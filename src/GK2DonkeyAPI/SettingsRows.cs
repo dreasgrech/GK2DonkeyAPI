@@ -121,6 +121,10 @@ namespace GK2DonkeyAPI
                 var bySection = new List<KeyValuePair<string, List<MountSettingsPage.Row>>>();
                 foreach (MountSettingsPage.Row r in page.Rows)
                 {
+                    if (r.Kind == MountSettingsPage.Kind.Preview)
+                    {
+                        continue; // the picture goes above this window (LookPreview)
+                    }
                     int at = bySection.FindIndex(kv => kv.Key == r.Section);
                     if (at < 0)
                     {

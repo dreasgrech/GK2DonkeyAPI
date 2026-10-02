@@ -7,9 +7,11 @@ using UnityEngine.UI;
 
 namespace GK2DonkeyAPI
 {
-    // The donkey's picture next to a mod's settings (MountSettingsPage.Preview), drawn by Colors.BuildPreview:
-    // - in GK2 Mod Framework's Mods menu: at the top right of the page whose title is the mod's ("<Title> — ...");
-    // - in the game's Settings window: beside the window, while one of the mod's pages is shown (SettingsRows).
+    // The donkey's picture next to a mod's settings (MountSettingsPage.Preview), drawn by PreviewStage:
+    // - in GK2 Mod Framework's Mods menu, on the page whose title is the mod's ("<Title> — ..."): above the window if
+    //   it fits there, else in the page's own rows in the list (MountSettingsPage.Preview, one per section asked for);
+    // - in the game's Settings window: above the window, while one of the mod's pages is shown (SettingsRows).
+    // Above the window only at MinScale or larger.
     // An extra on top of other UI: found by name and text, never by the framework's types (tests/FrameworkScan), and
     // everything is in try/catch. If anything fails it's switched off for the session and logged once; the settings
     // themselves are never touched.
@@ -38,7 +40,7 @@ namespace GK2DonkeyAPI
             internal GameObject Go;
             internal RawImage Image;
             internal Texture2D Tex;
-            internal Transform LoggedUnder;
+            internal string Logged;
         }
 
         private static Shown inMenu, inSettings;
@@ -76,25 +78,31 @@ namespace GK2DonkeyAPI
                     }
                 }
                 MountSettingsPage menuPage = null;
-                RectTransform menuWindow = FindMenuWindow(out menuPage);
-                Show(ref inMenu, menuWindow, menuPage);
+                RectTransform menuWindow = FindMenuWindow(out menuPage, out TextMeshProUGUI menuTitle);
+                Show(ref inMenu, menuWindow, menuPage, menuTitle, menu: true);
                 MountSettingsPage rowsPage = SettingsRows.ShownPage;
-                Show(ref inSettings, rowsPage != null ? SettingsRows.WindowFrame : null, rowsPage);
+                Show(ref inSettings, rowsPage != null ? SettingsRows.WindowFrame : null, rowsPage, null, menu: false);
             }
             catch (Exception e)
             {
                 failed = true;
+                foreach (MountSettingsPage p in pages)
+                {
+                    SetRowWanted(p, false);
+                }
                 Plugin.Log.LogWarning("Settings: the donkey's picture is off for this session (" + e.Message + "); the settings work without it.");
                 Hide(inMenu);
                 Hide(inSettings);
+                HideRows();
             }
         }
 
-        // The Mods window showing a page of ours (titled "<Title> - ..."): the widest of the title's parents that isn't
-        // the whole screen. Null when none is shown.
-        private static RectTransform FindMenuWindow(out MountSettingsPage page)
+        // The Mods window showing a page of ours (titled "<Title> - ..."). Null when none is shown; title is set when
+        // the page is shown even if the window itself isn't found (then the picture goes into the page's row).
+        private static RectTransform FindMenuWindow(out MountSettingsPage page, out TextMeshProUGUI title)
         {
             page = null;
+            title = null;
             if (!FrameworkLink.Installed)
             {
                 return null;
@@ -115,6 +123,7 @@ namespace GK2DonkeyAPI
                     if (t.text.StartsWith(p.Title + " \u2014", StringComparison.Ordinal))
                     {
                         page = p;
+                        title = t;
                         return WindowOf(t.rectTransform);
                     }
                 }
@@ -122,46 +131,104 @@ namespace GK2DonkeyAPI
             return null;
         }
 
+        // The window: the framework names it "Panel", a child of "GK2ModsMenuWindow" (ModsMenuWindow.BuildUi, 760 x
+        // 500, scaled down by localScale when the screen is too small). If that isn't found (another framework
+        // version): the widest of the title's parents that isn't the whole screen, measured on screen (rect.width
+        // ignores the window's scale: at 1440x1080 the 760-unit window, scaled to 0.9, was wider than 95% of the 720-
+        // unit screen, so nothing was found).
         private static RectTransform WindowOf(RectTransform title)
         {
-            Canvas root = title.GetComponentInParent<Canvas>()?.rootCanvas;
-            float screenW = root != null ? ((RectTransform)root.transform).rect.width : float.MaxValue;
-            RectTransform best = null;
             for (Transform t = title.parent; t != null && t.parent != null; t = t.parent)
             {
-                if (t is RectTransform r && r.rect.width < screenW * 0.95f && (best == null || r.rect.width >= best.rect.width))
+                if (t.name == "Panel" && t.parent.name == FrameworkWindow && t is RectTransform panel)
                 {
-                    best = r;
+                    return panel;
+                }
+            }
+            Canvas root = title.GetComponentInParent<Canvas>()?.rootCanvas;
+            float screenW = root != null ? ScreenWidth((RectTransform)root.transform) : float.MaxValue;
+            RectTransform best = null;
+            float bestW = 0f;
+            for (Transform t = title.parent; t != null && t.parent != null; t = t.parent)
+            {
+                if (t is RectTransform r)
+                {
+                    float w = ScreenWidth(r);
+                    if (w < screenW * 0.95f && w >= bestW)
+                    {
+                        best = r;
+                        bestW = w;
+                    }
                 }
             }
             return best;
         }
 
-        // Centred above the window, in the screen above it, as large as fits (at most three canvas units per art pixel).
-        private static void Show(ref Shown s, RectTransform window, MountSettingsPage page)
+        private static float ScreenWidth(RectTransform r)
         {
-            Transform under = window != null ? window.parent : null;
-            Mount.Instance paperDonkey = under != null ? PaperOf(page) : null;
-            if (under == null || paperDonkey == null)
+            var c = new Vector3[4];
+            r.GetWorldCorners(c);
+            return Vector3.Distance(c[1], c[2]);
+        }
+
+        // Where the picture goes, as large as fits there (K: canvas units per art pixel, at most MaxScale).
+        private struct Spot
+        {
+            internal float CentreX, Y, K, RoomW, RoomH;
+        }
+
+        // MinScale: below it a spot is too small (at 1920x1080 the canvas is about 2 screen pixels a unit, so 0.75 is
+        // 1.5 screen pixels per art pixel).
+        private const float MinScale = 0.75f, MaxScale = 3f, Margin = 8f;
+
+        // Pages whose picture has no room outside the list, so it's a row of the page (MountSettingsPage.Preview).
+        private static readonly HashSet<MountSettingsPage> rowWanted = new HashSet<MountSettingsPage>();
+
+        internal static bool RowWanted(MountSettingsPage page) => rowWanted.Contains(page);
+
+        private static void SetRowWanted(MountSettingsPage page, bool wanted)
+        {
+            if (page == null || (wanted ? !rowWanted.Add(page) : !rowWanted.Remove(page)))
             {
-                Hide(s);
                 return;
             }
+            Plugin.Log.LogInfo($"[preview] {page.Title}: the picture's row in the list is {(wanted ? "shown (no room outside the list)" : "hidden")}.");
+            page.RefreshMenu?.Invoke(); // the Mods menu re-reads the row's visibility
+        }
+
+        private static Shown NewShown()
+        {
+            var s = new Shown();
+            s.Go = new GameObject("GK2DonkeyAPI preview", typeof(RectTransform), typeof(RawImage), typeof(LayoutElement));
+            s.Go.GetComponent<LayoutElement>().ignoreLayout = true;
+            s.Image = s.Go.GetComponent<RawImage>();
+            s.Image.raycastTarget = false;
+            return s;
+        }
+
+        private static void Show(ref Shown s, RectTransform window, MountSettingsPage page, TextMeshProUGUI title, bool menu)
+        {
+            // measured: the window was found, so the room above it can be measured. Not measured but the page is shown
+            // (title): the page's rows.
+            Transform under = window != null ? window.parent : null;
+            bool measured = under != null;
+            Mount.Instance paperDonkey = measured || title != null ? PaperOf(page) : null;
+            if (paperDonkey == null)
+            {
+                Hide(s);
+                if (menu)
+                {
+                    HideRows();
+                }
+                return;
+            }
+            string where = measured ? $"'{window.name}'" : "the Mods menu (its window wasn't found, so nothing could be measured)";
             if (s == null || s.Go == null)
             {
-                s = new Shown();
-                s.Go = new GameObject("GK2DonkeyAPI preview", typeof(RectTransform), typeof(RawImage), typeof(LayoutElement));
-                s.Go.GetComponent<LayoutElement>().ignoreLayout = true;
-                s.Image = s.Go.GetComponent<RawImage>();
-                s.Image.raycastTarget = false;
+                s = NewShown();
             }
-            if (s.Go.transform.parent != under)
-            {
-                s.Go.transform.SetParent(under, false);
-            }
-            // With its cart, drawn by the game (PreviewStage); until that's ready, or if it fails, the donkey alone.
-            // The cart picture; the donkey alone only if that failed (while it's being made, nothing: the stand-in
-            // flashed for a moment before the cart picture took over).
+            // With its cart, drawn by the game (PreviewStage); the donkey alone only if that failed (while it's being
+            // made, nothing: the stand-in flashed for a moment before the cart picture took over).
             Texture pic = PreviewStage.Picture(paperDonkey);
             if (pic == null && PreviewStage.Failed)
             {
@@ -171,14 +238,135 @@ namespace GK2DonkeyAPI
             if (pic == null)
             {
                 Hide(s);
+                if (menu)
+                {
+                    HideRows();
+                }
                 return;
             }
-            s.Image.texture = pic;
+            // Above the window when it fits there (MinScale); else the page's own rows, in the Mods menu (the
+            // framework's page has them); else nowhere. (Also tried: the page's header, at most 0.53x at any of the
+            // game's resolutions, and beside the window, which none of them needs.)
+            Vector2 art = PreviewStage.ArtSize(pic);
+            Spot above = measured ? Above(window, under, art) : default;
+            bool useRows = (!measured || above.K < MinScale) && title != null && page.HasPreviewRows;
+            SetRowWanted(page, useRows);
+            List<RectTransform> rows = useRows ? FindRows(title, page) : null;
+            string rooms = (measured ? $"above {above.RoomW:0} x {above.RoomH:0} -> {above.K:0.##}x; " : "")
+                           + $"picture {pic.width} x {pic.height}, {art.x:0} x {art.y:0} art pixels; screen {Screen.width} x {Screen.height}"
+                           + (measured ? $", window scale {window.localScale.x:0.###}" : "");
+            string line;
+            if (useRows)
+            {
+                line = rows.Count == 0
+                    ? $"[preview] waiting for its rows in {where} ({rooms})."
+                    : $"[preview] shown in its rows ({rows.Count}), in {where}, at {RowScale(rows[0], art):0.##}x ({rooms}).";
+            }
+            else
+            {
+                line = above.K >= MinScale
+                    ? $"[preview] shown above, in {where}, at {above.K:0.##}x ({rooms})."
+                    : $"[preview] not shown in {where}: no room above it ({rooms}; needs {MinScale}x) and no row for it.";
+            }
+            if (s.Logged != line)
+            {
+                s.Logged = line;
+                Plugin.Log.LogInfo(line);
+            }
+            if (useRows)
+            {
+                Hide(s);
+                ShowRows(rows, pic, art);
+                return;
+            }
+            if (menu)
+            {
+                HideRows();
+            }
+            if (above.K < MinScale)
+            {
+                Hide(s);
+                return;
+            }
+            Place(s, under, pic, art, above.K);
             var rt = (RectTransform)s.Go.transform;
-            var wc = new Vector3[4];
-            window.GetWorldCorners(wc); // bottom left, top left, top right, bottom right
-            Vector3 topLeft = under.InverseTransformPoint(wc[1]), topRight = under.InverseTransformPoint(wc[2]);
-            float screenTop = topLeft.y + 200f;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.localPosition = new Vector3(above.CentreX, above.Y, 0f);
+        }
+
+        private static void Place(Shown s, Transform parent, Texture pic, Vector2 art, float k)
+        {
+            if (s.Go.transform.parent != parent)
+            {
+                s.Go.transform.SetParent(parent, false);
+            }
+            s.Image.texture = pic;
+            ((RectTransform)s.Go.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
+            s.Go.transform.SetAsLastSibling();
+            s.Go.SetActive(true);
+        }
+
+        // One picture per row, right of the row's middle (its label is on the left); each scrolls with the list.
+        private static readonly List<Shown> rowPics = new List<Shown>();
+
+        private static float RowScale(RectTransform row, Vector2 art)
+        {
+            Rect r = row.rect;
+            return Fit(r.width * 0.45f, r.height - 12f, art);
+        }
+
+        private static void ShowRows(List<RectTransform> rows, Texture pic, Vector2 art)
+        {
+            for (int i = 0; i < rows.Count; i++)
+            {
+                if (i == rowPics.Count || rowPics[i] == null || rowPics[i].Go == null)
+                {
+                    Shown n = NewShown();
+                    if (i == rowPics.Count)
+                    {
+                        rowPics.Add(n);
+                    }
+                    else
+                    {
+                        rowPics[i] = n;
+                    }
+                }
+                Place(rowPics[i], rows[i], pic, art, RowScale(rows[i], art));
+                var rt = (RectTransform)rowPics[i].Go.transform;
+                rt.anchorMin = rt.anchorMax = new Vector2(0.62f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+            }
+            for (int i = rows.Count; i < rowPics.Count; i++)
+            {
+                Hide(rowPics[i]);
+            }
+        }
+
+        private static void HideRows()
+        {
+            foreach (Shown r in rowPics)
+            {
+                Hide(r);
+            }
+        }
+
+        private static float Fit(float roomW, float roomH, Vector2 art)
+        {
+            return roomW <= 0f || roomH <= 0f ? 0f : Mathf.Min(MaxScale, roomW / art.x, roomH / art.y);
+        }
+
+        // Centred above the window: the screen between the window's top edge and the screen's.
+        private static Spot Above(RectTransform window, Transform under, Vector2 art)
+        {
+            var w = new Vector3[4];
+            window.GetWorldCorners(w); // bottom left, top left, top right, bottom right
+            for (int i = 0; i < 4; i++)
+            {
+                w[i] = under.InverseTransformPoint(w[i]);
+            }
+            float screenTop = w[1].y;
             Canvas root = window.GetComponentInParent<Canvas>()?.rootCanvas;
             if (root != null)
             {
@@ -186,22 +374,33 @@ namespace GK2DonkeyAPI
                 ((RectTransform)root.transform).GetWorldCorners(rc);
                 screenTop = under.InverseTransformPoint(rc[1]).y;
             }
-            const float margin = 8f;
-            float roomH = Mathf.Max(24f, screenTop - topLeft.y - 2f * margin);
-            float roomW = Mathf.Max(24f, topRight.x - topLeft.x);
-            Vector2 art = PreviewStage.ArtSize(pic); // k: canvas units per art pixel
-            float k = Mathf.Max(0.5f, Mathf.Min(3f, roomH / art.y, roomW / art.x));
-            rt.sizeDelta = new Vector2(art.x * k, art.y * k);
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0f);
-            rt.localPosition = new Vector3((topLeft.x + topRight.x) / 2f, topLeft.y + margin, 0f);
-            if (s.LoggedUnder != window)
+            float roomH = screenTop - w[1].y - 2f * Margin;
+            float roomW = w[2].x - w[1].x;
+            return new Spot
             {
-                s.LoggedUnder = window;
-                Plugin.Log.LogInfo($"[preview] shown above '{window.name}': room {roomW:0} x {roomH:0}, picture {pic.width} x {pic.height} ({art.x:0} x {art.y:0} art pixels) at {k:0.##}x.");
+                CentreX = (w[1].x + w[2].x) / 2f, Y = w[1].y + Margin,
+                RoomW = roomW, RoomH = roomH, K = Fit(roomW, roomH, art),
+            };
+        }
+
+        // The page's picture rows on screen: the rows around the labels of its Preview rows (under the page that holds
+        // the title), top to bottom. Empty while they aren't there yet.
+        private static List<RectTransform> FindRows(TextMeshProUGUI title, MountSettingsPage page)
+        {
+            var found = new List<RectTransform>();
+            Transform under = title.rectTransform.parent;
+            if (under == null)
+            {
+                return found;
             }
-            s.Go.transform.SetAsLastSibling();
-            s.Go.SetActive(true);
+            foreach (TextMeshProUGUI t in under.GetComponentsInChildren<TextMeshProUGUI>(false))
+            {
+                if (t.text != null && page.IsPreviewLabel(t.text) && t.transform.parent is RectTransform r && !found.Contains(r))
+                {
+                    found.Add(r);
+                }
+            }
+            return found;
         }
 
         private static void Hide(Shown s)

@@ -20,7 +20,7 @@ namespace GK2DonkeyAPI.Api
     // Both are extras: if anything about them fails, they don't show, and the settings work as before.
     public sealed class MountSettingsPage
     {
-        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button }
+        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview }
 
         internal sealed class Row
         {
@@ -41,6 +41,7 @@ namespace GK2DonkeyAPI.Api
         internal readonly List<Row> Rows = new List<Row>();
         private readonly List<string> sections = new List<string>();
         internal MountCompanion PreviewOf;
+        internal Action RefreshMenu; // the Mods menu re-reads the rows' visibility (set by FrameworkLink)
 
         // "Keys" -> "1. Keys", numbered in the order sections are first used.
         private string Sec(string name)
@@ -164,13 +165,29 @@ namespace GK2DonkeyAPI.Api
         }
 
         // A picture of the companion's donkey and cart in their current colours, walking on the spot: above the Mods
-        // window (or above the game's Settings window), where it stays in view whatever row is scrolled to; in the
-        // look bar too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so
-        // it shows in the main menu and indoors.
-        public void Preview(MountCompanion companion)
+        // window, where it stays in view whatever row is scrolled to (LookPreview). When there's no room above it (most
+        // screens up to 1080p), it's a row of the page instead, here in this section, in the order called: call it once
+        // per section that should show it (e.g. at the top of each section with look rows, so it's in view from each).
+        // label: the row's name. Above the game's Settings window without the Mods menu; in the look bar too. It needs
+        // no donkey in the game: drawn from the game's own files in the companion's colours, so it shows in the main
+        // menu and indoors.
+        public void Preview(string section, MountCompanion companion, string label = "Your donkey")
         {
             PreviewOf = companion;
+            Add(new Row
+            {
+                Kind = Kind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
+                Visible = () => LookPreview.RowWanted(this),
+            });
         }
+
+        // The rows are found on screen by their labels (LookPreview), and the Mods menu sizes a row by its description
+        // (only line breaks count as empty: the minimum height), so the picture's room is eight lines of one fully
+        // transparent dot each (a zero-width space didn't count).
+        internal bool HasPreviewRows => Rows.Exists(r => r.Kind == Kind.Preview);
+
+        internal bool IsPreviewLabel(string text) => Rows.Exists(r => r.Kind == Kind.Preview && r.Label == text);
+        internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
 
         // A button that closes the menu and opens the look bar over the game: the look rows (Choice and Steps with look,
         // and Color) at the bottom of the screen, the real donkey in view, with Done (keep) and Cancel (put back).

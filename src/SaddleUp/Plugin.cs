@@ -19,7 +19,7 @@ namespace SaddleUp
         public const string Version = "0.1.0";
 
         // The API this mod is written against: 0.14 has the companion and the settings page.
-        private static readonly Version NeedsApi = new Version(0, 14, 0);
+        private static readonly Version NeedsApi = new Version(0, 15, 0);
 
         internal static ManualLogSource Log;
         private ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey, sendAwayKey;
@@ -54,7 +54,7 @@ namespace SaddleUp
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             p.Toggle("Behaviour", "KeepWithSaves", true, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
 
-            p.Preview(me);
+            p.Preview("Donkey", me);
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your donkey and cart change. Done keeps them, Cancel puts them back.");
             p.Text("Donkey", "Name", "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
             ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
@@ -64,6 +64,7 @@ namespace SaddleUp
             p.Toggle("Donkey", "Brays", true, "Brays", "Now and then, and when you get on.", v => me.Brays = v);
             p.Toggle("Donkey", "Foal", false, "A foal", "A small donkey that stays with yours and follows it around.", v => me.HasFoal = v);
 
+            p.Preview("Cart", me, "Your cart");
             ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", CartPaint.Game, "Paint", "", v => me.Paint = v, new[] { "The game's", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
             p.Color("Cart", "CustomPaint", "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => me.CustomPaint = v, () => paint.Value == CartPaint.Custom);
             p.Toggle("Cart", "Lantern", true, "Lantern", "The lantern on its pole.", v => me.Lantern = v);

@@ -460,7 +460,7 @@ Where they apply:
 | `Info(section, label, value)` | nothing | read-only |
 | `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
 | `Choice` / `Steps` with `look: true` | as above | also in the look bar |
-| `Preview(companion)` | nothing | a picture of the companion's donkey in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
+| `Preview(section, companion, label = "Your donkey")` | a row, shown only when there's no room above the window; call once per section that should show it | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
 
 - **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from the Mods menu, the
@@ -478,11 +478,13 @@ Where they apply:
   window is used.
 - **The look, three ways:**
   - **named colours:** a colour by name and its lightness; the picture shows the result;
-  - **the picture:** the donkey's body and head, recoloured on the CPU with the same mapping the game's shader gets,
-    from the companion's "paper donkey" (an instance never spawned, carrying only its look). The art is read from the
-    game's own files, the look the game loads for the donkey (`Assets/AddressableAssets/WGOs/npc_donkey.prefab`,
-    through Addressables), so it shows in the main menu and indoors too, and follows a game update that redraws it. On the title's line in
-    the Mods menu, beside the Settings window, and at the top of the look bar;
+  - **the picture:** the donkey and its cart walking on the spot, in the companion's colours (its "paper donkey", an
+    instance never spawned, carrying only its look). A stripped copy of the game's own donkey
+    (`Assets/AddressableAssets/WGOs/npc_donkey.prefab`, through Addressables) is drawn by a hidden camera at the
+    game's angle, at 3 picture pixels per art pixel, so it shows in the main menu and indoors too. In the Mods menu it
+    goes above the window when it fits there (0.75 canvas units per art pixel or more), else into its rows in
+    the list, one per `Preview` call (most 16:9 screens up to 1080p; the rows are hidden otherwise). Above the Settings window without the framework, and at
+    the top of the look bar;
   - **the look bar:** the look rows at the bottom of the screen over the game, with Done and Cancel. Cancel puts
     back what was set when it opened. Only in a game.
 - **The picture and the bar are extras.** They're found and built defensively. If something about them fails

@@ -56,9 +56,10 @@ All of these apply at once:
 | 5. Sound | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
 
 **Choosing colours:**
-- **A picture** of your donkey in the chosen colours sits next to the settings: at the top right in the Mods menu,
-  beside the Settings window without it. It shows your donkey as last seen in the game, so call it once if it isn't
-  there yet.
+- **A picture** of your donkey and cart in the chosen colours, walking on the spot: above the Mods window if it
+  fits; when it doesn't (most screens up to 1080p), at the top of both the Donkey and the Cart sections (above the
+  Settings window without the Mods menu). It needs no donkey in
+  the game.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
   Mustard, Gold) and its lightness. The picture shows the result.
