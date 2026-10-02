@@ -125,7 +125,7 @@ namespace GK2DonkeyAPI.Api
         // matter), while the API is on. The API polls it: the mod needs no Update of its own.
         // Plain Backspace means no key: set from either menu or the cfg, it's cleared at once (GK2 Mod Framework's key
         // capture has no way to clear a key and takes Backspace as one; the game's Settings window does the same on
-        // its own). Publish adds a row saying so after the page's last key.
+        // its own). Publish adds a row saying so before the page's first key.
         public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null, Action pressed = null)
         {
             string cfgSection = Sec(section);
@@ -230,6 +230,7 @@ namespace GK2DonkeyAPI.Api
             LookPreview.Watch(this);
             if (FrameworkLink.TryRegister(this))
             {
+                MenuLabels.Add(this); // the choices' labels over the framework's plain names
                 Plugin.Log.LogInfo($"Settings: {Title} is in GK2 Mod Framework's Mods menu ({Rows.Count} rows).");
                 return;
             }
@@ -261,17 +262,17 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // After the page's last key row, in its section: how to clear a key and cancel setting one. A note: in the Mods
+        // Before the page's first key row, in its section: how to clear a key and cancel setting one. A note: in the Mods
         // menu a row whose description is the sentence, in the game's Settings window the sentence across the row.
         private void AddKeyHelp()
         {
-            int last = Rows.FindLastIndex(r => r.Kind == Kind.Key);
-            if (last < 0)
+            int first = Rows.FindIndex(r => r.Kind == Kind.Key);
+            if (first < 0)
             {
                 return;
             }
-            Row k = Rows[last];
-            Rows.Insert(last + 1, new Row
+            Row k = Rows[first];
+            Rows.Insert(first, new Row
             {
                 Kind = Kind.Note, Section = k.Section, ShownSection = k.ShownSection, Label = "Setting a key",
                 Description = KeyHelp,

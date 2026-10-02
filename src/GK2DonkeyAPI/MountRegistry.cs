@@ -381,6 +381,7 @@ namespace GK2DonkeyAPI
                 TickInner();
                 MountCompanion.TickAll();
                 LookPreview.Tick();
+                MenuLabels.Tick();
                 PreviewStage.Tick();
                 LookBar.Tick();
             }

@@ -28,7 +28,14 @@ namespace GK2DonkeyAPI
         internal static MountHandle Who(MountSettingsPage p)
         {
             MountCompanion c = p?.PreviewOf;
-            MountHandle h = c?.Donkey ?? c?.Foal;
+            MountHandle h = c?.Donkey;
+            if (h == null && c != null)
+            {
+                foreach (MountHandle f in c.Foals)
+                {
+                    h = h ?? f;
+                }
+            }
             return h != null && h.Exists ? h : null;
         }
 

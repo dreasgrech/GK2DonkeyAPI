@@ -54,22 +54,22 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | Group | Option | Default | Why it's safe |
 |---|---|---|---|
 | **Keys** | Ride, Cart, Bell, Send away | H, G, none, none | Only keys. No hitch key (dropped 2026-10-03): H while driving leaves the cart (the same unhitch), G while riding brings your cart, E hitches a cart in reach; Saddle Up sets the API's `HitchKey` to None. |
-| **Riding** | Speed while riding | Normal | A choice of Normal / Faster / Fastest (maps to fixed multipliers, e.g. 1.5 / 1.75 / 2.25 per style), not a free number. |
+| **Riding** | Riding speed, Cart speed | Normal | One each for riding the donkey and driving the cart (2026-10-03): Normal / Faster / Fastest (fixed multipliers per style), not a free number. |
 | | Get off at building doors | on | Off lets the cart into houses, through the furniture. It only looks wrong; nothing breaks (tested 2026-09-30). |
 | | Thought bubbles | on | Text only. |
 | **Donkey** | Coat | Grey (the game's) | A list of presets: Grey, Brown, Dark, Cream, Black, maybe one silly one. Each preset is a tested set of colour values. |
 | | Harness colour | the game's | A short preset list. |
 | | Shuffles when standing | on | On/off only. |
-| | Brays | on | On/off (some players find them noisy). |
+| | Bray sounds | on | On/off (some players find them noisy); in the Sound section (2026-10-03). |
 | **Cart** | Paint | the game's | Presets: Natural wood, Dark wood, Red, Green, Blue. |
 | | Lantern | on | Show the lantern pole at all. |
 | | Lantern lights by day | on | Off: it goes dark by day like the game's hand lantern. |
 | | Lantern colour | warm orange | Presets: Warm, White, Green (graveyard), Blue. |
-| | Bell when setting off with cargo | on | On/off. |
+| | Bell when setting off with cargo | off | On/off; off to start with (2026-10-03). |
 | **Sound** | Mount sounds volume | 100% | One slider, clamped 0–150%. |
 | **Saves** | Keep my donkey with the save | on | Already in. |
 | **Colours** | Each colour option above also has **Custom** | – | Custom uses the hex colours in Saddle Up's cfg (`Colors.CustomCoat` and so on); a wrong value is ignored and logged. |
-| **Foal** (extra B) | Your donkey has a foal | off | A small donkey that stays with yours: shuffles around it, trots after it, kept with the save. On/off only. |
+| **Foals** (extra B) | How many foals | none | 0 to 5 small donkeys that stay with yours: shuffle around it, trot after it, kept with the save (a number since 2026-10-03). |
 | **Name** (extra C) | Your donkey's name | empty | Shown in the prompt: "[E] Ride Bella". Text: in the Mods menu with the framework, else in the cfg. Empty: "[E] Ride". |
 
 ## 4. Fixed, not offered

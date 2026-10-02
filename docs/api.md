@@ -421,7 +421,7 @@ MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mo
 p.Status("Keys");                                                    // "Active", or why the API is off
 p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...", pressed: () => me.Use(MountStyle.Ride));
 p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" });
-p.Toggle("Donkey", "Foal", false, "A foal", "...", v => me.HasFoal = v);
+p.Steps("Donkey", "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Foals", "...", v => me.FoalCount = v);   // defaults: the companion's own values
 p.Publish();
 ```
 
@@ -437,12 +437,13 @@ p.Publish();
 | `Use(MountStyle)` | The ride key (Ride) or the cart key (Cart). On foot: the donkey (spawned the first time) comes and the keeper gets on, the cart brought and hitched, or left standing, as asked. Mounted in that style: off (the donkey stays). Mounted in the other style: the cart is left standing, or brought and hitched. Refusals come back as `MountResult` (indoors, busy, ...) and are written to the log with their reason. |
 | `RingBell()` | The bell, while mounted; else nothing. |
 | `SendAway()` | The donkey, cart and foal go; the cart's load is set down first. |
-| `Donkey`, `Cart`, `Foal` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`). Found again after a load by the keys `"donkey"`, `"cart"` and `"foal"`. |
+| `Donkey`, `Cart`, `Foals` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`; `Foals` a slot per foal, null when that one isn't there). Found again after a load by the keys `"donkey"`, `"cart"`, `"foal"`, `"foal2"` ... `"foal5"`. |
 | `KeepWithSaves` | Kept with the save (on). |
-| `HasFoal` | A foal (size 0.6, not rideable) that stays with the donkey. |
+| `FoalCount` | 0 to `MaxFoals` (5) foals (size 0.6, not rideable) that stay with the donkey. |
 | `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
-| `Speed` | `MountSpeed.Normal / Faster / Fastest`: Normal is the player's own speed; Faster 2.1 (Ride) / 1.8 (Cart); Fastest 2.5 / 2.1. |
-| `Brays`, `BellOnSetOff`, `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
+| `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
+| `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
+| *(every setting)* | Starts at the default a mod's settings should use: pass the property as the row's default (`p.Toggle(..., me.BellOnSetOff, ...)`), so it's written once, in the API. |
 | `Coat`, `Harness`, `Paint`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `LanternColor`); `Game` is the game's art. |
 | `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. An invalid one means the game's look, logged once. |
 
@@ -461,7 +462,7 @@ Where they apply:
 | `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | Off / On |
 | `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | the labels |
 | `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | each step, `format` turns it into text ("100%") |
-| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | either arrow, then the key ("Press a key..."; Backspace: none, Esc: cancel). Plain Backspace always means no key (the Mods menu takes it as a key; it's cleared at once), and a note saying so ("While setting a key, Backspace clears it and Esc cancels.") is added after your last key |
+| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | either arrow, then the key ("Press a key..."; Backspace: none, Esc: cancel). Plain Backspace always means no key (the Mods menu takes it as a key; it's cleared at once), and a note saying so ("While setting a key, Backspace clears it and Esc cancels.") is added before your first key |
 | `Status(section, label = "Status", description)` | nothing: the page's status | read-only |
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |
@@ -483,7 +484,9 @@ Where they apply:
     sorts the sections by name);
   - without it, your rows go into the game's own **Settings** window, on pages of their own: a "Showing" row at the
     top switches between the game's settings and yours. They're copies of the game's own rows (look, sounds,
-    gamepad).
+    gamepad). Each page holds as many rows as the game's own page; only the rows showing count, and the pages are
+    planned again when rows show or hide: the fewest pages, a section going on over the next page ("(more)") only
+    when keeping it whole would take another page, at least two rows on each side of a cut.
 - **The framework is never required:** the API's link to it is soft, and if it's missing or fails, the Settings
   window is used.
 - **The look, three ways:**
@@ -559,6 +562,9 @@ History:
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
+- 0.17.0 (breaking, pre-release): `MountCompanion.RideSpeed` and `CartSpeed` replace `Speed`; `FoalCount` (0 to `MaxFoals`) and `Foals` replace `HasFoal` and `Foal`; `SpeedLabels`; `BellOnSetOff` starts off.
+- 0.16.0: `MountSettingsPage.Key(..., pressed)` (the API polls the keys), `Status(section)`, `Mounts.StatusText`, `MountCompanion.RingBell`; refusals of `Use` logged; an unloaded mod's tuning cleared; plain Backspace means no key, with a note after the last key.
+- 0.15.0: `Preview(section, companion, label, cart)` rows; the picture above the Mods window or in the rows.
 - 0.14.0: `MountCompanion` (`Mounts.Companion`), the look and speed presets (`MountSpeed`, `CoatColor`,
   `HarnessColor`, `CartPaint`, `LanternColor`), `MountSettingsPage` (`Mounts.SettingsPage`: the Mods menu or the
   game's Settings window), `MountHandle.DisplayName` / `SetDisplayName`, and `HitchKey` in `Mounts.Behaviour`.

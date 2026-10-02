@@ -15,7 +15,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
 | **J** | – | take the cart in reach | leave the cart standing |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
-| Bell key (none by default) | – | ring the bell | ring the bell |
+| Bell key (B) | – | ring the bell | ring the bell |
 | Send-away key (none by default) | your donkey, cart and foal go (the load is set down first) | the same | the same |
 
 - **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
@@ -38,23 +38,23 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Ride, Drive, Bell, Send away | H, G, none, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
-| 2. Behaviour | Riding speed | Normal | Normal, Faster, Fastest. |
-| | Get off at building doors | on | Off: you ride into houses, and the cart goes through the furniture. |
+| 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
+| 2. Behaviour | Riding speed | Normal | Riding the donkey: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
+| | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
 | | Say why mounting is refused | on | The keeper's thought bubble. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | 3. Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Coat | the game's | Brown, Dark, Cream, Black, or Custom. |
 | | Harness | the game's | Black, Red, Blue, Green, or Custom. |
-| | Brays | on | |
-| | A foal | off | A small donkey that stays with yours and follows it around. |
+| | Baby donkeys | none | Up to 5 foals that stay with yours and follow it around. |
 | 4. Cart | Paint | the game's | Dark wood, Red, Green, Blue, or Custom. |
 | | Lantern | on | The lantern on its pole. |
 | | Lantern lit by day | on | Off: it goes dark by day, like your hand lantern. |
 | | Lantern light | warm (the game's) | White, Green, Blue, or Custom. |
-| | Bell when setting off | on | When the cart sets off with a load after standing. |
-| 5. Sound | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
+| | Bell when setting off | off | When the cart sets off with a load after standing. |
+| 5. Sound | Bray sounds | on | Now and then, and when you get on. |
+| | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
 
 **Choosing colours:**
 - **A picture** of your donkey and cart in the chosen colours, walking on the spot: at the top of the Donkey

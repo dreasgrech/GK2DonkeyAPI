@@ -52,18 +52,21 @@ class GK2DonkeyAPI.Api.MountCompanion
   field static const string CartKey = cart
   field static const string DonkeyKey = donkey
   field static const string FoalKey = foal
+  field static const int MaxFoals = 5
+  field static readonly System.String[] SpeedLabels
   property bool BellOnSetOff { get; set; }
   property bool Brays { get; set; }
   property GK2DonkeyAPI.Api.MountHandle Cart { get; }
+  property GK2DonkeyAPI.Api.MountSpeed CartSpeed { get; set; }
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }
   property string CustomHarness { get; set; }
   property string CustomLantern { get; set; }
   property string CustomPaint { get; set; }
   property GK2DonkeyAPI.Api.MountHandle Donkey { get; }
-  property GK2DonkeyAPI.Api.MountHandle Foal { get; }
+  property int FoalCount { get; set; }
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Foals { get; }
   property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
-  property bool HasFoal { get; set; }
   property bool KeepWithSaves { get; set; }
   property bool Lantern { get; set; }
   property bool LanternByDay { get; set; }
@@ -71,10 +74,11 @@ class GK2DonkeyAPI.Api.MountCompanion
   property string Name { get; set; }
   property string OwnerId { get; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
+  property GK2DonkeyAPI.Api.MountSpeed RideSpeed { get; set; }
   property float SoundVolume { get; set; }
-  property GK2DonkeyAPI.Api.MountSpeed Speed { get; set; }
   method void RingBell()
   method void SendAway()
+  method static System.String[] SpeedLabelsFor(GK2DonkeyAPI.Api.MountStyle style)
   method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
 enum GK2DonkeyAPI.Api.MountFeature
   Cargo = 0

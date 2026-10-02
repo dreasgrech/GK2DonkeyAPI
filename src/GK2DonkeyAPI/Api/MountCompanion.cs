@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Riding speed steps (MountCompanion.Speed): each a tested speed per style.
+    // Riding speed steps (MountCompanion.RideSpeed / CartSpeed): each a tested speed per style.
     public enum MountSpeed { Normal, Faster, Fastest }
 
     // Look presets (MountCompanion): Game is the game's own art, Custom uses the matching Custom* hex colour.
@@ -13,21 +13,55 @@ namespace GK2DonkeyAPI.Api
     public enum CartPaint { Game, DarkWood, Red, Green, Blue, Custom }
     public enum LanternColor { Game, White, Green, Blue, Custom }
 
-    // A mod's own donkey for the keeper, with its cart and an optional foal: everything a player mod needs, so the mod
+    // A mod's own donkey for the keeper, with its cart and up to MaxFoals foals: everything a player mod needs, so the mod
     // itself only maps its keys and settings onto this (Saddle Up is the example). One per owner (Mounts.Companion).
     //
     // - Use(Ride / Cart), for the ride and cart keys: on foot the donkey (spawned the first time) comes to the keeper
     //   and he gets on, the cart brought and hitched or left standing as asked; mounted in that style he gets off (the
     //   donkey stays); mounted in the other style the cart is left standing or brought and hitched.
-    // - SendAway: the donkey, its cart and foal go; the cart's cargo is set down first.
-    // - Found again after a load by their keys "donkey", "cart" and "foal" (kept with the save while KeepWithSaves).
-    // - The settings below apply as they're set. Looks, the name and the foal belong to this companion's own donkey,
-    //   cart and foal only (instance overrides, set by the owner); speed, brays, the bell, the volume and the lantern
+    // - SendAway: the donkey, its cart and foals go; the cart's cargo is set down first.
+    // - Found again after a load by their keys "donkey", "cart" and "foal", "foal2" ... (kept with the save while
+    //   KeepWithSaves).
+    // - The settings below apply as they're set; their starting values are the defaults a mod's settings should use
+    //   (e.g. p.Toggle(..., me.BellOnSetOff, ...)), so they're written once, here. Looks, the name and the foals belong
+    //   to this companion's own donkey, cart and foals only (instance overrides, set by the owner); the speeds, brays,
+    //   the bell, the volume and the lantern
     //   are the ride's (session overrides of both styles, set by the owner), since a style value can't differ per
     //   instance. Values another mod set are never cleared.
     public sealed class MountCompanion
     {
         public const string DonkeyKey = "donkey", CartKey = "cart", FoalKey = "foal";
+
+        // FoalCount at most.
+        public const int MaxFoals = 5;
+
+        // The speed steps as players read them, in MountSpeed's order.
+        public static readonly string[] SpeedLabels = { "Normal", "Faster", "Fastest" };
+
+        // The same with each step's speed for that style: "Normal (x1.75 walking speed)". Normal is the player's own
+        // value (the style's SpeedMultiplier in the cfg), the others the fixed steps below.
+        public static string[] SpeedLabelsFor(MountStyle style)
+        {
+            float[] steps = style == MountStyle.Ride ? RideSpeeds : CartSpeeds;
+            var labels = new string[SpeedLabels.Length];
+            for (int i = 0; i < labels.Length; i++)
+            {
+                float x = Mathf.Round((steps[i] > 0f ? steps[i] : PlayerSpeed(style)) * 20f) / 20f; // to 0.05: x2, not x1.99
+                labels[i] = $"{SpeedLabels[i]} (x{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} walking speed)";
+            }
+            return labels;
+        }
+
+        // The player's own speed for a style: the cfg value, not a session override (shipped: Ride 2, Cart 1.5).
+        private static float PlayerSpeed(MountStyle style)
+        {
+            StyleSettings s = Plugin.For(style);
+            return s != null && s.SpeedMultiplier != null && s.SpeedMultiplier.Entry != null ? s.SpeedMultiplier.Entry.Value
+                : style == MountStyle.Ride ? 1.75f : 1.5f;
+        }
+
+        // The first foal keeps the key "foal" (as before there were several); the others "foal2" to "foal5".
+        internal static string FoalKeyOf(int i) => i == 0 ? FoalKey : FoalKey + (i + 1);
 
         private static readonly Dictionary<string, MountCompanion> all = new Dictionary<string, MountCompanion>(StringComparer.Ordinal);
 
@@ -79,10 +113,13 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // Its donkey (with its cart while hitched), its cart while that stands on its own, and its foal. Null when none.
+        // Its donkey (with its cart while hitched), its cart while that stands on its own, and its foals (a slot each,
+        // null when that foal isn't there). Null when none.
         public MountHandle Donkey { get; private set; }
         public MountHandle Cart { get; private set; }
-        public MountHandle Foal { get; private set; }
+        public IReadOnlyList<MountHandle> Foals => foalHandles;
+
+        private readonly MountHandle[] foalHandles = new MountHandle[MaxFoals];
 
         private MountCompanion(string ownerId)
         {
@@ -99,9 +136,10 @@ namespace GK2DonkeyAPI.Api
 
         // ------------------------------------------------------------------ settings
 
-        private bool keep = true, foal, brays = true, bell = true, lantern = true, lanternByDay = true;
+        private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true;
+        private int foals;
         private string name;
-        private MountSpeed speed;
+        private MountSpeed rideSpeed, cartSpeed;
         private float volume = 1f;
         private CoatColor coat;
         private HarnessColor harness;
@@ -112,18 +150,20 @@ namespace GK2DonkeyAPI.Api
         // Kept with the save: after a load they're back where they were left, cargo on the cart.
         public bool KeepWithSaves { get => keep; set { keep = value; ApplyKeep(); } }
 
-        // A foal (size 0.6, not rideable) that stays with the donkey.
-        public bool HasFoal { get => foal; set { foal = value; nextFoalCheck = 0f; } }
+        // How many foals (size 0.6, not rideable) stay with the donkey: 0 to MaxFoals.
+        public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MaxFoals); nextFoalCheck = 0f; } }
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
         public string Name { get => name; set { name = value; ApplyName(); } }
 
-        public MountSpeed Speed { get => speed; set { speed = value; ApplyRide(); } }
+        // How fast the keeper goes riding the donkey alone, and driving the cart.
+        public MountSpeed RideSpeed { get => rideSpeed; set { rideSpeed = value; ApplyRide(); } }
+        public MountSpeed CartSpeed { get => cartSpeed; set { cartSpeed = value; ApplyRide(); } }
 
         // Brays at mounting and while standing.
         public bool Brays { get => brays; set { brays = value; ApplyRide(); } }
 
-        // The bell when the cart sets off with cargo.
+        // The bell when the cart sets off with cargo (off to start with).
         public bool BellOnSetOff { get => bell; set { bell = value; ApplyRide(); } }
 
         // The mount's sounds, times the game's SFX volume: 0 to 1.5.
@@ -300,7 +340,8 @@ namespace GK2DonkeyAPI.Api
             {
                 Mounts.Dismount("sent away");
             }
-            foreach (MountHandle h in new[] { Foal, Cart, Donkey })
+            var all = new List<MountHandle>(foalHandles) { Cart, Donkey };
+            foreach (MountHandle h in all)
             {
                 if (h != null && h.Exists)
                 {
@@ -308,7 +349,8 @@ namespace GK2DonkeyAPI.Api
                     h.Remove();
                 }
             }
-            Donkey = Cart = Foal = null;
+            Donkey = Cart = null;
+            Array.Clear(foalHandles, 0, foalHandles.Length);
             Plugin.Log.LogInfo($"Companion: {OwnerId} sent its donkey away.");
         }
 
@@ -335,18 +377,25 @@ namespace GK2DonkeyAPI.Api
             {
                 return;
             }
-            if (foal && (Foal == null || !Foal.Exists) && Donkey != null && Donkey.Exists)
+            bool spawned = false;
+            for (int i = 0; i < MaxFoals; i++)
             {
-                Foal = Mounts.SpawnFoal(OwnerId, Donkey, key: FoalKey, persist: keep);
-                if (Foal != null)
+                MountHandle f = foalHandles[i];
+                bool wanted = i < foals;
+                if (wanted && (f == null || !f.Exists) && Donkey != null && Donkey.Exists)
                 {
-                    ApplyLook();
+                    foalHandles[i] = Mounts.SpawnFoal(OwnerId, Donkey, key: FoalKeyOf(i), persist: keep);
+                    spawned |= foalHandles[i] != null;
+                }
+                else if (!wanted && f != null && f.Exists)
+                {
+                    f.Remove();
+                    foalHandles[i] = null;
                 }
             }
-            else if (!foal && Foal != null && Foal.Exists)
+            if (spawned)
             {
-                Foal.Remove();
-                Foal = null;
+                ApplyLook();
             }
         }
 
@@ -355,10 +404,15 @@ namespace GK2DonkeyAPI.Api
             pending = null;
             Donkey = Mounts.Find(OwnerId, DonkeyKey);
             Cart = Mounts.Find(OwnerId, CartKey);
-            Foal = Mounts.Find(OwnerId, FoalKey);
+            int found = 0;
+            for (int i = 0; i < MaxFoals; i++)
+            {
+                foalHandles[i] = Mounts.Find(OwnerId, FoalKeyOf(i));
+                found += foalHandles[i] != null ? 1 : 0;
+            }
             if (Donkey != null || Cart != null)
             {
-                Plugin.Log.LogInfo($"Companion: {OwnerId} found its {(Donkey != null ? "donkey " + Donkey.FullId : "")}{(Donkey != null && Cart != null ? " and " : "")}{(Cart != null ? "cart " + Cart.FullId : "")}{(Foal != null ? " and foal " + Foal.FullId : "")}.");
+                Plugin.Log.LogInfo($"Companion: {OwnerId} found its {(Donkey != null ? "donkey " + Donkey.FullId : "")}{(Donkey != null && Cart != null ? " and " : "")}{(Cart != null ? "cart " + Cart.FullId : "")}{(found > 0 ? $" and {found} foal(s)" : "")}.");
             }
             nextFoalCheck = 0f;
             ApplyAll();
@@ -368,7 +422,10 @@ namespace GK2DonkeyAPI.Api
         {
             if (h == Donkey) Donkey = null;
             if (h == Cart) Cart = null;
-            if (h == Foal) Foal = null;
+            for (int i = 0; i < MaxFoals; i++)
+            {
+                if (h == foalHandles[i]) foalHandles[i] = null;
+            }
         }
 
         private void OnHitched(MountHandle d, MountHandle c)
@@ -423,9 +480,10 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // Speeds per style for Faster and Fastest; Normal leaves the player's own (Ride 1.75, Cart 1.5 as shipped).
-        private static readonly float[] RideSpeeds = { 0f, 2.1f, 2.5f };
-        private static readonly float[] CartSpeeds = { 0f, 1.8f, 2.1f };
+        // Speeds per style for Faster and Fastest; Normal leaves the player's own (Ride 2, Cart 1.5 as shipped). Steps
+        // of a quarter, up to the tested 2.5 (Ride) and 2 (Cart).
+        private static readonly float[] RideSpeeds = { 0f, 2.25f, 2.5f };
+        private static readonly float[] CartSpeeds = { 0f, 1.75f, 2f };
 
         private void ApplyRide()
         {
@@ -436,7 +494,7 @@ namespace GK2DonkeyAPI.Api
             foreach (MountStyle style in new[] { MountStyle.Ride, MountStyle.Cart })
             {
                 MountTuning t = Mounts.Tuning(style);
-                float s = (style == MountStyle.Ride ? RideSpeeds : CartSpeeds)[(int)speed];
+                float s = style == MountStyle.Ride ? RideSpeeds[(int)rideSpeed] : CartSpeeds[(int)cartSpeed];
                 Session(t, "SpeedMultiplier", s > 0f, s);
                 Session(t, "BrayOnMountChance", !brays, 0f);
                 Session(t, "BrayIdleEverySeconds", !brays, 0f);
@@ -491,7 +549,8 @@ namespace GK2DonkeyAPI.Api
             }
             var paintKeys = Look(PaintPreset(paint, customPaint, "cart paint"));
             var lanternKeys = Look(LanternPreset(lanternColor, customLantern, "lantern"));
-            foreach (MountHandle h in new[] { Donkey, Foal })
+            var dressed = new List<MountHandle>(foalHandles) { Donkey };
+            foreach (MountHandle h in dressed)
             {
                 if (h != null && h.Exists)
                 {

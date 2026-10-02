@@ -55,6 +55,137 @@ namespace GK2DonkeyAPI
             internal readonly List<Built> Rows = new List<Built>();
         }
 
+        // A mod's rows, made once; which page each is on is planned again whenever rows show or hide (Paginate).
+        private sealed class ModRows
+        {
+            internal MountSettingsPage Page;
+            internal readonly List<Section> Sections = new List<Section>();
+        }
+
+        private sealed class Section
+        {
+            internal string Key, Name;
+            internal Built Heading;
+            internal readonly List<Built> Rows = new List<Built>();
+            internal readonly List<Built> More = new List<Built>(); // "<Name> (more)" headings, made when first needed
+        }
+
+        private static readonly List<ModRows> mods = new List<ModRows>();
+        private static readonly List<Built> built = new List<Built>(); // every row made, to hide the ones not shown
+        private static GameObject Template;
+        private static Transform Content;
+
+        // A section's piece on a page: its heading (or a "(more)" heading) and Count of its shown rows from From.
+        private struct Part
+        {
+            internal int Section, From, Count;
+            internal bool More;
+        }
+
+        // The pages for sections of rows[s] shown rows each (a heading counts as a row): the fewest pages, a section
+        // going on over the next page when it must ("(more)"); within that many pages, a section starts a new page
+        // instead of being cut wherever that still fits. A cut leaves at least two rows on each side (one row alone
+        // under a "(more)" heading read as a mistake).
+        internal static List<List<(int Section, int From, int Count, bool More)>> PlanPages(int[] rows, int per)
+        {
+            int fewest = Place(rows, 0, per, (s, n) => false).Count;
+            var plan = Place(rows, 0, per, (s, n) => n + Place(rows, s, per, (x, m) => false).Count <= fewest);
+            return plan.ConvertAll(page => page.ConvertAll(x => (x.Section, x.From, x.Count, x.More)));
+        }
+
+        // newPage(section, pages so far): when a section doesn't fit what's left of the page, start it on a new one
+        // (true) or cut it here (false).
+        private static List<List<Part>> Place(int[] rows, int first, int per, Func<int, int, bool> newPage)
+        {
+            var pagesOut = new List<List<Part>>();
+            List<Part> cur = null;
+            int used = 0;
+            for (int s = first; s < rows.Length; s++)
+            {
+                int size = 1 + rows[s];
+                int room = per - used - 1;
+                bool canCut = room >= 2 && rows[s] - room >= 2;
+                if (cur == null || (used + size > per && (!canCut || newPage(s, pagesOut.Count))))
+                {
+                    cur = new List<Part>();
+                    pagesOut.Add(cur);
+                    used = 0;
+                }
+                int from = 0;
+                bool more = false;
+                while (true)
+                {
+                    int take = Math.Min(rows[s] - from, Math.Max(0, per - used - 1));
+                    if (rows[s] - from - take == 1 && take > 2)
+                    {
+                        take--; // never one row alone on the next page
+                    }
+                    cur.Add(new Part { Section = s, From = from, Count = take, More = more });
+                    used += 1 + take;
+                    from += take;
+                    if (from >= rows[s])
+                    {
+                        break;
+                    }
+                    cur = new List<Part>();
+                    pagesOut.Add(cur);
+                    used = 0;
+                    more = true;
+                }
+            }
+            return pagesOut;
+        }
+
+        // The pages from the rows that show now (visible), for every mod; the "Showing" row's names follow.
+        private static void Paginate()
+        {
+            shown.Clear();
+            foreach (ModRows mod in mods)
+            {
+                var visible = mod.Sections.ConvertAll(sec => sec.Rows.FindAll(b => b.Row?.Visible == null || b.Row.Visible()));
+                int[] counts = visible.ConvertAll(v => v.Count).ToArray();
+                var plan = PlanPages(counts, rowsPerPage);
+                for (int i = 0; i < plan.Count; i++)
+                {
+                    var page = new Shown { Page = mod.Page, Name = plan.Count == 1 ? mod.Page.Title : $"{mod.Page.Title} {i + 1}/{plan.Count}" };
+                    int moreUsed = 0;
+                    foreach (var part in plan[i])
+                    {
+                        Section sec = mod.Sections[part.Section];
+                        if (part.More)
+                        {
+                            while (sec.More.Count <= moreUsed)
+                            {
+                                Built h = Make(Template, Content, null, mod.Page, sec.Name + " (more)");
+                                sec.More.Add(h);
+                                built.Add(h);
+                            }
+                            page.Rows.Add(sec.More[moreUsed++]);
+                        }
+                        else
+                        {
+                            page.Rows.Add(sec.Heading);
+                        }
+                        page.Rows.AddRange(visible[part.Section].GetRange(part.From, part.Count));
+                    }
+                    shown.Add(page);
+                }
+            }
+            if (showingSwitch != null)
+            {
+                var names = new List<string> { "Game settings" };
+                foreach (Shown sh in shown)
+                {
+                    names.Add(sh.Name);
+                }
+                if (showingSwitch.CurrentFieldIndex >= names.Count)
+                {
+                    showingSwitch.UpdateField(names.Count - 1, fireCallback: false); // ReinitLabels reads its index in the new list
+                }
+                showingSwitch.ReinitLabels(names.ToArray());
+            }
+        }
+
         private sealed class Built
         {
             internal MountSettingsPage.Row Row;
@@ -107,6 +238,8 @@ namespace GK2DonkeyAPI
             window = settings;
             shown.Clear();
             gameRows.Clear();
+            showing = null;
+            showingSwitch = null; // a new window: the old switch is gone with the old one
             keptRows.Clear();
             // The row to copy: the first "< value >" row, by its component (a name could change with an update).
             UISwitchButton template = settings.GetComponentInChildren<UISwitchButton>(true);
@@ -142,55 +275,35 @@ namespace GK2DonkeyAPI
             }
             rowsPerPage = Math.Max(MinRowsPerPage, gameSettingRows);
 
-            // The pages: each mod's rows by section, in their order, cut at rowsPerPage (a section heading counts).
+            // Each mod's rows by section, in their order: made once; the pages are planned from the rows shown (Paginate).
+            mods.Clear();
+            built.Clear();
+            Template = templateRow;
+            Content = content;
             foreach (MountSettingsPage page in pages)
             {
-                var bySection = new List<KeyValuePair<string, List<MountSettingsPage.Row>>>();
+                var mod = new ModRows { Page = page };
                 foreach (MountSettingsPage.Row r in page.Rows)
                 {
                     if (r.Kind == MountSettingsPage.Kind.Preview)
                     {
                         continue; // the picture goes above this window (LookPreview)
                     }
-                    int at = bySection.FindIndex(kv => kv.Key == r.Section);
-                    if (at < 0)
+                    Section sec = mod.Sections.Find(x => x.Key == r.Section);
+                    if (sec == null)
                     {
-                        bySection.Add(new KeyValuePair<string, List<MountSettingsPage.Row>>(r.Section, new List<MountSettingsPage.Row>()));
-                        at = bySection.Count - 1;
+                        sec = new Section { Key = r.Section, Name = r.ShownSection ?? r.Section };
+                        sec.Heading = Make(templateRow, content, null, page, sec.Name);
+                        built.Add(sec.Heading);
+                        mod.Sections.Add(sec);
                     }
-                    bySection[at].Value.Add(r);
+                    Built b = Make(templateRow, content, r, page, null);
+                    sec.Rows.Add(b);
+                    built.Add(b);
                 }
-                var mine = new List<Shown>();
-                Shown cur = null;
-                foreach (var section in bySection)
-                {
-                    string heading = section.Value[0].ShownSection ?? section.Key;
-                    // A new page when the whole section doesn't fit; a section longer than a page goes on over the
-                    // next, its heading repeated.
-                    if (cur == null || cur.Rows.Count + 1 + section.Value.Count > rowsPerPage && cur.Rows.Count > 0)
-                    {
-                        cur = new Shown();
-                        mine.Add(cur);
-                    }
-                    cur.Rows.Add(Make(templateRow, content, null, page, heading));
-                    foreach (MountSettingsPage.Row r in section.Value)
-                    {
-                        if (cur.Rows.Count >= rowsPerPage)
-                        {
-                            cur = new Shown();
-                            mine.Add(cur);
-                            cur.Rows.Add(Make(templateRow, content, null, page, heading + " (more)"));
-                        }
-                        cur.Rows.Add(Make(templateRow, content, r, page, null));
-                    }
-                }
-                for (int i = 0; i < mine.Count; i++)
-                {
-                    mine[i].Page = page;
-                    mine[i].Name = mine.Count == 1 ? page.Title : $"{page.Title} {i + 1}/{mine.Count}";
-                    shown.Add(mine[i]);
-                }
+                mods.Add(mod);
             }
+            Paginate();
 
             // The "Showing" row, first in the window.
             var names = new List<string> { "Game settings" };
@@ -204,12 +317,7 @@ namespace GK2DonkeyAPI
             SetLabel(showing, showingSwitch, "Showing");
             showingSwitch.Initialize(Show, names.ToArray(), 0);
             showing.SetActive(true);
-            int rows = 0;
-            foreach (Shown s in shown)
-            {
-                rows += s.Rows.Count;
-            }
-            Plugin.Log.LogInfo($"Settings: added {rows} rows on {shown.Count} page(s) to the game's Settings window ({rowsPerPage} a page, as the game's own; {keptRows.Count} other element(s) of the window kept on every page).");
+            Plugin.Log.LogInfo($"Settings: added {built.Count} rows to the game's Settings window, {shown.Count} page(s) as they show now ({rowsPerPage} a page, as the game's own; {keptRows.Count} other element(s) of the window kept on every page).");
         }
 
         // The window's content: the vertical layout the rows sit in, above the UISwitchButton.
@@ -713,16 +821,23 @@ namespace GK2DonkeyAPI
                     g.SetActive(page == 0 && (!gameRowsWereActive.TryGetValue(g, out bool was) || was));
                 }
             }
-            for (int i = 0; i < shown.Count; i++)
+            // Rows shown or hidden since (Custom) can change the pages: planned again; the same page, or the last.
+            Paginate();
+            if (page > shown.Count)
             {
-                foreach (Built b in shown[i].Rows)
+                page = current = shown.Count;
+            }
+            foreach (Built b in built)
+            {
+                b.Go.SetActive(false);
+            }
+            if (page > 0)
+            {
+                foreach (Built b in shown[page - 1].Rows)
                 {
-                    bool on = i + 1 == page && (b.Row?.Visible == null || b.Row.Visible());
-                    if (on)
-                    {
-                        Sync(b);
-                    }
-                    b.Go.SetActive(on);
+                    Sync(b);
+                    b.Go.SetActive(true);
+                    b.Go.transform.SetAsLastSibling(); // in the page's order ("(more)" headings are made later)
                 }
             }
             foreach (GameObject g in keptRows)
