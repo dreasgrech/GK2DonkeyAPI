@@ -84,10 +84,15 @@ namespace GK2DonkeyAPI
 
             public void Attach(Wgo donkey)
             {
+                AttachRoot(donkey.transform);
+            }
+
+            // Any root with the donkey prefab's parts under it (the settings' preview copy has no Wgo).
+            public void AttachRoot(Transform root)
+            {
                 Detach();
                 try
                 {
-                    Transform root = donkey.transform;
                     Transform poleSway = FindTopLevel(root, "donkey_cart_lantern_sway");
                     Transform lightSway = FindTopLevel(root, "light_sway");
                     if (poleSway == null || lightSway == null)

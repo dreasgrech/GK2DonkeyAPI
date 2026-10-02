@@ -30,32 +30,41 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 
 All of these apply at once:
 - **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
-  game's **Mods** menu, under GK2 Saddle Up!.
+  game's **Mods** menu, under GK2 Saddle Up!. Its sections are numbered (1. Keys first) to keep them in this order.
 - **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
   settings and Saddle Up's pages. The keys and the name show there read-only; you set those in the cfg.
 - **Always:** in `BepInEx\config\dreas.gk2.saddleup.cfg` (with the game closed).
 
-| Section | Setting | Default | |
+| Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| Keys | Ride, Drive, Hitch, Bell, Send away | H, G, J, none, none | The hitch key is a single key (modifiers are ignored). |
-| Behaviour | Riding speed | Normal | Normal, Faster, Fastest. |
+| 1. Keys | Ride, Drive, Hitch, Bell, Send away | H, G, J, none, none | The hitch key is a single key (modifiers are ignored). |
+| 2. Behaviour | Riding speed | Normal | Normal, Faster, Fastest. |
 | | Get off at building doors | on | Off: you ride into houses, and the cart goes through the furniture. |
 | | Say why mounting is refused | on | The keeper's thought bubble. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
-| | Keep the donkey with the save | on | |
-| Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
-| | Coat | the game's | Brown, Dark, Cream, Black, or Custom (a hex colour). |
+| | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
+| 3. Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
+| | Coat | the game's | Brown, Dark, Cream, Black, or Custom. |
 | | Harness | the game's | Black, Red, Blue, Green, or Custom. |
 | | Brays | on | |
 | | A foal | off | A small donkey that stays with yours and follows it around. |
-| Cart | Paint | the game's | Dark wood, Red, Green, Blue, or Custom. |
+| 4. Cart | Paint | the game's | Dark wood, Red, Green, Blue, or Custom. |
 | | Lantern | on | The lantern on its pole. |
 | | Lantern lit by day | on | Off: it goes dark by day, like your hand lantern. |
 | | Lantern light | warm (the game's) | White, Green, Blue, or Custom. |
 | | Bell when setting off | on | When the cart sets off with a load after standing. |
-| Sound | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
+| 5. Sound | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
 
-The custom colours are hex `RRGGBB` (e.g. `8A5A36`); their rows show only while that choice is Custom. Everything
+**Choosing colours:**
+- **A picture** of your donkey in the chosen colours sits next to the settings: at the top right in the Mods menu,
+  beside the Settings window without it. It shows your donkey as last seen in the game, so call it once if it isn't
+  there yet.
+- **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
+  Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
+  Mustard, Gold) and its lightness, with a swatch of the result.
+- **Choose colours** (in Donkey) closes the menu and opens the colour rows at the bottom of the screen, over the game.
+  You see your real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
+  Only in a game. Everything
 else (the seat, the cargo on the cart, the lantern's place, the sounds themselves) is tuned and fixed; mod authors
 can change it in GK2 Donkey API's dev panel.
 

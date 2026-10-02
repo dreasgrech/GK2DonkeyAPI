@@ -117,6 +117,14 @@ The API does the work; Saddle Up only defines its settings and maps its keys (`s
 - **`MountHandle.SetDisplayName`** and **`HitchKey` in `Mounts.Behaviour`.**
 - **The framework link** moved from Saddle Up into the API (the same safeguards; `tests/FrameworkScan` checks it).
 - **The preset colours are first guesses** and need judging in game: coat, harness, paint and lantern.
+- **Choosing colours (2026-10-02):**
+  - named colours and a lightness row instead of hex (`MountPalette`);
+  - a swatch row;
+  - a picture of the donkey in its colours next to the settings (`LookPreview.cs`, `ColorsPreview.cs`);
+  - "Choose colours", a bar over the game with Done and Cancel (`LookBar.cs`).
+
+  The user asked for the picture knowing it can break with updates: it's built so that it can only fail by not
+  showing.
 - **Known limit:** the framework's Mods menu shows a choice by its enum name (e.g. `DarkWood`), not the label; the
   Settings window shows the labels.
 

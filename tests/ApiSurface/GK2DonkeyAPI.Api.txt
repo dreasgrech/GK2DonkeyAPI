@@ -120,6 +120,10 @@ class GK2DonkeyAPI.Api.MountHandle
   method GK2DonkeyAPI.Api.MountResult SetPersist(string ownerId, bool keep)
   method GK2DonkeyAPI.Api.MountResult TakeToHead(bool showMessage = True)
   method string ToString()
+static class GK2DonkeyAPI.Api.MountPalette
+  method static string Hex(GK2DonkeyAPI.Api.PaletteColor c)
+  method static string Hex(GK2DonkeyAPI.Api.PaletteColor c, int lightness)
+  method static string Swatch(string hex)
 struct GK2DonkeyAPI.Api.MountResult
   property bool Ok { get; }
   property string Reason { get; }
@@ -175,11 +179,14 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle Unhitch(GK2DonkeyAPI.Api.MountHandle donkey)
   method static GK2DonkeyAPI.Api.MountHandle UnhitchRidden()
 class GK2DonkeyAPI.Api.MountSettingsPage
-  method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null)
+  method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
+  method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null)
+  method void LookButton(string section, string label, string description)
+  method void Preview(string section, string label, GK2DonkeyAPI.Api.MountCompanion companion)
   method void Publish()
-  method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null)
+  method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null)
 class GK2DonkeyAPI.Api.MountSpawn
@@ -215,6 +222,31 @@ class GK2DonkeyAPI.Api.MountTuning
   method void Reset()
   method T Set(string ownerId, string key, T value)
   method System.Type TypeOf(string key)
+enum GK2DonkeyAPI.Api.PaletteColor
+  Chestnut = 0
+  Sand = 1
+  Cream = 2
+  Snow = 3
+  Ash = 4
+  Slate = 5
+  Charcoal = 6
+  Black = 7
+  Rust = 8
+  Brick = 9
+  Wine = 10
+  Coral = 11
+  Rose = 12
+  Plum = 13
+  Lavender = 14
+  Navy = 15
+  Sky = 16
+  Teal = 17
+  Mint = 18
+  Moss = 19
+  Forest = 20
+  Olive = 21
+  Mustard = 22
+  Gold = 23
 enum GK2DonkeyAPI.Api.RiderPose
   Walk = 1
   Idle = 0

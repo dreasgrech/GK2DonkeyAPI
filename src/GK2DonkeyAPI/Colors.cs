@@ -513,7 +513,7 @@ namespace GK2DonkeyAPI
             private readonly string[] paletteKeys = new string[GroupCount];
             private readonly string[] lutKeys = new string[GroupCount];
             private readonly bool[] groupActive = new bool[GroupCount];
-            private Wgo attachedTo;
+            private UnityEngine.Object attachedTo; // the donkey's Wgo, or the root of the settings' preview copy (PreviewStage)
             private bool dirty = true;
             private float nextVerify;
             private float nextSpriteCheck = UnityEngine.Random.value * 0.2f; // spread over the donkeys' frames
@@ -541,15 +541,26 @@ namespace GK2DonkeyAPI
             // lists are rebuilt the same way).
             internal void Attach(Wgo donkey)
             {
+                AttachTo(donkey, donkey != null && donkey ? donkey.gameObject : null);
+            }
+
+            // Any root with the donkey prefab's parts under it (the settings' preview copy has no Wgo).
+            internal void AttachRoot(GameObject root)
+            {
+                AttachTo(root, root);
+            }
+
+            private void AttachTo(UnityEngine.Object owner, GameObject root)
+            {
                 Detach();
-                if (donkey == null || !donkey)
+                if (root == null || !root)
                 {
                     return;
                 }
-                attachedTo = donkey;
+                attachedTo = owner;
                 try
                 {
-                    foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                    foreach (SpriteRenderer sr in root.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
                     {
                         if (UnderCargo(sr.transform)) continue;
                         if (sr.name == "bdy" || sr.name == "hed")
@@ -561,7 +572,7 @@ namespace GK2DonkeyAPI
                             sprites.Add(new SpriteTarget { R = sr, G = Group.WheelSprites });
                         }
                     }
-                    foreach (Object3DMesh m in donkey.GetComponentsInChildren<Object3DMesh>(includeInactive: true))
+                    foreach (Object3DMesh m in root.GetComponentsInChildren<Object3DMesh>(includeInactive: true))
                     {
                         if (UnderCargo(m.transform)) continue;
                         Group? g = MeshGroup(m);

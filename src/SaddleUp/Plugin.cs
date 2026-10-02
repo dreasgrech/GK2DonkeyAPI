@@ -52,22 +52,24 @@ namespace SaddleUp
             p.Toggle("Behaviour", "DismountIndoors", true, "Get off at building doors", "Off: you ride into houses, and the cart goes through the furniture.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", v));
             p.Toggle("Behaviour", "ShowMessages", true, "Say why mounting is refused", "The keeper's thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
-            p.Toggle("Behaviour", "KeepWithSaves", true, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart.", v => me.KeepWithSaves = v);
+            p.Toggle("Behaviour", "KeepWithSaves", true, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
 
+            p.Preview("Donkey", "Looks like", me);
+            p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your donkey and cart change. Done keeps them, Cancel puts them back.");
             p.Text("Donkey", "Name", "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
-            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" });
-            p.Text("Donkey", "CustomCoat", "8A5A36", "Custom coat colour", "Hex RRGGBB, used with Custom.", v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
-            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", HarnessColor.Game, "Harness", "", v => me.Harness = v, new[] { "The game's", "Black", "Red", "Blue", "Green", "Custom" });
-            p.Text("Donkey", "CustomHarness", "A8322D", "Custom harness colour", "Hex RRGGBB, used with Custom.", v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
+            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+            p.Color("Donkey", "CustomCoat", "Custom coat", "Used when the coat is Custom.", PaletteColor.Chestnut, v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
+            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", HarnessColor.Game, "Harness", "", v => me.Harness = v, new[] { "The game's", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+            p.Color("Donkey", "CustomHarness", "Custom harness", "Used when the harness is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
             p.Toggle("Donkey", "Brays", true, "Brays", "Now and then, and when you get on.", v => me.Brays = v);
             p.Toggle("Donkey", "Foal", false, "A foal", "A small donkey that stays with yours and follows it around.", v => me.HasFoal = v);
 
-            ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", CartPaint.Game, "Paint", "", v => me.Paint = v, new[] { "The game's", "Dark wood", "Red", "Green", "Blue", "Custom" });
-            p.Text("Cart", "CustomPaint", "9C3B2E", "Custom paint colour", "Hex RRGGBB, used with Custom.", v => me.CustomPaint = v, () => paint.Value == CartPaint.Custom);
+            ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", CartPaint.Game, "Paint", "", v => me.Paint = v, new[] { "The game's", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
+            p.Color("Cart", "CustomPaint", "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => me.CustomPaint = v, () => paint.Value == CartPaint.Custom);
             p.Toggle("Cart", "Lantern", true, "Lantern", "The lantern on its pole.", v => me.Lantern = v);
             p.Toggle("Cart", "LanternByDay", true, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => me.LanternByDay = v);
-            ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor", LanternColor.Game, "Lantern light", "", v => me.LanternLight = v, new[] { "Warm (the game's)", "White", "Green", "Blue", "Custom" });
-            p.Text("Cart", "CustomLantern", "FFF1DA", "Custom light colour", "Hex RRGGBB, used with Custom.", v => me.CustomLantern = v, () => light.Value == LanternColor.Custom);
+            ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor", LanternColor.Game, "Lantern light", "", v => me.LanternLight = v, new[] { "Warm (the game's)", "White", "Green", "Blue", "Custom" }, look: true);
+            p.Color("Cart", "CustomLantern", "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => me.CustomLantern = v, () => light.Value == LanternColor.Custom);
             p.Toggle("Cart", "Bell", true, "Bell when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
 
             p.Steps("Sound", "Volume", 100, 0, 150, 10, "Donkey and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");

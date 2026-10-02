@@ -71,6 +71,19 @@ namespace GK2DonkeyAPI
         }
 
         public static string RepoDefaultsPath => RepoFile(FileName);
+
+        // A path in the mod's source folder whether the file is there or not; null without the sources.
+        public static string RepoPath(string name)
+        {
+            try
+            {
+                return string.IsNullOrEmpty(SourceDir) || !Directory.Exists(SourceDir) ? null : Path.Combine(SourceDir, name);
+            }
+            catch
+            {
+                return null;
+            }
+        }
         public static bool CanWriteDefaults => RepoDefaultsPath != null;
 
         public static void Load()

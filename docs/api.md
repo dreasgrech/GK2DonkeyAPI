@@ -458,9 +458,16 @@ Where they apply:
 | `Key(...)` | `ConfigEntry<KeyboardShortcut>` | read-only (set in the cfg) |
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |
+| `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness, and a swatch row of the result |
+| `Choice` / `Steps` with `look: true` | as above | also in the look bar |
+| `Preview(companion)` | nothing | a picture of the companion's donkey in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
+| `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
 
-- **Binding:** each row binds an entry in your cfg (that section and key) and runs `apply` now and on every change,
-  from the Mods menu, the Settings window or the cfg.
+- **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from the Mods menu, the
+  Settings window or the cfg.
+- **Sections keep your order:** the cfg section is numbered in the order you first use them (`1. Keys`,
+  `2. Behaviour`, ...), because the framework's Mods menu sorts sections by name and offers no other way to order
+  them. The game's Settings window shows the plain names.
 - **`Publish()`, once, after the rows, from your `Awake`:**
   - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
     sorts the sections by name);
@@ -469,6 +476,17 @@ Where they apply:
     gamepad).
 - **The framework is never required:** the API's link to it is soft, and if it's missing or fails, the Settings
   window is used.
+- **The look, three ways:**
+  - **named colours with a swatch:** the swatch is TextMeshPro rich text, so the game's own labels draw the colour;
+  - **the picture:** the donkey's body and head, recoloured on the CPU with the same mapping the game's shader gets,
+    from the companion's "paper donkey" (an instance never spawned, carrying only its look). The art is read from the
+    game's own files, the look the game loads for the donkey (`Assets/AddressableAssets/WGOs/npc_donkey.prefab`,
+    through Addressables), so it shows in the main menu and indoors too, and follows a game update that redraws it. On the title's line in
+    the Mods menu, beside the Settings window, and at the top of the look bar;
+  - **the look bar:** the look rows at the bottom of the screen over the game, with Done and Cancel. Cancel puts
+    back what was set when it opened. Only in a game.
+- **The picture and the bar are extras.** They're found and built defensively. If something about them fails
+  (after a game or framework update), they don't show and the log says so once; the settings work as before.
 - **`status`:** shown as a "Status" row. "Active" lets the Mods menu confirm the game build; anything else shows
   "Unknown build" there.
 

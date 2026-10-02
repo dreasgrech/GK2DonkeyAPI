@@ -511,7 +511,7 @@ namespace GK2DonkeyAPI
         {
             // Unity's layout pass runs before every OnGUI and makes garbage even when nothing is drawn: off while the
             // panel isn't showing (set here, before this frame's OnGUI, so the events of one frame agree).
-            bool gui = harmony != null && Enabled.Value && TuningWindow.Showing();
+            bool gui = harmony != null && Enabled.Value && (TuningWindow.Showing() || PreviewStage.DevWanted);
             if (useGUILayout != gui)
             {
                 useGUILayout = gui;
@@ -568,8 +568,12 @@ namespace GK2DonkeyAPI
                 }
                 using (Perf.Measure(Perf.S.Panel))
                 {
-                    TuningWindow.Draw();
+                    if (TuningWindow.Showing())
+                    {
+                        TuningWindow.Draw();
+                    }
                 }
+                PreviewStage.DevGui(); // the settings picture's tuning window, while the picture shows (dev panel on)
             }
             catch (Exception e)
             {

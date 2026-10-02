@@ -42,6 +42,7 @@ namespace GK2DonkeyAPI
 
         private sealed class Shown
         {
+            internal MountSettingsPage Page;
             internal string Name;              // in the "Showing" row
             internal readonly List<Built> Rows = new List<Built>();
         }
@@ -132,19 +133,29 @@ namespace GK2DonkeyAPI
                 Shown cur = null;
                 foreach (var section in bySection)
                 {
+                    string heading = section.Value[0].ShownSection ?? section.Key;
+                    // A new page when the whole section doesn't fit; a section longer than a page goes on over the
+                    // next, its heading repeated.
                     if (cur == null || cur.Rows.Count + 1 + section.Value.Count > RowsPerPage && cur.Rows.Count > 0)
                     {
                         cur = new Shown();
                         mine.Add(cur);
                     }
-                    cur.Rows.Add(Make(templateRow, content, null, page, section.Key));
+                    cur.Rows.Add(Make(templateRow, content, null, page, heading));
                     foreach (MountSettingsPage.Row r in section.Value)
                     {
+                        if (cur.Rows.Count >= RowsPerPage)
+                        {
+                            cur = new Shown();
+                            mine.Add(cur);
+                            cur.Rows.Add(Make(templateRow, content, null, page, heading + " (more)"));
+                        }
                         cur.Rows.Add(Make(templateRow, content, r, page, null));
                     }
                 }
                 for (int i = 0; i < mine.Count; i++)
                 {
+                    mine[i].Page = page;
                     mine[i].Name = mine.Count == 1 ? page.Title : $"{page.Title} {i + 1}/{mine.Count}";
                     shown.Add(mine[i]);
                 }
@@ -181,7 +192,47 @@ namespace GK2DonkeyAPI
             return row.parent;
         }
 
-        private static GameObject RowGameObject(Transform t, Transform content)
+        internal static Transform ContentOf(Transform t) => RowOf(t);
+
+        // The page shown now, and the window (for the donkey's picture beside it); null on the game's page.
+        internal static MountSettingsPage ShownPage => window != null && current > 0 && current <= shown.Count && LazyWindowsStackController.IsWindowOpened(window) ? shown[current - 1].Page : null;
+        internal static Transform WindowRect => window != null ? window.transform : null;
+
+        internal const float PreviewRowHeight = 150f;
+        private static readonly Dictionary<MountSettingsPage, GameObject> previewRows = new Dictionary<MountSettingsPage, GameObject>();
+
+        // The picture's row of this page while it's shown, or null.
+        internal static RectTransform PreviewRowOf(MountSettingsPage page)
+        {
+            return page != null && previewRows.TryGetValue(page, out GameObject go) && go != null && go.activeInHierarchy ? (RectTransform)go.transform : null;
+        }
+
+        // One row under any parent (the look bar's too), and how to bring its value up to date.
+        internal static GameObject MakeRow(GameObject template, Transform parent, MountSettingsPage.Row r, MountSettingsPage page, out Action refresh)
+        {
+            Built b = Make(template, parent, r, page, null);
+            refresh = () => Sync(b);
+            return b.Go;
+        }
+
+        // A row with a label only (a heading or a note), shown.
+        internal static GameObject MakeHeading(GameObject template, Transform parent, MountSettingsPage page, string text)
+        {
+            Built b = Make(template, parent, null, page, text);
+            b.Go.SetActive(true);
+            return b.Go;
+        }
+
+        internal static void SetHeading(GameObject row, string text)
+        {
+            UISwitchButton sw = row != null ? row.GetComponentInChildren<UISwitchButton>(true) : null;
+            if (sw != null)
+            {
+                SetLabel(row, sw, text);
+            }
+        }
+
+        internal static GameObject RowGameObject(Transform t, Transform content)
         {
             while (t.parent != content)
             {
@@ -232,10 +283,10 @@ namespace GK2DonkeyAPI
             var b = new Built { Row = r };
             b.Go = Copy(template, content, Prefix + page.OwnerId + " " + (r?.Entry?.Definition.Key ?? r?.Label ?? heading));
             b.Switch = b.Go.GetComponentInChildren<UISwitchButton>(true);
-            if (r == null)
+            if (r == null || r.Kind == MountSettingsPage.Kind.Preview)
             {
-                // A section heading: the label only, everything else of the row hidden.
-                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, heading);
+                // A section heading, or the picture's row: the label only, everything else of the row hidden.
+                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, r != null ? r.Label : heading);
                 b.Fields = new[] { "" };
                 b.Switch.Initialize(_ => { }, b.Fields, 0);
                 b.Switch.IsInteractable = false;
@@ -249,6 +300,14 @@ namespace GK2DonkeyAPI
                 foreach (GamepadNavigationItem n in b.Go.GetComponentsInChildren<GamepadNavigationItem>(true))
                 {
                     n.enabled = false; // not a stop for the gamepad
+                }
+                if (r != null)
+                {
+                    // The picture's row: its own height; the picture is laid over it (LookPreview).
+                    SetLabel(b.Go, b.Switch, r.Label);
+                    var le = b.Go.GetComponent<LayoutElement>() ?? b.Go.AddComponent<LayoutElement>();
+                    le.minHeight = le.preferredHeight = PreviewRowHeight;
+                    previewRows[page] = b.Go;
                 }
                 return b;
             }
@@ -278,13 +337,17 @@ namespace GK2DonkeyAPI
                     b.Fields = f.ToArray();
                     b.Values = v.ToArray();
                     break;
+                case MountSettingsPage.Kind.Button:
+                    // Either arrow (or the gamepad's left/right) presses it.
+                    b.Fields = new[] { "Open", "Open " };
+                    break;
                 default:
                     b.Fields = new[] { ReadOnlyText(r) };
                     break;
             }
             Built captured = b;
             b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", null, null, loopNavigation: r.Kind != MountSettingsPage.Kind.Steps);
-            b.Switch.IsInteractable = b.Values != null;
+            b.Switch.IsInteractable = b.Values != null || r.Kind == MountSettingsPage.Kind.Button;
             return b;
         }
 
@@ -293,7 +356,13 @@ namespace GK2DonkeyAPI
             string s;
             switch (r.Kind)
             {
-                case MountSettingsPage.Kind.Info: s = r.InfoValue?.Invoke(); break;
+                case MountSettingsPage.Kind.Info:
+                    s = r.InfoValue?.Invoke();
+                    if (string.IsNullOrEmpty(s))
+                    {
+                        return "-";
+                    }
+                    break;
                 case MountSettingsPage.Kind.Key: s = ((KeyboardShortcut)r.Entry.BoxedValue).ToString(); break;
                 default: s = r.Entry?.BoxedValue as string; break;
             }
@@ -319,6 +388,19 @@ namespace GK2DonkeyAPI
 
         private static void Changed(Built b, int index)
         {
+            if (b.Row?.Kind == MountSettingsPage.Kind.Button)
+            {
+                b.Switch.UpdateField(0, fireCallback: false);
+                try
+                {
+                    b.Row.OnClick?.Invoke();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Settings: {b.Row.Label} failed: {e.Message}");
+                }
+                return;
+            }
             if (b.Values == null || index < 0 || index >= b.Values.Length)
             {
                 return;
@@ -330,6 +412,30 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 Plugin.Log.LogWarning($"Settings: {b.Row.Label} could not be set: {e.Message}");
+            }
+            // One change can show or hide others (Custom) and change a swatch.
+            if (current > 0)
+            {
+                Show(current);
+            }
+            LookBar.Refresh();
+        }
+
+        // Its value up to date (the cfg, the Mods menu or another row may have changed it).
+        private static void Sync(Built b)
+        {
+            if (b.Row == null || b.Row.Kind == MountSettingsPage.Kind.Button)
+            {
+                return;
+            }
+            if (b.Values != null)
+            {
+                b.Switch.UpdateField(IndexOf(b), fireCallback: false);
+            }
+            else
+            {
+                b.Switch.ReinitLabels(new[] { ReadOnlyText(b.Row) });
+                b.Switch.UpdateField(0, fireCallback: false);
             }
         }
 
@@ -364,18 +470,9 @@ namespace GK2DonkeyAPI
                 foreach (Built b in shown[i].Rows)
                 {
                     bool on = i + 1 == page && (b.Row?.Visible == null || b.Row.Visible());
-                    if (on && b.Row != null)
+                    if (on)
                     {
-                        // The cfg or the Mods menu may have changed it since.
-                        if (b.Values != null)
-                        {
-                            b.Switch.UpdateField(IndexOf(b), fireCallback: false);
-                        }
-                        else
-                        {
-                            b.Switch.ReinitLabels(new[] { ReadOnlyText(b.Row) });
-                            b.Switch.UpdateField(0, fireCallback: false);
-                        }
+                        Sync(b);
                     }
                     b.Go.SetActive(on);
                 }

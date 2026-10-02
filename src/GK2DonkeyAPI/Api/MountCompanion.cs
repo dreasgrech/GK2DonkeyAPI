@@ -61,6 +61,24 @@ namespace GK2DonkeyAPI.Api
 
         public string OwnerId { get; }
 
+        // A donkey on paper: never spawned or registered, it only carries this companion's look, so the settings can
+        // show the colours (MountSettingsPage.Preview) in the main menu, indoors, or before the donkey was ever called.
+        private Mount.Instance paper;
+
+        internal Mount.Instance Paper
+        {
+            get
+            {
+                if (paper == null)
+                {
+                    // With its cart: it's drawn with one (PreviewStage) and reads the Cart style's lantern settings.
+                    paper = new Mount.Instance(0, OwnerId, ephemeral: true, hasDonkey: true, hasCart: true) { OwnLook = true };
+                    ApplyLook();
+                }
+                return paper;
+            }
+        }
+
         // Its donkey (with its cart while hitched), its cart while that stands on its own, and its foal. Null when none.
         public MountHandle Donkey { get; private set; }
         public MountHandle Cart { get; private set; }
@@ -431,6 +449,19 @@ namespace GK2DonkeyAPI.Api
             }
             var coatKeys = Look(CoatPreset(coat, customCoat, "coat"));
             var harnessKeys = Look(HarnessPreset(harness, customHarness, "harness"));
+            if (paper != null)
+            {
+                OnPaper(CoatKeys, coatKeys);
+                OnPaper(HarnessKeys, harnessKeys);
+            }
+            var paperPaint = Look(PaintPreset(paint, customPaint, "cart paint"));
+            var paperLantern = Look(LanternPreset(lanternColor, customLantern, "lantern"));
+            if (paper != null)
+            {
+                OnPaper(PaintKeys, paperPaint);
+                OnPaper(LanternKeys, paperLantern);
+                paper.ColorsRig.MarkDirty();
+            }
             var paintKeys = Look(PaintPreset(paint, customPaint, "cart paint"));
             var lanternKeys = Look(LanternPreset(lanternColor, customLantern, "lantern"));
             foreach (MountHandle h in new[] { Donkey, Foal })
@@ -451,6 +482,24 @@ namespace GK2DonkeyAPI.Api
         }
 
         private static Dictionary<string, object> Look(Dictionary<string, object> d) => d ?? new Dictionary<string, object>();
+
+        // The paper donkey's own values, as an instance override would be (the values are already of the key's type).
+        private void OnPaper(string[] keys, Dictionary<string, object> values)
+        {
+            foreach (string key in keys)
+            {
+                if (values.TryGetValue(key, out object v))
+                {
+                    paper.Overrides[key] = v;
+                    paper.OverrideOwners[key] = OwnerId;
+                }
+                else
+                {
+                    paper.Overrides.Remove(key);
+                    paper.OverrideOwners.Remove(key);
+                }
+            }
+        }
 
         // Every key a part may set: cleared (if this owner set it) when the preset doesn't use it.
         private static readonly string[] CoatKeys = { "CoatColorize", "CoatColorizeAmount", "CoatBrightness", "CoatSaturation" };
@@ -509,7 +558,7 @@ namespace GK2DonkeyAPI.Api
                 case CoatColor.Black: return new Dictionary<string, object> { ["CoatBrightness"] = 0.35f, ["CoatSaturation"] = 0.2f };
                 case CoatColor.Custom:
                     string hex = Hex(custom, what);
-                    return hex == null ? null : new Dictionary<string, object> { ["CoatColorize"] = hex };
+                    return hex == null ? null : new Dictionary<string, object> { ["CoatColorize"] = hex, ["CoatBrightness"] = Lightness(hex, "Coat") };
                 default: return null;
             }
         }
@@ -524,7 +573,7 @@ namespace GK2DonkeyAPI.Api
                 case HarnessColor.Green: return new Dictionary<string, object> { ["HarnessColorize"] = "3F6E3A" };
                 case HarnessColor.Custom:
                     string hex = Hex(custom, what);
-                    return hex == null ? null : new Dictionary<string, object> { ["HarnessColorize"] = hex };
+                    return hex == null ? null : new Dictionary<string, object> { ["HarnessColorize"] = hex, ["HarnessBrightness"] = Lightness(hex, "Harness") };
                 default: return null;
             }
         }
@@ -545,11 +594,18 @@ namespace GK2DonkeyAPI.Api
             {
                 return null;
             }
-            return new Dictionary<string, object>
+            var d = new Dictionary<string, object>
             {
                 ["CartBodyColorize"] = tint, ["CartBodyColorizeAmount"] = 0.75f,
                 ["ShaftsColorize"] = tint, ["ShaftsColorizeAmount"] = 0.75f,
             };
+            if (c == CartPaint.Custom)
+            {
+                d["CartBodyColorizeAmount"] = d["ShaftsColorizeAmount"] = 1f;
+                d["CartBodyBrightness"] = Lightness(tint, "CartBody");
+                d["ShaftsBrightness"] = Lightness(tint, "Shafts");
+            }
+            return d;
         }
 
         private static Dictionary<string, object> LanternPreset(LanternColor c, string custom, string what)
@@ -564,6 +620,16 @@ namespace GK2DonkeyAPI.Api
                 default: return null;
             }
             return hex == null ? null : new Dictionary<string, object> { ["LanternLightColor"] = hex, ["GlowColor"] = hex, ["LitGlassTint"] = hex };
+        }
+
+        // Colorize keeps each pixel's own brightness, so a custom colour also sets the brightness: how light the colour
+        // is against how light the region's art is (Black comes out dark, Snow light).
+        private static float Lightness(string hex, string region)
+        {
+            ColorUtility.TryParseHtmlString("#" + hex, out Color c);
+            Color.RGBToHSV(c, out _, out _, out float v);
+            float art = Mathf.Max(0.05f, Colors.ArtLightness(region));
+            return Mathf.Clamp(v / art, 0.15f, 3f);
         }
 
         private static readonly HashSet<string> warned = new HashSet<string>(StringComparer.Ordinal);
