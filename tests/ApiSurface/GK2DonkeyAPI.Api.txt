@@ -184,7 +184,7 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null)
   method void LookButton(string section, string label, string description)
-  method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your donkey)
+  method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your donkey, bool cart = True)
   method void Publish()
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)

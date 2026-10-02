@@ -57,7 +57,7 @@ All of these apply at once:
 
 **Choosing colours:**
 - **A picture** of your donkey and cart in the chosen colours, walking on the spot: above the Mods window if it
-  fits; when it doesn't (most screens up to 1080p), at the top of both the Donkey and the Cart sections (above the
+  fits; when it doesn't (most screens up to 1080p), at the top of the Donkey section (the donkey alone) and of the Cart section (with its cart) (above the
   Settings window without the Mods menu). It needs no donkey in
   the game.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,

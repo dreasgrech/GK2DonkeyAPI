@@ -460,7 +460,7 @@ Where they apply:
 | `Info(section, label, value)` | nothing | read-only |
 | `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
 | `Choice` / `Steps` with `look: true` | as above | also in the look bar |
-| `Preview(section, companion, label = "Your donkey")` | a row, shown only when there's no room above the window; call once per section that should show it | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
+| `Preview(section, companion, label = "Your donkey", cart = true)` | a row, shown only when there's no room above the window; call once per section that should show it. `cart: false`: that row shows the donkey alone | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
 
 - **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from the Mods menu, the

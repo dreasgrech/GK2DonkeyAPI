@@ -8,16 +8,20 @@ namespace GK2DonkeyAPI
     // donkey's look from the game's files (Assets/AddressableAssets/WGOs/<id>.prefab, the file the game draws the
     // donkey from) far below the world, wearing a paper donkey's colours and lantern (its Colors.Rig and Lantern.Rig
     // attached to the copy), photographed into a RenderTexture by a camera of its own at the game camera's angle.
+    // - Two pictures of the one copy, each with its own camera and framing (View): the donkey with its cart, and the
+    //   donkey alone (every renderer but the donkey's own sprites switched off for that photo only, then on again:
+    //   not a list of the cart's parts, since the lantern's hanging lamp is made later, on its first tick, and was
+    //   missed that way). One copy, so the colour and lantern rigs, which hold one root each, dress both.
     // - Kept apart by distance, not by layer: the game names all 32 layers (found 2026-10-02), so the copy keeps its
-    //   own; the game's cameras never look 5000 units down, and ours sees nothing else there.
+    //   own; the game's cameras never look 5000 units down, and ours see nothing else there.
     // - The copy keeps only what draws (transforms, mesh and sprite renderers, the game's Object3DMesh, which sets up
-    //   the 3D cart's materials on its own) and its animator, for the game's idle pose, with its events off. Every
-    //   other script, collider, light, sound is removed before the copy is ever switched on. The game's file stays
-    //   loaded while the copy exists (released, the copy's meshes went with it).
+    //   the 3D cart's materials on its own) and its animator, walking on the spot, with its events off. Every other
+    //   script, collider, light, sound is removed before the copy is ever switched on. The game's file stays loaded
+    //   while the copy exists (released, the copy's meshes went with it).
     // - The cart's parts on as in Cart style, the loaded-cart body and the effect helpers off.
     // - A point light of its own with a short reach: lit the same in the main menu and at night, the world untouched.
-    // - Framed on what's drawn (Frame, then Tighten on the read-back pixels), again whenever it's changed or something
-    //   reaches the edge.
+    // - Each picture framed on what's drawn (Frame, then Tighten on the read-back pixels), again whenever it's changed
+    //   or something reaches the edge.
     // Any failure: the stage is taken down for the session, logged once, and the picture is the donkey alone
     // (Colors.BuildPreview) or nothing. The game is never touched.
     internal static class PreviewStage
@@ -35,20 +39,40 @@ namespace GK2DonkeyAPI
             "donkey_cart_empty_sway", "donkey_cart_lantern_sway",
         };
 
+        // One picture: its camera, its texture, its framing.
+        private sealed class View
+        {
+            internal readonly bool WithCart;
+            internal readonly string Name;
+            internal Camera Cam;
+            internal RenderTexture Rt;
+            internal bool Reframe = true;
+            internal float NextEdgeCheck, LastAsked = -10f;
+            internal int LastRenderFrame = -1;
+
+            internal View(bool withCart)
+            {
+                WithCart = withCart;
+                Name = withCart ? "with the cart" : "the donkey alone";
+            }
+        }
+
+        private static readonly View cartView = new View(true), donkeyView = new View(false);
+        private static readonly View[] views = { cartView, donkeyView };
+
         private static GameObject stage, copy;
-        private static Camera cam;
         private static Light lamp;
-        private static RenderTexture rt;
         private static Animator animator;
-        private static bool failed, loadStarted, described, reframe = true, tuningFrame;
-        private static int framesSinceBuilt;
+        private static bool failed, loadStarted, described;
+        private static int framesSinceBuilt, lastPoseFrame = -1;
         private static Mount.Instance dressedAs;
         private static UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> loading;
-        private static float nextEdgeCheck, lastAsked;
-        private static int lastRenderFrame = -1;
         private const int SettleFrames = 8;
         private static Mount.Instance shownPaper;
         private static float ppu = 50f;
+        private static readonly List<Renderer> donkeyRenderers = new List<Renderer>(); // its body and head sprites
+        private static readonly List<Renderer> allRenderers = new List<Renderer>();
+        private static readonly List<Renderer> switchedOff = new List<Renderer>();
 
         // Picture pixels per art pixel. The walk animation rocks the cart body by up to 3 degrees; at one picture pixel
         // per art pixel that tilt snaps into a one-pixel step across the middle of the cart (it looked split in two).
@@ -59,43 +83,42 @@ namespace GK2DonkeyAPI
         // The picture's size in art pixels (the CPU stand-in is drawn at one pixel per art pixel).
         internal static Vector2 ArtSize(Texture pic)
         {
-            float d = pic == rt ? Detail : 1f;
+            float d = pic == cartView.Rt || pic == donkeyView.Rt ? Detail : 1f;
             return new Vector2(pic.width / d, pic.height / d);
         }
 
-        // What the dev window tunes (session only; "Log these values" prints them to be made the defaults).
-        private static Vector2 cartShift, donkeyShift;
-        private static float pitch = GameCameraPitch;
-        private static bool facingRight;
-        private static readonly List<(Transform T, Vector3 At)> cartRoots = new List<(Transform, Vector3)>();
-        private static readonly List<(Transform T, Vector3 At)> donkeyRoots = new List<(Transform, Vector3)>();
-
-        // The dev window is wanted: the dev panel is on and the picture was asked for a moment ago.
-        // The cart picture won't come this session: show the donkey alone instead.
+        // The pictures won't come this session: show the donkey alone (Colors.BuildPreview) instead.
         internal static bool Failed => failed;
 
-        internal static bool DevWanted => false; // the tuning window is gone: the parts were right (2026-10-02)
-
-        // Every frame (MountRegistry.Tick): while the picture was asked for a moment ago, draw it again, so the walk
-        // plays smoothly between the displays' four-a-second updates.
+        // Every frame (MountRegistry.Tick): each picture asked for a moment ago is drawn again, so the walk plays
+        // smoothly between the displays' four-a-second updates.
         internal static void Tick()
         {
-            if (shownPaper != null && !failed && copy != null && Time.unscaledTime - lastAsked < 0.5f)
+            if (shownPaper == null || failed || copy == null)
             {
-                Picture(shownPaper, ask: false);
+                return;
+            }
+            foreach (View v in views)
+            {
+                if (Time.unscaledTime - v.LastAsked < 0.5f)
+                {
+                    Picture(shownPaper, v.WithCart, ask: false);
+                }
             }
         }
 
-        // The picture of the paper donkey with its cart, or null (not ready yet, or failed: use the donkey alone).
-        internal static Texture Picture(Mount.Instance paper, bool ask = true)
+        // The picture of the paper donkey, with its cart or alone, or null (not ready yet, or failed: use the donkey
+        // alone from Colors.BuildPreview).
+        internal static Texture Picture(Mount.Instance paper, bool withCart = true, bool ask = true)
         {
             if (failed || paper == null)
             {
                 return null;
             }
+            View v = withCart ? cartView : donkeyView;
             if (ask)
             {
-                lastAsked = Time.unscaledTime;
+                v.LastAsked = Time.unscaledTime;
                 shownPaper = paper;
             }
             try
@@ -116,18 +139,30 @@ namespace GK2DonkeyAPI
                         paper.ColorsRig.MarkDirty();
                         paper.LanternRig.AttachRoot(copy.transform); // the pole where the tuning puts it, the lamp hanging
                     }
-                    reframe = true;
+                    foreach (View each in views)
+                    {
+                        each.Reframe = true;
+                    }
+                }
+                // The copy is posed once a frame, for both pictures.
+                bool newFrame = Time.frameCount != lastPoseFrame;
+                if (newFrame)
+                {
+                    lastPoseFrame = Time.frameCount;
                 }
                 // Settled before it's first framed and shown: Object3DMesh sets its materials on Start, the lamp is hung on
                 // the lantern's first tick, and the walk starts from the idle pose. Framed earlier, the picture changed
                 // size a moment after it first showed (2026-10-02).
                 if (framesSinceBuilt < SettleFrames)
                 {
-                    if (framesSinceBuilt >= 1)
+                    if (newFrame)
                     {
-                        Pose(paper);
+                        if (framesSinceBuilt >= 1)
+                        {
+                            Pose(paper);
+                        }
+                        framesSinceBuilt++;
                     }
-                    framesSinceBuilt++;
                     return null;
                 }
                 if (!described)
@@ -135,40 +170,16 @@ namespace GK2DonkeyAPI
                     described = true;
                     Describe("after start");
                 }
-                if (Time.frameCount != lastRenderFrame)
+                if (newFrame)
                 {
-                    lastRenderFrame = Time.frameCount;
                     Pose(paper);
-                    // While tuning (the dev window) the framing holds still and wide, so a part that is moved moves in
-                    // the picture: framed on what's drawn, the moved donkey stayed at the edge and the cart seemed to
-                    // move instead (the video of 2026-10-02 20-30).
-                    bool tuning = false;
-                    if (tuning != tuningFrame)
-                    {
-                        tuningFrame = tuning;
-                        reframe = true;
-                    }
-                    if (reframe)
-                    {
-                        reframe = false;
-                        Frame(tuning ? 1.5f : 0f);
-                        if (!tuning)
-                        {
-                            cam.Render();
-                            Tighten();
-                        }
-                    }
-                    cam.Render();
-                    if (!tuning && Time.unscaledTime >= nextEdgeCheck)
-                    {
-                        nextEdgeCheck = Time.unscaledTime + 1f;
-                        if (TouchesEdge())
-                        {
-                            reframe = true; // something reached the edge (the lamp hung, a setting changed): frame again
-                        }
-                    }
                 }
-                return rt;
+                if (Time.frameCount != v.LastRenderFrame)
+                {
+                    v.LastRenderFrame = Time.frameCount;
+                    Render(v);
+                }
+                return v.Rt;
             }
             catch (Exception e)
             {
@@ -177,32 +188,69 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // The pose for this picture: the dev shifts and facing, then the lantern (after the animator: this runs in
-        // the plugin's LateUpdate) and the colours.
+        // One photo: for the donkey alone, everything but the donkey's sprites is off just for it (and on again after,
+        // also on a failure).
+        private static void Render(View v)
+        {
+            switchedOff.Clear();
+            if (!v.WithCart)
+            {
+                copy.GetComponentsInChildren(false, allRenderers);
+                foreach (Renderer r in allRenderers)
+                {
+                    if (r != null && r.enabled && !donkeyRenderers.Contains(r))
+                    {
+                        r.enabled = false;
+                        switchedOff.Add(r);
+                    }
+                }
+            }
+            try
+            {
+                if (v.Reframe)
+                {
+                    v.Reframe = false;
+                    Frame(v);
+                    v.Cam.Render();
+                    Tighten(v);
+                }
+                v.Cam.Render();
+                if (Time.unscaledTime >= v.NextEdgeCheck)
+                {
+                    v.NextEdgeCheck = Time.unscaledTime + 1f;
+                    if (TouchesEdge(v))
+                    {
+                        v.Reframe = true; // something reached the edge (the lamp hung, a setting changed): frame again
+                    }
+                }
+            }
+            finally
+            {
+                foreach (Renderer r in switchedOff)
+                {
+                    if (r != null)
+                    {
+                        r.enabled = true;
+                    }
+                }
+                switchedOff.Clear();
+            }
+        }
+
+        // The pose for this frame: walking on the spot, then the lantern (after the animator: this runs in the
+        // plugin's LateUpdate) and the colours.
         private static void Pose(Mount.Instance paper)
         {
-            foreach (var (t, rest) in cartRoots)
-            {
-                if (t != null) t.localPosition = rest + new Vector3(cartShift.x, cartShift.y, 0f);
-            }
-            foreach (var (t, rest) in donkeyRoots)
-            {
-                if (t != null) t.localPosition = rest + new Vector3(donkeyShift.x, donkeyShift.y, 0f);
-            }
             if (animator != null)
             {
                 // Walking on the spot, facing left: the game's own parameters (AnimationComponentBase: State 1 = Walk,
                 // Direction 0 right / -180 left, walk_speed 1 = the clip's own pace).
                 foreach (AnimatorControllerParameter p in animator.parameters)
                 {
-                    if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("Direction", facingRight ? 0f : -180f);
+                    if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("Direction", -180f);
                     else if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) animator.SetInteger("State", 1);
                     else if (p.name == "walk_speed" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("walk_speed", 1f);
                 }
-            }
-            if (cam != null && Mathf.Abs(cam.transform.eulerAngles.x - pitch) > 0.01f)
-            {
-                reframe = true;
             }
             using (Mount.Bind(paper))
             {
@@ -227,18 +275,21 @@ namespace GK2DonkeyAPI
                 {
                     UnityEngine.Object.Destroy(stage);
                 }
-                if (rt != null)
+                foreach (View v in views)
                 {
-                    rt.Release();
-                    UnityEngine.Object.Destroy(rt);
+                    if (v.Rt != null)
+                    {
+                        v.Rt.Release();
+                        UnityEngine.Object.Destroy(v.Rt);
+                    }
+                    v.Rt = null;
+                    v.Cam = null;
                 }
             }
             catch
             {
             }
             stage = copy = null;
-            cam = null;
-            rt = null;
             dressedAs = null;
         }
 
@@ -270,18 +321,15 @@ namespace GK2DonkeyAPI
             copy.name = "GK2DonkeyAPI preview copy";
             Strip(copy);
             animator = copy.GetComponentInChildren<Animator>(true);
-            cartRoots.Clear();
-            donkeyRoots.Clear();
+            donkeyRenderers.Clear();
             SpriteRenderer body = null;
+            int cartParts = 0;
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true))
             {
                 if (Array.IndexOf(CartPartNames, t.name) >= 0)
                 {
                     t.gameObject.SetActive(true);
-                    if (!HasAncestorIn(t, CartPartNames))
-                    {
-                        cartRoots.Add((t, t.localPosition));
-                    }
+                    cartParts++;
                 }
                 else if (t.name == "donkey_cart_body_sway")
                 {
@@ -300,7 +348,7 @@ namespace GK2DonkeyAPI
                 }
                 if (sr != null && (t.name == "bdy" || t.name == "hed"))
                 {
-                    donkeyRoots.Add((t, t.localPosition));
+                    donkeyRenderers.Add(sr);
                     if (t.name == "bdy")
                     {
                         body = sr;
@@ -315,14 +363,18 @@ namespace GK2DonkeyAPI
             ppu = body.sprite != null ? body.sprite.pixelsPerUnit : 50f;
             stage.SetActive(true); // the copy's Object3DMesh starts: its materials are set by the next frame
 
-            var camGo = new GameObject("GK2DonkeyAPI preview camera");
-            camGo.transform.SetParent(stage.transform, false);
-            cam = camGo.AddComponent<Camera>();
-            cam.enabled = false;
-            cam.orthographic = true;
-            cam.cullingMask = ~(1 << 5); // everything but UI: there's nothing but the copy down here
-            cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+            foreach (View v in views)
+            {
+                var camGo = new GameObject("GK2DonkeyAPI preview camera (" + v.Name + ")");
+                camGo.transform.SetParent(stage.transform, false);
+                v.Cam = camGo.AddComponent<Camera>();
+                v.Cam.enabled = false;
+                v.Cam.orthographic = true;
+                v.Cam.cullingMask = ~(1 << 5); // everything but UI: there's nothing but the copy down here
+                v.Cam.clearFlags = CameraClearFlags.SolidColor;
+                v.Cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                v.Reframe = true;
+            }
 
             var lightGo = new GameObject("GK2DonkeyAPI preview light");
             lightGo.transform.SetParent(stage.transform, false);
@@ -333,27 +385,17 @@ namespace GK2DonkeyAPI
 
             framesSinceBuilt = 0;
             described = false;
-            reframe = true;
-            Frame();
-            Plugin.Log.LogInfo($"Settings: the picture with the cart is set up ({cartRoots.Count} cart parts, {donkeyRoots.Count} donkey sprites, {ppu} pixels per unit).");
+            Frame(cartView);
+            Plugin.Log.LogInfo($"Settings: the pictures are set up ({cartParts} cart parts on, {donkeyRenderers.Count} donkey sprites, {ppu} pixels per unit).");
             Describe("built");
         }
 
-        private static bool HasAncestorIn(Transform t, string[] names)
-        {
-            for (Transform p = t.parent; p != null; p = p.parent)
-            {
-                if (Array.IndexOf(names, p.name) >= 0) return true;
-            }
-            return false;
-        }
-
         // The camera at the game's angle, framed wide on every shown part's bounds (then Tighten crops to what's drawn).
-        // pad: world units of room on every side (while tuning, so moved parts stay in the picture).
-        private static void Frame(float pad = 0f)
+        // The light is placed by the cart picture's framing only, so both pictures are lit the same.
+        private static void Frame(View v)
         {
-            Transform ct = cam.transform;
-            ct.rotation = Quaternion.Euler(pitch, 0f, 0f);
+            Transform ct = v.Cam.transform;
+            ct.rotation = Quaternion.Euler(GameCameraPitch, 0f, 0f);
             Vector3 forward = ct.forward;
             Bounds b = new Bounds();
             bool any = false;
@@ -381,47 +423,49 @@ namespace GK2DonkeyAPI
             {
                 throw new InvalidOperationException("nothing to frame");
             }
-            b.Expand(new Vector3(pad * 2f, pad * 2f, 0f));
             float density = ppu * Detail;
             int w = Mathf.Clamp(Mathf.CeilToInt(b.size.x * density) + 8 * Detail, 16, 768 * Detail);
             int h = Mathf.Clamp(Mathf.CeilToInt(b.size.y * density) + 8 * Detail, 16, 768 * Detail);
-            cam.orthographicSize = h / density / 2f;
-            cam.aspect = (float)w / h;
+            v.Cam.orthographicSize = h / density / 2f;
+            v.Cam.aspect = (float)w / h;
             Vector3 centre = stage.transform.position + ct.TransformDirection(new Vector3(b.center.x, b.center.y, 0f));
             ct.position = centre - forward * (b.extents.z + 50f);
-            cam.nearClipPlane = 0.01f;
-            cam.farClipPlane = b.size.z + 100f;
-            NewTexture(w, h);
-            lamp.transform.position = centre - forward * 4f;
-            lamp.range = Mathf.Max(b.size.x, b.size.y) * 3f + 8f; // the stage only: the world is 5000 units away
+            v.Cam.nearClipPlane = 0.01f;
+            v.Cam.farClipPlane = b.size.z + 100f;
+            NewTexture(v, w, h);
+            if (v.WithCart)
+            {
+                lamp.transform.position = centre - forward * 4f;
+                lamp.range = Mathf.Max(b.size.x, b.size.y) * 3f + 8f; // the stage only: the world is 5000 units away
+            }
         }
 
-        private static void NewTexture(int w, int h)
+        private static void NewTexture(View v, int w, int h)
         {
-            if (rt != null && rt.width == w && rt.height == h)
+            if (v.Rt != null && v.Rt.width == w && v.Rt.height == h)
             {
                 return;
             }
-            cam.targetTexture = null;
-            if (rt != null)
+            v.Cam.targetTexture = null;
+            if (v.Rt != null)
             {
-                rt.Release();
-                UnityEngine.Object.Destroy(rt);
+                v.Rt.Release();
+                UnityEngine.Object.Destroy(v.Rt);
             }
-            rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point, name = "GK2DonkeyAPI preview" };
-            rt.Create();
-            cam.targetTexture = rt;
+            v.Rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point, name = "GK2DonkeyAPI preview (" + v.Name + ")" };
+            v.Rt.Create();
+            v.Cam.targetTexture = v.Rt;
         }
 
-        private static Color32[] ReadBack()
+        private static Color32[] ReadBack(View v)
         {
             RenderTexture prev = RenderTexture.active;
             Texture2D t = null;
             try
             {
-                RenderTexture.active = rt;
-                t = new Texture2D(rt.width, rt.height, TextureFormat.RGBA32, mipChain: false);
-                t.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
+                RenderTexture.active = v.Rt;
+                t = new Texture2D(v.Rt.width, v.Rt.height, TextureFormat.RGBA32, mipChain: false);
+                t.ReadPixels(new Rect(0, 0, v.Rt.width, v.Rt.height), 0, 0, false);
                 return t.GetPixels32();
             }
             finally
@@ -435,10 +479,10 @@ namespace GK2DonkeyAPI
         }
 
         // Is anything drawn on the picture's outermost pixels? Then it was cut off.
-        private static bool TouchesEdge()
+        private static bool TouchesEdge(View v)
         {
-            Color32[] px = ReadBack();
-            int w = rt.width, h = rt.height;
+            Color32[] px = ReadBack(v);
+            int w = v.Rt.width, h = v.Rt.height;
             for (int x = 0; x < w; x++)
             {
                 if (px[x].a > 8 || px[(h - 1) * w + x].a > 8) return true;
@@ -450,11 +494,11 @@ namespace GK2DonkeyAPI
             return false;
         }
 
-        // Onto what was drawn: the camera moved and narrowed onto the non-empty pixels, 2 pixels round.
-        private static void Tighten()
+        // Onto what was drawn: the camera moved and narrowed onto the non-empty pixels, a margin round.
+        private static void Tighten(View v)
         {
-            Color32[] px = ReadBack();
-            int w0 = rt.width, h0 = rt.height;
+            Color32[] px = ReadBack(v);
+            int w0 = v.Rt.width, h0 = v.Rt.height;
             int minX = w0, minY = h0, maxX = -1, maxY = -1;
             for (int y = 0; y < h0; y++)
             {
@@ -471,26 +515,22 @@ namespace GK2DonkeyAPI
             }
             if (maxX < 0)
             {
-                Plugin.Log.LogInfo("[preview] the picture is empty; framing left wide.");
+                Plugin.Log.LogInfo($"[preview] the picture {v.Name} is empty; framing left wide.");
                 return;
             }
             const int margin = 6 * Detail; // room for the walk's bob and the lamp's swing
             minX = Math.Max(0, minX - margin); minY = Math.Max(0, minY - margin);
             maxX = Math.Min(w0 - 1, maxX + margin); maxY = Math.Min(h0 - 1, maxY + margin);
             int w = maxX - minX + 1, h = maxY - minY + 1;
-            float unitsPerPixel = cam.orthographicSize * 2f / h0;
+            float unitsPerPixel = v.Cam.orthographicSize * 2f / h0;
             float dx = ((minX + maxX + 1) / 2f - w0 / 2f) * unitsPerPixel;
             float dy = ((minY + maxY + 1) / 2f - h0 / 2f) * unitsPerPixel;
-            Transform ct = cam.transform;
+            Transform ct = v.Cam.transform;
             ct.position += ct.right * dx + ct.up * dy;
-            NewTexture(w, h);
-            cam.orthographicSize = h * unitsPerPixel / 2f;
-            cam.aspect = (float)w / h;
-            Plugin.Log.LogInfo($"[preview] framed on what's drawn: {w} x {h} pixels (from {w0} x {h0}).");
-        }
-
-        internal static void DevGui()
-        {
+            NewTexture(v, w, h);
+            v.Cam.orthographicSize = h * unitsPerPixel / 2f;
+            v.Cam.aspect = (float)w / h;
+            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn, {w} x {h} pixels (from {w0} x {h0}).");
         }
 
         // ------------------------------------------------------------------ the log
@@ -510,6 +550,8 @@ namespace GK2DonkeyAPI
         {
             try
             {
+                Camera cam = cartView.Cam;
+                RenderTexture rt = cartView.Rt;
                 Transform ct = cam.transform;
                 Plugin.Log.LogInfo($"[preview] {when}: camera at {ct.position}, angle {ct.eulerAngles}, ortho size {cam.orthographicSize:0.###}, aspect {cam.aspect:0.###}, image {rt.width}x{rt.height}; animator {(animator != null ? animator.runtimeAnimatorController?.name ?? "no controller" : "none")}.");
                 int n = 0, on = 0;

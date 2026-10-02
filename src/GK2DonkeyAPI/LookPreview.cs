@@ -251,7 +251,7 @@ namespace GK2DonkeyAPI
             Spot above = measured ? Above(window, under, art) : default;
             bool useRows = (!measured || above.K < MinScale) && title != null && page.HasPreviewRows;
             SetRowWanted(page, useRows);
-            List<RectTransform> rows = useRows ? FindRows(title, page) : null;
+            List<(RectTransform Rect, bool WithCart)> rows = useRows ? FindRows(title, page) : null;
             string rooms = (measured ? $"above {above.RoomW:0} x {above.RoomH:0} -> {above.K:0.##}x; " : "")
                            + $"picture {pic.width} x {pic.height}, {art.x:0} x {art.y:0} art pixels; screen {Screen.width} x {Screen.height}"
                            + (measured ? $", window scale {window.localScale.x:0.###}" : "");
@@ -260,7 +260,7 @@ namespace GK2DonkeyAPI
             {
                 line = rows.Count == 0
                     ? $"[preview] waiting for its rows in {where} ({rooms})."
-                    : $"[preview] shown in its rows ({rows.Count}), in {where}, at {RowScale(rows[0], art):0.##}x ({rooms}).";
+                    : $"[preview] shown in its rows ({string.Join(", ", rows.ConvertAll(r => r.WithCart ? "with the cart" : "the donkey alone"))}), in {where} ({rooms}).";
             }
             else
             {
@@ -276,7 +276,7 @@ namespace GK2DonkeyAPI
             if (useRows)
             {
                 Hide(s);
-                ShowRows(rows, pic, art);
+                ShowRows(rows, paperDonkey, pic);
                 return;
             }
             if (menu)
@@ -307,19 +307,37 @@ namespace GK2DonkeyAPI
             s.Go.SetActive(true);
         }
 
-        // One picture per row, right of the row's middle (its label is on the left); each scrolls with the list.
+        // One picture per row, centred on the row's field area: the framework's "Control" (ModsMenuSettingsPage.
+        // CreateSettingRow: 320 units wide at the row's right for a read-only row, where other rows have their value
+        // and Reset button), level with the row's middle. Without it (another framework version), right of the row's
+        // middle. Each scrolls with the list.
         private static readonly List<Shown> rowPics = new List<Shown>();
+
+        private static RectTransform FieldOf(RectTransform row) => row.Find("Control") as RectTransform;
 
         private static float RowScale(RectTransform row, Vector2 art)
         {
-            Rect r = row.rect;
-            return Fit(r.width * 0.45f, r.height - 12f, art);
+            RectTransform field = FieldOf(row);
+            float roomW = field != null ? field.rect.width : row.rect.width * 0.45f;
+            return Fit(roomW, row.rect.height - 12f, art);
         }
 
-        private static void ShowRows(List<RectTransform> rows, Texture pic, Vector2 art)
+        // fallback: the cart picture, or the donkey alone if the stage failed; a donkey-alone row takes the stage's
+        // donkey-alone picture when there is one.
+        private static void ShowRows(List<(RectTransform Rect, bool WithCart)> rows, Mount.Instance paperDonkey, Texture fallback)
         {
             for (int i = 0; i < rows.Count; i++)
             {
+                Texture pic = rows[i].WithCart ? fallback : PreviewStage.Picture(paperDonkey, withCart: false) ?? (PreviewStage.Failed ? fallback : null);
+                if (pic == null)
+                {
+                    if (i < rowPics.Count)
+                    {
+                        Hide(rowPics[i]);
+                    }
+                    continue;
+                }
+                Vector2 art = PreviewStage.ArtSize(pic);
                 if (i == rowPics.Count || rowPics[i] == null || rowPics[i].Go == null)
                 {
                     Shown n = NewShown();
@@ -332,9 +350,10 @@ namespace GK2DonkeyAPI
                         rowPics[i] = n;
                     }
                 }
-                Place(rowPics[i], rows[i], pic, art, RowScale(rows[i], art));
+                RectTransform field = FieldOf(rows[i].Rect);
+                Place(rowPics[i], field ?? rows[i].Rect, pic, art, RowScale(rows[i].Rect, art));
                 var rt = (RectTransform)rowPics[i].Go.transform;
-                rt.anchorMin = rt.anchorMax = new Vector2(0.62f, 0.5f);
+                rt.anchorMin = rt.anchorMax = new Vector2(field != null ? 0.5f : 0.62f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
                 rt.anchoredPosition = Vector2.zero;
             }
@@ -385,9 +404,9 @@ namespace GK2DonkeyAPI
 
         // The page's picture rows on screen: the rows around the labels of its Preview rows (under the page that holds
         // the title), top to bottom. Empty while they aren't there yet.
-        private static List<RectTransform> FindRows(TextMeshProUGUI title, MountSettingsPage page)
+        private static List<(RectTransform Rect, bool WithCart)> FindRows(TextMeshProUGUI title, MountSettingsPage page)
         {
-            var found = new List<RectTransform>();
+            var found = new List<(RectTransform Rect, bool WithCart)>();
             Transform under = title.rectTransform.parent;
             if (under == null)
             {
@@ -395,9 +414,10 @@ namespace GK2DonkeyAPI
             }
             foreach (TextMeshProUGUI t in under.GetComponentsInChildren<TextMeshProUGUI>(false))
             {
-                if (t.text != null && page.IsPreviewLabel(t.text) && t.transform.parent is RectTransform r && !found.Contains(r))
+                MountSettingsPage.Row row = t.text != null ? page.PreviewRowLabelled(t.text) : null;
+                if (row != null && t.transform.parent is RectTransform r && !found.Exists(f => f.Rect == r))
                 {
-                    found.Add(r);
+                    found.Add((r, row.WithCart));
                 }
             }
             return found;

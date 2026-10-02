@@ -36,6 +36,7 @@ namespace GK2DonkeyAPI.Api
             internal Func<bool> Visible;
             internal bool IsLook;           // shown in the look bar (LookButton)
             internal Action OnClick;         // Kind.Button
+            internal bool WithCart;          // Kind.Preview: the donkey with its cart, or alone
         }
 
         internal readonly List<Row> Rows = new List<Row>();
@@ -168,16 +169,17 @@ namespace GK2DonkeyAPI.Api
         // window, where it stays in view whatever row is scrolled to (LookPreview). When there's no room above it (most
         // screens up to 1080p), it's a row of the page instead, here in this section, in the order called: call it once
         // per section that should show it (e.g. at the top of each section with look rows, so it's in view from each).
-        // label: the row's name. Above the game's Settings window without the Mods menu; in the look bar too. It needs
-        // no donkey in the game: drawn from the game's own files in the companion's colours, so it shows in the main
-        // menu and indoors.
-        public void Preview(string section, MountCompanion companion, string label = "Your donkey")
+        // label: the row's name; cart: the row's picture is the donkey with its cart, or the donkey alone (above the
+        // window it's always with the cart). Above the game's Settings window without the Mods menu; in the look bar
+        // too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so it shows
+        // in the main menu and indoors.
+        public void Preview(string section, MountCompanion companion, string label = "Your donkey", bool cart = true)
         {
             PreviewOf = companion;
             Add(new Row
             {
                 Kind = Kind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
-                Visible = () => LookPreview.RowWanted(this),
+                Visible = () => LookPreview.RowWanted(this), WithCart = cart,
             });
         }
 
@@ -186,7 +188,7 @@ namespace GK2DonkeyAPI.Api
         // transparent dot each (a zero-width space didn't count).
         internal bool HasPreviewRows => Rows.Exists(r => r.Kind == Kind.Preview);
 
-        internal bool IsPreviewLabel(string text) => Rows.Exists(r => r.Kind == Kind.Preview && r.Label == text);
+        internal Row PreviewRowLabelled(string text) => Rows.Find(r => r.Kind == Kind.Preview && r.Label == text);
         internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
 
         // A button that closes the menu and opens the look bar over the game: the look rows (Choice and Steps with look,
