@@ -1,17 +1,17 @@
 using Mono.Cecil;
 
-// The public API of GK2 Mounts (namespace GK2Mounts.Api), written as one line per type and member and compared with
-// the committed snapshot GK2Mounts.Api.txt. Any difference fails, so an API change is always a reviewed diff:
-// additions bump Mounts.ApiVersion's minor, changes or removals its major (docs/mounts-api-design.md).
-// Usage: dotnet run -c Release            compare (build GK2Mounts in Release first)
+// The public API of GK2 Donkey API (namespace GK2DonkeyAPI.Api), written as one line per type and member and compared with
+// the committed snapshot GK2DonkeyAPI.Api.txt. Any difference fails, so an API change is always a reviewed diff:
+// additions bump Mounts.ApiVersion's minor, changes or removals its major (docs/api-design.md).
+// Usage: dotnet run -c Release            compare (build GK2DonkeyAPI in Release first)
 //        dotnet run -c Release -- --update  write the snapshot from the current build
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
-var dll = Path.Combine(repo, "src", "GK2Mounts", "bin", "Release", "netstandard2.1", "GK2Mounts.dll");
-var snapshot = Path.Combine(repo, "tests", "ApiSurface", "GK2Mounts.Api.txt");
+var dll = Path.Combine(repo, "src", "GK2DonkeyAPI", "bin", "Release", "netstandard2.1", "GK2DonkeyAPI.dll");
+var snapshot = Path.Combine(repo, "tests", "ApiSurface", "GK2DonkeyAPI.Api.txt");
 var mod = ModuleDefinition.ReadModule(dll);
 
 var lines = new List<string>();
-foreach (var t in mod.Types.Where(t => t.IsPublic && t.Namespace == "GK2Mounts.Api").OrderBy(t => t.FullName))
+foreach (var t in mod.Types.Where(t => t.IsPublic && t.Namespace == "GK2DonkeyAPI.Api").OrderBy(t => t.FullName))
 {
     string kind = t.IsEnum ? "enum" : t.IsValueType ? "struct" : t.IsInterface ? "interface" : (t.IsAbstract && t.IsSealed) ? "static class" : "class";
     lines.Add($"{kind} {t.FullName}");
@@ -50,7 +50,7 @@ var oldLines = old.Split('\n', StringSplitOptions.RemoveEmptyEntries).ToHashSet(
 var newLines = lines.ToHashSet();
 foreach (var l in oldLines.Except(newLines)) Console.WriteLine("REMOVED  " + l);
 foreach (var l in newLines.Except(oldLines)) Console.WriteLine("ADDED    " + l);
-Console.WriteLine("FAIL the public API differs from tests/ApiSurface/GK2Mounts.Api.txt. Review, bump Mounts.ApiVersion, then run with --update.");
+Console.WriteLine("FAIL the public API differs from tests/ApiSurface/GK2DonkeyAPI.Api.txt. Review, bump Mounts.ApiVersion, then run with --update.");
 return 1;
 
 static string Name(TypeReference t)

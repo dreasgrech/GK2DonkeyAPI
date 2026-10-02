@@ -1,6 +1,6 @@
-# Colour investigation scripts (GK2 Mounts, Colors tab)
+# Colour investigation scripts (GK2 Donkey API, Colors tab)
 
-Offline scripts behind `docs/mounts-colors.md`. Python 3 with UnityPy, Pillow and lz4; they read the Steam install and
+Offline scripts behind `docs/colors.md`. Python 3 with UnityPy, Pillow and lz4; they read the Steam install and
 write next to themselves. Run in this order:
 
 1. `scan_tint.py`: every shader's properties and keywords, every LUT/palette texture, the skin presets (`tint_scan.json`).
@@ -10,4 +10,4 @@ write next to themselves. Run in this order:
 4. `colour_masks.py`: the donkey's colours (from the probe's atlas dump in `BepInEx/GK2-sprites`) with a mask sheet
    per colour; `cart_masks.py` the same for the cart textures from step 2.
 
-The colour lists in `src/GK2Mounts/Colors.cs` come from steps 4. Only the donkey's frames (`0301_*`) are read.
+The colour lists in `src/GK2DonkeyAPI/Colors.cs` come from steps 4. Only the donkey's frames (`0301_*`) are read.
