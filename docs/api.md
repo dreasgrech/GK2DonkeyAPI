@@ -409,28 +409,33 @@ cart. A corpse there is removed by the game's own corpse timer.
 - Details: [`persistence.md`](persistence.md). The test mod
   [`examples/GK2DonkeyHerd`](../examples/GK2DonkeyHerd/Plugin.cs) uses all of it.
 
-## A player mod in a few lines: the companion and the settings page (0.14.0)
+## A player mod in a few lines: the companion and the settings page (0.14.0; key actions and Status 0.16.0)
 
 Most player mods want the same thing: the keeper's own donkey, called with a key, with its cart, kept with the save,
-and settings a player can find. The API does all of that; your mod defines its settings and maps its keys.
-`src/SaddleUp/Plugin.cs` is the whole of such a mod.
+and settings a player can find. The API does all of that; your mod lists its settings and what its keys do, all in
+`Awake`, with no `Update` or `OnDestroy` of its own. `src/SaddleUp/Plugin.cs` is the whole of such a mod.
 
 ```csharp
 MountCompanion me = Mounts.Companion("you.gk2.mymod");               // one per mod
-MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mod", "you", "What it does.", () => "Active");
-ConfigEntry<KeyboardShortcut> ride = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...");
+MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mod", "you", "What it does.");
+p.Status("Keys");                                                    // "Active", or why the API is off
+p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...", pressed: () => me.Use(MountStyle.Ride));
 p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" });
 p.Toggle("Donkey", "Foal", false, "A foal", "...", v => me.HasFoal = v);
 p.Publish();
-// in Update:
-if (/* ride pressed */) me.Use(MountStyle.Ride);
 ```
+
+- **Keys:** the API polls a `Key` row's key while it's on and calls `pressed`. A key counts with its own modifiers
+  held, whatever else is held (walking): `KeyboardShortcut.IsDown()` never fires while a movement key is down.
+- **Unloaded:** when your plugin is destroyed (a script reloader), the API clears your tuning
+  (`Mounts.ClearTuning`) and drops your keys.
 
 **`MountCompanion`** (`Mounts.Companion(owner)`):
 
 | Member | Does |
 |---|---|
-| `Use(MountStyle)` | The ride key (Ride) or the cart key (Cart). On foot: the donkey (spawned the first time) comes and the keeper gets on, the cart brought and hitched, or left standing, as asked. Mounted in that style: off (the donkey stays). Mounted in the other style: the cart is left standing, or brought and hitched. Refusals come back as `MountResult` (indoors, busy, ...). |
+| `Use(MountStyle)` | The ride key (Ride) or the cart key (Cart). On foot: the donkey (spawned the first time) comes and the keeper gets on, the cart brought and hitched, or left standing, as asked. Mounted in that style: off (the donkey stays). Mounted in the other style: the cart is left standing, or brought and hitched. Refusals come back as `MountResult` (indoors, busy, ...) and are written to the log with their reason. |
+| `RingBell()` | The bell, while mounted; else nothing. |
 | `SendAway()` | The donkey, cart and foal go; the cart's load is set down first. |
 | `Donkey`, `Cart`, `Foal` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`). Found again after a load by the keys `"donkey"`, `"cart"` and `"foal"`. |
 | `KeepWithSaves` | Kept with the save (on). |
@@ -448,14 +453,16 @@ Where they apply:
   value can't differ per instance.
 - **Set by you**, as your owner id, so the dev panel shows who set them. A value another mod set is never cleared.
 
-**`MountSettingsPage`** (`Mounts.SettingsPage(owner, Config, title, author, description, status)`):
+**`MountSettingsPage`** (`Mounts.SettingsPage(owner, Config, title, author, description, status)`; without `status`,
+`Mounts.StatusText`: "Active", or why the API is off):
 
 | Row | Binds | In the game's Settings window |
 |---|---|---|
 | `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | Off / On |
 | `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | the labels |
 | `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | each step, `format` turns it into text ("100%") |
-| `Key(...)` | `ConfigEntry<KeyboardShortcut>` | read-only (set in the cfg) |
+| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | read-only (set in the cfg) |
+| `Status(section, label = "Status", description)` | nothing: the page's status | read-only |
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |
 | `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |

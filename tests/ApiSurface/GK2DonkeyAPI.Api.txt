@@ -73,6 +73,7 @@ class GK2DonkeyAPI.Api.MountCompanion
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
   property float SoundVolume { get; set; }
   property GK2DonkeyAPI.Api.MountSpeed Speed { get; set; }
+  method void RingBell()
   method void SendAway()
   method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
 enum GK2DonkeyAPI.Api.MountFeature
@@ -142,6 +143,7 @@ static class GK2DonkeyAPI.Api.Mounts
   property static string Owner { get; }
   property static GK2DonkeyAPI.Api.MountHandle Riding { get; }
   property static GK2DonkeyAPI.Api.MountTuning Shuffle { get; }
+  property static string StatusText { get; }
   property static GK2DonkeyAPI.Api.MountStyle Style { get; }
   event static System.Action<string> CargoLoaded
   event static System.Action<string> CargoUnloaded
@@ -182,10 +184,11 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void Info(string section, string label, System.Func<string> value, string description = )
-  method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null)
+  method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null, System.Action pressed = null)
   method void LookButton(string section, string label, string description)
   method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your donkey, bool cart = True)
   method void Publish()
+  method void Status(string section, string label = Status, string description = What the mod is doing right now.)
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null)

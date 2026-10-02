@@ -51,10 +51,14 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 15, 0);
+        public static readonly Version ApiVersion = new Version(0, 16, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
+
+        // For a mod's status line: "Active", or why the API is off.
+        public static string StatusText => IsAvailable ? "Active"
+            : "Off: GK2 Donkey API is off (its General.Enabled, or it switched itself off after a game update; see BepInEx/LogOutput.log).";
 
         public static bool IsMounted => Mount.IsMounted;
 
@@ -420,11 +424,17 @@ namespace GK2DonkeyAPI.Api
 
         // Your mod's companion: the keeper's own donkey with its cart and foal, its keys, looks and ride settings
         // (MountCompanion). One per owner; the same object on every call.
-        public static MountCompanion Companion(string ownerId) => MountCompanion.For(ownerId);
+        public static MountCompanion Companion(string ownerId)
+        {
+            MountCompanion c = MountCompanion.For(ownerId);
+            KeyActions.Track(ownerId); // unloaded, its tuning is cleared (KeyActions)
+            return c;
+        }
 
         // Your mod's player settings (MountSettingsPage): in GK2 Mod Framework's Mods menu when it's installed, else
-        // in the game's own Settings window. title: shown to players; status: shown as a read-only "Status" row and
-        // "Active" when all is well (the Mods menu then confirms the game build). Add rows, then Publish.
+        // in the game's own Settings window. title: shown to players; status: what the Status row shows (page.Status)
+        // and "Active" when all is well (the Mods menu then confirms the game build); without it, StatusText. Add rows,
+        // then Publish.
         public static MountSettingsPage SettingsPage(string ownerId, BepInEx.Configuration.ConfigFile config, string title, string author, string description, Func<string> status = null)
         {
             if (string.IsNullOrEmpty(ownerId))

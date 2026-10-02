@@ -67,7 +67,7 @@ namespace GK2DonkeyAPI
 
             public override void OnRegister(Gk2ModContext context)
             {
-                if (Mounts.IsAvailable && (page.Status == null || page.Status() == "Active"))
+                if (Mounts.IsAvailable && page.StatusValue() == "Active")
                 {
                     try
                     {

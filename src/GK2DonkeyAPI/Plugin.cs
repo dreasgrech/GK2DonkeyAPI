@@ -543,6 +543,14 @@ namespace GK2DonkeyAPI
             }
             try
             {
+                KeyActions.Poll(); // the mods' keys (MountSettingsPage.Key with pressed:), before this frame's update
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"The mods' keys failed this frame. {e}");
+            }
+            try
+            {
                 Mount.Tick();
             }
             catch (Exception e)

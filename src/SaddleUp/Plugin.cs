@@ -1,7 +1,6 @@
 using System;
 using BepInEx;
 using BepInEx.Configuration;
-using BepInEx.Logging;
 using GK2DonkeyAPI.Api;
 using UnityEngine;
 
@@ -9,8 +8,9 @@ namespace SaddleUp
 {
     // The player mod: the keeper's own donkey, cart and foal, built only on the public GK2 Donkey API (docs/api.md).
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
-    // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window). This mod only
-    // defines its settings and maps its keys, so it's also the example of how little a player mod needs.
+    // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
+    // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
+    // the example of how little a player mod needs.
     [BepInPlugin(Guid, "GK2 Saddle Up!", Version)]
     [BepInDependency("dreas.gk2.donkeyapi", "0.1.0")]
     public class Plugin : BaseUnityPlugin
@@ -18,35 +18,32 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         public const string Version = "0.1.0";
 
-        // The API this mod is written against: 0.14 has the companion and the settings page.
-        private static readonly Version NeedsApi = new Version(0, 15, 0);
-
-        internal static ManualLogSource Log;
-        private ConfigEntry<KeyboardShortcut> rideKey, cartKey, bellKey, sendAwayKey;
-        private MountCompanion me;
-        private string status = "not started";
+        // The API this mod is written against: 0.16 has the key actions and the Status row. Checked before anything of
+        // the API is used, so an older API gets a clear message instead of a missing-method error.
+        private static readonly Version NeedsApi = new Version(0, 16, 0);
 
         private void Awake()
         {
-            Log = Logger;
             if (Mounts.ApiVersion < NeedsApi)
             {
-                Log.LogError($"GK2 Donkey API {Mounts.ApiVersion} is too old (this mod needs {NeedsApi} or newer). Update GK2 Donkey API. The mount is off.");
+                Logger.LogError($"GK2 Donkey API {Mounts.ApiVersion} is too old (this mod needs {NeedsApi} or newer). Update GK2 Donkey API. The mount is off.");
                 return;
             }
-            me = Mounts.Companion(Guid);
-            status = Mounts.IsAvailable ? "Active" : "Off: GK2 Donkey API is off (its General.Enabled, or it switched itself off after a game update; see BepInEx/LogOutput.log).";
+            MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up!", "dreas",
-                "Your own donkey and cart: ride it (H), drive it (G), haul with the cart. Built on GK2 Donkey API.", () => status);
-            p.Info("Keys", "Status", () => status, "What the mod is doing right now.");
-            rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride the donkey", "Your donkey comes and you ride it; again: get off. In the cart: leave the cart standing and ride on.");
-            cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your donkey comes with its cart and you drive; again: get off. Riding: the cart comes and is hitched.");
+                "Your own donkey and cart: ride it (H), drive it (G), haul with the cart. Built on GK2 Donkey API.");
+            p.Status("Keys");
+            ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride the donkey", "Your donkey comes and you ride it; again: get off. In the cart: leave the cart standing and ride on.",
+                pressed: () => me.Use(MountStyle.Ride));
+            ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your donkey comes with its cart and you drive; again: get off. Riding: the cart comes and is hitched.",
+                pressed: () => me.Use(MountStyle.Cart));
             p.Key("Keys", "HitchKey", new KeyboardShortcut(KeyCode.J), "Hitch / unhitch", "While riding: leave the cart standing where it is, or take the cart in reach. One key; modifiers are ignored.",
                 k => Mounts.Behaviour.Set(Guid, "HitchKey", k.MainKey));
-            bellKey = p.Key("Keys", "BellKey", KeyboardShortcut.Empty, "Ring the bell", "While mounted. None = no key.");
-            sendAwayKey = p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send the donkey away", "Your donkey, cart and foal go (the cart's load is set down first); the next key brings a new one. None = no key.");
+            p.Key("Keys", "BellKey", KeyboardShortcut.Empty, "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
+            p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send the donkey away", "Your donkey, cart and foal go (the cart's load is set down first); the next key brings a new one. None = no key.",
+                pressed: me.SendAway);
 
             p.Choice("Behaviour", "Speed", MountSpeed.Normal, "Riding speed", "How fast you go while mounted.", v => me.Speed = v, new[] { "Normal", "Faster", "Fastest" });
             p.Toggle("Behaviour", "DismountIndoors", true, "Get off at building doors", "Off: you ride into houses, and the cart goes through the furniture.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", v));
@@ -75,65 +72,7 @@ namespace SaddleUp
 
             p.Steps("Sound", "Volume", 100, 0, 150, 10, "Donkey and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");
             p.Publish();
-            Log.LogInfo($"GK2 Saddle Up! {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
-        }
-
-        private void Update()
-        {
-            if (me == null || !Mounts.IsAvailable)
-            {
-                return;
-            }
-            try
-            {
-                if (Pressed(rideKey)) Report(me.Use(MountStyle.Ride));
-                else if (Pressed(cartKey)) Report(me.Use(MountStyle.Cart));
-                else if (Pressed(sendAwayKey)) me.SendAway();
-                if (Pressed(bellKey) && Mounts.IsMounted) Mounts.RingBell();
-            }
-            catch (Exception e)
-            {
-                Log.LogError("Key handling failed: " + e);
-            }
-        }
-
-        private static void Report(MountResult r)
-        {
-            if (!r.Ok)
-            {
-                Log.LogInfo("Not now: " + r.Reason);
-            }
-        }
-
-        // The main key pressed this frame with the shortcut's own modifiers held (e.g. Shift+H); other keys held don't
-        // matter. Not KeyboardShortcut.IsDown(): that also demands that no other key is held, so it never fires while
-        // the player walks (W/A/S/D down), which is exactly when mounting matters (found in game 2026-09-30).
-        private static bool Pressed(ConfigEntry<KeyboardShortcut> key)
-        {
-            KeyboardShortcut k = key.Value;
-            if (k.MainKey == KeyCode.None || !UnityInput.Current.GetKeyDown(k.MainKey))
-            {
-                return false;
-            }
-            foreach (KeyCode m in k.Modifiers)
-            {
-                if (!UnityInput.Current.GetKey(m))
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        private void OnDestroy()
-        {
-            try
-            {
-                Mounts.ClearTuning(Guid);
-            }
-            catch
-            {
-            }
+            Logger.LogInfo($"GK2 Saddle Up! {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }
     }
 }

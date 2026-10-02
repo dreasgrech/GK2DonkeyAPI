@@ -152,8 +152,28 @@ namespace GK2DonkeyAPI.Api
         private float pendingUntil;
         private const float PendingSeconds = 5f;
 
-        // The ride key (Ride) or the cart key (Cart). Ok: done, or under way (the donkey is coming).
+        // The ride key (Ride) or the cart key (Cart). Ok: done, or under way (the donkey is coming). A refusal is also
+        // written to the log, with its reason.
         public MountResult Use(MountStyle style)
+        {
+            MountResult r = UseNow(style);
+            if (!r.Ok)
+            {
+                Plugin.Log.LogInfo($"{OwnerId}: {style} not now: {r.Reason}");
+            }
+            return r;
+        }
+
+        // The bell, while mounted (else nothing).
+        public void RingBell()
+        {
+            if (Mounts.IsMounted)
+            {
+                Mounts.RingBell();
+            }
+        }
+
+        private MountResult UseNow(MountStyle style)
         {
             if (!Mounts.IsAvailable)
             {

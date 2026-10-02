@@ -58,7 +58,7 @@ namespace GK2DonkeyAPI.Api
 
         internal readonly string OwnerId, Title, Author, Description;
         internal readonly ConfigFile Config;
-        internal readonly Func<string> Status;
+        internal readonly Func<string> StatusValue;
         private bool published;
 
         internal MountSettingsPage(string ownerId, ConfigFile config, string title, string author, string description, Func<string> status)
@@ -68,7 +68,8 @@ namespace GK2DonkeyAPI.Api
             Title = title;
             Author = author;
             Description = description;
-            Status = status;
+            StatusValue = status ?? (() => Mounts.StatusText);
+            KeyActions.Track(ownerId);
         }
 
         internal string Version
@@ -119,12 +120,18 @@ namespace GK2DonkeyAPI.Api
         }
 
         // A key (with modifiers). Read-only in the game's Settings window.
-        public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null)
+        // pressed: called when the player presses the key (its modifiers held; other keys held, like walking, don't
+        // matter), while the API is on. The API polls it: the mod needs no Update of its own.
+        public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null, Action pressed = null)
         {
             string cfgSection = Sec(section);
             ConfigEntry<KeyboardShortcut> e = Config.Bind(cfgSection, key, value, description);
             Add(new Row { Kind = Kind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description });
             Wire(e, apply);
+            if (pressed != null)
+            {
+                KeyActions.Add(OwnerId, e, pressed);
+            }
             return e;
         }
 
@@ -157,6 +164,12 @@ namespace GK2DonkeyAPI.Api
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
             lightness = Steps(section, key + "Lightness", 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
             Combine();
+        }
+
+        // The read-only "Status" row: the page's status (Mounts.StatusText unless the page was given its own).
+        public void Status(string section, string label = "Status", string description = "What the mod is doing right now.")
+        {
+            Info(section, label, () => StatusValue(), description);
         }
 
         // A read-only line, e.g. what the mod is doing.
