@@ -8,8 +8,8 @@ using UnityEngine.UI;
 namespace GK2DonkeyAPI
 {
     // The donkey's picture next to a mod's settings (MountSettingsPage.Preview), drawn by PreviewStage:
-    // - in GK2 Mod Framework's Mods menu, on the page whose title is the mod's ("<Title> — ..."): above the window if
-    //   it fits there, else in the page's own rows in the list (MountSettingsPage.Preview, one per section asked for);
+    // - in GK2 Mod Framework's Mods menu, on the page whose title is the mod's ("<Title> — ..."): in the page's own rows
+    //   in the list (MountSettingsPage.Preview, one per section asked for), and above the window too if it fits there;
     // - in the game's Settings window: above the window, while one of the mod's pages is shown (SettingsRows).
     // Above the window only at MinScale or larger.
     // An extra on top of other UI: found by name and text, never by the framework's types (tests/FrameworkScan), and
@@ -88,7 +88,7 @@ namespace GK2DonkeyAPI
                 failed = true;
                 foreach (MountSettingsPage p in pages)
                 {
-                    SetRowWanted(p, false);
+                    p.RefreshMenu?.Invoke(); // the Mods menu re-reads the rows' visibility: empty, they go
                 }
                 Plugin.Log.LogWarning("Settings: the donkey's picture is off for this session (" + e.Message + "); the settings work without it.");
                 Hide(inMenu);
@@ -181,20 +181,8 @@ namespace GK2DonkeyAPI
         // 1.5 screen pixels per art pixel).
         private const float MinScale = 0.75f, MaxScale = 3f, Margin = 8f;
 
-        // Pages whose picture has no room outside the list, so it's a row of the page (MountSettingsPage.Preview).
-        private static readonly HashSet<MountSettingsPage> rowWanted = new HashSet<MountSettingsPage>();
-
-        internal static bool RowWanted(MountSettingsPage page) => rowWanted.Contains(page);
-
-        private static void SetRowWanted(MountSettingsPage page, bool wanted)
-        {
-            if (page == null || (wanted ? !rowWanted.Add(page) : !rowWanted.Remove(page)))
-            {
-                return;
-            }
-            Plugin.Log.LogInfo($"[preview] {page.Title}: the picture's row in the list is {(wanted ? "shown (no room outside the list)" : "hidden")}.");
-            page.RefreshMenu?.Invoke(); // the Mods menu re-reads the row's visibility
-        }
+        // The page's picture rows (MountSettingsPage.Preview) are shown unless the picture is off for the session.
+        internal static bool RowsShown => !failed;
 
         private static Shown NewShown()
         {
@@ -244,30 +232,21 @@ namespace GK2DonkeyAPI
                 }
                 return;
             }
-            // Above the window when it fits there (MinScale); else the page's own rows, in the Mods menu (the
-            // framework's page has them); else nowhere. (Also tried: the page's header, at most 0.53x at any of the
+            // In the page's own rows in the Mods menu (the framework's page has them) at every screen size, and above
+            // the window too when it fits there (MinScale). (Also tried: the page's header, at most 0.53x at any of the
             // game's resolutions, and beside the window, which none of them needs.)
             Vector2 art = PreviewStage.ArtSize(pic);
             Spot above = measured ? Above(window, under, art) : default;
-            bool useRows = (!measured || above.K < MinScale) && title != null && page.HasPreviewRows;
-            SetRowWanted(page, useRows);
+            bool aboveToo = above.K >= MinScale;
+            bool useRows = title != null && page.HasPreviewRows;
             List<(RectTransform Rect, bool WithCart)> rows = useRows ? FindRows(title, page) : null;
             string rooms = (measured ? $"above {above.RoomW:0} x {above.RoomH:0} -> {above.K:0.##}x; " : "")
                            + $"picture {pic.width} x {pic.height}, {art.x:0} x {art.y:0} art pixels; screen {Screen.width} x {Screen.height}"
                            + (measured ? $", window scale {window.localScale.x:0.###}" : "");
-            string line;
-            if (useRows)
-            {
-                line = rows.Count == 0
-                    ? $"[preview] waiting for its rows in {where} ({rooms})."
-                    : $"[preview] shown in its rows ({string.Join(", ", rows.ConvertAll(r => r.WithCart ? "with the cart" : "the donkey alone"))}), in {where} ({rooms}).";
-            }
-            else
-            {
-                line = above.K >= MinScale
-                    ? $"[preview] shown above, in {where}, at {above.K:0.##}x ({rooms})."
-                    : $"[preview] not shown in {where}: no room above it ({rooms}; needs {MinScale}x) and no row for it.";
-            }
+            string inRows = !useRows ? "no rows"
+                : rows.Count == 0 ? "its rows not there yet"
+                : "in its rows (" + string.Join(", ", rows.ConvertAll(r => r.WithCart ? "with the cart" : "the donkey alone")) + ")";
+            string line = $"[preview] in {where}: {(aboveToo ? $"above at {above.K:0.##}x" : $"not above (needs {MinScale}x)")}, {inRows} ({rooms}).";
             if (s.Logged != line)
             {
                 s.Logged = line;
@@ -275,15 +254,13 @@ namespace GK2DonkeyAPI
             }
             if (useRows)
             {
-                Hide(s);
                 ShowRows(rows, paperDonkey, pic);
-                return;
             }
-            if (menu)
+            else if (menu)
             {
                 HideRows();
             }
-            if (above.K < MinScale)
+            if (!aboveToo)
             {
                 Hide(s);
                 return;

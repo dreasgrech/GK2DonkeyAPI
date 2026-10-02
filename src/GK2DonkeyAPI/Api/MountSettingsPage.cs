@@ -165,10 +165,10 @@ namespace GK2DonkeyAPI.Api
             Add(new Row { Kind = Kind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
         }
 
-        // A picture of the companion's donkey and cart in their current colours, walking on the spot: above the Mods
-        // window, where it stays in view whatever row is scrolled to (LookPreview). When there's no room above it (most
-        // screens up to 1080p), it's a row of the page instead, here in this section, in the order called: call it once
-        // per section that should show it (e.g. at the top of each section with look rows, so it's in view from each).
+        // A picture of the companion's donkey and cart in their current colours, walking on the spot: a row of the page,
+        // here in this section, in the order called (LookPreview); call it once per section that should show it (e.g.
+        // at the top of each section with look rows, so it's in view from each). Also above the Mods window, where it
+        // stays in view whatever row is scrolled to, when there's room there (1440p and up, not 1080p).
         // label: the row's name; cart: the row's picture is the donkey with its cart, or the donkey alone (above the
         // window it's always with the cart). Above the game's Settings window without the Mods menu; in the look bar
         // too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so it shows
@@ -179,7 +179,7 @@ namespace GK2DonkeyAPI.Api
             Add(new Row
             {
                 Kind = Kind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
-                Visible = () => LookPreview.RowWanted(this), WithCart = cart,
+                Visible = () => LookPreview.RowsShown, WithCart = cart,
             });
         }
 
