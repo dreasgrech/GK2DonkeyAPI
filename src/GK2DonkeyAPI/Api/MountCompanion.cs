@@ -219,8 +219,15 @@ namespace GK2DonkeyAPI.Api
             }
             if (style == MountStyle.Ride)
             {
-                MountHandle left = Mounts.UnhitchRidden();
-                return left != null ? MountResult.Success : MountResult.Refused("The cart could not be left here.");
+                // Leaving the cart: refused, the keeper says why (as the hitch key does), e.g. no room to set it down.
+                MountHandle left = Mounts.UnhitchRidden(out string notLeft);
+                if (left == null)
+                {
+                    notLeft = string.IsNullOrEmpty(notLeft) ? "The cart could not be left here." : notLeft;
+                    Mount.Say(notLeft);
+                    return MountResult.Refused(notLeft);
+                }
+                return MountResult.Success;
             }
             string why = BringCart(riding);
             return why == null ? MountResult.Success : MountResult.Refused(why);

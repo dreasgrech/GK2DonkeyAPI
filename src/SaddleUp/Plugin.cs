@@ -31,6 +31,7 @@ namespace SaddleUp
             }
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
+            Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up!", "dreas",
                 "Your own donkey and cart: ride it (H), drive it (G), haul with the cart. Built on GK2 Donkey API.");
@@ -39,8 +40,6 @@ namespace SaddleUp
                 pressed: () => me.Use(MountStyle.Ride));
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your donkey comes with its cart and you drive; again: get off. Riding: the cart comes and is hitched.",
                 pressed: () => me.Use(MountStyle.Cart));
-            p.Key("Keys", "HitchKey", new KeyboardShortcut(KeyCode.J), "Hitch / unhitch", "While riding: leave the cart standing where it is, or take the cart in reach. One key; modifiers are ignored.",
-                k => Mounts.Behaviour.Set(Guid, "HitchKey", k.MainKey));
             p.Key("Keys", "BellKey", KeyboardShortcut.Empty, "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send the donkey away", "Your donkey, cart and foal go (the cart's load is set down first); the next key brings a new one. None = no key.",
                 pressed: me.SendAway);

@@ -37,7 +37,7 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Ride, Drive, Hitch, Bell, Send away | H, G, J, none, none | The hitch key is a single key (modifiers are ignored). |
+| 1. Keys | Ride, Drive, Bell, Send away | H, G, none, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Behaviour | Riding speed | Normal | Normal, Faster, Fastest. |
 | | Get off at building doors | on | Off: you ride into houses, and the cart goes through the furniture. |
 | | Say why mounting is refused | on | The keeper's thought bubble. |

@@ -584,17 +584,29 @@ namespace GK2DonkeyAPI.Api
         // The same for whatever is ridden, the summon of TryMount included.
         public static MountHandle UnhitchRidden()
         {
-            return Mount.Ridden != null ? UnhitchInstance(Mount.Ridden) : null;
+            return UnhitchRidden(out _);
+        }
+
+        // why: the reason when it's refused (for the companion's thought bubble).
+        internal static MountHandle UnhitchRidden(out string why)
+        {
+            why = "Not riding.";
+            return Mount.Ridden != null ? UnhitchInstance(Mount.Ridden, out why) : null;
         }
 
         private static MountHandle UnhitchInstance(Mount.Instance i)
         {
+            return UnhitchInstance(i, out _);
+        }
+
+        private static MountHandle UnhitchInstance(Mount.Instance i, out string why)
+        {
+            why = "Not in a game.";
             if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
             {
                 return null;
             }
             Mount.Instance cart;
-            string why;
             using (Mount.Bind(i))
             {
                 cart = i.Unhitch(pc, out why);
