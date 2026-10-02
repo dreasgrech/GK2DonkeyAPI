@@ -136,8 +136,8 @@ namespace GK2DonkeyAPI.Api
             return e;
         }
 
-        // A colour a player picks by name (PaletteColor: Chestnut, Sand, Moss, Sky, ...) and makes lighter or darker,
-        // with a swatch of the result. Bound as <key> and <key>Lightness; apply gets the colour as hex RRGGBB. visible:
+        // A colour a player picks by name (PaletteColor: Chestnut, Sand, Moss, Sky, ...) and makes lighter or darker
+        // (the picture, Preview, shows the result; a swatch row did before it existed). Bound as <key> and <key>Lightness; apply gets the colour as hex RRGGBB. visible:
         // shown only while it says so (e.g. only while its part's choice is Custom). In the look bar too.
         public void Color(string section, string key, string label, string description, PaletteColor value, Action<string> apply, Func<bool> visible = null)
         {
@@ -154,9 +154,6 @@ namespace GK2DonkeyAPI.Api
             }
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
             lightness = Steps(section, key + "Lightness", 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
-            Info(section, label + ": looks like", () => MountPalette.Swatch(Now()), "The colour as it is now.");
-            Rows[Rows.Count - 1].Visible = visible;
-            Rows[Rows.Count - 1].IsLook = true;
             Combine();
         }
 

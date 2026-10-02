@@ -458,7 +458,7 @@ Where they apply:
 | `Key(...)` | `ConfigEntry<KeyboardShortcut>` | read-only (set in the cfg) |
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |
-| `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness, and a swatch row of the result |
+| `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
 | `Choice` / `Steps` with `look: true` | as above | also in the look bar |
 | `Preview(companion)` | nothing | a picture of the companion's donkey in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
@@ -477,7 +477,7 @@ Where they apply:
 - **The framework is never required:** the API's link to it is soft, and if it's missing or fails, the Settings
   window is used.
 - **The look, three ways:**
-  - **named colours with a swatch:** the swatch is TextMeshPro rich text, so the game's own labels draw the colour;
+  - **named colours:** a colour by name and its lightness; the picture shows the result;
   - **the picture:** the donkey's body and head, recoloured on the CPU with the same mapping the game's shader gets,
     from the companion's "paper donkey" (an instance never spawned, carrying only its look). The art is read from the
     game's own files, the look the game loads for the donkey (`Assets/AddressableAssets/WGOs/npc_donkey.prefab`,

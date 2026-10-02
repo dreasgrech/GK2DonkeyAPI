@@ -61,7 +61,7 @@ All of these apply at once:
   there yet.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
-  Mustard, Gold) and its lightness, with a swatch of the result.
+  Mustard, Gold) and its lightness. The picture shows the result.
 - **Choose colours** (in Donkey) closes the menu and opens the colour rows at the bottom of the screen, over the game.
   You see your real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
   Only in a game. Everything

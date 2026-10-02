@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     // the bar doesn't open and the log says so; nothing else changes.
     internal static class LookBar
     {
-        private static GameObject bar, picture, note;
+        private static GameObject bar, picture;
         private static RawImage pictureImage;
         private static Texture2D pictureTex;
         private static float nextPicture;
@@ -129,7 +129,6 @@ namespace GK2DonkeyAPI
             pictureImage = picture.GetComponent<RawImage>();
             pictureImage.raycastTarget = false;
             picture.SetActive(false);
-            note = SettingsRows.MakeHeading(templateRow, bar.transform, page, "");
             foreach (MountSettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook)
@@ -210,7 +209,6 @@ namespace GK2DonkeyAPI
             nextPicture = Time.unscaledTime + 0.2f;
             try
             {
-                MountHandle h = LookPreview.Who(page);
                 Mount.Instance paperDonkey = LookPreview.PaperOf(page);
                 Texture pic = PreviewStage.Picture(paperDonkey);
                 if (pic == null && PreviewStage.Failed)
@@ -227,11 +225,6 @@ namespace GK2DonkeyAPI
                     ((RectTransform)picture.transform).sizeDelta = new Vector2(le.preferredWidth, le.preferredHeight);
                 }
                 picture.SetActive(pic != null);
-                // Is the real one in view? Same scene and near the keeper.
-                bool near = h != null && h.Exists && h.IsReady && Mount.Instance.IsInGame(out PlayerController pc, out _)
-                    && h.SceneId == pc.PlayerData.currentGameSceneId && (h.Position - pc.PlayerData.position.Value).sqrMagnitude < 15f * 15f;
-                SettingsRows.SetHeading(note, near ? "" : "Your donkey isn't here: the picture shows your colours.");
-                note.SetActive(!near);
             }
             catch (Exception e)
             {
@@ -272,7 +265,7 @@ namespace GK2DonkeyAPI
                 UnityEngine.Object.Destroy(pictureTex);
                 pictureTex = null;
             }
-            picture = note = null;
+            picture = null;
             nextPicture = 0f;
             page = null;
         }
