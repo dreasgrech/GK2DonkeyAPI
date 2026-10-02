@@ -236,3 +236,14 @@ The scripts that produced the colour lists and read the shaders are in `tools/co
 
 After a game update, re-run the mask scripts. If the art's colours changed, the lists in `Colors.cs` need the new
 values: unknown colours simply stay as the game draws them.
+
+## Colours and the mod defaults (2026-10-02)
+
+- **Colours are never mod defaults.** `defaults.cfg` holds none; "Make these the mod defaults" leaves them out and the
+  panel says so; `tests/DefaultsScan` fails if one gets in. Every player starts with the game's own art.
+- **Why:** the colour test of 2026-09-30 was still set when the button was pressed (commit
+  `6a53568`), and the shipped defaults gave every player a green coat, teal cart, red wheels, green hubs, an orange
+  pole and a pink lamp light (`[Cart] LanternLightColor = DC2B9D`).
+- **Own look:** a donkey of `Mounts.Companion` reads only its owner's presets on top of the game's art, never the
+  player's `[Colors*]` values (`Tuned.IsLook`, `Instance.OwnLook`). So Saddle Up's "The game's" really is the game's
+  art on every machine.

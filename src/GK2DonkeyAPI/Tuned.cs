@@ -23,6 +23,10 @@ namespace GK2DonkeyAPI
         object SetOverride(object value, string owner);
         object Clamp(object value);
         void ClearOverride();
+        // A colour of the look (the colour keys and the lamp's light colour): an instance with its own look
+        // (Instance.OwnLook) reads only its own override or the mod default for these, never the player's cfg or
+        // another mod's session value.
+        bool IsLook { get; set; }
     }
 
     internal sealed class Tuned<T> : ITuned
@@ -53,6 +57,10 @@ namespace GK2DonkeyAPI
                 {
                     return t;
                 }
+                if (i != null && i.OwnLook && IsLook && Entry.DefaultValue is T d)
+                {
+                    return d; // the mod default: neutral for every colour (the game's art), docs/colors.md
+                }
                 return hasOverride ? overrideValue : Entry.Value;
             }
             set => Entry.Value = value;
@@ -71,6 +79,7 @@ namespace GK2DonkeyAPI
         public bool HasOverride => hasOverride;
         public string OverrideOwner => hasOverride ? owner : null;
         public object Current => GlobalValue;
+        public bool IsLook { get; set; }
 
         // An instance's override for this key, clamped like the session override. Returns the value applied.
         public object Clamp(object value)
@@ -112,6 +121,14 @@ namespace GK2DonkeyAPI
         internal static string OverriddenBy(ConfigEntryBase e)
         {
             return e != null && ByEntry.TryGetValue(e, out ITuned t) && t.HasOverride ? t.OverrideOwner : null;
+        }
+
+        internal static void MarkLook(ConfigEntryBase e)
+        {
+            if (e != null && ByEntry.TryGetValue(e, out ITuned t))
+            {
+                t.IsLook = true;
+            }
         }
 
         internal static int OverrideCount()

@@ -294,6 +294,9 @@ namespace GK2DonkeyAPI
     // faster while riding. The donkey is a temporary view only (the game's build-preview mechanism): it is never
     // added to the world data, so nothing about it is saved. See README.md and FEASIBILITY.md.
     [BepInPlugin(Guid, "GK2 Donkey API", Version)]
+    // Soft: with GK2 Mod Framework installed, player mods' settings pages go into its Mods menu (FrameworkLink);
+    // without it they go into the game's own Settings window. Never needed.
+    [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.donkeyapi";
@@ -319,7 +322,33 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> DismountIndoors;
         internal static Tuned<bool> ShowMessages;
         internal static ConfigEntry<bool> InstanceControls;
-        internal static ConfigEntry<KeyCode> HitchKey;
+        internal static Tuned<KeyCode> HitchKey;
+
+        // Every [HarmonyPatch] class (tests/FrameworkScan checks the list is complete).
+        internal static readonly Type[] PatchClasses =
+        {
+            typeof(PlayerData_AddOverheadItem_Patch),
+            typeof(BigDropInteractionHandler_HasInteraction_Patch),
+            typeof(PlayerInteractionComponent_CanInteractWithDrop_Patch),
+            typeof(PlayerData_HasFreeOverheadSlot_Patch),
+            typeof(PlayerData_TryGetOverheadItem_Patch),
+            typeof(PlayerData_RemoveOverheadItem_Patch),
+            typeof(PlayerData_InsertOverheadItemTo_Patch),
+            typeof(PlayerInputHandler_UpdateInput_Patch),
+            typeof(LazyExpressionEvaluationScope_GetOverheadItemForMutation_Patch),
+            typeof(AnimationComponentBase_OnAnimationStepCompleted_Patch),
+            typeof(AnimationComponentBase_PlaySound_Patch),
+            typeof(AnimationComponentBase_SetDirection_Patch),
+            typeof(AnimationComponentBase_SetState_Patch),
+            typeof(AnimationComponentBase_SetDirectionEnum_Patch),
+            typeof(AnimationComponentBase_SetTrigger_Patch),
+            typeof(WgoDataScriptsManager_CreateScript_Patch),
+            typeof(Flow_Body_DoAction_Patch),
+            typeof(Wgo_CompleteVisualPartsLoad_Patch),
+            typeof(Wgo_OnDestroy_Patch),
+            typeof(SaveSystem_Save_Patch),
+            typeof(SaveSystem_Remove_Patch),
+        };
         internal static ConfigEntry<float> CartZoneSide, CartZoneRear, CartZoneFrontShift, DonkeyZoneAhead;
 
         // [Ride] / [Cart]: position, pose, animation, legs, speed
@@ -410,6 +439,12 @@ namespace GK2DonkeyAPI
                 legs: false, legSource: LegSource.Body, legHeight: 10, legX: 0, legY: 0);
             // [Colors] and [Colors.<region>]: the same donkey in both styles, so one set (Colors.cs).
             Colors.Bind(Config);
+            foreach (ConfigEntryBase e in Colors.AllEntries())
+            {
+                Tuned.MarkLook(e);
+            }
+            Tuned.MarkLook(Cart.LanternLightColor);
+            Tuned.MarkLook(Ride.LanternLightColor);
             // General.IdleShuffle and [Shuffle]: standing donkeys without a cart take a few slow steps (IdleShuffle.cs).
             IdleShuffle.Bind(Config);
 
@@ -448,7 +483,12 @@ namespace GK2DonkeyAPI
             try
             {
                 Access.Verify();
-                harmony.PatchAll(typeof(Plugin).Assembly);
+                // By class, never PatchAll(Assembly): that loads every type of the DLL, and without GK2 Mod Framework the
+                // one deriving from its base class (FrameworkLink) can't load, so Harmony would warn at every start.
+                foreach (Type patch in PatchClasses)
+                {
+                    harmony.PatchAll(patch);
+                }
             }
             catch (Exception e)
             {

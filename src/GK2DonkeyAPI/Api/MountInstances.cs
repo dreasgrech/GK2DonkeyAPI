@@ -128,6 +128,29 @@ namespace GK2DonkeyAPI.Api
             return MountResult.Success;
         }
 
+        // The name players see in its prompt: "[E] Ride Bella" instead of "[E] Ride". Kept with the save. Null or empty
+        // when it has none.
+        public string DisplayName => I.DisplayName;
+
+        // Only its owner (or the core's panel). Trimmed, line breaks dropped, at most 24 characters; null or empty clears.
+        public MountResult SetDisplayName(string ownerId, string name)
+        {
+            string why = Mounts.WhyNotOwner(this, ownerId);
+            if (why != null)
+            {
+                return MountResult.Refused(why);
+            }
+            string clean = (name ?? "").Replace("\r", " ").Replace("\n", " ").Replace("\t", " ").Trim();
+            if (clean.Length > MaxDisplayName)
+            {
+                clean = clean.Substring(0, MaxDisplayName).TrimEnd();
+            }
+            I.DisplayName = clean.Length == 0 ? null : clean;
+            return MountResult.Success;
+        }
+
+        public const int MaxDisplayName = 24;
+
         // A mod's own values on this instance, kept with the save: a name, a home, a mood. Each mod has its own
         // namespace (its ownerId), so two mods can't overwrite each other, and any mod may keep values on any instance
         // (a naming mod naming another mod's donkeys). Hitching moves the free cart's values onto the donkey.

@@ -327,7 +327,7 @@ namespace GK2DonkeyAPI
             {
                 if (zone == Zone.Donkey && cart.Rideable)
                 {
-                    Set(cart, FootAction.Ride, "Drive", atCart: false);
+                    Set(cart, FootAction.Ride, Named("Drive", cart), atCart: false);
                     return;
                 }
                 if (zone == Zone.Cart && cart.CargoRig.Count > 0 && MountRules.Allowed(MountFeature.Cargo)
@@ -340,9 +340,12 @@ namespace GK2DonkeyAPI
             Mount.Instance d = Nearest(pc, k, RideReach, i => i.HasDonkey && !i.HasCart && i.Rideable);
             if (d != null)
             {
-                Set(d, FootAction.Ride, "Ride", atCart: false);
+                Set(d, FootAction.Ride, Named("Ride", d), atCart: false);
             }
         }
+
+        // "Ride Bella" when the owner named it (MountHandle.SetDisplayName), else just the verb.
+        private static string Named(string verb, Mount.Instance i) => string.IsNullOrEmpty(i.DisplayName) ? verb : verb + " " + i.DisplayName;
 
         private static void Set(Mount.Instance i, FootAction a, string text, bool atCart)
         {

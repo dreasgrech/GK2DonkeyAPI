@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 13, 0);
+        public static readonly Version ApiVersion = new Version(0, 14, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -230,7 +230,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey,
                 }));
             }
         }
@@ -417,6 +417,22 @@ namespace GK2DonkeyAPI.Api
         // The game is loaded and the save's kept donkeys are back (InstancesRestored has come): spawning works from now
         // on. False in the menu, while a game loads, and for a frame at a door that loads another scene.
         public static bool IsGameReady => Mount.IsGameReady;
+
+        // Your mod's companion: the keeper's own donkey with its cart and foal, its keys, looks and ride settings
+        // (MountCompanion). One per owner; the same object on every call.
+        public static MountCompanion Companion(string ownerId) => MountCompanion.For(ownerId);
+
+        // Your mod's player settings (MountSettingsPage): in GK2 Mod Framework's Mods menu when it's installed, else
+        // in the game's own Settings window. title: shown to players; status: shown as a read-only "Status" row and
+        // "Active" when all is well (the Mods menu then confirms the game build). Add rows, then Publish.
+        public static MountSettingsPage SettingsPage(string ownerId, BepInEx.Configuration.ConfigFile config, string title, string author, string description, Func<string> status = null)
+        {
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            return new MountSettingsPage(ownerId, config ?? throw new ArgumentNullException(nameof(config)), title ?? ownerId, author ?? "", description ?? "", status);
+        }
 
         // Once per loaded game (a save, or a new game), after the save's kept donkeys are back, before anything else can
         // spawn: the place for a mod's own per-game spawning. Check Find(yourId, id) first; your kept donkeys are

@@ -57,14 +57,29 @@ Both sections hold the same keys; the values differ because the two looks differ
 section of the style you are currently mounted on. The table shows the values shipped at the time of writing,
 Ride / Cart.
 
-**Your settings and the mod defaults.** There are two kinds of values, and only two:
+**Where a value comes from**, the first that has one wins (the panel's Sources tab shows each, live):
+
+1. **The donkey's own values:** set on one donkey by a mod (Saddle Up's looks and name) or on the Instances tab;
+   kept with the save when the donkey is. A donkey with its **own look** (`Instance.OwnLook`, set by the companion)
+   reads no colour from 2 to 4: its colours are its owner's presets on top of the game's art.
+2. **Another mod, this session only:** `Mounts.Tuning(...).Set` and `Mounts.Behaviour.Set`. Cyan, locked rows; never
+   saved.
+3. **Your settings:** `BepInEx\config\dreas.gk2.donkeyapi.cfg`, written the moment a row changes.
+4. **Mod defaults:** `defaults.cfg`, built into the DLL. **No colours**: the button leaves them out and
+   `tests/DefaultsScan` fails if one gets in, so every player starts with the game's own art. (Found 2026-10-02: a
+   colour test still set when the button was pressed had shipped a green donkey and a pink lamp.)
+5. **The code's own values:** for anything the mod defaults leave out (all colours).
+
+Other mods' own settings (e.g. `dreas.gk2.saddleup.cfg`) reach this mod only as 1 or 2.
+
+**Your settings and the mod defaults** (3 and 4 above) are the two you edit on the panel:
 
 - *Your settings* are in `dreas.gk2.donkeyapi.cfg`. BepInEx writes that file the moment a value changes, so there is
   no save button: what you set on the panel is kept.
 - *Mod defaults* are what a fresh install starts with, and what right-click and the reset buttons go back to. They
   come from `defaults.cfg` next to the sources, embedded into the DLL at build time.
 
-A panel row shown in yellow differs from its mod default; the footer counts them and the Defaults tab lists them
+A panel row shown in yellow differs from its mod default; the footer counts them and the Sources tab lists them
 (yours and the default). On the machine with the sources (the build records the source folder), the mod reads
 `defaults.cfg` from the repo itself, and **Make these the mod defaults** (click twice to confirm) writes every
 current value of both styles into it. The yellow marks clear at once, and a rebuild ships the new defaults in the
@@ -185,7 +200,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Debug / Defaults. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
+| `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Colors / Instances / Debug / Sources. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
 | `TuningWindowKey` | F11 | Hides / shows the panel (e.g. for screenshots), for this session only. The game doesn't bind F-keys; Shift+F11 is left to its Workshop creator. `None` = no key. |
 | `TuningKeys` | false | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
 | (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the cart must be empty to start (a dismount mid-run aborts the sheet and discards its test copies). |

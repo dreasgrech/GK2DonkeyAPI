@@ -1,4 +1,4 @@
-# Showcase: what players get (proposal, 2026-10-02)
+# Saddle Up: what players get (decided 2026-10-02)
 
 Saddle Up (`src/SaddleUp`, until 2026-10-02 the showcase, `src/GK2Showcase`) becomes the mod players install to have a donkey. Everything in it
 goes through the GK2 Donkey API. This file says what it includes, what players may change, and what stays fixed.
@@ -7,6 +7,24 @@ The full list it picks from is the feature table in [`src/GK2DonkeyAPI/README.md
 **The rule for options:** a player may change *what happens* (keys, on/off, how fast, which colours), never *how it's
 drawn or measured* (seat pixels, leg slices, cargo packing, sound ids, slope maths). The second kind is the dev
 panel's, and a wrong value there breaks the picture.
+
+## Decided (2026-10-02)
+
+1. **The first release** has everything in sections 2 and 3, plus two extras: **B. a foal** and **C. naming your
+   donkey**. A (earning it in the story), D (spare carts) and E (a second donkey) come in later updates.
+2. **Colours:** presets, plus a **Custom** choice per part that uses colour values from Saddle Up's cfg.
+3. **Speed:** steps (Normal / Faster / Fastest), not a slider.
+4. **Riding through scene doors:** not offered; the ride ends at such doors, as now. It can come in an update once
+   it's tested.
+5. **The name:** GK2 Saddle Up!
+6. **Where the settings are** (uGUI, the game's own controls; never IMGUI for players):
+   - **With GK2 Mod Framework:** its Mods menu, every option including the keys and the donkey's name.
+   - **Without it:** rows added to the game's own Settings window under a "Saddle Up!" heading, copies of the
+     game's own ◀ value ▶ and slider rows. The keys and the name can't be edited there (the game has no such row);
+     they show read-only and are set in the cfg.
+   - **Never both:** with the framework installed, no rows are added to the Settings window.
+   - **Guarded:** if the game's rows can't be found (a game update renamed them), no rows are added, the cfg still
+     works, and the log says why. A test checks the row names after each game update.
 
 ## 1. What it is, in one line
 
@@ -49,6 +67,9 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | | Bell when setting off with cargo | on | On/off. |
 | **Sound** | Mount sounds volume | 100% | One slider, clamped 0–150%. |
 | **Saves** | Keep my donkey with the save | on | Already in. |
+| **Colours** | Each colour option above also has **Custom** | – | Custom uses the hex colours in Saddle Up's cfg (`Colors.CustomCoat` and so on); a wrong value is ignored and logged. |
+| **Foal** (extra B) | Your donkey has a foal | off | A small donkey that stays with yours: shuffles around it, trots after it, kept with the save. On/off only. |
+| **Name** (extra C) | Your donkey's name | empty | Shown in the prompt: "[E] Ride Bella". Text: in the Mods menu with the framework, else in the cfg. Empty: "[E] Ride". |
 
 ## 4. Fixed, not offered
 
@@ -86,9 +107,20 @@ These would make it more of a game, each at a cost:
 | **D. Spare carts** | More than one cart: leave loaded carts around as storage and swap between them. | Small in code (the API has free carts); needs a way to get the second cart (a craft? a cost?). |
 | **E. A second donkey** | A stable of two or more. | Medium: calling with H must pick one. Probably later. |
 
-## Open decisions
+## As built (2026-10-02, API 0.14.0)
 
-1. The option list in section 3: anything to add or drop?
-2. Colours as presets only, or also "custom" for those who want it?
-3. Which extras from section 6 (A–E)?
-4. The name (after the above).
+The API does the work; Saddle Up only defines its settings and maps its keys (`src/SaddleUp/Plugin.cs`).
+- **`Mounts.Companion`:** the donkey, cart and foal, the keys' behaviour, the looks and speed presets, the name,
+  keeping them with the save.
+- **`Mounts.SettingsPage`:** one list of rows, shown in the framework's Mods menu or, without it, on pages in the
+  game's Settings window (`SettingsRows.cs`, through `LazyWindowsStackController.OnWindowOpened`, no patch).
+- **`MountHandle.SetDisplayName`** and **`HitchKey` in `Mounts.Behaviour`.**
+- **The framework link** moved from Saddle Up into the API (the same safeguards; `tests/FrameworkScan` checks it).
+- **The preset colours are first guesses** and need judging in game: coat, harness, paint and lantern.
+- **Known limit:** the framework's Mods menu shows a choice by its enum name (e.g. `DarkWood`), not the label; the
+  Settings window shows the labels.
+
+## Before release
+
+The items in section 5, and the open bugs: the doorstep after riding indoors, "Take from cart" and loading several
+held items (the perk) untested, the 1.008 checks (a full cart refusing a pickup).

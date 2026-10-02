@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.13.0** (`Mounts.ApiVersion`). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.14.0** (`Mounts.ApiVersion`). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -129,6 +129,7 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - **Discovering keys:** `Keys`, `Has(key)`, `TypeOf(key)`, `IsOverridden(key)` and `OverriddenBy(key)`.
 
 **Behaviour** (`Mounts.Behaviour`, section "General"):
+- `HitchKey` (0.14.0, a `KeyCode`; `None` switches the key off)
 - `StayMountedThroughDoors`
 - `DismountIndoors`
 - `ShowMessages`
@@ -408,6 +409,73 @@ cart. A corpse there is removed by the game's own corpse timer.
 - Details: [`persistence.md`](persistence.md). The test mod
   [`examples/GK2DonkeyHerd`](../examples/GK2DonkeyHerd/Plugin.cs) uses all of it.
 
+## A player mod in a few lines: the companion and the settings page (0.14.0)
+
+Most player mods want the same thing: the keeper's own donkey, called with a key, with its cart, kept with the save,
+and settings a player can find. The API does all of that; your mod defines its settings and maps its keys.
+`src/SaddleUp/Plugin.cs` is the whole of such a mod.
+
+```csharp
+MountCompanion me = Mounts.Companion("you.gk2.mymod");               // one per mod
+MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mod", "you", "What it does.", () => "Active");
+ConfigEntry<KeyboardShortcut> ride = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...");
+p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" });
+p.Toggle("Donkey", "Foal", false, "A foal", "...", v => me.HasFoal = v);
+p.Publish();
+// in Update:
+if (/* ride pressed */) me.Use(MountStyle.Ride);
+```
+
+**`MountCompanion`** (`Mounts.Companion(owner)`):
+
+| Member | Does |
+|---|---|
+| `Use(MountStyle)` | The ride key (Ride) or the cart key (Cart). On foot: the donkey (spawned the first time) comes and the keeper gets on, the cart brought and hitched, or left standing, as asked. Mounted in that style: off (the donkey stays). Mounted in the other style: the cart is left standing, or brought and hitched. Refusals come back as `MountResult` (indoors, busy, ...). |
+| `SendAway()` | The donkey, cart and foal go; the cart's load is set down first. |
+| `Donkey`, `Cart`, `Foal` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`). Found again after a load by the keys `"donkey"`, `"cart"` and `"foal"`. |
+| `KeepWithSaves` | Kept with the save (on). |
+| `HasFoal` | A foal (size 0.6, not rideable) that stays with the donkey. |
+| `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
+| `Speed` | `MountSpeed.Normal / Faster / Fastest`: Normal is the player's own speed; Faster 2.1 (Ride) / 1.8 (Cart); Fastest 2.5 / 2.1. |
+| `Brays`, `BellOnSetOff`, `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
+| `Coat`, `Harness`, `Paint`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `LanternColor`); `Game` is the game's art. |
+| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. An invalid one means the game's look, logged once. |
+
+Where they apply:
+- **The looks, the name and the foal** are this companion's own donkey, cart and foal only (instance overrides): other
+  mods' donkeys keep theirs.
+- **Speed, sounds and the lamp** are the ride's (session overrides of `Mounts.Tuning(Ride / Cart)`), since a style
+  value can't differ per instance.
+- **Set by you**, as your owner id, so the dev panel shows who set them. A value another mod set is never cleared.
+
+**`MountSettingsPage`** (`Mounts.SettingsPage(owner, Config, title, author, description, status)`):
+
+| Row | Binds | In the game's Settings window |
+|---|---|---|
+| `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | Off / On |
+| `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | the labels |
+| `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | each step, `format` turns it into text ("100%") |
+| `Key(...)` | `ConfigEntry<KeyboardShortcut>` | read-only (set in the cfg) |
+| `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
+| `Info(section, label, value)` | nothing | read-only |
+
+- **Binding:** each row binds an entry in your cfg (that section and key) and runs `apply` now and on every change,
+  from the Mods menu, the Settings window or the cfg.
+- **`Publish()`, once, after the rows, from your `Awake`:**
+  - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
+    sorts the sections by name);
+  - without it, your rows go into the game's own **Settings** window, on pages of their own: a "Showing" row at the
+    top switches between the game's settings and yours. They're copies of the game's own rows (look, sounds,
+    gamepad).
+- **The framework is never required:** the API's link to it is soft, and if it's missing or fails, the Settings
+  window is used.
+- **`status`:** shown as a "Status" row. "Active" lets the Mods menu confirm the game build; anything else shows
+  "Unknown build" there.
+
+**Also new in 0.14.0:**
+- `MountHandle.DisplayName` and `SetDisplayName(owner, name)` (owner only, at most 24 characters, kept with the save).
+- `Mounts.Behaviour` has `HitchKey` (a `KeyCode`).
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -461,6 +529,9 @@ History:
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
+- 0.14.0: `MountCompanion` (`Mounts.Companion`), the look and speed presets (`MountSpeed`, `CoatColor`,
+  `HarnessColor`, `CartPaint`, `LanternColor`), `MountSettingsPage` (`Mounts.SettingsPage`: the Mods menu or the
+  game's Settings window), `MountHandle.DisplayName` / `SetDisplayName`, and `HitchKey` in `Mounts.Behaviour`.
 - 0.13.0 (breaking, pre-release): the rename. GK2 Mounts is now GK2 Donkey API: `GK2DonkeyAPI.dll`, GUID
   `dreas.gk2.donkeyapi`, namespace `GK2DonkeyAPI.Api` (was `GK2Mounts.Api`). Type and member names are unchanged.
   The showcase is now GK2 Saddle Up! (`dreas.gk2.saddleup`). A save's old side file and old owner ids are read and

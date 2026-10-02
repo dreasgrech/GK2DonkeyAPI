@@ -37,6 +37,14 @@ namespace GK2DonkeyAPI
             // The owner's own name for it (MountSpawn.Key), unique within the owner, kept with the save.
             internal string Key;
 
+            // The name players see in its prompt ("Ride Bella"; MountHandle.SetDisplayName), kept with the save.
+            internal string DisplayName;
+
+            // Its colours are its own (MountCompanion sets this): only its own overrides and the mod defaults (the
+            // game's art), never the player's cfg colours or another mod's session colours (Tuned.IsLook). Set
+            // again by the companion after every load, so it isn't saved.
+            internal bool OwnLook;
+
             // Any mod's own values on it, by that mod's id, then key (MountHandle.SetData); kept with the save.
             internal readonly Dictionary<string, Dictionary<string, string>> Data = new Dictionary<string, Dictionary<string, string>>(StringComparer.Ordinal);
         }
@@ -281,6 +289,10 @@ namespace GK2DonkeyAPI
                 {
                     Line(sb, "key", i.Key);
                 }
+                if (!string.IsNullOrEmpty(i.DisplayName))
+                {
+                    Line(sb, "name", i.DisplayName);
+                }
                 Line(sb, "donkey", Bool(i.HasDonkey));
                 Line(sb, "cart", Bool(i.HasCart));
                 Line(sb, "scene", i.SceneId ?? "");
@@ -391,7 +403,7 @@ namespace GK2DonkeyAPI
 
         internal sealed class Record
         {
-            internal string Owner, Key, Scene, ParentOwner;
+            internal string Owner, Key, Scene, ParentOwner, Name;
             internal int Id, ParentId;
             internal bool Complete; // its "end" line was read: a file cut off mid-record leaves the last one without
             internal bool Donkey = true, Cart, FacingRight = true, Rideable = true, RemoveWithParent = true;
@@ -453,6 +465,7 @@ namespace GK2DonkeyAPI
                     case "owner": cur.Owner = a; break;
                     case "id": int.TryParse(a, NumberStyles.Integer, CultureInfo.InvariantCulture, out cur.Id); break;
                     case "key": cur.Key = a; break;
+                    case "name": cur.Name = a; break; // 0.14.0; older versions skip the line
                     case "donkey": cur.Donkey = a == "true"; break;
                     case "cart": cur.Cart = a == "true"; break;
                     case "scene": cur.Scene = a; break;
@@ -687,6 +700,7 @@ namespace GK2DonkeyAPI
                         continue;
                     }
                     made[r.FullId] = i;
+                    i.DisplayName = string.IsNullOrEmpty(r.Name) ? null : r.Name;
                     foreach (string[] s in r.Sets)
                     {
                         RestoreSetting(i, s[0], s[1], s[2]);

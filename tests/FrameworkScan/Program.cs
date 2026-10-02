@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 //     interfaces, attributes, fields, signatures, locals and every IL operand are checked;
 //  4. Register is NoInlining, and Plugin has a soft BepInDependency on the framework.
 // Usage: dotnet run -c Release [ModName ...]   (default: every mod below; each must be built in Release first)
-string[] integrated = { "SaddleUp" }; // the four small mods are checked in GK2QOLMods
+string[] integrated = { "GK2DonkeyAPI" }; // it links player mods' settings pages to the framework (Saddle Up has no link of its own); the four small mods are checked in GK2QOLMods
 string[] mods = args.Length > 0 ? args : integrated;
 
 var res = new DefaultAssemblyResolver();
@@ -49,7 +49,7 @@ static int Check(ModuleDefinition mod, string ns)
         .Where(i => i.OpCode == OpCodes.Ldtoken && i.Operand is TypeReference)
         .Select(i => ((TypeReference)i.Operand).FullName).ToHashSet();
     var patchClasses = mod.GetTypes().Where(t => t.CustomAttributes.Any(a => a.AttributeType.FullName == "HarmonyLib.HarmonyPatch")).ToList();
-    // A mod without patches (Saddle Up) has nothing to list; the PatchAll(Assembly) check below still applies.
+    // A mod without [HarmonyPatch] classes has nothing to list; the PatchAll(Assembly) check below still applies.
     Console.WriteLine($"INFO {patchClasses.Count} [HarmonyPatch] classes found");
     foreach (var t in patchClasses)
     {
@@ -60,8 +60,10 @@ static int Check(ModuleDefinition mod, string ns)
     Result(!patchAllAssembly, "Plugin never calls PatchAll(Assembly)");
 
     // 2. Unity messages
+    // GK2 Donkey API runs its frame in LateUpdate on purpose (after the game's own Update).
     foreach (var m in new[] { "Start", "OnEnable", "OnDisable", "FixedUpdate", "LateUpdate", "OnApplicationQuit" })
     {
+        if (m == "LateUpdate" && ns == "GK2DonkeyAPI") continue;
         if (plugin.Methods.Any(x => x.Name == m))
         {
             Result(false, $"Plugin has a method named {m} (Unity would call it)");

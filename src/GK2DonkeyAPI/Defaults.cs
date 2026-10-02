@@ -306,8 +306,31 @@ namespace GK2DonkeyAPI
             return s.Length == 0 ? "(empty)" : s;
         }
 
-        // Writes every tracked setting's current value to the repo's defaults.cfg and re-reads it, so the panel's
-        // defaults (reset targets, the yellow marks) are the new ones at once. Returns the path.
+        // Colours are never mod defaults. Every player starts with the game's own art; colours are chosen by a mod
+        // (Saddle Up's presets, Mounts.Colors) or by the player. Found 2026-10-02: a colour test on the panel was
+        // still set when this button was pressed, and the shipped defaults gave every player a green donkey.
+        // tests/DefaultsScan fails if a colour ever gets into defaults.cfg again.
+        public static bool IsColor(string group) => group != null && group.StartsWith("Colors", StringComparison.OrdinalIgnoreCase);
+
+        // A colour group, or a colour of the look in another group (the lamp's light colour, Tuned.IsLook).
+        public static bool IsColor((string Group, ConfigEntryBase Entry) t) => IsColor(t.Group) || (Tuned.ByEntry.TryGetValue(t.Entry, out ITuned tu) && tu.IsLook);
+
+        // The differing settings the button would write (the colours left out).
+        public static int DifferingWritable()
+        {
+            int n = 0;
+            foreach (var t in Tracked)
+            {
+                if (!IsColor(t) && Differs(t.Entry))
+                {
+                    n++;
+                }
+            }
+            return n;
+        }
+
+        // Writes every tracked setting's current value, colours excepted, to the repo's defaults.cfg and re-reads it,
+        // so the panel's defaults (reset targets, the yellow marks) are the new ones at once. Returns the path.
         public static string MakeCurrentTheDefaults()
         {
             string path = RepoDefaultsPath;
@@ -320,8 +343,13 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# Written by the tuning panel's \"Make these the mod defaults\" button; rebuild to ship them.");
             sb.AppendLine("# Format: [Section] then Key = Value, same names as dreas.gk2.donkeyapi.cfg.");
             string group = null;
+            sb.AppendLine("# No colours: they are never mod defaults (the game's art for everyone), see Defaults.IsColor.");
             foreach (var t in Tracked)
             {
+                if (IsColor(t))
+                {
+                    continue; // left out: the code's own value (the game's look) is the default
+                }
                 if (t.Group != group)
                 {
                     sb.AppendLine().AppendLine("[" + t.Group + "]");

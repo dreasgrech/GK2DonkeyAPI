@@ -1,87 +1,82 @@
 # GK2 Saddle Up!
 
-Ride the donkey in Graveyard Keeper 2, or drive its cart. This is the playable mod built on
-[GK2 Donkey API](../GK2DonkeyAPI/README.md), which it needs: install both DLLs, `GK2DonkeyAPI.dll` and `SaddleUp.dll`.
-It uses nothing but the public GK2 Donkey API ([`docs/api.md`](../../docs/api.md)), so it's also the
-reference example for mod authors.
+Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart, haul logs, stone and corpses on it,
+leave it standing with its load, and find it where you left it after a reload.
 
-Version 0.1.0, for GK2 Donkey API 0.1.0 (API 0.13.0 or newer) and Steam game build 25676698 (game 1.008).
+Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
+`SaddleUp.dll`. Version 0.1.0, for GK2 Donkey API 0.1.0 (API 0.14.0 or newer) and Steam game build 25676698 (game
+1.008).
 
 ## Playing
 
-| Key | On foot | Riding the donkey | In the cart |
+| Key | On foot | Riding the donkey | Driving the cart |
 |---|---|---|---|
 | **H** | your donkey comes and you ride it | get off | leave the cart standing, ride on |
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
-| **E** (the game's interact key) | next to a standing donkey: ride it | next to a free cart: take it | set the top item down |
-| Send-away key (none by default) | your donkey and its cart go | the same (you get off first) | the same |
+| **J** | – | take the cart in reach | leave the cart standing |
+| **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
 | Bell key (none by default) | – | ring the bell | ring the bell |
+| Send-away key (none by default) | your donkey, cart and foal go (the load is set down first) | the same | the same |
 
-- **Your donkey stays in the world.** Getting off leaves it where you got off, with its cart and whatever is on the
-  cart. Walk up to it and press E to ride it again, or press H or G anywhere to call it: it comes to you, into your
-  area, and you get on.
-- **Its cart is yours too.** H in the cart leaves the cart standing where it is, cargo and all. G brings it back and
-  hitches it.
-- **Sending it away** sets the cart's cargo down on the ground first, so nothing is lost. The next H or G brings a
-  new donkey.
-- **Kept with the save:** your donkey and its cart come back when you load the save, where you left them, cargo
-  on the cart (`Behaviour.KeepWithSaves`). Off: after loading you get a new donkey on the first H or G, and any cargo
-  lies on the ground where the cart stood.
+- **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
+  press H or G anywhere: it comes to you.
+- **It's kept with the save:** after loading, it's where you left it, the load on the cart.
+- **The cart carries two items.** Anything you pick up while driving goes onto it; piles, tables, graves and quest
+  hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
+- **You're faster while mounted**, and you get off by yourself for work, ladders, building, fishing, fighting and
+  sleep, and at building doors. Chests and the inventory keep you mounted.
 
-- **You're faster while mounted.** The keeper always faces left or right, like the donkey.
-- **The cart carries two items.** Anything you pick up goes onto it. Press the interact key with nothing in front of
-  you to set the top item down. On the donkey alone, your hands stay empty.
-- **Cargo stays on the cart** when you get off. Around each save it is set down for a moment so the save has it.
-- **You get off automatically** for work, ladders, building, fishing, fighting and sleep, and when entering a
-  building. Chests and the inventory keep you mounted.
+## Settings
 
-## Settings (`BepInEx\config\dreas.gk2.saddleup.cfg`, or the game's Mods menu)
+All of these apply at once:
+- **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
+  game's **Mods** menu, under GK2 Saddle Up!.
+- **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
+  settings and Saddle Up's pages. The keys and the name show there read-only; you set those in the cfg.
+- **Always:** in `BepInEx\config\dreas.gk2.saddleup.cfg` (with the game closed).
 
-With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed (optional), all of these are
-in the game's **Mods** menu and apply at once. Otherwise edit the cfg with the game closed.
+| Section | Setting | Default | |
+|---|---|---|---|
+| Keys | Ride, Drive, Hitch, Bell, Send away | H, G, J, none, none | The hitch key is a single key (modifiers are ignored). |
+| Behaviour | Riding speed | Normal | Normal, Faster, Fastest. |
+| | Get off at building doors | on | Off: you ride into houses, and the cart goes through the furniture. |
+| | Say why mounting is refused | on | The keeper's thought bubble. |
+| | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
+| | Keep the donkey with the save | on | |
+| Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
+| | Coat | the game's | Brown, Dark, Cream, Black, or Custom (a hex colour). |
+| | Harness | the game's | Black, Red, Blue, Green, or Custom. |
+| | Brays | on | |
+| | A foal | off | A small donkey that stays with yours and follows it around. |
+| Cart | Paint | the game's | Dark wood, Red, Green, Blue, or Custom. |
+| | Lantern | on | The lantern on its pole. |
+| | Lantern lit by day | on | Off: it goes dark by day, like your hand lantern. |
+| | Lantern light | warm (the game's) | White, Green, Blue, or Custom. |
+| | Bell when setting off | on | When the cart sets off with a load after standing. |
+| Sound | Donkey and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
 
-| Key | Default | Meaning |
-|---|---|---|
-| `Keys.RideKey` | H | Ride the donkey / get off / switch from the cart. Combinations such as Shift+H work. |
-| `Keys.CartKey` | G | Take the cart / get off / switch from riding. |
-| `Keys.BellKey` | none | Ring the bell while mounted. |
-| `Keys.SendAwayKey` | none | Send your donkey and its cart away (their cargo is set down first). |
-| `Behaviour.DismountIndoors` | true | Get off when entering a building, church or dungeon, and don't mount inside. The cart would cut through furniture. |
-| `Behaviour.StayMountedThroughDoors` | false | Keep riding through a door that loads another area. A house door isn't one. |
-| `Behaviour.ShowMessages` | true | The keeper says in a thought bubble why he can't mount. |
-| `Behaviour.IdleShuffle` | true | Your donkey, left standing without its cart, takes a few slow steps now and then instead of standing perfectly still. |
-| `Behaviour.KeepWithSaves` | true | Your donkey and its cart stay in the world across saves, cargo included. Off: they're gone after a reload. |
-
-**Where the other settings are:**
-- The look and sound values (speed, seat, lantern, volumes) are GK2 Donkey API's settings, in `dreas.gk2.donkeyapi.cfg`.
-- GK2 Donkey API has a dev panel for tuning them live: `Debug.TuningWindow = true` in that cfg.
-- The behaviour switches above are handed to GK2 Donkey API for the session, so the dev panel shows them locked.
+The custom colours are hex `RRGGBB` (e.g. `8A5A36`); their rows show only while that choice is Custom. Everything
+else (the seat, the cargo on the cart, the lantern's place, the sounds themselves) is tuned and fixed; mod authors
+can change it in GK2 Donkey API's dev panel.
 
 ## How it's built
 
-- **One file,** `Plugin.cs`.
-- **Its donkey and cart are instances in the world,** all through the API:
-  - **Spawning:** `Mounts.SpawnDonkey` and `Mounts.SpawnCart`, the first time they're needed.
-  - **Calling:** `MountHandle.ComeToKeeper`, then waiting for `IsReady` before `Ride`.
-  - **Carts:** `Mounts.Hitch`, `Mounts.Unhitch` and `Mounts.UnhitchRidden`.
-  - **Getting off:** `Mounts.Dismount` (the donkey stays).
-  - **Sending away:** `SetDownCargo` then `Remove`.
-  - **Tracking its own handles:** the events `InstanceRemoved`, `Hitched` and `Unhitched`.
-  - `Mounts.TryMount` (the summon that vanishes at dismount) is no longer used. Other mods may still use it;
-    Saddle Up's keys then switch that ride's style the old way.
-- **Bell:** `Mounts.RingBell`.
-- **Behaviour switches:** `Mounts.Behaviour.Set(...)` at startup and on every change.
-- **The Mods menu:** `FrameworkLink.cs`, optional. Without the framework the same DLL works, and
-  `tests/FrameworkScan` checks that.
-- **Checks:** it declares a hard BepInEx dependency on `dreas.gk2.donkeyapi` and checks `Mounts.ApiVersion` at
-  startup.
+`Plugin.cs` only, and most of it is the list of settings. It defines the settings (`Mounts.SettingsPage`) and maps
+the keys to `Mounts.Companion`, which does the rest: calling the donkey, riding, hitching, the looks, the foal and
+keeping it with the save. Everything goes through the public API ([`docs/api.md`](../../docs/api.md)), so it's also
+the example for mod authors. It declares a hard dependency on `dreas.gk2.donkeyapi` and checks `Mounts.ApiVersion`.
 
-## Tested in game (2026-09-30)
+## Tested in game
 
-- **Keys:** H and G rode, switched style both ways and got off, with every ride owned by `dreas.gk2.saddleup`.
-- **Indoors:** a building door dismounted.
-- **Without Saddle Up:** GK2 Donkey API alone did nothing on any key.
-- **Mods menu:**
-  - the entry registered as Compatible, with Status Active;
-  - a bell key set there (B) rang the bell;
-  - unticking "Dismount indoors" let the donkey into the house, and the dev panel showed that row locked, Off.
+- **2026-09-30:**
+  - H and G rode, switched style both ways and got off;
+  - a building door dismounted;
+  - without Saddle Up, GK2 Donkey API alone did nothing on any key.
+- **2026-10-02:**
+  - after the rename, the kept donkey and cart came back with their load, owned by Saddle Up.
+- **Not yet tested (0.14.0):**
+  - the settings, both in the Mods menu and in the game's Settings window;
+  - the looks;
+  - the foal;
+  - the name;
+  - the speed steps.

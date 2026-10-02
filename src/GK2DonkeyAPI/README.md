@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.1.0 (API 0.13.0), built and audited against Steam game build 25676698, game 1.008 (Assembly-CSharp MVID
+Version 0.1.0 (API 0.14.0), built and audited against Steam game build 25676698, game 1.008 (Assembly-CSharp MVID
 `f7d46132-…`, LazyBearTechnology `f67c6993-…`; re-audit in
 [`docs/game-update-25676698.md`](../../docs/game-update-25676698.md)).
 
@@ -147,6 +147,9 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 | **Stay rules:** end a ride while it goes on. | API | tested |
 | **Feature rules:** switch cargo, the lantern, its light, sounds, the bell, or riding through doors off. | API | tested |
 | **Session tuning:** a mod can set any value for the session without touching the player's cfg; the panel shows it locked. | API | tested |
+| **Companion:** one call gives a mod the keeper's own donkey with its cart and foal: the ride and cart keys' behaviour, sending away, finding it again after a load, look and speed presets, a name in its prompt. | API | untested |
+| **Settings page:** a mod defines its settings once; they show in GK2 Mod Framework's Mods menu when it's installed, else on pages in the game's own Settings window (the game's own rows). | API | untested |
+| **Display names:** "[E] Ride Bella". | API | untested |
 | **Gating on progress:** tech tree, quests, story flags, buildings, days (the example mod gates the cart and the lamp on techs). | API (with the game's own state) | tested |
 
 ### 11. Performance
@@ -169,12 +172,12 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 
 ### 13. For mod authors: the dev panel
 
-`Debug.TuningWindow = true`, then F11. Tabs: General, Riding, Lantern, Sounds, Colors, Instances, Debug, Defaults.
+`Debug.TuningWindow = true`, then F11. Tabs: General, Riding, Lantern, Sounds, Colors, Instances, Debug, Sources (where every value comes from and where it is saved).
 
 | Feature | Status |
 |---|---|
 | **Live tuning** of every value, saved as you go; yellow rows differ from the mod default, cyan rows are locked by another mod; right-click resets a row. | tested |
-| **Mod defaults** kept in the repo's `defaults.cfg` and shipped in the DLL ("Make these the mod defaults"). | tested |
+| **Mod defaults** kept in the repo's `defaults.cfg` and shipped in the DLL ("Make these the mod defaults"). Colours are never mod defaults: every player starts with the game's own art (`tests/DefaultsScan`). | tested |
 | **Instances tab:** spawn donkeys, carts and families, ride, move, unhitch, keep or forget, per-donkey settings, the standing-cart areas drawn on the ground, the head-limit test buttons. | tested |
 | **Cargo photo sheet:** every item alone and every pair on the cart, photographed into one HTML page. | tested |
 | **Self-tests:** about 4 minutes of scripted in-game checks (levels, view reuse, persistence text, hitching, leaks, frame time). | tested |
@@ -190,7 +193,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`.
-3. Start the game once; the log says `GK2 Donkey API 0.1.0 loaded (API 0.13.0); nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.1.0 loaded (API 0.14.0); nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

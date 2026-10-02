@@ -9,7 +9,7 @@ namespace GK2DonkeyAPI
 {
     // In-game tuning panel (Unity IMGUI), shown in the top-right corner while mounted when Debug.TuningWindow is on.
     // Tabs: General (behaviour), Riding (everything that places and animates rider and donkey, for the style
-    // currently mounted), Lantern, Sounds, Debug, Defaults. Every control edits the live config value and the mount
+    // currently mounted), Lantern, Sounds, Colors, Instances, Debug, Sources. Every control edits the live config value and the mount
     // reacts immediately; BepInEx saves the cfg on every change. A row whose value differs from its mod default is
     // yellow, and right-click puts it back to that default (see Defaults.cs for yours against the mod defaults).
     internal static partial class TuningWindow
@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Defaults" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Sources" };
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -203,7 +203,7 @@ namespace GK2DonkeyAPI
         // layout pass was a good part of the panel's own cost. A change shows within a quarter second. The footer's
         // texts are made with it, not on every event.
         private static float nextDiffSnapshot;
-        private static string footerDiffText = "", footerOverrideText = "";
+        private static string footerDiffText = "", footerOverrideText = "", footerDonkeyText = "";
 
         private static void TakeDiffSnapshot()
         {
@@ -217,11 +217,49 @@ namespace GK2DonkeyAPI
             int differing = diffSnapshot.Count;
             footerDiffText = differing == 0
                 ? "Your changes are saved as you make them. All settings match the mod defaults."
-                : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Defaults tab).";
+                : $"Your changes are saved as you make them. {differing} setting{(differing == 1 ? "" : "s")} differ from the mod defaults ({DiffByGroup()}; yellow, listed on the Sources tab). Saved to your cfg; the Sources tab says where every value comes from.";
             footerOverrideText = overrideSnapshot > 0
-                ? $"{overrideSnapshot} value{(overrideSnapshot == 1 ? " is" : "s are")} set by another mod for this session (cyan): those rows are locked and show the value in effect. Your saved value is unchanged and comes back when the mod clears it or the game restarts."
+                ? $"{overrideSnapshot} value{(overrideSnapshot == 1 ? " is" : "s are")} set by another mod for this session ({OwnersOfSessionValues()}; cyan): those rows are locked and show the value in effect. Your saved value is unchanged and comes back when the mod clears it or the game restarts."
                 : "";
+            Mount.Instance r = Mount.Ridden;
+            int own = r != null ? r.Overrides.Count : 0;
+            footerDonkeyText = r == null ? ""
+                : own > 0 || r.OwnLook
+                    ? $"The donkey you ride ({r.FullId}) has {own} value{(own == 1 ? "" : "s")} of its own{(r.OwnLook ? " and its own look (your colours don't apply to it)" : "")}, set by {OwnersOf(r)}: they win over every row here. Sources tab."
+                    : "";
         }
+
+        // Who set the session values, e.g. "dreas.gk2.saddleup: 7".
+        private static string OwnersOfSessionValues()
+        {
+            var by = new SortedDictionary<string, int>(StringComparer.Ordinal);
+            foreach (ITuned t in Tuned.ByEntry.Values)
+            {
+                if (t.HasOverride)
+                {
+                    string o = t.OverrideOwner ?? "?";
+                    by[o] = by.TryGetValue(o, out int n) ? n + 1 : 1;
+                }
+            }
+            var parts = new List<string>();
+            foreach (var kv in by)
+            {
+                parts.Add(kv.Key + ": " + kv.Value);
+            }
+            return string.Join(", ", parts);
+        }
+
+        private static string OwnersOf(Mount.Instance i)
+        {
+            var set = new SortedSet<string>(i.OverrideOwners.Values, StringComparer.Ordinal);
+            if (set.Count == 0)
+            {
+                set.Add(i.OwnerId);
+            }
+            return string.Join(", ", set);
+        }
+
+        private static string CfgPath => Plugin.Instance != null ? Plugin.Instance.Config.ConfigFilePath : "dreas.gk2.donkeyapi.cfg";
 
         private static string DiffByGroup()
         {
@@ -337,6 +375,10 @@ namespace GK2DonkeyAPI
             if (overrideSnapshot > 0)
             {
                 GUILayout.Label(footerOverrideText, small);
+            }
+            if (footerDonkeyText.Length > 0)
+            {
+                GUILayout.Label(footerDonkeyText, small);
             }
             DrawDefaultsButtons(differing);
             GUILayout.Label("Right-click a row to put it back to its mod default.", small);
@@ -710,6 +752,7 @@ namespace GK2DonkeyAPI
         private static void DrawColors()
         {
             Header("Colours");
+            GUILayout.Label("These colours are your settings only (your cfg). They are never made mod defaults: every player starts with the game's own art. A donkey with its own look (Saddle Up's, set by its coat, harness, paint and light choices) ignores them; Sources tab.", small);
             GUILayout.Label("Recolours the donkey, the cart and the lantern through the game's own colour paths: an exact colour swap for the donkey's sprites, the game's colour cube for the 3D cart. Each region below is a set of the art's own colours; the same settings apply in both styles. Nothing is touched while a region is at its defaults.", small);
             Toggle("Colours on", Colors.Enabled, Colors.MarkDirty);
             EnumCycler("Donkey sprites recoloured with", Colors.SpriteMethod, Colors.MarkDirty);
@@ -1129,11 +1172,24 @@ namespace GK2DonkeyAPI
 
         private static void DrawDefaults()
         {
-            Header("Your settings and the mod defaults");
-            GUILayout.Label("Your settings: everything you set on this panel, saved to dreas.gk2.donkeyapi.cfg the moment you change it. They are what you play with.", small);
-            GUILayout.Label("Mod defaults: what a fresh install starts with and what right-click and the reset buttons go back to. They come from defaults.cfg, which is built into the DLL.", small);
-            GUILayout.Label("A setting shown in yellow differs from its mod default.", small);
-            GUILayout.Label("Mod defaults read from: " + Defaults.SourceShort, small);
+            Header("Where a value comes from (the first that has one wins)");
+            Mount.Instance r = Mount.Ridden;
+            GUILayout.Label("1. The donkey's own values: set on one donkey by a mod (Saddle Up's looks and name) or on the Instances tab. Kept with the save when the donkey is. "
+                + (r == null ? "You aren't riding one now." : $"The donkey you ride ({r.FullId}): {r.Overrides.Count} value(s){(r.Overrides.Count > 0 ? ", set by " + OwnersOf(r) : "")}{(r.OwnLook ? "; its own look: it ignores the colours of rows 3 to 5 (they are yours, not its)" : "")}."), small);
+            GUILayout.Label("2. Another mod, for this session only: cyan, locked rows. Never saved; gone when the mod clears them or the game closes. "
+                + (overrideSnapshot > 0 ? $"Now: {overrideSnapshot} ({OwnersOfSessionValues()})." : "Now: none."), small);
+            GUILayout.Label($"3. Your settings: {CfgPath}. Every row of this panel reads and writes this file; a change is saved the moment you make it. Yellow: differs from its mod default ({diffSnapshot.Count} now).", small);
+            GUILayout.Label("4. Mod defaults: what a fresh install starts with, and what right-click and the reset buttons go back to. Read from " + Defaults.SourceShort + ".", small);
+            GUILayout.Label("5. The code's own values: for anything the mod defaults leave out. All colours are left out on purpose, so every player starts with the game's own art.", small);
+            GUILayout.Label("Other mods keep their own settings in their own cfg (e.g. dreas.gk2.saddleup.cfg for Saddle Up's coat or speed): they reach this mod as 1 or 2, never as rows of this panel.", small);
+
+            Header("Where a change is saved");
+            GUILayout.Label("A row of this panel: your settings (3). Right-click: back to the mod default, saved the same way.", small);
+            GUILayout.Label("The Instances tab's settings of one donkey: that donkey (1), kept with the save if the donkey is.", small);
+            GUILayout.Label(Defaults.CanWriteDefaults
+                ? "Make these the mod defaults (below): the repo's defaults.cfg (4), colours excepted; a rebuild ships it."
+                : "Make these the mod defaults: not on this machine (the mod's source folder isn't here).", small);
+            GUILayout.Label("Cargo corrections (Riding tab): " + (CargoLayout.SavesToRepo ? "the repo's cargo-layout.cfg." : "this session only."), small);
 
             List<(string Group, ConfigEntryBase Entry)> diff = diffSnapshot;
             Header(diff.Count == 0 ? "All settings match the mod defaults" : $"{diff.Count} setting{(diff.Count == 1 ? "" : "s")} differ from the mod defaults");
@@ -1172,14 +1228,21 @@ namespace GK2DonkeyAPI
         }
 
         // "Make these the mod defaults" (only where the sources are) and "Reset this style"; used by the footer and
-        // the Defaults tab.
+        // the Sources tab.
         private static void DrawDefaultsButtons(int differing)
         {
             GUILayout.BeginHorizontal();
             if (Defaults.CanWriteDefaults && differing > 0)
             {
                 bool confirming = Time.unscaledTime < confirmMakeDefaultsUntil;
-                if (GUILayout.Button(confirming ? $"Click again: make all {differing} the mod defaults" : "Make these the mod defaults"))
+                int writable = Defaults.DifferingWritable();
+                if (differing > writable)
+                {
+                    GUILayout.EndHorizontal();
+                    GUILayout.Label($"Colours are never made mod defaults: {differing - writable} of your {differing} differing settings are colours and stay yours only (your cfg). Every player starts with the game's own art.", small);
+                    GUILayout.BeginHorizontal();
+                }
+                if (writable > 0 && GUILayout.Button(confirming ? $"Click again: make {writable} the mod defaults (no colours)" : $"Make these the mod defaults ({writable}, no colours)"))
                 {
                     if (!confirming)
                     {
@@ -1191,7 +1254,7 @@ namespace GK2DonkeyAPI
                         try
                         {
                             string path = Defaults.MakeCurrentTheDefaults();
-                            exportStatus = $"{differing} setting{(differing == 1 ? "" : "s")} are now the mod defaults, written to the repo's defaults.cfg. Rebuild the mod to ship them in the DLL.";
+                            exportStatus = $"{writable} setting{(writable == 1 ? "" : "s")} are now the mod defaults, written to the repo's defaults.cfg (colours left out). Rebuild the mod to ship them in the DLL.";
                             Plugin.Log.LogInfo(exportStatus);
                         }
                         catch (Exception e)

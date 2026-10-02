@@ -1,7 +1,28 @@
+enum GK2DonkeyAPI.Api.CartPaint
+  Game = 0
+  DarkWood = 1
+  Red = 2
+  Green = 3
+  Blue = 4
+  Custom = 5
 enum GK2DonkeyAPI.Api.CartSlopeStyle
   HalfLift = 0
   ShaftsTilt = 1
   WholeCartPitch = 2
+enum GK2DonkeyAPI.Api.CoatColor
+  Game = 0
+  Brown = 1
+  Dark = 2
+  Cream = 3
+  Black = 4
+  Custom = 5
+enum GK2DonkeyAPI.Api.HarnessColor
+  Game = 0
+  Black = 1
+  Red = 2
+  Blue = 3
+  Green = 4
+  Custom = 5
 class GK2DonkeyAPI.Api.InstanceTuning
   property System.Collections.Generic.IReadOnlyList<string> Keys { get; }
   method void Clear(string key)
@@ -10,6 +31,12 @@ class GK2DonkeyAPI.Api.InstanceTuning
   method void Reset()
   method T Set(string ownerId, string key, T value)
   method string SetBy(string key)
+enum GK2DonkeyAPI.Api.LanternColor
+  Game = 0
+  White = 1
+  Green = 2
+  Blue = 3
+  Custom = 4
 enum GK2DonkeyAPI.Api.LegSource
   Body = 0
   Drawn = 1
@@ -21,6 +48,33 @@ class GK2DonkeyAPI.Api.MountColorRegion
   property System.Collections.Generic.IReadOnlyList<string> SourceColors { get; }
   method string KeyOf(string setting)
   method string ToString()
+class GK2DonkeyAPI.Api.MountCompanion
+  field static const string CartKey = cart
+  field static const string DonkeyKey = donkey
+  field static const string FoalKey = foal
+  property bool BellOnSetOff { get; set; }
+  property bool Brays { get; set; }
+  property GK2DonkeyAPI.Api.MountHandle Cart { get; }
+  property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
+  property string CustomCoat { get; set; }
+  property string CustomHarness { get; set; }
+  property string CustomLantern { get; set; }
+  property string CustomPaint { get; set; }
+  property GK2DonkeyAPI.Api.MountHandle Donkey { get; }
+  property GK2DonkeyAPI.Api.MountHandle Foal { get; }
+  property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
+  property bool HasFoal { get; set; }
+  property bool KeepWithSaves { get; set; }
+  property bool Lantern { get; set; }
+  property bool LanternByDay { get; set; }
+  property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
+  property string Name { get; set; }
+  property string OwnerId { get; }
+  property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
+  property float SoundVolume { get; set; }
+  property GK2DonkeyAPI.Api.MountSpeed Speed { get; set; }
+  method void SendAway()
+  method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
 enum GK2DonkeyAPI.Api.MountFeature
   Cargo = 0
   Lantern = 1
@@ -29,8 +83,10 @@ enum GK2DonkeyAPI.Api.MountFeature
   Bell = 4
   StayThroughDoors = 5
 class GK2DonkeyAPI.Api.MountHandle
+  field static const int MaxDisplayName = 24
   property System.Collections.Generic.IReadOnlyList<string> CargoIds { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Children { get; }
+  property string DisplayName { get; }
   property bool Exists { get; }
   property bool FacingRight { get; }
   property string FullId { get; }
@@ -58,6 +114,7 @@ class GK2DonkeyAPI.Api.MountHandle
   method void Remove()
   method GK2DonkeyAPI.Api.MountResult Ride(bool showMessage = True)
   method void SetData(string ownerId, string key, string value)
+  method GK2DonkeyAPI.Api.MountResult SetDisplayName(string ownerId, string name)
   method int SetDownCargo()
   method GK2DonkeyAPI.Api.MountResult SetKey(string ownerId, string key)
   method GK2DonkeyAPI.Api.MountResult SetPersist(string ownerId, bool keep)
@@ -97,6 +154,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static System.IDisposable AddStayRule(string ownerId, System.Func<string> whyDismount)
   method static void Bray()
   method static void ClearTuning(string ownerId)
+  method static GK2DonkeyAPI.Api.MountCompanion Companion(string ownerId)
   method static void Dismount(string reason = null)
   method static GK2DonkeyAPI.Api.MountHandle Find(string ownerId, int id)
   method static GK2DonkeyAPI.Api.MountHandle Find(string ownerId, string key)
@@ -106,6 +164,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
   method static void RingBell()
+  method static GK2DonkeyAPI.Api.MountSettingsPage SettingsPage(string ownerId, BepInEx.Configuration.ConfigFile config, string title, string author, string description, System.Func<string> status = null)
   method static GK2DonkeyAPI.Api.MountHandle Spawn(string ownerId, GK2DonkeyAPI.Api.MountSpawn spec)
   method static GK2DonkeyAPI.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
   method static GK2DonkeyAPI.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
@@ -115,6 +174,14 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountTuning Tuning(GK2DonkeyAPI.Api.MountStyle style)
   method static GK2DonkeyAPI.Api.MountHandle Unhitch(GK2DonkeyAPI.Api.MountHandle donkey)
   method static GK2DonkeyAPI.Api.MountHandle UnhitchRidden()
+class GK2DonkeyAPI.Api.MountSettingsPage
+  method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null)
+  method void Info(string section, string label, System.Func<string> value, string description = )
+  method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null)
+  method void Publish()
+  method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null)
+  method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)
+  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null)
 class GK2DonkeyAPI.Api.MountSpawn
   field bool Donkey
   field bool FacingRight
@@ -129,6 +196,10 @@ class GK2DonkeyAPI.Api.MountSpawn
   field string SceneId
   field bool WithCart
   method void .ctor()
+enum GK2DonkeyAPI.Api.MountSpeed
+  Normal = 0
+  Faster = 1
+  Fastest = 2
 enum GK2DonkeyAPI.Api.MountStyle
   Ride = 0
   Cart = 1

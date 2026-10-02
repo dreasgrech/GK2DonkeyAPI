@@ -47,6 +47,11 @@
     <Reference Include="UnityEngine.AudioModule"><HintPath>$(Managed)\UnityEngine.AudioModule.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="0Harmony"><HintPath>$(BepInExCore)\0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(Managed)\UnityEngine.UI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(Managed)\UnityEngine.UIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(Managed)\Unity.TextMeshPro.dll</HintPath><Private>false</Private></Reference>
+    <!-- Optional at runtime: only FrameworkLink uses it, and only when the framework is installed. -->
+    <Reference Include="GK2.Framework"><HintPath>$(FrameworkDll)</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->

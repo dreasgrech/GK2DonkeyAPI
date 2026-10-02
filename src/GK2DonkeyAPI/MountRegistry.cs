@@ -379,6 +379,7 @@ namespace GK2DonkeyAPI
             using (Perf.Measure(Perf.S.Tick))
             {
                 TickInner();
+                MountCompanion.TickAll();
             }
         }
 
