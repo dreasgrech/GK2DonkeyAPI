@@ -21,7 +21,9 @@ namespace GK2DonkeyAPI
     // Found through LazyWindowsStackController.OnWindowOpened (no patch): the first time the window opens its rows are
     // added; every open starts on the game's page. A key row is set by capture: either arrow starts it ("Press a key..."),
     // the next key pressed (with its Shift/Ctrl/Alt) is the key, Backspace clears it, Esc / another page / closing the
-    // window / 10 s cancel (Tick). Text can't be edited with "< value >": it shows read-only.
+    // window / 10 s cancel (Tick). While it waits, the window's own input is off (the game's LazyWindowInputController,
+    // as when another window covers it): Esc then cancels instead of closing the window (as in GK2 Mod Framework's
+    // Mods menu), and the arrow keys can be chosen too. Text can't be edited with "< value >": it shows read-only.
     // Guarded: if the window or a row to copy isn't found (a game update changed the window), nothing is added, the
     // cfg still works, and the log says so once.
     internal static class SettingsRows
@@ -279,6 +281,34 @@ namespace GK2DonkeyAPI
 
         // The label left of the "< value >" (the game's is called LeftName): a text named so, else the first text
         // outside the switch.
+        // A note's text across the whole row, centred: a copy of the row's label (its font and colour) laid over the
+        // row outside its layout, the label itself hidden; smaller if the sentence doesn't fit.
+        private static void WidenToRow(GameObject row, TextMeshProUGUI label)
+        {
+            GameObject copy = UnityEngine.Object.Instantiate(label.gameObject, row.transform, false);
+            copy.name = "Note";
+            var le = copy.GetComponent<LayoutElement>() ?? copy.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+            ContentSizeFitter fit = copy.GetComponent<ContentSizeFitter>();
+            if (fit != null)
+            {
+                UnityEngine.Object.Destroy(fit); // it would size the copy to its text again
+            }
+            var rt = (RectTransform)copy.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            TextMeshProUGUI t = copy.GetComponent<TextMeshProUGUI>();
+            t.alignment = TextAlignmentOptions.Center;
+            t.textWrappingMode = TextWrappingModes.NoWrap;
+            t.enableAutoSizing = true;
+            t.fontSizeMax = label.fontSize;
+            t.fontSizeMin = Mathf.Max(8f, label.fontSize * 0.6f);
+            label.gameObject.SetActive(false);
+            copy.SetActive(true);
+        }
+
         private static TextMeshProUGUI SetLabel(GameObject go, UISwitchButton sw, string text)
         {
             TextMeshProUGUI found = null;
@@ -306,10 +336,11 @@ namespace GK2DonkeyAPI
             var b = new Built { Row = r };
             b.Go = Copy(template, content, Prefix + page.OwnerId + " " + (r?.Entry?.Definition.Key ?? r?.Label ?? heading));
             b.Switch = b.Go.GetComponentInChildren<UISwitchButton>(true);
-            if (r == null)
+            bool note = r != null && r.Kind == MountSettingsPage.Kind.Note;
+            if (r == null || note)
             {
-                // A section heading: the label only, everything else of the row hidden.
-                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, heading);
+                // A section heading, or a note: the label only, everything else of the row hidden.
+                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, note ? r.Description : heading);
                 b.Fields = new[] { "" };
                 b.Switch.Initialize(_ => { }, b.Fields, 0);
                 b.Switch.IsInteractable = false;
@@ -323,6 +354,10 @@ namespace GK2DonkeyAPI
                 foreach (GamepadNavigationItem n in b.Go.GetComponentsInChildren<GamepadNavigationItem>(true))
                 {
                     n.enabled = false; // not a stop for the gamepad
+                }
+                if (note && label != null)
+                {
+                    WidenToRow(b.Go, label);
                 }
                 return b;
             }
@@ -448,7 +483,7 @@ namespace GK2DonkeyAPI
         // Its value up to date (the cfg, the Mods menu or another row may have changed it).
         private static void Sync(Built b)
         {
-            if (b.Row == null || b.Row.Kind == MountSettingsPage.Kind.Button)
+            if (b.Row == null || b.Row.Kind == MountSettingsPage.Kind.Button || b.Row.Kind == MountSettingsPage.Kind.Note)
             {
                 return;
             }
@@ -458,7 +493,7 @@ namespace GK2DonkeyAPI
             }
             else if (b.Row.Kind == MountSettingsPage.Kind.Key)
             {
-                b.Switch.ReinitLabels(KeyFields(capturing == b ? "Press a key..." : KeyText(b.Row)));
+                b.Switch.ReinitLabels(KeyFields(capturing == b ? "Press a key (Esc cancels)" : KeyText(b.Row)));
                 b.Switch.UpdateField(0, fireCallback: false);
             }
             else
@@ -496,6 +531,10 @@ namespace GK2DonkeyAPI
         private static void StartCapture(Built b)
         {
             Built was = capturing;
+            if (was == null)
+            {
+                WindowInput(on: false);
+            }
             capturing = b;
             captureFrom = Time.frameCount + 1; // not the press that started it (an arrow, Enter, a click)
             captureUntil = Time.unscaledTime + CaptureSeconds;
@@ -510,11 +549,65 @@ namespace GK2DonkeyAPI
         private static void EndCapture()
         {
             Built b = capturing;
+            if (b != null)
+            {
+                WindowInput(on: true);
+            }
             capturing = null;
             captureEndedFrame = Time.frameCount;
             if (b != null)
             {
                 Sync(b);
+            }
+        }
+
+        private static System.Reflection.FieldInfo inputField;
+        private static bool inputFieldMissing;
+
+        // The Settings window's own keys (Esc closes it, the arrows step the focused row) off while a key is captured,
+        // and on again: the game's own Disable / Enable pair for a window covered by another. Not found (a game
+        // update): the capture works without it, and Esc may close the window.
+        private static void WindowInput(bool on)
+        {
+            if (window == null || inputFieldMissing)
+            {
+                return;
+            }
+            try
+            {
+                if (inputField == null)
+                {
+                    for (Type t = window.GetType(); t != null && inputField == null; t = t.BaseType)
+                    {
+                        inputField = t.GetField("lazyWindowInputController", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly); // LazyWindow<T>
+                    }
+                    if (inputField == null)
+                    {
+                        inputFieldMissing = true;
+                        Plugin.Log.LogInfo("Settings: the Settings window's input controller isn't found; Esc may close the window while a key is being set.");
+                        return;
+                    }
+                }
+                if (!(inputField.GetValue(window) is LazyWindowInputController input))
+                {
+                    return;
+                }
+                if (on)
+                {
+                    if (LazyWindowsStackController.IsWindowOpened(window))
+                    {
+                        input.Enable(restoreFocused: true);
+                    }
+                }
+                else
+                {
+                    input.Disable(rememberFocused: true);
+                }
+            }
+            catch (Exception e)
+            {
+                inputFieldMissing = true;
+                Plugin.Log.LogWarning("Settings: switching the Settings window's keys failed (" + e.Message + "); Esc may close the window while a key is being set.");
             }
         }
 

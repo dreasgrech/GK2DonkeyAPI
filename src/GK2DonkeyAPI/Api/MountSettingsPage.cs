@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 
@@ -20,7 +21,7 @@ namespace GK2DonkeyAPI.Api
     // Both are extras: if anything about them fails, they don't show, and the settings work as before.
     public sealed class MountSettingsPage
     {
-        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview }
+        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note }
 
         internal sealed class Row
         {
@@ -122,11 +123,16 @@ namespace GK2DonkeyAPI.Api
         // A key (with modifiers). Read-only in the game's Settings window.
         // pressed: called when the player presses the key (its modifiers held; other keys held, like walking, don't
         // matter), while the API is on. The API polls it: the mod needs no Update of its own.
+        // Plain Backspace means no key: set from either menu or the cfg, it's cleared at once (GK2 Mod Framework's key
+        // capture has no way to clear a key and takes Backspace as one; the game's Settings window does the same on
+        // its own). Publish adds a row saying so after the page's last key.
         public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null, Action pressed = null)
         {
             string cfgSection = Sec(section);
             ConfigEntry<KeyboardShortcut> e = Config.Bind(cfgSection, key, value, description);
             Add(new Row { Kind = Kind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description });
+            ClearIfBackspace(e);
+            e.SettingChanged += (_, __) => ClearIfBackspace(e); // before apply: apply sees the cleared key
             Wire(e, apply);
             if (pressed != null)
             {
@@ -220,6 +226,7 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             published = true;
+            AddKeyHelp();
             LookPreview.Watch(this);
             if (FrameworkLink.TryRegister(this))
             {
@@ -236,6 +243,39 @@ namespace GK2DonkeyAPI.Api
                 throw new InvalidOperationException("Add every row before Publish.");
             }
             Rows.Add(r);
+        }
+
+        internal const string KeyHelp = "While setting a key, Backspace clears it and Esc cancels.";
+
+        internal static bool IsClearKey(KeyboardShortcut k)
+        {
+            return k.MainKey == UnityEngine.KeyCode.Backspace && !k.Modifiers.Any();
+        }
+
+        private void ClearIfBackspace(ConfigEntry<KeyboardShortcut> e)
+        {
+            if (IsClearKey(e.Value))
+            {
+                e.Value = KeyboardShortcut.Empty;
+                Plugin.Log.LogInfo($"Settings: {OwnerId} {e.Definition.Key} cleared (Backspace means no key).");
+            }
+        }
+
+        // After the page's last key row, in its section: how to clear a key and cancel setting one. A note: in the Mods
+        // menu a row whose description is the sentence, in the game's Settings window the sentence across the row.
+        private void AddKeyHelp()
+        {
+            int last = Rows.FindLastIndex(r => r.Kind == Kind.Key);
+            if (last < 0)
+            {
+                return;
+            }
+            Row k = Rows[last];
+            Rows.Insert(last + 1, new Row
+            {
+                Kind = Kind.Note, Section = k.Section, ShownSection = k.ShownSection, Label = "Setting a key",
+                Description = KeyHelp,
+            });
         }
 
         private void Wire<T>(ConfigEntry<T> e, Action<T> apply)

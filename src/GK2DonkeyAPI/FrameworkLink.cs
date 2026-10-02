@@ -155,6 +155,9 @@ namespace GK2DonkeyAPI
                         case MountSettingsPage.Kind.Info:
                             s.AddReadOnly(r.Section, "Info" + order, r.Label, r.Description, r.InfoValue, order);
                             break;
+                        case MountSettingsPage.Kind.Note:
+                            s.AddReadOnly(r.Section, "Note" + order, r.Label, r.Description, () => "", order);
+                            break;
                         case MountSettingsPage.Kind.Preview:
                             // Shown only when the picture has no room outside the list (LookPreview lays it over this row).
                             s.AddReadOnly(r.Section, "Preview" + order, r.Label, r.Description, () => "", order);
