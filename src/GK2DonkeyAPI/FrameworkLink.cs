@@ -61,7 +61,7 @@ namespace GK2DonkeyAPI
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"GK2 Mod Framework {info.Metadata.Version} is installed, but listing GK2 Donkey API in its Mods menu failed; the mods built on it work as normal. {e.GetType().Name}: {e.Message}");
+                Plugin.Log?.LogWarning($"GK2 Mod Framework {info.Metadata.Version} is installed, but listing GK2 Donkey API in its Mods menu failed; the mods built on it work as normal. {e.GetType().Name}: {e.Message}");
             }
         }
 

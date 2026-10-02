@@ -12,7 +12,9 @@ namespace GK2DonkeyAPI
     // Player mods' settings pages (MountSettingsPage) in the game's own Settings window, for players without GK2 Mod
     // Framework. The window is the game's: a fixed list of rows, each a UISwitchButton ("< value >") with its label.
     // The game's window can't grow by twenty rows (it would leave the screen), so a "Showing" row at the top switches
-    // between the game's own rows and pages of the mods' rows, at most RowsPerPage each. Every row is a copy of the
+    // between the game's own rows and pages of the mods' rows, each as many rows as the game's own page has (its
+    // setting rows counted when the window is first built, at least MinRowsPerPage), so the window keeps its size.
+    // What isn't a setting row of the game's (the OK button) stays on every page, below the rows. Every row is a copy of the
     // game's own row, so it has the game's look, sounds, keys and gamepad navigation.
     //
     // Found through LazyWindowsStackController.OnWindowOpened (no patch): the first time the window opens its rows are
@@ -21,7 +23,8 @@ namespace GK2DonkeyAPI
     // cfg still works, and the log says so once.
     internal static class SettingsRows
     {
-        private const int RowsPerPage = 10;
+        private const int MinRowsPerPage = 10;
+        private static int rowsPerPage = MinRowsPerPage;
         private const string Prefix = "GK2DonkeyAPI ";
 
         private static readonly List<MountSettingsPage> pages = new List<MountSettingsPage>();
@@ -60,6 +63,7 @@ namespace GK2DonkeyAPI
         private static GameObject showing;
         private static UISwitchButton showingSwitch;
         private static readonly List<GameObject> gameRows = new List<GameObject>();
+        private static readonly List<GameObject> keptRows = new List<GameObject>(); // the OK button: on every page
         private static readonly Dictionary<GameObject, bool> gameRowsWereActive = new Dictionary<GameObject, bool>();
         private static readonly List<Shown> shown = new List<Shown>();
         private static int current;
@@ -98,6 +102,7 @@ namespace GK2DonkeyAPI
             window = settings;
             shown.Clear();
             gameRows.Clear();
+            keptRows.Clear();
             // The row to copy: the first "< value >" row, by its component (a name could change with an update).
             UISwitchButton template = settings.GetComponentInChildren<UISwitchButton>(true);
             Transform content = template != null ? RowOf(template.transform) : null;
@@ -107,15 +112,32 @@ namespace GK2DonkeyAPI
                 return;
             }
             GameObject templateRow = RowGameObject(template.transform, content);
+            int gameSettingRows = 0;
             foreach (Transform child in content)
             {
-                if (!child.name.StartsWith(Prefix, StringComparison.Ordinal))
+                if (child.name.StartsWith(Prefix, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+                // A setting row has a "< value >" switch or a volume slider (UIGameSettingsWindow's fields); anything
+                // else (the OK button) is kept on the mods' pages too.
+                bool settingRow = child.GetComponentInChildren<UISwitchButton>(true) != null || child.GetComponentInChildren<UISlider>(true) != null;
+                if (settingRow)
                 {
                     gameRows.Add(child.gameObject);
+                    if (child.gameObject.activeSelf)
+                    {
+                        gameSettingRows++;
+                    }
+                }
+                else
+                {
+                    keptRows.Add(child.gameObject);
                 }
             }
+            rowsPerPage = Math.Max(MinRowsPerPage, gameSettingRows);
 
-            // The pages: each mod's rows by section, in their order, cut at RowsPerPage (a section heading counts).
+            // The pages: each mod's rows by section, in their order, cut at rowsPerPage (a section heading counts).
             foreach (MountSettingsPage page in pages)
             {
                 var bySection = new List<KeyValuePair<string, List<MountSettingsPage.Row>>>();
@@ -140,7 +162,7 @@ namespace GK2DonkeyAPI
                     string heading = section.Value[0].ShownSection ?? section.Key;
                     // A new page when the whole section doesn't fit; a section longer than a page goes on over the
                     // next, its heading repeated.
-                    if (cur == null || cur.Rows.Count + 1 + section.Value.Count > RowsPerPage && cur.Rows.Count > 0)
+                    if (cur == null || cur.Rows.Count + 1 + section.Value.Count > rowsPerPage && cur.Rows.Count > 0)
                     {
                         cur = new Shown();
                         mine.Add(cur);
@@ -148,7 +170,7 @@ namespace GK2DonkeyAPI
                     cur.Rows.Add(Make(templateRow, content, null, page, heading));
                     foreach (MountSettingsPage.Row r in section.Value)
                     {
-                        if (cur.Rows.Count >= RowsPerPage)
+                        if (cur.Rows.Count >= rowsPerPage)
                         {
                             cur = new Shown();
                             mine.Add(cur);
@@ -182,7 +204,7 @@ namespace GK2DonkeyAPI
             {
                 rows += s.Rows.Count;
             }
-            Plugin.Log.LogInfo($"Settings: added {rows} rows on {shown.Count} page(s) to the game's Settings window.");
+            Plugin.Log.LogInfo($"Settings: added {rows} rows on {shown.Count} page(s) to the game's Settings window ({rowsPerPage} a page, as the game's own; {keptRows.Count} other element(s) of the window kept on every page).");
         }
 
         // The window's content: the vertical layout the rows sit in, above the UISwitchButton.
@@ -465,6 +487,13 @@ namespace GK2DonkeyAPI
                         Sync(b);
                     }
                     b.Go.SetActive(on);
+                }
+            }
+            foreach (GameObject g in keptRows)
+            {
+                if (g != null)
+                {
+                    g.transform.SetAsLastSibling(); // below the mods' rows, which are added after it
                 }
             }
             if (showingSwitch != null && showingSwitch.CurrentFieldIndex != page)
