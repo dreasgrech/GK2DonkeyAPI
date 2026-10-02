@@ -189,15 +189,16 @@ namespace GK2DonkeyAPI
             const float margin = 8f;
             float roomH = Mathf.Max(24f, screenTop - topLeft.y - 2f * margin);
             float roomW = Mathf.Max(24f, topRight.x - topLeft.x);
-            float k = Mathf.Max(0.5f, Mathf.Min(3f, roomH / pic.height, roomW / pic.width));
-            rt.sizeDelta = new Vector2(pic.width * k, pic.height * k);
+            Vector2 art = PreviewStage.ArtSize(pic); // k: canvas units per art pixel
+            float k = Mathf.Max(0.5f, Mathf.Min(3f, roomH / art.y, roomW / art.x));
+            rt.sizeDelta = new Vector2(art.x * k, art.y * k);
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0f);
             rt.localPosition = new Vector3((topLeft.x + topRight.x) / 2f, topLeft.y + margin, 0f);
             if (s.LoggedUnder != window)
             {
                 s.LoggedUnder = window;
-                Plugin.Log.LogInfo($"[preview] shown above '{window.name}': room {roomW:0} x {roomH:0}, picture {pic.width} x {pic.height} at {k:0.##}x.");
+                Plugin.Log.LogInfo($"[preview] shown above '{window.name}': room {roomW:0} x {roomH:0}, picture {pic.width} x {pic.height} ({art.x:0} x {art.y:0} art pixels) at {k:0.##}x.");
             }
             s.Go.transform.SetAsLastSibling();
             s.Go.SetActive(true);

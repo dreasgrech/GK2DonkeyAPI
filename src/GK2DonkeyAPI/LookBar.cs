@@ -220,8 +220,9 @@ namespace GK2DonkeyAPI
                 {
                     pictureImage.texture = pic;
                     var le = picture.GetComponent<LayoutElement>();
-                    le.preferredWidth = pic.width * 2f;
-                    le.preferredHeight = pic.height * 2f;
+                    Vector2 art = PreviewStage.ArtSize(pic);
+                    le.preferredWidth = art.x * 2f;
+                    le.preferredHeight = art.y * 2f;
                     ((RectTransform)picture.transform).sizeDelta = new Vector2(le.preferredWidth, le.preferredHeight);
                 }
                 picture.SetActive(pic != null);

@@ -50,6 +50,19 @@ namespace GK2DonkeyAPI
         private static Mount.Instance shownPaper;
         private static float ppu = 50f;
 
+        // Picture pixels per art pixel. The walk animation rocks the cart body by up to 3 degrees; at one picture pixel
+        // per art pixel that tilt snaps into a one-pixel step across the middle of the cart (it looked split in two).
+        // The game draws the cart at screen resolution, where the tilt is smooth: so does the picture, at the size it's
+        // shown (three canvas units per art pixel at most).
+        internal const int Detail = 3;
+
+        // The picture's size in art pixels (the CPU stand-in is drawn at one pixel per art pixel).
+        internal static Vector2 ArtSize(Texture pic)
+        {
+            float d = pic == rt ? Detail : 1f;
+            return new Vector2(pic.width / d, pic.height / d);
+        }
+
         // What the dev window tunes (session only; "Log these values" prints them to be made the defaults).
         private static Vector2 cartShift, donkeyShift;
         private static float pitch = GameCameraPitch;
@@ -369,9 +382,10 @@ namespace GK2DonkeyAPI
                 throw new InvalidOperationException("nothing to frame");
             }
             b.Expand(new Vector3(pad * 2f, pad * 2f, 0f));
-            int w = Mathf.Clamp(Mathf.CeilToInt(b.size.x * ppu) + 8, 16, 768);
-            int h = Mathf.Clamp(Mathf.CeilToInt(b.size.y * ppu) + 8, 16, 768);
-            cam.orthographicSize = h / ppu / 2f;
+            float density = ppu * Detail;
+            int w = Mathf.Clamp(Mathf.CeilToInt(b.size.x * density) + 8 * Detail, 16, 768 * Detail);
+            int h = Mathf.Clamp(Mathf.CeilToInt(b.size.y * density) + 8 * Detail, 16, 768 * Detail);
+            cam.orthographicSize = h / density / 2f;
             cam.aspect = (float)w / h;
             Vector3 centre = stage.transform.position + ct.TransformDirection(new Vector3(b.center.x, b.center.y, 0f));
             ct.position = centre - forward * (b.extents.z + 50f);
@@ -460,7 +474,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[preview] the picture is empty; framing left wide.");
                 return;
             }
-            const int margin = 6; // room for the walk's bob and the lamp's swing
+            const int margin = 6 * Detail; // room for the walk's bob and the lamp's swing
             minX = Math.Max(0, minX - margin); minY = Math.Max(0, minY - margin);
             maxX = Math.Min(w0 - 1, maxX + margin); maxY = Math.Min(h0 - 1, maxY + margin);
             int w = maxX - minX + 1, h = maxY - minY + 1;
