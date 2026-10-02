@@ -6,9 +6,11 @@ using Mono.Cecil.Cil;
 //  1. every [HarmonyPatch] class is in Plugin.PatchClasses (patched by class; PatchAll(assembly) would list the
 //     framework-typed class and make Harmony warn when the framework is absent);
 //  2. Plugin has no method Unity calls by name (a helper named Start once ran twice and patched everything twice);
-//  3. only FrameworkLink.Register and the classes nested in FrameworkLink touch GK2.Framework: base types,
-//     interfaces, attributes, fields, signatures, locals and every IL operand are checked;
-//  4. Register is NoInlining, and Plugin has a soft BepInDependency on the framework.
+//  3. only FrameworkLink's entry points (Register; RegisterApi, which lists GK2 Donkey API itself in the Mods menu)
+//     and the classes nested in FrameworkLink touch GK2.Framework: base types, interfaces, attributes, fields,
+//     signatures, locals and every IL operand are checked;
+//  4. the entry points are NoInlining (so a caller's JIT never loads the framework), and Plugin has a soft
+//     BepInDependency on the framework.
 // Usage: dotnet run -c Release [ModName ...]   (default: every mod below; each must be built in Release first)
 string[] integrated = { "GK2DonkeyAPI" }; // it links player mods' settings pages to the framework (Saddle Up has no link of its own); the four small mods are checked in GK2QOLMods
 string[] mods = args.Length > 0 ? args : integrated;
@@ -72,6 +74,7 @@ static int Check(ModuleDefinition mod, string ns)
     Result(true, "Plugin has no unintended Unity message methods (Start, OnEnable, OnDisable, ...)");
 
     // 3. framework isolation
+    string[] entryPoints = { "Register", "RegisterApi" };
     int registerUses = 0;
     foreach (var t in mod.GetTypes())
     {
@@ -89,15 +92,19 @@ static int Check(ModuleDefinition mod, string ns)
             bool uses = Fw(m.ReturnType) || m.Parameters.Any(p => Fw(p.ParameterType))
                 || (m.HasBody && (m.Body.Variables.Any(v => Fw(v.VariableType)) || m.Body.Instructions.Any(i => FwOperand(i.Operand))));
             if (!uses) continue;
-            if (t == link && m.Name == "Register") registerUses++;
+            if (t == link && entryPoints.Contains(m.Name)) registerUses++;
             else Bad("method " + m.Name);
         }
     }
-    Result(registerUses == 1, "GK2.Framework is used only by FrameworkLink.Register and its nested mod class");
+    Result(registerUses >= 1, "GK2.Framework is used only by FrameworkLink's entry points (" + string.Join(", ", entryPoints) + ") and its nested classes");
 
     // 4. inlining and load order
     var register = link.Methods.FirstOrDefault(m => m.Name == "Register");
-    Result(register != null && register.ImplAttributes.HasFlag(MethodImplAttributes.NoInlining), "FrameworkLink.Register is NoInlining");
+    Result(register != null, "FrameworkLink.Register exists");
+    foreach (var m in link.Methods.Where(m => entryPoints.Contains(m.Name)))
+    {
+        Result(m.ImplAttributes.HasFlag(MethodImplAttributes.NoInlining), $"FrameworkLink.{m.Name} is NoInlining");
+    }
     Result(plugin.CustomAttributes.Any(a => a.AttributeType.Name == "BepInDependency"
             && (string)a.ConstructorArguments[0].Value == "ru.superman4eg.gk2.framework"
             && Convert.ToInt32(a.ConstructorArguments[1].Value) == 2),

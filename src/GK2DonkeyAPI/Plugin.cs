@@ -399,6 +399,20 @@ namespace GK2DonkeyAPI
 
         private void Awake()
         {
+            try
+            {
+                Load();
+            }
+            finally
+            {
+                // In GK2 Mod Framework's Mods list too, also when it switched itself off (then shown as not confirmed
+                // for this build): the mods built on it list it as their dependency (FrameworkLink).
+                FrameworkLink.TryRegisterApi(Config);
+            }
+        }
+
+        private void Load()
+        {
             Log = Logger;
             Log.LogEvent += (_, __) => Perf.NoteLogLine(); // the panel's log lines per second
             Instance = this;

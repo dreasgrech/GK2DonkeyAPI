@@ -47,6 +47,48 @@ namespace GK2DonkeyAPI
             FrameworkApi.RegisterMod(new PageMod(page), page.Config);
         }
 
+        // GK2 Donkey API itself in the Mods list (no settings there): so the pages' mods can name it as their
+        // dependency, which the framework checks against its own list. Its build is confirmed only while it runs.
+        internal static void TryRegisterApi(ConfigFile config)
+        {
+            if (!Chainloader.PluginInfos.TryGetValue(FrameworkGuid, out var info) || info.Instance == null)
+            {
+                return;
+            }
+            try
+            {
+                RegisterApi(config);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"GK2 Mod Framework {info.Metadata.Version} is installed, but listing GK2 Donkey API in its Mods menu failed; the mods built on it work as normal. {e.GetType().Name}: {e.Message}");
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RegisterApi(ConfigFile config)
+        {
+            FrameworkApi.RegisterMod(new ApiMod(), config);
+        }
+
+        private sealed class ApiMod : Gk2ModBase
+        {
+            private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(Plugin.Guid, "GK2 Donkey API", "dreas", Plugin.Version,
+                $"The donkeys, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
+                + "install a mod that uses it, like GK2 Saddle Up!.",
+                supportsRuntimeToggle: false, requiresKnownBuild: true, frameworkManagesEnabledState: false);
+
+            public override Gk2ModMetadata Metadata => metadata;
+
+            public override void OnRegister(Gk2ModContext context)
+            {
+                if (Mounts.IsAvailable)
+                {
+                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                }
+            }
+        }
+
         private sealed class PageMod : Gk2ModBase
         {
             private readonly MountSettingsPage page;
@@ -54,8 +96,8 @@ namespace GK2DonkeyAPI
 
             // The mod keeps its own switches: the framework adds no Enabled entry (frameworkManagesEnabledState false).
             // requiresKnownBuild: the list says "Unknown build" unless OnRegister confirms the build, which it does
-            // only while the mod says it's active (its status) and GK2 Donkey API runs. No Dependencies: the menu
-            // printed the framework there with no "(optional)", which read as if the mod needed it.
+            // only while the mod says it's active (its status) and GK2 Donkey API runs. Dependencies: GK2 Donkey API
+            // only (not the framework: the menu printed it with no "(optional)", which read as if the mod needed it).
             internal PageMod(MountSettingsPage page)
             {
                 this.page = page;
@@ -64,6 +106,13 @@ namespace GK2DonkeyAPI
             }
 
             public override Gk2ModMetadata Metadata => metadata;
+
+            // GK2 Donkey API (listed by ApiMod): shown as the mod's dependency, and the framework marks the mod
+            // unavailable while the API is. Here, in the nested class: a field of FrameworkLink itself would load the
+            // framework with FrameworkLink (tests/FrameworkScan).
+            private static readonly Gk2ModDependency[] NeedsApi = { new Gk2ModDependency(Plugin.Guid) };
+
+            public override System.Collections.Generic.IReadOnlyList<Gk2ModDependency> Dependencies => NeedsApi;
 
             public override void OnRegister(Gk2ModContext context)
             {

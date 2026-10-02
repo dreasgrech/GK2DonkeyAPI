@@ -470,6 +470,9 @@ Where they apply:
 | `Preview(section, companion, label = "Your donkey", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
 
+- **In the Mods menu:** your mod lists `dreas.gk2.donkeyapi` as its dependency, and GK2 Donkey API has its own entry
+  in the list (no settings). While the API is off or unconfirmed for the game build, the menu marks your mod
+  "Dependency unavailable".
 - **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from the Mods menu, the
   Settings window or the cfg.
 - **Sections keep your order:** the cfg section is numbered in the order you first use them (`1. Keys`,
