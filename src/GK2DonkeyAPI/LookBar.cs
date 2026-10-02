@@ -213,7 +213,7 @@ namespace GK2DonkeyAPI
                 MountHandle h = LookPreview.Who(page);
                 Mount.Instance paperDonkey = LookPreview.PaperOf(page);
                 Texture pic = PreviewStage.Picture(paperDonkey);
-                if (pic == null)
+                if (pic == null && PreviewStage.Failed)
                 {
                     pictureTex = paperDonkey != null ? Colors.BuildPreview(paperDonkey, pictureTex) : null;
                     pic = pictureTex;

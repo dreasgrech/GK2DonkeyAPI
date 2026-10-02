@@ -54,7 +54,7 @@ namespace SaddleUp
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             p.Toggle("Behaviour", "KeepWithSaves", true, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
 
-            p.Preview("Donkey", "Looks like", me);
+            p.Preview(me);
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your donkey and cart change. Done keeps them, Cancel puts them back.");
             p.Text("Donkey", "Name", "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
             ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);

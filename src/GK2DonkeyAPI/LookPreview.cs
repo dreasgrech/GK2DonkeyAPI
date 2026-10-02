@@ -76,10 +76,10 @@ namespace GK2DonkeyAPI
                     }
                 }
                 MountSettingsPage menuPage = null;
-                RectTransform menuRow = FindMenuRow(out menuPage);
-                Show(ref inMenu, menuRow, menuPage, rightOf: false, titleWidth: 0f);
+                RectTransform menuWindow = FindMenuWindow(out menuPage);
+                Show(ref inMenu, menuWindow, menuPage);
                 MountSettingsPage rowsPage = SettingsRows.ShownPage;
-                Show(ref inSettings, SettingsRows.PreviewRowOf(rowsPage), rowsPage, rightOf: false, titleWidth: 0f);
+                Show(ref inSettings, rowsPage != null ? SettingsRows.WindowFrame : null, rowsPage);
             }
             catch (Exception e)
             {
@@ -90,9 +90,9 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // The framework's row for one of ours: the picture's row (found by its label, under a page titled
-        // "<Title> - ..."). Its label's parent is the row. Null when none is shown.
-        private static RectTransform FindMenuRow(out MountSettingsPage page)
+        // The Mods window showing a page of ours (titled "<Title> - ..."): the widest of the title's parents that isn't
+        // the whole screen. Null when none is shown.
+        private static RectTransform FindMenuWindow(out MountSettingsPage page)
         {
             page = null;
             if (!FrameworkLink.Installed)
@@ -104,41 +104,43 @@ namespace GK2DonkeyAPI
             {
                 return null;
             }
-            TextMeshProUGUI[] texts = w.GetComponentsInChildren<TextMeshProUGUI>(false);
-            foreach (MountSettingsPage p in pages)
+            foreach (TextMeshProUGUI t in w.GetComponentsInChildren<TextMeshProUGUI>(false))
             {
-                MountSettingsPage.Row row = p.PreviewRow;
-                if (row == null)
+                if (string.IsNullOrEmpty(t.text))
                 {
                     continue;
                 }
-                bool titled = false;
-                foreach (TextMeshProUGUI t in texts)
+                foreach (MountSettingsPage p in pages)
                 {
-                    if (t.text != null && t.text.StartsWith(p.Title + " \u2014", StringComparison.Ordinal))
-                    {
-                        titled = true;
-                        break;
-                    }
-                }
-                if (!titled)
-                {
-                    continue;
-                }
-                foreach (TextMeshProUGUI t in texts)
-                {
-                    if (t.text == row.Label && t.transform.parent is RectTransform r)
+                    if (t.text.StartsWith(p.Title + " \u2014", StringComparison.Ordinal))
                     {
                         page = p;
-                        return r;
+                        return WindowOf(t.rectTransform);
                     }
                 }
             }
             return null;
         }
 
-        private static void Show(ref Shown s, Transform under, MountSettingsPage page, bool rightOf, float titleWidth)
+        private static RectTransform WindowOf(RectTransform title)
         {
+            Canvas root = title.GetComponentInParent<Canvas>()?.rootCanvas;
+            float screenW = root != null ? ((RectTransform)root.transform).rect.width : float.MaxValue;
+            RectTransform best = null;
+            for (Transform t = title.parent; t != null && t.parent != null; t = t.parent)
+            {
+                if (t is RectTransform r && r.rect.width < screenW * 0.95f && (best == null || r.rect.width >= best.rect.width))
+                {
+                    best = r;
+                }
+            }
+            return best;
+        }
+
+        // Centred above the window, in the screen above it, as large as fits (at most three canvas units per art pixel).
+        private static void Show(ref Shown s, RectTransform window, MountSettingsPage page)
+        {
+            Transform under = window != null ? window.parent : null;
             Mount.Instance paperDonkey = under != null ? PaperOf(page) : null;
             if (under == null || paperDonkey == null)
             {
@@ -158,8 +160,10 @@ namespace GK2DonkeyAPI
                 s.Go.transform.SetParent(under, false);
             }
             // With its cart, drawn by the game (PreviewStage); until that's ready, or if it fails, the donkey alone.
+            // The cart picture; the donkey alone only if that failed (while it's being made, nothing: the stand-in
+            // flashed for a moment before the cart picture took over).
             Texture pic = PreviewStage.Picture(paperDonkey);
-            if (pic == null)
+            if (pic == null && PreviewStage.Failed)
             {
                 s.Tex = Colors.BuildPreview(paperDonkey, s.Tex);
                 pic = s.Tex;
@@ -171,20 +175,30 @@ namespace GK2DonkeyAPI
             }
             s.Image.texture = pic;
             var rt = (RectTransform)s.Go.transform;
-            // In the row, a little right of its middle (the row's label is on the left), as large as fits: at most
-            // three canvas units per art pixel.
-            Rect room = ((RectTransform)under).rect;
-            if (s.LoggedUnder != under)
+            var wc = new Vector3[4];
+            window.GetWorldCorners(wc); // bottom left, top left, top right, bottom right
+            Vector3 topLeft = under.InverseTransformPoint(wc[1]), topRight = under.InverseTransformPoint(wc[2]);
+            float screenTop = topLeft.y + 200f;
+            Canvas root = window.GetComponentInParent<Canvas>()?.rootCanvas;
+            if (root != null)
             {
-                s.LoggedUnder = under;
-                Plugin.Log.LogInfo($"[preview] shown in '{under.name}' (parent '{under.parent?.name}'), {room.width:0} x {room.height:0} canvas units; picture {pic.width} x {pic.height}.");
+                var rc = new Vector3[4];
+                ((RectTransform)root.transform).GetWorldCorners(rc);
+                screenTop = under.InverseTransformPoint(rc[1]).y;
             }
-            float k = Mathf.Min(3f, (room.width * 0.45f) / pic.width, (room.height - 12f) / pic.height);
-            k = Mathf.Max(0.5f, k);
+            const float margin = 8f;
+            float roomH = Mathf.Max(24f, screenTop - topLeft.y - 2f * margin);
+            float roomW = Mathf.Max(24f, topRight.x - topLeft.x);
+            float k = Mathf.Max(0.5f, Mathf.Min(3f, roomH / pic.height, roomW / pic.width));
             rt.sizeDelta = new Vector2(pic.width * k, pic.height * k);
-            rt.anchorMin = rt.anchorMax = new Vector2(0.62f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0f);
+            rt.localPosition = new Vector3((topLeft.x + topRight.x) / 2f, topLeft.y + margin, 0f);
+            if (s.LoggedUnder != window)
+            {
+                s.LoggedUnder = window;
+                Plugin.Log.LogInfo($"[preview] shown above '{window.name}': room {roomW:0} x {roomH:0}, picture {pic.width} x {pic.height} at {k:0.##}x.");
+            }
             s.Go.transform.SetAsLastSibling();
             s.Go.SetActive(true);
         }

@@ -20,7 +20,7 @@ namespace GK2DonkeyAPI.Api
     // Both are extras: if anything about them fails, they don't show, and the settings work as before.
     public sealed class MountSettingsPage
     {
-        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview }
+        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button }
 
         internal sealed class Row
         {
@@ -166,21 +166,14 @@ namespace GK2DonkeyAPI.Api
             Add(new Row { Kind = Kind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
         }
 
-        // A row with a picture of the companion's donkey and cart in their current colours: a tall row of the page (in
-        // the Mods menu a read-only row whose height is kept free, in the Settings window a row of its own height), the
-        // picture centred in it; in the look bar too. It needs no donkey in the game: drawn from the game's own files,
-        // in the companion's colours, so it shows in the main menu and indoors.
-        public void Preview(string section, string label, MountCompanion companion)
+        // A picture of the companion's donkey and cart in their current colours, walking on the spot: above the Mods
+        // window (or above the game's Settings window), where it stays in view whatever row is scrolled to; in the
+        // look bar too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so
+        // it shows in the main menu and indoors.
+        public void Preview(MountCompanion companion)
         {
             PreviewOf = companion;
-            Add(new Row { Kind = Kind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom });
         }
-
-        // The Mods menu sizes a row by its description (only line breaks count as empty: the minimum height), so the
-        // picture's room is eight lines of one fully transparent dot each (a zero-width space didn't count: 40 units).
-        internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
-
-        internal Row PreviewRow => Rows.Find(r => r.Kind == Kind.Preview);
 
         // A button that closes the menu and opens the look bar over the game: the look rows (Choice and Steps with look,
         // and Color) at the bottom of the screen, the real donkey in view, with Done (keep) and Cancel (put back).

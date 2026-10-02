@@ -198,14 +198,8 @@ namespace GK2DonkeyAPI
         internal static MountSettingsPage ShownPage => window != null && current > 0 && current <= shown.Count && LazyWindowsStackController.IsWindowOpened(window) ? shown[current - 1].Page : null;
         internal static Transform WindowRect => window != null ? window.transform : null;
 
-        internal const float PreviewRowHeight = 150f;
-        private static readonly Dictionary<MountSettingsPage, GameObject> previewRows = new Dictionary<MountSettingsPage, GameObject>();
-
-        // The picture's row of this page while it's shown, or null.
-        internal static RectTransform PreviewRowOf(MountSettingsPage page)
-        {
-            return page != null && previewRows.TryGetValue(page, out GameObject go) && go != null && go.activeInHierarchy ? (RectTransform)go.transform : null;
-        }
+        // The Settings window's own frame (for the picture above it), or the window.
+        internal static RectTransform WindowFrame => window == null ? null : (window.transform.Find("GenericWIndowLayout") as RectTransform) ?? (RectTransform)window.transform;
 
         // One row under any parent (the look bar's too), and how to bring its value up to date.
         internal static GameObject MakeRow(GameObject template, Transform parent, MountSettingsPage.Row r, MountSettingsPage page, out Action refresh)
@@ -283,10 +277,10 @@ namespace GK2DonkeyAPI
             var b = new Built { Row = r };
             b.Go = Copy(template, content, Prefix + page.OwnerId + " " + (r?.Entry?.Definition.Key ?? r?.Label ?? heading));
             b.Switch = b.Go.GetComponentInChildren<UISwitchButton>(true);
-            if (r == null || r.Kind == MountSettingsPage.Kind.Preview)
+            if (r == null)
             {
-                // A section heading, or the picture's row: the label only, everything else of the row hidden.
-                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, r != null ? r.Label : heading);
+                // A section heading: the label only, everything else of the row hidden.
+                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, heading);
                 b.Fields = new[] { "" };
                 b.Switch.Initialize(_ => { }, b.Fields, 0);
                 b.Switch.IsInteractable = false;
@@ -300,14 +294,6 @@ namespace GK2DonkeyAPI
                 foreach (GamepadNavigationItem n in b.Go.GetComponentsInChildren<GamepadNavigationItem>(true))
                 {
                     n.enabled = false; // not a stop for the gamepad
-                }
-                if (r != null)
-                {
-                    // The picture's row: its own height; the picture is laid over it (LookPreview).
-                    SetLabel(b.Go, b.Switch, r.Label);
-                    var le = b.Go.GetComponent<LayoutElement>() ?? b.Go.AddComponent<LayoutElement>();
-                    le.minHeight = le.preferredHeight = PreviewRowHeight;
-                    previewRows[page] = b.Go;
                 }
                 return b;
             }

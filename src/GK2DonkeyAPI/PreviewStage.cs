@@ -44,7 +44,10 @@ namespace GK2DonkeyAPI
         private static int framesSinceBuilt;
         private static Mount.Instance dressedAs;
         private static UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> loading;
-        private static float nextRender, nextEdgeCheck, lastAsked;
+        private static float nextEdgeCheck, lastAsked;
+        private static int lastRenderFrame = -1;
+        private const int SettleFrames = 8;
+        private static Mount.Instance shownPaper;
         private static float ppu = 50f;
 
         // What the dev window tunes (session only; "Log these values" prints them to be made the defaults).
@@ -55,16 +58,33 @@ namespace GK2DonkeyAPI
         private static readonly List<(Transform T, Vector3 At)> donkeyRoots = new List<(Transform, Vector3)>();
 
         // The dev window is wanted: the dev panel is on and the picture was asked for a moment ago.
+        // The cart picture won't come this session: show the donkey alone instead.
+        internal static bool Failed => failed;
+
         internal static bool DevWanted => false; // the tuning window is gone: the parts were right (2026-10-02)
 
+        // Every frame (MountRegistry.Tick): while the picture was asked for a moment ago, draw it again, so the walk
+        // plays smoothly between the displays' four-a-second updates.
+        internal static void Tick()
+        {
+            if (shownPaper != null && !failed && copy != null && Time.unscaledTime - lastAsked < 0.5f)
+            {
+                Picture(shownPaper, ask: false);
+            }
+        }
+
         // The picture of the paper donkey with its cart, or null (not ready yet, or failed: use the donkey alone).
-        internal static Texture Picture(Mount.Instance paper)
+        internal static Texture Picture(Mount.Instance paper, bool ask = true)
         {
             if (failed || paper == null)
             {
                 return null;
             }
-            lastAsked = Time.unscaledTime;
+            if (ask)
+            {
+                lastAsked = Time.unscaledTime;
+                shownPaper = paper;
+            }
             try
             {
                 if (copy == null)
@@ -75,16 +95,25 @@ namespace GK2DonkeyAPI
                 if (dressedAs != paper)
                 {
                     dressedAs = paper;
-                    paper.ColorsRig.AttachRoot(copy);
+                    // Bound, so the first build reads the paper donkey's look: attached unbound, the picture showed the
+                    // game's own colours until a setting changed (the video of 2026-10-02 20-57).
                     using (Mount.Bind(paper))
                     {
+                        paper.ColorsRig.AttachRoot(copy);
+                        paper.ColorsRig.MarkDirty();
                         paper.LanternRig.AttachRoot(copy.transform); // the pole where the tuning puts it, the lamp hanging
                     }
                     reframe = true;
                 }
-                // Object3DMesh sets its materials on Start: a frame after the copy is switched on.
-                if (framesSinceBuilt < 2)
+                // Settled before it's first framed and shown: Object3DMesh sets its materials on Start, the lamp is hung on
+                // the lantern's first tick, and the walk starts from the idle pose. Framed earlier, the picture changed
+                // size a moment after it first showed (2026-10-02).
+                if (framesSinceBuilt < SettleFrames)
                 {
+                    if (framesSinceBuilt >= 1)
+                    {
+                        Pose(paper);
+                    }
                     framesSinceBuilt++;
                     return null;
                 }
@@ -93,9 +122,9 @@ namespace GK2DonkeyAPI
                     described = true;
                     Describe("after start");
                 }
-                if (Time.unscaledTime >= nextRender)
+                if (Time.frameCount != lastRenderFrame)
                 {
-                    nextRender = Time.unscaledTime + 0.2f;
+                    lastRenderFrame = Time.frameCount;
                     Pose(paper);
                     // While tuning (the dev window) the framing holds still and wide, so a part that is moved moves in
                     // the picture: framed on what's drawn, the moved donkey stayed at the edge and the cart seemed to
@@ -149,12 +178,13 @@ namespace GK2DonkeyAPI
             }
             if (animator != null)
             {
+                // Walking on the spot, facing left: the game's own parameters (AnimationComponentBase: State 1 = Walk,
+                // Direction 0 right / -180 left, walk_speed 1 = the clip's own pace).
                 foreach (AnimatorControllerParameter p in animator.parameters)
                 {
-                    if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float)
-                    {
-                        animator.SetFloat("Direction", facingRight ? 0f : -180f); // 0 right, -180 left (AnimationComponentBase)
-                    }
+                    if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("Direction", facingRight ? 0f : -180f);
+                    else if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) animator.SetInteger("State", 1);
+                    else if (p.name == "walk_speed" && p.type == AnimatorControllerParameterType.Float) animator.SetFloat("walk_speed", 1f);
                 }
             }
             if (cam != null && Mathf.Abs(cam.transform.eulerAngles.x - pitch) > 0.01f)
@@ -164,8 +194,7 @@ namespace GK2DonkeyAPI
             using (Mount.Bind(paper))
             {
                 paper.LanternRig.Tick();
-                paper.ColorsRig.MarkDirty();
-                paper.ColorsRig.Tick();
+                paper.ColorsRig.Tick(); // rebuilt only when the look changed (MountCompanion marks it)
             }
         }
 
@@ -250,6 +279,12 @@ namespace GK2DonkeyAPI
                     t.gameObject.SetActive(false); // drawn for the game's effects, not to be seen
                 }
                 SpriteRenderer sr = t.GetComponent<SpriteRenderer>();
+                if (sr != null && t.name == "hed")
+                {
+                    // The head sprite is for turning the head; the game's HeadSpriteComponentMarker (stripped) keeps it
+                    // in step. The walk frames of the body draw the head already: left on, it floated beside it.
+                    sr.enabled = false;
+                }
                 if (sr != null && (t.name == "bdy" || t.name == "hed"))
                 {
                     donkeyRoots.Add((t, t.localPosition));
@@ -425,7 +460,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[preview] the picture is empty; framing left wide.");
                 return;
             }
-            const int margin = 2;
+            const int margin = 6; // room for the walk's bob and the lamp's swing
             minX = Math.Max(0, minX - margin); minY = Math.Max(0, minY - margin);
             maxX = Math.Min(w0 - 1, maxX + margin); maxY = Math.Min(h0 - 1, maxY + margin);
             int w = maxX - minX + 1, h = maxY - minY + 1;

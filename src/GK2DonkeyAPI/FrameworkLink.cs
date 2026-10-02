@@ -105,10 +105,6 @@ namespace GK2DonkeyAPI
                         case MountSettingsPage.Kind.Info:
                             s.AddReadOnly(r.Section, "Info" + order, r.Label, r.Description, r.InfoValue, order);
                             break;
-                        case MountSettingsPage.Kind.Preview:
-                            // The picture is laid over this row (LookPreview), found by its label.
-                            s.AddReadOnly(r.Section, "Preview" + order, r.Label, r.Description, () => "", order);
-                            break;
                         case MountSettingsPage.Kind.Button:
                             MountSettingsPage.Row button = r;
                             s.AddButton(r.Section, "Button" + order, r.Label, r.Description, () => Mounts.IsGameReady ? "Open" : "In a game", () =>
@@ -124,7 +120,7 @@ namespace GK2DonkeyAPI
                     }
                     if (r.Visible != null)
                     {
-                        string key = r.Entry != null ? r.Entry.Definition.Key : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : r.Kind == MountSettingsPage.Kind.Preview ? "Preview" : "Button") + order;
+                        string key = r.Entry != null ? r.Entry.Definition.Key : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : "Button") + order;
                         s.SetVisibilityCondition(r.Section, key, r.Visible);
                     }
                 }
