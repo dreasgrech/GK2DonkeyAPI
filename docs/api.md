@@ -461,7 +461,7 @@ Where they apply:
 | `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | Off / On |
 | `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | the labels |
 | `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | each step, `format` turns it into text ("100%") |
-| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | read-only (set in the cfg) |
+| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | either arrow, then the key ("Press a key..."; Backspace: none, Esc: cancel) |
 | `Status(section, label = "Status", description)` | nothing: the page's status | read-only |
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |

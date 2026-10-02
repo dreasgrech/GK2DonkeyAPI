@@ -20,8 +20,9 @@ panel's, and a wrong value there breaks the picture.
 6. **Where the settings are** (uGUI, the game's own controls; never IMGUI for players):
    - **With GK2 Mod Framework:** its Mods menu, every option including the keys and the donkey's name.
    - **Without it:** rows added to the game's own Settings window under a "Saddle Up!" heading, copies of the
-     game's own ◀ value ▶ and slider rows. The keys and the name can't be edited there (the game has no such row);
-     they show read-only and are set in the cfg.
+     game's own ◀ value ▶ and slider rows. A key is set there by pressing either arrow, then
+     the key (Backspace: none; Esc cancels). The name can't be edited there (the game has no text row): it shows
+     read-only and is set in the cfg.
    - **Never both:** with the framework installed, no rows are added to the Settings window.
    - **Guarded:** if the game's rows can't be found (a game update renamed them), no rows are added, the cfg still
      works, and the log says why. A test checks the row names after each game update.

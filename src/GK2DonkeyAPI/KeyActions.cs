@@ -50,6 +50,10 @@ namespace GK2DonkeyAPI
                 nextOwnerCheck = Time.unscaledTime + 1f;
                 CheckOwners();
             }
+            if (SettingsRows.CapturingKey)
+            {
+                return; // a key is being set in the game's Settings window
+            }
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];

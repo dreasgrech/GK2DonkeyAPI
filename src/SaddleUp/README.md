@@ -32,7 +32,8 @@ All of these apply at once:
 - **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
   game's **Mods** menu, under GK2 Saddle Up!. Its sections are numbered (1. Keys first) to keep them in this order.
 - **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
-  settings and Saddle Up's pages. The keys and the name show there read-only; you set those in the cfg.
+  settings and Saddle Up's pages. To set a key, press either arrow of its row, then the key (Backspace: no key; Esc: cancel). The
+  name shows there read-only; you set it in the cfg.
 - **Always:** in `BepInEx\config\dreas.gk2.saddleup.cfg` (with the game closed).
 
 | Section (in the cfg) | Setting | Default | |

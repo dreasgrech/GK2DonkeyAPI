@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using BepInEx;
 using BepInEx.Configuration;
 using GK2DonkeyAPI.Api;
 using LazyBearTechnology;
@@ -18,7 +19,9 @@ namespace GK2DonkeyAPI
     // game's own row, so it has the game's look, sounds, keys and gamepad navigation.
     //
     // Found through LazyWindowsStackController.OnWindowOpened (no patch): the first time the window opens its rows are
-    // added; every open starts on the game's page. Keys and text can't be edited with "< value >": they show read-only.
+    // added; every open starts on the game's page. A key row is set by capture: either arrow starts it ("Press a key..."),
+    // the next key pressed (with its Shift/Ctrl/Alt) is the key, Backspace clears it, Esc / another page / closing the
+    // window / 10 s cancel (Tick). Text can't be edited with "< value >": it shows read-only.
     // Guarded: if the window or a row to copy isn't found (a game update changed the window), nothing is added, the
     // cfg still works, and the log says so once.
     internal static class SettingsRows
@@ -353,13 +356,17 @@ namespace GK2DonkeyAPI
                     // Either arrow (or the gamepad's left/right) presses it.
                     b.Fields = new[] { "Open", "Open " };
                     break;
+                case MountSettingsPage.Kind.Key:
+                    // Either arrow starts the capture (Tick): two fields, so either arrow is a change.
+                    b.Fields = KeyFields(KeyText(r));
+                    break;
                 default:
                     b.Fields = new[] { ReadOnlyText(r) };
                     break;
             }
             Built captured = b;
             b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", null, null, loopNavigation: r.Kind != MountSettingsPage.Kind.Steps);
-            b.Switch.IsInteractable = b.Values != null || r.Kind == MountSettingsPage.Kind.Button;
+            b.Switch.IsInteractable = b.Values != null || r.Kind == MountSettingsPage.Kind.Button || r.Kind == MountSettingsPage.Kind.Key;
             return b;
         }
 
@@ -375,7 +382,7 @@ namespace GK2DonkeyAPI
                         return "-";
                     }
                     break;
-                case MountSettingsPage.Kind.Key: s = ((KeyboardShortcut)r.Entry.BoxedValue).ToString(); break;
+                case MountSettingsPage.Kind.Key: return KeyText(r);
                 default: s = r.Entry?.BoxedValue as string; break;
             }
             return string.IsNullOrEmpty(s) ? "(none; set in the cfg)" : s;
@@ -400,6 +407,11 @@ namespace GK2DonkeyAPI
 
         private static void Changed(Built b, int index)
         {
+            if (b.Row?.Kind == MountSettingsPage.Kind.Key)
+            {
+                StartCapture(b);
+                return;
+            }
             if (b.Row?.Kind == MountSettingsPage.Kind.Button)
             {
                 b.Switch.UpdateField(0, fireCallback: false);
@@ -444,10 +456,137 @@ namespace GK2DonkeyAPI
             {
                 b.Switch.UpdateField(IndexOf(b), fireCallback: false);
             }
+            else if (b.Row.Kind == MountSettingsPage.Kind.Key)
+            {
+                b.Switch.ReinitLabels(KeyFields(capturing == b ? "Press a key..." : KeyText(b.Row)));
+                b.Switch.UpdateField(0, fireCallback: false);
+            }
             else
             {
                 b.Switch.ReinitLabels(new[] { ReadOnlyText(b.Row) });
                 b.Switch.UpdateField(0, fireCallback: false);
+            }
+        }
+
+        // ------------------------------------------------------------------ setting a key
+
+        private static Built capturing;
+        private static int captureFrom, captureEndedFrame = -1, capturePage;
+        private static float captureUntil;
+        private static KeyCode[] keyboardKeys;
+        private const float CaptureSeconds = 10f;
+
+        private static readonly KeyCode[] Modifiers =
+        {
+            KeyCode.LeftShift, KeyCode.RightShift, KeyCode.LeftControl, KeyCode.RightControl, KeyCode.LeftAlt, KeyCode.RightAlt,
+        };
+
+        // A key is being captured, or was this frame: the mods' key actions wait (KeyActions), so pressing G to set a
+        // key doesn't also bring the cart.
+        internal static bool CapturingKey => capturing != null || Time.frameCount == captureEndedFrame;
+
+        private static string KeyText(MountSettingsPage.Row r)
+        {
+            var k = (KeyboardShortcut)r.Entry.BoxedValue;
+            return k.MainKey == KeyCode.None ? "Not set" : k.ToString();
+        }
+
+        private static string[] KeyFields(string text) => new[] { text, text + " " };
+
+        private static void StartCapture(Built b)
+        {
+            Built was = capturing;
+            capturing = b;
+            captureFrom = Time.frameCount + 1; // not the press that started it (an arrow, Enter, a click)
+            captureUntil = Time.unscaledTime + CaptureSeconds;
+            capturePage = current;
+            if (was != null && was != b)
+            {
+                Sync(was);
+            }
+            Sync(b);
+        }
+
+        private static void EndCapture()
+        {
+            Built b = capturing;
+            capturing = null;
+            captureEndedFrame = Time.frameCount;
+            if (b != null)
+            {
+                Sync(b);
+            }
+        }
+
+        // Every frame (Plugin.LateUpdate, before the mods' key actions): the key being captured.
+        internal static void Tick()
+        {
+            if (capturing == null)
+            {
+                return;
+            }
+            if (window == null || !LazyWindowsStackController.IsWindowOpened(window) || current != capturePage || Time.unscaledTime > captureUntil)
+            {
+                EndCapture(); // cancelled
+                return;
+            }
+            if (Time.frameCount < captureFrom)
+            {
+                return;
+            }
+            if (keyboardKeys == null)
+            {
+                var list = new List<KeyCode>();
+                foreach (KeyCode k in Enum.GetValues(typeof(KeyCode)))
+                {
+                    // The keyboard only: no mouse or joystick buttons; the modifiers come with a key.
+                    if (k != KeyCode.None && k < KeyCode.Mouse0 && Array.IndexOf(Modifiers, k) < 0 && !list.Contains(k))
+                    {
+                        list.Add(k);
+                    }
+                }
+                keyboardKeys = list.ToArray();
+            }
+            foreach (KeyCode k in keyboardKeys)
+            {
+                if (!UnityInput.Current.GetKeyDown(k))
+                {
+                    continue;
+                }
+                if (k == KeyCode.Escape)
+                {
+                    EndCapture();
+                    return;
+                }
+                KeyboardShortcut set;
+                if (k == KeyCode.Backspace)
+                {
+                    set = KeyboardShortcut.Empty;
+                }
+                else
+                {
+                    var held = new List<KeyCode>();
+                    foreach (KeyCode m in Modifiers)
+                    {
+                        if (UnityInput.Current.GetKey(m))
+                        {
+                            held.Add(m);
+                        }
+                    }
+                    set = new KeyboardShortcut(k, held.ToArray());
+                }
+                Built b = capturing;
+                try
+                {
+                    b.Row.Entry.BoxedValue = set; // its SettingChanged applies it (MountSettingsPage.Wire)
+                    Plugin.Log.LogInfo($"Settings: {b.Row.Label} set to {(set.MainKey == KeyCode.None ? "nothing" : set.ToString())} in the game's Settings window.");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Settings: {b.Row.Label} could not be set: {e.Message}");
+                }
+                EndCapture();
+                return;
             }
         }
 
@@ -470,6 +609,10 @@ namespace GK2DonkeyAPI
                 }
             }
             current = page;
+            if (capturing != null && capturePage != page)
+            {
+                EndCapture();
+            }
             foreach (GameObject g in gameRows)
             {
                 if (g != null)

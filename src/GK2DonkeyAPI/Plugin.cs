@@ -557,6 +557,7 @@ namespace GK2DonkeyAPI
             }
             try
             {
+                SettingsRows.Tick(); // a key being set in the game's Settings window (before the keys act)
                 KeyActions.Poll(); // the mods' keys (MountSettingsPage.Key with pressed:), before this frame's update
             }
             catch (Exception e)
