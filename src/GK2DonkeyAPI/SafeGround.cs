@@ -63,21 +63,45 @@ namespace GK2DonkeyAPI
                 {
                     return $"the walkable ground there is at {g:F2}, the seat at {spot.y:F2}";
                 }
-                groundFail = null;
-                bool walkable = LineWalkable(KeeperNow(pc), spot, "keeper to the seat");
-                string fail = groundFail;
-                groundFail = null; // the shuffle's own log reads it
-                if (!walkable)
+                // Ground the whole way from the keeper (no ledge, no water), not LineWalkable: its collider test called a
+                // keeper riding along a fence "blocked" at his own feet, and every hitch there was refused (the cart G
+                // brought stayed by the fence, the user's video 2026-10-03). Colliders were never the danger here.
+                string gap = GroundGap(KeeperNow(pc), spot);
+                if (gap != null)
                 {
-                    return "the way there: " + (fail ?? "blocked");
+                    return "the way there: " + gap;
                 }
                 spot.y = Mathf.Max(spot.y, g);
                 return null;
             }
 
-            // Park: where the ride left the donkey, checked. Its body (where it stands) off the ground (GroundAt, at the
-            // keeper's level), the donkey moves to the nearest spot next to him where it can stand; failing that, onto
-            // the keeper's spot.
+            // Null when there is ground all along a line (the navmesh or the ground raycast, water excluded), with no step
+            // between samples higher than the shuffle allows; else where it isn't.
+            private static string GroundGap(Vector3 a, Vector3 b)
+            {
+                float len = new Vector2(b.x - a.x, b.z - a.z).magnitude;
+                int samples = Mathf.Clamp(Mathf.CeilToInt(len / 0.2f), 5, 80);
+                float prev = float.NaN;
+                for (int i = 0; i <= samples; i++)
+                {
+                    Vector3 p = Vector3.Lerp(a, b, i / (float)samples);
+                    float g = GroundHeight(p, out string src);
+                    if (float.IsNaN(g))
+                    {
+                        return $"no ground at {p:F2} ({src})";
+                    }
+                    if (i > 0 && Mathf.Abs(g - prev) > MaxRisePerSample)
+                    {
+                        return $"a step from {prev:F2} to {g:F2} at {p:F2} ({src})";
+                    }
+                    prev = g;
+                }
+                return null;
+            }
+
+            // Park: where the ride left the donkey, checked. Its body (where it stands) or its cart off the ground
+            // (GroundAt, at the keeper's level), the donkey moves to the nearest spot next to him where both stand on
+            // ground; failing that, its body onto the keeper's spot.
             private void KeepOnGround(PlayerController pc)
             {
                 if (!CanJudgeGround || donkey == null || !donkey)
@@ -88,16 +112,27 @@ namespace GK2DonkeyAPI
                 Vector3 right = Vector3.Cross(Vector3.up, AwayFromCamera()).normalized;
                 Vector3 bodyOffset = bodySprite != null && bodySprite ? bodySprite.position - donkey.transform.position : right * LateralFor(riderFacingX);
                 bodyOffset.y = 0f;
+                // The cart stands about a unit behind the donkey: on a jetty or a bank it can be over the water with the
+                // donkey on land (the cargo is set down at it too, CartPoint).
+                Vector3 cartOffset = Vector3.zero;
+                if (HasCart)
+                {
+                    cartOffset = CartPoint() - Position;
+                    cartOffset.y = 0f;
+                }
                 Vector3 root = Position;
                 Vector3 body = root + bodyOffset;
-                if (GroundAt(body, keeper.y, out _))
+                bool bodyOk = GroundAt(body, keeper.y, out _);
+                bool cartOk = !HasCart || GroundAt(root + cartOffset, keeper.y, out _);
+                if (bodyOk && cartOk)
                 {
                     return;
                 }
                 Vector3 to = keeper - bodyOffset; // the last resort: its body (its feet) on the keeper's spot, ground for sure
                 string how = "onto the keeper's spot (no free ground next to him)";
                 bool found = false;
-                for (int ri = 1; ri <= 8 && !found; ri++)
+                int rings = HasCart ? 12 : 8; // out to 3 units with a cart, 2 without
+                for (int ri = 1; ri <= rings && !found; ri++)
                 {
                     float r = ri * 0.25f;
                     for (int k = 0; k < 12; k++)
@@ -115,6 +150,10 @@ namespace GK2DonkeyAPI
                             continue;
                         }
                         rt.y = gr;
+                        if (HasCart && !GroundAt(rt + cartOffset, gb, out _))
+                        {
+                            continue;
+                        }
                         if (!FreeAt(b, out _) || !FreeAt(rt, out _))
                         {
                             continue;
@@ -131,9 +170,27 @@ namespace GK2DonkeyAPI
                     }
                 }
                 groundFail = null; // the shuffle's own log reads it
-                Plugin.Log.LogInfo($"Mount: {Describe()} was left off walkable ground at {root:F2} (water, a ledge); moved {how}, to {to:F2}.");
+                string what = !bodyOk ? "off walkable ground" : "with its cart off walkable ground";
+                Plugin.Log.LogInfo($"Mount: {Describe()} was left {what} at {root:F2} (water, a ledge); moved {how}, to {to:F2}.");
                 TierNow();
                 Position = to;
+            }
+
+            // Leaving the cart (Unhitch): null when its cart stands on ground (GroundAt, at the keeper's level), else why
+            // not. The free cart stays exactly where it is drawn now, and its cargo is set down there when it goes.
+            private string WhyCartCannotStayHere(PlayerController pc)
+            {
+                if (!CanJudgeGround || !HasCart || donkey == null || !donkey)
+                {
+                    return null;
+                }
+                Vector3 c = CartPoint();
+                if (GroundAt(c, KeeperNow(pc).y, out float g))
+                {
+                    return null;
+                }
+                GroundHeight(c, out string src); // the source, for the log: water:<collider> (the water tag), none, raycast
+                return $"no ground under the cart at {c:F2} ({(float.IsNaN(g) ? src : "ground at " + g.ToString("F2") + ", " + src)})";
             }
         }
     }

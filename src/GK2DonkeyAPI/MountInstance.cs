@@ -826,6 +826,14 @@ namespace GK2DonkeyAPI
                     why = "Not right now.";
                     return null;
                 }
+                // The cart stays where it is drawn: not over water or off a ledge (SafeGround.cs).
+                string offGround = WhyCartCannotStayHere(pc);
+                if (offGround != null)
+                {
+                    Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart here: {offGround}.");
+                    why = "The cart can't stand here.";
+                    return null;
+                }
                 var cart = new Instance(NextId(OwnerId), OwnerId, ephemeral: false, hasDonkey: false, hasCart: true)
                 {
                     Position = donkey.Data.Position,

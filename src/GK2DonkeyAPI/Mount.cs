@@ -221,6 +221,45 @@ namespace GK2DonkeyAPI
                 return s;
             }
 
+            // Water over the ground the raycast found (or with no ground under it at all): no ground. The game marks water
+            // with WaterComponentTag on a solid collider, which its own drop-spot search (SpecialPhysicsCastUtils.
+            // GetPlayerDropPosition) finds among layers 8, 10, 11, 12 (mask 7424) and refuses. Our ground layers (11, 12)
+            // may or may not hold it: on them the raycast took the surface for ground, off them it went through to the
+            // bed. Either way a donkey parked there, or the idle shuffle down a sloping bank, ended up in the lake
+            // (docs/safe-ground.md). Asked only when the navmesh has no answer; the tag is looked up once per collider.
+            private static readonly RaycastHit[] waterHits = new RaycastHit[8];
+            private static readonly Dictionary<int, string> waterSources = new Dictionary<int, string>(); // null: not water
+
+            private static bool WaterOver(Ray ray, float groundY, out string source)
+            {
+                source = null;
+                int n = Physics.RaycastNonAlloc(ray, waterHits, 10f, 7424, QueryTriggerInteraction.Ignore);
+                for (int i = 0; i < n; i++)
+                {
+                    Collider c = waterHits[i].collider;
+                    if (c == null || waterHits[i].point.y < groundY - 0.01f)
+                    {
+                        continue;
+                    }
+                    int id = c.GetInstanceID();
+                    if (!waterSources.TryGetValue(id, out string w))
+                    {
+                        if (waterSources.Count > 512)
+                        {
+                            waterSources.Clear();
+                        }
+                        w = c.TryGetComponent<WaterComponentTag>(out _) ? "water:" + c.name : null;
+                        waterSources[id] = w;
+                    }
+                    if (w != null)
+                    {
+                        source = w;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             internal static float GroundHeight(Vector3 p, out string source)
             {
                 using var perf = Perf.Measure(Perf.S.Ground);
@@ -240,10 +279,21 @@ namespace GK2DonkeyAPI
                             return np.y;
                         }
                     }
-                    if (Physics.Raycast(new Ray(p + Vector3.up * 1f, Vector3.down), out RaycastHit hit, 10f, 6144))
+                    Ray ray = new Ray(p + Vector3.up * 1f, Vector3.down);
+                    if (Physics.Raycast(ray, out RaycastHit hit, 10f, 6144))
                     {
+                        if (WaterOver(ray, hit.point.y, out string water))
+                        {
+                            source = water;
+                            return float.NaN;
+                        }
                         source = RaycastSource(hit.collider);
                         return hit.point.y;
+                    }
+                    if (WaterOver(ray, float.NegativeInfinity, out string open))
+                    {
+                        source = open;
+                        return float.NaN;
                     }
                 }
                 catch (Exception e)

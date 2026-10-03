@@ -65,6 +65,12 @@ In a game:
       ground` line;
     - after fishing, getting on again works (no "I'm busy.");
     - hitching a standing cart on plain ground still works.
+    - (confirmed 2026-10-03.) Second round, water and carts ([safe-ground.md](safe-ground.md), "Other places
+      checked"): drive the cart onto the jetty and get off: the donkey and cart move to land (`with its cart off
+      walkable ground`); H there to leave the cart: "The cart can't stand here."; donkeys and foals idling by the lake
+      don't wander into it; ordinary dismounts and leaving the cart on plain ground work as before.
+    - Fence regression (fixed 2026-10-03, safe-ground.md): riding along a fence, G brings the cart and hitches it;
+      a cart standing by a fence hitches when you ride up to it; no `hitching ... refused` lines.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 
