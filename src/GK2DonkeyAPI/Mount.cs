@@ -1652,9 +1652,13 @@ namespace GK2DonkeyAPI
             // and at the bridge by the house the navmesh lies under the deck (6.0), while the keeper walks on the deck's
             // collider (6.3 to 6.5): the foals crossed inside the bridge, only their heads showing (the user's video,
             // 2026-10-03; their roots logged at 6.00 on the deck). The ridden donkey never showed it: its height follows the
-            // keeper's. So above a navmesh height, a ground-layer surface up to DeckRise higher wins, as the keeper's own
-            // ground ray finds it (the walkable top of a dropped big item and water excepted).
+            // keeper's. So the ground-layer surface wins, as the keeper's own ground ray finds it (the walkable top of a dropped
+            // big item and water excepted): the highest one from DeckRise above the navmesh height down to NavmeshOver
+            // below it, where the navmesh lies a little above the ground (up to 0.07 at the foot of the Inquisition Base hill,
+            // [cartground] lines, 2026-10-04: a foal floated there). Lower than that is another level (a lake bed, the bank
+            // under a bridge): the navmesh height stands.
             private const float DeckRise = 0.6f;
+            private const float NavmeshOver = 0.15f;
 
             internal static float StandHeight(Vector3 p)
             {
@@ -1663,8 +1667,8 @@ namespace GK2DonkeyAPI
                 {
                     return g;
                 }
-                int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, g + DeckRise, p.z), Vector3.down), rayHits, DeckRise + 0.05f, 6144);
-                float best = g;
+                int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, g + DeckRise, p.z), Vector3.down), rayHits, DeckRise + NavmeshOver, 6144);
+                float best = float.NaN;
                 for (int i = 0; i < n; i++)
                 {
                     Collider c = rayHits[i].collider;
@@ -1672,9 +1676,12 @@ namespace GK2DonkeyAPI
                     {
                         continue;
                     }
-                    best = Mathf.Max(best, rayHits[i].point.y);
+                    if (float.IsNaN(best) || rayHits[i].point.y > best)
+                    {
+                        best = rayHits[i].point.y;
+                    }
                 }
-                return best;
+                return float.IsNaN(best) ? g : best;
             }
 
             // Whether the ground between two neighbouring samples is level enough (a step of at most limit), judged from one
@@ -2057,7 +2064,21 @@ namespace GK2DonkeyAPI
                     GroundHeightPair(target + bodyOffset, basePos, basePos.y, out float gd, out float gk, out string pairSource);
                     lastDonkeyGroundSource = lastKeeperGroundSource = pairSource;
                     lastCartGround = GroundHeight(target + bodyOffset - right * (sign * 1.2f), out lastCartGroundSource);
-                    if (!float.IsNaN(gd) && !float.IsNaN(gk))
+                    // The walkable surface under the body, as the game snaps a walking object (layers 11 and 12, the highest
+                    // hit within reach of the keeper's level): the donkey stands on it. Taken as a difference from the
+                    // keeper's height, it carried his physics body's hover over a slope (+0.03 to +0.05 going down the
+                    // Inquisition Base hill, [rideground] lines, 2026-10-04). The difference of the two surfaces is still
+                    // checked against the step limit; failing that, or with no surface, the pair difference below as before.
+                    float surfDonkey = HighestHitUnder(target + bodyOffset, basePos.y, CartRiseWindow, out Collider surfCollider);
+                    float surfKeeper = HighestHitUnder(basePos, basePos.y, CartRiseWindow, out _);
+                    if (!float.IsNaN(surfDonkey) && !float.IsNaN(surfKeeper) && Mathf.Abs(surfDonkey - surfKeeper) <= RideGroundStepLimit)
+                    {
+                        lastDonkeyGroundSource = RaycastSource(surfCollider);
+                        groundDelta = surfDonkey - basePos.y;
+                        lastGoodGroundDelta = surfDonkey - surfKeeper;
+                        target.y = surfDonkey;
+                    }
+                    else if (!float.IsNaN(gd) && !float.IsNaN(gk))
                     {
                         float d = gd - gk;
                         if (Mathf.Abs(d) > RideGroundStepLimit)
@@ -2083,6 +2104,10 @@ namespace GK2DonkeyAPI
                 if (cartParts.Count > 0)
                 {
                     FollowCartParts(Position.y);
+                }
+                else
+                {
+                    ProbeRideGround(basePos, right);
                 }
 
                 // Legs and seat are updated from the keeper's OnLateUpdate (after the skin swap), see OnKeeperLateUpdate.

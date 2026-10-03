@@ -58,6 +58,63 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo(sb.ToString());
             }
 
+            // The donkey ridden without a cart ([rideground], same toggle): its root and its body sprite's ground line (the
+            // bottom row of the frame's art, where the hooves stand) against the ground under the body and half a body
+            // ahead and behind it (front and back hooves). The root's height in Ride style is the keeper's plus the ground
+            // difference between the body point and the keeper (SnapToGround, GroundHeightPair); the line says which source.
+            private float nextRideGroundProbe;
+
+            private void ProbeRideGround(Vector3 keeper, Vector3 right)
+            {
+                if (!CartGroundProbeOn || !mounted || Time.unscaledTime < nextRideGroundProbe || donkey == null || !donkey)
+                {
+                    return;
+                }
+                nextRideGroundProbe = Time.unscaledTime + 0.2f;
+                var sb = new StringBuilder("[rideground] ");
+                float level = keeper.y;
+                sb.Append($"keeper {keeper.y:F3} over {Heights(keeper, level)} | root {donkey.transform.position.y:F3} at ({donkey.transform.position.x:F2}, {donkey.transform.position.z:F2}) facing {(riderFacingX > 0f ? "right" : "left")}");
+                sb.Append($" | snap {S.SnapToGround.Value} delta {groundDelta:F3} ({lastDonkeyGroundSource})");
+                if (donkeyBodyRenderer != null && donkeyBodyRenderer.sprite != null)
+                {
+                    Sprite sp = donkeyBodyRenderer.sprite;
+                    float ppu = sp.pixelsPerUnit > 0f ? sp.pixelsPerUnit : 50f;
+                    // The frames carry a 2 px transparent border; the art's bottom row is the ground line.
+                    float lineLocalY = (sp.textureRectOffset.y + 2f - sp.pivot.y) / ppu;
+                    Vector3 line = donkeyBodyRenderer.transform.TransformPoint(new Vector3(0f, lineLocalY, 0f));
+                    Vector3 body = donkeyBodyRenderer.bounds.center;
+                    body.y = line.y;
+                    sb.Append($" | body line {line.y:F3} (frame {sp.name})");
+                    foreach (var (name, at) in new[] { ("under the body", body), ("front", body + right * (0.4f * riderFacingX)), ("back", body - right * (0.4f * riderFacingX)) })
+                    {
+                        float ray = HighestHitUnder(at, level, out _);
+                        float nav = NavmeshHeight(at, level);
+                        sb.Append($" | {name} ({at.x:F2}, {at.z:F2}): raycast {ray:F3} gap {line.y - ray:F3}, navmesh {nav:F3}");
+                    }
+                }
+                sb.Append(ScreenPlacement());
+                Plugin.Log.LogInfo(sb.ToString());
+            }
+
+            // Where the camera draws the keeper's and the donkey's body frames, in art pixels (for mock-ups that match the
+            // game): each sprite's pivot projected to the screen, the frame's pivot in the art, and the screen pixels per art
+            // pixel across and up. Keeper minus donkey: + right, + up.
+            private string ScreenPlacement()
+            {
+                Camera cam = Camera.main;
+                if (cam == null || keeperBodyRenderer == null || keeperBodyRenderer.sprite == null || donkeyBodyRenderer == null || donkeyBodyRenderer.sprite == null)
+                {
+                    return " | screen: not available";
+                }
+                Vector3 k = cam.WorldToScreenPoint(keeperBodyRenderer.transform.position);
+                Vector3 d = cam.WorldToScreenPoint(donkeyBodyRenderer.transform.position);
+                Vector3 x1 = cam.WorldToScreenPoint(donkeyBodyRenderer.transform.position + Vector3.right * 0.02f);
+                Vector3 y1 = cam.WorldToScreenPoint(donkeyBodyRenderer.transform.position + Vector3.up * PxWorldY);
+                float pxX = Mathf.Abs(x1.x - d.x), pxY = Mathf.Abs(y1.y - d.y);
+                Sprite ks = keeperBodyRenderer.sprite, ds = donkeyBodyRenderer.sprite;
+                return $" | screen: art px = {pxX:F2} x {pxY:F2} screen px; keeper pivot - donkey pivot = ({(k.x - d.x) / pxX:F2}, {(k.y - d.y) / pxY:F2}) art px; keeper {ks.name} pivot ({ks.pivot.x:F1}, {ks.pivot.y:F1}) rect {ks.rect.width}x{ks.rect.height}, donkey {ds.name} pivot ({ds.pivot.x:F1}, {ds.pivot.y:F1}) rect {ds.rect.width}x{ds.rect.height}; keeper drawn {(keeperBodyRenderer.transform.position.z < donkeyBodyRenderer.transform.position.z ? "nearer the camera" : "further")} (z {keeperBodyRenderer.transform.position.z:F3} vs {donkeyBodyRenderer.transform.position.z:F3}); seat {seatApplied:F3}, torso shift {TorsoShiftWorld.x:F3}";
+            }
+
             private static string Heights(Vector3 p, float levelY)
             {
                 float nav = NavmeshHeight(p, levelY);

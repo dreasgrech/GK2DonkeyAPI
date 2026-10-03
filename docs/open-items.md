@@ -119,9 +119,21 @@ In a game:
     - the cart on the bridge;
     - a cart left standing on the hill after getting off.
 
+    **Confirmed 2026-10-04** (the user: "looks great"; 55 probe lines, down and up twice each way): every wheel gap is
+    between −0.005 and +0.005 on the slope and the flat, the applied lift always equals its target (no lag), lifts
+    are 0.26 to 0.31 down and −0.21 to −0.35 up, and there are no warnings in the log. The pitch touched its 20° cap
+    once (lift −0.353, it needed 20.3°). Still to see: the cart on the bridge, and a cart left standing on the hill.
+
     Known, not touched: in Cart style the donkey sprite itself is off its ground by the same ±0.1 on this hill
     (SnapToGround off); nobody has reported it. The earlier note that the pitch hits its 20° cap came from the wrong
     0.387 lift: the right lift (about 0.33) needs about 19°.
+9m. **The ridden donkey on the ground surface** (2026-10-04, [slopes.md](slopes.md) "Built instead: A"): on the
+    hill, ridden without the cart, the donkey's middle is on the ground (no float of a few pixels going down); flat
+    ground and the bridge look as before. (The slant, B and C, was tried and removed.) Confirmed by the user 2026-10-04.
+    Then the same for foals and standing donkeys (`StandHeight` takes the surface slightly below the navmesh too):
+    - foals at the foot of the hill stand on the ground;
+    - the bridge deck still holds them;
+    - a lake shore doesn't drop them onto the bed.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

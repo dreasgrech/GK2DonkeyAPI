@@ -1083,8 +1083,8 @@ namespace GK2DonkeyAPI
             }
             GUILayout.EndHorizontal();
             GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
-            Mount.CartGroundProbeOn = GUILayout.Toggle(Mount.CartGroundProbeOn, " Log the cart's wheels against the ground (5 lines a second while driving)");
-            GUILayout.Label("[cartground] lines: the cart's lift and pitch, and each wheel's bottom against the ground under it (gap > 0 floats, < 0 is inside). Drive down and up a hill with it on. Off again after a restart.", small);
+            Mount.CartGroundProbeOn = GUILayout.Toggle(Mount.CartGroundProbeOn, " Log the cart's wheels / the ridden donkey's hooves against the ground (5 lines a second)");
+            GUILayout.Label("[cartground] lines with the cart: its lift and pitch, each wheel's bottom against the ground under it. [rideground] lines riding without it: the body's ground line against the ground under the body and its front and back hooves. gap > 0 floats, < 0 is inside. Off again after a restart.", small);
 
             Header("Held item (investigation)");
             if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
