@@ -1456,6 +1456,7 @@ namespace GK2DonkeyAPI
             // one-frame outlier cannot make the cart jump; a real slope is still followed within a fraction of a second.
             // Every rejected sample and every jump of the target is written to the log (at most twice a second) with
             // both samples and their sources, so a flicker can be traced to its cause.
+            private const float CartRiseWindow = 0.6f;
             private const float CartSlopeLimit = 1.2f;  // world units of height difference between the two samples
             private const float CartShiftRate = 3f;     // world units per second
             private float cartShiftTarget, cartShiftApplied;
@@ -1464,9 +1465,20 @@ namespace GK2DonkeyAPI
             private Vector3 lastCartPoint;
             private bool hasLastCartPoint;
 
-            // levelY is the keeper's own height, i.e. the ground level the cart belongs to: both samples look for ground
-            // near that level, so a walkway or a cellar floor stacked above or below the road can never be picked.
-            private void FollowCartParts(Vector3 bodyGroundPoint, float levelY)
+            // The cart's parts hang from the donkey's root (Position): on flat ground the wheels' bottom is the root's height.
+            // So the lift is the ground surface under the cart against the root's own height, whatever gave the root that
+            // height: the keeper's (Cart style rides without SnapToGround), the ground under the donkey's body (Ride style
+            // snaps), the keeper's at the moment of a dismount or an unhitch (a standing cart keeps it), or a snap to the
+            // ground under the root (spawned, moved). The surface is the game's own: the walkable layers 11 and 12 (mask
+            // 6144) as RaycastUtils.TrySnapToTheGround and the keeper's ground ray find them, the highest hit within a unit
+            // of the root's height (HighestHitUnder: a box under the terrain or another level stays out).
+            //
+            // Measured on the Inquisition Base hill ([cartground] lines, 2026-10-03/04). Two earlier rules took the ground
+            // difference between the cart and a reference point, and each reference was off the root's ground by the
+            // slope between them: the donkey's body point (wheels +0.10 floating going down, -0.06 inside going up) and
+            // then the root's own spot while the root kept the keeper's height 0.4 away (-0.12 inside going down, +0.17
+            // floating going up). The absolute rule predicts all four measured errors within 0.005.
+            private void FollowCartParts(float rootY)
             {
                 if (cartParts.Count == 0)
                 {
@@ -1476,7 +1488,8 @@ namespace GK2DonkeyAPI
                 float cap = Mathf.Max(0f, S.CartGroundMaxShift.Value);
                 float target = 0f;
                 string why = null;
-                Vector3 refPoint = new Vector3(bodyGroundPoint.x, levelY, bodyGroundPoint.z);
+                float levelY = rootY;
+                Vector3 refPoint = new Vector3(Position.x, rootY, Position.z); // for the logs
                 Vector3 cartPoint = refPoint;
                 string src = "-";
                 lastCartRefGround = float.NaN;
@@ -1492,7 +1505,11 @@ namespace GK2DonkeyAPI
                     sideChange = !hasLastCartPoint || d.x * d.x + d.z * d.z > 0.5f * 0.5f;
                     lastCartPoint = cartPoint;
                     hasLastCartPoint = true;
-                    GroundHeightPair(refPoint, cartPoint, levelY, out lastCartRefGround, out float g, out src);
+                    lastCartRefGround = rootY;
+                    // At most CartRiseWindow above the root: a slope climbs about 0.35 over the half unit to the cart body
+                    // on the steepest hill measured; a walkable surface higher than that beside the road is another level.
+                    float g = HighestHitUnder(cartPoint, rootY, CartRiseWindow, out Collider surface);
+                    src = surface != null ? RaycastSource(surface) : "none";
                     cartBodyPart.LastGround = g;
                     cartBodyPart.LastSource = src;
                     if (float.IsNaN(lastCartRefGround) || float.IsNaN(g))
@@ -1601,6 +1618,7 @@ namespace GK2DonkeyAPI
                     Vector3 liftVec = Mathf.Abs(lift) < 0.0005f ? Vector3.zero : p.T.parent.InverseTransformVector(Vector3.up * lift);
                     p.T.localPosition = p.Base + liftVec;
                 }
+                ProbeCartGround(refPoint, cartPoint, levelY);
             }
 
             private CartPart swayRefPart;
@@ -1716,7 +1734,13 @@ namespace GK2DonkeyAPI
 
             private static float HighestHitUnder(Vector3 p, float levelY, out Collider bestCollider)
             {
-                int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, levelY + CartLevelWindow, p.z), Vector3.down), rayHits, 2f * CartLevelWindow, 6144);
+                return HighestHitUnder(p, levelY, CartLevelWindow, out bestCollider);
+            }
+
+            // Only ground up to 'above' over levelY, and down to a unit under it.
+            private static float HighestHitUnder(Vector3 p, float levelY, float above, out Collider bestCollider)
+            {
+                int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, levelY + above, p.z), Vector3.down), rayHits, above + CartLevelWindow, 6144);
                 float best = float.NaN;
                 bestCollider = null;
                 for (int i = 0; i < n; i++)
@@ -2058,8 +2082,7 @@ namespace GK2DonkeyAPI
                 Position = donkey.Data.Position;
                 if (cartParts.Count > 0)
                 {
-                    Vector3 bodyGround = (bodySprite != null && bodySprite) ? bodySprite.position : donkey.transform.position + right * lateral;
-                    FollowCartParts(bodyGround, basePos.y);
+                    FollowCartParts(Position.y);
                 }
 
                 // Legs and seat are updated from the keeper's OnLateUpdate (after the skin swap), see OnKeeperLateUpdate.

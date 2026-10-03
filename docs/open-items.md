@@ -84,6 +84,44 @@ In a game:
     normal), the cart style unchanged, and no `rider motion found ...` warning in the log.
 9k. **Foals cross the bridge by the house** (2026-10-03, [foals.md](foals.md) "The bridge by the house"): both ways,
     with no `no step fits` or `no way around` line at (-21, 6, 19); they walk on the deck, not in it (`StandHeight`, built 2026-10-03), and ordinary ground looks as before.
+9l. **The cart on a hill** (2026-10-03, the user's video `2026-10-03 11-48-07 PM`): going down, the cart seemed to
+    float; going back up, a wheel went into the ground. None of the day's changes touch the ridden cart (its height is
+    `FollowCartParts`, unchanged since WholeCartPitch, 2026-09-29). Measuring first: Debug tab, "Log the cart's wheels
+    against the ground" (`Dev/CartGroundProbe.cs`, session only), then drive down and up that hill. Each `[cartground]`
+    line gives every wheel's drawn bottom against the navmesh and the raycast surface under it.
+    **Measured 2026-10-04**, three runs of the probe on the same hill. Where the root's height comes from, in Cart
+    style: SnapToGround is off, so the root keeps the keeper's height. But the root stands about 0.4 away from him
+    (Depth 0.24, CenterOffset 0.48, RiderOffsetPx −8): log, keeper at (20.81, 15.51), root at (20.49, 15.75). On the
+    slope the root is therefore 0.1 or so above or below the ground under itself. The cart's parts hang from the root
+    (on the flat, the wheels' bottom is the root's height).
+
+    Two lift rules failed, each taking a ground difference against a point that isn't the root's ground:
+    - against the donkey's body point: wheels +0.10 going down, −0.06 going up;
+    - then against the root's own spot: −0.12 going down, +0.17 going up (the user's video `12-04-44 AM`: the reverse).
+
+    **Fixed** (deployed 2026-10-04, 00:11): the lift is the walkable surface under the cart (layers 11 and 12, as the
+    game's own `RaycastUtils.TrySnapToTheGround`) minus the root's drawn height, whatever gave the root that height
+    (ridden, parked, unhitched, reloaded). Checked against all four measurements before building:
+
+    | Run | Lift then | New lift | Predicted error | Measured |
+    |---|---|---|---|---|
+    | 1st, down | 0.387 | 0.294 | +0.093 | +0.098 |
+    | 1st, up | −0.387 | −0.327 | −0.060 | −0.065 |
+    | 2nd, down | 0.170 | 0.296 | −0.126 | −0.122 |
+    | 2nd, up | −0.166 | −0.336 | +0.170 | +0.165 |
+
+    The surface is searched from 0.6 above the root (`CartRiseWindow`: the slope climbs about 0.35 to the cart body
+    here) down to a unit below it, so another level beside the road isn't taken.
+
+    The probe's wheel gap is now nearly true by construction (same raycast; only the wheels' 0.42 sideways offset
+    differs), so the video is the test:
+    - the hill both ways;
+    - the cart on the bridge;
+    - a cart left standing on the hill after getting off.
+
+    Known, not touched: in Cart style the donkey sprite itself is off its ground by the same ±0.1 on this hill
+    (SnapToGround off); nobody has reported it. The earlier note that the pitch hits its 20° cap came from the wrong
+    0.387 lift: the right lift (about 0.33) needs about 19°.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

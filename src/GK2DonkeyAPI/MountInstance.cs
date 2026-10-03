@@ -202,8 +202,7 @@ namespace GK2DonkeyAPI
                 ApplyStandState(); // Idle, or Walk during an idle-shuffle step (IdleShuffle.cs)
                 if (cartParts.Count > 0)
                 {
-                    Vector3 bodyGround = bodySprite != null && bodySprite ? bodySprite.position : donkey.transform.position;
-                    FollowCartParts(bodyGround, Position.y);
+                    FollowCartParts(at.y); // the height the root is drawn at
                     if (!HasDonkey)
                     {
                         LowerShafts();
