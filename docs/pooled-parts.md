@@ -46,8 +46,7 @@ The game's `npc_donkey` prefab is the measure of a clean view. It's read once fr
 | A free cart's donkey hidden | `HideDonkeyOnly` | `ReleaseView` |
 | Idle freeze: animators off, keep-state on, renderers off | `QuietAnimators(true)` (`Tiers.cs`) | `QuietAnimators(false)`; `ReleaseView` → `UnquietForPool` |
 | Whole view switched off (idle) | `QuietAnimators(true)` | `QuietAnimators(false)` (the `Wgo` itself, not the parts) |
-| Colliders off, layer 26; navmesh cuts off | `MuteColliders` (alive), `PrepareParts` | `RestoreColliders` (values recorded once per view life) |
-| Navmesh holes held by the data (`GlobalNavigationManager`) | the game, for the data | `NavHoles.Clear` (spawn, prepare, every second, destroy) |
+| Colliders off, layer 26; navmesh cuts off | `MuteColliders` (alive: colliders), `PrepareParts` (both) | `RestoreColliders` (values recorded once per view life) |
 | Cart part nodes: active, position, rotation | `PrepareParts`, the cart pose, slopes | `partRest` in `ReleaseView` |
 | Colours (materials, LUTs) | `ColorsRig` | `ColorsRig.Detach` |
 | Lantern pole and lights; the hanging lamp object | `LanternRig`, `LampHang` | `LanternRig.Detach` (lamp unparented, then destroyed: `Destroy` waits for the frame's end, and the first `[pool]` check, 2026-10-03, found the lamp still on returned views) |
@@ -84,3 +83,12 @@ so a `hed` sprite while every playing clip is a walk is this bug, whatever cause
   end of idle). Backup: `HeadGuardFrame` empties the head layer on every frame of a walk state, after the animator.
   The `[heads] ... the walk's head layer falls back to ...` line (once per view) shows whether the root fix holds:
   after it, the line should never appear.
+- **Status after the fourth test (2026-10-03, 13:50 log):** the pooled views walk with no head layer: root-caused and
+  fixed. But three views made by `Wgo.Spawn` (with and without the cart) logged the fallback line: on those the
+  backup did the work. They reuse the game's pooled parts, which come back from `ReleaseView` holding the prefab's
+  head (the reset and the audit put it there). So `ReleaseView` now empties the head layer last too.
+  - **To read next:** if the fallback line stops for `Wgo.Spawn` views, the backup is only a safety net. If not, the
+    fresh views' fallback is set some other way, still unknown.
+  - **Then (step two, one change at a time):** `ResetHeadDefault`'s `Rebind` (and the sprite reset in `PrepareParts`)
+    didn't change the fallback in test 3, so it may do nothing. Remove it and see whether the fallback lines come
+    back.

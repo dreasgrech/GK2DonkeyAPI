@@ -4,17 +4,17 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // The still head over the walking body (the "double donkey", docs/pooled-parts.md) came back on 2026-10-04 with
-    // no [pool] or [view] line: whatever bound the animator's default head this time, it wasn't a part reused without
-    // a reset. Measured rather than guessed: the walk clips never draw the head layer ("hed": the walking body carries
-    // its own head), so a hed sprite while every playing clip is a walk is that bug, whatever caused it. Each view is
-    // checked a few times a second; a hit is logged with where the view came from and what happened to it since.
-    //
-    // Measured 2026-10-04 (the [heads] lines): only views from the mod's own pool, and neither the prefab's sprites nor
-    // a cleared head before Animator.Rebind changed it: the head was back within 12 frames after each try, so the
-    // value the walk falls back to isn't one the mod can set by binding again. So the walk's head layer is emptied
-    // every frame instead (HeadGuardFrame), after the animator has written it (the mounts update in the plugin's
-    // LateUpdate): a walk never shows the head layer, whatever its default is.
+    // The still head over the walking body (the "double donkey", docs/pooled-parts.md). The walk clips never draw the
+    // head layer ("hed": the walking body carries its own head), so a hed sprite during a walk is that bug, whatever
+    // caused it.
+    //   - The cause (measured 2026-10-04, the [heads] lines): a view switched on while its head layer held a sprite (the
+    //     prefab's own 0301_hed_static_down, put back by the pool reset) builds its animator with that as the walk's
+    //     fallback; binding again later (Rebind) did not change it. Fixed where views are switched on (EmptyHeadLayer:
+    //     TakeParkedView, the end of idle, ReleaseView for the game's pool).
+    //   - The backup: HeadGuardFrame empties the head layer on every frame of a walk state, after the animator (the
+    //     mounts update in the plugin's LateUpdate).
+    //   - The check (HeadWatch, a few times a second): a view whose walk falls back to a head is logged once, with where
+    //     the view came from and what happened to it since. No such line: the root fix held and the backup did nothing.
     internal static partial class Mount
     {
         internal sealed partial class Instance
@@ -22,7 +22,6 @@ namespace GK2DonkeyAPI
             // Where the current view came from and what was done to it since (for the [heads] line).
             internal string viewOrigin = "none";
             internal int viewOriginFrame = -1;
-            internal int lastRebindFrame = -1;
             internal string viewEvents = "";
 
             private SpriteRenderer headRenderer;
@@ -30,14 +29,13 @@ namespace GK2DonkeyAPI
             private int headHits;
             private int nextHeadCheck;
             private static int headsLogged;
-            private static int ridesLogged;
-            private string lastBaseClip, lastHead;
             private bool headLoggedForView;         // the warning once per view
             private Animator headAnimator;
 
-            // The base layer's walk states (their short name hashes), learnt from the clip names a few times a second, so
-            // the per-frame guard needs no clip lookup (GetCurrentAnimatorClipInfo allocates).
+            // The base layer's states (short name hashes), sorted into walks and others by their clip's name the first time
+            // each is seen, so neither check needs a clip lookup after that (GetCurrentAnimatorClipInfo allocates).
             private static readonly System.Collections.Generic.HashSet<int> WalkStates = new System.Collections.Generic.HashSet<int>();
+            private static readonly System.Collections.Generic.HashSet<int> OtherStates = new System.Collections.Generic.HashSet<int>();
 
             internal void NoteView(string origin)
             {
@@ -93,28 +91,15 @@ namespace GK2DonkeyAPI
                     headHits = 0;
                     return;
                 }
-                string baseClip = BaseClip(a);
-                string headNow = h.sprite != null && h.enabled && h.gameObject.activeInHierarchy ? h.sprite.name : "none";
-                if (mounted && ridesLogged < 40 && (baseClip != lastBaseClip || headNow != lastHead))
+                // The base layer's state, learnt once per state from its clip's name (the clip lookup allocates).
+                int state = a.GetCurrentAnimatorStateInfo(0).shortNameHash;
+                bool walk = WalkStates.Contains(state);
+                if (!walk && !a.IsInTransition(0) && !OtherStates.Contains(state))
                 {
-                    // While ridden: each change of the base layer's clip or of the head layer's sprite (measurement; the
-                    // first version's walk test never matched: the animator has 14 layers, most never a walk).
-                    ridesLogged++;
-                    Plugin.Log.LogInfo($"[heads] ridden {Describe()}: base clip {baseClip}, head layer {headNow}, state {lastMirrored}; view {viewOrigin} {Time.frameCount - viewOriginFrame} frame(s) ago, since: {(viewEvents.Length > 0 ? viewEvents : "nothing")}.");
+                    walk = BaseClip(a).IndexOf("walk", StringComparison.OrdinalIgnoreCase) >= 0;
+                    (walk ? WalkStates : OtherStates).Add(state);
                 }
-                lastBaseClip = baseClip;
-                lastHead = headNow;
-                if (headNow == "none")
-                {
-                    headHits = 0;
-                    return;
-                }
-                bool walk = baseClip.IndexOf("walk", StringComparison.OrdinalIgnoreCase) >= 0;
-                if (walk && !a.IsInTransition(0))
-                {
-                    WalkStates.Add(a.GetCurrentAnimatorStateInfo(0).shortNameHash);
-                }
-                if (!walk)
+                if (!walk || h.sprite == null || !h.enabled || !h.gameObject.activeInHierarchy)
                 {
                     headHits = 0;
                     return;
@@ -130,7 +115,7 @@ namespace GK2DonkeyAPI
                     headLoggedForView = true;
                     headsLogged++;
                     Plugin.Log.LogInfo($"[heads] {Describe()}{(mounted ? " (ridden)" : "")}: the walk's head layer falls back to {h.sprite.name} ({PlayingClips(a)}); "
-                        + $"its view: {viewOrigin} {Time.frameCount - viewOriginFrame} frame(s) ago, animator last bound by the mod {(lastRebindFrame < 0 ? "never" : (Time.frameCount - lastRebindFrame) + " frame(s) ago")}, "
+                        + $"its view: {viewOrigin} {Time.frameCount - viewOriginFrame} frame(s) ago, "
                         + $"since then: {(viewEvents.Length > 0 ? viewEvents : "nothing")}. Emptied every walk frame (HeadGuardFrame), so it isn't seen.");
                 }
             }

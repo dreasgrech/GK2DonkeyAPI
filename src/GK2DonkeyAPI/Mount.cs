@@ -377,7 +377,6 @@ namespace GK2DonkeyAPI
                 }
 
                 Follow(pc);
-                CheckNavHoles();
                 RevealDonkeyIfDue();
                 if (partsReady)
                 {
@@ -905,7 +904,6 @@ namespace GK2DonkeyAPI
                     }
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
                     NoteView("made by Wgo.Spawn (new or the game's pooled parts)");
-                    NavHoles.ClearAndLog(data, Describe()); // no holes in the keeper's navmesh (NavHoles.cs)
                     MuteColliders(); // parts from the game's pool arrive inside Wgo.Spawn, before OnVisualPartsLoaded knows the view
                     donkey.UpdateChunkVisibility(isVisible: true);
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
@@ -946,7 +944,6 @@ namespace GK2DonkeyAPI
                 MuteColliders(); // and nothing solid before then (a physics step comes first)
             }
 
-            private static bool loggedCuts; // the first view's cuts, once a session
             private static int loggedHeadResets;
 
             private void ResetHeadDefault()
@@ -969,7 +966,6 @@ namespace GK2DonkeyAPI
                     if (a != null)
                     {
                         a.Rebind();
-                        lastRebindFrame = Time.frameCount;
                     }
                     lastMirrored = (AnimationState)(-1); // the stand or walk pose is sent again
                     if (!string.IsNullOrEmpty(had) && loggedHeadResets < 5)
@@ -982,19 +978,6 @@ namespace GK2DonkeyAPI
                 {
                     Plugin.Log.LogWarning($"Mount: {Describe()}: resetting the head sprite failed: {e.Message}");
                 }
-            }
-
-            // Once a second with a view: the game adds a part's baked cuts again on a part-state update (NavHoles.cs).
-            private float nextHoleCheck;
-
-            private void CheckNavHoles()
-            {
-                if (Time.unscaledTime < nextHoleCheck || donkey == null || !donkey)
-                {
-                    return;
-                }
-                nextHoleCheck = Time.unscaledTime + 1f;
-                NavHoles.ClearAndLog(donkey.Data, Describe());
             }
 
             // Once the prefab is loaded: no blocking, no interaction target, no navmesh cut; cart per style.
@@ -1035,25 +1018,11 @@ namespace GK2DonkeyAPI
                             collider.enabled = false;
                         }
                     }
-                    // Every navmesh cut of the view (the donkey prefab's are two NavMeshCutSphereCustom; only the box kind was
-                    // switched off before 2026-10-03, so each standing donkey and foal cut a hole in the ground the keeper
-                    // walks on: parked in front of a door, it shut him in the doorway).
-                    int cutsOn = 0;
-                    string cutNames = "";
+                    // No navmesh cut of any kind (the prefab's two NavMeshCutSphereCustom are off already; measured 2026-10-03:
+                    // "0 on"): a mod donkey never cuts the ground the keeper walks on. Put back by RestoreColliders.
                     foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
                     {
-                        if (cut.gameObject.activeInHierarchy)
-                        {
-                            cutsOn++;
-                            cutNames += (cutNames.Length > 0 ? ", " : "") + cut.GetType().Name + " " + cut.name;
-                        }
                         cut.gameObject.SetActive(value: false);
-                    }
-                    NavHoles.ClearAndLog(donkey.Data, Describe()); // and the holes outside the view (NavHoles.cs)
-                    if (!loggedCuts)
-                    {
-                        loggedCuts = true; // the first view of a session, also when there were none (so the log can tell)
-                        Plugin.Log.LogInfo($"Mount: navmesh cuts in the view of {Describe()}: {cutsOn} on{(cutsOn > 0 ? " (" + cutNames + "), switched off" : "")}.");
                     }
                     bool cart = activeStyle == MountStyle.Cart;
                     RememberPartRest(); // the prefab's own state, put back before the parts return to the game's pool
@@ -2134,7 +2103,6 @@ namespace GK2DonkeyAPI
                     {
                         if (donkey)
                         {
-                            NavHoles.Clear(donkey.Data); // a hole left here would stay for good: nothing holds its id after
                             UnityEngine.Object.Destroy(donkey.gameObject);
                         }
                     }

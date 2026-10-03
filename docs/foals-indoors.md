@@ -51,7 +51,7 @@ With this on, the baby donkeys come through doors with the keeper, follow him in
 Each door writes these log lines:
 
 - `[indoors] the keeper went through a door (event frame N, now M, control back / not back yet): from ... to ..., indoors/outdoors (<preset>)`.
-- `[indoors] control back at frame K (... frame(s) after the door)`.
+- (`[indoors] control back at frame K` was logged too, until 2026-10-03: every door measured "control not back yet", so it was removed.)
 - The foals' `caught up with the keeper (came in with the keeper)` lines.
 
 **What should happen:**
@@ -96,7 +96,7 @@ Each door writes these log lines:
 - A physics step runs in between, so the capsule threw him up.
 - New views have the same gap: from the part loader's `CompleteVisualPartsLoad`, or pooled parts inside `Wgo.Spawn`,
   to `PrepareParts`.
-- No navmesh hole and no other object of ours was found (`cut holes` never logged; nothing "(OURS)" under him).
+- No navmesh hole and no other object of ours was found (nothing "(OURS)" under him).
 
 **Fix (the cause):** `MuteColliders` switches every collider and navmesh cut of a view off the moment the view comes
 alive:
@@ -107,57 +107,15 @@ alive:
 The game's own values are still recorded once per view life (`RememberColliders` no longer records over them) and put
 back for the game's pool.
 
-**Earlier theories (kept: the measurement code stays until this is confirmed):**
-- He walks by physics, not on the navmesh (`PlayerPhysicalBody`). His invisible edge walls rise wherever there's no
-  walkable ground (layers 11 and 12) under a point 0.25 to 0.4 beside him (`PlayerInvisibleWalls`). So something
-  solid, or a missing patch of ground, at the door holds him.
-- **A mod donkey can leave three things behind that the view cleanup never touched:**
-  1. **Navmesh cuts inside the view.** `PrepareParts` switched off only `NavMeshCutBoxCustom`. The donkey prefab's
-     cuts are two `NavMeshCutSphereCustom`, each with a `SphereCollider`.
-  2. **The part's baked cut prefabs.** The game spawns these outside the view, under `GlobalNavigationManager`
-     (`GraphCustomNavMeshCutUnit`). They're tracked to the WgoData's position, held by its `UniqueId`, and spawned
-     again on every `Wgo.UpdateWgoPartState`.
-  3. **A forced navigation hole.** The `WgoData` constructor calls `SetupForcedNavigationHoleIfNeeded`. When the
-     definition says `SpawnHoleForce`, a static cut and scene-update box are left where the data was made. Nothing
-     removes them, since the game's removal runs only when a wgo is removed from its scene.
-- Which of these the `npc_donkey` actually has is game data. The build measures it rather than assuming.
-
-**Also removed (all three, measured, none found so far):**
-- **Every in-view cut:** every `CustomNavMeshCutBakeSourceBase` in the view is switched off (box, sphere, mesh and
-  planner kinds), and put back before the parts return to the game's pool.
-  - Log, first view of a session: `Mount: navmesh cuts in the view of ...: N on (...), switched off`.
-- **The cuts and holes outside the view:** `NavHoles.cs` removes them with
-  `GlobalNavigationManager.RemoveCutUnit(UniqueId)` and stops the WgoData's cut tracking. This runs after
-  `Wgo.Spawn`, in `PrepareParts`, once a second while a view exists, and before a view is destroyed.
-  - Log, first 5 views that had any: `Mount: ... cut holes in the keeper's navmesh (cut / scene update / baked cut prefabs; the game's own setting for npc_donkey: ...); removed`.
-- **Measurement:** after every door, `[indoors] solid colliders within 2.5 of the keeper at ...` lists what is solid
-  around him where he arrives: path, layer and distance.
-  - If he's still stuck, that line names what holds him.
-  - If the hole lines never appear and he's stuck anyway, the cause is elsewhere: read that line.
-
-## Found in test 2026-10-03: foals inside each other ("Siamese donkeys")
-
-**Symptom:** after a door, two or more foals stood in exactly the same place, one facing each way. Going in, all of
-them were clumped on top of the keeper.
-
-**Log:** going in, foals #11 and #13 were placed at the very same point, 0.4 in front of the keeper, and #12 0.58
-beside them.
-
-**Cause** (`CatchUp`): a foal goes to its own slot if the line from its lead is clear. If not, it went to the first
-clear slot (slot 0 for every foal), else to 0.4 in front of the lead (the same point for every foal). At a door the
-lines are often blocked (the doorway, or the new room's floor not loaded yet in the frames after the door), so all
-of them landed on the same spot.
-
-**Fix** (`Foals.cs` `FreeSlot`, `FoalsIndoors.cs`):
-- a slot another donkey stands on (within 0.5) is skipped;
-- with no clear line to any slot, any spot around the lead with a clear line (rings at 0.9, 1.4 and 2, straight
-  away from the camera first); only if none, in front of the lead, spread sideways by the foal's index.
-  - The first version took a slot with "ground and room" but no clear line. Inside the door that was behind the
-    room's wall (the slots beside the keeper run along it), so the foals came in out of sight and couldn't reach him
-    (second test, same day: "no foals entered with me").
-- a foal placed at a door without a clear line tries again each frame until the keeper has control back (the screen
-  is black till then), so it moves to a proper slot once the floor is there;
-- the catch-up log line says when no slot had a clear line, and the first failure.
+**Earlier theory, wrong (its code removed 2026-10-03, once the collider fix was confirmed):**
+- He walks by physics, not on the navmesh (`PlayerPhysicalBody`); his invisible edge walls rise where there's no
+  walkable ground under a point beside him (`PlayerInvisibleWalls`). So a hole cut in the ground by a mod donkey
+  looked like a cause: navmesh cuts in the view, the part's baked cut prefabs, a forced navigation hole of the data.
+- Built to remove all three and log what it found (`NavHoles.cs`). Measured over many sessions: no hole of any kind
+  (`cut holes` never logged; `navmesh cuts in the view: 0 on`). Removed: the reflection ran once a second per view
+  for nothing.
+- Kept from it: `PrepareParts` switches every in-view cut kind off (before, only the box kind), put back for the
+  game's pool. It costs nothing and keeps the old rule that a mod donkey never cuts the keeper's ground.
 
 ## In-game test list
 
@@ -166,8 +124,7 @@ Set "Baby donkeys" to 2 or more and "Baby donkeys come indoors" on.
 1. **The door bug:**
    - Ride into the house so the donkey is parked at the door, come back out, and walk away down past the donkey.
      You shouldn't get stuck.
-   - Send the log either way. The lines `navmesh cuts in the view`, `cut holes in the keeper's navmesh` and
-     `[indoors] solid colliders within 2.5` say what was there.
+   - (Confirmed fixed 2026-10-03.)
 2. **In on foot:**
    - With the foals around the donkey near the house, walk in. Once the fade clears, the foals are next to you
      inside, not appearing in view.

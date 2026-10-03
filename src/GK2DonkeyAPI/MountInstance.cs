@@ -139,7 +139,6 @@ namespace GK2DonkeyAPI
                         QuietAnimators(true); // made while idle (the ring around the keeper): ready, but frozen
                     }
                 }
-                CheckNavHoles();
                 if (t == Tier.Idle)
                 {
                     return; // frozen where it stands until it is active again (Tiers.cs)
@@ -323,7 +322,7 @@ namespace GK2DonkeyAPI
             }
 
             // The moment a view comes alive (a new one from the part loader, or one taken from the pool): no solid
-            // collider and no navmesh cut until PrepareParts sets it up. Before 2026-10-03 they were live until the next
+            // collider until PrepareParts sets it up. Before 2026-10-03 they were live until the next
             // LateUpdate; a physics step came first, and a donkey woken where the keeper stood (parked on a doorstep, the
             // keeper coming out of the door) shoved him a unit up onto its Obstacle capsule, wedged in the doorway.
             private void MuteColliders()
@@ -336,10 +335,6 @@ namespace GK2DonkeyAPI
                 foreach (Collider c in donkey.GetComponentsInChildren<Collider>(includeInactive: true))
                 {
                     c.enabled = false;
-                }
-                foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
-                {
-                    cut.gameObject.SetActive(false);
                 }
             }
 
@@ -393,9 +388,11 @@ namespace GK2DonkeyAPI
                 }
                 partRest.Clear();
                 try { RestoreColliders(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colliders failed: {e.Message}"); }
-                // Back to the pool with the prefab's sprites (whoever binds the part next takes them as its defaults; see
-                // ResetHeadDefault), then checked against the prefab: anything the mod changed and didn't put back is put
-                // right and logged ([pool], DonkeyPrefab.cs).
+                // Back to the pool with the prefab's sprites, then checked against the prefab: anything the mod changed and
+                // didn't put back is put right and logged ([pool], DonkeyPrefab.cs). Then the head layer emptied: whoever
+                // switches the part on next builds its animator from the sprites it holds, and the prefab's own head
+                // (0301_hed_static_down) then shows still over every walk (docs/pooled-parts.md). The game's pool hands
+                // these parts to the next Wgo.Spawn, ours and the game's own donkey.
                 try
                 {
                     if (donkey != null && donkey)
@@ -409,6 +406,7 @@ namespace GK2DonkeyAPI
                             }
                         }
                         DonkeyPrefab.Audit(part, Describe());
+                        EmptyHeadLayer(donkey);
                     }
                 }
                 catch (Exception e)

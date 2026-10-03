@@ -21,7 +21,6 @@ namespace GK2DonkeyAPI
         private static bool doorPending;
         private static Vector3 doorFrom;
         private static string doorFromScene;
-        private static bool doorLogControls;
         private static float nextIndoorsCheck;
         private static object indoorsSave;     // the game these were recorded in
         private static bool loadedCheckDue;     // the first steady check of a newly loaded game
@@ -34,7 +33,6 @@ namespace GK2DonkeyAPI
             doorPending = true;
             doorFrom = keeperWasAt;
             doorFromScene = keeperWasIn;
-            doorLogControls = false;
         }
 
         // Each registry frame, before the instances' own frames (MountRegistry.Tick).
@@ -47,7 +45,6 @@ namespace GK2DonkeyAPI
                 // Another game: where the keeper stood belongs to the old one (a load's own teleport is no door).
                 indoorsSave = readySave;
                 doorPending = false;
-                doorLogControls = false;
                 keeperWasIn = null;
                 loadedCheckDue = true;
             }
@@ -78,16 +75,9 @@ namespace GK2DonkeyAPI
             if (doorPending && (Time.frameCount >= doorFrame + 2 || controls))
             {
                 doorPending = false;
-                doorLogControls = !controls;
                 bool inside = Instance.IsIndoors();
                 Plugin.Log.LogInfo($"[indoors] the keeper went through a door (event frame {doorFrame}, now {Time.frameCount}, control {(controls ? "back" : "not back yet")}): from {doorFrom:F1} in {doorFromScene} to {pd.position.Value:F1} in {pd.currentGameSceneId}, {(inside ? "indoors" : "outdoors")} ({PresetName()}).");
                 ThroughDoor(pd, inside);
-            }
-            else if (doorLogControls && controls)
-            {
-                // Measured once per door: the foals must be placed before this (the screen fades back before control).
-                doorLogControls = false;
-                Plugin.Log.LogInfo($"[indoors] control back at frame {Time.frameCount} ({Time.frameCount - doorFrame} frame(s) after the door).");
             }
             else if (!doorPending && controls && Time.unscaledTime >= nextIndoorsCheck)
             {
