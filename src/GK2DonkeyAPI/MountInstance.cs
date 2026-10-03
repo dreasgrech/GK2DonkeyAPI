@@ -139,6 +139,7 @@ namespace GK2DonkeyAPI
                         QuietAnimators(true); // made while idle (the ring around the keeper): ready, but frozen
                     }
                 }
+                CheckNavHoles();
                 if (t == Tier.Idle)
                 {
                     return; // frozen where it stands until it is active again (Tiers.cs)
@@ -303,17 +304,42 @@ namespace GK2DonkeyAPI
             private readonly List<(Collider C, bool Active, bool Enabled, int Layer)> colliderRest = new List<(Collider, bool, bool, int)>();
             private readonly List<(GameObject Go, bool Active)> cutRest = new List<(GameObject, bool)>();
 
+            // Once per view life: MuteColliders may have recorded them already when the view came alive, and recording
+            // again would take the muted state for the game's.
             private void RememberColliders()
             {
-                colliderRest.Clear();
-                cutRest.Clear();
+                if (colliderRest.Count > 0 || cutRest.Count > 0)
+                {
+                    return;
+                }
                 foreach (Collider c in donkey.GetComponentsInChildren<Collider>(includeInactive: true))
                 {
                     colliderRest.Add((c, c.gameObject.activeSelf, c.enabled, c.gameObject.layer));
                 }
-                foreach (NavMeshCutBoxCustom cut in donkey.GetComponentsInChildren<NavMeshCutBoxCustom>(includeInactive: true))
+                foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
                 {
                     cutRest.Add((cut.gameObject, cut.gameObject.activeSelf));
+                }
+            }
+
+            // The moment a view comes alive (a new one from the part loader, or one taken from the pool): no solid
+            // collider and no navmesh cut until PrepareParts sets it up. Before 2026-10-03 they were live until the next
+            // LateUpdate; a physics step came first, and a donkey woken where the keeper stood (parked on a doorstep, the
+            // keeper coming out of the door) shoved him a unit up onto its Obstacle capsule, wedged in the doorway.
+            private void MuteColliders()
+            {
+                if (donkey == null || !donkey)
+                {
+                    return;
+                }
+                RememberColliders();
+                foreach (Collider c in donkey.GetComponentsInChildren<Collider>(includeInactive: true))
+                {
+                    c.enabled = false;
+                }
+                foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
+                {
+                    cut.gameObject.SetActive(false);
                 }
             }
 
@@ -341,6 +367,10 @@ namespace GK2DonkeyAPI
             // or switched-off cart part. The instance keeps its cargo list (the rig's mirror), settings and place.
             internal void ReleaseView()
             {
+                // A view frozen far from the keeper (Tiers.cs: animators off, renderers forced off) goes back unfrozen:
+                // the tier change to asleep did that, but a removal, a send-away or the game unloading the scene did not,
+                // and the next donkey built from the parts (ours, or the game's delivery donkey) came frozen or unseen.
+                UnquietForPool();
                 foreach (Renderer r in hiddenRenderers)
                 {
                     if (r != null && r) r.forceRenderingOff = false;
@@ -363,6 +393,28 @@ namespace GK2DonkeyAPI
                 }
                 partRest.Clear();
                 try { RestoreColliders(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colliders failed: {e.Message}"); }
+                // Back to the pool with the prefab's sprites (whoever binds the part next takes them as its defaults; see
+                // ResetHeadDefault), then checked against the prefab: anything the mod changed and didn't put back is put
+                // right and logged ([pool], DonkeyPrefab.cs).
+                try
+                {
+                    if (donkey != null && donkey)
+                    {
+                        Transform part = donkey.MainWgoPart?.transform;
+                        if (DonkeyPrefab.ResetSprites(part) == null)
+                        {
+                            foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                            {
+                                if (sr.name == "hed") sr.sprite = null;
+                            }
+                        }
+                        DonkeyPrefab.Audit(part, Describe());
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Mount: {Describe()}: checking the view against the prefab failed: {e.Message}");
+                }
                 shaftDropDeg = float.NaN;
             }
 

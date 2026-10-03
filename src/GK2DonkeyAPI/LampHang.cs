@@ -72,6 +72,10 @@ namespace GK2DonkeyAPI
                     }
                     if (lampGo != null)
                     {
+                        // Out of the view first: Destroy waits for the frame's end, and the view's parts may go back to
+                        // the game's pool (and out again) before that (the [pool] check found it still there, 2026-10-03).
+                        lampGo.transform.SetParent(null, worldPositionStays: false);
+                        lampGo.SetActive(false);
                         UnityEngine.Object.Destroy(lampGo);
                     }
                     if (poleMesh != null) { UnityEngine.Object.Destroy(poleMesh); Live.Meshes--; }

@@ -82,7 +82,7 @@ Built, untested in game (API 0.12.0):
   of the donkey's body and the back end, split the cart in the middle: measured 1.40 apart, the cart's front edge
   still meant Drive (the user's screenshot).
 - **The key**, on foot: holding something the cart takes, anywhere in either area, "Load on cart" (one item per
-  press) or "Cart is full"; empty hands in the donkey's area "Drive", in the cart's area with cargo "Take from cart"
+  press) or "Cart is full"; empty hands in the donkey's area "Ride" ("Drive" until 2026-10-03), in the cart's area with cargo "Take from cart"
   (not within 0.5 s of a load). A cart-less donkey keeps "Ride" within 1.3 of its body.
 - **API:** `MountHandle.LoadFromHead`, `TakeToHead`.
 - **Fixed on the way:** the controls stepped aside for any game object in front of the keeper; now only for one the

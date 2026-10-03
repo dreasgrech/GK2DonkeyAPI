@@ -517,6 +517,7 @@ namespace GK2DonkeyAPI
             Perf.LogEvery10s = TuningWindowEnabled.Value;
             Perf.AllocBySection = TuningWindowEnabled.Value;
             MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
+            PlayerController.OnPlayerTeleported += Mount.OnKeeperTeleported; // foals indoors (FoalsIndoors.cs)
             Log.LogInfo($"GK2 Donkey API {Version} loaded (API {Mounts.ApiVersion}); nothing happens until a mod uses it.");
         }
 
@@ -614,6 +615,7 @@ namespace GK2DonkeyAPI
             }
             Patched = false;
             MainGame.OnGameStarted = (Action)Delegate.Remove(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
+            PlayerController.OnPlayerTeleported -= Mount.OnKeeperTeleported;
             harmony?.UnpatchSelf();
             harmony = null;
         }

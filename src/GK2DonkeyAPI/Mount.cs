@@ -377,6 +377,7 @@ namespace GK2DonkeyAPI
                 }
 
                 Follow(pc);
+                CheckNavHoles();
                 RevealDonkeyIfDue();
                 if (partsReady)
                 {
@@ -753,7 +754,7 @@ namespace GK2DonkeyAPI
 
             // The game switches its time-of-day lighting preset per area; interiors, the church and dungeons use presets
             // flagged indoorPreset. Read after teleports settle (the switch is asynchronous, a frame or two).
-            private static bool IsIndoors()
+            internal static bool IsIndoors()
             {
                 try
                 {
@@ -902,6 +903,8 @@ namespace GK2DonkeyAPI
                         SuppressScripts = false;
                     }
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
+                    NavHoles.ClearAndLog(data, Describe()); // no holes in the keeper's navmesh (NavHoles.cs)
+                    MuteColliders(); // parts from the game's pool arrive inside Wgo.Spawn, before OnVisualPartsLoaded knows the view
                     donkey.UpdateChunkVisibility(isVisible: true);
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
                     quietKeepState.Clear();
@@ -938,6 +941,58 @@ namespace GK2DonkeyAPI
                 hiddenRenderers.Clear();
                 HideRenderersNow();
                 revealFrame = int.MaxValue; // until PrepareParts
+                MuteColliders(); // and nothing solid before then (a physics step comes first)
+            }
+
+            private static bool loggedCuts; // the first view's cuts, once a session
+            private static int loggedHeadResets;
+
+            private void ResetHeadDefault()
+            {
+                try
+                {
+                    // Every sprite as the prefab has it (DonkeyPrefab.cs); without the prefab, at least the head cleared.
+                    string had = DonkeyPrefab.ResetSprites(donkey.MainWgoPart?.transform);
+                    if (had == null)
+                    {
+                        foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                        {
+                            if (sr.name == "hed" && sr.sprite != null)
+                            {
+                                had = "hed " + sr.sprite.name + " -> none";
+                                sr.sprite = null;
+                            }
+                        }
+                    }
+                    Animator a = donkey.MainWgoPart?.AnimationComponent?.Animator;
+                    if (a != null)
+                    {
+                        a.Rebind();
+                    }
+                    lastMirrored = (AnimationState)(-1); // the stand or walk pose is sent again
+                    if (!string.IsNullOrEmpty(had) && loggedHeadResets < 5)
+                    {
+                        loggedHeadResets++;
+                        DiagLog($"[view] {Describe()}: sprites set back to the prefab's before the animator is bound again ({had}).");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Mount: {Describe()}: resetting the head sprite failed: {e.Message}");
+                }
+            }
+
+            // Once a second with a view: the game adds a part's baked cuts again on a part-state update (NavHoles.cs).
+            private float nextHoleCheck;
+
+            private void CheckNavHoles()
+            {
+                if (Time.unscaledTime < nextHoleCheck || donkey == null || !donkey)
+                {
+                    return;
+                }
+                nextHoleCheck = Time.unscaledTime + 1f;
+                NavHoles.ClearAndLog(donkey.Data, Describe());
             }
 
             // Once the prefab is loaded: no blocking, no interaction target, no navmesh cut; cart per style.
@@ -946,6 +1001,22 @@ namespace GK2DonkeyAPI
                 partsReady = true;
                 try
                 {
+                    // The still head over the walking body (the "double donkey", 2026-10-03): the walk clips don't key the
+                    // head sprite ("hed"), so with write defaults it shows the value the animator took as its default when
+                    // it was bound. A new prefab has no head sprite then; a part from the game's pool was bound again
+                    // still holding hed_static_down from its last use, so every walk frame painted that head (only from the
+                    // second view on: the first comes new). The head is cleared and the animator bound again here, so its
+                    // default is no head; the pose and the facing are then sent again.
+                    ResetHeadDefault();
+                    // The facing straight to the animator once per view (a view from the pool, ours or the game's, may hold
+                    // a stale Direction, and the data doesn't tell it again when the facing value is the same).
+                    try
+                    {
+                        donkey.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));
+                    }
+                    catch
+                    {
+                    }
                     RememberColliders(); // put back with the rest before the parts return to the game's pool
                     donkey.SetInteractableCollidersState(isActive: false);
                     donkey.SetLayerToAllColliders(26);
@@ -961,9 +1032,25 @@ namespace GK2DonkeyAPI
                             collider.enabled = false;
                         }
                     }
-                    foreach (NavMeshCutBoxCustom cut in donkey.GetComponentsInChildren<NavMeshCutBoxCustom>(includeInactive: true))
+                    // Every navmesh cut of the view (the donkey prefab's are two NavMeshCutSphereCustom; only the box kind was
+                    // switched off before 2026-10-03, so each standing donkey and foal cut a hole in the ground the keeper
+                    // walks on: parked in front of a door, it shut him in the doorway).
+                    int cutsOn = 0;
+                    string cutNames = "";
+                    foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
                     {
+                        if (cut.gameObject.activeInHierarchy)
+                        {
+                            cutsOn++;
+                            cutNames += (cutNames.Length > 0 ? ", " : "") + cut.GetType().Name + " " + cut.name;
+                        }
                         cut.gameObject.SetActive(value: false);
+                    }
+                    NavHoles.ClearAndLog(donkey.Data, Describe()); // and the holes outside the view (NavHoles.cs)
+                    if (!loggedCuts)
+                    {
+                        loggedCuts = true; // the first view of a session, also when there were none (so the log can tell)
+                        Plugin.Log.LogInfo($"Mount: navmesh cuts in the view of {Describe()}: {cutsOn} on{(cutsOn > 0 ? " (" + cutNames + "), switched off" : "")}.");
                     }
                     bool cart = activeStyle == MountStyle.Cart;
                     RememberPartRest(); // the prefab's own state, put back before the parts return to the game's pool
@@ -2044,6 +2131,7 @@ namespace GK2DonkeyAPI
                     {
                         if (donkey)
                         {
+                            NavHoles.Clear(donkey.Data); // a hole left here would stay for good: nothing holds its id after
                             UnityEngine.Object.Destroy(donkey.gameObject);
                         }
                     }

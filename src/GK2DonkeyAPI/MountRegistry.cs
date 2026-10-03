@@ -471,6 +471,14 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
+            try
+            {
+                IndoorsTick(pc); // foals coming through a door with the keeper (FoalsIndoors.cs)
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Mount: foals indoors: " + e.Message);
+            }
             List<Instance> all = TakeSnapshot();
             try
             {

@@ -319,6 +319,13 @@ MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2,
   stands still; set it again if you clear your tuning mid-session.
 - **On `MountHandle`:** `Scale`, `IsRideable`, `Parent`, `Children`. `IsStepping` is also true while trotting after
   the parent.
+- **Indoors with the keeper (0.18.0):** with the `Mounts.Shuffle` key `ShuffleFollowKeeperIndoors` on for a foal
+  (`foal.Tuning.Set(yourId, "ShuffleFollowKeeperIndoors", true)`; off in the core), it comes through a door with the
+  keeper when it's within `ShuffleFollowMaxDistance` of him. That covers buildings, the church and dungeons, which
+  are the game's indoor places, the same test as `DismountIndoors`. Inside it follows him instead of its parent,
+  comes back out with him, then goes back to its parent. `MountHandle.IsWithKeeper` says whether it's with him now.
+  It's moved while the door's fade is black. Being with the keeper isn't saved: after a load indoors, the flagged
+  foals near him are with him again. See [foals-indoors.md](foals-indoors.md).
 
 ## Several mods, ids and the save (0.9.0, 0.10.0)
 
@@ -420,7 +427,7 @@ MountCompanion me = Mounts.Companion("you.gk2.mymod");               // one per 
 MountSettingsPage p = Mounts.SettingsPage("you.gk2.mymod", Config, "My Donkey Mod", "you", "What it does.");
 p.Status("Keys");                                                    // "Active", or why the API is off
 p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride", "...", pressed: () => me.Use(MountStyle.Ride));
-p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" });
+p.Choice("Donkey", "Coat", CoatColor.Game, "Coat", "", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" });
 p.Steps("Donkey", "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Foals", "...", v => me.FoalCount = v);   // defaults: the companion's own values
 p.Publish();
 ```
@@ -440,12 +447,13 @@ p.Publish();
 | `Donkey`, `Cart`, `Foals` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`; `Foals` a slot per foal, null when that one isn't there). Found again after a load by the keys `"donkey"`, `"cart"`, `"foal"`, `"foal2"` ... `"foal5"`. |
 | `KeepWithSaves` | Kept with the save (on). |
 | `FoalCount` | 0 to `MaxFoals` (5) foals (size 0.6, not rideable) that stay with the donkey. |
+| `FoalsComeIndoors` | The foals come through doors with the keeper, follow him inside and come back out with him (`ShuffleFollowKeeperIndoors` on each foal). Off. |
 | `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
 | `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
 | `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
 | *(every setting)* | Starts at the default a mod's settings should use: pass the property as the row's default (`p.Toggle(..., me.BellOnSetOff, ...)`), so it's written once, in the API. |
-| `Coat`, `Harness`, `Paint`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `LanternColor`); `Game` is the game's art. |
-| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. An invalid one means the game's look, logged once. |
+| `Coat`, `Harness`, `Paint`, `Wheels`, `Hubs`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `WheelColor`, `HubColor`, `LanternColor`); `Game` is the game's art. The paint is the cart body and shafts; the wheels' wood and their hubs have their own (0.19.0). |
+| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomWheels`, `CustomHubs`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. An invalid one means the game's look, logged once. |
 
 Where they apply:
 - **The looks, the name and the foal** are this companion's own donkey, cart and foal only (instance overrides): other
@@ -562,6 +570,8 @@ History:
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
+- 0.19.0: `MountCompanion.Wheels` / `Hubs` (`WheelColor`: Game, DarkWood, Red, Green, Blue, Black, Custom; `HubColor`: Game, Black, Brass, Silver, Custom) with `CustomWheels` / `CustomHubs`; `Paint`'s Dark wood no longer darkens the wheels. Fix: donkey views are reset to the prefab and checked when they go back (docs/pooled-parts.md).
+- 0.18.0: foals indoors: the `Mounts.Shuffle` key `ShuffleFollowKeeperIndoors`, `MountHandle.IsWithKeeper`, `MountCompanion.FoalsComeIndoors`. Fix: a mod donkey's navmesh cuts and holes are removed (in the view, the baked cut prefabs and a forced hole), likely what shut the keeper in a doorway.
 - 0.17.0 (breaking, pre-release): `MountCompanion.RideSpeed` and `CartSpeed` replace `Speed`; `FoalCount` (0 to `MaxFoals`) and `Foals` replace `HasFoal` and `Foal`; `SpeedLabels`; `BellOnSetOff` starts off.
 - 0.16.0: `MountSettingsPage.Key(..., pressed)` (the API polls the keys), `Status(section)`, `Mounts.StatusText`, `MountCompanion.RingBell`; refusals of `Use` logged; an unloaded mod's tuning cleared; plain Backspace means no key, with a note after the last key.
 - 0.15.0: `Preview(section, companion, label, cart)` rows; the picture above the Mods window or in the rows.

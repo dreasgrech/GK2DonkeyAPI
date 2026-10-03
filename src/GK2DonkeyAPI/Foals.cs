@@ -66,6 +66,51 @@ namespace GK2DonkeyAPI
 
             internal bool RemoveWithParent = true;
 
+            // Who a foal keeps to: its parent, or the keeper while it is with him indoors (FoalsIndoors.cs). Everything the
+            // following reads of it, taken fresh each time (a transform or two).
+            private struct Lead
+            {
+                internal Vector3 Body;    // its body point (the keeper: where he stands)
+                internal float GroundY;   // the height its slots are put at
+                internal string SceneId;
+                internal bool Here;       // its view is up (the keeper is always there)
+                internal bool Moving;     // ridden (the keeper: going through a door), so not standing for a catch-up
+                internal float FacingX;
+                internal bool HasCart;
+                internal string Name;     // for the log and the panel
+            }
+
+            private Lead LeadNow()
+            {
+                if (withKeeper)
+                {
+                    PlayerController pc = MainGame.PlayerController;
+                    PlayerData pd = pc?.PlayerData;
+                    if (pd != null)
+                    {
+                        Vector3 k = pd.position.Value;
+                        return new Lead
+                        {
+                            Body = k, GroundY = k.y, SceneId = pd.currentGameSceneId, Here = true, Moving = !pc.IsControlsEnabled,
+                            FacingX = pd.Direction.x < -0.05f ? -1f : 1f, HasCart = false, Name = "the keeper",
+                        };
+                    }
+                }
+                Instance p = Parent;
+                return new Lead
+                {
+                    Body = p.BodyPoint(), GroundY = p.Position.y, SceneId = p.SceneId, Here = p.HasView, Moving = p.IsRidden,
+                    FacingX = p.riderFacingX, HasCart = p.HasCart, Name = "its parent " + p.FullId,
+                };
+            }
+
+            // The parent (or the keeper it is with) is in this foal's scene with its view up: its home is next to it.
+            private bool LeadIsHere()
+            {
+                Lead l = LeadNow();
+                return l.SceneId == SceneId && l.Here;
+            }
+
             // A route around obstacles (FoalRoute.cs): the search in progress, or the corners being walked.
             private FoalRouteSearch routeSearch;
             private List<Vector3> route;
@@ -130,12 +175,13 @@ namespace GK2DonkeyAPI
 
             private Vector3 NearSideOfParent(Vector3 body)
             {
-                Vector3 pb = Parent.BodyPoint();
+                Lead l = LeadNow();
+                Vector3 pb = l.Body;
                 Vector3 dir = body - pb;
                 dir.y = 0f;
                 dir = dir.sqrMagnitude > 0.0001f ? dir.normalized : Vector3.back;
                 Vector3 at = pb + dir * 0.9f;
-                at.y = Parent.Position.y;
+                at.y = l.GroundY;
                 return at;
             }
             private bool followLost;            // could not follow (blocked or too far): shuffles where it is until caught up
@@ -181,13 +227,13 @@ namespace GK2DonkeyAPI
                 return n >= 0 ? n : 0;
             }
 
-            // How long the parent has stood where it is (it moves while ridden or shuffling).
+            // How long the parent (or the keeper it is with) has stood where it is (it moves while ridden or shuffling).
             private float ParentStillFor()
             {
-                Instance p = Parent;
-                if ((p.Position - parentSeenAt).sqrMagnitude > 0.0004f)
+                Vector3 at = withKeeper ? LeadNow().Body : Parent.Position;
+                if ((at - parentSeenAt).sqrMagnitude > 0.0004f)
                 {
-                    parentSeenAt = p.Position;
+                    parentSeenAt = at;
                     parentStillSince = Time.time;
                 }
                 return Time.time - parentStillSince;
@@ -223,13 +269,13 @@ namespace GK2DonkeyAPI
 
             private void UpdateFoalSide(Vector3 body)
             {
-                Instance p = Parent;
+                Lead p = LeadNow();
                 Vector3 right = Vector3.Cross(Vector3.up, AwayFromCamera()).normalized;
-                float rel = Vector3.Dot(body - p.BodyPoint(), right);
+                float rel = Vector3.Dot(body - p.Body, right);
                 if (foalSide == 0f)
                 {
                     float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
-                    foalSide = Mathf.Abs(rel) > 0.05f ? Mathf.Sign(rel) : -p.riderFacingX * worldToRight; // behind it at first
+                    foalSide = Mathf.Abs(rel) > 0.05f ? Mathf.Sign(rel) : -p.FacingX * worldToRight; // behind it at first
                 }
                 else if (Mathf.Abs(rel) > 0.3f)
                 {
@@ -239,26 +285,26 @@ namespace GK2DonkeyAPI
 
             private Vector3 SlotNearParent(int index)
             {
-                Instance p = Parent;
+                Lead p = LeadNow();
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 float worldToRight = Vector3.Dot(Vector3.right, right) >= 0f ? 1f : -1f;
-                float side = foalSide != 0f ? foalSide : -p.riderFacingX * worldToRight;
+                float side = foalSide != 0f ? foalSide : -p.FacingX * worldToRight;
                 Vector2 s = SlotOffset(index);
-                bool cartSide = p.HasCart && side == -p.riderFacingX * worldToRight; // the cart is behind the donkey
-                float gap = IdleShuffleGap(p);
+                bool cartSide = p.HasCart && side == -p.FacingX * worldToRight; // the cart is behind the donkey
+                float gap = IdleShuffleGap(Parent);
                 Vector3 at;
                 if (cartSide)
                 {
                     // Beside the cart: near its front (the donkey's end), in front of or behind it on screen.
                     float depth = (s.y >= 0f ? 1f : -1f) * (BesideCart + Mathf.Abs(s.y) * 0.5f);
-                    at = p.BodyPoint() + right * (side * (gap * 0.5f + s.x)) + away * depth;
+                    at = p.Body + right * (side * (gap * 0.5f + s.x)) + away * depth;
                 }
                 else
                 {
-                    at = p.BodyPoint() + right * (side * (gap + s.x)) + away * s.y;
+                    at = p.Body + right * (side * (gap + s.x)) + away * s.y;
                 }
-                at.y = p.Position.y;
+                at.y = p.GroundY;
                 return at;
             }
 
@@ -274,16 +320,18 @@ namespace GK2DonkeyAPI
                 if (!IsRegistered(p))
                 {
                     Parent = null; // an orphan now: it shuffles where it is
+                    withKeeper = false;
                     return false;
                 }
                 float still = ParentStillFor();
-                if (p.SceneId != SceneId || !p.HasView)
+                Lead l = LeadNow();
+                if (l.SceneId != SceneId || !l.Here)
                 {
                     StopFollowing();
-                    shuffleHold = "waiting for its parent (somewhere else)";
-                    if (!p.IsRidden && p.HasView && still >= 1.5f)
+                    shuffleHold = withKeeper ? "waiting for the keeper (somewhere else)" : "waiting for its parent (somewhere else)";
+                    if (!l.Moving && l.Here && still >= 1.5f)
                     {
-                        CatchUp("its parent is in another place");
+                        CatchUp(withKeeper ? "the keeper is in another place" : "its parent is in another place");
                     }
                     return true;
                 }
@@ -292,7 +340,7 @@ namespace GK2DonkeyAPI
                 // The reachable target only while trotting (it costs a few ground checks every 0.5 s).
                 Vector3 slot = shufflePhase == ShufflePhase.Following ? FollowTarget(body) : SlotNearParent(SiblingIndex());
                 float d = FlatDistance(body, slot);                // arriving: at its slot (or the reachable one)
-                float dHome = FlatDistance(body, p.BodyPoint());   // starting and giving up: from the parent itself
+                float dHome = FlatDistance(body, l.Body);          // starting and giving up: from the parent itself
                 float homeRange = Mathf.Max(IdleShuffle.AreaWidth.Value, IdleShuffle.AreaDepth.Value) + 0.6f;
                 // ShuffleFollowAlways: no distance limit, it follows until the way is blocked.
                 float maxFollow = IdleShuffle.FollowAlways != null && IdleShuffle.FollowAlways.Value ? float.MaxValue : IdleShuffle.FollowMaxDistance.Value;
@@ -344,7 +392,7 @@ namespace GK2DonkeyAPI
                             shufflePhase = ShufflePhase.Following;
                             nextAheadCheck = 0f;
                             rejoinedAt = Time.time;
-                            DiagLog($"[foal] {Describe()} follows its parent {p.FullId} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
+                            DiagLog($"[foal] {Describe()} follows {l.Name} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
                             return true;
                         }
                         // No straight way to any place next to it: a route around, when the parent is within the route's
@@ -365,7 +413,7 @@ namespace GK2DonkeyAPI
                     }
                     // Out of sight only: a foal vanishing in view and appearing next to its parent looked broken (the
                     // user, 2026-10-01). In view only when it is truly wedged against the world, after 6 s.
-                    else if (!p.IsRidden && still >= 1.5f && (OffScreen(body) || (wedged && still >= 6f)))
+                    else if (!l.Moving && still >= 1.5f && (OffScreen(body) || (wedged && still >= 6f)))
                     {
                         CatchUp("its parent stands again");
                         return true;
@@ -390,7 +438,7 @@ namespace GK2DonkeyAPI
                     if (followsLogged < 5)
                     {
                         followsLogged++;
-                        DiagLog($"[foal] {Describe()} follows its parent {p.FullId} ({dHome:F1} away).");
+                        DiagLog($"[foal] {Describe()} follows {l.Name} ({dHome:F1} away).");
                     }
                     return true;
                 }
@@ -524,7 +572,7 @@ namespace GK2DonkeyAPI
                 string what = s.Result == FoalRouteSearch.State.Found
                     ? $"found, {s.Corners.Count} corner(s)"
                     : $"none ({s.Why})";
-                DiagLog($"[foal] {Describe()} route to its parent {p.FullId}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
+                DiagLog($"[foal] {Describe()} route to {LeadNow().Name}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
             }
 
             // One frame of trotting towards the slot: the body moves in a straight line, the root stays half a (scaled)
@@ -605,7 +653,7 @@ namespace GK2DonkeyAPI
                 {
                     followLost = true;
                     shuffleHome = body;
-                    DiagLog($"[foal] {Describe()} can't follow its parent {Parent.FullId} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
+                    DiagLog($"[foal] {Describe()} can't follow {LeadNow().Name} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
                     groundFail = null;
                 }
             }
@@ -649,14 +697,14 @@ namespace GK2DonkeyAPI
             private void CatchUp(string why)
             {
                 CatchUpCount++;
-                Instance p = Parent;
+                Lead p = LeadNow();
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 Vector3 slot = SlotNearParent(SiblingIndex());
-                if (p.HasView)
+                if (p.Here)
                 {
                     // Its own slot, else any free one with a clear line from the parent, else next to the parent.
-                    Vector3 pb = p.BodyPoint();
+                    Vector3 pb = p.Body;
                     bool found = LineWalkable(pb, slot, "catch-up");
                     for (int k = 0; !found && k < SlotCount; k++)
                     {
@@ -674,7 +722,7 @@ namespace GK2DonkeyAPI
                 }
                 if (SceneId != p.SceneId)
                 {
-                    DestroyDonkey(); // spawned again in the parent's scene by StandTick
+                    DestroyDonkey(); // spawned again in the parent's (or keeper's) scene by StandTick
                     SceneId = p.SceneId;
                     nextSpawnTry = 0f;
                     nextViewlessTick = 0f; // spawned there on the next frame, not within the half-second viewless tick
@@ -690,21 +738,26 @@ namespace GK2DonkeyAPI
                 pickFailsInRow = 0;
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
-                DiagLog($"[foal] {Describe()} caught up with its parent {p.FullId} ({why}) at {root:F2} in {SceneId}.");
+                DiagLog($"[foal] {Describe()} caught up with {p.Name} ({why}) at {root:F2} in {SceneId}.");
             }
 
-            // StandTick without a view (its scene is not loaded): a foal whose parent stands in another, loaded scene
-            // goes there.
+            // StandTick without a view (its scene is not loaded): a foal whose parent (or the keeper it is with) stands in
+            // another, loaded scene goes there.
             private void FollowWithoutView()
             {
-                Instance p = Parent;
-                if (p == null || !IsRegistered(p) || p.SceneId == SceneId || p.IsRidden || !p.HasView)
+                Instance parent = Parent;
+                if (parent == null || !IsRegistered(parent))
+                {
+                    return;
+                }
+                Lead p = LeadNow();
+                if (p.SceneId == SceneId || p.Moving || !p.Here)
                 {
                     return;
                 }
                 if (ParentStillFor() >= 1.5f)
                 {
-                    CatchUp("its parent stands in another place");
+                    CatchUp(withKeeper ? "the keeper stands in another place" : "its parent stands in another place");
                 }
             }
 

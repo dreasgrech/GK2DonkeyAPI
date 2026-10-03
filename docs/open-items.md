@@ -1,0 +1,99 @@
+# Open and deferred items
+
+What is built but not yet seen in game, what is undecided, and what was put off. As of 2026-10-03, API 0.18.0,
+Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new ones at the end of their list.
+
+## To check in game (built and deployed, not yet seen)
+
+With GK2 Mod Framework installed:
+
+1. **Choice labels in the Mods menu** (`MenuLabels.cs`): the framework shows each value's plain name, so the API
+   writes the page's labels over its dropdowns.
+   - Riding speed: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5).
+   - Cart speed: Normal (x1.5), Faster (x1.75), Fastest (x2).
+   - Coat, Harness, Paint, Lantern light: "Game default" (not "Game"), "Dark wood", "Warm (game default)".
+   - A picked value still sticks after closing and reopening the menu.
+   - Every dropdown list of our pages is at most 8 rows tall and scrolls (`MenuLabels.MaxListRows`; the 24 palette
+     colours ran off the top of the screen, 2026-10-03).
+2. **"Setting a key" note** sits right under Status, before the first key (`MountSettingsPage.AddKeyHelp`).
+3. **Backspace clears a key in the Mods menu:** the framework's capture takes Backspace as a key; the API clears it
+   at once (`MountSettingsPage.ClearIfBackspace`). The field should show no key, not "Backspace" (if it does, leave
+   the page and come back to see whether it's really cleared).
+4. **GK2 Donkey API in the Mods list** (its own entry, no Settings button), and Saddle Up's details show
+   `Dependencies: dreas.gk2.donkeyapi`.
+
+In a game:
+
+5. **The two speeds** feel right: riding at Normal (x2) as before; Faster and Fastest noticeably faster.
+6. **Baby donkeys 2 to 5:** more than one foal at a time has never been seen in game (the siblings' spots around
+   the parent exist in `Foals.cs` but are untested). Also: the count going down removes the extra foals, and the
+   first foal keeps its save key `"foal"` (the others `"foal2"` to `"foal5"`).
+7. **Defaults** (Saddle Up's cfg was reset 2026-10-03): bell key B, bell when setting off off, both speeds Normal,
+   no baby donkeys, keys H and G.
+8. **Keys:**
+   - J does nothing (Saddle Up sets the API's `HitchKey` to None).
+   - E (interact) hitches a cart you ride up to ("Hitch the cart").
+   - H while driving leaves the cart; when it can't, the keeper says why in a thought bubble.
+   - H and G work while walking (the API polls them: `KeyActions`).
+9. **Building doors** always dismount (Saddle Up forces `DismountIndoors`; the setting is gone from Saddle Up).
+9a. **The door bug, fixed 2026-10-03 (API 0.18.0):** ride into the house and come back out. You shouldn't be stuck
+    in the doorway behind the parked donkey and foals. The likely cause is navmesh cuts and holes the donkey views
+    left behind. They're now removed, and the log measures them and the colliders around the keeper at each door
+    ([foals-indoors.md](foals-indoors.md), "The door bug").
+9c. **The "double donkey", fixed 2026-10-03, to confirm:** from the second exit of a house on, a still second head
+    showed over the walking donkey. The `[art]` probe compared walking normally (no head sprite) with walking in the
+    bug (`hed_static_down` stuck on).
+    - Cause: the walk clips don't key the head sprite, so with write defaults it shows the animator's bound default.
+      Parts from the game's pool were bound again still holding `hed_static_down` from their last use.
+    - Fix: `ResetHeadDefault` in `PrepareParts` clears the head sprite and rebinds the animator (then resends pose
+      and facing); `ReleaseView` returns parts without a head sprite.
+    - Confirmed fixed in game 2026-10-03; the `[heads]` and `[art]` probes are removed.
+9d. **The pooled-parts guard** (`DonkeyPrefab.cs`, [pooled-parts.md](pooled-parts.md)), built 2026-10-03:
+    - check the log for `Mount: the donkey prefab's clean state read`;
+    - `[pool] ... leftover(s)` warnings should not appear (each one names a change the mod didn't undo);
+    - `[pool] ... left as it is` lines name objects the prefab hasn't: confirm they're the game's.
+9e. **Wheel and hub colours** (API 0.19.0): Saddle Up's Cart section, "Wheel colour" and "Wheel hub colour", each
+    with a Custom colour. The presets are first guesses (judge them in game, and the picture). Paint's Dark wood no
+    longer darkens the wheels.
+9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
+    the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
+
+Without GK2 Mod Framework (move `GK2.Framework.dll` and the `GK2.Framework` folder out of `BepInEx\plugins`, game
+closed):
+
+10. **The new paging** (`SettingsRows.PlanPages`): 12 rows a page like the game's own; only shown rows count;
+    the fewest pages; a section continues on the next page ("(more)") only when keeping it whole would cost a page;
+    at least two rows on each side of a cut. Expected with the defaults: 3 pages (Keys + first 4 of Behaviour |
+    Behaviour (more) + Donkey | Cart + Sound); more with Custom colours on, fewer again when they're off. Checked
+    only in an offline copy of the planner. With "Baby donkeys come indoors" (0.18.0), page 2 has 8 rows (10 with
+    Custom colours), so still 3 pages.
+11. **Speed labels fit** the game's narrow value field ("Fastest (x2.5 walking speed)"); if they're cut off,
+    shorten them for that window only.
+
+## Undecided
+
+- **Rebinding in the Mods menu may fire the key's action:** e.g. setting Ride to G might also bring the cart. The
+  API's key actions pause only during the game window's own capture (`SettingsRows.CapturingKey`), not the
+  framework's. If it happens, extend the pause to the Mods menu's capture.
+- **Version numbers:** GK2 Donkey API's plugin version is still 0.1.0 while its API is 0.17.0; the Mods list shows
+  0.1.0. Align them before release (and decide whether Saddle Up's dependency should then name a minimum version).
+- **The game's Settings window has no text row:** the donkey's name can't be edited there (only in the cfg or in
+  the Mods menu).
+- **Foal sounds:** investigated, nothing built ([foal-sounds.md](foal-sounds.md)). Waiting on the audition
+  (`C:\ClaudeCodeTemp\GK2-foal-sound-audition\`): the pitch, whether a filter is worth it, which calls.
+
+## Deferred
+
+- **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after
+  "Dismounted (indoors)". That's harmless now it no longer blocks the way, but it could be parked a little off the
+  door if it looks odd.
+- **"Take from cart" and the several-items perk:** load-on-foot is built (API 0.12.0) but not tested in game; the
+  zone outlines are still on for testing ([load-on-foot.md](load-on-foot.md)).
+- **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
+- **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
+  component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
+- **`dist/` at release:** rebuild here, and in GK2QOLMods, where it's stale.
+- **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;
+  it could use the API's key actions instead.
+- **Earlier showcase tests:** zombie, scene-door and save-while-mounted tests, and the persistence check J8
+  ([persistence-tests.md](persistence-tests.md)).

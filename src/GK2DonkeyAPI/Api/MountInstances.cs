@@ -67,6 +67,10 @@ namespace GK2DonkeyAPI.Api
         // The donkey it stays with (MountSpawn.Parent, Mounts.SpawnFoal), or null.
         public MountHandle Parent => I.Parent?.Handle;
 
+        // A foal with the Shuffle key ShuffleFollowKeeperIndoors on that came through a door with the keeper: it follows
+        // him indoors instead of its parent, until he goes back out (docs/foals-indoors.md).
+        public bool IsWithKeeper => I.withKeeper;
+
         // With a Parent: whether it is removed with the parent (MountSpawn.RemoveWithParent).
         public bool RemoveWithParent => I.RemoveWithParent;
 

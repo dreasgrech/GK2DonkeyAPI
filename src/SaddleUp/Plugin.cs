@@ -18,9 +18,9 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         public const string Version = "0.1.0";
 
-        // The API this mod is written against: 0.17 has the two speeds and the foal count. Checked before anything of
+        // The API this mod is written against: 0.19 has the wheel and hub colours. Checked before anything of
         // the API is used, so an older API gets a clear message instead of a missing-method error.
-        private static readonly Version NeedsApi = new Version(0, 17, 0);
+        private static readonly Version NeedsApi = new Version(0, 19, 0);
 
         private void Awake()
         {
@@ -57,21 +57,26 @@ namespace SaddleUp
             p.Preview("Donkey", me, cart: false);
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your donkey and cart change. Done keeps them, Cancel puts them back.");
             p.Text("Donkey", "Name", me.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
-            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", me.Coat, "Coat", "", v => me.Coat = v, new[] { "The game's", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
-            p.Color("Donkey", "CustomCoat", "Custom coat", "Used when the coat is Custom.", PaletteColor.Chestnut, v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
-            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness", "", v => me.Harness = v, new[] { "The game's", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
-            p.Color("Donkey", "CustomHarness", "Custom harness", "Used when the harness is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
+            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", me.Coat, "Coat colour", "", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+            p.Color("Donkey", "CustomCoat", "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
+            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness colour", "", v => me.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+            p.Color("Donkey", "CustomHarness", "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
             p.Steps("Donkey", "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Baby donkeys", "Foals that stay with yours and follow it around.", v => me.FoalCount = v, v => v == 0 ? "None" : v.ToString());
+            p.Toggle("Donkey", "FoalsIndoors", me.FoalsComeIndoors, "Baby donkeys come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
 
             p.Preview("Cart", me, "Your cart");
-            ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", me.Paint, "Paint", "", v => me.Paint = v, new[] { "The game's", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
+            ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", me.Paint, "Paint", "", v => me.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
             p.Color("Cart", "CustomPaint", "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => me.CustomPaint = v, () => paint.Value == CartPaint.Custom);
+            ConfigEntry<WheelColor> wheels = p.Choice("Cart", "Wheels", me.Wheels, "Wheel colour", "The wood of the wheels.", v => me.Wheels = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Black", "Custom" }, look: true);
+            p.Color("Cart", "CustomWheels", "Custom wheel colour", "Used when the wheel colour is Custom.", PaletteColor.Mustard, v => me.CustomWheels = v, () => wheels.Value == WheelColor.Custom);
+            ConfigEntry<HubColor> hubs = p.Choice("Cart", "Hubs", me.Hubs, "Wheel hub colour", "The iron in the middle of the wheels.", v => me.Hubs = v, new[] { "Game default", "Black", "Brass", "Silver", "Custom" }, look: true);
+            p.Color("Cart", "CustomHubs", "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => me.CustomHubs = v, () => hubs.Value == HubColor.Custom);
             p.Toggle("Cart", "Lantern", me.Lantern, "Lantern", "The lantern on its pole.", v => me.Lantern = v);
             p.Toggle("Cart", "LanternByDay", me.LanternByDay, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => me.LanternByDay = v);
-            ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor", me.LanternLight, "Lantern light", "", v => me.LanternLight = v, new[] { "Warm (the game's)", "White", "Green", "Blue", "Custom" }, look: true);
+            ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor", me.LanternLight, "Lantern light", "", v => me.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
             p.Color("Cart", "CustomLantern", "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => me.CustomLantern = v, () => light.Value == LanternColor.Custom);
-            p.Toggle("Cart", "Bell", me.BellOnSetOff, "Bell when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
 
+            p.Toggle("Sound", "Bell", me.BellOnSetOff, "Bell sound when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
             p.Toggle("Sound", "Brays", me.Brays, "Bray sounds", "Now and then, and when you get on.", v => me.Brays = v);
             p.Steps("Sound", "Volume", Mathf.RoundToInt(me.SoundVolume * 100f), 0, 150, 10, "Donkey and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");
             p.Publish();

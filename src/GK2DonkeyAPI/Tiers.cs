@@ -354,6 +354,29 @@ namespace GK2DonkeyAPI
             // Idle with the view switched off (Lod.IdleSwitchesOff): the game's own per-frame work on it stops too.
             private bool switchedOff;
 
+            // The freeze undone without waking anything (ReleaseView): animators on with their own keep-state, renderers
+            // no longer forced off. The view is going; nothing is sent to it.
+            private void UnquietForPool()
+            {
+                for (int k = 0; k < quietAnimators.Count; k++)
+                {
+                    Behaviour a = quietAnimators[k];
+                    if (a == null || !a) continue;
+                    a.enabled = true;
+                    if (a is Animator an && k < quietKeepState.Count)
+                    {
+                        an.keepAnimatorStateOnDisable = quietKeepState[k];
+                    }
+                }
+                quietAnimators.Clear();
+                quietKeepState.Clear();
+                foreach (Renderer r in quietRenderers)
+                {
+                    if (r != null && r) r.forceRenderingOff = false;
+                }
+                quietRenderers.Clear();
+            }
+
             private void QuietAnimators(bool quiet)
             {
                 if (!quiet && switchedOff)
@@ -555,7 +578,22 @@ namespace GK2DonkeyAPI
                 hiddenRenderers.Clear();
                 HideRenderersNow();          // shown again one frame after PrepareParts, as a new view is
                 revealFrame = int.MaxValue;
+                MuteColliders();             // ReleaseView put the game's colliders back: off before it is switched on
                 v.gameObject.SetActive(true);
+                // Switched off in the pool, its animator lost its parameters: its Direction went back to the default, and
+                // the data, given the same facing it had, doesn't tell it again. The head layer then showed its "down"
+                // head (0301_hed_static_down) still, over the walking body: a second, static donkey from the second exit
+                // of a house on (2026-10-03, the [art] probe). The facing and the stand pose are sent again, as when an
+                // idle view is switched back on, and checked two frames later ([wake]).
+                lastMirrored = (AnimationState)(-1);
+                try
+                {
+                    v.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));
+                }
+                catch
+                {
+                }
+                wakeCheckFrame = Time.frameCount + 2;
                 Lod.Reused++;
                 Lod.ReusedTotal++;
                 return true;

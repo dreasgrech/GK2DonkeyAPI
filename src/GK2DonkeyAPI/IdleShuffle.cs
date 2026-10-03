@@ -26,7 +26,7 @@ namespace GK2DonkeyAPI
         // [Shuffle]: how (Mounts.Shuffle).
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
             MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange;
-        internal static Tuned<bool> FollowAlways, FollowRoutes;
+        internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -60,6 +60,8 @@ namespace GK2DonkeyAPI
                 "A donkey with a parent (a foal): keep following the parent however far it goes (ShuffleFollowMaxDistance is ignored); it stops only when its way is blocked, and then follows again as soon as a straight way to the parent is clear, or catches up out of sight once the parent stands.");
             FollowRoutes = cfg.Bind(Section, "ShuffleFollowRoutes", Defaults.Get(Section, "ShuffleFollowRoutes", true),
                 "A donkey with a parent (a foal): when a fence, a building or anything else the keeper can't walk through is in the straight way to the parent, work out a way round it (a small grid search) and follow that. Off: straight lines only; a blocked foal waits and catches up out of sight.");
+            FollowKeeperIndoors = cfg.Bind(Section, "ShuffleFollowKeeperIndoors", Defaults.Get(Section, "ShuffleFollowKeeperIndoors", false),
+                "A donkey with a parent (a foal): when the keeper goes through a door into a building, the church or a dungeon (the game's indoor places) while it is within ShuffleFollowMaxDistance of him, it comes in with him and follows him there; when he goes back out it comes out with him and returns to its parent. Off: it stays with its parent outside.");
             RouteRange = F(cfg, "ShuffleRouteRange", 8f, 2f, 8f,
                 "A donkey with a parent (a foal), with ShuffleFollowRoutes: how far from the foal a way round may reach, world units either way (the search's area). Beyond it the route leads towards the parent and the next one goes on from there.");
             FollowGap = F(cfg, "ShuffleFollowGap", 0.9f, 0.3f, 4f,
@@ -77,7 +79,7 @@ namespace GK2DonkeyAPI
         internal static ITuned[] Settings => new ITuned[]
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
-            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange,
+            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange, FollowKeeperIndoors,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -175,8 +177,8 @@ namespace GK2DonkeyAPI
                     nextInsideCheck = Time.time + 1f;
                     StepOutIfInside();
                 }
-                // A foal's home is its parent's body (while it can follow; Foals.cs).
-                bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && Parent.SceneId == SceneId && Parent.HasView;
+                // A foal's home is its parent's body, or the keeper it is with indoors (while it can follow; Foals.cs).
+                bool parentHome = Parent != null && !followLost && IsRegistered(Parent) && LeadIsHere();
                 if (!shuffleHomeSet || (Position - shuffleWrote).sqrMagnitude > 0.000001f)
                 {
                     // First frame, or moved by something else (MoveTo, ComeToKeeper, a dismount, a hitch): home is here.
@@ -197,7 +199,7 @@ namespace GK2DonkeyAPI
                 }
                 if (parentHome && !followLost)
                 {
-                    shuffleHome = SlotNearParent(SiblingIndex()); // its own spot next to the parent (Foals.cs)
+                    shuffleHome = SlotNearParent(SiblingIndex()); // its own spot next to the parent or keeper (Foals.cs)
                 }
                 bool following;
                 using (Perf.Measure(Perf.S.Follow))
@@ -681,9 +683,10 @@ namespace GK2DonkeyAPI
                             s = $"stepping {(riderFacingX > 0f ? "right" : "left")}, {stepDone:F2} of {stepLength:F2}";
                             break;
                         case ShufflePhase.Following:
-                            s = RoutePlanning ? $"working out a way round to its parent {Parent?.FullId}"
-                                : route != null ? $"trotting round an obstacle to its parent {Parent?.FullId}, corner {routeIndex + 1} of {route.Count}"
-                                : $"trotting after its parent {Parent?.FullId} at {followSpeedNow:F1}/s";
+                            string to = Parent != null ? LeadNow().Name : "its parent";
+                            s = RoutePlanning ? $"working out a way round to {to}"
+                                : route != null ? $"trotting round an obstacle to {to}, corner {routeIndex + 1} of {route.Count}"
+                                : $"trotting after {to} at {followSpeedNow:F1}/s";
                             break;
                         default:
                             s = "starting";
@@ -699,7 +702,11 @@ namespace GK2DonkeyAPI
                 }
                 if (followLost && Parent != null)
                 {
-                    s += $"; lost its parent {Parent.FullId}, catches up out of sight";
+                    s += $"; lost {LeadNow().Name}, catches up out of sight";
+                }
+                if (withKeeper)
+                {
+                    s += "; indoors with the keeper";
                 }
                 if (stepsTaken > 0)
                 {

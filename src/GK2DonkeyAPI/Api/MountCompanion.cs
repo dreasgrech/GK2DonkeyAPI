@@ -12,6 +12,8 @@ namespace GK2DonkeyAPI.Api
     public enum HarnessColor { Game, Black, Red, Blue, Green, Custom }
     public enum CartPaint { Game, DarkWood, Red, Green, Blue, Custom }
     public enum LanternColor { Game, White, Green, Blue, Custom }
+    public enum WheelColor { Game, DarkWood, Red, Green, Blue, Black, Custom }
+    public enum HubColor { Game, Black, Brass, Silver, Custom }
 
     // A mod's own donkey for the keeper, with its cart and up to MaxFoals foals: everything a player mod needs, so the mod
     // itself only maps its keys and settings onto this (Saddle Up is the example). One per owner (Mounts.Companion).
@@ -136,7 +138,7 @@ namespace GK2DonkeyAPI.Api
 
         // ------------------------------------------------------------------ settings
 
-        private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true;
+        private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true, foalsIndoors;
         private int foals;
         private string name;
         private MountSpeed rideSpeed, cartSpeed;
@@ -145,13 +147,20 @@ namespace GK2DonkeyAPI.Api
         private HarnessColor harness;
         private CartPaint paint;
         private LanternColor lanternColor;
-        private string customCoat, customHarness, customPaint, customLantern;
+        private string customCoat, customHarness, customPaint, customLantern, customWheels, customHubs;
+        private WheelColor wheels;
+        private HubColor hubs;
 
         // Kept with the save: after a load they're back where they were left, cargo on the cart.
         public bool KeepWithSaves { get => keep; set { keep = value; ApplyKeep(); } }
 
         // How many foals (size 0.6, not rideable) stay with the donkey: 0 to MaxFoals.
         public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MaxFoals); nextFoalCheck = 0f; } }
+
+        // The foals come through doors with the keeper (buildings, the church, dungeons), follow him inside and come back
+        // out with him (the Shuffle key ShuffleFollowKeeperIndoors on each foal). Off to start with: they stay outside
+        // with the donkey.
+        public bool FoalsComeIndoors { get => foalsIndoors; set { foalsIndoors = value; ApplyFoals(); } }
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
         public string Name { get => name; set { name = value; ApplyName(); } }
@@ -184,6 +193,13 @@ namespace GK2DonkeyAPI.Api
         public string CustomCoat { get => customCoat; set { customCoat = value; ApplyLook(); } }
         public string CustomHarness { get => customHarness; set { customHarness = value; ApplyLook(); } }
         public string CustomPaint { get => customPaint; set { customPaint = value; ApplyLook(); } }
+
+        // The cart's wheels (their wood) and their hubs (the iron fittings), each on its own; "Game" leaves the game's art.
+        // The paint no longer touches the wheels (0.19.0).
+        public WheelColor Wheels { get => wheels; set { wheels = value; ApplyLook(); } }
+        public HubColor Hubs { get => hubs; set { hubs = value; ApplyLook(); } }
+        public string CustomWheels { get => customWheels; set { customWheels = value; ApplyLook(); } }
+        public string CustomHubs { get => customHubs; set { customHubs = value; ApplyLook(); } }
         public string CustomLantern { get => customLantern; set { customLantern = value; ApplyLook(); } }
 
         // ------------------------------------------------------------------ the keys
@@ -396,6 +412,7 @@ namespace GK2DonkeyAPI.Api
             if (spawned)
             {
                 ApplyLook();
+                ApplyFoals();
             }
         }
 
@@ -459,6 +476,7 @@ namespace GK2DonkeyAPI.Api
             ApplyName();
             ApplyRide();
             ApplyLook();
+            ApplyFoals();
         }
 
         private void ApplyKeep()
@@ -506,6 +524,37 @@ namespace GK2DonkeyAPI.Api
             Session(cart, "LanternLightDayDim", !lanternByDay, 0f);
         }
 
+        // Each foal's own ShuffleFollowKeeperIndoors: set while on, cleared when off if this owner set it.
+        private void ApplyFoals()
+        {
+            if (!Mounts.IsAvailable)
+            {
+                return;
+            }
+            foreach (MountHandle h in foalHandles)
+            {
+                if (h == null || !h.Exists)
+                {
+                    continue;
+                }
+                try
+                {
+                    if (foalsIndoors)
+                    {
+                        h.Tuning.Set(OwnerId, "ShuffleFollowKeeperIndoors", true);
+                    }
+                    else if (h.Tuning.IsSet("ShuffleFollowKeeperIndoors") && h.Tuning.SetBy("ShuffleFollowKeeperIndoors") == OwnerId)
+                    {
+                        h.Tuning.Clear("ShuffleFollowKeeperIndoors");
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Companion: ShuffleFollowKeeperIndoors could not be set on {h.FullId}: {e.Message}");
+                }
+            }
+        }
+
         // Set while on; cleared when off, but only if this owner set it (another mod's value stays).
         private void Session<T>(MountTuning t, string key, bool on, T value)
         {
@@ -541,10 +590,14 @@ namespace GK2DonkeyAPI.Api
             }
             var paperPaint = Look(PaintPreset(paint, customPaint, "cart paint"));
             var paperLantern = Look(LanternPreset(lanternColor, customLantern, "lantern"));
+            var wheelKeys = Look(WheelPreset(wheels, customWheels, "wheels"));
+            var hubKeys = Look(HubPreset(hubs, customHubs, "wheel hubs"));
             if (paper != null)
             {
                 OnPaper(PaintKeys, paperPaint);
                 OnPaper(LanternKeys, paperLantern);
+                OnPaper(WheelKeys, wheelKeys);
+                OnPaper(HubKeys, hubKeys);
                 paper.ColorsRig.MarkDirty();
             }
             var paintKeys = Look(PaintPreset(paint, customPaint, "cart paint"));
@@ -564,6 +617,8 @@ namespace GK2DonkeyAPI.Api
             {
                 Instance(withCart, PaintKeys, paintKeys);
                 Instance(withCart, LanternKeys, lanternKeys);
+                Instance(withCart, WheelKeys, wheelKeys);
+                Instance(withCart, HubKeys, hubKeys);
             }
         }
 
@@ -594,8 +649,9 @@ namespace GK2DonkeyAPI.Api
         {
             "CartBodyColorize", "CartBodyColorizeAmount", "CartBodyBrightness",
             "ShaftsColorize", "ShaftsColorizeAmount", "ShaftsBrightness",
-            "WheelsBrightness",
         };
+        private static readonly string[] WheelKeys = { "WheelsColorize", "WheelsColorizeAmount", "WheelsBrightness", "WheelsSaturation" };
+        private static readonly string[] HubKeys = { "HubsColorize", "HubsColorizeAmount", "HubsBrightness", "HubsSaturation" };
         private static readonly string[] LanternKeys = { "LanternLightColor", "GlowColor", "LitGlassTint" };
 
         private void Instance(MountHandle h, string[] keys, Dictionary<string, object> values)
@@ -670,7 +726,7 @@ namespace GK2DonkeyAPI.Api
             switch (c)
             {
                 case CartPaint.DarkWood:
-                    return new Dictionary<string, object> { ["CartBodyBrightness"] = 0.6f, ["ShaftsBrightness"] = 0.6f, ["WheelsBrightness"] = 0.6f };
+                    return new Dictionary<string, object> { ["CartBodyBrightness"] = 0.6f, ["ShaftsBrightness"] = 0.6f };
                 case CartPaint.Red: tint = "9C3B2E"; break;
                 case CartPaint.Green: tint = "4C6B3A"; break;
                 case CartPaint.Blue: tint = "3E5A86"; break;
@@ -692,6 +748,47 @@ namespace GK2DonkeyAPI.Api
                 d["ShaftsBrightness"] = Lightness(tint, "Shafts");
             }
             return d;
+        }
+
+        // The wheels' wood: as the paint's presets (dark wood, the three tints) plus black.
+        private static Dictionary<string, object> WheelPreset(WheelColor c, string custom, string what)
+        {
+            string tint = null;
+            switch (c)
+            {
+                case WheelColor.DarkWood: return new Dictionary<string, object> { ["WheelsBrightness"] = 0.6f };
+                case WheelColor.Black: return new Dictionary<string, object> { ["WheelsBrightness"] = 0.35f, ["WheelsSaturation"] = 0.25f };
+                case WheelColor.Red: tint = "9C3B2E"; break;
+                case WheelColor.Green: tint = "4C6B3A"; break;
+                case WheelColor.Blue: tint = "3E5A86"; break;
+                case WheelColor.Custom: tint = Hex(custom, what); break;
+            }
+            if (tint == null)
+            {
+                return null;
+            }
+            var d = new Dictionary<string, object> { ["WheelsColorize"] = tint, ["WheelsColorizeAmount"] = 0.75f };
+            if (c == WheelColor.Custom)
+            {
+                d["WheelsColorizeAmount"] = 1f;
+                d["WheelsBrightness"] = Lightness(tint, "Wheels");
+            }
+            return d;
+        }
+
+        // The hubs' iron: blackened, brass or polished.
+        private static Dictionary<string, object> HubPreset(HubColor c, string custom, string what)
+        {
+            switch (c)
+            {
+                case HubColor.Black: return new Dictionary<string, object> { ["HubsBrightness"] = 0.45f, ["HubsSaturation"] = 0.3f };
+                case HubColor.Brass: return new Dictionary<string, object> { ["HubsColorize"] = "B8913A", ["HubsBrightness"] = 1.2f };
+                case HubColor.Silver: return new Dictionary<string, object> { ["HubsColorize"] = "B4BCC4", ["HubsBrightness"] = 1.3f };
+                case HubColor.Custom:
+                    string hex = Hex(custom, what);
+                    return hex == null ? null : new Dictionary<string, object> { ["HubsColorize"] = hex, ["HubsBrightness"] = Lightness(hex, "Hubs") };
+                default: return null;
+            }
         }
 
         private static Dictionary<string, object> LanternPreset(LanternColor c, string custom, string what)

@@ -8,7 +8,7 @@ namespace GK2DonkeyAPI
 {
     // The Choice rows' labels in GK2 Mod Framework's Mods menu. The framework fills a dropdown with each value's own
     // name (Convert.ToString of the enum: "Game", "Normal") and has no way to give it a label, so the labels the page
-    // was given ("The game's", "Normal (x1.75 walking speed)") are written over its options once it has made them,
+    // was given ("Game default", "Normal (x1.75 walking speed)") are written over its options once it has made them,
     // matched by position (the options are the enum's values in order, as the labels are).
     // Found by name, never by the framework's types (tests/FrameworkScan): the row is "Setting_<section>.<key>"
     // (ModsMenuSettingsPage.CreateSettingRow, ConfigSetting.UniqueKey). Anything unexpected (another framework
@@ -20,6 +20,13 @@ namespace GK2DonkeyAPI
 
         // Unique key ("<section>.<key>") -> the labels, for every Choice row of the pages in the Mods menu.
         private static readonly Dictionary<string, string[]> labels = new Dictionary<string, string[]>(StringComparer.Ordinal);
+
+        // Every row of our pages ("<section>.<key>"): their dropdowns' lists are kept to MaxListRows. The framework makes
+        // a list 30 px per choice with no limit, and the 24 palette colours ran off the top of the screen (2026-10-03);
+        // the list already scrolls, so a shorter one only scrolls.
+        private static readonly HashSet<string> ourRows = new HashSet<string>(StringComparer.Ordinal);
+        private const int MaxListRows = 8;
+        private const float ItemHeight = 30f;
         private static float next;
         private static bool failed, loggedMismatch;
 
@@ -27,6 +34,10 @@ namespace GK2DonkeyAPI
         {
             foreach (MountSettingsPage.Row r in page.Rows)
             {
+                if (r.Entry != null)
+                {
+                    ourRows.Add(r.Section + "." + r.Entry.Definition.Key);
+                }
                 if (r.Kind == MountSettingsPage.Kind.Choice && r.Entry != null && r.ChoiceLabels != null)
                 {
                     labels[r.Section + "." + r.Entry.Definition.Key] = r.ChoiceLabels;
@@ -36,7 +47,7 @@ namespace GK2DonkeyAPI
 
         internal static void Tick()
         {
-            if (failed || labels.Count == 0 || Time.unscaledTime < next)
+            if (failed || ourRows.Count == 0 || Time.unscaledTime < next)
             {
                 return;
             }
@@ -51,7 +62,20 @@ namespace GK2DonkeyAPI
                 foreach (TMP_Dropdown d in w.GetComponentsInChildren<TMP_Dropdown>(false))
                 {
                     string key = RowKey(d.transform);
-                    if (key == null || !labels.TryGetValue(key, out string[] want))
+                    if (key == null || !ourRows.Contains(key))
+                    {
+                        continue;
+                    }
+                    if (d.template != null)
+                    {
+                        float most = MaxListRows * ItemHeight;
+                        Vector2 size = d.template.sizeDelta;
+                        if (size.y > most + 0.5f)
+                        {
+                            d.template.sizeDelta = new Vector2(size.x, most); // the framework's template: the next list opens this tall
+                        }
+                    }
+                    if (!labels.TryGetValue(key, out string[] want))
                     {
                         continue;
                     }

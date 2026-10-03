@@ -13,7 +13,7 @@ namespace GK2DonkeyAPI
     //     holding something the cart takes, anywhere in either area: the top such item onto the cart ("Load on cart"),
     //       or "Cart is full" (the key then sets nothing down: next to the cart the game's drop could put the item
     //       inside the cart's drawing, which has no collider);
-    //     empty hands in the donkey's area: ride it ("Drive");
+    //     empty hands in the donkey's area: ride it ("Ride", with or without the cart);
     //     empty hands in the cart's area, with cargo: its top item into the hands ("Take from cart"), not within
     //       half a second of a load, so a quick second press doesn't take back what was just loaded;
     // - on foot with empty hands, the interact key next to a standing donkey without a cart rides it;
@@ -327,7 +327,7 @@ namespace GK2DonkeyAPI
             {
                 if (zone == Zone.Donkey && cart.Rideable)
                 {
-                    Set(cart, FootAction.Ride, Named("Drive", cart), atCart: false);
+                    Set(cart, FootAction.Ride, Named("Ride", cart), atCart: false); // "Ride" also with the cart (the user, 2026-10-03)
                     return;
                 }
                 if (zone == Zone.Cart && cart.CargoRig.Count > 0 && MountRules.Allowed(MountFeature.Cargo)

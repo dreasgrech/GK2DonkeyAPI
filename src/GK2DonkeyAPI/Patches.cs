@@ -31,6 +31,8 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(SaveSystem), nameof(SaveSystem.Remove)), "SaveSystem.Remove");
             Require(AccessTools.PropertyGetter(typeof(MainGame), nameof(MainGame.SaveSlotData)), "MainGame.SaveSlotData");
             Require(AccessTools.Field(typeof(MainGame), nameof(MainGame.OnGameStarted)), "MainGame.OnGameStarted");
+            Require(AccessTools.Field(typeof(PlayerController), nameof(PlayerController.OnPlayerTeleported)), "PlayerController.OnPlayerTeleported");
+            Require(AccessTools.PropertyGetter(typeof(PlayerController), nameof(PlayerController.IsControlsEnabled)), "PlayerController.IsControlsEnabled getter");
             Require(AccessTools.Property(typeof(BepInEx.Bootstrap.Chainloader), nameof(BepInEx.Bootstrap.Chainloader.PluginInfos)), "Chainloader.PluginInfos");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.TryAddOverheadItemNoReplace)), "PlayerData.TryAddOverheadItemNoReplace");
             Require(AccessTools.Method(typeof(PlayerData), nameof(PlayerData.InsertOverheadItemTo), new[] { typeof(WgoData), typeof(Item) }), "PlayerData.InsertOverheadItemTo(WgoData, Item)");

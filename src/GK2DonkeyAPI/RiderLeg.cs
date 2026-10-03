@@ -135,6 +135,9 @@ namespace GK2DonkeyAPI
                 {
                     if (renderer)
                     {
+                        // Out of the donkey's body first: Destroy waits for the frame's end (see LampHang.Detach).
+                        renderer.transform.SetParent(null, worldPositionStays: false);
+                        renderer.gameObject.SetActive(false);
                         UnityEngine.Object.Destroy(renderer.gameObject);
                     }
                 }
