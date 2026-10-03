@@ -633,7 +633,7 @@ namespace GK2DonkeyAPI
                 {
                     return "Not indoors.";
                 }
-                if (!(pc.Ssm?.CurState is FreePlayerState))
+                if (!(pc.Ssm?.CurState is FreePlayerState) || (pc.MovementComponent != null && pc.MovementComponent.IsMoving))
                 {
                     return "I'm busy.";
                 }
@@ -703,6 +703,13 @@ namespace GK2DonkeyAPI
                         return "control taken " + t;
                     }
                 }
+                // The game walking the keeper itself (its MovementComponent: a script's Flow_GoTo, or the walk to a fishing
+                // spot, which takes no control at all): the ride ends where he stands, before he is walked off to a place
+                // the donkey drawn next to him can't stand (the jetty's tip, found 2026-10-03; docs/safe-ground.md).
+                if (pc.MovementComponent != null && pc.MovementComponent.IsMoving)
+                {
+                    return "the game walks the keeper";
+                }
                 // A script holding control (an NPC's conversation, a quest moment, the town building window): the ride
                 // goes on while it only talks, and ends as soon as it stages something with the keeper
                 // (docs/talk-while-mounted.md).
@@ -712,10 +719,6 @@ namespace GK2DonkeyAPI
                     if (staged != null)
                     {
                         return "script: " + staged;
-                    }
-                    if (pc.MovementComponent != null && pc.MovementComponent.IsMoving)
-                    {
-                        return "script: scripted walk";
                     }
                     if (CinematicShown())
                     {
@@ -833,11 +836,19 @@ namespace GK2DonkeyAPI
             }
 
             // If the keeper is standing still at dismount, nothing would call SetState again; put the real state back.
+            // Only over the riding pose (or the walk and idle it stands for): a state the game has just put him in is the
+            // game's. The fishing window sets FishingStart and takes control in one go, and the ride ends after that: the
+            // walk written over it left the keeper running on the spot at the fishing spot (2026-10-03).
             private void RestorePose(PlayerController pc)
             {
                 UnfreezeRider(pc);
                 try
                 {
+                    AnimationState shown = pc.View?.PlayerAnimation?.GetState() ?? AnimationState.Idle;
+                    if (shown != AnimationState.Walk && shown != AnimationState.Idle && shown != RiderPoseState)
+                    {
+                        return;
+                    }
                     AnimationState real = pc.PlayerData.charState.Value;
                     pc.View?.PlayerAnimation?.SetState(real == AnimationState.Walk ? AnimationState.Walk : AnimationState.Idle);
                 }

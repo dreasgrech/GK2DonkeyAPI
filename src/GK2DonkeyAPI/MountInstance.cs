@@ -527,9 +527,26 @@ namespace GK2DonkeyAPI
                 // which is where its place was worked out from. Otherwise the spot on its seat, from its place (not its
                 // view's transform: the view follows a move only in the next StandTick, and riding in the same frame put
                 // the keeper at the old spot, found 2026-09-30).
+                // The seat only when the keeper can stand there; else the donkey comes to him (one left in the water put
+                // him over it, and he fell through the map: SafeGround.cs).
                 if (!(cameFor.HasValue && (Position - cameFor.Value.Place).sqrMagnitude < 0.0001f))
                 {
-                    pc.SetPosition(KeeperSpotFor(Position, riderFacingX));
+                    Vector3 seat = KeeperSpotFor(Position, riderFacingX);
+                    string offGround = WhyKeeperCannotStandAt(pc, ref seat);
+                    if (offGround == null)
+                    {
+                        pc.SetPosition(seat);
+                    }
+                    else
+                    {
+                        GameScene here = LoadedScene(SceneId);
+                        if (here == null)
+                        {
+                            return "It isn't here right now.";
+                        }
+                        Plugin.Log.LogInfo($"Mount: {Describe()}: its seat is no place for the keeper ({offGround}); it comes to him instead.");
+                        ComeTo(pc, here, riderFacingX);
+                    }
                 }
                 cameFor = null;
                 mounted = true;
@@ -577,6 +594,7 @@ namespace GK2DonkeyAPI
                 {
                     Position = donkey.Data.Position;
                     donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f);
+                    KeepOnGround(pc); // not left in the water where the ride drew it (SafeGround.cs)
                 }
                 RestoreSeat();
                 RestoreSpeed(pc);
@@ -751,6 +769,20 @@ namespace GK2DonkeyAPI
                         return rule;
                     }
                 }
+                float seatFloor = float.NegativeInfinity;
+                if (mounted)
+                {
+                    // The keeper is moved to where the cart's donkey sits: only onto ground he can stand on, never below
+                    // it (SafeGround.cs). Checked before anything changes; the seat itself is taken below, as always.
+                    Vector3 seat = KeeperSpotFor(cart.Position, cart.riderFacingX, Plugin.For(MountStyle.Cart));
+                    string offGround = WhyKeeperCannotStandAt(pc, ref seat);
+                    if (offGround != null)
+                    {
+                        Plugin.Log.LogInfo($"Mount: hitching {cart.FullId} refused: its seat is no place for the keeper ({offGround}).");
+                        return "I can't get to that cart from here.";
+                    }
+                    seatFloor = seat.y;
+                }
                 List<Item> items = cart.CargoRig.TakeAllForTransfer();
                 MoveCartSettings(cart, this);
                 MergeData(cart, this);
@@ -760,7 +792,9 @@ namespace GK2DonkeyAPI
                 cart.Discard();
                 if (mounted)
                 {
-                    pc.SetPosition(KeeperSpotFor(at, facing, Plugin.For(MountStyle.Cart))); // measured in the current view, before the facing changes; Cart's seat values
+                    Vector3 hitchSeat = KeeperSpotFor(at, facing, Plugin.For(MountStyle.Cart)); // measured in the current view, before the facing changes; Cart's seat values
+                    hitchSeat.y = Mathf.Max(hitchSeat.y, seatFloor);
+                    pc.SetPosition(hitchSeat);
                     riderFacingX = facing;
                     pc.PhysicalBody.SetFacingDirection(new Vector2(facing, 0f));
                 }

@@ -66,7 +66,9 @@ The risks are how a scene looks, not what it does. That is why anything staged s
 While **mounted** and **`ByFlow` is the only control taken** (besides the ones already ignored: UI, teleport, the
 rider's own pose), **stay mounted**. The ride ends at once when any of these happens:
 
-1. The keeper's own `MovementComponent` starts moving (a scripted walk).
+1. The keeper's own `MovementComponent` starts moving (a scripted walk). Since 2026-10-03 this ends the ride with or
+   without `ByFlow` (the walk to a fishing spot takes no control; [safe-ground.md](safe-ground.md)); the log reason
+   is now `the game walks the keeper`.
 2. A trigger is set on his `PlayerAnimation`, or a `SetState` other than Walk or Idle (a gesture or pose).
 3. The letterbox bars show (`UICinematic` active), or `ByCinematics` is taken.
 4. The state leaves `FreePlayerState` (as now).
@@ -78,7 +80,7 @@ Also:
 - **While the script holds control:** the donkey stands still (he can't move), with the pose and rider as when
   standing.
 - **When control comes back:** nothing to do. He is still mounted.
-- **Log:** each dismount says which signal ended the ride (`scripted walk`, `player trigger 'x'`,
+- **Log:** each dismount says which signal ended the ride (`the game walks the keeper`, `player trigger 'x'`,
   `player state X`, `cinematic`). The first test then shows which NPC scripts are plain chats and which are staged.
 
 ## What it costs

@@ -55,6 +55,16 @@ In a game:
 9g. **Lively foals** (API 0.20.0, [foals.md](foals.md) "Lively foals"): more movement around the parent: varied
     steps and speeds, strides in a row, a quick trot now and then. Judge the values (the `ShuffleFoal*` keys, live
     on the dev panel), and watch for foals caught up in view (wedged) more often than before.
+9h. **Fishing while mounted, and ground the keeper is put on** (2026-10-03, [safe-ground.md](safe-ground.md)):
+    - ride to a fishing jetty and press E: the ride ends where you stand (`Dismounted (the game walks the keeper)`),
+      the keeper walks to the spot on foot, and the fishing pose shows, not a walk on the spot;
+    - the donkey stays on land; if the ride had left it off the navmesh the log says `was left off walkable ground`;
+    - the donkey still standing in the lake from the bug: E on it brings it to you (`its seat is no place for the
+      keeper ... it comes to him instead`), and you don't fall;
+    - an ordinary dismount next to a fence or a wall: the donkey doesn't move and there's no `left off walkable
+      ground` line;
+    - after fishing, getting on again works (no "I'm busy.");
+    - hitching a standing cart on plain ground still works.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 
