@@ -876,7 +876,7 @@ namespace GK2DonkeyAPI
                     string id = WgoId;
                     if (TakeParkedView(scene, id)) // a released view of the same kind (Tiers.cs, ViewPool): no Wgo.Spawn
                     {
-                        NoteView("taken from the mod's view pool");
+                        viewOrigin = "taken from the mod's view pool";
                         switchedOff = false;
                         quietAnimators.Clear();
                         quietKeepState.Clear();
@@ -903,7 +903,7 @@ namespace GK2DonkeyAPI
                         SuppressScripts = false;
                     }
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
-                    NoteView("made by Wgo.Spawn (new or the game's pooled parts)");
+                    viewOrigin = "made by Wgo.Spawn";
                     MuteColliders(); // parts from the game's pool arrive inside Wgo.Spawn, before OnVisualPartsLoaded knows the view
                     donkey.UpdateChunkVisibility(isVisible: true);
                     quietAnimators.Clear(); // the old view's (Tiers.cs): a view the game destroyed while idle left them
@@ -944,56 +944,15 @@ namespace GK2DonkeyAPI
                 MuteColliders(); // and nothing solid before then (a physics step comes first)
             }
 
-            private static int loggedHeadResets;
-
-            private void ResetHeadDefault()
-            {
-                try
-                {
-                    // Every sprite as the prefab has it (DonkeyPrefab.cs), then the head layer cleared in any case: the
-                    // prefab's own head layer holds 0301_hed_static_down, and the walk clips don't key it, so bound with
-                    // that sprite the walk shows it still over the walking body. Resetting to the prefab alone brought the
-                    // "double donkey" back (2026-10-04, the [heads] lines: the head came back 12 frames after each reset).
-                    string had = DonkeyPrefab.ResetSprites(donkey.MainWgoPart?.transform) ?? "";
-                    foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
-                    {
-                        if (sr.name == "hed" && sr.sprite != null)
-                        {
-                            sr.sprite = null;
-                        }
-                    }
-                    Animator a = donkey.MainWgoPart?.AnimationComponent?.Animator;
-                    if (a != null)
-                    {
-                        a.Rebind();
-                    }
-                    lastMirrored = (AnimationState)(-1); // the stand or walk pose is sent again
-                    if (!string.IsNullOrEmpty(had) && loggedHeadResets < 5)
-                    {
-                        loggedHeadResets++;
-                        DiagLog($"[view] {Describe()}: sprites set back to the prefab's before the animator is bound again ({had}).");
-                    }
-                }
-                catch (Exception e)
-                {
-                    Plugin.Log.LogWarning($"Mount: {Describe()}: resetting the head sprite failed: {e.Message}");
-                }
-            }
-
             // Once the prefab is loaded: no blocking, no interaction target, no navmesh cut; cart per style.
             private void PrepareParts(PlayerController pc)
             {
                 partsReady = true;
-                NoteViewEvent("prepared");
                 try
                 {
-                    // The still head over the walking body (the "double donkey", 2026-10-03): the walk clips don't key the
-                    // head sprite ("hed"), so with write defaults it shows the value the animator took as its default when
-                    // it was bound. A new prefab has no head sprite then; a part from the game's pool was bound again
-                    // still holding hed_static_down from its last use, so every walk frame painted that head (only from the
-                    // second view on: the first comes new). The head is cleared and the animator bound again here, so its
-                    // default is no head; the pose and the facing are then sent again.
-                    ResetHeadDefault();
+                    // No still head over the walk (the "double donkey"): the animator started again with the head layer
+                    // empty, so the walk falls back to no head (measured, HeadWatch.cs). First, before the parts are set.
+                    RestartWithoutHead();
                     // The facing straight to the animator once per view (a view from the pool, ours or the game's, may hold
                     // a stale Direction, and the data doesn't tell it again when the facing value is the same).
                     try

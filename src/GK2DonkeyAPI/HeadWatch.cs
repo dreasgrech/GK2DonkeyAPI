@@ -1,59 +1,76 @@
 using System;
-using System.Text;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // The still head over the walking body (the "double donkey", docs/pooled-parts.md). The walk clips never draw the
-    // head layer ("hed": the walking body carries its own head), so a hed sprite during a walk is that bug, whatever
-    // caused it.
-    //   - The cause (measured 2026-10-04, the [heads] lines): a view switched on while its head layer held a sprite (the
-    //     prefab's own 0301_hed_static_down, put back by the pool reset) builds its animator with that as the walk's
-    //     fallback; binding again later (Rebind) did not change it. Fixed where views are switched on (EmptyHeadLayer:
-    //     TakeParkedView, the end of idle, ReleaseView for the game's pool).
-    //   - The backup: HeadGuardFrame empties the head layer on every frame of a walk state, after the animator (the
-    //     mounts update in the plugin's LateUpdate).
-    //   - The check (HeadWatch, a few times a second): a view whose walk falls back to a head is logged once, with where
-    //     the view came from and what happened to it since. No such line: the root fix held and the backup did nothing.
+    // The still head over the walking body (the "double donkey", docs/pooled-parts.md).
+    //
+    // The walk clips don't draw the head layer ("hed": the walking body carries its own head), so during a walk that
+    // layer shows its fallback: the sprite it held when the animator started running (write defaults). Measured
+    // 2026-10-03 with Animator.WriteDefaultValues ([defaults] lines):
+    //   - the game starts a new view's animator after its skin swap has put a copy of the still head there: every view
+    //     the game hands over falls back to 0301_hed_static_down(Clone);
+    //   - Animator.Rebind and switching the Animator component off and on leave that fallback unchanged;
+    //   - switching the animator's object off and on with the head layer empty sets it to none, and the walk is clean.
+    // So the head layer is emptied wherever a donkey's animator starts: once per view in PrepareParts
+    // (RestartWithoutHead), and before an idle view is switched back on (Tiers.cs). HeadWatch only checks.
     internal static partial class Mount
     {
         internal sealed partial class Instance
         {
-            // Where the current view came from and what was done to it since (for the [heads] line).
+            // The head layer ("hed") emptied, for an animator about to start.
+            private static void EmptyHeadLayer(Wgo v)
+            {
+                foreach (SpriteRenderer sr in v.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                {
+                    if (sr.name == "hed")
+                    {
+                        sr.sprite = null;
+                    }
+                }
+            }
+
+            // PrepareParts, first thing: the animator started again with the head layer empty, by switching its object off
+            // and on (nothing less resets the fallback, see above). The view is hidden until PrepareParts is done, its
+            // cart parts are set after this, and the pose and facing are sent again.
+            private void RestartWithoutHead()
+            {
+                try
+                {
+                    Animator a = donkey.MainWgoPart?.AnimationComponent?.Animator;
+                    if (a == null)
+                    {
+                        return;
+                    }
+                    EmptyHeadLayer(donkey);
+                    a.gameObject.SetActive(false);
+                    a.gameObject.SetActive(true);
+                    lastMirrored = (AnimationState)(-1);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Mount: {Describe()}: starting the animator again without a head failed: {e.Message}");
+                }
+            }
+
+            // Where the current view came from (for the [heads] line).
             internal string viewOrigin = "none";
-            internal int viewOriginFrame = -1;
-            internal string viewEvents = "";
 
             private SpriteRenderer headRenderer;
             private Wgo headRendererOf;
             private int headHits;
             private int nextHeadCheck;
             private static int headsLogged;
-            private bool headLoggedForView;         // the warning once per view
-            private Animator headAnimator;
+            private Wgo headLoggedFor;
 
             // The base layer's states (short name hashes), sorted into walks and others by their clip's name the first time
-            // each is seen, so neither check needs a clip lookup after that (GetCurrentAnimatorClipInfo allocates).
+            // each is seen (GetCurrentAnimatorClipInfo allocates; the hash doesn't).
             private static readonly System.Collections.Generic.HashSet<int> WalkStates = new System.Collections.Generic.HashSet<int>();
             private static readonly System.Collections.Generic.HashSet<int> OtherStates = new System.Collections.Generic.HashSet<int>();
 
-            internal void NoteView(string origin)
-            {
-                viewOrigin = origin;
-                viewOriginFrame = Time.frameCount;
-                viewEvents = "";
-                headLoggedForView = false;
-            }
-
-            internal void NoteViewEvent(string what)
-            {
-                if (viewEvents.Length < 300)
-                {
-                    viewEvents += (viewEvents.Length > 0 ? ", " : "") + what + " @" + (Time.frameCount - viewOriginFrame);
-                }
-            }
-
-            // Every instance, every frame (MountRegistry.Tick); the work a few times a second.
+            // The tripwire, a few times a second for every view (MountRegistry.Tick): a head sprite during a walk means an
+            // animator started with a head on that layer somewhere the fix doesn't reach. Logged once per view, never put
+            // right here (a hidden fix would hide the next cause too).
             internal void HeadWatch()
             {
                 if (Time.frameCount < nextHeadCheck)
@@ -67,12 +84,12 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 Animator a = donkey.MainWgoPart?.AnimationComponent?.Animator;
-                if (a == null || !a.isActiveAndEnabled)
+                if (a == null || !a.isActiveAndEnabled || a.layerCount == 0)
                 {
                     headHits = 0;
                     return;
                 }
-                if (!ReferenceEquals(headRendererOf, donkey) || headRenderer == null)
+                if (!ReferenceEquals(headRendererOf, donkey))
                 {
                     headRendererOf = donkey;
                     headRenderer = null;
@@ -86,15 +103,14 @@ namespace GK2DonkeyAPI
                     }
                 }
                 SpriteRenderer h = headRenderer;
-                if (h == null)
+                if (h == null || a.IsInTransition(0))
                 {
                     headHits = 0;
                     return;
                 }
-                // The base layer's state, learnt once per state from its clip's name (the clip lookup allocates).
                 int state = a.GetCurrentAnimatorStateInfo(0).shortNameHash;
                 bool walk = WalkStates.Contains(state);
-                if (!walk && !a.IsInTransition(0) && !OtherStates.Contains(state))
+                if (!walk && !OtherStates.Contains(state))
                 {
                     walk = BaseClip(a).IndexOf("walk", StringComparison.OrdinalIgnoreCase) >= 0;
                     (walk ? WalkStates : OtherStates).Add(state);
@@ -104,86 +120,35 @@ namespace GK2DonkeyAPI
                     headHits = 0;
                     return;
                 }
-                headHits++;
-                if (headHits < 2)
+                if (++headHits < 2)
                 {
-                    return; // a walk starting from idle may show one frame of the old head
+                    return; // two checks in a row (12 frames): not a walk's first frame
                 }
                 headHits = 0;
-                if (!headLoggedForView && headsLogged < 20)
+                if (!ReferenceEquals(headLoggedFor, donkey) && headsLogged < 20)
                 {
-                    headLoggedForView = true;
+                    headLoggedFor = donkey;
                     headsLogged++;
-                    Plugin.Log.LogInfo($"[heads] {Describe()}{(mounted ? " (ridden)" : "")}: the walk's head layer falls back to {h.sprite.name} ({PlayingClips(a)}); "
-                        + $"its view: {viewOrigin} {Time.frameCount - viewOriginFrame} frame(s) ago, "
-                        + $"since then: {(viewEvents.Length > 0 ? viewEvents : "nothing")}. Emptied every walk frame (HeadGuardFrame), so it isn't seen.");
+                    Plugin.Log.LogWarning($"[heads] {Describe()}{(mounted ? " (ridden)" : "")}: a still head ({h.sprite.name}) over the walk; its view was {viewOrigin}. "
+                        + "An animator started with a head on that layer where the fix doesn't reach (docs/pooled-parts.md); please report this line.");
                 }
             }
 
-            // Every frame, after the animator (MountRegistry.Tick, in the plugin's LateUpdate): in a walk state of the base
-            // layer the head layer is emptied (the walking body draws its own head). Not during a transition, so the idle
-            // head stays until the walk has really started.
-            internal void HeadGuardFrame()
-            {
-                SpriteRenderer h = headRenderer;
-                if (h == null || h.sprite == null || donkey == null || !donkey || !ReferenceEquals(headRendererOf, donkey))
-                {
-                    return;
-                }
-                Animator a = headAnimator;
-                if (a == null || !ReferenceEquals(headAnimatorOf, donkey))
-                {
-                    a = headAnimator = donkey.MainWgoPart?.AnimationComponent?.Animator;
-                    headAnimatorOf = donkey;
-                }
-                if (a == null || !a.isActiveAndEnabled || a.layerCount == 0 || a.IsInTransition(0))
-                {
-                    return;
-                }
-                if (WalkStates.Contains(a.GetCurrentAnimatorStateInfo(0).shortNameHash))
-                {
-                    h.sprite = null;
-                }
-            }
-
-            private Wgo headAnimatorOf;
-
-            // The base layer's strongest clip: the body's state (static_*, walk_*); the other layers are the game's
+            // The base layer's strongest clip: the body's state (static_*, walk_*); the other 18 layers are the game's
             // generic ones (overhead, armour, talking), whatever the body does.
             private static string BaseClip(Animator a)
             {
                 string best = "none";
                 float w = 0f;
-                if (a.layerCount > 0)
+                foreach (AnimatorClipInfo c in a.GetCurrentAnimatorClipInfo(0))
                 {
-                    foreach (AnimatorClipInfo c in a.GetCurrentAnimatorClipInfo(0))
+                    if (c.clip != null && c.weight > w)
                     {
-                        if (c.clip != null && c.weight > w)
-                        {
-                            w = c.weight;
-                            best = c.clip.name;
-                        }
+                        w = c.weight;
+                        best = c.clip.name;
                     }
                 }
                 return best;
-            }
-
-            // Every layer's clips, with the layer's index (for the log).
-            private static string PlayingClips(Animator a)
-            {
-                var sb = new StringBuilder();
-                for (int layer = 0; layer < a.layerCount; layer++)
-                {
-                    foreach (AnimatorClipInfo c in a.GetCurrentAnimatorClipInfo(layer))
-                    {
-                        if (c.clip == null || c.weight < 0.01f)
-                        {
-                            continue;
-                        }
-                        sb.Append(sb.Length > 0 ? ", " : "").Append(layer).Append(':').Append(c.clip.name);
-                    }
-                }
-                return sb.ToString();
             }
         }
     }

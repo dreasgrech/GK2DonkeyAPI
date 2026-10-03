@@ -12,16 +12,13 @@ were exactly that:
 | Bug | What was carried over | Fix |
 |---|---|---|
 | Keeper thrown up and stuck in a doorway | A reused or new view's `Obstacle` capsule was live for a physics step before `PrepareParts` muted it | `MuteColliders` the moment a view comes alive |
-| Second, still head on the ridden donkey | A part's head sprite (`hed_static_down`), taken by the animator as its bound default (the walk clips don't key the head; write defaults) | Sprites reset to the prefab's and the animator rebound in `PrepareParts`; sprites reset when a view goes back |
+| Second, still head on the walking donkey | The head layer's sprite when the animator started, the walk's fallback (see "The double donkey, settled" below) | The animator started again with the head layer empty (`RestartWithoutHead`); emptied before an idle view is switched on |
 | (Found in the audit, not seen yet) Frozen or invisible donkey from reused parts | The idle tier's frozen state (animators off, renderers forced off) left on a view removed, sent away or unloaded while frozen | `ReleaseView` undoes the freeze first (`UnquietForPool`) |
 
 ## The guard (`DonkeyPrefab.cs`)
 
 The game's `npc_donkey` prefab is the measure of a clean view. It's read once from the game's files.
 
-- **When a view is prepared** (`PrepareParts`): every sprite is set to the prefab's, then the animator is bound
-  again (`ResetHeadDefault`). Whatever the animator takes as its defaults is therefore the prefab's, whatever the
-  parts held before. Logged as `[view] ... sprites set back to the prefab's`, for the first 5 views that differed.
 - **When a view goes back** (`ReleaseView`, after the mod's own restores): sprites are reset, then what the mod
   changes is compared with the prefab, put right, and logged as a warning:
   `[pool] ...: its view went back to the pool with N leftover(s), put right: ...`.
@@ -52,7 +49,8 @@ The game's `npc_donkey` prefab is the measure of a clean view. It's read once fr
 | Lantern pole and lights; the hanging lamp object | `LanternRig`, `LampHang` | `LanternRig.Detach` (lamp unparented, then destroyed: `Destroy` waits for the frame's end, and the first `[pool]` check, 2026-10-03, found the lamp still on returned views) |
 | Cargo holder and cargo meshes (`cart_cargo`) | `CargoRig` | `CargoRig.Detach` (destroyed) |
 | Rider's near leg (`mount_rider_legs` under `bdy`) | `RiderLeg.Attach` | `RiderLeg.Detach` (unparented, then destroyed) |
-| Sprites (the head's bound default) | the animator, the game's skin | `ResetSprites` in `PrepareParts` (then the head layer cleared before binding: the prefab's own is the still head) and `ReleaseView` |
+| Sprites | the animator, the game's skin | `ResetSprites` in `ReleaseView` (the parts go back as the prefab has them) |
+| The walk's head fallback | the animator, when it starts | `RestartWithoutHead` in `PrepareParts`; emptied before an idle view is switched on (see below) |
 | Animator facing / pose after a view comes back on | the animator reset on enable | sent again: `QuietAnimators(false)`, `TakeParkedView`, `PrepareParts` |
 | Walk animation rate | `SetWalkAnimationSpeedMultiplier` | an animator parameter, reset when the animator is rebound |
 
@@ -60,35 +58,40 @@ The game's `npc_donkey` prefab is the measure of a clean view. It's read once fr
 end). Beyond that, anything that changes a donkey view gets a row here and an undo in `ReleaseView`. If the
 `[pool]` check doesn't already cover it, extend `DonkeyPrefab.Audit`.
 
-## The head came back (2026-10-04): the head watch
+## The "double donkey", settled (2026-10-03, measured)
 
-The still head over the walk came back while riding after a few house exits, with no `[pool]` or `[view]` line: the
-reset and the audit above saw nothing wrong, so it came by another way. Not guessed this time: `HeadWatch.cs` checks
-every view a few times a second. The walk clips never draw the head layer (`hed`; the walking body has its own head),
-so a `hed` sprite while every playing clip is a walk is this bug, whatever caused it.
-- On a hit: `[heads] ... a still head (...) over the walk (...); its view: <where it came from> N frame(s) ago,
-  animator last bound by the mod ..., since then: <prepared, mounted, switched off/on, ...>`, then the view is put
-  right (sprites, the animator bound again, facing sent again). At most 3 fixes per view, so never a loop.
-- Once a session: `[heads] first ridden walk: playing ...`, which shows the check matches the real clip names.
-- **Found (second test, same day):** the game's prefab itself holds `0301_hed_static_down` on the head layer. The
-  guard's reset to the prefab put exactly that sprite back just before the animator was bound again, so it became the
-  default the walk shows: the guard brought the bug back (the first fix had cleared the head). The `[heads]` lines
-  showed it on a view from the mod's pool, and the head back 12 frames after each of the watch's resets.
-- **First fix, not enough:** `ResetHeadDefault` resets to the prefab's sprites, then clears the head layer before
-  `Rebind`. The third test still showed the head on pooled views: binding again later didn't change the fallback.
-- **The clue (the user):** it never happens with the cart. A donkey with a cart never takes a parked view, and the idle
-  switch-off skips carts too; both switch a view off and on again. Switching on builds the animator anew from the
-  sprites the view holds at that moment, and `ReleaseView` had left the prefab's still head there.
-- **Fix:** the head layer is emptied right before a view is switched on (`EmptyHeadLayer`: `TakeParkedView` and the
-  end of idle). Backup: `HeadGuardFrame` empties the head layer on every frame of a walk state, after the animator.
-  The `[heads] ... the walk's head layer falls back to ...` line (once per view) shows whether the root fix holds:
-  after it, the line should never appear.
-- **Status after the fourth test (2026-10-03, 13:50 log):** the pooled views walk with no head layer: root-caused and
-  fixed. But three views made by `Wgo.Spawn` (with and without the cart) logged the fallback line: on those the
-  backup did the work. They reuse the game's pooled parts, which come back from `ReleaseView` holding the prefab's
-  head (the reset and the audit put it there). So `ReleaseView` now empties the head layer last too.
-  - **To read next:** if the fallback line stops for `Wgo.Spawn` views, the backup is only a safety net. If not, the
-    fresh views' fallback is set some other way, still unknown.
-  - **Then (step two, one change at a time):** `ResetHeadDefault`'s `Rebind` (and the sprite reset in `PrepareParts`)
-    didn't change the fallback in test 3, so it may do nothing. Remove it and see whether the fallback lines come
-    back.
+**What it is:** a still head (`0301_hed_static_down`) drawn over the walking body.
+
+**How the animator does it:** the walk clips don't draw the head layer (`hed`); the walking body has its own head.
+So during a walk that layer shows its fallback (write defaults): the sprite it held when the animator **started
+running**. Measured with `Animator.WriteDefaultValues` (the `[defaults]` probe, removed since):
+
+| Moment | The walk's head fallback |
+|---|---|
+| A new view, as the game hands it over | `0301_hed_static_down(Clone)`: the game's skin swap put that copy there before the animator started |
+| After `Animator.Rebind` | unchanged |
+| After switching the Animator component off and on | unchanged |
+| After switching the animator's object off and on, the head layer empty | `none`, and the walk is clean |
+| A pooled view switched on with the head layer empty | `none` |
+
+**Why it showed only without the cart, and only now and then:** the game's skin swap usually hides that head copy
+during a walk (it switches the renderer off), but not reliably. Views reused from the mod's pool (donkeys without a
+cart only) were switched on holding the prefab's own head, which nothing hides.
+
+**The fix** (`HeadWatch.cs`):
+- `RestartWithoutHead`, first thing in `PrepareParts`, for every view: the head layer emptied, then the animator's
+  object switched off and on.
+- Before an idle (frozen) view is switched back on (`Tiers.cs`): the head layer emptied. No `PrepareParts` follows
+  there, and switching on starts the animator.
+
+**The tripwire:** `HeadWatch` checks every view a few times a second. A head sprite during a walk logs once per view:
+`[heads] ... a still head (...) over the walk; its view was ...`. It doesn't hide it: a hidden fix hid the cause
+for new views until the probe found it.
+
+**Tried and removed, with the reason:**
+- Resetting the sprites to the prefab's before binding: the prefab's own head layer holds the still head, so this
+  brought the bug back.
+- `Rebind`: it doesn't change the fallback.
+- Emptying the head layer before a pooled view is switched on, and when a view goes back: covered by
+  `RestartWithoutHead`.
+- Emptying the head layer on every walk frame: it hid the problem rather than fixing it.

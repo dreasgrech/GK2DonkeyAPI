@@ -389,10 +389,8 @@ namespace GK2DonkeyAPI
                 partRest.Clear();
                 try { RestoreColliders(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colliders failed: {e.Message}"); }
                 // Back to the pool with the prefab's sprites, then checked against the prefab: anything the mod changed and
-                // didn't put back is put right and logged ([pool], DonkeyPrefab.cs). Then the head layer emptied: whoever
-                // switches the part on next builds its animator from the sprites it holds, and the prefab's own head
-                // (0301_hed_static_down) then shows still over every walk (docs/pooled-parts.md). The game's pool hands
-                // these parts to the next Wgo.Spawn, ours and the game's own donkey.
+                // didn't put back is put right and logged ([pool], DonkeyPrefab.cs). (The next view of ours made from these
+                // parts starts its animator again without a head anyway: RestartWithoutHead.)
                 try
                 {
                     if (donkey != null && donkey)
@@ -406,7 +404,6 @@ namespace GK2DonkeyAPI
                             }
                         }
                         DonkeyPrefab.Audit(part, Describe());
-                        EmptyHeadLayer(donkey);
                     }
                 }
                 catch (Exception e)
@@ -561,7 +558,6 @@ namespace GK2DonkeyAPI
                     CargoRig.LoadFromHead("mount");
                 }
                 Plugin.Log.LogInfo($"Mounted {Describe()} ({activeStyle}, speed x{S.SpeedMultiplier.Value}).");
-                NoteViewEvent("mounted");
                 Mounts.SetRideOwner(OwnerId);
                 Mounts.RaiseMounted(activeStyle);
                 return null;
@@ -592,7 +588,6 @@ namespace GK2DonkeyAPI
                 riderAttached = false;
                 lastMirrored = (AnimationState)(-1);
                 Plugin.Log.LogInfo($"Dismounted ({reason}); {Describe()} stays at {Position:F2} in {SceneId} with {CargoRig.Count} item(s).");
-                NoteViewEvent("dismounted");
                 Mounts.RaiseDismounted(reason);
             }
 

@@ -487,8 +487,7 @@ namespace GK2DonkeyAPI
                     Instance i = all[k];
                     try
                     {
-                        i.HeadWatch();      // every view, ridden or not (HeadWatch.cs): measures first,
-                        i.HeadGuardFrame(); // then empties the walk's head layer
+                        i.HeadWatch(); // every view, ridden or not: the still-head tripwire (HeadWatch.cs)
                     }
                     catch (Exception e)
                     {

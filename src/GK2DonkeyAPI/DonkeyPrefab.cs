@@ -8,12 +8,14 @@ namespace GK2DonkeyAPI
     // The game's donkey prefab as the measure of a clean view (docs/pooled-parts.md). Our donkeys are built from parts
     // the game pools and reuses (its delivery donkey shares them), and from views the mod parks itself (ViewPool). A part
     // that comes back changed carries the change into the next donkey; three bugs of 2026-10-03 were that: a live
-    // collider that threw the keeper up in a doorway, a stale animator facing, and a head sprite the animator took as its
-    // default (the "double donkey"). So:
-    //   - ResetSprites, when a view is prepared: every sprite as the prefab has it, before the animator is bound again,
-    //     so what the animator takes as its defaults is the prefab's;
-    //   - Audit, when a view goes back (ReleaseView, after the mod's own restores): what the mod ever changes, compared
-    //     with the prefab, put right and logged ([pool]), so a leftover shows in the log the moment it happens.
+    // collider that threw the keeper up in a doorway, a stale animator facing, and the hanging lamp left attached. So,
+    // when a view goes back (ReleaseView, after the mod's own restores):
+    //   - ResetSprites: every sprite as the prefab has it (the parts go back as the game made them);
+    //   - Audit: what the mod ever changes, compared with the prefab, put right and logged ([pool]), so a leftover shows
+    //     in the log the moment it happens.
+    // (Not the "double donkey": that is the animator's head fallback, set when it starts, HeadWatch.cs. Resetting the
+    // sprites to the prefab's before binding was tried for it and is what brought it back: the prefab's head layer
+    // holds the still head.)
     // Paths are relative to the part's root (MainWgoPart, the prefab's instance), each step with its sibling index, so
     // two children of one name stay apart; children the mod adds come after the prefab's and don't shift them.
     internal static class DonkeyPrefab
@@ -29,7 +31,7 @@ namespace GK2DonkeyAPI
 
         private static Dictionary<string, Node> baseline;
         private static bool tried, failed;
-        private static int auditsLogged, resetsLogged;
+        private static int auditsLogged;
 
         // Loaded once, synchronously (the prefab is in memory whenever a donkey view exists).
         private static bool Ready()
@@ -116,15 +118,6 @@ namespace GK2DonkeyAPI
                 }
             });
             return changed.ToString();
-        }
-
-        internal static void LogReset(string who, string changed)
-        {
-            if (!string.IsNullOrEmpty(changed) && resetsLogged < 5)
-            {
-                resetsLogged++;
-                Mount.DiagLog($"[view] {who}: sprites set back to the prefab's before the animator is bound ({changed}).");
-            }
         }
 
         // What the mod changes on a view, compared with the prefab once the mod has put its own changes back: renderers

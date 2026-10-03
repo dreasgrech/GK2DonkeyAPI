@@ -384,9 +384,10 @@ namespace GK2DonkeyAPI
                     switchedOff = false;
                     if (donkey != null && donkey)
                     {
-                        EmptyHeadLayer(donkey); // before switching on, as for a parked view (TakeParkedView)
+                        // Switching on starts its animator, which takes the head layer's sprite as the walk's fallback
+                        // (the frozen idle left the still head there): emptied first (HeadWatch.cs). No PrepareParts follows.
+                        EmptyHeadLayer(donkey);
                         donkey.gameObject.SetActive(true);
-                        NoteViewEvent("switched on (idle ended)");
                         // Switched on, the game's WgoPart.OnEnable runs its ConditionalDrawer again, whose rule for an empty
                         // inventory switches the empty cart body (donkey_cart_empty_sway) on: hidden again, as PrepareParts
                         // does for a donkey without a cart (only those are ever switched off). Found reading the drawer
@@ -421,7 +422,6 @@ namespace GK2DonkeyAPI
                     {
                         switchedOff = true;
                         donkey.gameObject.SetActive(false);
-                        NoteViewEvent("switched off (idle)");
                     }
                     return;
                 }
@@ -442,7 +442,6 @@ namespace GK2DonkeyAPI
                     quietKeepState.Clear();
                     if (any)
                     {
-                        NoteViewEvent("animators on (idle ended)");
                         lastMirrored = (AnimationState)(-1); // the stand pose is sent again on its next frame
                         // The facing too, straight to the animation: one set while the animator was off (Saddle Up's H
                         // turning a frozen donkey towards the keeper) never reached it, and the data, already holding the
@@ -565,18 +564,6 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // The head layer ("hed") emptied, right before a view is switched on (see TakeParkedView).
-            private static void EmptyHeadLayer(Wgo v)
-            {
-                foreach (SpriteRenderer sr in v.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
-                {
-                    if (sr.name == "hed")
-                    {
-                        sr.sprite = null;
-                    }
-                }
-            }
-
             // TrySpawn: a parked view of this scene, kind and size instead of a new one, when there is one.
             private bool TakeParkedView(GameScene scene, string wgoId)
             {
@@ -595,18 +582,11 @@ namespace GK2DonkeyAPI
                 HideRenderersNow();          // shown again one frame after PrepareParts, as a new view is
                 revealFrame = int.MaxValue;
                 MuteColliders();             // ReleaseView put the game's colliders back: off before it is switched on
-                // The head layer emptied before it is switched on: switching on builds the animator anew, and the values
-                // its sprites hold then are what a clip that doesn't key them falls back to. ReleaseView left the
-                // prefab's own head there (0301_hed_static_down), so every walk drew it still over the walking body,
-                // only on views from this pool (a donkey with a cart never comes from it; the user, 2026-10-04: never
-                // with the cart). Binding again later (PrepareParts) did not change that fallback (the [heads] lines).
-                EmptyHeadLayer(v);
                 v.gameObject.SetActive(true);
                 // Switched off in the pool, its animator lost its parameters: its Direction went back to the default, and
-                // the data, given the same facing it had, doesn't tell it again. The head layer then showed its "down"
-                // head (0301_hed_static_down) still, over the walking body: a second, static donkey from the second exit
-                // of a house on (2026-10-03, the [art] probe). The facing and the stand pose are sent again, as when an
-                // idle view is switched back on, and checked two frames later ([wake]).
+                // the data, given the same facing it had, doesn't tell it again. The facing and the stand pose are sent
+                // again, as when an idle view is switched back on, and checked two frames later ([wake]). (The still head
+                // over the walk, once blamed on this, is the animator's head fallback: RestartWithoutHead, HeadWatch.cs.)
                 lastMirrored = (AnimationState)(-1);
                 try
                 {

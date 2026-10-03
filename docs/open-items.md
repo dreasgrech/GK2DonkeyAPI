@@ -40,14 +40,9 @@ In a game:
     in the doorway behind the parked donkey and foals. The likely cause is navmesh cuts and holes the donkey views
     left behind. They're now removed, and the log measures them and the colliders around the keeper at each door
     ([foals-indoors.md](foals-indoors.md), "The door bug").
-9c. **The "double donkey", fixed 2026-10-03, to confirm:** from the second exit of a house on, a still second head
-    showed over the walking donkey. The `[art]` probe compared walking normally (no head sprite) with walking in the
-    bug (`hed_static_down` stuck on).
-    - Cause: the walk clips don't key the head sprite, so with write defaults it shows the animator's bound default.
-      Parts from the game's pool were bound again still holding `hed_static_down` from their last use.
-    - Fix: `ResetHeadDefault` in `PrepareParts` clears the head sprite and rebinds the animator (then resends pose
-      and facing); `ReleaseView` returns parts without a head sprite.
-    - Confirmed fixed in game 2026-10-03; the `[heads]` and `[art]` probes are removed.
+9c. **The "double donkey"** (a still head over the walking donkey): settled 2026-10-03 by measurement, see
+    [pooled-parts.md](pooled-parts.md), "The double donkey, settled". To confirm over normal play: no
+    `[heads] ... a still head` warning in the log, with and without the cart, foals included.
 9d. **The pooled-parts guard** (`DonkeyPrefab.cs`, [pooled-parts.md](pooled-parts.md)), built 2026-10-03:
     - check the log for `Mount: the donkey prefab's clean state read`;
     - `[pool] ... leftover(s)` warnings should not appear (each one names a change the mod didn't undo);
