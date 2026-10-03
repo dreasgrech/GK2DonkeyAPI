@@ -82,6 +82,8 @@ In a game:
     amounts on the dev panel (and whether 0.5 px hand sway shows at all). Check both facings, stopping mid-stride
     (everything back in place at once), getting off (no hand or head left out of place, then walking on foot looks
     normal), the cart style unchanged, and no `rider motion found ...` warning in the log.
+9k. **Foals cross the bridge by the house** (2026-10-03, [foals.md](foals.md) "The bridge by the house"): both ways,
+    with no `no step fits` or `no way around` line at (-21, 6, 19); they walk on the deck, not in it (`StandHeight`, built 2026-10-03), and ordinary ground looks as before.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

@@ -82,6 +82,7 @@ namespace GK2DonkeyAPI
                 float len = new Vector2(b.x - a.x, b.z - a.z).magnitude;
                 int samples = Mathf.Clamp(Mathf.CeilToInt(len / 0.2f), 5, 80);
                 float prev = float.NaN;
+                Vector3 prevP = a;
                 for (int i = 0; i <= samples; i++)
                 {
                     Vector3 p = Vector3.Lerp(a, b, i / (float)samples);
@@ -90,11 +91,12 @@ namespace GK2DonkeyAPI
                     {
                         return $"no ground at {p:F2} ({src})";
                     }
-                    if (i > 0 && Mathf.Abs(g - prev) > MaxRisePerSample)
+                    if (i > 0 && !StepFits(prevP, prev, p, g, MaxRisePerSample))
                     {
                         return $"a step from {prev:F2} to {g:F2} at {p:F2} ({src})";
                     }
                     prev = g;
+                    prevP = p;
                 }
                 return null;
             }

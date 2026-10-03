@@ -556,7 +556,8 @@ namespace GK2DonkeyAPI
                 route = null;
                 nextRouteAt = Time.time + 1f; // at most one plan a second
                 routeSearch = new FoalRouteSearch(body, slot, RouteRange, MaxRisePerSample,
-                    pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _));
+                    pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _),
+                    (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample));
                 if (routesLogged < 30)
                 {
                     DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
@@ -626,7 +627,7 @@ namespace GK2DonkeyAPI
                     * Mathf.Lerp(1f, 1.75f, Mathf.Clamp01((dFinal - 2f) / 6f));
                 float move = Mathf.Min(followSpeedNow * dt, dist);
                 Vector3 bodyNew = body + dir * move;
-                float g = GroundHeight(bodyNew, out _);
+                float g = StandHeight(bodyNew);
                 Vector3 root = bodyNew - right * LateralFor(riderFacingX);
                 root.y = float.IsNaN(g) ? Position.y : g;
                 SetShufflePosition(root);

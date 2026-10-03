@@ -36,6 +36,7 @@ namespace GK2DonkeyAPI
 
         private readonly Func<Vector3, float> groundAt;       // NaN: no ground
         private readonly Func<Vector3, bool> freeAt;
+        private readonly Func<Vector3, float, Vector3, float, bool> stepFits; // a big step judged again from one source
         private readonly float maxRise;
         private readonly Vector3 origin;                      // world position of cell (0, 0)'s corner
         private readonly int w, h;
@@ -53,10 +54,11 @@ namespace GK2DonkeyAPI
 
         // start and goal are body points; range: how far from the start the grid may reach (either way).
         internal FoalRouteSearch(Vector3 startPoint, Vector3 goalPoint, float range, float maxRise,
-            Func<Vector3, float> groundAt, Func<Vector3, bool> freeAt)
+            Func<Vector3, float> groundAt, Func<Vector3, bool> freeAt, Func<Vector3, float, Vector3, float, bool> stepFits)
         {
             this.groundAt = groundAt;
             this.freeAt = freeAt;
+            this.stepFits = stepFits;
             this.maxRise = maxRise;
             startY = startPoint.y;
             range = Mathf.Clamp(range, 1f, 8f);
@@ -214,7 +216,7 @@ namespace GK2DonkeyAPI
                         if (nx < 0 || nz < 0 || nx >= w || nz >= h) continue;
                         int ni = nz * w + nx;
                         if (closed[ni] || cellState[ni] != 1) continue;
-                        if (Mathf.Abs(cellHeight[ni] - cellHeight[cur]) > maxRise) continue;
+                        if (!StepFits(cur, ni)) continue;
                         // No diagonal past a blocked corner (it would cut a fence end).
                         if (dx != 0 && dz != 0 && (cellState[cz * w + nx] != 1 || cellState[nz * w + cx] != 1)) continue;
                         float step = dx != 0 && dz != 0 ? Mathf.Sqrt(1f + UpDownCost * UpDownCost) : dz != 0 ? UpDownCost : 1f;
@@ -278,6 +280,14 @@ namespace GK2DonkeyAPI
         // enough. Cells the search never tested (off the path) are tested here, outside the frame budget: a pull costs
         // a few dozen tests once per route (with only known cells, nearly every pull past a neighbour failed and a
         // route had a corner in every cell).
+        // The step between two neighbouring cells: their heights, or, above maxRise, both measured again from one source
+        // (the navmesh under a bridge's end against the deck beyond it is no step).
+        private bool StepFits(int a, int b)
+        {
+            return Mathf.Abs(cellHeight[b] - cellHeight[a]) <= maxRise
+                   || stepFits != null && stepFits(Center(a), cellHeight[a], Center(b), cellHeight[b]);
+        }
+
         private bool ClearLine(int a, int b)
         {
             Vector3 pa = Center(a), pb = Center(b);
@@ -291,7 +301,7 @@ namespace GK2DonkeyAPI
                 {
                     continue;
                 }
-                if (!FreeUnbudgeted(c) || Mathf.Abs(cellHeight[c] - cellHeight[prev]) > maxRise)
+                if (!FreeUnbudgeted(c) || !StepFits(prev, c))
                 {
                     return false;
                 }

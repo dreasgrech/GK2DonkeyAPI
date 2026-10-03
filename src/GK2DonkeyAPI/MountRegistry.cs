@@ -894,10 +894,11 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // The ground under a point (the navigation mesh, else the ground raycast); the point's own height if neither.
+        // The ground under a point, as a donkey stands on it (Instance.StandHeight: a bridge's deck over the navmesh under
+        // it); the point's own height if there is none.
         internal static Vector3 SnapToGround(Vector3 p)
         {
-            float g = Instance.GroundHeight(p, out _);
+            float g = Instance.StandHeight(p);
             if (!float.IsNaN(g))
             {
                 p.y = g;

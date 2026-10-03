@@ -241,16 +241,7 @@ namespace GK2DonkeyAPI
                     {
                         continue;
                     }
-                    int id = c.GetInstanceID();
-                    if (!waterSources.TryGetValue(id, out string w))
-                    {
-                        if (waterSources.Count > 512)
-                        {
-                            waterSources.Clear();
-                        }
-                        w = c.TryGetComponent<WaterComponentTag>(out _) ? "water:" + c.name : null;
-                        waterSources[id] = w;
-                    }
+                    string w = WaterSource(c);
                     if (w != null)
                     {
                         source = w;
@@ -259,6 +250,24 @@ namespace GK2DonkeyAPI
                 }
                 return false;
             }
+
+            // "water:<name>" for a collider with the water tag, else null (told once per collider).
+            private static string WaterSource(Collider c)
+            {
+                int id = c.GetInstanceID();
+                if (!waterSources.TryGetValue(id, out string w))
+                {
+                    if (waterSources.Count > 512)
+                    {
+                        waterSources.Clear();
+                    }
+                    w = c.TryGetComponent<WaterComponentTag>(out _) ? "water:" + c.name : null;
+                    waterSources[id] = w;
+                }
+                return w;
+            }
+
+            private static bool IsWater(Collider c) => WaterSource(c) != null;
 
             internal static float GroundHeight(Vector3 p, out string source)
             {
@@ -1619,6 +1628,51 @@ namespace GK2DonkeyAPI
                 ga = HighestHitUnder(a, levelY, out Collider ca);
                 gb = HighestHitUnder(b, levelY, out Collider cb);
                 source = RaycastPairSource(ca, cb);
+            }
+
+            // The height a donkey or foal stands at: the surface the keeper would walk on. GroundHeight takes the navmesh first,
+            // and at the bridge by the house the navmesh lies under the deck (6.0), while the keeper walks on the deck's
+            // collider (6.3 to 6.5): the foals crossed inside the bridge, only their heads showing (the user's video,
+            // 2026-10-03; their roots logged at 6.00 on the deck). The ridden donkey never showed it: its height follows the
+            // keeper's. So above a navmesh height, a ground-layer surface up to DeckRise higher wins, as the keeper's own
+            // ground ray finds it (the walkable top of a dropped big item and water excepted).
+            private const float DeckRise = 0.6f;
+
+            internal static float StandHeight(Vector3 p)
+            {
+                float g = GroundHeight(p, out string src);
+                if (float.IsNaN(g) || src != "navmesh")
+                {
+                    return g;
+                }
+                int n = Physics.RaycastNonAlloc(new Ray(new Vector3(p.x, g + DeckRise, p.z), Vector3.down), rayHits, DeckRise + 0.05f, 6144);
+                float best = g;
+                for (int i = 0; i < n; i++)
+                {
+                    Collider c = rayHits[i].collider;
+                    if (c == null || IsBigDropTop(c) || IsWater(c))
+                    {
+                        continue;
+                    }
+                    best = Mathf.Max(best, rayHits[i].point.y);
+                }
+                return best;
+            }
+
+            // Whether the ground between two neighbouring samples is level enough (a step of at most limit), judged from one
+            // source. GroundHeight takes the navmesh where it has one and the ground raycast elsewhere, and at a bridge's
+            // ends the two lie stacked: the navmesh under the deck (6.0) and the deck (6.3 to 6.5) just past where the
+            // navmesh ends. Compared across that edge, the deck looked like a 0.49 wall and the foals would never cross
+            // the bridge by the house (the user, 2026-10-03; the riding side had the same fixed by GroundHeightPair on
+            // 2026-10-01). A step above the limit is measured again with both points from one source; a real ledge stays one.
+            internal static bool StepFits(Vector3 a, float ga, Vector3 b, float gb, float limit)
+            {
+                if (Mathf.Abs(gb - ga) <= limit)
+                {
+                    return true;
+                }
+                GroundHeightPair(a, b, Mathf.Max(ga, gb), out float pa, out float pb, out _);
+                return !float.IsNaN(pa) && !float.IsNaN(pb) && Mathf.Abs(pb - pa) <= limit;
             }
 
             // "raycast:<collider>/<collider>", made once per pair (the cart's ground is checked every frame).

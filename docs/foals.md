@@ -288,3 +288,39 @@ never needs route finding.
    spec. Or just a `SpawnFoal`? Recommended: the blocks with `SpawnFoal` on top.
 3. **Foals and the keeper:** ignore him, or keep a small distance?
 4. **The showcase:** should your donkey get foals (a key, or one foal by default)?
+
+## The bridge by the house (2026-10-03)
+
+The foals wouldn't cross the bridge just west of the house (the user's screenshot), and the log said why: `no step
+fits where it stands: root sample 4 at (-21.30, 6.00, 19.52): ground 6.49 (raycast:broken_bridgeto_vineyard-collision)
+against 6.00 before`. Routes round found "none".
+
+**The cause:** `GroundHeight` takes the navmesh where there is one, and the ground raycast elsewhere. At the bridge's
+ends the navmesh lies under the deck (6.0), and just past where it ends the raycast finds the deck itself (6.3 to
+6.5). Neighbouring samples from the two sources looked like a 0.49 wall, over the 0.45 limit (`MaxRisePerSample`).
+Riding had the same problem, fixed on 2026-10-01 by comparing two points from one source (`GroundHeightPair`).
+
+**The fix:** `StepFits`. A step above the limit is measured again with both points from one source (the navmesh for
+both, or the raycast for both, within a unit of the higher point); a real ledge stays one. It is used everywhere
+neighbouring samples are compared:
+- the step and follow lines (`LineWalkable`);
+- the route search's cells and its straight pulls (`FoalRouteSearch`, a new delegate);
+- the keeper's way to a seat (`GroundGap`).
+
+**Then: inside the bridge** (the user's video `Graveyard Keeper 2 - 2026-10-03 11-29-55 PM.mp4`). They crossed, but
+drawn inside the deck, only their heads showing. Their roots were logged at 5.996 on the bridge, i.e. the navmesh
+lies under most of the deck, not only at its ends. The ridden donkey and the cart never showed this: their height
+follows the keeper's, and he walks on the deck's collider.
+
+`StandHeight` fixes it: where the navmesh gives the height, a ground-layer surface up to 0.6 higher wins, as the
+keeper's own ground ray finds it (the walkable top of a dropped big item and water excepted). It is used wherever a
+donkey or foal is put down:
+- a shuffle step;
+- a foal following;
+- stepping out of an obstacle;
+- `SnapToGround` (catch-up, spawn, placing).
+
+The step checks still compare `GroundHeight`s through `StepFits`.
+
+**Still to see:** foals cross the bridge both ways, on the deck and not in it, with no pop at its ends. Ordinary ground
+should look as before (the deck rule only adds a surface above the navmesh).

@@ -342,7 +342,7 @@ namespace GK2DonkeyAPI
                 // The height of the ground under the body, not under the root half a unit beside it: that is how Follow
                 // places the ridden donkey (ground under the body sprite), and on a slope the root's ground put the body
                 // into the hill (found 2026-09-30).
-                float g = GroundHeight(BodyAt(p, riderFacingX), out _);
+                float g = StandHeight(BodyAt(p, riderFacingX));
                 p.y = float.IsNaN(g) ? Position.y : g;
                 SetShufflePosition(p);
                 if (stepDone >= stepLength - 0.0001f)
@@ -533,6 +533,7 @@ namespace GK2DonkeyAPI
                 using var perf = Perf.Measure(Perf.S.Line);
                 keeperBody = MainGame.PlayerController?.PhysicalBody?.Rb;
                 float prev = float.NaN;
+                Vector3 prevP = a;
                 float start = float.NaN;
                 // At least 5 intervals, and no more than 0.2 apart on long lines (a foal rejoining from far away), up to 80.
                 float len = new Vector2(b.x - a.x, b.z - a.z).magnitude;
@@ -553,12 +554,13 @@ namespace GK2DonkeyAPI
                     // Only the change between neighbouring samples (a ledge, a wall): a limit on the whole line's change
                     // refused every longer slope (a trotting foal checks up to 1.8 ahead, and down a ramp that dropped
                     // more than 0.6 in small steps, found 2026-09-30).
-                    else if (Mathf.Abs(g - prev) > MaxRisePerSample)
+                    else if (!StepFits(prevP, prev, p, g, MaxRisePerSample))
                     {
                         if (groundFail == null) NoteGroundFail($"{what} sample {i} at {p:F2}: ground {g:F2} ({src}) against {prev:F2} before, {start:F2} at the start");
                         return false;
                     }
                     prev = g;
+                    prevP = p;
                     Vector3 foot = new Vector3(p.x, g, p.z);
                     int n = Physics.OverlapCapsuleNonAlloc(foot + Vector3.up * (BodyRadius + 0.1f), foot + Vector3.up * 0.9f, BodyRadius,
                         blockers, BlockingLayers, QueryTriggerInteraction.Ignore);
@@ -596,7 +598,7 @@ namespace GK2DonkeyAPI
                     {
                         float a = k * Mathf.PI / 6f;
                         Vector3 p = body + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * r;
-                        float g = GroundHeight(p, out _);
+                        float g = StandHeight(p);
                         if (float.IsNaN(g) || Mathf.Abs(g - body.y) > MaxRise)
                         {
                             continue;
