@@ -47,6 +47,9 @@ namespace GK2DonkeyAPI
         public readonly Tuned<float> LanternScale, LanternLightIntensity, LanternLightRange, LanternLightDayDim, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowAlpha, LanternGlowScale;
         public readonly Tuned<string> LanternLightColor;
         public readonly Tuned<float> IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed;
+        // Rider motion while the donkey walks (docs/rider-motion.md): the body's bob, the hands and the head.
+        public readonly Tuned<float> BobScale, HandsSteady, HandsSwayPx, HeadSettle;
+        public readonly Tuned<int> BobLagFrames, HeadLagFrames;
         // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
         public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
             CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo;
@@ -79,7 +82,7 @@ namespace GK2DonkeyAPI
             SeatOffset = cfg.Bind(section, "SeatOffset", Defaults.Get(section, "SeatOffset", seatOffset),
                 "Without AutoSeat: torso height in world units (0 = standing on the ground).");
             Bob = cfg.Bind(section, "Bob", Defaults.Get(section, "Bob", bob),
-                "Move the rider up and down with the donkey's back through its walk cycle (1 px).");
+                "Move the rider up and down with the donkey's back through its walk cycle (the back moves 1 px either way; BobScale multiplies it).");
             Pose = cfg.Bind(section, "Pose", Defaults.Get(section, "Pose", pose),
                 "Keeper's body pose. FishingIdle: hands forward as if holding reins, legs still (left/right frames only). Idle: standing still. FocusedWalk: the combat-focus walk. Walk: unchanged (arms swing).");
             FreezePoseWhenIdle = cfg.Bind(section, "FreezePoseWhenIdle", Defaults.Get(section, "FreezePoseWhenIdle", freeze),
@@ -179,6 +182,20 @@ namespace GK2DonkeyAPI
             IdleCrawlSpeed = cfg.Bind(section, "IdleCrawlSpeed", Defaults.Get(section, "IdleCrawlSpeed", 0.05f),
                 new ConfigDescription("With FreezePoseWhenIdle: playback speed between fidgets, so the keeper's breathing layer keeps a barely visible life instead of stopping. 0 = fully still between fidgets.", new AcceptableValueRange<float>(0f, 0.5f)));
 
+            bool riding = section != "Cart";
+            BobScale = cfg.Bind(section, "BobScale", Defaults.Get(section, "BobScale", riding ? 1.5f : 1f),
+                new ConfigDescription("With Bob: how far the rider bobs, as a multiple of the donkey's back (which moves 1 art px either way). 1 = exactly with the back.", new AcceptableValueRange<float>(0f, 3f)));
+            BobLagFrames = cfg.Bind(section, "BobLagFrames", Defaults.Get(section, "BobLagFrames", riding ? 1 : 0),
+                new ConfigDescription("With Bob: how many of the donkey's walk frames the rider's bob trails its back, so his weight follows the step. 0 = at the same time.", new AcceptableValueRange<int>(0, 3)));
+            HandsSteady = cfg.Bind(section, "HandsSteady", Defaults.Get(section, "HandsSteady", riding ? 0.5f : 0f),
+                new ConfigDescription("While walking: how much of the body's bob the hands (the keeper's arm layer) don't follow, as if holding the reins steady. 0 = the hands move with the body, 1 = they stay level.", new AcceptableValueRange<float>(0f, 1f)));
+            HandsSwayPx = cfg.Bind(section, "HandsSwayPx", Defaults.Get(section, "HandsSwayPx", riding ? 0.5f : 0f),
+                new ConfigDescription("While walking: the hands move forward and back with each of the donkey's strides (following its head), by up to this many art pixels. 0 = off.", new AcceptableValueRange<float>(0f, 2f)));
+            HeadLagFrames = cfg.Bind(section, "HeadLagFrames", Defaults.Get(section, "HeadLagFrames", riding ? 1 : 0),
+                new ConfigDescription("With Bob: the head (with hair, beard and eyes) settles this many walk frames after the body. 0 = the head moves with the body.", new AcceptableValueRange<int>(0, 2)));
+            HeadSettle = cfg.Bind(section, "HeadSettle", Defaults.Get(section, "HeadSettle", riding ? 0.3f : 0f),
+                new ConfigDescription("With HeadLagFrames: how much of that late movement the head shows. 1 = all of it (the head then moves against the body by up to two bobs at each step: a bobble head); 0 = the head moves with the body.", new AcceptableValueRange<float>(0f, 1f)));
+
             bool cart = section == "Cart";
             SoundsOn = B(cfg, section, "SoundsOn", true, "Master switch for all mount sounds added by the mod " + who + ".");
             SoundVolume = F(cfg, section, "SoundVolume", 1f, 0f, 3f, "Master volume multiplier for all mount sounds " + who + ".");
@@ -272,6 +289,7 @@ namespace GK2DonkeyAPI
                     CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
+                    BobScale, BobLagFrames, HandsSteady, HandsSwayPx, HeadLagFrames, HeadSettle,
                     LanternShow, LanternScale, LanternLightOn, LanternLightIntensity, LanternLightRange, LanternLightColor, LanternLightShadows, LanternLightDayDim,
                     LanternSelfLightOn, LanternSelfLightIntensity, LanternSelfLightRange, LanternGlowOn, LanternGlowAlpha, LanternGlowScale, LanternGlassOn,
                 };

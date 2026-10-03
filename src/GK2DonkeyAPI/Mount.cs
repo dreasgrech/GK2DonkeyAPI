@@ -2231,6 +2231,7 @@ namespace GK2DonkeyAPI
                 catch
                 {
                 }
+                RestoreRiderParts();
                 seatRoot = null;
                 seatApplied = 0f;
             }
@@ -2248,7 +2249,7 @@ namespace GK2DonkeyAPI
                 Sprite k = keeperBodyRenderer.sprite;
                 Sprite d = donkeyBodyRenderer.sprite;
                 float keeperHipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) * px;
-                float back = S.Bob.Value ? BackHeightPx(d) : 25f;
+                float back = 25f + RiderBobPx(0);
                 float donkeyBackLocalY = (d.textureRectOffset.y + 2f + back - d.pivot.y) * px;
                 // Measure with the seat at rest so the result is absolute, not relative to the current seat.
                 Vector3 hipWorld = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, keeperHipLocalY, 0f)) - Vector3.up * seatApplied;
@@ -2379,6 +2380,7 @@ namespace GK2DonkeyAPI
                     if (!seatPending)
                     {
                         TickSeat(pc);
+                        TickRiderParts();
                     }
                 }
                 catch (Exception e)
@@ -2401,13 +2403,8 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
-                    // Manual height plus the walk-cycle bob (the back is 24-26 px above the ground depending on frame).
-                    float bob = 0f;
-                    if (S.Bob.Value && donkeyBodyRenderer != null && donkeyBodyRenderer.sprite != null)
-                    {
-                        bob = (BackHeightPx(donkeyBodyRenderer.sprite) - 25f) * PxWorldY;
-                    }
-                    seat = S.SeatOffset.Value + bob + groundDelta;
+                    // Manual height plus the walk-cycle bob (RiderBobPx: the back's, scaled and trailing it).
+                    seat = S.SeatOffset.Value + RiderBobPx(0) * PxWorldY + groundDelta;
                 }
                 if (!seat.HasValue)
                 {

@@ -452,6 +452,20 @@ namespace GK2DonkeyAPI
                 FloatSlider("Torso height (0 = standing on the ground)", s.SeatOffset, -1f, 1f, 2, Mount.RefreshSeat);
             }
             Toggle("Torso bobs with the donkey's walk", s.Bob, Mount.RefreshSeat);
+            if (s.Bob.Value)
+            {
+                FloatSlider("Bob amount (x the donkey's back, which moves 1 px)", s.BobScale, 0f, 3f, 2, Mount.RefreshSeat);
+                IntSlider("Bob trails the back by (walk frames)", s.BobLagFrames, 0, 3, Mount.RefreshSeat);
+                IntSlider("Head settles after the body by (walk frames, 0 = with it)", s.HeadLagFrames, 0, 2, null);
+                if (s.HeadLagFrames.Value > 0)
+                {
+                    FloatSlider("How much the head settles (1 = all: a bobble head)", s.HeadSettle, 0f, 1f, 2, null);
+                }
+            }
+
+            Header("Rider hands (while walking)");
+            FloatSlider("Hands steadier than the body (0 = with it, 1 = level)", s.HandsSteady, 0f, 1f, 2, null);
+            FloatSlider("Hands forward and back with each stride (px)", s.HandsSwayPx, 0f, 2f, 2, null);
 
             Header("Rider pose and animation");
             EnumCycler("Body pose", s.Pose, Mount.ApplyPoseNow);

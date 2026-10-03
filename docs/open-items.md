@@ -77,6 +77,11 @@ In a game:
     direction into it only when that changes), and `Follow` read it. `Follow` now reads the keeper's animator
     (`KeeperDrawnDirection`). Confirmed in game and in the log 2026-10-03 (one turn, the stored direction stayed
     stale underneath); the temporary `[facing]` probe is removed. Still to see: hitching while moving.
+9j. **Rider motion** (API 0.21.0, [rider-motion.md](rider-motion.md)): riding at a walk, the rider bobs a little more
+    and a step late, his hands stay steadier and move with the strides, his head settles after the body. Judge the
+    amounts on the dev panel (and whether 0.5 px hand sway shows at all). Check both facings, stopping mid-stride
+    (everything back in place at once), getting off (no hand or head left out of place, then walking on foot looks
+    normal), the cart style unchanged, and no `rider motion found ...` warning in the log.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 
