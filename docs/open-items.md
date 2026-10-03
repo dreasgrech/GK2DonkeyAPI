@@ -71,6 +71,12 @@ In a game:
       don't wander into it; ordinary dismounts and leaving the cart on plain ground work as before.
     - Fence regression (fixed 2026-10-03, safe-ground.md): riding along a fence, G brings the cart and hitches it;
       a cart standing by a fence hitches when you ride up to it; no `hitching ... refused` lines.
+9i. **Rig flickering left-right after getting on while moving** (2026-10-03): the user's repro, donkey (or cart)
+    facing left, keeper holding right, E while still moving: the rig flipped every frame until the key was let go.
+    Cause: `SetFacingDirection` at getting on leaves `PlayerData.Direction` stale (the game copies the animator's
+    direction into it only when that changes), and `Follow` read it. `Follow` now reads the keeper's animator
+    (`KeeperDrawnDirection`). Confirmed in game and in the log 2026-10-03 (one turn, the stored direction stayed
+    stale underneath); the temporary `[facing]` probe is removed. Still to see: hitching while moving.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

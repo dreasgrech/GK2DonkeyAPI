@@ -1881,14 +1881,38 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // The keeper's facing as his animator draws it (see Follow); his stored direction if the animator can't say
+            // (AnimationComponentBase.GetDirection reads its animator field unchecked).
+            private static Vector2 KeeperDrawnDirection(PlayerController pc)
+            {
+                try
+                {
+                    Animator a = pc.View?.PlayerAnimation?.Animator;
+                    if (a != null && a.isActiveAndEnabled)
+                    {
+                        return pc.View.PlayerAnimation.GetDirection();
+                    }
+                }
+                catch
+                {
+                }
+                return pc.PlayerData.Direction;
+            }
+
             private void Follow(PlayerController pc)
             {
                 PlayerData pd = pc.PlayerData;
                 // The keeper's sprite is locked to left/right while mounted (SetDirection prefix); give the donkey that
-                // same facing so the two never disagree.
-                if (Mathf.Abs(pd.Direction.x) > 0.05f)
+                // same facing so the two never disagree. Read from his animator (what is drawn, set only through that
+                // prefix), not PlayerData.Direction: SetFacingDirection at getting on writes that directly, while the
+                // game copies the animator's direction into it only when the animator's direction changes
+                // (PlayerPhysicalBody.UpdatePlayerData, against prevDirection). Got on while walking the other way, it
+                // stayed on the donkey's side while the input turned the keeper back every physics step: the rig flipped
+                // every frame for as long as the key was held (the user's repro, 2026-10-03).
+                Vector2 drawnDir = KeeperDrawnDirection(pc);
+                if (Mathf.Abs(drawnDir.x) > 0.05f)
                 {
-                    riderFacingX = pd.Direction.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
+                    riderFacingX = drawnDir.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
                 }
                 Vector2 dir = SideView ? new Vector2(riderFacingX, 0f) : pd.Direction;
                 if (dir.sqrMagnitude > 0.0001f)
