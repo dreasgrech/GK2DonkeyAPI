@@ -453,7 +453,7 @@ p.Publish();
 | `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
 | *(every setting)* | Starts at the default a mod's settings should use: pass the property as the row's default (`p.Toggle(..., me.BellOnSetOff, ...)`), so it's written once, in the API. |
 | `Coat`, `Harness`, `Paint`, `Wheels`, `Hubs`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `WheelColor`, `HubColor`, `LanternColor`); `Game` is the game's art. The paint is the cart body and shafts; the wheels' wood and their hubs have their own (0.19.0). |
-| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomWheels`, `CustomHubs`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. An invalid one means the game's look, logged once. |
+| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomWheels`, `CustomHubs`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. Empty or invalid means the game's look; an invalid one is logged once. |
 
 Where they apply:
 - **The looks, the name and the foal** are this companion's own donkey, cart and foal only (instance overrides): other

@@ -189,7 +189,8 @@ namespace GK2DonkeyAPI.Api
         public CartPaint Paint { get => paint; set { paint = value; ApplyLook(); } }
         public LanternColor LanternLight { get => lanternColor; set { lanternColor = value; ApplyLook(); } }
 
-        // The colours used with Custom, hex RRGGBB (a leading # is fine). Invalid: the game's look, logged once.
+        // The colours used with Custom, hex RRGGBB (a leading # is fine). Empty: the game's look. Invalid: the game's look,
+        // logged once.
         public string CustomCoat { get => customCoat; set { customCoat = value; ApplyLook(); } }
         public string CustomHarness { get => customHarness; set { customHarness = value; ApplyLook(); } }
         public string CustomPaint { get => customPaint; set { customPaint = value; ApplyLook(); } }
@@ -817,10 +818,16 @@ namespace GK2DonkeyAPI.Api
 
         private static readonly HashSet<string> warned = new HashSet<string>(StringComparer.Ordinal);
 
-        // RRGGBB, upper case, or null (logged once per bad value).
+        // RRGGBB, upper case, or null. A bad value is logged once; an empty one is not: it means no colour given yet. Each
+        // setter applies the look at once, so a mod setting Coat = Custom and then CustomCoat passes through Custom with
+        // no colour for a moment (Saddle Up at every start: three false warnings, 2026-10-03).
         private static string Hex(string value, string what)
         {
             string v = (value ?? "").Trim().TrimStart('#');
+            if (v.Length == 0)
+            {
+                return null;
+            }
             bool ok = v.Length == 6;
             for (int i = 0; ok && i < 6; i++)
             {

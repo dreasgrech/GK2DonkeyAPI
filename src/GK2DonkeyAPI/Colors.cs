@@ -694,9 +694,10 @@ namespace GK2DonkeyAPI
                         {
                             if (!t.Applied || t.M == null || !t.M) continue;
                             Object3DSubMesh sm = t.M.GetSubMesh(0);
-                            // An inactive part (Ride style's cart, the loaded-cart body) was never initialised by the game:
-                            // its LUT is stored and applies when it starts; its materials say nothing yet.
-                            bool slotsOk = !t.M.gameObject.activeInHierarchy || AllSlotsLut(t.M);
+                            // A part the game hasn't initialised yet (inactive: Ride style's cart, the loaded-cart body; or
+                            // switched on this frame) has its LUT stored and applies it when it starts: its materials say
+                            // nothing yet.
+                            bool slotsOk = !Started(t.M) || AllSlotsLut(t.M);
                             if ((sm != null && sm.LutTexture != luts[(int)t.G]) || !slotsOk)
                             {
                                 if (!t.Warned)
@@ -986,7 +987,7 @@ namespace GK2DonkeyAPI
                         continue; // already ours: the texture was updated in place
                     }
                     SetLut(t.M, luts[(int)t.G]);
-                    if (t.M.gameObject.activeInHierarchy && !AllSlotsLut(t.M))
+                    if (Started(t.M) && !AllSlotsLut(t.M))
                     {
                         Plugin.Log.LogWarning($"Colors: '{t.M.name}' has {MaterialNames(t.M.ObjRenderer)} after the LUT was set; some of it keeps the game's colours.");
                     }
@@ -1011,6 +1012,15 @@ namespace GK2DonkeyAPI
                 }
                 m.SetLutTexture(lut);
             }
+
+            // The game has initialised the mesh (Object3DMesh.Start: TryInit). Before that its submeshes have no renderer, so
+            // SetLutTexture only stores the LUT, and Start applies the LUT material with it. Checked before then (a cart
+            // part switched on in the same PrepareParts that colours it), its slots still showed the game's 3DObject
+            // material: four warnings per cart, false (the check a second later never found them wrong; 2026-10-03).
+            private static readonly AccessTools.FieldRef<Object3DMesh, bool> MeshInitialized =
+                AccessTools.FieldRefAccess<Object3DMesh, bool>("initialized");
+
+            private static bool Started(Object3DMesh m) => m.gameObject.activeInHierarchy && MeshInitialized(m);
 
             // True when every material slot of the mesh has the game's LUT material (the check behind SetLut).
             private bool AllSlotsLut(Object3DMesh m)

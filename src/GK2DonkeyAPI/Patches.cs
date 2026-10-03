@@ -66,6 +66,8 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(Object3DMesh), nameof(Object3DMesh.SetLutTexture)), "Object3DMesh.SetLutTexture");
             Require(AccessTools.Method(typeof(Object3DMesh), nameof(Object3DMesh.GetSubMesh)), "Object3DMesh.GetSubMesh");
             Require(AccessTools.PropertyGetter(typeof(Object3DMesh), nameof(Object3DMesh.SubMeshCount)), "Object3DMesh.SubMeshCount getter");
+            Require(AccessTools.Field(typeof(Object3DMesh), "initialized"), "Object3DMesh.initialized");
+            Require(AccessTools.Field(typeof(Object3DSubMesh), "cachedSharedMaterials"), "Object3DSubMesh.cachedSharedMaterials");
             Require(AccessTools.PropertyGetter(typeof(Object3DMesh), nameof(Object3DMesh.ObjRenderer)), "Object3DMesh.ObjRenderer getter");
             Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.LutTexture)), "Object3DSubMesh.LutTexture getter");
             Require(AccessTools.PropertyGetter(typeof(Object3DSubMesh), nameof(Object3DSubMesh.MainTextureName)), "Object3DSubMesh.MainTextureName getter");

@@ -247,3 +247,15 @@ values: unknown colours simply stay as the game draws them.
 - **Own look:** a donkey of `Mounts.Companion` reads only its owner's presets on top of the game's art, never the
   player's `[Colors*]` values (`Tuned.IsLook`, `Instance.OwnLook`). So Saddle Up's "The game's" really is the game's
   art on every machine.
+
+## False "keeps the game's colours" warnings (fixed 2026-10-03)
+
+Each cart ride logged four `Colors: '...-MERGE S_OBJ' has 3DObject+3DObject after the LUT was set; some of it keeps
+the game's colours` warnings, for the wheels, bars and body. They were false: the once-a-second check never logged
+`lost its colours` afterwards, so the colours were in place.
+
+- **Why:** a cart part switched on in the same `PrepareParts` that colours it hasn't run `Object3DMesh.Start` yet.
+  Until then its submeshes have no renderer, so `SetLutTexture` only stores the LUT, and `Start` applies the LUT
+  material with it a frame later.
+- **Fix:** both checks skip meshes the game hasn't initialised (`Object3DMesh.initialized`, checked at startup in
+  `Patches.cs`).
