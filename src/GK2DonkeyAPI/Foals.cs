@@ -187,6 +187,7 @@ namespace GK2DonkeyAPI
             private bool followLost;            // could not follow (blocked or too far): shuffles where it is until caught up
             private bool wedged;                // no step fits where it stands (spawned against a wall): caught up like a lost one
             private int pickFailsInRow;
+            private float firstPickFailAt;
             private float nextAheadCheck;
             private float followSpeedNow;
             private Vector3 parentSeenAt;
@@ -341,7 +342,7 @@ namespace GK2DonkeyAPI
                 Vector3 slot = shufflePhase == ShufflePhase.Following ? FollowTarget(body) : SlotNearParent(SiblingIndex());
                 float d = FlatDistance(body, slot);                // arriving: at its slot (or the reachable one)
                 float dHome = FlatDistance(body, l.Body);          // starting and giving up: from the parent itself
-                float homeRange = Mathf.Max(IdleShuffle.AreaWidth.Value, IdleShuffle.AreaDepth.Value) + 0.6f;
+                float homeRange = Mathf.Max(AreaW, AreaD) + 0.6f;
                 // ShuffleFollowAlways: no distance limit, it follows until the way is blocked.
                 float maxFollow = IdleShuffle.FollowAlways != null && IdleShuffle.FollowAlways.Value ? float.MaxValue : IdleShuffle.FollowMaxDistance.Value;
                 if (shufflePhase == ShufflePhase.Following)
@@ -681,8 +682,14 @@ namespace GK2DonkeyAPI
                     pickFailsInRow = 0;
                     return;
                 }
+                if (pickFailsInRow == 0)
+                {
+                    firstPickFailAt = Time.time;
+                }
                 pickFailsInRow++;
-                if (Parent != null && pickFailsInRow >= 3 && !followLost)
+                // Three in a row and 8 s: a lively foal tries often (short pauses), and three quick misses next to a wall
+                // aren't being wedged; each wedge ends in a catch-up, which may be in view.
+                if (Parent != null && pickFailsInRow >= 3 && Time.time - firstPickFailAt >= 8f && !followLost)
                 {
                     wedged = true;
                     LoseParent(BodyAt(Position, riderFacingX), "no step fits where it stands");
@@ -694,31 +701,26 @@ namespace GK2DonkeyAPI
                 pickFailsInRow = 0;
             }
 
-            private void CatchUp(string why)
+            // Places it next to its lead. True when the spot has a clear line from the lead (false: the last resort, see
+            // FreeSlot; a door's placement tries again while the screen is still black, FoalsIndoors.cs).
+            private bool CatchUp(string why)
             {
                 CatchUpCount++;
                 Lead p = LeadNow();
                 Vector3 away = AwayFromCamera();
                 Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
                 Vector3 slot = SlotNearParent(SiblingIndex());
+                bool clear = true;
+                string fail = null;
                 if (p.Here)
                 {
-                    // Its own slot, else any free one with a clear line from the parent, else next to the parent.
-                    Vector3 pb = p.Body;
-                    bool found = LineWalkable(pb, slot, "catch-up");
-                    for (int k = 0; !found && k < SlotCount; k++)
+                    groundFail = null;
+                    slot = FreeSlot(p, out clear);
+                    if (!clear)
                     {
-                        Vector3 s = SlotNearParent(k);
-                        if (LineWalkable(pb, s, "catch-up"))
-                        {
-                            slot = s;
-                            found = true;
-                        }
+                        fail = groundFail ?? "every slot taken";
                     }
-                    if (!found)
-                    {
-                        slot = pb + away * 0.4f;
-                    }
+                    groundFail = null;
                 }
                 if (SceneId != p.SceneId)
                 {
@@ -738,7 +740,77 @@ namespace GK2DonkeyAPI
                 pickFailsInRow = 0;
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
-                DiagLog($"[foal] {Describe()} caught up with {p.Name} ({why}) at {root:F2} in {SceneId}.");
+                DiagLog($"[foal] {Describe()} caught up with {p.Name} ({why}) at {root:F2} in {SceneId}{(clear ? "" : "; no slot with a clear line (first failure: " + fail + "), placed on a free one anyway")}.");
+                return clear;
+            }
+
+            // Two foals' bodies closer than this stand inside each other. Slots are at least 0.62 apart (SlotOffset).
+            private const float MinApart = 0.5f;
+
+            // Its own slot, else the lowest-numbered other one, with a clear line from the lead and no other donkey's body
+            // on it; else any spot around the lead with a clear line and nobody on it (rings, straight away from the
+            // camera first); else in front of the lead, spread by its index, and false (a door tries again).
+            // - Every foal used to fall back on the same spot (the first clear slot, or 0.4 in front of the lead), so foals
+            //   placed together at a door stood inside each other, "Siamese donkeys" (log 2026-10-03: two foals at the very
+            //   same point).
+            // - The slots are beside the lead. Inside a door the keeper stands against the room's wall, so they run along
+            //   it, and a slot with "ground and room" was behind the wall: the foals came in out of sight and could never
+            //   reach him (log 2026-10-03, second test). Only a clear line from the lead counts now.
+            private Vector3 FreeSlot(Lead p, out bool clear)
+            {
+                int own = SiblingIndex();
+                int count = SlotCount + 4; // with the keeper, foals of several parents share his slots
+                for (int n = -1; n < count; n++)
+                {
+                    int k = n < 0 ? own : n;
+                    if (n == own)
+                    {
+                        continue;
+                    }
+                    Vector3 s = SlotNearParent(k);
+                    if (!Taken(s, p.SceneId) && LineWalkable(p.Body, s, "catch-up"))
+                    {
+                        clear = true;
+                        return s;
+                    }
+                }
+                Vector3 away = AwayFromCamera();
+                Vector3 right = Vector3.Cross(Vector3.up, away).normalized;
+                for (int ring = 0; ring < RingRadii.Length; ring++)
+                {
+                    for (int j = 0; j < RingAngles.Length; j++)
+                    {
+                        float a = RingAngles[j] * Mathf.Deg2Rad;
+                        Vector3 s = p.Body + (away * Mathf.Cos(a) + right * Mathf.Sin(a)) * RingRadii[ring];
+                        s.y = p.GroundY;
+                        if (!Taken(s, p.SceneId) && LineWalkable(p.Body, s, "catch-up"))
+                        {
+                            clear = true;
+                            return s;
+                        }
+                    }
+                }
+                clear = false;
+                Vector3 at = p.Body + away * 0.4f + right * (((own % 3) - 1) * 0.6f);
+                at.y = p.GroundY;
+                return at;
+            }
+
+            private static readonly float[] RingRadii = { 0.9f, 1.4f, 2f };
+            private static readonly float[] RingAngles = { 0f, 30f, -30f, 60f, -60f, 90f, -90f, 120f, -120f, 150f, -150f, 180f };
+
+            // Another donkey's body (in that scene) stands on this body point.
+            private bool Taken(Vector3 body, string scene)
+            {
+                for (int k = 0; k < instances.Count; k++)
+                {
+                    Instance o = instances[k];
+                    if (o != this && o.SceneId == scene && FlatDistance(o.BodyAt(o.Position, o.riderFacingX), body) < MinApart)
+                    {
+                        return true;
+                    }
+                }
+                return false;
             }
 
             // StandTick without a view (its scene is not loaded): a foal whose parent (or the keeper it is with) stands in

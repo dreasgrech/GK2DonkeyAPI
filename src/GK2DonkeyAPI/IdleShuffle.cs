@@ -25,8 +25,10 @@ namespace GK2DonkeyAPI
 
         // [Shuffle]: how (Mounts.Shuffle).
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
-            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange;
-        internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors;
+            MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange,
+            FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin, FoalPauseMax,
+            FoalChainChance, FoalBurstChance, FoalBurstSpeed;
+        internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors, FoalLively;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -68,6 +70,30 @@ namespace GK2DonkeyAPI
                 "A donkey with a parent (a foal): how close to the parent's body it settles after following, world units (the nearest of the siblings' spots; the others are a little further out). With a cart, the foals on the cart's side settle alongside the cart, level with the donkey.");
             FollowMaxDistance = F(cfg, "ShuffleFollowMaxDistance", 10f, 1f, 30f,
                 "A donkey with a parent (a foal): it trots after its parent only while it is closer than this, world units. Further (or blocked, or in another place), it waits, shuffling where it is, and catches up out of sight once the parent stands again.");
+            FoalLively = cfg.Bind(Section, "ShuffleFoalLively", Defaults.Get(Section, "ShuffleFoalLively", true),
+                "A donkey with a parent (a foal) moves like a young one around its spot: shorter pauses, a wider area, steps of different lengths and speeds, often one after another, and now and then a quick trot. It uses the ShuffleFoal* values instead of ShuffleAreaWidth/Depth, ShuffleStepMin/Max, ShuffleSpeed and ShufflePauseMin/Max. Off: foals shuffle like grown donkeys.");
+            FoalAreaWidth = F(cfg, "ShuffleFoalAreaWidth", 2f, 0.1f, 5f,
+                "A lively foal (ShuffleFoalLively): how far it may wander from its spot next to its parent sideways, either way, world units.");
+            FoalAreaDepth = F(cfg, "ShuffleFoalAreaDepth", 1f, 0f, 3f,
+                "A lively foal: how far it may wander from its spot towards or away from the camera, either way, world units.");
+            FoalStepMin = F(cfg, "ShuffleFoalStepMin", 0.4f, 0.05f, 3f,
+                "A lively foal: shortest step, world units.");
+            FoalStepMax = F(cfg, "ShuffleFoalStepMax", 1.5f, 0.1f, 4f,
+                "A lively foal: longest step, world units (a quick trot goes up to half again as far).");
+            FoalSpeedMin = F(cfg, "ShuffleFoalSpeedMin", 0.5f, 0.1f, 3f,
+                "A lively foal: slowest walk of a step, world units per second; each step picks its own speed up to ShuffleFoalSpeedMax.");
+            FoalSpeedMax = F(cfg, "ShuffleFoalSpeedMax", 1.2f, 0.1f, 3f,
+                "A lively foal: fastest walk of a step, world units per second.");
+            FoalPauseMin = F(cfg, "ShuffleFoalPauseMin", 1f, 0.2f, 60f,
+                "A lively foal: shortest pause between two steps, seconds.");
+            FoalPauseMax = F(cfg, "ShuffleFoalPauseMax", 4f, 0.2f, 120f,
+                "A lively foal: longest pause between two steps, seconds.");
+            FoalChainChance = F(cfg, "ShuffleFoalChainChance", 0.5f, 0f, 1f,
+                "A lively foal: chance that a step is followed at once (within 0.4 s) by another in a new direction, so it wanders in a few strides instead of stopping after each.");
+            FoalBurstChance = F(cfg, "ShuffleFoalBurstChance", 0.12f, 0f, 1f,
+                "A lively foal: chance that a step is a quick trot (ShuffleFoalBurstSpeed), longer than a walk.");
+            FoalBurstSpeed = F(cfg, "ShuffleFoalBurstSpeed", 2.5f, 0.5f, 5f,
+                "A lively foal: speed of a quick trot, world units per second.");
         }
 
         private static ConfigEntry<float> F(ConfigFile cfg, string key, float def, float min, float max, string desc)
@@ -80,6 +106,8 @@ namespace GK2DonkeyAPI
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
             FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange, FollowKeeperIndoors,
+            FoalLively, FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin,
+            FoalPauseMax, FoalChainChance, FoalBurstChance, FoalBurstSpeed,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -125,6 +153,16 @@ namespace GK2DonkeyAPI
             private Vector3 turnRoot;
             private Vector3 stepFrom, stepTo;
             private float stepLength, stepDone;
+            private float stepSpeed = 0.5f;                  // this step's walk (a lively foal picks one per step)
+            private bool stepBurst;                          // this step is a lively foal's quick trot
+
+            // A foal moving like a young one (ShuffleFoalLively, read while bound): its own area, steps, speeds and
+            // pauses, steps often chained, now and then a quick trot. Grown donkeys: the ordinary values.
+            private bool Lively => Parent != null && IdleShuffle.FoalLively != null && IdleShuffle.FoalLively.Value;
+            private float AreaW => Lively ? IdleShuffle.FoalAreaWidth.Value : IdleShuffle.AreaWidth.Value;
+            private float AreaD => Lively ? IdleShuffle.FoalAreaDepth.Value : IdleShuffle.AreaDepth.Value;
+            private float PauseLo => Lively ? IdleShuffle.FoalPauseMin.Value : IdleShuffle.PauseMin.Value;
+            private float PauseHi => Mathf.Max(PauseLo, Lively ? IdleShuffle.FoalPauseMax.Value : IdleShuffle.PauseMax.Value);
             private int turnLogFrames;
             private bool shuffleAnnounced;                   // the "shuffles around" log line, once per instance
             private string shuffleHold;                      // why it is not shuffling right now (null: it is), for the panel
@@ -231,7 +269,7 @@ namespace GK2DonkeyAPI
                         {
                             NotePickFailed(pickWorld > pickCrowd);
                             LogFailedPick();
-                            shuffleAt = Time.time + UnityEngine.Random.Range(IdleShuffle.PauseMin.Value, Mathf.Max(IdleShuffle.PauseMin.Value, IdleShuffle.PauseMax.Value)) * 0.5f;
+                            shuffleAt = Time.time + UnityEngine.Random.Range(PauseLo, PauseHi) * 0.5f;
                         }
                         break;
                     case ShufflePhase.Turning:
@@ -277,20 +315,28 @@ namespace GK2DonkeyAPI
             private void EndStep(bool firstPause)
             {
                 FinishTurn();
-                float min = IdleShuffle.PauseMin.Value;
-                float max = Mathf.Max(min, IdleShuffle.PauseMax.Value);
+                float min = PauseLo;
+                float max = PauseHi;
                 // The first pause after being left is a random part of a full one, so donkeys left together do not step
                 // in time.
                 shuffleAt = Time.time + UnityEngine.Random.Range(firstPause ? 0.3f * min : min, max);
+                // A lively foal often goes straight on with another step (a fresh direction, maybe a turn): a wander of a
+                // few strides, not a stop after every one (the user, 2026-10-03: "go from point a to b, then stop, repeat").
+                if (!firstPause && shufflePhase == ShufflePhase.Stepping && Lively && UnityEngine.Random.value < IdleShuffle.FoalChainChance.Value)
+                {
+                    shuffleAt = Time.time + UnityEngine.Random.Range(0.05f, 0.4f);
+                }
                 shufflePhase = ShufflePhase.Waiting;
             }
 
             private void Advance(float dt)
             {
                 // Eased in and out over the ends of the step (never below a quarter speed, so it does not creep).
+                // A faster step eases over a longer stretch, so a quick trot doesn't start or stop dead.
                 float fromStart = stepDone, toEnd = stepLength - stepDone;
-                float ease = Mathf.Clamp01(Mathf.Min(fromStart, toEnd) / StepEase);
-                float speed = IdleShuffle.Speed.Value * Mathf.Lerp(0.25f, 1f, ease * ease * (3f - 2f * ease));
+                float easeOver = Mathf.Min(Mathf.Clamp(stepSpeed * 0.25f, StepEase, 0.5f), stepLength * 0.5f);
+                float ease = Mathf.Clamp01(Mathf.Min(fromStart, toEnd) / Mathf.Max(0.01f, easeOver));
+                float speed = stepSpeed * Mathf.Lerp(0.25f, 1f, ease * ease * (3f - 2f * ease));
                 stepDone = Mathf.Min(stepLength, stepDone + speed * dt);
                 Vector3 p = Vector3.Lerp(stepFrom, stepTo, stepLength > 0.0001f ? stepDone / stepLength : 1f);
                 // The height of the ground under the body, not under the root half a unit beside it: that is how Follow
@@ -347,10 +393,28 @@ namespace GK2DonkeyAPI
                     return Mathf.Max(ox, oz);
                 }
                 bool turnFirst = UnityEngine.Random.value < IdleShuffle.TurnChance.Value;
-                float lenMin = Mathf.Min(IdleShuffle.StepMin.Value, IdleShuffle.StepMax.Value);
-                float lenMax = Mathf.Max(IdleShuffle.StepMin.Value, IdleShuffle.StepMax.Value);
+                bool lively = Lively;
+                float sMin = lively ? IdleShuffle.FoalStepMin.Value : IdleShuffle.StepMin.Value;
+                float sMax = lively ? IdleShuffle.FoalStepMax.Value : IdleShuffle.StepMax.Value;
+                float lenMin = Mathf.Min(sMin, sMax);
+                float lenMax = Mathf.Max(sMin, sMax);
+                float speed = IdleShuffle.Speed.Value;
+                bool burst = false;
+                if (lively)
+                {
+                    float vMin = IdleShuffle.FoalSpeedMin.Value, vMax = IdleShuffle.FoalSpeedMax.Value;
+                    speed = UnityEngine.Random.Range(Mathf.Min(vMin, vMax), Mathf.Max(vMin, vMax));
+                    if (UnityEngine.Random.value < IdleShuffle.FoalBurstChance.Value)
+                    {
+                        // A quick trot: faster, and longer (the far half of the step range and up to half again).
+                        burst = true;
+                        speed = IdleShuffle.FoalBurstSpeed.Value;
+                        lenMin = Mathf.Lerp(lenMin, lenMax, 0.5f);
+                        lenMax *= 1.5f;
+                    }
+                }
                 float maxAngle = IdleShuffle.MaxAngle.Value * Mathf.Deg2Rad;
-                float w = IdleShuffle.AreaWidth.Value, d = IdleShuffle.AreaDepth.Value;
+                float w = AreaW, d = AreaD;
                 for (int pass = 0; pass < 2; pass++)
                 {
                     bool turn = (pass == 0) == turnFirst;
@@ -391,6 +455,8 @@ namespace GK2DonkeyAPI
                         }
                         stepTo = rootTo;
                         stepLength = len;
+                        stepSpeed = speed;
+                        stepBurst = burst;
                         stepDone = 0f;
                         stepsTaken++;
                         lastStepAt = Time.time;
@@ -614,6 +680,11 @@ namespace GK2DonkeyAPI
                     Vector3 b = o.BodyPoint();
                     float dx = b.x - point.x, dz = b.z - point.z;
                     float gap = InstanceGap * 0.5f * (ViewScale + o.ViewScale); // two full donkeys 1.1, a foal and its parent less
+                    if (o.Parent != null && Lively)
+                    {
+                        // Lively foals play close to each other, never inside each other (Foals.cs, MinApart).
+                        gap = Mathf.Max(MinApart + 0.05f, gap * 0.8f);
+                    }
                     if (dx * dx + dz * dz < gap * gap)
                     {
                         return true;
@@ -680,7 +751,7 @@ namespace GK2DonkeyAPI
                             s = "turning around";
                             break;
                         case ShufflePhase.Stepping:
-                            s = $"stepping {(riderFacingX > 0f ? "right" : "left")}, {stepDone:F2} of {stepLength:F2}";
+                            s = $"{(stepBurst ? "trotting" : "stepping")} {(riderFacingX > 0f ? "right" : "left")} at {stepSpeed:F1}/s, {stepDone:F2} of {stepLength:F2}";
                             break;
                         case ShufflePhase.Following:
                             string to = Parent != null ? LeadNow().Name : "its parent";
@@ -726,7 +797,7 @@ namespace GK2DonkeyAPI
             private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning ? AnimationState.Walk : AnimationState.Idle;
 
             // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground.
-            private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : IdleShuffle.Speed.Value)
+            private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : stepSpeed)
                 * IdleShuffle.AnimSpeed.Value / Mathf.Max(0.1f, ViewScale);
 
             private float walkSpeedApplied = -1f;

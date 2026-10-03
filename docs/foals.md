@@ -124,6 +124,29 @@ foal.Tuning.Set("you.gk2.mymod", "CoatBrightness", 0.15f);   // its own look, as
 - **Keeper close:** foals don't hold still for the keeper, since nobody rides them. Maybe they should keep a little
   distance instead. That's a decision.
 
+## Lively foals (API 0.20.0, built 2026-10-03, not yet seen in game)
+
+**Why:** the user, 2026-10-03: the foals "idle in the same spot a lot", and move "from point a to b, then stop, and
+repeat". They shuffled like grown donkeys: a 5–15 s pause after every 0.3–0.9 step at 0.5 units/s (about a tenth of
+the time moving), in a 1 x 0.5 box, and kept 0.7–0.9 from each other, which refused most steps in a family.
+
+**What changed** (`IdleShuffle.cs`, all per instance through `Mounts.Shuffle`; grown donkeys unchanged):
+- `ShuffleFoalLively` (on) gives a foal its own values instead of the grown donkey's:
+  - **area** 2 x 1 around its spot next to the parent (the follow's home range grows with it);
+  - **steps** 0.4–1.5, each at its own speed, 0.5–1.2 units/s (the walk animation matches the speed);
+  - **pauses** 1–4 s;
+  - **chained steps:** half the steps go straight on into another within 0.4 s, in a fresh direction or after a
+    turn, so a wander is a few strides instead of a stop after each;
+  - **quick trots:** 12 % of steps trot at 2.5 units/s and go further (up to 1.5 x the longest step), easing in and
+    out over a longer stretch.
+- **Spacing:** foals keep 0.8 of the usual gap from each other, never under 0.55 (they never stand inside each other).
+- **Wedged:** a foal counts as wedged (and is caught up) only after three missed picks in a row *and* 8 s; with short
+  pauses three misses came in about 3 s.
+- Every step still stays within `ShuffleMaxAngle` of the screen's horizontal (side views only).
+
+**Ideas held back** until this has been seen: chasing a sibling (one trots to another, which trots off), visiting the
+keeper when he's near, staggered follow speeds.
+
 ## When the parent leaves (the open question)
 
 Nothing in the mod or the game makes a donkey travel a route; the shuffle only takes short straight steps. When the

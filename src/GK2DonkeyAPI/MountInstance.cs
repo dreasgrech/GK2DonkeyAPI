@@ -563,6 +563,7 @@ namespace GK2DonkeyAPI
                     CargoRig.LoadFromHead("mount");
                 }
                 Plugin.Log.LogInfo($"Mounted {Describe()} ({activeStyle}, speed x{S.SpeedMultiplier.Value}).");
+                NoteViewEvent("mounted");
                 Mounts.SetRideOwner(OwnerId);
                 Mounts.RaiseMounted(activeStyle);
                 return null;
@@ -593,6 +594,7 @@ namespace GK2DonkeyAPI
                 riderAttached = false;
                 lastMirrored = (AnimationState)(-1);
                 Plugin.Log.LogInfo($"Dismounted ({reason}); {Describe()} stays at {Position:F2} in {SceneId} with {CargoRig.Count} item(s).");
+                NoteViewEvent("dismounted");
                 Mounts.RaiseDismounted(reason);
             }
 

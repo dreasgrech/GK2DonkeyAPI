@@ -485,6 +485,15 @@ namespace GK2DonkeyAPI
                 for (int k = 0; k < all.Count; k++)
                 {
                     Instance i = all[k];
+                    try
+                    {
+                        i.HeadWatch();      // every view, ridden or not (HeadWatch.cs): measures first,
+                        i.HeadGuardFrame(); // then empties the walk's head layer
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Mount: {i.Describe()}: head check failed: {e.Message}");
+                    }
                     if (i.IsRidden || i.Ephemeral)
                     {
                         continue;

@@ -877,6 +877,7 @@ namespace GK2DonkeyAPI
                     string id = WgoId;
                     if (TakeParkedView(scene, id)) // a released view of the same kind (Tiers.cs, ViewPool): no Wgo.Spawn
                     {
+                        NoteView("taken from the mod's view pool");
                         switchedOff = false;
                         quietAnimators.Clear();
                         quietKeepState.Clear();
@@ -903,6 +904,7 @@ namespace GK2DonkeyAPI
                         SuppressScripts = false;
                     }
                     donkey = Wgo.Spawn(data, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
+                    NoteView("made by Wgo.Spawn (new or the game's pooled parts)");
                     NavHoles.ClearAndLog(data, Describe()); // no holes in the keeper's navmesh (NavHoles.cs)
                     MuteColliders(); // parts from the game's pool arrive inside Wgo.Spawn, before OnVisualPartsLoaded knows the view
                     donkey.UpdateChunkVisibility(isVisible: true);
@@ -951,23 +953,23 @@ namespace GK2DonkeyAPI
             {
                 try
                 {
-                    // Every sprite as the prefab has it (DonkeyPrefab.cs); without the prefab, at least the head cleared.
-                    string had = DonkeyPrefab.ResetSprites(donkey.MainWgoPart?.transform);
-                    if (had == null)
+                    // Every sprite as the prefab has it (DonkeyPrefab.cs), then the head layer cleared in any case: the
+                    // prefab's own head layer holds 0301_hed_static_down, and the walk clips don't key it, so bound with
+                    // that sprite the walk shows it still over the walking body. Resetting to the prefab alone brought the
+                    // "double donkey" back (2026-10-04, the [heads] lines: the head came back 12 frames after each reset).
+                    string had = DonkeyPrefab.ResetSprites(donkey.MainWgoPart?.transform) ?? "";
+                    foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
                     {
-                        foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
+                        if (sr.name == "hed" && sr.sprite != null)
                         {
-                            if (sr.name == "hed" && sr.sprite != null)
-                            {
-                                had = "hed " + sr.sprite.name + " -> none";
-                                sr.sprite = null;
-                            }
+                            sr.sprite = null;
                         }
                     }
                     Animator a = donkey.MainWgoPart?.AnimationComponent?.Animator;
                     if (a != null)
                     {
                         a.Rebind();
+                        lastRebindFrame = Time.frameCount;
                     }
                     lastMirrored = (AnimationState)(-1); // the stand or walk pose is sent again
                     if (!string.IsNullOrEmpty(had) && loggedHeadResets < 5)
@@ -999,6 +1001,7 @@ namespace GK2DonkeyAPI
             private void PrepareParts(PlayerController pc)
             {
                 partsReady = true;
+                NoteViewEvent("prepared");
                 try
                 {
                     // The still head over the walking body (the "double donkey", 2026-10-03): the walk clips don't key the

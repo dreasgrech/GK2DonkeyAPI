@@ -25,6 +25,7 @@ namespace GK2DonkeyAPI
         private static float nextIndoorsCheck;
         private static object indoorsSave;     // the game these were recorded in
         private static bool loadedCheckDue;     // the first steady check of a newly loaded game
+        private static bool placeAgainDue;      // a foal placed at a door without a clear slot tries again until control is back
 
         // PlayerController.OnPlayerTeleported (subscribed by Plugin): every door, the map's fast travel, a script's move.
         internal static void OnKeeperTeleported()
@@ -49,6 +50,30 @@ namespace GK2DonkeyAPI
                 doorLogControls = false;
                 keeperWasIn = null;
                 loadedCheckDue = true;
+            }
+            if (placeAgainDue)
+            {
+                // The new place's parts (and its floor) load after the door's event: a foal placed in the first frames
+                // found no clear slot and stood on a free one by the keeper; each frame until the screen fades back it
+                // looks again (log 2026-10-03: three foals indoors, all on the last resort).
+                if (controls)
+                {
+                    placeAgainDue = false;
+                    ForEachInstance(i => i.placeAgain = false, bind: false); // or the next door would move it again
+                }
+                else
+                {
+                    bool any = false;
+                    ForEachInstance(i =>
+                    {
+                        if (i.placeAgain)
+                        {
+                            i.PlaceAgain();
+                            any |= i.placeAgain;
+                        }
+                    });
+                    placeAgainDue = any;
+                }
             }
             if (doorPending && (Time.frameCount >= doorFrame + 2 || controls))
             {
@@ -154,6 +179,7 @@ namespace GK2DonkeyAPI
         {
             // With the keeper indoors: he is the one it follows (Foals.cs, LeadNow). Not saved.
             internal bool withKeeper;
+            internal bool placeAgain;    // placed at a door without a clear slot (FreeSlot), the screen still black
 
             // A foal (with a parent, not ridden) whose ShuffleFollowKeeperIndoors is on. Read while bound.
             internal bool ComesIndoors()
@@ -168,8 +194,34 @@ namespace GK2DonkeyAPI
                 withKeeper = true;
                 foalSide = 0f; // the side of the keeper it is on, picked again where it lands
                 StopShuffle();
-                CatchUp(why);
+                PlaceAtDoor(why);
                 WakeNow();
+            }
+
+            private void PlaceAtDoor(string why)
+            {
+                placeAgain = !CatchUp(why);
+                if (placeAgain)
+                {
+                    placeAgainDue = true;
+                }
+            }
+
+            // Again, once a slot with a clear line is there (quietly until then).
+            internal void PlaceAgain()
+            {
+                Lead p = LeadNow();
+                if (!p.Here)
+                {
+                    return;
+                }
+                FreeSlot(p, out bool clear);
+                groundFail = null;
+                if (clear)
+                {
+                    placeAgain = false;
+                    CatchUp("placed again, its slot clear now");
+                }
             }
 
             // Its view at once where it landed: far from the keeper a moment ago, it may have been put to sleep (no view)
@@ -189,7 +241,7 @@ namespace GK2DonkeyAPI
                 {
                     foalSide = 0f;
                     StopShuffle();
-                    CatchUp(why);
+                    PlaceAtDoor(why); // a try again (screen still black) places it by its parent, which it goes back to anyway
                     WakeNow();
                 }
                 withKeeper = false;

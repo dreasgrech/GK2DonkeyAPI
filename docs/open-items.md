@@ -1,6 +1,6 @@
 # Open and deferred items
 
-What is built but not yet seen in game, what is undecided, and what was put off. As of 2026-10-03, API 0.18.0,
+What is built but not yet seen in game, what is undecided, and what was put off. As of 2026-10-03, API 0.20.0,
 Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new ones at the end of their list.
 
 ## To check in game (built and deployed, not yet seen)
@@ -55,6 +55,11 @@ In a game:
 9e. **Wheel and hub colours** (API 0.19.0): Saddle Up's Cart section, "Wheel colour" and "Wheel hub colour", each
     with a Custom colour. The presets are first guesses (judge them in game, and the picture). Paint's Dark wood no
     longer darkens the wheels.
+9f. **Foals at doors** (2026-10-03): coming in and going out, no two foals in the same place, and none on top of the
+    keeper. If one is, the `[foal] ... caught up with` line says "no slot with a clear line" and why.
+9g. **Lively foals** (API 0.20.0, [foals.md](foals.md) "Lively foals"): more movement around the parent: varied
+    steps and speeds, strides in a row, a quick trot now and then. Judge the values (the `ShuffleFoal*` keys, live
+    on the dev panel), and watch for foals caught up in view (wedged) more often than before.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

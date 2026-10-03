@@ -135,6 +135,30 @@ back for the game's pool.
   - If he's still stuck, that line names what holds him.
   - If the hole lines never appear and he's stuck anyway, the cause is elsewhere: read that line.
 
+## Found in test 2026-10-03: foals inside each other ("Siamese donkeys")
+
+**Symptom:** after a door, two or more foals stood in exactly the same place, one facing each way. Going in, all of
+them were clumped on top of the keeper.
+
+**Log:** going in, foals #11 and #13 were placed at the very same point, 0.4 in front of the keeper, and #12 0.58
+beside them.
+
+**Cause** (`CatchUp`): a foal goes to its own slot if the line from its lead is clear. If not, it went to the first
+clear slot (slot 0 for every foal), else to 0.4 in front of the lead (the same point for every foal). At a door the
+lines are often blocked (the doorway, or the new room's floor not loaded yet in the frames after the door), so all
+of them landed on the same spot.
+
+**Fix** (`Foals.cs` `FreeSlot`, `FoalsIndoors.cs`):
+- a slot another donkey stands on (within 0.5) is skipped;
+- with no clear line to any slot, any spot around the lead with a clear line (rings at 0.9, 1.4 and 2, straight
+  away from the camera first); only if none, in front of the lead, spread sideways by the foal's index.
+  - The first version took a slot with "ground and room" but no clear line. Inside the door that was behind the
+    room's wall (the slots beside the keeper run along it), so the foals came in out of sight and couldn't reach him
+    (second test, same day: "no foals entered with me").
+- a foal placed at a door without a clear line tries again each frame until the keeper has control back (the screen
+  is black till then), so it moves to a proper slot once the floor is there;
+- the catch-up log line says when no slot had a clear line, and the first failure.
+
 ## In-game test list
 
 Set "Baby donkeys" to 2 or more and "Baby donkeys come indoors" on.
