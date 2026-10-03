@@ -237,7 +237,7 @@ namespace GK2DonkeyAPI
                     shaftDropDeg = 0f;
                     Transform parent = p.T.parent;
                     Vector3 harnessW = parent.TransformPoint(p.Harness + lift);
-                    float g = GroundHeight(harnessW, out _);
+                    float g = StandHeight(harnessW); // a bridge's deck, not the navmesh under it (the shafts dipped into it)
                     if (float.IsNaN(g))
                     {
                         g = Position.y;

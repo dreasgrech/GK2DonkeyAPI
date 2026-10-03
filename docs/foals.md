@@ -324,3 +324,19 @@ The step checks still compare `GroundHeight`s through `StepFits`.
 
 **Still to see:** foals cross the bridge both ways, on the deck and not in it, with no pop at its ends. Ordinary ground
 should look as before (the deck rule only adds a surface above the navmesh).
+
+**Audit of the same bug elsewhere** (2026-10-03, after the user confirmed the bridge). Every place that takes a ground
+height:
+
+| Where | Finding | Done |
+|---|---|---|
+| A standing cart's shafts rest on the ground (`MountInstance`, shaft drop) | Read `GroundHeight`: on a bridge the shafts would dip to the navmesh under the deck | `StandHeight` |
+| A donkey moved off bad ground at a dismount (`KeepOnGround`) | The new spot took the navmesh height: put onto a deck, it would stand inside it | `StandHeight` |
+| Calling the donkey, `MoveTo`, spawning, a foal catching up | `SnapToGround` | Already `StandHeight` |
+| Hoofsteps of a standing donkey or foal | The game's surface probe from the root down: sunk under the deck it heard the ground below (stone, dirt) instead of wood | Fixed with the height |
+| The ridden donkey, the ridden cart | Height relative to the keeper's, from one source (`GroundHeightPair`) | Nothing to do |
+| Getting on (`WhyKeeperCannotStandAt`) | The seat is never put below the navmesh, and a deck is above it | Nothing to do |
+| Step checks (lines, routes, the keeper's way to a seat) | `StepFits` | Done |
+| Cargo set down | The game's own drop | Nothing to do |
+
+Left as a limit: a surface more than 0.6 above the navmesh (`DeckRise`) is not taken. None is known; the bridge is 0.5.

@@ -151,7 +151,8 @@ namespace GK2DonkeyAPI
                         {
                             continue;
                         }
-                        rt.y = gr;
+                        float stand = StandHeight(rt); // on a deck over the navmesh, not inside it
+                        rt.y = float.IsNaN(stand) ? gr : stand;
                         if (HasCart && !GroundAt(rt + cartOffset, gb, out _))
                         {
                             continue;
