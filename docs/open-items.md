@@ -197,6 +197,20 @@ In a game:
     - Fixed on the way (2026-10-05): a quit-time warning, `the donkey prefab could not be read (not found)`. The
       prefab audit reads the prefab on the first view release, which in that session was at the quit, with the asset
       system torn down; `DonkeyPrefab.Ready` now skips while `Plugin.Quitting`.
+    - **Found while tuning (the user's video, 2026-10-05 00:53):** moving the top zombie of a tuned
+      `body_zombie+body_zombie` pair swapped the two (their heads changed places). The packer orders a pair by
+      footprint area, then id, then load order. Each view is measured on its own, through world space, so two equal
+      zombies differed by float noise that moved with the views, and the order flipped on every slider move. Areas
+      are now compared in whole square centimetres, so equal items fall through to the load order, which doesn't
+      change. Also: the `zombie box` line is logged only when a view is (re)drawn, not on every repack.
+    - **Found while tuning (video 2026-10-05 01:04):** dragging the lower item's "up" past the other swapped the
+      two slider blocks under the mouse (the panel lists the higher item first), so the drag went on with the other
+      item and the two leapfrogged up. An old panel bug, seen now because zombie pairs get tuned upwards. First fixed
+      by re-sorting only while no slider is held. Then, at the user's request (re-sorting after each release was
+      still confusing), the blocks follow the pair's arrangement, never the live heights: stacked, the item the
+      packer put on top first (as on the cart; the packer's order is fixed), otherwise packing order. The "(on top)" /
+      "(bottom)" tags, read from the current heights, are gone too (they flipped as one item passed the other); two
+      of the same item are labelled "(1)" and "(2)" by their fixed block.
     - Not yet: tuning. Already done: a third zombie with a full cart (only two in the save; a Debug-tab "Spawn a test zombie" button is
       built for it), the setting off, and tuning.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially

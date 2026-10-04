@@ -951,7 +951,8 @@ namespace GK2DonkeyAPI
             // dropped zombie (AnimationComponentBase.ApplyOverheadItemToView, DropView). Re-activated only when what it
             // shows changes. Colliders off and the holder's layer again afterwards: a zombie's mesh is instantiated into
             // the view on first use (DropViewAtomMesh.GetCachedZombieElement), after MakeView set them.
-            private void ActivateFor(DropViewAtomMesh view, Item item)
+            // True when the view was (re)activated, false when it already showed this.
+            private bool ActivateFor(DropViewAtomMesh view, Item item)
             {
                 viewKeys.TryGetValue(view, out string had);
                 string key;
@@ -968,7 +969,7 @@ namespace GK2DonkeyAPI
                     key = "zombie:" + head + ":" + lut;
                     if (had == key)
                     {
-                        return;
+                        return false;
                     }
                     Texture2D tex = null;
                     if (!string.IsNullOrEmpty(lut))
@@ -1004,7 +1005,7 @@ namespace GK2DonkeyAPI
                     key = "icon:" + icon;
                     if (had == key && view.IconId == icon)
                     {
-                        return;
+                        return false;
                     }
                     view.Activate(icon);
                 }
@@ -1019,6 +1020,7 @@ namespace GK2DonkeyAPI
                 {
                     c.enabled = false;
                 }
+                return true;
             }
 
             private class Drawn
@@ -1088,14 +1090,14 @@ namespace GK2DonkeyAPI
                             }
                         }
                         view.gameObject.SetActive(true);
-                        ActivateFor(view, drawn[i].Item);
+                        bool fresh = ActivateFor(view, drawn[i].Item);
                         drawn[i].View = view;
                         bool measured = MeasureMeshes(view.transform, view.transform, out drawn[i].Box);
                         if (!measured)
                         {
                             drawn[i].Box = new Bounds(Vector3.zero, new Vector3(0.5f, 0.4f, 0.5f));
                         }
-                        if (IsZombie(drawn[i].Item.Definition))
+                        if (fresh && IsZombie(drawn[i].Item.Definition))
                         {
                             Plugin.Log.LogInfo($"Cargo: zombie box on {owner.Describe()}: size {drawn[i].Box.size:F2}, centre {drawn[i].Box.center:F2}{(measured ? "" : " (not measured: the default box)")}.");
                         }
@@ -1135,7 +1137,10 @@ namespace GK2DonkeyAPI
                 }
                 drawn.Sort((a, b) =>
                 {
-                    float areaA = a.Box.size.x * a.Box.size.z, areaB = b.Box.size.x * b.Box.size.z;
+                    // Footprints in whole square centimetres: each view is measured on its own, and the float noise of
+                    // that measurement moves with the view, so two equal items (two zombies) compared exactly swapped
+                    // order, and with it their places in a tuned pair, on every slider move (seen 2026-10-05).
+                    int areaA = Mathf.RoundToInt(a.Box.size.x * a.Box.size.z * 10000f), areaB = Mathf.RoundToInt(b.Box.size.x * b.Box.size.z * 10000f);
                     int c = areaB.CompareTo(areaA);
                     if (c == 0) c = string.CompareOrdinal(a.Item.id, b.Item.id); // equal footprints: by id, not by who came first
                     return c != 0 ? c : a.LoadOrder.CompareTo(b.LoadOrder);

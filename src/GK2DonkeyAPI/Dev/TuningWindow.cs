@@ -1393,18 +1393,23 @@ namespace GK2DonkeyAPI
                 GUILayout.Label(pair.Tuned
                     ? "  Tuned: exactly this layout from now on; each item moves on its own, also when stacked. A button above forgets the tuning and lays the pair out again that way (auto: the packer decides)."
                     : "  Automatic: pick the arrangement (auto: across the bed when both widths fit, else end to end, else stacked; side = across, along = end to end, stack = on top). Then move an item: that tunes the pair, starting from this layout.", small);
-                // Listed as they stand: the higher item first, so a stack reads top to bottom as on screen (in packing
-                // order the bottom item came first and the top item's sliders were the lower block). k stays the packing
-                // index, which is what maps a block to PosA or PosB.
-                bool topFirst = p1.Pos.y > p0.Pos.y + 0.01f;
+                // As the pair is arranged, never by the live heights: stacked, the item the packer put on top is listed
+                // first, as on screen (the packer's order of the two is fixed: footprint, id, load order); side by side or
+                // end to end, in packing order. Ordered by the current heights, the blocks swapped under the mouse
+                // mid-drag (the drag went on with the other item, which then leapfrogged) and re-sorted after every
+                // release (2026-10-05). k stays the packing index, which is what maps a block to PosA or PosB.
+                bool topFirst = p1.OnTop;
                 for (int n = 0; n < 2; n++)
                 {
                     int k = topFirst ? 1 - n : n;
                     Cargo.PlacedItem p = k == 0 ? p0 : p1;
                     Cargo.PlacedItem other = k == 0 ? p1 : p0;
                     Vector3 v = p.Pos;
-                    string where = Mathf.Abs(p.Pos.y - other.Pos.y) <= 0.01f ? "" : p.Pos.y > other.Pos.y ? " (on top)" : " (bottom)";
-                    GUILayout.Label($"  {p.Id}{where}: place in this pair (height above the cargo floor)", label);
+                    // A fixed name, never the current height: an "(on top)" / "(bottom)" read from the heights flipped
+                    // whenever one item's up passed the other's, which looked like the items swapping (2026-10-05).
+                    // Two of the same item are told apart by their block's place, which is fixed too.
+                    string tag = p.Id == other.Id ? $" ({n + 1})" : "";
+                    GUILayout.Label($"  {p.Id}{tag}: place in this pair (height above the cargo floor)", label);
                     bool moved = false;
                     moved |= RawSlider("    along (tail - / head +)", ref v.x, -0.6f, 0.6f, canReset: false);
                     moved |= RawSlider("    up", ref v.y, -0.3f, 1.0f, canReset: false);
