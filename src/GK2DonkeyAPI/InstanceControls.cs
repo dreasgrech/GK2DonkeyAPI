@@ -273,12 +273,19 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            // Only while he walks freely: working (holding F at a crafting station) keeps the controls on, and the station's
+            // hint turns to the work key, so "Ride" stayed up over "[F] Craft" (the user's screenshot, 2026-10-04). Any
+            // other state is the game's (work, ladders, fishing, combat), as for ending a ride (Mount.WhyMustDismount).
+            if (!(pc.Ssm?.CurState is FreePlayerState))
+            {
+                return;
+            }
             try
             {
                 // The game's own interaction target wins the key (TryInteract steps aside for it), so our label hides
                 // while it has one: two labels on one key promised what the key would not do (an NPC's Speak next to a
                 // donkey's Drive, 2026-09-30).
-                bool gameTarget = GameHasTarget(pc);
+                bool gameTarget = GameHasTarget(pc) || GameShowsHint(pc);
                 if (!Mount.IsMounted)
                 {
                     if (!gameTarget)
@@ -445,6 +452,29 @@ namespace GK2DonkeyAPI
             }
             IWGOInteractionHandler h = w.InteractionHandler;
             return h == null || h.HasInteraction(); // no handler to ask: the game's own, to be safe
+        }
+
+        // The game shows a hint of its own at the keeper's target or at what he works on: the same test as Wgo.GetWidgetData
+        // (decomp 1.008), for either key (HasInteraction: E, HasInteraction2: F, the work key). GameHasTarget asks only
+        // about E, so "[E] Ride" was drawn over an ore's "[F]" and a station's "[F] Craft" (the user's screenshots
+        // 2026-10-04). One hint at a time, the game's first, as for E.
+        private static bool GameShowsHint(PlayerController pc)
+        {
+            return ShowsHint(pc, pc.PlayerInteractionComponent?.WgoUnderInteraction) || ShowsHint(pc, pc.PlayerWorkComponent?.Wgo);
+        }
+
+        private static bool ShowsHint(PlayerController pc, Wgo w)
+        {
+            if (w == null || w.Data == null || !w.Data.IsInteractable)
+            {
+                return false;
+            }
+            IWGOInteractionHandler h = w.InteractionHandler;
+            if (h == null)
+            {
+                return false;
+            }
+            return w.Data.Events.Count > 0 || h.HasInteraction(pc) || h.HasInteraction2(pc);
         }
 
         private static void HitchKey(PlayerController pc, Mount.Instance r)

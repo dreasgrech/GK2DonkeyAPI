@@ -144,6 +144,14 @@ In a game:
     - riding along a fence and hitching there still works (the 10-03 regression).
     - after the second fix (footprint, levels): mining the ore while riding parks the donkey fully clear of the ore,
       on the floor (`moved ... to (..., 6.00, ...)`, never on the rock), or on the keeper's spot.
+9o. **One hint at a time** (2026-10-04, `InstanceControls.Find`): the mod's hints ("Ride", "Load on cart", "Take
+    from cart", "Hitch the cart") show only while the keeper walks freely (the game's `FreePlayerState`; not working,
+    building, planting, on a ladder or attacking) and only when the game shows no hint of its own at his target or at
+    what he works on, for either key (`Wgo.GetWidgetData`'s test: E, F, events). Check:
+    - holding F at a crafting station next to a donkey: only "[F] Craft";
+    - facing an ore or a tree with the donkey beside it: only the game's "[F]"; turn or step to the donkey and "[E]
+      Ride" shows (and E rides only while it shows);
+    - normal "Ride", carrying a body to the cart ("Load on cart"), "Take from cart" and "Hitch the cart" still show.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 
