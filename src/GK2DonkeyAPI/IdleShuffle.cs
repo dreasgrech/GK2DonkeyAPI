@@ -608,6 +608,24 @@ namespace GK2DonkeyAPI
                         {
                             continue;
                         }
+                        // A donkey someone rides: its whole body out of it, not just its middle (SafeGround.FootprintBlocked).
+                        if (Rideable && FootprintBlocked(MainGame.PlayerController, p, right) != null)
+                        {
+                            continue;
+                        }
+                        // Not out on the far side of the wall it stands in: 2026-10-04 a donkey left in a rock stepped out
+                        // into a closed-off pocket behind it, and getting on it put the keeper there (SafeGround.cs). On the
+                        // keeper's part of the walkable mesh, and in a clear line from him when he is close.
+                        PlayerController kpc = MainGame.PlayerController;
+                        if (kpc != null && kpc.PlayerData != null && kpc.PlayerData.currentGameSceneId == SceneId)
+                        {
+                            Vector3 kp = KeeperNow(kpc);
+                            Vector2 flat = new Vector2(p.x - kp.x, p.z - kp.z);
+                            if (WhyNotConnected(kp, p) != null || flat.sqrMagnitude < 64f && PlaceBlocked(kpc, kp, p) != null)
+                            {
+                                continue;
+                            }
+                        }
                         Vector3 root = p - right * LateralFor(riderFacingX);
                         root.y = g;
                         SetShufflePosition(root);

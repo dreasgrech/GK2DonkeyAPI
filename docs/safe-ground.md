@@ -76,5 +76,91 @@ The first version checked the way from the keeper to the seat with the idle shuf
 refuses any keeper-blocking collider along the line. Riding along a fence, the keeper's own spot touched it ("sample 0
 ... blocked by Collider (layer Obstacle)"), so every hitch there was refused: the cart G brought to him stayed by the
 fence, and riding up to it again was refused each time (the user's video, log lines "hitching ... refused"). It had
-also refused a ride from the jetty once (the donkey came to him instead). Colliders were never the danger; the check
-is ground only now (`GroundGap`).
+also refused a ride from the jetty once (the donkey came to him instead). The check became ground only (`GroundGap`).
+That was wrong: walls are a danger too (next section).
+
+## Locked in behind a rock (2026-10-04)
+
+**What happened** (the user, RuinedTemple, riding without the cart):
+1. F at an ore ended the ride (`WorkPlayerState`), and the donkey, drawn next to the keeper, stayed inside the rock at
+   (-14.46, 6.00, 23.34). `KeepOnGround` only asked for ground, and there is ground under a rock.
+2. The idle shuffle found it inside `Obstacle (1)` and stepped it 0.6 out (`StepOutIfInside`), to (-15.24, 6.00, 23.86):
+   the nearest free spot, on the far side of the rock face, in a closed-off pocket.
+3. Getting on moved the keeper to its seat (`RideFromWorld`, `pc.SetPosition`). Ground, navmesh and height all passed,
+   so he was put in the pocket, with no way out. Nothing was saved there (the last save was before the ore).
+
+**What stops the keeper** (decomp 1.008, checked in the review): physics only. He is a rigidbody (layer Player 10,
+convex `MeshCollider` 0.50 × 1.07 × 0.30, continuous-dynamic collision checks already) moved by velocity
+(`PlayerPhysicalBody.MoveByDirection`), stopped by every collider his layer collides with and by the invisible edge
+walls the game puts up where a ground ray finds nothing (`PlayerInvisibleWalls`). The recast navmesh only sets his
+height (`MovementAdjustComponentBase.UpdatePos`). The game's own "can he get there" is `PlayerLocalAreaMovement.IsReachable`
+on its walk grid (graph 3, rescanned around him against the colliders before every walk it gives him).
+
+**The rule now:** the mod moves the keeper only to a spot he could walk to himself. The only moves are getting on a
+standing donkey and hitching while riding (plus the dev self-test); both go through `WhyKeeperCannotStandAt`, which
+ends with `WhyKeeperCannotReach`. Everything must pass:
+1. **Not far:** at most 2 units (`MaxKeeperMove`). Seats are within reach anyway (1.3 to the donkey's body); further
+   (another mod's `Ride` from afar) the donkey comes to him.
+2. **His body's way:** a capsule a little thinner than him (radius 0.12, 0.2 to 0.95 up) swept from him to the spot,
+   and rays at 0.15, 0.5 and 0.9 both ways (a one-sided mesh blocks rays from one side only), with back faces on.
+   Against every layer he collides with; only a ground layer (11, 12) facing up is floor. A collider he starts inside
+   doesn't count, so the fence he rides along (the 10-03 regression) doesn't. A full hit buffer counts as blocked.
+3. **His body fits there:** his own collider placed at the spot (`ComputePenetration`, the game's 0.05 tolerance).
+4. **The game's walk grid connects him** to the spot (rescanned around him, as the game does; not while the game is
+   walking him).
+5. **The walkable mesh connects them**, where both lie on it (within 0.25): a nearest node off the mesh means nothing.
+
+If any of them fails, the donkey comes to him instead (getting on), or the hitch is refused. In a scene without a
+navmesh, all but the ground tests still run. Every allowed move logs `Mount: the keeper may move from ... to ...`;
+every refusal logs which test failed and what was in the way.
+
+**Donkeys are kept on the keeper's side too**, so a later ride doesn't have to refuse:
+- `KeepOnGround` (every dismount with the view there): the donkey's body must be free (`FreeAt`), his body's way to it
+  clear (test 2, any distance) and on his part of the walkable mesh; otherwise it moves to the nearest spot that is
+  (ground all the way from him, `GroundGap`; the old `LineWalkable` refused his own spot beside a fence), or onto the
+  keeper's spot. Logged as `... was left where the keeper can't reach it (...)`.
+- `StepOutIfInside`: a spot out of a wall must be on the keeper's part of the walkable mesh, and his body's way to it
+  clear when he is within 8 units (in his scene).
+
+**First test in game (2026-10-04), and what it showed:** getting on never moved the keeper into the rock (the donkey
+came to him), but parking still went wrong twice:
+- the donkey was moved only 0.25–0.5, still half inside the ore: `FreeAt` tests one thin capsule at its middle, and
+  the ore's collider is smaller than its picture. Now its whole body has to be free (`FootprintBlocked`: a box 0.9
+  long, 0.3 deep, 0.1 to 0.9 up), at parking and when a rideable donkey steps out of something;
+- once it was put on top of the rock, at 8.41 against the floor's 6.00: under the rock the floor is cut out of the
+  navmesh, and the nearest navmesh seen from above is the rock's top. Ground now counts only near the level it is
+  judged at (`NearLevel`: the raycast within 0.6, the navmesh within 1.2, the parking search within 0.6 plus 0.6 per
+  unit from the keeper), and a parking spot must also pass the game's walk grid around the keeper (rescanned once per
+  search).
+- An ore's drop ("SmallItemTriggerCollider", layer Drop) counted as a wall on the way to a seat. Items on the ground
+  and anything the keeper pushes away (a moving rigidbody) are no walls now.
+
+**Checking it in game:** Debug tab, "Keeper moves (safety check)": 32 `[reach]` lines around the keeper, each spot
+allowed or refused with the reason. Next to a rock or a wall, every spot on its far side must be refused.
+
+**Tried and dropped the same day:** switching the keeper to continuous collision checks at high ride speeds. His body
+already uses continuous-dynamic checks (PROBE-FINDINGS, Player), so it never applied. At 4x he moves 5 × 4 = 20
+units/s (damping 10), 0.4 per physics step; continuous checks stop him at walls, and the edge walls keep him on the
+ground.
+
+**Audit of keeper lock-out paths** (2026-10-04, by me and an independent review):
+
+| Path | Finding |
+|---|---|
+| The mod moving the keeper | Only `RideFromWorld` and `Hitch` (and the dev self-test, off by default, which sends him home after each scenario); both go through the gate. The hitch moves him to exactly the seat it checked (same inputs) |
+| The keeper's body | The mod never changes his collider, layer, kinematic state or collision mode; the seat and rider offsets move `main_character` (the sprites) only |
+| Our donkeys, carts and foals blocking a passage | Their colliders are off from the moment a view exists (`MuteColliders`, `PrepareParts`); no navmesh cut |
+| Ride speed | Clamped to 4x (API overrides too); continuous checks are the game's own |
+| Dismount, doors, saving while riding | He stays where he is; doors are the game's teleport; the game saves his real position |
+| Work, ladders, the game walking him | The ride ends first; the game walks him on its own grid |
+| Saddle Up, the examples | Never touch the keeper's body |
+
+**Known, not a lock-out:**
+- `SceneRecastGraph` is kept from the last scene that had one; in a scene without its own, the ground tests judge
+  against the wrong mesh: every seat refused (the donkey comes to him) and parked donkeys moved onto his spot. No such
+  scene is known.
+- Donkeys placed without the check: a park with the view gone (through a door), `ForceCleanup` / ending the ride
+  without parking, `ComeTo`'s spot, `MoveTo`, a restore from the save, a foal's last-resort spot, and a step-out with
+  the keeper in another scene. None of these moves him; the gate is what keeps him out of a pocket.
+- A hitch may now be refused where a post, a lamp or a person stands on the straight way to the seat, though he
+  could walk around ("I can't get to that cart from here."). Riding up from another side works.

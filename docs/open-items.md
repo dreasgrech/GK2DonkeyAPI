@@ -134,6 +134,16 @@ In a game:
     - foals at the foot of the hill stand on the ground;
     - the bridge deck still holds them;
     - a lake shore doesn't drop them onto the bed.
+9n. **Never locked in behind a wall** (2026-10-04, [safe-ground.md](safe-ground.md) "Locked in behind a rock"):
+    - first, next to that ore in RuinedTemple (and by a fence, a wall, a building): Debug tab "Write what the move
+      check says around the keeper". Every `[reach]` spot behind the rock must be refused, the open ones allowed;
+    - mine the ore while riding, then get on again: the donkey is moved to the keeper's side (`... where the keeper
+      can't reach it`), and getting on logs `the keeper may move from ... to ...` or the donkey comes to him;
+    - ordinary getting on and hitching still work; any refusal says why (watch for one test refusing everywhere, e.g.
+      `the game's walk grid has no free cell`);
+    - riding along a fence and hitching there still works (the 10-03 regression).
+    - after the second fix (footprint, levels): mining the ore while riding parks the donkey fully clear of the ore,
+      on the floor (`moved ... to (..., 6.00, ...)`, never on the rock), or on the keeper's spot.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 

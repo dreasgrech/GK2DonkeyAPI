@@ -1086,6 +1086,13 @@ namespace GK2DonkeyAPI
             Mount.CartGroundProbeOn = GUILayout.Toggle(Mount.CartGroundProbeOn, " Log the cart's wheels / the ridden donkey's hooves against the ground (5 lines a second)");
             GUILayout.Label("[cartground] lines with the cart: its lift and pitch, each wheel's bottom against the ground under it. [rideground] lines riding without it: the body's ground line against the ground under the body and its front and back hooves. gap > 0 floats, < 0 is inside. Off again after a restart.", small);
 
+            Header("Keeper moves (safety check)");
+            if (GUILayout.Button("Write what the move check says around the keeper to the log"))
+            {
+                ReachProbe.Write();
+            }
+            GUILayout.Label("[reach] lines: 32 spots around the keeper (1.0 and 1.8 away), each allowed or refused with the reason. Next to a rock or a wall, every spot on its far side must be refused.", small);
+
             Header("Held item (investigation)");
             if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
             {
