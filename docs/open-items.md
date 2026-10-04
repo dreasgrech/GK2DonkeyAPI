@@ -142,6 +142,8 @@ In a game:
     - ordinary getting on and hitching still work; any refusal says why (watch for one test refusing everywhere, e.g.
       `the game's walk grid has no free cell`);
     - riding along a fence and hitching there still works (the 10-03 regression).
+    - ride into the house and into the church (with and without the cart): the donkey stays on the doorstep outside
+      (`... stays where it stood ...: the keeper is not on it`), never inside next to you.
     - after the second fix (footprint, levels): mining the ore while riding parks the donkey fully clear of the ore,
       on the floor (`moved ... to (..., 6.00, ...)`, never on the rock), or on the keeper's spot.
 9o. **One hint at a time** (2026-10-04, `InstanceControls.Find`): the mod's hints ("Ride", "Load on cart", "Take

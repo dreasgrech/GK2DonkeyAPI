@@ -119,6 +119,13 @@ every refusal logs which test failed and what was in the way.
   clear (test 2, any distance) and on his part of the walkable mesh; otherwise it moves to the nearest spot that is
   (ground all the way from him, `GroundGap`; the old `LineWalkable` refused his own spot beside a fence), or onto the
   keeper's spot. Logged as `... was left where the keeper can't reach it (...)`.
+  Only while the keeper is on it: when he is more than 2 units away (flat) or 1.2 up or down, it stays where it stood
+  (`... stays where it stood ...: the keeper is not on it`). **Found 2026-10-04:** riding through a door, the game
+  moves him inside and switches to the indoor light in one call (`SetPosAndUnFadeAsync`); the ride ends on the next
+  frame with the donkey still on the doorstep. The house's inside lies about 100 away and 6 lower (RuinedTemple), so
+  nothing outside counted as his ground, and the last resort put the donkey, cart and all, onto his spot inside: in
+  the house and in the church, where riding is refused ("Not indoors."). A donkey already left inside comes out with
+  Saddle Up's H (or G with its cart) outdoors.
 - `StepOutIfInside`: a spot out of a wall must be on the keeper's part of the walkable mesh, and his body's way to it
   clear when he is within 8 units (in his scene).
 

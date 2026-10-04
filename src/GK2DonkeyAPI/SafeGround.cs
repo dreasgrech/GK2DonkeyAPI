@@ -444,6 +444,16 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 Vector3 keeper = KeeperNow(pc);
+                // Judged against the keeper only while he is on it. A door takes him elsewhere first (SetPosition, then the
+                // indoor light, in one call; the ride ends on the next frame with the donkey still on the doorstep): the
+                // house's inside lies about 100 away and 6 lower in RuinedTemple, so nothing outside was "his ground" and
+                // the last resort put the donkey, cart and all, onto his spot in the house and the church (the user's
+                // screenshots, 2026-10-04). It stays where it walked under him; getting on later goes through the gate.
+                if (FlatOff(keeper, Position) > MaxKeeperMove || Mathf.Abs(keeper.y - Position.y) > 2f * MaxRise)
+                {
+                    Plugin.Log.LogInfo($"Mount: {Describe()} stays where it stood at {Position:F2}: the keeper is not on it (at {keeper:F2}, a door).");
+                    return;
+                }
                 Vector3 right = Vector3.Cross(Vector3.up, AwayFromCamera()).normalized;
                 Vector3 bodyOffset = bodySprite != null && bodySprite ? bodySprite.position - donkey.transform.position : right * LateralFor(riderFacingX);
                 bodyOffset.y = 0f;
