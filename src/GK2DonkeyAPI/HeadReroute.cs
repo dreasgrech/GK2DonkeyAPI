@@ -33,9 +33,14 @@ namespace GK2DonkeyAPI
         private static Item lastCartMatch;
 
         // The reroute is on only while the cart is the keeper's hands. During the mod's own unload the head is the
-        // destination again.
+        // destination again. Off while the cargo sheet runs: its test items are on the cart then, and they must not be
+        // found by a pile or a script, nor a real pickup land among them (the sheet's abort clears the cart).
         internal static bool Active => Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached && !Cargo.Unloading
-            && MountRules.Allowed(MountFeature.Cargo);
+            && MountRules.Allowed(MountFeature.Cargo) && !CargoSheet.Running;
+
+        // Inside a zombie station's own take-back (ZombieStations_TakeBack_Patch): its HasFreeOverheadSlot asks for room
+        // for its worker only. A counter, as the game's calls can nest.
+        internal static int InZombieStation;
 
         // While the game's own AddOverheadItem runs for an item the cart refuses (a zombie), the gate answers for the
         // real head, so the original drops for the head's limit and not for the cart's.
@@ -64,6 +69,25 @@ namespace GK2DonkeyAPI
             return item != null && !item.IsEmpty && !Cargo.Allowed(item);
         }
 
+        // A zombie standing in the world (at its job or free) the keeper may not take while mounted: whenever the cart
+        // can't take it right now. Taking one has no slot check in the game (ZombieInteractionHandler.Interact): it
+        // finishes and empties its station, unassigns it and frees its dock first, and only then hands the item to
+        // AddOverheadItem, so a refusal there comes too late (found in game 2026-10-05: in Ride style the zombie was
+        // laid on the ground, off its job). Refused here, before any of that runs.
+        internal static bool RefuseWorldZombie(Item zombieItem)
+        {
+            if (!Mount.IsMounted)
+            {
+                return false;
+            }
+            if (HandsLocked || !Active || zombieItem == null || zombieItem.IsEmpty || !Cargo.Allowed(zombieItem))
+            {
+                return true;
+            }
+            Inventory inv = Cargo.Inv;
+            return inv == null || !inv.CanAddItemToInventory(zombieItem);
+        }
+
         // Puts an item the game wanted on the head onto the cart, with the pickup's side effects. False when the cart
         // is full or refuses the item (the caller then falls back).
         internal static bool TakeToCart(PlayerData pd, Item item)
@@ -78,6 +102,7 @@ namespace GK2DonkeyAPI
             {
                 return false;
             }
+            RelinkZombie(inv, item, "the cart");
             item.Count = count; // the source shell: callers that still hold it remove it from its table by GUID next
             if (pd.HasInteractingItem)
             {
@@ -95,6 +120,58 @@ namespace GK2DonkeyAPI
             MountSounds.CargoLanded();
             Plugin.Log.LogInfo($"Cargo: picked up {item.id} straight onto the cart ({inv.Data.Inventory.Count}/{inv.Data.InventorySize}).");
             return true;
+        }
+
+        // A zombie's item must be the very object its ZombieWgoData holds (zombieItem): the zombie's organs and gear are
+        // that object's nested inventory, and the game builds a placed zombie from it. An inventory add of a single
+        // item stores a NEW object and moves the nested inventory into it (Item.AddItemToInventory -> Split(1,
+        // transferInternalData)), leaving the source empty with the same GUID; on the game's head no copy is made,
+        // so the game never needs this. Called right after each of the mod's own adds, with the inventory added to;
+        // never from the change events, which also fire on removals (a station's own add has made its own copy then).
+        // The game's own relinks do the same (ZombieDropInteractionHandler.LinkItemToZombieData, the choir, autopsy).
+        internal static void RelinkZombie(Inventory inv, Item added, string where)
+        {
+            try
+            {
+                if (inv == null || added == null || added.Definition == null || !Cargo.IsLinked(added.Definition))
+                {
+                    return;
+                }
+                Guid g = added.UniqueId.Guid;
+                Item stored = null;
+                foreach (Item it in inv.Data.Inventory)
+                {
+                    if (it != null && !it.IsEmpty && it.UniqueId.Guid == g)
+                    {
+                        stored = it;
+                        break;
+                    }
+                }
+                if (stored == null)
+                {
+                    return;
+                }
+                ZombieWgoData z = MainGame.ZombieSystemData?.GetZombie(stored.UniqueId);
+                if (z == null)
+                {
+                    if (Cargo.IsZombie(stored.Definition))
+                    {
+                        // A zombie item with no zombie: never made by the game (every zombie item is created with one).
+                        Plugin.Log.LogWarning($"Cargo: {stored.id} on {where} has no zombie behind it ({g}); nothing to link.");
+                    }
+                    return; // another linked item (a wild zombie body, if the game marks it linked): nothing to keep in step
+                }
+                if (ReferenceEquals(z.ZombieItem, stored))
+                {
+                    return;
+                }
+                z.SetZombieItem(stored);
+                Plugin.Log.LogInfo($"Cargo: zombie {z.Name} linked to its copy on {where} ({stored.Inventory.Count} item(s) inside: organs and gear).");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Cargo: linking the zombie to its copy on {where} failed: " + e);
+            }
         }
 
         internal static Item FindOnCart(Item item)
@@ -237,6 +314,125 @@ namespace GK2DonkeyAPI
         }
     }
 
+    // A zombie standing in the world: no "take" while mounted when the cart can't take it (HeadReroute.RefuseWorldZombie).
+    // HasInteraction is what the game's E press asks (PlayerInputHandler.UpdateInput, and our own prefix of it); the
+    // hint asks HasInteraction OR HasInteraction2, and inspect (F) stays, so its "[E] Take" row is removed separately.
+    [HarmonyPatch(typeof(ZombieInteractionHandler), nameof(ZombieInteractionHandler.HasInteraction))]
+    internal static class ZombieInteractionHandler_HasInteraction_Patch
+    {
+        internal static readonly AccessTools.FieldRef<WGOInteractionHandlerBase, Wgo> AssignedWgo =
+            AccessTools.FieldRefAccess<WGOInteractionHandlerBase, Wgo>("assignedWgo");
+
+        internal static bool Refused(ZombieInteractionHandler h)
+        {
+            if (!Mount.IsMounted)
+            {
+                return false;
+            }
+            Wgo w = AssignedWgo(h);
+            return w != null && w.Data is ZombieWgoData z && HeadReroute.RefuseWorldZombie(z.ZombieItem);
+        }
+
+        private static bool warned;
+
+        private static void Postfix(ZombieInteractionHandler __instance, ref bool __result)
+        {
+            try
+            {
+                if (__result && Refused(__instance))
+                {
+                    __result = false;
+                }
+            }
+            catch (Exception e)
+            {
+                if (!warned)
+                {
+                    warned = true; // asked every frame for the hint: once is enough
+                    Plugin.Log.LogWarning("Mount: zombie take check failed (the game's answer stands): " + e);
+                }
+            }
+        }
+    }
+
+    // The zombie's hint rows are built without asking HasInteraction ("[E] Take" and "[F] Inspect" always), so the
+    // take row goes here while it is refused. Matched by the exact text the handler built (the same call, before the
+    // game's FixSpace runs in GetInteractionInfos). Rows from events or quests (the base's) are left alone.
+    [HarmonyPatch(typeof(ZombieInteractionHandler), "FormInteractionInfo")]
+    internal static class ZombieInteractionHandler_FormInteractionInfo_Patch
+    {
+        private static readonly MethodInfo Localize = AccessTools.Method(typeof(WGOInteractionHandlerBase), "LocalizeHintWithActionIcon",
+            new[] { typeof(string), typeof(GameKey) });
+
+        private static bool warned;
+
+        private static void Postfix(ZombieInteractionHandler __instance, InteractionInfos __result)
+        {
+            try
+            {
+                if (__result == null || __result.list.Count == 0 || !ZombieInteractionHandler_HasInteraction_Patch.Refused(__instance))
+                {
+                    return;
+                }
+                string take = (string)Localize.Invoke(__instance, new object[] { "hint_take", GameKey.Interaction });
+                __result.list.RemoveAll(r => r != null && r.text == take);
+            }
+            catch (Exception e)
+            {
+                if (!warned)
+                {
+                    warned = true; // built every frame while the zombie is the target: once is enough
+                    Plugin.Log.LogWarning("Mount: hiding the zombie's take hint failed: " + e);
+                }
+            }
+        }
+    }
+
+    // Taking a worker back from its station (porter, power source, carrier, clay, mine, sand, sawmill: every caller of
+    // PutZombieFromGameSceneToStoreForPlayer besides the walking zombie) is gated by HasFreeOverheadSlot alone, which
+    // answers the cart's room while riding. With zombies off the cart (CargoZombies off) the station would then
+    // unassign its worker and hand it to AddOverheadItem, the head, and the empty-hands rule would lay it on the ground
+    // (the bug of 2026-10-05 through another door). Marked here, so the gate can say no for these calls only.
+    // Interact2 (the window) is left alone. With zombies on, the gate's cart answer is right: room means it fits.
+    [HarmonyPatch]
+    internal static class ZombieStations_TakeBack_Patch
+    {
+        private static IEnumerable<MethodBase> TargetMethods()
+        {
+            var types = new[]
+            {
+                typeof(PorterStationInteractionHandler), typeof(PowerSourceInteractionHandler), typeof(ZombieCarrierInteractionHandler),
+                typeof(ZombieClayInteractionHandler), typeof(ZombieMineInteractionHandler), typeof(ZombieSandInteractionHandler),
+                typeof(ZombieSawmillInteractionHandler),
+            };
+            foreach (Type t in types)
+            {
+                foreach (string name in new[] { "Interact", "HasInteraction", "FormInteractionInfo" })
+                {
+                    MethodInfo m = AccessTools.DeclaredMethod(t, name);
+                    if (m != null)
+                    {
+                        yield return m;
+                    }
+                }
+            }
+        }
+
+        private static void Prefix()
+        {
+            HeadReroute.InZombieStation++;
+        }
+
+        // A finalizer, so the mark goes even when the original throws.
+        private static void Finalizer()
+        {
+            if (HeadReroute.InZombieStation > 0)
+            {
+                HeadReroute.InZombieStation--;
+            }
+        }
+    }
+
     // ---------------------------------------------------------------------- the gate
 
     [HarmonyPatch(typeof(PlayerData), nameof(PlayerData.HasFreeOverheadSlot), MethodType.Getter)]
@@ -252,6 +448,11 @@ namespace GK2DonkeyAPI
             if (HeadReroute.HandsLocked)
             {
                 __result = false;
+                return false;
+            }
+            if (HeadReroute.InZombieStation > 0 && Mount.IsMounted && !Plugin.CargoZombies.Value)
+            {
+                __result = false; // a station asking for room for its worker, and the cart takes no zombies
                 return false;
             }
             if (!HeadReroute.Active || HeadReroute.GateAnswersForHead)
@@ -384,10 +585,12 @@ namespace GK2DonkeyAPI
                 {
                     // Refused after all (CanAdd said yes a moment ago): back onto the cart, never into thin air.
                     Cargo.Inv.AddItemToInventory(stored);
+                    HeadReroute.RelinkZombie(Cargo.Inv, stored, "the cart");
                     Cargo.Resync("insert refused");
                     Plugin.Log.LogWarning($"Cargo: {wgoData.id} refused {id} after all; it is back on the cart.");
                     return false;
                 }
+                HeadReroute.RelinkZombie(wgoData.Inventory, stored, wgoData.id); // the game leaves this one stale; its own takes relink later
                 GlobalEventsSystem.FireTrigger(GlobalEventsSystem.Event.Type.PlayerInsertOverheadToWgoAnItem, id);
                 Plugin.Log.LogInfo($"Cargo: {id} put into {wgoData.id} from the cart ({Cargo.Count} left).");
                 return false;

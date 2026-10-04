@@ -639,7 +639,7 @@ namespace GK2DonkeyAPI
                             Vector3 at = i.CartPoint();
                             foreach (Item it in i.CargoRig.ItemsNow())
                             {
-                                if (!MainGame.Instance.dropSystem.DropItem(it, i.SceneId, at))
+                                if (!MainGame.Instance.dropSystem.DropItem(it, i.SceneId, at) && !Cargo.RescueZombie(it, i.SceneId, at, reason))
                                 {
                                     Plugin.Log.LogWarning($"Cargo: {it.id} on {i.Describe()} could not be set down ({reason}); it is LOST.");
                                 }
@@ -870,12 +870,40 @@ namespace GK2DonkeyAPI
             {
                 DismountFromApi(why);
             }
+            int zombies = 0;
             using (Bind(i))
             {
+                // Its cargo goes with it, except zombies: a zombie with no item anywhere could never be placed again, so
+                // each is set down where the cart stood (or stood up in the world when the game refuses the drop).
+                foreach (Item it in i.CargoRig.ItemsNow())
+                {
+                    if (!Cargo.IsLinked(it.Definition))
+                    {
+                        continue;
+                    }
+                    try
+                    {
+                        Vector3 at = i.CartPoint();
+                        if (MainGame.Instance.dropSystem.DropItem(it, i.SceneId, at) || Cargo.RescueZombie(it, i.SceneId, at, "removed with " + i.Describe()))
+                        {
+                            i.CargoRig.Forget(it);
+                            zombies++;
+                        }
+                        else
+                        {
+                            Plugin.Log.LogWarning($"Cargo: zombie {it.id} on {i.Describe()} could not be set down (removed: {why}); it is LOST.");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"Cargo: setting zombie {it.id} down from {i.Describe()} failed (removed: {why}): {e}");
+                    }
+                }
                 i.Discard();
             }
             Unregister(i);
-            Plugin.Log.LogInfo($"Mount: removed {i.Describe()} ({why}); {i.CargoRig.Count} item(s) on it are gone with it.");
+            string zombieNote = zombies > 0 ? $", {zombies} zombie(s) set down where it stood" : "";
+            Plugin.Log.LogInfo($"Mount: removed {i.Describe()} ({why}); {i.CargoRig.Count} item(s) on it are gone with it{zombieNote}.");
             // Its children go with it (MountSpawn.RemoveWithParent), or stay as orphans shuffling where they are.
             foreach (Instance c in new List<Instance>(All))
             {
@@ -966,6 +994,8 @@ namespace GK2DonkeyAPI
         internal static void LendCargoToSave()
         {
             lent.Clear();
+            // The sheet's test items sit on the ridden cart while it runs; they must not be lent into the save.
+            CargoSheet.Abort("save");
             foreach (Instance i in instances.ToArray())
             {
                 if (i.Ephemeral || i.CargoRig.Count == 0)
@@ -990,7 +1020,15 @@ namespace GK2DonkeyAPI
                         {
                             if (!MainGame.Instance.dropSystem.DropItem(it, i.SceneId, at))
                             {
-                                Plugin.Log.LogWarning($"Cargo: the game refused to put {it.id} of {i.Describe()} into the save; it is not in this save.");
+                                // A zombie must be somewhere in the save: stood up in the world at the cart, off the cart.
+                                if (Cargo.RescueZombie(it, i.SceneId, at, "lending to the save"))
+                                {
+                                    i.CargoRig.Forget(it);
+                                }
+                                else
+                                {
+                                    Plugin.Log.LogWarning($"Cargo: the game refused to put {it.id} of {i.Describe()} into the save; it is not in this save.");
+                                }
                                 continue;
                             }
                             // The same Item (a single big item is dropped as itself): in the scene's drops, or in its queue

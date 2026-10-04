@@ -79,7 +79,14 @@ The log has no warnings or errors from any mod.
   throw goes through the game's own head-item removal, so the log says "taken off the cart by the game", not "put
   into". Once, at the bank, the cart logged `[cart] no ground sample … cart=NaN (raycast:Ground/none)`, meaning
   there was no ground under it (water). It held its height (applied 0.000); harmless.
-- **13 and 14 not done:** zombies aren't unlocked in the user's game yet.
+- **13 and 14 (run 2026-10-05, zombies unlocked):**
+  - **13:** with the cart full, a zombie on the ground can't be taken (no outline, E does nothing). That is today's
+    rule: `RefuseGroundItem` refuses zombies whenever mounted, in either style. It does not go to the head as this
+    step expected.
+  - **14 passed:** `cart full, wood dropped in front of the keeper` (twice), after `(2/2)`.
+  - **Found:** in Ride style (and with a full cart), a zombie at its job offers "[E] Take", and taking it lays it on
+    the ground, off its job (`body_zombie set down in front of the keeper`). Fix and the zombies-on-cart plan:
+    [zombies-on-cart.md](zombies-on-cart.md).
 - **15 passed:** `[sheet] set the cargo down first (the sheet needs an empty cart)`.
 - **16 not possible:** sleeping while mounted can't be done (see below).
 - **17 passed, but only in Unity's `Player.log`**

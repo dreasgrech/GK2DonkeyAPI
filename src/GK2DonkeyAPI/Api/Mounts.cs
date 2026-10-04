@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 21, 0);
+        public static readonly Version ApiVersion = new Version(0, 22, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -222,6 +222,7 @@ namespace GK2DonkeyAPI.Api
         //   StayMountedThroughDoors  keep riding through doors that load another scene
         //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
         //   ShowMessages             the keeper's thought bubble for refusals
+        //   CargoZombies             zombies ride on the cart (0.22.0, on); off: the cart refuses them
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -234,7 +235,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies,
                 }));
             }
         }

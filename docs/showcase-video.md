@@ -1,43 +1,103 @@
-# Showcase video (plan, 2026-10-03; not shot yet)
+# Showcase video (plan, revised 2026-10-04; not shot yet)
 
-A short video showing as many Saddle Up features as possible, about 75 seconds. Each shot covers two or three features.
+A short video showing as many Saddle Up features as possible, about 75 seconds. Each shot covers two or three
+features. The setup and the edit are automated (see "Automation" below); the action is played by hand.
 
 ## Shot list
 
 | # | Time | Shot | Features | Caption idea |
 |---|---|---|---|---|
-| 1 | 0–5 | Cold open: the keeper at the graveyard presses **H**. The donkey trots in from off screen with a couple of foals behind it; he jumps on. | Calling the donkey, mounting, foals | "Your own donkey." |
-| 2 | 5–12 | Ride fast across a hill; a short bray. | Riding speed, the tilt on slopes, bray sounds | "Ride it." |
+| 1 | 0–5 | Cold open: the keeper at the graveyard, facing away from the camera's edge, presses **H** and turns: the donkey is there with its foals; he jumps on. (H puts it next to him at once, it doesn't trot in: the turn or a cut on the key press hides that.) | Calling the donkey, mounting, foals | "Your own donkey." |
+| 2 | 5–12 | Ride fast across a hill; a short bray. The rider bobs, his hands and head move with the walk. | Riding speed, the donkey on the ground surface and the cart pitch on slopes, rider motion, bray sounds | "Ride it." |
 | 3 | 12–20 | Press **G** mid-ride: the cart rolls up and is hitched; drive off with the **bell**. | Switching H/G, hitching, the bell | "Hitch the cart." |
 | 4 | 20–32 | Drive past a log pile and pick up a log (it lands on the cart), then a stone. Pull up at the workbench pile and hand them in from the cart. | The cart carries two items; piles take from the cart | "Haul logs, stone…" |
 | 5 | 32–38 | A corpse onto the cart, drive to a grave, bury it from the cart. | Corpses, grave and quest hand-ins | "…and the dead." |
-| 6 | 38–44 | **H** leaves the cart standing with its load; ride on. Cut back: walk up, **E** takes the top item, **J** takes the cart. | The standing cart, taking from the back, J | "Leave it loaded." |
-| 7 | 44–50 | Get off at the house door: the donkey stays outside, shuffling; the foals come in with you. Walk back out. | Getting off at doors, shuffling, foals indoors | "They follow you home." |
-| 8 | 50–56 | Walk up to the donkey: the prompt reads **"[E] Ride Bella"**. | The name; the donkey stays in the world | "Name it." |
-| 9 | 56–66 | **Choose colours**: click through coat, harness, paint, wheels and hubs while the real donkey and cart change live. Quick cut to the picture in the Mods menu. | The live colour picker, wheel and hub colours | "Make it yours." |
-| 10 | 66–72 | Dusk or night: the cart's lantern lit, the hanging lamp swinging; the light switches warm, then green. | Lantern, light colour | "Light the way." |
-| 11 | 72–75 | Save and quit, load: it's where you left it, with its load. End card: logo, "Requires GK2 Donkey API". | Kept with the save | "It's still there." |
+| 6 | 38–48 | **H** leaves the cart standing with its load; ride off. Walk back on foot: "[E] Ride Bella" shows at the donkey; carrying a stone, **E** puts it on the cart; at the back, **E** takes the top item; ride up and **E** hitches it. | The standing cart, the name, loading and taking on foot, hitching with E | "Leave it loaded." |
+| 7 | 48–54 | Ride to the house door and go in: the donkey stays on the doorstep, the foals come in with you and trot after you. Walk back out. | Getting off at doors, foals indoors, lively foals | "They follow you home." |
+| 8 | 54–64 | **Choose colours**: click through coat, harness, paint, wheels and hubs while the real donkey and cart change live. Quick cut to the picture in the Mods menu. | The live colour picker, wheel and hub colours | "Make it yours." |
+| 9 | 64–70 | Night: the cart's lantern lit, the hanging lamp swinging; the light switches warm, then green. | Lantern, light colour | "Light the way." |
+| 10 | 70–75 | Hard cut from day to night (or after a reload), the donkey and its load in the same spot. End card: logo, "Requires GK2 Donkey API". | Kept with the save | "It's still there." |
+
+Changes from the first plan (2026-10-03): shot 1 no longer has the donkey trot in from off screen; shot 2's "tilt"
+became the ground surface and the cart pitch (the slanted donkey was rejected, [slopes.md](slopes.md)); the old shots 6
+and 8 are one take, with loading on foot and hitching with E added; lively foals and rider motion added; shot 11's
+loading screen replaced by a hard cut.
+
+**Before shooting shot 7:** confirm in game that riding through a door leaves the donkey on the doorstep
+([open-items.md](open-items.md) 9n, last check; fixed 2026-10-04).
 
 ## Ways to tighten it
 
-- **Merge shots 6 and 8:** walk back to the standing cart, see "[E] Ride Bella", take the top item, press J. One take.
-- **Shot 11 is a weak picture** (a loading screen). A hard cut between two times of day, with the donkey in the same
-  spot, reads faster.
 - **An optional ending for mod authors (+5 s):** a herd of donkeys with carts across a field (the herd test mod),
   "Built on GK2 Donkey API". Only if the video should pitch the API too.
-- **Drop first if it runs long:** shot 5, the menu half of shot 9, shot 10.
-
-## Before recording
-
-- One save with Baby donkeys at 2–3, "Baby donkeys come indoors" on, a name set, and a striking custom colour ready
-  to switch to.
-- Logs, stone and a corpse along one route that ends at a pile and a grave: shots 4 and 5 become one drive.
-- Shot 10 recorded separately at night; shot 9 by day.
-- "Bell sound when setting off" on for shot 3. "Say why mounting is refused" on, in case a refusal bubble makes a gag.
-- Key presses shown on screen (H, G, E, J, B): the keys are the core of how it plays.
+- **Drop first if it runs long:** shot 5, the menu half of shot 8, shot 9.
 
 ## Still to decide
 
 - Where it goes: the Nexus page and YouTube (landscape), or a vertical short (the timings change).
-- Music only, or the game's audio with the brays and the bell (they sell the feel).
+- Music only, or the game's audio with the brays and the bell (they sell the feel). The game's soundtrack is
+  extracted to `C:\ClaudeCodeTemp\GK2-music\music\` (and every sound to `...\sfx\`); first picks by name:
+  `gameplay_track_calm`, `village`, `location_theme_village`, `heartwelming`. The music is the game makers': mod
+  videos with it are usually tolerated, but YouTube's Content ID may claim the video.
 - Saddle Up only, or the API pitched too.
+
+## Automation
+
+The split: everything around the action is scripted (setup, recording, key overlay, edit); the action itself is
+played by hand, because scripted walking looks robotic and the game's own work actions (picking up, handing in,
+burying) would each need new research. A bad take then costs seconds, not a reset. A shot is scripted further only
+if it keeps going wrong by hand.
+
+### 1. The director (a dev plugin, not shipped)
+
+Its own plugin (`dreas.gk2.showcasedirector`, one feature per plugin), using the public API wherever it can. A
+number key per shot (or a panel row) puts the game in that shot's starting state:
+
+| Setup step | How (decomp 1.008) |
+|---|---|
+| The keeper at the spot | `PlayerController.SetPosition` (same scene), on the ground at a saved spot |
+| Time of day | `EnvironmentEngine.SetTimeOfDay(float)` |
+| Weather | `WeatherSystem.SetWeatherState(name, force: true)` / `ResetWeatherState()` (what `Flow_SetWeatherState` does) |
+| Donkey, foals, cart, load | The API: place the companion (`MountHandle` / `MountCompanion`), foals, the cart's cargo |
+| Name and colours | The API's companion settings (name, coat, harness, paint, wheels, hubs, lantern light) |
+| Items along a route (log, stone, corpse) | The game's `dropSystem.DropItem(item, scene, at)`, as the cart's set-down does |
+| No HUD | `HUD.SetMode` / `HUD.SetDisableState(HudStateType, ...)`: which mode hides it all is still to be found |
+| Key overlay | Draws the pressed key (H, G, E, J, B) big at the bottom for a second, and logs `[shot] key X at t` |
+
+Spots are saved in the director's own cfg with a "Save this spot for shot N" button, so they're chosen by walking
+there once. Each shot's setup is logged (`[shot] N ready`) so the recording script can wait for it.
+
+**Optional, per shot:** a cue list fired on timers (for example shot 3: G at 2.0 s, bell at 3.5 s; shot 9: light warm,
+then green). Only for the timed shots, if they keep going wrong by hand.
+
+**Riding along a route (only if needed):** waypoints fed into the movement input through the input hook the mod
+already has (HeadReroute's `PlayerInputHandler.UpdateInput` prefix), with eased turns. Not the game's walk-to-point:
+that ends a ride.
+
+### 2. Recording (OBS)
+
+- OBS Studio is installed, with its websocket (port and password in
+  `%APPDATA%\obs-studio\plugin_config\obs-websocket\config.json`).
+- A small script (Python, `obsws-python`, not installed yet) per take: start recording, wait for `[shot] N ready` in
+  `LogOutput.log`, record the shot's length plus a second either side, stop, and rename the file `shotN_takeM.mkv`.
+- One OBS scene: the game window only, 1080p or 1440p, 60 fps.
+
+### 3. The edit (ffmpeg)
+
+ffmpeg 8.1 is installed. A script builds the video from the shot list and a chosen take per shot:
+
+1. Cut each take to its slot (`-ss`/`-t`), with a short crossfade between shots (`xfade`).
+2. Captions with `drawtext` in the game's font, at the times in the shot list.
+3. Key presses: either the director's overlay (recorded in the video), or drawn by ffmpeg from the `[shot] key`
+   log lines.
+4. The music under the game's sound (`amix`, music at about 30%, faded out at the end), or the music alone.
+5. The end card (logo and "Requires GK2 Donkey API") as the last 3 seconds.
+
+A change to the shot list means running the script again, not editing again.
+
+### Order of work
+
+1. The director's setup steps and spot saving (most of the time saved), and finding the HUD mode.
+2. The key overlay.
+3. The OBS and ffmpeg scripts.
+4. Shoot by hand; script only the shots that keep failing.

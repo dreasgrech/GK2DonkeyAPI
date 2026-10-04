@@ -44,6 +44,13 @@ namespace GK2DonkeyAPI
             {
                 return false;
             }
+            if (Plugin.Quitting)
+            {
+                // The views go back while the game closes, and its asset system is being torn down: a first read now
+                // fails ("not found", seen 2026-10-05 in a session whose first view release was at the quit). Nothing
+                // is checked at the quit anyway; not marked as tried.
+                return false;
+            }
             tried = true;
             try
             {

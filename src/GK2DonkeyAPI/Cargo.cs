@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using HarmonyLib;
 using UnityEngine;
 
 using GK2DonkeyAPI.Api;
@@ -71,12 +72,79 @@ namespace GK2DonkeyAPI
         }
 
         internal static bool Allowed(Item item) => Rig.Allowed(item);
+
+        // An item that stands for a world object (a zombie: its UniqueId is the ZombieWgoData's, and the zombie's
+        // organs and gear are its nested inventory). Such an item must never be conjured from an id or thrown away,
+        // or the zombie is left with no body anywhere (or a body with no zombie).
+        internal static bool IsLinked(ItemDef def) => def != null && (def.isLinkedToWgo || def.itemGroupIds.Contains("zombie"));
+
+        // A zombie proper (item group "zombie", body_zombie): drawn as the game's zombie and a layout class of its own.
+        // Narrower than IsLinked on purpose: body_wild_zombie is in "wild_zombie", rides the cart as a shroud and keeps
+        // its place in the body class, whatever its isLinkedToWgo says.
+        internal static bool IsZombie(ItemDef def) => def != null && def.itemGroupIds.Contains("zombie");
+
+        // The last resort for a zombie whose item could not be set down or handed over: the zombie is stood up in the
+        // world where it was meant to go, with the game's own call (ZombieSystemData.PutZombieFromStoreToGameScene, which
+        // takes it out of the store of carried zombies, as placing one does). A carried zombie with no item anywhere
+        // could never be placed again. The cart is not touched here: the caller takes the item off it. False for any
+        // other item, or when the game refuses this too (then the caller reports it LOST).
+        internal static bool RescueZombie(Item item, string sceneId, Vector3 at, string why)
+        {
+            if (item == null || item.IsEmpty || !IsLinked(item.Definition))
+            {
+                return false;
+            }
+            try
+            {
+                ZombieSystemData zs = MainGame.ZombieSystemData;
+                ZombieWgoData z = zs?.GetZombie(item.UniqueId);
+                if (z == null || string.IsNullOrEmpty(sceneId))
+                {
+                    return false;
+                }
+                if (!ReferenceEquals(z.ZombieItem, item))
+                {
+                    z.SetZombieItem(item); // the object with its organs and gear, whatever happened before
+                }
+                zs.PutZombieFromStoreToGameScene(item.UniqueId, sceneId, at);
+                Plugin.Log.LogWarning($"Cargo: zombie {z.Name} could not be set down ({why}); it stands in the world at {at:F2} instead.");
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Cargo: standing zombie {item.id} up in the world failed ({why}): {e}");
+                return false;
+            }
+        }
         internal static int SetDownHeld(PlayerData pd) => Rig.SetDownHeld(pd);
         internal static string ResolveIcon(ItemDef def) => Rig.ResolveIcon(def);
         internal static Transform FindOverheadElement(ItemDef def) => Rig.FindOverheadElement(def);
         internal static bool MeasureMeshes(Transform root, Transform space, out Bounds bounds, bool includeInactive = false) => Rig.MeasureMeshes(root, space, out bounds, includeInactive);
         internal static bool IsShadowMesh(string name) => Rig.IsShadowMesh(name);
         internal static DropViewAtomMesh FindSourceAtom() => Rig.FindSourceAtom();
+
+        private static readonly AccessTools.FieldRef<DropViewAtomMesh, List<DropViewAtomMeshElement>> ZombieDropPrefabs =
+            AccessTools.FieldRefAccess<DropViewAtomMesh, List<DropViewAtomMeshElement>>("zombieWorkerDropPrefabs");
+
+        // The lying zombie (pose 2) of the keeper's overhead atom, the first head: what a zombie on the cart is drawn
+        // with, for its size. Null when the atom or its list is missing.
+        internal static Transform ZombieDropPrefab()
+        {
+            DropViewAtomMesh src = FindSourceAtom();
+            List<DropViewAtomMeshElement> list = src != null ? ZombieDropPrefabs(src) : null;
+            if (list == null)
+            {
+                return null;
+            }
+            foreach (DropViewAtomMeshElement el in list)
+            {
+                if (el != null)
+                {
+                    return el.transform;
+                }
+            }
+            return null;
+        }
 
         // A packer setting or a layout entry changed: every cart redraws with its own settings.
         public static void RefreshViews()
@@ -101,6 +169,9 @@ namespace GK2DonkeyAPI
             private float bedWidth = 0.75f;  // measured from the empty cart body (its size across, local z)
             private float bedLength = 0.9f;  // measured from the empty cart body (its size along, local x)
             private readonly List<DropViewAtomMesh> views = new List<DropViewAtomMesh>();
+            // What each view shows now ("icon:<id>" or "zombie:<head>:<lut>"): a zombie's IconId is its head id, so two
+            // zombies with the same head but other colours swapping views would not be told apart by IconId alone.
+            private readonly Dictionary<DropViewAtomMesh, string> viewKeys = new Dictionary<DropViewAtomMesh, string>();
             private bool subscribed;
             private bool unloading;
             internal bool Unloading => unloading;
@@ -157,6 +228,7 @@ namespace GK2DonkeyAPI
                         }
                         if (inv.AddItemToInventory(it))
                         {
+                            HeadReroute.RelinkZombie(inv, it, owner.Describe());
                             back++;
                         }
                         else
@@ -165,7 +237,8 @@ namespace GK2DonkeyAPI
                             {
                                 DropAtKeeper(MainGame.PlayerData, it);
                             }
-                            else if (!MainGame.Instance.dropSystem.DropItem(it, owner.SceneId, owner.CartPoint()))
+                            else if (!MainGame.Instance.dropSystem.DropItem(it, owner.SceneId, owner.CartPoint())
+                                && !RescueZombie(it, owner.SceneId, owner.CartPoint(), "did not fit on the re-summoned cart"))
                             {
                                 Plugin.Log.LogWarning($"Cargo: {it.id} did not fit on {owner.Describe()} and the game refused to set it down; it is LOST.");
                             }
@@ -215,6 +288,7 @@ namespace GK2DonkeyAPI
                     if (Allowed(it) && inv.CanAddItemToInventory(it))
                     {
                         pd.InsertOverheadItemTo(donkey.Data, it);
+                        HeadReroute.RelinkZombie(inv, it, owner.Describe());
                         moved++;
                     }
                 }
@@ -259,6 +333,7 @@ namespace GK2DonkeyAPI
                     Resync("load failed");
                     return "The cart is full.";
                 }
+                HeadReroute.RelinkZombie(inv, item, owner.Describe());
                 pd.RemoveOverheadItem(item);
                 MountSounds.CargoLanded();
                 Plugin.Log.LogInfo($"Cargo: {itemId} loaded onto {owner.Describe()} from the hands; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} still held.");
@@ -300,6 +375,7 @@ namespace GK2DonkeyAPI
                 if (!pd.TryAddOverheadItemNoReplace(last))
                 {
                     inv.AddItemToInventory(last);
+                    HeadReroute.RelinkZombie(inv, last, owner.Describe());
                     Resync("hands refused");
                     return "My hands are full.";
                 }
@@ -335,6 +411,7 @@ namespace GK2DonkeyAPI
                 }
                 subscribed = false;
                 views.Clear();
+                viewKeys.Clear();
                 Placed.Clear();
                 // The holder (and the cargo meshes in it) is the mod's: it must not go back to the game's pool with the
                 // cart parts, where the next donkey built from them (the game's delivery donkey too) would show it. Out
@@ -439,6 +516,26 @@ namespace GK2DonkeyAPI
                 {
                     owner.OnCargoChanged(); // refreshes the views and re-collects the lifted cart parts
                 }
+                if (owner.IsRidden)
+                {
+                    RefreshTargetHint();
+                }
+            }
+
+            // The hint over what the keeper faces is built when he turns to it and rebuilt only when the game asks
+            // (Wgo.DrawWidgets); room on the cart changes what it offers (a working zombie's "[E] Take" while the cart
+            // is the hands), so it is asked here. Found in game 2026-10-05: after setting a zombie down, "[E] Take" came
+            // back only after turning away and back.
+            private static void RefreshTargetHint()
+            {
+                try
+                {
+                    MainGame.PlayerController?.PlayerInteractionComponent?.WgoUnderInteraction?.DrawWidgets();
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Cargo: redrawing the hint of what the keeper faces failed: " + e.Message);
+                }
             }
 
             private void SyncMirror()
@@ -528,9 +625,11 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogWarning("Cargo: setting the item down failed: " + e);
                 }
             }
+            // Zombies only with the behaviour key CargoZombies (docs/zombies-on-cart.md); everything else always.
             internal static bool Allowed(Item item)
             {
-                return item != null && !item.IsEmpty && item.Definition != null && !item.Definition.itemGroupIds.Contains("zombie");
+                return item != null && !item.IsEmpty && item.Definition != null
+                    && (!item.Definition.itemGroupIds.Contains("zombie") || Plugin.CargoZombies.Value);
             }
 
             // Everything back to the keeper: hands while they are free, the rest dropped at his feet (the game's own
@@ -580,12 +679,24 @@ namespace GK2DonkeyAPI
                             {
                                 inv.RemoveItemFromInventoryByUID(it);
                             }
+                            // A zombie goes to the hands only for the save hand-back (it comes back onto the cart right
+                            // after). At any other ride end the ground: an end forced by the game (a fight, sleep, work,
+                            // a script) has already emptied or checked the hands by then.
+                            bool linked = IsZombie(it.Definition);
+                            bool handsOk = toHands && (!linked || reason == "save");
                             if (pd == null)
                             {
-                                lost++;
-                                Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): no player data.");
+                                if (RescueZombie(it, owner.SceneId, owner.CartPoint(), "unload on " + reason + ", no player data"))
+                                {
+                                    dropped++;
+                                }
+                                else
+                                {
+                                    lost++;
+                                    Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): no player data.");
+                                }
                             }
-                            else if (toHands && pd.TryAddOverheadItemNoReplace(it))
+                            else if (handsOk && pd.TryAddOverheadItemNoReplace(it))
                             {
                                 hands++;
                             }
@@ -593,7 +704,7 @@ namespace GK2DonkeyAPI
                             {
                                 dropped++;
                             }
-                            else if (!toHands && pd.TryAddOverheadItemNoReplace(it))
+                            else if (!toHands && !linked && pd.TryAddOverheadItemNoReplace(it))
                             {
                                 hands++;
                             }
@@ -624,6 +735,11 @@ namespace GK2DonkeyAPI
                             }
                             catch
                             {
+                            }
+                            if (RescueZombie(it, pd != null ? pd.currentGameSceneId : owner.SceneId, pd != null ? pd.position.Value : owner.CartPoint(), "unload on " + reason))
+                            {
+                                dropped++;
+                                continue;
                             }
                             lost++;
                             Plugin.Log.LogWarning($"Cargo: {it.id} LOST on unload ({reason}): {e}");
@@ -816,11 +932,94 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogWarning($"Cargo: the game refused to drop {item.id} (scene '{pd.currentGameSceneId}'); it went to the keeper's hands.");
                     return true;
                 }
+                if (RescueZombie(item, pd.currentGameSceneId, pd.position.Value, "the game refused the drop"))
+                {
+                    return true;
+                }
                 Plugin.Log.LogWarning($"Cargo: the game refused to drop {item.id} (scene '{pd.currentGameSceneId}'); it is LOST.");
                 return false;
             }
 
             // ------------------------------------------------------------------ views and the packer
+
+            // The drop view's zombie heads (the asset bundles, 2026-10-04: zombieWorkerDropPrefabs holds
+            // drops_item_zombie_pose2_t1050..1059 on the keeper's overhead atom the views are cloned from).
+            private const int FirstZombieHead = 1050, LastZombieHead = 1059;
+
+            // Shows the item on the view: the item's own mesh, or for a zombie the game's lying zombie (pose 2, as on the
+            // ground: the views have isOverhead false) with its head and head colours, as the game draws a carried or
+            // dropped zombie (AnimationComponentBase.ApplyOverheadItemToView, DropView). Re-activated only when what it
+            // shows changes. Colliders off and the holder's layer again afterwards: a zombie's mesh is instantiated into
+            // the view on first use (DropViewAtomMesh.GetCachedZombieElement), after MakeView set them.
+            private void ActivateFor(DropViewAtomMesh view, Item item)
+            {
+                viewKeys.TryGetValue(view, out string had);
+                string key;
+                ZombieWgoData z = IsZombie(item.Definition) ? MainGame.ZombieSystemData?.GetZombie(item.UniqueId) : null;
+                if (z != null)
+                {
+                    int head = z.GetGameResInt("zombie_head_id");
+                    string lut = z.GameResStr.Get("zombie_head_lut");
+                    if (head < FirstZombieHead || head > LastZombieHead)
+                    {
+                        Plugin.Log.LogInfo($"Cargo: zombie {z.Name} has head {head}, which the drop view doesn't carry; drawn with head {FirstZombieHead}.");
+                        head = FirstZombieHead;
+                    }
+                    key = "zombie:" + head + ":" + lut;
+                    if (had == key)
+                    {
+                        return;
+                    }
+                    Texture2D tex = null;
+                    if (!string.IsNullOrEmpty(lut))
+                    {
+                        try
+                        {
+                            tex = ZombieCustomizationConfig.GetHeadTextureByName(ZombieSkinHelper.ZOMBIE_WORKER_DATA_ID, lut);
+                        }
+                        catch (Exception e)
+                        {
+                            Plugin.Log.LogInfo($"Cargo: zombie {z.Name}'s head colours '{lut}' not found ({e.GetType().Name}); drawn without them.");
+                        }
+                    }
+                    string headId = head.ToString("D4");
+                    view.isOverhead = false;
+                    view.ActivateZombie(headId, tex);
+                    string want = "drops_item_zombie_pose2_t" + headId;
+                    if (view.MeshElement == null || view.MeshElement.name != want)
+                    {
+                        Plugin.Log.LogWarning($"Cargo: the cargo view has no lying zombie '{want}' (shows '{view.MeshElement?.name ?? "nothing"}'); zombie {z.Name} is drawn as the game's placeholder.");
+                        string icon = ResolveIcon(item.Definition);
+                        view.Activate(icon);
+                        key = "icon:" + icon;
+                    }
+                    else
+                    {
+                        Plugin.Log.LogInfo($"Cargo: zombie {z.Name} drawn lying on {owner.Describe()} (head {headId}, colours {(string.IsNullOrEmpty(lut) ? "none" : lut)}).");
+                    }
+                }
+                else
+                {
+                    string icon = ResolveIcon(item.Definition);
+                    key = "icon:" + icon;
+                    if (had == key && view.IconId == icon)
+                    {
+                        return;
+                    }
+                    view.Activate(icon);
+                }
+                viewKeys[view] = key;
+                view.SetInteractionState(isUnderInteraction: false);
+                int layer = container != null ? container.gameObject.layer : view.gameObject.layer;
+                foreach (Transform t in view.GetComponentsInChildren<Transform>(includeInactive: true))
+                {
+                    t.gameObject.layer = layer;
+                }
+                foreach (Collider c in view.GetComponentsInChildren<Collider>(includeInactive: true))
+                {
+                    c.enabled = false;
+                }
+            }
 
             private class Drawn
             {
@@ -889,20 +1088,16 @@ namespace GK2DonkeyAPI
                             }
                         }
                         view.gameObject.SetActive(true);
-                        string icon = ResolveIcon(drawn[i].Item.Definition);
-                        if (view.IconId != icon)
-                        {
-                            view.Activate(icon);
-                            view.SetInteractionState(isUnderInteraction: false);
-                            foreach (Collider c in view.GetComponentsInChildren<Collider>(includeInactive: true))
-                            {
-                                c.enabled = false;
-                            }
-                        }
+                        ActivateFor(view, drawn[i].Item);
                         drawn[i].View = view;
-                        if (!MeasureMeshes(view.transform, view.transform, out drawn[i].Box))
+                        bool measured = MeasureMeshes(view.transform, view.transform, out drawn[i].Box);
+                        if (!measured)
                         {
                             drawn[i].Box = new Bounds(Vector3.zero, new Vector3(0.5f, 0.4f, 0.5f));
+                        }
+                        if (IsZombie(drawn[i].Item.Definition))
+                        {
+                            Plugin.Log.LogInfo($"Cargo: zombie box on {owner.Describe()}: size {drawn[i].Box.size:F2}, centre {drawn[i].Box.center:F2}{(measured ? "" : " (not measured: the default box)")}.");
                         }
                     }
                     for (int j = drawn.Count; j < views.Count; j++)
@@ -911,6 +1106,7 @@ namespace GK2DonkeyAPI
                         {
                             views[j].Deactivate();
                             views[j].gameObject.SetActive(false);
+                            viewKeys.Remove(views[j]);
                         }
                     }
 

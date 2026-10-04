@@ -339,6 +339,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> StayMountedThroughDoors;
         internal static Tuned<bool> DismountIndoors;
         internal static Tuned<bool> ShowMessages;
+        internal static Tuned<bool> CargoZombies;
         internal static ConfigEntry<bool> InstanceControls;
         internal static Tuned<KeyCode> HitchKey;
 
@@ -348,6 +349,9 @@ namespace GK2DonkeyAPI
             typeof(PlayerData_AddOverheadItem_Patch),
             typeof(BigDropInteractionHandler_HasInteraction_Patch),
             typeof(PlayerInteractionComponent_CanInteractWithDrop_Patch),
+            typeof(ZombieInteractionHandler_HasInteraction_Patch),
+            typeof(ZombieInteractionHandler_FormInteractionInfo_Patch),
+            typeof(ZombieStations_TakeBack_Patch),
             typeof(PlayerData_HasFreeOverheadSlot_Patch),
             typeof(PlayerData_TryGetOverheadItem_Patch),
             typeof(PlayerData_RemoveOverheadItem_Patch),
@@ -446,6 +450,8 @@ namespace GK2DonkeyAPI
                 "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
+            CargoZombies = Config.Bind("General", "CargoZombies", Defaults.Get("General", "CargoZombies", true),
+                "Zombies ride on the cart like any other load (two at once), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
             InstanceControls = Config.Bind("General", "InstanceControls", Defaults.Get("General", "InstanceControls", true),
                 "Donkeys and carts a mod left standing in the world (Mounts.SpawnDonkey / SpawnCart): the interact key next to a standing donkey rides it (empty hands), and next to a free cart while riding a donkey without its cart hitches it; a label over it says so. Off: only mods can do that (MountHandle.Ride, Mounts.Hitch).");
             HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),

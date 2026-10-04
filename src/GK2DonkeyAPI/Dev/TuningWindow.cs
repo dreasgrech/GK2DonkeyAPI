@@ -395,6 +395,7 @@ namespace GK2DonkeyAPI
             Header("Behaviour");
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
+            Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
             GUILayout.Label("While mounted the keeper faces only left or right, like the donkey.", small);
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
@@ -1186,6 +1187,11 @@ namespace GK2DonkeyAPI
             }
             GUILayout.EndHorizontal();
             GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
+            if (GUILayout.Button("Spawn a test zombie here", Wd(220f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnZombie());
+            }
+            GUILayout.Label("A real zombie lying in front of the keeper, made the way the game's own quest scripts drop one (its organs, collar and looks included). It is saved like any other zombie: reload without saving to be rid of it.", small);
 
         }
 

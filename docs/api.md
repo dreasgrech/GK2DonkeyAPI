@@ -135,6 +135,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `ShowMessages`
 - `IdleShuffle` (0.7.0, off in the core): donkeys standing in the world **without a cart** take a few slow steps now
   and then, so they don't stand perfectly still. See "Idle shuffle" below.
+- `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load ([zombies-on-cart.md](zombies-on-cart.md)).
+  Off: the cart refuses them, and a zombie can't be taken while riding. (Being built: until the cart takes zombies,
+  both are refused either way.)
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 

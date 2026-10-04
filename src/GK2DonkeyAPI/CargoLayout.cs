@@ -238,7 +238,8 @@ namespace GK2DonkeyAPI
             sb.AppendLine("#");
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
             sb.AppendLine("# box_clothes_1/2, box_fabric, box_vine); body (body_corpse, body_wild_zombie); low crate (15 box_* incl. preserves);");
-            sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate).");
+            sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate);");
+            sb.AppendLine("# zombie (body_zombie: the game's lying zombie, one body for all ten heads; a class of its own, matched by id only).");
             sb.AppendLine("version = 1");
             foreach (string id in itemOrder)
             {
@@ -300,7 +301,9 @@ namespace GK2DonkeyAPI
             try
             {
                 ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
-                Transform el = def != null ? Cargo.FindOverheadElement(def) : null;
+                // A zombie has no overhead element of its own: its box is the game's lying zombie (one body for all ten
+                // heads, identical head bounds: the asset bundles, 2026-10-04).
+                Transform el = def == null ? null : Cargo.IsZombie(def) ? Cargo.ZombieDropPrefab() : Cargo.FindOverheadElement(def);
                 if (el != null && Cargo.MeasureMeshes(el, el, out Bounds bb, includeInactive: true))
                 {
                     b = bb.size;
@@ -319,8 +322,35 @@ namespace GK2DonkeyAPI
             {
                 return true;
             }
+            if (IsZombieId(a) || IsZombieId(b))
+            {
+                return false; // zombies are a class of their own: tuning one never moves another item, nor the other way
+            }
             Vector3 d = BoxOf(a) - BoxOf(b);
             return Mathf.Abs(d.x) <= SizeTolerance && Mathf.Abs(d.y) <= SizeTolerance && Mathf.Abs(d.z) <= SizeTolerance;
+        }
+
+        private static readonly Dictionary<string, bool> zombieIds = new Dictionary<string, bool>(StringComparer.Ordinal);
+
+        private static bool IsZombieId(string itemId)
+        {
+            if (itemId == null)
+            {
+                return false;
+            }
+            if (!zombieIds.TryGetValue(itemId, out bool z))
+            {
+                try
+                {
+                    z = Cargo.IsZombie(GameBalance.Me.GetDataOrNull<ItemDef>(itemId));
+                }
+                catch
+                {
+                    z = false;
+                }
+                zombieIds[itemId] = z;
+            }
+            return z;
         }
 
         // The entry covering this item's size class, or null. The exact id wins over a class match.

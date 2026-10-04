@@ -139,9 +139,14 @@ namespace GK2DonkeyAPI
             {
                 return "not mounted";
             }
-            if (GameBalance.Me.GetDataOrNull<ItemDef>(itemId) == null)
+            ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
+            if (def == null)
             {
                 return "unknown item id: " + itemId;
+            }
+            if (Cargo.IsLinked(def))
+            {
+                return "zombies are world objects linked to their item; one made from an id would have no zombie behind it";
             }
             try
             {
@@ -159,7 +164,8 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Takes the first item back out (Inventory.RemoveItemById, as the conveyor cell does) and discards it.
+        // Takes the first item back out (Inventory.RemoveItemById, as the conveyor cell does) and discards it; never a
+        // zombie.
         public static string TestUnload()
         {
             Wgo donkey = Mount.Donkey;
@@ -174,7 +180,13 @@ namespace GK2DonkeyAPI
                 {
                     return "cart inventory already empty";
                 }
-                string id = list[0].id;
+                // Never a zombie: discarding its item would leave the zombie with no body anywhere.
+                Item first = list.Find(x => x != null && !x.IsEmpty && !Cargo.IsLinked(x.Definition));
+                if (first == null)
+                {
+                    return "only zombies on the cart; the test unload discards items, so it leaves them alone";
+                }
+                string id = first.id;
                 List<Item> removed = donkey.Data.Inventory.RemoveItemById(id, 1);
                 var sb = new StringBuilder();
                 sb.Append($"removed {removed.Count} x '{id}' (discarded, test only); inventory now {list.Count}/{donkey.Data.Inventory.Data.InventorySize} | ");
@@ -238,7 +250,7 @@ namespace GK2DonkeyAPI
                 }
                 if (def.itemGroupIds.Contains("zombie"))
                 {
-                    return "zombies are world objects linked to their item; they cannot be spawned from an id";
+                    return "zombies are world objects linked to their item; use \"Spawn a test zombie\" instead";
                 }
                 Item item;
                 if (def.itemGroupIds.Contains("body"))
@@ -261,6 +273,68 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 return "spawn failed: " + e;
+            }
+        }
+
+        // A real zombie lying in front of the keeper, made the way the game's own "Drop Zombie" script node does it
+        // (Flow_DropZombie: a body definition's GenerateItem, ZombieSystemData.CreateZombieDrop, the game's drop), so it
+        // has its ZombieWgoData, organs, collar and skin like any other: never an item without a zombie. A body
+        // definition that makes body_zombie is used; without one, a corpse is turned into a zombie the way the
+        // resurrection table does it (UIResurrectionWindowData: a new body_zombie with the corpse's start items and
+        // contents). Test aid: it is a normal zombie and is saved like any other; reload without saving to be rid of it.
+        public static string SpawnZombie()
+        {
+            try
+            {
+                PlayerData pd = MainGame.PlayerData;
+                if (pd == null || MainGame.Instance?.dropSystem == null || MainGame.ZombieSystemData == null)
+                {
+                    return "no game loaded";
+                }
+                BodyDef zombieBody = GameBalance.Me.bodyDefs.Find(b => b != null && b.linkedBodyItemId == "body_zombie");
+                Item item;
+                string how;
+                if (zombieBody != null)
+                {
+                    item = zombieBody.GenerateItem();
+                    how = "body definition " + zombieBody.id;
+                }
+                else
+                {
+                    BodyDef corpseBody = GameBalance.Me.GetDataOrNull<BodyDef>("body_0_1");
+                    if (corpseBody == null)
+                    {
+                        return "no body definition to make a zombie from";
+                    }
+                    Item corpse = corpseBody.GenerateItem();
+                    item = new Item("body_zombie");
+                    if (corpse.TryGetProperty<BodyZombieStartItemsSerializedItemProperty>(out var start))
+                    {
+                        item.AddProperty(start);
+                    }
+                    foreach (Item part in new List<Item>(corpse.Inventory))
+                    {
+                        item.AddItemToInventory(part);
+                    }
+                    how = "a corpse of body_0_1, resurrected";
+                }
+                Vector3 pos;
+                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(pd.position.Value, pd.Direction, out pos))
+                {
+                    pos = pd.position.Value + new Vector3(pd.Direction.x, 0f, pd.Direction.y);
+                }
+                string scene = pd.currentGameSceneId;
+                ZombieWgoData z = MainGame.ZombieSystemData.CreateZombieDrop("zombie", pos, scene, item);
+                if (!MainGame.Instance.dropSystem.DropItem(item, scene, pos))
+                {
+                    MainGame.ZombieSystemData.RemoveZombie(z.UniqueId); // no zombie without its item
+                    return "drop REFUSED; the test zombie was removed again";
+                }
+                return $"spawned test zombie {z.Name} from {how}, {item.Inventory.Count} item(s) inside, at {pos:F2}. It is a real zombie and is saved like any other: reload without saving to be rid of it.";
+            }
+            catch (Exception e)
+            {
+                return "zombie spawn failed: " + e;
             }
         }
 

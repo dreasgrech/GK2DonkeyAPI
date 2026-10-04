@@ -143,7 +143,9 @@ In a game:
       `the game's walk grid has no free cell`);
     - riding along a fence and hitching there still works (the 10-03 regression).
     - ride into the house and into the church (with and without the cart): the donkey stays on the doorstep outside
-      (`... stays where it stood ...: the keeper is not on it`), never inside next to you.
+      (`... stays where it stood ...: the keeper is not on it`), never inside next to you. **Passed for the dungeon
+      door with the cart, 2026-10-05** (log: `stays where it stood at (23.87, 3.60, 20.56): the keeper is not on it
+      (..., a door)`, the foals came in and went back out). House and church still to see.
     - after the second fix (footprint, levels): mining the ore while riding parks the donkey fully clear of the ore,
       on the floor (`moved ... to (..., 6.00, ...)`, never on the rock), or on the keeper's spot.
 9o. **One hint at a time** (2026-10-04, `InstanceControls.Find`): the mod's hints ("Ride", "Load on cart", "Take
@@ -154,6 +156,49 @@ In a game:
     - facing an ore or a tree with the donkey beside it: only the game's "[F]"; turn or step to the donkey and "[E]
       Ride" shows (and E rides only while it shows);
     - normal "Ride", carrying a body to the cart ("Load on cart"), "Take from cart" and "Hitch the cart" still show.
+9p. **Zombies step 1, safety** (2026-10-05, [zombies-on-cart.md](zombies-on-cart.md) §6 step 1). **Passed in game
+    2026-10-05** (the user: "looks good"; log: Ride and Cart, no warnings, no zombie set down). The Debug-tab and
+    sheet guards weren't exercised:
+    - riding (Ride style, and Cart style), a zombie at its job shows only "[F] Inspect", no "[E] Take"; E does
+      nothing, and it stays at its job. On foot, "[E] Take" works as before;
+    - inspect (F) on that zombie still opens its window while riding;
+    - the Debug tab's test unload never discards a zombie, and the test load refuses `body_zombie`;
+    - the cargo sheet: piles and scripts don't see its test items, and a save during a run aborts it (`[sheet]
+      aborted (save)`);
+    - no warnings from `zombie take check` or `hiding the zombie's take hint`.
+9q. **Zombies on the cart, steps 2–6** (2026-10-05, [zombies-on-cart.md](zombies-on-cart.md) §6 and its test
+    list). Watch the log for `linked to its copy`, `drawn lying`, `zombie box`, and never `LOST`, `no zombie behind
+    it` or `stands in the world … instead` (that last one means a rescue ran: report it).
+    **Round 1 passed (2026-10-05, log):** no warning or error of any kind, game included.
+    - Both zombies (`zombie_name_14` head 1059 / `hed_lut_02`, `zombie_name_28` head 1055 / `hed_lut_04`) went on
+      the cart and were drawn lying. Each relink kept `9 item(s) inside`: after pickups, doors (re-summon), loading
+      on foot and the save.
+    - Measured box 0.98 × 0.32 × 0.60, as the asset bundles said.
+    - Handed off the cart by the game twice (station), set down behind the cart (spot from the zombie's own length,
+      came to rest 0.3–1.4 behind), taken into the hands on foot and loaded back with E.
+    - Through doors with 1 and 2 aboard. Saved and woke with both on the standing cart: lent to the save, back on
+      the cart after it.
+    - Saddle Up's donkey parks with its cargo at a dismount (not an API summon), so zombies stay on the standing
+      cart; test 7's "set down" applies to API summons only.
+    - **Found (the user, round 2):** with two zombies aboard a working zombie showed no "[E] Take" (right), but
+      after setting one down it came back only after turning away and back. The game rebuilds a hint only when asked
+      (`Wgo.DrawWidgets`); now asked at every change of the ridden cart (`Rig.RefreshTargetHint`). Built, to test:
+      set one down while facing the worker, and "[E] Take" appears at once; load one back and it goes.
+    - **Round 3 (2026-10-05, log):** no warnings or errors. The test zombie (`zombie_name_29`, made from the body
+      definition `zombie_fighter_pike`, 13 items inside) lay on the ground. With the cart full, E on it gave `cart
+      full, body_zombie dropped in front of the keeper` each time, the same as any ground item (the zombie's own
+      hint "[E] Take / [F] Inspect" shows there; kept, so "The cart is full." still explains it). All three
+      zombies swapped on and off the cart (station hand-ins, set-downs behind the cart) with their item counts
+      unchanged (9, 9, 13).
+    - Perf in that session: the mod at 1–2.4 ms a frame, all of it the open dev panel (Window 0.8 ms, Debug tab
+      ~0.5 ms and 60–110 KB/frame of GUI garbage). Dev only; the core's own Tick stayed at 0.2 ms.
+    - **Round 3 passed (the user):** the hint redraw (set one down facing a worker: "[E] Take" at once; load one:
+      gone) and the setting off (the cart refuses zombies; no worker taken while riding).
+    - Fixed on the way (2026-10-05): a quit-time warning, `the donkey prefab could not be read (not found)`. The
+      prefab audit reads the prefab on the first view release, which in that session was at the quit, with the asset
+      system torn down; `DonkeyPrefab.Ready` now skips while `Plugin.Quitting`.
+    - Not yet: tuning. Already done: a third zombie with a full cart (only two in the save; a Debug-tab "Spawn a test zombie" button is
+      built for it), the setting off, and tuning.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially
     the `[indoors]` timing line ("control not back yet"), small rooms, and doors to other scenes and the church.
 
@@ -180,6 +225,16 @@ closed):
   the Mods menu).
 - **Foal sounds:** investigated, nothing built ([foal-sounds.md](foal-sounds.md)). Waiting on the audition
   (`C:\ClaudeCodeTemp\GK2-foal-sound-audition\`): the pitch, whether a filter is worth it, which calls.
+- **The game's sounds:** all 6,393 clips extracted 2026-10-04 ([game-sounds.md](game-sounds.md)); a 66-clip donkey
+  shortlist waits for the user to listen (talking-donkey lines, footsteps by ground, cart loops, bells).
+- **Showcase video** ([showcase-video.md](showcase-video.md), revised 2026-10-04): shot list updated, automation
+  planned (a dev "director" plugin for each shot's setup, OBS and ffmpeg scripts), nothing built. To decide:
+  landscape or vertical, music or game audio, Saddle Up only or the API too. Shot 7 waits for the door fix (9n).
+- **Zombies on the cart** ([zombies-on-cart.md](zombies-on-cart.md), investigated 2026-10-04): possible with
+  changes listed in the doc. Decided: two at once, fully tunable like every item, setting on by default. Key catch:
+  the inventory add copies a zombie's organs and gear away from it, so every add needs a relink. Second-round audit
+  done; the build plan (§6) waits for approval. Found on the way, in the current build: in Ride style (or with a
+  full cart), E on a working zombie pulls it off its job and lays it on the ground (§5 finding 4). Zombies are now unlocked in the user's save, so the old zombie tests can run.
 
 ## Deferred
 
