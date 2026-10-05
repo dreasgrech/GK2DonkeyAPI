@@ -336,17 +336,57 @@ namespace GK2DonkeyAPI
             LastEvent = "bell";
         }
 
-        // An item landed on the cart (a pickup or the head's load at mount).
+        // An item landed on a cart: a pickup while riding, the head's load at mount, or loading a standing cart on foot.
+        // The cart is the bound instance (Mount.Current: the ridden one, or the standing cart loaded on foot), and the
+        // thump plays there with its settings. It used to ask for the ridden cart only, so loading on foot was silent
+        // (found in game 2026-10-05).
         public static void CargoLanded()
         {
-            if (Mount.CurrentStyle != MountStyle.Cart || CargoSheet.Running || !S.SoundsOn.Value || !S.CargoThumpOn.Value
+            Mount.Instance cart = Mount.Current;
+            if (cart == null || !cart.HasCart || CargoSheet.Running || !S.SoundsOn.Value || !S.CargoThumpOn.Value
                 || !MountRules.Allowed(MountFeature.Sounds))
             {
                 return;
             }
-            Transform at = Mount.Donkey != null ? Mount.Donkey.transform : null;
+            Transform at = cart.Donkey != null ? cart.Donkey.transform : null;
             Play(S.CargoThumpSoundId.Value, at, S.CargoThumpVolume.Value, S.CargoThumpPitch.Value);
             LastEvent = "cargo thump";
+        }
+
+        // Getting on or off, or hitching a cart (what: "mount", "dismount", "hitch"), at that donkey with the settings of
+        // its style: the donkey alone and with its cart have their own sounds (the user's picks, 2026-10-05).
+        internal static void Moment(Mount.Instance i, string what)
+        {
+            try
+            {
+                if (i == null || CargoSheet.Running || !MountRules.Allowed(MountFeature.Sounds))
+                {
+                    return;
+                }
+                StyleSettings s = i.S;
+                if (!s.SoundsOn.Value)
+                {
+                    return;
+                }
+                Transform at = i.Donkey != null ? i.Donkey.transform : null;
+                switch (what)
+                {
+                    case "mount":
+                        if (s.MountOn.Value) Play(s.MountSoundId.Value, at, s.MountVolume.Value, s.MountPitch.Value, s.MountSoundStart.Value);
+                        break;
+                    case "dismount":
+                        if (s.DismountOn.Value) Play(s.DismountSoundId.Value, at, s.DismountVolume.Value, s.DismountPitch.Value, s.DismountSoundStart.Value);
+                        break;
+                    case "hitch":
+                        if (s.HitchOn.Value) Play(s.HitchSoundId.Value, at, s.HitchVolume.Value, s.HitchPitch.Value);
+                        break;
+                }
+                LastEvent = what;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Sounds: the {what} sound failed: {e.Message}");
+            }
         }
 
         // The donkey's own lips clip calls AnimationComponentBase.PlaySound("donkey_lips") from an animation event;
@@ -380,6 +420,9 @@ namespace GK2DonkeyAPI
                 case "lips": Lips("donkey_lips", d.transform); break;
                 case "bray": Bray(); break;
                 case "thump": Play(S.CargoThumpSoundId.Value, d.transform, S.CargoThumpVolume.Value, S.CargoThumpPitch.Value); break;
+                case "mount": Play(S.MountSoundId.Value, d.transform, S.MountVolume.Value, S.MountPitch.Value, S.MountSoundStart.Value); break;
+                case "dismount": Play(S.DismountSoundId.Value, d.transform, S.DismountVolume.Value, S.DismountPitch.Value, S.DismountSoundStart.Value); break;
+                case "hitch": Play(S.HitchSoundId.Value, d.transform, S.HitchVolume.Value, S.HitchPitch.Value); break;
                 case "wheel": Play(S.WheelSoundId.Value, d.transform, S.WheelVolume.Value, S.WheelPitch.Value); break;
                 case "bell": RingBell(); break;
             }
@@ -387,7 +430,9 @@ namespace GK2DonkeyAPI
 
         // Plays a game sound id 3D at the donkey. Volume and pitch multiply the game's own values for that sound.
         // An id the game does not have is refused (the game would play its placeholder clip instead) and logged once.
-        private static SoundHandler Play(string id, Transform at, float volume, float pitch)
+        // startAt: seconds into the clip to start from (silence at a clip's start; SoundHandler.SetTime right after the
+        // play call, before the first audio frame).
+        private static SoundHandler Play(string id, Transform at, float volume, float pitch, float startAt = 0f)
         {
             id = id?.Trim(); // a hand-edited or pasted id may carry spaces
             if (string.IsNullOrEmpty(id) || at == null || !LazyAudio.IsInitialized)
@@ -402,21 +447,27 @@ namespace GK2DonkeyAPI
             try
             {
                 AudioConfig cfg = LazySingletonSO<AudioConfig>.Instance;
-                if (cfg == null || cfg.Get(id) == null)
+                int clip = SplitClip(ref id);
+                Sound sound = cfg?.Get(id);
+                if (sound == null || clip > sound.samples.Count)
                 {
-                    if (warnedIds.Add(id))
+                    if (warnedIds.Add(id + "#" + clip))
                     {
-                        Plugin.Log.LogWarning($"Sounds: the game has no sound '{id}'; nothing played.");
+                        Plugin.Log.LogWarning(sound == null ? $"Sounds: the game has no sound '{id}'; nothing played." : $"Sounds: '{id}' has {sound.samples.Count} clip(s), not {clip}; nothing played.");
                     }
                     return null;
                 }
-                SoundHandler h = LazyAudio.PlayAtGameObject(id, at, SpatialType.sound3D, checkDelay: false);
+                SoundHandler h = clip > 0 ? PlayClip(sound, clip, id, at) : LazyAudio.PlayAtGameObject(id, at, SpatialType.sound3D, checkDelay: false);
                 if (h == null)
                 {
                     return null;
                 }
                 h.SetVolume(v);
                 h.SetPitch(Mathf.Clamp(pitch, 0.1f, 3f));
+                if (startAt > 0f)
+                {
+                    h.SetTime(startAt);
+                }
                 // The game's pooled players keep the fade times of whatever used them last, and a fade re-applies
                 // the volume read at fade setup every frame; zero fades with the volume above as the target.
                 h.SetFadeInFadeOut(0f, 0f);
@@ -432,13 +483,54 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // "id#n": clip n (1-based) of the sound; 0 for a plain id (the game picks a clip at random).
+        private static int SplitClip(ref string id)
+        {
+            int hash = id.LastIndexOf('#');
+            if (hash > 0 && int.TryParse(id.Substring(hash + 1), out int n) && n > 0)
+            {
+                id = id.Substring(0, hash);
+                return n;
+            }
+            return 0;
+        }
+
+        // The game picks the clip inside the play call (LazyAudio.PlaySound -> Sound.RandomSample, which skips disabled
+        // samples), so only the wanted clip is enabled for that call and the others are put back right after.
+        private static SoundHandler PlayClip(Sound sound, int clip, string id, Transform at)
+        {
+            var was = new bool[sound.samples.Count];
+            try
+            {
+                for (int k = 0; k < sound.samples.Count; k++)
+                {
+                    was[k] = sound.samples[k].isEnabled;
+                    sound.samples[k].isEnabled = k == clip - 1;
+                }
+                return LazyAudio.PlayAtGameObject(id, at, SpatialType.sound3D, checkDelay: false);
+            }
+            finally
+            {
+                for (int k = 0; k < sound.samples.Count; k++)
+                {
+                    sound.samples[k].isEnabled = was[k];
+                }
+            }
+        }
+
         public static bool KnownId(string id)
         {
             try
             {
                 AudioConfig cfg = LazySingletonSO<AudioConfig>.Instance;
                 id = id?.Trim();
-                return !string.IsNullOrEmpty(id) && cfg != null && cfg.Get(id) != null;
+                if (string.IsNullOrEmpty(id) || cfg == null)
+                {
+                    return false;
+                }
+                int clip = SplitClip(ref id);
+                Sound sound = cfg.Get(id);
+                return sound != null && clip <= sound.samples.Count;
             }
             catch
             {

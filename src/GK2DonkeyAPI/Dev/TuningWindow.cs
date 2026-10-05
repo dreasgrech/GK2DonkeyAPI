@@ -659,10 +659,22 @@ namespace GK2DonkeyAPI
             FloatSlider("Pitch", s.BrayPitch, 0.3f, 2f, 2, null);
             Toggle("Follows the SFX volume (off: the speech volume, as in the donkey's dialogue)", s.BrayInSfxChannel, null);
 
+            Header("Getting on and off (this style's own sounds: id#n plays only clip n)");
+            Toggle("Sound when getting on", s.MountOn, null);
+            SoundIdRow("Getting-on sound id", s.MountSoundId, "mount", allowEmpty: false);
+            FloatSlider("Getting-on volume", s.MountVolume, 0f, 3f, 2, null);
+            FloatSlider("Getting-on pitch", s.MountPitch, 0.3f, 2f, 2, null);
+            FloatSlider("Getting-on: start this far into the clip (s)", s.MountSoundStart, 0f, 1f, 2, null);
+            Toggle("Sound when getting off", s.DismountOn, null);
+            SoundIdRow("Getting-off sound id", s.DismountSoundId, "dismount", allowEmpty: false);
+            FloatSlider("Getting-off volume", s.DismountVolume, 0f, 3f, 2, null);
+            FloatSlider("Getting-off pitch", s.DismountPitch, 0.3f, 2f, 2, null);
+            FloatSlider("Getting-off: start this far into the clip (s)", s.DismountSoundStart, 0f, 1f, 2, null);
+
             Header("Cart");
             if (!cart)
             {
-                GUILayout.Label("Wheels and the cargo thump belong to the cart. Mount in Cart style to tune them.", small);
+                GUILayout.Label("Wheels, the cargo thump and the hitching sound belong to the cart. Mount in Cart style to tune them.", small);
             }
             else
             {
@@ -677,6 +689,10 @@ namespace GK2DonkeyAPI
                 SoundIdRow("Thump sound id", s.CargoThumpSoundId, "thump", allowEmpty: false);
                 FloatSlider("Thump volume", s.CargoThumpVolume, 0f, 3f, 2, null);
                 FloatSlider("Thump pitch", s.CargoThumpPitch, 0.3f, 2f, 2, null);
+                Toggle("Sound when a cart is hitched", s.HitchOn, null);
+                SoundIdRow("Hitching sound id", s.HitchSoundId, "hitch", allowEmpty: false);
+                FloatSlider("Hitching volume", s.HitchVolume, 0f, 3f, 2, null);
+                FloatSlider("Hitching pitch", s.HitchPitch, 0.3f, 2f, 2, null);
             }
 
             Header("Bell");

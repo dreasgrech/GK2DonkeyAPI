@@ -55,7 +55,12 @@ if it keeps going wrong by hand.
   `EnvironmentEngine.SetTimeOfDayFake`. It changes the light, the HUD's sun-and-moon wheel (`UIHUDWheel` follows fake
   times) and the town's ambient sounds. The clock pauses; the save's time and day don't move, and the game's
   time-triggered scripts ignore fake times (`Flow_OnTimeOfDayEvent`). "Back to the real time" calls
-  `ResumeTimeOfDayFromData`. A real new day isn't offered: that is what sleeping does (decay, crops, quests).
+  `ResumeTimeOfDayFromData`.
+  - **Through doors:** a door switches the lighting preset (indoor or outdoor), which relights the real time without
+    resuming it (`SetTimeOfDayPresetAsync` → `OnTimeOfDayChanged(data.TimeOfDay)`). The director watches
+    `Data.timeOfDayPresetName` and puts the held time back the frame after, under the door's fade. Found in game:
+    a time set inside the house was gone outside.
+  - A real new day isn't offered: that is what sleeping does (decay, crops, quests).
 - **Weather:** one button per weather state, read at run time from the weather state machine (the names are in the
   game's assets). `SetWeatherState(name, force: true)` holds it, and the game stops rolling new weather.
   "Back to the weather before" restores what was there before the first change, rolling again.

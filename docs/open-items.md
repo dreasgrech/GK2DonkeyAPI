@@ -252,6 +252,17 @@ closed):
 - **Showcase video** ([showcase-video.md](showcase-video.md), revised 2026-10-04): shot list updated, automation
   planned (a dev "director" plugin for each shot's setup, OBS and ffmpeg scripts), nothing built. To decide:
   landscape or vertical, music or game audio, Saddle Up only or the API too. Shot 7 waits for the door fix (9n).
+- **Getting-on, getting-off and hitching sounds (built 2026-10-05, the user's picks):**
+  - Each style has its own (keys `Mount*`, `Dismount*`, `Hitch*`): the donkey alone `donkey_lips#1` on getting on
+    and `donkey_lips#2` on getting off; with the cart `ladder_climb_start` and `ladder_climb_finish`.
+  - Hitching plays `equip_tool`.
+  - No getting-off sound at doors, scene changes, failed re-summons or style changes.
+  - A sound id `id#n` plays only clip n (`MountSounds.PlayClip`: only that sample is enabled for the play call).
+  - Rows and previews are on the Sounds tab. To hear in game.
+- **The cargo thump when loading on foot (found 2026-10-05, fixed, to test):** loading a standing cart with E made no
+  sound. `MountSounds.CargoLanded` asked only for the ridden cart (style and position). It now plays for the bound
+  instance (`Mount.Current`: the ridden cart, or the standing cart being loaded), at that cart, with its settings.
+  Test: load on foot, and the thump plays at the cart; pickups while driving still thump.
 - **Label over the wrong donkey (found 2026-10-05, fixed, to test):** walking up to Saddle Up's donkey showed
   "[E] Ride RSK" (its name, right) over a panel-spawned donkey (wrong place). `Instance.HintPoint` cached the view's
   `BubblePoint` and never let go. When the view was parked in the view pool (Tiers) and handed to another donkey, the

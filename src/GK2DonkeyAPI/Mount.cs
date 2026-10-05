@@ -661,6 +661,7 @@ namespace GK2DonkeyAPI
                 lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
                 Ridden = this;
                 MountSounds.OnMounted();
+                MountSounds.Moment(this, "mount");
                 riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
                 if (SideView)
                 {
@@ -830,6 +831,12 @@ namespace GK2DonkeyAPI
 
             private void Dismount(PlayerController pc, string reason)
             {
+                // Not where the keeper is already elsewhere or rides on: a door (indoors, a scene change), a failed
+                // re-summon, a style change (he gets straight on again).
+                if (reason != "indoors" && reason != "scene changed" && reason != "style change" && reason != "could not re-summon the donkey")
+                {
+                    MountSounds.Moment(this, "dismount");
+                }
                 CargoSheet.Abort("dismount: " + reason); // before Park keeps the cargo on a standing cart
                 if (!Ephemeral)
                 {

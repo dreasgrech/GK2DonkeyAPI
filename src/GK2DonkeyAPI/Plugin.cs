@@ -52,12 +52,14 @@ namespace GK2DonkeyAPI
         public readonly Tuned<int> BobLagFrames, HeadLagFrames;
         // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
         public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
-            CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo;
+            CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo, MountOn, DismountOn, HitchOn;
         public readonly Tuned<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
             BrayOnMountChance, BrayIdleEverySeconds, BrayVolume, BrayPitch, CargoThumpVolume, CargoThumpPitch,
-            WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds;
+            WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds,
+            MountVolume, MountPitch, MountSoundStart, DismountVolume, DismountPitch, DismountSoundStart, HitchVolume, HitchPitch;
         public readonly Tuned<int> HoofStepsPerCycle, WheelEveryCycles;
-        public readonly Tuned<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId;
+        public readonly Tuned<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId,
+            MountSoundId, DismountSoundId, HitchSoundId;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -222,6 +224,25 @@ namespace GK2DonkeyAPI
             CargoThumpSoundId = S(cfg, section, "CargoThumpSoundId", "oh_wood_container_drop", "Sound id for an item landing in the cart.");
             CargoThumpVolume = F(cfg, section, "CargoThumpVolume", 1f, 0f, 3f, "Cargo thump volume.");
             CargoThumpPitch = F(cfg, section, "CargoThumpPitch", 1f, 0.3f, 2f, "Cargo thump pitch.");
+            // Getting on and off, and hitching a cart: the game has no riding, so these borrow its sounds (picked by ear,
+            // 2026-10-05): with the cart the ladder's climb start and finish, the donkey alone its two lip snorts (an id
+            // with "#n" plays only that clip of the sound), hitching the tool equip.
+            MountOn = B(cfg, section, "MountOn", true, "A sound when the keeper gets on the donkey (in this style).");
+            MountSoundId = S(cfg, section, "MountSoundId", cart ? "ladder_climb_start" : "donkey_lips#1", "Sound id for getting on. id#n plays only clip n of that sound.");
+            MountVolume = F(cfg, section, "MountVolume", 1f, 0f, 3f, "Getting-on volume.");
+            MountPitch = F(cfg, section, "MountPitch", 1f, 0.3f, 2f, "Getting-on pitch.");
+            // The lip snorts open with 0.44 s of silence (made to line up with the donkey's animation; measured
+            // 2026-10-05), which felt late on a key press: the clip starts that far in.
+            MountSoundStart = F(cfg, section, "MountSoundStart", cart ? 0f : 0.42f, 0f, 1f, "Start the getting-on clip this many seconds in (skips silence at its start).");
+            DismountOn = B(cfg, section, "DismountOn", true, "A sound when the keeper gets off the donkey (in this style; not at doors, where he is already elsewhere).");
+            DismountSoundId = S(cfg, section, "DismountSoundId", cart ? "ladder_climb_finish" : "donkey_lips#2", "Sound id for getting off. id#n plays only clip n of that sound.");
+            DismountVolume = F(cfg, section, "DismountVolume", 1f, 0f, 3f, "Getting-off volume.");
+            DismountPitch = F(cfg, section, "DismountPitch", 1f, 0.3f, 2f, "Getting-off pitch.");
+            DismountSoundStart = F(cfg, section, "DismountSoundStart", cart ? 0f : 0.42f, 0f, 1f, "Start the getting-off clip this many seconds in (skips silence at its start).");
+            HitchOn = B(cfg, section, "HitchOn", true, "Cart: a sound when a donkey is hitched to a cart.");
+            HitchSoundId = S(cfg, section, "HitchSoundId", "equip_tool", "Sound id for hitching a cart.");
+            HitchVolume = F(cfg, section, "HitchVolume", 1f, 0f, 3f, "Hitching volume.");
+            HitchPitch = F(cfg, section, "HitchPitch", 1f, 0.3f, 2f, "Hitching pitch.");
             WheelOn = B(cfg, section, "WheelOn", cart, "Cart: a wooden wheel rumble once per walk cycle while the cart moves (the game has no cart sound; this borrows a machine wheel).");
             WheelSoundId = S(cfg, section, "WheelSoundId", "conveyor_furnace_wheel", "Sound id for the wheels (conveyor_assembly_wheel is the chain-and-rev alternative).");
             WheelVolume = F(cfg, section, "WheelVolume", 0.6f, 0f, 3f, "Wheel volume.");
@@ -264,6 +285,9 @@ namespace GK2DonkeyAPI
             GrazeOn, GrazeSoundId, GrazeVolume, LipsVolume,
             BraySoundId, BrayOnMountChance, BrayIdleEverySeconds, BrayWhileWalking, BrayVolume, BrayPitch, BrayInSfxChannel,
             CargoThumpOn, CargoThumpSoundId, CargoThumpVolume, CargoThumpPitch,
+            MountOn, MountSoundId, MountVolume, MountPitch, MountSoundStart,
+            DismountOn, DismountSoundId, DismountVolume, DismountPitch, DismountSoundStart,
+            HitchOn, HitchSoundId, HitchVolume, HitchPitch,
             WheelOn, WheelSoundId, WheelVolume, WheelPitch, WheelPitchFollowsSpeed, WheelEveryCycles, WheelPhase,
             BellSoundId, BellOnSetOff, BellOnlyWithCargo, BellSetOffIdleSeconds, BellVolume, BellPitch,
         };

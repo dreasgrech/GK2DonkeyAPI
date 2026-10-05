@@ -553,6 +553,7 @@ namespace GK2DonkeyAPI
                 Ridden = this;
                 riderAttached = true;
                 MountSounds.OnMounted();
+                MountSounds.Moment(this, "mount");
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
                 pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
@@ -805,6 +806,7 @@ namespace GK2DonkeyAPI
                 CargoRig.SetCarried(items);
                 Restyle(pc, scene, MountStyle.Cart);
                 Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart {cart.FullId} ({items.Count} item(s) on it).");
+                MountSounds.Moment(this, "hitch");
                 Mounts.RaiseHitched(Handle, cart.Handle);
                 return null;
             }

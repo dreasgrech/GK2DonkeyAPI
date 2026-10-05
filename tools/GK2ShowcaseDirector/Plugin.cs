@@ -13,7 +13,8 @@ namespace GK2ShowcaseDirector
     //   Time of day: EnvironmentEngine.SetTimeOfDayFake, the game's own "show this time" call. It changes the light, the
     //     HUD's sun-and-moon wheel and the town's ambient sounds, and pauses the clock; the save's time and day don't
     //     move, and the game's time-triggered scripts ignore it (Flow_OnTimeOfDayEvent skips fake times).
-    //     ResumeTimeOfDayFromData puts the real time back where it was.
+    //     ResumeTimeOfDayFromData puts the real time back where it was. A door's lighting switch relights the real time,
+    //     so a held time is put back after it.
     //   Weather: WeatherSystem.SetWeatherState(name, force: true) holds a weather (the game stops rolling new weather
     //     while one is forced). "Back" restores the weather from before the first change, rolling again. A weather the
     //     game holds (a quest or event set it) is left alone, and the quests' event weathers and the state without a
@@ -34,6 +35,7 @@ namespace GK2ShowcaseDirector
 
         private bool timeHeld;
         private float shownTime = 0.5f;
+        private string lastPreset; // the lighting preset (indoor/outdoor) seen last frame
         private List<string> weathers;
 
         // The weather as it was before the director's first change (always a rolling one: a weather the game holds is
@@ -66,6 +68,24 @@ namespace GK2ShowcaseDirector
             {
                 timeHeld = false;
                 weatherBefore = null;
+            }
+            // A door switches the lighting preset (EnvironmentEngine.SetTimeOfDayPresetAsync), which lights the new preset
+            // for the REAL time (OnTimeOfDayChanged(data.TimeOfDay)) without resuming it: the clock stays paused and the
+            // HUD wheel keeps the held time, only the light snaps back. The held time is put back the frame after (the
+            // door's fade hides that frame). Found in game 2026-10-05: set inside the house, gone outside.
+            if (InGame)
+            {
+                string preset = EnvironmentEngine.Instance.Data.timeOfDayPresetName;
+                if (timeHeld && lastPreset != null && preset != lastPreset)
+                {
+                    EnvironmentEngine.Instance.SetTimeOfDayFake(shownTime);
+                    Logger.LogInfo($"[director] lighting changed to {preset} (a door); {Clock(shownTime)} kept.");
+                }
+                lastPreset = preset;
+            }
+            else
+            {
+                lastPreset = null;
             }
             // Something of the game's own (sleeping, a cutscene) may have resumed the real time: the window follows.
             if (timeHeld && EnvironmentEngine.Instance != null && !EnvironmentEngine.Instance.IsPaused)

@@ -160,6 +160,9 @@ nothing, is flagged on the tab and logged once), and each has a play button on t
 | `WheelSoundId` | `conveyor_furnace_wheel` | The wheel sound. |
 | `WheelVolume` / `WheelPitch` / `WheelPitchFollowsSpeed` / `WheelEveryCycles` / `WheelPhase` | 0.6 / 1 / false / 1 / 0 | Wheel tuning. |
 | `CargoThumpOn` / `CargoThumpSoundId` / `CargoThumpVolume` / `CargoThumpPitch` | true / `oh_wood_container_drop` / 1 / 1 | Cart: a thump when an item lands in the cart, on top of the game's own pickup sound. |
+| `MountOn` / `MountSoundId` / `MountVolume` / `MountPitch` / `MountSoundStart` | true / Ride `donkey_lips#1`, Cart `ladder_climb_start` / 1 / 1 / Ride 0.42 s, Cart 0 | A sound when the keeper gets on, each style its own: the donkey alone a lip snort, with its cart the ladder's climb start. `id#n` plays only clip n of a sound (the game otherwise picks one at random). |
+| `DismountOn` / `DismountSoundId` / `DismountVolume` / `DismountPitch` / `DismountSoundStart` | true / Ride `donkey_lips#2`, Cart `ladder_climb_finish` / 1 / 1 / Ride 0.42 s, Cart 0 | A sound when he gets off, each style its own. `…SoundStart` starts the clip that far in: the lip snorts open with 0.44 s of silence (made for the donkey's animation). Not at doors, a scene change, a failed re-summon or a style change. |
+| `HitchOn` / `HitchSoundId` / `HitchVolume` / `HitchPitch` | true / `equip_tool` / 1 / 1 | Cart: a sound when a donkey is hitched to a cart (the tool equip), riding or standing. |
 | `BellSoundId` / `BellVolume` / `BellPitch` | `donkey_bell` / 0.7 / 1 | The donkey delivery's bell. |
 | `BellOnSetOff` | false / true | Ring the bell when setting off; see the next row. |
 | `BellOnlyWithCargo` / `BellSetOffIdleSeconds` | true / 4 | Ring when the donkey sets off after standing at least that long (optionally only with cargo). |
