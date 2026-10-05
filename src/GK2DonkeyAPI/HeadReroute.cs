@@ -19,8 +19,9 @@ namespace GK2DonkeyAPI
     //             LazyExpressionEvaluationScope.GetOverheadItemForMutation (script executions)
     // Everything that draws the head or drops what is held (HasOverheadItem, the counts, OverheadItems) keeps
     // reading the real head, which stays empty while riding, so nothing is drawn on the keeper and nothing is dumped
-    // when he starts work. Zombies are the one exception: the cart refuses them (linked world objects), so they keep
-    // the head, with its own limit honoured here because the gate now answers for the cart.
+    // when he starts work. Zombies go onto the cart like the rest (CargoZombies; docs/zombies-on-cart.md), relinked to
+    // the copy the cart stores (RelinkZombie). With CargoZombies off the cart refuses them and they keep the head, with
+    // its own limit honoured because the gate otherwise answers for the cart.
     //
     // Item identity (probe section E): adding to an inventory stores a NEW object with the same GUID and empties the
     // source. Take-from-table paths add first and remove from the table by GUID second, so the source shell gets its
@@ -42,7 +43,7 @@ namespace GK2DonkeyAPI
         // for its worker only. A counter, as the game's calls can nest.
         internal static int InZombieStation;
 
-        // While the game's own AddOverheadItem runs for an item the cart refuses (a zombie), the gate answers for the
+        // While the game's own AddOverheadItem runs for an item the cart refuses (a zombie with CargoZombies off), the gate answers for the
         // real head, so the original drops for the head's limit and not for the cart's.
         internal static bool GateAnswersForHead;
 
@@ -54,7 +55,7 @@ namespace GK2DonkeyAPI
         internal static bool HandsLocked => Mount.IsMounted && !Active && !Cargo.Unloading && !GateAnswersForHead;
 
         // A ground item the keeper may not take while mounted: anything while the hands are locked, and what the cart
-        // refuses (zombies) in either style.
+        // refuses (zombies with CargoZombies off) in either style.
         internal static bool RefuseGroundItem(DropView drop)
         {
             if (!Mount.IsMounted || drop == null)
@@ -118,7 +119,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogWarning("Cargo: take sound failed: " + e.Message);
             }
             MountSounds.CargoLanded();
-            Plugin.Log.LogInfo($"Cargo: picked up {item.id} straight onto the cart ({inv.Data.Inventory.Count}/{inv.Data.InventorySize}).");
+            Plugin.Log.LogInfo($"Cargo: picked up {Cargo.Name(item)} straight onto the cart ({inv.Data.Inventory.Count}/{inv.Data.InventorySize}).");
             return true;
         }
 
@@ -245,7 +246,7 @@ namespace GK2DonkeyAPI
                 }
                 if (!Cargo.Allowed(item))
                 {
-                    // A zombie keeps the head: the original runs, with the gate answering for the head (its own
+                    // A zombie with CargoZombies off keeps the head: the original runs, with the gate answering for the head (its own
                     // limit) instead of the cart, so it drops exactly what a full head would drop and nothing more.
                     HeadReroute.GateAnswersForHead = true;
                     return true;
@@ -258,7 +259,7 @@ namespace GK2DonkeyAPI
                 // reappears in front of the keeper instead of vanishing or landing on the head.
                 Cargo.DropAtKeeper(__instance, item);
                 Mount.Say("The cart is full.");
-                Plugin.Log.LogInfo($"Cargo: cart full, {item.id} dropped in front of the keeper.");
+                Plugin.Log.LogInfo($"Cargo: cart full, {Cargo.Name(item)} dropped in front of the keeper.");
                 return false;
             }
             catch (Exception e)
@@ -280,7 +281,7 @@ namespace GK2DonkeyAPI
     // Picking an item up from the ground (BigDropInteractionHandler.Interact: remove the drop, AddOverheadItem) asks
     // no gate, so while the hands are locked the ground item offers no interaction at all: no prompt, E does nothing.
     // Measured 2026-09-30: without this the item was picked up and the AddOverheadItem sink set it straight down
-    // again. A zombie on the ground is refused while mounted in either style, as the cart cannot take zombies either.
+    // again. A zombie on the ground is refused while mounted in either style when the cart takes no zombies.
     // Judged by the item (Cargo.Allowed), not the handler: the game gives ZombieDropInteractionHandler to corpses too
     // (DropView: DropType != 0 or item group "body"), and corpses do go on the cart (found in game 2026-09-30).
     [HarmonyPatch(typeof(BigDropInteractionHandler), nameof(BigDropInteractionHandler.HasInteraction))]
@@ -541,7 +542,7 @@ namespace GK2DonkeyAPI
                     return true;
                 }
                 HeadReroute.RemoveFromCart(stored);
-                Plugin.Log.LogInfo($"Cargo: {item.id} taken off the cart by the game ({Cargo.Count} left).");
+                Plugin.Log.LogInfo($"Cargo: {Cargo.Name(item)} taken off the cart by the game ({Cargo.Count} left).");
                 return false;
             }
             catch (Exception e)
@@ -566,7 +567,7 @@ namespace GK2DonkeyAPI
                 Item stored = HeadReroute.FindOnCart(item);
                 if (stored == null)
                 {
-                    return true; // from the head (the mod's own load, or a zombie): the game's path
+                    return true; // from the head (the mod's own load, or a zombie with CargoZombies off): the game's path
                 }
                 if (wgoData == Cargo.DonkeyData)
                 {
@@ -592,7 +593,7 @@ namespace GK2DonkeyAPI
                 }
                 HeadReroute.RelinkZombie(wgoData.Inventory, stored, wgoData.id); // the game leaves this one stale; its own takes relink later
                 GlobalEventsSystem.FireTrigger(GlobalEventsSystem.Event.Type.PlayerInsertOverheadToWgoAnItem, id);
-                Plugin.Log.LogInfo($"Cargo: {id} put into {wgoData.id} from the cart ({Cargo.Count} left).");
+                Plugin.Log.LogInfo($"Cargo: {Cargo.Name(stored)} put into {wgoData.id} from the cart ({Cargo.Count} left).");
                 return false;
             }
             catch (Exception e)
@@ -665,7 +666,7 @@ namespace GK2DonkeyAPI
                 PlayerData pd = pc.PlayerData;
                 if (pd.HasOverheadItem)
                 {
-                    pd.DropOverheadItem(); // something really on the head (a zombie): the game's own drop
+                    pd.DropOverheadItem(); // something really on the head (a zombie with CargoZombies off): the game's own drop
                 }
                 else
                 {

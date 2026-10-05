@@ -1,3 +1,9 @@
+class GK2DonkeyAPI.Api.CargoItem
+  property string Id { get; }
+  property bool IsZombie { get; }
+  property string UniqueId { get; }
+  property string ZombieName { get; }
+  method string ToString()
 enum GK2DonkeyAPI.Api.CartPaint
   Game = 0
   DarkWood = 1
@@ -100,7 +106,7 @@ enum GK2DonkeyAPI.Api.MountFeature
   StayThroughDoors = 5
 class GK2DonkeyAPI.Api.MountHandle
   field static const int MaxDisplayName = 24
-  property System.Collections.Generic.IReadOnlyList<string> CargoIds { get; }
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.CargoItem> Cargo { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Children { get; }
   property string DisplayName { get; }
   property bool Exists { get; }
@@ -161,8 +167,8 @@ static class GK2DonkeyAPI.Api.Mounts
   property static GK2DonkeyAPI.Api.MountTuning Shuffle { get; }
   property static string StatusText { get; }
   property static GK2DonkeyAPI.Api.MountStyle Style { get; }
-  event static System.Action<string> CargoLoaded
-  event static System.Action<string> CargoUnloaded
+  event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoLoaded
+  event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoUnloaded
   event static System.Action<string> Dismounted
   event static System.Action GameReady
   event static System.Action<GK2DonkeyAPI.Api.MountHandle, GK2DonkeyAPI.Api.MountHandle> Hitched

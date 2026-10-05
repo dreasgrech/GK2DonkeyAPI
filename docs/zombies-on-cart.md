@@ -86,8 +86,8 @@ relink: `GetZombie(guid)?.SetZombieItem(stored)`.
 | Restoring after a load | `SetCarried` (after `Persistence.TakeDropBack`) |
 
 **Known and accepted:** in `TakeToCart` the add fires the cart's change event, and with it the API's `CargoLoaded`,
-before the relink runs. A mod listening there sees the zombie one call before its link is fixed. Nothing reads the
-zombie's gear in that event.
+before the relink runs. A mod listening there sees the zombie one call before its link is fixed. The event carries
+the zombie's id, GUID and name, never its gear, so nothing can read the stale link through it.
 
 Removals (`RemoveItemFromInventoryByUID`) return the same object, so the hand-back, set-down and station
 placement stay consistent once the link is right.
@@ -354,7 +354,20 @@ Each step is built and checked before the next.
    A stand-in usable outside the sheet was dropped. It would need a guard on 8+ paths (drop, unload, lend,
    set-down, `Remove`, quit, the `LOST` branches), and each one missed would leave an orphan zombie in the world
    (`GetZombie == null`, a station NRE or lock-out).
-9. **API and docs:** GUID/name event overloads, api.md, reference, README, saddleup-scope, baseline 13 rewritten,
+9. **Done 2026-10-05:**
+   - `CargoLoaded` / `CargoUnloaded` pass a `CargoItem` (id, GUID, `IsZombie`, `ZombieName`), and
+     `MountHandle.Cargo` replaces `CargoIds`. Replaced in place, not added alongside: nothing is shipped (the user).
+   - The key log lines name the zombie (`Cargo.Name`: "body_zombie (zombie_name_14)").
+   - api.md (and its 0.22.0 history entry), reference, the API README, saddleup-scope, the Saddle Up README,
+     instances, persistence and api-design are updated, baseline 13 is rewritten, and the stale comments are fixed.
+   - **Dropped: firing `AddOverhead` when a zombie is laid at the feet** (§5 finding 8). That was meant for a
+     working zombie taken with a full cart, which `RefuseWorldZombie` now refuses before anything happens. A zombie
+     put back on the ground ("The cart is full.") was never picked up, so the game's "picked up" event would be
+     false (quests listen to it).
+   - "The cart is full." is accurate now: the sink reaches it only when the cart has no room (refused items are
+     sorted out before).
+
+   **API and docs:** GUID/name event overloads, api.md, reference, README, saddleup-scope, baseline 13 rewritten,
    the stale comments.
 
 **In-game tests**, in order. Each lists what to check (the zombie's worker window shows its gear; the log has the

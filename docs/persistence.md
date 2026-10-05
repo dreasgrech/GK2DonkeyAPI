@@ -364,7 +364,7 @@ loaded"). The cargo lies on the ground where each cart stood.
 | Size, rideable | `Scale`, `IsRideable` | Yes |
 | Foals | `Parent`, `Children` | Yes, but `RemoveWithParent` can't be read |
 | Its own settings and colours | `Tuning.Keys`, `IsSet`, `Get<T>` | Yes, with `Tuning.Set`. The type comes from `Mounts.Tuning(style)`, `Behaviour`, `Shuffle` or `Colors` `.TypeOf(key)`, as `InstanceTuning` has none |
-| Cargo | `CargoIds` | **No.** There is no call that puts a drop onto a standing cart, and `CargoIds` gives item kinds, not the GUIDs needed to find the right drops |
+| Cargo | `Cargo` | **No.** There is no call that puts a drop onto a standing cart (`Cargo` gives each item's GUID, so the drops could be found, but nothing puts them back) |
 | Owner | `Owner` | Yes, by spawning under the same owner |
 | Its id | `Id` | No: the ids are new after a load. A mod has to map them itself |
 

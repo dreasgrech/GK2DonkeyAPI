@@ -99,7 +99,7 @@ Each one says why.
 - `Mounts.Instances` lists every live one.
 - `MountHandle`:
   - identity and state: `Id`, `Owner`, `HasDonkey`, `HasCart`, `IsRidden`, `SceneId`, `Position`, `FacingRight`,
-    `CargoIds`;
+    `Cargo`;
   - settings: `Tuning` (`Get` / `Set` / `Clear` / `Reset` by key, like `MountTuning`);
   - actions: `Ride()`, `Remove()`, `MoveTo(position)`.
 - `Mounts.Hitch(donkey, cart)` and `Mounts.Unhitch(donkey)`.

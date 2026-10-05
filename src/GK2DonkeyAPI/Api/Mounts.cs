@@ -694,11 +694,12 @@ namespace GK2DonkeyAPI.Api
         // After the ride ended, cargo handed back (argument: the reason, e.g. "dismounted", "indoors", a rule's text).
         public static event Action<string> Dismounted;
 
-        // An item went onto the cart / left it (argument: the item id, e.g. "wood", "body_corpse"). Not raised for
-        // the core's own bookkeeping: the hand-back around a save, or the cart summoned again after a door.
-        public static event Action<string> CargoLoaded;
+        // An item went onto the cart / left it (argument: the item, with its id, e.g. "wood", "body_corpse", its GUID
+        // and, for a zombie, its name: two zombies are both "body_zombie"). Not raised for the core's own bookkeeping:
+        // the hand-back around a save, or the cart summoned again after a door.
+        public static event Action<CargoItem> CargoLoaded;
 
-        public static event Action<string> CargoUnloaded;
+        public static event Action<CargoItem> CargoUnloaded;
 
         // ------------------------------------------------------------------ core side
 
@@ -721,14 +722,14 @@ namespace GK2DonkeyAPI.Api
             Raise(Dismounted, reason, "Dismounted");
         }
 
-        internal static void RaiseCargoLoaded(string itemId)
+        internal static void RaiseCargoLoaded(CargoItem item)
         {
-            Raise(CargoLoaded, itemId, "CargoLoaded");
+            Raise(CargoLoaded, item, "CargoLoaded");
         }
 
-        internal static void RaiseCargoUnloaded(string itemId)
+        internal static void RaiseCargoUnloaded(CargoItem item)
         {
-            Raise(CargoUnloaded, itemId, "CargoUnloaded");
+            Raise(CargoUnloaded, item, "CargoUnloaded");
         }
 
         private static void Raise<T>(Action<T> handlers, T arg, string name)

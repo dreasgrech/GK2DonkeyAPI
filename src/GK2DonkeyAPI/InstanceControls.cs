@@ -322,7 +322,7 @@ namespace GK2DonkeyAPI
             Mount.Instance cart = CartAround(pc, k, out Zone zone);
             if (pd.HasOverheadItem)
             {
-                // Only what the cart takes (not a zombie): anything else keeps the game's own key (set it down).
+                // Only what the cart takes (Cargo.Allowed: zombies only with CargoZombies): anything else keeps the game's own key (set it down).
                 if (cart != null && MountRules.Allowed(MountFeature.Cargo) && pd.TryGetOverheadItem(Cargo.Rig.AllowedItem, out _))
                 {
                     bool fits = cart.CargoRig.HeldItemFits(pd);

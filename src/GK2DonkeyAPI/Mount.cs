@@ -419,7 +419,7 @@ namespace GK2DonkeyAPI
                 }
                 // Empty hands while riding (HeadReroute.HandsLocked). Checked once the parts are ready, because in Cart style
                 // PrepareParts attaches the cart, which first takes what the keeper holds; what is still held after that
-                // (Ride style, Cargo off, cart full, a zombie) is set down.
+                // (Ride style, Cargo off, cart full, a zombie with CargoZombies off) is set down.
                 if (partsReady && !CargoRig.Unloading && !CargoSheet.Running && pc.PlayerData.HasOverheadItem)
                 {
                     int n = Cargo.SetDownHeld(pc.PlayerData);

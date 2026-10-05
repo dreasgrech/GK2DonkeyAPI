@@ -93,7 +93,7 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | **Riding through doors that load another area** | Untested. Stays off and hidden until it's tested. |
 | **Talking to NPCs while mounted** | Built, untested. It's always on in the core, so it ships either way: test it. |
 | **Take from cart** | Built, untested. In section 2: test it. |
-| **Carrying zombies** | The cart refuses them; check the message once zombies are unlocked. |
+| **Carrying zombies** | Built and tested 2026-10-05 (API 0.22.0, the toggle "Zombies ride on the cart"): two at once, handed to their work from the cart ([zombies-on-cart.md](zombies-on-cart.md)). Positions tuned in the panel. |
 | **The door bug** (2026-10-02) | The donkey parked on the doorstep after "Dismounted (indoors)" shut the keeper in the doorway. Likely cause found 2026-10-03: navmesh cuts and holes the donkey views left behind; removed and measured in API 0.18.0, to test ([foals-indoors.md](foals-indoors.md)). |
 
 ## 6. Optional extras (decide)

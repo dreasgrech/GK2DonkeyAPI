@@ -83,6 +83,27 @@ namespace GK2DonkeyAPI
         // its place in the body class, whatever its isLinkedToWgo says.
         internal static bool IsZombie(ItemDef def) => def != null && def.itemGroupIds.Contains("zombie");
 
+        // The item for the API and the log: its id, GUID and, for a zombie, its name.
+        internal static CargoItem Describe(Item it)
+        {
+            bool zombie = IsZombie(it?.Definition);
+            string name = null;
+            if (zombie)
+            {
+                try
+                {
+                    name = MainGame.ZombieSystemData?.GetZombie(it.UniqueId)?.Name;
+                }
+                catch
+                {
+                }
+            }
+            return new CargoItem(it?.id, it?.UniqueId?.ToString(), zombie, name);
+        }
+
+        // For log lines: "wood", or "body_zombie (its name)".
+        internal static string Name(Item it) => it == null ? "nothing" : Describe(it).ToString();
+
         // The last resort for a zombie whose item could not be set down or handed over: the zombie is stood up in the
         // world where it was meant to go, with the game's own call (ZombieSystemData.PutZombieFromStoreToGameScene, which
         // takes it out of the store of carried zombies, as placing one does). A carried zombie with no item anywhere
@@ -336,7 +357,7 @@ namespace GK2DonkeyAPI
                 HeadReroute.RelinkZombie(inv, item, owner.Describe());
                 pd.RemoveOverheadItem(item);
                 MountSounds.CargoLanded();
-                Plugin.Log.LogInfo($"Cargo: {itemId} loaded onto {owner.Describe()} from the hands; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} still held.");
+                Plugin.Log.LogInfo($"Cargo: {Cargo.Name(item)} loaded onto {owner.Describe()} from the hands; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} still held.");
                 return null;
             }
 
@@ -380,7 +401,7 @@ namespace GK2DonkeyAPI
                     return "My hands are full.";
                 }
                 itemId = last.id;
-                Plugin.Log.LogInfo($"Cargo: {itemId} taken off {owner.Describe()} into the hands; cart {list.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} held.");
+                Plugin.Log.LogInfo($"Cargo: {Cargo.Name(last)} taken off {owner.Describe()} into the hands; cart {list.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} held.");
                 return null;
             }
 
@@ -452,6 +473,13 @@ namespace GK2DonkeyAPI
                 {
                     if (it != null && !it.IsEmpty) l.Add(it);
                 }
+                return l;
+            }
+
+            internal List<CargoItem> Described()
+            {
+                var l = new List<CargoItem>();
+                foreach (Item it in ItemsNow()) l.Add(Describe(it));
                 return l;
             }
 
@@ -553,7 +581,7 @@ namespace GK2DonkeyAPI
             // at each call site, reports every way items come and go exactly once, and nothing for the core's own
             // bookkeeping: the cart summoned again after a door holds the same GUIDs, and around a save the announcing is
             // held (SuppressAnnounce) until the cargo is back.
-            private readonly Dictionary<string, string> announced = new Dictionary<string, string>();
+            private readonly Dictionary<string, CargoItem> announced = new Dictionary<string, CargoItem>();
             internal static bool SuppressAnnounce;
 
             internal void Announce()
@@ -562,15 +590,16 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
-                var now = new Dictionary<string, string>();
+                var now = new Dictionary<string, CargoItem>();
                 foreach (Item it in inv != null ? inv.Data.Inventory : mirror)
                 {
                     if (it != null && !it.IsEmpty && it.UniqueId != null)
                     {
-                        now[it.UniqueId.ToString()] = it.id;
+                        string key = it.UniqueId.ToString();
+                        now[key] = announced.TryGetValue(key, out CargoItem had) ? had : Describe(it);
                     }
                 }
-                foreach (var kv in new List<KeyValuePair<string, string>>(announced))
+                foreach (var kv in new List<KeyValuePair<string, CargoItem>>(announced))
                 {
                     if (!now.ContainsKey(kv.Key))
                     {
@@ -615,11 +644,11 @@ namespace GK2DonkeyAPI
                     }
                     if (owner.S.CargoSetDownBehindCart.Value && DropBehindCart(pd, last))
                     {
-                        Plugin.Log.LogInfo($"Cargo: set {last.id} down behind the cart; cart {list.Count}/{inv.Data.InventorySize}.");
+                        Plugin.Log.LogInfo($"Cargo: set {Cargo.Name(last)} down behind the cart; cart {list.Count}/{inv.Data.InventorySize}.");
                         return;
                     }
                     DropAtKeeper(pd, last);
-                    Plugin.Log.LogInfo($"Cargo: set {last.id} down in front of the keeper; cart {list.Count}/{inv.Data.InventorySize}.");
+                    Plugin.Log.LogInfo($"Cargo: set {Cargo.Name(last)} down in front of the keeper; cart {list.Count}/{inv.Data.InventorySize}.");
                 }
                 catch (Exception e)
                 {

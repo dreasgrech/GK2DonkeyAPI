@@ -25,7 +25,7 @@ A mod built on the API needs none of this code itself; Saddle Up is about 160 li
 | `StayMountedThroughDoors` | false | Keep riding through a door that loads another scene (the donkey is summoned again there). A house door isn't one. |
 | `DismountIndoors` | true | Dismount on entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount indoors. The cart is a 3D object that would cut through furniture and door frames. |
 | `ShowMessages` | true | The keeper's thought bubble when he can't mount ("I'm busy.", "Not in a co-op game.", a mod's own reason). |
-| `CargoZombies` | true | Zombies ride on the cart like any other load, two at once, and go to their work straight from it ([`docs/zombies-on-cart.md`](zombies-on-cart.md); being built, not in effect yet). Off: the cart refuses zombies, and they can't be taken while riding. |
+| `CargoZombies` | true | Zombies ride on the cart like any other load, two at once, and go to their work straight from it ([`docs/zombies-on-cart.md`](zombies-on-cart.md)). Off: the cart refuses zombies, and they can't be taken while riding. |
 | `InstanceControls` | true | Donkeys and carts standing in the world ([`docs/instances.md`](instances.md)). The interact key rides a standing donkey you walk up to with empty hands. While riding a donkey without its cart, it takes a free cart you ride up to. On foot at a standing cart ([`docs/load-on-foot.md`](load-on-foot.md)): holding something, it puts the top item onto the cart ("Load on cart", one per press; "Cart is full" when it is); with empty hands, at the donkey it drives, at the cart it takes the top item into your hands ("Take from cart"). A label over it says so. Off: only mods can. |
 | `CartZoneSide` / `CartZoneRear` / `CartZoneFrontShift` / `DonkeyZoneAhead` | 0.6 / 0.8 / 0 / 1.2 | On foot at a standing cart: the two areas that decide what the interact key does. The cart's area runs from the cart body's front edge (shifted by `CartZoneFrontShift`) to `CartZoneRear` behind its back end; the donkey's from `DonkeyZoneAhead` ahead of the donkey's body to the cart's area. Both are as wide as the cart body plus `CartZoneSide` on each side. The Instances tab draws them on the ground while the panel is open. |
 | `HitchKey` | J | While riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off. |
@@ -48,7 +48,8 @@ own settings (its cfg or the Mods menu) as session overrides, so the dev panel s
   pallets, tables, graves and quest hand-ins take their items from the cart as if he held them.
 - **Setting down:** press the game's interact key with nothing in front to set the top item down.
 - **A full cart** puts a ground pickup back down ("The cart is full.").
-- **Zombies can't be carried while mounted.**
+- **Zombies** ride on the cart like any other load (`CargoZombies`), two at once; a working zombie offers no "Take"
+  while the cart can't take it. In Ride style they're refused like everything else.
 - **Handing back:** cargo goes back to the keeper at every dismount, and before every save, because it lives in a
   temporary inventory that no save contains. Through doors, it stays on the cart.
 
@@ -286,7 +287,7 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 13. **Idle shuffle:** the test list in [`docs/roaming.md`](roaming.md).
 14. **Foals:** the test list in [`docs/foals.md`](foals.md).
 
-Still untested: carrying zombies (not unlocked in the test save); doors that load another scene; a save while mounted
+Still untested: doors that load another scene; a save while mounted
 (the bed is indoors, so normal play always dismounts first).
 
 ## Probe (`tools/GK2DonkeyProbe/`)

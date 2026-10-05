@@ -105,8 +105,8 @@ public static class Mounts
     // events
     public static event Action<MountStyle> Mounted;
     public static event Action<string> Dismounted;          // reason
-    public static event Action<string> CargoLoaded;         // item id
-    public static event Action<string> CargoUnloaded;
+    public static event Action<CargoItem> CargoLoaded;      // id, GUID, zombie name (0.22.0; was the item id)
+    public static event Action<CargoItem> CargoUnloaded;
     public static event Action BellRung;
 }
 

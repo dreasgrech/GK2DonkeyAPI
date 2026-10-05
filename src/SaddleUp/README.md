@@ -42,7 +42,7 @@ All of these apply at once:
 | 2. Behaviour | Riding speed | Normal | Riding the donkey: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
 | | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
 | | Say why mounting is refused | on | The keeper's thought bubble. |
-| | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, two at once; hand it to its work straight from the cart. Off: the cart refuses zombies. (Being built: not in effect yet.) |
+| | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, two at once; hand it to its work straight from the cart. Off: the cart refuses zombies. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | 3. Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |

@@ -31,8 +31,8 @@ namespace GK2DonkeyAPIProbe
             Logger.LogInfo($"[api probe] GK2 Donkey API {Mounts.ApiVersion}, available {Mounts.IsAvailable}.");
             Mounts.Mounted += style => Logger.LogInfo($"[api probe] event Mounted: {style}, owner {Mounts.Owner}.");
             Mounts.Dismounted += reason => Logger.LogInfo($"[api probe] event Dismounted: {reason}.");
-            Mounts.CargoLoaded += id => Logger.LogInfo($"[api probe] event CargoLoaded: {id}.");
-            Mounts.CargoUnloaded += id => Logger.LogInfo($"[api probe] event CargoUnloaded: {id}.");
+            Mounts.CargoLoaded += it => Logger.LogInfo($"[api probe] event CargoLoaded: {it} ({it.UniqueId}).");
+            Mounts.CargoUnloaded += it => Logger.LogInfo($"[api probe] event CargoUnloaded: {it} ({it.UniqueId}).");
             Mounts.AddMountRule(Guid, style => blocked ? "The API probe says no." : null);
             Mounts.AddStayRule(Guid, () => blocked ? "The API probe ended the ride." : null);
             foreach (MountFeature f in Features)

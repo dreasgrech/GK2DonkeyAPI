@@ -47,8 +47,9 @@ namespace GK2DonkeyAPI.Api
 
         public bool FacingRight => I.FacingRight;
 
-        // The item ids on its cart, in load order (empty without a cart).
-        public IReadOnlyList<string> CargoIds => I.CargoRig.Ids();
+        // The items on its cart, in load order (empty without a cart): each with its id, its GUID and, for a zombie, its
+        // name.
+        public IReadOnlyList<CargoItem> Cargo => I.CargoRig.Described();
 
         // This instance's own settings: any key of Mounts.Tuning, Mounts.Behaviour, Mounts.Shuffle or Mounts.Colors.
         // E.g. Tuning.Set(myId, "IdleShuffle", true) lets just this donkey shuffle.

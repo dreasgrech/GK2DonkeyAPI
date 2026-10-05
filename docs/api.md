@@ -99,9 +99,10 @@ To keep the player out of the cart style altogether, there's no feature; use a m
 - `Mounted(MountStyle)`: after the donkey is summoned, and after a style switch.
 - `Dismounted(string reason)`: after the ride ended, with the cargo already handed back. Reasons include
   `"dismounted"`, `"style change"`, `"indoors"` and a stay rule's text.
-- `CargoLoaded(string itemId)` and `CargoUnloaded(string itemId)`: an item went onto the cart or left it (e.g.
-  `"wood"`, `"body_corpse"`). Nothing is reported for the core's own bookkeeping, such as a door re-summon or the
-  hand-back around a save.
+- `CargoLoaded(CargoItem item)` and `CargoUnloaded(CargoItem item)`: an item went onto the cart or left it.
+  `CargoItem` has `Id` (e.g. `"wood"`, `"body_corpse"`, `"body_zombie"`), `UniqueId` (the game's item GUID, which
+  tells two zombies apart), `IsZombie` and `ZombieName`. Nothing is reported for the core's own bookkeeping, such as
+  a door re-summon or the hand-back around a save.
 
 A handler that throws is logged and skipped.
 
@@ -135,9 +136,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `ShowMessages`
 - `IdleShuffle` (0.7.0, off in the core): donkeys standing in the world **without a cart** take a few slow steps now
   and then, so they don't stand perfectly still. See "Idle shuffle" below.
-- `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load ([zombies-on-cart.md](zombies-on-cart.md)).
-  Off: the cart refuses them, and a zombie can't be taken while riding. (Being built: until the cart takes zombies,
-  both are refused either way.)
+- `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load, two at once, and are handed to their
+  work straight from it ([zombies-on-cart.md](zombies-on-cart.md)). Off: the cart refuses them, and a zombie can't be
+  taken while riding (neither from the ground, nor from its job, nor back from a station).
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 
@@ -237,15 +238,15 @@ MountHandle left = Mounts.Unhitch(donkey);                        // the cart st
 |---|---|
 | `Id`, `Owner`, `Exists`, `HasDonkey`, `HasCart`, `IsRidden` | Identity and state. |
 | `SceneId`, `Position`, `FacingRight` | Where it stands. |
-| `CargoIds` | What is on its cart. |
+| `Cargo` | What is on its cart, in load order (`CargoItem`: `Id`, `UniqueId`, `IsZombie`, `ZombieName`). |
 | `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour`, `Mounts.Shuffle` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
 | `Ride(showMessage)` | The keeper gets on and is put on the seat. The same checks and rules as `TryMount`. |
 | `MoveTo(position, facingRight)` | Moves a standing one. |
 | `IsReady` | Its view is loaded in the keeper's scene: `Ride` works. It takes a few frames after a spawn, `ComeToKeeper`, a hitch or an unhitch. |
 | `ComeToKeeper(facingRight, forRide = true, showMessage = true)` | It comes to the keeper, into his scene, to where a ride would put it, so `Ride` right after moves no one. Saddle Up calls its donkey this way. A donkey called while the keeper is on foot is called for a ride: when a ride would be refused there (indoors, busy, building, co-op, a mod's rule, too small to ride), it stays where it is and the refusal is returned and shown like a ride's. `forRide: false` brings it anyway. A cart, or anything called while the keeper rides, always comes. |
-| `LoadFromHead(showMessage = true)` | On foot at this standing cart: the topmost item the keeper holds that the cart takes goes onto it, one per call (with the perk for several held items, call again for the next). Refused while the keeper rides, for a ridden or cart-less one, in another scene, when the cart is full or takes none of what is held (zombies), or when a rule switched `Cargo` off. The keeper's controls call it ("[E] Load on cart"). |
+| `LoadFromHead(showMessage = true)` | On foot at this standing cart: the topmost item the keeper holds that the cart takes goes onto it, one per call (with the perk for several held items, call again for the next). Refused while the keeper rides, for a ridden or cart-less one, in another scene, when the cart is full or takes none of what is held (zombies with `CargoZombies` off), or when a rule switched `Cargo` off. The keeper's controls call it ("[E] Load on cart"). |
 | `TakeToHead(showMessage = true)` | On foot at this standing cart: its top item into the keeper's hands, with the game's own pickup. Refused as `LoadFromHead`, and when the hands are full or the cart is empty. The keeper's controls call it ("[E] Take from cart"). |
-| `SetDownCargo()` | Everything on its cart is set down on the ground at the cart. Call it before `Remove` to keep the cargo. |
+| `SetDownCargo()` | Everything on its cart is set down on the ground at the cart. Call it before `Remove` to keep the cargo (zombies are always set down by `Remove`: a zombie is never thrown away). |
 | `Remove()` | Gone, with anything on its cart; a ridden one is dismounted first. |
 
 **Events:** `InstanceSpawned`, `InstanceRemoved`, `Hitched(donkey, oldCart)`, `Unhitched(donkey, newCart)`. The
@@ -574,6 +575,7 @@ History:
 - 0.8.0: `Mounts.Spawn(ownerId, MountSpawn)`, `Mounts.SpawnFoal`, `MountSpawn`, `MountHandle.Scale`, `IsRideable`,
   `Parent`, `Children`; the `Mounts.Shuffle` keys `ShuffleFollowSpeed`, `ShuffleFollowMaxDistance`, `ShuffleFollowGap` (how close to the parent it settles, 0.9), `ShuffleFollowAlways` (bool: follow however far, stopping only when blocked), `ShuffleFollowRoutes` (bool, on: a way round obstacles), `ShuffleRouteRange` (8).
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
+- 0.22.0: zombies on the cart ([zombies-on-cart.md](zombies-on-cart.md)): the `Mounts.Behaviour` key `CargoZombies` (on); two zombies at once, drawn as the game's lying zombie with their own heads and colours, a layout class of their own; their organs and gear stay with them through every move (the zombie is relinked to the copy the cart stores). `CargoLoaded` / `CargoUnloaded` pass a `CargoItem` (id, GUID, zombie name) and `MountHandle.Cargo` replaces `CargoIds`. Fix: riding past a working zombie no longer offers "[E] Take" while the cart can't take it (taking it pulled it off its job). Fix: the hint over what the keeper faces is redrawn when the cart's load changes.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).
 - 0.20.0: lively foals: the `Mounts.Shuffle` keys `ShuffleFoalLively` (on) and `ShuffleFoal*` (area, steps, speeds, pauses, chained steps, quick trots) for donkeys with a parent ([foals.md](foals.md), "Lively foals"). Fix: foals placed together (at a door, a catch-up) each take a free slot; they stood inside each other. Fix: the still head over the walk (a view switched on with the prefab's head on its head layer). Removed: the navmesh-hole code (never found a hole). Fix: the game walking the keeper (the walk to a fishing spot, a script's walk) ends the ride where he stands, with the reason `the game walks the keeper`; a dismount leaves a state the game set on the keeper alone; a donkey is never parked off the ground, and the keeper is never put onto a seat over no ground: the donkey comes to him instead, and hitching such a cart while riding is refused ([safe-ground.md](safe-ground.md)). Fix: getting on (or hitching) while walking the other way no longer flips the rider and donkey every frame (the facing is read from the keeper's animator, not his stored direction, which the game leaves stale).
 - 0.19.0: `MountCompanion.Wheels` / `Hubs` (`WheelColor`: Game, DarkWood, Red, Green, Blue, Black, Custom; `HubColor`: Game, Black, Brass, Silver, Custom) with `CustomWheels` / `CustomHubs`; `Paint`'s Dark wood no longer darkens the wheels. Fix: donkey views are reset to the prefab and checked when they go back (docs/pooled-parts.md).

@@ -45,9 +45,12 @@ can be checked against it. Build: Mounts 0.1.0 as installed on 2026-09-30, inclu
     the river.
     - Check: `Cargo: … put into <river object> from the cart (1 left)`. The other item stays on the cart and looks
       right.
-13. **Full cart plus a zombie:** with the cart full (2/2), pick up a zombie.
-    - It should go onto the keeper's head as in the normal game, nothing duplicated, nothing dropped twice.
-    - Check: no `LOST`, and no second drop of the same item.
+13. **Zombies on the cart** (`CargoZombies` on): pick up a zombie from the ground and one from its job, and both lie
+    on the cart; with the cart full, a working zombie shows no "[E] Take", and one on the ground is put back down
+    ("The cart is full.").
+    - Check: `zombie … linked to its copy … (N item(s) inside)` with the same N at every move, no `LOST`, no
+      `stands in the world … instead`.
+    - The full test list: [zombies-on-cart.md](zombies-on-cart.md).
 14. **Cart full, a third item:** pick up one more item. It's put down in front of the keeper.
     - Check: `Cargo: cart full, … dropped in front of the keeper`.
 15. **Cargo sheet refuses a loaded cart:** with items on the cart, press "Photograph all cargo combinations" on the
