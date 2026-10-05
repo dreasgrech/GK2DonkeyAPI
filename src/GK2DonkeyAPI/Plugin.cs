@@ -396,29 +396,6 @@ namespace GK2DonkeyAPI
         // game update disabled the mod.
         internal static bool Patched;
 
-        // Before the rename (2026-10-02) this mod had another GUID, so its settings were in dreas.gk2.mounts.cfg. The first start
-        // under the new name copies that file over (BepInEx writes the new one only at the first Bind, which comes
-        // after this), so the settings carry on; the old file is left as it was.
-        private void CarryOverOldConfig(string oldName)
-        {
-            try
-            {
-                string now = Config.ConfigFilePath;
-                string old = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(now), oldName);
-                if (System.IO.File.Exists(now) || !System.IO.File.Exists(old))
-                {
-                    return;
-                }
-                System.IO.File.Copy(old, now);
-                Config.Reload();
-                Logger.LogInfo($"Settings carried over from {oldName} (this mod's settings before the rename) into {System.IO.Path.GetFileName(now)}.");
-            }
-            catch (System.Exception e)
-            {
-                Logger.LogWarning($"Couldn't carry the settings over from {oldName}: {e.Message}. The defaults apply.");
-            }
-        }
-
         private void Awake()
         {
             try
@@ -439,7 +416,6 @@ namespace GK2DonkeyAPI
             Log.LogEvent += (_, __) => Perf.NoteLogLine(); // the panel's log lines per second
             Instance = this;
             Application.quitting += () => Quitting = true;
-            CarryOverOldConfig("dreas.gk2.mounts.cfg");
             Enabled = Config.Bind("General", "Enabled", true,
                 "Master switch for the mount. GK2 Donkey API does nothing on its own: a mod built on it (such as Saddle Up) summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",

@@ -1230,10 +1230,6 @@ namespace GK2DonkeyAPI
                         onTop[i] = true;
                         note.Append($"{cur.Item.id} on top of {prev.Item.id}{(mode != "auto" ? " (" + mode + ")" : "")}");
                     }
-                    if (pair != null && !pair.Tuned)
-                    {
-                        target[i] += pair.Second;
-                    }
                 }
                 // A tuned pair: exactly where the panel put the two items (by id), above today's floor. Nothing above is used.
                 if (drawn.Count == 2)

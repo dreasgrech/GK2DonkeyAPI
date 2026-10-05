@@ -19,7 +19,6 @@ namespace GK2DonkeyAPI
     //                 added 2026-09-30, because a correction tuned for two logs side by side also moved one log).
     //                 top_along/top_up/top_across: offsets when it is stacked on top of another item.
     //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
-    //                 along/up/across shift the second-placed item relative to where the packer put it (legacy).
     //                 a_along/a_up/a_across, b_along/b_up/b_across: a TUNED pair (added 2026-09-30). The exact
     //                 place of item a and of item b (footprint centre along and across, bottom height above the cart
     //                 floor), written by the panel the first time either item of the pair is moved. A tuned pair is
@@ -94,10 +93,9 @@ namespace GK2DonkeyAPI
         {
             public string A, B;
             public string Mode = "auto"; // auto | side (across) | along (end to end) | stack
-            public Vector3 Second;       // offset of the second-placed item (legacy, untuned pairs only)
             public bool Tuned;           // PosA / PosB are the pair's exact layout
             public Vector3 PosA, PosB;   // along, height above the floor, across
-            public bool IsEmpty => Mode == "auto" && Second == Vector3.zero && !Tuned;
+            public bool IsEmpty => Mode == "auto" && !Tuned;
         }
 
         public static readonly Dictionary<string, ItemEntry> Items = new Dictionary<string, ItemEntry>(StringComparer.Ordinal);
@@ -209,9 +207,6 @@ namespace GK2DonkeyAPI
                     switch (key)
                     {
                         case "mode": pair.Mode = val.ToLowerInvariant(); break;
-                        case "along": pair.Second.x = f; break;
-                        case "up": pair.Second.y = f; break;
-                        case "across": pair.Second.z = f; break;
                         case "a_along": pair.PosA.x = f; pair.Tuned = true; break;
                         case "a_up": pair.PosA.y = f; pair.Tuned = true; break;
                         case "a_across": pair.PosA.z = f; pair.Tuned = true; break;
@@ -232,7 +227,7 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
-            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack; along / up / across move the second item.");
+            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack.");
             sb.AppendLine("#   a_* / b_*: a tuned pair, the exact place of item a and item b (along, height above the floor, across); frozen against everything but the floor.");
             sb.AppendLine("# Exact ids win over size-class matches; among class matches the first in this file wins.");
             sb.AppendLine("#");
@@ -267,7 +262,6 @@ namespace GK2DonkeyAPI
                 }
                 sb.AppendLine().AppendLine("[pair " + p.A + "+" + p.B + "]");
                 sb.AppendLine("mode = " + p.Mode);
-                Line(sb, "along", p.Second.x); Line(sb, "up", p.Second.y); Line(sb, "across", p.Second.z);
                 if (p.Tuned)
                 {
                     // all six, zeros too: their presence is what makes the pair tuned
