@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Dev-only: the showcase video's director (docs/showcase-video.md, "Automation"). Never shipped. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>GK2ShowcaseDirector</AssemblyName>
+    <Version>0.1.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- MSB3277 (System.IO.Compression 4.1.3.0 against 4.2.0.0) is the game's own, as in GK2DonkeyAPI.csproj: its
+         Assembly-CSharp is built against 4.2.0.0 but ships 4.0.0.0, and Mono unifies them at load. Not used here. -->
+    <MSBuildWarningsAsMessages>$(MSBuildWarningsAsMessages);MSB3277</MSBuildWarningsAsMessages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="NodeCanvas"><HintPath>$(Managed)/NodeCanvas.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="ParadoxNotion"><HintPath>$(Managed)/ParadoxNotion.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(Managed)\UnityEngine.IMGUIModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(Managed)\UnityEngine.InputLegacyModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
+
+</Project>

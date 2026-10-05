@@ -50,6 +50,28 @@ if it keeps going wrong by hand.
 
 ### 1. The director (a dev plugin, not shipped)
 
+**Built 2026-10-05, first part: time of day and weather** (`tools/GK2ShowcaseDirector`, F9; untested in game):
+- **Time:** a slider and presets (dawn, morning, noon, afternoon, dusk, night, midnight) through the game's
+  `EnvironmentEngine.SetTimeOfDayFake`. It changes the light, the HUD's sun-and-moon wheel (`UIHUDWheel` follows fake
+  times) and the town's ambient sounds. The clock pauses; the save's time and day don't move, and the game's
+  time-triggered scripts ignore fake times (`Flow_OnTimeOfDayEvent`). "Back to the real time" calls
+  `ResumeTimeOfDayFromData`. A real new day isn't offered: that is what sleeping does (decay, crops, quests).
+- **Weather:** one button per weather state, read at run time from the weather state machine (the names are in the
+  game's assets). `SetWeatherState(name, force: true)` holds it, and the game stops rolling new weather.
+  "Back to the weather before" restores what was there before the first change, rolling again.
+  - A weather the game holds (a quest or event set it) is left alone: entering a weather state runs its enter script
+    and leaving it its exit script (`FSMWeatherState.OnEnter` / `OnExit`).
+  - For the same reason the quests' event weathers ("Event…") aren't offered, nor "NULL Weather", a router with no
+    weather that can re-enter itself endlessly.
+  - Offered: the 9 ordinary weathers the game rolls between anyway (clear, five rains, weak wind, light and strong
+    mist). The weather is saved
+  with the game, so set it back before saving.
+- **While a time is held**, the few things that read the shown time see it: fishing (day or night fish), the scripts'
+  "time between" and "time of day" checks (quests, NPCs), fog and lighting. Don't fish or do time-dependent quest
+  steps while holding. The game's clock is paused, so time-scheduled things wait. A cutscene or sleep takes the time
+  over (the game's `Flow_TimeController`), and the director notices and lets go.
+- Its own window, not a tab of the donkey API's panel (one feature per plugin). Log prefix `[director]`.
+
 Its own plugin (`dreas.gk2.showcasedirector`, one feature per plugin), using the public API wherever it can. A
 number key per shot (or a panel row) puts the game in that shot's starting state:
 

@@ -252,6 +252,9 @@ closed):
 - **Showcase video** ([showcase-video.md](showcase-video.md), revised 2026-10-04): shot list updated, automation
   planned (a dev "director" plugin for each shot's setup, OBS and ffmpeg scripts), nothing built. To decide:
   landscape or vertical, music or game audio, Saddle Up only or the API too. Shot 7 waits for the door fix (9n).
+- **Showcase director, time and weather** (built 2026-10-05, [showcase-video.md](showcase-video.md)): F9 window,
+  untested. Check: the presets change the light and the HUD wheel; the real time stays (the label); back to the real
+  time; the weather list (`[director] N weather states: …`), holding one, back to normal.
 - **Zombies on the cart** ([zombies-on-cart.md](zombies-on-cart.md), investigated 2026-10-04): possible with
   changes listed in the doc. Decided: two at once, fully tunable like every item, setting on by default. Key catch:
   the inventory add copies a zombie's organs and gear away from it, so every add needs a relink. Second-round audit
