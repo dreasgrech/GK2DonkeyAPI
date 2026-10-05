@@ -893,7 +893,10 @@ namespace GK2DonkeyAPI
             {
                 if (HasDonkey && donkey != null && donkey)
                 {
-                    if (bubblePoint == null || !bubblePoint)
+                    // Only while it is in this view: views are pooled (Tiers, ViewPool), and a parked view handed to another
+                    // donkey kept this one's label over that donkey (found in game 2026-10-05: "[E] Ride RSK" over a panel
+                    // donkey).
+                    if (bubblePoint == null || !bubblePoint || !bubblePoint.IsChildOf(donkey.transform))
                     {
                         bubblePoint = null;
                         foreach (Transform t in donkey.GetComponentsInChildren<Transform>(includeInactive: true))

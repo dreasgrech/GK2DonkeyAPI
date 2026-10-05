@@ -530,6 +530,7 @@ namespace GK2DonkeyAPI
                 seatPending = false;
                 bodySprite = null;
                 donkeyBodyRenderer = null;
+                bubblePoint = null; // its label point is in the parked view, which may go to another donkey
                 try
                 {
                     v.gameObject.SetActive(false);

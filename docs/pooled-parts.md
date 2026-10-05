@@ -95,3 +95,15 @@ for new views until the probe found it.
 - Emptying the head layer before a pooled view is switched on, and when a view goes back: covered by
   `RestartWithoutHead`.
 - Emptying the head layer on every walk frame: it hid the problem rather than fixing it.
+
+## The mod's own caches into a view (2026-10-05)
+
+The same rule holds for the mod's own references into a view, not only the game's parts. `Instance.HintPoint` cached
+the view's `BubblePoint` transform and never let go. When the view was parked in the view pool (`Tiers.cs`) and later
+handed to another donkey, the transform was still alive, so the first donkey's "[E] Ride <name>" label was drawn over
+the other one (found in game: "[E] Ride RSK" over a panel donkey).
+
+**The fix:** the cache is cleared when the view is parked, and used only while it is inside the donkey's current view
+(`IsChildOf(donkey.transform)`). Any cached transform or renderer from a donkey view must be cleared at the park,
+next to `bodySprite` and `donkeyBodyRenderer`. `seatRoot` is not one: it is the keeper's animator, used only while
+riding.

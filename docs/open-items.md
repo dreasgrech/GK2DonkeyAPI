@@ -252,6 +252,12 @@ closed):
 - **Showcase video** ([showcase-video.md](showcase-video.md), revised 2026-10-04): shot list updated, automation
   planned (a dev "director" plugin for each shot's setup, OBS and ffmpeg scripts), nothing built. To decide:
   landscape or vertical, music or game audio, Saddle Up only or the API too. Shot 7 waits for the door fix (9n).
+- **Label over the wrong donkey (found 2026-10-05, fixed, to test):** walking up to Saddle Up's donkey showed
+  "[E] Ride RSK" (its name, right) over a panel-spawned donkey (wrong place). `Instance.HintPoint` cached the view's
+  `BubblePoint` and never let go. When the view was parked in the view pool (Tiers) and handed to another donkey, the
+  cache still pointed into it. Now cleared when a view is parked, and only used while it is inside this donkey's
+  current view (`IsChildOf`). Test: with several standing donkeys (some far enough to be parked and woken), every
+  "[E] Ride" sits over its own donkey.
 - **Showcase director, time and weather** (built 2026-10-05, [showcase-video.md](showcase-video.md)): F9 window,
   untested. Check: the presets change the light and the HUD wheel; the real time stays (the label); back to the real
   time; the weather list (`[director] N weather states: …`), holding one, back to normal.
