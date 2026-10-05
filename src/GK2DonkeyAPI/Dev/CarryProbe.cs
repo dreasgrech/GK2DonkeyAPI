@@ -282,6 +282,36 @@ namespace GK2DonkeyAPI
         // definition that makes body_zombie is used; without one, a corpse is turned into a zombie the way the
         // resurrection table does it (UIResurrectionWindowData: a new body_zombie with the corpse's start items and
         // contents). Test aid: it is a normal zombie and is saved like any other; reload without saving to be rid of it.
+        // A zombie's body item, before CreateZombieDrop gives it its zombie: from a body definition that makes body_zombie,
+        // else a corpse turned into one as the resurrection table does it. Null when the game has neither.
+        internal static Item NewZombieBody(out string how)
+        {
+            BodyDef zombieBody = GameBalance.Me.bodyDefs.Find(b => b != null && b.linkedBodyItemId == "body_zombie");
+            if (zombieBody != null)
+            {
+                how = "body definition " + zombieBody.id;
+                return zombieBody.GenerateItem();
+            }
+            BodyDef corpseBody = GameBalance.Me.GetDataOrNull<BodyDef>("body_0_1");
+            if (corpseBody == null)
+            {
+                how = null;
+                return null;
+            }
+            Item corpse = corpseBody.GenerateItem();
+            Item item = new Item("body_zombie");
+            if (corpse.TryGetProperty<BodyZombieStartItemsSerializedItemProperty>(out var start))
+            {
+                item.AddProperty(start);
+            }
+            foreach (Item part in new List<Item>(corpse.Inventory))
+            {
+                item.AddItemToInventory(part);
+            }
+            how = "a corpse of body_0_1, resurrected";
+            return item;
+        }
+
         public static string SpawnZombie()
         {
             try
@@ -291,32 +321,10 @@ namespace GK2DonkeyAPI
                 {
                     return "no game loaded";
                 }
-                BodyDef zombieBody = GameBalance.Me.bodyDefs.Find(b => b != null && b.linkedBodyItemId == "body_zombie");
-                Item item;
-                string how;
-                if (zombieBody != null)
+                Item item = NewZombieBody(out string how);
+                if (item == null)
                 {
-                    item = zombieBody.GenerateItem();
-                    how = "body definition " + zombieBody.id;
-                }
-                else
-                {
-                    BodyDef corpseBody = GameBalance.Me.GetDataOrNull<BodyDef>("body_0_1");
-                    if (corpseBody == null)
-                    {
-                        return "no body definition to make a zombie from";
-                    }
-                    Item corpse = corpseBody.GenerateItem();
-                    item = new Item("body_zombie");
-                    if (corpse.TryGetProperty<BodyZombieStartItemsSerializedItemProperty>(out var start))
-                    {
-                        item.AddProperty(start);
-                    }
-                    foreach (Item part in new List<Item>(corpse.Inventory))
-                    {
-                        item.AddItemToInventory(part);
-                    }
-                    how = "a corpse of body_0_1, resurrected";
+                    return "no body definition to make a zombie from";
                 }
                 Vector3 pos;
                 if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(pd.position.Value, pd.Direction, out pos))

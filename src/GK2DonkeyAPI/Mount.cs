@@ -830,6 +830,7 @@ namespace GK2DonkeyAPI
 
             private void Dismount(PlayerController pc, string reason)
             {
+                CargoSheet.Abort("dismount: " + reason); // before Park keeps the cargo on a standing cart
                 if (!Ephemeral)
                 {
                     Park(pc, reason);
@@ -854,6 +855,7 @@ namespace GK2DonkeyAPI
             // game is closing); the old summon hands its cargo back first, as always.
             public void ForceCleanup(string reason)
             {
+                CargoSheet.Abort("cleanup: " + reason);
                 bool was = mounted;
                 mounted = false;
                 if (Ridden == this) Ridden = null;

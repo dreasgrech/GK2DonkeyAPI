@@ -466,6 +466,7 @@ namespace GK2DonkeyAPI
             // no one in between.
             internal List<Item> TakeAllForTransfer()
             {
+                CargoSheet.Abort("hitch or unhitch"); // the sheet's items never go to another cart
                 List<Item> items = ItemsNow();
                 unloading = true;
                 try

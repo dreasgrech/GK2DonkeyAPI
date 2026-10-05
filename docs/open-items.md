@@ -211,6 +211,14 @@ In a game:
       packer put on top first (as on the cart; the packer's order is fixed), otherwise packing order. The "(on top)" /
       "(bottom)" tags, read from the current heights, are gone too (they flipped as one item passed the other); two
       of the same item are labelled "(1)" and "(2)" by their fixed block.
+    - **The sheet's stand-in zombies (built 2026-10-05, to test):** with an empty cart, Debug tab, "Photograph all
+      cargo combinations". Check:
+      - `[sheet] stand-in zombie … made` twice;
+      - a `body_zombie` row and column, and the 10-head strip;
+      - `stand-in zombie … removed (the sheet ended)` twice;
+      - no `left the cart`.
+      Then dismount mid-run once: `[sheet] aborted (dismount: …)`, both stand-ins removed, nothing left on the
+      standing cart.
     - Not yet: tuning. Already done: a third zombie with a full cart (only two in the save; a Debug-tab "Spawn a test zombie" button is
       built for it), the setting off, and tuning.
 9b. **Baby donkeys come indoors** (0.18.0): the test list in [foals-indoors.md](foals-indoors.md). Check especially

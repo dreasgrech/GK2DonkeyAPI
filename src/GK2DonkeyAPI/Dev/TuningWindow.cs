@@ -1166,7 +1166,7 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
             }
-            GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; BepInEx/GK2-cargo-sheet/index.html shows the grid (rows: first item, columns: second). The panel hides during the run; your real cargo is put back afterwards.", small);
+            GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; index.html in the sheet folder (the repo's tools/cargo-sheet/out on the machine with the sources, else BepInEx/GK2-cargo-sheet; emptied of the last run's pictures first) shows the grid (rows: first item, columns: second). Zombies are in it through two temporary stand-in zombies (real ones, made and removed by the sheet), with every zombie head alone at the end. The panel hides during the run; your real cargo is put back afterwards.", small);
 
             Header("Spawn a carryable item in front of the keeper (test)");
             GUILayout.BeginHorizontal();

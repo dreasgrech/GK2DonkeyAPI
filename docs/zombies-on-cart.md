@@ -328,7 +328,24 @@ Each step is built and checked before the next.
    seed entries once the box is measured in game, and the `Save` header's class list.
    **Layout:** the `body_zombie` class (own box, never merged); `BoxOf` and `DropBehindCart` use it; seed entries
    and the `Save` header.
-8. **Dev tools** (the user chose (a), 2026-10-05):
+8. **Built 2026-10-05:** the sheet makes two real temporary zombies (`CarryProbe.NewZombieBody` +
+   `CreateZombieDrop`, held in the store of carried zombies, no world object). It adds a `body_zombie` row and column
+   (alone, with itself, with every class) and a strip of the 10 heads (`ApplySkinToZombieWgoData` on the first
+   stand-in). It removes them with `RemoveZombie` when it ends or aborts, unless one's item is found off the sheet's
+   cart (then it stays, a real zombie, with a warning).
+   - Chosen over a fake look (a skin override with no zombie behind it): leaked, a fake would be an orphan zombie
+     item that could break a station; a real stand-in is harmless.
+   - The sheet now also aborts at a dismount or park, a cleanup, `Mount.Remove` and a hitch or unhitch, besides
+     unload and save, so its test items never reach a standing cart or the ground.
+   - `CarryProbe.SpawnZombie` shares `NewZombieBody`.
+   - Also 2026-10-05, the user's request: the sheet writes to the repo's `tools/cargo-sheet/out/` (git-ignored) on
+     the machine with the sources, else to `BepInEx/GK2-cargo-sheet`. Each run first removes its own old pictures
+     (the grid's or the shapes page's).
+   - The shapes page ("Photograph every item alone") has a zombie bucket too: the stand-in, one picture per head,
+     removed when the page ends.
+   - Not tested in game yet.
+
+   **Dev tools** (the user chose (a), 2026-10-05):
    - **(a) A stand-in only inside the cargo sheet:** a fake zombie (a head picker, drawn without a real zombie)
      that exists only while `CargoSheet.Running`. The sheet then shows a zombie representative, the 10 heads and
      every pair. The panel is tuned with real zombies.

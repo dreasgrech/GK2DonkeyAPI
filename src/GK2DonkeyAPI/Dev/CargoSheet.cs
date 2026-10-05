@@ -27,6 +27,15 @@ namespace GK2DonkeyAPI
         private static Coroutine running;
         private static Inventory runningInv;
 
+        // Zombies on the sheet (docs/zombies-on-cart.md, the user's choice (a), 2026-10-05). A zombie item needs its
+        // ZombieWgoData to be drawn (its head and colours) and must never exist without one, so the sheet makes two real
+        // zombies with the game's own call (CarryProbe.NewZombieBody + ZombieSystemData.CreateZombieDrop, as the game's
+        // "Drop Zombie" script node), held in the store of carried zombies (no world object), and removes them again when
+        // it ends or is aborted. If one ever left the cart before that (a path the aborts below missed), it is a real
+        // zombie and stays one: harmless, logged, never removed from under the player.
+        internal const string ZombieRep = "body_zombie";
+        private static readonly List<ZombieWgoData> standIns = new List<ZombieWgoData>();
+
         // Ends a run early (a dismount, a save, an error) and throws its test items away. Unity does not run a
         // stopped coroutine's finally block, so the inventory is cleared here. The cart was empty when the run
         // began (Begin insists), so there is nothing to put back.
@@ -48,6 +57,7 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning("[sheet] abort cleanup failed: " + e.Message);
             }
+            RemoveStandIns("abort");
             running = null;
             runningInv = null;
             Running = false;
@@ -147,13 +157,14 @@ namespace GK2DonkeyAPI
         private static IEnumerator RunShapes()
         {
             Running = true;
-            string dir = Path.Combine(Paths.BepInExRootPath, "GK2-cargo-sheet");
+            string dir = OutDir();
             List<Item> saved = null;
             Inventory inv = null;
             var log = new StringBuilder();
             try
             {
                 Directory.CreateDirectory(dir);
+                ClearOld(dir, shapes: true);
                 inv = Mount.Donkey.Data.Inventory;
                 saved = new List<Item>(inv.Data.Inventory);
                 Dictionary<string, Transform> elements = OverheadElements();
@@ -207,6 +218,42 @@ namespace GK2DonkeyAPI
                     done++;
                     Status = $"{done} / {ids.Count}";
                 }
+                // Zombies: their own bucket (CargoLayout keeps them a class of their own), one picture per head, drawn on the
+                // sheet's stand-in zombie (see standIns), which is removed again in the finally below or by an abort.
+                if (MakeStandIns())
+                {
+                    ZombieWgoData z = standIns[0];
+                    int zbody = z.GetGameResInt("zombie_body_id");
+                    string zbodyLut = z.GameResStr.Get("zombie_body_lut"), zheadLut = z.GameResStr.Get("zombie_head_lut");
+                    Vector3 zbox = CargoLayout.BoxOf(ZombieRep);
+                    var zrows = new List<string>();
+                    for (int head = 1050; head <= 1059; head++)
+                    {
+                        ZombieSkinHelper.ApplySkinToZombieWgoData(z, zbody, head, zbodyLut, zheadLut);
+                        inv.Clear();
+                        AddCell(inv, ZombieRep, 0);
+                        yield return null;
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        string file = "shape__" + ZombieRep + "_head" + head + ".png";
+                        string err = Capture(Path.Combine(dir, file));
+                        if (err != null)
+                        {
+                            log.AppendLine(file + ": " + err);
+                        }
+                        string cap = ZombieRep + " head " + head;
+                        zrows.Add($"<td><img src=\"{file}\" alt=\"{cap}\" title=\"{cap}\" onclick=\"show('{file}','{cap}')\"><div class=\"cap\"><b>{cap}</b><br>the game's lying zombie (pose 2), head {head}<br>{zbox.x:0.00} long, {zbox.y:0.00} high, {zbox.z:0.00} across</div></td>");
+                        Status = $"{done} / {ids.Count}, zombie head {head}";
+                    }
+                    bucketRefs.Add(ZombieRep);
+                    bucketSizes.Add(zbox);
+                    bucketRows.Add(zrows);
+                    bucketMeshes.Add(new HashSet<string> { "drops_item_zombie_pose2 (10 heads)" });
+                }
+                else
+                {
+                    log.AppendLine("no stand-in zombie (the game has no body definition to make one from); zombies left out.");
+                }
                 // Largest boxes first, for reading.
                 var order = new List<int>();
                 for (int k = 0; k < bucketSizes.Count; k++)
@@ -257,6 +304,7 @@ namespace GK2DonkeyAPI
                 if (inv != null)
                 {
                     inv.Clear();
+                    RemoveStandIns("the shapes page ended");
                     if (saved != null)
                     {
                         foreach (Item it in saved)
@@ -306,6 +354,11 @@ namespace GK2DonkeyAPI
         private static List<string> Members(string rep)
         {
             var m = new List<string>();
+            if (rep == ZombieRep)
+            {
+                m.Add(ZombieRep + " (the stand-in zombies; every head below)");
+                return m;
+            }
             foreach (string id in CarryProbe.BigItemIds())
             {
                 if (CargoLayout.SameClass(rep, id))
@@ -316,19 +369,181 @@ namespace GK2DonkeyAPI
             return m;
         }
 
+        // Where the pictures go: on the machine with the sources the repo's tools/cargo-sheet/out (git-ignored: generated,
+        // about 24 MB, stale after every tuning change; the layout file they are made from is the source), else the
+        // game's BepInEx/GK2-cargo-sheet.
+        internal static string OutDir()
+        {
+            try
+            {
+                string repo = Defaults.RepoPath(Path.Combine("..", "..", "tools", "cargo-sheet", "out"));
+                if (repo != null)
+                {
+                    return Path.GetFullPath(repo);
+                }
+            }
+            catch
+            {
+            }
+            return Path.Combine(Paths.BepInExRootPath, "GK2-cargo-sheet");
+        }
+
+        // A run's own old files out first (the grid's or the shapes page's, never the other's), so the folder holds only
+        // what the run makes: pictures of buckets that no longer exist used to stay behind for weeks.
+        private static void ClearOld(string dir, bool shapes)
+        {
+            int n = 0;
+            foreach (string f in Directory.GetFiles(dir))
+            {
+                string name = Path.GetFileName(f);
+                string ext = Path.GetExtension(f).ToLowerInvariant();
+                bool shapeFile = name.StartsWith("shape__", StringComparison.Ordinal) || name == "shapes.html";
+                if (shapeFile == shapes && (ext == ".png" || ext == ".html"))
+                {
+                    try
+                    {
+                        File.Delete(f);
+                        n++;
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogWarning($"[sheet] could not remove the old {name}: {e.Message}");
+                    }
+                }
+            }
+            if (n > 0)
+            {
+                Plugin.Log.LogInfo($"[sheet] {n} old file(s) removed from {dir}.");
+            }
+        }
+
+        private static bool MakeStandIns()
+        {
+            RemoveStandIns("left over");
+            PlayerData pd = MainGame.PlayerData;
+            if (pd == null || MainGame.ZombieSystemData == null)
+            {
+                return false;
+            }
+            for (int i = 0; i < 2; i++)
+            {
+                Item body = CarryProbe.NewZombieBody(out string how);
+                if (body == null)
+                {
+                    return false;
+                }
+                ZombieWgoData z = MainGame.ZombieSystemData.CreateZombieDrop("zombie", pd.position.Value, pd.currentGameSceneId, body);
+                standIns.Add(z);
+                Plugin.Log.LogInfo($"[sheet] stand-in zombie {z.Name} made from {how} (head {z.GetGameResInt("zombie_head_id")}, colours {z.GameResStr.Get("zombie_head_lut")}); removed when the sheet ends.");
+            }
+            return true;
+        }
+
+        // Puts an item for a sheet cell on the cart: a new item from its id, or for the zombie bucket the stand-in's own
+        // item (slot 0 or 1), linked to the copy the cart stores (HeadReroute.RelinkZombie), as for a real zombie.
+        private static void AddCell(Inventory inv, string id, int slot)
+        {
+            if (id == ZombieRep && slot < standIns.Count)
+            {
+                Item zi = standIns[slot].ZombieItem;
+                inv.AddItemToInventory(zi);
+                HeadReroute.RelinkZombie(inv, zi, "the cargo sheet");
+                return;
+            }
+            inv.AddItemToInventory(new Item(id));
+        }
+
+        // Called after the cart was cleared (the run's end or an abort). A stand-in whose item lies anywhere but the sheet's
+        // cart (the ground, another cart, the hands) is a real zombie now and stays; the others are removed from the game.
+        private static void RemoveStandIns(string why)
+        {
+            if (standIns.Count == 0)
+            {
+                return;
+            }
+            foreach (ZombieWgoData z in standIns)
+            {
+                try
+                {
+                    if (z == null || MainGame.ZombieSystemData?.GetZombie(z.UniqueId) == null)
+                    {
+                        continue;
+                    }
+                    string where = FoundOutsideSheet(z);
+                    if (where != null)
+                    {
+                        Plugin.Log.LogWarning($"[sheet] stand-in zombie {z.Name} left the cart ({where}); it stays, a real zombie like any other.");
+                        continue;
+                    }
+                    MainGame.ZombieSystemData.RemoveZombie(z.UniqueId);
+                    Plugin.Log.LogInfo($"[sheet] stand-in zombie {z.Name} removed ({why}).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"[sheet] removing a stand-in zombie failed ({why}): {e.Message}");
+                }
+            }
+            standIns.Clear();
+        }
+
+        // Where the zombie's item is, when not on the sheet's cart: a drop in a scene, a cart, the keeper's hands. Null
+        // when nowhere else (it was only ever on the sheet's cart).
+        private static string FoundOutsideSheet(ZombieWgoData z)
+        {
+            Guid g = z.UniqueId.Guid;
+            foreach (GameSceneData sd in MainGame.WorldData.gameSceneDataList)
+            {
+                if (sd == null)
+                {
+                    continue;
+                }
+                if (sd.droppedItems.Exists(d => d?.Item != null && d.Item.UniqueId.Guid == g) || sd.queuedDrops.Exists(d => d?.Item != null && d.Item.UniqueId.Guid == g))
+                {
+                    return "on the ground in " + sd.id;
+                }
+            }
+            string cart = null;
+            Mount.ForEachInstance(i =>
+            {
+                if (cart == null && i.CargoRig.ItemsNow().Exists(it => it.UniqueId.Guid == g))
+                {
+                    cart = "on " + i.Describe();
+                }
+            });
+            if (cart != null)
+            {
+                return cart;
+            }
+            PlayerData pd = MainGame.PlayerData;
+            if (pd != null && pd.TryGetOverheadItem(it => it.UniqueId.Guid == g, out _))
+            {
+                return "in the keeper's hands";
+            }
+            return null;
+        }
+
         private static IEnumerator Run()
         {
             Running = true;
-            string dir = Path.Combine(Paths.BepInExRootPath, "GK2-cargo-sheet");
+            string dir = OutDir();
             var log = new StringBuilder();
             List<Item> saved = null;
             Inventory inv = null;
             try
             {
                 Directory.CreateDirectory(dir);
+                ClearOld(dir, shapes: false);
                 inv = Mount.Donkey.Data.Inventory;
                 saved = new List<Item>(inv.Data.Inventory);
                 List<string> reps = Representatives();
+                if (MakeStandIns())
+                {
+                    reps.Add(ZombieRep);
+                }
+                else
+                {
+                    log.AppendLine("no stand-in zombies (the game has no body definition to make one from); zombies left out.");
+                }
                 Status = $"0 / {reps.Count * (reps.Count + 1)}";
                 Plugin.Log.LogInfo($"[sheet] {reps.Count} size buckets: {string.Join(" ", reps)}");
 
@@ -349,10 +564,10 @@ namespace GK2DonkeyAPI
                 foreach (KeyValuePair<string, string> combo in combos)
                 {
                     inv.Clear();
-                    inv.AddItemToInventory(new Item(combo.Key));
+                    AddCell(inv, combo.Key, 0);
                     if (combo.Value != null)
                     {
-                        inv.AddItemToInventory(new Item(combo.Value));
+                        AddCell(inv, combo.Value, 1);
                     }
                     yield return null;
                     yield return null;
@@ -367,7 +582,33 @@ namespace GK2DonkeyAPI
                     done++;
                     Status = $"{done} / {total}";
                 }
-                WriteHtml(Path.Combine(dir, "index.html"), reps, cells, log.ToString());
+                // Every zombie head alone (the stand-in's head changed, its colours kept), to see that the one zombie class
+                // fits them all.
+                var heads = new List<KeyValuePair<string, string>>();
+                if (standIns.Count > 0)
+                {
+                    ZombieWgoData z = standIns[0];
+                    int body = z.GetGameResInt("zombie_body_id");
+                    string bodyLut = z.GameResStr.Get("zombie_body_lut"), headLut = z.GameResStr.Get("zombie_head_lut");
+                    for (int head = 1050; head <= 1059; head++)
+                    {
+                        ZombieSkinHelper.ApplySkinToZombieWgoData(z, body, head, bodyLut, headLut);
+                        inv.Clear();
+                        AddCell(inv, ZombieRep, 0);
+                        yield return null;
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        string file = "zombie_head_" + head + ".png";
+                        string err = Capture(Path.Combine(dir, file));
+                        if (err != null)
+                        {
+                            log.AppendLine(file + ": " + err);
+                        }
+                        heads.Add(new KeyValuePair<string, string>(file, "head " + head));
+                        Status = $"{done} / {total}, head {head}";
+                    }
+                }
+                WriteHtml(Path.Combine(dir, "index.html"), reps, cells, log.ToString(), heads);
                 Plugin.Log.LogInfo($"[sheet] {done} pictures written to {dir}\\index.html" + (log.Length > 0 ? " with problems:\n" + log : ""));
                 Status = "done: " + Path.Combine(dir, "index.html");
             }
@@ -376,6 +617,7 @@ namespace GK2DonkeyAPI
                 if (inv != null)
                 {
                     inv.Clear();
+                    RemoveStandIns("the sheet ended");
                     if (saved != null)
                     {
                         foreach (Item it in saved)
@@ -453,7 +695,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void WriteHtml(string path, List<string> reps, Dictionary<string, string> cells, string problems)
+        private static void WriteHtml(string path, List<string> reps, Dictionary<string, string> cells, string problems, List<KeyValuePair<string, string>> heads = null)
         {
             StyleSettings s = Mount.S;
             var sb = new StringBuilder();
@@ -494,6 +736,16 @@ namespace GK2DonkeyAPI
                 sb.AppendLine("</tr>");
             }
             sb.AppendLine("</table>");
+            if (heads != null && heads.Count > 0)
+            {
+                sb.AppendLine("<h2>Every zombie head, alone on the cart (one zombie class covers them all)</h2><table><tr>");
+                foreach (KeyValuePair<string, string> h in heads)
+                {
+                    string cap = "body_zombie " + h.Value;
+                    sb.Append($"<td><img src=\"{h.Key}\" alt=\"{cap}\" title=\"{cap}\" onclick=\"show('{h.Key}','{cap}')\"><div class=\"cap\">{cap}</div></td>");
+                }
+                sb.AppendLine("</tr></table>");
+            }
             if (!string.IsNullOrEmpty(problems))
             {
                 sb.AppendLine("<h2>Problems</h2><pre>").Append(problems).AppendLine("</pre>");

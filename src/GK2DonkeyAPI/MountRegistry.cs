@@ -866,6 +866,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            CargoSheet.Abort("removed: " + why);
             if (i.IsRidden)
             {
                 DismountFromApi(why);
