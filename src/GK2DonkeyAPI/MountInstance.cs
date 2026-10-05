@@ -846,6 +846,7 @@ namespace GK2DonkeyAPI
                 MoveCartSettings(this, cart);
                 cart.CargoRig.SetCarried(CargoRig.TakeAllForTransfer());
                 Register(cart);
+                MountSounds.Moment(this, "unhitch"); // still in Cart style: the cart's sound settings
                 Restyle(pc, scene, MountStyle.Ride);
                 Plugin.Log.LogInfo($"Mount: {Describe()} left its cart as {cart.Describe()} at {cart.Position:F2} ({cart.CargoRig.Count} item(s) on it).");
                 Mounts.RaiseUnhitched(Handle, cart.Handle);

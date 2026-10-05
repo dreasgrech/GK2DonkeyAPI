@@ -693,6 +693,10 @@ namespace GK2DonkeyAPI
                 SoundIdRow("Hitching sound id", s.HitchSoundId, "hitch", allowEmpty: false);
                 FloatSlider("Hitching volume", s.HitchVolume, 0f, 3f, 2, null);
                 FloatSlider("Hitching pitch", s.HitchPitch, 0.3f, 2f, 2, null);
+                Toggle("Sound when the cart is left standing", s.UnhitchOn, null);
+                SoundIdRow("Unhitching sound id", s.UnhitchSoundId, "unhitch", allowEmpty: false);
+                FloatSlider("Unhitching volume", s.UnhitchVolume, 0f, 3f, 2, null);
+                FloatSlider("Unhitching pitch", s.UnhitchPitch, 0.3f, 2f, 2, null);
             }
 
             Header("Bell");

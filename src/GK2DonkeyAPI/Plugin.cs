@@ -52,14 +52,14 @@ namespace GK2DonkeyAPI
         public readonly Tuned<int> BobLagFrames, HeadLagFrames;
         // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
         public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
-            CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo, MountOn, DismountOn, HitchOn;
+            CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo, MountOn, DismountOn, HitchOn, UnhitchOn;
         public readonly Tuned<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
             BrayOnMountChance, BrayIdleEverySeconds, BrayVolume, BrayPitch, CargoThumpVolume, CargoThumpPitch,
             WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds,
-            MountVolume, MountPitch, MountSoundStart, DismountVolume, DismountPitch, DismountSoundStart, HitchVolume, HitchPitch;
+            MountVolume, MountPitch, MountSoundStart, DismountVolume, DismountPitch, DismountSoundStart, HitchVolume, HitchPitch, UnhitchVolume, UnhitchPitch;
         public readonly Tuned<int> HoofStepsPerCycle, WheelEveryCycles;
         public readonly Tuned<string> HoofSoundId, GrazeSoundId, BraySoundId, CargoThumpSoundId, WheelSoundId, BellSoundId,
-            MountSoundId, DismountSoundId, HitchSoundId;
+            MountSoundId, DismountSoundId, HitchSoundId, UnhitchSoundId;
 
         public StyleSettings(ConfigFile cfg, string section, float speed, float depth, float center, int riderPx, int torsoPx,
             bool autoSeat, int seatAdjustPx, float seatOffset, bool bob, RiderPose pose, bool freeze,
@@ -243,6 +243,10 @@ namespace GK2DonkeyAPI
             HitchSoundId = S(cfg, section, "HitchSoundId", "equip_tool", "Sound id for hitching a cart.");
             HitchVolume = F(cfg, section, "HitchVolume", 1f, 0f, 3f, "Hitching volume.");
             HitchPitch = F(cfg, section, "HitchPitch", 1f, 0.3f, 2f, "Hitching pitch.");
+            UnhitchOn = B(cfg, section, "UnhitchOn", true, "Cart: a sound when a donkey leaves its cart standing.");
+            UnhitchSoundId = S(cfg, section, "UnhitchSoundId", "unequip_tool", "Sound id for leaving the cart standing (the counterpart of the hitching sound).");
+            UnhitchVolume = F(cfg, section, "UnhitchVolume", 1f, 0f, 3f, "Unhitching volume.");
+            UnhitchPitch = F(cfg, section, "UnhitchPitch", 1f, 0.3f, 2f, "Unhitching pitch.");
             WheelOn = B(cfg, section, "WheelOn", cart, "Cart: a wooden wheel rumble once per walk cycle while the cart moves (the game has no cart sound; this borrows a machine wheel).");
             WheelSoundId = S(cfg, section, "WheelSoundId", "conveyor_furnace_wheel", "Sound id for the wheels (conveyor_assembly_wheel is the chain-and-rev alternative).");
             WheelVolume = F(cfg, section, "WheelVolume", 0.6f, 0f, 3f, "Wheel volume.");
@@ -288,6 +292,7 @@ namespace GK2DonkeyAPI
             MountOn, MountSoundId, MountVolume, MountPitch, MountSoundStart,
             DismountOn, DismountSoundId, DismountVolume, DismountPitch, DismountSoundStart,
             HitchOn, HitchSoundId, HitchVolume, HitchPitch,
+            UnhitchOn, UnhitchSoundId, UnhitchVolume, UnhitchPitch,
             WheelOn, WheelSoundId, WheelVolume, WheelPitch, WheelPitchFollowsSpeed, WheelEveryCycles, WheelPhase,
             BellSoundId, BellOnSetOff, BellOnlyWithCargo, BellSetOffIdleSeconds, BellVolume, BellPitch,
         };

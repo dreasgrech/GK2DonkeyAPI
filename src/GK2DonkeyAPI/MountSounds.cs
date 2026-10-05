@@ -353,7 +353,7 @@ namespace GK2DonkeyAPI
             LastEvent = "cargo thump";
         }
 
-        // Getting on or off, or hitching a cart (what: "mount", "dismount", "hitch"), at that donkey with the settings of
+        // Getting on or off, hitching or unhitching a cart (what: "mount", "dismount", "hitch", "unhitch"), at that donkey with the settings of
         // its style: the donkey alone and with its cart have their own sounds (the user's picks, 2026-10-05).
         internal static void Moment(Mount.Instance i, string what)
         {
@@ -379,6 +379,9 @@ namespace GK2DonkeyAPI
                         break;
                     case "hitch":
                         if (s.HitchOn.Value) Play(s.HitchSoundId.Value, at, s.HitchVolume.Value, s.HitchPitch.Value);
+                        break;
+                    case "unhitch":
+                        if (s.UnhitchOn.Value) Play(s.UnhitchSoundId.Value, at, s.UnhitchVolume.Value, s.UnhitchPitch.Value);
                         break;
                 }
                 LastEvent = what;
@@ -423,6 +426,7 @@ namespace GK2DonkeyAPI
                 case "mount": Play(S.MountSoundId.Value, d.transform, S.MountVolume.Value, S.MountPitch.Value, S.MountSoundStart.Value); break;
                 case "dismount": Play(S.DismountSoundId.Value, d.transform, S.DismountVolume.Value, S.DismountPitch.Value, S.DismountSoundStart.Value); break;
                 case "hitch": Play(S.HitchSoundId.Value, d.transform, S.HitchVolume.Value, S.HitchPitch.Value); break;
+                case "unhitch": Play(S.UnhitchSoundId.Value, d.transform, S.UnhitchVolume.Value, S.UnhitchPitch.Value); break;
                 case "wheel": Play(S.WheelSoundId.Value, d.transform, S.WheelVolume.Value, S.WheelPitch.Value); break;
                 case "bell": RingBell(); break;
             }
