@@ -1213,6 +1213,42 @@ namespace GK2DonkeyAPI
             }
             GUILayout.Label("A real zombie lying in front of the keeper, made the way the game's own quest scripts drop one (its organs, collar and looks included). It is saved like any other zombie: reload without saving to be rid of it.", small);
 
+            Header("Chest on the cart: step-0 probe (docs/portable-chest.md §6)");
+            if (GUILayout.Button("Dump chest and building definitions to a file"))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpDefinitions());
+            }
+            GUILayout.Label("Writes BepInEx/GK2-chest-facts.txt: every world object with a chest interaction or an inventory, with the flags the design depends on (size, multi-inventory, town quality, scripts, HP behaviour, filters), its build and remove definitions with costs and refunds, and which scenes keep the previous scene loaded through a door.", small);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Hide, move 4 m, show", Wd(170f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.HideMoveShow());
+            }
+            if (GUILayout.Button("Move back", Wd(100f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.MoveBack());
+            }
+            if (GUILayout.Button("Zone out and in", Wd(130f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.ZoneRoundTrip());
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Stand-in here", Wd(130f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.StandIn());
+            }
+            if (GUILayout.Button("Remove stand-in", Wd(130f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.RemoveStandIn());
+            }
+            if (GUILayout.Button("Log its colliders", Wd(130f)))
+            {
+                Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpColliders());
+            }
+            GUILayout.EndHorizontal();
+            GUILayout.Label("All on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper; press ten times, then Remove, and check the log for town quality changes and [pool] lines.", small);
+
         }
 
         // Your settings (saved as you change them) against the mod defaults (defaults.cfg, shipped in the DLL).
