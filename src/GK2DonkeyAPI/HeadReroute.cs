@@ -389,7 +389,8 @@ namespace GK2DonkeyAPI
         }
     }
 
-    // Taking a worker back from its station (porter, power source, carrier, clay, mine, sand, sawmill: every caller of
+    // Taking a worker back from its station (porter, power source, carrier, clay, mine, sand, sawmill, and since game
+    // 1.009 the caretaker's station while the caretaker is out working: every caller of
     // PutZombieFromGameSceneToStoreForPlayer besides the walking zombie) is gated by HasFreeOverheadSlot alone, which
     // answers the cart's room while riding. With zombies off the cart (CargoZombies off) the station would then
     // unassign its worker and hand it to AddOverheadItem, the head, and the empty-hands rule would lay it on the ground
@@ -404,7 +405,7 @@ namespace GK2DonkeyAPI
             {
                 typeof(PorterStationInteractionHandler), typeof(PowerSourceInteractionHandler), typeof(ZombieCarrierInteractionHandler),
                 typeof(ZombieClayInteractionHandler), typeof(ZombieMineInteractionHandler), typeof(ZombieSandInteractionHandler),
-                typeof(ZombieSawmillInteractionHandler),
+                typeof(ZombieSawmillInteractionHandler), typeof(StationInteractionHandler),
             };
             foreach (Type t in types)
             {
