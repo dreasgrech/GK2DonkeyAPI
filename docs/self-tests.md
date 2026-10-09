@@ -14,8 +14,9 @@ A fix can't pass because the case happened not to show.
 
 ## How to run
 
-1. Load a save and stand outdoors with open ground around the keeper. The tests need ground 3, 22, 26 and 42–50 units
-   away.
+1. Load a save and stand outdoors with open ground around the keeper, **inside a built-up area** (the chest scenarios
+   build their test chest beside the keeper and need a zone; outside every area they skip with a WARN). The tests need
+   ground 3, 22, 26 and 42–50 units away.
 2. Open the panel (F11), go to the **Debug** tab, then **Self-tests**, and press **Run self-tests**. It takes about 4
    minutes.
 3. **Don't touch the keys while it runs.** The tests move the keeper, ride and dismount. **Abort** stops after the
@@ -56,6 +57,13 @@ a failure of the mod. Try another spot.
 | Foals keep up off screen | a parent with two foals (following however far) is ridden 22 away | the foals stay active, and reach the parent by trotting, with no catch-up jumps (a jump gives WARN) |
 | No leaks | 80 donkeys (8 with carts) spawned and removed, twice | instances, colour materials, colour textures (also shared), lamps, meshes and cargo holders all back at the start |
 | Frame time by mode | 300 donkeys around the keeper; 3 s each of: levels with idle switched off, idle frozen, levels off, levels on again | INFO lines only: the frame time and the mod's share in each mode, and what levels and switching off save at this spot |
+| Chest: hide, move, show (and off screen) | a test `chest_rough` built beside the keeper is hidden, moved to a free spot inside the camera's view and shown again; the keeper walks 45 away and back; moved back | data and view at the new spot; drawn, registered in the chunk system, held by a chunk around the new spot; zone membership untouched; culled away, drawn again back near it (the view's private state and the camera's facts are logged when not) |
+| Chest: zone out and in | the chest with one item leaves every zone list and comes back through the game's own priority order | out: no list entry, not a crafting source, no navigation hole, the item the same object; in: the same zone, exactly one entry, a crafting source with its hole again |
+| Chest: ten stand-ins | ten stand-ins of the chest spawned and destroyed | drawn, no solid collider, not interactable in the scene list, town quality unchanged, no stand-in part put into the pool (a temp object destroys its parts even when they came from the pool; the borrowed count is reported) |
+| Chest: the ride (step 1) | a test cart ridden to the chest: hint, refusals (cargo aboard, a sawmill chest), lift, set-down (up to five stands against the reach gate), lift again, dismount, unhitch and hitch, the save hook, the cart removed | the handler's rows; hidden, zone-less, no hole, `TryAddWgoData` refused while riding; the cart at 0 slots; the stand-in under the cargo holder with only its trigger on; the chest follows the cart; `ChestLoaded`/`ChestUnloaded` once each; set down shown and zoned with its hole; it goes with the free cart and comes back; stands at the cart for the save and rides again after; the cart removed leaves it standing; contents the same object throughout |
+| Chest: the backstops | the chest broken on purpose (hidden and zone-less, nobody's), then the game's save order (hook, pass, take-back) and the after-load repair; a normal chest for contrast | both show and zone it, drawn, contents untouched; a chest standing normally is left alone (its "Please report this line" warnings are announced as the test's own) |
+| Chest: the save as the game writes it | with the chest riding a test cart, the real save steps and the game's own serializer in memory, read back into a copy; then the fail-safe lock | in the copy: present, not hidden, interactable, the same items, by the cart on ground, in a zone's list; the side file names it; it rides again after; locked: set down at the cart, pickups refused ("Chests don't ride on the cart."); unlocked; any other riding chest (the player's) lifted back |
+| Chest: a zombie using it | a caretaker staged by data in the zombie system's lookup (never in a scene, never saved) with the chest as its target, then a conveyor transporter | refused with "A zombie is using this chest." by the hint's reason and the press, the chest shown and zoned; target cleared, liftable; the zombie gone again, the list's count as before |
 
 **After every scenario that moves the keeper:** every donkey in the world with its view on has a view of its own size,
 and its cart parts match whether it has a cart. That covers reused views taken by any donkey, not only the test's.
@@ -78,3 +86,4 @@ number, scene, kind, keep setting and key. No test donkey is left behind.
 | 2026-10-01, run 2 | 74 passed, 0 failed, 1 warning | the reason: after the ride it stood 22 from the keeper's far spot, 37% of the screen past the edge, inside the 40% an active donkey needs to leave. The test's far spot is now taken 30 from the donkey |
 | 2026-10-01, run 3 | 71 passed, 1 failed, 1 warning | the frozen ride passed. The "both took a parked view" failure was the test's assumption: the world's own donkeys woke with the keeper and took parked views too. Reuse is now counted for anyone, and every donkey with a view is checked for size and cart parts |
 | 2026-10-01, run 4 | **81 passed, 0 failed, 0 warnings** | levels save 5.7 ms a frame with 300 test donkeys (14.1 → 8.4 ms); switched off versus frozen: no measurable difference here |
+| 2026-10-09, several runs | **179 passed, 0 failed, 0 warnings** (last run) | the seven chest scenarios added (docs/portable-chest.md). Test fixes on the way: the lock test lifts the player's own riding chests back; the backstops test uses the game's save order; hide/move/show picks a spot inside the camera's view (Grave Zoom at 2x halves it); stand-ins may take idle pool parts; the ride test tries several stands against the reach gate; the per-mod API's made-up GUID warnings announced |

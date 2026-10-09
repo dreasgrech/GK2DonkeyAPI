@@ -294,8 +294,18 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 12. **Donkeys and carts in the world:** the test list in [`docs/instances.md`](instances.md).
 13. **Idle shuffle:** the test list in [`docs/roaming.md`](roaming.md).
 14. **Foals:** the test list in [`docs/foals.md`](foals.md).
+15. **A chest on the cart** ([`docs/portable-chest.md`](portable-chest.md)), all passed 2026-10-09:
+    - driving the cart up to a plain storage chest shows "[F] Load onto the cart"; F lifts it, drawn on the bed, and
+      the cart takes no other cargo ("The cart is full.");
+    - with cargo aboard, or a zombie heading for the chest, F is refused with a bubble that says why;
+    - E with nothing in front sets it down behind the cart; on foot at the standing cart the chest offers "[E] Open"
+      (the real contents) and "[F] Set down";
+    - sleep with it aboard, quit and load: it rides again (`restored with the save` in the log);
+    - the mod removed (both DLLs renamed) and the save loaded: a normal chest stands by where the cart was, openable,
+      with its items, removable; the mod back: lifted onto the cart again;
+    - a door to another scene: "The chest stays by the cart." and the chest stands at the cart.
 
-Still untested: doors that load another scene; a save while mounted
+Still untested: a save while mounted
 (the bed is indoors, so normal play always dismounts first).
 
 ## Probe (`tools/GK2DonkeyProbe/`)
