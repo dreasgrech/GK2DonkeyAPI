@@ -47,6 +47,7 @@ All of these apply at once:
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | | Calling the donkey leaves the cart parked | on | H while your donkey stands somewhere with the cart: the donkey alone comes and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |
+| | Donkey leaves corpses at the crossroads | **off** | The game's own delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears: it walks out from behind its tree, the bodies drop beside it with a notification, and it walks back and vanishes. You carry them to the morgue, or cart them. Bodies on the ground count toward the morgue's capacity, and one left out of sight for about 75 minutes of play turns into a grave mound (the game's rules; the API's cfg can switch the rot off, change the spots and the text). Off: the game's own delivery, nothing of it hooked. |
 | 3. Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Coat colour | Game default | Brown, Dark, Cream, Black, or Custom. |
 | | Harness colour | Game default | Black, Red, Blue, Green, or Custom. |

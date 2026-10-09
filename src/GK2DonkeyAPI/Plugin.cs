@@ -417,6 +417,7 @@ namespace GK2DonkeyAPI
 
         // [Debug]
         internal static ConfigEntry<bool> TuningKeys;
+        internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<KeyCode> TuningWindowKey;
         internal static bool TuningWindowHidden; // toggled by TuningWindowKey; starts as remembered (TuningWindowHiddenCfg); the self-tests hide it for the run only
@@ -482,6 +483,25 @@ namespace GK2DonkeyAPI
             DonkeyZoneAhead = Config.Bind("General", "DonkeyZoneAhead", Defaults.Get("General", "DonkeyZoneAhead", 1.2f),
                 new ConfigDescription("On foot next to a standing donkey with its cart: how far ahead of the donkey's body its area reaches, world units.", new AcceptableValueRange<float>(0.2f, 2.5f)));
 
+            // [Corpses]: the game's donkey leaves its bodies at the crossroads (Corpses.cs, docs/corpse-delivery.md).
+            // Off in the core; a mod switches it on for its player (Mounts.Corpses).
+            Corpses.AtCrossroads = Config.Bind(Corpses.Section, "CorpsesAtCrossroads", Defaults.Get(Corpses.Section, "CorpsesAtCrossroads", false),
+                "The game's donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets; you carry or cart them to the morgue yourself. Off: the game's own delivery, nothing of it hooked.");
+            Corpses.UnloadAtCrossroads = Config.Bind(Corpses.Section, "CorpsesUnloadAtCrossroads", Defaults.Get(Corpses.Section, "CorpsesUnloadAtCrossroads", true),
+                "The donkey walks out from behind its tree to CorpsesStandPoint, unloads there and walks back to vanish. Off: it walks to the morgue as in the game; the bodies still appear at CorpsesDropPoint when it arrives. While a quest keeps the donkey at the morgue for a talk, it walks there either way.");
+            Corpses.StandPoint = Config.Bind(Corpses.Section, "CorpsesStandPoint", Defaults.Get(Corpses.Section, "CorpsesStandPoint", "donkey_01_01"),
+                "GD point the donkey walks to and unloads at. donkey_01_01 is the road beside the nun; crossroad_nun_corpses right beside her; donkey_02 further west; donkey_01 is its own spawn point behind the tree (then it unloads on the spot after CorpsesUnloadDelay).");
+            Corpses.DropPoint = Config.Bind(Corpses.Section, "CorpsesDropPoint", Defaults.Get(Corpses.Section, "CorpsesDropPoint", "nun_body_drop_point"),
+                "GD point the bodies are left at. nun_body_drop_point is the game's own spot by the nun; crossroad_nun_corpses right beside her; donkey_01 where the donkey appears.");
+            Corpses.NeverRot = Config.Bind(Corpses.Section, "CorpsesNeverRot", Defaults.Get(Corpses.Section, "CorpsesNeverRot", false),
+                "A body on the ground normally turns into a grave mound after about 75 minutes of play out of sight (the game's rule). On: the bodies the donkey leaves never rot.");
+            Corpses.Notification = Config.Bind(Corpses.Section, "CorpsesNotification", Defaults.Get(Corpses.Section, "CorpsesNotification", "The donkey left a body at the crossroads"),
+                "Shown instead of the game's \"New Body\" notification for each body left, with the body's icon. Empty: the game's own.");
+            Corpses.UnloadDelay = Config.Bind(Corpses.Section, "CorpsesUnloadDelay", Defaults.Get(Corpses.Section, "CorpsesUnloadDelay", 1.5f),
+                new ConfigDescription("Only when the donkey unloads on the spot (CorpsesStandPoint is its spawn point, or no walk is possible): seconds before the bodies appear.", new AcceptableValueRange<float>(0.1f, 10f)));
+            Corpses.LeaveDelay = Config.Bind(Corpses.Section, "CorpsesLeaveDelay", Defaults.Get(Corpses.Section, "CorpsesLeaveDelay", 1f),
+                new ConfigDescription("Only when the donkey unloads on the spot: seconds it stays before it vanishes.", new AcceptableValueRange<float>(0.1f, 10f)));
+
 
             Ride = new StyleSettings(Config, "Ride",
                 speed: 1.75f, depth: 0.32f, center: 0.48f, riderPx: -4, torsoPx: -3,
@@ -515,6 +535,8 @@ namespace GK2DonkeyAPI
                 "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
             TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
+            SelfTestSpot = Config.Bind("Debug", "SelfTestSpot", "",
+                "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a run with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", false,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
 
@@ -556,6 +578,16 @@ namespace GK2DonkeyAPI
                 return;
             }
             Patched = true;
+            // The corpse delivery's patch targets (its patches go in only when a mod switches the feature on): a
+            // missing one switches that feature off for good, not the API.
+            try
+            {
+                Corpses.Verify();
+            }
+            catch (Exception e)
+            {
+                Corpses.Unavailable(e.Message);
+            }
             // With the dev panel on (Debug.TuningWindow), the [perf] line is written every 10 s from the start: a
             // measurement no longer depends on remembering the panel's switch (it can still be switched off there).
             Perf.LogEvery10s = TuningWindowEnabled.Value;
@@ -579,6 +611,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            Corpses.Tick(); // the corpse-delivery patches follow their switch (off: not hooked at all)
             if (!Enabled.Value)
             {
                 // Switched off mid-ride: hand the cargo back and restore the keeper instead of leaving a frozen
@@ -659,6 +692,7 @@ namespace GK2DonkeyAPI
             {
             }
             Patched = false;
+            Corpses.Remove();
             MainGame.OnGameStarted = (Action)Delegate.Remove(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
             PlayerController.OnPlayerTeleported -= Mount.OnKeeperTeleported;
             harmony?.UnpatchSelf();

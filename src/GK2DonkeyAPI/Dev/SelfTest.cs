@@ -78,9 +78,54 @@ namespace GK2DonkeyAPI
             Plugin.TuningWindowHidden = true;
             bool lodOn = Lod.On, idleOff = Lod.IdleSwitchesOff;
             int perFrame = Lod.SpawnsPerFrame;
+            // Where the keeper stood: he is put back there at the end. The run itself starts from the remembered spot
+            // (Debug.SelfTestSpot, written by a run that passed everywhere) when it is in this scene.
+            Vector3 origin = Keeper();
+            float originFacing = pc.PlayerData.Direction.x >= 0f ? 1f : -1f;
+            current = "start";
+            if (TryParseSpot(Plugin.SelfTestSpot.Value, out string spotScene, out Vector3 spot) && spotScene == scene.Id && Vector3.Distance(spot, origin) > 1f)
+            {
+                PutKeeper(spot, originFacing);
+                yield return Frames(2);
+                if (Vector3.Distance(Keeper(), spot) < 1f)
+                {
+                    Info($"the keeper moved to the remembered test spot {spot:F1} (Debug.SelfTestSpot); back to {origin:F1} at the end");
+                }
+                else
+                {
+                    Warn($"the remembered test spot {spot:F1} didn't take (he is at {Keeper():F1}); running from here");
+                }
+            }
+            // Not inside a container zone (a built-up area with chests and crafting, the kind a chest can belong to;
+            // the player's own zone readout counts other kinds too): into the nearest one, at a free spot with ground.
+            if (ZoneAt(Keeper(), scene) == null)
+            {
+                Vector3? into = SpotInNearestZone(Keeper(), scene, out WorldZoneData intoZone);
+                if (into.HasValue)
+                {
+                    PutKeeper(into.Value, originFacing);
+                    yield return Frames(2);
+                    if (Vector3.Distance(Keeper(), into.Value) < 1f)
+                    {
+                        Info($"the keeper stood in no container zone; moved into {intoZone.id} at {into.Value:F1} (back to {origin:F1} at the end)");
+                    }
+                    else
+                    {
+                        Warn($"the spot in {intoZone.id} at {into.Value:F1} didn't take (he is at {Keeper():F1}); running from here");
+                    }
+                }
+            }
             home = Keeper();
-            homeFacing = pc.PlayerData.Direction.x >= 0f ? 1f : -1f;
-            Line($"[test] start: {scene.Id} at {home:F1}, {Mount.All.Count} instance(s) in the world; levels {(lodOn ? "on" : "off")}, idle {(idleOff ? "switched off" : "frozen")}.");
+            homeFacing = originFacing;
+            int bodiesAtStart = MainGame.PlayerData.GetResInt("cur_bodies_count");
+            corpseDrops.Clear();
+            WorldZoneData startZone = ZoneAt(home, scene);
+            string zone = startZone?.id ?? MainGame.PlayerData.CurrentWorldZoneData?.Definition?.id;
+            Line($"[test] start: {scene.Id} at {home:F1} ({(startZone != null ? "container zone " + zone : zone != null ? "zone " + zone + ", not a container zone" : "no zone")}), {Mount.All.Count} instance(s) in the world; levels {(lodOn ? "on" : "off")}, idle {(idleOff ? "switched off" : "frozen")}.");
+            if (startZone == null)
+            {
+                Warn("this spot is in no container zone and none could be reached: the chest scenarios will skip. Start the run inside a built-up area with chests (the yard).");
+            }
 
             // The world's own instances (not the tests'): all must come through the run as they were.
             var before = new Dictionary<string, string>();
@@ -111,6 +156,14 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "chest: the backstops", Body = ChestBackstops },
                 new Scenario { Name = "chest: the save as the game writes it", Body = ChestSaveImage },
                 new Scenario { Name = "chest: a zombie using it", Body = ChestZombieGuard },
+                new Scenario { Name = "corpses: drop and stand points", Body = CorpsePoints },
+                new Scenario { Name = "corpses: one body left", Body = CorpseOneBody },
+                new Scenario { Name = "corpses: the patches follow the switch", Body = CorpseSwitch },
+                new Scenario { Name = "corpses: the notification, swapped once", Body = CorpseNotification },
+                new Scenario { Name = "corpses: twelve bodies at once", Body = CorpseManyBodies },
+                new Scenario { Name = "corpses: never rot", Body = CorpseNeverRot },
+                new Scenario { Name = "corpses: an unknown point steps aside", Body = CorpseUnknownPoint },
+                new Scenario { Name = "corpses: walk decisions", Body = CorpseWalkDecisions },
             };
             foreach (Scenario s in scenarios)
             {
@@ -155,6 +208,25 @@ namespace GK2DonkeyAPI
                 if (IsTestOwner(i.OwnerId)) leftover++;
             }
             Check(leftover == 0, $"no test donkey left behind ({leftover})");
+            if (corpseDrops.Count > 0)
+            {
+                // A corpse scenario that threw after its drop: its bodies are real, so they go now, not at the next load.
+                current = "corpse bodies left by a failed scenario";
+                yield return RemoveCorpseDrops(bodiesAtStart);
+            }
+            if (!abort && fail == 0 && warn == 0)
+            {
+                string remembered = scene.Id + "|" + home.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
+                if (Plugin.SelfTestSpot.Value != remembered)
+                {
+                    Plugin.SelfTestSpot.Value = remembered;
+                    Info($"this spot passed everywhere and is remembered for the next run (Debug.SelfTestSpot = {remembered})");
+                }
+            }
+            if (Vector3.Distance(origin, Keeper()) > 0.5f)
+            {
+                PutKeeper(origin, originFacing);
+            }
             string summary = $"{(abort ? "aborted" : "done")}: {pass} passed, {fail} failed, {warn} warning(s).";
             Line("[test] " + summary);
             Status = summary;
@@ -236,6 +308,25 @@ namespace GK2DonkeyAPI
 
         private static Vector3 Keeper() => PC.PlayerData.position.Value;
 
+        // "scene|x,y,z" (Debug.SelfTestSpot), invariant culture.
+        private static bool TryParseSpot(string s, out string scene, out Vector3 p)
+        {
+            scene = null;
+            p = default;
+            if (string.IsNullOrWhiteSpace(s)) return false;
+            int bar = s.IndexOf('|');
+            if (bar <= 0) return false;
+            string[] xyz = s.Substring(bar + 1).Split(',');
+            if (xyz.Length != 3) return false;
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            if (!float.TryParse(xyz[0], System.Globalization.NumberStyles.Float, ci, out float x)
+                || !float.TryParse(xyz[1], System.Globalization.NumberStyles.Float, ci, out float y)
+                || !float.TryParse(xyz[2], System.Globalization.NumberStyles.Float, ci, out float z)) return false;
+            scene = s.Substring(0, bar);
+            p = new Vector3(x, y, z);
+            return true;
+        }
+
         private static void PutKeeper(Vector3 p, float facing)
         {
             PC.SetPosition(p);
@@ -276,7 +367,8 @@ namespace GK2DonkeyAPI
         }
 
         // A point with ground and room for the keeper about 'dist' from 'from' (eight directions, sideways first).
-        private static Vector3? Spot(Vector3 from, float dist)
+        // also: a further condition on the spot (the chest scenarios want one inside a building zone).
+        private static Vector3? Spot(Vector3 from, float dist, Func<Vector3, bool> also = null)
         {
             float[] angles = { 0f, 180f, 30f, 150f, 210f, 330f, 90f, 270f };
             foreach (float a in angles)
@@ -287,10 +379,71 @@ namespace GK2DonkeyAPI
                 if (!float.IsNaN(g))
                 {
                     p.y = g;
-                    if (FreeSpot(p))
+                    if (FreeSpot(p) && (also == null || also(p)))
                     {
                         return p;
                     }
+                }
+            }
+            return null;
+        }
+
+        // A free spot with ground inside the nearest active container zone of the scene (its centre first, then rings
+        // around it), or null. Nearest by the distance from p to the zone's rectangle.
+        private static Vector3? SpotInNearestZone(Vector3 p, GameScene scene, out WorldZoneData zone)
+        {
+            zone = null;
+            GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(scene.Id);
+            if (sd?.WorldZonesByProcessingPriority == null) return null;
+            var xz = new Vector2(p.x, p.z);
+            var zones = new List<WorldZoneData>();
+            foreach (var kv in sd.WorldZonesByProcessingPriority)
+            {
+                foreach (WorldZoneData z in kv.Value)
+                {
+                    if (z.IsContainer && z.IsActive && z.wholeZoneRect.width > 0f) zones.Add(z);
+                }
+            }
+            zones.Sort((a, b) => RectDistance(a.wholeZoneRect, xz).CompareTo(RectDistance(b.wholeZoneRect, xz)));
+            foreach (WorldZoneData z in zones)
+            {
+                Vector3 c = new Vector3(z.wholeZoneRect.center.x, p.y, z.wholeZoneRect.center.y);
+                WorldZoneData want = z;
+                Func<Vector3, bool> inside = q => ZoneAt(q, scene) == want;
+                float g = Mount.Instance.GroundHeight(c, out _);
+                if (!float.IsNaN(g))
+                {
+                    c.y = g;
+                    if (FreeSpot(c) && inside(c)) { zone = z; return c; }
+                }
+                foreach (float r in new[] { 2f, 4f, 6f, 9f })
+                {
+                    Vector3? s = Spot(c, r, inside);
+                    if (s.HasValue) { zone = z; return s; }
+                }
+            }
+            return null;
+        }
+
+        private static float RectDistance(Rect r, Vector2 q)
+        {
+            float dx = Mathf.Max(r.xMin - q.x, 0f, q.x - r.xMax);
+            float dy = Mathf.Max(r.yMin - q.y, 0f, q.y - r.yMax);
+            return Mathf.Sqrt(dx * dx + dy * dy);
+        }
+
+        // The building zone a world object placed at p would belong to (the game's own test: an active container
+        // zone whose rectangle holds the point, highest processing priority first), or null.
+        private static WorldZoneData ZoneAt(Vector3 p, GameScene scene)
+        {
+            GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(scene.Id);
+            if (sd?.WorldZonesByProcessingPriority == null) return null;
+            var xz = new Vector2(p.x, p.z);
+            foreach (var kv in System.Linq.Enumerable.Reverse(sd.WorldZonesByProcessingPriority))
+            {
+                foreach (WorldZoneData z in kv.Value)
+                {
+                    if (z.IsContainer && z.IsActive && z.wholeZoneRect.Contains(xz)) return z;
                 }
             }
             return null;

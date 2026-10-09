@@ -209,12 +209,30 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 - **Test**: obvious colours everywhere for this session;
 - **a colour report** written to the log.
 
+### `[Corpses]`: the game's delivery donkey leaves its bodies at the crossroads
+
+Off in the core; Saddle Up's "Donkey leaves corpses at the crossroads" sets the switch (a session override, like its
+other Behaviour toggles). Full story: [corpse-delivery.md](corpse-delivery.md). Panel rows: General tab, "Corpses at the
+crossroads".
+
+| Key | Default | Meaning |
+|---|---|---|
+| `CorpsesAtCrossroads` | false | The switch. Off: nothing of the game's delivery is hooked. On: four patches go in (the pallet step, the graph's fallback drops, the delivery walk, the "New Body" notification) and come out again when it's switched off. |
+| `CorpsesUnloadAtCrossroads` | true | The donkey walks out from behind its tree to `CorpsesStandPoint`, unloads there and walks back to vanish. Off: it walks to the morgue as in the game; the bodies still appear at `CorpsesDropPoint` when it arrives. A quest that keeps it at the morgue for a talk keeps the game's walk either way. |
+| `CorpsesStandPoint` | `donkey_01_01` | GD point it walks to and unloads at (the road beside the nun). `crossroad_nun_corpses`: right beside her; `donkey_02`: further west; `donkey_01`: its own spawn point (then it unloads on the spot after `CorpsesUnloadDelay`). |
+| `CorpsesDropPoint` | `nun_body_drop_point` | GD point the bodies are left at (the game's own spot by the nun). |
+| `CorpsesNeverRot` | false | The bodies it leaves never turn into a grave mound (the game's rule: about 75 minutes of play out of sight). |
+| `CorpsesNotification` | The donkey left a body at the crossroads | Shown instead of the game's "New Body", with the body's icon. Empty: the game's own. |
+| `CorpsesUnloadDelay` | 1.5 | Only when it unloads on the spot: seconds before the bodies appear. |
+| `CorpsesLeaveDelay` | 1 | Only when it unloads on the spot: seconds before it vanishes. |
+
 ### `[Debug]` and `[Safety]`
 
 | Key | Default | Meaning |
 |---|---|---|
 | `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Lantern / Sounds / Colors / Instances / Debug / Sources. Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
 | `TuningWindowKey` | F11 | Hides / shows the panel (e.g. for screenshots). The game doesn't bind F-keys; Shift+F11 is left to its Workshop creator. `None` = no key. |
+| `SelfTestSpot` | (empty) | Where the self-tests start, `scene|x,y,z`; written by the runner after a run with no failures and no warnings, used at the start of the next run in that scene (the keeper is moved there and put back afterwards). Empty: from where he stands (2026-10-10). |
 | `TuningWindowHidden` | false | Whether the panel is hidden right now; written as the key toggles it, so a panel left hidden stays hidden after a restart (2026-10-09). |
 | `TuningKeys` | false | PageUp/PageDown torso, Home/End legs sideways, Insert/Delete legs up/down, one art pixel per press, editing the current style's values. Turn off for normal play. |
 | (Debug tab buttons) | | "Start a real delivery now" fires the game donkey's own `full_cycle` script event with its body roll forced to pass (a Harmony prefix on `Flow_Body.DoAction`, active for two frames after the press, drop chance untouched), so the real cart can be watched on the same ground as ours. "Dump the game donkey's script" writes the `npc_donkey` flow graph to `BepInEx/GK2-script-npc_donkey.json`; the text field sends any of its events. See `PROBE-FINDINGS.md` for the routine. "Dump carry facts" writes `BepInEx/GK2-carry-facts.txt` (the donkey prefab's drawer rules, its inventory filters, every big item, the overhead mesh elements) and "Put in cart inventory" / "Take first out" add or remove a plain test item on the mounted donkey's own 2-slot inventory to watch the game's loaded-cart mesh react (Round 7 of the findings; groundwork for carrying cargo). "Drop it here" spawns any big item in front of the keeper with the game's own drop routine (a normal, saved world drop; `<` `>` cycle through all of them; a corpse comes from the delivery script's body definition; zombies cannot be spawned from an id). "Photograph all cargo combinations" puts every distinct item shape alone and every ordered pair on the mounted cart in turn, screenshots and crops each, and writes `BepInEx/GK2-cargo-sheet/index.html`, a grid of all pictures (rows: first item, columns: second) with the settings used; the cart must be empty to start (a dismount mid-run aborts the sheet and discards its test copies). |

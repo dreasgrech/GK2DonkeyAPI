@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 25, 0);
+        public static readonly Version ApiVersion = new Version(0, 26, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -258,6 +258,48 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
+        // Corpses at the crossroads (docs/corpse-delivery.md), overridable like tuning (keys = their [Corpses] cfg
+        // names). Off in the core; a mod turns it on for its player (Saddle Up's "Donkey leaves corpses at the
+        // crossroads"), and while it is on the game's own donkey leaves the bodies it brings where it appears, by the
+        // nun, instead of putting them on the morgue pallets; the keeper hauls them himself (the cart takes them).
+        //   CorpsesAtCrossroads        the switch (off). Off: nothing of the game's delivery is hooked at all.
+        //   CorpsesUnloadAtCrossroads  the donkey walks out from behind its tree to CorpsesStandPoint, unloads there and
+        //                              walks back (on); off: it walks to the morgue as in the game, and the bodies
+        //                              still appear at the drop point when it arrives.
+        //   CorpsesStandPoint          GD point it walks to (donkey_01_01, the road beside the nun).
+        //   CorpsesDropPoint           GD point the bodies are left at (nun_body_drop_point, the game's own spot by her).
+        //   CorpsesNeverRot            the bodies it leaves never turn into a grave mound (off; the game's rule is about
+        //                              75 minutes of play out of sight).
+        //   CorpsesNotification        text shown instead of the game's "New Body", with the body's icon; "" = the game's.
+        //   CorpsesUnloadDelay / CorpsesLeaveDelay  only when it unloads on the spot (the stand point is its spawn point,
+        //                              or no walk is possible): seconds before the bodies appear / before it vanishes.
+        // The game's own rules stay: deliveries every second day, the body roll, the morgue's capacity (bodies on the
+        // ground count), the quests that keep the donkey at the morgue for a talk (then it walks there as in the game).
+        public static MountTuning Corpses
+        {
+            get
+            {
+                if (GK2DonkeyAPI.Corpses.AtCrossroads == null)
+                {
+                    throw new InvalidOperationException("GK2 Donkey API has not loaded its settings yet.");
+                }
+                return corpses ?? (corpses = new MountTuning(GK2DonkeyAPI.Corpses.Section, GK2DonkeyAPI.Corpses.Settings));
+            }
+        }
+
+        // Whether the corpse delivery is hooked right now (CorpsesAtCrossroads on, the API active, the patches in).
+        public static bool CorpsesActive => GK2DonkeyAPI.Corpses.Applied;
+
+        // A body the game's donkey left at the crossroads (CorpsesAtCrossroads).
+        public static event Action<CorpseInfo> CorpseLeft;
+
+        internal static void RaiseCorpseLeft(CorpseInfo corpse) => Raise(CorpseLeft, corpse, "CorpseLeft");
+
+        // Debug aid: starts the game donkey's own delivery now (the same event the game's schedule sends every second
+        // day), with its body roll forced to pass. The game's other rules still apply (the morgue's capacity, the
+        // quests). Not sent while the donkey is already out. Returns what happened, for the log.
+        public static string StartCorpseDelivery() => GK2DonkeyAPI.Corpses.StartDeliveryNow();
+
         // The colours of the donkey, the cart and the lantern, for both styles, overridable like tuning. Keys: the
         // globals Enabled (bool), SpriteMethod (SpriteColorMethod), GlowColor, LitGlassTint, CharacterLightColor (hex
         // RRGGBB, "" = the game's), then for every region of ColorRegions its KeyOf(setting) keys ("CoatHue",
@@ -286,6 +328,7 @@ namespace GK2DonkeyAPI.Api
             Tuning(MountStyle.Cart).ClearOwner(ownerId);
             Behaviour.ClearOwner(ownerId);
             Shuffle.ClearOwner(ownerId);
+            Corpses.ClearOwner(ownerId);
             Colors.ClearOwner(ownerId);
             foreach (MountHandle h in Instances)
             {
@@ -681,7 +724,7 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        private static MountTuning rideTuning, cartTuning, behaviour, shuffle;
+        private static MountTuning rideTuning, cartTuning, behaviour, shuffle, corpses;
 
         // Removes every rule this owner added.
         public static void RemoveRules(string ownerId)

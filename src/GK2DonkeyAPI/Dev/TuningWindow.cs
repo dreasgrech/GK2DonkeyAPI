@@ -405,6 +405,23 @@ namespace GK2DonkeyAPI
             GUILayout.Label("While mounted the keeper faces only left or right, like the donkey.", small);
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
 
+            Header("Corpses at the crossroads (docs/corpse-delivery.md)");
+            Toggle("The game's delivery donkey leaves its bodies at the crossroads by the nun, for you to haul (Saddle Up: \"Donkey leaves corpses at the crossroads\")", Corpses.AtCrossroads, null);
+            GUILayout.Label(Corpses.Applied ? "Hooked right now: the pallet step, the graph's two fallback drops, the delivery walk and the New Body notification."
+                : Corpses.ApplyError != null ? "Not hooked: patching failed (" + Corpses.ApplyError + "); switch off and on to retry." : "Not hooked: the game's donkey code is untouched while this is off.", small);
+            Toggle("It walks out from behind its tree to the stand point, unloads there and walks back (off: it walks to the morgue as in the game; the bodies still appear at the drop point)", Corpses.UnloadAtCrossroads, null);
+            TextRow("Stand point: GD point it walks to (donkey_01_01 = the road beside the nun)", Corpses.StandPoint);
+            TextRow("Drop point: GD point the bodies are left at (nun_body_drop_point = the game's spot by her)", Corpses.DropPoint);
+            Toggle("The bodies it leaves never rot (the game: a grave mound after ~75 min out of sight)", Corpses.NeverRot, null);
+            TextRow("Notification text (empty: the game's \"New Body\")", Corpses.Notification);
+            FloatSlider("On-the-spot unload only: seconds before the bodies appear", Corpses.UnloadDelay, 0.1f, 10f, 1, null);
+            FloatSlider("On-the-spot unload only: seconds before it vanishes", Corpses.LeaveDelay, 0.1f, 10f, 1, null);
+            if (GUILayout.Button("Start a delivery now (the game's own donkey, its body roll forced; not while it is already out)"))
+            {
+                Plugin.Log.LogInfo("[script] delivery: " + Mounts.StartCorpseDelivery()); // not "Corpses:": that prefix means the feature acted
+            }
+            GUILayout.Label("The game's rules stay: every second day, the morgue's capacity (bodies on the ground count), the quests that keep the donkey at the morgue for a talk.", small);
+
             Header("Setup");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Mount: world-object id to summon (General.MountWgoId)", label, Wd(LabelW));
@@ -1614,6 +1631,25 @@ namespace GK2DonkeyAPI
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             return clicked;
+        }
+
+        // A free text value (a GD point id, a notification text), trimmed.
+        private static void TextRow(string name, ConfigEntry<string> entry)
+        {
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            bool locked = Locked(entry, out string shown);
+            GUI.enabled = !locked;
+            string v = GUILayout.TextField(shown ?? "", Wd(SliderW));
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            if (locked) { return; }
+            if (ResetOnRightClick(entry, null)) { return; }
+            v = (v ?? "").Trim();
+            if (v != Val(entry))
+            {
+                Put(entry, v);
+            }
         }
 
         private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange)

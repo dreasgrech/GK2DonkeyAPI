@@ -37,7 +37,9 @@ namespace GK2DonkeyAPI
                 Fail($"the game has no '{TestChestId}'");
                 yield break;
             }
-            Vector3? spot = Spot(Keeper(), 3f);
+            // A spot inside a building zone first (the keeper may stand at a zone's edge: run 2026-10-10), else any
+            // free spot, which then gives the "in no zone" warning below.
+            Vector3? spot = Spot(Keeper(), 3f, p => ZoneAt(p, scene) != null) ?? Spot(Keeper(), 3f);
             if (spot == null)
             {
                 Warn("no free spot near the keeper for a test chest; skipped");

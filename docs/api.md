@@ -529,6 +529,36 @@ Where they apply:
 - `MountHandle.DisplayName` and `SetDisplayName(owner, name)` (owner only, at most 24 characters, kept with the save).
 - `Mounts.Behaviour` has `HitchKey` (a `KeyCode`).
 
+## Corpses at the crossroads (0.26.0)
+
+The game's own delivery donkey, made to leave the bodies it brings **at the crossroads by the nun**, where it appears,
+instead of putting them on the morgue pallets, so the keeper hauls them himself (the cart takes them). Off in the
+core; a mod switches it on for its player. How the game delivers and what the feature changes, in full:
+[corpse-delivery.md](corpse-delivery.md).
+
+| Member | What it does |
+|---|---|
+| `Mounts.Corpses` | A `MountTuning` over the `[Corpses]` cfg section, overridable per session like `Behaviour`. Keys: `CorpsesAtCrossroads` (bool, off: the switch), `CorpsesUnloadAtCrossroads` (bool, on: the donkey walks out from behind its tree to the stand point, unloads there and walks back; off: it walks to the morgue as in the game and the bodies still appear at the drop point when it arrives), `CorpsesStandPoint` (string GD point id, `donkey_01_01`), `CorpsesDropPoint` (string, `nun_body_drop_point`), `CorpsesNeverRot` (bool, off), `CorpsesNotification` (string; "" = the game's "New Body"), `CorpsesUnloadDelay` / `CorpsesLeaveDelay` (float seconds, 1.5 / 1; only when it unloads on the spot). |
+| `Mounts.CorpsesActive` | Whether the delivery is hooked right now: the switch on, the API active, the four patches in. |
+| `Mounts.CorpseLeft` | Event, a `CorpseInfo` (`Id`, `UniqueId`, `Point`, `Position`) per body left on the ground. |
+| `Mounts.StartCorpseDelivery()` | Debug aid: the game's own `full_cycle` event on the donkey with its body roll forced; not sent while the donkey is already out. Returns what happened, for the log. |
+
+- **Off means untouched.** The four prefixes (the graph's pallet node, its own fallback drop node, its walk node, the
+  "New Body" notification) are applied when `CorpsesAtCrossroads` turns on and removed when it turns off (`Corpses.Tick`,
+  every frame). A missing patch target after a game update switches this feature off for good and leaves the rest of
+  the API running.
+- **The game's rules stay:** deliveries every second day in the early afternoon, the body roll and its chance, the
+  morgue's capacity (bodies on the ground count, so deliveries thin out and then stop until they're hauled), and the
+  five quests that keep the donkey at the morgue for a scripted talk (`21_base_donkey_nun` awaiting;
+  `137_base_resurrection_donkey`, `165/166/167_base_donkey*_speak` in progress): then it walks there as in the game.
+  Both quest triggers (`DonkeyStart`, `DonkeyMorgue`) still fire in their order.
+- **Nothing of the mod's own in the save.** The body is the game's generated instance, dropped by the game's drop
+  system (what the game does itself when the pallets are full); a body left out of sight for about 75 minutes of
+  play turns into a grave mound as the game has it (`CorpsesNeverRot` switches that off). The on-the-spot unload is
+  timed with the game's own saved delayed WGO events; loaded without the mod they resolve as the game's own.
+- Saddle Up: the Behaviour toggle "Donkey leaves corpses at the crossroads" (off) sets `CorpsesAtCrossroads`; the
+  finer keys are the API's cfg and the panel's "Corpses at the crossroads" rows.
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -584,6 +614,7 @@ History:
 - 0.9.0: kept with the save: `MountSpawn.Persist`, `Key`, `SceneId`; `MountHandle.Persist`, `Key`, `RemoveWithParent`; the event `Mounts.InstancesRestored`.
 - 0.22.0: zombies on the cart ([zombies-on-cart.md](zombies-on-cart.md)): the `Mounts.Behaviour` key `CargoZombies` (on); two zombies at once, drawn as the game's lying zombie with their own heads and colours, a layout class of their own; their organs and gear stay with them through every move (the zombie is relinked to the copy the cart stores). `CargoLoaded` / `CargoUnloaded` pass a `CargoItem` (id, GUID, zombie name) and `MountHandle.Cargo` replaces `CargoIds`. Fix: riding past a working zombie no longer offers "[E] Take" while the cart can't take it (taking it pulled it off its job). Fix: the hint over what the keeper faces is redrawn when the cart's load changes.
 - 0.23.0: a chest on the cart ([portable-chest.md](portable-chest.md)): the `Mounts.Behaviour` key `CargoChest` (on). While driving the cart, the action key on a plain storage chest (`chest_rough`, `chest`, `chest_good`) lifts it onto the cart, contents and all; it rides alone (the cart takes no other cargo meanwhile), drawn on the bed by a stand-in placed like a lone cargo item (its own `[item]` layout entry); the interact key with nothing in front sets it down where cargo would go, when the spot is in reach and inside a building area. On foot at the standing cart the stand-in offers the game's "[E] Open" (the real chest's inventory) and "[F] Set down". A save sets it down at the cart and takes it back right after; the side file names it (`chest <guid>`) and the restore after a load lifts it again. A door to another scene is refused while it rides ("Set the chest down before going through."); a dismount of the summon, a removal or a scene change set it down at the cart. The chest is the same world object throughout: it is never copied or removed from the scene.
+- 0.26.0: corpses at the crossroads ([corpse-delivery.md](corpse-delivery.md)): `Mounts.Corpses` (the `[Corpses]` keys, `CorpsesAtCrossroads` off), `Mounts.CorpsesActive`, `Mounts.CorpseLeft` with a `CorpseInfo`, `Mounts.StartCorpseDelivery()`. With the switch on, the game's own delivery donkey walks out beside the nun, leaves its bodies there for the keeper to haul and walks back; its four patches exist only while the switch is on.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).

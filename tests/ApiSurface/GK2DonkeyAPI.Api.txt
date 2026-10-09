@@ -28,6 +28,12 @@ enum GK2DonkeyAPI.Api.CoatColor
   Cream = 3
   Black = 4
   Custom = 5
+class GK2DonkeyAPI.Api.CorpseInfo
+  property string Id { get; }
+  property string Point { get; }
+  property UnityEngine.Vector3 Position { get; }
+  property string UniqueId { get; }
+  method string ToString()
 enum GK2DonkeyAPI.Api.HarnessColor
   Game = 0
   Black = 1
@@ -166,6 +172,8 @@ static class GK2DonkeyAPI.Api.Mounts
   property static GK2DonkeyAPI.Api.MountTuning Behaviour { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountColorRegion> ColorRegions { get; }
   property static GK2DonkeyAPI.Api.MountTuning Colors { get; }
+  property static GK2DonkeyAPI.Api.MountTuning Corpses { get; }
+  property static bool CorpsesActive { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Instances { get; }
   property static bool IsAvailable { get; }
   property static bool IsGameReady { get; }
@@ -179,6 +187,7 @@ static class GK2DonkeyAPI.Api.Mounts
   event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoUnloaded
   event static System.Action<GK2DonkeyAPI.Api.ChestInfo> ChestLoaded
   event static System.Action<GK2DonkeyAPI.Api.ChestInfo> ChestUnloaded
+  event static System.Action<GK2DonkeyAPI.Api.CorpseInfo> CorpseLeft
   event static System.Action<string> Dismounted
   event static System.Action GameReady
   event static System.Action<GK2DonkeyAPI.Api.MountHandle, GK2DonkeyAPI.Api.MountHandle> Hitched
@@ -207,6 +216,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
   method static GK2DonkeyAPI.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
   method static GK2DonkeyAPI.Api.MountHandle SpawnFoal(string ownerId, GK2DonkeyAPI.Api.MountHandle parent, float scale = 0.6, int id = 0, string key = null, System.Nullable<bool> persist = null)
+  method static string StartCorpseDelivery()
   method static GK2DonkeyAPI.Api.MountResult SwitchStyle(GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
   method static GK2DonkeyAPI.Api.MountResult TryMount(string ownerId, GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
   method static GK2DonkeyAPI.Api.MountTuning Tuning(GK2DonkeyAPI.Api.MountStyle style)

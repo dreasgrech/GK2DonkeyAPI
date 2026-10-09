@@ -20,7 +20,7 @@ namespace SaddleUp
 
         // The API this mod is written against: 0.23 has the CargoChest behaviour key (0.22 CargoZombies, 0.19 the wheel and hub colours). Checked before anything of
         // the API is used, so an older API gets a clear message instead of a missing-method error.
-        private static readonly Version NeedsApi = new Version(0, 25, 0);
+        private static readonly Version NeedsApi = new Version(0, 26, 0);
 
         private void Awake()
         {
@@ -56,6 +56,7 @@ namespace SaddleUp
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             p.Toggle("Behaviour", "KeepWithSaves", me.KeepWithSaves, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
             p.Toggle("Behaviour", "CartStaysParked", me.CartStaysParked, "Calling the donkey leaves the cart parked", "Ride key while your donkey stands somewhere with the cart: the donkey alone comes and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you.", v => me.CartStaysParked = v);
+            p.Toggle("Behaviour", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets. You carry them to the morgue yourself, or cart them. Off: the game's own delivery.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
 
             p.Preview("Donkey", me, cart: false);
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your donkey and cart change. Done keeps them, Cancel puts them back.");

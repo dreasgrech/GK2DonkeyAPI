@@ -7,7 +7,7 @@ var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2DonkeyAPI", 
 var game = ModuleDefinition.ReadModule(managed + "Assembly-CSharp.dll", rp);
 Console.WriteLine("Game MVID " + game.Mvid);
 int fails = 0, ok = 0;
-var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology" };
+var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology", "FlowCanvas" };
 var seen = new HashSet<string>();
 foreach (var t in mod.GetTypes()) foreach (var m in t.Methods.Where(m => m.HasBody)) foreach (var ins in m.Body.Instructions) {
   if (ins.Operand is MemberReference mr && !(mr is TypeReference) && mr.DeclaringType != null && !(mr.DeclaringType is ArrayType) && gameScopes.Contains(mr.DeclaringType.Scope.Name)) {
@@ -41,9 +41,45 @@ Console.WriteLine($"IL references into game assemblies: {ok} resolved, {fails} u
   Console.WriteLine($"Harmony patch targets named by string: {patches} checked"); }
 void Field(string type, string name, string ftype, bool isStatic=false) { var td = game.GetType(type); var f = td?.Fields.FirstOrDefault(x => x.Name == name);
   bool good = f != null && f.FieldType.FullName == ftype && f.IsStatic == isStatic; Console.WriteLine((good?"PASS":"FAIL") + $" field {type}.{name} : {f?.FieldType.FullName} static={f?.IsStatic}"); if (!good) fails++; }
+// Overload-aware: the member exists with `pars` parameters among `overloads` overloads (the first parameter's type when given).
+void MethodOf(string type, string name, int pars, int overloads, string? firstParam = null) { var td = game.GetType(type); var ms = td?.Methods.Where(x => x.Name == name).ToList();
+  var m = ms?.FirstOrDefault(x => x.Parameters.Count == pars && (firstParam == null || x.Parameters[0].ParameterType.FullName == firstParam));
+  bool good = ms != null && ms.Count == overloads && m != null && m.HasBody; Console.WriteLine((good?"PASS":"FAIL") + $" method {type}.{name} overloads={ms?.Count} params={pars} found={m != null}"); if (!good) fails++; }
 void Method(string type, string name, int pars) { var td = game.GetType(type); var ms = td?.Methods.Where(x => x.Name == name).ToList();
   bool good = ms != null && ms.Count == 1 && ms[0].Parameters.Count == pars && ms[0].HasBody; Console.WriteLine((good?"PASS":"FAIL") + $" method {type}.{name} overloads={ms?.Count} params={ms?.FirstOrDefault()?.Parameters.Count}"); if (!good) fails++; }
 Method("WgoDataScriptsManager", "CreateScript", 2);
+// Corpses at the crossroads (Corpses.cs): patches applied on demand (no [HarmonyPatch] attribute), so their targets
+// and the private ports the prefixes take are named here.
+MethodOf("GK2.FlowCanvasNodes.Flow_TryToAddCorpseToPallet", "TryToAddCorpseToPallet", 1, 1, "FlowCanvas.Flow");
+Field("GK2.FlowCanvasNodes.Flow_TryToAddCorpseToPallet", "item", "FlowCanvas.ValueInput`1<Item>");
+Field("GK2.FlowCanvasNodes.Flow_TryToAddCorpseToPallet", "yes", "FlowCanvas.FlowOutput");
+MethodOf("GK2.FlowCanvasNodes.Flow_DropItem", "Drop", 1, 1, "FlowCanvas.Flow");
+Field("GK2.FlowCanvasNodes.Flow_DropItem", "out", "FlowCanvas.FlowOutput");
+Field("GK2.FlowCanvasNodes.Flow_DropItem", "item", "FlowCanvas.ValueInput`1<Item>");
+Field("GK2.FlowCanvasNodes.Flow_DropItem", "gdPointDataDropOn", "FlowCanvas.ValueInput`1<GDPointData>");
+Field("GK2.FlowCanvasNodes.Flow_DropItem", "dropBody", "System.Boolean");
+MethodOf("GK2.FlowCanvasNodes.Flow_GoTo", "GoTo", 1, 1, "FlowCanvas.Flow");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "out", "FlowCanvas.FlowOutput");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "onFinish", "FlowCanvas.FlowOutput");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "fireEventOnFinish", "FlowCanvas.ValueInput`1<System.String>");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "gdPointData", "FlowCanvas.ValueInput`1<GDPointData>");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "gdPointId", "FlowCanvas.ValueInput`1<System.String>");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "useGdDataInsteadId", "System.Boolean");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "navigation", "FlowCanvas.ValueInput`1<MovementType>");
+Field("GK2.FlowCanvasNodes.Flow_GoTo", "speed", "FlowCanvas.ValueInput`1<System.Single>");
+MethodOf("UINotificator", "ShowNewBodyNotification", 1, 2, "System.String"); // the parameterless one forwards to it
+Method("UINotificator", "ShowSimpleTextWithIconNotification", 2);
+Method("GKCustomFlowNodeWithWgoData", "GetWgoData", 0);
+Field("WgoDataScript", "wgoData", "WgoData");
+Method("GdPointsData", "GetGDPointDataById", 1);
+Method("WgoData", "AddDelayedEvent", 2);
+Method("WgoData", "FireEvent", 1);
+Method("QuestSystemData", "IsQuestInStatus", 2);
+MethodOf("WorldData", "GetWgoData", 1, 2, "System.String");
+Method("WorldData", "GetWgoDataByCustomTag", 1);
+Method("WorldData", "GetWgoDataListByGroup", 1);
+MethodOf("MovementComponent", "StartPath", 9, 7, "UnityEngine.Vector3"); // the node's own overload, GDGraph
+Method("MovementComponent", "TryFinishAlreadyAtDestination", 3); // the premise for LeaveHere: a walk to where it stands ends with onFinish only
 Method("Wgo", "Spawn", 6);
 // 1.008 added UpdateChunkVisibility(bool, bool); the mod calls the (bool) one.
 { var td = game.GetType("Wgo"); var m = td?.Methods.FirstOrDefault(x => x.Name == "UpdateChunkVisibility" && x.Parameters.Count == 1 && x.Parameters[0].ParameterType.FullName == "System.Boolean"); bool good = m != null && m.HasBody; Console.WriteLine((good?"PASS":"FAIL") + " method Wgo.UpdateChunkVisibility(bool) found=" + (m != null)); if (!good) fails++; }

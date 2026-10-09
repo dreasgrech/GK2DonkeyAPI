@@ -66,6 +66,7 @@ Every feature the library has, grouped by area. **Reached by** says how a player
 | **Loading a standing cart on foot:** holding something, "[E] Load on cart" puts the top item onto it, one per press (with the several-items perk, press again); "Cart is full" when it is. | cfg, API | partly (loading tested) |
 | **Unloading a standing cart on foot:** empty hands at the cart's back, "[E] Take from cart" takes the top item into the hands. At the donkey the same key drives. | cfg, API | untested |
 | **Cargo events** for other mods: an item loaded, an item unloaded. | API | tested |
+| **Corpses at the crossroads:** the game's own delivery donkey leaves the bodies it brings by the nun, where it appears, for the keeper to haul (the cart takes them); it walks out from behind its tree, unloads, walks back. Off in the core; a mod's switch; its four patches exist only while it's on ([`docs/corpse-delivery.md`](../../docs/corpse-delivery.md)). | `Mounts.Corpses` (off), `CorpseLeft`, `StartCorpseDelivery` | tested (as a standalone mod on 2026-10-10; the API form's in-game run pending) |
 | **Never lost:** cargo lives in a temporary inventory, so it's handed back, or set down at the cart, around every save, dismount and crash cleanup. | always | tested |
 
 ### 3. Cart on slopes
