@@ -397,6 +397,22 @@ Then, on a test chest the user builds and empties:
 5. **Where it lives: the Donkey API does all the work** (pick-up, hide, stand-in, set-down, save hook, guards,
    door prefix); Saddle Up gets the toggle and labels, as with zombies.
 
+**Two facts measured by the self-tests on 2026-10-09:**
+- **The camera.** The game's `Main Camera` is orthographic, tilted 53°, placed about 6 units south of and 8 above the
+  keeper; its half-height is `height / 2 / 100 / (pixelSize / 2)` (`CameraSystem.CalculateOrthographicSize`), 3.6 units
+  at 1080p, and 1.8 as measured with Grave Zoom zoomed in 2x (the user's setting during the runs). Zoomed in, the screen
+  shows about 6.7 × 3.6 units of ground: a chest 3 m beside the keeper is at the screen's edge and one 4 m further is
+  below it, and the chunk system culls it (state *Prewarm*:
+  parts kept, view inactive) until the camera reaches it. That is the game's normal culling, not a failure of the show;
+  the probe scenario had moved its chest 4 m south and failed twice on it. A set-down chest behind the cart is always
+  within a cart length of the keeper, so on screen; a chest a fallback stands at a far cart is drawn when the camera
+  arrives, like any object.
+- **The part pool and the stand-in.** A temp object destroys its parts when it goes even if they came from the pool
+  (`Wgo.DestroyParts`: pooled key but `isTempObject`), so a stand-in takes an idle pooled chest part when there is one
+  and the pool's *borrowed* count rises by one per stand-in for good (the game's build preview does exactly the same;
+  it is bookkeeping, no object leaks). Destroying is right: a stand-in's parts carry collider overrides that must never
+  go back into the pool (§2.3). The scenario now checks that no stand-in part enters the pool and reports the counts.
+
 ## 6a. What a game update, a broken mod or a removed mod does to a chest
 
 The question the design is built around: **nothing the mod can do, break or stop doing may touch the player's chest.**
@@ -459,7 +475,15 @@ guard directly, since in normal play none of them ever runs), two checks only th
    game's "[E] Open", the same 19 items, highlighted by remove mode, no error in the log; with the mods back it was
    lifted onto the cart again ("restored with the save onto dreas.gk2.saddleup#1 ... from zone ''", 4 of 4 donkeys
    and 1 chest back).
-2. **The caretaker refusal** ("A zombie is using this chest."): needs a working caretaker. Status: **pending**.
+2. **The caretaker refusal** ("A zombie is using this chest."). In the game a caretaker is a zombie handed to a
+   `zombie_supplier_station` (`StationInteractionHandler`, interaction type Station), which then walks delivery
+   orders between the zone's storage and its workbenches. No test save has one, so the self-test *"chest: a zombie
+   using it"* stages one by data (2026-10-09): a `ZombieWgoData` that exists only in `ZombieSystemData`'s lookup
+   (never in a scene, never saved), typed Caretaker with the test chest as `caretakerCurrentTargetUniqueId`, for a
+   few synchronous checks: the hint's reason and the press both refuse with the zombie message and the chest stands
+   shown and zoned; the target cleared, it lifts; the same as a conveyor transporter; the zombie gone again before
+   the frame ends. What this cannot show is the real caretaker's trip itself (traced from the game code in §4a).
+   Status: automated check **passed 2026-10-09** (self-tests 179/179).
 
 ## 8. Plan
 
@@ -496,7 +520,7 @@ guard directly, since in normal play none of them ever runs), two checks only th
      disabled itself. They sit on `WGOInteractionHandlerBase` now, and `CecilScan-DonkeyAPI` checks every string-named
      patch target is declared on its type.
    - **By hand, 2026-10-06, passed:** pick up and set down with 4 then 5 items (the same items after every move);
-     "(not now)" and "Set the cargo down first." with cargo aboard; no "[F]" on the home chest; a full-cart ground
+     "(not now)" (the suffix dropped 2026-10-09: the hint is the plain offer, the press tells why) and "Set the cargo down first." with cargo aboard; no "[F]" on the home chest; a full-cart ground
      pickup drops the item in front of the keeper as it always did; sleeping with the chest aboard (Saddle Up
      dismounts at the door first, the chest stays on the parked cart, the save hook sets it down at the cart: `set
      down at the cart (save)`); unhitch and hitch with the chest aboard, then set down; the Saddle Up toggle. Not

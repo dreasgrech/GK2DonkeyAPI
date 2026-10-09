@@ -130,6 +130,43 @@ namespace GK2DonkeyAPI
             return Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
         }
 
+        internal static Bounds ViewBounds(Wgo v)
+        {
+            object b = v.GetChunkableData();
+            return new Bounds(Float3(AccessTools.Field(b.GetType(), "center").GetValue(b)), Float3(AccessTools.Field(b.GetType(), "size").GetValue(b)));
+        }
+
+        // Each chunk holding the view, with the chunk system's own verdict on it (Chunk.isVisible after the last pass).
+        internal static string ChunkStates(Wgo v)
+        {
+            ChunkManager cm = LazySingleton<ChunkManager>.Instance;
+            if (cm == null || v == null)
+            {
+                return "no chunk manager";
+            }
+            var layers = AccessTools.Field(typeof(ChunkManager), "layers").GetValue(cm) as System.Collections.IEnumerable;
+            var sb = new StringBuilder();
+            foreach (object layer in layers ?? Array.Empty<object>())
+            {
+                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
+                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                for (int i = 0; i < count && arr != null && i < arr.Length; i++)
+                {
+                    Chunk c = arr[i];
+                    if (c == null || !c.ContainsChunkableObject(v))
+                    {
+                        continue;
+                    }
+                    object b = c.GetChunkableData();
+                    Vector3 center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
+                    Vector3 size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                    object vis = AccessTools.Field(typeof(Chunk), "isVisible")?.GetValue(c);
+                    sb.Append(sb.Length > 0 ? "; " : "").Append($"chunk centre {center:F1} size {size:F1} isVisible {vis ?? "?"}, {c.Count} object(s)");
+                }
+            }
+            return sb.Length > 0 ? sb.ToString() : "in no chunk";
+        }
+
         private static Vector3 Float3(object f)
         {
             Type t = f.GetType();

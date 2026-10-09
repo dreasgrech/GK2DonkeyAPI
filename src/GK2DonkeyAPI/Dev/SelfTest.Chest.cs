@@ -1,9 +1,11 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using GK2DonkeyAPI.Api;
 using HarmonyLib;
+using LazyBearTechnology;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
@@ -90,6 +92,72 @@ namespace GK2DonkeyAPI
             chestView = null;
         }
 
+        // The view's private state, for a failed drawn check (docs/measure-before-visual-fixes): what the game's own
+        // visibility pass left it in.
+        private static string ViewState(Wgo v)
+        {
+            if (v == null || !v)
+            {
+                return "no view";
+            }
+            string F(string name)
+            {
+                try
+                {
+                    return AccessTools.Field(typeof(Wgo), name)?.GetValue(v)?.ToString() ?? "?";
+                }
+                catch
+                {
+                    return "?";
+                }
+            }
+            int on = 0, all = 0;
+            foreach (Renderer r in v.GetComponentsInChildren<Renderer>(true))
+            {
+                all++;
+                if (r.enabled && r.gameObject.activeInHierarchy)
+                {
+                    on++;
+                }
+            }
+            return $"active {v.gameObject.activeSelf}, isVisible {F("isVisible")}, chunk state {F("chunkVisibilityState")}, spawnCompleted {F("spawnCompleted")}, partsLoaded {F("wgoPartsLoaded")}, partsLoading {F("wgoPartsLoading")}, hidden {v.Data?.IsHidden}, registered {v.RegisteredInChunker}, ignoreChunkVisibility {((IChunkableObject)v).IgnoreChunkVisibility}, renderers on {on}/{all}, at {v.transform.position:F2}";
+        }
+
+        // What the camera and the chunk system make of a view: the camera (position, angles), where the view's spot
+        // lands on screen (viewport 0..1 is on screen), whether the view's chunk bounds pass Unity's frustum test
+        // against that camera, and the verdict of each chunk holding it.
+        private static string CameraFacts(Wgo v)
+        {
+            try
+            {
+                Camera cam = CameraSystem.Instance?.MainCamera?.Camera ?? Camera.main;
+                if (cam == null)
+                {
+                    return "no camera";
+                }
+                Bounds b = ChestProbe.ViewBounds(v);
+                Vector3 vp = cam.WorldToViewportPoint(v.transform.position);
+                bool inFrustum = GeometryUtility.TestPlanesAABB(GeometryUtility.CalculateFrustumPlanes(cam), b);
+                return $"camera '{cam.name}' at {cam.transform.position:F1} angles {cam.transform.eulerAngles:F0} {(cam.orthographic ? $"ortho {cam.orthographicSize:F1}" : $"fov {cam.fieldOfView:F0}")} near {cam.nearClipPlane:F1} far {cam.farClipPlane:F0}; the spot on screen at viewport ({vp.x:F2}, {vp.y:F2}, depth {vp.z:F1}); view bounds centre {b.center:F1} size {b.size:F1} {(inFrustum ? "pass" : "FAIL")} the frustum test; {ChestProbe.ChunkStates(v)}";
+            }
+            catch (Exception e)
+            {
+                return "camera facts failed: " + e.Message;
+            }
+        }
+
+        // Inside the camera's viewport with a margin (the chunk system culls what is outside it).
+        private static bool OnScreen(Vector3 p)
+        {
+            Camera cam = CameraSystem.Instance?.MainCamera?.Camera ?? Camera.main;
+            if (cam == null)
+            {
+                return false;
+            }
+            Vector3 vp = cam.WorldToViewportPoint(p);
+            return vp.x > 0.15f && vp.x < 0.85f && vp.y > 0.15f && vp.y < 0.85f;
+        }
+
         private static bool Drawn(Wgo v)
         {
             if (v == null || !v.gameObject.activeSelf || v.MainWgoPart == null)
@@ -115,12 +183,50 @@ namespace GK2DonkeyAPI
             {
                 yield break;
             }
+            // The new spot must be ON SCREEN for the drawn checks to mean anything: the game's camera is orthographic
+            // with a half-height of 1.8 units at a 53° tilt (measured 2026-10-09), so the test chest 3 m beside the
+            // keeper already sits at the screen's edge and 4 m further is below it, culled by the chunk system as it
+            // should be (two runs failed on exactly that). So: half-way to the keeper, then on past the keeper, whichever
+            // is free ground and lands inside the viewport.
             Vector3 from = chest.Position;
-            Vector3 to = from + new Vector3(0f, 0f, -4f);
+            Vector3 keeper = Keeper();
+            Vector3? pick = null;
+            foreach (Vector3 c in new[] { keeper + (from - keeper) * 0.5f, keeper + (keeper - from) * 0.5f, keeper + (from - keeper) * 0.3f })
+            {
+                Vector3 q = c;
+                float g = Mount.Instance.GroundHeight(q, out _);
+                if (float.IsNaN(g))
+                {
+                    continue;
+                }
+                q.y = g;
+                if (FreeSpot(q) && OnScreen(q))
+                {
+                    pick = q;
+                    break;
+                }
+            }
+            if (pick == null)
+            {
+                Warn("no free spot on screen near the keeper to move the chest to; skipped");
+                RemoveChest();
+                yield break;
+            }
+            Vector3 to = pick.Value;
             var sb = new StringBuilder();
+            Info("at the old spot: " + ViewState(chestView) + " | " + CameraFacts(chestView));
             ChestProbe.Relocate(chest, chestView, to, sb);
             yield return Frames(2);
             Check(chest.Position == to && chestView.transform.position == to, $"data and view at the new spot {to:F2}");
+            if (!Drawn(chestView))
+            {
+                Info("not drawn 2 frames after the show: " + ViewState(chestView) + " | " + CameraFacts(chestView));
+                yield return Seconds(1f);
+                Info("1 s later: " + ViewState(chestView));
+                LazySingleton<ChunkManager>.Instance?.RequestVisibilityRecheck(chestView);
+                yield return Frames(3);
+                Info("after asking the chunk system for a recheck: " + ViewState(chestView) + " | " + CameraFacts(chestView));
+            }
             Check(!chest.IsHidden && Drawn(chestView), "the view is active with its parts drawn after hide and show");
             Check(chestView.RegisteredInChunker, "registered in the chunk system");
             Vector3 bc = ChestProbe.ViewBoundsCenter(chestView);
@@ -144,6 +250,10 @@ namespace GK2DonkeyAPI
                     Info($"with the keeper 45 m away the view is {(chestView.gameObject.activeSelf ? "still active" : "culled")}");
                     yield return MoveKeeper(here, homeFacing);
                     yield return Until(() => Drawn(chestView), 5f);
+                    if (!waited)
+                    {
+                        Info("not drawn back near it: " + ViewState(chestView) + " | " + CameraFacts(chestView));
+                    }
                     Check(waited, "back near it, the view is drawn again at the new spot");
                 }
             }
@@ -263,7 +373,11 @@ namespace GK2DonkeyAPI
             int q1 = MainGame.Instance.GameSave.townSystem.Quality;
             Check(q0 == q1, $"town quality unchanged ({q0})");
             ChestProbe.PoolCounts(chest, out _, out int idle1, out int borrowed1);
-            Check(idle1 >= idle0, $"the pool's idle parts for '{key}' not taken ({idle0} -> {idle1})");
+            // A temp object destroys its parts even when they came from the pool (Wgo.DestroyParts: pooled key but
+            // isTempObject), so idle parts are taken when the pool has some (seen 2026-10-09: 2 -> 0 after an earlier
+            // scenario left two in the pool); the game's own build preview does the same. What must never happen is a
+            // stand-in's parts, with their collider overrides, going INTO the pool.
+            Check(idle1 <= idle0, $"no stand-in part went into the pool (idle parts for '{key}': {idle0} -> {idle1}, borrowed {borrowed0} -> {borrowed1})");
             Info($"the pool's borrowed count for '{key}': {borrowed0} -> {borrowed1} (a temp object's parts are destroyed, not returned; the game's build preview does the same)");
             Info(ChestProbe.Colliders(chest));
             RemoveChest();
@@ -327,6 +441,9 @@ namespace GK2DonkeyAPI
                         scene.AddWgoData(other);
                         yield return Frames(2);
                         Check(rig.WhyNotPickUp(other, PC) == "Only a plain storage chest goes on the cart.", "a sawmill chest is refused");
+                        // Its work done: gone before the set-down, so it never stands in the keeper's way to the spot.
+                        MainGame.WorldData.RemoveWgoDataFromGameScene(other);
+                        other = null;
                     }
                 }
 
@@ -381,8 +498,25 @@ namespace GK2DonkeyAPI
                 yield return Frames(3);
                 Check(Vector3.Distance(chest.Position, r.CartPoint()) < 0.05f, $"aboard: the chest's position follows the cart ({chest.Position:F2} vs {r.CartPoint():F2})");
 
-                // Set down.
-                bool down = rig.SetDown(PC, out string why);
+                // Set down. The spot is behind the cart, and the yard has fences, buildings and the keeper's own test
+                // objects, so a stand can be refused by the reach gate (seen 2026-10-09: "I can't reach that spot", the
+                // feature working as designed); then the keeper rides to another stand and tries again, a few times.
+                bool down = false;
+                string why = null;
+                foreach (Vector3 stand in new[] { Keeper(), k, k + new Vector3(-2f, 0f, 0f), k + new Vector3(0f, 0f, 2f), k + new Vector3(0f, 0f, -2f) })
+                {
+                    if (Vector3.Distance(Keeper(), stand) > 0.1f)
+                    {
+                        yield return MoveKeeper(stand, homeFacing);
+                        yield return Frames(3);
+                    }
+                    down = rig.SetDown(PC, out why);
+                    if (down)
+                    {
+                        break;
+                    }
+                    Info($"set-down refused from the stand {Keeper():F1} ({why}); trying another stand");
+                }
                 Check(down, $"set down where cargo goes{(down ? "" : " (" + why + ")")}");
                 yield return Frames(2);
                 Check(!rig.Aboard && !chest.IsHidden && ChestProbe.ZoneEntries(chest) == 1 && chest.WorldZoneData != null && ChestProbe.HasNavCut(chest), $"down: shown, in zone '{chest.WorldZoneData?.id}' with its navigation hole");
@@ -483,7 +617,12 @@ namespace GK2DonkeyAPI
                 ChestMoves.Hide(chest, v);
                 yield return Frames(2);
                 Check(chest.IsHidden && ChestProbe.ZoneEntries(chest) == 0 && CartChest.RigOf(chest) == null, "set up: a hidden, zone-less chest no cart owns");
+                // In the game's own order: the save hook first (a player's chest riding a cart stands at its cart through
+                // its own path), then the pass; then the take-back. The pass alone would meet that chest still hidden
+                // and warn about it (seen 2026-10-09 with the player's chest on a free cart).
+                Mount.LendCargoToSave();
                 CartChest.EnsureNoneHiddenForSave();
+                Mount.TakeCargoBackFromSave();
                 yield return Frames(2);
                 Check(!chest.IsHidden && ChestProbe.ZoneEntries(chest) == 1 && chest.WorldZoneData != null, "the pre-save pass shows and zones it");
                 yield return Until(() => Drawn(GameScene.GetWgoViewGlobal(chest.UniqueId)), 5f);
@@ -503,7 +642,9 @@ namespace GK2DonkeyAPI
 
                 // A shown chest is left alone by both.
                 int before = ChestProbe.ZoneEntries(chest);
+                Mount.LendCargoToSave();
                 CartChest.EnsureNoneHiddenForSave();
+                Mount.TakeCargoBackFromSave();
                 int repaired2 = CartChest.RepairHiddenChests();
                 Check(repaired2 == 0 && !chest.IsHidden && ChestProbe.ZoneEntries(chest) == before, "a chest standing normally is left alone by both");
                 chest.Inventory.RemoveItemFromInventoryByUID(chest.Inventory.Data.Inventory[0]);
@@ -630,7 +771,21 @@ namespace GK2DonkeyAPI
                 yield return Frames(2);
                 Check(rig.Aboard && chest.IsHidden && ChestProbe.ZoneEntries(chest) == 0, "after the save it rides again, hidden and zone-less");
 
-                // The fail-safe.
+                // The fail-safe. It sets down EVERY riding chest, the player's included (seen 2026-10-09: the player's
+                // chest stood by its free cart after the run), so those are noted first and lifted back afterwards
+                // through the load's own path (Rig.Restore).
+                var others = new List<KeyValuePair<CartChest.Rig, WgoData>>();
+                foreach (Mount.Instance i in Mount.All)
+                {
+                    if (i.ChestRig.Aboard && !ReferenceEquals(i.ChestRig, rig))
+                    {
+                        others.Add(new KeyValuePair<CartChest.Rig, WgoData>(i.ChestRig, i.ChestRig.Chest));
+                    }
+                }
+                if (others.Count > 0)
+                {
+                    Info($"{others.Count} other chest(s) ride in the world (yours): the lock sets them down at their carts and this test lifts them back");
+                }
                 Info("the next \"switched off for this session\" error is this test's own: it trips the lock on purpose");
                 CartChest.Lock("self-test");
                 yield return Frames(2);
@@ -638,6 +793,11 @@ namespace GK2DonkeyAPI
                 Check(!CartChest.On && rig.WhyNotPickUp(chest, PC) == "Chests don't ride on the cart.", "locked: no chest is lifted any more");
                 CartChest.UnlockForTest();
                 Check(CartChest.On, "unlocked again for the session");
+                foreach (KeyValuePair<CartChest.Rig, WgoData> o in others)
+                {
+                    bool back = o.Key.Restore(o.Value, "back on the cart after the self-test");
+                    Check(back && o.Key.Aboard && o.Value.IsHidden, $"your chest is back on {o.Key.owner.Describe()}");
+                }
                 Check(Same(chest.Inventory, count0, total0), "after everything: the same items");
                 Mounts.Dismount("self-test");
                 yield return Frames(2);
@@ -645,6 +805,111 @@ namespace GK2DonkeyAPI
             finally
             {
                 CartChest.UnlockForTest();
+                RemoveChest();
+            }
+        }
+
+        // The zombie guard (docs/portable-chest.md §4a, §7a.2): a caretaker on its way to or from a chest keeps it as a
+        // target by id and finishes the trip wherever the chest is, so the pickup must wait while one targets it. No
+        // test save has a caretaker (a zombie handed to a zombie_supplier_station), so one is staged by data: a
+        // ZombieWgoData that exists only in the zombie system's lookup (never in a scene, never saved), typed Caretaker
+        // with the test chest as its target, for a few synchronous checks; then as a conveyor transporter. It is gone
+        // again before the frame ends, so no save can ever see it.
+        private static IEnumerator ChestZombieGuard()
+        {
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle h = Spawn(near, true, withCart: true);
+            if (h == null)
+            {
+                Fail("could not spawn a donkey with a cart");
+                yield break;
+            }
+            yield return Until(() => h.IsReady, 6f);
+            yield return MakeChest();
+            if (chest == null)
+            {
+                yield break;
+            }
+            try
+            {
+                h.ComeToKeeper(true, showMessage: false);
+                yield return Until(() => h.IsReady, 4f);
+                MountResult ride = h.Ride(showMessage: false);
+                if (!ride.Ok)
+                {
+                    Fail("riding the test cart: " + ride.Reason);
+                    yield break;
+                }
+                yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 4f);
+                CartChest.Rig rig = h.I.ChestRig;
+                Check(rig.WhyNotPickUp(chest, PC) == null, "before: the chest can be lifted");
+                ZombieSystemData zs = MainGame.ZombieSystemData;
+                if (zs == null)
+                {
+                    Fail("the game has no zombie system data");
+                    yield break;
+                }
+                FieldInfo typeField = AccessTools.Field(typeof(ZombieWgoData), "zombieType");
+                FieldInfo careField = AccessTools.Field(typeof(ZombieWgoData), "caretakerCurrentTargetUniqueId");
+                FieldInfo convField = AccessTools.Field(typeof(ZombieWgoData), "conveyorTransporterCurrentTargetUniqueId");
+                if (typeField == null || careField == null || convField == null)
+                {
+                    Fail("the zombie's fields moved (zombieType, caretakerCurrentTargetUniqueId, conveyorTransporterCurrentTargetUniqueId): the guard reads their public getters; check them");
+                    yield break;
+                }
+                int zombiesBefore = zs.zombieOnSceneWgoIds.Count;
+                ZombieWgoData z = null;
+                Mount.Instance.SuppressScripts = true;
+                try
+                {
+                    z = new ZombieWgoData("zombie", chest.Position, chest.WorldId) { isTempObject = true, IsInteractable = false };
+                }
+                catch (Exception e)
+                {
+                    Fail("making a zombie by data: " + e.GetType().Name + ": " + e.Message);
+                }
+                finally
+                {
+                    Mount.Instance.SuppressScripts = false;
+                }
+                if (z == null)
+                {
+                    yield break;
+                }
+                string why;
+                try
+                {
+                    zs.Cache[z.UniqueId.Guid] = z;
+                    zs.zombieOnSceneWgoIds.Add(z.UniqueId);
+                    typeField.SetValue(z, ZombieType.Caretaker);
+                    careField.SetValue(z, chest.UniqueId);
+                    Check(z.ZombieType == ZombieType.Caretaker && z.CaretakerCurrentTargetUniqueId == chest.UniqueId && zs.GetZombie(z.UniqueId) == z, "staged: a caretaker in the zombie system with the chest as its target");
+                    Check(rig.WhyNotPickUp(chest, PC) == "A zombie is using this chest.", "a caretaker heading for the chest: refused with the zombie message");
+                    bool lifted = rig.PickUp(chest, PC, out why);
+                    Check(!lifted && why == "A zombie is using this chest." && !rig.Aboard && !chest.IsHidden && chest.WorldZoneData != null, $"the press refuses too ({why}); the chest stands shown and zoned");
+                    careField.SetValue(z, SGuid.Empty);
+                    Check(rig.WhyNotPickUp(chest, PC) == null, "the caretaker done with it: the chest can be lifted again");
+                    typeField.SetValue(z, ZombieType.ConveyorTransporter);
+                    convField.SetValue(z, chest.UniqueId);
+                    Check(rig.WhyNotPickUp(chest, PC) == "A zombie is using this chest.", "a conveyor transporter heading for the chest: refused");
+                    convField.SetValue(z, SGuid.Empty);
+                    Check(rig.WhyNotPickUp(chest, PC) == null, "the transporter done with it: the chest can be lifted again");
+                }
+                finally
+                {
+                    zs.zombieOnSceneWgoIds.Remove(z.UniqueId);
+                    zs.Cache.Remove(z.UniqueId.Guid);
+                }
+                Check(zs.zombieOnSceneWgoIds.Count == zombiesBefore && zs.GetZombie(z.UniqueId) == null, "the staged zombie is gone from the zombie system again");
+                Check(rig.PickUp(chest, PC, out why), $"after it: lifted{(why != null ? " (" + why + ")" : "")}");
+                yield return Frames(2);
+                Check(rig.SetDown(PC, out why), $"set down again{(why != null ? " (" + why + ")" : "")}");
+                yield return Frames(2);
+                Mounts.Dismount("self-test");
+                yield return Frames(2);
+            }
+            finally
+            {
                 RemoveChest();
             }
         }

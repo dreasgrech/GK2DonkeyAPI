@@ -109,6 +109,7 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "chest: the ride (step 1)", Body = ChestRide },
                 new Scenario { Name = "chest: the backstops", Body = ChestBackstops },
                 new Scenario { Name = "chest: the save as the game writes it", Body = ChestSaveImage },
+                new Scenario { Name = "chest: a zombie using it", Body = ChestZombieGuard },
             };
             foreach (Scenario s in scenarios)
             {

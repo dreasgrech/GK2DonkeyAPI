@@ -864,6 +864,7 @@ namespace GK2DonkeyAPI
                 string blocked = Mount.Instance.PlaceBlocked(pc, pd.position.Value, spot);
                 if (blocked != null)
                 {
+                    Plugin.Log.LogInfo($"Chest: not set down {how} at {spot:F2}: the keeper's way there from {pd.position.Value:F2} is blocked ({blocked}).");
                     reason = "I can't reach that spot.";
                     return false;
                 }
@@ -1172,23 +1173,6 @@ namespace GK2DonkeyAPI
     {
         private static bool warned;
 
-        // Asked every frame while a chest is in reach: the verdict (zombies, windows, the chest's state) is kept a
-        // quarter second, as the hint's key icon is.
-        private static WgoData verdictFor;
-        private static bool verdictOk;
-        private static float verdictUntil;
-
-        private static bool CanLoad(Mount.Instance r, WgoData d)
-        {
-            if (!ReferenceEquals(verdictFor, d) || Time.unscaledTime >= verdictUntil)
-            {
-                verdictFor = d;
-                verdictOk = r.ChestRig.WhyNotPickUp(d, MainGame.PlayerController) == null;
-                verdictUntil = Time.unscaledTime + 0.25f;
-            }
-            return verdictOk;
-        }
-
         private static void Postfix(ChestInteractionHandler __instance, InteractionInfos __result)
         {
             try
@@ -1208,7 +1192,10 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
-                __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, CanLoad(r, d) ? "Load onto the cart" : "Load onto the cart (not now)")));
+                // The plain offer whatever the chest's state; the press says why when it can't (the bubble), as the game's
+                // own station does and as the cart's "The cart is full." does. A "(not now)" suffix was tried and dropped
+                // 2026-10-09: no other hint in the game or the mod reads like that.
+                __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, "Load onto the cart")));
             }
             catch (Exception e)
             {
