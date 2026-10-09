@@ -76,6 +76,7 @@ class GK2DonkeyAPI.Api.MountCompanion
   property bool Brays { get; set; }
   property GK2DonkeyAPI.Api.MountHandle Cart { get; }
   property GK2DonkeyAPI.Api.MountSpeed CartSpeed { get; set; }
+  property bool CartStaysParked { get; set; }
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }
   property string CustomHarness { get; set; }

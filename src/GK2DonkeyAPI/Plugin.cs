@@ -419,7 +419,8 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<KeyCode> TuningWindowKey;
-        internal static bool TuningWindowHidden; // this session only, toggled by TuningWindowKey (e.g. for screenshots)
+        internal static bool TuningWindowHidden; // toggled by TuningWindowKey; starts as remembered (TuningWindowHiddenCfg); the self-tests hide it for the run only
+        internal static ConfigEntry<bool> TuningWindowHiddenCfg; // the hide remembered across sessions: left hidden, it stays hidden after a restart
         internal static ConfigEntry<float> TuningWindowScale;
         internal static ConfigEntry<float> TuningWindowFontScale;
         internal static ConfigEntry<float> TuningWindowWidth;
@@ -504,7 +505,10 @@ namespace GK2DonkeyAPI
             TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", false,
                 "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");
             TuningWindowKey = Config.Bind("Debug", "TuningWindowKey", KeyCode.F11,
-                "Hides or shows the tuning panel, e.g. for screenshots. Only for this session: the panel is back after a restart. The game doesn't use F11 on its own (it can't be bound in its controls; Shift+F11 is its Workshop creator). None = no key.");
+                "Hides or shows the tuning panel, e.g. for screenshots. Remembered (TuningWindowHidden): left hidden, it stays hidden after a restart. The game doesn't use F11 on its own (it can't be bound in its controls; Shift+F11 is its Workshop creator). None = no key.");
+            TuningWindowHiddenCfg = Config.Bind("Debug", "TuningWindowHidden", false,
+                "Whether the tuning panel is hidden right now; written as TuningWindowKey toggles it, so the panel comes back the way it was left.");
+            TuningWindowHidden = TuningWindowHiddenCfg.Value;
             TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
                 "Overall size of the tuning panel (1 = Unity default, 1.5 suits 1440p). Text and width scale with it.");
             TuningWindowFontScale = Config.Bind("Debug", "TuningWindowFontScale", 1f,
@@ -595,6 +599,7 @@ namespace GK2DonkeyAPI
                 && !UnityInput.Current.GetKey(KeyCode.LeftShift) && !UnityInput.Current.GetKey(KeyCode.RightShift))
             {
                 TuningWindowHidden = !TuningWindowHidden;
+                TuningWindowHiddenCfg.Value = TuningWindowHidden;
             }
             try
             {

@@ -11,7 +11,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 
 | Key | On foot | Riding the donkey | Driving the cart |
 |---|---|---|---|
-| **H** | your donkey comes and you ride it; a parked cart stays where you left it | get off | leave the cart standing, ride on |
+| **H** | your donkey comes and you ride it; a parked cart stays where you left it (a setting) | get off | leave the cart standing, ride on |
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
 | **J** | – | take the cart in reach | leave the cart standing |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
@@ -46,6 +46,7 @@ All of these apply at once:
 | | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
+| | Calling the donkey leaves the cart parked | on | H while your donkey stands somewhere with the cart: the donkey alone comes and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |
 | 3. Donkey | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Coat colour | Game default | Brown, Dark, Cream, Black, or Custom. |
 | | Harness colour | Game default | Black, Red, Blue, Green, or Custom. |

@@ -53,13 +53,14 @@ Kept short: everything a player would look for, nothing that can break the pictu
 
 | Group | Option | Default | Why it's safe |
 |---|---|---|---|
-| **Keys** | Ride, Cart, Bell, Send away | H, G, none, none | Only keys. No hitch key (dropped 2026-10-03): H while driving leaves the cart (the same unhitch), G while riding brings your cart, E hitches a cart in reach; Saddle Up sets the API's `HitchKey` to None. H on foot while the cart is parked somewhere: the donkey alone comes and the cart stays where it was (2026-10-09). |
+| **Keys** | Ride, Cart, Bell, Send away | H, G, none, none | Only keys. No hitch key (dropped 2026-10-03): H while driving leaves the cart (the same unhitch), G while riding brings your cart, E hitches a cart in reach; Saddle Up sets the API's `HitchKey` to None. H on foot while the cart is parked somewhere: the donkey alone comes and the cart stays where it was (2026-10-09, the toggle below). |
 | **Riding** | Riding speed, Cart speed | Normal | One each for riding the donkey and driving the cart (2026-10-03): Normal / Faster / Fastest (fixed multipliers per style), not a free number. |
 | | Get off at building doors | on | Off lets the cart into houses, through the furniture. It only looks wrong; nothing breaks (tested 2026-09-30). |
 | | Thought bubbles | on | Text only. |
 | **Donkey** | Coat | Grey (the game's) | A list of presets: Grey, Brown, Dark, Cream, Black, maybe one silly one. Each preset is a tested set of colour values. |
 | | Harness colour | the game's | A short preset list. |
 | | Shuffles when standing | on | On/off only. |
+| | Calling the donkey leaves the cart parked | on | On/off only (2026-10-09): off brings the cart along and leaves it by the keeper, the old way. |
 | | Bray sounds | on | On/off (some players find them noisy); in the Sound section (2026-10-03). |
 | **Cart** | Paint | the game's | Presets: Natural wood, Dark wood, Red, Green, Blue. |
 | | Lantern | on | Show the lantern pole at all. |

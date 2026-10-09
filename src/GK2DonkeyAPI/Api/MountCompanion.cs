@@ -20,8 +20,9 @@ namespace GK2DonkeyAPI.Api
     //
     // - Use(Ride / Cart), for the ride and cart keys: on foot the donkey (spawned the first time) comes to the keeper
     //   and he gets on, the cart brought and hitched (Cart) or, when the donkey stands hitched to it somewhere, left
-    //   there where it was parked (Ride); mounted in that style he gets off (the donkey stays); mounted in the other
-    //   style the cart is left standing or brought and hitched.
+    //   there where it was parked (Ride, CartStaysParked; off: it comes along and is left by the keeper); mounted in
+    //   that style he gets off (the donkey stays); mounted in the other style the cart is left standing or brought and
+    //   hitched.
     // - SendAway: the donkey, its cart and foals go; the cart's cargo is set down first.
     // - Found again after a load by their keys "donkey", "cart" and "foal", "foal2" ... (kept with the save while
     //   KeepWithSaves).
@@ -155,6 +156,11 @@ namespace GK2DonkeyAPI.Api
         // Kept with the save: after a load they're back where they were left, cargo on the cart.
         public bool KeepWithSaves { get => keep; set { keep = value; ApplyKeep(); } }
 
+        // Use(Ride) while the donkey stands hitched to its cart somewhere: on, the cart is left where it was parked (with
+        // its load and chest) and the donkey alone comes; off, both come and the cart is left standing by the keeper.
+        // On to start with.
+        public bool CartStaysParked { get; set; } = true;
+
         // How many foals (size 0.6, not rideable) stay with the donkey: 0 to MaxFoals.
         public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MaxFoals); nextFoalCheck = 0f; } }
 
@@ -252,11 +258,11 @@ namespace GK2DonkeyAPI.Api
                 Plugin.Log.LogInfo($"Companion: spawned {Donkey.FullId} for {OwnerId}.");
                 ApplyAll();
             }
-            if (style == MountStyle.Ride && Donkey.HasCart)
+            if (style == MountStyle.Ride && Donkey.HasCart && CartStaysParked)
             {
-                // Its cart stays where it was parked and the donkey alone comes (asked for 2026-10-09; before, both came
-                // and the cart was left standing by the keeper). Not when the ride here would be refused: then nothing
-                // changes and the refusal is shown, as ComeToKeeper shows it.
+                // Its cart stays where it was parked and the donkey alone comes (asked for 2026-10-09; before, and with
+                // CartStaysParked off, both come and the cart is left standing by the keeper in ContinuePending). Not when
+                // the ride here would be refused: then nothing changes and the refusal is shown, as ComeToKeeper shows it.
                 if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
                 {
                     return MountResult.Refused("Not in a game.");
@@ -362,6 +368,15 @@ namespace GK2DonkeyAPI.Api
                     pending = null;
                 }
                 return; // hitched: a new view, ready in a frame or two
+            }
+            if (style == MountStyle.Ride && Donkey.HasCart)
+            {
+                // CartStaysParked off: the cart came along and is left standing here, by the keeper.
+                if (Mounts.Unhitch(Donkey) == null)
+                {
+                    pending = null;
+                }
+                return;
             }
             pending = null;
             Donkey.Ride();

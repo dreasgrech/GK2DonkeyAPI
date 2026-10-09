@@ -72,7 +72,7 @@ Each one says why.
   cart with its cargo and settings, and the ride goes on in Ride style. A standing donkey's cart is left the same
   way (`Mounts.Unhitch`), also one without a view (asleep far away, or in a scene that isn't loaded): the cart stays
   exactly where the donkey stood, with the cargo and the chest, and the views follow when they are next due. Saddle
-  Up's H on foot leaves a parked cart this way and brings the donkey alone.
+  Up's H on foot leaves a parked cart this way and brings the donkey alone (`MountCompanion.CartStaysParked`).
 - **Pickups** go onto the ridden cart only, as before. A standing cart is loaded and unloaded on foot with the interact
   key instead (docs/load-on-foot.md).
 
