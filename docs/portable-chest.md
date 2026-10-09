@@ -453,7 +453,12 @@ guard directly, since in normal play none of them ever runs), two checks only th
    sleep with a chest aboard, close the game, rename `BepInEx/plugins/GK2DonkeyAPI.dll` and `SaddleUp.dll` to
    `.off`, start the game, load: the chest stands beside where the cart stood, openable, with its items; remove mode
    takes it down normally. Rename back, load again: the chest is lifted back onto the cart (`restored with the
-   save`). Status: automated check **built, not yet run**; by hand **pending**.
+   save`). Status: automated check **passed 2026-10-09** (the zoned case, in the yard); by hand **passed 2026-10-09** in
+   the zone-less case: the cart with a chest of 19 items parked on the crossroads (outside every area), the save taken at
+   a house door ("stands at ... for the save in no zone"); without the mods the chest stood on the crossroads with the
+   game's "[E] Open", the same 19 items, highlighted by remove mode, no error in the log; with the mods back it was
+   lifted onto the cart again ("restored with the save onto dreas.gk2.saddleup#1 ... from zone ''", 4 of 4 donkeys
+   and 1 chest back).
 2. **The caretaker refusal** ("A zombie is using this chest."): needs a working caretaker. Status: **pending**.
 
 ## 8. Plan
@@ -538,4 +543,5 @@ guard directly, since in normal play none of them ever runs), two checks only th
    `PlayerController.Teleport`, so a refusal there couldn't be told from a cutscene's teleport and would have left
    the keeper frozen. So the prefix on `Teleport` no longer refuses: a teleport to another scene **sets the chest down
    at the cart** (shown, zoned) and goes ahead, with the bubble "The chest stays by the cart." The scene-change
-   fallback stays as a safety net. Open: API events and docs/reference entries; the tuning of the chest's place.
+   fallback stays as a safety net. API events (`ChestLoaded` / `ChestUnloaded`, `MountHandle.Chest`), docs/api.md and
+   docs/reference.md entries and the stand-in's place on the bed (up −0.01, across 0.04) done 2026-10-09 (API 0.24.0).
