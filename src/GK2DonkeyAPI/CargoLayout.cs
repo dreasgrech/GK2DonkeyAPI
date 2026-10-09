@@ -234,7 +234,8 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
             sb.AppendLine("# box_clothes_1/2, box_fabric, box_vine); body (body_corpse, body_wild_zombie); low crate (15 box_* incl. preserves);");
             sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate);");
-            sb.AppendLine("# zombie (body_zombie: the game's lying zombie, one body for all ten heads; a class of its own, matched by id only).");
+            sb.AppendLine("# zombie (body_zombie: the game's lying zombie, one body for all ten heads; a class of its own, matched by id only);");
+            sb.AppendLine("# chest (chest_rough / chest / chest_good riding on the cart, CartChest.cs: a class each, matched by id only; alone_* places it).");
             sb.AppendLine("version = 1");
             foreach (string id in itemOrder)
             {
@@ -316,9 +317,9 @@ namespace GK2DonkeyAPI
             {
                 return true;
             }
-            if (IsZombieId(a) || IsZombieId(b))
+            if (IsZombieId(a) || IsZombieId(b) || CartChest.Allowed.Contains(a) || CartChest.Allowed.Contains(b))
             {
-                return false; // zombies are a class of their own: tuning one never moves another item, nor the other way
+                return false; // zombies and the chests are classes of their own: tuning one never moves another item, nor the other way
             }
             Vector3 d = BoxOf(a) - BoxOf(b);
             return Mathf.Abs(d.x) <= SizeTolerance && Mathf.Abs(d.y) <= SizeTolerance && Mathf.Abs(d.z) <= SizeTolerance;

@@ -396,6 +396,7 @@ namespace GK2DonkeyAPI
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
+            Toggle("A storage chest rides on the cart (alone; F on it while driving, E with nothing in front sets it down)", Plugin.CargoChest, null);
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
             GUILayout.Label("While mounted the keeper faces only left or right, like the donkey.", small);
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
@@ -1247,7 +1248,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpColliders());
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label("All on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper; press ten times, then Remove, and check the log for town quality changes and [pool] lines.", small);
+            GUILayout.Label("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in \"Run self-tests\" above (the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.", small);
 
         }
 

@@ -434,6 +434,7 @@ namespace GK2DonkeyAPI
                 views.Clear();
                 viewKeys.Clear();
                 Placed.Clear();
+                owner.ChestRig.OnHolderGone(); // the stand-in goes with the holder below
                 // The holder (and the cargo meshes in it) is the mod's: it must not go back to the game's pool with the
                 // cart parts, where the next donkey built from them (the game's delivery donkey too) would show it. Out
                 // of the tree first, so a new holder made this frame is not confused with it (Destroy waits for the
@@ -851,30 +852,9 @@ namespace GK2DonkeyAPI
             // caller then sets it down in front of the keeper as before.
             private bool DropBehindCart(PlayerData pd, Item item)
             {
-                if (!owner.TryCartRear(out Vector3 rear, out Vector3 back, out string detail))
-                {
-                    return false;
-                }
-                const float NearestRing = 0.75f; // GetPlayerDropPosition's first distance
                 Vector3 box = CargoLayout.BoxOf(item.id); // long, high, across of the mesh; a dropped view is not rotated
-                float half = box == Vector3.zero ? 0.4f : 0.5f * (Mathf.Abs(back.x) * box.x + Mathf.Abs(back.z) * box.z);
-                float want = half + owner.S.CargoSetDownGap.Value;
-                Vector3 anchor = rear + back * (want - NearestRing);
-                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(anchor, new Vector2(back.x, back.z), out Vector3 pos))
+                if (!TrySpotBehindCart(pd, box, out Vector3 pos, out Vector3 rear, out Vector3 back, out float half, item.id))
                 {
-                    Plugin.Log.LogInfo($"Cargo: no free spot behind the cart for {item.id} ({detail}); setting it down in front of the keeper.");
-                    return false;
-                }
-                Vector3 off = pos - rear;
-                Plugin.Log.LogInfo($"Cargo: set-down spot for {item.id} {Vector3.Dot(off, back):0.00} behind the cart's back end, {Vector3.Cross(back, off).y:0.00} to the side, wanted {want:0.00} (half length {half:0.00} + gap {owner.S.CargoSetDownGap.Value:0.00}; {detail}).");
-                // The cart has no collider and can reach through a fence or wall, and the search only checks the sight
-                // line from its anchor. So the spot must also be in sight of the keeper, with the search's own test
-                // (0.6 up, walls and buildings mask 3328), or the item could land where he cannot get to it.
-                Vector3 eye = pd.position.Value + Vector3.up * 0.6f;
-                Vector3 to = pos + Vector3.up * 0.6f - eye;
-                if (Physics.Raycast(eye, to.normalized, to.magnitude, 3328, QueryTriggerInteraction.Ignore))
-                {
-                    Plugin.Log.LogInfo($"Cargo: the spot behind the cart is out of the keeper's sight (behind a wall); setting {item.id} down in front of him.");
                     return false;
                 }
                 if (!MainGame.Instance.dropSystem.DropItem(item, pd.currentGameSceneId, pos))
@@ -883,6 +863,50 @@ namespace GK2DonkeyAPI
                 }
                 Plugin.Instance.StartCoroutine(MeasureSetDown(item, rear, back, half));
                 return true;
+            }
+
+            // A free spot behind the cart for something of this box (long, high, across), in the keeper's sight: the
+            // drop search from an anchor so that the thing's near edge lands CargoSetDownGap behind the cart's back end.
+            // Used for cargo and for the chest (CartChest.SetDown). False when there is no cart, no free spot, or the spot
+            // is out of the keeper's sight; the caller then sets the thing down in front of him.
+            internal bool TrySpotBehindCart(PlayerData pd, Vector3 box, out Vector3 pos) => TrySpotBehindCart(pd, box, out pos, out _, out _, out _, "the chest");
+
+            private bool TrySpotBehindCart(PlayerData pd, Vector3 box, out Vector3 pos, out Vector3 rear, out Vector3 back, out float half, string what)
+            {
+                pos = rear = back = Vector3.zero;
+                half = 0f;
+                if (!owner.TryCartRear(out rear, out back, out string detail))
+                {
+                    return false;
+                }
+                const float NearestRing = 0.75f; // GetPlayerDropPosition's first distance
+                half = box == Vector3.zero ? 0.4f : 0.5f * (Mathf.Abs(back.x) * box.x + Mathf.Abs(back.z) * box.z);
+                float want = half + owner.S.CargoSetDownGap.Value;
+                Vector3 anchor = rear + back * (want - NearestRing);
+                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(anchor, new Vector2(back.x, back.z), out pos))
+                {
+                    Plugin.Log.LogInfo($"Cargo: no free spot behind the cart for {what} ({detail}); setting it down in front of the keeper.");
+                    return false;
+                }
+                Vector3 off = pos - rear;
+                Plugin.Log.LogInfo($"Cargo: set-down spot for {what} {Vector3.Dot(off, back):0.00} behind the cart's back end, {Vector3.Cross(back, off).y:0.00} to the side, wanted {want:0.00} (half length {half:0.00} + gap {owner.S.CargoSetDownGap.Value:0.00}; {detail}).");
+                // The cart has no collider and can reach through a fence or wall, and the search only checks the sight
+                // line from its anchor. So the spot must also be in sight of the keeper, or the thing could land where he
+                // cannot get to it.
+                if (!InKeepersSight(pd, pos))
+                {
+                    Plugin.Log.LogInfo($"Cargo: the spot behind the cart is out of the keeper's sight (behind a wall); setting {what} down in front of him.");
+                    return false;
+                }
+                return true;
+            }
+
+            // The drop search's own sight test (0.6 up, walls and buildings mask 3328) from the keeper to a spot.
+            internal static bool InKeepersSight(PlayerData pd, Vector3 spot)
+            {
+                Vector3 eye = pd.position.Value + Vector3.up * 0.6f;
+                Vector3 to = spot + Vector3.up * 0.6f - eye;
+                return !Physics.Raycast(eye, to.normalized, to.magnitude, 3328, QueryTriggerInteraction.Ignore);
             }
 
             // A second after the drop (its bounce is over), where the item's drawn meshes really lie relative to the
@@ -1143,6 +1167,13 @@ namespace GK2DonkeyAPI
                     }
 
                     Pack(drawn, s, gameCorpse ? LoadedBodyExtra() : 0f);
+                    // A chest riding (CartChest): its stand-in on the bed, placed like a lone item, listed for the panel.
+                    owner.ChestRig.Layout(container, s.CargoBedDepth.Value, Placed, out string chestNote);
+                    if (chestNote != null)
+                    {
+                        LastFloor = s.CargoBedDepth.Value;
+                        LastLayoutNote = chestNote;
+                    }
                 }
                 catch (Exception e)
                 {

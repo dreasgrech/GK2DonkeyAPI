@@ -51,6 +51,10 @@ namespace GK2DonkeyAPI.Api
         // name.
         public IReadOnlyList<CargoItem> Cargo => I.CargoRig.Described();
 
+        // The storage chest riding on its cart, or null (docs/portable-chest.md). While a chest rides the cart takes no
+        // cargo, and Cargo is empty.
+        public ChestInfo Chest => I.ChestRig.Info(this);
+
         // This instance's own settings: any key of Mounts.Tuning, Mounts.Behaviour, Mounts.Shuffle or Mounts.Colors.
         // E.g. Tuning.Set(myId, "IdleShuffle", true) lets just this donkey shuffle.
         public InstanceTuning Tuning { get; }

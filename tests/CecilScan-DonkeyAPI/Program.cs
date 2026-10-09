@@ -18,6 +18,27 @@ foreach (var t in mod.GetTypes()) foreach (var m in t.Methods.Where(m => m.HasBo
   }
 }
 Console.WriteLine($"IL references into game assemblies: {ok} resolved, {fails} unresolved");
+// Harmony targets named by string ([HarmonyPatch(typeof(T), "name")] and friends): the method must be DECLARED on
+// that type, not inherited (Harmony's AccessTools.DeclaredMethod), or patching fails at start and the mod disables
+// itself (found 2026-10-06: ChestInteractionHandler inherits HasInteraction2). Classes using TargetMethod(s) are skipped.
+{ int patches = 0;
+  foreach (var t in mod.GetTypes()) {
+    var attrs = t.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch").ToList();
+    if (attrs.Count == 0) continue;
+    TypeReference? target = null; string? name = null; int methodType = 0;
+    foreach (var a in attrs) foreach (var arg in a.ConstructorArguments) {
+      if (arg.Value is TypeReference tr) target = tr;
+      else if (arg.Value is string str) name = str;
+      else if (arg.Type.Name == "MethodType" && arg.Value is int mt) methodType = mt;
+    }
+    if (target == null || name == null) continue; // TargetMethod(s): resolved at run time, skipped by Harmony when null
+    patches++;
+    string want = methodType == 1 ? "get_" + name : methodType == 2 ? "set_" + name : name;
+    TypeDefinition? td = null; try { td = target.Resolve(); } catch {}
+    bool good = td != null && td.Methods.Any(m => m.Name == want);
+    Console.WriteLine((good?"PASS":"FAIL") + $" patch target {target.FullName}.{want} declared ({t.Name})"); if (!good) fails++;
+  }
+  Console.WriteLine($"Harmony patch targets named by string: {patches} checked"); }
 void Field(string type, string name, string ftype, bool isStatic=false) { var td = game.GetType(type); var f = td?.Fields.FirstOrDefault(x => x.Name == name);
   bool good = f != null && f.FieldType.FullName == ftype && f.IsStatic == isStatic; Console.WriteLine((good?"PASS":"FAIL") + $" field {type}.{name} : {f?.FieldType.FullName} static={f?.IsStatic}"); if (!good) fails++; }
 void Method(string type, string name, int pars) { var td = game.GetType(type); var ms = td?.Methods.Where(x => x.Name == name).ToList();

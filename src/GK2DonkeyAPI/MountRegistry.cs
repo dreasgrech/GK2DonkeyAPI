@@ -355,6 +355,7 @@ namespace GK2DonkeyAPI
             try
             {
                 restored = RestoreFromSideFile();
+                CartChest.RepairHiddenChests(); // a chest hidden in the save that no cart owns: shown again, loudly
             }
             catch (Exception e)
             {
@@ -634,6 +635,10 @@ namespace GK2DonkeyAPI
                 {
                     try
                     {
+                        if (setDownCargo && inGame && !i.Ephemeral && !Plugin.Quitting)
+                        {
+                            i.ChestRig.SetDownAt(i.CartPoint(), "cleanup: " + reason);
+                        }
                         if (setDownCargo && inGame && !i.Ephemeral && i.CargoRig.Count > 0 && !Plugin.Quitting)
                         {
                             Vector3 at = i.CartPoint();
@@ -900,6 +905,7 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogWarning($"Cargo: setting zombie {it.id} down from {i.Describe()} failed (removed: {why}): {e}");
                     }
                 }
+                i.ChestRig.SetDownAt(i.CartPoint(), "cart removed, " + why); // a hidden chest must never be left behind
                 i.Discard();
             }
             Unregister(i);
@@ -997,6 +1003,28 @@ namespace GK2DonkeyAPI
             lent.Clear();
             // The sheet's test items sit on the ridden cart while it runs; they must not be lent into the save.
             CargoSheet.Abort("save");
+            // The chests first, each on its own: a chest on a cart stands at the cart for the save (its data shown and
+            // zoned), so the save holds a normal chest with its contents, mod or no mod; taken back by
+            // TakeCargoBackFromSave. One failing can't keep the next hidden (and GameSave_PrepareToSave_Patch is the
+            // last line behind this).
+            foreach (Instance i in instances.ToArray())
+            {
+                if (!i.ChestRig.Aboard)
+                {
+                    continue;
+                }
+                try
+                {
+                    using (Bind(i))
+                    {
+                        i.ChestRig.SetDownForSave();
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogError($"Chest: standing the chest of {i.Describe()} at the cart for the save failed: {e}");
+                }
+            }
             foreach (Instance i in instances.ToArray())
             {
                 if (i.Ephemeral || i.CargoRig.Count == 0)
@@ -1098,6 +1126,13 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo($"Cargo: {lent.Count} item(s) back on their carts after the save.");
             }
             lent.Clear();
+            foreach (Instance i in instances.ToArray())
+            {
+                using (Bind(i))
+                {
+                    i.ChestRig.TakeBackAfterSave(); // the chest the save hook set down at the cart
+                }
+            }
         }
     }
 }

@@ -310,6 +310,10 @@ namespace GK2DonkeyAPI
                     Line(sb, "cargo", guid);
                     items++;
                 }
+                if (!string.IsNullOrEmpty(i.ChestRig.LentChestGuid))
+                {
+                    Line(sb, "chest", i.ChestRig.LentChestGuid); // the chest standing at the cart for this save (CartChest)
+                }
                 foreach (var kv in i.Overrides)
                 {
                     string value;
@@ -410,6 +414,7 @@ namespace GK2DonkeyAPI
             internal Vector3 Position;
             internal float Scale = 1f;
             internal readonly List<string> Cargo = new List<string>();
+            internal string Chest; // the GUID of the chest that rode on this cart (standing at the cart in the save)
             internal readonly List<string[]> Sets = new List<string[]>();
             internal readonly List<string[]> DataLines = new List<string[]>();
             internal readonly List<string> Lines = new List<string>();
@@ -487,6 +492,7 @@ namespace GK2DonkeyAPI
                         break;
                     case "removeWithParent": cur.RemoveWithParent = a == "true"; break;
                     case "cargo": cur.Cargo.Add(a); break;
+                    case "chest": cur.Chest = a; break;
                     case "set":
                         if (f.Length >= 4)
                         {
@@ -653,7 +659,7 @@ namespace GK2DonkeyAPI
 
             // Parents before children (no chains: two passes).
             var made = new Dictionary<string, Instance>(StringComparer.Ordinal);
-            int items = 0, missing = 0, failed = 0, total = 0;
+            int items = 0, missing = 0, failed = 0, total = 0, chests = 0, chestsLeft = 0;
             for (int pass = 0; pass < 2; pass++)
             {
                 foreach (Record r in valid)
@@ -732,12 +738,25 @@ namespace GK2DonkeyAPI
                         i.CargoRig.SetCarried(carried); // onto its inventory when its view is prepared
                         items += carried.Count;
                     }
+                    if (!string.IsNullOrEmpty(r.Chest) && r.Cart)
+                    {
+                        if (ReclaimChest(i, r.Chest, r.Position))
+                        {
+                            chests++;
+                        }
+                        else
+                        {
+                            chestsLeft++; // standing where it is (said above), never lost
+                        }
+                    }
                     Register(i); // InstanceSpawned, now that it is complete
                     restored.Add(i.Handle);
                 }
             }
             total += dropped.Count; // every record that wasn't dormant: back, dropped with its parent, or failed
             string note = $"{restored.Count} of {total} donkey(s)/cart(s) back, {items} cargo item(s) back on their carts"
+                + (chests > 0 ? $", {chests} chest(s) back on their carts" : "")
+                + (chestsLeft > 0 ? $", {chestsLeft} chest(s) left standing" : "")
                 + (missing > 0 ? $", {missing} not found on the ground" : "")
                 + (dormant.Count > 0 ? $", {dormant.Count} dormant" : "")
                 + (dropped.Count + failed > 0 ? $", {dropped.Count + failed} not back (see above)" : "");
@@ -758,6 +777,37 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 Plugin.Log.LogWarning($"Persistence: {i.Describe()}'s setting {key} = {value} wasn't restored: {e.Message}");
+            }
+        }
+
+        // The chest with this GUID, standing within ReclaimRadius of where its cart stood, back onto the cart (CartChest).
+        private static bool ReclaimChest(Instance i, string guid, Vector3 at)
+        {
+            try
+            {
+                WgoData d = MainGame.WorldData.GetWgoData(new SGuid(Guid.Parse(guid)));
+                if (d == null)
+                {
+                    Plugin.Log.LogWarning($"Persistence: the chest {guid} of {i.Describe()} is not in the save; nothing to put back.");
+                    return false;
+                }
+                // 'at' is the donkey's root; the chest stood at the cart body, up to about 1.5 behind it: a wider ring.
+                if (new Vector2(d.Position.x - at.x, d.Position.z - at.z).magnitude > ReclaimRadius + 1.5f || d.WorldId != i.SceneId)
+                {
+                    Plugin.Log.LogInfo($"Persistence: the chest {d.id} of {i.Describe()} stands at {d.Position:F1}, not at the cart ({at:F1}); left where it is.");
+                    return false;
+                }
+                if (!i.ChestRig.Restore(d, "restored with the save"))
+                {
+                    Plugin.Log.LogInfo($"Persistence: the chest {d.id} of {i.Describe()} is left standing at {d.Position:F1} (see the line above).");
+                    return false;
+                }
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Persistence: putting the chest {guid} back onto {i.Describe()} failed: {e.Message}");
+                return false;
             }
         }
 

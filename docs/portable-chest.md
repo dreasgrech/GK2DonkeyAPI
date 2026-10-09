@@ -45,20 +45,33 @@ default for every world object is "hole while inside a zone" (`WGODef.ForceSetNa
 there. No holes are left behind as long as every removal goes through `RemoveWgoData`.
 
 **Building.** From the build menu in a builder zone: `WgoBuildPointer.TryDoBuildAction` takes the cost, then
-`new WgoData(id, pos, scene)` and `gameScene.AddWgoData` (`WgoBuildPointer.cs:141-175`). The player-built chests,
-read from the balance data by string search (costs confirmed, the rest needs the probe):
+`new WgoData(id, pos, scene)` and `gameScene.AddWgoData` (`WgoBuildPointer.cs:141-175`). What gets placed is the
+**construction site** `<chest>_place`; when its build craft finishes, the game turns the same object into the
+finished chest with `WorldData.ChangeWgoData` (the same `WgoData`, re-id'd; it leaves `isRemovingFromData` true
+forever, a quirk Move Building also notes). The finished player chests, from the probe's definitions dump
+(2026-10-06, `BepInEx/GK2-chest-facts.txt`):
 
-| Build def → object | Cost | Refund (`_r`) |
-|---|---|---|
-| `chest_rough_place_p` → `chest_rough_place` | 4 wooden_plank, 4 nails_bronze | not decoded |
-| `chest_place_p` → `chest_place` | 4 oiled_plank, 2 wooden_beam, 6 nails_iron | `chest_place_r`: in full |
-| `chest_good_place_p` → `chest_good_place` | 2 oiled_beam, 6 carved_wood, 8 screw_steel | not decoded |
+| Finished chest | Slots | Built as | Cost | Remove (`_r`, a destroy craft) refunds |
+|---|---|---|---|---|
+| `chest_rough` | 20 | `chest_rough_place` | 4 wooden_plank, 4 nails_bronze | 2 wooden_plank, 2 nails_bronze |
+| `chest` | 30 | `chest_place` | 4 oiled_plank, 2 wooden_beam, 6 nails_iron | 2 oiled_plank, 1 wooden_beam, 3 nails_iron |
+| `chest_good` | 40 | `chest_good_place` | 2 oiled_beam, 6 carved_wood, 8 screw_steel | 1 oiled_beam, 3 carved_wood, 4 screw_steel |
 
-Other chest ids exist and are never touched by this feature: `chest`, `chest_home`, `chest_yard_place`,
-`chest_garden_place`, `chest_graveyard_place`, `chest_mine`, `chest_kitchen`, `sawmill_chest`, `yard_chest`,
-`military_base_chest`, `looters_chest(_full)`, `chest_myst`, `chest_resurrection`, the conveyor chests
-(`conveyor_chest*`, `garden_bags_storage_1-3`, `conveyor_wine_beer_pallet`, which have their own windows and
-systems) and `test_chest_size_2/4`.
+Removing an unfinished site (`<chest>_place_r`) is instant with the full cost back. All three finished chests:
+`openInMultiInventory` true, `isMovable` false, `townQuality` 0, no attached script, no NPC group, no reference to
+another object's inventory, `conveyorType` None, nav hole "inside world zone", `hp` 0, `dropInventoryOnDeath`
+false, no `replaceToWgoOnDie`, no start items, no filters. So every flag the design worried about is clean, and
+**the allow-list is `chest_rough`, `chest`, `chest_good`.**
+
+Other chest ids exist and are never touched by this feature: `chest_home`, `chest_kitchen`, `chest_mine`,
+`chest_resurrection`, `sawmill_chest`, `yard_chest`, `military_base_chest`, `town_supplies`,
+`alchemy_scroll_closet`, `bookshelf_1`, the conveyor chests and pallets (`conveyor_chest*`, `*_container_*`,
+`garden_bags_storage_1-3`, `conveyor_wine_beer_pallet`: their own windows and systems, some with a reference to
+another object's inventory) and `test_chest*`.
+
+**Scenes:** the probe also logged `disableUnloadOnTeleport` per scene: **`RuinedTemple` (the main outdoor scene) is
+kept loaded when the keeper goes through a door**; the other five unload. So indoors the outdoor donkey view
+survives, and a carry-through would hit the duplicate view-cache key (§4b) exactly for the main scene.
 
 **Deconstructing.** In remove mode, `Wgo.DoBuildRemove` (`Wgo.cs:2203-2318`) never refuses because of contents.
 Normally it queues a `destroy_basic` craft whose output is the refund **plus live references to the items still in
@@ -123,7 +136,9 @@ its scene, never cloned, never removed from the scene, its `Inventory` object ne
    (`Mount.cs:975-983`). On destroy, a temp object's parts are destroyed, not pooled (`Wgo.cs DestroyParts`), so
    it can't leak either. The stand-in is placed by our cargo layout and follows the bed each frame (kept under the
    scene transform with `UpdatePosByData = false`, not parented under the cart, so the cart's child scans never
-   see it).
+   see it). One stand-in per ride, made at pick-up and destroyed at set-down: each one leaves the part pool's
+   borrowed count one higher (the game's own build preview does the same, §6), so it is not re-made per frame or
+   per redraw.
 
 **On the cart:**
 - **Open:** our own interaction opens `UIChestWindow` with `new UIBaseChestWindowData(playerInv, null, chestData)`.
@@ -140,10 +155,15 @@ its scene, never cloned, never removed from the scene, its `Inventory` object ne
 2. `Position = spot`; rotation as before.
 3. `IsHidden = false`: the view loads its parts at the new position (the root's transform followed `Position` all
    along, `Wgo.cs:1596-1601`).
-4. Re-register in the chunk system at the new position: `ChunkManager.UnregisterStaticChunkableObject` then
-   `RegisterStaticChunkableObject` (both public; `Wgo.RegisteredInChunker` is settable). Fallback if the probe
-   shows a problem: despawn the view and recreate it through the scene's own `CreateWgoView` (private, via
-   AccessTools), which is how a freshly built chest gets its view.
+4. Re-register in the chunk system at the new position, the way **Move Building** does it (GK2QOLMods
+   `src/GK2MoveBuilding/Mover.cs`, `Relocate`): the private `Wgo.TryUnregisterInChunkManager` then
+   `TryRegisterInChunkManager` through `AccessTools.MethodDelegate`, after `RefreshCustomNavMeshCutUnit()` and
+   `Physics.SyncTransforms()`. Move Building moves standing buildings exactly this way (zone remove → `Position` →
+   zone re-add by the game's priority loop → chunk re-register) and its in-game test 12, "leave the area and come
+   back: the building appears at the new spot", passed on 2026-09-30. Its other steps apply too: cut workbench
+   links before and relink after (`DetachLinks` / `RelinkExtensions`; a chest has none unless built against a
+   table), re-register baked navigation points if the object has any (`gdPointsData`; chests are expected to have
+   none, the probe's step B logs it), refuse while a dock point is occupied or a worker is set.
 5. Zone: `RemoveWgoData` on every zone first (duplicate guard: `TryAddWgoData` has no `Contains` check and a
    double add would list the same inventory twice), then the game's loop: zones by descending
    `processingPriority`, first `TryAddWgoData` that returns true (`GameSceneData.cs:306-319`, replicated;
@@ -185,13 +205,22 @@ and never touches items inside, `Inventory.cs:132-199`). The risks are these, ea
 | 3 | **Pending demolish or craft.** The destroy craft holds live item references (`Wgo.cs:2286-2312`); a scene move would silently clear it | Refuse pickup while `CraftComponent.IsDestroyingCraftActive`, `IsStarted` or a queue exists. While hidden the chest can't be marked (no colliders) |
 | 4 | **Workbench extension cascade.** A chest attached as a full-cover extension is dropped and removed when its parent is demolished, wherever it is (`WgoData.cs:1955-2000`) | Refuse pickup while `WorkbenchParents` or `AttachedWorkbenchExtensions` is non-empty |
 | 5 | **Death logic.** HP death with `replaceToWgoOnDie` or without `dropInventoryOnDeath` removes without a drop (`WgoData.cs:2072-2150`) | Probe `hp`, `dropInventoryOnDeath`, `replaceToWgoOnDie` for the three ids. Hidden objects take no damage anyway |
-| 6 | **Double zone registration** (no `Contains` check) and the fight-level zone grab | Remove from all zones before any add; prefix `TryAddWgoData` for riding chests |
+| 6 | **Double zone registration** (no `Contains` check) and the fight-level zone grab. **Found by the self-test:** `RemoveWgoData` takes one list entry per call (`List.Remove`), so a duplicate survives a plain remove-then-add, and the game's own scene removal leaves one orphan id in the zone list | Remove from a zone *until it holds no entry* (`ChestProbe.ZoneRemoveAll`), then add; prefix `TryAddWgoData` for riding chests |
 | 7 | **Caretaker with a stale target** finishes its trip into or out of the chest by id | Before pickup, scan `MainGame.ZombieSystemData` for a caretaker or transporter whose target id is the chest; refuse with "a zombie is using this chest" (or wait). Nothing is lost either way, this only avoids a stuck zombie and surprise transfers |
 | 8 | **Fallback drops are lossy.** `DropSystem.DropItem` destroys fuel items outright, splits stacks into recreated items, converts tech points; corpses on the ground auto-expire (`DropSystem.cs:9-80`, `DropData.cs:175-181`) | The design never drops chest contents. Every failure path sets the whole chest down instead |
 | 9 | **Saved flags.** `isHidden` and `isInteractable` are saved | Never use `IsInteractable`. Undo `IsHidden` in the save prefix (§3) |
 | 10 | **A chest with `hasRefToOtherWgoInventory`** shows another object's inventory | Probe; such ids are never allowed |
 | 11 | **Quest or script removal.** Expressions remove objects by custom tag or as their own scope; chest defs with an `attachedScript` or delayed events could | Probe `attachedScript`; only ids without one are allowed |
 | 12 | Co-op: `Position` writes and zone changes aren't replicated | Out of scope, as for all of the mod |
+
+**Two independent reviews of the built code (2026-10-06)** added these, all built:
+- **A hidden chest in a save is the one unrecoverable state** (nothing in the game un-hides a chest; the view spawns inactive and collider-less). So there are now three lines, each on its own: (1) the save hook stands every riding chest at its cart, each instance in its own try, chests before cargo; (2) a prefix on `GameSave.PrepareToSave`, the last call before the game serializes, un-hides any allowed chest still hidden, loudly ("please report this line"); (3) after a load, `RepairHiddenChests` shows any allowed chest found hidden that no cart owns, and the restore lifts a hidden chest it recognises as a repair instead of refusing it.
+- **The rig owns the chest before anything changes** in a lift; on a throw the chest is shown and zoned again where it stands. A set-down that throws after the chest is shown completes the bookkeeping, so a visible chest is never dragged along.
+- **Hitching hands the chest over first**, before the view is re-made or anything can fail (a failure used to leave a hidden chest on an unregistered instance that no save hook visits).
+- **The zone guard the design asked for exists** (`WorldZoneData.TryAddWgoData` prefix: a riding chest is refused, except for the mod's own adds), and every set-down removes before it adds.
+- **The open-from-cart patch never falls through** to the game's handler on a stand-in (that would open the stand-in's own empty inventory; items put there would be nobody's), and a dropped stand-in is non-interactable at once.
+- **Only the player's own door press is refused.** A scripted teleport (a quest flow, a fight, a cutscene) has already taken control and needs the teleport to finish; refusing it froze the keeper. Those set the chest down at the cart and go ahead.
+- The save stands the chest at the cart **data-only** (shown, zoned), the rig keeps it, the stand-in and the 0 slots stay; the postfix hides it again, and the next tick does so if the postfix never ran. Ground height is corrected only in the keeper's own scene. `Restore` requires a cart. The reclaim ring allows for the cart body behind the donkey root and logs every refusal.
 
 Vanilla behaviour that looks like loss but isn't ours: the game's chest UI recreating items (§1), sawmill zombies
 discarding output when the zone has no space (`Flow_FinishZombieSawmillCraft.cs:36-50`), which happens more often
@@ -227,6 +256,13 @@ walled-in chest. **Also refuse while build mode, the building window or any ches
 the zone's `MultiInventory` for the whole session (`BuildManager.cs:53-66`, `UIBuildingWindow.cs:75, 93`,
 `ChestInteractionHandler.cs:20`) and would keep spending from the riding chest. Set-down needs no refresh:
 caretakers poll the zone list every frame (2128-2133) and the order helpers read live.
+
+**Game 1.009 (2026-10-06, `game-update-25731225.md`):** the findings above were made against 1.008 and were
+re-checked against the 1.009 diff. `UnAttachFromWgoData` now unsubscribes the caretaker from the zone's
+`OnOrderRemoved` (the double-subscription quirk is gone); `CaretakerState`'s setter only adds a widget redraw; the
+caretaker's `MoveAction` change concerns carrier stations only. The new save fixes (`< 1009`) touch no world objects
+or inventories. The caretaker station's new "[E] Take" of an away-working caretaker is a head path (covered by the
+zombies-on-cart station patch), not a chest matter.
 
 ### 4b. Doors to another scene (third round)
 
@@ -276,6 +312,47 @@ Carry-through is viable and documented for a later version. v1 refuses the door.
 
 ## 6. What only the running game can settle (step 0 probe)
 
+**Status 2026-10-06:** the definitions dump (1) is done, see §1. Step 2 passed by hand (the chest moved 4 m east,
+south and north, drawn and openable at each new spot, and back; the first "disappearance" was the chest moved
+behind the yard's north wall). Steps 2 to 5 are now **self-tests** ("Run self-tests" on the Debug tab,
+`Dev/SelfTest.Chest.cs`): each scenario builds its own empty `chest_rough` beside the keeper, runs the move through
+`ChestProbe`'s pieces, checks, and removes the chest again, so no building, walking or reload is needed:
+- *chest: hide, move, show (and off screen)*: data and view at the new spot, parts drawn, registered, held by a
+  chunk around the new spot, zone untouched; the keeper 45 m away and back, the view drawn again; moved back.
+- *chest: zone out and in*: with an item inside: out = no list entry, not a crafting source
+  (`MultiInventory(zone)`), no navigation cut (`GlobalNavigationManager.usedUnits`); in = the same zone by the
+  game's order, one entry, source and cut back, the item the same object; a bare second add shown to duplicate and
+  remove-all-then-add shown to put it right.
+- *chest: ten stand-ins*: each drawn, no active collider, not interactable, never in the scene list; town quality
+  and the pool's idle parts unchanged; the pool's borrowed count reported (a temp object's parts are destroyed,
+  not returned: the game's build preview does the same), the chest's colliders logged.
+The manual buttons stay for looking at things by eye.
+
+**Second run (2026-10-06, after the fixes below): 106 passed, 0 failed, 0 warnings.** Step 0 is complete. (A later run
+with the test chest standing on a chunk boundary showed it held by two chunks, which is how the game registers a
+straddling object; the chunk check now accepts any holding chunk around the spot.)
+
+**First run (2026-10-06, game 1.009):** 102 passed, 4 failed, all 4 in "zone out and in", two of them the test's own
+mistake and two a real finding:
+- *hide, move, show:* all passed. The moved view is held by one chunk around its new spot (chunk centre (0, 8.7, 10)
+  size 18×10.5×10 for a chest at z 12); with the keeper 45 m away the view is culled, back near it is drawn again;
+  moved back, drawn and registered.
+- *zone out and in:* lists, crafting source and navigation hole all follow, in both directions, back into the same
+  zone with one entry. **Finding:** `RemoveWgoData` takes one list entry per call, so after the deliberate double
+  add the remove-all-then-add left two entries, and the game's own scene removal then left an orphan id in the
+  zone list (§4 row 6; `ZoneRemoveAll` now loops until no entry is left). The two "same object" checks compared
+  with the `Item` handed to `AddItemToInventory`, which the game recreates for a stackable item; the stored object
+  is what must stay the same, and the test now captures that one.
+- *ten stand-ins:* all passed. Town quality unchanged (10), the pool's idle parts untouched (0). **The pool's
+  borrowed count rose by one per stand-in** (4 → 14): a temp object's parts are destroyed, not returned, so the
+  game's `NoteReturned` never runs (its own build preview leaks the same way). It only lowers the save-load pre-warm
+  of that prefab for the rest of the session, but the design keeps **one stand-in per ride**, made at pick-up and
+  destroyed at set-down, so the drift is one per ride.
+- *colliders of `chest_rough`:* two orientations, `Horizontal` (active) and `Vertical` (inactive), each with
+  `Base/Obstacle` (layer 8, solid), `Interactable` (layer 6, trigger, the one the interaction scan hits), four
+  `DockPoints` (layer 7, triggers) and a `Build Collider` (layer 19, trigger, what remove mode hits). Hidden, none
+  is active: the design's "no colliders anywhere" holds.
+
 A dev button logs, for every `WGODef` with `interactionType == Chest` or `inventorySize > 0`: `inventorySize`,
 `OpenInMultiInventory`, `isMovable`, `townQuality`, `attachedScript`, `npcLifeSimGroup`, `hasRefToOtherWgoInventory`,
 `refToOtherWgoInventory`, `conveyorType`, `forceSetNavigationHoleType`, `hp`, `dropInventoryOnDeath`,
@@ -309,12 +386,84 @@ Then, on a test chest the user builds and empties:
 
 ## 8. Plan
 
-0. **Probe** (§6): **built and deployed 2026-10-06** (`Dev/ChestProbe.cs`, Debug tab, section "Chest on the cart:
-   step-0 probe"; log lines are tagged `[chest]`, the definitions go to `BepInEx/GK2-chest-facts.txt`). Nothing
-   else is built before its results are in.
-1. Pick up and set down in one scene, with all §4 guards, no stand-in yet (the chest is simply invisible while it
-   rides), no saving.
-2. The stand-in on the bed and the layout entry (box measured from the stand-in).
-3. The open-from-cart interaction.
-4. Save hook, side file, restore after load, lost-cart paths.
-5. Doors as decided, API and settings, docs and tests.
+0. **Probe** (§6): **done 2026-10-06.** Definitions dumped (`BepInEx/GK2-chest-facts.txt`), the moves passed by hand
+   and as self-tests (106/106 on the second run). Findings folded in: the allow-list (§1), the one-entry-per-call
+   zone removal (§4 row 6), one stand-in per ride (§3). Dev code: `Dev/ChestProbe.cs`, `Dev/SelfTest.Chest.cs`.
+1. **Pick up and set down in one scene: built 2026-10-06** (`CartChest.cs`, API 0.23.0, behaviour key `CargoChest`,
+   Saddle Up toggle "A storage chest rides on the cart"). No stand-in yet, so the chest is invisible while it rides.
+   - **Keys:** while driving, F on a chest = "[F] Load onto the cart" (the chest's own handler gains the Action key
+     through three patches; the refusal reason is a thought bubble); E with nothing in front = set it down where
+     cargo would go (behind the cart with `CargoSetDownBehindCart`, else in front), when the spot is in the keeper's
+     sight and reach (`SafeGround.PlaceBlocked`) and some zone accepts it, else "That spot is outside any building
+     area." and it stays aboard.
+   - **Whole cart:** the cart's inventory is shrunk to 0 slots while the chest rides, so every "room on the cart"
+     question (the head gate, the stations, the hints) says full; the size comes back at set-down. Loading a chest
+     is refused while cargo is on the cart.
+   - **Guards** (§4): the allow-list; hidden or temp objects; another scene; co-op; a pending destroy craft or any
+     craft; workbench links; a worker or an occupied dock point; build mode or the building and chest windows open;
+     a caretaker or transporter targeting it.
+   - **Fallbacks, all "set down at the cart"** (shown, zoned if a zone takes the spot, else zone-less and logged):
+     the save prefix (the save always holds a normal chest; taking it back after the save is step 4), the summon's
+     dismount and cleanup, a standing cart removed or cleaned up, a scene change (the chest stays in the scene it
+     came from, where the cart stood).
+   - **Hitch and unhitch** hand the chest over to the other instance with the cart.
+   - **Self-test "chest: the ride (step 1)"** (`Dev/SelfTest.Chest.cs`): a test donkey with its cart is ridden; the
+     chest's handler offers the action key with the "Load onto the cart" row; the press lifts the chest (hidden,
+     zone-less, no navigation hole, the cart at 0 slots and the head gate saying no, contents the same object,
+     position following the cart); refusals for cargo aboard and for a sawmill chest; set down where cargo goes
+     (shown, zoned, drawn, the cart's slots back); the chest stays on the parked cart, goes with the cart through
+     unhitch and hitch (the re-made inventory at 0 slots); the save hook and the cart's removal set it down at the
+     cart. Not automatable: a door, a zombie walking to the chest, the real key presses and the thought bubbles.
+     **Passed 2026-10-06** (132/132 for the whole suite). A first start had failed: the two Action-key patches named
+     `ChestInteractionHandler`, which inherits `HasInteraction2`/`Interact2`; Harmony found no target and the API
+     disabled itself. They sit on `WGOInteractionHandlerBase` now, and `CecilScan-DonkeyAPI` checks every string-named
+     patch target is declared on its type.
+   - **By hand, 2026-10-06, passed:** pick up and set down with 4 then 5 items (the same items after every move);
+     "(not now)" and "Set the cargo down first." with cargo aboard; no "[F]" on the home chest; a full-cart ground
+     pickup drops the item in front of the keeper as it always did; sleeping with the chest aboard (Saddle Up
+     dismounts at the door first, the chest stays on the parked cart, the save hook sets it down at the cart: `set
+     down at the cart (save)`); unhitch and hitch with the chest aboard, then set down; the Saddle Up toggle. Not
+     reachable with Saddle Up: the scene-change fallback (it keeps "stay mounted through doors" off). Not tested: a
+     caretaker heading to the chest (the user had none working).
+   - **To test in game by hand:** (a) build a chest, put a few items in, drive up in Cart style, F: the chest vanishes, the
+     log says `Chest: … lifted onto …`; a ground item then shows no "[E] Take" (cart full); E with nothing in
+     front: the chest stands where cargo would, openable, same items, `… set down …` in the log; (b) the refusals:
+     F with cargo on the cart ("Set the cargo down first"), F on the home chest or a conveyor chest (nothing offered),
+     F while a caretaker heads to it; (c) with the chest aboard: sleep (the chest stands at the cart after the save),
+     unhitch and hitch (the chest follows the cart), a door (the chest stands where the cart was, in the old scene),
+     dismount the summon; (d) the Saddle Up toggle "A storage chest rides on the cart" off: no "[F]" on chests.
+2. **The stand-in on the bed: built 2026-10-06.** A copy of the chest's look (`ChestMoves.SpawnStandIn`, the build-preview
+   technique) made once per ride at pick-up, parented under the cargo holder so it sways and pitches with the cart
+   and goes with the holder when the view is released (`Cargo.Rig.Detach` → `ChestRig.OnHolderGone`); destroyed
+   at set-down and at hand-over; re-made on a re-made view (`OnCartInventory` → `RefreshViews`). Placed by the cargo
+   packer's pass (`Cargo.Rig.RefreshViews` → `ChestRig.Layout`): bottom on the cargo floor, at the chest id's
+   `[item]` entry (alone place, else base), its box measured from its meshes (else its renderers), listed in
+   `Cargo.Placed` so the Riding tab's "One item on the cart" sliders tune it like any lone cargo item. The chest
+   ids are a layout class each, matched by id only. Self-test additions: the stand-in drawn under the holder, no
+   active collider, temp and not interactable, listed alone with a measured box; gone at set-down; back on the
+   re-made view after hitching.
+3. **Open from the cart: built 2026-10-06.** While mounted the keeper can never face the cart (it is always behind the
+   donkey), so this is an on-foot action at the standing cart, like loading on foot: once its parts are loaded the
+   stand-in gets its interactable trigger back (layer 6, the one the keeper's interaction scan hits; the solid,
+   build-area and dock-point colliders stay off) and its temp data is made interactable, so the game's own chest
+   handler offers "[E] Open" on it. `ChestInteractionHandler.Interact` is patched to open `UIChestWindow` over the
+   **real** chest's inventory (no zone list) when the handler's object is a stand-in (`CartChest.RigOfStandIn`), and
+   the Action-key patches offer "[F] Set down" on a stand-in, which runs the ordinary set-down from the keeper's
+   position.
+4. **Save and restore: built 2026-10-06.** The save hook sets the chest down at the cart and remembers it
+   (`lentChest`); the side file gets a `chest <guid>` line on that instance; `TakeCargoBackFromSave` lifts it again
+   right after the save (so sleeping no longer ends the ride); after a load, `RestoreFromSideFile` finds the chest by
+   GUID within 3 units of where the cart stood and lifts it (`Rig.Restore`: the player's guards skipped, only "not
+   one of the three", hidden, or a pending destroy craft still refuse). The side-file round trip and the take-back
+   are in the ride self-test. **Hand-tested 2026-10-09 with 19 items inside:** open from the cart and set down on
+   foot; sleeping (`stands at … for the save`, `rides on … again after the save`); quit and load (`restored with
+   the save onto …`, `1 chest(s) back on their carts`); the same 19 items at every step. Self-tests 139/140, the one
+   failure a test building the side text from the kept list, which the test cart isn't in (fixed).
+5. **Doors: built 2026-10-06, changed 2026-10-09.** Two facts from the game decided it: the house (and every indoor
+   room of the main map) is a **same-scene** teleport (`from RuinedTemple to RuinedTemple, indoors` in the log), so
+   nothing needs doing there: Saddle Up dismounts at the door and the chest rides on with the parked cart, hidden,
+   like cargo; and the game's cross-scene doors are **scripted** teleports that take control before calling
+   `PlayerController.Teleport`, so a refusal there couldn't be told from a cutscene's teleport and would have left
+   the keeper frozen. So the prefix on `Teleport` no longer refuses: a teleport to another scene **sets the chest down
+   at the cart** (shown, zoned) and goes ahead, with the bubble "The chest stays by the cart." The scene-change
+   fallback stays as a safety net. Open: API events and docs/reference entries; the tuning of the chest's place.

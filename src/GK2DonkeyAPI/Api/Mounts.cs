@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 22, 0);
+        public static readonly Version ApiVersion = new Version(0, 24, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -223,6 +223,7 @@ namespace GK2DonkeyAPI.Api
         //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
         //   ShowMessages             the keeper's thought bubble for refusals
         //   CargoZombies             zombies ride on the cart (0.22.0, on); off: the cart refuses them
+        //   CargoChest               a plain storage chest rides on the cart, alone (0.23.0, on); off: chests stay put
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -235,7 +236,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
                 }));
             }
         }
@@ -701,6 +702,14 @@ namespace GK2DonkeyAPI.Api
 
         public static event Action<CargoItem> CargoUnloaded;
 
+        // A storage chest went onto a cart / was set down from it (docs/portable-chest.md; argument: the chest with
+        // the cart it rides on, its id and GUID, and how many item stacks it holds). Raised for the player's own
+        // loading and for every set-down, including the mod's fallbacks (the cart removed, a scene left). Not raised
+        // for the core's own bookkeeping around a save or a load, nor when the chest changes carts at hitching. (0.24.0)
+        public static event Action<ChestInfo> ChestLoaded;
+
+        public static event Action<ChestInfo> ChestUnloaded;
+
         // ------------------------------------------------------------------ core side
 
         private static string owner;
@@ -730,6 +739,16 @@ namespace GK2DonkeyAPI.Api
         internal static void RaiseCargoUnloaded(CargoItem item)
         {
             Raise(CargoUnloaded, item, "CargoUnloaded");
+        }
+
+        internal static void RaiseChestLoaded(ChestInfo chest)
+        {
+            Raise(ChestLoaded, chest, "ChestLoaded");
+        }
+
+        internal static void RaiseChestUnloaded(ChestInfo chest)
+        {
+            Raise(ChestUnloaded, chest, "ChestUnloaded");
         }
 
         private static void Raise<T>(Action<T> handlers, T arg, string name)

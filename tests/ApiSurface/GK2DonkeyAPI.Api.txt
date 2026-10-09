@@ -15,6 +15,12 @@ enum GK2DonkeyAPI.Api.CartSlopeStyle
   HalfLift = 0
   ShaftsTilt = 1
   WholeCartPitch = 2
+class GK2DonkeyAPI.Api.ChestInfo
+  property GK2DonkeyAPI.Api.MountHandle Cart { get; }
+  property string Id { get; }
+  property int Items { get; }
+  property string UniqueId { get; }
+  method string ToString()
 enum GK2DonkeyAPI.Api.CoatColor
   Game = 0
   Brown = 1
@@ -107,6 +113,7 @@ enum GK2DonkeyAPI.Api.MountFeature
 class GK2DonkeyAPI.Api.MountHandle
   field static const int MaxDisplayName = 24
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.CargoItem> Cargo { get; }
+  property GK2DonkeyAPI.Api.ChestInfo Chest { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Children { get; }
   property string DisplayName { get; }
   property bool Exists { get; }
@@ -169,6 +176,8 @@ static class GK2DonkeyAPI.Api.Mounts
   property static GK2DonkeyAPI.Api.MountStyle Style { get; }
   event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoLoaded
   event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoUnloaded
+  event static System.Action<GK2DonkeyAPI.Api.ChestInfo> ChestLoaded
+  event static System.Action<GK2DonkeyAPI.Api.ChestInfo> ChestUnloaded
   event static System.Action<string> Dismounted
   event static System.Action GameReady
   event static System.Action<GK2DonkeyAPI.Api.MountHandle, GK2DonkeyAPI.Api.MountHandle> Hitched

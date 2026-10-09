@@ -15,7 +15,7 @@ namespace GK2DonkeyAPI
     // Run from the panel's Debug tab. Test donkeys belong to SelfTest.Owner, are never kept with the save and are
     // removed after each scenario; the keeper is put back where he stood; nothing is saved. Results go to the log as
     // [test] PASS / FAIL / WARN / INFO lines and a summary, and to the panel.
-    internal static class SelfTest
+    internal static partial class SelfTest
     {
         internal const string Owner = "dreas.gk2.donkeyapi.selftest";
 
@@ -103,6 +103,10 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "foals keep up off screen", Body = FoalsFollow },
                 new Scenario { Name = "no leaks over spawn and remove", Body = Leaks },
                 new Scenario { Name = "frame time by mode", Body = FrameTimes },
+                new Scenario { Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },
+                new Scenario { Name = "chest: zone out and in", Body = ChestZoneRoundTrip },
+                new Scenario { Name = "chest: ten stand-ins", Body = ChestStandIns },
+                new Scenario { Name = "chest: the ride (step 1)", Body = ChestRide },
             };
             foreach (Scenario s in scenarios)
             {

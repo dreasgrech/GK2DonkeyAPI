@@ -43,6 +43,7 @@ namespace GK2DonkeyAPI
             private bool riderAttached;
 
             internal readonly Cargo.Rig CargoRig;
+            internal readonly CartChest.Rig ChestRig;
             internal readonly Lantern.Rig LanternRig;
             internal readonly Colors.Rig ColorsRig;
             internal MountHandle Handle;
@@ -60,6 +61,7 @@ namespace GK2DonkeyAPI
                 HasDonkey = hasDonkey;
                 activeStyle = hasCart ? MountStyle.Cart : MountStyle.Ride;
                 CargoRig = new Cargo.Rig(this);
+                ChestRig = new CartChest.Rig(this);
                 LanternRig = new Lantern.Rig(this);
                 ColorsRig = new Colors.Rig();
             }
@@ -789,6 +791,7 @@ namespace GK2DonkeyAPI
                 Vector3 at = cart.Position;
                 float facing = cart.riderFacingX;
                 Unregister(cart);
+                cart.ChestRig.TransferTo(ChestRig); // the chest goes with the cart, before anything below can fail
                 cart.Discard();
                 if (mounted)
                 {
@@ -846,6 +849,7 @@ namespace GK2DonkeyAPI
                 MoveCartSettings(this, cart);
                 cart.CargoRig.SetCarried(CargoRig.TakeAllForTransfer());
                 Register(cart);
+                ChestRig.TransferTo(cart.ChestRig); // the chest goes with the cart
                 MountSounds.Moment(this, "unhitch"); // still in Cart style: the cart's sound settings
                 Restyle(pc, scene, MountStyle.Ride);
                 Plugin.Log.LogInfo($"Mount: {Describe()} left its cart as {cart.Describe()} at {cart.Position:F2} ({cart.CargoRig.Count} item(s) on it).");

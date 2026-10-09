@@ -669,6 +669,13 @@ namespace GK2DonkeyAPI
                 {
                     pd.DropOverheadItem(); // something really on the head (a zombie with CargoZombies off): the game's own drop
                 }
+                else if (Mount.Ridden != null && Mount.Ridden.ChestRig.Aboard)
+                {
+                    if (!Mount.Ridden.ChestRig.SetDown(pc, out string why) && why != null)
+                    {
+                        Mount.Say(why);
+                    }
+                }
                 else
                 {
                     Cargo.SetDownLast(pd);

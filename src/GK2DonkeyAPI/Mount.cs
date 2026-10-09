@@ -399,6 +399,9 @@ namespace GK2DonkeyAPI
                         // set the cargo down at the old door; waiting puts it at his feet where he arrives.
                         return;
                     }
+                    // A chest on the cart belongs to the scene left behind: set down there, where the cart stood, before
+                    // the ride goes on or ends (docs/portable-chest.md §4b; carrying it through is a later step).
+                    ChestRig.SetDownAt(Position, "scene change");
                     if (!Plugin.StayMountedThroughDoors.Value || !MountRules.Allowed(MountFeature.StayThroughDoors))
                     {
                         Dismount(pc, "scene changed");
@@ -436,6 +439,7 @@ namespace GK2DonkeyAPI
                 }
 
                 Follow(pc);
+                ChestRig.Follow();
                 RevealDonkeyIfDue();
                 if (partsReady)
                 {
@@ -843,6 +847,7 @@ namespace GK2DonkeyAPI
                     Park(pc, reason);
                     return;
                 }
+                ChestRig.SetDownAt(CartPoint(), "dismount: " + reason); // the summon's cart goes away with the ride
                 mounted = false;
                 if (Ridden == this) Ridden = null;
                 gearHideUntilFrame = UnityEngine.Time.frameCount + 8;
@@ -871,6 +876,7 @@ namespace GK2DonkeyAPI
                 {
                     if (Ephemeral)
                     {
+                        ChestRig.SetDownAt(CartPoint(), "cleanup: " + reason);
                         CargoRig.Unload(reason);
                     }
                 }
@@ -1079,7 +1085,8 @@ namespace GK2DonkeyAPI
                     cartParts.Clear();
                     if (cart)
                     {
-                        CargoRig.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
+                        CargoRig.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
+                        ChestRig.OnCartInventory(CargoRig.Inv); // a chest aboard keeps the new inventory at 0 slots
                         cartParts.Clear();    // (re-adding carried-over cargo may already have collected once)
                         CollectCartParts();
                         LanternRig.Attach(donkey); // poses the pole's child nodes; the sway parents stay the animator's
@@ -2673,7 +2680,7 @@ namespace GK2DonkeyAPI
             }
 
             // Same test the game's bug reporter uses for "is this a co-op game".
-            private static bool IsCoop()
+            internal static bool IsCoop()
             {
                 try
                 {

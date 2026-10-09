@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using BepInEx;
+using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 
@@ -11,20 +13,187 @@ namespace GK2DonkeyAPI
 {
     // Step-0 probe for the chest on the cart (docs/portable-chest.md §6, Debug tab). Dev-only: it settles the facts
     // the decompile can't (the balance asset defeats the offline reader) and tries the three moves the design rests
-    // on, one button each, on a chest the keeper faces (or the nearest one within 6 m):
+    // on, by hand on a chest the keeper faces (or the nearest one within 6 m), or scripted by the self-tests
+    // (SelfTest.Chest.cs), which make their own test chest:
     //   - the chest and building definitions, to a file;
     //   - hide, move 4 m along the keeper's facing, re-register in the chunk system, show (and a button to move it back);
     //   - zone remove and re-add at the chest's current position;
     //   - a stand-in view of the chest (the build-preview technique) made and destroyed, with the town quality logged;
     //   - the chest view's colliders, per layer;
     //   - which scenes keep the previous scene loaded through a door.
-    // Everything acts on real saved objects, so: an empty test chest, and reload without saving afterwards.
+    // The buttons act on real saved objects, so: an empty test chest, and reload without saving afterwards.
     internal static class ChestProbe
     {
         private static WgoData moved;
         private static Vector3 movedFrom;
         private static Wgo standIn;
         private static WgoData standInData;
+
+        // ------------------------------------------------------------------ the pieces (also used by the self-tests)
+
+        // The moves themselves live in ChestMoves (CartChest.cs); these keep the probe's log around them.
+        internal static void Relocate(WgoData d, Wgo v, Vector3 to, StringBuilder sb)
+        {
+            ChestMoves.Hide(d, v);
+            sb?.AppendLine("hidden: " + Where(d));
+            ChestMoves.Show(d, v, to);
+            sb?.AppendLine("shown at the new spot" + (v != null && v.RegisteredInChunker ? ", registered in the chunk system" : ""));
+        }
+
+        internal static void ZoneRemoveAll(GameSceneData sd, WgoData d) => ChestMoves.ZoneRemoveAll(sd, d);
+
+        internal static WorldZoneData ZoneAddByPriority(GameSceneData sd, WgoData d) => ChestMoves.ZoneAddByPriority(sd, d);
+
+        internal static bool HasNavCut(WgoData d) => ChestMoves.HasNavCut(d);
+
+        internal static Wgo SpawnStandIn(WgoData src, Vector3 pos, string sceneId, Transform parent, out WgoData temp, out int collidersOff)
+            => ChestMoves.SpawnStandIn(src, pos, sceneId, parent, out temp, out collidersOff);
+
+        // The chunk that holds this view, for the self-test's check that a moved view sits in a chunk around its new
+        // spot: centre and size of that chunk's bounds, or false when no chunk holds it. Reads the chunk manager's
+        // private layer list; BurstableBounds is Unity.Mathematics, read by reflection so the project needs no reference.
+        internal static bool ChunkOf(Wgo v, out Vector3 center, out Vector3 size, out int chunks)
+        {
+            center = size = Vector3.zero;
+            chunks = 0;
+            ChunkManager cm = LazySingleton<ChunkManager>.Instance;
+            if (cm == null || v == null)
+            {
+                return false;
+            }
+            var layers = AccessTools.Field(typeof(ChunkManager), "layers").GetValue(cm) as System.Collections.IEnumerable;
+            bool found = false;
+            foreach (object layer in layers ?? Array.Empty<object>())
+            {
+                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
+                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                for (int i = 0; i < count && arr != null && i < arr.Length; i++)
+                {
+                    Chunk c = arr[i];
+                    if (c != null && c.ContainsChunkableObject(v))
+                    {
+                        chunks++;
+                        if (!found)
+                        {
+                            object b = c.GetChunkableData();
+                            center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
+                            size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                            found = true;
+                        }
+                    }
+                }
+            }
+            return found;
+        }
+
+        // True when one of the chunks holding this view has bounds around 'point' (x and z): an object on a chunk
+        // boundary is held by two chunks (ChunkManager.SplitChunkableObjectBetweenChunks), and either may be the one.
+        internal static bool ChunkHolds(Wgo v, Vector3 point, out int chunks, out string where)
+        {
+            chunks = 0;
+            where = "";
+            ChunkManager cm = LazySingleton<ChunkManager>.Instance;
+            if (cm == null || v == null)
+            {
+                return false;
+            }
+            var layers = AccessTools.Field(typeof(ChunkManager), "layers").GetValue(cm) as System.Collections.IEnumerable;
+            bool holds = false;
+            foreach (object layer in layers ?? Array.Empty<object>())
+            {
+                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
+                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                for (int i = 0; i < count && arr != null && i < arr.Length; i++)
+                {
+                    Chunk c = arr[i];
+                    if (c == null || !c.ContainsChunkableObject(v))
+                    {
+                        continue;
+                    }
+                    chunks++;
+                    object b = c.GetChunkableData();
+                    Vector3 center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
+                    Vector3 size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                    where += $"{(where.Length > 0 ? "; " : "")}centre {center:F1} size {size:F1}";
+                    if (Mathf.Abs(point.x - center.x) <= size.x * 0.5f + 0.01f && Mathf.Abs(point.z - center.z) <= size.z * 0.5f + 0.01f)
+                    {
+                        holds = true;
+                    }
+                }
+            }
+            return holds;
+        }
+
+        internal static Vector3 ViewBoundsCenter(Wgo v)
+        {
+            object b = v.GetChunkableData();
+            return Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
+        }
+
+        private static Vector3 Float3(object f)
+        {
+            Type t = f.GetType();
+            return new Vector3((float)t.GetField("x").GetValue(f), (float)t.GetField("y").GetValue(f), (float)t.GetField("z").GetValue(f));
+        }
+
+        // The part pool's bookkeeping for a chest's main part: how many are idle in the pool and how many it counts
+        // as borrowed (1.009: NoteBorrowed/NoteReturned).
+        internal static void PoolCounts(WgoData d, out string key, out int idle, out int borrowed)
+        {
+            string asset = d.Definition != null ? d.Definition.ResolveAssetId(d.id, d) : d.id;
+            key = WgoPartPool.GetAddressableKey(asset);
+            idle = borrowed = 0;
+            WgoPartPool pool = LazySingleton<WgoPartPool>.Instance;
+            if (pool == null)
+            {
+                return;
+            }
+            var pools = AccessTools.Field(typeof(WgoPartPool), "pools").GetValue(pool) as System.Collections.IDictionary;
+            if (pools != null && pools.Contains(key))
+            {
+                idle = (int)AccessTools.Property(pools[key].GetType(), "Count").GetValue(pools[key]);
+            }
+            var b = AccessTools.Field(typeof(WgoPartPool), "borrowedCounts").GetValue(pool) as System.Collections.IDictionary;
+            if (b != null && b.Contains(key))
+            {
+                borrowed = (int)b[key];
+            }
+        }
+
+        internal static string Where(WgoData d)
+        {
+            Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
+            return $"{d.id} {d.UniqueId} at {d.Position:F2} hidden={d.IsHidden} interactable={d.IsInteractable} zone='{d.WorldZoneData?.id}' (in lists: {Zones(d)}) view={(v != null ? $"{(v.gameObject.activeSelf ? "active" : "inactive")} at {v.transform.position:F2} parts={(v.MainWgoPart != null ? "loaded" : "none")} registered={v.RegisteredInChunker}" : "none")}";
+        }
+
+        // The zones whose saved lists hold the object, "x2" marking a duplicate entry.
+        internal static string Zones(WgoData d)
+        {
+            GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(d.WorldId);
+            var l = new List<string>();
+            foreach (WorldZoneData z in sd?.worldZones ?? new List<WorldZoneData>())
+            {
+                int c = z.wgoDataList.Count(g => g == d.UniqueId);
+                if (c > 0)
+                {
+                    l.Add(z.id + (c > 1 ? " x" + c : ""));
+                }
+            }
+            return l.Count == 0 ? "none" : string.Join(", ", l);
+        }
+
+        internal static int ZoneEntries(WgoData d)
+        {
+            GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(d.WorldId);
+            int n = 0;
+            foreach (WorldZoneData z in sd?.worldZones ?? new List<WorldZoneData>())
+            {
+                n += z.wgoDataList.Count(g => g == d.UniqueId);
+            }
+            return n;
+        }
+
+        // ------------------------------------------------------------------ the buttons
 
         public static string DumpDefinitions()
         {
@@ -109,30 +278,6 @@ namespace GK2DonkeyAPI
             return best;
         }
 
-        private static string Where(WgoData d)
-        {
-            Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
-            string zones = Zones(d);
-            return $"{d.id} {d.UniqueId} at {d.Position:F2} hidden={d.IsHidden} interactable={d.IsInteractable} zone='{d.WorldZoneData?.id}' (in lists: {zones}) view={(v != null ? $"{(v.gameObject.activeSelf ? "active" : "inactive")} at {v.transform.position:F2} registered={v.RegisteredInChunker}" : "none")}";
-        }
-
-        private static string Zones(WgoData d)
-        {
-            GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(d.WorldId);
-            var l = new List<string>();
-            foreach (WorldZoneData z in sd?.worldZones ?? new List<WorldZoneData>())
-            {
-                int c = z.wgoDataList.Count(g => g == d.UniqueId);
-                if (c > 0)
-                {
-                    l.Add(z.id + (c > 1 ? " x" + c : ""));
-                }
-            }
-            return l.Count == 0 ? "none" : string.Join(", ", l);
-        }
-
-        // Hide, move 4 m along the keeper's facing, re-register in the chunk system, show. The order matters: the
-        // chunk entry is found from the view's bounds, so it is unregistered at the old spot and registered at the new.
         public static string HideMoveShow()
         {
             try
@@ -148,16 +293,10 @@ namespace GK2DonkeyAPI
                 }
                 var sb = new StringBuilder();
                 sb.AppendLine("before: " + Where(d));
-                Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
                 PlayerData pd = MainGame.PlayerData;
                 Vector3 to = d.Position + new Vector3(pd.Direction.x, 0f, pd.Direction.y).normalized * 4f;
-                Unregister(v, sb);
-                d.IsHidden = true;
-                sb.AppendLine("hidden: " + Where(d));
                 movedFrom = d.Position;
-                d.Position = to;
-                d.IsHidden = false;
-                Register(v, sb);
+                Relocate(d, GameScene.GetWgoViewGlobal(d.UniqueId), to, sb);
                 moved = d;
                 sb.AppendLine("after: " + Where(d));
                 sb.Append("Now walk away until the old spot is off screen and come back, look at the new spot from near and far, then press Move back.");
@@ -178,12 +317,7 @@ namespace GK2DonkeyAPI
                     return "nothing moved";
                 }
                 var sb = new StringBuilder();
-                Wgo v = GameScene.GetWgoViewGlobal(moved.UniqueId);
-                Unregister(v, sb);
-                moved.IsHidden = true;
-                moved.Position = movedFrom;
-                moved.IsHidden = false;
-                Register(v, sb);
+                Relocate(moved, GameScene.GetWgoViewGlobal(moved.UniqueId), movedFrom, sb);
                 sb.Append("back: " + Where(moved));
                 moved = null;
                 return sb.ToString();
@@ -194,44 +328,6 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void Unregister(Wgo v, StringBuilder sb)
-        {
-            if (v == null)
-            {
-                sb.AppendLine("chunk: no view, nothing to unregister");
-                return;
-            }
-            if (v.Data.Definition.isMovable)
-            {
-                sb.AppendLine("chunk: a movable definition (dynamic chunk object), left registered");
-                return;
-            }
-            if (v.RegisteredInChunker)
-            {
-                LazySingleton<ChunkManager>.Instance.UnregisterStaticChunkableObject(v, ChunkManagerLayerType.StaticWgo);
-                v.RegisteredInChunker = false;
-                sb.AppendLine("chunk: unregistered at the old spot");
-            }
-            else
-            {
-                sb.AppendLine("chunk: was not registered");
-            }
-        }
-
-        private static void Register(Wgo v, StringBuilder sb)
-        {
-            if (v == null || v.Data.Definition.isMovable || v.RegisteredInChunker)
-            {
-                return;
-            }
-            LazySingleton<ChunkManager>.Instance.RegisterStaticChunkableObject(v, ChunkManagerLayerType.StaticWgo);
-            v.RegisteredInChunker = true;
-            LazySingleton<ChunkManager>.Instance.RequestVisibilityRecheck(v);
-            sb.AppendLine("chunk: registered at the new spot, visibility recheck requested");
-        }
-
-        // Out of every zone, then back in through the game's own order (zones by descending processing priority,
-        // the first that accepts). Logged: the zone lists before, between and after, so a duplicate would show as x2.
         public static string ZoneRoundTrip()
         {
             try
@@ -242,31 +338,12 @@ namespace GK2DonkeyAPI
                     return why;
                 }
                 var sb = new StringBuilder();
-                sb.AppendLine("before: " + Where(d));
+                sb.AppendLine("before: " + Where(d) + $" navCut={HasNavCut(d)}");
                 GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(d.WorldId);
-                foreach (WorldZoneData z in sd.worldZones)
-                {
-                    z.RemoveWgoData(d);
-                }
-                d.WorldZoneData = null;
-                sb.AppendLine("removed: " + Where(d));
-                string added = null;
-                foreach (KeyValuePair<int, List<WorldZoneData>> kv in sd.WorldZonesByProcessingPriority.Reverse())
-                {
-                    foreach (WorldZoneData z in kv.Value)
-                    {
-                        if (z.TryAddWgoData(d))
-                        {
-                            added = z.id;
-                            break;
-                        }
-                    }
-                    if (added != null)
-                    {
-                        break;
-                    }
-                }
-                sb.AppendLine($"re-added to '{added ?? "NO ZONE ACCEPTED"}': " + Where(d));
+                ZoneRemoveAll(sd, d);
+                sb.AppendLine("removed: " + Where(d) + $" navCut={HasNavCut(d)}");
+                WorldZoneData added = ZoneAddByPriority(sd, d);
+                sb.AppendLine($"re-added to '{added?.id ?? "NO ZONE ACCEPTED"}': " + Where(d) + $" navCut={HasNavCut(d)}");
                 sb.Append("Check: a workbench in this area still lists the chest's items; villagers path around the chest.");
                 return sb.ToString();
             }
@@ -276,9 +353,6 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // A stand-in view of the faced chest at the keeper's drop position, made as the build preview is (a temp
-        // object, not in the scene, no chunk registration, colliders off). The previous stand-in is destroyed first,
-        // so pressing ten times is the spawn-and-destroy test; "Remove" destroys the last one.
         public static string StandIn()
         {
             try
@@ -300,25 +374,7 @@ namespace GK2DonkeyAPI
                 {
                     pos = pd.position.Value + new Vector3(pd.Direction.x, 0f, pd.Direction.y);
                 }
-                Mount.Instance.SuppressScripts = true;
-                try
-                {
-                    standInData = new WgoData(d.id, pos, pd.currentGameSceneId) { isTempObject = true, IsInteractable = false };
-                    standInData.MainWgoPartData.variationId = d.MainWgoPartData.variationId;
-                    standInData.MainWgoPartData.rotationIndex = d.MainWgoPartData.rotationIndex;
-                }
-                finally
-                {
-                    Mount.Instance.SuppressScripts = false;
-                }
-                standIn = Wgo.Spawn(standInData, scene.transform, registerInChunkManagerIfStatic: true, ignoreChunkRegistration: true, applyDefaultWgoPartState: true);
-                standIn.UpdateChunkVisibility(isVisible: true);
-                int cols = 0;
-                foreach (Collider c in standIn.GetComponentsInChildren<Collider>(includeInactive: true))
-                {
-                    c.gameObject.SetActive(false);
-                    cols++;
-                }
+                standIn = SpawnStandIn(d, pos, pd.currentGameSceneId, scene.transform, out standInData, out int cols);
                 int q1 = MainGame.Instance.GameSave.townSystem.Quality;
                 sb.Append($"stand-in {d.id} (variation '{standInData.MainWgoPartData.variationId}') at {pos:F2}, {cols} collider object(s) off, town quality {q0} -> {q1}{(q0 != q1 ? " CHANGED" : "")}; in scene list: {(MainGame.WorldData.GetGameSceneDataById(pd.currentGameSceneId).wgoDataList.Contains(standInData) ? "YES (wrong)" : "no")}");
                 return sb.ToString();
@@ -353,23 +409,28 @@ namespace GK2DonkeyAPI
                 {
                     return why;
                 }
-                Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
-                if (v == null)
-                {
-                    return "no view for " + d.id;
-                }
-                var sb = new StringBuilder();
-                sb.AppendLine($"colliders of {d.id} (interactable colliders: {v.MainWgoPart?.InteractableColliders?.Count ?? 0}):");
-                foreach (Collider c in v.GetComponentsInChildren<Collider>(includeInactive: true))
-                {
-                    sb.AppendLine($"  {PathOf(c.transform, v.transform)}: {c.GetType().Name} layer {c.gameObject.layer} '{LayerMask.LayerToName(c.gameObject.layer)}' enabled={c.enabled} trigger={c.isTrigger} active={c.gameObject.activeInHierarchy} interactable={(v.MainWgoPart?.InteractableColliders?.Contains(c) ?? false)}");
-                }
-                return sb.ToString();
+                return Colliders(d);
             }
             catch (Exception e)
             {
                 return "collider dump failed: " + e;
             }
+        }
+
+        internal static string Colliders(WgoData d)
+        {
+            Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
+            if (v == null)
+            {
+                return "no view for " + d.id;
+            }
+            var sb = new StringBuilder();
+            sb.AppendLine($"colliders of {d.id} (interactable colliders: {v.MainWgoPart?.InteractableColliders?.Count ?? 0}):");
+            foreach (Collider c in v.GetComponentsInChildren<Collider>(includeInactive: true))
+            {
+                sb.AppendLine($"  {PathOf(c.transform, v.transform)}: {c.GetType().Name} layer {c.gameObject.layer} '{LayerMask.LayerToName(c.gameObject.layer)}' enabled={c.enabled} trigger={c.isTrigger} active={c.gameObject.activeInHierarchy} interactable={(v.MainWgoPart?.InteractableColliders?.Contains(c) ?? false)}");
+            }
+            return sb.ToString().TrimEnd();
         }
 
         private static string PathOf(Transform t, Transform root)

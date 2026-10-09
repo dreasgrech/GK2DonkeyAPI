@@ -602,30 +602,34 @@ namespace GK2DonkeyAPI
         // Asked every frame while something is in reach. The game's GetIconId builds a new string on every call, so the
         // icon is asked twice a second (a rebound key or another input device shows within half a second) and the
         // joined text is kept until the icon or the text changes.
-        private static string hintIcon, hintText, hintJoined;
-        private static float nextIconCheck;
 
-        private static string HintText(string text)
+        private static string HintText(string text) => HintFor(GameKey.Interaction, text);
+
+        // The same for any key, for rows a patch adds to a game handler's hint (the chest's "[F] Load onto the cart"):
+        // the key's icon asked twice a second, the joined text kept until it changes.
+        private static readonly Dictionary<GameKey, (string Icon, string Text, string Joined, float Next)> hintsByKey = new Dictionary<GameKey, (string, string, string, float)>();
+
+        internal static string HintFor(GameKey key, string text)
         {
             try
             {
-                string icon = hintIcon;
-                if (icon == null || Time.unscaledTime >= nextIconCheck)
+                hintsByKey.TryGetValue(key, out var h);
+                string icon = h.Icon;
+                if (icon == null || Time.unscaledTime >= h.Next)
                 {
-                    nextIconCheck = Time.unscaledTime + 0.5f;
-                    icon = ControllerIconLibrary.GetIconId(GameKey.Interaction);
+                    icon = ControllerIconLibrary.GetIconId(key);
+                    h.Next = Time.unscaledTime + 0.5f;
                 }
-                if (hintJoined == null || !ReferenceEquals(text, hintText) || icon != hintIcon)
+                if (h.Joined == null || h.Text != text || icon != h.Icon)
                 {
-                    hintIcon = icon;
-                    hintText = text;
-                    hintJoined = icon + text;
+                    h = (icon, text, icon + text, h.Next);
                 }
-                return hintJoined;
+                hintsByKey[key] = h;
+                return h.Joined;
             }
             catch
             {
-                return "[E] " + text;
+                return (key == GameKey.Action ? "[F] " : "[E] ") + text;
             }
         }
 
