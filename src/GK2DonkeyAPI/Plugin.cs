@@ -530,6 +530,7 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
+                CartChest.Lock("the game changed since this mod was audited (DisableOnGameUpdate=false); the chest on the cart touches saved state and stays off until the mod is re-audited");
             }
 
             harmony = new Harmony(Guid);

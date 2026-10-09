@@ -107,6 +107,8 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "chest: zone out and in", Body = ChestZoneRoundTrip },
                 new Scenario { Name = "chest: ten stand-ins", Body = ChestStandIns },
                 new Scenario { Name = "chest: the ride (step 1)", Body = ChestRide },
+                new Scenario { Name = "chest: the backstops", Body = ChestBackstops },
+                new Scenario { Name = "chest: the save as the game writes it", Body = ChestSaveImage },
             };
             foreach (Scenario s in scenarios)
             {
@@ -435,6 +437,7 @@ namespace GK2DonkeyAPI
         private static IEnumerator ApiIdentity()
         {
             Vector3 near = Spot(home, 4f) ?? home;
+            Info("the next \"is not a loaded plugin's GUID\" warnings are this test's own: it spawns as two made-up mods on purpose");
             MountHandle a1 = Spawn(near, true, owner: OwnerA, id: 1, key: "same");
             MountHandle b1 = Spawn(near + new Vector3(1.5f, 0f, 0f), false, owner: OwnerB, id: 1, key: "same");
             if (a1 == null || b1 == null)

@@ -660,6 +660,7 @@ namespace GK2DonkeyAPI
             // Parents before children (no chains: two passes).
             var made = new Dictionary<string, Instance>(StringComparer.Ordinal);
             int items = 0, missing = 0, failed = 0, total = 0, chests = 0, chestsLeft = 0;
+            var reclaimedChests = new HashSet<string>(StringComparer.Ordinal); // one cart per chest, whatever the records say
             for (int pass = 0; pass < 2; pass++)
             {
                 foreach (Record r in valid)
@@ -738,7 +739,7 @@ namespace GK2DonkeyAPI
                         i.CargoRig.SetCarried(carried); // onto its inventory when its view is prepared
                         items += carried.Count;
                     }
-                    if (!string.IsNullOrEmpty(r.Chest) && r.Cart)
+                    if (!string.IsNullOrEmpty(r.Chest) && r.Cart && reclaimedChests.Add(r.Chest))
                     {
                         if (ReclaimChest(i, r.Chest, r.Position))
                         {

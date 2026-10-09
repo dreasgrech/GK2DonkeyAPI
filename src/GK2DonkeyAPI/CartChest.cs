@@ -154,7 +154,58 @@ namespace GK2DonkeyAPI
 
         internal static bool IsChest(WgoData d) => d?.Definition != null && d.Definition.interactionType == WGODef.InteractionType.Chest && Allowed.Contains(d.id);
 
-        internal static bool On => Plugin.CargoChest != null && Plugin.CargoChest.Value;
+        internal static bool On => Plugin.CargoChest != null && Plugin.CargoChest.Value && !Locked;
+
+        // The feature's own fail-safe. Locked, no chest is lifted any more this session; whatever rides is set down
+        // at its cart at once. Set when the game is not the audited build and the player forced the mod on anyway
+        // (this is the one feature that touches saved state), and when any chest operation throws (whatever the
+        // cause: a broken mod can then hurt at most once, loudly). The after-load repair and the pre-save pass keep
+        // running regardless: they use only the game's most basic calls.
+        internal static bool Locked { get; private set; }
+        internal static string LockReason { get; private set; }
+
+        // The self-tests only: the lock is a session state, and a test that trips it must not switch the feature off
+        // for the player's session.
+        internal static void UnlockForTest()
+        {
+            Locked = false;
+            LockReason = null;
+        }
+
+        internal static void Lock(string reason)
+        {
+            if (Locked)
+            {
+                return;
+            }
+            Locked = true;
+            LockReason = reason;
+            Plugin.Log.LogError($"Chest: the chest on the cart is switched off for this session: {reason}. Any chest riding is set down at its cart now.");
+            try
+            {
+                foreach (Mount.Instance i in Mount.All.ToArray())
+                {
+                    if (i.ChestRig.Aboard)
+                    {
+                        i.ChestRig.SetDownAt(i.CartPoint(), "locked: " + reason);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError("Chest: setting the riding chests down after the lock failed; the pre-save pass and the after-load repair cover them: " + e.Message);
+            }
+            try
+            {
+                if (Mount.Instance.IsInGame(out _, out _))
+                {
+                    Mount.Say("The chest on the cart is off for now (see the log).");
+                }
+            }
+            catch
+            {
+            }
+        }
 
         // The stand-ins on the carts, by their temp data: the chest handler patches turn "[E] Open" on a stand-in into
         // the real chest's window and offer "[F] Set down" on it.
@@ -173,7 +224,12 @@ namespace GK2DonkeyAPI
         {
             try
             {
-                foreach (GameSceneData sd in MainGame.WorldData.gameSceneDataList)
+                WorldData world = MainGame.WorldData;
+                if (world == null)
+                {
+                    return;
+                }
+                foreach (GameSceneData sd in world.gameSceneDataList)
                 {
                     foreach (WgoData d in sd.wgoDataList.ToArray())
                     {
@@ -181,10 +237,23 @@ namespace GK2DonkeyAPI
                         {
                             continue;
                         }
+                        Rig rig = RigOf(d);
+                        if (rig == null && ZoneEntries(sd, d) > 0)
+                        {
+                            continue; // hidden by the game itself (a fight stage, a script): it stays in its zone lists; ours never do
+                        }
+                        if (rig != null)
+                        {
+                            // A riding chest the save hook missed (it threw): through the rig's own save path, so the
+                            // take-back after the save knows about it.
+                            rig.SetDownForSave();
+                            Plugin.Log.LogWarning($"Chest: {d.id} {d.UniqueId} was still hidden as the game saved though {rig.owner.Describe()} carries it; stood at the cart for the save now. Please report this line.");
+                            continue;
+                        }
                         ChestMoves.Show(d, GameScene.GetWgoViewGlobal(d.UniqueId), d.Position);
                         ChestMoves.ZoneRemoveAll(sd, d);
                         WorldZoneData zone = ChestMoves.ZoneAddByPriority(sd, d);
-                        Plugin.Log.LogWarning($"Chest: {d.id} {d.UniqueId} ({d.Inventory.Data.Inventory.Count} item(s) inside) was still hidden as the game saved; shown at {d.Position:F2} in {sd.id}{(zone != null ? $", zone '{zone.id}'" : ", no zone")} so the save holds a normal chest. Please report this line.");
+                        Plugin.Log.LogWarning($"Chest: {d.id} {d.UniqueId} ({d.Inventory.Data.Inventory.Count} item(s) inside) was still hidden as the game saved with no cart carrying it; shown at {d.Position:F2} in {sd.id}{(zone != null ? $", zone '{zone.id}'" : ", no zone")} so the save holds a normal chest. Please report this line.");
                     }
                 }
             }
@@ -192,6 +261,40 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogError("Chest: the pre-save check failed: " + e);
             }
+        }
+
+        // How many zone lists of the scene hold this object (a riding chest: none; the game's own hidden objects keep theirs).
+        internal static int ZoneEntries(GameSceneData sd, WgoData d)
+        {
+            int n = 0;
+            foreach (WorldZoneData z in sd.worldZones)
+            {
+                foreach (SGuid g in z.wgoDataList)
+                {
+                    if (g == d.UniqueId)
+                    {
+                        n++;
+                    }
+                }
+            }
+            return n;
+        }
+
+        // The rig carrying this chest, or null.
+        internal static Rig RigOf(WgoData d)
+        {
+            if (d == null)
+            {
+                return null;
+            }
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (ReferenceEquals(i.ChestRig.Chest, d))
+                {
+                    return i.ChestRig;
+                }
+            }
+            return null;
         }
 
         // After a load (the restore is done): any allowed chest still hidden in the save that no cart owns is a ride
@@ -202,6 +305,10 @@ namespace GK2DonkeyAPI
             int fixedCount = 0;
             try
             {
+                if (MainGame.WorldData == null)
+                {
+                    return 0;
+                }
                 var owned = new HashSet<WgoData>();
                 foreach (Mount.Instance i in Mount.All)
                 {
@@ -214,9 +321,9 @@ namespace GK2DonkeyAPI
                 {
                     foreach (WgoData d in sd.wgoDataList.ToArray())
                     {
-                        if (d == null || !d.IsHidden || !IsChest(d) || owned.Contains(d))
+                        if (d == null || !d.IsHidden || !IsChest(d) || owned.Contains(d) || ZoneEntries(sd, d) > 0)
                         {
-                            continue;
+                            continue; // in a zone list while hidden: the game's own staging, not a ride that never ended
                         }
                         ChestMoves.Show(d, GameScene.GetWgoViewGlobal(d.UniqueId), d.Position);
                         ChestMoves.ZoneRemoveAll(sd, d);
@@ -283,7 +390,7 @@ namespace GK2DonkeyAPI
 
         internal sealed class Rig
         {
-            private readonly Mount.Instance owner;
+            internal readonly Mount.Instance owner;
             private WgoData chest;
             private int savedSize = -1;
 
@@ -408,6 +515,14 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogInfo($"Chest: {d.id} stays where it is: {owner.Describe()} has no cart.");
                     return false;
                 }
+                Rig other = RigOf(d);
+                if (other != null || Riding.Contains(d))
+                {
+                    // Two records naming one chest (a dormant one from an uninstalled mod and a live one): the first
+                    // cart that claimed it keeps it; never two owners.
+                    Plugin.Log.LogInfo($"Chest: {d.id} is already carried by {other?.owner.Describe() ?? "another cart"}; {owner.Describe()} does not take it.");
+                    return false;
+                }
                 if (d.IsHidden)
                 {
                     Plugin.Log.LogWarning($"Chest: {d.id} was hidden in the save (a ride that never ended); lifted onto {owner.Describe()} as a repair.");
@@ -428,6 +543,7 @@ namespace GK2DonkeyAPI
             {
                 chest = d;
                 Riding.Add(d);
+                Vector3 stood = d.Position; // the rollback's spot: Follow moves the data to the cart inside the try
                 GameSceneData sd = null;
                 Wgo v = null;
                 try
@@ -453,7 +569,7 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogError($"Chest: lifting {d.id} failed; it is put back where it stands: {e}");
                     try
                     {
-                        ChestMoves.Show(d, v, d.Position);
+                        ChestMoves.Show(d, v, stood);
                         if (sd != null)
                         {
                             ChestMoves.ZoneRemoveAll(sd, d);
@@ -467,6 +583,7 @@ namespace GK2DonkeyAPI
                     RestoreCartSize();
                     Riding.Remove(d);
                     chest = null;
+                    Lock("lifting a chest threw");
                     return false;
                 }
             }
@@ -491,23 +608,17 @@ namespace GK2DonkeyAPI
                     WgoData d = chest;
                     GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(d.WorldId);
                     Wgo v = GameScene.GetWgoViewGlobal(d.UniqueId);
-                    Vector3 at = owner.CartPoint();
-                    if (d.WorldId == MainGame.PlayerData?.currentGameSceneId)
-                    {
-                        float g = Mount.Instance.GroundHeight(at, out _); // the keeper's scene only: another scene's ground isn't here to ask
-                        if (!float.IsNaN(g))
-                        {
-                            at.y = g;
-                        }
-                    }
+                    Vector3 at = FallbackSpot(owner.CartPoint());
+                    lentForSave = true; // before anything can throw: the take-back after the save must always run
                     ChestMoves.Show(d, v, at);
+                    ChestMoves.ZoneRemoveAll(sd, d);
                     WorldZoneData zone = ChestMoves.ZoneAddByPriority(sd, d);
-                    lentForSave = true;
                     Plugin.Log.LogInfo($"Chest: {d.id} ({d.Inventory.Data.Inventory.Count} item(s) inside) stands at {owner.Describe()} for the save{(zone != null ? $" in zone '{zone.id}'" : " in no zone")}.");
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogError($"Chest: standing {chest?.id} at the cart for the save failed: {e}");
+                    Plugin.Log.LogError($"Chest: standing {chest?.id} at the cart for the save failed (the pre-save pass is the next line): {e}");
+                    Lock("standing a chest at the cart for the save threw");
                 }
             }
 
@@ -534,6 +645,7 @@ namespace GK2DonkeyAPI
                 catch (Exception e)
                 {
                     Plugin.Log.LogError($"Chest: taking {chest?.id} back after the save failed: {e}");
+                    Lock("taking a chest back after the save threw");
                 }
             }
 
@@ -548,6 +660,23 @@ namespace GK2DonkeyAPI
                 {
                     TakeBackAfterSave(); // the save's postfix never ran (the game's save threw): back to riding now
                     return;
+                }
+                if (!chest.IsHidden)
+                {
+                    // Shown while the rig holds it and no save is in progress: a half-done step somewhere. Riding means
+                    // hidden and zone-less; put it back to that rather than drag a visible chest along.
+                    Plugin.Log.LogWarning($"Chest: {chest.id} was shown while riding on {owner.Describe()}; hidden again. Please report this line.");
+                    try
+                    {
+                        ChestMoves.ZoneRemoveAll(MainGame.WorldData.GetGameSceneDataById(chest.WorldId), chest);
+                        ChestMoves.Hide(chest, GameScene.GetWgoViewGlobal(chest.UniqueId));
+                    }
+                    catch (Exception e)
+                    {
+                        Plugin.Log.LogError("Chest: hiding it again failed: " + e.Message);
+                        Lock("a riding chest could not be hidden again");
+                        return;
+                    }
                 }
                 chest.Position = owner.CartPoint();
             }
@@ -746,6 +875,49 @@ namespace GK2DonkeyAPI
                 return Place(spot, how, out reason, strict: true);
             }
 
+            // The spot a fallback stands the chest on: the cart body's point, on its ground; without ground there (the
+            // body hangs behind the donkey and can overhang a bank), the donkey's root, which SafeGround keeps on walkable
+            // ground. Ground is asked only in the keeper's scene: another scene's ground isn't here to ask.
+            private Vector3 FallbackSpot(Vector3 at)
+            {
+                if (chest == null || chest.WorldId != MainGame.PlayerData?.currentGameSceneId)
+                {
+                    return at;
+                }
+                float g = Mount.Instance.GroundHeight(at, out _);
+                if (!float.IsNaN(g))
+                {
+                    at.y = g;
+                    return at;
+                }
+                Vector3 root = owner.Position;
+                float gr = Mount.Instance.GroundHeight(root, out _);
+                if (!float.IsNaN(gr))
+                {
+                    root.y = gr;
+                    Plugin.Log.LogInfo($"Chest: no ground under the cart's point {at:F2}; {chest.id} stands at the donkey's root {root:F2} instead.");
+                    return root;
+                }
+                // Neither on ground (riding along a bank, the ride ended at a door before the park check could move the
+                // donkey): the game's own drop-spot search from the root, which only returns ground (no water, no other
+                // drops), as cargo set down behind the cart uses it.
+                Vector3 dir = at - root;
+                dir.y = 0f;
+                Vector2 face = dir.sqrMagnitude > 0.0001f ? new Vector2(dir.x, dir.z).normalized : Vector2.down;
+                if (SpecialPhysicsCastUtils.GetPlayerDropPosition(root, face, out Vector3 found))
+                {
+                    float gf = Mount.Instance.GroundHeight(found, out _);
+                    if (!float.IsNaN(gf))
+                    {
+                        found.y = gf;
+                    }
+                    Plugin.Log.LogInfo($"Chest: no ground under the cart's point {at:F2} nor the donkey's root {root:F2}; {chest.id} stands at the nearest drop spot {found:F2}.");
+                    return found;
+                }
+                Plugin.Log.LogWarning($"Chest: no ground found near the cart for {chest.id}; it stands at the cart's point {at:F2} anyway. Please report this line.");
+                return at;
+            }
+
             // Where the cart is, no questions asked: a save being written, the cart removed or lost, a scene change.
             // The chest is shown and zoned if any zone takes the spot, else shown zone-less (a normal chest the game's
             // remove mode still accepts) and logged.
@@ -755,14 +927,7 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
-                if (chest.WorldId == MainGame.PlayerData?.currentGameSceneId)
-                {
-                    float g = Mount.Instance.GroundHeight(at, out _); // the keeper's scene only: another scene's ground isn't here to ask
-                    if (!float.IsNaN(g))
-                    {
-                        at.y = g;
-                    }
-                }
+                at = FallbackSpot(at);
                 if (!Place(at, "at the cart (" + why + ")", out string reason, strict: false))
                 {
                     Plugin.Log.LogWarning($"Chest: {chest?.id} could not be set down at the cart ({why}): {reason}");
@@ -806,9 +971,11 @@ namespace GK2DonkeyAPI
                         LetGo();
                         try { owner.OnCargoChanged(); } catch { }
                         Plugin.Log.LogWarning($"Chest: {d.id} stands at {d.Position:F2} (set down half-way); the cart takes cargo again.");
+                        Lock("setting a chest down threw");
                         return true;
                     }
                     reason = "That didn't work.";
+                    Lock("setting a chest down threw");
                     return false;
                 }
             }
@@ -1074,9 +1241,9 @@ namespace GK2DonkeyAPI
                 }
                 string to = teleportData.GetDestinationSceneData()?.id;
                 string here = MainGame.PlayerData?.currentGameSceneId;
-                if (to == null || to == here)
+                if (to == null || to == here || !teleportData.CanTeleport(out _))
                 {
-                    return true;
+                    return true; // same scene, or the game refuses the teleport itself: nothing to do
                 }
                 // The chest stays with the cart: set down where the cart is, and the teleport goes ahead. (The game's
                 // doors are scripted teleports that take control before calling this, so a refusal here could not be

@@ -397,6 +397,10 @@ namespace GK2DonkeyAPI
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
             Toggle("A storage chest rides on the cart (alone; F on it while driving, E with nothing in front sets it down)", Plugin.CargoChest, null);
+            if (CartChest.Locked)
+            {
+                GUILayout.Label("Chest on the cart: OFF for this session: " + CartChest.LockReason + ". Riding chests were set down at their carts.", small);
+            }
             Toggle("Show a thought bubble when mounting is refused", Plugin.ShowMessages, null);
             GUILayout.Label("While mounted the keeper faces only left or right, like the donkey.", small);
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);

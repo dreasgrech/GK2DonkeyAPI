@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using GK2DonkeyAPI.Api;
+using HarmonyLib;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
@@ -349,6 +350,9 @@ namespace GK2DonkeyAPI
                     yield break;
                 }
                 Check(chest.IsHidden && ChestProbe.ZoneEntries(chest) == 0 && chest.WorldZoneData == null && !ChestProbe.HasNavCut(chest), "aboard: hidden, in no zone, no navigation hole");
+                // The zone guard: the game's own re-zoning (a fighting level's content load does this to every object) can't take it.
+                WorldZoneData yard = MainGame.WorldData.GetGameSceneDataById(chest.WorldId)?.worldZones.Find(z => z.wgoDataList.Count > 0 && z.IsContainer);
+                Check(yard != null && !yard.TryAddWgoData(chest) && ChestProbe.ZoneEntries(chest) == 0, "aboard: a zone's TryAddWgoData is refused for the riding chest");
                 Check(cartInv != null && cartInv.Data.InventorySize == 0 && !PC.PlayerData.HasFreeOverheadSlot, "aboard: the cart is full for everything else (0 slots, the head gate says no)");
                 Check(ReferenceEquals(chest.Inventory, inv0) && Same(inv0, count0, total0), "aboard: the contents are the same object, untouched");
                 // The stand-in (step 2): under the cargo holder, drawn, no collider, measured and listed for the panel.
@@ -452,6 +456,197 @@ namespace GK2DonkeyAPI
             int t = 0;
             foreach (Item it in inv.Data.Inventory) t += it.Count;
             return t == total;
+        }
+
+        // The backstops (docs/portable-chest.md §4, "a hidden chest in a save is the one unrecoverable state"): a chest
+        // left hidden and zone-less with no cart owning it, as some failure the code didn't foresee would leave it, is
+        // shown and zoned again by the pre-save pass and by the after-load repair. In normal play neither ever runs.
+        private static IEnumerator ChestBackstops()
+        {
+            yield return MakeChest();
+            if (chest == null)
+            {
+                yield break;
+            }
+            try
+            {
+                chest.Inventory.AddItemToInventory(new Item(TestItemId));
+                Inventory inv0 = chest.Inventory;
+                int count0 = inv0.Data.Inventory.Count, total0 = 0;
+                foreach (Item it in inv0.Data.Inventory) total0 += it.Count;
+                GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(chest.WorldId);
+                Wgo v = GameScene.GetWgoViewGlobal(chest.UniqueId);
+
+                // Broken state 1: hidden and zone-less, nobody's.
+                Info("the next \"Please report this line\" warnings are this test's own: it breaks a chest on purpose");
+                ChestMoves.ZoneRemoveAll(sd, chest);
+                ChestMoves.Hide(chest, v);
+                yield return Frames(2);
+                Check(chest.IsHidden && ChestProbe.ZoneEntries(chest) == 0 && CartChest.RigOf(chest) == null, "set up: a hidden, zone-less chest no cart owns");
+                CartChest.EnsureNoneHiddenForSave();
+                yield return Frames(2);
+                Check(!chest.IsHidden && ChestProbe.ZoneEntries(chest) == 1 && chest.WorldZoneData != null, "the pre-save pass shows and zones it");
+                yield return Until(() => Drawn(GameScene.GetWgoViewGlobal(chest.UniqueId)), 5f);
+                Check(waited, "and it is drawn again");
+                Check(ReferenceEquals(chest.Inventory, inv0) && Same(inv0, count0, total0), "contents the same object, untouched");
+
+                // Broken state 2: the same, repaired after a load.
+                ChestMoves.ZoneRemoveAll(sd, chest);
+                ChestMoves.Hide(chest, v);
+                yield return Frames(2);
+                int repaired = CartChest.RepairHiddenChests();
+                yield return Frames(2);
+                Check(repaired >= 1 && !chest.IsHidden && ChestProbe.ZoneEntries(chest) == 1 && chest.WorldZoneData != null, $"the after-load repair shows and zones it ({repaired} repaired)");
+                yield return Until(() => Drawn(GameScene.GetWgoViewGlobal(chest.UniqueId)), 5f);
+                Check(waited, "and it is drawn again");
+                Check(ReferenceEquals(chest.Inventory, inv0) && Same(inv0, count0, total0), "contents the same object, untouched");
+
+                // A shown chest is left alone by both.
+                int before = ChestProbe.ZoneEntries(chest);
+                CartChest.EnsureNoneHiddenForSave();
+                int repaired2 = CartChest.RepairHiddenChests();
+                Check(repaired2 == 0 && !chest.IsHidden && ChestProbe.ZoneEntries(chest) == before, "a chest standing normally is left alone by both");
+                chest.Inventory.RemoveItemFromInventoryByUID(chest.Inventory.Data.Inventory[0]);
+            }
+            finally
+            {
+                RemoveChest();
+            }
+        }
+
+        // The save as the game writes it (docs/portable-chest.md §7a): with a chest riding a test cart, the real save
+        // steps run (the chests stood at their carts, the pre-serialization pass), the game's own save object is
+        // serialized with the game's own serializer, in memory, and deserialized into a separate copy; the chest in that
+        // copy is what a game WITHOUT the mod would load: visible, zoned, interactable, standing by the cart, the same
+        // items. Then the take-back, and the chest rides again. Also the fail-safe: locking the feature with a chest
+        // aboard sets it down at the cart and refuses further pickups; the lock is undone for the session afterwards.
+        private static IEnumerator ChestSaveImage()
+        {
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle h = Spawn(near, true, withCart: true);
+            if (h == null)
+            {
+                Fail("could not spawn a donkey with a cart");
+                yield break;
+            }
+            yield return Until(() => h.IsReady, 6f);
+            yield return MakeChest();
+            if (chest == null)
+            {
+                yield break;
+            }
+            try
+            {
+                h.ComeToKeeper(true, showMessage: false);
+                yield return Until(() => h.IsReady, 4f);
+                MountResult ride = h.Ride(showMessage: false);
+                if (!ride.Ok)
+                {
+                    Fail("riding the test cart: " + ride.Reason);
+                    yield break;
+                }
+                yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 4f);
+                CartChest.Rig rig = h.I.ChestRig;
+                chest.Inventory.AddItemToInventory(new Item(TestItemId));
+                chest.Inventory.AddItemToInventory(new Item(TestItemId));
+                int count0 = chest.Inventory.Data.Inventory.Count, total0 = 0;
+                foreach (Item it in chest.Inventory.Data.Inventory) total0 += it.Count;
+                Check(rig.PickUp(chest, PC, out string why), $"lifted{(why != null ? " (" + why + ")" : "")}");
+                if (!rig.Aboard)
+                {
+                    yield break;
+                }
+                yield return Frames(2);
+
+                // The real save steps, then the game's serializer on the game's save object, in memory.
+                Mount.LendCargoToSave();
+                CartChest.EnsureNoneHiddenForSave();
+                GameSave live = MainGame.Instance.GameSave;
+                byte[] bytes = null;
+                GameSave copy = null;
+                string error = null;
+                try
+                {
+                    object serializer = AccessTools.Property(typeof(SaveSystem), "OdinBinaryFileSerializer")?.GetValue(null)
+                        ?? AccessTools.Field(typeof(SaveSystem), "odinBinaryFileSerializer")?.GetValue(null);
+                    var odin = serializer as OdinBinaryFileSerializer;
+                    if (odin == null)
+                    {
+                        error = "the game's serializer was not found";
+                    }
+                    else
+                    {
+                        live.OnBeforeSerialize();
+                        bytes = odin.Serialize(live);
+                        copy = odin.Deserialize<GameSave>(bytes);
+                    }
+                }
+                catch (Exception e)
+                {
+                    error = e.GetType().Name + ": " + e.Message;
+                }
+                Check(error == null && bytes != null && bytes.Length > 0 && copy != null, error == null ? $"the save object serialized and read back ({(bytes?.Length ?? 0) / 1024} KB)" : "serializing the save object: " + error);
+                if (copy != null)
+                {
+                    WgoData saved = null;
+                    string savedScene = null;
+                    foreach (GameSceneData sd in copy.worldData.gameSceneDataList)
+                    {
+                        foreach (WgoData d in sd.wgoDataList)
+                        {
+                            if (d != null && d.UniqueId != null && d.UniqueId.Id == chest.UniqueId.Id)
+                            {
+                                saved = d;
+                                savedScene = sd.id;
+                            }
+                        }
+                    }
+                    Check(saved != null, "the chest is in the save's world (its scene's list)");
+                    if (saved != null)
+                    {
+                        Check(!saved.IsHidden, "in the save it is not hidden");
+                        Check(saved.IsInteractable, "in the save it is interactable");
+                        int savedCount = saved.Inventory?.Data?.Inventory?.Count ?? -1, savedTotal = 0;
+                        if (saved.Inventory?.Data?.Inventory != null) foreach (Item it in saved.Inventory.Data.Inventory) savedTotal += it.Count;
+                        Check(savedCount == count0 && savedTotal == total0, $"in the save it holds the same items ({savedCount} stack(s), {savedTotal} in all)");
+                        Check(Vector3.Distance(saved.Position, h.I.CartPoint()) < 1.5f, $"in the save it stands by the cart ({saved.Position:F2} vs cart {h.I.CartPoint():F2})");
+                        bool zoned = false;
+                        foreach (GameSceneData sd in copy.worldData.gameSceneDataList)
+                        {
+                            if (sd.id != savedScene) continue;
+                            foreach (WorldZoneData z in sd.worldZones)
+                            {
+                                foreach (SGuid g in z.wgoDataList) if (g == saved.UniqueId) zoned = true;
+                            }
+                        }
+                        Check(zoned, "in the save it is in a zone's list (a crafting source, a navigation hole, as any built chest)");
+                        float ground = Mount.Instance.GroundHeight(saved.Position, out string src);
+                        Check(!float.IsNaN(ground) && Mathf.Abs(ground - saved.Position.y) < 0.5f, $"in the save it stands on ground ({src}, {ground:F2} vs {saved.Position.y:F2})");
+                    }
+                }
+                string side = Mount.BuildSideText("selftest", "saved at test time", 42, new List<Mount.Instance> { h.I }, false, out _);
+                Check(side.Contains(chest.UniqueId.Id), "the side file names the chest");
+                Mount.TakeCargoBackFromSave();
+                yield return Frames(2);
+                Check(rig.Aboard && chest.IsHidden && ChestProbe.ZoneEntries(chest) == 0, "after the save it rides again, hidden and zone-less");
+
+                // The fail-safe.
+                Info("the next \"switched off for this session\" error is this test's own: it trips the lock on purpose");
+                CartChest.Lock("self-test");
+                yield return Frames(2);
+                Check(!rig.Aboard && !chest.IsHidden && chest.WorldZoneData != null && Vector3.Distance(chest.Position, h.I.CartPoint()) < 1.5f, "locked: the riding chest was set down at the cart, shown and zoned");
+                Check(!CartChest.On && rig.WhyNotPickUp(chest, PC) == "Chests don't ride on the cart.", "locked: no chest is lifted any more");
+                CartChest.UnlockForTest();
+                Check(CartChest.On, "unlocked again for the session");
+                Check(Same(chest.Inventory, count0, total0), "after everything: the same items");
+                Mounts.Dismount("self-test");
+                yield return Frames(2);
+            }
+            finally
+            {
+                CartChest.UnlockForTest();
+                RemoveChest();
+            }
         }
     }
 }

@@ -355,11 +355,18 @@ namespace GK2DonkeyAPI
             try
             {
                 restored = RestoreFromSideFile();
-                CartChest.RepairHiddenChests(); // a chest hidden in the save that no cart owns: shown again, loudly
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Persistence: restoring the kept donkeys and carts failed: " + e);
+            }
+            try
+            {
+                CartChest.RepairHiddenChests(); // a chest hidden in the save that no cart owns: shown again, loudly (its own try: a bad side file must not skip it)
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Chest: the hidden-chest repair failed: " + e);
             }
             readySave = save; // before the events: their handlers may spawn
             Plugin.Log.LogInfo($"Mounts: game ready ({(started ? "the game started" : "fallback")}, {frames} frame(s) and {waited:F1} s after its save appeared); mods may spawn now.");

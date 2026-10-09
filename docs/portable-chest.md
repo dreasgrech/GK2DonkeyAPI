@@ -222,6 +222,19 @@ and never touches items inside, `Inventory.cs:132-199`). The risks are these, ea
 - **Only the player's own door press is refused.** A scripted teleport (a quest flow, a fight, a cutscene) has already taken control and needs the teleport to finish; refusing it froze the keeper. Those set the chest down at the cart and go ahead.
 - The save stands the chest at the cart **data-only** (shown, zoned), the rig keeps it, the stand-in and the 0 slots stay; the postfix hides it again, and the next tick does so if the postfix never ran. Ground height is corrected only in the keeper's own scene. `Restore` requires a cart. The reclaim ring allows for the cart body behind the donkey root and logs every refusal.
 
+**A third review (2026-10-09, of the code as fixed) found no loss or duplication path and eight hardening points, all
+built:** one cart per chest (the restore refuses a chest another cart already carries, and each chest GUID is
+reclaimed once per load, so a dormant record from an uninstalled mod plus a live one can't both claim it); the
+backstops only treat a chest that is hidden **and in no zone list** as "our ride that never ended", since the game's
+own staging (fight stages, scripts) hides objects but leaves them in their zones; the lift's rollback returns the
+chest to where it stood, not to the cart; the save's stand-at-cart marks the take-back before anything can throw and
+removes before it adds; the tick re-hides a riding chest found shown outside a save; the after-load repair has its
+own try; the teleport prefix asks the game's `CanTeleport` first. Verified safe by that review, with method: the
+synchronous save order (prefix → `PrepareToSave` with our un-hide → serialize → write → success callback with the
+side file → postfix/finalizer take-back), the 0-slot inventory (`Item` inserts only while fill ≠ size, and the
+shrink only ever happens empty), the mod-less save fields, the save-failure branches, hitch and unhitch, and every
+instance exit path reaching `LetGo`.
+
 Vanilla behaviour that looks like loss but isn't ours: the game's chest UI recreating items (§1), sawmill zombies
 discarding output when the zone has no space (`Flow_FinishZombieSawmillCraft.cs:36-50`), which happens more often
 when a chest leaves the zone.
@@ -383,6 +396,65 @@ Then, on a test chest the user builds and empties:
 4. **Zombie guard: refuse pickup while a zombie targets the chest** (§4a).
 5. **Where it lives: the Donkey API does all the work** (pick-up, hide, stand-in, set-down, save hook, guards,
    door prefix); Saddle Up gets the toggle and labels, as with zombies.
+
+## 6a. What a game update, a broken mod or a removed mod does to a chest
+
+The question the design is built around: **nothing the mod can do, break or stop doing may touch the player's chest.**
+
+- **The chest is never the mod's.** It is the game's own object with the game's own inventory from first to last;
+  the mod only hides it, moves its position and takes it in and out of zones. There is no mod-owned copy of any
+  item, so there is no state to migrate and nothing a missing mod could fail to give back.
+- **A save always holds a normal chest.** Before the game writes: the save hook stands each riding chest at its
+  cart (shown, zoned); a prefix on the game's `PrepareToSave` (its last call before serializing) un-hides any
+  allowed chest still hidden; the side file only *names* the chest. A save made with the mod is therefore a save a
+  mod-less game reads as "a chest standing by a cart". Remove mode takes it down normally, zoned or not.
+- **A game update disables the mod before it patches anything** (`Safety.DisableOnGameUpdate`, the audited MVIDs):
+  the game runs unmodified, the chest stands where the last save put it. If the player forces the mod on
+  (`DisableOnGameUpdate=false`), **the chest feature alone stays locked** until the mod is re-audited, because it is
+  the one feature that writes saved state; everything else of the mod runs as the player asked.
+- **The members the feature reaches by name** (`Wgo.TryRegisterInChunkManager`, `TryUnregisterInChunkManager`,
+  `WGOInteractionHandlerBase.assignedWgo`) are checked at start with the rest (`Access.Verify`): gone, the whole
+  mod stays off with a clear log line instead of a chest operation throwing later. The build-time scan checks
+  every Harmony target by name as well.
+- **At run time the feature is its own fail-safe:** any chest operation that throws (lifting, setting down, the
+  save's stand-at-the-cart or take-back) puts the chest back where it was, then **locks the feature for the
+  session** and sets every riding chest down at its cart, with a bubble and an error line. A broken mod can hurt
+  at most once, visibly, and never silently.
+- **After a load**, before anything else, every allowed chest found hidden that no cart owns is shown and zoned
+  again (`RepairHiddenChests`), using only the game's most basic calls; it runs in the locked state too.
+- **Where a chest can ever be left standing:** every fallback (the save, a removal, a scene change, the lock) uses the
+  cart's own spot, which is ground the keeper drove onto (the donkey follows his ground rules; `SafeGround` keeps it
+  out of water and off ledges). Checked in the code, not assumed (2026-10-09): the park check (`SafeGround.cs`
+  `KeepOnGround`) moves a parked donkey until its body *and* its cart point are on ground, reachable and on the
+  walk grid, but skips that when the keeper has just gone through a door ("stays where it stood"); while riding, the
+  root is placed from the keeper with an offset and ground snapping is a setting (`SnapToGround`), so along a bank
+  the root, and the cart point behind it, can be over water. Hence `FallbackSpot` tries three spots in turn: the
+  cart point on ground, else the donkey's root on ground, else the game's own drop-spot search from the root
+  (`SpecialPhysicsCastUtils.GetPlayerDropPosition`, which returns ground only: no water, no other drops), and only
+  then the cart point with a warning. `GroundHeight` (`Mount.cs:272`) answers NaN for water and for no ground.
+  Zone or no zone, the chest can be opened from beside it (the interaction scan filters only by `IsInteractable`,
+  `PlayerInteractionComponent.GetWgoTargetsFromColliders`) and taken down with the game's remove mode
+  (`RemovePointer.IsFromCurrentWorldZone` returns true for an object in no zone; `Wgo.IsBuildRemovable` asks only
+  for a remove definition, which all three chests have).
+- **What a mod-less game sees that it wouldn't otherwise:** a chest standing where a cart stood (inside a zone when
+  one accepted the spot, on walkable ground, not on the build grid), the same kind of thing Move Building leaves.
+  The game's own save fixes target authored ids and never player chests (checked in 1.008 and 1.009).
+
+## 7a. Release checks (the worst case, empirically)
+
+Besides the self-tests ("chest: the backstops" exercises the pre-save pass, the after-load repair and the zone
+guard directly, since in normal play none of them ever runs), two checks only the real game can give:
+1. **The mod removed with a chest riding in the save.** Automated in substance by the self-test *"chest: the save as
+   the game writes it"*: with a chest riding a test cart, the real save steps run, the game's save object is
+   serialized with the game's own serializer in memory and read back into a separate copy, and the chest **in that
+   copy** (what a mod-less game loads) is checked: not hidden, interactable, the same items, standing by the cart
+   on ground, in a zone's list; then the take-back, and the chest rides again. The same scenario trips the
+   fail-safe lock with a chest aboard (set down at the cart, pickups refused) and undoes it. By hand, for the eyes:
+   sleep with a chest aboard, close the game, rename `BepInEx/plugins/GK2DonkeyAPI.dll` and `SaddleUp.dll` to
+   `.off`, start the game, load: the chest stands beside where the cart stood, openable, with its items; remove mode
+   takes it down normally. Rename back, load again: the chest is lifted back onto the cart (`restored with the
+   save`). Status: automated check **built, not yet run**; by hand **pending**.
+2. **The caretaker refusal** ("A zombie is using this chest."): needs a working caretaker. Status: **pending**.
 
 ## 8. Plan
 

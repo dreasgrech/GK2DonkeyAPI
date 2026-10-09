@@ -22,6 +22,11 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(UnityEngine.Vector2) }), "AnimationComponentBase.SetDirection(Vector2)");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetState), new[] { typeof(AnimationState) }), "AnimationComponentBase.SetState");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetDirection), new[] { typeof(Direction) }), "AnimationComponentBase.SetDirection(Direction)");
+            // The chest on the cart (CartChest.cs) reaches three private members by name; gone, the whole mod stays off
+            // rather than a chest operation throwing at run time.
+            Require(AccessTools.Method(typeof(Wgo), "TryRegisterInChunkManager"), "Wgo.TryRegisterInChunkManager");
+            Require(AccessTools.Method(typeof(Wgo), "TryUnregisterInChunkManager"), "Wgo.TryUnregisterInChunkManager");
+            Require(AccessTools.Field(typeof(WGOInteractionHandlerBase), "assignedWgo"), "WGOInteractionHandlerBase.assignedWgo");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetTrigger), new[] { typeof(string) }), "AnimationComponentBase.SetTrigger(string)");
             Require(AccessTools.Property(typeof(PlayerController), nameof(PlayerController.MovementComponent)), "PlayerController.MovementComponent");
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");
