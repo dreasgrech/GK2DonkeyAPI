@@ -27,6 +27,7 @@ namespace GK2DonkeyAPI
             internal bool IsRidden => mounted;
             // Its view exists and is prepared (switched off while idle or not): enough to follow it as a parent.
             internal bool HasView => donkey != null && donkey && partsReady;
+            internal bool HasViewObject => donkey != null && donkey; // spawned, ready or not (Unhitch's data-only path is for the rest)
 
             // Its view is there, prepared and switched on: ridden, hitched, prompted, IsReady. A view switched off while
             // idle (Tiers.cs) wakes the frame after it is brought near; riding it before that would measure the seat
@@ -469,7 +470,9 @@ namespace GK2DonkeyAPI
             // (MountHandle.ComeToKeeper), so a refused ride doesn't leave it standing next to him indoors (found
             // 2026-10-01: Saddle Up's H in a building said "Not indoors." and the donkey came in anyway). Logged and
             // said the way a refused ride is.
-            internal string WhyCannotRideHere(PlayerController pc, bool showMessage)
+            // asStyle: the mods' rules are asked for that style instead of the current one (the companion's H judges
+            // Ride while the donkey still stands hitched to the cart it is about to leave).
+            internal string WhyCannotRideHere(PlayerController pc, bool showMessage, MountStyle? asStyle = null)
             {
                 if (!HasDonkey)
                 {
@@ -483,7 +486,7 @@ namespace GK2DonkeyAPI
                 {
                     return "Already mounted.";
                 }
-                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(activeStyle);
+                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(asStyle ?? activeStyle);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo($"Mount refused ({Describe()}, not brought to the keeper): " + reason);
@@ -815,7 +818,9 @@ namespace GK2DonkeyAPI
             }
 
             // This donkey leaves its cart standing where it is (a new free cart with the cargo and the cart settings) and
-            // goes on without it. Returns the new cart.
+            // goes on without it. Returns the new cart. A standing donkey without a view (asleep far away, or in a
+            // scene that isn't loaded) leaves its cart too: the split is data only, and each gets its view in its new
+            // style when that is next due (StandTick, ComeTo). Saddle Up's H leaves a parked cart where it is this way.
             internal Instance Unhitch(PlayerController pc, out string why)
             {
                 why = null;
@@ -825,22 +830,28 @@ namespace GK2DonkeyAPI
                     return null;
                 }
                 GameScene scene = LoadedScene(SceneId);
-                if (scene == null || donkey == null || !donkey)
+                bool viewed = scene != null && HasViewObject;
+                if (mounted && !viewed)
                 {
                     why = "Not right now.";
                     return null;
                 }
-                // The cart stays where it is drawn: not over water or off a ledge (SafeGround.cs).
-                string offGround = WhyCartCannotStayHere(pc);
-                if (offGround != null)
+                if (mounted)
                 {
-                    Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart here: {offGround}.");
-                    why = "The cart can't stand here.";
-                    return null;
+                    // Ridden, the cart stays where it is drawn: not over water or off a ledge (SafeGround.cs). A standing
+                    // cart stands on judged ground already (the dismount's check), and the keeper may be far away at
+                    // another level, where the judge (a raycast at his level) would refuse it falsely.
+                    string offGround = WhyCartCannotStayHere(pc);
+                    if (offGround != null)
+                    {
+                        Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart here: {offGround}.");
+                        why = "The cart can't stand here.";
+                        return null;
+                    }
                 }
                 var cart = new Instance(NextId(OwnerId), OwnerId, ephemeral: false, hasDonkey: false, hasCart: true)
                 {
-                    Position = donkey.Data.Position,
+                    Position = viewed ? donkey.Data.Position : Position,
                     SceneId = SceneId,
                     riderFacingX = riderFacingX,
                     // Kept with the save as its donkey is; a cart left by the summon is the keeper's, kept too.
@@ -850,9 +861,20 @@ namespace GK2DonkeyAPI
                 cart.CargoRig.SetCarried(CargoRig.TakeAllForTransfer());
                 Register(cart);
                 ChestRig.TransferTo(cart.ChestRig); // the chest goes with the cart
-                MountSounds.Moment(this, "unhitch"); // still in Cart style: the cart's sound settings
-                Restyle(pc, scene, MountStyle.Ride);
-                Plugin.Log.LogInfo($"Mount: {Describe()} left its cart as {cart.Describe()} at {cart.Position:F2} ({cart.CargoRig.Count} item(s) on it).");
+                if (viewed)
+                {
+                    MountSounds.Moment(this, "unhitch"); // still in Cart style: the cart's sound settings
+                    Restyle(pc, scene, MountStyle.Ride);
+                }
+                else
+                {
+                    // No view to rebuild (Restyle's spawn needs the loaded scene): the style changes on the data, and the
+                    // Ride-style view is built when its scene is loaded or it is called to the keeper.
+                    DestroyDonkey(); // a stale reference at most
+                    activeStyle = MountStyle.Ride;
+                    lastMirrored = (AnimationState)(-1);
+                }
+                Plugin.Log.LogInfo($"Mount: {Describe()} left its cart as {cart.Describe()} at {cart.Position:F2} ({cart.CargoRig.Count} item(s) on it){(viewed ? "" : ", without a view")}.");
                 Mounts.RaiseUnhitched(Handle, cart.Handle);
                 return cart;
             }

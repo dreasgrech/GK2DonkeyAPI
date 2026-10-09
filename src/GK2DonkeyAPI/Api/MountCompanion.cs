@@ -19,8 +19,9 @@ namespace GK2DonkeyAPI.Api
     // itself only maps its keys and settings onto this (Saddle Up is the example). One per owner (Mounts.Companion).
     //
     // - Use(Ride / Cart), for the ride and cart keys: on foot the donkey (spawned the first time) comes to the keeper
-    //   and he gets on, the cart brought and hitched or left standing as asked; mounted in that style he gets off (the
-    //   donkey stays); mounted in the other style the cart is left standing or brought and hitched.
+    //   and he gets on, the cart brought and hitched (Cart) or, when the donkey stands hitched to it somewhere, left
+    //   there where it was parked (Ride); mounted in that style he gets off (the donkey stays); mounted in the other
+    //   style the cart is left standing or brought and hitched.
     // - SendAway: the donkey, its cart and foals go; the cart's cargo is set down first.
     // - Found again after a load by their keys "donkey", "cart" and "foal", "foal2" ... (kept with the save while
     //   KeepWithSaves).
@@ -251,6 +252,31 @@ namespace GK2DonkeyAPI.Api
                 Plugin.Log.LogInfo($"Companion: spawned {Donkey.FullId} for {OwnerId}.");
                 ApplyAll();
             }
+            if (style == MountStyle.Ride && Donkey.HasCart)
+            {
+                // Its cart stays where it was parked and the donkey alone comes (asked for 2026-10-09; before, both came
+                // and the cart was left standing by the keeper). Not when the ride here would be refused: then nothing
+                // changes and the refusal is shown, as ComeToKeeper shows it.
+                if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
+                {
+                    return MountResult.Refused("Not in a game.");
+                }
+                string why;
+                using (Mount.Bind(Donkey.I))
+                {
+                    why = Donkey.I.WhyCannotRideHere(pc, showMessage: true, asStyle: MountStyle.Ride);
+                }
+                if (why != null)
+                {
+                    return MountResult.Refused(why);
+                }
+                if (Mounts.Unhitch(Donkey) == null)
+                {
+                    const string notLeft = "The cart could not be left where it stands.";
+                    Mount.Say(notLeft);
+                    return MountResult.Refused(notLeft);
+                }
+            }
             MountResult come = Donkey.ComeToKeeper();
             if (!come.Ok)
             {
@@ -336,14 +362,6 @@ namespace GK2DonkeyAPI.Api
                     pending = null;
                 }
                 return; // hitched: a new view, ready in a frame or two
-            }
-            if (style == MountStyle.Ride && Donkey.HasCart)
-            {
-                if (Mounts.Unhitch(Donkey) == null)
-                {
-                    pending = null;
-                }
-                return;
             }
             pending = null;
             Donkey.Ride();

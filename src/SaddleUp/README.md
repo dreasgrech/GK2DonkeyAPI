@@ -11,7 +11,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 
 | Key | On foot | Riding the donkey | Driving the cart |
 |---|---|---|---|
-| **H** | your donkey comes and you ride it | get off | leave the cart standing, ride on |
+| **H** | your donkey comes and you ride it; a parked cart stays where you left it | get off | leave the cart standing, ride on |
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
 | **J** | – | take the cart in reach | leave the cart standing |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |

@@ -94,6 +94,7 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "the per-mod API (ids, keys, data, owner rules)", Body = ApiIdentity },
                 new Scenario { Name = "kept-with-save text, round trip", Body = RoundTrip },
                 new Scenario { Name = "hitch and unhitch", Body = HitchUnhitch },
+                new Scenario { Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
                 new Scenario { Name = "shared colour textures", Body = SharedColours },
                 new Scenario { Name = "one new view per frame", Body = SpawnCap },
                 new Scenario { Name = "waking (view switched off)", Body = () => Wake(switchOff: true) },
@@ -569,6 +570,60 @@ namespace GK2DonkeyAPI
             yield return Until(() => d.IsReady && left.IsReady, 4f);
             yield return Frames(3);
             Check(d.I.TestCartPartsOn() == 0, $"the donkey's cart parts are off ({d.I.TestCartPartsOn()} on)");
+        }
+
+        // A standing donkey with its cart far away has no view (asleep): its cart is left where it stands all the same,
+        // on the data alone (Saddle Up's H leaves a parked cart this way), and the donkey called to the keeper comes
+        // without cart parts while the cart stays put with the cargo.
+        private static IEnumerator UnhitchWithoutView()
+        {
+            Vector3? far = Spot(home, 50f) ?? Spot(home, 42f);
+            if (!far.HasValue)
+            {
+                Warn("no ground 42 to 50 units around the keeper: skipped");
+                yield break;
+            }
+            MountHandle d = Spawn(far.Value, true, withCart: true);
+            if (d == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            yield return Until(() => d.I.tier == Mount.Tier.Asleep, 6f);
+            if (!waited || d.I.HasViewObject)
+            {
+                Warn($"not asleep without a view {Vector3.Distance(home, far.Value):F0} away (level {d.I.tier}): skipped");
+                yield break;
+            }
+            // The test item rides in the cart's mirror only (no view is ever built for the cart); taken off again at
+            // the end, whichever instance holds it, so the runner's Remove never drops it into the world.
+            var item = new Item(TestItemId);
+            MountHandle left = null;
+            try
+            {
+                d.I.CargoRig.SetCarried(new List<Item> { item });
+                Vector3 stood = d.Position;
+                left = Mounts.Unhitch(d);
+                Check(left != null && left.Exists && left.HasCart && !left.HasDonkey, "unhitched without a view: a free cart");
+                if (left == null) yield break;
+                Check(Vector3.Distance(left.Position, stood) < 0.01f, $"the cart stands where the donkey stood ({left.Position:F2})");
+                Check(!d.HasCart && !d.I.HasViewObject && !left.I.HasViewObject, "the donkey has no cart now; neither has a view (the data-only path)");
+                Check(left.I.CargoRig.Count == 1 && d.I.CargoRig.Count == 0, $"the cargo went with the cart ({left.I.CargoRig.Count} on it, {d.I.CargoRig.Count} on the donkey)");
+                Check(left.Owner == d.Owner && left.Persist == d.Persist, "the cart has the donkey's owner and kept setting");
+                MountResult come = d.ComeToKeeper(true);
+                Check(come.Ok, $"called to the keeper{(come.Ok ? "" : " (" + come.Reason + ")")}");
+                yield return Until(() => d.IsReady, 6f);
+                Check(waited, "ready within 6 s");
+                yield return Frames(3);
+                Check(d.I.TestCartPartsOn() == 0, $"it came without cart parts ({d.I.TestCartPartsOn()} on)");
+                Check(left.Exists && Vector3.Distance(left.Position, stood) < 0.01f && !left.HasDonkey, "the cart stayed where it was");
+                Check(left.I.CargoRig.Count == 1, "the item is still on the cart");
+            }
+            finally
+            {
+                if (d.Exists) d.I.CargoRig.Forget(item);
+                if (left != null && left.Exists) left.I.CargoRig.Forget(item);
+            }
         }
 
         // Donkeys with the same colours share their colour textures; another colour adds its own; all removed, the

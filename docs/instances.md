@@ -69,7 +69,10 @@ Each one says why.
 - **Hitching:** riding a donkey without a cart, press the hitch key (General.HitchKey, J) or the interact key near
   a free cart's shafts. The cart, its cargo and its settings join the donkey, and the ride goes on in Cart style.
 - **Unhitching:** riding a donkey with its cart, press the hitch key. The cart stays where it stands, as a free
-  cart with its cargo and settings, and the ride goes on in Ride style.
+  cart with its cargo and settings, and the ride goes on in Ride style. A standing donkey's cart is left the same
+  way (`Mounts.Unhitch`), also one without a view (asleep far away, or in a scene that isn't loaded): the cart stays
+  exactly where the donkey stood, with the cargo and the chest, and the views follow when they are next due. Saddle
+  Up's H on foot leaves a parked cart this way and brings the donkey alone.
 - **Pickups** go onto the ridden cart only, as before. A standing cart is loaded and unloaded on foot with the interact
   key instead (docs/load-on-foot.md).
 

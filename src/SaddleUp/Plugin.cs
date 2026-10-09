@@ -20,7 +20,7 @@ namespace SaddleUp
 
         // The API this mod is written against: 0.23 has the CargoChest behaviour key (0.22 CargoZombies, 0.19 the wheel and hub colours). Checked before anything of
         // the API is used, so an older API gets a clear message instead of a missing-method error.
-        private static readonly Version NeedsApi = new Version(0, 23, 0);
+        private static readonly Version NeedsApi = new Version(0, 25, 0);
 
         private void Awake()
         {
@@ -37,7 +37,7 @@ namespace SaddleUp
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up!", "dreas",
                 "Your own donkey and cart: ride it (H), drive it (G), haul with the cart. Built on GK2 Donkey API.");
             p.Status("Keys");
-            ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride the donkey", "Your donkey comes and you ride it; again: dismount. In the cart: leave the cart standing and ride on.",
+            ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride the donkey", "Your donkey comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your donkey comes with its cart and you drive; again: dismount. Riding: the cart comes and is hitched.",
                 pressed: () => me.Use(MountStyle.Cart));

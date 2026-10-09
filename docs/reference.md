@@ -272,6 +272,8 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.
+   With the cart parked somewhere (G, drive off, G to get off), walk far away or into another area and press **H**:
+   the donkey alone comes, the cart stays where you left it with its load; **G** then brings the cart.
 3. **G:** the cart, with its lantern. **H** in the cart switches to riding, **G** back to the cart, and **G** again
    dismounts.
 4. **Stays mounted:** opening a chest or the inventory keeps you mounted.

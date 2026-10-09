@@ -53,7 +53,7 @@ Kept short: everything a player would look for, nothing that can break the pictu
 
 | Group | Option | Default | Why it's safe |
 |---|---|---|---|
-| **Keys** | Ride, Cart, Bell, Send away | H, G, none, none | Only keys. No hitch key (dropped 2026-10-03): H while driving leaves the cart (the same unhitch), G while riding brings your cart, E hitches a cart in reach; Saddle Up sets the API's `HitchKey` to None. |
+| **Keys** | Ride, Cart, Bell, Send away | H, G, none, none | Only keys. No hitch key (dropped 2026-10-03): H while driving leaves the cart (the same unhitch), G while riding brings your cart, E hitches a cart in reach; Saddle Up sets the API's `HitchKey` to None. H on foot while the cart is parked somewhere: the donkey alone comes and the cart stays where it was (2026-10-09). |
 | **Riding** | Riding speed, Cart speed | Normal | One each for riding the donkey and driving the cart (2026-10-03): Normal / Faster / Fastest (fixed multipliers per style), not a free number. |
 | | Get off at building doors | on | Off lets the cart into houses, through the furniture. It only looks wrong; nothing breaks (tested 2026-09-30). |
 | | Thought bubbles | on | Text only. |
