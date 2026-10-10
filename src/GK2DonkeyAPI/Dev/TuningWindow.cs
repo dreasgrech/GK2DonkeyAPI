@@ -16,7 +16,7 @@ namespace GK2DonkeyAPI
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small, changed, overridden, instanceSet, wrapToggle;
+        private static GUIStyle label, header, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill;
 
         // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
         // which shows again once the override ends); else yellow when it differs from its mod default.
@@ -37,7 +37,9 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Sources" };
+        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources" };
+        private const int TabInstances = 5, TabDebug = 6, TabTests = 7, TabPerformance = 8;
+        private const int TabsPerRow = 5; // two rows: ten names in one row of 470 would be cut short
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -107,7 +109,7 @@ namespace GK2DonkeyAPI
         private static float maxContentHeight = 800f;
         private static float chromeHeight = 130f;   // measured; 130 is the first-frame guess
         private static float lastScrollHeight;
-        private static readonly float[] contentHeight = new float[8]; // measured per tab, last repaint
+        private static readonly float[] contentHeight = new float[TabNames.Length]; // measured per tab, last repaint (TabNames is declared above: static fields initialise in order)
 
         // Panel width in panel units (before the overall scale) and the widths derived from it, so rows shrink and
         // grow with the panel instead of overflowing it.
@@ -150,6 +152,17 @@ namespace GK2DonkeyAPI
             overridden.normal.textColor = new Color(0.35f, 0.85f, 1f);
             instanceSet = new GUIStyle(label);
             instanceSet.normal.textColor = new Color(1f, 0.5f, 0.95f);
+            wrapLabel = new GUIStyle(label) { wordWrap = true };
+            good = new GUIStyle(wrapLabel);
+            good.normal.textColor = new Color(0.55f, 0.9f, 0.55f);
+            bad = new GUIStyle(wrapLabel);
+            bad.normal.textColor = new Color(1f, 0.45f, 0.45f);
+            warnWrap = new GUIStyle(wrapLabel);
+            warnWrap.normal.textColor = changed.normal.textColor;
+            barBack = new GUIStyle();
+            barBack.normal.background = Solid(new Color(1f, 1f, 1f, 0.12f));
+            barFill = new GUIStyle();
+            barFill.normal.background = Solid(new Color(0.55f, 0.9f, 0.55f, 0.8f));
             var tex = new Texture2D(1, 1);
             tex.SetPixel(0, 0, new Color(1f, 1f, 1f, 0.35f));
             tex.Apply();
@@ -161,6 +174,32 @@ namespace GK2DonkeyAPI
         }
 
         private static GUIStyle rule;
+
+        private static Texture2D Solid(Color c)
+        {
+            var t = new Texture2D(1, 1);
+            t.SetPixel(0, 0, c);
+            t.Apply();
+            return t;
+        }
+
+        // A plain bar, filled to frac of its width; drawn on the repaint only (it takes no input). Its rect comes from
+        // the layout, not from Wd (a width that changes every frame would churn that cache).
+        private static void ProgressBar(float frac)
+        {
+            Rect r = GUILayoutUtility.GetRect(10f, 12f, ExpandW);
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+            GUI.Box(r, GUIContent.none, barBack);
+            Rect f = r;
+            f.width = Mathf.Round(r.width * Mathf.Clamp01(frac));
+            if (f.width >= 1f)
+            {
+                GUI.Box(f, GUIContent.none, barFill);
+            }
+        }
 
         // Layout options made once per width: GUILayout.Width makes an option object and a params array on every call,
         // for every row on every event (the panel's own garbage, 2026-10-01). Options never change, so one per width.
@@ -323,7 +362,7 @@ namespace GK2DonkeyAPI
                 {
                     TakeDiffSnapshot();
                 }
-                int newTab = GUILayout.Toolbar(tab, TabNames);
+                int newTab = GUILayout.SelectionGrid(tab, TabNames, TabsPerRow);
                 if (newTab != tab)
                 {
                     tab = newTab;
@@ -352,8 +391,10 @@ namespace GK2DonkeyAPI
                     case 2: DrawLantern(); break;
                     case 3: DrawSounds(); break;
                     case 4: DrawColors(); break;
-                    case 5: DrawInstances(); break;
-                    case 6: DrawDebug(); break;
+                    case TabInstances: DrawInstances(); break;
+                    case TabDebug: DrawDebug(); break;
+                    case TabTests: DrawTests(); break;
+                    case TabPerformance: DrawPerformance(); break;
                     default: DrawDefaults(); break;
                 }
             }
@@ -1068,32 +1109,7 @@ namespace GK2DonkeyAPI
 
         private static void DrawDebug()
         {
-            Header("Performance (the last second)");
-            GUILayout.Label(Perf.SummaryText, small);
-            GUILayout.Label("Each part includes the parts inside it (Line and Ground inside Follow, inside Shuffle, inside Stand, inside Tick). Panel is this window itself: close it (its key) to see the frame without it, and read the numbers from the log line instead.", small);
-            Perf.LogEvery10s = GUILayout.Toggle(Perf.LogEvery10s, " Write this to the log every 10 s ([perf] lines; keeps going with the panel closed)");
-            Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
-            Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
-
-            Header("Self-tests");
-            GUILayout.Label("Scripted checks of the per-mod API, the side file, hitching, shared colours, the levels, view reuse, foals following, the spawn cap and leaks, about 4 minutes (docs/self-tests.md). They spawn their own test donkeys (never kept), move the keeper and put him back, and save nothing. Don't touch the keys while they run; results in the log as [test] lines.", small);
-            GUILayout.BeginHorizontal();
-            if (!SelfTest.Running && GUILayout.Button("Run self-tests"))
-            {
-                SelfTest.RequestStart(); // started on the next frame (Mount.Tick), not inside this GUI event
-            }
-            if (SelfTest.Running && GUILayout.Button("Abort the self-tests"))
-            {
-                SelfTest.Abort();
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label(SelfTest.Status, label);
-            int shown = 0;
-            for (int k = SelfTest.Lines.Count - 1; k >= 0 && shown < 12; k--, shown++)
-            {
-                string l = SelfTest.Lines[k];
-                if (l.Contains(" FAIL ") || l.Contains(" WARN ")) GUILayout.Label(l, small);
-            }
+            GUILayout.Label("The self-tests and the performance readout have their own tabs (Tests, Performance).", small);
 
             Header("Levels: far and off-screen donkeys do less (this session)");
             GUILayout.Label("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.", small);
@@ -1271,6 +1287,113 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             GUILayout.Label("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in \"Run self-tests\" above (the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.", small);
 
+        }
+
+        // ------------------------------------------------------------------ Tests tab
+
+        private static void DrawTests()
+        {
+            Header("Self-tests");
+            GUILayout.Label("Scripted checks that drive the game over frames (docs/self-tests.md): the per-mod API, the side file, hitching, shared colours, the levels, view reuse, foals following, the spawn cap and leaks, the chest on the cart, the morgue door, the corpses at the crossroads. All of them take about 4 minutes; a group or one scenario alone has the same start and finish (the keeper moved to the test spot and put back, every test donkey removed, the world's own donkeys checked). They spawn their own test donkeys (never kept) and save nothing. Don't touch the keys while they run. Each scenario's tally shows here as it runs; the full [test] lines are in the log.", small);
+            GUILayout.BeginHorizontal();
+            if (!SelfTest.Running && GUILayout.Button("Run all", Wd(110f)))
+            {
+                SelfTest.RequestStart(); // started on the next frame (SelfTest.PollStart), not inside this GUI event
+            }
+            if (SelfTest.Running && GUILayout.Button("Abort", Wd(110f)))
+            {
+                SelfTest.Abort();
+            }
+            GUILayout.Label(SelfTest.Status, wrapLabel);
+            GUILayout.EndHorizontal();
+            if (SelfTest.Running)
+            {
+                int done = SelfTest.RunDone, total = SelfTest.RunCount;
+                ProgressBar(total > 0 ? (float)done / total : 0f);
+                GUILayout.Label($"{done} of {total} scenario(s) done after {Mathf.FloorToInt(Time.unscaledTime - SelfTest.RunStarted)} s; so far {SelfTest.PassCount} passed, {SelfTest.FailCount} failed, {SelfTest.WarnCount} warning(s).", small);
+            }
+            foreach (string g in SelfTest.Groups)
+            {
+                GUILayout.Box(GUIContent.none, rule, ExpandW);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(g, header, ExpandW);
+                if (!SelfTest.Running && GUILayout.Button("Run group", Wd(90f)))
+                {
+                    SelfTest.RequestStartGroup(g);
+                }
+                GUILayout.EndHorizontal();
+                foreach (SelfTest.Scenario s in SelfTest.Catalog)
+                {
+                    if (s.Group != g)
+                    {
+                        continue;
+                    }
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(ScenarioState(s, out GUIStyle st), st, Wd(W * 0.36f));
+                    GUILayout.Label(s.Name, wrapLabel, ExpandW);
+                    if (!SelfTest.Running && GUILayout.Button("Run", Wd(48f)))
+                    {
+                        SelfTest.RequestStart(s);
+                    }
+                    GUILayout.EndHorizontal();
+                }
+            }
+
+            Header("Failures and warnings of the last run");
+            int shown = 0;
+            for (int k = SelfTest.Lines.Count - 1; k >= 0 && shown < 40; k--)
+            {
+                string l = SelfTest.Lines[k];
+                if (l.Contains(" FAIL ") || l.Contains(" WARN "))
+                {
+                    GUILayout.Label(l, l.Contains(" FAIL ") ? bad : warnWrap);
+                    shown++;
+                }
+            }
+            if (shown == 0)
+            {
+                GUILayout.Label(SelfTest.Lines.Count == 0 ? "No run this session." : "None.", small);
+            }
+        }
+
+        // One scenario's state for its row: not run, running (with its time so far), or its tally, coloured.
+        private static string ScenarioState(SelfTest.Scenario s, out GUIStyle style)
+        {
+            switch (s.State)
+            {
+                case SelfTest.RunState.Running:
+                    style = warnWrap;
+                    return $"running, {Mathf.FloorToInt(Time.unscaledTime - s.Started)} s";
+                case SelfTest.RunState.Done:
+                    if (s.Fail > 0)
+                    {
+                        style = bad;
+                        return $"FAIL {s.Fail}, {s.Pass} passed{(s.Warn > 0 ? $", {s.Warn} warn" : "")}";
+                    }
+                    if (s.Warn > 0)
+                    {
+                        style = warnWrap;
+                        return $"WARN {s.Warn}, {s.Pass} passed";
+                    }
+                    style = good;
+                    return $"PASS {s.Pass} ({s.Elapsed:F0} s)";
+                default:
+                    style = small;
+                    return "not run";
+            }
+        }
+
+        // ------------------------------------------------------------------ Performance tab
+
+        private static void DrawPerformance()
+        {
+            Header("Performance (the last second)");
+            GUILayout.Label(Perf.SummaryText, small);
+            GUILayout.Label("Each part includes the parts inside it (Line and Ground inside Follow, inside Shuffle, inside Stand, inside Tick). Panel is this window itself: close it (its key) to see the frame without it, and read the numbers from the log line instead.", small);
+            Perf.LogEvery10s = GUILayout.Toggle(Perf.LogEvery10s, " Write this to the log every 10 s ([perf] lines; keeps going with the panel closed)");
+            Perf.ExpNoShuffle = GUILayout.Toggle(Perf.ExpNoShuffle, " Experiment: standing donkeys don't shuffle or follow (the mod's movement work off)");
+            Perf.ExpHideViews = GUILayout.Toggle(Perf.ExpHideViews, " Experiment: hide standing donkeys (no drawing, no animation: the game's cost of showing them)");
+            GUILayout.Label("The levels (far and off-screen donkeys doing less) are tuned on the Debug tab; the \"frame time by mode\" self-test on the Tests tab measures them.", small);
         }
 
         // Your settings (saved as you change them) against the mod defaults (defaults.cfg, shipped in the DLL).

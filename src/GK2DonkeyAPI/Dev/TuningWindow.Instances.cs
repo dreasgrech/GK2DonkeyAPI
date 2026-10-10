@@ -224,7 +224,7 @@ namespace GK2DonkeyAPI
         {
             // Drawn on the repaint only: plain labels take no input, and every other event (the layout pass, mouse moves)
             // drew all 63 again for nothing (0.33 ms and 12-22 KB a frame, measured 2026-10-01).
-            if (tab != 5 && !EditingNow || Event.current.type != EventType.Repaint)
+            if (tab != TabInstances && !EditingNow || Event.current.type != EventType.Repaint)
             {
                 return;
             }

@@ -12,9 +12,10 @@ namespace GK2DonkeyAPI
     // animator's facing, which cart parts are on, whose materials the sprites wear, the counters. Every bug of the
     // levels and view reuse found by hand on 2026-10-01 is one of them, so a fix can't pass by luck.
     //
-    // Run from the panel's Debug tab. Test donkeys belong to SelfTest.Owner, are never kept with the save and are
-    // removed after each scenario; the keeper is put back where he stood; nothing is saved. Results go to the log as
-    // [test] PASS / FAIL / WARN / INFO lines and a summary, and to the panel.
+    // Run from the panel's Tests tab: all of them, one group, or one scenario; every run has the same start and
+    // finish. Test donkeys belong to SelfTest.Owner, are never kept with the save and are removed after each
+    // scenario; the keeper is put back where he stood; nothing is saved. Results go to the log as [test] PASS / FAIL /
+    // WARN / INFO lines and a summary, and to the panel (each scenario's own tally while the run goes on).
     internal static partial class SelfTest
     {
         internal const string Owner = "dreas.gk2.donkeyapi.selftest";
@@ -27,10 +28,37 @@ namespace GK2DonkeyAPI
         private static bool abort;
         private static int spawnSeq;
 
-        private static bool startRequested;
+        // The run as a whole, for the panel's progress: the scenarios in it, how many are done, when it started, and
+        // the tallies so far.
+        internal static int PassCount => pass;
+        internal static int FailCount => fail;
+        internal static int WarnCount => warn;
+        internal static int RunCount { get; private set; }
+        internal static int RunDone { get; private set; }
+        internal static float RunStarted { get; private set; }
+        internal static Scenario Current => running;
 
-        // The panel's button: the run starts on the next frame (PollStart), not inside the GUI event.
-        internal static void RequestStart() => startRequested = true;
+        private static bool startRequested;
+        private static Func<Scenario, bool> pick; // which scenarios the requested run takes; null = all
+
+        // The panel's buttons: the run starts on the next frame (PollStart), not inside the GUI event. All of them,
+        // one group, or one scenario; every run has the same start and finish (the test spot, cleanup, the world's
+        // own donkeys checked).
+        internal static void RequestStart() => RequestStart((Func<Scenario, bool>)null);
+
+        internal static void RequestStart(Scenario one) => RequestStart(s => s == one);
+
+        internal static void RequestStartGroup(string group) => RequestStart(s => s.Group == group);
+
+        internal static void RequestStart(Func<Scenario, bool> which)
+        {
+            if (Running)
+            {
+                return;
+            }
+            pick = which;
+            startRequested = true;
+        }
 
         internal static void PollStart()
         {
@@ -51,11 +79,76 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ the runner
 
-        private sealed class Scenario
+        internal enum RunState { NotRun, Running, Done }
+
+        internal sealed class Scenario
         {
             internal string Name;
+            internal string Group;
             internal Func<IEnumerator> Body;
+            internal bool HidesPanel;   // the panel hidden while it runs (its own cost would be in the measurement)
+            // Its last run: the state and the tally; kept until it runs again, so a run of one group or one scenario
+            // leaves the others' results standing.
+            internal RunState State;
+            internal int Pass, Fail, Warn;
+            internal float Started, Elapsed;
         }
+
+        private const string GroupCore = "API, side file, carts, colours";
+        private const string GroupLevels = "Levels and views";
+        private const string GroupChest = "Chest on the cart";
+        private const string GroupMorgue = "Morgue";
+        private const string GroupCorpses = "Corpses at the crossroads";
+
+        // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
+        internal static readonly Scenario[] Catalog =
+        {
+            new Scenario { Group = GroupCore, Name = "the per-mod API (ids, keys, data, owner rules)", Body = ApiIdentity },
+            new Scenario { Group = GroupCore, Name = "kept-with-save text, round trip", Body = RoundTrip },
+            new Scenario { Group = GroupCore, Name = "hitch and unhitch", Body = HitchUnhitch },
+            new Scenario { Group = GroupCore, Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
+            new Scenario { Group = GroupCore, Name = "shared colour textures", Body = SharedColours },
+            new Scenario { Group = GroupLevels, Name = "one new view per frame", Body = SpawnCap },
+            new Scenario { Group = GroupLevels, Name = "waking (view switched off)", Body = () => Wake(switchOff: true) },
+            new Scenario { Group = GroupLevels, Name = "waking (view frozen)", Body = () => Wake(switchOff: false) },
+            new Scenario { Group = GroupLevels, Name = "mounted while idle (Saddle Up's H)", Body = MountWhileIdle },
+            new Scenario { Group = GroupLevels, Name = "reused views", Body = Reuse },
+            new Scenario { Group = GroupLevels, Name = "foals keep up off screen", Body = FoalsFollow },
+            new Scenario { Group = GroupLevels, Name = "no leaks over spawn and remove", Body = Leaks },
+            new Scenario { Group = GroupLevels, Name = "frame time by mode", Body = FrameTimes, HidesPanel = true },
+            new Scenario { Group = GroupChest, Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },
+            new Scenario { Group = GroupChest, Name = "chest: zone out and in", Body = ChestZoneRoundTrip },
+            new Scenario { Group = GroupChest, Name = "chest: ten stand-ins", Body = ChestStandIns },
+            new Scenario { Group = GroupChest, Name = "chest: the ride (step 1)", Body = ChestRide },
+            new Scenario { Group = GroupChest, Name = "chest: the backstops", Body = ChestBackstops },
+            new Scenario { Group = GroupChest, Name = "chest: the save as the game writes it", Body = ChestSaveImage },
+            new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
+            new Scenario { Group = GroupMorgue, Name = "morgue: the door rule", Body = MorgueDecisions },
+            new Scenario { Group = GroupMorgue, Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
+            new Scenario { Group = GroupCorpses, Name = "corpses: drop and stand points", Body = CorpsePoints },
+            new Scenario { Group = GroupCorpses, Name = "corpses: one body left", Body = CorpseOneBody },
+            new Scenario { Group = GroupCorpses, Name = "corpses: the patches follow the switch", Body = CorpseSwitch },
+            new Scenario { Group = GroupCorpses, Name = "corpses: the notification, swapped once", Body = CorpseNotification },
+            new Scenario { Group = GroupCorpses, Name = "corpses: twelve bodies at once", Body = CorpseManyBodies },
+            new Scenario { Group = GroupCorpses, Name = "corpses: never rot", Body = CorpseNeverRot },
+            new Scenario { Group = GroupCorpses, Name = "corpses: an unknown point steps aside", Body = CorpseUnknownPoint },
+            new Scenario { Group = GroupCorpses, Name = "corpses: walk decisions", Body = CorpseWalkDecisions },
+        };
+
+        // The groups in the order they first appear in the catalog (after Catalog: static fields initialise in order).
+        internal static readonly string[] Groups = DistinctGroups();
+
+        private static string[] DistinctGroups()
+        {
+            var g = new List<string>();
+            foreach (Scenario s in Catalog)
+            {
+                if (!g.Contains(s.Group)) g.Add(s.Group);
+            }
+            return g.ToArray();
+        }
+
+        private static Scenario running;
 
         private static IEnumerator Run()
         {
@@ -72,10 +165,8 @@ namespace GK2DonkeyAPI
                 Mounts.Dismount("self-test");
                 yield return null;
             }
-            // The panel hidden while the tests run (its own cost would be in the frame times, its markers on screen); back,
-            // with the results, at the end. Its key still opens it, to abort.
-            bool panelWasHidden = Plugin.TuningWindowHidden;
-            Plugin.TuningWindowHidden = true;
+            // The panel stays up during the run (its Tests tab shows each scenario's progress); only the frame-time
+            // scenario hides it, its own cost would be in the measurement.
             bool lodOn = Lod.On, idleOff = Lod.IdleSwitchesOff;
             int perFrame = Lod.SpawnsPerFrame;
             // Where the keeper stood: he is put back there at the end. The run itself starts from the remembered spot
@@ -134,39 +225,27 @@ namespace GK2DonkeyAPI
                 if (!IsTestOwner(i.OwnerId) && !i.Ephemeral) before[i.FullId] = Sig(i);
             }
 
-            var scenarios = new List<Scenario>
+            // The scenarios of this run (all, one group, or one): their last results are cleared, the others' stand.
+            var scenarios = new List<Scenario>();
+            foreach (Scenario c in Catalog)
             {
-                new Scenario { Name = "the per-mod API (ids, keys, data, owner rules)", Body = ApiIdentity },
-                new Scenario { Name = "kept-with-save text, round trip", Body = RoundTrip },
-                new Scenario { Name = "hitch and unhitch", Body = HitchUnhitch },
-                new Scenario { Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
-                new Scenario { Name = "shared colour textures", Body = SharedColours },
-                new Scenario { Name = "one new view per frame", Body = SpawnCap },
-                new Scenario { Name = "waking (view switched off)", Body = () => Wake(switchOff: true) },
-                new Scenario { Name = "waking (view frozen)", Body = () => Wake(switchOff: false) },
-                new Scenario { Name = "mounted while idle (Saddle Up's H)", Body = MountWhileIdle },
-                new Scenario { Name = "reused views", Body = Reuse },
-                new Scenario { Name = "foals keep up off screen", Body = FoalsFollow },
-                new Scenario { Name = "no leaks over spawn and remove", Body = Leaks },
-                new Scenario { Name = "frame time by mode", Body = FrameTimes },
-                new Scenario { Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },
-                new Scenario { Name = "chest: zone out and in", Body = ChestZoneRoundTrip },
-                new Scenario { Name = "chest: ten stand-ins", Body = ChestStandIns },
-                new Scenario { Name = "chest: the ride (step 1)", Body = ChestRide },
-                new Scenario { Name = "chest: the backstops", Body = ChestBackstops },
-                new Scenario { Name = "chest: the save as the game writes it", Body = ChestSaveImage },
-                new Scenario { Name = "chest: a zombie using it", Body = ChestZombieGuard },
-                new Scenario { Name = "morgue: the door rule", Body = MorgueDecisions },
-                new Scenario { Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
-                new Scenario { Name = "corpses: drop and stand points", Body = CorpsePoints },
-                new Scenario { Name = "corpses: one body left", Body = CorpseOneBody },
-                new Scenario { Name = "corpses: the patches follow the switch", Body = CorpseSwitch },
-                new Scenario { Name = "corpses: the notification, swapped once", Body = CorpseNotification },
-                new Scenario { Name = "corpses: twelve bodies at once", Body = CorpseManyBodies },
-                new Scenario { Name = "corpses: never rot", Body = CorpseNeverRot },
-                new Scenario { Name = "corpses: an unknown point steps aside", Body = CorpseUnknownPoint },
-                new Scenario { Name = "corpses: walk decisions", Body = CorpseWalkDecisions },
-            };
+                if (pick == null || pick(c)) scenarios.Add(c);
+            }
+            pick = null;
+            bool full = scenarios.Count == Catalog.Length;
+            foreach (Scenario c in scenarios)
+            {
+                c.State = RunState.NotRun;
+                c.Pass = c.Fail = c.Warn = 0;
+                c.Elapsed = 0f;
+            }
+            RunCount = scenarios.Count;
+            RunDone = 0;
+            RunStarted = Time.unscaledTime;
+            if (!full)
+            {
+                Line($"[test] this run: {scenarios.Count} of {Catalog.Length} scenario(s): {string.Join("; ", scenarios.ConvertAll(c => c.Name))}");
+            }
             foreach (Scenario s in scenarios)
             {
                 if (abort)
@@ -175,13 +254,30 @@ namespace GK2DonkeyAPI
                 }
                 Status = $"Running: {s.Name}";
                 current = s.Name;
+                running = s;
+                s.State = RunState.Running;
+                s.Started = Time.unscaledTime;
                 Lod.On = true;
                 Lod.IdleSwitchesOff = idleOff;
                 Lod.SpawnsPerFrame = perFrame;
+                bool panelWasHidden = Plugin.TuningWindowHidden;
+                if (s.HidesPanel)
+                {
+                    Plugin.TuningWindowHidden = true;
+                }
                 yield return s.Body();
                 // Between scenarios: everything back.
                 yield return CleanUp();
+                if (s.HidesPanel)
+                {
+                    Plugin.TuningWindowHidden = panelWasHidden;
+                }
+                s.Elapsed = Time.unscaledTime - s.Started;
+                s.State = RunState.Done;
+                running = null;
+                RunDone++;
             }
+            running = null;
             Lod.On = lodOn;
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
@@ -216,7 +312,9 @@ namespace GK2DonkeyAPI
                 current = "corpse bodies left by a failed scenario";
                 yield return RemoveCorpseDrops(bodiesAtStart);
             }
-            if (!abort && fail == 0 && warn == 0)
+            // Only a full run that passed everywhere remembers its spot: a passing group or scenario says nothing about
+            // the others' ground.
+            if (full && !abort && fail == 0 && warn == 0)
             {
                 string remembered = scene.Id + "|" + home.x.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.y.ToString("F2", System.Globalization.CultureInfo.InvariantCulture) + "," + home.z.ToString("F2", System.Globalization.CultureInfo.InvariantCulture);
                 if (Plugin.SelfTestSpot.Value != remembered)
@@ -229,10 +327,9 @@ namespace GK2DonkeyAPI
             {
                 PutKeeper(origin, originFacing);
             }
-            string summary = $"{(abort ? "aborted" : "done")}: {pass} passed, {fail} failed, {warn} warning(s).";
+            string summary = $"{(abort ? "aborted" : "done")}{(full ? "" : $" ({scenarios.Count} of {Catalog.Length} scenarios)")}: {pass} passed, {fail} failed, {warn} warning(s).";
             Line("[test] " + summary);
             Status = summary;
-            Plugin.TuningWindowHidden = panelWasHidden;
         }
 
         // Runs a coroutine with its nested coroutines itself, so an exception anywhere ends only that scenario (FAIL)
@@ -287,11 +384,11 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogInfo(s);
         }
 
-        private static void Pass(string what) { pass++; Line($"[test] PASS {current}: {what}"); }
+        private static void Pass(string what) { pass++; if (running != null) running.Pass++; Line($"[test] PASS {current}: {what}"); }
 
-        private static void Fail(string what) { fail++; Line($"[test] FAIL {current}: {what}"); }
+        private static void Fail(string what) { fail++; if (running != null) running.Fail++; Line($"[test] FAIL {current}: {what}"); }
 
-        private static void Warn(string what) { warn++; Line($"[test] WARN {current}: {what}"); }
+        private static void Warn(string what) { warn++; if (running != null) running.Warn++; Line($"[test] WARN {current}: {what}"); }
 
         private static void Info(string what) => Line($"[test] INFO {current}: {what}");
 

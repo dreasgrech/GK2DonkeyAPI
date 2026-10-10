@@ -543,7 +543,7 @@ namespace GK2DonkeyAPI
             TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
             SelfTestSpot = Config.Bind("Debug", "SelfTestSpot", "",
-                "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a run with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
+                "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", false,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
 

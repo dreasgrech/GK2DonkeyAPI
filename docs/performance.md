@@ -14,7 +14,7 @@ other donkeys and carts; 43 of them foals. The game runs at a frame cap of about
   so they aren't in Panel.
 
 **Where to read it:**
-- The panel's Debug tab, "Performance".
+- The panel's Performance tab (its own tab since 2026-10-10; it was a section of the Debug tab).
 - `[perf]` lines in the log every 10 s, once that switch is on. They keep coming with the panel closed.
 
 **Two experiments,** both for the session only:
@@ -47,7 +47,7 @@ other donkeys and carts; 43 of them foals. The game runs at a frame cap of about
     had been 10–19 lines a second.
 - **Pass 2:**
   - **World markers:** text and size are cached (0.56 → 0.05 ms).
-  - **The Debug tab's summary** is built once a second.
+  - **The panel's performance summary** (the Performance tab) is built once a second.
   - **Writing a standing view's position and facing only when they changed** was tried and reverted. It saved 0.02 ms,
     and every write is kept as it was.
 - **Foal behaviour found during the measuring:** foals disappearing and sprinting in crowded families.
@@ -100,7 +100,8 @@ not kept with the save. The game was still at its 117 fps cap, because uncapping
 - **Hysteresis:** leaving Active needs 3 more units and 10% more margin.
 - **New views:** at most 1 per frame, nearest first (`Mount.ProcessSpawnQueue`). That covers spawns from the API, a
   restore at load, and waking up.
-- **Panel:** every number is tunable for the session on the Debug tab ("Levels"), with a switch to turn levels off.
+- **Panel:** every number is tunable for the session on the Debug tab ("Levels"), with a switch to turn levels off;
+  the readout is on the Performance tab.
   The `[perf]` line has the counts per level and the views made and released per second. Compact rows say "idle (off
   screen)" or "asleep (far)".
 - **For API users:** an asleep donkey has no view, so `IsReady` is false and `Ride` refuses. `MoveTo` or

@@ -327,7 +327,7 @@ Carry-through is viable and documented for a later version. v1 refuses the door.
 
 **Status 2026-10-06:** the definitions dump (1) is done, see §1. Step 2 passed by hand (the chest moved 4 m east,
 south and north, drawn and openable at each new spot, and back; the first "disappearance" was the chest moved
-behind the yard's north wall). Steps 2 to 5 are now **self-tests** ("Run self-tests" on the Debug tab,
+behind the yard's north wall). Steps 2 to 5 are now **self-tests** (the panel's Tests tab,
 `Dev/SelfTest.Chest.cs`): each scenario builds its own empty `chest_rough` beside the keeper, runs the move through
 `ChestProbe`'s pieces, checks, and removes the chest again, so no building, walking or reload is needed:
 - *chest: hide, move, show (and off screen)*: data and view at the new spot, parts drawn, registered, held by a

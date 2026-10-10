@@ -22,17 +22,25 @@ A fix can't pass because the case happened not to show.
    be reached. **A run that passes everywhere remembers its spot** (`Debug.SelfTestSpot` in the API's cfg, `scene|x,y,z`):
    the next run in that scene moves the keeper there first and puts him back where he stood at the end, so after one
    good run it no longer matters where you start it from.
-2. Open the panel (F11), go to the **Debug** tab, then **Self-tests**, and press **Run self-tests**. It takes about 4
-   minutes.
+2. Open the panel (F11), go to the **Tests** tab and press **Run all**. It takes about 4 minutes. The tab lists every
+   scenario by group (API and carts; levels and views; chest; morgue; corpses), each with **Run** and each group with
+   **Run group**: a group or one scenario alone has the same start and finish as the full run (the test spot, the
+   cleanup between scenarios, the world's own donkeys checked), and the others' last results stay on the tab. Only a
+   full run remembers its spot (below). The summary of a partial run says so (`done (3 of 30 scenarios): ...`).
 3. **Don't touch the keys while it runs.** The tests move the keeper, ride and dismount. **Abort** stops after the
    current step.
-4. **Results:** `[test] PASS`, `FAIL`, `WARN` and `INFO` lines in `BepInEx\LogOutput.log`, and a summary,
-   `[test] done: N passed, M failed, K warning(s)`. The panel shows the summary and the last failures and warnings.
+4. **Progress and results:** the panel stays up during the run (only the frame-time scenario hides it, its own cost
+   would be in the measurement): a bar and "k of N scenarios done", and every scenario's row says `running, 12 s`,
+   then `PASS 9 (14 s)`, `WARN 1, 3 passed`, or `FAIL 1, 8 passed`. In `BepInEx\LogOutput.log`: `[test] PASS`,
+   `FAIL`, `WARN` and `INFO` lines and a summary, `[test] done: N passed, M failed, K warning(s)`. The tab ends with
+   the failures and warnings of the last run.
 
 **Safety:**
 - **Test donkeys** belong to `dreas.gk2.donkeyapi.selftest`. They're never kept with the save and are removed after each
   scenario.
 - **The keeper** is put back where he stood, facing the same way, after every scenario.
+- **The panel's state** (`Debug.TuningWindowHidden`) is left as it was: hidden for the frame-time scenario only, and
+  back afterwards.
 - **Nothing is saved.**
 - **The level settings** are restored at the end.
 
