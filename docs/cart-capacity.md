@@ -293,6 +293,8 @@ boxes), `docs/zombies-on-cart.md` 53, 120-124, and the "two items" mentions acro
   style's defaults put the pole at the back (`LanternAlong` 0.47), so the lean went towards the lamp: it is now the
   setting `CargoLayerShift` (per layer, positive = back, default -0.03 towards the donkey), on the panel's packer
   section with the other four values.
+- **Tuning stacks by hand** is its own investigation: [cargo-layout-layers.md](cargo-layout-layers.md) (pairwise
+  relations, beside and on top, as the unit of tuning; the panel showing the relations a load is made of).
 - **Still open:** the look in game (four crates, four logs, two bodies and two logs, four zombies; the lantern pole;
   the sheet's two-item pictures unchanged), a door with four aboard, a save with a full cart, and the shipped default
   (2 for now). Option B (follow the hands) is not built; it would be one more choice in the same row.

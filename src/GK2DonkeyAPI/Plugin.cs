@@ -6,6 +6,8 @@ using GK2DonkeyAPI.Api;
 using HarmonyLib;
 using UnityEngine;
 
+[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("PackerScan")] // tests/PackerScan runs the cargo packer without the game
+
 namespace GK2DonkeyAPI
 {
     // Everything that positions and animates rider and donkey, one complete set per style ([Ride] and [Cart]
@@ -424,6 +426,7 @@ namespace GK2DonkeyAPI
         // [Debug]
         internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<string> SelfTestSpot;
+        internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<KeyCode> TuningWindowKey;
         internal static bool TuningWindowHidden; // toggled by TuningWindowKey; starts as remembered (TuningWindowHiddenCfg); the self-tests hide it for the run only
@@ -548,6 +551,8 @@ namespace GK2DonkeyAPI
                 "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
             TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
+            CargoTabTint = Config.Bind("Debug", "CargoTabTint", true,
+                "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
             SelfTestSpot = Config.Bind("Debug", "SelfTestSpot", "",
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = Config.Bind("Debug", "TuningKeys", false,

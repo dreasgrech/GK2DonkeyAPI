@@ -88,7 +88,7 @@ a failure of the mod. Try another spot.
 | Chest: a zombie using it | a caretaker staged by data in the zombie system's lookup (never in a scene, never saved) with the chest as its target, then a conveyor transporter | refused with "A zombie is using this chest." by the hint's reason and the press, the chest shown and zoned; target cleared, liftable; the zombie gone again, the list's count as before |
 | Morgue: the door rule | `MorgueHandover.Decide` alone | the morgue area decides; the morgue door decides before the area is known; another area and door, nothing known, an empty list: no; case and spaces don't matter; the setting in effect names the morgue |
 | Morgue: a corpse off the parked cart into the hands | a test cart beside the keeper with a generated body on it; `HandOver` with the switch off, then on, then a second body | off: the body stays on the cart; on: it is in the keeper's hands and off the cart; the second body stays when the hands are full (one slot; an INFO with more); `cur_bodies_count` unchanged; the bodies removed again, the cart removed. The hand-over is the game's own pickup, so its `AddOverhead body_corpse` trigger fires, as it does whenever the keeper picks up a body |
-| Cargo: more than two items | a standing test cart; `CartSlots` overridden to 4; four plain items (wood, stone); unhitch and hitch; lowered to 2; two items off | the override applies to the standing cart at once; four taken, a fifth refused; two layers of two, the upper one standing on the lower; the free cart takes all four on a 4-slot inventory and the re-made inventory after hitching has all four back (nothing dropped); lowered to 2: the size stays at the load and a fifth is still refused; two off: 2 slots; the override cleared, the items removed, both carts removed |
+| Cargo: more than two items | a standing test cart; `CartSlots` overridden to 4; four plain items (wood, stone); unhitch and hitch; lowered to 2; two items off | the override applies to the standing cart at once; four taken, a fifth refused; two layers of two, the upper one standing on the lower; the free cart takes all four on a 4-slot inventory and the re-made inventory after hitching has all four back (nothing dropped); lowered to 2: the size stays at the load and a fifth is still refused; two off: 2 slots; the relations recorded (bed, beside, on its support, beside above) and the relative places consistent; isolating two of the four draws them as a two-item stack, then beside, with all four still on the cart, and clearing draws four again; the override cleared, the items removed, both carts removed |
 
 **After every scenario that moves the keeper:** every donkey in the world with its view on has a view of its own size,
 and its cart parts match whether it has a cart. That covers reused views taken by any donkey, not only the test's.
@@ -107,6 +107,13 @@ number, scene, kind, keep setting and key. No test donkey is left behind.
   destination point), or why not. Done by hand 2026-10-10: the door signal decided (`tp_RT_morgue_exit`, preset
   `dungeons`) on the dismount frame, with control not yet back, so the body was in his hands before the screen came
   back; the cart stayed at (24.2, 3.6, 20.5) with 0 items.
+
+## Offline: PackerScan
+
+`tests/PackerScan` (`dotnet run -c Release`, after a Release build of the mod) runs the cargo packer (`CargoPacker.cs`) and the
+panel's relation edits without the game: one and two items against the pre-layer algorithm, the Tune loop as a fixed point,
+a slider moving exactly its relation, determinism, forced relations, sanity. Run it with the other test projects after any
+change to the packer, the layout file format or the panel's cargo editors ([cargo-layout-layers.md](cargo-layout-layers.md)).
 
 ## Runs
 

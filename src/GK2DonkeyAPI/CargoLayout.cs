@@ -18,14 +18,18 @@ namespace GK2DonkeyAPI
     //                 alone_along/alone_up/alone_across: offsets when it is the only item on the cart (optional;
     //                 added 2026-09-30, because a correction tuned for two logs side by side also moved one log).
     //                 top_along/top_up/top_across: offsets when it is stacked on top of another item.
-    //   [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto|side|along|stack, and
-    //                 a_along/a_up/a_across, b_along/b_up/b_across: a TUNED pair (added 2026-09-30). The exact
-    //                 place of item a and of item b (footprint centre along and across, bottom height above the cart
-    //                 floor), written by the panel the first time either item of the pair is moved. A tuned pair is
-    //                 frozen: class entries, alone offsets, gap, overhang, nestle, the mode and the load order no
-    //                 longer change it; only the floor (CargoBedDepth) moves it, with everything else. Positions
-    //                 belong to a and b by id, not to "first" and "second", so which item was picked up first does
-    //                 not matter.
+    //   [pair <a>+<b>] applies to that pair of size classes in either order. Two RELATIONS between the two, each
+    //                 tunable on its own (docs/cargo-layout-layers.md, 2026-10-10; before that a pair held one):
+    //                 beside_a_*/beside_b_*: the two lying beside each other (side or along), the exact place of a
+    //                 and of b (footprint centre along and across, bottom height above the layer's floor);
+    //                 top_a_*/top_b_*: b on top of a, both places as a two-item cart shows them; inside a bigger
+    //                 load b is placed relative to a (b minus a), wherever a is.
+    //                 mode = auto|side|along|stack: which relation a two-item cart shows (auto: the packer decides).
+    //                 A tuned relation is frozen: class entries, alone offsets, gap, overhang, nestle, the layer
+    //                 shift and the load order no longer change it; only the floor (CargoBedDepth) moves it.
+    //                 Positions belong to a and b by id, not to "first" and "second", so which item was picked up
+    //                 first does not matter. Files of version 1 (a_*/b_*: one set) are read: the set becomes the
+    //                 relation of the pair's mode.
     //   Lookup is deterministic: an exact id (or id pair) wins over a size-class match; among class matches the
     //   first in the file wins, and a second one is reported once in the log (it would never apply).
     //
@@ -39,6 +43,11 @@ namespace GK2DonkeyAPI
     {
         public const float SizeTolerance = 0.05f;
         public const string RepoFileName = "cargo-layout.cfg";
+
+        // The cargo sheet's hold on how a pair is laid out: "beside" (the pair's own mode, or the packer's choice) or
+        // "stack" (on top), so every pair is pictured in both relations; null normally. A rig's isolation
+        // (Cargo.Rig.Isolate) does the same for one cart.
+        public static string ForcedRelation;
 
         // True on the machine with the sources: edits are saved to the repo file.
         public static bool SavesToRepo => Defaults.RepoFile(RepoFileName) != null;
@@ -92,10 +101,41 @@ namespace GK2DonkeyAPI
         public class PairEntry
         {
             public string A, B;
-            public string Mode = "auto"; // auto | side (across) | along (end to end) | stack
-            public bool Tuned;           // PosA / PosB are the pair's exact layout
-            public Vector3 PosA, PosB;   // along, height above the floor, across
-            public bool IsEmpty => Mode == "auto" && !Tuned;
+            public string Mode = "auto"; // auto | side (across) | along (end to end) | stack: what a two-item cart shows
+            // The two relations. Beside: both places in the layer's frame (along, height above the layer floor,
+            // across). On top: a below, b above, both places as a two-item cart shows them (b is applied relative to a).
+            public bool BesideTuned, TopTuned;
+            public Vector3 BesideA, BesideB, TopA, TopB;
+            public bool IsEmpty => Mode == "auto" && !BesideTuned && !TopTuned;
+
+            public static bool IsStack(string mode) => mode == "stack";
+
+            // The relation a two-item cart in this mode uses.
+            public bool TunedFor(string mode) => IsStack(mode) ? TopTuned : BesideTuned;
+            public Vector3 PosAFor(string mode) => IsStack(mode) ? TopA : BesideA;
+            public Vector3 PosBFor(string mode) => IsStack(mode) ? TopB : BesideB;
+
+            public void SetFor(string mode, Vector3 a, Vector3 b)
+            {
+                if (IsStack(mode)) { TopTuned = true; TopA = a; TopB = b; }
+                else { BesideTuned = true; BesideA = a; BesideB = b; }
+            }
+
+            public void SetPos(string mode, bool isA, Vector3 v)
+            {
+                if (IsStack(mode)) { TopTuned = true; if (isA) TopA = v; else TopB = v; }
+                else { BesideTuned = true; if (isA) BesideA = v; else BesideB = v; }
+            }
+
+            public void ClearFor(string mode)
+            {
+                if (IsStack(mode)) { TopTuned = false; TopA = TopB = Vector3.zero; }
+                else { BesideTuned = false; BesideA = BesideB = Vector3.zero; }
+            }
+
+            // Version 1 of the file: one set, a_*/b_*, belonging to the pair's mode.
+            internal bool legacyTuned;
+            internal Vector3 legacyA, legacyB;
         }
 
         public static readonly Dictionary<string, ItemEntry> Items = new Dictionary<string, ItemEntry>(StringComparer.Ordinal);
@@ -207,14 +247,44 @@ namespace GK2DonkeyAPI
                     switch (key)
                     {
                         case "mode": pair.Mode = val.ToLowerInvariant(); break;
-                        case "a_along": pair.PosA.x = f; pair.Tuned = true; break;
-                        case "a_up": pair.PosA.y = f; pair.Tuned = true; break;
-                        case "a_across": pair.PosA.z = f; pair.Tuned = true; break;
-                        case "b_along": pair.PosB.x = f; pair.Tuned = true; break;
-                        case "b_up": pair.PosB.y = f; pair.Tuned = true; break;
-                        case "b_across": pair.PosB.z = f; pair.Tuned = true; break;
+                        case "beside_a_along": pair.BesideA.x = f; pair.BesideTuned = true; break;
+                        case "beside_a_up": pair.BesideA.y = f; pair.BesideTuned = true; break;
+                        case "beside_a_across": pair.BesideA.z = f; pair.BesideTuned = true; break;
+                        case "beside_b_along": pair.BesideB.x = f; pair.BesideTuned = true; break;
+                        case "beside_b_up": pair.BesideB.y = f; pair.BesideTuned = true; break;
+                        case "beside_b_across": pair.BesideB.z = f; pair.BesideTuned = true; break;
+                        case "top_a_along": pair.TopA.x = f; pair.TopTuned = true; break;
+                        case "top_a_up": pair.TopA.y = f; pair.TopTuned = true; break;
+                        case "top_a_across": pair.TopA.z = f; pair.TopTuned = true; break;
+                        case "top_b_along": pair.TopB.x = f; pair.TopTuned = true; break;
+                        case "top_b_up": pair.TopB.y = f; pair.TopTuned = true; break;
+                        case "top_b_across": pair.TopB.z = f; pair.TopTuned = true; break;
+                        // version 1: one set for the pair's mode
+                        case "a_along": pair.legacyA.x = f; pair.legacyTuned = true; break;
+                        case "a_up": pair.legacyA.y = f; pair.legacyTuned = true; break;
+                        case "a_across": pair.legacyA.z = f; pair.legacyTuned = true; break;
+                        case "b_along": pair.legacyB.x = f; pair.legacyTuned = true; break;
+                        case "b_up": pair.legacyB.y = f; pair.legacyTuned = true; break;
+                        case "b_across": pair.legacyB.z = f; pair.legacyTuned = true; break;
                     }
                 }
+            }
+            // Version 1 pairs: the one set becomes the relation of the pair's mode (a stack pair: on top; side,
+            // along or auto: beside). Saved in the new form at the next save.
+            int migrated = 0;
+            foreach (PairEntry pe in Pairs)
+            {
+                if (pe.legacyTuned && !pe.TunedFor(pe.Mode))
+                {
+                    pe.SetFor(pe.Mode, pe.legacyA, pe.legacyB);
+                    migrated++;
+                }
+                pe.legacyTuned = false;
+            }
+            if (migrated > 0)
+            {
+                Plugin.Log.LogInfo($"Cargo layout: {migrated} pair(s) read from a version 1 file (one set per pair); they are the relation of their mode now and are written in the new form at the next save.");
+                MarkChanged();
             }
         }
 
@@ -227,8 +297,10 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
-            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order: mode = auto | side (across the bed) | along (end to end) | stack.");
-            sb.AppendLine("#   a_* / b_*: a tuned pair, the exact place of item a and item b (along, height above the floor, across); frozen against everything but the floor.");
+            sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order. Two relations, each tunable on its own:");
+            sb.AppendLine("#   beside_a_* / beside_b_*: the two lying beside each other (side or along), the exact place of a and b (along, height above the layer's floor, across);");
+            sb.AppendLine("#   top_a_* / top_b_*: b on top of a, both places as a two-item cart shows them; inside a bigger load b is placed relative to a.");
+            sb.AppendLine("#   mode = auto | side (across the bed) | along (end to end) | stack: which relation a two-item cart shows. A tuned relation is frozen against everything but the floor.");
             sb.AppendLine("# Exact ids win over size-class matches; among class matches the first in this file wins.");
             sb.AppendLine("#");
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
@@ -236,7 +308,7 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# slab (stone, iron_ore_2h); no mesh (marble -> shown with the slab mesh, box_engineering_mechanism -> generic crate);");
             sb.AppendLine("# zombie (body_zombie: the game's lying zombie, one body for all ten heads; a class of its own, matched by id only);");
             sb.AppendLine("# chest (chest_rough / chest / chest_good riding on the cart, CartChest.cs: a class each, matched by id only; alone_* places it).");
-            sb.AppendLine("version = 1");
+            sb.AppendLine("version = 2");
             foreach (string id in itemOrder)
             {
                 ItemEntry e = Items[id];
@@ -263,10 +335,17 @@ namespace GK2DonkeyAPI
                 }
                 sb.AppendLine().AppendLine("[pair " + p.A + "+" + p.B + "]");
                 sb.AppendLine("mode = " + p.Mode);
-                if (p.Tuned)
+                // all six of a relation, zeros too: their presence is what makes it tuned
+                if (p.BesideTuned)
                 {
-                    // all six, zeros too: their presence is what makes the pair tuned
-                    foreach (var kv in new (string, float)[] { ("a_along", p.PosA.x), ("a_up", p.PosA.y), ("a_across", p.PosA.z), ("b_along", p.PosB.x), ("b_up", p.PosB.y), ("b_across", p.PosB.z) })
+                    foreach (var kv in new (string, float)[] { ("beside_a_along", p.BesideA.x), ("beside_a_up", p.BesideA.y), ("beside_a_across", p.BesideA.z), ("beside_b_along", p.BesideB.x), ("beside_b_up", p.BesideB.y), ("beside_b_across", p.BesideB.z) })
+                    {
+                        sb.AppendLine(kv.Item1 + " = " + kv.Item2.ToString("0.###", CultureInfo.InvariantCulture));
+                    }
+                }
+                if (p.TopTuned)
+                {
+                    foreach (var kv in new (string, float)[] { ("top_a_along", p.TopA.x), ("top_a_up", p.TopA.y), ("top_a_across", p.TopA.z), ("top_b_along", p.TopB.x), ("top_b_up", p.TopB.y), ("top_b_across", p.TopB.z) })
                     {
                         sb.AppendLine(kv.Item1 + " = " + kv.Item2.ToString("0.###", CultureInfo.InvariantCulture));
                     }

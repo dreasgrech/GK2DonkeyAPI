@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><ImplicitUsings>enable</ImplicitUsings><Nullable>disable</Nullable></PropertyGroup>
+<!-- The cargo packer (CargoPacker.cs) and the panel's relation edits, run without the game: the mod DLL as built, plus Unity's maths. -->
+<ItemGroup>
+<Reference Include="GK2DonkeyAPI"><HintPath>..\..\src\GK2DonkeyAPI\bin\Release\netstandard2.1\GK2DonkeyAPI.dll</HintPath></Reference>
+<Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath></Reference>
+<Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath></Reference>
+</ItemGroup></Project>

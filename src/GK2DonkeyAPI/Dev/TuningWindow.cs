@@ -16,7 +16,7 @@ namespace GK2DonkeyAPI
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill;
+        private static GUIStyle label, header, step, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill;
 
         // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
         // which shows again once the override ends); else yellow when it differs from its mod default.
@@ -37,9 +37,9 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources" };
-        private const int TabInstances = 5, TabDebug = 6, TabTests = 7, TabPerformance = 8;
-        private const int TabsPerRow = 5; // two rows: ten names in one row of 470 would be cut short
+        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources" };
+        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9;
+        private const int TabsPerRow = 6; // two rows: eleven names in one row of 470 would be cut short
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -141,10 +141,15 @@ namespace GK2DonkeyAPI
                 return;
             }
             appliedFontScale = fontScale;
-            label = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale) };
-            small = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11f * fontScale), wordWrap = true };
+            // Rich text on the text styles: a word can carry its own colour (<color=#8ee68e>tuned</color>), which is how
+            // the Cargo tab marks states; section headers are gold on every tab so a skim finds them, steps are blue.
+            label = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), richText = true };
+            small = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(11f * fontScale), wordWrap = true, richText = true };
             small.normal.textColor = new Color(0.75f, 0.75f, 0.75f);
-            header = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), fontStyle = FontStyle.Bold };
+            header = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), fontStyle = FontStyle.Bold, richText = true };
+            header.normal.textColor = new Color(1f, 0.84f, 0.5f);
+            step = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(14f * fontScale), fontStyle = FontStyle.Bold, richText = true };
+            step.normal.textColor = new Color(0.55f, 0.82f, 1f);
             wrapToggle = new GUIStyle(GUI.skin.toggle) { wordWrap = true, fontSize = Mathf.RoundToInt(13f * fontScale) };
             changed = new GUIStyle(label);
             changed.normal.textColor = new Color(1f, 0.85f, 0.3f);
@@ -388,9 +393,10 @@ namespace GK2DonkeyAPI
                 {
                     case 0: DrawGeneral(); break;
                     case 1: DrawRiding(); break;
-                    case 2: DrawLantern(); break;
-                    case 3: DrawSounds(); break;
-                    case 4: DrawColors(); break;
+                    case TabCargo: DrawCargoTab(); break;
+                    case 3: DrawLantern(); break;
+                    case 4: DrawSounds(); break;
+                    case 5: DrawColors(); break;
                     case TabInstances: DrawInstances(); break;
                     case TabDebug: DrawDebug(); break;
                     case TabTests: DrawTests(); break;
@@ -593,23 +599,7 @@ namespace GK2DonkeyAPI
                     GUILayout.Label(CartSlopeNote(s.CartSlope.Value) + " " + Mount.CartSlopeStatus(), small);
                 }
 
-                Header("Cart cargo: the packer");
-                GUILayout.Label("Every item's box is measured; the larger footprint goes to the bottom or far side; two items lie side by side when they fit across the bed (end to end when only the lengths fit), else the second stacks. Three and more items (General: cart capacity) go on in layers of up to two by the same rules, each layer moved along the cart by the layer shift. These values rule every combination.", small);
-                FloatSlider("Cargo floor below the rail top (bed depth)", s.CargoBedDepth, -0.6f, 0.3f, 2, Cargo.RefreshViews);
-                FloatSlider("Gap between side-by-side items", s.CargoSideGap, 0f, 0.3f, 2, Cargo.RefreshViews);
-                FloatSlider("Overhang allowed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
-                FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
-                FloatSlider("Layer shift: each layer above the bed moved along the cart, per layer (+ back, - towards the donkey)", s.CargoLayerShift, -0.3f, 0.3f, 2, Cargo.RefreshViews);
-                Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
-                Toggle("Cargo rocks with the cart while it rolls (as the game's loaded corpse does)", s.CargoSwaysWithCart, null);
-                Toggle("Set items down behind the cart (off = in front of the keeper, where the next press picks them up again)", s.CargoSetDownBehindCart, null);
-                if (s.CargoSetDownBehindCart.Value)
-                {
-                    FloatSlider("   gap between the cart and the item (its own length is added)", s.CargoSetDownGap, 0f, 1.5f, 2, null);
-                }
-                GUILayout.Label($"While riding, anything you pick up goes straight onto the cart and piles, tables and graves take from it. The interact key with nothing in front of you sets the top item down, behind the cart or in front of you (the switch above). {Cargo.Summary()}", small);
-                DrawCargoCorrections();
-                GUILayout.Label("The lantern pole and its lamp have their own tab.", small);
+                GUILayout.Label("The cargo (its places, the packer's rules, its behaviour) and the lantern have their own tabs.", small);
             }
         }
 
@@ -1533,120 +1523,6 @@ namespace GK2DonkeyAPI
         // entries' bottom/beside and on-top values stay in the file as the starting point of untuned pairs and are no
         // longer edited here, so tuning one pair can never move another. The packer re-runs on every change, and the
         // layout file is saved shortly after (CargoLayout.MarkChanged / SaveIfDue).
-        private static void DrawCargoCorrections()
-        {
-            Header("Cart cargo: corrections (cargo-layout.cfg)");
-            GUILayout.Label("One item on the cart: its 'alone' place, used only when it is alone. Two items: that pair's own layout. Moving either item tunes the pair: both items' places are stored for this pair of item sizes and nothing else changes them any more (the class values, the alone places, the four packer values above, the mode, which item came first). Only the cargo floor still moves them, with everything. " + CargoLayout.Summary(), small);
-            if (Cargo.Placed.Count == 0)
-            {
-                GUILayout.Label("Load items onto the cart to edit their corrections.", small);
-            }
-            // Work on a snapshot: a slider change re-runs the packer, which rebuilds Cargo.Placed; re-pack once after.
-            var placed = new System.Collections.Generic.List<Cargo.PlacedItem>(Cargo.Placed);
-            bool refresh = false;
-            if (placed.Count == 1)
-            {
-                Cargo.PlacedItem p = placed[0];
-                CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
-                GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label($"{p.Id} alone (class entry '{e.Id}', box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00})", label);
-                // An entry without its own alone place starts from its bottom/beside values, where it sits now.
-                if (!e.HasAlone)
-                {
-                    e.HasAlone = true;
-                    e.Alone = e.Base;
-                }
-                refresh |= RawSlider("  along (tail - / head +)", ref e.Alone.x, -0.5f, 0.5f);
-                refresh |= RawSlider("  up", ref e.Alone.y, -0.4f, 0.4f);
-                refresh |= RawSlider("  across (camera - / away +)", ref e.Alone.z, -0.5f, 0.5f);
-                GUILayout.EndVertical();
-            }
-            else if (placed.Count == 2)
-            {
-                Cargo.PlacedItem p0 = placed[0], p1 = placed[1];
-                CargoLayout.PairEntry pair = CargoLayout.EditPair(p0.Id, p1.Id);
-                bool firstIsA = CargoLayout.FirstIsA(pair, p0.Id, p1.Id);
-                GUILayout.BeginVertical(GUI.skin.box);
-                GUILayout.Label($"Pair {pair.A} + {pair.B} (these item sizes, either order): {(pair.Tuned ? "tuned" : "automatic")}, {Cargo.LastPairMode}", label);
-                // The arrangement row is always there. Automatic pair: it picks how the packer lays the two out. Tuned
-                // pair: a click starts the pair over in that arrangement (the tuning is forgotten, the packer lays it
-                // out, and the next move tunes it again from there); the highlighted button is the tuned layout's.
-                GUILayout.BeginHorizontal();
-                GUILayout.Label(pair.Tuned ? "  start over as" : "  arrangement", label, Wd(120f));
-                foreach (string mode in new[] { "auto", "side", "along", "stack" })
-                {
-                    bool on = pair.Mode == mode;
-                    // A click is a change of the toggle's state (a toggle that is on returns true on every event;
-                    // taking that as a click started a tuned pair over every frame, found 2026-09-30). Automatic: only
-                    // switching a button on counts. Tuned: a click on any button, the highlighted one too.
-                    bool now = GUILayout.Toggle(on, mode, GUI.skin.button, Wd(70f));
-                    bool clicked = now != on && (pair.Tuned || now);
-                    if (clicked)
-                    {
-                        if (pair.Tuned)
-                        {
-                            pair.Tuned = false;
-                            pair.PosA = pair.PosB = Vector3.zero;
-                            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} back to automatic ({mode}).");
-                        }
-                        pair.Mode = mode;
-                        refresh = true;
-                    }
-                }
-                GUILayout.EndHorizontal();
-                GUILayout.Label(pair.Tuned
-                    ? "  Tuned: exactly this layout from now on; each item moves on its own, also when stacked. A button above forgets the tuning and lays the pair out again that way (auto: the packer decides)."
-                    : "  Automatic: pick the arrangement (auto: across the bed when both widths fit, else end to end, else stacked; side = across, along = end to end, stack = on top). Then move an item: that tunes the pair, starting from this layout.", small);
-                // As the pair is arranged, never by the live heights: stacked, the item the packer put on top is listed
-                // first, as on screen (the packer's order of the two is fixed: footprint, id, load order); side by side or
-                // end to end, in packing order. Ordered by the current heights, the blocks swapped under the mouse
-                // mid-drag (the drag went on with the other item, which then leapfrogged) and re-sorted after every
-                // release (2026-10-05). k stays the packing index, which is what maps a block to PosA or PosB.
-                bool topFirst = p1.OnTop;
-                for (int n = 0; n < 2; n++)
-                {
-                    int k = topFirst ? 1 - n : n;
-                    Cargo.PlacedItem p = k == 0 ? p0 : p1;
-                    Cargo.PlacedItem other = k == 0 ? p1 : p0;
-                    Vector3 v = p.Pos;
-                    // A fixed name, never the current height: an "(on top)" / "(bottom)" read from the heights flipped
-                    // whenever one item's up passed the other's, which looked like the items swapping (2026-10-05).
-                    // Two of the same item are told apart by their block's place, which is fixed too.
-                    string tag = p.Id == other.Id ? $" ({n + 1})" : "";
-                    GUILayout.Label($"  {p.Id}{tag}: place in this pair (height above the cargo floor)", label);
-                    bool moved = false;
-                    moved |= RawSlider("    along (tail - / head +)", ref v.x, -0.6f, 0.6f, canReset: false);
-                    moved |= RawSlider("    up", ref v.y, -0.3f, 1.0f, canReset: false);
-                    moved |= RawSlider("    across (camera - / away +)", ref v.z, -0.5f, 0.5f, canReset: false);
-                    if (moved)
-                    {
-                        if (!pair.Tuned)
-                        {
-                            // freeze where both are now, then apply this move
-                            pair.Tuned = true;
-                            pair.Mode = string.IsNullOrEmpty(Cargo.LastPairMode) ? pair.Mode : Cargo.LastPairMode;
-                            pair.PosA = firstIsA ? p0.Pos : p1.Pos;
-                            pair.PosB = firstIsA ? p1.Pos : p0.Pos;
-                            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} tuned ({pair.Mode}).");
-                        }
-                        if ((k == 0) == firstIsA) pair.PosA = v; else pair.PosB = v;
-                        refresh = true;
-                    }
-                }
-                GUILayout.EndVertical();
-            }
-            else
-            {
-                GUILayout.Label($"{placed.Count} items on the cart: laid out in layers of up to two by the packer's own rules (a tuned pair applies to exactly two items). Load one or two items to tune their places. Layout: {Cargo.LastLayoutNote}", small);
-            }
-            if (refresh)
-            {
-                Cargo.RefreshViews();
-                CargoLayout.MarkChanged();
-            }
-            GUILayout.Label((placed.Count == 1 ? "Right-click an alone slider to zero it. " : "") + (CargoLayout.SavesToRepo ? "Saved to the repo's cargo-layout.cfg as you edit." : "Not saved on this machine (no source folder)."), small);
-        }
-
         // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.
         private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format)
         {

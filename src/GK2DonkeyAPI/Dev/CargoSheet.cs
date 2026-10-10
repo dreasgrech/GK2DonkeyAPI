@@ -62,6 +62,7 @@ namespace GK2DonkeyAPI
             runningInv = null;
             Running = false;
             Cargo.SlotFloor = 0;
+            CargoLayout.ForcedRelation = null;
             Mount.ApplyCartSlots("the sheet aborted");
             Status = "aborted: " + why;
             Plugin.Log.LogInfo("[sheet] aborted (" + why + "); test items discarded.");
@@ -69,13 +70,13 @@ namespace GK2DonkeyAPI
 
         public static string Start()
         {
-            return Begin(Run());
+            return Status = Begin(Run()); // a refusal shows next to the button, not only in the log
         }
 
         // Second mode: every spawnable item alone, grouped by the shape bucket the code assigns, to prove the buckets.
         public static string StartShapes()
         {
-            return Begin(RunShapes());
+            return Status = Begin(RunShapes());
         }
 
         private static string Begin(IEnumerator routine)
@@ -322,6 +323,7 @@ namespace GK2DonkeyAPI
                 }
                 Running = false;
                 Cargo.SlotFloor = 0;
+                CargoLayout.ForcedRelation = null;
                 Mount.ApplyCartSlots("the sheet ended");
             }
         }
@@ -550,11 +552,12 @@ namespace GK2DonkeyAPI
                 {
                     log.AppendLine("no stand-in zombies (the game has no body definition to make one from); zombies left out.");
                 }
-                Status = $"0 / {reps.Count * (reps.Count + 1)}";
+                Status = $"0 / {reps.Count * (2 * reps.Count + 1)}";
                 Plugin.Log.LogInfo($"[sheet] {reps.Count} size buckets: {string.Join(" ", reps)}");
 
-                var cells = new Dictionary<string, string>(); // "a|b" -> file name
-                int done = 0, total = reps.Count * (reps.Count + 1);
+                var cells = new Dictionary<string, string>();    // "a|b" -> file name: alone, or the pair beside each other
+                var cellsTop = new Dictionary<string, string>(); // "a|b" -> file name: b on a
+                int done = 0, total = reps.Count * (2 * reps.Count + 1);
                 var combos = new List<KeyValuePair<string, string>>();
                 foreach (string a in reps)
                 {
@@ -569,25 +572,34 @@ namespace GK2DonkeyAPI
                 }
                 foreach (KeyValuePair<string, string> combo in combos)
                 {
-                    inv.Clear();
-                    AddCell(inv, combo.Key, 0);
-                    if (combo.Value != null)
+                    // A pair twice: beside each other (its own mode, or the packer's choice), then on top: the two
+                    // relations a load is composed of (CargoLayout.ForcedRelation holds the packer to one).
+                    int shots = combo.Value == null ? 1 : 2;
+                    for (int shot = 0; shot < shots; shot++)
                     {
-                        AddCell(inv, combo.Value, 1);
+                        CargoLayout.ForcedRelation = combo.Value == null ? null : shot == 0 ? "beside" : "stack";
+                        inv.Clear();
+                        AddCell(inv, combo.Key, 0);
+                        if (combo.Value != null)
+                        {
+                            AddCell(inv, combo.Value, 1);
+                        }
+                        Cargo.RefreshViews(); // the held relation changed; the inventory's own events may not fire for the same items
+                        yield return null;
+                        yield return null;
+                        yield return new WaitForEndOfFrame();
+                        string file = combo.Key + "__" + (combo.Value ?? "none") + (shot == 1 ? "__top" : "") + ".png";
+                        string err = Capture(Path.Combine(dir, file));
+                        if (err != null)
+                        {
+                            log.AppendLine(file + ": " + err);
+                        }
+                        (shot == 1 ? cellsTop : cells)[combo.Key + "|" + (combo.Value ?? "")] = file;
+                        done++;
+                        Status = $"{done} / {total}";
                     }
-                    yield return null;
-                    yield return null;
-                    yield return new WaitForEndOfFrame();
-                    string file = combo.Key + "__" + (combo.Value ?? "none") + ".png";
-                    string err = Capture(Path.Combine(dir, file));
-                    if (err != null)
-                    {
-                        log.AppendLine(file + ": " + err);
-                    }
-                    cells[combo.Key + "|" + (combo.Value ?? "")] = file;
-                    done++;
-                    Status = $"{done} / {total}";
                 }
+                CargoLayout.ForcedRelation = null;
                 // Every zombie head alone (the stand-in's head changed, its colours kept), to see that the one zombie class
                 // fits them all.
                 var heads = new List<KeyValuePair<string, string>>();
@@ -614,7 +626,7 @@ namespace GK2DonkeyAPI
                         Status = $"{done} / {total}, head {head}";
                     }
                 }
-                WriteHtml(Path.Combine(dir, "index.html"), reps, cells, log.ToString(), heads);
+                WriteHtml(Path.Combine(dir, "index.html"), reps, cells, log.ToString(), heads, cellsTop);
                 Plugin.Log.LogInfo($"[sheet] {done} pictures written to {dir}\\index.html" + (log.Length > 0 ? " with problems:\n" + log : ""));
                 Status = "done: " + Path.Combine(dir, "index.html");
             }
@@ -637,6 +649,7 @@ namespace GK2DonkeyAPI
                 }
                 Running = false;
                 Cargo.SlotFloor = 0;
+                CargoLayout.ForcedRelation = null;
                 Mount.ApplyCartSlots("the sheet ended");
             }
         }
@@ -703,13 +716,13 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void WriteHtml(string path, List<string> reps, Dictionary<string, string> cells, string problems, List<KeyValuePair<string, string>> heads = null)
+        private static void WriteHtml(string path, List<string> reps, Dictionary<string, string> cells, string problems, List<KeyValuePair<string, string>> heads = null, Dictionary<string, string> cellsTop = null)
         {
             StyleSettings s = Mount.S;
             var sb = new StringBuilder();
             sb.AppendLine("<!doctype html><html><head><meta charset=\"utf-8\"><title>GK2 Donkey API cargo sheet</title>");
             sb.AppendLine("<style>:root{--w:260px}body{font-family:sans-serif;background:#222;color:#ddd;margin:16px}table{border-collapse:collapse}td,th{border:1px solid #444;padding:2px;text-align:center;vertical-align:top;font-size:12px}th{background:#333;position:sticky;top:34px;z-index:1}th.row{position:sticky;left:0;background:#333}img{display:block;width:var(--w);height:auto;cursor:zoom-in}.cap{color:#999;font-size:11px;max-width:var(--w);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}pre{background:#111;padding:8px}#bar{position:sticky;top:0;background:#222;padding:6px 0;z-index:2;display:flex;gap:8px;align-items:center}#bar button{background:#444;color:#ddd;border:1px solid #666;padding:3px 10px;cursor:pointer}#bar input{width:220px}.small .cap{display:none}#big{position:fixed;inset:0;background:rgba(0,0,0,.85);display:none;align-items:center;justify-content:center;flex-direction:column;cursor:zoom-out;z-index:9}#big img{width:auto;max-width:95vw;max-height:88vh;image-rendering:pixelated}#big div{color:#ddd;margin-top:8px}</style></head><body>");
-            sb.AppendLine($"<h1>GK2 Donkey API cargo sheet</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Rows: first item (slot 1). Columns: second item (slot 2); first column: the item alone. {reps.Count} size buckets, {cells.Count} pictures. Click a picture to see it full size.</p>");
+            sb.AppendLine($"<h1>GK2 Donkey API cargo sheet</h1><p>{DateTime.Now:yyyy-MM-dd HH:mm}. Rows: first item (slot 1). Columns: second item (slot 2); first column: the item alone. The first grid shows every pair beside each other (its own arrangement, or the packer's), the second grid the column's item on top of the row's item: the two relations every bigger load is composed of. A pair that fits neither across nor end to end (two zombies) is stacked in the first grid as well, since that is what the cart does with it. {reps.Count} size buckets, {cells.Count + (cellsTop?.Count ?? 0)} pictures. Click a picture to see it full size.</p>");
             sb.AppendLine("<div id=\"bar\"><button onclick=\"zoom(-30)\">&minus;</button><input type=\"range\" id=\"z\" min=\"40\" max=\"600\" value=\"260\" oninput=\"setW(+this.value)\"><button onclick=\"zoom(30)\">+</button><button onclick=\"fitAll()\">Fit everything on one page</button><button onclick=\"fitWidth()\">Fit width</button><button onclick=\"setW(260)\">Reset</button><span id=\"zl\">260 px</span></div>");
             sb.AppendLine($"<script>var COLS={reps.Count + 1},ROWS={reps.Count};function setW(w){{w=Math.max(30,Math.min(1200,Math.round(w)));document.documentElement.style.setProperty('--w',w+'px');document.getElementById('z').value=w;document.getElementById('zl').textContent=w+' px';document.body.classList.toggle('small',w<110);}}function zoom(d){{setW(+document.getElementById('z').value+d);}}function fitWidth(){{var lab=document.querySelector('th.row').offsetWidth;setW((window.innerWidth-lab-40-COLS*6)/COLS);}}function fitAll(){{var lab=document.querySelector('th.row').offsetWidth;var img=document.querySelector('td img');var ratio=img?img.naturalHeight/img.naturalWidth:1.1;var top=document.querySelector('table').getBoundingClientRect().top+window.scrollY+30;var byW=(window.innerWidth-lab-40-COLS*6)/COLS;var byH=(window.innerHeight-top-ROWS*6)/ROWS/ratio;setW(Math.min(byW,byH));}}function show(src,cap){{var b=document.getElementById('big');b.querySelector('img').src=src;b.querySelector('div').textContent=cap;b.style.display='flex';}}</script>");
             sb.AppendLine("<div id=\"big\" onclick=\"this.style.display='none'\"><img alt=\"\"><div></div></div>");
@@ -723,7 +736,7 @@ namespace GK2DonkeyAPI
             var tunedPairs = new List<string>();
             foreach (CargoLayout.PairEntry pe in CargoLayout.Pairs)
             {
-                if (pe.Tuned) tunedPairs.Add(pe.A + "+" + pe.B);
+                if (pe.BesideTuned || pe.TopTuned) tunedPairs.Add(pe.A + "+" + pe.B + (pe.BesideTuned && pe.TopTuned ? " (beside and on top)" : pe.TopTuned ? " (on top)" : " (beside)"));
             }
             sb.AppendLine($"<p>Tuned pairs (frozen): {(tunedPairs.Count == 0 ? "none yet" : string.Join(", ", tunedPairs))}.</p>");
             sb.AppendLine($"<p>Settings [{s.Section}]: CargoDrawCorpse={s.CargoDrawCorpse.Value} BedDepth={s.CargoBedDepth.Value} SideGap={s.CargoSideGap.Value} Overhang={s.CargoOverhang.Value} Nestle={s.CargoNestle.Value}; layout file: {CargoLayout.Summary()}</p>");
@@ -744,6 +757,25 @@ namespace GK2DonkeyAPI
                 sb.AppendLine("</tr>");
             }
             sb.AppendLine("</table>");
+            if (cellsTop != null && cellsTop.Count > 0)
+            {
+                sb.AppendLine("<h2>On top: the column's item on the row's item</h2><table><tr><th></th>");
+                foreach (string b in reps)
+                {
+                    sb.Append("<th>").Append(b).Append("</th>");
+                }
+                sb.AppendLine("</tr>");
+                foreach (string a in reps)
+                {
+                    sb.Append("<tr><th class=\"row\">").Append(a).Append("</th>");
+                    foreach (string b in reps)
+                    {
+                        sb.Append(Cell(cellsTop, a, b, b + " on " + a));
+                    }
+                    sb.AppendLine("</tr>");
+                }
+                sb.AppendLine("</table>");
+            }
             if (heads != null && heads.Count > 0)
             {
                 sb.AppendLine("<h2>Every zombie head, alone on the cart (one zombie class covers them all)</h2><table><tr>");

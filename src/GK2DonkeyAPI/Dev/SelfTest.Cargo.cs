@@ -45,7 +45,7 @@ namespace GK2DonkeyAPI
                 Check(added == 4 && h.I.CargoRig.Count == 4, $"four items taken ({added} added, {h.I.CargoRig.Count} on the cart)");
                 Check(!Inv().AddItemToInventory(new Item("wood")), "a fifth is refused");
                 yield return Frames(2);
-                List<Cargo.PlacedItem> placed = h.I.CargoRig.Placed;
+                var placed = new List<Cargo.PlacedItem>(h.I.CargoRig.Placed); // a copy: Isolate below rebuilds the live list
                 int l0 = 0, l1 = 0;
                 float top0 = float.MinValue, bottom1 = float.MaxValue;
                 foreach (Cargo.PlacedItem pl in placed)
@@ -63,6 +63,21 @@ namespace GK2DonkeyAPI
                 }
                 Check(placed.Count == 4 && l0 == 2 && l1 == 2, $"two layers of two ({placed.Count} placed: {l0} on the bed, {l1} above; {h.I.CargoRig.LastLayoutNote})");
                 Check(l1 > 0 && bottom1 > top0 - 0.1f && bottom1 < top0 + 0.1f, $"the upper layer stands on the lower one (its bottom {bottom1:F2}, the lower top {top0:F2})");
+                // The relations: the bed, a beside partner, an on-top support in the layer below, a beside partner above.
+                Check(placed.Count == 4 && placed[0].Relation == "bed" && placed[1].Partner == 0 && (placed[1].Relation == "side" || placed[1].Relation == "along")
+                    && placed[2].Relation == "on" && placed[2].Partner >= 0 && placed[2].Partner <= 1 && placed[3].Partner == 2 && (placed[3].Relation == "side" || placed[3].Relation == "along"),
+                    $"the relations are recorded (bed; {placed[1].Relation} 0; {placed[2].Relation} {placed[2].Partner}; {placed[3].Relation} {placed[3].Partner})");
+                Check(placed.Count == 4 && placed[2].Rel.y > 0.1f && Vector3.Distance(placed[3].LayerPos - placed[2].LayerPos, placed[3].Rel) < 0.001f, "relative places: the upper item is above its support; the beside partner's place relative to the layer agrees");
+                // Isolation: two of the four, laid out as a two-item cart in the asked relation; the load untouched.
+                h.I.CargoRig.Isolate(placed[0].Guid, placed[2].Guid, "stack");
+                yield return Frames(1);
+                Check(h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 2 && h.I.CargoRig.LastPairMode == "stack" && h.I.CargoRig.Count == 4, $"isolated: two drawn as a stack ({h.I.CargoRig.Placed.Count} placed, {h.I.CargoRig.LastPairMode}), four still on the cart");
+                h.I.CargoRig.Isolate(placed[0].Guid, placed[1].Guid, "beside");
+                yield return Frames(1);
+                Check(h.I.CargoRig.Placed.Count == 2 && h.I.CargoRig.LastPairMode != "stack", $"isolated beside: two drawn side by side ({h.I.CargoRig.LastPairMode})");
+                h.I.CargoRig.ClearIsolation();
+                yield return Frames(1);
+                Check(!h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 4, "back to the whole load: four drawn again");
 
                 // The door path: a new view gets a new inventory and the carried-over items go back on. Unhitch and hitch
                 // re-make the cart's inventory the same way.

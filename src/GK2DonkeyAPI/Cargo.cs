@@ -44,6 +44,15 @@ namespace GK2DonkeyAPI
             public bool Alone; // the only item on the cart
             public Vector3 Box;
             public Vector3 Pos;      // where the packer put it: footprint centre along/across, bottom height above the floor
+            // The relation that placed it: "bed" (the first item on the floor), "side" / "along" (beside Partner, the
+            // layer's first item), "on" (on top of Partner, its support). Rel: its place relative to the partner (for
+            // "bed": relative to the floor origin, i.e. Pos). Tuned: that relation came from a tuned layout entry.
+            public string Relation;
+            public int Partner;
+            public Vector3 Rel;
+            public bool Tuned;
+            public string Guid;      // the item's UniqueId, for the panel's "Isolate"
+            public Vector3 LayerPos; // its place relative to its layer's origin (the floor origin on the bed)
         }
 
         // ------------------------------------------------------------------ the bound instance's cart (Mount.Current)
@@ -55,6 +64,14 @@ namespace GK2DonkeyAPI
         public static string LastPairMode => Current?.LastPairMode ?? "";
         public static bool LastPairTuned => Current != null && Current.LastPairTuned;
         public static List<PlacedItem> Placed => Current?.Placed ?? NoPlaced;
+        public static bool Isolating => Current != null && Current.Isolating;
+        // The panel's Cargo tab calls this every frame it is drawn: the ridden cart's items are tinted by their role.
+        internal static void MarkPanelTint() => Rig.PanelTintFrame = Time.frameCount;
+        internal static bool TintIsSecond(PlacedItem p, List<PlacedItem> all) => Rig.IsSecond(p, all);
+        internal static Color TintFor(PlacedItem p, List<PlacedItem> all) => Rig.TintFor(p, all);
+        public static int IsolatedFrom => Current?.IsolatedFrom ?? 0;
+        public static void Isolate(string guidA, string guidB, string relation) => Current?.Isolate(guidA, guidB, relation);
+        public static void ClearIsolation() => Current?.ClearIsolation();
         public static string LastLayoutNote => Current?.LastLayoutNote ?? "";
         public static int Count => Current?.Count ?? 0;
         public static bool Attached => Current != null && Current.Attached;
@@ -530,6 +547,150 @@ namespace GK2DonkeyAPI
                 return true;
             }
 
+            // Isolation (the panel's "Isolate these two", docs/cargo-layout-layers.md): only two of the cart's items are
+            // drawn, laid out as a two-item cart in the given relation ("beside" or "stack"), so that relation can be
+            // tuned with the two-item editor while the real load stays on the inventory untouched. Ends with
+            // ClearIsolation, when either item leaves the cart, or when the view goes.
+            private string isolateA, isolateB, isolateRelation;
+            internal bool Isolating => isolateA != null;
+            internal string IsolateRelation => isolateRelation;
+            internal int IsolatedFrom => Isolating && inv != null ? inv.Data.Inventory.Count : 0;
+
+            internal void Isolate(string guidA, string guidB, string relation)
+            {
+                if (string.IsNullOrEmpty(guidA) || string.IsNullOrEmpty(guidB) || guidA == guidB)
+                {
+                    return;
+                }
+                isolateA = guidA;
+                isolateB = guidB;
+                isolateRelation = relation == "stack" ? "stack" : "beside";
+                Plugin.Log.LogInfo($"Cargo: isolating two of {Count} items on {owner.Describe()} ({isolateRelation}).");
+                RefreshViews();
+            }
+
+            internal void ClearIsolation()
+            {
+                if (!Isolating)
+                {
+                    return;
+                }
+                isolateA = isolateB = isolateRelation = null;
+                RefreshViews();
+            }
+
+            // Both isolated items still on the cart; else the isolation ends quietly.
+            private bool IsolationHolds()
+            {
+                if (!Isolating)
+                {
+                    return false;
+                }
+                if (inv == null || !owner.IsRidden)
+                {
+                    isolateA = isolateB = isolateRelation = null; // a parked cart shows its whole load
+                    return false;
+                }
+                bool a = false, b = false;
+                foreach (Item it in inv.Data.Inventory)
+                {
+                    if (it == null || it.IsEmpty || it.UniqueId == null) continue;
+                    string g = it.UniqueId.ToString();
+                    if (g == isolateA) a = true;
+                    if (g == isolateB) b = true;
+                }
+                if (!a || !b)
+                {
+                    isolateA = isolateB = isolateRelation = null;
+                }
+                return a && b;
+            }
+
+            // ---------------------------------------------------------- the panel's tints
+            // While the panel's Cargo tab is open, the ridden cart's items are tinted by their role in their layer, through
+            // the game's own selection tint on the item's meshes: the first item of a layer blue, the second orange (an
+            // item alone on top of a layer counts as the second, so a two-item stack shows blue below and orange on top).
+            // The tab's labels carry the same colours. Cleared when the tab closes or the cargo changes.
+            internal static int PanelTintFrame = -10;
+            internal static readonly Color TintFirst = new Color(0.35f, 0.65f, 1f), TintSecond = new Color(1f, 0.6f, 0.2f);
+            // The tab's "show on the cart" filters: items hidden from view only, while the tab is open. They stay in the
+            // layout (the packer places them), so nothing moves; their views are switched off after the pack.
+            internal static bool HideFirst, HideSecond;
+            internal static readonly HashSet<int> HiddenLayers = new HashSet<int>();
+            internal static bool AnyHidden => HideFirst || HideSecond || HiddenLayers.Count > 0;
+
+            internal static bool PanelHides(PlacedItem p, List<PlacedItem> all)
+            {
+                if (HiddenLayers.Contains(p.Layer)) return true;
+                bool second = IsSecond(p, all);
+                return second ? HideSecond : HideFirst;
+            }
+            private readonly List<DropViewAtomMesh> placedViews = new List<DropViewAtomMesh>();
+            private bool tintApplied, tintDirty;
+
+            // Hue by role (which slider block moves it), shade by layer: each layer up is lighter.
+            internal static Color TintFor(PlacedItem p, List<PlacedItem> all)
+            {
+                Color hue = IsSecond(p, all) ? TintSecond : TintFirst;
+                return Color.Lerp(hue, Color.white, Mathf.Clamp01(p.Layer * 0.3f));
+            }
+
+            internal static bool IsSecond(PlacedItem p, List<PlacedItem> all)
+            {
+                if (p.Relation == "side" || p.Relation == "along") return true;
+                if (p.Relation != "on") return false;
+                foreach (PlacedItem o in all)
+                {
+                    if (o.Layer == p.Layer && !ReferenceEquals(o, p)) return false; // the layer has a second item: this is its first
+                }
+                return true;
+            }
+
+            // Every frame (Mount.Instance.Tick): applies or clears the tints when the tab opens or closes, or after a pack.
+            internal void TickTint()
+            {
+                bool panelOpen = owner.IsRidden && Time.frameCount - PanelTintFrame <= 2;
+                if (!panelOpen && AnyHidden)
+                {
+                    // the tab closed with items hidden: everything shows again
+                    HideFirst = HideSecond = false;
+                    HiddenLayers.Clear();
+                    RefreshViews();
+                }
+                bool want = panelOpen && Plugin.CargoTabTint.Value;
+                if (want == tintApplied && !tintDirty)
+                {
+                    return;
+                }
+                ApplyTints(want);
+            }
+
+            private void ApplyTints(bool on)
+            {
+                try
+                {
+                    for (int i = 0; i < placedViews.Count && i < Placed.Count; i++)
+                    {
+                        DropViewAtomMesh v = placedViews[i];
+                        if (v == null || !v || v.MeshElement == null || v.MeshElement.object3D == null || v.MeshElement.object3D.Object3DMeshes == null)
+                        {
+                            continue;
+                        }
+                        Color c = TintFor(Placed[i], Placed);
+                        foreach (Object3DMesh m in v.MeshElement.object3D.Object3DMeshes)
+                        {
+                            if (m != null) m.SetSelectionTint(on ? c : Color.white, on ? 0.45f : 0f);
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning("Cargo: tinting the cargo for the panel failed: " + e.Message);
+                }
+                tintApplied = on;
+                tintDirty = false;
+            }
+
             internal bool HeldItemFits(PlayerData pd)
             {
                 if (inv == null || pd == null)
@@ -543,6 +704,9 @@ namespace GK2DonkeyAPI
             // The view is gone (dismount or scene change); the mirror is kept, Unload clears it.
             public void Detach()
             {
+                isolateA = isolateB = isolateRelation = null;
+                placedViews.Clear();
+                tintApplied = false; // the views go with the holder
                 if (subscribed && inv != null)
                 {
                     inv.OnItemsAdd -= OnChanged;
@@ -1226,12 +1390,17 @@ namespace GK2DonkeyAPI
                     // other items ride on top of it.
                     var drawn = new List<Drawn>();
                     bool gameCorpse = false;
+                    bool isolating = IsolationHolds();
                     for (int k = 0; k < inv.Data.Inventory.Count; k++)
                     {
                         Item it = inv.Data.Inventory[k];
                         if (it == null || it.IsEmpty || it.Definition == null)
                         {
                             continue;
+                        }
+                        if (isolating && it.UniqueId != null && it.UniqueId.ToString() != isolateA && it.UniqueId.ToString() != isolateB)
+                        {
+                            continue; // the panel looks at two of them
                         }
                         if (it.id == CorpseId && !gameCorpse && !modDrawsCorpse)
                         {
@@ -1286,6 +1455,16 @@ namespace GK2DonkeyAPI
                     }
 
                     Pack(drawn, s, gameCorpse ? LoadedBodyExtra() : 0f);
+                    if (AnyHidden && owner.IsRidden)
+                    {
+                        for (int i = 0; i < placedViews.Count && i < Placed.Count; i++)
+                        {
+                            if (placedViews[i] != null && PanelHides(Placed[i], Placed))
+                            {
+                                placedViews[i].gameObject.SetActive(false); // view only; the next pack shows it again
+                            }
+                        }
+                    }
                     // A chest riding (CartChest): its stand-in on the bed, placed like a lone item, listed for the panel.
                     owner.ChestRig.Layout(container, s.CargoBedDepth.Value, Placed, out string chestNote);
                     if (chestNote != null)
@@ -1300,162 +1479,65 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // The packer. Container space: origin at the measured top of the empty cart body, x along the cart, z across
-            // (+z away from the camera), y up. Every item: bottom on the floor (bed top + CargoBedDepth), footprint
-            // centre at its place. Order independent: the larger footprint is placed first (bottom / far side), ties by
-            // load order. Two items lie side by side across the bed, touching within CargoSideGap and centred as a pair,
-            // when their widths fit within the bed plus CargoOverhang (end to end along the cart when the lengths fit
-            // instead); otherwise the second stacks on the first, sunk by CargoNestle. More items go on in layers of up
-            // to two: a layer's first item sits over the middle of the layer below (over the one item, when there is
-            // one: the stack rule), at that layer's top less CargoNestle, with its on-top offsets and moved along the
-            // cart by CargoLayerShift per layer (towards the donkey by default, away from the lantern pole, which the
-            // Cart style's defaults put at the back); the second lies beside it by the same side / along test, the pair
-            // centred there, or starts the next layer. One and two items come out exactly as they did before layers
-            // existed. Layout-file corrections apply per size class (item entry: base or top role) and per pair (mode
-            // override; a tuned pair's exact places, for exactly two items on the cart).
+            // The packer (CargoPacker.cs, scene-free so tests/PackerScan can run it). Container space: origin at the
+            // measured top of the empty cart body, x along the cart, z across (+z away from the camera), y up. Every
+            // item: bottom on the floor (bed top + CargoBedDepth), footprint centre at its place. The result is applied
+            // to the views (pivot-corrected) and listed for the panel (Placed).
+            private static readonly CargoPacker.Lookup LayoutLookup = new CargoPacker.Lookup
+            {
+                ForItem = CargoLayout.ForItem,
+                ForPair = CargoLayout.ForPair,
+                FirstIsA = CargoLayout.FirstIsA,
+                SameClass = CargoLayout.SameClass,
+                BoxOf = CargoLayout.BoxOf,
+            };
 
             private void Pack(List<Drawn> drawn, StyleSettings s, float floorExtra)
             {
                 Placed.Clear();
                 if (drawn.Count == 0)
                 {
+                    placedViews.Clear();
                     LastLayoutNote = "empty";
                     return;
                 }
-                drawn.Sort((a, b) =>
+                var items = new CargoPacker.Item[drawn.Count];
+                for (int k = 0; k < drawn.Count; k++)
                 {
-                    // Footprints in whole square centimetres: each view is measured on its own, and the float noise of
-                    // that measurement moves with the view, so two equal items (two zombies) compared exactly swapped
-                    // order, and with it their places in a tuned pair, on every slider move (seen 2026-10-05).
-                    int areaA = Mathf.RoundToInt(a.Box.size.x * a.Box.size.z * 10000f), areaB = Mathf.RoundToInt(b.Box.size.x * b.Box.size.z * 10000f);
-                    int c = areaB.CompareTo(areaA);
-                    if (c == 0) c = string.CompareOrdinal(a.Item.id, b.Item.id); // equal footprints: by id, not by who came first
-                    return c != 0 ? c : a.LoadOrder.CompareTo(b.LoadOrder);
-                });
-                float floor = s.CargoBedDepth.Value + floorExtra;
-                var note = new System.Text.StringBuilder();
-
-                // Footprint centres (x, z) and bottoms (y) each item is placed at, before pivot correction; its layer.
-                var target = new Vector3[drawn.Count];
-                var onTop = new bool[drawn.Count];
-                var layerOf = new int[drawn.Count];
-                LastFloor = floor;
-                LastPairMode = "";
-                LastPairTuned = false;
-                Drawn first = drawn[0];
-                CargoLayout.ItemEntry e0 = CargoLayout.ForItem(first.Item.id);
-                // Alone on the cart: the item's own alone offsets when it has them, else the bottom/beside ones.
-                bool aloneOwn = drawn.Count == 1 && e0 != null && e0.HasAlone;
-                target[0] = new Vector3(0f, floor, 0f) + (e0 == null ? Vector3.zero : aloneOwn ? e0.Alone : e0.Base);
-
-                float gap = s.CargoSideGap.Value, over = s.CargoOverhang.Value;
-                int layer = 0, layerStart = 0;   // the current layer and the index of its first item
-                Vector3 centre = Vector3.zero;   // where the current layer is centred (x along, z across), no offsets
-                float layerFloor = floor;
-                for (int i = 1; i < drawn.Count; i++)
-                {
-                    Drawn cur = drawn[i];
-                    CargoLayout.ItemEntry e = CargoLayout.ForItem(cur.Item.id);
-                    if (i == layerStart + 1)
-                    {
-                        // The layer holds one item so far: beside it when the pair fits.
-                        Drawn a = drawn[layerStart];
-                        CargoLayout.ItemEntry ea = CargoLayout.ForItem(a.Item.id);
-                        CargoLayout.PairEntry pair = CargoLayout.ForPair(a.Item.id, cur.Item.id);
-                        string mode = pair != null ? pair.Mode : "auto";
-                        float w0 = a.Box.size.z, w1 = cur.Box.size.z; // across the bed
-                        float l0 = a.Box.size.x, l1 = cur.Box.size.x; // along the cart
-                        // Two ways to lie next to each other: across the bed (the game's timber pile density; the default
-                        // when the widths fit) or end to end along the cart (when the lengths fit but the widths do not,
-                        // e.g. two crates); otherwise stacked. A pair entry can force any of the three.
-                        bool side = mode == "side" || (mode == "auto" && w0 + gap + w1 <= bedWidth + over);
-                        bool along = !side && (mode == "along" || (mode == "auto" && l0 + gap + l1 <= bedLength + over));
-                        if (i == 1)
-                        {
-                            LastPairMode = side ? "side" : along ? "along" : "stack";
-                        }
-                        Vector3 offA = ea == null ? Vector3.zero : layer == 0 ? ea.Base : ea.Top;
-                        Vector3 offB = e == null ? Vector3.zero : layer == 0 ? e.Base : e.Top;
-                        if (side || along)
-                        {
-                            if (layer > 0) note.Append($"; layer {layer + 1}: ");
-                            if (side)
-                            {
-                                float total = w0 + gap + w1;
-                                target[layerStart] = new Vector3(centre.x, layerFloor, centre.z + total * 0.5f - w0 * 0.5f) + offA;
-                                target[i] = new Vector3(centre.x, layerFloor, centre.z - total * 0.5f + w1 * 0.5f) + offB;
-                                note.Append($"{a.Item.id} | {cur.Item.id} side by side across ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
-                            }
-                            else
-                            {
-                                float total = l0 + gap + l1;
-                                target[layerStart] = new Vector3(centre.x + total * 0.5f - l0 * 0.5f, layerFloor, centre.z) + offA;
-                                target[i] = new Vector3(centre.x - total * 0.5f + l1 * 0.5f, layerFloor, centre.z) + offB;
-                                note.Append($"{a.Item.id} | {cur.Item.id} end to end along ({l0:0.00}+{l1:0.00} on {bedLength:0.00})");
-                            }
-                            onTop[i] = layer > 0;
-                            layerOf[i] = layer;
-                            continue;
-                        }
-                        if (layer == 0 && mode != "auto")
-                        {
-                            note.Append($"{cur.Item.id} on top of {a.Item.id} ({mode})");
-                        }
-                        else
-                        {
-                            note.Append($"{cur.Item.id} on top of {a.Item.id}");
-                        }
-                    }
-                    else
-                    {
-                        note.Append($"; {cur.Item.id} on layer {layer + 2}");
-                    }
-                    // A new layer: over the middle of the one below, at its top less the nestle.
-                    float top = float.MinValue, cx = 0f, cz = 0f;
-                    int n = 0;
-                    for (int k = layerStart; k < i; k++)
-                    {
-                        top = Mathf.Max(top, target[k].y + drawn[k].Box.size.y);
-                        cx += target[k].x;
-                        cz += target[k].z;
-                        n++;
-                    }
-                    layer++;
-                    layerStart = i;
-                    centre = new Vector3(cx / n + s.CargoLayerShift.Value, 0f, cz / n);
-                    layerFloor = top - s.CargoNestle.Value;
-                    target[i] = new Vector3(centre.x, layerFloor, centre.z) + (e != null ? e.Top : Vector3.zero);
-                    onTop[i] = true;
-                    layerOf[i] = layer;
+                    items[k] = new CargoPacker.Item { Id = drawn[k].Item.id, Box = drawn[k].Box.size, LoadOrder = drawn[k].LoadOrder };
                 }
-                // A tuned pair: exactly where the panel put the two items (by id), above today's floor. Nothing above is used.
-                if (drawn.Count == 2)
+                var settings = new CargoPacker.Settings
                 {
-                    CargoLayout.PairEntry tuned = CargoLayout.ForPair(first.Item.id, drawn[1].Item.id);
-                    if (tuned != null && tuned.Tuned)
+                    Floor = s.CargoBedDepth.Value + floorExtra,
+                    Gap = s.CargoSideGap.Value,
+                    Overhang = s.CargoOverhang.Value,
+                    Nestle = s.CargoNestle.Value,
+                    LayerShift = s.CargoLayerShift.Value,
+                    BedWidth = bedWidth,
+                    BedLength = bedLength,
+                    Forced = isolateRelation ?? CargoLayout.ForcedRelation, // the panel's Alone or the sheet: a pair shown in one relation
+                };
+                CargoPacker.Result r = CargoPacker.Pack(items, settings, LayoutLookup);
+                LastFloor = r.Floor;
+                LastPairMode = r.PairMode;
+                LastPairTuned = r.PairTuned;
+                LastLayoutNote = r.Note;
+                placedViews.Clear();
+                tintDirty = true; // re-tinted (or cleared) by the next TickTint, in the new order
+                for (int i = 0; i < r.Count; i++)
+                {
+                    Drawn d = drawn[r.Order[i]];
+                    Bounds b = d.Box;
+                    placedViews.Add(d.View);
+                    d.View.transform.localPosition = new Vector3(r.Target[i].x - b.center.x, r.Target[i].y - b.min.y, r.Target[i].z - b.center.z);
+                    Placed.Add(new PlacedItem
                     {
-                        bool firstIsA = CargoLayout.FirstIsA(tuned, first.Item.id, drawn[1].Item.id);
-                        target[0] = (firstIsA ? tuned.PosA : tuned.PosB) + new Vector3(0f, floor, 0f);
-                        target[1] = (firstIsA ? tuned.PosB : tuned.PosA) + new Vector3(0f, floor, 0f);
-                        onTop[1] = tuned.Mode == "stack";
-                        layerOf[1] = onTop[1] ? 1 : 0;
-                        LastPairMode = tuned.Mode;
-                        LastPairTuned = true;
-                        note.Append(" (tuned pair)");
-                    }
+                        Id = d.Item.id, OnTop = r.OnTop[i], Layer = r.Layer[i], Alone = r.Count == 1, Box = b.size,
+                        Pos = r.Target[i] - new Vector3(0f, r.Floor, 0f),
+                        Relation = r.Relation[i], Partner = r.Partner[i], Tuned = r.Tuned[i],
+                        Rel = r.Rel(i), LayerPos = r.LayerPos(i), Guid = d.Item.UniqueId?.ToString(),
+                    });
                 }
-                if (drawn.Count == 1)
-                {
-                    note.Append(first.Item.id + " alone" + (aloneOwn ? " (own alone correction)" : ""));
-                }
-
-                for (int i = 0; i < drawn.Count; i++)
-                {
-                    Bounds b = drawn[i].Box;
-                    drawn[i].View.transform.localPosition = new Vector3(target[i].x - b.center.x, target[i].y - b.min.y, target[i].z - b.center.z);
-                    Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Layer = layerOf[i], Alone = drawn.Count == 1, Box = b.size, Pos = target[i] - new Vector3(0f, floor, 0f) });
-                }
-                LastLayoutNote = note.ToString();
             }
 
             // ------------------------------------------------------------------ meshes

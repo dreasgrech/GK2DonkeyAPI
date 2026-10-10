@@ -282,6 +282,10 @@ closed):
   the chest restore fixed, self-tested. To check in game: four crates, four logs, two bodies and two logs, four
   zombies (the lantern pole, the rider), the two-item pictures unchanged, a door and a save with four aboard. Then
   decide the shipped default (2 now) and whether the Carrier perk should count (option B, not built).
+- **Tuning stacks by hand** ([cargo-layout-layers.md](cargo-layout-layers.md), investigated 2026-10-10): a pair entry
+  holds one relation (beside or on top), so six logs need both. Recommended: both relations per pair as the unit
+  of tuning, support-aware placement, relation blocks and an isolate button on the panel, the sheet picturing
+  each pair twice. Steps 1-4 built 2026-10-10 (file v2 and migration, packer from relations, the sheet's second picture per pair, the panel's relation rows with Isolate). To check in game: the sheet (two-item pictures unchanged), six logs, four crates, three logs, a crate over a log and a slab; then calibrate the on-top relations.
 
 ## Deferred
 

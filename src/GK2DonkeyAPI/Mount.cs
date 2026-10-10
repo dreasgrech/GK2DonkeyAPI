@@ -364,6 +364,7 @@ namespace GK2DonkeyAPI
             // The ridden instance's frame (Mount.Tick calls it with this instance bound).
             internal void Tick(PlayerController pc, GameScene scene)
             {
+                CargoRig.TickTint(); // the panel's Cargo tab tints the items by role while it is open
                 if (!mounted)
                 {
                     return;
