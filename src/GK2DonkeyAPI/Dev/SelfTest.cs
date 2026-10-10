@@ -97,6 +97,7 @@ namespace GK2DonkeyAPI
         private const string GroupCore = "API, side file, carts, colours";
         private const string GroupLevels = "Levels and views";
         private const string GroupChest = "Chest on the cart";
+        private const string GroupCargo = "Cargo in layers";
         private const string GroupMorgue = "Morgue";
         private const string GroupCorpses = "Corpses at the crossroads";
 
@@ -123,6 +124,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupChest, Name = "chest: the backstops", Body = ChestBackstops },
             new Scenario { Group = GroupChest, Name = "chest: the save as the game writes it", Body = ChestSaveImage },
             new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
+            new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
             new Scenario { Group = GroupMorgue, Name = "morgue: the door rule", Body = MorgueDecisions },
             new Scenario { Group = GroupMorgue, Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
             new Scenario { Group = GroupCorpses, Name = "corpses: drop and stand points", Body = CorpsePoints },

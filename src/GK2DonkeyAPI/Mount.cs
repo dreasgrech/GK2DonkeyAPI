@@ -600,6 +600,7 @@ namespace GK2DonkeyAPI
                 {
                     Colors.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame
                 }
+                CargoRig.ApplySlots(); // the slot count: the cfg, a mod's override, or this instance's own (the panel's instance editing, MountHandle.Tuning)
                 if (!mounted || (style.HasValue && activeStyle != style.Value))
                 {
                     return;

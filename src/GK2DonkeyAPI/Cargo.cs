@@ -19,8 +19,12 @@ namespace GK2DonkeyAPI
     // So the mod draws the cargo itself with copies of the keeper's overhead mesh atom (one mesh per big item) and
     // places them with a size-based packer (RefreshViews): every item's box is measured, the bigger footprint goes to
     // the bottom or the far side, two items lie side by side across the bed when they fit and stack otherwise, at
-    // the density of the game's own timber stockpile (touching, one width apart, one height up). Corrections come
-    // from cargo-layout.cfg (CargoLayout), keyed by size class, so the 27 items reduce to seven classes.
+    // the density of the game's own timber stockpile (touching, one width apart, one height up); further items go on
+    // in layers of up to two (General.CartSlots, docs/cart-capacity.md). Corrections come from cargo-layout.cfg
+    // (CargoLayout), keyed by size class, so the 27 items reduce to seven classes.
+    //
+    // How many: the cart's inventory is sized per cart (ApplySlots, from General.CartSlots) when its view is prepared,
+    // before anything carried over goes back on; the game's definition (npc_donkey.inventorySize = 2) is never touched.
     //
     // Save safety: the donkey is a temp object, so its inventory never reaches a save. Everything is returned to the
     // keeper (hands first, then dropped at his feet) whenever the ride ends (dismount, cleanup, sleep) and right
@@ -36,6 +40,7 @@ namespace GK2DonkeyAPI
         {
             public string Id;
             public bool OnTop;
+            public int Layer;  // 0 on the bed, 1 on the first layer above it, ...
             public bool Alone; // the only item on the cart
             public Vector3 Box;
             public Vector3 Pos;      // where the packer put it: footprint centre along/across, bottom height above the floor
@@ -72,6 +77,14 @@ namespace GK2DonkeyAPI
         }
 
         internal static bool Allowed(Item item) => Rig.Allowed(item);
+
+        // A floor under every cart's slot count while a tool needs it (the cargo sheet puts pairs on the cart whatever
+        // CartSlots says). 0 normally.
+        internal static int SlotFloor
+        {
+            get => Rig.SlotFloor;
+            set => Rig.SlotFloor = value;
+        }
 
         // An item that stands for a world object (a zombie: its UniqueId is the ZombieWgoData's, and the zombie's
         // organs and gear are its nested inventory). Such an item must never be conjured from an id or thrown away,
@@ -236,6 +249,7 @@ namespace GK2DonkeyAPI
                 donkey = d;
                 inv = d.Data.Inventory;
                 EnsureContainer();
+                ApplySlots(); // the slot count before the carried-over items go back on: a door never sheds any
                 if (mirror.Count > 0)
                 {
                     var carried = new List<Item>(mirror);
@@ -486,6 +500,36 @@ namespace GK2DonkeyAPI
             internal static readonly Predicate<Item> AllowedItem = Allowed;
 
             // Whether the topmost item the cart takes would fit (the controls' label), without moving anything.
+            // How many slots this cart should have: General.CartSlots (an instance's own override first), never below
+            // what it holds or carries over, so a lowered setting cannot shed items (at a door the carried-over items
+            // go back on before anything else). The number only: a chest aboard keeps 0 (CartChest), see ApplySlots.
+            internal static int SlotFloor;
+
+            internal int WantedSlots()
+            {
+                int slots = owner.Overrides.TryGetValue("CartSlots", out object o) && o is int n ? n : Plugin.CartSlots.GlobalValue;
+                slots = Mathf.Max(slots, SlotFloor);
+                int held = Mathf.Max(mirror.Count, inv != null ? inv.Data.Inventory.Count : 0);
+                return Mathf.Max(1, Mathf.Max(slots, held));
+            }
+
+            // Applies WantedSlots to the inventory. False when there is nothing to do: no inventory, a chest aboard (its
+            // 0 stays), or the size already right. Never redraws; the callers do.
+            internal bool ApplySlots()
+            {
+                if (inv == null || owner.ChestRig.Aboard)
+                {
+                    return false;
+                }
+                int want = WantedSlots();
+                if (inv.Data.InventorySize == want)
+                {
+                    return false;
+                }
+                inv.Data.InventorySize = want;
+                return true;
+            }
+
             internal bool HeldItemFits(PlayerData pd)
             {
                 if (inv == null || pd == null)
@@ -616,6 +660,7 @@ namespace GK2DonkeyAPI
             private void OnChanged(List<Item> _)
             {
                 SyncMirror();
+                ApplySlots(); // a lowered setting takes effect once the extra items are off
                 if (!unloading)
                 {
                     owner.OnCargoChanged(); // refreshes the views and re-collects the lifted cart parts
@@ -1259,9 +1304,16 @@ namespace GK2DonkeyAPI
             // (+z away from the camera), y up. Every item: bottom on the floor (bed top + CargoBedDepth), footprint
             // centre at its place. Order independent: the larger footprint is placed first (bottom / far side), ties by
             // load order. Two items lie side by side across the bed, touching within CargoSideGap and centred as a pair,
-            // when their widths fit within the bed plus CargoOverhang; otherwise the second stacks on the first, sunk by
-            // CargoNestle. A third or later item stacks on the previous one. Layout-file corrections apply per size class
-            // (item entry: base or top role) and per pair (mode override and a shift of the second item).
+            // when their widths fit within the bed plus CargoOverhang (end to end along the cart when the lengths fit
+            // instead); otherwise the second stacks on the first, sunk by CargoNestle. More items go on in layers of up
+            // to two: a layer's first item sits over the middle of the layer below (over the one item, when there is
+            // one: the stack rule), at that layer's top less CargoNestle, with its on-top offsets and moved along the
+            // cart by CargoLayerShift per layer (towards the donkey by default, away from the lantern pole, which the
+            // Cart style's defaults put at the back); the second lies beside it by the same side / along test, the pair
+            // centred there, or starts the next layer. One and two items come out exactly as they did before layers
+            // existed. Layout-file corrections apply per size class (item entry: base or top role) and per pair (mode
+            // override; a tuned pair's exact places, for exactly two items on the cart).
+
             private void Pack(List<Drawn> drawn, StyleSettings s, float floorExtra)
             {
                 Placed.Clear();
@@ -1283,9 +1335,10 @@ namespace GK2DonkeyAPI
                 float floor = s.CargoBedDepth.Value + floorExtra;
                 var note = new System.Text.StringBuilder();
 
-                // Footprint centres (x, z) and bottoms (y) each item is placed at, before pivot correction.
+                // Footprint centres (x, z) and bottoms (y) each item is placed at, before pivot correction; its layer.
                 var target = new Vector3[drawn.Count];
                 var onTop = new bool[drawn.Count];
+                var layerOf = new int[drawn.Count];
                 LastFloor = floor;
                 LastPairMode = "";
                 LastPairTuned = false;
@@ -1295,46 +1348,85 @@ namespace GK2DonkeyAPI
                 bool aloneOwn = drawn.Count == 1 && e0 != null && e0.HasAlone;
                 target[0] = new Vector3(0f, floor, 0f) + (e0 == null ? Vector3.zero : aloneOwn ? e0.Alone : e0.Base);
 
+                float gap = s.CargoSideGap.Value, over = s.CargoOverhang.Value;
+                int layer = 0, layerStart = 0;   // the current layer and the index of its first item
+                Vector3 centre = Vector3.zero;   // where the current layer is centred (x along, z across), no offsets
+                float layerFloor = floor;
                 for (int i = 1; i < drawn.Count; i++)
                 {
-                    Drawn prev = drawn[i - 1];
                     Drawn cur = drawn[i];
                     CargoLayout.ItemEntry e = CargoLayout.ForItem(cur.Item.id);
-                    CargoLayout.PairEntry pair = i == 1 ? CargoLayout.ForPair(first.Item.id, cur.Item.id) : null;
-                    string mode = pair != null ? pair.Mode : "auto";
-                    float gap = s.CargoSideGap.Value, over = s.CargoOverhang.Value;
-                    float w0 = first.Box.size.z, w1 = cur.Box.size.z; // across the bed
-                    float l0 = first.Box.size.x, l1 = cur.Box.size.x; // along the cart
-                    // Two ways to lie next to each other: across the bed (the game's timber pile density; the default
-                    // when the widths fit) or end to end along the cart (when the lengths fit but the widths do not, e.g.
-                    // two crates); otherwise stacked. A pair entry can force any of the three.
-                    bool side = i == 1 && (mode == "side" || (mode == "auto" && w0 + gap + w1 <= bedWidth + over));
-                    bool along = i == 1 && !side && (mode == "along" || (mode == "auto" && l0 + gap + l1 <= bedLength + over));
-                    if (i == 1)
+                    if (i == layerStart + 1)
                     {
-                        LastPairMode = side ? "side" : along ? "along" : "stack";
-                    }
-                    if (side)
-                    {
-                        float total = w0 + gap + w1;
-                        target[0].z = total * 0.5f - w0 * 0.5f + (e0 != null ? e0.Base.z : 0f);
-                        target[i] = new Vector3(0f, floor, -total * 0.5f + w1 * 0.5f) + (e != null ? e.Base : Vector3.zero);
-                        note.Append($"{first.Item.id} | {cur.Item.id} side by side across ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
-                    }
-                    else if (along)
-                    {
-                        float total = l0 + gap + l1;
-                        target[0].x = total * 0.5f - l0 * 0.5f + (e0 != null ? e0.Base.x : 0f);
-                        target[i] = new Vector3(-total * 0.5f + l1 * 0.5f, floor, 0f) + (e != null ? e.Base : Vector3.zero);
-                        note.Append($"{first.Item.id} | {cur.Item.id} end to end along ({l0:0.00}+{l1:0.00} on {bedLength:0.00})");
+                        // The layer holds one item so far: beside it when the pair fits.
+                        Drawn a = drawn[layerStart];
+                        CargoLayout.ItemEntry ea = CargoLayout.ForItem(a.Item.id);
+                        CargoLayout.PairEntry pair = CargoLayout.ForPair(a.Item.id, cur.Item.id);
+                        string mode = pair != null ? pair.Mode : "auto";
+                        float w0 = a.Box.size.z, w1 = cur.Box.size.z; // across the bed
+                        float l0 = a.Box.size.x, l1 = cur.Box.size.x; // along the cart
+                        // Two ways to lie next to each other: across the bed (the game's timber pile density; the default
+                        // when the widths fit) or end to end along the cart (when the lengths fit but the widths do not,
+                        // e.g. two crates); otherwise stacked. A pair entry can force any of the three.
+                        bool side = mode == "side" || (mode == "auto" && w0 + gap + w1 <= bedWidth + over);
+                        bool along = !side && (mode == "along" || (mode == "auto" && l0 + gap + l1 <= bedLength + over));
+                        if (i == 1)
+                        {
+                            LastPairMode = side ? "side" : along ? "along" : "stack";
+                        }
+                        Vector3 offA = ea == null ? Vector3.zero : layer == 0 ? ea.Base : ea.Top;
+                        Vector3 offB = e == null ? Vector3.zero : layer == 0 ? e.Base : e.Top;
+                        if (side || along)
+                        {
+                            if (layer > 0) note.Append($"; layer {layer + 1}: ");
+                            if (side)
+                            {
+                                float total = w0 + gap + w1;
+                                target[layerStart] = new Vector3(centre.x, layerFloor, centre.z + total * 0.5f - w0 * 0.5f) + offA;
+                                target[i] = new Vector3(centre.x, layerFloor, centre.z - total * 0.5f + w1 * 0.5f) + offB;
+                                note.Append($"{a.Item.id} | {cur.Item.id} side by side across ({w0:0.00}+{w1:0.00} on {bedWidth:0.00})");
+                            }
+                            else
+                            {
+                                float total = l0 + gap + l1;
+                                target[layerStart] = new Vector3(centre.x + total * 0.5f - l0 * 0.5f, layerFloor, centre.z) + offA;
+                                target[i] = new Vector3(centre.x - total * 0.5f + l1 * 0.5f, layerFloor, centre.z) + offB;
+                                note.Append($"{a.Item.id} | {cur.Item.id} end to end along ({l0:0.00}+{l1:0.00} on {bedLength:0.00})");
+                            }
+                            onTop[i] = layer > 0;
+                            layerOf[i] = layer;
+                            continue;
+                        }
+                        if (layer == 0 && mode != "auto")
+                        {
+                            note.Append($"{cur.Item.id} on top of {a.Item.id} ({mode})");
+                        }
+                        else
+                        {
+                            note.Append($"{cur.Item.id} on top of {a.Item.id}");
+                        }
                     }
                     else
                     {
-                        float prevTop = target[i - 1].y + prev.Box.size.y;
-                        target[i] = new Vector3(target[i - 1].x, prevTop - s.CargoNestle.Value, target[i - 1].z) + (e != null ? e.Top : Vector3.zero);
-                        onTop[i] = true;
-                        note.Append($"{cur.Item.id} on top of {prev.Item.id}{(mode != "auto" ? " (" + mode + ")" : "")}");
+                        note.Append($"; {cur.Item.id} on layer {layer + 2}");
                     }
+                    // A new layer: over the middle of the one below, at its top less the nestle.
+                    float top = float.MinValue, cx = 0f, cz = 0f;
+                    int n = 0;
+                    for (int k = layerStart; k < i; k++)
+                    {
+                        top = Mathf.Max(top, target[k].y + drawn[k].Box.size.y);
+                        cx += target[k].x;
+                        cz += target[k].z;
+                        n++;
+                    }
+                    layer++;
+                    layerStart = i;
+                    centre = new Vector3(cx / n + s.CargoLayerShift.Value, 0f, cz / n);
+                    layerFloor = top - s.CargoNestle.Value;
+                    target[i] = new Vector3(centre.x, layerFloor, centre.z) + (e != null ? e.Top : Vector3.zero);
+                    onTop[i] = true;
+                    layerOf[i] = layer;
                 }
                 // A tuned pair: exactly where the panel put the two items (by id), above today's floor. Nothing above is used.
                 if (drawn.Count == 2)
@@ -1346,6 +1438,7 @@ namespace GK2DonkeyAPI
                         target[0] = (firstIsA ? tuned.PosA : tuned.PosB) + new Vector3(0f, floor, 0f);
                         target[1] = (firstIsA ? tuned.PosB : tuned.PosA) + new Vector3(0f, floor, 0f);
                         onTop[1] = tuned.Mode == "stack";
+                        layerOf[1] = onTop[1] ? 1 : 0;
                         LastPairMode = tuned.Mode;
                         LastPairTuned = true;
                         note.Append(" (tuned pair)");
@@ -1360,7 +1453,7 @@ namespace GK2DonkeyAPI
                 {
                     Bounds b = drawn[i].Box;
                     drawn[i].View.transform.localPosition = new Vector3(target[i].x - b.center.x, target[i].y - b.min.y, target[i].z - b.center.z);
-                    Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Alone = drawn.Count == 1, Box = b.size, Pos = target[i] - new Vector3(0f, floor, 0f) });
+                    Placed.Add(new PlacedItem { Id = drawn[i].Item.id, OnTop = onTop[i], Layer = layerOf[i], Alone = drawn.Count == 1, Box = b.size, Pos = target[i] - new Vector3(0f, floor, 0f) });
                 }
                 LastLayoutNote = note.ToString();
             }

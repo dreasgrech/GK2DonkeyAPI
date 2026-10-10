@@ -437,6 +437,8 @@ namespace GK2DonkeyAPI
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
             Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
+            IntSlider("Cart capacity (items)", Plugin.CartSlots, 1, 6, () => Mount.ApplyCartSlots("the panel"));
+            GUILayout.Label("How many items the cart carries (1-6). Three and more ride in layers of up to two. Lowering it never drops anything: a fuller cart stays full until unloaded. Saddle Up's own 'Cart capacity' (2 / 4 / 6) overrides this row while it is installed; editing one donkey on the Instances tab gives that cart its own number.", small);
             Toggle("A storage chest rides on the cart (alone; F on it while driving, E with nothing in front sets it down)", Plugin.CargoChest, null);
             if (CartChest.Locked)
             {
@@ -592,11 +594,12 @@ namespace GK2DonkeyAPI
                 }
 
                 Header("Cart cargo: the packer");
-                GUILayout.Label("Every item's box is measured; the larger footprint goes to the bottom or far side; two items lie side by side when they fit across the bed, else the second stacks. These four values rule every combination.", small);
+                GUILayout.Label("Every item's box is measured; the larger footprint goes to the bottom or far side; two items lie side by side when they fit across the bed (end to end when only the lengths fit), else the second stacks. Three and more items (General: cart capacity) go on in layers of up to two by the same rules, each layer moved along the cart by the layer shift. These values rule every combination.", small);
                 FloatSlider("Cargo floor below the rail top (bed depth)", s.CargoBedDepth, -0.6f, 0.3f, 2, Cargo.RefreshViews);
                 FloatSlider("Gap between side-by-side items", s.CargoSideGap, 0f, 0.3f, 2, Cargo.RefreshViews);
                 FloatSlider("Overhang allowed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
                 FloatSlider("Nestle: how far a stacked item sinks into the one below", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
+                FloatSlider("Layer shift: each layer above the bed moved along the cart, per layer (+ back, - towards the donkey)", s.CargoLayerShift, -0.3f, 0.3f, 2, Cargo.RefreshViews);
                 Toggle("Mod draws corpses too (off = the game's own shroud for the first corpse)", s.CargoDrawCorpse, Cargo.RefreshViews);
                 Toggle("Cargo rocks with the cart while it rolls (as the game's loaded corpse does)", s.CargoSwaysWithCart, null);
                 Toggle("Set items down behind the cart (off = in front of the keeper, where the next press picks them up again)", s.CargoSetDownBehindCart, null);
@@ -1558,7 +1561,7 @@ namespace GK2DonkeyAPI
                 refresh |= RawSlider("  across (camera - / away +)", ref e.Alone.z, -0.5f, 0.5f);
                 GUILayout.EndVertical();
             }
-            else if (placed.Count >= 2)
+            else if (placed.Count == 2)
             {
                 Cargo.PlacedItem p0 = placed[0], p1 = placed[1];
                 CargoLayout.PairEntry pair = CargoLayout.EditPair(p0.Id, p1.Id);
@@ -1631,6 +1634,10 @@ namespace GK2DonkeyAPI
                     }
                 }
                 GUILayout.EndVertical();
+            }
+            else
+            {
+                GUILayout.Label($"{placed.Count} items on the cart: laid out in layers of up to two by the packer's own rules (a tuned pair applies to exactly two items). Load one or two items to tune their places. Layout: {Cargo.LastLayoutNote}", small);
             }
             if (refresh)
             {

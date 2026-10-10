@@ -277,6 +277,11 @@ closed):
   the inventory add copies a zombie's organs and gear away from it, so every add needs a relink. Second-round audit
   done; the build plan (§6) waits for approval. Found on the way, in the current build: in Ride style (or with a
   full cart), E on a working zombie pulls it off its job and lays it on the ground (§5 finding 4). Zombies are now unlocked in the user's save, so the old zombie tests can run.
+- **More than two items on the cart** ([cart-capacity.md](cart-capacity.md), investigated and built 2026-10-10, API
+  0.28.0): `CartSlots` (2 / 4 / 6 in Saddle Up's "Cart capacity"), the packer in layers of two, the door re-add and
+  the chest restore fixed, self-tested. To check in game: four crates, four logs, two bodies and two logs, four
+  zombies (the lantern pole, the rider), the two-item pictures unchanged, a door and a save with four aboard. Then
+  decide the shipped default (2 now) and whether the Carrier perk should count (option B, not built).
 
 ## Deferred
 

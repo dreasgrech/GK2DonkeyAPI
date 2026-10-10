@@ -45,7 +45,8 @@ has a target of its own (steps 1 and 2).
   fires, through the existing `OnChanged` → `SyncMirror` → `Announce` path.
 - **Moving items from the head to the cart:** `Rig.LoadFromHead` (used at mount) already does it with the game's own
   `InsertOverheadItemTo`. It skips zombies (`Cargo.Allowed`) and checks the cart's room with
-  `CanAddItemToInventory`. The cart holds 2 items (`npc_donkey.inventorySize = 2`).
+  `CanAddItemToInventory`. The cart holds 2 items by default (`npc_donkey.inventorySize = 2`; since API 0.28.0 each
+  cart's inventory is sized from `CartSlots`, up to 6, [cart-capacity.md](cart-capacity.md)).
 - **Prompts:** `InstanceControls` already finds the nearest standing instance in reach, shows the game's own hint
   bubble ("[E] Ride", "[E] Drive", "[E] Hitch the cart") and takes the key in `TryInteract`. The on-foot branch
   today only looks when the hands are empty, for Ride/Drive.

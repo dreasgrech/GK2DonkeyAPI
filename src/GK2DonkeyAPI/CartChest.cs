@@ -999,7 +999,7 @@ namespace GK2DonkeyAPI
                 Inventory inv = owner.CargoRig.Inv;
                 if (inv != null && savedSize >= 0)
                 {
-                    inv.Data.InventorySize = savedSize;
+                    inv.Data.InventorySize = owner.CargoRig.WantedSlots(); // the setting as it is now, not what the chest found
                 }
                 savedSize = -1;
             }

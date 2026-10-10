@@ -61,6 +61,8 @@ namespace GK2DonkeyAPI
             running = null;
             runningInv = null;
             Running = false;
+            Cargo.SlotFloor = 0;
+            Mount.ApplyCartSlots("the sheet aborted");
             Status = "aborted: " + why;
             Plugin.Log.LogInfo("[sheet] aborted (" + why + "); test items discarded.");
         }
@@ -97,6 +99,8 @@ namespace GK2DonkeyAPI
                 return "set the cargo down first (the sheet needs an empty cart)";
             }
             runningInv = Mount.Donkey.Data.Inventory;
+            Cargo.SlotFloor = 2; // the sheet puts pairs on the cart whatever CartSlots says (1 included)
+            Cargo.Current?.ApplySlots();
             running = Plugin.Instance.StartCoroutine(routine);
             return "started; stand still until the panel comes back";
         }
@@ -317,6 +321,8 @@ namespace GK2DonkeyAPI
                     }
                 }
                 Running = false;
+                Cargo.SlotFloor = 0;
+                Mount.ApplyCartSlots("the sheet ended");
             }
         }
 
@@ -630,6 +636,8 @@ namespace GK2DonkeyAPI
                     }
                 }
                 Running = false;
+                Cargo.SlotFloor = 0;
+                Mount.ApplyCartSlots("the sheet ended");
             }
         }
 

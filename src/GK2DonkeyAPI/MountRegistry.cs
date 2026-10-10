@@ -619,8 +619,26 @@ namespace GK2DonkeyAPI
             if (!style.HasValue)
             {
                 Colors.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame
+                ApplyCartSlots("a behaviour override");
             }
             ForEachInstance(i => i.OnTuningChanged(style));
+        }
+
+        // The cart's slot count (General.CartSlots, or an instance's own override) applied to every cart, standing ones
+        // too: at a setting change (the panel, the Mods menu, the cfg) and at a Behaviour override. Quiet when nothing
+        // changes.
+        internal static void ApplyCartSlots(string why)
+        {
+            int n = 0;
+            ForEachInstance(i =>
+            {
+                if (i.CargoRig.ApplySlots()) n++;
+            });
+            if (n > 0)
+            {
+                Plugin.Log.LogInfo($"Cargo: the cart's slot count applied to {n} cart(s) ({why}).");
+                OnCargoChanged(); // the hint over what the keeper faces: room on the cart
+            }
         }
 
         // Leaving the game, the mod switched off, an error: every instance goes (the ride ends first).

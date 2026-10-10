@@ -57,7 +57,7 @@ does.
 | `RingBell()`, `Bray()` | Sounds, subject to the `Sounds` and `Bell` features. |
 
 **While mounted, the keeper's hands stay empty.** Only the cart carries:
-- in Cart style, pickups land on the cart (2 slots);
+- in Cart style, pickups land on the cart (`CartSlots` slots: 2 by default, up to 6, three and more in layers);
 - in Ride style, or with `Cargo` switched off, the game refuses pickups, and ground items show no outline;
 - whatever he holds when mounting goes onto the cart, or is set down first.
 
@@ -141,12 +141,15 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `ShowMessages`
 - `IdleShuffle` (0.7.0, off in the core): donkeys standing in the world **without a cart** take a few slow steps now
   and then, so they don't stand perfectly still. See "Idle shuffle" below.
-- `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load, two at once, and are handed to their
+- `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load, as many as it holds, and are handed to their
   work straight from it ([zombies-on-cart.md](zombies-on-cart.md)). Off: the cart refuses them, and a zombie can't be
   taken while riding (neither from the ground, nor from its job, nor back from a station).
 - `CorpseIntoMorgue` (0.27.0, on): a corpse on the cart goes into the keeper's hands when the ride ends at the morgue
   door, so he walks in carrying it instead of leaving it on the parked cart; `CorpseIntoMorguePlaces` (a string, the
   area ids and door destinations that count). See "A corpse into the morgue" below.
+- `CartSlots` (0.28.0, 2): how many items the cart carries, 1 to 6; three and more ride in layers of up to two. Applied
+  to every cart at once (standing ones too) and never below what a cart holds, so lowering it drops nothing. A chest
+  aboard still takes the whole cart. See [cart-capacity.md](cart-capacity.md).
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 
@@ -160,7 +163,7 @@ While mounted the keeper always faces only left or right, like the donkey. That 
 | Pose | `Pose` (`RiderPose`: Walk, Idle, FishingIdle, FocusedWalk); `FreezePoseWhenIdle`, `PoseSpeedFollowsDonkey` (bool); `PoseSpeed`, `IdleFidgetEverySeconds`, `IdleFidgetSpeed`, `IdleCrawlSpeed` (float) |
 | Legs | `NearLeg` (bool), `LegSource` (`LegSource`: Body, Drawn), `LegHeightPx`, `LegAdjustXPx`, `LegAdjustYPx` (int) |
 | Cart on slopes | `CartFollowsGround` (bool), `CartGroundMaxShift`, `CartPitchMaxDegrees` (float), `CartSlope` (`CartSlopeStyle`: HalfLift, ShaftsTilt, WholeCartPitch) |
-| Cargo | `CargoDrawCorpse`, `CargoSwaysWithCart`, `CargoSetDownBehindCart` (bool); `CargoBedDepth`, `CargoSideGap`, `CargoOverhang`, `CargoNestle`, `CargoSetDownGap` (float) |
+| Cargo | `CargoDrawCorpse`, `CargoSwaysWithCart`, `CargoSetDownBehindCart` (bool); `CargoBedDepth`, `CargoSideGap`, `CargoOverhang`, `CargoNestle`, `CargoLayerShift`, `CargoSetDownGap` (float) |
 | Lantern pole | `LanternAlong`, `LanternUp`, `LanternAcross`, `LanternTilt`, `LanternLean`, `LanternSwayDegrees`, `LanternSwaySeconds`, `LanternScale` (float); `LanternShow`, `LanternFlip`, `LanternHangs` (bool) |
 | Lantern light | `LanternLightOn`, `LanternLightShadows`, `LanternSelfLightOn`, `LanternGlowOn`, `LanternGlassOn` (bool); `LanternLightIntensity`, `LanternLightRange`, `LanternLightDayDim`, `LanternSelfLightIntensity`, `LanternSelfLightRange`, `LanternGlowAlpha`, `LanternGlowScale` (float); `LanternLightColor` (string, hex `RRGGBB`) |
 | Sounds | `SoundsOn`, `HoofOn`, `HoofSurfaceAware`, `GrazeOn`, `BrayWhileWalking`, `BrayInSfxChannel`, `CargoThumpOn`, `MountOn`, `DismountOn`, `HitchOn`, `UnhitchOn`, `WheelOn`, `WheelPitchFollowsSpeed`, `BellOnSetOff`, `BellOnlyWithCargo` (bool); `SoundVolume` and every `…Volume`, `…Pitch`, `HoofPitchVariation`, `HoofPhase`, `WheelPhase`, `BrayOnMountChance`, `BrayIdleEverySeconds`, `BellSetOffIdleSeconds` (float); `HoofStepsPerCycle`, `WheelEveryCycles` (int); `HoofSoundId`, `GrazeSoundId`, `BraySoundId`, `CargoThumpSoundId`, `MountSoundId`, `DismountSoundId`, `HitchSoundId`, `UnhitchSoundId`, `WheelSoundId`, `BellSoundId` (string, the game's LazyAudio ids) |
@@ -649,6 +652,7 @@ History:
 - 0.23.0: a chest on the cart ([portable-chest.md](portable-chest.md)): the `Mounts.Behaviour` key `CargoChest` (on). While driving the cart, the action key on a plain storage chest (`chest_rough`, `chest`, `chest_good`) lifts it onto the cart, contents and all; it rides alone (the cart takes no other cargo meanwhile), drawn on the bed by a stand-in placed like a lone cargo item (its own `[item]` layout entry); the interact key with nothing in front sets it down where cargo would go, when the spot is in reach and inside a building area. On foot at the standing cart the stand-in offers the game's "[E] Open" (the real chest's inventory) and "[F] Set down". A save sets it down at the cart and takes it back right after; the side file names it (`chest <guid>`) and the restore after a load lifts it again. A door to another scene is refused while it rides ("Set the chest down before going through."); a dismount of the summon, a removal or a scene change set it down at the cart. The chest is the same world object throughout: it is never copied or removed from the scene.
 - 0.26.0: corpses at the crossroads ([corpse-delivery.md](corpse-delivery.md)): `Mounts.Corpses` (the `[Corpses]` keys, `CorpsesAtCrossroads` off), `Mounts.CorpsesActive`, `Mounts.CorpseLeft` with a `CorpseInfo`, `Mounts.StartCorpseDelivery()`. With the switch on, the game's own delivery donkey walks out beside the nun, leaves its bodies there for the keeper to haul and walks back; its four patches exist only while the switch is on.
 - 0.27.0: a corpse into the morgue ([above](#a-corpse-into-the-morgue-0270)): the `Mounts.Behaviour` keys `CorpseIntoMorgue` (on) and `CorpseIntoMorguePlaces`. The ride ends at the morgue door as always; the corpse comes off the parked cart into the keeper's hands, so he walks in carrying it. The game's doors are noted while riding (`PlayerController.Teleport` prefix, never refusing).
+- 0.28.0: the cart's capacity ([cart-capacity.md](cart-capacity.md)): the `Mounts.Behaviour` key `CartSlots` (2; 1 to 6). Each cart's inventory is sized when its view is prepared, before carried-over items go back on (a door never sheds any), and again when the setting or an override changes; the game's `npc_donkey.inventorySize` is untouched. The packer lays three and more items out in layers of up to two; one and two items are placed exactly as before.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).

@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI
         public readonly Tuned<CartSlopeStyle> CartSlope;
         public readonly Tuned<float> CartPitchMaxDegrees;
         public readonly Tuned<bool> CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart;
-        public readonly Tuned<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoSetDownGap;
+        public readonly Tuned<float> CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift, CargoSetDownGap;
         public readonly Tuned<float> LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean;
         public readonly Tuned<bool> LanternFlip;
         public readonly Tuned<bool> LanternHangs;
@@ -129,6 +129,8 @@ namespace GK2DonkeyAPI
                 "Cart style only: how far two items lying next to each other may together exceed the bed's measured width (across) or length (end to end) before the second one is stacked on the first instead, world units.");
             CargoNestle = cfg.Bind(section, "CargoNestle", Defaults.Get(section, "CargoNestle", 0.03f),
                 "Cart style only: how far an item stacked on another sinks into it, world units (a log on a shroud does not float on the highest point).");
+            CargoLayerShift = cfg.Bind(section, "CargoLayerShift", Defaults.Get(section, "CargoLayerShift", -0.03f),
+                new ConfigDescription("Cart style only, with more than two items (CartSlots): how far each layer above the bed is moved along the cart, per layer, world units; positive = towards the back of the cart, negative = towards the donkey. The default leans the load a little towards the donkey, away from the lantern pole, which stands at the back in Cart style.", new AcceptableValueRange<float>(-0.3f, 0.3f)));
             LanternAlong = cfg.Bind(section, "LanternAlong", Defaults.Get(section, "LanternAlong", 0f),
                 "Cart style only: move the lantern pole (with its light) along the cart, world units; positive = towards the back of the cart, away from the donkey. The prefab has it at the front rail, where the rider's head hides it.");
             LanternUp = cfg.Bind(section, "LanternUp", Defaults.Get(section, "LanternUp", 0f),
@@ -315,7 +317,7 @@ namespace GK2DonkeyAPI
                     SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
                     NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
-                    CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle,
+                    CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
                     BobScale, BobLagFrames, HandsSteady, HandsSwayPx, HeadLagFrames, HeadSettle,
@@ -370,6 +372,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> ShowMessages;
         internal static Tuned<bool> CargoZombies;
         internal static Tuned<bool> CargoChest;
+        internal static Tuned<int> CartSlots;
         internal static Tuned<bool> CorpseIntoMorgue;
         internal static Tuned<string> CorpseIntoMorguePlaces;
         internal static ConfigEntry<bool> InstanceControls;
@@ -469,9 +472,12 @@ namespace GK2DonkeyAPI
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
             CargoZombies = Config.Bind("General", "CargoZombies", Defaults.Get("General", "CargoZombies", true),
-                "Zombies ride on the cart like any other load (two at once), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
+                "Zombies ride on the cart like any other load (as many as it holds), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
             CargoChest = Config.Bind("General", "CargoChest", Defaults.Get("General", "CargoChest", true),
                 "A plain storage chest (rough, normal or good) rides on the cart: the action key on it while driving lifts it, contents and all; the interact key with nothing in front sets it down. Nothing else rides with it. Off: chests stay where they are.");
+            CartSlots = Config.Bind("General", "CartSlots", Defaults.Get("General", "CartSlots", 2),
+                new ConfigDescription("How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers), 6 (three layers). Applied to every cart at once. A cart holding more than the new number stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
+            CartSlots.Entry.SettingChanged += (_, __) => Mount.ApplyCartSlots("the setting changed");
             CorpseIntoMorgue = Config.Bind("General", "CorpseIntoMorgue", Defaults.Get("General", "CorpseIntoMorgue", true),
                 "Driving the cart through the morgue door with a corpse aboard: the ride ends at the door as always and the cart stays outside with its load, but the corpse goes into the keeper's hands, so he walks in carrying it (one; more with the game's extra hand slots). Only there (CorpseIntoMorguePlaces). Off: it stays on the cart.");
             CorpseIntoMorguePlaces = Config.Bind("General", "CorpseIntoMorguePlaces", Defaults.Get("General", "CorpseIntoMorguePlaces", "morgue, tp_RT_morgue_exit, tp_morgue_to_graveyard"),
