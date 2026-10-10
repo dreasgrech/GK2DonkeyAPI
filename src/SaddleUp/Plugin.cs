@@ -20,7 +20,7 @@ namespace SaddleUp
 
         // The API this mod is written against: 0.23 has the CargoChest behaviour key (0.22 CargoZombies, 0.19 the wheel and hub colours). Checked before anything of
         // the API is used, so an older API gets a clear message instead of a missing-method error.
-        private static readonly Version NeedsApi = new Version(0, 26, 0);
+        private static readonly Version NeedsApi = new Version(0, 27, 0);
 
         private void Awake()
         {
@@ -52,6 +52,7 @@ namespace SaddleUp
             Speed(MountStyle.Cart, "CartSpeed", "Cart speed", "driving the cart", me.CartSpeed, v => me.CartSpeed = v);
             p.Toggle("Behaviour", "ShowMessages", true, "Say why mounting is refused", "The keeper's thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
             p.Toggle("Behaviour", "CargoZombies", true, "Zombies ride on the cart", "Pick up a zombie while driving and it lies on the cart, two at once; hand it to its work straight from the cart. Off: the cart refuses zombies.", v => Mounts.Behaviour.Set(Guid, "CargoZombies", v));
+            p.Toggle("Behaviour", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse. Off: it stays on the cart.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));
             p.Toggle("Behaviour", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a plain storage chest (rough, normal or good) and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             p.Toggle("Behaviour", "KeepWithSaves", me.KeepWithSaves, "Keep the donkey with the save", "After loading, your donkey and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);

@@ -842,6 +842,10 @@ namespace GK2DonkeyAPI
                     MountSounds.Moment(this, "dismount");
                 }
                 CargoSheet.Abort("dismount: " + reason); // before Park keeps the cargo on a standing cart
+                if (reason == "indoors" || reason == "scene changed")
+                {
+                    MorgueHandover.Arm(this, reason); // a corpse aboard at the morgue door goes into his hands (decided over the next frames)
+                }
                 if (!Ephemeral)
                 {
                     Park(pc, reason);

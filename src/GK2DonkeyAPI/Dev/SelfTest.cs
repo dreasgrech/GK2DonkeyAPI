@@ -156,6 +156,8 @@ namespace GK2DonkeyAPI
                 new Scenario { Name = "chest: the backstops", Body = ChestBackstops },
                 new Scenario { Name = "chest: the save as the game writes it", Body = ChestSaveImage },
                 new Scenario { Name = "chest: a zombie using it", Body = ChestZombieGuard },
+                new Scenario { Name = "morgue: the door rule", Body = MorgueDecisions },
+                new Scenario { Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
                 new Scenario { Name = "corpses: drop and stand points", Body = CorpsePoints },
                 new Scenario { Name = "corpses: one body left", Body = CorpseOneBody },
                 new Scenario { Name = "corpses: the patches follow the switch", Body = CorpseSwitch },

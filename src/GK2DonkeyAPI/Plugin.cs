@@ -370,6 +370,8 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> ShowMessages;
         internal static Tuned<bool> CargoZombies;
         internal static Tuned<bool> CargoChest;
+        internal static Tuned<bool> CorpseIntoMorgue;
+        internal static Tuned<string> CorpseIntoMorguePlaces;
         internal static ConfigEntry<bool> InstanceControls;
         internal static Tuned<KeyCode> HitchKey;
 
@@ -385,6 +387,7 @@ namespace GK2DonkeyAPI
             typeof(ChestInteractionHandler_Interact_Patch),
             typeof(ChestInteractionHandler_HasInteraction2_Patch),
             typeof(PlayerController_Teleport_Patch),
+            typeof(PlayerController_Teleport_DoorNote_Patch),
             typeof(WorldZoneData_TryAddWgoData_Patch),
             typeof(GameSave_PrepareToSave_Patch),
             typeof(ChestInteractionHandler_Interact2_Patch),
@@ -469,6 +472,10 @@ namespace GK2DonkeyAPI
                 "Zombies ride on the cart like any other load (two at once), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
             CargoChest = Config.Bind("General", "CargoChest", Defaults.Get("General", "CargoChest", true),
                 "A plain storage chest (rough, normal or good) rides on the cart: the action key on it while driving lifts it, contents and all; the interact key with nothing in front sets it down. Nothing else rides with it. Off: chests stay where they are.");
+            CorpseIntoMorgue = Config.Bind("General", "CorpseIntoMorgue", Defaults.Get("General", "CorpseIntoMorgue", true),
+                "Driving the cart through the morgue door with a corpse aboard: the ride ends at the door as always and the cart stays outside with its load, but the corpse goes into the keeper's hands, so he walks in carrying it (one; more with the game's extra hand slots). Only there (CorpseIntoMorguePlaces). Off: it stays on the cart.");
+            CorpseIntoMorguePlaces = Config.Bind("General", "CorpseIntoMorguePlaces", Defaults.Get("General", "CorpseIntoMorguePlaces", "morgue, tp_RT_morgue_exit, tp_morgue_to_graveyard"),
+                "Where CorpseIntoMorgue applies, comma-separated: building area ids (the game's world zones; the keeper's area after the door) and door destinations (the teleport point ids the game's doors pass). Either one matching is enough. Empty: nowhere.");
             InstanceControls = Config.Bind("General", "InstanceControls", Defaults.Get("General", "InstanceControls", true),
                 "Donkeys and carts a mod left standing in the world (Mounts.SpawnDonkey / SpawnCart): the interact key next to a standing donkey rides it (empty hands), and next to a free cart while riding a donkey without its cart hitches it; a label over it says so. Off: only mods can do that (MountHandle.Ride, Mounts.Hitch).");
             HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),

@@ -487,6 +487,14 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning("Mount: foals indoors: " + e.Message);
             }
+            try
+            {
+                MorgueHandover.Tick(pc); // a corpse off the cart parked at the morgue door (MorgueHandover.cs)
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Mount: corpse into the morgue: " + e.Message);
+            }
             List<Instance> all = TakeSnapshot();
             try
             {

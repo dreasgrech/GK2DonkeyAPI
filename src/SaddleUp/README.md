@@ -44,6 +44,7 @@ All of these apply at once:
 | | Say why mounting is refused | on | The keeper's thought bubble. |
 | | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, two at once; hand it to its work straight from the cart. Off: the cart refuses zombies. |
 | | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
+| | Carry the corpse into the morgue | on | Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse. Off: it stays on the cart. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | | Calling the donkey leaves the cart parked | on | H while your donkey stands somewhere with the cart: the donkey alone comes and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |

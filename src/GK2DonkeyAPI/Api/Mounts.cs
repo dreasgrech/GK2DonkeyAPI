@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI.Api
     public static class Mounts
     {
         // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 26, 0);
+        public static readonly Version ApiVersion = new Version(0, 27, 0);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
@@ -224,6 +224,9 @@ namespace GK2DonkeyAPI.Api
         //   ShowMessages             the keeper's thought bubble for refusals
         //   CargoZombies             zombies ride on the cart (0.22.0, on); off: the cart refuses them
         //   CargoChest               a plain storage chest rides on the cart, alone (0.23.0, on); off: chests stay put
+        //   CorpseIntoMorgue         a corpse on the cart goes into the keeper's hands when the ride ends at the morgue
+        //                            door, so he walks in carrying it (0.27.0, on); CorpseIntoMorguePlaces (a string):
+        //                            the area ids and door destinations that count ("morgue, tp_RT_morgue_exit, ...")
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -237,6 +240,7 @@ namespace GK2DonkeyAPI.Api
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
+                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces,
                 }));
             }
         }

@@ -121,6 +121,14 @@ Harmony prefixes are applied when `CorpsesAtCrossroads` turns on and removed whe
 off the game's donkey code is not hooked at all. Seen in play on 2026-10-10 (both the walk-to-morgue form and the
 walk-out form). The design discussion below is kept as written.
 
+### The way back (0.27.0, same day)
+
+A body carted from the crossroads to the morgue: driving the cart through the morgue door ends the ride at the door as
+always (the cart is parked outside with its load), and with the `[General]` key `CorpseIntoMorgue` (on) the body comes
+off the parked cart into the keeper's hands, so he walks in carrying it. Only the morgue (`CorpseIntoMorguePlaces`:
+the `morgue` area, or the door destinations `tp_RT_morgue_exit` / `tp_morgue_to_graveyard` from the game's door
+expressions). `src/GK2DonkeyAPI/MorgueHandover.cs`; docs/api.md "A corpse into the morgue".
+
 ## Design
 
 **Option A, recommended for v1: redirect at the pallet.** Prefix on `Flow_TryToAddCorpseToPallet.TryToAddCorpseToPallet`

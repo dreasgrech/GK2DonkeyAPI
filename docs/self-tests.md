@@ -78,6 +78,8 @@ a failure of the mod. Try another spot.
 | Chest: the backstops | the chest broken on purpose (hidden and zone-less, nobody's), then the game's save order (hook, pass, take-back) and the after-load repair; a normal chest for contrast | both show and zone it, drawn, contents untouched; a chest standing normally is left alone (its "Please report this line" warnings are announced as the test's own) |
 | Chest: the save as the game writes it | with the chest riding a test cart, the real save steps and the game's own serializer in memory, read back into a copy; then the fail-safe lock | in the copy: present, not hidden, interactable, the same items, by the cart on ground, in a zone's list; the side file names it; it rides again after; locked: set down at the cart, pickups refused ("Chests don't ride on the cart."); unlocked; any other riding chest (the player's) lifted back |
 | Chest: a zombie using it | a caretaker staged by data in the zombie system's lookup (never in a scene, never saved) with the chest as its target, then a conveyor transporter | refused with "A zombie is using this chest." by the hint's reason and the press, the chest shown and zoned; target cleared, liftable; the zombie gone again, the list's count as before |
+| Morgue: the door rule | `MorgueHandover.Decide` alone | the morgue area decides; the morgue door decides before the area is known; another area and door, nothing known, an empty list: no; case and spaces don't matter; the setting in effect names the morgue |
+| Morgue: a corpse off the parked cart into the hands | a test cart beside the keeper with a generated body on it; `HandOver` with the switch off, then on, then a second body | off: the body stays on the cart; on: it is in the keeper's hands and off the cart; the second body stays when the hands are full (one slot; an INFO with more); `cur_bodies_count` unchanged; the bodies removed again, the cart removed. The hand-over is the game's own pickup, so its `AddOverhead body_corpse` trigger fires, as it does whenever the keeper picks up a body |
 
 **After every scenario that moves the keeper:** every donkey in the world with its view on has a view of its own size,
 and its cart parts match whether it has a cart. That covers reused views taken by any donkey, not only the test's.
@@ -91,6 +93,11 @@ number, scene, kind, keep setting and key. No test donkey is left behind.
   save. See `persistence-tests.md`.
 - **Whether it looks right overall.** A screenshot page per check could be added, like the cargo sheet.
 - **How riding feels:** hitches while the player rides.
+- **The morgue door itself** (0.27.0): drive the cart in with a body aboard; the body should be in the keeper's hands
+  inside, the cart at the door with the rest. The log says which signal decided (the `morgue` area or the door's
+  destination point), or why not. Done by hand 2026-10-10: the door signal decided (`tp_RT_morgue_exit`, preset
+  `dungeons`) on the dismount frame, with control not yet back, so the body was in his hands before the screen came
+  back; the cart stayed at (24.2, 3.6, 20.5) with 0 items.
 
 ## Runs
 
@@ -105,3 +112,5 @@ number, scene, kind, keep setting and key. No test donkey is left behind.
 | 2026-10-10, run 2 (yard) | 156 passed, 0 failed, 7 warnings | the foal-follow scenario passed from the yard (location-bound, as suspected). The chest scenarios still skipped: the keeper stood in the yard zone but the chest spot 3 units east was just outside it; the chest tests now pick a spot inside a zone first. Run 3 pending (then the spot is remembered) |
 | 2026-10-10, run 3 | 156 passed, 0 failed, 7 warnings | started from `inquisitions_base`, which the game lists as the keeper's zone but which is not a container zone, so no chest could belong anywhere near; the runner now moves the keeper into the nearest container zone at the start when he isn't in one. Run 4 pending |
 | 2026-10-10, run 4 | **254 passed, 0 failed, 0 warnings** | started outside any container zone; the runner moved the keeper into the graveyard zone at (38.4, 3.6, 15.6) and back afterwards; every chest and corpse scenario ran; the spot is remembered (`Debug.SelfTestSpot`) |
+| 2026-10-10, run 5 | 267 passed, 1 failed, 0 warnings | the two new morgue scenarios (API 0.27.0). The hand-over itself worked (1 handed, cart 0, held 1); the FAIL was the test's own check, which compared the body by object reference, while the game's inventory stores a split-off instance with its own GUID (`Item.Split`). Its cleanup missed for the same reason and the test body stayed in the keeper's hands (a free body in that save). Fixed: GUIDs read from the cart, and the cleanup takes out of the hands whatever was not held before the test. |
+| 2026-10-10, run 6 | **269 passed, 0 failed, 0 warnings** | the fixed morgue scenario, with the new check that the keeper's hands are as they were (1 test body taken out of them). The morgue door itself is the hand test. |

@@ -97,6 +97,7 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | **Take from cart** | Built, untested. In section 2: test it. |
 | **Carrying zombies** | Built and tested 2026-10-05 (API 0.22.0, the toggle "Zombies ride on the cart"): two at once, handed to their work from the cart ([zombies-on-cart.md](zombies-on-cart.md)). Positions tuned in the panel. |
 | **The door bug** (2026-10-02) | The donkey parked on the doorstep after "Dismounted (indoors)" shut the keeper in the doorway. Likely cause found 2026-10-03: navmesh cuts and holes the donkey views left behind; removed and measured in API 0.18.0, to test ([foals-indoors.md](foals-indoors.md)). |
+| **A corpse into the morgue** (2026-10-10) | Built (API 0.27.0, the toggle "Carry the corpse into the morgue", on): the ride ends at the morgue door as always, the body comes off the parked cart into the keeper's hands. Self-tested (the rule and the hand-over) and the door tested by hand the same day: the body was in his hands before the screen came back. |
 
 ## 6. Optional extras (decide)
 

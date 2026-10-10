@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI
     // are kept in memory and put back on the re-summoned cart.
     internal static partial class Cargo
     {
-        private const string CorpseId = "body_corpse";
+        internal const string CorpseId = "body_corpse";
         internal const string ContainerName = "cart_cargo";
 
         // What the packer placed last, for the panel: item id and whether it sits on top of another item.
@@ -403,6 +403,80 @@ namespace GK2DonkeyAPI
                 itemId = last.id;
                 Plugin.Log.LogInfo($"Cargo: {Cargo.Name(last)} taken off {owner.Describe()} into the hands; cart {list.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} held.");
                 return null;
+            }
+
+            // The corpses off this cart into the keeper's hands, as many as they take (Mount.MorgueHandover: the keeper
+            // walked into the morgue and the cart stayed at the door). From the cart's inventory while it has a view,
+            // else from the list kept for the next one; a body the hands refuse goes back where it was, so nothing is
+            // dropped or lost. Returns how many went; stop says why it stopped short, if it did.
+            internal int HandCorpsesTo(PlayerData pd, out string stop)
+            {
+                stop = null;
+                if (pd == null)
+                {
+                    stop = "no keeper";
+                    return 0;
+                }
+                int n = 0;
+                foreach (Item it in ItemsNow())
+                {
+                    if (it.id != CorpseId)
+                    {
+                        continue;
+                    }
+                    if (!pd.HasFreeOverheadSlot)
+                    {
+                        stop = "his hands are full";
+                        break;
+                    }
+                    bool fromInv = inv != null;
+                    if (fromInv ? !inv.RemoveItemFromInventoryByUID(it) : !mirror.Remove(it))
+                    {
+                        Plugin.Log.LogWarning($"Cargo: {Cargo.Name(it)} would not come off {owner.Describe()}; it stays there.");
+                        continue;
+                    }
+                    bool inHands;
+                    try
+                    {
+                        inHands = pd.TryAddOverheadItemNoReplace(it);
+                    }
+                    catch (Exception e)
+                    {
+                        // The game adds the item to the hands and then plays its pickup sound (as in Unload): a failure
+                        // after the add leaves it in hand; before the add, it goes back onto the cart. Never lost.
+                        inHands = InHands(pd, it);
+                        Plugin.Log.LogWarning($"Cargo: handing {Cargo.Name(it)} to the keeper threw ({e.Message}); it is {(inHands ? "in his hands" : "back on " + owner.Describe())}.");
+                    }
+                    if (!inHands)
+                    {
+                        if (!fromInv)
+                        {
+                            mirror.Add(it);
+                        }
+                        else if (!inv.AddItemToInventory(it))
+                        {
+                            // The slot it came from is free again, so this does not happen; if it ever did, the body
+                            // goes onto the ground at the keeper's feet (the game's own drop), never away.
+                            Plugin.Log.LogWarning($"Cargo: {Cargo.Name(it)} did not go back onto {owner.Describe()}; {(DropAtKeeper(pd, it) ? "set down at the keeper's feet" : "it is LOST")}.");
+                            stop = "his hands refused it";
+                            break;
+                        }
+                        Plugin.Log.LogWarning($"Cargo: the keeper's hands refused {Cargo.Name(it)}; it is back on {owner.Describe()}.");
+                        stop = "his hands refused it";
+                        break;
+                    }
+                    n++;
+                }
+                if (inv != null)
+                {
+                    SyncMirror();
+                    owner.OnCargoChanged();
+                }
+                else
+                {
+                    Announce();
+                }
+                return n;
             }
 
             // The predicates above, made once (a lambda capturing the cart would be new garbage on every call; the

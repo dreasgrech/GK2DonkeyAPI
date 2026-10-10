@@ -144,6 +144,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `CargoZombies` (0.22.0, on): zombies ride on the cart like any other load, two at once, and are handed to their
   work straight from it ([zombies-on-cart.md](zombies-on-cart.md)). Off: the cart refuses them, and a zombie can't be
   taken while riding (neither from the ground, nor from its job, nor back from a station).
+- `CorpseIntoMorgue` (0.27.0, on): a corpse on the cart goes into the keeper's hands when the ride ends at the morgue
+  door, so he walks in carrying it instead of leaving it on the parked cart; `CorpseIntoMorguePlaces` (a string, the
+  area ids and door destinations that count). See "A corpse into the morgue" below.
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 
@@ -559,6 +562,36 @@ core; a mod switches it on for its player. How the game delivers and what the fe
 - Saddle Up: the Behaviour toggle "Donkey leaves corpses at the crossroads" (off) sets `CorpsesAtCrossroads`; the
   finer keys are the API's cfg and the panel's "Corpses at the crossroads" rows.
 
+## A corpse into the morgue (0.27.0)
+
+The way back from the crossroads: a body carted to the morgue. Driving the cart through the morgue door, the ride ends
+at the door as it always does (`DismountIndoors`; a door that loads another scene ends it too) and the cart is parked
+outside with its load. With `CorpseIntoMorgue` on (the core's default) the corpse comes off that parked cart into the
+keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/GK2DonkeyAPI/MorgueHandover.cs`.
+
+- **Only the morgue.** It is the one building a body is worked in (the pallets, the autopsy table, the crematorium); in
+  a house or the church a body in hand is of no use, and no other cargo comes inside either. `CorpseIntoMorguePlaces`
+  (default `morgue, tp_RT_morgue_exit, tp_morgue_to_graveyard`) says which: building area ids, as the game tracks the
+  keeper's area after the door (`PlayerData.CurrentWorldZoneData`, read from a raycast every physics step, so a moment
+  after the door), and door destinations (the teleport point ids the game's door expressions pass:
+  `TeleportTo("tp_RT_morgue_exit", "dungeons", "door")` is the morgue's entrance seen from inside, known the moment the
+  ride ends, while the screen is still black). Either one matching is enough; the decision waits at most a quarter
+  second after control is back. Only after a door: a ride that ends "indoors" without a teleport in the last minute
+  (a script's indoor preset) hands nothing over. Not the morgue: nothing happens.
+- **Only bodies** (`body_corpse`), as many as his hands take: one, more with the game's `extra_overhead`. Zombies and
+  everything else stay on the cart. Nothing is dropped and nothing is lost: a body the hands refuse goes back onto the
+  cart. The game's own pickup runs (its sound, `AddOverhead` trigger), so the body shows on his shoulder as a body he
+  picked up.
+- **Instances only.** The old summon hands its whole load back at every door anyway. A parked cart raises no cargo
+  event for this (as `Park` raises none).
+- **On the way out** nothing new: getting back on with the body in hand loads it onto the cart, as always.
+- Saddle Up: the Behaviour toggle "Carry the corpse into the morgue" (on).
+- Tested in game 2026-10-10: the door signal decided on the dismount frame, while the screen was still black; the
+  morgue's inside is at about (-72.5, 0, -388.7) in `RuinedTemple`, lit with the `dungeons` preset.
+- Every door while riding writes `Mount: a door while riding: to <point> in <scene> (preset <p>); N item(s) on the
+  cart.`, and a door with a corpse aboard then `... goes into the keeper's hands if this is the morgue.` followed by
+  either the hand-over line or `the corpse stays on ...: not the morgue (area <a>, door to <d>)`.
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -615,6 +648,7 @@ History:
 - 0.22.0: zombies on the cart ([zombies-on-cart.md](zombies-on-cart.md)): the `Mounts.Behaviour` key `CargoZombies` (on); two zombies at once, drawn as the game's lying zombie with their own heads and colours, a layout class of their own; their organs and gear stay with them through every move (the zombie is relinked to the copy the cart stores). `CargoLoaded` / `CargoUnloaded` pass a `CargoItem` (id, GUID, zombie name) and `MountHandle.Cargo` replaces `CargoIds`. Fix: riding past a working zombie no longer offers "[E] Take" while the cart can't take it (taking it pulled it off its job). Fix: the hint over what the keeper faces is redrawn when the cart's load changes.
 - 0.23.0: a chest on the cart ([portable-chest.md](portable-chest.md)): the `Mounts.Behaviour` key `CargoChest` (on). While driving the cart, the action key on a plain storage chest (`chest_rough`, `chest`, `chest_good`) lifts it onto the cart, contents and all; it rides alone (the cart takes no other cargo meanwhile), drawn on the bed by a stand-in placed like a lone cargo item (its own `[item]` layout entry); the interact key with nothing in front sets it down where cargo would go, when the spot is in reach and inside a building area. On foot at the standing cart the stand-in offers the game's "[E] Open" (the real chest's inventory) and "[F] Set down". A save sets it down at the cart and takes it back right after; the side file names it (`chest <guid>`) and the restore after a load lifts it again. A door to another scene is refused while it rides ("Set the chest down before going through."); a dismount of the summon, a removal or a scene change set it down at the cart. The chest is the same world object throughout: it is never copied or removed from the scene.
 - 0.26.0: corpses at the crossroads ([corpse-delivery.md](corpse-delivery.md)): `Mounts.Corpses` (the `[Corpses]` keys, `CorpsesAtCrossroads` off), `Mounts.CorpsesActive`, `Mounts.CorpseLeft` with a `CorpseInfo`, `Mounts.StartCorpseDelivery()`. With the switch on, the game's own delivery donkey walks out beside the nun, leaves its bodies there for the keeper to haul and walks back; its four patches exist only while the switch is on.
+- 0.27.0: a corpse into the morgue ([above](#a-corpse-into-the-morgue-0270)): the `Mounts.Behaviour` keys `CorpseIntoMorgue` (on) and `CorpseIntoMorguePlaces`. The ride ends at the morgue door as always; the corpse comes off the parked cart into the keeper's hands, so he walks in carrying it. The game's doors are noted while riding (`PlayerController.Teleport` prefix, never refusing).
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).
