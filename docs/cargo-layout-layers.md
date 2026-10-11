@@ -223,6 +223,41 @@ look right.
   from view while it is open, so one part can be tuned without the others in the way. View only: the hidden items
   stay in the layout (packed, then their views switched off), so nothing moves; everything shows again when the tab
   closes. The tint is now hue by role and shade by layer, with a switch (Debug.CargoTabTint).
+- **Alone on top of a pair (2026-10-10, night):** a lone item on an upper layer (five logs: the top one) was placed by
+  the same on-top contact as a whole pair layer, at the layer's origin without the beside offsets its neighbours
+  get, so it floated and could not be moved alone. Each class now has `onpair_along/up/across` in its `[item]`
+  entry, applied only to an item lying alone on top of a pair; step 3 shows a box for it. Never on a two-item cart.
+- **The rules, traced (2026-10-10, night):** the floor moves everything (cart calibration); gap and overhang decide
+  whether a pair set to 'auto' lies beside or stacks, tuned or not, and space untuned beside pairs; nestle and layer
+  shift only touch untuned on-top contacts. So a beside contact tuned from step 3 with its pair still on 'auto'
+  could have been flipped by an overhang change: freezing a beside contact now pins the pair's arrangement to the
+  way it lies (`FreezeBeside(..., arrangement)`), and PackerScan checks it survives a smaller overhang. The tab
+  shows the floor as step 0 (set first) and step 4 as 'Fallbacks for contacts not tuned yet', grouped by what they
+  decide, with how many contacts of the load still follow them.
+- **No more numbered steps (2026-10-10, night):** the numbers 0 to 6 read as 'step 4 is for four items'. The tab is
+  now three parts: 'The cart' (the floor, set once), 'Tune this load' with three views (1 item, 2 items, 3 or more)
+  of which the one matching the load is lit and shown, and 'Options' (fallbacks, behaviour, help with how to check),
+  folded.
+- **Drag jumping to another slider (2026-10-10, night):** a box's Reset button appeared only once the box was tuned,
+  so the first move of an untuned slider added a control above the sliders; IMGUI knows controls by their order in
+  the frame, and the held drag went to the slider below (the dragged one would not go left). Reset is now always
+  drawn, greyed when there is nothing to reset (`ResetButton`). The video frame by frame: Height -0.01, Reset appears,
+  the slider sticks, the value falls back to 0 and wood (1) Along follows the mouse.
+  The full review of the tab for this class of fault, and what else was fixed:
+  - The tab draws from a view of the load frozen while any panel control is held (`GUIUtility.hotControl`):
+    dragging the overhang or the gap re-arranges the load, which added or removed contact boxes above those sliders
+    (the same jump), and a pack in between could do the same. The view follows on release. Held means hotControl set
+    and a mouse button really down (`UnityInput`), so a release outside the game can't leave the view frozen. The sliders take their
+    values live from the last pack (`LiveOf`, only while the load has the same shape), because a slider compares its
+    result with the value it was given and a frozen value would drop a drag back to the starting point.
+  - Every state a click changes is read once before the click: tint, hide filters, the three folds, set down behind
+    the cart, and the isolation (Alone / Show the whole load). Reading the live state after the click drew more
+    controls than the layout pass had in that event.
+  - PackerScan sweeps every contact slider and every alone-on-a-pair offset to both ends of its panel range on 38
+    loads: the load's shape (order, relation, partner, layer) never changes. So in 'Tune this load' only the
+    fallbacks (overhang, gap) can change which boxes show, and those are covered by the frozen view. The scan's
+    beside freeze now passes the arrangement, as the tab does. 14001 passed, 0 failed.
+  - No panel aborts and no GUILayout errors in either log for the session in the video.
 - **The fit rule made deterministic (2026-10-10):** comparing the new sheet with the one from 2026-10-05 (every
   other picture unchanged beyond lighting), two pairs had flipped from stacked to side by side: a crate beside a
   slab, and beside a log. Their widths sum to exactly the limit (0.50 + 0.02 + 0.35 = 0.87 against 0.75 + 0.12),

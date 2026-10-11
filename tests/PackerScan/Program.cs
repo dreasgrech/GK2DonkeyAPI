@@ -36,6 +36,11 @@ CargoLayout.PairEntry EditPair(string a, string b)
     if (p == null) { p = new CargoLayout.PairEntry { A = a, B = b }; pairs.Add(p); }
     return p;
 }
+CargoLayout.ItemEntry EditItem(string id)
+{
+    if (!items.TryGetValue(id, out var e)) { e = new CargoLayout.ItemEntry { Id = id }; items[id] = e; }
+    return e;
+}
 bool FirstIsA(CargoLayout.PairEntry p, string first, string second) => p.A == first && p.B == second || !(p.A == second && p.B == first);
 var L = new CargoPacker.Lookup
 {
@@ -157,6 +162,10 @@ Console.WriteLine($"INFO {twoCases} two-item cases against the pre-layer algorit
 float R() => (float)(rnd.NextDouble() * 0.4 - 0.2);
 int Area(string id) => Mathf.RoundToInt(boxes[id].x * boxes[id].z * 10000f);
 string Lower(string a, string b) => Area(a) != Area(b) ? (Area(a) > Area(b) ? a : b) : (string.CompareOrdinal(a, b) <= 0 ? a : b);
+// The load's shape as the Cargo tab draws it (which boxes, in which order): order, relation, partner and layer of every
+// item. A slider in 'Tune this load' must never change it, or the boxes above the dragged slider come and go and the
+// drag lands on another slider (IMGUI knows a control by its order; 2026-10-10, video 18-19-36).
+string Shape(CargoPacker.Result r) => string.Join(";", Enumerable.Range(0, r.Count).Select(j => $"{r.Order[j]}/{r.Relation[j]}/{r.Partner[j]}/{r.Layer[j]}"));
 string Key(CargoPacker.Result r, int j) => r.Relation[j] == "bed" ? "bed" : (r.Relation[j] == "on" ? "on:" : "beside:") + Lower(r.Id[r.Partner[j]], r.Id[j]) + "+" + (Lower(r.Id[r.Partner[j]], r.Id[j]) == r.Id[r.Partner[j]] ? r.Id[j] : r.Id[r.Partner[j]]);
 Vector3 OnRel(CargoPacker.Result r, int j) => r.Origin[j] - r.Target[r.Partner[j]];
 
@@ -234,7 +243,7 @@ foreach (string[] ids in loads)
                 }
                 else
                 {
-                    if (!pair.BesideTuned) CargoPacker.FreezeBeside(pair, qIsA, cur.LayerPos(q), cur.LayerPos(i));
+                    if (!pair.BesideTuned) CargoPacker.FreezeBeside(pair, qIsA, cur.LayerPos(q), cur.LayerPos(i), cur.Relation[i]);
                     CargoPacker.WriteBeside(pair, qIsA, cur.LayerPos(q));
                     CargoPacker.WriteBeside(pair, !qIsA, cur.LayerPos(i));
                 }
@@ -243,6 +252,44 @@ foreach (string[] ids in loads)
                 bool same = after.Count == before.Count && Enumerable.Range(0, after.Count).All(j => Near(after.Target[j], before.Target[j]) && after.Relation[j] == before.Relation[j] && after.Partner[j] == before.Partner[j]);
                 Check(same, $"{name}: row {i} ({before.Relation[i]} {before.Id[i]}/{before.Id[q]}, rep {rep}) moved on a write-back: " + string.Join(" ", Enumerable.Range(0, after.Count).Where(j => !Near(after.Target[j], before.Target[j])).Select(j => $"{j}:{V(before.Target[j])}->{V(after.Target[j])}")));
                 if (!same) break;
+            }
+            // any slider of this row, anywhere in its range (the tab's ranges), keeps the load's shape
+            {
+                var shapeBase = CargoPacker.Pack(load, S(), L);
+                string shape0 = Shape(shapeBase);
+                foreach (var d in new[] { new Vector3(-0.6f, -0.3f, -0.5f), new Vector3(0.6f, 1.0f, 0.5f), new Vector3(-0.6f, 1.0f, 0.5f), new Vector3(0.6f, -0.3f, -0.5f), new Vector3(R(), R(), R()) })
+                {
+                    if (onTop)
+                    {
+                        Vector3 keep = CargoPacker.OnTopShown(shapeBase, i, L, pair);
+                        CargoPacker.WriteOnTop(pair, qIsA, d);
+                        string sh = Shape(CargoPacker.Pack(load, S(), L));
+                        Check(sh == shape0, $"{name}: on-top row {i} set to {V(d)} changed the load's shape: {shape0} -> {sh}");
+                        CargoPacker.WriteOnTop(pair, qIsA, keep);
+                    }
+                    else
+                    {
+                        foreach (bool aSide in new[] { qIsA, !qIsA })
+                        {
+                            Vector3 keep = aSide == qIsA ? shapeBase.LayerPos(q) : shapeBase.LayerPos(i);
+                            CargoPacker.WriteBeside(pair, aSide, d);
+                            string sh = Shape(CargoPacker.Pack(load, S(), L));
+                            Check(sh == shape0, $"{name}: beside row {i} item {(aSide ? "A" : "B")} set to {V(d)} changed the load's shape: {shape0} -> {sh}");
+                            CargoPacker.WriteBeside(pair, aSide, keep);
+                        }
+                    }
+                    // the lone-on-a-pair offset of every class in the load
+                    foreach (string c in ids.Distinct())
+                    {
+                        var e = EditItem(c);
+                        Vector3 keepE = e.OnPair;
+                        e.OnPair = new Vector3(Mathf.Clamp(d.x, -0.4f, 0.4f), Mathf.Clamp(d.y, -0.4f, 0.4f), Mathf.Clamp(d.z, -0.4f, 0.4f));
+                        string sh = Shape(CargoPacker.Pack(load, S(), L));
+                        Check(sh == shape0, $"{name}: {c} alone-on-a-pair set to {V(e.OnPair)} changed the load's shape");
+                        e.OnPair = keepE;
+                    }
+                }
+                Check(Shape(CargoPacker.Pack(load, S(), L)) == shape0, $"{name}: row {i}: shape not back after the range sweep");
             }
             // a slider delta: the relation moves by exactly that wherever it occurs (every layer of the same pair), and
             // no other relation changes (relative quantities: an on-top relation is its layer origin relative to the
@@ -326,6 +373,43 @@ Console.WriteLine($"INFO {loads.Count} loads, {loops} write-back loops");
 }
 
 Mixed.Run((ok, what) => { Check(ok, what); return ok; });
+{
+    // a beside contact tuned from a stack keeps its arrangement when the fallback rules change
+    ResetLayout();
+    var p = EditPair("box", "wood");
+    p.Mode = "auto";
+    var load = Load("wood", "wood", "box", "wood");
+    var wide = S(); wide.Overhang = 0.30f; // box + wood fit side by side
+    var r = CargoPacker.Pack(load, wide, L);
+    int bi = Enumerable.Range(0, r.Count).FirstOrDefault(i => (r.Relation[i] == "side" || r.Relation[i] == "along") && (r.Id[i] == "box" || r.Id[r.Partner[i]] == "box"));
+    if (bi > 0)
+    {
+        int q = r.Partner[bi];
+        CargoPacker.FreezeBeside(p, FirstIsA(p, r.Id[q], r.Id[bi]), r.LayerPos(q), r.LayerPos(bi), r.Relation[bi]);
+        var narrow = S(); narrow.Overhang = 0.0f; // would not fit any more
+        var r2 = CargoPacker.Pack(load, narrow, L);
+        Check(p.Mode == r.Relation[bi] && r2.Relation.Count(x => x == "side" || x == "along") == r.Relation.Count(x => x == "side" || x == "along"), $"a tuned beside pair is pinned ({p.Mode}) and survives a smaller overhang");
+    }
+    else Check(false, "box + wood did not lie beside each other with a wide overhang: " + r.Note);
+}
+{
+    // alone on top of a pair: five logs; the onpair offset moves the lone top log only, and never a two-item stack
+    ResetLayout();
+    var five = Load("wood", "wood", "wood", "wood", "wood");
+    var r0 = CargoPacker.Pack(five, S(), L);
+    items["wood"].OnPair = new Vector3(0.03f, -0.05f, 0.02f);
+    var r1 = CargoPacker.Pack(five, S(), L);
+    Check(Near(r1.Target[4] - r0.Target[4], items["wood"].OnPair) && Enumerable.Range(0, 4).All(j => Near(r1.Target[j], r0.Target[j])), "five logs: onpair moves the lone top log only");
+    var two = CargoPacker.Pack(Load("wood", "wood"), S("stack"), L);
+    items["wood"].OnPair = Vector3.zero;
+    var twoBase = CargoPacker.Pack(Load("wood", "wood"), S("stack"), L);
+    Check(Near(two.Target[1], twoBase.Target[1]), "two logs stacked: onpair never applies");
+    var six = CargoPacker.Pack(Load("wood", "wood", "wood", "wood", "wood", "wood"), S(), L);
+    items["wood"].OnPair = new Vector3(0.03f, -0.05f, 0.02f);
+    var six1 = CargoPacker.Pack(Load("wood", "wood", "wood", "wood", "wood", "wood"), S(), L);
+    Check(Enumerable.Range(0, 6).All(j => Near(six1.Target[j], six.Target[j])), "six logs (no lone item): onpair changes nothing");
+    items["wood"].OnPair = Vector3.zero;
+}
 Console.WriteLine($"{pass} passed, {fail} failed");
 Console.WriteLine(fail == 0 ? "ALL PASS" : "FAILED");
 return fail == 0 ? 0 : 1;

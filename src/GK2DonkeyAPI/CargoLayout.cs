@@ -95,7 +95,8 @@ namespace GK2DonkeyAPI
             public Vector3 Top;    // when stacked on top
             public bool HasAlone;  // alone on the cart: Alone instead of Base
             public Vector3 Alone;
-            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && !HasAlone;
+            public Vector3 OnPair; // alone on top of a pair (a lone item on an upper layer): an extra offset, in that layer only
+            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && OnPair == Vector3.zero && !HasAlone;
         }
 
         public class PairEntry
@@ -240,6 +241,9 @@ namespace GK2DonkeyAPI
                         case "alone_along": item.Alone.x = f; item.HasAlone = true; break;
                         case "alone_up": item.Alone.y = f; item.HasAlone = true; break;
                         case "alone_across": item.Alone.z = f; item.HasAlone = true; break;
+                        case "onpair_along": item.OnPair.x = f; break;
+                        case "onpair_up": item.OnPair.y = f; break;
+                        case "onpair_across": item.OnPair.z = f; break;
                     }
                 }
                 else if (pair != null)
@@ -297,6 +301,7 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
+            sb.AppendLine("#   onpair_along / onpair_up / onpair_across: an extra offset when it lies alone on top of a pair (a lone item on an upper layer).");
             sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order. Two relations, each tunable on its own:");
             sb.AppendLine("#   beside_a_* / beside_b_*: the two lying beside each other (side or along), the exact place of a and b (along, height above the layer's floor, across);");
             sb.AppendLine("#   top_a_* / top_b_*: b on top of a, both places as a two-item cart shows them; inside a bigger load b is placed relative to a.");
@@ -319,6 +324,7 @@ namespace GK2DonkeyAPI
                 sb.AppendLine().AppendLine("[item " + id + "]");
                 Line(sb, "along", e.Base.x); Line(sb, "up", e.Base.y); Line(sb, "across", e.Base.z);
                 Line(sb, "top_along", e.Top.x); Line(sb, "top_up", e.Top.y); Line(sb, "top_across", e.Top.z);
+                Line(sb, "onpair_along", e.OnPair.x); Line(sb, "onpair_up", e.OnPair.y); Line(sb, "onpair_across", e.OnPair.z);
                 if (e.HasAlone)
                 {
                     // all three, zeros too: their presence is what says "own alone offsets"

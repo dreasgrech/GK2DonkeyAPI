@@ -262,6 +262,13 @@ namespace GK2DonkeyAPI
                     string how = vp != null && vp.Mode != "auto" && !belowPair ? " (" + vp.Mode + ")" : "";
                     note.Append($"{(layer > 1 || belowPair ? "; " : "")}{cur} on {(samePair ? "the pair of " + sup : sup)}{how}");
                 }
+                // Alone on top of a pair: the class's own correction, in this layer only. A second item joining the layer
+                // re-places this one from the origin (the beside branch), so the offset stays only on a lone item. Never
+                // on a two-item cart (its layer below is a single item).
+                if (belowPair && e != null)
+                {
+                    target[i] += e.OnPair;
+                }
                 centre = new Vector3(layerOrigin.x, 0f, layerOrigin.z);
                 layerFloor = layerOrigin.y;
                 r.Origin[i] = layerOrigin;
@@ -296,9 +303,15 @@ namespace GK2DonkeyAPI
 
         // Freezes an untuned beside relation at both items' places in the layer's frame. firstIsA: whether the layer's
         // first item is the pair entry's A.
-        internal static void FreezeBeside(CargoLayout.PairEntry pair, bool firstIsA, Vector3 first, Vector3 second)
+        // arrangement: "side" or "along", the way the two lie now. A pair left on "auto" is pinned to it, so the fallback
+        // rules (gap, overhang) can never flip a tuned pair into a stack or the other way round.
+        internal static void FreezeBeside(CargoLayout.PairEntry pair, bool firstIsA, Vector3 first, Vector3 second, string arrangement = null)
         {
             pair.SetFor("side", firstIsA ? first : second, firstIsA ? second : first);
+            if (pair.Mode == "auto" && (arrangement == "side" || arrangement == "along"))
+            {
+                pair.Mode = arrangement;
+            }
         }
 
         internal static void WriteBeside(CargoLayout.PairEntry pair, bool isA, Vector3 layerPos)

@@ -112,7 +112,8 @@ number, scene, kind, keep setting and key. No test donkey is left behind.
 
 `tests/PackerScan` (`dotnet run -c Release`, after a Release build of the mod) runs the cargo packer (`CargoPacker.cs`) and the
 panel's relation edits without the game: one and two items against the pre-layer algorithm, the Tune loop as a fixed point,
-a slider moving exactly its relation, determinism, forced relations, sanity. Run it with the other test projects after any
+a slider moving exactly its relation, every slider over its whole panel range keeping the load's shape (which boxes the
+Cargo tab shows), determinism, forced relations, sanity. Run it with the other test projects after any
 change to the packer, the layout file format or the panel's cargo editors ([cargo-layout-layers.md](cargo-layout-layers.md)).
 
 ## Runs
