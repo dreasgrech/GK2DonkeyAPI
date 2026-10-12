@@ -1240,7 +1240,7 @@ namespace GK2DonkeyAPI
 
         private static void DrawDebugCargo()
         {
-            Header("Tuning status and coverage (every load of up to six items)");
+            Header("Every load of up to six items: status, coverage, pictures");
             if (GUILayout.Button(Tip("Tuning status, instant (status.html: every contact, what to tune next, no pictures)", "Runs every load of up to six items through the packer and writes status.html to the sheet folder. Instant, needs no cart, nothing changes."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartStatus());
@@ -1268,12 +1268,12 @@ namespace GK2DonkeyAPI
             }
             GUILayout.Label(ShapeProbe.Status, small);
             Help("Reads every size class's triangles back from the graphics card (the meshes are not readable otherwise) and saves its top and bottom surface on a 1 cm grid to the repo's cargo-shapes.cfg, with a page to check them by eye in the sheet folder. Nothing in the game changes. The seat suggestions and the problem scan are built on it.");
-            Header("Pictures of every pair and every item");
-            if (GUILayout.Button(Tip("Photograph all cargo combinations (HTML sheet)", "Puts every item shape and every ordered pair on the cart, photographs each into a grid (index.html). Needs Cart style; the panel hides; cargo is put back."), GUILayout.ExpandWidth(true)))
+            Header("The building blocks only: every pair, every item alone");
+            if (GUILayout.Button(Tip("Photograph every pair of size classes, beside and stacked (index.html)", "Puts every item shape and every ordered pair on the cart, photographs each into a grid (index.html). Needs Cart style; the panel hides; cargo is put back."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.Start());
             }
-            if (GUILayout.Button(Tip("Photograph every item alone, grouped by shape bucket (shapes.html)", "Photographs each item on the cart by itself, sorted by shape group, into shapes.html. Needs Cart style; cargo is put back afterwards."), GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Photograph every item alone, grouped by size class (shapes.html)", "Photographs each item on the cart by itself, sorted by shape group, into shapes.html. Needs Cart style; cargo is put back afterwards."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
             }

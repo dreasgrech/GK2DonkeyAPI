@@ -471,7 +471,7 @@ namespace GK2DonkeyAPI
 
         private static string Pct(int part, int whole) => whole == 0 ? "0%" : $"{100.0 * part / whole:0}%";
 
-        private const string PageStyle = "<style>body{font-family:sans-serif;background:#1e1e1e;color:#ddd;margin:16px;max-width:1500px}h1{font-size:20px}h2{font-size:16px;margin:26px 0 8px;color:#ffd257}"
+        private const string PageStyle = "<style>body{font-family:sans-serif;background:#1e1e1e;color:#ddd;margin:12px 16px}h1{font-size:20px;margin:6px 0}details.legend summary{cursor:pointer;color:#9a9a9a;font-size:12px;margin:4px 0}h2{font-size:16px;margin:26px 0 8px;color:#ffd257}"
             + "table{border-collapse:collapse;margin:6px 0}td,th{border:1px solid #444;padding:3px 6px;font-size:12px;vertical-align:top;text-align:left}th{background:#333}"
             + ".ok{color:#8ee68e}.no{color:#ff8c69}.dim{color:#8a8a8a}.big{font-size:26px;font-weight:bold}.box{display:inline-block;border:1px solid #444;padding:8px 14px;margin:0 8px 8px 0;background:#262626}"
             + "img{display:block;max-width:var(--w,260px);height:auto;cursor:zoom-in;margin:2px 0}.pics{display:flex;flex-wrap:wrap;gap:6px}.fig{border:1px solid #444;padding:4px;background:#262626;max-width:var(--w,260px)}"
@@ -689,7 +689,7 @@ namespace GK2DonkeyAPI
             var sb = new StringBuilder();
             sb.AppendLine($"<!doctype html><html><head><meta charset=\"utf-8\"><title>Every cargo load</title>{PageStyle}</head><body>{PageScript}");
             sb.AppendLine($"<h1>Every cargo load</h1><p class=\"dim\">{DateTime.Now:yyyy-MM-dd HH:mm}. {shots.Count} loads of 1 to {rep.MaxItems} items, in the Cargo tab's colours (blue the first item of a layer, orange the second or one alone on top, lighter higher up). Under each: its contacts, green tuned, red still on the fallbacks. {SettingsLine(rep)}</p>");
-            sb.AppendLine(ClassLegend(rep));
+            sb.AppendLine("<details class=\"legend\"><summary>The size classes and their items</summary>" + ClassLegend(rep) + "</details>");
             sb.Append("<div id=\"bar\"><span>Items:</span>");
             for (int n = 1; n <= rep.MaxItems; n++) sb.Append($"<label><input type=\"checkbox\" class=\"sz\" value=\"{n}\" checked onchange=\"f()\">{n}</label>");
             sb.Append("<select id=\"cl\" onchange=\"f()\"><option value=\"\">any class</option>");
@@ -697,8 +697,9 @@ namespace GK2DonkeyAPI
             sb.Append("</select><select id=\"ct\" onchange=\"f()\"><option value=\"\">any contact</option>");
             foreach (CargoCoverage.Contact c in rep.Contacts) sb.Append($"<option value=\"|{H(c.Key)}|\">{(c.Tuned ? "" : "untuned: ")}{H(c.Title)}</option>");
             sb.Append("</select><label><input type=\"checkbox\" id=\"un\" onchange=\"f()\"> with an untuned contact only</label>");
-            sb.Append("<span>width <input type=\"range\" min=\"100\" max=\"600\" value=\"220\" oninput=\"setW(this.value)\"></span><span id=\"cnt\"></span></div>");
-            sb.AppendLine("<script>document.documentElement.style.setProperty('--w','220px');function f(){var sz=[...document.querySelectorAll('.sz')].filter(x=>x.checked).map(x=>x.value);var cl=document.getElementById('cl').value,ct=document.getElementById('ct').value,un=document.getElementById('un').checked,n=0;"
+            sb.Append("<span>columns <input type=\"range\" id=\"cols\" min=\"3\" max=\"16\" value=\"8\" oninput=\"fit()\"> <span id=\"colsN\">8</span></span><span id=\"cnt\"></span></div>");
+            // the pictures fill the window: their width follows the window width and the columns slider, on resize too
+            sb.AppendLine("<script>function fit(){var n=+document.getElementById('cols').value;document.getElementById('colsN').textContent=n;var w=Math.floor((document.documentElement.clientWidth-40-n*8)/n);document.documentElement.style.setProperty('--w',Math.max(90,w)+'px');}window.addEventListener('resize',fit);fit();function f(){var sz=[...document.querySelectorAll('.sz')].filter(x=>x.checked).map(x=>x.value);var cl=document.getElementById('cl').value,ct=document.getElementById('ct').value,un=document.getElementById('un').checked,n=0;"
                 + "document.querySelectorAll('.fig').forEach(e=>{var ok=sz.includes(e.dataset.n)&&(!cl||e.dataset.c.includes(cl))&&(!ct||e.dataset.k.includes(ct))&&(!un||e.dataset.u!=='0');e.style.display=ok?'':'none';if(ok)n++;});document.getElementById('cnt').textContent=n+' shown';}</script>");
             sb.AppendLine("<div class=\"pics\">");
             foreach (Shot s in shots)

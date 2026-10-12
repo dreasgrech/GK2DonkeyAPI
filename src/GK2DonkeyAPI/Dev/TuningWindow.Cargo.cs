@@ -207,52 +207,63 @@ namespace GK2DonkeyAPI
             GUILayout.EndVertical();
         }
 
-        // The Debug tab's load builder: any load, by how many of each size class, put on the cart as a test load.
-        private static readonly Dictionary<string, int> builderCounts = new Dictionary<string, int>(StringComparer.Ordinal);
-
+        // The Debug tab's load builder: how many of each size class are on the cart, changed live. The counts mirror the
+        // ridden cart (whatever put the items there); a - or + press puts the new load on at once (TestLoads.Put, which is
+        // refused while the cart holds cargo that is not a test load, so nothing of the player's is ever replaced).
         private static void DrawTestLoadBuilder()
         {
-            Header("Test loads on the cart");
+            Header("Test loads on the cart (live)");
             List<string> classes = CargoSheet.ClassReps();
+            // the counts as the cart stands at the start of the pass; a click below changes the cart, not these
+            var counts = new Dictionary<string, int>(StringComparer.Ordinal);
             int total = 0;
-            foreach (string c in classes) total += builderCounts.TryGetValue(c, out int k) ? k : 0;
+            foreach (Cargo.PlacedItem p in Cargo.Placed)
+            {
+                string c = CargoSheet.ClassOf(p.Id);
+                counts[c] = (counts.TryGetValue(c, out int k) ? k : 0) + 1;
+                total++;
+            }
+            bool riding = Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && Cargo.Attached;
+            int testOn = TestLoads.OnCart();
+            string change = null; // the class to add (+) or remove (-), applied after the rows are drawn
+            int delta = 0;
             foreach (string c in classes)
             {
-                int k = builderCounts.TryGetValue(c, out int got) ? got : 0;
+                int k = counts.TryGetValue(c, out int got) ? got : 0;
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(CargoSheet.ClassLabel(c), label, Wd(140f));
-                if (GUILayout.Button("-", Wd(28f)) && k > 0) builderCounts[c] = k - 1;
+                GUILayout.Label(Tip(CargoSheet.ClassLabel(c), "How many of this size class are on the cart now. - and + change the cart at once (a test load; refused while other cargo is aboard)."), label, Wd(140f));
+                bool was = GUI.enabled;
+                GUI.enabled = was && riding && k > 0;
+                if (GUILayout.Button("-", Wd(28f))) { change = c; delta = -1; }
+                GUI.enabled = was;
                 GUILayout.Label(k.ToString(), label, Wd(24f));
-                if (GUILayout.Button("+", Wd(28f)) && total < CargoSheet.CoverageMaxItems) builderCounts[c] = k + 1;
+                GUI.enabled = was && riding && total < CargoSheet.CoverageMaxItems;
+                if (GUILayout.Button("+", Wd(28f))) { change = c; delta = 1; }
+                GUI.enabled = was;
                 GUILayout.Label($"<color=#9a9a9a>{c}</color>", small);
                 GUILayout.EndHorizontal();
             }
-            int testOn = TestLoads.OnCart();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button($"Put these {total} on the cart", Wd(180f)) && total > 0)
+            bool en = GUI.enabled;
+            GUI.enabled = en && testOn > 0;
+            if (GUILayout.Button(Tip("Take the test load off", TipTakeOff), Wd(170f)))
+            {
+                TestLoads.TakeOff();
+            }
+            GUI.enabled = en;
+            GUILayout.Label(riding ? TestLoads.Status : "ride in Cart style to use this", small);
+            GUILayout.EndHorizontal();
+            Help("Real items put straight onto the ridden cart (a corpse with its organs, a zombie made the way the game makes one): no searching the world. Each press re-makes the test load with the new count; the cart must hold nothing else. Items you set down stay yours. The Cargo tab's Tune next list has a Load button per contact.");
+            if (change != null)
             {
                 var ids = new List<string>();
                 foreach (string c in classes)
                 {
-                    int k = builderCounts.TryGetValue(c, out int got) ? got : 0;
+                    int k = (counts.TryGetValue(c, out int got) ? got : 0) + (c == change ? delta : 0);
                     for (int j = 0; j < k; j++) ids.Add(c);
                 }
-                TestLoads.Put(ids, "the load builder");
+                if (ids.Count == 0) TestLoads.TakeOff(); else TestLoads.Put(ids, "the load builder");
             }
-            if (GUILayout.Button("Clear the counts", Wd(130f)))
-            {
-                builderCounts.Clear();
-            }
-            bool was = GUI.enabled;
-            GUI.enabled = was && testOn > 0;
-            if (GUILayout.Button("Take the test load off", Wd(170f)))
-            {
-                TestLoads.TakeOff();
-            }
-            GUI.enabled = was;
-            GUILayout.EndHorizontal();
-            GUILayout.Label(TestLoads.Status, small);
-            Help("Puts real items straight onto the ridden cart (a corpse with its organs, a zombie made the way the game makes one): no searching the world. A new test load replaces the last one; the cart must hold nothing else. Taking it off removes only the test items still on the cart (and the test zombies). Items set down stay normal world items. The Cargo tab's Tune next list has a Load button per contact.");
         }
 
         // ---------------------------------------------------------------- Looks right (docs/cargo-tuning-tools.md)
