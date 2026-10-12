@@ -361,6 +361,11 @@ namespace GK2DonkeyAPI
 
         private static void DrawContentsInner(int id)
         {
+            rawSeq = 0;
+            if (tab != TabCargo)
+            {
+                nudgePending = 0f; // keys pressed elsewhere never land on a cargo slider later
+            }
             using (Perf.Measure(Perf.S.WinTop))
             {
                 if (Event.current.type == EventType.Layout)
@@ -1100,126 +1105,85 @@ namespace GK2DonkeyAPI
         }
 
 
+        // The Debug tab in four groups (one shown at a time) and the explanations folded away: it had grown into one
+        // long page of every tool ever built, hard to find anything in (2026-10-12).
+        private static int debugGroup;
+        private static bool debugHelp;
+        private static readonly string[] DebugGroups = { "Cargo tools", "Panel & levels", "Logs & checks", "Investigations" };
+
         private static void DrawDebug()
         {
-            GUILayout.Label("The self-tests and the performance readout have their own tabs (Tests, Performance).", small);
-
-            Header("Levels: far and off-screen donkeys do less (this session)");
-            GUILayout.Label("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.", small);
-            Lod.On = GUILayout.Toggle(Lod.On, " Levels on (off: every donkey is always active, as before)");
-            Lod.ActiveRadius = SessionFloatRow("Always active within", Lod.ActiveRadius, 3f, 60f);
-            Lod.SleepRadius = SessionFloatRow("Asleep beyond", Lod.SleepRadius, 10f, 200f);
-            Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f), Lod.SleepRadius - 2f);
-            Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f);
-            Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20);
-            Lod.IdleSwitchesOff = GUILayout.Toggle(Lod.IdleSwitchesOff, " Idle donkeys without a cart: view switched off (off: frozen, view kept on)");
-
-            Header("This panel");
-            // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.
-            Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");
-            Stepper("Text size inside the panel (Debug.TuningWindowFontScale)", Plugin.TuningWindowFontScale, 0.05f, 0.5f, 2f, "0.00");
-            Stepper("Panel width (Debug.TuningWindowWidth)", Plugin.TuningWindowWidth, 20f, 300f, 900f, "0");
-            Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
-            GUILayout.Label("Debug.TuningWindow=false in the cfg hides this panel for normal play.", small);
-
-            Header("Diagnostics");
+            // drawn by the group and the help state at the start of the pass: a click switches them from the next pass on
+            int group = debugGroup;
+            bool help = debugHelp;
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Write values to log"))
-            {
-                StyleSettings s = Mount.S;
-                Plugin.Log.LogInfo($"[tune] [{s.Section}] speed {s.SpeedMultiplier.Value}, depth {s.Depth.Value}, centering {s.CenterOffset.Value}, rider {s.RiderOffsetPx.Value} px, torso {s.TorsoOffsetPx.Value} px, autoSeat {s.AutoSeat.Value}, seat adjust {s.SeatAdjustPx.Value} px, seat offset {s.SeatOffset.Value}, bob {s.Bob.Value}, freeze {s.FreezePoseWhenIdle.Value}, pose {s.Pose.Value}, legs {s.NearLeg.Value}/{s.LegSource.Value} h {s.LegHeightPx.Value} x {s.LegAdjustXPx.Value} y {s.LegAdjustYPx.Value} | general: doors {Plugin.StayMountedThroughDoors.Value}");
-            }
-            if (GUILayout.Button("Write geometry to log"))
-            {
-                Mount.LogGeometry();
-            }
+            debugGroup = GUILayout.Toolbar(debugGroup, DebugGroups);
+            debugHelp = GUILayout.Toggle(debugHelp, " explanations", Wd(110f));
             GUILayout.EndHorizontal();
-            GUILayout.Label("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.", small);
-            Mount.CartGroundProbeOn = GUILayout.Toggle(Mount.CartGroundProbeOn, " Log the cart's wheels / the ridden donkey's hooves against the ground (5 lines a second)");
-            GUILayout.Label("[cartground] lines with the cart: its lift and pitch, each wheel's bottom against the ground under it. [rideground] lines riding without it: the body's ground line against the ground under the body and its front and back hooves. gap > 0 floats, < 0 is inside. Off again after a restart.", small);
+            helpShown = help;
+            Help("The self-tests and the performance readout have their own tabs (Tests, Performance).");
+            switch (group)
+            {
+                case 0: DrawDebugCargo(); break;
+                case 1: DrawDebugPanel(); break;
+                case 2: DrawDebugLogs(); break;
+                default: DrawDebugProbes(); break;
+            }
+        }
 
-            Header("Keeper moves (safety check)");
-            if (GUILayout.Button("Write what the move check says around the keeper to the log"))
-            {
-                ReachProbe.Write();
-            }
-            GUILayout.Label("[reach] lines: 32 spots around the keeper (1.0 and 1.8 away), each allowed or refused with the reason. Next to a rock or a wall, every spot on its far side must be refused.", small);
+        private static bool helpShown;
 
-            Header("Held item (investigation)");
-            if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
+        // A tool's explanation, shown when 'explanations' is on.
+        private static void Help(string text)
+        {
+            if (helpShown)
             {
-                HeldItemProbe.Write();
+                GUILayout.Label(text, small);
             }
-            GUILayout.Label("One [held] line: the items in the keeper's hands, the animator's layers with their weights and clips, and the drop view that draws a held item (active, position, renderers). Press once on foot carrying something and once riding.", small);
+        }
 
-            Header("Lantern pole (investigation)");
-            if (GUILayout.Button("Sample the lantern for 6 s, then write GK2-lantern-facts.txt") && !LanternProbe.Running)
+        private static void DrawDebugCargo()
+        {
+            Header("Tuning status and coverage (every load of up to six items)");
+            if (GUILayout.Button("Tuning status, instant (status.html: every contact, what to tune next, no pictures)", GUILayout.ExpandWidth(true)))
             {
-                Plugin.Log.LogInfo("[lantern] " + LanternProbe.Start(6f));
+                Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartStatus());
             }
-            GUILayout.Label(LanternProbe.Running ? "Sampling: ride around and turn once, so both facings are seen." : LanternProbe.Status, small);
-            GUILayout.Label("Reads the pole and light nodes at the end of every frame (after the donkey's animator) while you ride, and writes BepInEx/GK2-lantern-facts.txt: whether the animator swings them and about which axis, the pole's foot and head relative to its pivot, the lights, how the root mirrors when turning, and the pole's overlap with the keeper's body on screen. Nothing is moved.", small);
+            if (GUILayout.Button("Photograph the coverage set (coverage.html: every contact in its smallest load, the fewest loads showing all)", GUILayout.ExpandWidth(true)))
+            {
+                Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartCoverage());
+            }
+            if (GUILayout.Button($"Photograph every load (all.html: all {CargoSheet.CoverageMaxItems}-or-fewer item loads, with filters; minutes)", GUILayout.ExpandWidth(true)))
+            {
+                Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartAllLoads());
+            }
+            Help("Every load of 1 to 6 items goes through the packer with the layout as it is now; a load is built from contacts (x on y, x beside y, x alone on a pair, x alone), and each contact is one tuning. The status page needs nothing; the photo runs need Cart style and an empty cart, like the pair pictures below, and put everything back. Same folder as the pair pictures.");
+            GUILayout.Label(CargoSheet.Status, small); // the last run of any of these buttons, and of the pictures below
 
-            Header("Game donkey (for comparison)");
-            if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))
+            DrawTestLoadBuilder();
+            Header("Item shapes (measured from the meshes)");
+            if (GUILayout.Button("Measure the item shapes (cargo-shapes.cfg and shape-heights.html)", GUILayout.ExpandWidth(true)))
             {
-                Plugin.Log.LogInfo("[script] " + ScriptDump.StartDelivery());
+                Plugin.Log.LogInfo("[shapes] " + ShapeProbe.MeasureAll());
             }
-            GUILayout.Label("Fires the donkey script's 'full_cycle' event with its body roll forced to pass: the cart appears at the road point donkey_01 and drives to the morgue point donkey_05. Nothing happens while global_lock_on_drop_bodies is set or while the quest 33_base_complain_go is in progress (then it walks to the morgue instead); the log line says which.", small);
-            if (GUILayout.Button("Dump the game donkey's script (npc_donkey) to a file"))
+            if (GUILayout.Button("Check the saved shapes against the items on the cart", GUILayout.ExpandWidth(true)))
             {
-                Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
+                Plugin.Log.LogInfo("[shapes] " + ShapeProbe.CheckOnCart());
             }
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Send event to the real donkey's script", label, Wd(LabelW));
-            donkeyEvent = GUILayout.TextField(donkeyEvent, Wd(110f));
-            if (GUILayout.Button("Send", Wd(50f)))
-            {
-                Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent.Trim()));
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.", small);
-
-            Header("Cart cargo (investigation)");
-            if (GUILayout.Button("Dump carry facts to a file (drawer rules, inventory filters, big items)"))
-            {
-                Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
-            }
-            GUILayout.Label("Writes BepInEx/GK2-carry-facts.txt: the donkey prefab's ConditionalDrawer rules (what switches the loaded-cart mesh), the npc_donkey definition's inventory size and item filters, every item with itemSize Big, and the mesh elements the keeper's overhead view can show. Mount first for the drawer rules.", small);
-            if (GUILayout.Button("Dump head-item facts (patch checks, quest listeners, script expressions, item mechanics)"))
-            {
-                Plugin.Log.LogInfo("[head] " + HeadProbe.Dump());
-            }
-            GUILayout.Label("Writes BepInEx/GK2-head-facts.txt for routing pickups straight onto the cart: whether patches on the game's small head methods take effect when the game calls them, which quests listen to the head triggers, every expression in the game data and every world-object script that mentions the head, and a live test of the item mechanics on the cart's inventory. Mount in Cart style with empty hands and one free cart slot for the full set. " + HeadProbe.Status, small);
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Test item id", label, Wd(100f));
-            cargoItemId = GUILayout.TextField(cargoItemId, Wd(110f));
-            if (GUILayout.Button("Put in cart inventory", Wd(170f)))
-            {
-                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId.Trim()));
-            }
-            if (GUILayout.Button("Take first out", Wd(120f)))
-            {
-                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestUnload());
-            }
-            GUILayout.EndHorizontal();
-            GUILayout.Label("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.", small);
-
-            Header("Cargo sheet: every combination on the cart, as pictures");
-            GUILayout.BeginHorizontal();
+            GUILayout.Label(ShapeProbe.Status, small);
+            Help("Reads every size class's triangles back from the graphics card (the meshes are not readable otherwise) and saves its top and bottom surface on a 1 cm grid to the repo's cargo-shapes.cfg, with a page to check them by eye in the sheet folder. Nothing in the game changes. The seat suggestions and the problem scan are built on it.");
+            Header("Pictures of every pair and every item");
             if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.Start());
             }
-            GUILayout.Label(CargoSheet.Status, small);
-            GUILayout.EndHorizontal();
             if (GUILayout.Button("Photograph every item alone, grouped by shape bucket (shapes.html)", GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
             }
-            GUILayout.Label("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; index.html in the sheet folder (the repo's tools/cargo-sheet/out on the machine with the sources, else BepInEx/GK2-cargo-sheet; emptied of the last run's pictures first) shows the grid (rows: first item, columns: second). Zombies are in it through two temporary stand-in zombies (real ones, made and removed by the sheet), with every zombie head alone at the end. The panel hides during the run; your real cargo is put back afterwards.", small);
+            Help("Mount in Cart style, stand still with the cart in view, press. Each distinct item shape alone and every ordered pair is put on the cart in turn, photographed and cropped; index.html in the sheet folder (the repo's tools/cargo-sheet/out on the machine with the sources, else BepInEx/GK2-cargo-sheet; emptied of the last run's pictures first) shows the grid (rows: first item, columns: second). Zombies are in it through two temporary stand-in zombies (real ones, made and removed by the sheet), with every zombie head alone at the end. The panel hides during the run; your real cargo is put back afterwards.");
 
-            Header("Spawn a carryable item in front of the keeper (test)");
+            Header("Drop an item in front of the keeper");
             GUILayout.BeginHorizontal();
             System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
             int at = big.IndexOf(spawnItemId.Trim());
@@ -1237,19 +1201,129 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId.Trim()));
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.", small);
+            Help($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.");
             if (GUILayout.Button("Spawn a test zombie here", Wd(220f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnZombie());
             }
-            GUILayout.Label("A real zombie lying in front of the keeper, made the way the game's own quest scripts drop one (its organs, collar and looks included). It is saved like any other zombie: reload without saving to be rid of it.", small);
+            Help("A real zombie lying in front of the keeper, made the way the game's own quest scripts drop one (its organs, collar and looks included). It is saved like any other zombie: reload without saving to be rid of it.");
+        }
+
+        private static void DrawDebugPanel()
+        {
+            Header("This panel");
+            // Stepped, not sliders: dragging a slider that rescales the panel moves the slider under the mouse.
+            Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");
+            Stepper("Text size inside the panel (Debug.TuningWindowFontScale)", Plugin.TuningWindowFontScale, 0.05f, 0.5f, 2f, "0.00");
+            Stepper("Panel width (Debug.TuningWindowWidth)", Plugin.TuningWindowWidth, 20f, 300f, 900f, "0");
+            Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
+            Help("Debug.TuningWindow=false in the cfg hides this panel for normal play.");
+
+            Header("Levels: far and off-screen donkeys do less (this session)");
+            Help("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.");
+            Lod.On = GUILayout.Toggle(Lod.On, " Levels on (off: every donkey is always active, as before)");
+            Lod.ActiveRadius = SessionFloatRow("Always active within", Lod.ActiveRadius, 3f, 60f);
+            Lod.SleepRadius = SessionFloatRow("Asleep beyond", Lod.SleepRadius, 10f, 200f);
+            Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f), Lod.SleepRadius - 2f);
+            Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f);
+            Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20);
+            Lod.IdleSwitchesOff = GUILayout.Toggle(Lod.IdleSwitchesOff, " Idle donkeys without a cart: view switched off (off: frozen, view kept on)");
+        }
+
+        private static void DrawDebugLogs()
+        {
+            Header("Diagnostics");
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Write values to log"))
+            {
+                StyleSettings s = Mount.S;
+                Plugin.Log.LogInfo($"[tune] [{s.Section}] speed {s.SpeedMultiplier.Value}, depth {s.Depth.Value}, centering {s.CenterOffset.Value}, rider {s.RiderOffsetPx.Value} px, torso {s.TorsoOffsetPx.Value} px, autoSeat {s.AutoSeat.Value}, seat adjust {s.SeatAdjustPx.Value} px, seat offset {s.SeatOffset.Value}, bob {s.Bob.Value}, freeze {s.FreezePoseWhenIdle.Value}, pose {s.Pose.Value}, legs {s.NearLeg.Value}/{s.LegSource.Value} h {s.LegHeightPx.Value} x {s.LegAdjustXPx.Value} y {s.LegAdjustYPx.Value} | general: doors {Plugin.StayMountedThroughDoors.Value}");
+            }
+            if (GUILayout.Button("Write geometry to log"))
+            {
+                Mount.LogGeometry();
+            }
+            GUILayout.EndHorizontal();
+            Help("Both write one line to BepInEx/LogOutput.log. Geometry: press once per facing (and once while walking) when reporting a placement problem.");
+            Mount.CartGroundProbeOn = GUILayout.Toggle(Mount.CartGroundProbeOn, " Log the cart's wheels / the ridden donkey's hooves against the ground (5 lines a second)");
+            Help("[cartground] lines with the cart: its lift and pitch, each wheel's bottom against the ground under it. [rideground] lines riding without it: the body's ground line against the ground under the body and its front and back hooves. gap > 0 floats, < 0 is inside. Off again after a restart.");
+
+            Header("Keeper moves (safety check)");
+            if (GUILayout.Button("Write what the move check says around the keeper to the log"))
+            {
+                ReachProbe.Write();
+            }
+            Help("[reach] lines: 32 spots around the keeper (1.0 and 1.8 away), each allowed or refused with the reason. Next to a rock or a wall, every spot on its far side must be refused.");
+
+            Header("Held item (investigation)");
+            if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
+            {
+                HeldItemProbe.Write();
+            }
+            Help("One [held] line: the items in the keeper's hands, the animator's layers with their weights and clips, and the drop view that draws a held item (active, position, renderers). Press once on foot carrying something and once riding.");
+        }
+
+        private static void DrawDebugProbes()
+        {
+            Header("Lantern pole (investigation)");
+            if (GUILayout.Button("Sample the lantern for 6 s, then write GK2-lantern-facts.txt") && !LanternProbe.Running)
+            {
+                Plugin.Log.LogInfo("[lantern] " + LanternProbe.Start(6f));
+            }
+            GUILayout.Label(LanternProbe.Running ? "Sampling: ride around and turn once, so both facings are seen." : LanternProbe.Status, small);
+            Help("Reads the pole and light nodes at the end of every frame (after the donkey's animator) while you ride, and writes BepInEx/GK2-lantern-facts.txt: whether the animator swings them and about which axis, the pole's foot and head relative to its pivot, the lights, how the root mirrors when turning, and the pole's overlap with the keeper's body on screen. Nothing is moved.");
+
+            Header("Game donkey (for comparison)");
+            if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.StartDelivery());
+            }
+            Help("Fires the donkey script's 'full_cycle' event with its body roll forced to pass: the cart appears at the road point donkey_01 and drives to the morgue point donkey_05. Nothing happens while global_lock_on_drop_bodies is set or while the quest 33_base_complain_go is in progress (then it walks to the morgue instead); the log line says which.");
+            if (GUILayout.Button("Dump the game donkey's script (npc_donkey) to a file"))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
+            }
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Send event to the real donkey's script", label, Wd(LabelW));
+            donkeyEvent = GUILayout.TextField(donkeyEvent, Wd(110f));
+            if (GUILayout.Button("Send", Wd(50f)))
+            {
+                Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent.Trim()));
+            }
+            GUILayout.EndHorizontal();
+            Help("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.");
+
+            Header("Cart cargo (investigation)");
+            if (GUILayout.Button("Dump carry facts to a file (drawer rules, inventory filters, big items)"))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
+            }
+            Help("Writes BepInEx/GK2-carry-facts.txt: the donkey prefab's ConditionalDrawer rules (what switches the loaded-cart mesh), the npc_donkey definition's inventory size and item filters, every item with itemSize Big, and the mesh elements the keeper's overhead view can show. Mount first for the drawer rules.");
+            if (GUILayout.Button("Dump head-item facts (patch checks, quest listeners, script expressions, item mechanics)"))
+            {
+                Plugin.Log.LogInfo("[head] " + HeadProbe.Dump());
+            }
+            GUILayout.Label("Writes BepInEx/GK2-head-facts.txt for routing pickups straight onto the cart: whether patches on the game's small head methods take effect when the game calls them, which quests listen to the head triggers, every expression in the game data and every world-object script that mentions the head, and a live test of the item mechanics on the cart's inventory. Mount in Cart style with empty hands and one free cart slot for the full set. " + HeadProbe.Status, small);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Test item id", label, Wd(100f));
+            cargoItemId = GUILayout.TextField(cargoItemId, Wd(110f));
+            if (GUILayout.Button("Put in cart inventory", Wd(170f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId.Trim()));
+            }
+            if (GUILayout.Button("Take first out", Wd(120f)))
+            {
+                Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestUnload());
+            }
+            GUILayout.EndHorizontal();
+            Help("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.");
 
             Header("Chest on the cart: step-0 probe (docs/portable-chest.md §6)");
             if (GUILayout.Button("Dump chest and building definitions to a file"))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpDefinitions());
             }
-            GUILayout.Label("Writes BepInEx/GK2-chest-facts.txt: every world object with a chest interaction or an inventory, with the flags the design depends on (size, multi-inventory, town quality, scripts, HP behaviour, filters), its build and remove definitions with costs and refunds, and which scenes keep the previous scene loaded through a door.", small);
+            Help("Writes BepInEx/GK2-chest-facts.txt: every world object with a chest interaction or an inventory, with the flags the design depends on (size, multi-inventory, town quality, scripts, HP behaviour, filters), its build and remove definitions with costs and refunds, and which scenes keep the previous scene loaded through a door.");
             GUILayout.BeginHorizontal();
             if (GUILayout.Button("Hide, move 4 m, show", Wd(170f)))
             {
@@ -1278,8 +1352,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpColliders());
             }
             GUILayout.EndHorizontal();
-            GUILayout.Label("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in \"Run self-tests\" above (the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.", small);
-
+            Help("By hand, on the chest the keeper faces (or the nearest within 6 m); use an empty test chest and reload without saving afterwards. The same three moves run scripted in \"Run self-tests\" above (the three \"chest:\" scenarios make their own test chest and remove it), so these buttons are for looking at things by eye. Hide/move/show is the set-down mechanism: the chest should appear at the new spot from near and far, also after walking away and back. Zone out and in should leave a workbench nearby still seeing the chest's items and villagers pathing around it. Stand-in: each press destroys the last and makes a new preview-style copy in front of the keeper.");
         }
 
         // ------------------------------------------------------------------ Tests tab
@@ -1550,19 +1623,37 @@ namespace GK2DonkeyAPI
         }
 
         // A slider on a plain float (layout-file values). Right-click resets to 0. Returns true when it moved.
+        // Numpad nudges (the Cargo tab turns them on while it draws, TuningWindow.Cargo.cs): every RawSlider of a pass gets
+        // a number in drawing order; the one last dragged is remembered and a pending nudge is applied to it in a repaint.
+        private static int rawSeq, nudgeId = -1;
+        private static bool nudgeEnabled;
+        private static float nudgePending;
+
         private static bool RawSlider(string name, ref float value, float min, float max, bool canReset = true)
         {
+            int id = ++rawSeq;
+            bool focused = nudgeEnabled && id == nudgeId;
             GUILayout.BeginHorizontal();
             // Inside a box (its padding) with a slider and a value: the label gets the rest of the content width.
-            GUILayout.Label(name, label, Wd(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
+            GUILayout.Label(focused ? "<color=#ffd257>» " + name.TrimStart() + $"  ({Plugin.CargoNudgeUp.Value} / {Plugin.CargoNudgeDown.Value})</color>" : name, label, Wd(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
             float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW));
             // Only a drag (or the right-click reset) is a change. The slider hands back the value it was given when it
             // is not touched (clamped to its range); rounding that for display must not count as a move, or a value
             // with more decimals (a pair's measured places) "changed" on every event: the pair re-tuned itself right
             // after "Back to automatic" (found 2026-09-30, four "tuned" lines in the log).
             bool touched = v != Mathf.Clamp(value, min, max);
+            if (touched && nudgeEnabled)
+            {
+                nudgeId = id; // dragged: the numpad moves this one from now on
+            }
+            if (focused && !touched && nudgePending != 0f && GUI.enabled && Event.current.type == EventType.Repaint)
+            {
+                v = Mathf.Clamp(value + nudgePending, min, max);
+                touched = true;
+                nudgePending = 0f;
+            }
             Rect r = GUILayoutUtility.GetLastRect();
-            if (canReset && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
+            if (canReset && GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
                 v = 0f;
                 touched = true;

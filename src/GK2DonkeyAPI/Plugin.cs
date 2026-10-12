@@ -427,6 +427,8 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> CargoTabTint;
+        internal static ConfigEntry<bool> CargoSeatOnShapes;
+        internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<KeyCode> TuningWindowKey;
         internal static bool TuningWindowHidden; // toggled by TuningWindowKey; starts as remembered (TuningWindowHiddenCfg); the self-tests hide it for the run only
@@ -551,6 +553,11 @@ namespace GK2DonkeyAPI
                 "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
             TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
+            CargoNudgeUp = Config.Bind("Debug", "CargoNudgeUp", KeyCode.KeypadPlus, "Cargo tab: moves the last slider dragged up by 0.01 (Shift: 0.05).");
+            CargoNudgeDown = Config.Bind("Debug", "CargoNudgeDown", KeyCode.KeypadMinus, "Cargo tab: moves the last slider dragged down by 0.01 (Shift: 0.05).");
+            CargoSeatOnShapes = Config.Bind("Debug", "CargoSeatOnShapes", true,
+                "Upper layers of cargo rest on the items' measured shapes (cargo-shapes.cfg) instead of their boxes: a layer on a round log or a zombie sits on it, not on its box. Tuned contacts keep their values. Off: the boxes only.");
+            CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();
             CargoTabTint = Config.Bind("Debug", "CargoTabTint", true,
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
             SelfTestSpot = Config.Bind("Debug", "SelfTestSpot", "",
@@ -562,6 +569,7 @@ namespace GK2DonkeyAPI
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
 
             CargoLayout.Load(); // cargo-layout.cfg: the repo file on the machine with the sources, else the embedded copy
+            CargoShapes.Load(); // cargo-shapes.cfg: the measured item shapes, the same way
             Log.LogInfo("Cargo layout: " + CargoLayout.Summary());
 
             System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
@@ -669,6 +677,19 @@ namespace GK2DonkeyAPI
             {
                 Log.LogError($"Mount update failed; dismounting. {e}");
                 Mount.ForceCleanup("error");
+            }
+        }
+
+        // A layout edit is written 0.75 s after the last change, from OnGUI: one made just before quitting is written here.
+        private void OnApplicationQuit()
+        {
+            try
+            {
+                CargoLayout.SaveIfDue(now: true);
+            }
+            catch (Exception e)
+            {
+                Log.LogWarning("Cargo layout: saving at quit failed: " + e.Message);
             }
         }
 

@@ -53,6 +53,8 @@ namespace GK2DonkeyAPI
             public bool Tuned;
             public string Guid;      // the item's UniqueId, for the panel's "Isolate"
             public Vector3 LayerPos; // its place relative to its layer's origin (the floor origin on the bed)
+            public float LayerBase;  // beside, above the bed: the first item's bed height taken off both (CargoPacker.Result.LayerBase)
+            public Vector3 BesideStored => LayerPos + new Vector3(0f, LayerBase, 0f);
         }
 
         // ------------------------------------------------------------------ the bound instance's cart (Mount.Current)
@@ -650,6 +652,12 @@ namespace GK2DonkeyAPI
             internal void TickTint()
             {
                 bool panelOpen = owner.IsRidden && Time.frameCount - PanelTintFrame <= 2;
+                if (!panelOpen && CargoLayout.Comparing && Time.frameCount - PanelTintFrame > 2)
+                {
+                    // the tab closed while showing the session's starting layout: the current one comes back
+                    CargoLayout.Compare(false);
+                    Cargo.RefreshViews();
+                }
                 if (!panelOpen && AnyHidden)
                 {
                     // the tab closed with items hidden: everything shows again
@@ -657,12 +665,38 @@ namespace GK2DonkeyAPI
                     HiddenLayers.Clear();
                     RefreshViews();
                 }
-                bool want = panelOpen && Plugin.CargoTabTint.Value;
+                bool want = SheetTint != null || (panelOpen && Plugin.CargoTabTint.Value);
                 if (want == tintApplied && !tintDirty)
                 {
                     return;
                 }
                 ApplyTints(want);
+            }
+
+            // The cargo sheet's own colours (a contact's two items highlighted, or the tab's colours), while it photographs;
+            // null: the panel's tint. A null colour leaves that item untinted. Set it, then refresh the views.
+            internal static Func<List<PlacedItem>, int, Color?> SheetTint;
+
+            internal float BedWidth => bedWidth;
+            internal float BedLength => bedLength;
+            internal Transform Container => container;                       // the cargo holder (the packer's space)
+            internal List<DropViewAtomMesh> PlacedViews => placedViews;      // in Placed's order
+
+            // The world box around the drawn cargo (the sheet sizes its crop to a tall stack with it).
+            internal bool CargoWorldBounds(out Bounds b)
+            {
+                b = default;
+                bool any = false;
+                foreach (DropViewAtomMesh v in placedViews)
+                {
+                    if (v == null || !v || !v.gameObject.activeInHierarchy) continue;
+                    foreach (Renderer r in v.GetComponentsInChildren<Renderer>())
+                    {
+                        if (r == null || !r.enabled) continue;
+                        if (!any) { b = r.bounds; any = true; } else b.Encapsulate(r.bounds);
+                    }
+                }
+                return any;
             }
 
             private void ApplyTints(bool on)
@@ -676,10 +710,12 @@ namespace GK2DonkeyAPI
                         {
                             continue;
                         }
-                        Color c = TintFor(Placed[i], Placed);
+                        Color? sheet = SheetTint != null ? SheetTint(Placed, i) : null;
+                        bool tint = on && (SheetTint == null || sheet.HasValue);
+                        Color c = sheet ?? TintFor(Placed[i], Placed);
                         foreach (Object3DMesh m in v.MeshElement.object3D.Object3DMeshes)
                         {
-                            if (m != null) m.SetSelectionTint(on ? c : Color.white, on ? 0.45f : 0f);
+                            if (m != null) m.SetSelectionTint(tint ? c : Color.white, tint ? 0.45f : 0f);
                         }
                     }
                 }
@@ -824,6 +860,10 @@ namespace GK2DonkeyAPI
             private void OnChanged(List<Item> _)
             {
                 SyncMirror();
+                if (owner.IsRidden)
+                {
+                    TestLoads.CartChanged(inv); // a test item that left the cart is ordinary cargo from now on
+                }
                 ApplySlots(); // a lowered setting takes effect once the extra items are off
                 if (!unloading)
                 {
@@ -1490,7 +1530,11 @@ namespace GK2DonkeyAPI
                 FirstIsA = CargoLayout.FirstIsA,
                 SameClass = CargoLayout.SameClass,
                 BoxOf = CargoLayout.BoxOf,
+                ShapeOf = ShapeForPacker, // the seat pass (CargoPacker.SeatOnShapes) when the shapes are measured and the switch is on
             };
+
+            private static CargoShapes.Shape ShapeForPacker(string itemId) =>
+                Plugin.CargoSeatOnShapes != null && Plugin.CargoSeatOnShapes.Value && CargoShapes.Count > 0 ? CargoShapes.ByClass(CargoSheet.ClassOf(itemId)) : null;
 
             private void Pack(List<Drawn> drawn, StyleSettings s, float floorExtra)
             {
@@ -1535,7 +1579,7 @@ namespace GK2DonkeyAPI
                         Id = d.Item.id, OnTop = r.OnTop[i], Layer = r.Layer[i], Alone = r.Count == 1, Box = b.size,
                         Pos = r.Target[i] - new Vector3(0f, r.Floor, 0f),
                         Relation = r.Relation[i], Partner = r.Partner[i], Tuned = r.Tuned[i],
-                        Rel = r.Rel(i), LayerPos = r.LayerPos(i), Guid = d.Item.UniqueId?.ToString(),
+                        Rel = r.Rel(i), LayerPos = r.LayerPos(i), LayerBase = r.LayerBase[i], Guid = d.Item.UniqueId?.ToString(),
                     });
                 }
             }

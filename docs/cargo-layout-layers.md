@@ -258,6 +258,8 @@ look right.
     fallbacks (overhang, gap) can change which boxes show, and those are covered by the frozen view. The scan's
     beside freeze now passes the arrangement, as the tab does. 14001 passed, 0 failed.
   - No panel aborts and no GUILayout errors in either log for the session in the video.
+- **Coverage tools (2026-10-12):** see [cargo-coverage.md](cargo-coverage.md): every load of up to six items analysed
+  by contacts, a status line in the Cargo tab, status / coverage / every-load pages from the Debug tab.
 - **The fit rule made deterministic (2026-10-10):** comparing the new sheet with the one from 2026-10-05 (every
   other picture unchanged beyond lighting), two pairs had flipped from stacked to side by side: a crate beside a
   slab, and beside a log. Their widths sum to exactly the limit (0.50 + 0.02 + 0.35 = 0.87 against 0.75 + 0.12),

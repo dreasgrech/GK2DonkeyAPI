@@ -17,6 +17,8 @@ void Check(bool ok, string what)
 bool Near(Vector3 a, Vector3 b, float eps = 1e-4f) => Mathf.Abs(a.x - b.x) <= eps && Mathf.Abs(a.y - b.y) <= eps && Mathf.Abs(a.z - b.z) <= eps;
 string V(Vector3 v) => $"({v.x:0.000}, {v.y:0.000}, {v.z:0.000})";
 
+if (args.Contains("--real")) return Real.Run(Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"), args.Contains("--verbose"));
+
 // The size classes (tools/cargo-sheet/out/shapes.html): x along, y up, z across.
 var boxes = new Dictionary<string, Vector3>
 {
@@ -50,6 +52,21 @@ var L = new CargoPacker.Lookup
     SameClass = (a, b) => a == b,
     BoxOf = id => boxes[id],
 };
+// --shapes: every check below again with the seat pass on, each test class a solid box as its measured shape (top
+// flat at its height, bottom flat at 0): the seat pass must keep every fixed point, slider delta and shape check.
+if (args.Contains("--shapes"))
+{
+    var synth = new Dictionary<string, CargoShapes.Shape>();
+    foreach (var kv in boxes)
+    {
+        int nx = Mathf.CeilToInt(kv.Value.x / 0.01f) + 1, nz = Mathf.CeilToInt(kv.Value.z / 0.01f) + 1;
+        var sh = new CargoShapes.Shape { Class = kv.Key, Name = kv.Key, Box = kv.Value, Nx = nx, Nz = nz, Cell = 0.01f, X0 = -(nx - 1) * 0.005f, Z0 = -(nz - 1) * 0.005f, Top = new float[nx * nz], Bottom = new float[nx * nz] };
+        for (int c = 0; c < sh.Top.Length; c++) { sh.Top[c] = kv.Value.y; sh.Bottom[c] = 0f; }
+        synth[kv.Key] = sh;
+    }
+    L.ShapeOf = id => synth.TryGetValue(id, out var sh) ? sh : null;
+    Console.WriteLine("INFO the seat pass is on (synthetic box shapes)");
+}
 CargoPacker.Settings S(string forced = null) => new CargoPacker.Settings { Floor = -0.26f, Gap = 0.02f, Overhang = 0.12f, Nestle = 0.03f, LayerShift = -0.03f, BedWidth = 0.75f, BedLength = 0.90f, Forced = forced };
 List<CargoPacker.Item> Load(params string[] ids) => ids.Select((id, k) => new CargoPacker.Item { Id = id, Box = boxes[id], LoadOrder = k }).ToList();
 void ResetLayout()
@@ -167,7 +184,7 @@ string Lower(string a, string b) => Area(a) != Area(b) ? (Area(a) > Area(b) ? a 
 // drag lands on another slider (IMGUI knows a control by its order; 2026-10-10, video 18-19-36).
 string Shape(CargoPacker.Result r) => string.Join(";", Enumerable.Range(0, r.Count).Select(j => $"{r.Order[j]}/{r.Relation[j]}/{r.Partner[j]}/{r.Layer[j]}"));
 string Key(CargoPacker.Result r, int j) => r.Relation[j] == "bed" ? "bed" : (r.Relation[j] == "on" ? "on:" : "beside:") + Lower(r.Id[r.Partner[j]], r.Id[j]) + "+" + (Lower(r.Id[r.Partner[j]], r.Id[j]) == r.Id[r.Partner[j]] ? r.Id[j] : r.Id[r.Partner[j]]);
-Vector3 OnRel(CargoPacker.Result r, int j) => r.Origin[j] - r.Target[r.Partner[j]];
+Vector3 OnRel(CargoPacker.Result r, int j) => r.Rel(j); // the stored relation (the shelf lift taken off)
 
 // ---------------------------------------------------------------- 2. the panel's edit loop is a fixed point, and a slider moves what it says
 var loads = new List<string[]>
@@ -238,14 +255,15 @@ foreach (string[] ids in loads)
                     {
                         var eq = L.ForItem(cur.Id[q]);
                         CargoPacker.FreezeOnTop(pair, qIsA, eq != null ? eq.Base : Vector3.zero, v);
+                        CargoPacker.FreezeLayerArrangement(cur, i, L, EditPair); // as the tab does
                     }
                     CargoPacker.WriteOnTop(pair, qIsA, v);
                 }
                 else
                 {
-                    if (!pair.BesideTuned) CargoPacker.FreezeBeside(pair, qIsA, cur.LayerPos(q), cur.LayerPos(i), cur.Relation[i]);
-                    CargoPacker.WriteBeside(pair, qIsA, cur.LayerPos(q));
-                    CargoPacker.WriteBeside(pair, !qIsA, cur.LayerPos(i));
+                    if (!pair.BesideTuned) CargoPacker.FreezeBeside(pair, qIsA, cur.BesideStored(q), cur.BesideStored(i), cur.Relation[i]);
+                    CargoPacker.WriteBeside(pair, qIsA, cur.BesideStored(q));
+                    CargoPacker.WriteBeside(pair, !qIsA, cur.BesideStored(i));
                 }
                 var after = CargoPacker.Pack(load, S(), L);
                 loops++;
@@ -271,7 +289,7 @@ foreach (string[] ids in loads)
                     {
                         foreach (bool aSide in new[] { qIsA, !qIsA })
                         {
-                            Vector3 keep = aSide == qIsA ? shapeBase.LayerPos(q) : shapeBase.LayerPos(i);
+                            Vector3 keep = aSide == qIsA ? shapeBase.BesideStored(q) : shapeBase.BesideStored(i);
                             CargoPacker.WriteBeside(pair, aSide, d);
                             string sh = Shape(CargoPacker.Pack(load, S(), L));
                             Check(sh == shape0, $"{name}: beside row {i} item {(aSide ? "A" : "B")} set to {V(d)} changed the load's shape: {shape0} -> {sh}");
@@ -312,6 +330,8 @@ foreach (string[] ids in loads)
                     }
                     else
                     {
+                        // with the seat pass an untuned item rests on what is under it, so it may follow (as untuned on-top rows do)
+                        if (L.ShapeOf != null && !basePack.Tuned[j]) continue;
                         Check(Near(moved.LayerPos(j), basePack.LayerPos(j)), $"{name}: on-top row {i} moved: beside item {j} changed its place in its layer");
                     }
                 }
@@ -319,7 +339,7 @@ foreach (string[] ids in loads)
             }
             else
             {
-                CargoPacker.WriteBeside(pair, !qIsA, basePack.LayerPos(i) + delta);
+                CargoPacker.WriteBeside(pair, !qIsA, basePack.BesideStored(i) + delta);
                 var moved = CargoPacker.Pack(load, S(), L);
                 for (int j = 1; j < moved.Count; j++)
                 {
@@ -329,12 +349,13 @@ foreach (string[] ids in loads)
                     }
                     else
                     {
+                        if (L.ShapeOf != null && !basePack.Tuned[j]) continue; // an untuned item seated on what is under it may follow
                         Vector3 want = Key(basePack, j) == key ? delta : Vector3.zero;
                         Check(Near(moved.LayerPos(j) - basePack.LayerPos(j), want), $"{name}: beside row {i} moved: beside item {j} ({basePack.Id[j]}) changed by {V(moved.LayerPos(j) - basePack.LayerPos(j))}, wanted {V(want)}");
                         Check(Near(moved.LayerPos(moved.Partner[j]), basePack.LayerPos(basePack.Partner[j])), $"{name}: beside row {i} moved: the first item of layer of {j} moved");
                     }
                 }
-                CargoPacker.WriteBeside(pair, !qIsA, basePack.LayerPos(i)); // back
+                CargoPacker.WriteBeside(pair, !qIsA, basePack.BesideStored(i)); // back
             }
             var restored = CargoPacker.Pack(load, S(), L);
             Check(Enumerable.Range(0, restored.Count).All(j => Near(restored.Target[j], basePack.Target[j])), $"{name}: row {i}: not back after undoing the delta");
@@ -356,7 +377,9 @@ Console.WriteLine($"INFO {loads.Count} loads, {loops} write-back loops");
     var m = CargoPacker.Pack(load, S(), L);
     var ons = Enumerable.Range(0, m.Count).Where(i => m.Relation[i] == "on").ToList();
     Check(ons.Count == 2 && ons.All(i => Mathf.Abs((m.Origin[i].y - m.Target[m.Partner[i]].y) - (v.y - 0.1f)) < 1e-4f), "six logs: both on-top rows follow one tuning");
-    Check(Mathf.Abs((m.Target[5].y - r.Target[5].y) - (-0.2f)) < 1e-4f, $"six logs: the top layer came down twice the delta ({m.Target[5].y - r.Target[5].y:0.000})");
+    // the top LAYER (its origin) comes down twice the delta; with the seat pass on, its second log, still untuned beside,
+    // rests on its own and the panel freezes it with the layer on the first slider move (FreezeLayerArrangement)
+    Check(Mathf.Abs((m.Origin[5].y - r.Origin[5].y) - (-0.2f)) < 1e-4f, $"six logs: the top layer came down twice the delta ({m.Origin[5].y - r.Origin[5].y:0.000})");
 }
 
 // ---------------------------------------------------------------- 4. forced relations
@@ -374,6 +397,28 @@ Console.WriteLine($"INFO {loads.Count} loads, {loops} write-back loops");
 
 Mixed.Run((ok, what) => { Check(ok, what); return ok; });
 {
+    // the shelf lift: box on body tuned on a lone body (a two-item stack), then met where the body has a taller log
+    // beside it: the box must sit as high above the log's top as it sat above the lone body's, not cut into the log
+    ResetLayout();
+    var pair = EditPair("body", "box");
+    var two = CargoPacker.Pack(Load("body", "box"), S("stack"), L);
+    bool bodyIsA = FirstIsA(pair, two.Id[0], two.Id[1]);
+    var eb = L.ForItem("body");
+    CargoPacker.FreezeOnTop(pair, bodyIsA, eb != null ? eb.Base : Vector3.zero, CargoPacker.OnTopShown(two, 1, L, pair));
+    var twoT = CargoPacker.Pack(Load("body", "box"), S("stack"), L);
+    Check(Near(twoT.Target[1], two.Target[1]) && twoT.Lift[1] == 0f, "shelf lift: a lone support is not lifted, and freezing moved nothing");
+    float aboveBody = twoT.Target[1].y - (twoT.Target[0].y + twoT.Box[0].y);
+    var three = CargoPacker.Pack(Load("body", "wood", "box"), S(), L);
+    int bi = Array.IndexOf(three.Id, "box"), wi = Array.IndexOf(three.Id, "wood");
+    if (three.Relation[bi] == "on" && three.Layer[wi] == three.Layer[three.Partner[bi]])
+    {
+        float shelf = Enumerable.Range(0, three.Count).Where(k => three.Layer[k] == three.Layer[bi] - 1).Max(k => three.Target[k].y + three.Box[k].y);
+        Check(three.Tuned[bi] && three.Lift[bi] > 0.01f && Mathf.Abs((three.Target[bi].y - shelf) - aboveBody) < 1e-4f, $"shelf lift: the box sits {three.Target[bi].y - shelf:0.000} above the taller log, as {aboveBody:0.000} above the lone body (lift {three.Lift[bi]:0.000})");
+        Check(Near(CargoPacker.OnTopShown(three, bi, L, pair), CargoPacker.OnTopShown(twoT, 1, L, pair)), "shelf lift: the panel shows the stored relation in both loads");
+    }
+    else Check(false, $"shelf lift: body + log + box did not put the box on a body-and-log layer: {three.Note}");
+}
+{
     // a beside contact tuned from a stack keeps its arrangement when the fallback rules change
     ResetLayout();
     var p = EditPair("box", "wood");
@@ -385,7 +430,7 @@ Mixed.Run((ok, what) => { Check(ok, what); return ok; });
     if (bi > 0)
     {
         int q = r.Partner[bi];
-        CargoPacker.FreezeBeside(p, FirstIsA(p, r.Id[q], r.Id[bi]), r.LayerPos(q), r.LayerPos(bi), r.Relation[bi]);
+        CargoPacker.FreezeBeside(p, FirstIsA(p, r.Id[q], r.Id[bi]), r.BesideStored(q), r.BesideStored(bi), r.Relation[bi]);
         var narrow = S(); narrow.Overhang = 0.0f; // would not fit any more
         var r2 = CargoPacker.Pack(load, narrow, L);
         Check(p.Mode == r.Relation[bi] && r2.Relation.Count(x => x == "side" || x == "along") == r.Relation.Count(x => x == "side" || x == "along"), $"a tuned beside pair is pinned ({p.Mode}) and survives a smaller overhang");
@@ -409,6 +454,43 @@ Mixed.Run((ok, what) => { Check(ok, what); return ok; });
     var six1 = CargoPacker.Pack(Load("wood", "wood", "wood", "wood", "wood", "wood"), S(), L);
     Check(Enumerable.Range(0, 6).All(j => Near(six1.Target[j], six.Target[j])), "six logs (no lone item): onpair changes nothing");
     items["wood"].OnPair = Vector3.zero;
+}
+{
+    // the coverage analysis (CargoCoverage): every load of up to six items over the six test classes
+    ResetLayout();
+    items["zombie"] = new CargoLayout.ItemEntry { Id = "zombie", OnPair = new Vector3(0f, 0.1f, 0f) }; // a zombie never lies alone on a pair: a dead tuning
+    var cls = classes.ToList();
+    var rep = CargoCoverage.Analyse(cls, 6, null, L, S(), pairs, items.Values);
+    int expect = 0;
+    for (int size = 1; size <= 6; size++) { long c = 1; for (int j = 0; j < size; j++) c = c * (cls.Count + j) / (j + 1); expect += (int)c; }
+    Check(rep.Loads.Count == expect, $"coverage: {rep.Loads.Count} loads, expected every multiset of 1..6 of {cls.Count} classes ({expect})");
+    Check(rep.Total == rep.Contacts.Count && rep.Total == rep.ByKey.Count, "coverage: contacts counted once");
+    bool keysOk = true, smallestOk = true;
+    foreach (var ld in rep.Loads)
+    {
+        var r = CargoPacker.Pack(ld.Classes.Select((c, j) => new CargoPacker.Item { Id = cls[c], Box = boxes[cls[c]], LoadOrder = j }).ToList(), S(), L);
+        var keys = CargoCoverage.ContactsOf(r, x => x).Select(kv => kv.Key).Distinct().OrderBy(x => x, StringComparer.Ordinal);
+        keysOk &= keys.SequenceEqual(ld.Keys.OrderBy(x => x, StringComparer.Ordinal));
+    }
+    foreach (var c in rep.Contacts)
+    {
+        var sm = rep.Loads.First(l => ReferenceEquals(l.Classes, c.Smallest));
+        smallestOk &= sm.Keys.Contains(c.Key) && rep.Loads.Where(l => l.Keys.Contains(c.Key)).All(l => l.Classes.Length >= c.Smallest.Length);
+        smallestOk &= c.Loads == rep.Loads.Count(l => l.Keys.Contains(c.Key));
+    }
+    Check(keysOk, "coverage: each load's contacts are the packer's (the Cargo tab's keys)");
+    Check(smallestOk, "coverage: every contact's smallest load shows it, no smaller load does, and its load count is right");
+    var covered = new HashSet<string>(rep.Cover.SelectMany(i => rep.Loads[i].Keys));
+    Check(rep.Contacts.Where(c => c.Kind != "alone").All(c => covered.Contains(c.Key)), "coverage: the covering loads show every contact");
+    Check(rep.Contacts.All(c => c.Tuned == (c.Kind == "alone" ? (items.TryGetValue(c.Lower, out var e1) && e1.HasAlone) : c.Kind == "onpair" ? (items.TryGetValue(c.Lower, out var e2) && e2.OnPairTuned) : FindPair(c.Lower, c.Upper) is { } pp && (c.Kind == "on" ? pp.TopTuned : pp.BesideTuned))), "coverage: tuned states match the layout");
+    Check(rep.Dead.Any(d => d.Contains("[item zombie]")), "coverage: the zombie's onpair offset is reported as never used");
+    var again = CargoCoverage.Analyse(cls, 6, null, L, S(), pairs, items.Values);
+    Check(CargoCoverage.Text(again) == CargoCoverage.Text(rep) && again.Cover.SequenceEqual(rep.Cover), "coverage: deterministic");
+    var capped = CargoCoverage.Analyse(cls, 6, id => id == "zombie" ? 2 : 6, L, S(), pairs, items.Values);
+    Check(capped.Loads.All(l => l.Classes.Count(c => cls[c] == "zombie") <= 2) && capped.Loads.Count < rep.Loads.Count, "coverage: a class cap (the sheet's stand-in zombies) is kept");
+    Console.WriteLine($"INFO coverage: {rep.Loads.Count} loads, {rep.Total} contacts ({rep.Tuned} tuned), cover {rep.Cover.Count} loads, {rep.Dead.Count} dead tuning(s)");
+    if (args.Contains("--coverage")) Console.WriteLine(CargoCoverage.Text(rep));
+    items.Remove("zombie");
 }
 Console.WriteLine($"{pass} passed, {fail} failed");
 Console.WriteLine(fail == 0 ? "ALL PASS" : "FAILED");

@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     // captured at the end of the frame and cropped around the cart. The cargo that was aboard before is put back.
     // Items with the same mesh (fourteen crates share one model) are represented once. Nothing here touches the
     // save: the donkey's inventory is a temp object's, the test items are created and discarded in memory.
-    internal static class CargoSheet
+    internal static partial class CargoSheet
     {
         public static bool Running { get; private set; }
         public static string Status { get; private set; } = "";
@@ -58,6 +58,7 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogWarning("[sheet] abort cleanup failed: " + e.Message);
             }
             RemoveStandIns("abort");
+            Cargo.Rig.SheetTint = null;
             running = null;
             runningInv = null;
             Running = false;
@@ -97,7 +98,7 @@ namespace GK2DonkeyAPI
             {
                 // Real cargo would be swapped out for test copies for the run; if the ride ended mid-run the copies
                 // would be set down as real items and the real cargo would be gone. Run with an empty cart only.
-                return "set the cargo down first (the sheet needs an empty cart)";
+                return TestLoads.OnCart() == Cargo.Count ? "press 'Take the test load off' first (the sheet needs an empty cart)" : "set the cargo down first (the sheet needs an empty cart)";
             }
             runningInv = Mount.Donkey.Data.Inventory;
             Cargo.SlotFloor = 2; // the sheet puts pairs on the cart whatever CartSlots says (1 included)
@@ -396,17 +397,29 @@ namespace GK2DonkeyAPI
             return Path.Combine(Paths.BepInExRootPath, "GK2-cargo-sheet");
         }
 
-        // A run's own old files out first (the grid's or the shapes page's, never the other's), so the folder holds only
-        // what the run makes: pictures of buckets that no longer exist used to stay behind for weeks.
-        private static void ClearOld(string dir, bool shapes)
+        // Which run made a file in the sheet folder: "shapes", "coverage" (the covering set and its pictures), "status"
+        // (the instant status page), "all" (every load) or "pairs" (the grid).
+        private static string KindOfFile(string name)
+        {
+            if (name.StartsWith("shape__", StringComparison.Ordinal) || name == "shapes.html") return "shapes";
+            if (name.StartsWith("cov__", StringComparison.Ordinal) || name.StartsWith("coverage.", StringComparison.Ordinal)) return "coverage";
+            if (name.StartsWith("status.", StringComparison.Ordinal)) return "status";
+            if (name.StartsWith("all__", StringComparison.Ordinal) || name.StartsWith("all.", StringComparison.Ordinal)) return "all";
+            return "pairs";
+        }
+
+        // A run's own old files out first (never another run's), so the folder holds only what the run makes: pictures
+        // of buckets that no longer exist used to stay behind for weeks.
+        private static void ClearOld(string dir, bool shapes) => ClearOld(dir, shapes ? "shapes" : "pairs");
+
+        private static void ClearOld(string dir, string kind)
         {
             int n = 0;
             foreach (string f in Directory.GetFiles(dir))
             {
                 string name = Path.GetFileName(f);
                 string ext = Path.GetExtension(f).ToLowerInvariant();
-                bool shapeFile = name.StartsWith("shape__", StringComparison.Ordinal) || name == "shapes.html";
-                if (shapeFile == shapes && (ext == ".png" || ext == ".html"))
+                if (KindOfFile(name) == kind && (ext == ".png" || ext == ".jpg" || ext == ".html" || ext == ".txt"))
                 {
                     try
                     {
@@ -425,7 +438,9 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static bool MakeStandIns()
+        // count: as many as one load holds (two for the pair grid, up to six for the coverage runs). False when not even
+        // one could be made; the ones made are in standIns either way.
+        private static bool MakeStandIns(int count = 2)
         {
             RemoveStandIns("left over");
             PlayerData pd = MainGame.PlayerData;
@@ -433,12 +448,12 @@ namespace GK2DonkeyAPI
             {
                 return false;
             }
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < count; i++)
             {
                 Item body = CarryProbe.NewZombieBody(out string how);
                 if (body == null)
                 {
-                    return false;
+                    return standIns.Count > 0;
                 }
                 ZombieWgoData z = MainGame.ZombieSystemData.CreateZombieDrop("zombie", pd.position.Value, pd.currentGameSceneId, body);
                 standIns.Add(z);
@@ -449,16 +464,24 @@ namespace GK2DonkeyAPI
 
         // Puts an item for a sheet cell on the cart: a new item from its id, or for the zombie bucket the stand-in's own
         // item (slot 0 or 1), linked to the copy the cart stores (HeadReroute.RelinkZombie), as for a real zombie.
-        private static void AddCell(Inventory inv, string id, int slot)
+        // slot: which stand-in (the zombies of one load take one each). A zombie item without its ZombieWgoData must never
+        // exist, so without a stand-in for that slot nothing is added (false).
+        private static bool AddCell(Inventory inv, string id, int slot)
         {
-            if (id == ZombieRep && slot < standIns.Count)
+            if (id == ZombieRep)
             {
+                if (slot >= standIns.Count)
+                {
+                    Plugin.Log.LogWarning($"[sheet] no stand-in zombie number {slot + 1} (only {standIns.Count} made); that zombie is left out of the load.");
+                    return false;
+                }
                 Item zi = standIns[slot].ZombieItem;
                 inv.AddItemToInventory(zi);
                 HeadReroute.RelinkZombie(inv, zi, "the cargo sheet");
-                return;
+                return true;
             }
             inv.AddItemToInventory(new Item(id));
+            return true;
         }
 
         // Called after the cart was cleared (the run's end or an abort). A stand-in whose item lies anywhere but the sheet's
@@ -496,7 +519,7 @@ namespace GK2DonkeyAPI
 
         // Where the zombie's item is, when not on the sheet's cart: a drop in a scene, a cart, the keeper's hands. Null
         // when nowhere else (it was only ever on the sheet's cart).
-        private static string FoundOutsideSheet(ZombieWgoData z)
+        internal static string FoundOutsideSheet(ZombieWgoData z)
         {
             Guid g = z.UniqueId.Guid;
             foreach (GameSceneData sd in MainGame.WorldData.gameSceneDataList)
@@ -544,7 +567,7 @@ namespace GK2DonkeyAPI
                 inv = Mount.Donkey.Data.Inventory;
                 saved = new List<Item>(inv.Data.Inventory);
                 List<string> reps = Representatives();
-                if (MakeStandIns())
+                if (MakeStandIns() && standIns.Count >= 2)
                 {
                     reps.Add(ZombieRep);
                 }
@@ -655,7 +678,10 @@ namespace GK2DonkeyAPI
         }
 
         // Screen capture cropped to the cart: the world box around the cargo holder projected to the screen.
-        private static string Capture(string path)
+        private static string Capture(string path) => Capture(path, null, false);
+
+        // extra: a world box the crop must also hold (a tall stack); jpg: smaller files for the runs of many pictures.
+        private static string Capture(string path, Bounds? extra, bool jpg)
         {
             Texture2D full = null;
             Texture2D crop = null;
@@ -680,6 +706,18 @@ namespace GK2DonkeyAPI
                     minX = Mathf.Min(minX, sp.x); maxX = Mathf.Max(maxX, sp.x);
                     minY = Mathf.Min(minY, sp.y); maxY = Mathf.Max(maxY, sp.y);
                 }
+                if (extra.HasValue)
+                {
+                    Bounds e = extra.Value;
+                    e.Expand(0.3f);
+                    for (int c = 0; c < 8; c++)
+                    {
+                        var corner = new Vector3((c & 1) == 0 ? e.min.x : e.max.x, (c & 2) == 0 ? e.min.y : e.max.y, (c & 4) == 0 ? e.min.z : e.max.z);
+                        Vector3 sp = cam.WorldToScreenPoint(corner);
+                        minX = Mathf.Min(minX, sp.x); maxX = Mathf.Max(maxX, sp.x);
+                        minY = Mathf.Min(minY, sp.y); maxY = Mathf.Max(maxY, sp.y);
+                    }
+                }
                 full = ScreenCapture.CaptureScreenshotAsTexture();
                 float sx = full.width / Mathf.Max(1f, cam.pixelWidth), sy = full.height / Mathf.Max(1f, cam.pixelHeight);
                 minX *= sx; maxX *= sx; minY *= sy; maxY *= sy;
@@ -696,7 +734,7 @@ namespace GK2DonkeyAPI
                 crop = new Texture2D(w, h, TextureFormat.RGB24, false);
                 crop.SetPixels(full.GetPixels(x0, y0, w, h));
                 crop.Apply();
-                File.WriteAllBytes(path, crop.EncodeToPNG());
+                File.WriteAllBytes(path, jpg ? crop.EncodeToJPG(88) : crop.EncodeToPNG());
                 return null;
             }
             catch (Exception e)

@@ -56,17 +56,116 @@ namespace GK2DonkeyAPI
         private static float lastChange;
 
         // A correction changed on the panel; written to the repo file shortly after the last change (SaveIfDue).
+        // Counts every change to the entries (the panel's edits, a reload), so what is computed from them (the coverage
+        // report) knows when to redo it.
+        public static int Version { get; private set; }
+
         public static void MarkChanged()
         {
+            Version++;
             dirty = true;
             lastChange = UnityEngine.Time.unscaledTime;
         }
 
         public static string LastSaveNote { get; private set; } = "";
 
+        // ------------------------------------------------------------------ undo, redo, compare (docs/cargo-tuning-tools.md)
+        // Snapshots are the file's text. The panel calls Checkpoint after a finished edit (never mid-drag); Undo / Redo
+        // put a snapshot back and save it like an edit. Compare shows the layout as it was when the session began, with
+        // saving held off and editing locked, and puts the current one back when it ends: the file always keeps the
+        // current layout, whatever happens while comparing.
+        private static readonly List<string> undoStack = new List<string>(), redoStack = new List<string>();
+        private static string lastText, sessionStart, compareSaved;
+        private const int UndoDepth = 200;
+
+        public static bool CanUndo => undoStack.Count > 0 && !Comparing;
+        public static bool CanRedo => redoStack.Count > 0 && !Comparing;
+        public static int UndoCount => undoStack.Count;
+        public static bool Comparing => compareSaved != null;
+        public static bool DiffersFromSessionStart => sessionStart != null && (compareSaved ?? lastText ?? ToText()) != sessionStart;
+
+        // After a finished edit: the state before it goes on the undo stack. merge: a nudge (a key press); nudges that
+        // follow each other within two seconds are one undo step, not one per press.
+        private static float lastMergeAt = -10f;
+
+        public static void Checkpoint(bool merge = false)
+        {
+            if (Comparing) return;
+            string now = ToText();
+            if (lastText == null)
+            {
+                lastText = now;
+                return;
+            }
+            if (now == lastText) return;
+            float t = UnityEngine.Time.unscaledTime;
+            bool merging = merge && t - lastMergeAt < 2f && undoStack.Count > 0;
+            lastMergeAt = merge ? t : -10f;
+            if (merging)
+            {
+                lastText = now; // the step on the stack already holds the state before the first nudge
+                return;
+            }
+            undoStack.Add(lastText);
+            if (undoStack.Count > UndoDepth) undoStack.RemoveAt(0);
+            redoStack.Clear();
+            lastText = now;
+        }
+
+        public static bool Undo()
+        {
+            if (!CanUndo) return false;
+            redoStack.Add(lastText);
+            lastText = undoStack[undoStack.Count - 1];
+            undoStack.RemoveAt(undoStack.Count - 1);
+            Restore(lastText, save: true);
+            return true;
+        }
+
+        public static bool Redo()
+        {
+            if (!CanRedo) return false;
+            undoStack.Add(lastText);
+            lastText = redoStack[redoStack.Count - 1];
+            redoStack.RemoveAt(redoStack.Count - 1);
+            Restore(lastText, save: true);
+            return true;
+        }
+
+        // Shows the session's starting layout (on) or puts the current one back (off). Never saved while on.
+        public static void Compare(bool on)
+        {
+            if (on == Comparing || sessionStart == null) return;
+            if (on)
+            {
+                SaveIfDue(now: true); // the current layout is on disk before anything else is shown
+                compareSaved = ToText();
+                Restore(sessionStart, save: false);
+            }
+            else
+            {
+                string back = compareSaved;
+                compareSaved = null;
+                Restore(back, save: false);
+            }
+        }
+
+        private static void Restore(string text, bool save)
+        {
+            Items.Clear();
+            itemOrder.Clear();
+            Pairs.Clear();
+            Parse(text);
+            Version++;
+            if (save)
+            {
+                MarkChanged();
+            }
+        }
+
         public static void SaveIfDue(bool now = false)
         {
-            if (!dirty || (!now && UnityEngine.Time.unscaledTime - lastChange < 0.75f))
+            if (!dirty || Comparing || (!now && UnityEngine.Time.unscaledTime - lastChange < 0.75f))
             {
                 return;
             }
@@ -96,7 +195,9 @@ namespace GK2DonkeyAPI
             public bool HasAlone;  // alone on the cart: Alone instead of Base
             public Vector3 Alone;
             public Vector3 OnPair; // alone on top of a pair (a lone item on an upper layer): an extra offset, in that layer only
-            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && OnPair == Vector3.zero && !HasAlone;
+            public bool HasOnPair; // alone on a pair accepted or tuned (all three onpair_* written, zeros included)
+            public bool OnPairTuned => HasOnPair || OnPair != Vector3.zero;
+            public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && OnPair == Vector3.zero && !HasAlone && !HasOnPair;
         }
 
         public class PairEntry
@@ -148,6 +249,17 @@ namespace GK2DonkeyAPI
 
         public static void Load()
         {
+            LoadFile();
+            // the session's starting point for undo and compare
+            undoStack.Clear();
+            redoStack.Clear();
+            compareSaved = null;
+            sessionStart = lastText = ToText();
+        }
+
+        private static void LoadFile()
+        {
+            Version++;
             Items.Clear();
             itemOrder.Clear();
             Pairs.Clear();
@@ -241,9 +353,9 @@ namespace GK2DonkeyAPI
                         case "alone_along": item.Alone.x = f; item.HasAlone = true; break;
                         case "alone_up": item.Alone.y = f; item.HasAlone = true; break;
                         case "alone_across": item.Alone.z = f; item.HasAlone = true; break;
-                        case "onpair_along": item.OnPair.x = f; break;
-                        case "onpair_up": item.OnPair.y = f; break;
-                        case "onpair_across": item.OnPair.z = f; break;
+                        case "onpair_along": item.OnPair.x = f; item.HasOnPair = true; break;
+                        case "onpair_up": item.OnPair.y = f; item.HasOnPair = true; break;
+                        case "onpair_across": item.OnPair.z = f; item.HasOnPair = true; break;
                     }
                 }
                 else if (pair != null)
@@ -295,13 +407,20 @@ namespace GK2DonkeyAPI
         // Writes the current entries (empty ones dropped) to path.
         private static void Save(string path)
         {
+            File.WriteAllText(path, ToText());
+            Source = path;
+        }
+
+        // The file's text for the current entries (also the undo snapshots).
+        internal static string ToText()
+        {
             var sb = new StringBuilder();
             sb.AppendLine("# GK2 Donkey API cargo layout: corrections on top of the size-based cargo packer (see CargoLayout.cs).");
             sb.AppendLine("# Embedded into the DLL at build time. The tuning panel writes this file as you edit; rebuild to ship it.");
             sb.AppendLine("# [item <id>] applies to every item of the same size class (measured box within " + SizeTolerance.ToString("0.00", CultureInfo.InvariantCulture) + ").");
             sb.AppendLine("#   along / up / across: at the bottom or beside another item (and alone, without alone_*); top_along / top_up / top_across: stacked on top.");
             sb.AppendLine("#   alone_along / alone_up / alone_across: the only item on the cart (all three written when set, zeros included).");
-            sb.AppendLine("#   onpair_along / onpair_up / onpair_across: an extra offset when it lies alone on top of a pair (a lone item on an upper layer).");
+            sb.AppendLine("#   onpair_along / onpair_up / onpair_across: an extra offset when it lies alone on top of a pair (a lone item on an upper layer; all three written when set, zeros included).");
             sb.AppendLine("# [pair <a>+<b>] applies to that pair of size classes in either order. Two relations, each tunable on its own:");
             sb.AppendLine("#   beside_a_* / beside_b_*: the two lying beside each other (side or along), the exact place of a and b (along, height above the layer's floor, across);");
             sb.AppendLine("#   top_a_* / top_b_*: b on top of a, both places as a two-item cart shows them; inside a bigger load b is placed relative to a.");
@@ -324,7 +443,13 @@ namespace GK2DonkeyAPI
                 sb.AppendLine().AppendLine("[item " + id + "]");
                 Line(sb, "along", e.Base.x); Line(sb, "up", e.Base.y); Line(sb, "across", e.Base.z);
                 Line(sb, "top_along", e.Top.x); Line(sb, "top_up", e.Top.y); Line(sb, "top_across", e.Top.z);
-                Line(sb, "onpair_along", e.OnPair.x); Line(sb, "onpair_up", e.OnPair.y); Line(sb, "onpair_across", e.OnPair.z);
+                if (e.OnPairTuned)
+                {
+                    // all three, zeros too: their presence is what says "tuned" (accepted as it is: all zero)
+                    sb.AppendLine("onpair_along = " + e.OnPair.x.ToString("0.###", CultureInfo.InvariantCulture));
+                    sb.AppendLine("onpair_up = " + e.OnPair.y.ToString("0.###", CultureInfo.InvariantCulture));
+                    sb.AppendLine("onpair_across = " + e.OnPair.z.ToString("0.###", CultureInfo.InvariantCulture));
+                }
                 if (e.HasAlone)
                 {
                     // all three, zeros too: their presence is what says "own alone offsets"
@@ -357,8 +482,7 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
-            File.WriteAllText(path, sb.ToString());
-            Source = path;
+            return sb.ToString();
         }
 
         private static void Line(StringBuilder sb, string key, float v)
@@ -412,7 +536,7 @@ namespace GK2DonkeyAPI
 
         private static readonly Dictionary<string, bool> zombieIds = new Dictionary<string, bool>(StringComparer.Ordinal);
 
-        private static bool IsZombieId(string itemId)
+        internal static bool IsZombieId(string itemId)
         {
             if (itemId == null)
             {

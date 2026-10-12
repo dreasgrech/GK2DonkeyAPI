@@ -15,7 +15,8 @@ namespace GK2DonkeyAPI
     // frame. ON TOP: a new layer over its support, the layer below's first item (the larger footprint; a fixed
     // choice); the layer's origin is at the highest point of the layer below less the nestle, over the support (or the
     // middle of a same-class pair), moved along by the layer shift when the layer below is a pair; a tuned on-top
-    // relation puts the origin at the support plus (b minus a). The on-top relation places the LAYER, the beside
+    // relation puts the origin at the support plus (b minus a), raised by the shelf lift when the support's neighbour stands
+    // taller. The on-top relation places the LAYER, the beside
     // relation arranges the items inside it; they never move the same number. One and two items come out exactly as
     // they did before layers existed: a two-item cart shows the relation of the pair's mode.
     internal static class CargoPacker
@@ -40,6 +41,7 @@ namespace GK2DonkeyAPI
             public Func<CargoLayout.PairEntry, string, string, bool> FirstIsA;
             public Func<string, string, bool> SameClass;
             public Func<string, Vector3> BoxOf; // the size class's box; zero when unknown (the live box is used then)
+            public Func<string, CargoShapes.Shape> ShapeOf; // the measured shapes (null: boxes only, as before)
         }
 
         internal sealed class Result
@@ -54,18 +56,27 @@ namespace GK2DonkeyAPI
             public int[] Layer;
             public int[] Partner;       // the layer's first item (beside) or the support (on); -1 on the bed
             public string[] Relation;   // "bed", "side", "along", "on"
+            public float[] Lift;        // on: how far the shelf (the layer below's highest point) stands above the support's top
+            public float[] LayerBase;   // beside, above the bed: the first item's own height in the layer, taken off both items (see the beside branch)
             public string Note, PairMode;
             public bool PairTuned;
             public float Floor;
             public int Count => Target.Length;
 
-            // What the on-top relation stores: the layer's origin relative to the support. Beside: the item relative to
-            // the layer's first item. The bed: the place itself (above the floor origin).
-            public Vector3 Rel(int i) => Relation[i] == "on" ? Origin[i] - Target[Partner[i]] : Partner[i] >= 0 ? Target[i] - Target[Partner[i]] : Target[i] - new Vector3(0f, Floor, 0f);
+            // What the on-top relation stores: the layer's origin relative to the support, without the shelf lift. Beside:
+            // the item relative to the layer's first item. The bed: the place itself (above the floor origin).
+            public Vector3 Rel(int i) => Relation[i] == "on" ? Origin[i] - Target[Partner[i]] - new Vector3(0f, Lift[i], 0f) : Partner[i] >= 0 ? Target[i] - Target[Partner[i]] : Target[i] - new Vector3(0f, Floor, 0f);
 
-            // The item's place in its layer's frame.
+            // The item's place in its layer's frame (what the panel's beside sliders show).
             public Vector3 LayerPos(int i) => Target[i] - Origin[i];
+
+            // What a beside relation stores for item i: its place in the layer plus the layer base taken off above the bed, so
+            // a freeze or a write from an upper layer keeps the pair's bed heights (every beside freeze and write goes
+            // through this).
+            public Vector3 BesideStored(int i) => LayerPos(i) + new Vector3(0f, LayerBase[i], 0f);
         }
+
+        internal static bool LiftOff; // tests only: the packer without the shelf lift, to measure what it does
 
         internal static Result Pack(IList<Item> input, Settings s, Lookup L)
         {
@@ -86,7 +97,7 @@ namespace GK2DonkeyAPI
             var r = new Result
             {
                 Order = order, Id = new string[n], Box = new Vector3[n], Target = new Vector3[n], Origin = new Vector3[n],
-                OnTop = new bool[n], Tuned = new bool[n], Layer = new int[n], Partner = new int[n], Relation = new string[n],
+                OnTop = new bool[n], Tuned = new bool[n], Layer = new int[n], Partner = new int[n], Relation = new string[n], Lift = new float[n], LayerBase = new float[n],
                 Floor = s.Floor, PairMode = "", PairTuned = false, Note = "",
             };
             if (n == 0)
@@ -184,6 +195,19 @@ namespace GK2DonkeyAPI
                                 note.Append($"{a} | {cur} end to end along ({l0:0.00}+{l1:0.00} on {s.BedLength:0.00})");
                             }
                         }
+                        if (layer > 0)
+                        {
+                            // Above the bed the layer's FIRST item sits at the origin (the on-top relation, or the seat
+                            // pass, places it) and the second keeps only its height relative to the first. A height both
+                            // have on the bed (crates 12 cm up over the rails, logs 9 cm down) is how they sit on the flat
+                            // bed, not a float or a sink to carry into every layer above (2026-10-12). BesideStored adds it
+                            // back for a freeze or a write, so the stored pair never changes meaning.
+                            float hb = target[layerStart].y - origin.y;
+                            target[layerStart].y -= hb;
+                            target[i].y -= hb;
+                            r.LayerBase[layerStart] = hb;
+                            r.LayerBase[i] = hb;
+                        }
                         r.Relation[i] = side ? "side" : "along";
                         r.Partner[i] = layerStart;
                         r.Tuned[i] = tuned;
@@ -219,6 +243,13 @@ namespace GK2DonkeyAPI
                     topY = Mathf.Max(topY, target[k].y + r.Box[k].y);
                 }
                 bool samePair = belowPair && L.SameClass(r.Id[belowStart], r.Id[belowEnd]);
+                // The shelf lift: a tuned relation is measured against its support, and when the support's neighbour in
+                // the layer below stands taller, the layer must rise by the difference or it is pushed into the neighbour
+                // (a contact tuned on a lone support, then met on a pair; docs/cargo-tuning-tools.md). Zero on a single
+                // support and on a pair of equal height, so those look exactly as tuned. Rel takes it off again, so the
+                // panel shows and writes the stored relation.
+                float lift = belowPair && !LiftOff ? Mathf.Max(0f, topY - (target[support].y + r.Box[support].y)) : 0f;
+                r.Lift[i] = lift;
                 string sup = r.Id[support];
                 CargoLayout.PairEntry vp = L.ForPair(sup, cur);
                 bool vTuned = vp != null && vp.TopTuned;
@@ -248,7 +279,7 @@ namespace GK2DonkeyAPI
                         target[support] = new Vector3(0f, floor, 0f) + posSup;
                         r.Tuned[support] = true;
                     }
-                    layerOrigin = target[support] + (posCur - posSup);
+                    layerOrigin = target[support] + (posCur - posSup) + new Vector3(0f, lift, 0f);
                     target[i] = layerOrigin;
                     if (i == 1) r.PairTuned = true;
                     note.Append($"{(layer > 1 || belowPair ? "; " : "")}{cur} on {sup} (tuned)");
@@ -277,8 +308,91 @@ namespace GK2DonkeyAPI
             {
                 note.Append(r.Id[0] + " alone" + (aloneOwn ? " (own alone correction)" : ""));
             }
+            if (L.ShapeOf != null && n > 1)
+            {
+                SeatOnShapes(r, s, L);
+            }
             r.Note = note.ToString();
             return r;
+        }
+
+        // The seat pass (docs/cargo-tuning-tools.md): with the measured shapes, every upper layer is placed on what is
+        // really under it, bottom up, once all its items have their places across and along. Untuned: the layer's first
+        // item rests with its lowest quarter at the nestle on the layers below (the class's on-top and alone-on-a-pair
+        // heights kept on top), the same rule as the panel's Seat it; an untuned second item is seated on its own. Tuned:
+        // as stored, raised only when a neighbour's real surface (not its box: the log's stub) stands under the item above
+        // its support's (the shelf lift by the shapes). Whatever a layer moves, the layers above move with it. The lift is
+        // kept in Lift, so Rel (the stored relation) and freezing stay exact: an accepted layer lands where it was.
+        private static void SeatOnShapes(Result r, Settings s, Lookup L)
+        {
+            int n = r.Count, top = 0;
+            var shapes = new CargoShapes.Shape[n];
+            for (int i = 0; i < n; i++) shapes[i] = L.ShapeOf(r.Id[i]);
+            for (int i = 0; i < n; i++) top = Mathf.Max(top, r.Layer[i]);
+            for (int layer = 1; layer <= top; layer++)
+            {
+                int first = -1, second = -1, below = 0;
+                for (int i = 0; i < n; i++)
+                {
+                    if (r.Layer[i] == layer && r.Relation[i] == "on") first = i;
+                    else if (r.Layer[i] == layer && (r.Relation[i] == "side" || r.Relation[i] == "along")) second = i;
+                    if (r.Layer[i] == layer - 1) below++;
+                }
+                if (first < 0 || !ShapesFor(shapes, r, layer)) continue;
+                int support = r.Partner[first];
+                CargoShapes.SeatQuantiles(r, first, shapes, support, 0.25f, out float pAll, out float pSup);
+                if (float.IsNaN(pAll)) continue; // nothing measured under it: the boxes stay
+                float lift = float.IsNaN(pSup) ? 0f : Mathf.Max(0f, pSup - pAll);
+                float shift;
+                if (!r.Tuned[first])
+                {
+                    // An automatic layer RESTS: its origin is placed so that its first item sits at the nestle on what is
+                    // under it (the same rule as the panel's Seat it).
+                    // The first item sits at the origin in an upper layer (its bed height taken off in the beside branch), so
+                    // its height in the layer is only a lone item's alone-on-a-pair offset; that and the class's on-top
+                    // height stay on top of the rest.
+                    CargoLayout.ItemEntry e = L.ForItem(r.Id[first]);
+                    float keep = (r.Target[first].y - r.Origin[first].y) + (e != null ? e.Top.y : 0f);
+                    shift = -(pAll - keep + s.Nestle);
+                }
+                else
+                {
+                    shift = lift - r.Lift[first];
+                }
+                r.Lift[first] = lift;
+                if (shift != 0f)
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        if (r.Layer[i] < layer) continue;
+                        r.Target[i].y += shift;
+                        r.Origin[i].y += shift;
+                    }
+                }
+                // A second item still untuned beside is seated on its own (nothing about it is anyone's choice yet). Once
+                // its beside relation is tuned it keeps its place in the layer and moves with it: the panel freezes it
+                // together with the layer's on-top relation, so a tuned layer moves as one.
+                if (second >= 0 && !r.Tuned[second])
+                {
+                    CargoShapes.SeatQuantiles(r, second, shapes, -1, 0.25f, out float p2, out _);
+                    if (!float.IsNaN(p2))
+                    {
+                        // its own height in the layer kept, as for the first item
+                        float keep2 = r.Target[second].y - r.Origin[second].y;
+                        r.Target[second].y += -(p2 - keep2 + s.Nestle);
+                    }
+                }
+            }
+        }
+
+        // Every item of the layer and of the layers below it has a measured shape.
+        private static bool ShapesFor(CargoShapes.Shape[] shapes, Result r, int layer)
+        {
+            for (int i = 0; i < r.Count; i++)
+            {
+                if (r.Layer[i] <= layer && shapes[i] == null) return false;
+            }
+            return true;
         }
 
         // ------------------------------------------------------------------ the panel's edits of a relation
@@ -301,8 +415,23 @@ namespace GK2DonkeyAPI
             pair.SetPos("stack", !lowerIsA, lower + rel);
         }
 
-        // Freezes an untuned beside relation at both items' places in the layer's frame. firstIsA: whether the layer's
-        // first item is the pair entry's A.
+        // Tuning a layer (its on-top relation) also freezes its second item's place, untuned until then: the seat pass seats
+        // a second item on its own only in an automatic layer, so it would jump back onto the layer otherwise. index: the
+        // layer's first item.
+        internal static void FreezeLayerArrangement(Result r, int index, Lookup L, Func<string, string, CargoLayout.PairEntry> editPair)
+        {
+            for (int k = 0; k < r.Count; k++)
+            {
+                if (r.Layer[k] != r.Layer[index] || r.Partner[k] != index || (r.Relation[k] != "side" && r.Relation[k] != "along")) continue;
+                CargoLayout.PairEntry pair = editPair(r.Id[index], r.Id[k]);
+                if (pair.BesideTuned) return;
+                FreezeBeside(pair, L.FirstIsA(pair, r.Id[index], r.Id[k]), r.BesideStored(index), r.BesideStored(k), r.Relation[k]);
+                return;
+            }
+        }
+
+        // Freezes an untuned beside relation at both items' stored places (Result.BesideStored: the place in the layer plus
+        // the layer base above the bed). firstIsA: whether the layer's first item is the pair entry's A.
         // arrangement: "side" or "along", the way the two lie now. A pair left on "auto" is pinned to it, so the fallback
         // rules (gap, overhang) can never flip a tuned pair into a stack or the other way round.
         internal static void FreezeBeside(CargoLayout.PairEntry pair, bool firstIsA, Vector3 first, Vector3 second, string arrangement = null)
@@ -314,9 +443,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        internal static void WriteBeside(CargoLayout.PairEntry pair, bool isA, Vector3 layerPos)
+        // stored: the item's place in its layer plus the layer base (Result.BesideStored plus the slider's change).
+        internal static void WriteBeside(CargoLayout.PairEntry pair, bool isA, Vector3 stored)
         {
-            pair.SetPos("side", isA, layerPos);
+            pair.SetPos("side", isA, stored);
         }
 
         // ------------------------------------------------------------------ helpers

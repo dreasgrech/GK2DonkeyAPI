@@ -19,6 +19,7 @@
   <ItemGroup>
     <EmbeddedResource Include="defaults.cfg" LogicalName="GK2DonkeyAPI.defaults.cfg" />
     <EmbeddedResource Include="cargo-layout.cfg" LogicalName="GK2DonkeyAPI.cargo-layout.cfg" />
+    <EmbeddedResource Include="cargo-shapes.cfg" LogicalName="GK2DonkeyAPI.cargo-shapes.cfg" />
     <!-- The cart lantern's mesh data (vertex and index buffers of donkey_cart_lantern-MERGE S_OBJ, read from the
          game's bundle; the mesh is not readable at runtime). LampHang.cs splits it into pole and hanging lamp. -->
     <EmbeddedResource Include="assets\lantern-vertices.bin" LogicalName="GK2DonkeyAPI.lantern-vertices.bin" />

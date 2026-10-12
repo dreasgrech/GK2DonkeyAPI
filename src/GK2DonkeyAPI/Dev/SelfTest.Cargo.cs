@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
                 Mounts.Behaviour.Set(Owner, "CartSlots", 4);
                 Check(Inv().Data.InventorySize == 4, $"the override applies to the standing cart at once (4 slots; was {before})");
                 int added = 0;
-                foreach (string id in new[] { "wood", "stone", "wood", "stone" })
+                foreach (string id in new[] { "wood", "wood", "wood", "wood" }) // a pair tuned side by side: two layers of two whatever else the layout says
                 {
                     if (Inv().AddItemToInventory(new Item(id))) added++;
                 }
@@ -62,7 +62,10 @@ namespace GK2DonkeyAPI
                     }
                 }
                 Check(placed.Count == 4 && l0 == 2 && l1 == 2, $"two layers of two ({placed.Count} placed: {l0} on the bed, {l1} above; {h.I.CargoRig.LastLayoutNote})");
-                Check(l1 > 0 && bottom1 > top0 - 0.1f && bottom1 < top0 + 0.1f, $"the upper layer stands on the lower one (its bottom {bottom1:F2}, the lower top {top0:F2})");
+                // The upper layer rests on the lower one: by the boxes within 10 cm of their top; with the measured shapes it
+                // may sit lower (on a round log's trunk, under the box's stub), never higher.
+                bool shapes = Plugin.CargoSeatOnShapes.Value && CargoShapes.Count > 0;
+                Check(l1 > 0 && bottom1 > top0 - (shapes ? 0.35f : 0.1f) && bottom1 < top0 + 0.1f, $"the upper layer stands on the lower one (its bottom {bottom1:F2}, the lower boxes' top {top0:F2}{(shapes ? ", seated on the measured shapes" : "")})");
                 // The relations: the bed, a beside partner, an on-top support in the layer below, a beside partner above.
                 Check(placed.Count == 4 && placed[0].Relation == "bed" && placed[1].Partner == 0 && (placed[1].Relation == "side" || placed[1].Relation == "along")
                     && placed[2].Relation == "on" && placed[2].Partner >= 0 && placed[2].Partner <= 1 && placed[3].Partner == 2 && (placed[3].Relation == "side" || placed[3].Relation == "along"),

@@ -23,6 +23,594 @@ namespace GK2DonkeyAPI
         private static int cargoViewIsolatedFrom;
         private static string cargoViewPairMode = "";
 
+        // The whole layout's state over every load of up to six items (CargoCoverage via CargoSheet.AnalyseNow), redone
+        // when the layout or the fallbacks change, never while a control is held (a drag changes the layout every frame),
+        // and only in a Layout event (both passes of an event draw the same lines).
+        private static CargoCoverage.Report coverage;
+        private static string coverageSig;
+
+        private static void UpdateCoverage()
+        {
+            bool held = GUIUtility.hotControl != 0 && (BepInEx.UnityInput.Current.GetMouseButton(0) || BepInEx.UnityInput.Current.GetMouseButton(1));
+            if (held || Event.current.type != EventType.Layout)
+            {
+                return;
+            }
+            string sig;
+            try
+            {
+                sig = CargoSheet.CurrentSignature();
+            }
+            catch (Exception e)
+            {
+                sig = "error " + e.Message;
+            }
+            if (sig == coverageSig)
+            {
+                return;
+            }
+            // Wait until the edits settle (half a second without a change): every numpad press or slider release
+            // would run the 1,715 packs (about 60 ms) otherwise.
+            if (sig != pendingSig)
+            {
+                pendingSig = sig;
+                pendingSince = Time.unscaledTime;
+                if (coverage != null) return;
+            }
+            else if (coverage != null && Time.unscaledTime - pendingSince < 0.5f)
+            {
+                return;
+            }
+            coverageSig = sig; // set first: a failure is logged once per change, not every frame
+            try
+            {
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+                coverage = CargoSheet.AnalyseNow(CargoSheet.CoverageMaxItems);
+                if (coverageLogged++ < 3)
+                {
+                    Plugin.Log.LogInfo($"[coverage] {coverage.Tuned} of {coverage.Total} contacts tuned over {coverage.Loads.Count} loads (analysed in {watch.ElapsedMilliseconds} ms).");
+                }
+            }
+            catch (Exception e)
+            {
+                coverage = null;
+                Plugin.Log.LogWarning("[coverage] analysing the layout failed: " + e);
+            }
+        }
+
+        private static int coverageLogged;
+        private static string pendingSig;
+        private static float pendingSince;
+
+        // Per analysis: the queue and the fully tuned count (the panel draws them every pass).
+        private static CargoCoverage.Report cachedFor;
+        private static int cachedSkips = -1, cachedFully;
+        private static List<CargoCoverage.Contact> cachedQueue;
+
+        private static List<CargoCoverage.Contact> CachedQueue(out int fully)
+        {
+            if (!ReferenceEquals(cachedFor, coverage) || cachedSkips != skippedKeys.Count)
+            {
+                cachedFor = coverage;
+                cachedSkips = skippedKeys.Count;
+                cachedQueue = Queue(coverage);
+                cachedFully = 0;
+                foreach (CargoCoverage.Load l in coverage.Loads) if (l.Untuned == 0) cachedFully++;
+            }
+            fully = cachedFully;
+            return cachedQueue;
+        }
+
+        // " · used in N loads" for a contact key (CargoCoverage's keys), when the analysis has it.
+        private static string UsedIn(string key)
+        {
+            if (coverage == null || !coverage.ByKey.TryGetValue(key, out CargoCoverage.Contact c))
+            {
+                return "";
+            }
+            return $"   <color=#9a9a9a>· in {c.Loads} of {coverage.Loads.Count} loads</color>";
+        }
+
+        private static string KeyOf(string relation, string id, string partnerId) => CargoCoverage.KeyOf(relation, id, partnerId, CargoSheet.ClassOf);
+
+        private static void DrawCoverageLine()
+        {
+            if (coverage == null)
+            {
+                return;
+            }
+            List<CargoCoverage.Contact> next = CachedQueue(out int fully);
+            string done = coverage.Tuned == coverage.Total ? "<color=#8ee68e>" : "<color=#ffd257>";
+            GUILayout.Label($"Whole layout: {done}{coverage.Tuned} of {coverage.Total} contacts tuned</color>, {fully} of {coverage.Loads.Count} loads fully tuned.", label);
+
+            // Read before any button below: a click changes the cart in this pass, and the rows after it must stay the
+            // ones the layout pass drew.
+            int testOn = TestLoads.OnCart();
+            GUILayout.BeginVertical(GUI.skin.box);
+            if (next.Count > 0)
+            {
+                GUILayout.Label("Tune next  <color=#9a9a9a>(most used first; Load puts its smallest load on the cart)</color>", label);
+                for (int i = 0; i < Mathf.Min(TuneNextRows, next.Count); i++)
+                {
+                    CargoCoverage.Contact c = next[i];
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Load", Wd(60f)))
+                    {
+                        TestLoads.Put(LoadIds(c.Smallest), c.Title);
+                    }
+                    GUILayout.Label($"<color=#ff8c69>{c.Title}</color>   <color=#9a9a9a>in {c.Loads} loads, completes {c.Completes} · {coverage.Describe(c.Smallest)}{(skippedKeys.Contains(c.Key) ? " · skipped" : "")}</color>", label);
+                    GUILayout.EndHorizontal();
+                }
+            }
+            else
+            {
+                GUILayout.Label("<color=#8ee68e>Every contact is tuned.</color>", label);
+            }
+            // Walk the covering loads: together they show every contact of every load.
+            if (coverage.Cover.Count > 0)
+            {
+                coverStep = Mathf.Clamp(coverStep, 0, coverage.Cover.Count - 1);
+                CargoCoverage.Load cl = coverage.Loads[coverage.Cover[coverStep]];
+                GUILayout.BeginHorizontal();
+                if (GUILayout.Button("<", Wd(28f))) coverStep = (coverStep + coverage.Cover.Count - 1) % coverage.Cover.Count;
+                if (GUILayout.Button(">", Wd(28f))) coverStep = (coverStep + 1) % coverage.Cover.Count;
+                if (GUILayout.Button("Load", Wd(60f)))
+                {
+                    TestLoads.Put(LoadIds(cl.Classes), $"covering load {coverStep + 1} of {coverage.Cover.Count}");
+                }
+                GUILayout.Label($"Every contact in {coverage.Cover.Count} loads: {coverStep + 1}. {coverage.Describe(cl.Classes)}   <color=#9a9a9a>{cl.Untuned} untuned</color>", label);
+                GUILayout.EndHorizontal();
+            }
+            GUILayout.BeginHorizontal();
+            bool was = GUI.enabled;
+            GUI.enabled = was && testOn > 0;
+            if (GUILayout.Button(testOn > 0 ? $"Take the test load off ({testOn})" : "Take the test load off", Wd(200f)))
+            {
+                TestLoads.TakeOff();
+            }
+            GUI.enabled = was;
+            GUILayout.Label(TestLoads.Status, small);
+            GUILayout.EndHorizontal();
+            GUILayout.EndVertical();
+        }
+
+        // The Debug tab's load builder: any load, by how many of each size class, put on the cart as a test load.
+        private static readonly Dictionary<string, int> builderCounts = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        private static void DrawTestLoadBuilder()
+        {
+            Header("Test loads on the cart");
+            List<string> classes = CargoSheet.ClassReps();
+            int total = 0;
+            foreach (string c in classes) total += builderCounts.TryGetValue(c, out int k) ? k : 0;
+            foreach (string c in classes)
+            {
+                int k = builderCounts.TryGetValue(c, out int got) ? got : 0;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(CargoSheet.ClassLabel(c), label, Wd(140f));
+                if (GUILayout.Button("-", Wd(28f)) && k > 0) builderCounts[c] = k - 1;
+                GUILayout.Label(k.ToString(), label, Wd(24f));
+                if (GUILayout.Button("+", Wd(28f)) && total < CargoSheet.CoverageMaxItems) builderCounts[c] = k + 1;
+                GUILayout.Label($"<color=#9a9a9a>{c}</color>", small);
+                GUILayout.EndHorizontal();
+            }
+            int testOn = TestLoads.OnCart();
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button($"Put these {total} on the cart", Wd(180f)) && total > 0)
+            {
+                var ids = new List<string>();
+                foreach (string c in classes)
+                {
+                    int k = builderCounts.TryGetValue(c, out int got) ? got : 0;
+                    for (int j = 0; j < k; j++) ids.Add(c);
+                }
+                TestLoads.Put(ids, "the load builder");
+            }
+            if (GUILayout.Button("Clear the counts", Wd(130f)))
+            {
+                builderCounts.Clear();
+            }
+            bool was = GUI.enabled;
+            GUI.enabled = was && testOn > 0;
+            if (GUILayout.Button("Take the test load off", Wd(170f)))
+            {
+                TestLoads.TakeOff();
+            }
+            GUI.enabled = was;
+            GUILayout.EndHorizontal();
+            GUILayout.Label(TestLoads.Status, small);
+            Help("Puts real items straight onto the ridden cart (a corpse with its organs, a zombie made the way the game makes one): no searching the world. A new test load replaces the last one; the cart must hold nothing else. Taking it off removes only the test items still on the cart (and the test zombies). Items set down stay normal world items. The Cargo tab's Tune next list has a Load button per contact.");
+        }
+
+        // ---------------------------------------------------------------- Looks right (docs/cargo-tuning-tools.md)
+        // Each freezes a contact exactly where it lies now: the same freeze a first slider move makes, without the move.
+        // True when something was frozen.
+
+        private static bool LooksRightButton(bool active)
+        {
+            bool was = GUI.enabled;
+            GUI.enabled = was && active;
+            bool pressed = GUILayout.Button("Looks right", Wd(100f));
+            GUI.enabled = was;
+            return pressed && active;
+        }
+
+        private static bool AcceptAlone(Cargo.PlacedItem p)
+        {
+            CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
+            if (e.HasAlone) return false;
+            e.HasAlone = true;
+            e.Alone = e.Base; // where an item without its own alone place lies
+            Plugin.Log.LogInfo($"Cargo layout: {p.Id} alone accepted as it lies.");
+            return true;
+        }
+
+        private static bool AcceptPair2(Cargo.PlacedItem p0, Cargo.PlacedItem p1, bool isolating, string lastPairMode)
+        {
+            CargoLayout.PairEntry pair = CargoLayout.EditPair(p0.Id, p1.Id);
+            string shown = string.IsNullOrEmpty(lastPairMode) ? pair.Mode : lastPairMode;
+            if (pair.TunedFor(shown)) return false;
+            bool firstIsA = CargoLayout.FirstIsA(pair, p0.Id, p1.Id);
+            if (!isolating) pair.Mode = shown; // a two-item cart keeps showing what was accepted
+            pair.SetFor(shown, firstIsA ? p0.Pos : p1.Pos, firstIsA ? p1.Pos : p0.Pos);
+            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} accepted as it lies ({shown}).");
+            return true;
+        }
+
+        private static bool AcceptOn(Cargo.PlacedItem pl, Cargo.PlacedItem q, List<Cargo.PlacedItem> view = null, int index = -1)
+        {
+            CargoLayout.PairEntry pair = CargoLayout.EditPair(q.Id, pl.Id);
+            if (pair.TopTuned) return false;
+            CargoLayout.ItemEntry eq = CargoLayout.ForItem(q.Id);
+            CargoPacker.FreezeOnTop(pair, CargoLayout.FirstIsA(pair, q.Id, pl.Id), eq != null ? eq.Base : Vector3.zero, pl.Rel);
+            if (view != null) FreezeLayerOf(view, index);
+            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} on top accepted as it lies.");
+            return true;
+        }
+
+        // The layer of the item at index (its first item) keeps its arrangement when its on-top relation is tuned
+        // (CargoPacker.FreezeLayerArrangement).
+        private static void FreezeLayerOf(List<Cargo.PlacedItem> view, int index)
+        {
+            if (index < 0 || index >= view.Count) return;
+            CargoPacker.FreezeLayerArrangement(LiveResult(view), index, CoverageLayoutLookup, CargoLayout.EditPair);
+        }
+
+        private static readonly CargoPacker.Lookup CoverageLayoutLookup = new CargoPacker.Lookup
+        {
+            ForItem = CargoLayout.ForItem, ForPair = CargoLayout.ForPair, FirstIsA = CargoLayout.FirstIsA, SameClass = CargoLayout.SameClass, BoxOf = CargoLayout.BoxOf,
+        };
+
+        private static bool AcceptBeside(Cargo.PlacedItem pl, Cargo.PlacedItem q)
+        {
+            CargoLayout.PairEntry pair = CargoLayout.EditPair(q.Id, pl.Id);
+            if (pair.BesideTuned) return false;
+            CargoPacker.FreezeBeside(pair, CargoLayout.FirstIsA(pair, q.Id, pl.Id), q.BesideStored, pl.BesideStored, pl.Relation);
+            Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} beside accepted as it lies ({pl.Relation}).");
+            return true;
+        }
+
+        private static bool AcceptOnPair(Cargo.PlacedItem it)
+        {
+            CargoLayout.ItemEntry e = CargoLayout.EditItem(it.Id);
+            if (e.OnPairTuned) return false;
+            e.HasOnPair = true; // its offset stays as it is (zero)
+            Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair accepted as it lies.");
+            return true;
+        }
+
+        private static bool IsLoneOnPair(List<Cargo.PlacedItem> placed, Cargo.PlacedItem it)
+        {
+            if (it.Relation != "on") return false;
+            int inLayer = 0, inBelow = 0;
+            foreach (Cargo.PlacedItem o in placed)
+            {
+                if (o.Layer == it.Layer) inLayer++;
+                if (o.Layer == it.Layer - 1) inBelow++;
+            }
+            return inLayer == 1 && inBelow >= 2;
+        }
+
+        // Every untuned contact of the load on the cart, accepted as it lies (one freeze per contact; the freezes move
+        // nothing, so they can all use the same pack). The count frozen.
+        private static int AcceptAll(List<Cargo.PlacedItem> view, bool isolating, string lastPairMode)
+        {
+            int n = view.Count, done = 0;
+            if (n == 1)
+            {
+                return AcceptAlone(LiveOf(view, 0)) ? 1 : 0;
+            }
+            if (n == 2)
+            {
+                return AcceptPair2(LiveOf(view, 0), LiveOf(view, 1), isolating, lastPairMode) ? 1 : 0;
+            }
+            for (int k = 0; k < n; k++)
+            {
+                Cargo.PlacedItem it = LiveOf(view, k);
+                if (it.Relation == null || it.Relation == "bed" || it.Partner < 0 || it.Partner >= n) continue;
+                Cargo.PlacedItem q = LiveOf(view, it.Partner);
+                if (it.Relation == "on" ? AcceptOn(it, q, view, k) : AcceptBeside(it, q)) done++;
+                if (IsLoneOnPair(view, it) && AcceptOnPair(it)) done++;
+            }
+            return done;
+        }
+
+        // How many contacts of the load on the cart are still on the fallbacks (for the button's label).
+        private static int UntunedInLoad(List<Cargo.PlacedItem> view, bool isolating)
+        {
+            int n = view.Count;
+            if (n == 1)
+            {
+                CargoLayout.ItemEntry e = CargoLayout.ForItem(view[0].Id);
+                return e != null && e.HasAlone ? 0 : 1;
+            }
+            if (n == 2)
+            {
+                CargoLayout.PairEntry pair = CargoLayout.ForPair(view[0].Id, view[1].Id);
+                string shown = string.IsNullOrEmpty(cargoViewPairMode) ? (pair != null ? pair.Mode : "auto") : cargoViewPairMode;
+                return pair != null && pair.TunedFor(shown) ? 0 : 1;
+            }
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            int open = 0;
+            foreach (Cargo.PlacedItem it in view)
+            {
+                if (it.Relation == null || it.Relation == "bed" || it.Partner < 0 || it.Partner >= n) continue;
+                string key = KeyOf(it.Relation, it.Id, view[it.Partner].Id);
+                if (seen.Add(key) && !it.Tuned) open++;
+                if (IsLoneOnPair(view, it) && seen.Add("onpair:" + CargoSheet.ClassOf(it.Id)))
+                {
+                    CargoLayout.ItemEntry e = CargoLayout.ForItem(it.Id);
+                    if (e == null || !e.OnPairTuned) open++;
+                }
+            }
+            return open;
+        }
+
+        // The most used untuned contact's smallest load onto the cart (a test load). afterAccept: the layout just changed,
+        // so the analysis is redone first.
+        // Contacts skipped this session (Skip to next): they go to the back of the queue, or skipping would load the same
+        // load again (it holds the most used untuned contact, which is why it was loaded). When only skipped ones are
+        // left, the queue goes round to them.
+        private static readonly HashSet<string> skippedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+        // The untuned contacts in the order they are offered: not skipped first, then the most used, then by key. The
+        // Tune next list shows it and the next / skip buttons load its first one, so the two always agree (they did not
+        // on a tie: slab beside slab and corpse on zombie both in 330 loads, 2026-10-12).
+        private static List<CargoCoverage.Contact> Queue(CargoCoverage.Report rep)
+        {
+            var list = new List<CargoCoverage.Contact>();
+            foreach (CargoCoverage.Contact c in rep.Contacts) if (!c.Tuned) list.Add(c);
+            list.Sort((x, y) =>
+            {
+                bool sx = skippedKeys.Contains(x.Key), sy = skippedKeys.Contains(y.Key);
+                if (sx != sy) return sx ? 1 : -1;
+                return y.Loads != x.Loads ? y.Loads.CompareTo(x.Loads) : string.CompareOrdinal(x.Key, y.Key);
+            });
+            return list;
+        }
+
+        // The untuned contacts of the load on the cart (coverage keys).
+        private static List<string> UntunedKeysHere(List<Cargo.PlacedItem> view)
+        {
+            var keys = new List<string>();
+            if (coverage == null) return keys;
+            int n = view.Count;
+            for (int k = 0; k < n; k++)
+            {
+                Cargo.PlacedItem it = view[k];
+                var here = new List<string>();
+                if (n == 1) here.Add("alone:" + CargoSheet.ClassOf(it.Id));
+                else if (it.Relation != null && it.Relation != "bed" && it.Partner >= 0 && it.Partner < n)
+                {
+                    here.Add(KeyOf(it.Relation, it.Id, view[it.Partner].Id));
+                    if (IsLoneOnPair(view, it)) here.Add("onpair:" + CargoSheet.ClassOf(it.Id));
+                }
+                foreach (string key in here)
+                {
+                    if (coverage.ByKey.TryGetValue(key, out CargoCoverage.Contact c) && !c.Tuned && !keys.Contains(key)) keys.Add(key);
+                }
+            }
+            return keys;
+        }
+
+        private static void LoadNextUntuned(bool afterAccept, List<Cargo.PlacedItem> skipping = null)
+        {
+            try
+            {
+                if (afterAccept || coverage == null)
+                {
+                    // the accepted entries are in memory already; the tab marks the change (and saves) at the end of the pass
+                    coverage = CargoSheet.AnalyseNow(CargoSheet.CoverageMaxItems);
+                }
+                if (skipping != null)
+                {
+                    skippedKeys.UnionWith(UntunedKeysHere(skipping));
+                }
+                List<CargoCoverage.Contact> queue = Queue(coverage);
+                if (queue.Count == 0)
+                {
+                    TestLoads.Note("every contact is tuned: nothing left to load");
+                    return;
+                }
+                if (skippedKeys.Contains(queue[0].Key))
+                {
+                    // only skipped ones are left: round again
+                    skippedKeys.Clear();
+                    queue = Queue(coverage);
+                }
+                TestLoads.Put(LoadIds(queue[0].Smallest), queue[0].Title);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("[testload] loading the next untuned contact failed: " + e);
+            }
+        }
+
+        // ---------------------------------------------------------------- the measured shapes: seats and verdicts
+        // (CargoShapes; docs/cargo-tuning-tools.md). Seat it rests an item on the bulk of what is under it (its lowest
+        // quarter at the usual 3 cm sink, a small bump ignored), through the same write a slider move makes, so it is
+        // one undo step and freezes an untuned contact first. A starting point for the eye, not a verdict.
+
+        private static bool SeatButton(bool active)
+        {
+            bool was = GUI.enabled;
+            GUI.enabled = was && active;
+            bool pressed = GUILayout.Button("Seat it", Wd(70f));
+            GUI.enabled = was;
+            return pressed && active;
+        }
+
+        // The load on the cart as a packer result (the places relative to the floor; only differences are used).
+        private static CargoPacker.Result LiveResult(List<Cargo.PlacedItem> view)
+        {
+            int n = view.Count;
+            var r = new CargoPacker.Result
+            {
+                Order = new int[n], Id = new string[n], Box = new Vector3[n], Target = new Vector3[n], Origin = new Vector3[n], OnTop = new bool[n],
+                Tuned = new bool[n], Layer = new int[n], Partner = new int[n], Relation = new string[n], Lift = new float[n], LayerBase = new float[n], Note = "", PairMode = "",
+            };
+            for (int k = 0; k < n; k++)
+            {
+                Cargo.PlacedItem p = LiveOf(view, k);
+                r.Order[k] = k;
+                r.Id[k] = p.Id;
+                r.Box[k] = p.Box;
+                r.Target[k] = p.Pos;
+                r.Layer[k] = p.Layer;
+                r.Partner[k] = p.Partner;
+                r.Relation[k] = p.Relation ?? "bed";
+                r.Tuned[k] = p.Tuned;
+                r.OnTop[k] = p.OnTop;
+                r.LayerBase[k] = p.LayerBase;
+            }
+            return r;
+        }
+
+        private static bool SeatOn(List<Cargo.PlacedItem> view, int index, Cargo.PlacedItem pl, Cargo.PlacedItem q)
+        {
+            float d = CargoShapes.SeatDelta(LiveResult(view), index, CargoSheet.ShapeOf);
+            if (float.IsNaN(d)) return false;
+            CargoLayout.PairEntry pair = CargoLayout.EditPair(q.Id, pl.Id);
+            bool qIsA = CargoLayout.FirstIsA(pair, q.Id, pl.Id);
+            if (!pair.TopTuned)
+            {
+                CargoLayout.ItemEntry eq = CargoLayout.ForItem(q.Id);
+                CargoPacker.FreezeOnTop(pair, qIsA, eq != null ? eq.Base : Vector3.zero, pl.Rel);
+                FreezeLayerOf(view, index);
+            }
+            CargoPacker.WriteOnTop(pair, qIsA, pl.Rel + new Vector3(0f, d, 0f));
+            Plugin.Log.LogInfo($"Cargo layout: {pl.Id} on {q.Id} seated ({d:+0.000;-0.000}).");
+            return true;
+        }
+
+        // What looks wrong in the load on the cart (CargoShapes.Judge), worked out again only when the load moved.
+        private static string verdictKey;
+        private static string verdictText = "";
+
+        private static void DrawVerdicts(List<Cargo.PlacedItem> view)
+        {
+            if (CargoShapes.Count == 0 || view.Count < 2)
+            {
+                return;
+            }
+            if (Event.current.type == EventType.Layout)
+            {
+                var sbk = new System.Text.StringBuilder();
+                for (int k = 0; k < view.Count; k++)
+                {
+                    Cargo.PlacedItem p = LiveOf(view, k);
+                    sbk.Append(p.Id).Append(p.Pos.x.ToString("0.000")).Append(p.Pos.y.ToString("0.000")).Append(p.Pos.z.ToString("0.000")).Append('|');
+                }
+                string key = sbk.ToString();
+                if (key != verdictKey)
+                {
+                    verdictKey = key;
+                    CargoPacker.Result r = LiveResult(view);
+                    var parts = new List<string>();
+                    for (int i = 0; i < r.Count; i++)
+                    {
+                        CargoShapes.Verdict v = CargoShapes.Judge(r, i, CargoSheet.ShapeOf);
+                        if (v == null) continue;
+                        string what = Tinted(LiveOf(view, i), view);
+                        string under = v.Under >= 0 && v.Under < r.Count ? Tinted(LiveOf(view, v.Under), view) : "";
+                        parts.Add(v.Kind == "floats" ? $"{what} floats {v.Amount * 100:0} cm" : v.Kind == "sinks" ? $"{what} sinks {v.Amount * 100:0} cm into {under}" : $"{what} has nothing under it");
+                    }
+                    verdictText = parts.Count == 0
+                        ? "<color=#8ee68e>Nothing floats or sinks here</color> <color=#9a9a9a>(by the measured shapes)</color>"
+                        : "<color=#ff8c69>Looks wrong:</color> " + string.Join(";  ", parts) + "  <color=#9a9a9a>(Seat it rests an item on what is under it)</color>";
+                }
+            }
+            GUILayout.Label(verdictText, label);
+        }
+
+        // ---------------------------------------------------------------- undo, redo, compare
+        private static int checkpointVersion = -1;
+
+        private static void DrawUndoRow()
+        {
+            GUILayout.BeginHorizontal();
+            bool was = GUI.enabled;
+            GUI.enabled = was && CargoLayout.CanUndo;
+            if (GUILayout.Button(CargoLayout.UndoCount > 0 ? $"Undo ({CargoLayout.UndoCount})" : "Undo", Wd(90f)))
+            {
+                CargoLayout.Undo();
+                Cargo.RefreshViews();
+            }
+            GUI.enabled = was && CargoLayout.CanRedo;
+            if (GUILayout.Button("Redo", Wd(70f)))
+            {
+                CargoLayout.Redo();
+                Cargo.RefreshViews();
+            }
+            GUI.enabled = was && (CargoLayout.Comparing || CargoLayout.DiffersFromSessionStart);
+            if (GUILayout.Button(CargoLayout.Comparing ? "Back to now" : "Compare with the session start", Wd(230f)))
+            {
+                CargoLayout.Compare(!CargoLayout.Comparing);
+                Cargo.RefreshViews();
+            }
+            GUI.enabled = was;
+            GUILayout.EndHorizontal();
+        }
+
+        // ---------------------------------------------------------------- numpad nudges
+        // Numpad + / - move the last slider moved in this tab by 0.01 (Shift: 0.05). RawSlider counts its sliders per
+        // pass (rawSeq), remembers the one dragged (nudgeId) and applies a pending nudge to it in the next repaint; the
+        // keys are read once per frame. The slider the keys move is marked in gold.
+        private static string nudgeShape = "";
+        private static int nudgeFrame = -1;
+        private static bool nudgedSinceCheckpoint;
+
+        private static void PollNudgeKeys()
+        {
+            if (Time.frameCount == nudgeFrame) return;
+            nudgeFrame = Time.frameCount;
+            var input = BepInEx.UnityInput.Current;
+            float step = input.GetKey(KeyCode.LeftShift) || input.GetKey(KeyCode.RightShift) ? 0.05f : 0.01f;
+            if (Plugin.CargoNudgeUp.Value != KeyCode.None && input.GetKeyDown(Plugin.CargoNudgeUp.Value)) nudgePending += step;
+            if (Plugin.CargoNudgeDown.Value != KeyCode.None && input.GetKeyDown(Plugin.CargoNudgeDown.Value)) nudgePending -= step;
+            if (nudgePending != 0f && nudgeId >= 0) nudgedSinceCheckpoint = true;
+            if (nudgeId < 0 || CargoLayout.Comparing)
+            {
+                nudgePending = 0f; // no slider to move: a press never waits to land on one later
+            }
+        }
+
+        private static void Help2(string text)
+        {
+            if (cargoHelpOpen) GUILayout.Label(text, small);
+        }
+
+        private const int TuneNextRows = 5;
+        private static int coverStep;
+
+        // A load of the analysis as item ids to put on the cart (the classes' representatives).
+        private static List<string> LoadIds(int[] classes)
+        {
+            var ids = new List<string>();
+            foreach (int c in classes) ids.Add(coverage.Classes[c]);
+            return ids;
+        }
+
         // An item of the frozen view with its values from the last pack: a slider is handed the live value (it compares
         // its result with it, so a drag back to where it started is still written), while the boxes stay frozen. The
         // view's own copy when the load changed shape since it was frozen.
@@ -64,7 +652,30 @@ namespace GK2DonkeyAPI
             foreach (Cargo.PlacedItem p in placed) layers = Mathf.Max(layers, p.Layer + 1);
             bool refresh = false;
 
+            // A finished edit (nothing held) becomes an undo step.
+            if (!held && Event.current.type == EventType.Layout && CargoLayout.Version != checkpointVersion)
+            {
+                CargoLayout.Checkpoint(merge: nudgedSinceCheckpoint);
+                nudgedSinceCheckpoint = false;
+                checkpointVersion = CargoLayout.Version;
+            }
+            // The numpad nudges the last slider moved in this tab; a new load (another shape) forgets which one that was.
+            var shapeKey = new System.Text.StringBuilder(isolating ? "iso|" : "|");
+            foreach (Cargo.PlacedItem p in placed) shapeKey.Append(p.Id).Append(',').Append(p.Layer).Append(',').Append(p.Partner).Append(',').Append(p.Relation).Append('|');
+            string shape = shapeKey.ToString();
+            if (shape != nudgeShape)
+            {
+                nudgeShape = shape;
+                nudgeId = -1;
+            }
+            PollNudgeKeys();
+            nudgeEnabled = true;
+            bool comparingAtStart = CargoLayout.Comparing; // the Compare button below switches it in this pass
+
             Header("Cargo on the cart");
+            UpdateCoverage();
+            DrawCoverageLine();
+            DrawUndoRow();
             if (!onCart)
             {
                 GUILayout.Label("Mount in Cart style and load items. 'Tune this load' shows the controls for what is on the cart.", small);
@@ -132,6 +743,7 @@ namespace GK2DonkeyAPI
                     }
                 }
                 GUILayout.EndVertical();
+                DrawVerdicts(placed);
             }
 
             // ---- the cart: the floor (calibration: moves everything, tuned contacts included)
@@ -147,6 +759,39 @@ namespace GK2DonkeyAPI
             int mode = n == 0 ? -1 : Mathf.Min(n, 3);
             GUILayout.Label(ModeChip("1 item", mode == 1) + "    " + ModeChip("2 items", mode == 2) + "    " + ModeChip("3 or more", mode == 3), step);
             GUILayout.EndHorizontal();
+            bool comparing = comparingAtStart;
+            bool wasEnabled = GUI.enabled;
+            if (comparing)
+            {
+                GUILayout.Label("<color=#ffd257>Showing the layout as it was when this session began. Editing is locked; press 'Back to now' above.</color>", label);
+                GUI.enabled = false;
+            }
+            if (mode >= 1 && onCart)
+            {
+                int open = UntunedInLoad(placed, isolating);
+                GUILayout.BeginHorizontal();
+                // Accept (stay) is only for a load with something untuned; Accept and next always works (with nothing left to
+                // accept it just moves on: greyed out after an Accept, it read as broken, 2026-10-12); Skip never accepts.
+                bool en = GUI.enabled;
+                GUI.enabled = en && open > 0;
+                if (GUILayout.Button(open > 0 ? $"Accept this load ({open})" : "Accept this load", Wd(170f)))
+                {
+                    refresh |= AcceptAll(placed, isolating, cargoViewPairMode) > 0;
+                }
+                GUI.enabled = en;
+                if (GUILayout.Button("Accept and next", Wd(150f)))
+                {
+                    bool any = AcceptAll(placed, isolating, cargoViewPairMode) > 0;
+                    refresh |= any;
+                    LoadNextUntuned(afterAccept: any);
+                }
+                if (GUILayout.Button("Skip to next", Wd(120f)))
+                {
+                    LoadNextUntuned(afterAccept: false, skipping: placed);
+                }
+                GUILayout.EndHorizontal();
+                GUILayout.Label("Accept: what you see now counts as tuned (no fallback moves it again).  Next: the most used untuned contact's load goes on the cart.  Skip: nothing is accepted.", small);
+            }
             if (mode == 1)
             {
                 GUILayout.Label("Where it lies when it is the only thing on the cart.", small);
@@ -166,6 +811,7 @@ namespace GK2DonkeyAPI
             {
                 GUILayout.Label("(nothing on the cart: the view follows the number of items you load)", small);
             }
+            GUI.enabled = wasEnabled;
 
             // ---- options (folded)
             GUILayout.Space(10f);
@@ -192,6 +838,7 @@ namespace GK2DonkeyAPI
                 GUILayout.Label("  How an untuned layer sits on the one below", label);
                 FloatSlider("Nestle: how far it sinks in", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
                 FloatSlider("Layer shift: each layer up moves forward / back   (+ back, - toward the donkey)", s.CargoLayerShift, -0.3f, 0.3f, 2, Cargo.RefreshViews);
+                Toggle("Upper layers rest on the measured shapes (off: on the boxes)", Plugin.CargoSeatOnShapes, null);
             }
 
             // behaviour
@@ -236,6 +883,12 @@ namespace GK2DonkeyAPI
                 CargoLayout.MarkChanged();
             }
             GUILayout.Label(CargoLayout.SavesToRepo ? "Saved to the repo's cargo-layout.cfg as you edit." : "Not saved on this machine (no source folder).", small);
+            nudgeEnabled = false;
+            if (Event.current.type == EventType.Repaint && nudgeId > rawSeq)
+            {
+                nudgeId = -1; // that slider is not drawn any more
+                nudgePending = 0f;
+            }
         }
 
         // Colours for a state word inside a label (the styles have rich text on), and for an item's name in the colour
@@ -247,7 +900,7 @@ namespace GK2DonkeyAPI
         private static string Tinted(Cargo.PlacedItem p, List<Cargo.PlacedItem> all, string text = null)
         {
             Color c = Cargo.TintFor(p, all);
-            return $"<color=#{ColorUtility.ToHtmlStringRGB(c)}>{text ?? p.Id}</color>";
+            return $"<color=#{ColorUtility.ToHtmlStringRGB(c)}>{text ?? CargoSheet.ClassLabel(p.Id)}</color>";
         }
 
         // One of the three views of 'Tune this load': lit (gold) when it matches the load, grey otherwise.
@@ -273,16 +926,26 @@ namespace GK2DonkeyAPI
         {
             CargoLayout.ItemEntry e = CargoLayout.EditItem(p.Id);
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label($"{p.Id} alone  (class '{e.Id}', box {p.Box.x:0.00} long × {p.Box.y:0.00} high × {p.Box.z:0.00} across)", label);
-            // An entry without its own alone place starts from its bottom/beside values, where it sits now.
-            if (!e.HasAlone)
+            GUILayout.BeginHorizontal();
+            GUILayout.Label($"{CargoSheet.ClassLabel(p.Id)} alone  ({(e.HasAlone ? TunedWord : RulesWord)}; {p.Id}, box {p.Box.x:0.00} × {p.Box.y:0.00} × {p.Box.z:0.00}){UsedIn("alone:" + CargoSheet.ClassOf(p.Id))}", label);
+            if (LooksRightButton(!e.HasAlone))
+            {
+                refresh |= AcceptAlone(p);
+            }
+            GUILayout.EndHorizontal();
+            // An entry without its own alone place lies at its bottom/beside values: the sliders start there, and the first
+            // move (or Looks right) gives it its own alone place. Just looking no longer tunes it.
+            Vector3 v = e.HasAlone ? e.Alone : e.Base;
+            bool moved = false;
+            moved |= RawSlider("  Height", ref v.y, -0.4f, 0.4f);
+            moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f);
+            moved |= RawSlider("  " + AlongLabel, ref v.x, -0.5f, 0.5f);
+            if (moved)
             {
                 e.HasAlone = true;
-                e.Alone = e.Base;
+                e.Alone = v;
+                refresh = true;
             }
-            refresh |= RawSlider("  Height", ref e.Alone.y, -0.4f, 0.4f);
-            refresh |= RawSlider("  " + AcrossLabel, ref e.Alone.z, -0.5f, 0.5f);
-            refresh |= RawSlider("  " + AlongLabel, ref e.Alone.x, -0.5f, 0.5f);
             GUILayout.EndVertical();
         }
 
@@ -297,7 +960,7 @@ namespace GK2DonkeyAPI
             bool shownStack = CargoLayout.PairEntry.IsStack(shown);
             bool tunedNow = pair.TunedFor(shown);
             GUILayout.BeginVertical(GUI.skin.box);
-            GUILayout.Label($"{p0.Id} + {p1.Id}: {(shownStack ? "one on the other" : shown == "along" ? "end to end along the cart" : "side by side across")}  ({(tunedNow ? TunedWord : RulesWord)}; the other way: {(shownStack ? (pair.BesideTuned ? TunedWord : RulesWord) : (pair.TopTuned ? TunedWord : RulesWord))})", label);
+            GUILayout.Label($"{CargoSheet.ClassLabel(p0.Id)} + {CargoSheet.ClassLabel(p1.Id)}: {(shownStack ? "one on the other" : shown == "along" ? "end to end along the cart" : "side by side across")}  ({(tunedNow ? TunedWord : RulesWord)}; the other way: {(shownStack ? (pair.BesideTuned ? TunedWord : RulesWord) : (pair.TopTuned ? TunedWord : RulesWord))}){UsedIn(KeyOf(shownStack ? "on" : "side", p1.Id, p0.Id))}", label);
             if (!isolating)
             {
                 // The arrangement a two-item cart shows; each arrangement keeps its own tuning. The lit button again (or
@@ -324,6 +987,10 @@ namespace GK2DonkeyAPI
                         refresh = true;
                     }
                 }
+                if (LooksRightButton(!tunedNow))
+                {
+                    refresh |= AcceptPair2(p0, p1, isolating, lastPairMode);
+                }
                 if (ResetButton(tunedNow))
                 {
                     pair.ClearFor(shown);
@@ -340,9 +1007,22 @@ namespace GK2DonkeyAPI
                 Cargo.PlacedItem p = k == 0 ? p0 : p1;
                 Cargo.PlacedItem other = k == 0 ? p1 : p0;
                 Vector3 v = p.Pos;
-                string tag = p.Id == other.Id ? $" ({n + 1})" : "";
-                GUILayout.Label($"  {(k == 0 ? Blue(p.Id + tag) : Orange(p.Id + tag))}{(shownStack ? (k == 0 ? ", below" : ", on top") : "")}", label);
+                string tag = CargoSheet.ClassLabel(p.Id) == CargoSheet.ClassLabel(other.Id) ? $" ({n + 1})" : "";
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"  {(k == 0 ? Blue(CargoSheet.ClassLabel(p.Id) + tag) : Orange(CargoSheet.ClassLabel(p.Id) + tag))}{(shownStack ? (k == 0 ? ", below" : ", on top") : "")}", label);
+                bool seatPressed = SeatButton(shownStack && p.Layer > 0 && CargoShapes.Count > 0);
+                GUILayout.EndHorizontal();
                 bool moved = false;
+                if (seatPressed)
+                {
+                    float d = CargoShapes.SeatDelta(LiveResult(new List<Cargo.PlacedItem> { p0, p1 }), k, CargoSheet.ShapeOf);
+                    if (!float.IsNaN(d))
+                    {
+                        v.y += d;
+                        moved = true;
+                        Plugin.Log.LogInfo($"Cargo layout: {p.Id} seated on {other.Id} ({d:+0.000;-0.000}).");
+                    }
+                }
                 moved |= RawSlider("    Height above the floor", ref v.y, -0.3f, 1.0f, canReset: false);
                 moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false);
                 moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false);
@@ -379,7 +1059,7 @@ namespace GK2DonkeyAPI
                     continue;
                 }
                 Cargo.PlacedItem partner = placed[it.Partner];
-                string key = (it.Relation == "on" ? "on:" : "beside:") + (string.CompareOrdinal(partner.Id, it.Id) <= 0 ? partner.Id + "+" + it.Id : it.Id + "+" + partner.Id);
+                string key = KeyOf(it.Relation, it.Id, partner.Id); // by size class: two members of one class are one contact (one layout entry)
                 if (!first.ContainsKey(key))
                 {
                     first[key] = k;
@@ -405,17 +1085,39 @@ namespace GK2DonkeyAPI
                 CargoLayout.ItemEntry e = CargoLayout.EditItem(it.Id);
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"{Tinted(it, placed)} alone on top of a pair   ({(e.OnPair != Vector3.zero ? TunedWord : RulesWord)}; layer {it.Layer + 1})", label);
-                if (ResetButton(e.OnPair != Vector3.zero))
+                GUILayout.Label($"{Tinted(it, placed)} alone on top of a pair   ({(e.OnPairTuned ? TunedWord : RulesWord)}; layer {it.Layer + 1}){UsedIn("onpair:" + CargoSheet.ClassOf(it.Id))}", label);
+                if (LooksRightButton(!e.OnPairTuned))
+                {
+                    refresh |= AcceptOnPair(it);
+                }
+                if (SeatButton(CargoShapes.Count > 0))
+                {
+                    float d = CargoShapes.SeatDelta(LiveResult(placed), k, CargoSheet.ShapeOf);
+                    if (!float.IsNaN(d))
+                    {
+                        e.OnPair.y += d;
+                        e.HasOnPair = true;
+                        refresh = true;
+                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair seated ({d:+0.000;-0.000}).");
+                    }
+                }
+                if (ResetButton(e.OnPairTuned))
                 {
                     e.OnPair = Vector3.zero;
+                    e.HasOnPair = false;
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label($"  Moves only a {it.Id} lying alone on top of a pair; nothing under it moves.", small);
-                refresh |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false);
-                refresh |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false);
-                refresh |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false);
+                GUILayout.Label($"  Moves only a {CargoSheet.ClassLabel(it.Id)} lying alone on top of a pair; nothing under it moves.", small);
+                bool movedP = false;
+                movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false);
+                movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false);
+                movedP |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false);
+                if (movedP)
+                {
+                    e.HasOnPair = true;
+                    refresh = true;
+                }
                 GUILayout.EndVertical();
             }
             foreach (string key in order)
@@ -429,10 +1131,18 @@ namespace GK2DonkeyAPI
                 var ls = where[key];
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.BeginHorizontal();
-                GUILayout.Label((onTop ? $"{Tinted(pl, placed)} on {Tinted(q, placed)}" : $"{Tinted(q, placed)}  |  {Tinted(pl, placed)} in one layer") + $"   ({(tuned ? TunedWord : RulesWord)}; layer{(ls.Count == 1 ? "" : "s")} {string.Join(", ", ls)})", label);
+                GUILayout.Label((onTop ? $"{Tinted(pl, placed)} on {Tinted(q, placed)}" : $"{Tinted(q, placed)}  |  {Tinted(pl, placed)} in one layer") + $"   ({(tuned ? TunedWord : RulesWord)}; layer{(ls.Count == 1 ? "" : "s")} {string.Join(", ", ls)}){UsedIn(KeyOf(pl.Relation, pl.Id, q.Id))}", label);
                 if (GUILayout.Button("Alone", Wd(60f)))
                 {
                     Cargo.Isolate(q.Guid, pl.Guid, onTop ? "stack" : "beside");
+                }
+                if (LooksRightButton(!tuned))
+                {
+                    refresh |= onTop ? AcceptOn(pl, q, placed, first[key]) : AcceptBeside(pl, q);
+                }
+                if (SeatButton(onTop && CargoShapes.Count > 0))
+                {
+                    refresh |= SeatOn(placed, first[key], pl, q);
                 }
                 if (ResetButton(tuned))
                 {
@@ -443,7 +1153,7 @@ namespace GK2DonkeyAPI
                 GUILayout.EndHorizontal();
                 if (onTop)
                 {
-                    GUILayout.Label($"  Height: how high {Tinted(pl, placed)} sits on {Tinted(q, placed)} ({q.Id} is {q.Box.y:0.00} tall); the whole upper layer moves with it. This is how the layers stack.", small);
+                    GUILayout.Label($"  Height: how high {Tinted(pl, placed)} sits on {Tinted(q, placed)} ({CargoSheet.ClassLabel(q.Id)} is {q.Box.y:0.00} tall); the whole upper layer moves with it. This is how the layers stack.", small);
                     Vector3 v = pl.Rel;
                     Vector3 was = v;
                     bool moved = false;
@@ -456,6 +1166,7 @@ namespace GK2DonkeyAPI
                         {
                             CargoLayout.ItemEntry eq = CargoLayout.ForItem(q.Id);
                             CargoPacker.FreezeOnTop(pair, qIsA, eq != null ? eq.Base : Vector3.zero, was);
+                            FreezeLayerOf(placed, first[key]);
                             Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} tuned (on top, from a load of {placed.Count}).");
                         }
                         CargoPacker.WriteOnTop(pair, qIsA, v);
@@ -464,26 +1175,45 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
-                    GUILayout.Label("  Each item's place in the layer. Height floats an item inside its layer; the layer above sits on the highest point.", small);
+                    GUILayout.Label(q.Layer == 0
+                        ? "  Each item's place in the layer. Height floats an item above the bed; the layer above sits on the highest point."
+                        : $"  Each item's place in the layer. {Tinted(q, placed)} sits where the layer does (its height: the '{CargoSheet.ClassLabel(q.Id)} on ...' box); {Tinted(pl, placed)}'s height is relative to it.", small);
                     for (int n = 0; n < 2; n++)
                     {
                         Cargo.PlacedItem item = n == 0 ? q : pl;
                         bool isA = n == 0 ? qIsA : !qIsA;
-                        string tag = q.Id == pl.Id ? $" ({n + 1})" : "";
+                        string tag = CargoSheet.ClassLabel(q.Id) == CargoSheet.ClassLabel(pl.Id) ? $" ({n + 1})" : "";
                         Vector3 v = item.LayerPos;
                         bool moved = false;
-                        GUILayout.Label("  " + Tinted(item, placed, item.Id + tag), label);
-                        moved |= RawSlider("    Height in the layer", ref v.y, -0.3f, 1.0f, canReset: false);
+                        bool layerFirstAbove = n == 0 && item.Layer > 0; // at the origin: its height is the layer's (the on-top box)
+                        GUILayout.BeginHorizontal();
+                        GUILayout.Label("  " + Tinted(item, placed, CargoSheet.ClassLabel(item.Id) + tag), label);
+                        if (SeatButton(item.Layer > 0 && !layerFirstAbove && CargoShapes.Count > 0))
+                        {
+                            float d = CargoShapes.SeatDelta(LiveResult(placed), n == 0 ? pl.Partner : first[key], CargoSheet.ShapeOf);
+                            if (!float.IsNaN(d))
+                            {
+                                v.y += d;
+                                moved = true;
+                                Plugin.Log.LogInfo($"Cargo layout: {item.Id} seated in its layer ({d:+0.000;-0.000}).");
+                            }
+                        }
+                        GUILayout.EndHorizontal();
+                        // the slider is always drawn (the control order); greyed for the first item of an upper layer
+                        bool en = GUI.enabled;
+                        GUI.enabled = en && !layerFirstAbove;
+                        moved |= RawSlider(layerFirstAbove ? "    Height in the layer (the layer's: see the box above)" : item.Layer == 0 ? "    Height above the bed" : "    Height, relative to " + CargoSheet.ClassLabel(q.Id), ref v.y, -0.3f, 1.0f, canReset: false);
+                        GUI.enabled = en;
                         moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false);
                         moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false);
                         if (moved)
                         {
                             if (!pair.BesideTuned)
                             {
-                                CargoPacker.FreezeBeside(pair, qIsA, q.LayerPos, pl.LayerPos, pl.Relation);
+                                CargoPacker.FreezeBeside(pair, qIsA, q.BesideStored, pl.BesideStored, pl.Relation);
                                 Plugin.Log.LogInfo($"Cargo layout: pair {pair.A}+{pair.B} tuned (beside, from a load of {placed.Count}).");
                             }
-                            CargoPacker.WriteBeside(pair, isA, v);
+                            CargoPacker.WriteBeside(pair, isA, v + new Vector3(0f, item.LayerBase, 0f));
                             refresh = true;
                         }
                     }
