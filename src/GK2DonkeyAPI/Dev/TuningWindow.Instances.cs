@@ -91,7 +91,7 @@ namespace GK2DonkeyAPI
             {
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"Editing {editing.Describe()}'s own settings (marked in the world). Every row changes only this one: magenta = its own value, right-click = back to everyone's. The style tabs show its style ({editing.CurrentStyle}).", instanceSet);
-                if (GUILayout.Button("Stop", Wd(60f)))
+                if (GUILayout.Button(Tip("Stop", "Ends editing this one donkey; the rows on every tab change everyone's settings again. Its own values are kept."), Wd(60f)))
                 {
                     editing = null;
                 }
@@ -276,11 +276,11 @@ namespace GK2DonkeyAPI
             }
             GUILayout.BeginHorizontal();
             GUILayout.Label($"Head limit {pd.OverheadStackLimit} (extra_overhead {pd.ExtraOverhead}), holding {pd.OverheadCount}. Testing only: it is saved with the game, set it back before sleeping.", small);
-            if (GUILayout.Button("+1", Wd(40)))
+            if (GUILayout.Button(Tip("+1", "Lets the keeper carry one more item on his head, for testing. It is saved with the game: set it back before sleeping."), Wd(40)))
             {
                 pending = () => pd.SetRes("extra_overhead", pd.ExtraOverhead + 1);
             }
-            if (GUILayout.Button("Back to 1", Wd(90)))
+            if (GUILayout.Button(Tip("Back to 1", "Sets the head-carry limit back to the game's normal one item (the perk's extra is removed)."), Wd(90)))
             {
                 pending = () => pd.SetRes("extra_overhead", 0);
             }
@@ -328,21 +328,21 @@ namespace GK2DonkeyAPI
 
             Header("Spawn one in front of the keeper");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Donkey"))
+            if (GUILayout.Button(Tip("Donkey", "Spawns a new donkey without a cart in front of the keeper, facing his way. It is kept with saves in a side file; the game's save is untouched.")))
             {
                 pending = () => SpawnHere(true, false);
             }
-            if (GUILayout.Button("Donkey with its cart"))
+            if (GUILayout.Button(Tip("Donkey with its cart", "Spawns a new donkey already hitched to its own cart in front of the keeper. Kept with saves; remove it with its row below.")))
             {
                 pending = () => SpawnHere(true, true);
             }
-            if (GUILayout.Button("Cart on its own"))
+            if (GUILayout.Button(Tip("Cart on its own", "Spawns a free cart in front of the keeper; a ridden donkey without a cart can take it at its shafts. Kept with saves.")))
             {
                 pending = () => SpawnHere(false, true);
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button($"A donkey family: a donkey and {familyFoals} foal{(familyFoals == 1 ? "" : "s")}"))
+            if (GUILayout.Button(Tip($"A donkey family: a donkey and {familyFoals} foal{(familyFoals == 1 ? "" : "s")}", "Spawns a donkey with the number and size of foals set below; the foals follow it and its idle shuffle is switched on. Kept with saves.")))
             {
                 pending = SpawnFamily;
             }
@@ -356,7 +356,7 @@ namespace GK2DonkeyAPI
             {
                 Header("The ride");
                 GUILayout.Label($"Riding {(r.Ephemeral ? "the summoned donkey (it goes at dismount)" : r.Describe())}, {r.CurrentStyle} style.", label);
-                if (r.HasCart && GUILayout.Button("Leave the cart standing here (unhitch)"))
+                if (r.HasCart && GUILayout.Button(Tip("Leave the cart standing here (unhitch)", "Unhooks the cart from the donkey you ride; it stays here with its cargo and you ride on without it. Same as the hitch key.")))
                 {
                     pending = () => Mounts.UnhitchRidden();
                 }
@@ -393,7 +393,7 @@ namespace GK2DonkeyAPI
                     // button off the panel's right edge (seen 2026-10-01).
                     GUILayout.BeginVertical(GUI.skin.box);
                     GUILayout.Label($"#{d.Id} {d.Kind}{(d.Key != null ? $" '{d.Key}'" : "")}: dormant ({d.Why}), in {d.Scene}{(d.Cargo > 0 ? $", {d.Cargo} cargo item(s) on the ground there" : "")}. Back with its mod; Forget drops it at the next save.", small);
-                    if (GUILayout.Button("Forget"))
+                    if (GUILayout.Button(Tip("Forget", "Drops this sleeping record from the side file at the next save, so it never comes back. Its cargo stays on the ground in its scene.")))
                     {
                         Mount.DormantRecord forget = d;
                         pending = () => Mount.ForgetDormant(forget);
@@ -476,10 +476,10 @@ namespace GK2DonkeyAPI
             spawnNote = $"Spawned {parent.I.Describe()} with {n} foal(s) of size {foalScale:F2}.";
         }
 
-        private static int SessionIntRow(string name, int value, int min, int max)
+        private static int SessionIntRow(string name, int value, int min, int max, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, Wd(LabelW));
+            GUILayout.Label(Tip(name, tip), label, Wd(LabelW));
             if (GUILayout.Button("-", Wd(22f)) && value > min) value--;
             GUILayout.Label(value.ToString(), label, Wd(30f));
             if (GUILayout.Button("+", Wd(22f)) && value < max) value++;
@@ -487,10 +487,10 @@ namespace GK2DonkeyAPI
             return value;
         }
 
-        private static float SessionFloatRow(string name, float value, float min, float max)
+        private static float SessionFloatRow(string name, float value, float min, float max, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, Wd(LabelW));
+            GUILayout.Label(Tip(name, tip), label, Wd(LabelW));
             value = (float)Math.Round(GUILayout.HorizontalSlider(value, min, max, Wd(90f)), 2);
             GUILayout.Label(value.ToString("F2"), label, Wd(45f));
             GUILayout.EndHorizontal();
@@ -622,7 +622,7 @@ namespace GK2DonkeyAPI
         {
             GUILayout.BeginHorizontal(GUI.skin.box);
             GUILayout.Label(CompactText(i, pd), label);
-            if (GUILayout.Button("Details", Wd(80f)))
+            if (GUILayout.Button(Tip("Details", "Opens this row: where it is, its cargo, its own settings and the buttons to ride, move, hitch, remove or keep it."), Wd(80f)))
             {
                 pending = () => expanded.Add(i);
             }
@@ -642,28 +642,28 @@ namespace GK2DonkeyAPI
                 : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => Ref(i, c)))};" : "";
             GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(editing == i ? "Stop editing" : "Edit its settings", Wd(120f)))
+            if (GUILayout.Button(Tip(editing == i ? "Stop editing" : "Edit its settings", editing == i ? "Ends editing this donkey's own settings; the rows on every tab change everyone's again." : "Makes every row on every tab change only this donkey (its own values show magenta; right-click puts one back to everyone's). It is marked in the world."), Wd(120f)))
             {
                 editing = editing == i ? null : i;
             }
             GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
-            if (GUILayout.Button("Ride", Wd(60f)))
+            if (GUILayout.Button(Tip("Ride", "Mounts this donkey from here, wherever it stands. Greyed while something is ridden, while it is not ready or while it cannot be ridden."), Wd(60f)))
             {
                 pending = () => i.Handle.Ride();
             }
             GUI.enabled = !i.IsRidden;
-            if (GUILayout.Button("Move here", Wd(90f)) && pd != null)
+            if (GUILayout.Button(Tip("Move here", "Teleports it to just in front of the keeper, facing his way. Not while it is being ridden."), Wd(90f)) && pd != null)
             {
                 pending = () => i.Handle.MoveTo(InFront(pd, 1.8f), pd.Direction.x >= 0f);
             }
             GUI.enabled = i.HasDonkey && i.HasCart && i.Ready;
-            if (GUILayout.Button("Unhitch", Wd(80f)))
+            if (GUILayout.Button(Tip("Unhitch", "Leaves this donkey's cart standing where it is, with its cargo; the donkey is on its own afterwards. Needs a donkey with a cart."), Wd(80f)))
             {
                 pending = () => Mounts.Unhitch(i.Handle);
             }
             Mount.Instance cart = NearestFreeCart(i);
             GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
-            if (GUILayout.Button(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", Wd(110f)))
+            if (GUILayout.Button(Tip(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", cart != null ? "Hooks this donkey to the nearest free cart in its scene, however far away, and brings them together. A refusal shows in the note above." : "No free cart in this scene to take: spawn one or unhitch another donkey first."), Wd(110f)))
             {
                 pending = () =>
                 {
@@ -672,7 +672,7 @@ namespace GK2DonkeyAPI
                 };
             }
             GUI.enabled = true;
-            if (GUILayout.Button("Remove", Wd(80f)))
+            if (GUILayout.Button(Tip("Remove", "Deletes this donkey or cart for good, with everything on its cart. A ridden one is dismounted first; unload first to keep the cargo."), Wd(80f)))
             {
                 pending = () =>
                 {
@@ -683,17 +683,17 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             // A second row: the first one is full (Keep in it pushed Remove off the edge, seen 2026-10-01).
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Fewer details", Wd(120f)))
+            if (GUILayout.Button(Tip("Fewer details", "Folds this row back to its one-line summary."), Wd(120f)))
             {
                 pending = () => expanded.Remove(i);
             }
-            if (GUILayout.Button(i.Persist ? "Don't keep with saves" : "Keep with saves"))
+            if (GUILayout.Button(Tip(i.Persist ? "Don't keep with saves" : "Keep with saves", i.Persist ? "Stops storing it in the save's side file: after the next load it is gone, its cargo left on the ground where it stood." : "Stores it in a side file next to the save, so it comes back where it stands with cargo and settings. The game's own save is never changed.")))
             {
                 pending = () => i.Handle.SetPersist(PanelOwner, !i.Persist);
             }
             if (i.HasDonkey && i.Parent == null && i.Rideable)
             {
-                if (GUILayout.Button($"Add a foal (size {foalScale:F2})"))
+                if (GUILayout.Button(Tip($"Add a foal (size {foalScale:F2})", "Spawns a foal of the size chosen above next to this donkey; it follows it around. Kept with saves if the parent is.")))
                 {
                     pending = () =>
                     {
@@ -716,7 +716,7 @@ namespace GK2DonkeyAPI
                     parts.Add($"{kv.Key} = {kv.Value}");
                 }
                 GUILayout.Label("Own settings: " + string.Join("; ", parts), small);
-                if (GUILayout.Button("Back to everyone's settings (clear its own)"))
+                if (GUILayout.Button(Tip("Back to everyone's settings (clear its own)", "Removes every value this donkey has of its own; from now on it uses the shared settings for everything.")))
                 {
                     pending = () => i.Handle.Tuning.Reset();
                 }

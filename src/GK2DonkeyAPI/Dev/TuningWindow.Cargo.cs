@@ -787,17 +787,21 @@ namespace GK2DonkeyAPI
                 {
                     refresh |= AcceptAll(placed, isolating, cargoViewPairMode) > 0;
                 }
-                GUI.enabled = en;
+                // greyed only when nothing untuned is left anywhere (the queue is empty); read from the analysis, never changed in this pass
+                bool anyLeft = coverage == null || coverage.Tuned < coverage.Total || open > 0;
+                GUI.enabled = en && anyLeft;
                 if (GUILayout.Button(Tip("Accept and next", TipAcceptNext), Wd(150f)))
                 {
                     bool any = AcceptAll(placed, isolating, cargoViewPairMode) > 0;
                     refresh |= any;
                     LoadNextUntuned(afterAccept: any);
                 }
+                GUI.enabled = en && coverage != null && coverage.Tuned < coverage.Total;
                 if (GUILayout.Button(Tip("Skip to next", TipSkip), Wd(120f)))
                 {
                     LoadNextUntuned(afterAccept: false, skipping: placed);
                 }
+                GUI.enabled = en;
                 GUILayout.EndHorizontal();
             }
             if (mode == 1)

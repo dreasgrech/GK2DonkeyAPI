@@ -239,6 +239,24 @@ namespace GK2DonkeyAPI
 
         internal static GUIContent Tip(string text, string tip) => string.IsNullOrEmpty(tip) ? new GUIContent(text) : new GUIContent(text, tip);
 
+        // A settings row's tooltip: the one given, else the setting's own description (the text written for the cfg file),
+        // cut to whole sentences within ~260 characters so the box stays short. Every settings row on every tab gets one.
+        private static readonly Dictionary<ConfigEntryBase, string> tipCache = new Dictionary<ConfigEntryBase, string>();
+
+        private static string TipFor(ConfigEntryBase entry, string tip)
+        {
+            if (!string.IsNullOrEmpty(tip) || entry == null) return tip;
+            if (tipCache.TryGetValue(entry, out string cached)) return cached;
+            string d = entry.Description?.Description ?? "";
+            if (d.Length > 260)
+            {
+                int cut = d.LastIndexOf(". ", 258, StringComparison.Ordinal);
+                d = cut > 60 ? d.Substring(0, cut + 1) : d.Substring(0, 257) + "...";
+            }
+            tipCache[entry] = d;
+            return d;
+        }
+
         // A button with a tooltip; active false draws it greyed (the control order never changes) and returns false.
         private static bool TipButton(string text, string tip, float width, bool active = true)
         {
@@ -548,7 +566,7 @@ namespace GK2DonkeyAPI
             TextRow("Notification text (empty: the game's \"New Body\")", Corpses.Notification);
             FloatSlider("On-the-spot unload only: seconds before the bodies appear", Corpses.UnloadDelay, 0.1f, 10f, 1, null);
             FloatSlider("On-the-spot unload only: seconds before it vanishes", Corpses.LeaveDelay, 0.1f, 10f, 1, null);
-            if (GUILayout.Button("Start a delivery now (the game's own donkey, its body roll forced; not while it is already out)"))
+            if (GUILayout.Button(Tip("Start a delivery now (the game's own donkey, its body roll forced; not while it is already out)", "Sends the game's delivery donkey out right now with a body guaranteed. Ignored while it is already out; the result goes to the log.")))
             {
                 Plugin.Log.LogInfo("[script] delivery: " + Mounts.StartCorpseDelivery()); // not "Corpses:": that prefix means the feature acted
             }
@@ -577,7 +595,7 @@ namespace GK2DonkeyAPI
             Header("Style being tuned: " + (ride ? "riding on the donkey's back" : "the donkey pulling its cart") + "  [" + s.Section + "]");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Switch style (the donkey is summoned again)", label, Wd(LabelW));
-            if (GUILayout.Button(ride ? "Go to cart" : "Go to riding", Wd(SliderW)))
+            if (GUILayout.Button(Tip(ride ? "Go to cart" : "Go to riding", ride ? "Dismounts and mounts again in Cart style, in place. Refused if a rule blocks the cart; then the ride goes on unchanged." : "Dismounts and mounts again riding on the donkey's back, in place. Refused if a rule blocks it; then the ride goes on unchanged."), Wd(SliderW)))
             {
                 Mounts.SwitchStyle(ride ? MountStyle.Cart : MountStyle.Ride);
             }
@@ -668,7 +686,7 @@ namespace GK2DonkeyAPI
                     CartSlopeStyle next = (CartSlopeStyle)(((int)s.CartSlope.Value + 1) % Enum.GetValues(typeof(CartSlopeStyle)).Length);
                     bool slopeLocked = Tuned.OverriddenBy(s.CartSlope.Entry) != null;
                     GUI.enabled = !slopeLocked;
-                    bool compare = GUILayout.Button("Compare: switch to " + next + " (live)") && !slopeLocked;
+                    bool compare = GUILayout.Button(Tip("Compare: switch to " + next + " (live)", "Switches to the next slope style while you ride, so you can compare them on a hill. Greyed when a mod locks this setting.")) && !slopeLocked;
                     GUI.enabled = true;
                     if (compare)
                     {
@@ -787,7 +805,7 @@ namespace GK2DonkeyAPI
             SoundIdRow("Graze sound id", s.GrazeSoundId, "graze", allowEmpty: false);
             FloatSlider("Graze volume", s.GrazeVolume, 0f, 3f, 2, null);
             FloatSlider("Lip-smacking volume (the game's own lips sound; 0 = silent)", s.LipsVolume, 0f, 3f, 2, null);
-            if (GUILayout.Button("Play the lips sound", Wd(160f))) MountSounds.Preview("lips");
+            if (GUILayout.Button(Tip("Play the lips sound", "Plays the game's own lip-smacking sound at the donkey once. Needs a mounted donkey."), Wd(160f))) MountSounds.Preview("lips");
 
             Header("Braying");
             SoundIdRow("Bray sound id (voice_donkey: four short ee-aw sounds)", s.BraySoundId, "bray", allowEmpty: false);
@@ -848,7 +866,7 @@ namespace GK2DonkeyAPI
 
             Header("Status");
             GUILayout.Label("Last sound: " + (string.IsNullOrEmpty(MountSounds.LastEvent) ? "none yet" : MountSounds.LastEvent), small);
-            if (GUILayout.Button("Reset the sounds of this style to defaults"))
+            if (GUILayout.Button(Tip("Reset the sounds of this style to defaults", "Puts every sound setting of this style (ids, volumes, pitches, timings) back to the mod defaults. Other styles and tabs are untouched.")))
             {
                 s.ResetSounds();
             }
@@ -859,7 +877,7 @@ namespace GK2DonkeyAPI
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
-            if (GUILayout.Button("Play", Wd(50f)))
+            if (GUILayout.Button(Tip("Play", "Plays this row's sound once at the donkey, with the volume and pitch set here. Needs a mounted donkey; an unknown id plays nothing."), Wd(50f)))
             {
                 MountSounds.Preview(preview);
             }
@@ -882,12 +900,12 @@ namespace GK2DonkeyAPI
         }
 
         // A hex colour as three 0-1 sliders; the entry keeps RRGGBB so the config stays hand-editable.
-        private static void ColorRow(string name, ConfigEntry<string> entry, Action onChange)
+        private static void ColorRow(string name, ConfigEntry<string> entry, Action onChange, string tip = null)
         {
             bool locked = Locked(entry, out string shown);
             Color c = Lantern.ParseColor(shown, new Color(1f, 0.59f, 0f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             GUILayout.Label(shown, label, Wd(70f));
             GUILayout.EndHorizontal();
             if (!locked && ResetOnRightClick(entry, onChange)) { return; }
@@ -936,13 +954,13 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             if (Colors.TestActive)
             {
-                if (GUILayout.Button("Clear the test colours")) Colors.ClearTest();
+                if (GUILayout.Button(Tip("Clear the test colours", "Removes the loud test colours again; your own colour settings show as before."))) Colors.ClearTest();
             }
-            else if (GUILayout.Button("Test: obvious colours everywhere"))
+            else if (GUILayout.Button(Tip("Test: obvious colours everywhere", "Paints every region a loud distinct colour for this session (rows lock, shown cyan) to see what each region covers. Your values stay.")))
             {
                 Colors.ApplyTest();
             }
-            if (GUILayout.Button("Write a colour report to the log"))
+            if (GUILayout.Button(Tip("Write a colour report to the log", "Writes what the recolouring finds (sprites, materials, regions, method in use) to BepInEx/LogOutput.log. Changes nothing.")))
             {
                 Plugin.Log.LogInfo(Colors.Diagnose());
             }
@@ -991,7 +1009,7 @@ namespace GK2DonkeyAPI
 
             Header("Reset");
             bool confirming = Time.unscaledTime < confirmColorResetUntil;
-            if (GUILayout.Button(confirming ? "Click again: every colour back to its default" : "Reset all colours to the mod defaults"))
+            if (GUILayout.Button(Tip(confirming ? "Click again: every colour back to its default" : "Reset all colours to the mod defaults", confirming ? "Second click within 4 seconds: every region, swap and lamp colour goes back to the game's own art." : "Asks once more, then puts every region, swap and lamp colour back to the game's own art. One region alone: its own Reset below.")))
             {
                 if (!confirming)
                 {
@@ -1072,7 +1090,7 @@ namespace GK2DonkeyAPI
                 FloatSlider("    Overlay amount", s.OverlayAmount, 0f, 1f, 2, Colors.MarkDirty);
             }
             GUILayout.Label("Order: a swap wins; else hue, saturation, brightness, contrast, colorize, tint, overlay.", small);
-            if (GUILayout.Button("Reset this region"))
+            if (GUILayout.Button(Tip("Reset this region", "Puts this region's swaps, hue, saturation, brightness, contrast, colorize, tint and overlay back to the game's art. Other regions stay.")))
             {
                 Colors.ResetRegion(region.Key);
                 swapSource = null;
@@ -1106,8 +1124,8 @@ namespace GK2DonkeyAPI
             n.g = Channel("Green", c.g);
             n.b = Channel("Blue", c.b);
             GUILayout.BeginHorizontal();
-            bool remove = GUILayout.Button(has ? "Remove this swap" : "(no swap yet)") && has;
-            bool clear = GUILayout.Button("Remove every swap of this region") && swaps.Count > 0;
+            bool remove = GUILayout.Button(Tip(has ? "Remove this swap" : "(no swap yet)", has ? "Drops the exact-colour replacement of the selected colour; it follows the region's sliders again." : "Nothing to remove yet: move the sliders above to give this colour a replacement first.")) && has;
+            bool clear = GUILayout.Button(Tip("Remove every swap of this region", "Clears all exact-colour replacements of this region at once; the sliders still apply. Does nothing when there are none.")) && swaps.Count > 0;
             GUILayout.EndHorizontal();
             GUI.enabled = true;
             if (locked)
@@ -1223,15 +1241,15 @@ namespace GK2DonkeyAPI
         private static void DrawDebugCargo()
         {
             Header("Tuning status and coverage (every load of up to six items)");
-            if (GUILayout.Button("Tuning status, instant (status.html: every contact, what to tune next, no pictures)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Tuning status, instant (status.html: every contact, what to tune next, no pictures)", "Runs every load of up to six items through the packer and writes status.html to the sheet folder. Instant, needs no cart, nothing changes."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartStatus());
             }
-            if (GUILayout.Button("Photograph the coverage set (coverage.html: every contact in its smallest load, the fewest loads showing all)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Photograph the coverage set (coverage.html: every contact in its smallest load, the fewest loads showing all)", "Puts the fewest loads showing every contact on the cart in turn and photographs them into coverage.html. Needs Cart style and an empty cart."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartCoverage());
             }
-            if (GUILayout.Button($"Photograph every load (all.html: all {CargoSheet.CoverageMaxItems}-or-fewer item loads, with filters; minutes)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip($"Photograph every load (all.html: all {CargoSheet.CoverageMaxItems}-or-fewer item loads, with filters; minutes)", "Photographs every possible load into all.html with filters. Takes minutes; needs Cart style and an empty cart; your cargo is put back after."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[coverage] " + CargoSheet.StartAllLoads());
             }
@@ -1240,22 +1258,22 @@ namespace GK2DonkeyAPI
 
             DrawTestLoadBuilder();
             Header("Item shapes (measured from the meshes)");
-            if (GUILayout.Button("Measure the item shapes (cargo-shapes.cfg and shape-heights.html)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Measure the item shapes (cargo-shapes.cfg and shape-heights.html)", "Reads every item size's mesh back from the graphics card and saves its top and bottom surfaces to the repo's cargo-shapes.cfg. Nothing in the game changes."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[shapes] " + ShapeProbe.MeasureAll());
             }
-            if (GUILayout.Button("Check the saved shapes against the items on the cart", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Check the saved shapes against the items on the cart", "Compares the saved shape file with the items on the cart right now and reports differences below and in the log. Needs items on the cart."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[shapes] " + ShapeProbe.CheckOnCart());
             }
             GUILayout.Label(ShapeProbe.Status, small);
             Help("Reads every size class's triangles back from the graphics card (the meshes are not readable otherwise) and saves its top and bottom surface on a 1 cm grid to the repo's cargo-shapes.cfg, with a page to check them by eye in the sheet folder. Nothing in the game changes. The seat suggestions and the problem scan are built on it.");
             Header("Pictures of every pair and every item");
-            if (GUILayout.Button("Photograph all cargo combinations (HTML sheet)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Photograph all cargo combinations (HTML sheet)", "Puts every item shape and every ordered pair on the cart, photographs each into a grid (index.html). Needs Cart style; the panel hides; cargo is put back."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.Start());
             }
-            if (GUILayout.Button("Photograph every item alone, grouped by shape bucket (shapes.html)", GUILayout.ExpandWidth(true)))
+            if (GUILayout.Button(Tip("Photograph every item alone, grouped by shape bucket (shapes.html)", "Photographs each item on the cart by itself, sorted by shape group, into shapes.html. Needs Cart style; cargo is put back afterwards."), GUILayout.ExpandWidth(true)))
             {
                 Plugin.Log.LogInfo("[sheet] " + CargoSheet.StartShapes());
             }
@@ -1265,22 +1283,22 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             System.Collections.Generic.List<string> big = CarryProbe.BigItemIds();
             int at = big.IndexOf(spawnItemId.Trim());
-            if (GUILayout.Button("<", Wd(28f)) && big.Count > 0)
+            if (GUILayout.Button(Tip("<", "The previous big item the game defines (zombies excluded)."), Wd(28f)) && big.Count > 0)
             {
                 spawnItemId = big[(at <= 0 ? big.Count : at) - 1];
             }
             spawnItemId = GUILayout.TextField(spawnItemId, Wd(200f));
-            if (GUILayout.Button(">", Wd(28f)) && big.Count > 0)
+            if (GUILayout.Button(Tip(">", "The next big item the game defines (zombies excluded)."), Wd(28f)) && big.Count > 0)
             {
                 spawnItemId = big[(at + 1) % big.Count];
             }
-            if (GUILayout.Button("Drop it here", Wd(120f)))
+            if (GUILayout.Button(Tip("Drop it here", "Creates the item with this id and drops it in front of the keeper like a normal world drop. It is saved with the game; pick it up to be rid of it."), Wd(120f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnDrop(spawnItemId.Trim()));
             }
             GUILayout.EndHorizontal();
             Help($"Uses the game's own drop routine at the keeper's drop position, so the item is a normal world drop (it is saved like any other; pick it up with the interaction key). < and > cycle through the {big.Count} big items the game defines (zombies excluded, they are linked world objects). A corpse is generated from the delivery script's body definition.");
-            if (GUILayout.Button("Spawn a test zombie here", Wd(220f)))
+            if (GUILayout.Button(Tip("Spawn a test zombie here", "Lays a real zombie in front of the keeper, the way the game's quests do. It is saved like any zombie: reload without saving to be rid of it."), Wd(220f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.SpawnZombie());
             }
@@ -1300,11 +1318,11 @@ namespace GK2DonkeyAPI
             Header("Levels: far and off-screen donkeys do less (this session)");
             Help("Active: ridden, edited here, near the keeper or on screen: everything. Idle: off screen up to the sleep distance: the view stays but stands frozen. Asleep: beyond it: no view (it comes back inside the wake distance). New views: a few per frame, nearest first.");
             Lod.On = GUILayout.Toggle(Lod.On, " Levels on (off: every donkey is always active, as before)");
-            Lod.ActiveRadius = SessionFloatRow("Always active within", Lod.ActiveRadius, 3f, 60f);
-            Lod.SleepRadius = SessionFloatRow("Asleep beyond", Lod.SleepRadius, 10f, 200f);
-            Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f), Lod.SleepRadius - 2f);
-            Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f);
-            Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20);
+            Lod.ActiveRadius = SessionFloatRow("Always active within", Lod.ActiveRadius, 3f, 60f, "Donkeys closer than this to the keeper are always fully active, on screen or not. In world units; this session only.");
+            Lod.SleepRadius = SessionFloatRow("Asleep beyond", Lod.SleepRadius, 10f, 200f, "Donkeys farther than this lose their view entirely until the keeper comes back within the wake distance. This session only.");
+            Lod.WakeRadius = Mathf.Min(SessionFloatRow("Awake again within", Lod.WakeRadius, 5f, 200f, "A sleeping donkey gets its view back when the keeper comes this close. Kept below the sleep distance so it cannot flicker. This session only."), Lod.SleepRadius - 2f);
+            Lod.ScreenMargin = SessionFloatRow("On screen margin (fraction of the screen)", Lod.ScreenMargin, 0f, 1f, "How far past the screen edge a donkey still counts as on screen (and so active). 0.2 = a fifth of the screen. This session only.");
+            Lod.SpawnsPerFrame = SessionIntRow("New views per frame", Lod.SpawnsPerFrame, 1, 20, "How many donkey views may be created in one frame when several wake at once, nearest first. Higher is faster but can stutter. This session only.");
             Lod.IdleSwitchesOff = GUILayout.Toggle(Lod.IdleSwitchesOff, " Idle donkeys without a cart: view switched off (off: frozen, view kept on)");
         }
 
@@ -1312,12 +1330,12 @@ namespace GK2DonkeyAPI
         {
             Header("Diagnostics");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Write values to log"))
+            if (GUILayout.Button(Tip("Write values to log", "Writes one line with this style's current rider and donkey settings to BepInEx/LogOutput.log. Changes nothing.")))
             {
                 StyleSettings s = Mount.S;
                 Plugin.Log.LogInfo($"[tune] [{s.Section}] speed {s.SpeedMultiplier.Value}, depth {s.Depth.Value}, centering {s.CenterOffset.Value}, rider {s.RiderOffsetPx.Value} px, torso {s.TorsoOffsetPx.Value} px, autoSeat {s.AutoSeat.Value}, seat adjust {s.SeatAdjustPx.Value} px, seat offset {s.SeatOffset.Value}, bob {s.Bob.Value}, freeze {s.FreezePoseWhenIdle.Value}, pose {s.Pose.Value}, legs {s.NearLeg.Value}/{s.LegSource.Value} h {s.LegHeightPx.Value} x {s.LegAdjustXPx.Value} y {s.LegAdjustYPx.Value} | general: doors {Plugin.StayMountedThroughDoors.Value}");
             }
-            if (GUILayout.Button("Write geometry to log"))
+            if (GUILayout.Button(Tip("Write geometry to log", "Writes one line with every position involved in placing rider and donkey to the log. Only while riding; press once per facing.")))
             {
                 Mount.LogGeometry();
             }
@@ -1327,14 +1345,14 @@ namespace GK2DonkeyAPI
             Help("[cartground] lines with the cart: its lift and pitch, each wheel's bottom against the ground under it. [rideground] lines riding without it: the body's ground line against the ground under the body and its front and back hooves. gap > 0 floats, < 0 is inside. Off again after a restart.");
 
             Header("Keeper moves (safety check)");
-            if (GUILayout.Button("Write what the move check says around the keeper to the log"))
+            if (GUILayout.Button(Tip("Write what the move check says around the keeper to the log", "Tests 32 spots around the keeper and logs each as allowed or refused with the reason. Changes nothing; use it next to a rock or wall.")))
             {
                 ReachProbe.Write();
             }
             Help("[reach] lines: 32 spots around the keeper (1.0 and 1.8 away), each allowed or refused with the reason. Next to a rock or a wall, every spot on its far side must be refused.");
 
             Header("Held item (investigation)");
-            if (GUILayout.Button("Write the keeper's held-item view to the log (also F5, on foot too)"))
+            if (GUILayout.Button(Tip("Write the keeper's held-item view to the log (also F5, on foot too)", "Logs one line about what the keeper holds, the animation layers and the view drawing it. Works on foot and riding; changes nothing.")))
             {
                 HeldItemProbe.Write();
             }
@@ -1344,7 +1362,7 @@ namespace GK2DonkeyAPI
         private static void DrawDebugProbes()
         {
             Header("Lantern pole (investigation)");
-            if (GUILayout.Button("Sample the lantern for 6 s, then write GK2-lantern-facts.txt") && !LanternProbe.Running)
+            if (GUILayout.Button(Tip("Sample the lantern for 6 s, then write GK2-lantern-facts.txt", "Records the pole and lights every frame for 6 seconds, then writes BepInEx/GK2-lantern-facts.txt. Ride and turn once meanwhile; nothing moves.")) && !LanternProbe.Running)
             {
                 Plugin.Log.LogInfo("[lantern] " + LanternProbe.Start(6f));
             }
@@ -1352,19 +1370,19 @@ namespace GK2DonkeyAPI
             Help("Reads the pole and light nodes at the end of every frame (after the donkey's animator) while you ride, and writes BepInEx/GK2-lantern-facts.txt: whether the animator swings them and about which axis, the pole's foot and head relative to its pivot, the lights, how the root mirrors when turning, and the pole's overlap with the keeper's body on screen. Nothing is moved.");
 
             Header("Game donkey (for comparison)");
-            if (GUILayout.Button("Start a real delivery now (the game's own cart brings a body)"))
+            if (GUILayout.Button(Tip("Start a real delivery now (the game's own cart brings a body)", "Fires the game donkey's delivery event with its body roll forced: the cart drives from the road to the morgue. Blocked by some quests; the log says.")))
             {
                 Plugin.Log.LogInfo("[script] " + ScriptDump.StartDelivery());
             }
             Help("Fires the donkey script's 'full_cycle' event with its body roll forced to pass: the cart appears at the road point donkey_01 and drives to the morgue point donkey_05. Nothing happens while global_lock_on_drop_bodies is set or while the quest 33_base_complain_go is in progress (then it walks to the morgue instead); the log line says which.");
-            if (GUILayout.Button("Dump the game donkey's script (npc_donkey) to a file"))
+            if (GUILayout.Button(Tip("Dump the game donkey's script (npc_donkey) to a file", "Writes the game donkey's behaviour graph as JSON to BepInEx/GK2-script-npc_donkey.json; a summary of its nodes goes to the log.")))
             {
                 Plugin.Log.LogInfo("[script] " + ScriptDump.DumpWgoScript("npc_donkey"));
             }
             GUILayout.BeginHorizontal();
             GUILayout.Label("Send event to the real donkey's script", label, Wd(LabelW));
             donkeyEvent = GUILayout.TextField(donkeyEvent, Wd(110f));
-            if (GUILayout.Button("Send", Wd(50f)))
+            if (GUILayout.Button(Tip("Send", "Sends the typed event name to the game donkey's running script, like the game's own flow does, and logs what happened."), Wd(50f)))
             {
                 Plugin.Log.LogInfo("[script] " + ScriptDump.FireEventOnWgo("npc_donkey", donkeyEvent.Trim()));
             }
@@ -1372,12 +1390,12 @@ namespace GK2DonkeyAPI
             Help("Other events from the dumped graph: move_to_morgue, full_cycle_back, move_from_morgue, stay_morgue, Disable, SetInteractive, SetNonInteractive.");
 
             Header("Cart cargo (investigation)");
-            if (GUILayout.Button("Dump carry facts to a file (drawer rules, inventory filters, big items)"))
+            if (GUILayout.Button(Tip("Dump carry facts to a file (drawer rules, inventory filters, big items)", "Writes the loaded-cart drawer rules, the donkey's inventory filters and every big item to BepInEx/GK2-carry-facts.txt. Mount first for the rules.")))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.DumpFacts());
             }
             Help("Writes BepInEx/GK2-carry-facts.txt: the donkey prefab's ConditionalDrawer rules (what switches the loaded-cart mesh), the npc_donkey definition's inventory size and item filters, every item with itemSize Big, and the mesh elements the keeper's overhead view can show. Mount first for the drawer rules.");
-            if (GUILayout.Button("Dump head-item facts (patch checks, quest listeners, script expressions, item mechanics)"))
+            if (GUILayout.Button(Tip("Dump head-item facts (patch checks, quest listeners, script expressions, item mechanics)", "Writes BepInEx/GK2-head-facts.txt and runs a live test on the cart's inventory. Mount in Cart style with empty hands and a free slot for everything.")))
             {
                 Plugin.Log.LogInfo("[head] " + HeadProbe.Dump());
             }
@@ -1385,11 +1403,11 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             GUILayout.Label("Test item id", label, Wd(100f));
             cargoItemId = GUILayout.TextField(cargoItemId, Wd(110f));
-            if (GUILayout.Button("Put in cart inventory", Wd(170f)))
+            if (GUILayout.Button(Tip("Put in cart inventory", "Adds the test item id to the donkey's inventory the way the delivery script does and logs whether the cart meshes switched. Nothing is saved."), Wd(170f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestLoad(cargoItemId.Trim()));
             }
-            if (GUILayout.Button("Take first out", Wd(120f)))
+            if (GUILayout.Button(Tip("Take first out", "Removes the first item from the donkey's inventory again and logs the mesh result. The test item vanishes."), Wd(120f)))
             {
                 Plugin.Log.LogInfo("[cargo] " + CarryProbe.TestUnload());
             }
@@ -1397,35 +1415,35 @@ namespace GK2DonkeyAPI
             Help("Adds a plain item to our donkey's inventory exactly as the delivery script does, and logs whether the game's drawer switched the cart meshes. Test items vanish; the donkey is a temp object, nothing is saved.");
 
             Header("Chest on the cart: step-0 probe (docs/portable-chest.md §6)");
-            if (GUILayout.Button("Dump chest and building definitions to a file"))
+            if (GUILayout.Button(Tip("Dump chest and building definitions to a file", "Writes every chest-like object with its flags, build and remove costs, and the door-linked scenes to BepInEx/GK2-chest-facts.txt.")))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpDefinitions());
             }
             Help("Writes BepInEx/GK2-chest-facts.txt: every world object with a chest interaction or an inventory, with the flags the design depends on (size, multi-inventory, town quality, scripts, HP behaviour, filters), its build and remove definitions with costs and refunds, and which scenes keep the previous scene loaded through a door.");
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Hide, move 4 m, show", Wd(170f)))
+            if (GUILayout.Button(Tip("Hide, move 4 m, show", "Hides the chest the keeper faces (or the nearest within 6 m), moves it 4 m and shows it again: the set-down mechanism by hand. Use a test chest."), Wd(170f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.HideMoveShow());
             }
-            if (GUILayout.Button("Move back", Wd(100f)))
+            if (GUILayout.Button(Tip("Move back", "Returns the chest moved by the button to the left to where it stood."), Wd(100f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.MoveBack());
             }
-            if (GUILayout.Button("Zone out and in", Wd(130f)))
+            if (GUILayout.Button(Tip("Zone out and in", "Takes the faced chest out of the world's zoning and back in; nearby workbenches and villagers should still see it. Logged."), Wd(130f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.ZoneRoundTrip());
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("Stand-in here", Wd(130f)))
+            if (GUILayout.Button(Tip("Stand-in here", "Makes a preview-style copy of the faced chest in front of the keeper; each press destroys the last one first."), Wd(130f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.StandIn());
             }
-            if (GUILayout.Button("Remove stand-in", Wd(130f)))
+            if (GUILayout.Button(Tip("Remove stand-in", "Destroys the stand-in copy made by the button to the left."), Wd(130f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.RemoveStandIn());
             }
-            if (GUILayout.Button("Log its colliders", Wd(130f)))
+            if (GUILayout.Button(Tip("Log its colliders", "Writes the faced chest's colliders (shape, size, layer) to the log. Changes nothing."), Wd(130f)))
             {
                 Plugin.Log.LogInfo("[chest] " + ChestProbe.DumpColliders());
             }
@@ -1440,11 +1458,11 @@ namespace GK2DonkeyAPI
             Header("Self-tests");
             GUILayout.Label("Scripted checks that drive the game over frames (docs/self-tests.md): the per-mod API, the side file, hitching, shared colours, the levels, view reuse, foals following, the spawn cap and leaks, the chest on the cart, the morgue door, the corpses at the crossroads. All of them take about 4 minutes; a group or one scenario alone has the same start and finish (the keeper moved to the test spot and put back, every test donkey removed, the world's own donkeys checked). They spawn their own test donkeys (never kept) and save nothing. Don't touch the keys while they run. Each scenario's tally shows here as it runs; the full [test] lines are in the log.", small);
             GUILayout.BeginHorizontal();
-            if (!SelfTest.Running && GUILayout.Button("Run all", Wd(110f)))
+            if (!SelfTest.Running && GUILayout.Button(Tip("Run all", "Starts every self-test scenario on the next frame, about 4 minutes. Test donkeys are never kept, nothing is saved; keep your hands off the keys."), Wd(110f)))
             {
                 SelfTest.RequestStart(); // started on the next frame (SelfTest.PollStart), not inside this GUI event
             }
-            if (SelfTest.Running && GUILayout.Button("Abort", Wd(110f)))
+            if (SelfTest.Running && GUILayout.Button(Tip("Abort", "Stops the running self-tests at the next step; the keeper is put back and the test donkeys removed."), Wd(110f)))
             {
                 SelfTest.Abort();
             }
@@ -1461,7 +1479,7 @@ namespace GK2DonkeyAPI
                 GUILayout.Box(GUIContent.none, rule, ExpandW);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(g, header, ExpandW);
-                if (!SelfTest.Running && GUILayout.Button("Run group", Wd(90f)))
+                if (!SelfTest.Running && GUILayout.Button(Tip("Run group", "Runs only this group's scenarios, with the same start and finish as a full run. Nothing is saved."), Wd(90f)))
                 {
                     SelfTest.RequestStartGroup(g);
                 }
@@ -1475,7 +1493,7 @@ namespace GK2DonkeyAPI
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(ScenarioState(s, out GUIStyle st), st, Wd(W * 0.36f));
                     GUILayout.Label(s.Name, wrapLabel, ExpandW);
-                    if (!SelfTest.Running && GUILayout.Button("Run", Wd(48f)))
+                    if (!SelfTest.Running && GUILayout.Button(Tip("Run", "Runs this one scenario alone; the keeper is moved to the test spot and put back afterwards. Nothing is saved."), Wd(48f)))
                     {
                         SelfTest.RequestStart(s);
                     }
@@ -1582,7 +1600,7 @@ namespace GK2DonkeyAPI
             {
                 GUILayout.Label("The corrections edited on the Riding tab last for this session only: the mod's source folder is not on this machine, so there is nowhere to save them.", small);
             }
-            if (GUILayout.Button("Re-read the layout file"))
+            if (GUILayout.Button(Tip("Re-read the layout file", "Loads the cargo layout file from disk again and re-packs every cart. Edits in the file since the start show up; unsaved panel changes are lost.")))
             {
                 CargoLayout.Load();
                 Cargo.RefreshViews();
@@ -1616,7 +1634,7 @@ namespace GK2DonkeyAPI
                     GUILayout.Label($"Colours are never made mod defaults: {differing - writable} of your {differing} differing settings are colours and stay yours only (your cfg). Every player starts with the game's own art.", small);
                     GUILayout.BeginHorizontal();
                 }
-                if (writable > 0 && GUILayout.Button(confirming ? $"Click again: make {writable} the mod defaults (no colours)" : $"Make these the mod defaults ({writable}, no colours)"))
+                if (writable > 0 && GUILayout.Button(Tip(confirming ? $"Click again: make {writable} the mod defaults (no colours)" : $"Make these the mod defaults ({writable}, no colours)", confirming ? "Second click within 4 seconds: writes your differing settings to the repo's defaults.cfg. Colours are left out; a rebuild ships them." : "Asks once more, then writes your differing settings to the repo's defaults.cfg as the new mod defaults. Colours never; a rebuild ships them.")))
                 {
                     if (!confirming)
                     {
@@ -1639,7 +1657,7 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
-            if (GUILayout.Button("Reset this style to the mod defaults"))
+            if (GUILayout.Button(Tip("Reset this style to the mod defaults", "Puts every setting of the current style (Ride or Cart) back to the mod defaults and refreshes the ride. Colours and the other style stay.")))
             {
                 Mount.S.ResetAll();
                 Mount.RefreshLeg();
@@ -1675,10 +1693,10 @@ namespace GK2DonkeyAPI
         // longer edited here, so tuning one pair can never move another. The packer re-runs on every change, and the
         // layout file is saved shortly after (CargoLayout.MarkChanged / SaveIfDue).
         // A - value + row for a float setting, stepping by 'step' within [min, max]; right-click the value resets it.
-        private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format)
+        private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
             if (GUILayout.Button("-", Wd(30f)) && !locked)
@@ -1756,7 +1774,7 @@ namespace GK2DonkeyAPI
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, tip), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
             float v = GUILayout.HorizontalSlider(shown, min, max, Wd(90f));
@@ -1773,10 +1791,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange)
+        private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
@@ -1810,10 +1828,10 @@ namespace GK2DonkeyAPI
         }
 
         // A free text value (a GD point id, a notification text), trimmed.
-        private static void TextRow(string name, ConfigEntry<string> entry)
+        private static void TextRow(string name, ConfigEntry<string> entry, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out string shown);
             GUI.enabled = !locked;
             string v = GUILayout.TextField(shown ?? "", Wd(SliderW));
@@ -1831,7 +1849,7 @@ namespace GK2DonkeyAPI
         private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange, string tip = null)
         {
             bool locked = Locked(entry, out bool shown);
-            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked, tip: tip);
+            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked, tip: TipFor(entry, tip));
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
@@ -1860,18 +1878,18 @@ namespace GK2DonkeyAPI
         }
 
         // Type inference does not look through Tuned<T>'s implicit conversion, hence this overload.
-        private static void EnumCycler<T>(string name, Tuned<T> tuned, Action onChange) where T : struct, Enum
+        private static void EnumCycler<T>(string name, Tuned<T> tuned, Action onChange, string tip = null) where T : struct, Enum
         {
-            EnumCycler<T>(name, tuned.Entry, onChange);
+            EnumCycler<T>(name, tuned.Entry, onChange, tip);
         }
 
-        private static void EnumCycler<T>(string name, ConfigEntry<T> entry, Action onChange) where T : struct, Enum
+        private static void EnumCycler<T>(string name, ConfigEntry<T> entry, Action onChange, string tip = null) where T : struct, Enum
         {
             T[] values = EnumInfo<T>.Values;
             int idx = Array.IndexOf(values, Val(entry));
             bool locked = Locked(entry, out T shown);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool changed = false;
             GUI.enabled = !locked;
             if (GUILayout.Button("<", Wd(22f)) && !locked) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
