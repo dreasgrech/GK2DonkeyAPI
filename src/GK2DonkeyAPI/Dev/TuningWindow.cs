@@ -141,6 +141,7 @@ namespace GK2DonkeyAPI
                 return;
             }
             appliedFontScale = fontScale;
+            tipStyle = null; // rebuilt at the new size on the next hover
             // Rich text on the text styles: a word can carry its own colour (<color=#8ee68e>tuned</color>), which is how
             // the Cargo tab marks states; section headers are gold on every tab so a skim finds them, steps are blue.
             label = new GUIStyle(GUI.skin.label) { fontSize = Mathf.RoundToInt(13f * fontScale), richText = true };
@@ -230,6 +231,81 @@ namespace GK2DonkeyAPI
         private static string Fixed(int decimals) => decimals >= 0 && decimals < FixedFormats.Length ? FixedFormats[decimals] : "F" + decimals;
 
         // A section title with a rule line above it, so the rows below visibly belong to it.
+        // ------------------------------------------------------------------ tooltips
+        // A control's GUIContent may carry a tooltip; IMGUI sets GUI.tooltip while the mouse is over it (Repaint). The
+        // box is drawn at the very end of the window function with GUI.Label at a rect: no layout control, so the slider
+        // order is untouched. Clamped inside the window (a window clips its contents).
+        private static GUIStyle tipStyle;
+
+        internal static GUIContent Tip(string text, string tip) => string.IsNullOrEmpty(tip) ? new GUIContent(text) : new GUIContent(text, tip);
+
+        // A button with a tooltip; active false draws it greyed (the control order never changes) and returns false.
+        private static bool TipButton(string text, string tip, float width, bool active = true)
+        {
+            bool was = GUI.enabled;
+            GUI.enabled = was && active;
+            bool pressed = GUILayout.Button(Tip(text, tip), Wd(width));
+            GUI.enabled = was;
+            return pressed && active;
+        }
+
+        // GUI.tooltip is set by a hovered control during Repaint but never cleared by the player when the mouse leaves
+        // (the box stayed on screen with the last text, 2026-10-12): the window clears it at the start of each repaint
+        // (ClearTooltip), so at the end it holds only what the mouse is over now. Shown after the mouse has rested on the
+        // same control for HoverDelay seconds, and hidden again as soon as it moves, like any tooltip.
+        private const float HoverDelay = 0.45f;
+        private static string hoverTip = "";
+        private static float hoverSince;
+        private static Vector2 hoverAt;
+
+        private static void ClearTooltip()
+        {
+            if (Event.current.type == EventType.Repaint)
+            {
+                GUI.tooltip = "";
+            }
+        }
+
+        private static void DrawTooltip()
+        {
+            if (Event.current.type != EventType.Repaint)
+            {
+                return;
+            }
+            string now = GUI.tooltip ?? "";
+            Vector2 m = Event.current.mousePosition;
+            if (now != hoverTip || (m - hoverAt).sqrMagnitude > 16f)
+            {
+                hoverTip = now;
+                hoverSince = Time.unscaledTime;
+                hoverAt = m;
+                return;
+            }
+            if (now.Length == 0 || Time.unscaledTime - hoverSince < HoverDelay)
+            {
+                return;
+            }
+            if (tipStyle == null)
+            {
+                tipStyle = new GUIStyle(GUI.skin.box)
+                {
+                    fontSize = Mathf.RoundToInt(11f * appliedFontScale), alignment = TextAnchor.UpperLeft, wordWrap = true, richText = true,
+                    padding = new RectOffset(8, 8, 6, 6), normal = { textColor = new Color(0.92f, 0.92f, 0.92f) },
+                };
+                var bg = new Texture2D(1, 1);
+                bg.SetPixel(0, 0, new Color(0.08f, 0.08f, 0.1f, 0.97f));
+                bg.Apply();
+                tipStyle.normal.background = bg;
+            }
+            var content = new GUIContent(now);
+            float w = Mathf.Min(340f, rect.width - 24f);
+            float h = tipStyle.CalcHeight(content, w);
+            float x = Mathf.Clamp(m.x + 14f, 4f, Mathf.Max(4f, rect.width - w - 4f));
+            float y = m.y + 22f;
+            if (y + h > rect.height - 4f) y = Mathf.Max(4f, m.y - h - 8f); // above the mouse near the bottom
+            GUI.Label(new Rect(x, y, w, h), content, tipStyle);
+        }
+
         private static void Header(string text)
         {
             GUILayout.Box(GUIContent.none, rule, ExpandW);
@@ -362,6 +438,7 @@ namespace GK2DonkeyAPI
         private static void DrawContentsInner(int id)
         {
             rawSeq = 0;
+            ClearTooltip();
             if (tab != TabCargo)
             {
                 nudgePending = 0f; // keys pressed elsewhere never land on a cargo slider later
@@ -434,6 +511,7 @@ namespace GK2DonkeyAPI
             }
             DrawDefaultsButtons(differing);
             GUILayout.Label("Right-click a row to put it back to its mod default.", small);
+            DrawTooltip(); // last: over everything, no layout control
             GUI.DragWindow(new Rect(0f, 0f, 10000f, 20f));
         }
 
@@ -1629,13 +1707,14 @@ namespace GK2DonkeyAPI
         private static bool nudgeEnabled;
         private static float nudgePending;
 
-        private static bool RawSlider(string name, ref float value, float min, float max, bool canReset = true)
+        private static bool RawSlider(string name, ref float value, float min, float max, bool canReset = true, string tip = null)
         {
             int id = ++rawSeq;
             bool focused = nudgeEnabled && id == nudgeId;
             GUILayout.BeginHorizontal();
             // Inside a box (its padding) with a slider and a value: the label gets the rest of the content width.
-            GUILayout.Label(focused ? "<color=#ffd257>» " + name.TrimStart() + $"  ({Plugin.CargoNudgeUp.Value} / {Plugin.CargoNudgeDown.Value})</color>" : name, label, Wd(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
+            string shownName = focused ? "<color=#ffd257>» " + name.TrimStart() + $"  ({Plugin.CargoNudgeUp.Value} / {Plugin.CargoNudgeDown.Value})</color>" : name;
+            GUILayout.Label(Tip(shownName, tip), label, Wd(Mathf.Max(80f, ContentW - SliderW - 50f - GUI.skin.box.padding.horizontal - 12f)));
             float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW));
             // Only a drag (or the right-click reset) is a change. The slider hands back the value it was given when it
             // is not touched (clamped to its range); rounding that for display must not count as a move, or a value
@@ -1674,10 +1753,10 @@ namespace GK2DonkeyAPI
             return false;
         }
 
-        private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange)
+        private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, tip), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
             float v = GUILayout.HorizontalSlider(shown, min, max, Wd(90f));
@@ -1719,12 +1798,12 @@ namespace GK2DonkeyAPI
         }
 
         // Booleans as a labelled On/Off button in the value column (a label-styled GUILayout.Toggle draws no box).
-        private static bool OnOffRow(string name, bool value, GUIStyle style = null, bool enabled = true)
+        private static bool OnOffRow(string name, bool value, GUIStyle style = null, bool enabled = true, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(name, style ?? label, Wd(LabelW));
+            GUILayout.Label(Tip(name, tip), style ?? label, Wd(LabelW));
             GUI.enabled = enabled;
-            bool clicked = GUILayout.Button(value ? "On" : "Off", Wd(70f)) && enabled;
+            bool clicked = GUILayout.Button(Tip(value ? "On" : "Off", tip), Wd(70f)) && enabled;
             GUI.enabled = true;
             GUILayout.EndHorizontal();
             return clicked;
@@ -1749,10 +1828,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange)
+        private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange, string tip = null)
         {
             bool locked = Locked(entry, out bool shown);
-            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked);
+            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked, tip: tip);
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)

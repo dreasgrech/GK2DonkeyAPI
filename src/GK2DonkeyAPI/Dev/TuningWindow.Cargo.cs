@@ -13,6 +13,39 @@ namespace GK2DonkeyAPI
     {
         private static bool cargoRulesOpen, cargoBehaviourOpen, cargoHelpOpen;
 
+        // The tab's tooltips (hover a label or a button). Short; the long form is in the folded help and the docs.
+        private const string TipHeightOn = "How high this item (and everything above it) sits on the one below. Applies wherever these two meet this way.";
+        private const string TipAcross = "Toward (-) or away from (+) the camera.";
+        private const string TipAlong = "Toward the donkey (+) or the back of the cart (-).";
+        private const string TipHeightAlone = "Height above the cart floor when this is the only item aboard.";
+        private const string TipHeightBed = "Height above the cart floor, in the bed layer.";
+        private const string TipHeightRel = "Height relative to the layer's first item. The layer itself rests by the box above.";
+        private const string TipHeightLayerFirst = "The first item sits where its layer sits: set the layer's height in the 'x on y' box above.";
+        private const string TipHeightTwo = "Height above the cart floor. For the item on top this is how the two stack.";
+        private const string TipOnPair = "An extra move for this item only when it lies alone on top of a pair. Nothing under it moves.";
+        private const string TipLooksRight = "Freeze this contact exactly as it lies now. It counts as tuned and no fallback can move it again.";
+        private const string TipSeat = "Rest this item on what is really under it (its measured shape, 3 cm sunk in). Written as a tuning; one Undo step.";
+        private const string TipReset = "Forget this contact's tuning; it follows the fallbacks again.";
+        private const string TipAlone = "Show just these two on the cart, as a two-item cart, to tune them without the rest. The whole load stays aboard.";
+        private const string TipAcceptLoad = "Freeze every untuned contact in this load exactly as it lies. You stay on this load.";
+        private const string TipAcceptNext = "Freeze every untuned contact here, then put the most used untuned contact's load on the cart (a test load).";
+        private const string TipSkip = "Put the next untuned contact's load on the cart without accepting anything here. Skipped contacts go to the back of the queue.";
+        private const string TipLoad = "Put this contact's smallest load on the cart as a test load (real items, made for you). Replaces the last test load; refused while the cart holds other cargo.";
+        private const string TipCoverLoad = "The fewest loads that together show every contact: load them one by one and you have seen everything.";
+        private const string TipTakeOff = "Remove the test items this tool put on the cart (and their test zombies). Items you set down stay yours.";
+        private const string TipUndo = "Undo the last layout edit (a drag, a nudge run, Looks right, Seat it, Reset).";
+        private const string TipRedo = "Redo the edit you just undid.";
+        private const string TipCompare = "Show the layout as it was when this session began. Editing is locked and nothing is saved until you come back.";
+        private const string TipTint = "Colour the items on the cart like their names here: blue the first item of a layer, orange the second or one alone on top, lighter higher up.";
+        private const string TipShow = "Hide part of the load to see the rest. View only: hidden items still count in the layout and come back when the tab closes.";
+        private const string TipFloor = "Where the bottom of the load rests on the cart. Set this once; it moves everything, tuned or not.";
+        private const string TipArrangement = "How a two-item cart lays these two out. The lit button again starts this contact over; the others switch and keep both tunings.";
+        private const string TipOverhang = "How far a pair may stick out past the bed before the packer stacks them instead (pairs set to 'let the rules pick').";
+        private const string TipGap = "Space between two untuned items lying beside each other.";
+        private const string TipNestle = "How far an untuned upper layer sinks into the one below.";
+        private const string TipLayerShift = "Each untuned upper layer moved forward or back by this much (+ back, - toward the donkey).";
+        private const string TipSeatOnShapes = "Upper layers rest on the items' measured shapes (a layer on a round log sits on the trunk). Off: on their boxes.";
+
         // What the tab is drawn from, frozen while any panel control is held (GUIUtility.hotControl, with a button down). IMGUI knows a
         // control by its order in the pass, so the boxes above a slider must not come and go while it is dragged, or
         // the drag lands on another slider (2026-10-10, video 18-19-36). Dragging the overhang or the gap re-arranges
@@ -129,12 +162,12 @@ namespace GK2DonkeyAPI
             GUILayout.BeginVertical(GUI.skin.box);
             if (next.Count > 0)
             {
-                GUILayout.Label("Tune next  <color=#9a9a9a>(most used first; Load puts its smallest load on the cart)</color>", label);
+                GUILayout.Label(Tip("Tune next  <color=#9a9a9a>(most used first)</color>", "The contacts still on the fallbacks, the most used first. Load puts a contact's smallest load on the cart."), label);
                 for (int i = 0; i < Mathf.Min(TuneNextRows, next.Count); i++)
                 {
                     CargoCoverage.Contact c = next[i];
                     GUILayout.BeginHorizontal();
-                    if (GUILayout.Button("Load", Wd(60f)))
+                    if (TipButton("Load", TipLoad, 60f))
                     {
                         TestLoads.Put(LoadIds(c.Smallest), c.Title);
                     }
@@ -154,17 +187,17 @@ namespace GK2DonkeyAPI
                 GUILayout.BeginHorizontal();
                 if (GUILayout.Button("<", Wd(28f))) coverStep = (coverStep + coverage.Cover.Count - 1) % coverage.Cover.Count;
                 if (GUILayout.Button(">", Wd(28f))) coverStep = (coverStep + 1) % coverage.Cover.Count;
-                if (GUILayout.Button("Load", Wd(60f)))
+                if (TipButton("Load", TipCoverLoad, 60f))
                 {
                     TestLoads.Put(LoadIds(cl.Classes), $"covering load {coverStep + 1} of {coverage.Cover.Count}");
                 }
-                GUILayout.Label($"Every contact in {coverage.Cover.Count} loads: {coverStep + 1}. {coverage.Describe(cl.Classes)}   <color=#9a9a9a>{cl.Untuned} untuned</color>", label);
+                GUILayout.Label(Tip($"Every contact in {coverage.Cover.Count} loads: {coverStep + 1}. {coverage.Describe(cl.Classes)}   <color=#9a9a9a>{cl.Untuned} untuned</color>", TipCoverLoad), label);
                 GUILayout.EndHorizontal();
             }
             GUILayout.BeginHorizontal();
             bool was = GUI.enabled;
             GUI.enabled = was && testOn > 0;
-            if (GUILayout.Button(testOn > 0 ? $"Take the test load off ({testOn})" : "Take the test load off", Wd(200f)))
+            if (GUILayout.Button(Tip(testOn > 0 ? $"Take the test load off ({testOn})" : "Take the test load off", TipTakeOff), Wd(200f)))
             {
                 TestLoads.TakeOff();
             }
@@ -226,14 +259,7 @@ namespace GK2DonkeyAPI
         // Each freezes a contact exactly where it lies now: the same freeze a first slider move makes, without the move.
         // True when something was frozen.
 
-        private static bool LooksRightButton(bool active)
-        {
-            bool was = GUI.enabled;
-            GUI.enabled = was && active;
-            bool pressed = GUILayout.Button("Looks right", Wd(100f));
-            GUI.enabled = was;
-            return pressed && active;
-        }
+        private static bool LooksRightButton(bool active) => TipButton("Looks right", TipLooksRight, 100f, active);
 
         private static bool AcceptAlone(Cargo.PlacedItem p)
         {
@@ -451,14 +477,7 @@ namespace GK2DonkeyAPI
         // quarter at the usual 3 cm sink, a small bump ignored), through the same write a slider move makes, so it is
         // one undo step and freezes an untuned contact first. A starting point for the eye, not a verdict.
 
-        private static bool SeatButton(bool active)
-        {
-            bool was = GUI.enabled;
-            GUI.enabled = was && active;
-            bool pressed = GUILayout.Button("Seat it", Wd(70f));
-            GUI.enabled = was;
-            return pressed && active;
-        }
+        private static bool SeatButton(bool active) => TipButton("Seat it", TipSeat, 70f, active);
 
         // The load on the cart as a packer result (the places relative to the floor; only differences are used).
         private static CargoPacker.Result LiveResult(List<Cargo.PlacedItem> view)
@@ -551,19 +570,19 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             bool was = GUI.enabled;
             GUI.enabled = was && CargoLayout.CanUndo;
-            if (GUILayout.Button(CargoLayout.UndoCount > 0 ? $"Undo ({CargoLayout.UndoCount})" : "Undo", Wd(90f)))
+            if (GUILayout.Button(Tip(CargoLayout.UndoCount > 0 ? $"Undo ({CargoLayout.UndoCount})" : "Undo", TipUndo), Wd(90f)))
             {
                 CargoLayout.Undo();
                 Cargo.RefreshViews();
             }
             GUI.enabled = was && CargoLayout.CanRedo;
-            if (GUILayout.Button("Redo", Wd(70f)))
+            if (GUILayout.Button(Tip("Redo", TipRedo), Wd(70f)))
             {
                 CargoLayout.Redo();
                 Cargo.RefreshViews();
             }
             GUI.enabled = was && (CargoLayout.Comparing || CargoLayout.DiffersFromSessionStart);
-            if (GUILayout.Button(CargoLayout.Comparing ? "Back to now" : "Compare with the session start", Wd(230f)))
+            if (GUILayout.Button(Tip(CargoLayout.Comparing ? "Back to now" : "Compare with the session start", TipCompare), Wd(230f)))
             {
                 CargoLayout.Compare(!CargoLayout.Comparing);
                 Cargo.RefreshViews();
@@ -705,27 +724,22 @@ namespace GK2DonkeyAPI
                     }
                     GUILayout.EndHorizontal();
                 }
-                bool tintOn = Plugin.CargoTabTint.Value;
-                Toggle("  Tint the items on the cart like the names here", Plugin.CargoTabTint, null);
-                if (tintOn)
-                {
-                    GUILayout.Label("  " + Blue("Blue") + ": the first item of a layer. " + Orange("Orange") + ": the second, or one alone on top. Lighter: a higher layer. The same hue moves with the same sliders.", small);
-                }
+                Toggle("  Tint the items on the cart like the names here", Plugin.CargoTabTint, null, TipTint);
                 // Show / hide parts of the load while working: view only, the layout keeps every item.
                 if (n >= 2)
                 {
                     bool anyHidden = Cargo.Rig.AnyHidden;
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label("  Show on the cart", label, Wd(130f));
+                    GUILayout.Label(Tip("  Show on the cart", TipShow), label, Wd(130f));
                     bool changed = false;
-                    bool showFirst = GUILayout.Toggle(!Cargo.Rig.HideFirst, "blue", GUI.skin.button, Wd(60f));
+                    bool showFirst = GUILayout.Toggle(!Cargo.Rig.HideFirst, Tip("blue", TipShow), GUI.skin.button, Wd(60f));
                     if (showFirst == Cargo.Rig.HideFirst) { Cargo.Rig.HideFirst = !showFirst; changed = true; }
-                    bool showSecond = GUILayout.Toggle(!Cargo.Rig.HideSecond, "orange", GUI.skin.button, Wd(70f));
+                    bool showSecond = GUILayout.Toggle(!Cargo.Rig.HideSecond, Tip("orange", TipShow), GUI.skin.button, Wd(70f));
                     if (showSecond == Cargo.Rig.HideSecond) { Cargo.Rig.HideSecond = !showSecond; changed = true; }
                     for (int l = 0; l < layers; l++)
                     {
                         bool shown = !Cargo.Rig.HiddenLayers.Contains(l);
-                        bool now = GUILayout.Toggle(shown, $"layer {l + 1}", GUI.skin.button, Wd(70f));
+                        bool now = GUILayout.Toggle(shown, Tip($"layer {l + 1}", TipShow), GUI.skin.button, Wd(70f));
                         if (now != shown)
                         {
                             if (now) Cargo.Rig.HiddenLayers.Remove(l); else Cargo.Rig.HiddenLayers.Add(l);
@@ -733,10 +747,6 @@ namespace GK2DonkeyAPI
                         }
                     }
                     GUILayout.EndHorizontal();
-                    if (anyHidden)
-                    {
-                        GUILayout.Label("  Hidden items still count in the layout (nothing moves); they show again when this tab closes.", small);
-                    }
                     if (changed)
                     {
                         Cargo.RefreshViews();
@@ -749,8 +759,7 @@ namespace GK2DonkeyAPI
             // ---- the cart: the floor (calibration: moves everything, tuned contacts included)
             GUILayout.Space(6f);
             GUILayout.Label("The cart", step);
-            GUILayout.Label("Set once: where the bottom of the load rests. It moves everything, tuned or not.", small);
-            FloatSlider("Floor: cargo below the rail top", s.CargoBedDepth, -0.6f, 0.3f, 2, Cargo.RefreshViews);
+            FloatSlider("Floor: cargo below the rail top", s.CargoBedDepth, -0.6f, 0.3f, 2, Cargo.RefreshViews, TipFloor);
 
             // ---- this load: one view, picked by how many items are on the cart
             GUILayout.Space(6f);
@@ -774,23 +783,22 @@ namespace GK2DonkeyAPI
                 // accept it just moves on: greyed out after an Accept, it read as broken, 2026-10-12); Skip never accepts.
                 bool en = GUI.enabled;
                 GUI.enabled = en && open > 0;
-                if (GUILayout.Button(open > 0 ? $"Accept this load ({open})" : "Accept this load", Wd(170f)))
+                if (GUILayout.Button(Tip(open > 0 ? $"Accept this load ({open})" : "Accept this load", TipAcceptLoad), Wd(170f)))
                 {
                     refresh |= AcceptAll(placed, isolating, cargoViewPairMode) > 0;
                 }
                 GUI.enabled = en;
-                if (GUILayout.Button("Accept and next", Wd(150f)))
+                if (GUILayout.Button(Tip("Accept and next", TipAcceptNext), Wd(150f)))
                 {
                     bool any = AcceptAll(placed, isolating, cargoViewPairMode) > 0;
                     refresh |= any;
                     LoadNextUntuned(afterAccept: any);
                 }
-                if (GUILayout.Button("Skip to next", Wd(120f)))
+                if (GUILayout.Button(Tip("Skip to next", TipSkip), Wd(120f)))
                 {
                     LoadNextUntuned(afterAccept: false, skipping: placed);
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label("Accept: what you see now counts as tuned (no fallback moves it again).  Next: the most used untuned contact's load goes on the cart.  Skip: nothing is accepted.", small);
             }
             if (mode == 1)
             {
@@ -831,14 +839,12 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             if (cargoRulesOpenNow)
             {
-                GUILayout.Label("Starting points for any contact you have not tuned. Tuning a contact freezes it: these never move it again.", small);
-                GUILayout.Label("  Which way two items lie (pairs set to 'let the rules pick')", label);
-                FloatSlider("Overhang: how far a pair may exceed the bed before stacking", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews);
-                FloatSlider("Gap between two items lying beside each other", s.CargoSideGap, 0f, 0.3f, 2, Cargo.RefreshViews);
-                GUILayout.Label("  How an untuned layer sits on the one below", label);
-                FloatSlider("Nestle: how far it sinks in", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews);
-                FloatSlider("Layer shift: each layer up moves forward / back   (+ back, - toward the donkey)", s.CargoLayerShift, -0.3f, 0.3f, 2, Cargo.RefreshViews);
-                Toggle("Upper layers rest on the measured shapes (off: on the boxes)", Plugin.CargoSeatOnShapes, null);
+                GUILayout.Label(Tip("Starting points for contacts you have not tuned; a tuned contact never follows these.", "Tuning a contact (a drag, Looks right, Seat it) freezes it. Only the cart floor still moves a tuned contact."), small);
+                FloatSlider("Overhang before a pair stacks", s.CargoOverhang, 0f, 0.5f, 2, Cargo.RefreshViews, TipOverhang);
+                FloatSlider("Gap between items beside each other", s.CargoSideGap, 0f, 0.3f, 2, Cargo.RefreshViews, TipGap);
+                FloatSlider("Nestle of an upper layer", s.CargoNestle, 0f, 0.3f, 2, Cargo.RefreshViews, TipNestle);
+                FloatSlider("Layer shift, per layer up", s.CargoLayerShift, -0.3f, 0.3f, 2, Cargo.RefreshViews, TipLayerShift);
+                Toggle("Upper layers rest on the measured shapes", Plugin.CargoSeatOnShapes, null, TipSeatOnShapes);
             }
 
             // behaviour
@@ -907,14 +913,7 @@ namespace GK2DonkeyAPI
         // Reset, always drawn (greyed when there is nothing to reset). IMGUI knows a control by its order in the frame: a
         // button that appears once a box is tuned shifts every slider after it, so the slider being dragged (whose
         // first move tuned the box) lost the drag to the slider below it (found 2026-10-10, video 18-19-36).
-        private static bool ResetButton(bool active)
-        {
-            bool was = GUI.enabled;
-            GUI.enabled = was && active;
-            bool pressed = GUILayout.Button("Reset", Wd(60f));
-            GUI.enabled = was;
-            return pressed && active;
-        }
+        private static bool ResetButton(bool active) => TipButton("Reset", TipReset, 60f, active);
 
         private static string ModeChip(string text, bool on) => on ? "<color=#ffd257>[ " + text + " ]</color>" : "<color=#6e6e6e>" + text + "</color>";
 
@@ -937,9 +936,9 @@ namespace GK2DonkeyAPI
             // move (or Looks right) gives it its own alone place. Just looking no longer tunes it.
             Vector3 v = e.HasAlone ? e.Alone : e.Base;
             bool moved = false;
-            moved |= RawSlider("  Height", ref v.y, -0.4f, 0.4f);
-            moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f);
-            moved |= RawSlider("  " + AlongLabel, ref v.x, -0.5f, 0.5f);
+            moved |= RawSlider("  Height", ref v.y, -0.4f, 0.4f, tip: TipHeightAlone);
+            moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f, tip: TipAcross);
+            moved |= RawSlider("  " + AlongLabel, ref v.x, -0.5f, 0.5f, tip: TipAlong);
             if (moved)
             {
                 e.HasAlone = true;
@@ -973,7 +972,7 @@ namespace GK2DonkeyAPI
                     string text = mode == "auto" ? "let the rules pick" : mode == "side" ? "across" : mode == "along" ? "along" : "stacked";
                     // A click is a change of the toggle's state (a lit toggle returns true on every event; taking that as
                     // a click started a tuned pair over every frame, 2026-09-30).
-                    bool now = GUILayout.Toggle(on, text, GUI.skin.button, Wd(mode == "auto" ? 110f : 70f));
+                    bool now = GUILayout.Toggle(on, Tip(text, TipArrangement), GUI.skin.button, Wd(mode == "auto" ? 110f : 70f));
                     bool clicked = now != on && (tunedNow || now);
                     if (clicked)
                     {
@@ -997,7 +996,6 @@ namespace GK2DonkeyAPI
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label("  The lit arrangement again starts this contact over by the rules; the others switch and keep both tunings.", small);
             }
             // Stacked, the item on top is listed first, as on screen; k stays the packing index (which maps to A or B).
             bool topFirst = p1.OnTop;
@@ -1023,9 +1021,9 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogInfo($"Cargo layout: {p.Id} seated on {other.Id} ({d:+0.000;-0.000}).");
                     }
                 }
-                moved |= RawSlider("    Height above the floor", ref v.y, -0.3f, 1.0f, canReset: false);
-                moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false);
-                moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false);
+                moved |= RawSlider("    Height above the floor", ref v.y, -0.3f, 1.0f, canReset: false, tip: TipHeightTwo);
+                moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false, tip: TipAcross);
+                moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false, tip: TipAlong);
                 if (moved)
                 {
                     if (!tunedNow)
@@ -1108,11 +1106,10 @@ namespace GK2DonkeyAPI
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
-                GUILayout.Label($"  Moves only a {CargoSheet.ClassLabel(it.Id)} lying alone on top of a pair; nothing under it moves.", small);
                 bool movedP = false;
-                movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false);
-                movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false);
-                movedP |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false);
+                movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
+                movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
+                movedP |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
                 if (movedP)
                 {
                     e.HasOnPair = true;
@@ -1132,7 +1129,7 @@ namespace GK2DonkeyAPI
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label((onTop ? $"{Tinted(pl, placed)} on {Tinted(q, placed)}" : $"{Tinted(q, placed)}  |  {Tinted(pl, placed)} in one layer") + $"   ({(tuned ? TunedWord : RulesWord)}; layer{(ls.Count == 1 ? "" : "s")} {string.Join(", ", ls)}){UsedIn(KeyOf(pl.Relation, pl.Id, q.Id))}", label);
-                if (GUILayout.Button("Alone", Wd(60f)))
+                if (TipButton("Alone", TipAlone, 60f))
                 {
                     Cargo.Isolate(q.Guid, pl.Guid, onTop ? "stack" : "beside");
                 }
@@ -1153,13 +1150,12 @@ namespace GK2DonkeyAPI
                 GUILayout.EndHorizontal();
                 if (onTop)
                 {
-                    GUILayout.Label($"  Height: how high {Tinted(pl, placed)} sits on {Tinted(q, placed)} ({CargoSheet.ClassLabel(q.Id)} is {q.Box.y:0.00} tall); the whole upper layer moves with it. This is how the layers stack.", small);
                     Vector3 v = pl.Rel;
                     Vector3 was = v;
                     bool moved = false;
-                    moved |= RawSlider("  Height", ref v.y, -0.3f, 1.0f, canReset: false);
-                    moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false);
-                    moved |= RawSlider("  " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false);
+                    moved |= RawSlider("  Height", ref v.y, -0.3f, 1.0f, canReset: false, tip: TipHeightOn + $" ({CargoSheet.ClassLabel(q.Id)} is {q.Box.y:0.00} tall.)");
+                    moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false, tip: TipAcross);
+                    moved |= RawSlider("  " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false, tip: TipAlong);
                     if (moved)
                     {
                         if (!pair.TopTuned)
@@ -1175,9 +1171,6 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
-                    GUILayout.Label(q.Layer == 0
-                        ? "  Each item's place in the layer. Height floats an item above the bed; the layer above sits on the highest point."
-                        : $"  Each item's place in the layer. {Tinted(q, placed)} sits where the layer does (its height: the '{CargoSheet.ClassLabel(q.Id)} on ...' box); {Tinted(pl, placed)}'s height is relative to it.", small);
                     for (int n = 0; n < 2; n++)
                     {
                         Cargo.PlacedItem item = n == 0 ? q : pl;
@@ -1202,10 +1195,11 @@ namespace GK2DonkeyAPI
                         // the slider is always drawn (the control order); greyed for the first item of an upper layer
                         bool en = GUI.enabled;
                         GUI.enabled = en && !layerFirstAbove;
-                        moved |= RawSlider(layerFirstAbove ? "    Height in the layer (the layer's: see the box above)" : item.Layer == 0 ? "    Height above the bed" : "    Height, relative to " + CargoSheet.ClassLabel(q.Id), ref v.y, -0.3f, 1.0f, canReset: false);
+                        moved |= RawSlider(layerFirstAbove ? "    Height (the layer's)" : item.Layer == 0 ? "    Height above the bed" : "    Height, relative to " + CargoSheet.ClassLabel(q.Id), ref v.y, -0.3f, 1.0f, canReset: false,
+                            tip: layerFirstAbove ? TipHeightLayerFirst : item.Layer == 0 ? TipHeightBed : TipHeightRel);
                         GUI.enabled = en;
-                        moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false);
-                        moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false);
+                        moved |= RawSlider("    " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false, tip: TipAcross);
+                        moved |= RawSlider("    " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false, tip: TipAlong);
                         if (moved)
                         {
                             if (!pair.BesideTuned)
