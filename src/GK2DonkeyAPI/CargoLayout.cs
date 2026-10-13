@@ -28,8 +28,7 @@ namespace GK2DonkeyAPI
     //                 A tuned relation is frozen: class entries, alone offsets, gap, overhang, nestle, the layer
     //                 shift and the load order no longer change it; only the floor (CargoBedDepth) moves it.
     //                 Positions belong to a and b by id, not to "first" and "second", so which item was picked up
-    //                 first does not matter. Files of version 1 (a_*/b_*: one set) are read: the set becomes the
-    //                 relation of the pair's mode.
+    //                 first does not matter.
     //   Lookup is deterministic: an exact id (or id pair) wins over a size-class match; among class matches the
     //   first in the file wins, and a second one is reported once in the log (it would never apply).
     //
@@ -235,9 +234,6 @@ namespace GK2DonkeyAPI
                 else { BesideTuned = false; BesideA = BesideB = Vector3.zero; }
             }
 
-            // Version 1 of the file: one set, a_*/b_*, belonging to the pair's mode.
-            internal bool legacyTuned;
-            internal Vector3 legacyA, legacyB;
         }
 
         public static readonly Dictionary<string, ItemEntry> Items = new Dictionary<string, ItemEntry>(StringComparer.Ordinal);
@@ -375,32 +371,8 @@ namespace GK2DonkeyAPI
                         case "top_b_along": pair.TopB.x = f; pair.TopTuned = true; break;
                         case "top_b_up": pair.TopB.y = f; pair.TopTuned = true; break;
                         case "top_b_across": pair.TopB.z = f; pair.TopTuned = true; break;
-                        // version 1: one set for the pair's mode
-                        case "a_along": pair.legacyA.x = f; pair.legacyTuned = true; break;
-                        case "a_up": pair.legacyA.y = f; pair.legacyTuned = true; break;
-                        case "a_across": pair.legacyA.z = f; pair.legacyTuned = true; break;
-                        case "b_along": pair.legacyB.x = f; pair.legacyTuned = true; break;
-                        case "b_up": pair.legacyB.y = f; pair.legacyTuned = true; break;
-                        case "b_across": pair.legacyB.z = f; pair.legacyTuned = true; break;
                     }
                 }
-            }
-            // Version 1 pairs: the one set becomes the relation of the pair's mode (a stack pair: on top; side,
-            // along or auto: beside). Saved in the new form at the next save.
-            int migrated = 0;
-            foreach (PairEntry pe in Pairs)
-            {
-                if (pe.legacyTuned && !pe.TunedFor(pe.Mode))
-                {
-                    pe.SetFor(pe.Mode, pe.legacyA, pe.legacyB);
-                    migrated++;
-                }
-                pe.legacyTuned = false;
-            }
-            if (migrated > 0)
-            {
-                Plugin.Log.LogInfo($"Cargo layout: {migrated} pair(s) read from a version 1 file (one set per pair); they are the relation of their mode now and are written in the new form at the next save.");
-                MarkChanged();
             }
         }
 

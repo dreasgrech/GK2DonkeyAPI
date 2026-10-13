@@ -4,8 +4,8 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`SaddleUp.dll`. Version 0.1.0, for GK2 Donkey API 0.1.0 (API 0.14.0 or newer) and Steam game build 25752683 (game
-1.009).
+`SaddleUp.dll`. Version 0.1.0, for GK2 Donkey API 0.1.0 (API 0.28.0 or newer) and Steam game build 25752683 (game
+1.009 hotfix).
 
 ## Playing
 
@@ -13,7 +13,6 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 |---|---|---|---|
 | **H** | your donkey comes and you ride it; a parked cart stays where you left it (a setting) | get off | leave the cart standing, ride on |
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
-| **J** | – | take the cart in reach | leave the cart standing |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
 | Bell key (B) | – | ring the bell | ring the bell |
 | Send-away key (none by default) | your donkey, cart and foal go (the load is set down first) | the same | the same |

@@ -10,9 +10,9 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.1.0 (API 0.14.0), built and audited against Steam game build 25752683, game 1.009 (Assembly-CSharp MVID
-`f7d46132-…`, LazyBearTechnology `f67c6993-…`; re-audit in
-[`docs/game-update-25676698.md`](../../docs/game-update-25676698.md)).
+Version 0.1.0 (API 0.28.0), built and audited against Steam game build 25752683, game 1.009 hotfix (Assembly-CSharp
+MVID `44edf1a9-…`, LazyBearTechnology `02955186-…`; re-audit in
+[`docs/game-update-25731225.md`](../../docs/game-update-25731225.md)).
 
 - **Every setting and how it works inside the game:** [`docs/reference.md`](../../docs/reference.md).
 - **Design:** [`docs/api-design.md`](../../docs/api-design.md), [`FEASIBILITY.md`](FEASIBILITY.md), and
@@ -26,7 +26,8 @@ donkey NPC and its schedule are untouched.
 Every feature the library has, grouped by area. **Reached by** says how a player or a mod gets at it:
 - **cfg:** a setting in `BepInEx\config\dreas.gk2.donkeyapi.cfg` (the key names are in the reference);
 - **API:** a call in [`docs/api.md`](../../docs/api.md);
-- **panel:** the dev panel (`Debug.TuningWindow = true`, for mod authors);
+- **panel:** the dev panel (for mod authors: the empty marker file `BepInEx\config\dreas.gk2.dev`, then
+  `Debug.TuningWindow = true`; without the marker a player's cfg has no `[Debug]` keys);
 - **always:** built in, no switch.
 
 **Status** is the state of in-game testing as of 2026-10-02: **tested**; **partly** (some of its test list passed);
@@ -175,7 +176,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 
 ### 13. For mod authors: the dev panel
 
-`Debug.TuningWindow = true`, then F11. Tabs: General, Riding, Lantern, Sounds, Colors, Instances, Debug, Sources (where every value comes from and where it is saved).
+the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, then F11. Tabs: General, Riding, Lantern, Sounds, Colors, Instances, Debug, Sources (where every value comes from and where it is saved).
 
 | Feature | Status |
 |---|---|
@@ -196,7 +197,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`.
-3. Start the game once; the log says `GK2 Donkey API 0.1.0 loaded (API 0.14.0); nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.1.0 loaded (API 0.28.0); nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

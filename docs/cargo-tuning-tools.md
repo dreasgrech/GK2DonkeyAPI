@@ -175,7 +175,7 @@ check is low value next to the rest.
     after the pack, bottom up, an untuned layer's origin rests at the nestle on the measured surfaces below (its
     items keep their heights in the layer), an untuned second item is seated on its own, a tuned layer keeps its
     values and is lifted only by a neighbour's real surface, layers above move along. Lift and Rel stay exact.
-    Switch: `[Debug] CargoSeatOnShapes` (Cargo tab, Options, Fallbacks). The coverage analysis stays on boxes (same
+    Switch: `[General] CargoSeatOnShapes` (Cargo tab, Options, Fallbacks; in [Debug] until 2026-10-13: it changes every player's packing, so it isn't a dev setting). The coverage analysis stays on boxes (same
     contacts, fast); the scan packs as the cart does.
   - A first version seated the first ITEM; with a pair layer (crates tuned 12 cm up on the bed) and a lone layer of
     the same contact in one load, the two origins differed by 12 cm, so accepting one moved the other (5 crates).

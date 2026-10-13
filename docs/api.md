@@ -153,7 +153,8 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 
 While mounted the keeper always faces only left or right, like the donkey. That isn't a setting.
 
-**Tuning keys per style.** Find the right values with the core's dev panel: set `Debug.TuningWindow = true` in
+**Tuning keys per style.** Find the right values with the core's dev panel: create the empty marker file
+`BepInEx\config\dreas.gk2.dev` (it unlocks the `[Debug]` keys), set `Debug.TuningWindow = true` in
 `dreas.gk2.donkeyapi.cfg`. Every row there is one of these keys.
 
 | Group | Keys (type) |

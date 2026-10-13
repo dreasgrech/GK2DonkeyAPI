@@ -78,50 +78,6 @@ namespace GK2DonkeyAPI
 
         internal static string SideFile(string slotName) => Path.Combine(SaveSystem.SaveFolder, slotName + ".gk2donkeyapi.dat");
 
-        // ------------------------------------------------------------------ before the rename (2026-10-02)
-        // GK2 Mounts became GK2 Donkey API, and its showcase GK2 Saddle Up!. A slot saved before that has
-        // <slot>.gk2mounts.dat with the old owner ids. It is read when the new file is missing, with the ids mapped,
-        // and the next save writes the new file; the old one is left as it was (and deleted with the slot).
-        internal static string OldSideFile(string slotName) => Path.Combine(SaveSystem.SaveFolder, slotName + ".gk2mounts.dat");
-
-        internal static string MapOldOwner(string owner)
-        {
-            const string oldCore = "dreas.gk2.mounts";
-            if (owner == "dreas.gk2.showcase")
-            {
-                return "dreas.gk2.saddleup";
-            }
-            if (owner == "dreas.gk2.mountsapiprobe")
-            {
-                return "dreas.gk2.donkeyapi.apiprobe";
-            }
-            if (owner == oldCore || owner.StartsWith(oldCore + ".", StringComparison.Ordinal))
-            {
-                return Plugin.Guid + owner.Substring(oldCore.Length); // the panel, the self-tests, the examples
-            }
-            return owner;
-        }
-
-        // An owner id sits in owner, next, parent and data (field 1) and in set (field 2, who set it). Owner ids hold no
-        // tab, line break or backslash, so the escaped field is the id itself. Dormant records are written back from
-        // these lines, so they're mapped here and not after parsing.
-        internal static string MigrateOldLine(string raw)
-        {
-            string[] f = raw.Split('\t');
-            int at = f[0] == "owner" || f[0] == "next" || f[0] == "parent" || f[0] == "data" ? 1 : f[0] == "set" ? 2 : -1;
-            if (at < 0 || at >= f.Length)
-            {
-                return raw;
-            }
-            string mapped = MapOldOwner(f[at]);
-            if (mapped == f[at])
-            {
-                return raw;
-            }
-            f[at] = mapped;
-            return string.Join("\t", f);
-        }
-
         // ------------------------------------------------------------------ owners
 
         // The core and its panel: always there, and allowed to change any instance (the panel is the player's tool).
@@ -393,13 +349,11 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            foreach (string path in new[] { SideFile(slot.slotName), OldSideFile(slot.slotName) })
+            string path = SideFile(slot.slotName);
+            if (File.Exists(path))
             {
-                if (File.Exists(path))
-                {
-                    File.Delete(path);
-                    Plugin.Log.LogInfo($"Persistence: save {slot.slotName} was deleted; so was its side file ({Path.GetFileName(path)}).");
-                }
+                File.Delete(path);
+                Plugin.Log.LogInfo($"Persistence: save {slot.slotName} was deleted; so was its side file ({Path.GetFileName(path)}).");
             }
         }
 
@@ -522,12 +476,6 @@ namespace GK2DonkeyAPI
                 return restored;
             }
             string path = SideFile(slot.slotName);
-            bool fromOld = !File.Exists(path) && File.Exists(OldSideFile(slot.slotName));
-            if (fromOld)
-            {
-                path = OldSideFile(slot.slotName);
-                Plugin.Log.LogInfo($"Persistence: {slot.slotName} has only the side file from before the rename ({Path.GetFileName(path)}); reading it with the old owner ids mapped. The next save writes {Path.GetFileName(SideFile(slot.slotName))}.");
-            }
             if (!File.Exists(path))
             {
                 PersistenceNote = $"Loaded {slot.slotName}: no side file, nothing to restore.";
@@ -538,13 +486,6 @@ namespace GK2DonkeyAPI
             var nexts = new List<string[]>();
             var records = new List<Record>();
             string[] lines = File.ReadAllLines(path, Encoding.UTF8);
-            if (fromOld)
-            {
-                for (int n = 0; n < lines.Length; n++)
-                {
-                    lines[n] = MigrateOldLine(lines[n]);
-                }
-            }
             ParseSideText(lines, header, nexts, records);
 
             header.TryGetValue("format", out string format);

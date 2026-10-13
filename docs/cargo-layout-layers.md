@@ -128,9 +128,8 @@ look right.
 
 - `cargo-layout.cfg` is version 2: a `[pair a+b]` holds `mode` and two relation sets, `beside_a_*/beside_b_*` (both
   places in the layer's frame) and `top_a_*/top_b_*` (b on a, both places as a two-item cart shows them). The repo
-  file was migrated by script (the eight tuned pairs: three became beside sets, five on-top sets, by their mode);
-  a version 1 file is still read, its one set becoming the relation of the pair's mode, and is written in the new
-  form at the next save.
+  file was migrated by script (the eight tuned pairs: three became beside sets, five on-top sets, by their mode).
+  The reader for version 1 files was removed before release (2026-10-13): nothing shipped with that format.
 - `Pack` composes any load from the two relations. Beside: within a layer, the tuned set applied around the layer's
   origin (the floor origin for the bed, the layer's centre above). On top: the new layer's first item over its
   *support*, the item below it overlaps most when placed over the layer's middle (over the middle of a same-class

@@ -460,12 +460,41 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // One write of the cfg at the end instead of one per new key: with SaveOnConfigSet on (BepInEx's default) every
+        // Bind of a key the file doesn't have yet saves the whole file, and a first start binds about 470 keys into a
+        // file that grows past 100 KB (2026-10-13). Afterwards every change is written at once, as before.
         private void Load()
+        {
+            Config.SaveOnConfigSet = false;
+            try
+            {
+                BindAndPatch();
+            }
+            finally
+            {
+                Config.SaveOnConfigSet = true;
+                Config.Save();
+            }
+        }
+
+        private void BindAndPatch()
         {
             Log = Logger;
             Log.LogEvent += (_, __) => Perf.NoteLogLine(); // the panel's log lines per second
             Instance = this;
-            Application.quitting += () => Quitting = true;
+            Application.quitting += () =>
+            {
+                Quitting = true;
+                // A layout edit is written 0.75 s after the last change, from OnGUI: one made just before quitting is written here.
+                try
+                {
+                    CargoLayout.SaveIfDue(now: true);
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning("Cargo layout: saving at quit failed: " + e.Message);
+                }
+            };
             Enabled = Config.Bind("General", "Enabled", true,
                 "Master switch for the mount. GK2 Donkey API does nothing on its own: a mod built on it (such as Saddle Up) summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
@@ -540,31 +569,37 @@ namespace GK2DonkeyAPI
             // General.IdleShuffle and [Shuffle]: standing donkeys without a cart take a few slow steps (IdleShuffle.cs).
             IdleShuffle.Bind(Config);
 
-            TuningWindowEnabled = Config.Bind("Debug", "TuningWindow", false,
+            // The [Debug] keys: in the cfg only with the dev tools unlocked (DevTools.cs), else in a scratch config nobody sees.
+            ConfigFile dbg = DevTools.DebugConfig(Config);
+            TuningWindowEnabled = dbg.Bind("Debug", "TuningWindow", false,
                 "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");
-            TuningWindowKey = Config.Bind("Debug", "TuningWindowKey", KeyCode.F11,
+            TuningWindowKey = dbg.Bind("Debug", "TuningWindowKey", KeyCode.F11,
                 "Hides or shows the tuning panel, e.g. for screenshots. Remembered (TuningWindowHidden): left hidden, it stays hidden after a restart. The game doesn't use F11 on its own (it can't be bound in its controls; Shift+F11 is its Workshop creator). None = no key.");
-            TuningWindowHiddenCfg = Config.Bind("Debug", "TuningWindowHidden", false,
+            TuningWindowHiddenCfg = dbg.Bind("Debug", "TuningWindowHidden", false,
                 "Whether the tuning panel is hidden right now; written as TuningWindowKey toggles it, so the panel comes back the way it was left.");
             TuningWindowHidden = TuningWindowHiddenCfg.Value;
-            TuningWindowScale = Config.Bind("Debug", "TuningWindowScale", 1.5f,
+            TuningWindowScale = dbg.Bind("Debug", "TuningWindowScale", 1.5f,
                 "Overall size of the tuning panel (1 = Unity default, 1.5 suits 1440p). Text and width scale with it.");
-            TuningWindowFontScale = Config.Bind("Debug", "TuningWindowFontScale", 1f,
+            TuningWindowFontScale = dbg.Bind("Debug", "TuningWindowFontScale", 1f,
                 "Text size inside the tuning panel, relative (1 = normal). Lower it so long rows fit.");
-            TuningWindowWidth = Config.Bind("Debug", "TuningWindowWidth", 470f,
+            TuningWindowWidth = dbg.Bind("Debug", "TuningWindowWidth", 470f,
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
-            CargoNudgeUp = Config.Bind("Debug", "CargoNudgeUp", KeyCode.KeypadPlus, "Cargo tab: moves the last slider dragged up by 0.01 (Shift: 0.05).");
-            CargoNudgeDown = Config.Bind("Debug", "CargoNudgeDown", KeyCode.KeypadMinus, "Cargo tab: moves the last slider dragged down by 0.01 (Shift: 0.05).");
-            CargoSeatOnShapes = Config.Bind("Debug", "CargoSeatOnShapes", true,
+            CargoNudgeUp = dbg.Bind("Debug", "CargoNudgeUp", KeyCode.KeypadPlus, "Cargo tab: moves the last slider dragged up by 0.01 (Shift: 0.05).");
+            CargoNudgeDown = dbg.Bind("Debug", "CargoNudgeDown", KeyCode.KeypadMinus, "Cargo tab: moves the last slider dragged down by 0.01 (Shift: 0.05).");
+            CargoSeatOnShapes = Config.Bind("General", "CargoSeatOnShapes", true,
                 "Upper layers of cargo rest on the items' measured shapes (cargo-shapes.cfg) instead of their boxes: a layer on a round log or a zombie sits on it, not on its box. Tuned contacts keep their values. Off: the boxes only.");
             CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();
-            CargoTabTint = Config.Bind("Debug", "CargoTabTint", true,
+            CargoTabTint = dbg.Bind("Debug", "CargoTabTint", true,
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
-            SelfTestSpot = Config.Bind("Debug", "SelfTestSpot", "",
+            SelfTestSpot = dbg.Bind("Debug", "SelfTestSpot", "",
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
-            TuningKeys = Config.Bind("Debug", "TuningKeys", false,
+            TuningKeys = dbg.Bind("Debug", "TuningKeys", false,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
 
+            if (DevTools.Unlocked)
+            {
+                Log.LogInfo("Dev tools unlocked by " + DevTools.How + ": the [Debug] keys are in the cfg (Debug.TuningWindow is the panel).");
+            }
             DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
                 "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
 
@@ -654,7 +689,8 @@ namespace GK2DonkeyAPI
                 HeldItemProbe.Write();
             }
             // Plain key only: Shift+F11 opens the game's Workshop creator (when enabled), so leave that combination to it.
-            if (TuningWindowKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(TuningWindowKey.Value)
+            // Only with the panel switched on: with it off the key did nothing visible but still wrote TuningWindowHidden.
+            if (TuningWindowEnabled.Value && TuningWindowKey.Value != KeyCode.None && UnityInput.Current.GetKeyDown(TuningWindowKey.Value)
                 && !UnityInput.Current.GetKey(KeyCode.LeftShift) && !UnityInput.Current.GetKey(KeyCode.RightShift))
             {
                 TuningWindowHidden = !TuningWindowHidden;
@@ -677,19 +713,6 @@ namespace GK2DonkeyAPI
             {
                 Log.LogError($"Mount update failed; dismounting. {e}");
                 Mount.ForceCleanup("error");
-            }
-        }
-
-        // A layout edit is written 0.75 s after the last change, from OnGUI: one made just before quitting is written here.
-        private void OnApplicationQuit()
-        {
-            try
-            {
-                CargoLayout.SaveIfDue(now: true);
-            }
-            catch (Exception e)
-            {
-                Log.LogWarning("Cargo layout: saving at quit failed: " + e.Message);
             }
         }
 

@@ -46,7 +46,7 @@ namespace GK2DonkeyAPI
         internal static bool Showing()
         {
             bool inGame = Mount.IsMounted || (MainGame.Instance != null && MainGame.PlayerData != null);
-            return inGame && Plugin.TuningWindowEnabled.Value && !Plugin.TuningWindowHidden && !CargoSheet.Running;
+            return inGame && DevTools.Unlocked && Plugin.TuningWindowEnabled.Value && !Plugin.TuningWindowHidden && !CargoSheet.Running;
         }
 
         public static void Draw()

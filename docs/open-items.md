@@ -292,12 +292,12 @@ closed):
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after
   "Dismounted (indoors)". That's harmless now it no longer blocks the way, but it could be parked a little off the
   door if it looks odd.
-- **"Take from cart" and the several-items perk:** load-on-foot is built (API 0.12.0) but not tested in game; the
-  zone outlines are still on for testing ([load-on-foot.md](load-on-foot.md)).
+- **"Take from cart" and the several-items perk:** load-on-foot is built (API 0.12.0) but not tested in game. The
+  zone outlines draw only while the dev panel shows (`InstanceControls.MeasureZones`), so players never see them.
 - **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
 - **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
   component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
-- **`dist/` at release:** rebuild here, and in GK2QOLMods, where it's stale.
+- **`dist/` at release:** rebuilt 2026-10-13 in both repos ([release-checklist.md](release-checklist.md)); rebuild again after any change.
 - **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;
   it could use the API's key actions instead.
 - **Earlier showcase tests:** zombie, scene-door and save-while-mounted tests, and the persistence check J8

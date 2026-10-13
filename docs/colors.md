@@ -195,7 +195,7 @@ no `[panel]` lines in the log afterwards. The `[panel]` logging stays, at most o
 
 ## Test list (game closed until then; the DLL is deployed)
 
-With `Debug.TuningWindow = true` in `dreas.gk2.donkeyapi.cfg`, mount (the showcase: H or G) and open the **Colors** tab.
+With the dev tools unlocked (the marker file `BepInEx\config\dreas.gk2.dev`, or the sources on this machine) and `Debug.TuningWindow = true` in `dreas.gk2.donkeyapi.cfg`, mount (the showcase: H or G) and open the **Colors** tab.
 
 1. **Nothing changes by default:** mount and look. The log has `Colors: attached; N sprites (…), M cart meshes.`
    Nothing looks different from before.
