@@ -7,7 +7,7 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 | [GK2 Saddle Up!](src/SaddleUp/README.md) | 0.9.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. |
 | [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.28.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
-Both are built and audited against Steam game build 25752683 (game 1.009).
+Both are built and audited against Steam game build 25910882 (game 1.010).
 
 Until 2026-10-02 the two were called GK2 Mounts and GK2 Showcase, and lived in the
 [GK2QOLMods](https://github.com/dreasgrech/GK2QOLMods) repo. Their history came along: `git log --follow` works

@@ -78,9 +78,11 @@ Run 2026-10-13 with the 0.28.0 dist, without the framework and with a stock `Bep
 layout `from embedded`, the save's donkey and foals restored, ride, cart, two logs loaded, a dismount at a build desk;
 no warning, error or exception in 101 log lines; the fresh cfgs at defaults; no new file in the BepInEx folder.
 Second run the same day with the marker-file lock built: cart, ride, two logs loaded; 132 lines, no warning or error,
-no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scratch cfg file written.
+no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scratch cfg file written. Both runs
+were on the 1.009-hotfix dist; the 1.010 dist of the same evening (pins only: `docs/game-update-25910882.md`) has
+not been rehearsed.
 
 ## 6. Hand-off
 
-The user commits and tags; the release notes name the game build (`25752683`, 1.009 hotfix as of 2026-10-13) and
+The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13) and
 what `docs/open-items.md` still lists as unseen in game.
