@@ -509,7 +509,7 @@ namespace GK2DonkeyAPI
                 "Zombies ride on the cart like any other load (as many as it holds), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
             CargoChest = Config.Bind("General", "CargoChest", Defaults.Get("General", "CargoChest", true),
                 "A plain storage chest (rough, normal or good) rides on the cart: the action key on it while driving lifts it, contents and all; the interact key with nothing in front sets it down. Nothing else rides with it. Off: chests stay where they are.");
-            CartSlots = Config.Bind("General", "CartSlots", Defaults.Get("General", "CartSlots", 2),
+            CartSlots = Config.Bind("General", "CartSlots", Defaults.Get("General", "CartSlots", 6),
                 new ConfigDescription("How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers), 6 (three layers). Applied to every cart at once. A cart holding more than the new number stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
             CartSlots.Entry.SettingChanged += (_, __) => Mount.ApplyCartSlots("the setting changed");
             CorpseIntoMorgue = Config.Bind("General", "CorpseIntoMorgue", Defaults.Get("General", "CorpseIntoMorgue", true),

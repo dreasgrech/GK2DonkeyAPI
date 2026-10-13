@@ -281,7 +281,7 @@ closed):
   0.28.0): `CartSlots` (2 / 4 / 6 in Saddle Up's "Cart capacity"), the packer in layers of two, the door re-add and
   the chest restore fixed, self-tested. To check in game: four crates, four logs, two bodies and two logs, four
   zombies (the lantern pole, the rider), the two-item pictures unchanged, a door and a save with four aboard. Then
-  decide the shipped default (2 now) and whether the Carrier perk should count (option B, not built).
+  the shipped default is 6 (decided 2026-10-13; 2 before) and whether the Carrier perk should count (option B, not built).
 - **Tuning stacks by hand** ([cargo-layout-layers.md](cargo-layout-layers.md), investigated 2026-10-10): a pair entry
   holds one relation (beside or on top), so six logs need both. Recommended: both relations per pair as the unit
   of tuning, support-aware placement, relation blocks and an isolate button on the panel, the sheet picturing

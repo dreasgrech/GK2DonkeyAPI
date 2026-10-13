@@ -57,7 +57,7 @@ Every feature the library has, grouped by area. **Reached by** says how a player
 | Feature | Reached by | Status |
 |---|---|---|
 | **The cart is the keeper's hands:** anything he picks up while driving goes onto the cart: logs, stone, ore, crates, sacks, corpses, from the ground, piles, pallets and tables. | always (feature `Cargo`) | tested |
-| **Two items,** like the game's own delivery cart, or four or six in layers of two (`CartSlots`, 2 by default; [`docs/cart-capacity.md`](../../docs/cart-capacity.md)). A full cart puts a ground pickup back ("The cart is full."). | cfg `CartSlots` | two items tested; the layers self-tested, their look in game pending |
+| **Six items** in layers of two, or four, or two like the game's own delivery cart (`CartSlots`, 6 by default since 2026-10-13; [`docs/cart-capacity.md`](../../docs/cart-capacity.md)). A full cart puts a ground pickup back ("The cart is full."). | cfg `CartSlots` | two items tested; the layers self-tested, their look in game pending |
 | **The game takes from the cart:** piles, pallets, tables, graves and quest hand-ins take their items from the cart as if he held them. | always | tested |
 | **Setting down:** the interact key with nothing in front sets the top item down, behind the cart (the game's own drop-spot search, avoiding walls, water and other drops), so the next press sets the next one down. | cfg, API | tested |
 | **Hands stay empty while mounted:** what he holds when mounting goes onto the cart or is set down first; in Ride style the game refuses pickups and ground items show no outline. | always | tested |

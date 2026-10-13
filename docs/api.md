@@ -57,7 +57,7 @@ does.
 | `RingBell()`, `Bray()` | Sounds, subject to the `Sounds` and `Bell` features. |
 
 **While mounted, the keeper's hands stay empty.** Only the cart carries:
-- in Cart style, pickups land on the cart (`CartSlots` slots: 2 by default, up to 6, three and more in layers);
+- in Cart style, pickups land on the cart (`CartSlots` slots: 6 by default, 1 to 6, three and more in layers);
 - in Ride style, or with `Cargo` switched off, the game refuses pickups, and ground items show no outline;
 - whatever he holds when mounting goes onto the cart, or is set down first.
 

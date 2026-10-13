@@ -75,6 +75,8 @@ Rehearse the first start on a clean config, with the game closed:
 Run 2026-10-13 with the 0.28.0 dist, without the framework and with a stock `BepInEx.cfg`: all seven plugins loaded,
 layout `from embedded`, the save's donkey and foals restored, ride, cart, two logs loaded, a dismount at a build desk;
 no warning, error or exception in 101 log lines; the fresh cfgs at defaults; no new file in the BepInEx folder.
+Second run the same day with the marker-file lock built: cart, ride, two logs loaded; 132 lines, no warning or error,
+no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scratch cfg file written.
 
 ## 6. Hand-off
 

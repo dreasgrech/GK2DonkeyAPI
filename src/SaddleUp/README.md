@@ -20,7 +20,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 - **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
   press H or G anywhere: it comes to you.
 - **It's kept with the save:** after loading, it's where you left it, the load on the cart.
-- **The cart carries two items** (four or six with "Cart capacity", in layers). Anything you pick up while driving goes onto it; piles, tables, graves and quest
+- **The cart carries six items** in three layers of two (two or four with "Cart capacity"). Anything you pick up while driving goes onto it; piles, tables, graves and quest
   hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
 - **You're faster while mounted**, and you get off by yourself for work, ladders, building, fishing, fighting and
   sleep, and at building doors. Chests and the inventory keep you mounted.
@@ -43,7 +43,7 @@ All of these apply at once:
 | | Say why mounting is refused | on | The keeper's thought bubble. |
 | | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies. |
 | | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
-| | Cart capacity | 2 items | How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers) or 6 (three). Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded. |
+| | Cart capacity | 6 items | How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded. |
 | | Carry the corpse into the morgue | on | Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse. Off: it stays on the cart. |
 | | Shuffles while standing | on | Left without its cart, your donkey takes a few slow steps now and then. |
 | | Keep the donkey with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |

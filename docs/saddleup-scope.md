@@ -98,7 +98,7 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | **Carrying zombies** | Built and tested 2026-10-05 (API 0.22.0, the toggle "Zombies ride on the cart"): two at once, handed to their work from the cart ([zombies-on-cart.md](zombies-on-cart.md)). Positions tuned in the panel. |
 | **The door bug** (2026-10-02) | The donkey parked on the doorstep after "Dismounted (indoors)" shut the keeper in the doorway. Likely cause found 2026-10-03: navmesh cuts and holes the donkey views left behind; removed and measured in API 0.18.0, to test ([foals-indoors.md](foals-indoors.md)). |
 | **A corpse into the morgue** (2026-10-10) | Built (API 0.27.0, the toggle "Carry the corpse into the morgue", on): the ride ends at the morgue door as always, the body comes off the parked cart into the keeper's hands. Self-tested (the rule and the hand-over) and the door tested by hand the same day: the body was in his hands before the screen came back. |
-| **Cart capacity** (2026-10-10) | Built (API 0.28.0, the Steps row "Cart capacity": 2 / 4 / 6 items, default 2): each cart's slots from `CartSlots`, three and more items in layers of up to two. Self-tested; the layered look in game is a hand test, and the shipped default is decided after it ([cart-capacity.md](cart-capacity.md)). |
+| **Cart capacity** (2026-10-10) | Built (API 0.28.0, the Steps row "Cart capacity": 2 / 4 / 6 items, default 6 since 2026-10-13): each cart's slots from `CartSlots`, three and more items in layers of up to two. Self-tested; the layered look in game is a hand test, and the shipped default is decided after it ([cart-capacity.md](cart-capacity.md)). |
 
 ## 6. Optional extras (decide)
 
