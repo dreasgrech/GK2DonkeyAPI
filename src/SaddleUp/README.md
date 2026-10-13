@@ -4,7 +4,7 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`SaddleUp.dll`. Version 0.1.0, for GK2 Donkey API 0.28.0 or newer and Steam game build 25752683 (game
+`SaddleUp.dll`. Version 0.9.0, for GK2 Donkey API 0.28.0 or newer, and Steam game build 25752683 (game
 1.009 hotfix).
 
 ## Playing

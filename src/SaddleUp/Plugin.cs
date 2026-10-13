@@ -12,15 +12,17 @@ namespace SaddleUp
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs.
     [BepInPlugin(Guid, "GK2 Saddle Up!", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.28.0")]
+    [BepInDependency("dreas.gk2.donkeyapi", "0.28.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
-        public const string Version = "0.1.0";
+        // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
+        // mod was written against.
+        public const string Version = "0.9.0";
 
         // The API this mod is written against: 0.28 has the CartSlots behaviour key (0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22
         // CargoZombies). Checked before anything of the API is used, so an older API gets a clear message instead of a
-        // missing-method error.
+        // missing-method error. Keep it the same as the BepInDependency minimum above.
         private static readonly Version NeedsApi = new Version(0, 28, 0);
 
         private void Awake()
