@@ -351,7 +351,9 @@ namespace GK2DonkeyAPI
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.donkeyapi";
-        public const string Version = "0.1.0";
+        // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
+        // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
+        public const string Version = "0.28.0";
 
         // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
         private static readonly System.Guid AuditedGameMvid = new System.Guid("44edf1a9-b9b5-4276-a731-a680e9e9c44d");
@@ -655,7 +657,7 @@ namespace GK2DonkeyAPI
             Perf.AllocBySection = TuningWindowEnabled.Value;
             MainGame.OnGameStarted = (Action)Delegate.Combine(MainGame.OnGameStarted, new Action(Mount.OnGameStarted));
             PlayerController.OnPlayerTeleported += Mount.OnKeeperTeleported; // foals indoors (FoalsIndoors.cs)
-            Log.LogInfo($"GK2 Donkey API {Version} loaded (API {Mounts.ApiVersion}); nothing happens until a mod uses it.");
+            Log.LogInfo($"GK2 Donkey API {Version} loaded; nothing happens until a mod uses it.");
         }
 
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.

@@ -6,8 +6,8 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.1.0 (API 0.28.0) | 25752683 (1.009 hotfix), built 2026-10-13 |
-| `SaddleUp.dll` | 0.1.0 (needs API 0.28.0 or newer) | 25752683 (1.009 hotfix), built 2026-10-13 |
+| `GK2DonkeyAPI.dll` | 0.28.0 | 25752683 (1.009 hotfix), built 2026-10-13 |
+| `SaddleUp.dll` | 0.1.0 (needs GK2 Donkey API 0.28.0 or newer) | 25752683 (1.009 hotfix), built 2026-10-13 |
 
 Players install both into `BepInEx\plugins`. Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
 

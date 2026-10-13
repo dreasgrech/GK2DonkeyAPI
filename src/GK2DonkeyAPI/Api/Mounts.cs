@@ -50,8 +50,9 @@ namespace GK2DonkeyAPI.Api
     // rules added here can refuse more, never allow what the core refuses (co-op, indoors, busy, building, saves).
     public static class Mounts
     {
-        // The API's own version, separate from the mod version: minor for additions, major for breaking changes.
-        public static readonly Version ApiVersion = new Version(0, 28, 0);
+        // The API's version, the same number as the mod's (Plugin.Version is the one place): minor for additions, major
+        // for breaking changes.
+        public static readonly Version ApiVersion = new Version(Plugin.Version);
 
         // False when the core is switched off (General.Enabled) or disabled itself after a game update.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;

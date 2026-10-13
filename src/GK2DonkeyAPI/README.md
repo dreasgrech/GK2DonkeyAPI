@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.1.0 (API 0.28.0), built and audited against Steam game build 25752683, game 1.009 hotfix (Assembly-CSharp
+Version 0.28.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25752683, game 1.009 hotfix (Assembly-CSharp
 MVID `44edf1a9-…`, LazyBearTechnology `02955186-…`; re-audit in
 [`docs/game-update-25731225.md`](../../docs/game-update-25731225.md)).
 
@@ -197,7 +197,7 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`.
-3. Start the game once; the log says `GK2 Donkey API 0.1.0 loaded (API 0.28.0); nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.28.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

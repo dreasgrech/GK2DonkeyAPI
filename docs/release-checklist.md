@@ -8,7 +8,8 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   lines from our plugins).
 - No pre-release migration code is left in (nothing has shipped, so there is nothing to migrate from). Removed
   2026-10-13: the `.gk2mounts.dat` side-file reader and the cargo-layout version-1 reader.
-- `Mounts.ApiVersion` (`Api/Mounts.cs`) matches what Saddle Up asks for (`NeedsApi` in `src/SaddleUp/Plugin.cs`)
+- `Plugin.Version` is the mod's one version (the plugin's and `Mounts.ApiVersion`, which reads it); bump it with every
+  API change. Saddle Up asks for it twice (`NeedsApi` and the `BepInDependency` minimum in `src/SaddleUp/Plugin.cs`),
   and `tests/ApiSurface` is green (its snapshot is the public API).
 - The audited game: `AuditedGameMvid` / `AuditedLazyBearMvid` in `src/GK2DonkeyAPI/Plugin.cs` are the installed
   game's (`tests/GameDiff` after any update; the audit notes are `docs/game-update-*.md`).
@@ -67,7 +68,7 @@ Rehearse the first start on a clean config, with the game closed:
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
 2. Put the two `dist/` DLLs into `BepInEx\plugins` over the dev builds.
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API 0.1.0 loaded (API x.y.z)`, `GK2 Saddle Up! 0.1.0 loaded`,
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up! 0.1.0 loaded`,
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).

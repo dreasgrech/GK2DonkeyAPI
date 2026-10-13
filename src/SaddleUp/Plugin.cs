@@ -12,7 +12,7 @@ namespace SaddleUp
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs.
     [BepInPlugin(Guid, "GK2 Saddle Up!", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.1.0")]
+    [BepInDependency("dreas.gk2.donkeyapi", "0.28.0")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";

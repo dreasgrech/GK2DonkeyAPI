@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.14.0** (`Mounts.ApiVersion`). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.28.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -16,7 +16,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ```csharp
 [BepInPlugin("you.gk2.mymod", "My Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.1.0")]           // hard: your mod needs the core
+[BepInDependency("dreas.gk2.donkeyapi", "0.28.0")]          // hard: your mod needs the core, at least this version
 public class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -631,7 +631,8 @@ so on. The full survey is in `docs/api-design.md`.
 
 ## Versioning
 
-- `ApiVersion` is separate from the mod version.
+- `ApiVersion` is the mod's version: one number (`Plugin.Version`), shown by BepInEx and read by your mod. Until
+  2026-10-13 the plugin was 0.1.0 with the API counted apart.
 - New members bump the minor version, and a change to existing members bumps the major.
 - **Before 1.0**, a breaking change bumps the minor, as semver allows for 0.x, and it's listed here:
   - **0.4.0:** `Mounts.BuiltInKeyOwner` was removed (the core has no keys), and `MountTuning.Style` became
