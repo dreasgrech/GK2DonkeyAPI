@@ -194,7 +194,7 @@ namespace GK2DonkeyAPI
             public Vector3 Top;    // when stacked on top
             public bool HasAlone;  // alone on the cart: Alone instead of Base
             public Vector3 Alone;
-            public Vector3 OnPair; // alone on top of a pair (a lone item on an upper layer): an extra offset, in that layer only
+            public Vector3 OnPair; // alone on top of a pair (a lone item on an upper layer, placed over the middle of the two below): an extra offset, in that layer only
             public bool HasOnPair; // alone on a pair accepted or tuned (all three onpair_* written, zeros included)
             public bool OnPairTuned => HasOnPair || OnPair != Vector3.zero;
             public bool IsEmpty => Base == Vector3.zero && Top == Vector3.zero && OnPair == Vector3.zero && !HasAlone && !HasOnPair;

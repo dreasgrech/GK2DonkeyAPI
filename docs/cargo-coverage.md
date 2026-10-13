@@ -19,7 +19,8 @@ occurs in:
 
 - `x on y`: an item (and its layer) on the layer below; y is the support, the layer below's first item.
 - `x beside y`: two items in one layer (across, or end to end).
-- `x alone on a pair`: an item lying alone on top of a pair (its class's `onpair_*` offset).
+- `x alone on a pair`: an item lying alone on top of a pair: over the middle of the two below, plus its class's
+  `onpair_*` offset.
 - `x alone`: the only item on the cart (`alone_*`).
 
 So the work is the contacts (a few dozen), not the loads. The tools count them.
@@ -38,8 +39,13 @@ Then:
 
 - **The covering set**: the fewest loads that together show every contact (greedy: the load adding the most contacts
   not shown yet, ties to fewer items). On the six test classes: 9 loads for 37 contacts.
-- **Tune next**: the untuned contacts, most used first, with how many loads each one *completes* (loads where it is
-  the last untuned contact).
+- **Tune next**: the untuned contacts in the order to tune them: *ready* ones first (a load exists where it is the
+  only untuned contact, `SmallestReady`; Load puts that load on the cart, so each step tunes one thing on top of tuned
+  ones), then up the ladder alone, beside, on, alone on a pair (effects run upward only: a beside relation moves every
+  layer above it, an on relation its layer and above, an alone-on-a-pair offset one item, alone nothing else), then the
+  most used; with how many loads each one *completes* (loads where it is the last untuned contact). The Cargo tab
+  shows the ladder over "Tune this load" with this load's kinds lit, and a box whose load still has an untuned
+  contact lower on the ladder says "tune first: ...".
 - **Loads fully tuned**: loads with no untuned contact, overall and per size.
 - **Tunings no load uses**: a tuned on-top or beside relation of a pair whose classes never meet that way, an onpair
   offset on a class that never lies alone on a pair (a zombie: everything under a zombie is a zombie, and zombies
@@ -66,7 +72,9 @@ Not covered: the chests (a chest on the cart is the portable chest, a class of i
     loads in the Cargo tab's colours. Roughly 100 pictures.
   - *Photograph every load* (`all.html`, `all__*.jpg`): all 1,715 loads in the Cargo tab's colours, each with its
     contacts as green (tuned) / red (fallbacks) chips; filters: number of items, contains a class, contains a
-    contact, only loads with an untuned contact; picture width. A few minutes.
+    contact, only loads with an untuned contact; number of columns (the grid fills the window). The page keeps
+    its filters, columns, the folded legend and the scroll position in the browser (local storage), so a refresh
+    after a new run shows the same view. A few minutes.
 
 The photo runs need Cart style and an empty cart (like the pair sheet), raise the cart to six slots for the run, make
 up to six stand-in zombies (removed again at the end; loads needing more than were made are left out and noted),

@@ -17,7 +17,8 @@ void Check(bool ok, string what)
 bool Near(Vector3 a, Vector3 b, float eps = 1e-4f) => Mathf.Abs(a.x - b.x) <= eps && Mathf.Abs(a.y - b.y) <= eps && Mathf.Abs(a.z - b.z) <= eps;
 string V(Vector3 v) => $"({v.x:0.000}, {v.y:0.000}, {v.z:0.000})";
 
-if (args.Contains("--real")) return Real.Run(Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"), args.Contains("--verbose"));
+// --cfg <path>: another layout file (a scratch copy for an experiment); the shapes file is looked for next to it
+if (args.Contains("--real")) return Real.Run(Array.IndexOf(args, "--cfg") is int ca && ca >= 0 && ca + 1 < args.Length ? args[ca + 1] : Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"), args.Contains("--verbose"));
 
 // The size classes (tools/cargo-sheet/out/shapes.html): x along, y up, z across.
 var boxes = new Dictionary<string, Vector3>

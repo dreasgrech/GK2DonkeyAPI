@@ -97,6 +97,23 @@ static class Real
             CargoShapes.Shape ShapeOf(string id) => CargoShapes.ByClass(C(id));
             // the cart packs with the measured shapes (the seat pass), unless --boxes
             if (!Environment.GetCommandLineArgs().Contains("--boxes")) L.ShapeOf = ShapeOf;
+            // --show wood,wood,wood;box_beer,box_beer,box_beer,box_beer : the pack of each load, item by item (a look at the
+            // numbers the game would place: layer, relation, partner, target, layer origin, lift), then back to the scan.
+            int showAt = Array.IndexOf(Environment.GetCommandLineArgs(), "--show");
+            if (showAt >= 0 && showAt + 1 < Environment.GetCommandLineArgs().Length)
+            {
+                foreach (string loadText in Environment.GetCommandLineArgs()[showAt + 1].Split(';'))
+                {
+                    var ids = loadText.Split(',').Select(x => x.Trim()).Where(x => x.Length > 0).ToList();
+                    var input = ids.Select((id, j) => new CargoPacker.Item { Id = id, Box = Box[C(id)], LoadOrder = j }).ToList();
+                    var r = CargoPacker.Pack(input, S, L);
+                    Console.WriteLine($"-- {string.Join(" + ", ids.Select(i => Name[C(i)]))}: {r.Note}");
+                    for (int i = 0; i < r.Count; i++)
+                    {
+                        Console.WriteLine($"   {i} {Name[C(r.Id[i])],-10} layer {r.Layer[i] + 1} {r.Relation[i],-5} partner {r.Partner[i],2} {(r.Tuned[i] ? "tuned" : "auto ")}  target ({r.Target[i].x,6:0.000} {r.Target[i].y,6:0.000} {r.Target[i].z,6:0.000})  origin ({r.Origin[i].x,6:0.000} {r.Origin[i].y,6:0.000} {r.Origin[i].z,6:0.000})  lift {r.Lift[i]:0.000}");
+                    }
+                }
+            }
             void RestoreLayout(string text)
             {
                 CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear();
@@ -181,6 +198,74 @@ static class Real
                 }
                 RestoreLayout(start1);
                 Console.WriteLine((bmoved == 0 ? "PASS" : "FAIL") + $" touching one beside box moves nothing ({brows} rows, {bmoved} moved)");
+            }
+            // A lone item on a pair sits over the middle of the two below (footprint centres) plus its class's alone-on-a-pair
+            // offset, in every load, tuned or not.
+            {
+                int lone = 0, off = 0;
+                foreach (var ld in rep.Loads.Where(l => l.Classes.Length >= 3))
+                {
+                    var input = ld.Classes.Select((cl, j) => new CargoPacker.Item { Id = reps[cl], Box = Box[reps[cl]], LoadOrder = j }).ToList();
+                    var r = CargoPacker.Pack(input, S, L);
+                    for (int i = 1; i < r.Count; i++)
+                    {
+                        if (r.Relation[i] != "on") continue;
+                        int inLayer = 0, bs = -1, be = -1;
+                        for (int k = 0; k < r.Count; k++)
+                        {
+                            if (r.Layer[k] == r.Layer[i]) inLayer++;
+                            if (r.Layer[k] == r.Layer[i] - 1) { if (bs < 0) bs = k; be = k; }
+                        }
+                        if (inLayer != 1 || be == bs) continue;
+                        lone++;
+                        var e = ForItem(r.Id[i]);
+                        Vector3 op = e != null ? e.OnPair : Vector3.zero;
+                        float mx = (r.Target[bs].x + r.Target[be].x) * 0.5f + op.x, mz = (r.Target[bs].z + r.Target[be].z) * 0.5f + op.z;
+                        if (Mathf.Abs(r.Target[i].x - mx) > 1e-4f || Mathf.Abs(r.Target[i].z - mz) > 1e-4f)
+                        {
+                            off++;
+                            if (verbose) Console.WriteLine($"    {rep.Describe(ld.Classes)}: {Name[C(r.Id[i])]} at ({r.Target[i].x:0.000}, {r.Target[i].z:0.000}), the middle ({mx:0.000}, {mz:0.000})");
+                        }
+                    }
+                }
+                Console.WriteLine((off == 0 ? "PASS" : "FAIL") + $" a lone item on a pair sits over the pair's middle plus its offset ({lone} cases, {off} off)");
+            }
+            // Accept from three, then four: for every same-class pair that lies beside and takes a third on top, with its on-top
+            // relation taken away (as a Reset does), Accept from a + a + a must give a + a + a + a its upper pair straight over the
+            // lower one (plus the layer shift), the lone third centred, and the three-item load unmoved by the Accept.
+            {
+                string start2 = CargoLayout.ToText();
+                int cases = 0, badAccept = 0;
+                foreach (string a in reps)
+                {
+                    RestoreLayout(start2);
+                    var pr = ForPair(a, a);
+                    if (pr == null) continue;
+                    pr.ClearFor("stack");
+                    var in3 = Enumerable.Range(0, 3).Select(j => new CargoPacker.Item { Id = a, Box = Box[a], LoadOrder = j }).ToList();
+                    var in4 = Enumerable.Range(0, 4).Select(j => new CargoPacker.Item { Id = a, Box = Box[a], LoadOrder = j }).ToList();
+                    var r3 = CargoPacker.Pack(in3, S, L);
+                    if (r3.Relation[1] == "on" || r3.Relation[2] != "on" || r3.Tuned[2]) continue; // only pairs that lie beside and take a third on top
+                    cases++;
+                    var eq = ForItem(a);
+                    CargoPacker.FreezeOnTop(pr, FirstIsA(pr, a, a), eq != null ? eq.Base : Vector3.zero, r3.Rel(2));
+                    CargoPacker.FreezeLayerArrangement(r3, 2, L, (x, y) => ForPair(x, y));
+                    var r3b = CargoPacker.Pack(in3, S, L);
+                    var r4 = CargoPacker.Pack(in4, S, L);
+                    bool unmoved = Enumerable.Range(0, 3).All(k => (r3b.Target[k] - r3.Target[k]).magnitude < 0.0005f) && r3b.Tuned[2];
+                    bool straight = r4.Count == 4 && r4.Layer[2] == 1 && r4.Layer[3] == 1
+                        && Mathf.Abs(r4.Target[2].x - (r4.Target[0].x + S.LayerShift)) < 1e-4f && Mathf.Abs(r4.Target[2].z - r4.Target[0].z) < 1e-4f
+                        && Mathf.Abs(r4.Target[3].x - (r4.Target[1].x + S.LayerShift)) < 1e-4f && Mathf.Abs(r4.Target[3].z - r4.Target[1].z) < 1e-4f;
+                    Vector3 op = eq != null ? eq.OnPair : Vector3.zero;
+                    bool centred = Mathf.Abs(r3b.Target[2].x - ((r3b.Target[0].x + r3b.Target[1].x) * 0.5f + op.x)) < 1e-4f && Mathf.Abs(r3b.Target[2].z - ((r3b.Target[0].z + r3b.Target[1].z) * 0.5f + op.z)) < 1e-4f;
+                    if (!(unmoved && straight && centred))
+                    {
+                        badAccept++;
+                        Console.WriteLine($"    {Name[a]}: unmoved {unmoved}, four straight {straight} (upper {r4.Target[2].x:0.000}/{r4.Target[3].x:0.000} over {r4.Target[0].x:0.000}/{r4.Target[1].x:0.000}), lone centred {centred}");
+                    }
+                }
+                RestoreLayout(start2);
+                Console.WriteLine((badAccept == 0 ? "PASS" : "FAIL") + $" Accept from a + a + a stacks a + a + a + a straight and leaves the lone third centred ({cases} pairs, {badAccept} bad)");
             }
             // How long a pack takes with and without the seat pass (the cart packs on every change, every frame of a drag)
             {

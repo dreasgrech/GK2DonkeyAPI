@@ -244,3 +244,87 @@ check is low value next to the rest.
     the first slider move freezes it with the layer).
   - Loads with something floating or sinking: 452 -> 385. The remainder is above all untuned contacts on zombies and
     corpses (rounded tops) and the low crate's alone-on-a-pair +0.13.
+
+- 2026-10-12 (evening), **built from the investigation below**, all offline suites pass (14,013 / 13,991 /
+  `--real --thorough`: touch one box, accept 1,708 loads, Seat it 28/28, plus two new checks):
+  - Packer: an untuned layer over a pair starts at the layer below's origin (+ layer shift), same-class and mixed
+    pairs alike; Accept from a + a + a now writes the straight-over value (check: 4 beside-pairs, a + a + a + a straight,
+    the three-item load unmoved). A lone item on a pair sits over the middle of the two below plus its class's
+    `onpair_*` correction (check: 866 lone-on-a-pair cases in the 1,715 loads, all at the middle). `Origin` and `Rel`
+    unchanged, so every stored on-top relation and every tuned pair-on-pair load stays where it was.
+  - Layout file: the sideways `onpair_along/across` values (tall crate -0.34 / 0.02, log 0.01, low crate 0.02) set to
+    0; the two `onpair_up` values kept. Judged scan 385 -> 379 loads.
+  - Coverage / tab: `Contact.SmallestReady` (the smallest load where it is the only untuned contact) and `Ready`;
+    Tune next orders ready first, then up the ladder (`KindRank`: alone, beside, on, alone on a pair), then by use;
+    Load / next put `LoadToTune` on the cart. The "1 item / 2 items / 3 or more" chips are the ladder with this
+    load's kinds lit; a box whose load has an untuned contact lower on the ladder says "tune first: ...".
+  - PackerScan: `--show "a,b;c,d,e"` prints packs item by item; `--cfg <path>` runs the real scan on another file.
+
+## Investigation 2026-10-12 (evening): a lone item on a pair, and the order of tuning
+
+Asked: three tall crates (a pair with one on top) should show the top crate between the two below, four crates should
+stack straight over the pair, and moving either box for the lone crate seemed to spoil the other case. Also: in
+which order should contacts be tuned, and does work on big loads change small ones?
+
+Tools used: `PackerScan --real --show "a,b,c;d,e,f"` (new) prints the pack of named loads item by item (layer,
+relation, partner, target, layer origin, lift); `--cfg <path>` (new) runs the real scan on another layout file (a
+scratch copy for an experiment; the shapes file is looked for next to it). The game saves straight into the repo's
+`cargo-layout.cfg`, so the repo copy is the live layout.
+
+### What the packer does with the stored values (tall crates)
+
+- `beside box_beer+box_beer`: a 0.28, b -0.18 along (spread 0.46). `on box_beer+box_beer`: top_b - top_a =
+  (-0.28, 0.37, 0). `onpair box_beer`: (-0.34, 0.03, 0.02).
+- Four crates: layer 2 origin = support 0.28 + (-0.28) = 0.000 = the bed origin, and above the bed a pair is arranged
+  around its layer's origin exactly as on the bed, so the upper pair lands at 0.28 / -0.18: straight over. The "on"
+  box at -0.28 IS the straight-over value for this pair (it equals minus the support's beside offset).
+- Three crates: the lone crate sits at the layer origin (0.000) plus its class's onpair offset: x = -0.34, i.e.
+  16 cm behind the rear crate (-0.18). Centred between 0.28 and -0.18 would be onpair x = +0.05, z = 0.
+- The same onpair offset is applied on every pair the crate lies alone on: corpse + log + crate puts it at x -0.37
+  (that pair's midpoint is -0.01), flour + flour + crate at -0.04 (midpoint 0.075). One per-class value cannot
+  centre over pairs whose midpoints differ. This, not the slider the user moved, is the defect.
+
+### The trap: Accept writes the pair's midpoint into the shared "on" relation
+
+With `top_*` of the crate pair removed (scratch copy): the untuned layer over a same-class pair starts at the pair's
+midpoint plus LayerShift, 0.05 - 0.03 = 0.020, for the lone crate AND for the pair on the pair. Accepting from either
+load writes Rel = 0.02 - 0.28 = -0.26 into `on box_beer+box_beer`, so four crates come out 2 cm off straight
+(0.30 / -0.16) until the slider is dragged to -0.28 by eye, and the lone crate is then placed from the straight-over
+origin and must be centred by the onpair box. Over a mixed pair the untuned origin is over the SUPPORT, not the pair:
+corpse + log + crate + crate puts the crate pair's origin at across 0.13 (the corpse's place in that pair), centred on
+the corpse, not on the cart. So "one set affects the other" is true today in exactly one way: the on relation holds
+the layer origin, and the untuned default for that origin depends on which load it was accepted from.
+
+The onpair sliders and Seat it write only the item's `OnPair` (`TuningWindow.Cargo.cs`, the alone-on-a-pair box); a
+second item joining the layer re-places the layer from its origin, so that box never moves a pair on a pair.
+
+### Proposed change (small; not built, waiting for the decision)
+
+1. The untuned layer origin over a pair = the layer below's origin (+ LayerShift), for same-class and mixed pairs
+   alike. Accept then writes the straight-over value, and a pair on any pair is centred over the cart like the bed.
+2. A lone item on a pair starts at the footprint midpoint of the two items below (x, z), at the height the on relation
+   gives; `OnPair` becomes a per-class correction on top of that. `Origin` and `Rel` keep their meaning, so every
+   stored "on" relation and every tuned pair-on-pair load stays where it is.
+3. LayerShift (-0.03 along) contradicts "directly on top" and should be 0 for this layout.
+
+Cost: the 5 onpair tunings change meaning (they should all end near zero; retune by eye or Reset), the seat pass
+measures at the new x/z, so `PackerScan --real --thorough`, the synthetic suites and a new all.html run are needed.
+A later, larger step would make the "on" relation's horizontal part relative to the layer below's origin instead of
+the support (28 relations, exact migration only in each contact's smallest load); not proposed now.
+
+### The order of tuning
+
+Effects run upward only. A beside relation moves every layer above it in every load it occurs in; an on relation moves
+its layer and the layers above; an onpair offset moves one item; alone (one item on the cart) touches nothing else
+(the bottom of a stack takes the pair's own place, not the alone offset). Re-touching a lower kind later can move
+tuned upper kinds along, so they want a glance afterwards; the reverse never happens. The number of items is not the
+order: a six-item load adds no slider, it is these relations stacked.
+
+The ladder: alone (7) -> beside (9) -> on (28; mostly heights once the origin default is fixed) -> alone on a pair
+(5; corrections). Today the Tune next queue is most-used-first, which can offer `log on corpse` (smallest load
+corpse + log + log) before `corpse beside log` is tuned, and `flour sack alone on a pair` (corpse + sack + log)
+before `sack on corpse`. Proposed: order by readiness first (contacts whose smallest load has no other untuned
+contact), then by kind up the ladder, then by use; choose each contact's Smallest as the smallest load where it is the
+only untuned contact when one exists; a box header says "needs X first" when a lower-kind contact of the same load is
+untuned; the "1 item / 2 items / 3 or more" chips become the ladder's step. Not built yet.
+

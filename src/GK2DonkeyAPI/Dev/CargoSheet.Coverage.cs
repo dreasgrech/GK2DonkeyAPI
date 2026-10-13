@@ -577,7 +577,7 @@ namespace GK2DonkeyAPI
             }
             else
             {
-                sb.AppendLine("<p class=\"dim\">The contacts still on the fallbacks, most used first. <i>Completes</i>: loads that become fully tuned when this one is tuned (it is their last untuned contact). To tune one, load the smallest load shown and use its box in the Cargo tab.</p>");
+                sb.AppendLine("<p class=\"dim\">The contacts still on the fallbacks in the Cargo tab's order: ready ones first (a load exists where it is the only untuned contact), then up the ladder (alone, beside, on, alone on a pair), then the most used. <i>Completes</i>: loads that become fully tuned when this one is tuned (it is their last untuned contact). To tune one, load the smallest load shown and use its box in the Cargo tab.</p>");
                 sb.AppendLine("<table><tr><th>#</th><th>Contact</th><th>Used in</th><th>Completes</th><th>Load it with</th></tr>");
                 int rank = 0;
                 foreach (CargoCoverage.Contact c in next)
@@ -689,7 +689,7 @@ namespace GK2DonkeyAPI
             var sb = new StringBuilder();
             sb.AppendLine($"<!doctype html><html><head><meta charset=\"utf-8\"><title>Every cargo load</title>{PageStyle}</head><body>{PageScript}");
             sb.AppendLine($"<h1>Every cargo load</h1><p class=\"dim\">{DateTime.Now:yyyy-MM-dd HH:mm}. {shots.Count} loads of 1 to {rep.MaxItems} items, in the Cargo tab's colours (blue the first item of a layer, orange the second or one alone on top, lighter higher up). Under each: its contacts, green tuned, red still on the fallbacks. {SettingsLine(rep)}</p>");
-            sb.AppendLine("<details class=\"legend\"><summary>The size classes and their items</summary>" + ClassLegend(rep) + "</details>");
+            sb.AppendLine("<details class=\"legend\" id=\"leg\" ontoggle=\"save()\"><summary>The size classes and their items</summary>" + ClassLegend(rep) + "</details>");
             sb.Append("<div id=\"bar\"><span>Items:</span>");
             for (int n = 1; n <= rep.MaxItems; n++) sb.Append($"<label><input type=\"checkbox\" class=\"sz\" value=\"{n}\" checked onchange=\"f()\">{n}</label>");
             sb.Append("<select id=\"cl\" onchange=\"f()\"><option value=\"\">any class</option>");
@@ -698,9 +698,10 @@ namespace GK2DonkeyAPI
             foreach (CargoCoverage.Contact c in rep.Contacts) sb.Append($"<option value=\"|{H(c.Key)}|\">{(c.Tuned ? "" : "untuned: ")}{H(c.Title)}</option>");
             sb.Append("</select><label><input type=\"checkbox\" id=\"un\" onchange=\"f()\"> with an untuned contact only</label>");
             sb.Append("<span>columns <input type=\"range\" id=\"cols\" min=\"3\" max=\"16\" value=\"8\" oninput=\"fit()\"> <span id=\"colsN\">8</span></span><span id=\"cnt\"></span></div>");
-            // the pictures fill the window: their width follows the window width and the columns slider, on resize too
-            sb.AppendLine("<script>function fit(){var n=+document.getElementById('cols').value;document.getElementById('colsN').textContent=n;var w=Math.floor((document.documentElement.clientWidth-40-n*8)/n);document.documentElement.style.setProperty('--w',Math.max(90,w)+'px');}window.addEventListener('resize',fit);fit();function f(){var sz=[...document.querySelectorAll('.sz')].filter(x=>x.checked).map(x=>x.value);var cl=document.getElementById('cl').value,ct=document.getElementById('ct').value,un=document.getElementById('un').checked,n=0;"
-                + "document.querySelectorAll('.fig').forEach(e=>{var ok=sz.includes(e.dataset.n)&&(!cl||e.dataset.c.includes(cl))&&(!ct||e.dataset.k.includes(ct))&&(!un||e.dataset.u!=='0');e.style.display=ok?'':'none';if(ok)n++;});document.getElementById('cnt').textContent=n+' shown';}</script>");
+            // the pictures fill the window: their width follows the window width and the columns slider, on resize too.
+            // Filters, columns, the legend's fold and the scroll position live in the browser's local storage, so a refresh keeps them.
+            sb.AppendLine("<script>var K='gk2-all-html';function q(i){return document.getElementById(i);}function state(){return {sz:[...document.querySelectorAll('.sz')].map(x=>x.checked),cl:q('cl').value,ct:q('ct').value,un:q('un').checked,cols:q('cols').value,leg:q('leg').open,y:window.scrollY};}function save(){try{localStorage.setItem(K,JSON.stringify(state()));}catch(e){}}function restore(){var s;try{s=JSON.parse(localStorage.getItem(K)||'');}catch(e){}if(!s)return;if(s.sz)document.querySelectorAll('.sz').forEach((x,i)=>{if(i<s.sz.length)x.checked=s.sz[i];});['cl','ct'].forEach(i=>{q(i).value=s[i]||'';if(q(i).value!==(s[i]||''))q(i).value='';});q('un').checked=!!s.un;if(s.cols)q('cols').value=s.cols;q('leg').open=!!s.leg;if(s.y){try{history.scrollRestoration='manual';}catch(e){}window.addEventListener('load',function(){window.scrollTo(0,s.y);});}}function fit(){var n=+document.getElementById('cols').value;document.getElementById('colsN').textContent=n;var w=Math.floor((document.documentElement.clientWidth-40-n*8)/n);document.documentElement.style.setProperty('--w',Math.max(90,w)+'px');save();}window.addEventListener('resize',fit);window.addEventListener('beforeunload',save);restore();fit();function f(){var sz=[...document.querySelectorAll('.sz')].filter(x=>x.checked).map(x=>x.value);var cl=document.getElementById('cl').value,ct=document.getElementById('ct').value,un=document.getElementById('un').checked,n=0;"
+                + "document.querySelectorAll('.fig').forEach(e=>{var ok=sz.includes(e.dataset.n)&&(!cl||e.dataset.c.includes(cl))&&(!ct||e.dataset.k.includes(ct))&&(!un||e.dataset.u!=='0');e.style.display=ok?'':'none';if(ok)n++;});document.getElementById('cnt').textContent=n+' shown';save();}</script>");
             sb.AppendLine("<div class=\"pics\">");
             foreach (Shot s in shots)
             {

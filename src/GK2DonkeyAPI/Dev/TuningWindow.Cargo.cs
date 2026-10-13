@@ -22,13 +22,13 @@ namespace GK2DonkeyAPI
         private const string TipHeightRel = "Height relative to the layer's first item. The layer itself rests by the box above.";
         private const string TipHeightLayerFirst = "The first item sits where its layer sits: set the layer's height in the 'x on y' box above.";
         private const string TipHeightTwo = "Height above the cart floor. For the item on top this is how the two stack.";
-        private const string TipOnPair = "An extra move for this item only when it lies alone on top of a pair. Nothing under it moves.";
+        private const string TipOnPair = "This item starts over the middle of the two below. This is an extra move for it, only when it lies alone on top of a pair. Nothing under it moves.";
         private const string TipLooksRight = "Freeze this contact exactly as it lies now. It counts as tuned and no fallback can move it again.";
         private const string TipSeat = "Rest this item on what is really under it (its measured shape, 3 cm sunk in). Written as a tuning; one Undo step.";
         private const string TipReset = "Forget this contact's tuning; it follows the fallbacks again.";
         private const string TipAlone = "Show just these two on the cart, as a two-item cart, to tune them without the rest. The whole load stays aboard.";
         private const string TipAcceptLoad = "Freeze every untuned contact in this load exactly as it lies. You stay on this load.";
-        private const string TipAcceptNext = "Freeze every untuned contact here, then put the most used untuned contact's load on the cart (a test load).";
+        private const string TipAcceptNext = "Freeze every untuned contact here, then put the next contact's load on the cart (a test load): ready ones first, up the ladder.";
         private const string TipSkip = "Put the next untuned contact's load on the cart without accepting anything here. Skipped contacts go to the back of the queue.";
         private const string TipLoad = "Put this contact's smallest load on the cart as a test load (real items, made for you). Replaces the last test load; refused while the cart holds other cargo.";
         private const string TipCoverLoad = "The fewest loads that together show every contact: load them one by one and you have seen everything.";
@@ -162,16 +162,16 @@ namespace GK2DonkeyAPI
             GUILayout.BeginVertical(GUI.skin.box);
             if (next.Count > 0)
             {
-                GUILayout.Label(Tip("Tune next  <color=#9a9a9a>(most used first)</color>", "The contacts still on the fallbacks, the most used first. Load puts a contact's smallest load on the cart."), label);
+                GUILayout.Label(Tip("Tune next  <color=#9a9a9a>(ready first, up the ladder: alone, beside, on, alone on a pair)</color>", "The contacts still on the fallbacks: first those whose load has nothing else untuned (ready), then up the ladder, then the most used. Load puts the contact's load on the cart: the smallest where it is the only untuned contact, else the smallest showing it."), label);
                 for (int i = 0; i < Mathf.Min(TuneNextRows, next.Count); i++)
                 {
                     CargoCoverage.Contact c = next[i];
                     GUILayout.BeginHorizontal();
                     if (TipButton("Load", TipLoad, 60f))
                     {
-                        TestLoads.Put(LoadIds(c.Smallest), c.Title);
+                        TestLoads.Put(LoadIds(c.LoadToTune), c.Title);
                     }
-                    GUILayout.Label($"<color=#ff8c69>{c.Title}</color>   <color=#9a9a9a>in {c.Loads} loads, completes {c.Completes} · {coverage.Describe(c.Smallest)}{(skippedKeys.Contains(c.Key) ? " · skipped" : "")}</color>", label);
+                    GUILayout.Label($"<color=#ff8c69>{c.Title}</color>   <color=#9a9a9a>in {c.Loads} loads, completes {c.Completes} · {coverage.Describe(c.LoadToTune)}{(c.Ready ? "" : " · after others")}{(skippedKeys.Contains(c.Key) ? " · skipped" : "")}</color>", label);
                     GUILayout.EndHorizontal();
                 }
             }
@@ -403,16 +403,19 @@ namespace GK2DonkeyAPI
             return open;
         }
 
-        // The most used untuned contact's smallest load onto the cart (a test load). afterAccept: the layout just changed,
+        // The next untuned contact's load onto the cart (a test load; Queue, LoadToTune). afterAccept: the layout just changed,
         // so the analysis is redone first.
         // Contacts skipped this session (Skip to next): they go to the back of the queue, or skipping would load the same
-        // load again (it holds the most used untuned contact, which is why it was loaded). When only skipped ones are
+        // load again (it holds the next untuned contact, which is why it was loaded). When only skipped ones are
         // left, the queue goes round to them.
         private static readonly HashSet<string> skippedKeys = new HashSet<string>(StringComparer.Ordinal);
 
-        // The untuned contacts in the order they are offered: not skipped first, then the most used, then by key. The
-        // Tune next list shows it and the next / skip buttons load its first one, so the two always agree (they did not
-        // on a tie: slab beside slab and corpse on zombie both in 330 loads, 2026-10-12).
+        // The untuned contacts in the order they are offered: not skipped first; then the READY ones (a load exists where
+        // it is the only untuned contact, so it is tuned on its own, on top of tuned ones); then up the ladder (alone,
+        // beside, on, alone on a pair: effects run upward only, CargoCoverage.KindRank); then the most used; then by key.
+        // The Tune next list shows it and the next / skip buttons load its first one, so the two always agree (they did
+        // not on a tie: slab beside slab and corpse on zombie both in 330 loads, 2026-10-12). Most-used-first alone
+        // offered 'log on corpse' (corpse + log + log) before 'corpse beside log' was tuned (2026-10-12).
         private static List<CargoCoverage.Contact> Queue(CargoCoverage.Report rep)
         {
             var list = new List<CargoCoverage.Contact>();
@@ -421,9 +424,33 @@ namespace GK2DonkeyAPI
             {
                 bool sx = skippedKeys.Contains(x.Key), sy = skippedKeys.Contains(y.Key);
                 if (sx != sy) return sx ? 1 : -1;
+                if (x.Ready != y.Ready) return x.Ready ? -1 : 1;
+                int kx = CargoCoverage.KindRank(x.Kind), ky = CargoCoverage.KindRank(y.Kind);
+                if (kx != ky) return kx.CompareTo(ky);
                 return y.Loads != x.Loads ? y.Loads.CompareTo(x.Loads) : string.CompareOrdinal(x.Key, y.Key);
             });
             return list;
+        }
+
+        // Under a box's header: the untuned contacts of a lower kind in this load. Effects run upward only (a beside
+        // relation moves the layers above it, an on relation its layer and above), so those are tuned first; this one
+        // then keeps its relation but is carried along. Drawn only from state that cannot change during a drag.
+        private static void TuneFirstNote(List<Cargo.PlacedItem> view, string kind)
+        {
+            if (coverage == null) return;
+            int rank = CargoCoverage.KindRank(kind);
+            List<string> names = null;
+            foreach (string key in UntunedKeysHere(view))
+            {
+                if (coverage.ByKey.TryGetValue(key, out CargoCoverage.Contact c) && CargoCoverage.KindRank(c.Kind) < rank)
+                {
+                    (names ?? (names = new List<string>())).Add(c.Title);
+                }
+            }
+            if (names != null)
+            {
+                GUILayout.Label(Tip($"  <color=#ffd257>tune first: {string.Join(", ", names)}</color>", "Lower on the ladder and still on the fallbacks in this load. Tuning it later would carry this contact along, so settle it first."), small);
+            }
         }
 
         // The untuned contacts of the load on the cart (coverage keys).
@@ -475,7 +502,7 @@ namespace GK2DonkeyAPI
                     skippedKeys.Clear();
                     queue = Queue(coverage);
                 }
-                TestLoads.Put(LoadIds(queue[0].Smallest), queue[0].Title);
+                TestLoads.Put(LoadIds(queue[0].LoadToTune), queue[0].Title);
             }
             catch (Exception e)
             {
@@ -777,7 +804,15 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             GUILayout.Label("Tune this load", step, Wd(170f));
             int mode = n == 0 ? -1 : Mathf.Min(n, 3);
-            GUILayout.Label(ModeChip("1 item", mode == 1) + "    " + ModeChip("2 items", mode == 2) + "    " + ModeChip("3 or more", mode == 3), step);
+            // the ladder, the kinds of contact this load has lit: the order to tune in (effects run upward only)
+            bool hasBeside = false, hasOn = false, hasLone = false;
+            foreach (Cargo.PlacedItem it in placed)
+            {
+                if (it.Relation == "side" || it.Relation == "along") hasBeside = true;
+                if (it.Relation == "on") { hasOn = true; if (IsLoneOnPair(placed, it)) hasLone = true; }
+            }
+            GUILayout.Label(Tip(ModeChip("alone", n == 1) + "  >  " + ModeChip("beside", hasBeside) + "  >  " + ModeChip("on", hasOn) + "  >  " + ModeChip("alone on a pair", hasLone),
+                "The ladder: the kinds of contact, in the order to tune them. A beside relation moves every layer above it, an on relation its layer and the layers above, an alone-on-a-pair offset one item, alone nothing else. Lit: the kinds in this load."), step);
             GUILayout.EndHorizontal();
             bool comparing = comparingAtStart;
             bool wasEnabled = GUI.enabled;
@@ -1121,6 +1156,7 @@ namespace GK2DonkeyAPI
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
+                TuneFirstNote(placed, "onpair");
                 bool movedP = false;
                 movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
                 movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
@@ -1163,6 +1199,7 @@ namespace GK2DonkeyAPI
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
+                TuneFirstNote(placed, onTop ? "on" : "beside");
                 if (onTop)
                 {
                     Vector3 v = pl.Rel;

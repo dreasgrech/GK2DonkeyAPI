@@ -30,6 +30,9 @@ namespace GK2DonkeyAPI
             public int[] SmallestOnPair; // on: the smallest load where its support is the first item of a pair (the shelf is the pair's top)
             public bool OnSingle, OnPair; // on: seen on a lone support / on a pair below
             public int Completes;  // untuned: loads where it is the last untuned contact (tuning it completes them)
+            public int[] SmallestReady; // untuned: the smallest load where it is the ONLY untuned contact (tune it there: nothing else in the load is still on the fallbacks); null when there is none yet
+            public bool Ready => SmallestReady != null;
+            public int[] LoadToTune => SmallestReady ?? Smallest; // the load the tab puts on the cart for it
             public string LowerName, UpperName; // readable class names (Report.Label)
             public readonly HashSet<string> Arrangements = new HashSet<string>(StringComparer.Ordinal); // beside: side / along
 
@@ -129,7 +132,13 @@ namespace GK2DonkeyAPI
             foreach (Load ld in rep.Loads)
             {
                 if (ld.Untuned != 1) continue;
-                foreach (string key in ld.Keys) if (!rep.ByKey[key].Tuned) rep.ByKey[key].Completes++;
+                foreach (string key in ld.Keys)
+                {
+                    Contact c = rep.ByKey[key];
+                    if (c.Tuned) continue;
+                    c.Completes++;
+                    if (c.SmallestReady == null || Smaller(ld.Classes, c.SmallestReady)) c.SmallestReady = ld.Classes;
+                }
             }
             foreach (Contact c in rep.Contacts)
             {
@@ -141,7 +150,9 @@ namespace GK2DonkeyAPI
             return rep;
         }
 
-        private static int KindRank(string kind) => kind == "alone" ? 0 : kind == "beside" ? 1 : kind == "on" ? 2 : 3;
+        // The ladder: effects run upward only (a beside relation moves every layer above it, an on relation its layer and
+        // the layers above, an alone-on-a-pair offset one item, alone nothing else), so this is the order to tune in.
+        internal static int KindRank(string kind) => kind == "alone" ? 0 : kind == "beside" ? 1 : kind == "on" ? 2 : 3;
 
         private static void Enumerate(int k, int left, int[] counts, int from, List<int> cur, Action<int[]> visit)
         {
@@ -341,7 +352,7 @@ namespace GK2DonkeyAPI
             var sb = new StringBuilder();
             sb.AppendLine($"{rep.Tuned} of {rep.Total} contacts tuned; {rep.Loads.Count} loads of 1 to {rep.MaxItems} items over {rep.Classes.Count} size classes; cover {rep.Cover.Count} loads.");
             foreach (Contact c in rep.Contacts)
-                sb.AppendLine($"  {(c.Tuned ? "tuned  " : "UNTUNED")} {c.Title,-40} {c.Loads,5} loads   smallest: {rep.Describe(c.Smallest)}");
+                sb.AppendLine($"  {(c.Tuned ? "tuned  " : c.Ready ? "UNTUNED, ready" : "UNTUNED, after others")} {c.Title,-40} {c.Loads,5} loads   smallest: {rep.Describe(c.Smallest)}{(c.Ready && c.SmallestReady != c.Smallest ? "   tune in: " + rep.Describe(c.SmallestReady) : "")}");
             foreach (string d in rep.Dead) sb.AppendLine("  dead: " + d);
             return sb.ToString();
         }

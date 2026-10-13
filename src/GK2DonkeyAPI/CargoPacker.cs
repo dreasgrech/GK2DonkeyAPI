@@ -286,19 +286,26 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
-                    float lx = samePair ? cx : target[support].x, lz = samePair ? cz : target[support].z;
-                    if (belowPair) lx += s.LayerShift;
+                    // Over a pair the layer starts at the layer below's ORIGIN (plus the layer shift): a pair on it is then
+                    // arranged as on the bed, straight over a same pair and centred over the cart over a mixed one, and
+                    // Accept writes exactly that into the relation. Over a lone support: over the support. (Before: the
+                    // pair's midpoint over a same pair, the support over a mixed one; Accept wrote the half spread into the
+                    // shared relation and four crates came out 2 cm off straight, 2026-10-12.)
+                    float lx = belowPair ? r.Origin[belowStart].x + s.LayerShift : target[support].x, lz = belowPair ? r.Origin[belowStart].z : target[support].z;
                     layerOrigin = new Vector3(lx, topY - s.Nestle, lz) + (e != null ? e.Top : Vector3.zero);
                     target[i] = layerOrigin;
                     string how = vp != null && vp.Mode != "auto" && !belowPair ? " (" + vp.Mode + ")" : "";
                     note.Append($"{(layer > 1 || belowPair ? "; " : "")}{cur} on {(samePair ? "the pair of " + sup : sup)}{how}");
                 }
-                // Alone on top of a pair: the class's own correction, in this layer only. A second item joining the layer
-                // re-places this one from the origin (the beside branch), so the offset stays only on a lone item. Never
-                // on a two-item cart (its layer below is a single item).
-                if (belowPair && e != null)
+                // Alone on top of a pair: over the MIDDLE of the two below (their footprint centres), at the layer's height,
+                // plus the class's alone-on-a-pair correction. The layer's origin stays where the on-top relation put it, so
+                // a second item joining the layer re-places this one from the origin (the beside branch) and the middle
+                // and the correction apply only to a lone item; never on a two-item cart (its layer below is one item).
+                // (Before, the lone item sat at the origin plus the correction, and one per-class correction had to
+                // centre it over every pair it could lie on, whose middles differ: 2026-10-12.)
+                if (belowPair)
                 {
-                    target[i] += e.OnPair;
+                    target[i] = new Vector3(cx, target[i].y, cz) + (e != null ? e.OnPair : Vector3.zero);
                 }
                 centre = new Vector3(layerOrigin.x, 0f, layerOrigin.z);
                 layerFloor = layerOrigin.y;

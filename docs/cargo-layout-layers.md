@@ -227,6 +227,9 @@ look right.
   the same on-top contact as a whole pair layer, at the layer's origin without the beside offsets its neighbours
   get, so it floated and could not be moved alone. Each class now has `onpair_along/up/across` in its `[item]`
   entry, applied only to an item lying alone on top of a pair; step 3 shows a box for it. Never on a two-item cart.
+  Since 2026-10-12 (evening) the lone item starts over the MIDDLE of the two below (footprint centres) and the
+  offset is a correction on that; before, it started at the layer origin and one per-class offset had to centre it
+  over every pair it could lie on (docs/cargo-tuning-tools.md, the evening investigation).
 - **The rules, traced (2026-10-10, night):** the floor moves everything (cart calibration); gap and overhang decide
   whether a pair set to 'auto' lies beside or stacks, tuned or not, and space untuned beside pairs; nestle and layer
   shift only touch untuned on-top contacts. So a beside contact tuned from step 3 with its pair still on 'auto'
