@@ -146,7 +146,10 @@ namespace GK2DonkeyAPI
             if (Mount.IsMounted && Mount.SideView && __instance is PlayerAnimation)
             {
                 UnityEngine.Vector2 v = Mount.RiderFacing(direction.ConvertToVector2XZ());
-                direction = v.x >= 0f ? Direction.Right : Direction.Left;
+                if (UnityEngine.Mathf.Abs(v.y) <= UnityEngine.Mathf.Abs(v.x))
+                {
+                    direction = v.x >= 0f ? Direction.Right : Direction.Left; // a vertical one was let through (armour, attacking)
+                }
             }
         }
     }

@@ -328,8 +328,10 @@ closed):
   Seen in game 2026-10-14 11:01: cart left at the talk, armoured rider, swings/arrows, strafe with the reversed
   donkey walk (confirmed in the log), fight end ridden through, barricade dismount, death (ByDeath dismount, donkey
   stays in the arena). All of §8 seen. The cart-at-the-talk bubble was dropped on the user's word (the cart simply
-  stays outside; whether it comes along is decided later). **Open:** step 3 options (§9.1) and the §6 choices (focus
-  speed, aiming up/down).
+  stays outside; whether it comes along is decided later). **Afternoon:** §10 (measurements, the art from the atlas,
+  the composite `docs/img/mounted-combat-rider-on-donkey.png`); built: Idle pose in armour with the bob, up/down
+  facing during attacks and focus in armour (the game's own aiming), side-flip hysteresis. **Open:** the in-game look of
+  the up/down rider (option (c) stands by), the focus-speed choice, `Dev/SpriteProbe.cs` out once its layer map is read.
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after

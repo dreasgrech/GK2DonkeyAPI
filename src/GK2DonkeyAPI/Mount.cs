@@ -344,26 +344,58 @@ namespace GK2DonkeyAPI
 
             // The pose in use: the style's Pose, or Walk while the keeper wears armour (the armour layers have frames for
             // Walk and Idle only, and for the attacks; docs/mounted-combat.md). Every read of the pose goes through this.
-            internal RiderPose EffectivePose => InArmour(MainGame.PlayerController) ? RiderPose.Walk : S.Pose.Value;
+            // In armour the pose is Idle: the armour has no seated frame, and its static frames with the rider's bob read
+            // as sitting (the atlas, docs/mounted-combat.md §10.2); Walk made him step in the air whenever the donkey moved.
+            internal RiderPose EffectivePose => InArmour(MainGame.PlayerController) ? RiderPose.Idle : S.Pose.Value;
 
-            // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk.
+            // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk; armour: Idle.
             public AnimationState RiderPoseState =>
                 (AnimationState)(int)EffectivePose;
 
             // Horizontal facing shared by rider and mount while mounted: +1 right, -1 left.
             private float riderFacingX = 1f;
 
-            // Called from the SetDirection prefix for the keeper's animation component (see Patches.cs).
+            // Whether the keeper may face up or down while seated: only in his armour (its frames exist in all four
+            // facings; the riding poses have side frames only) and only while attacking or in a focus stance, so that
+            // aiming up or down from the side-view donkey shoots and strikes up or down the game's own way (the attack
+            // direction is the drawn facing, the arrow flies along it, the weapon layer turns the sword's fan to it:
+            // docs/mounted-combat.md §10). The donkey keeps its side; the keeper turns on it.
+            internal bool VerticalFacingAllowed
+            {
+                get
+                {
+                    try
+                    {
+                        PlayerController pc = MainGame.PlayerController;
+                        return mounted && pc != null && InArmour(pc) && IsAttackState(pc.Ssm?.CurState);
+                    }
+                    catch
+                    {
+                        return false;
+                    }
+                }
+            }
+
+            // Called from the SetDirection prefix for the keeper's animation component (see Patches.cs). A vertical
+            // request passes through when it is allowed (above); otherwise the facing is the shared side. The side flips
+            // only when the request points clearly to the other side (its normalised x against the current side below
+            // -0.25, about 14.5° past vertical for the cursor): a near-vertical aim no longer turns keeper and donkey on a
+            // tiny mouse move; keys and stick diagonals (|x| at least 0.707) still turn at once.
             public Vector2 RiderFacing(Vector2 requested)
             {
                 if (requested.sqrMagnitude < 0.0001f)
                 {
                     return requested;
                 }
-                if (Mathf.Abs(requested.x) > 0.05f)
+                Vector2 n = requested.normalized;
+                if (Mathf.Abs(n.y) > Mathf.Abs(n.x) && VerticalFacingAllowed)
+                {
+                    return requested;
+                }
+                if (n.x * riderFacingX < -0.25f)
                 {
                     float was = riderFacingX;
-                    riderFacingX = requested.x > 0f ? 1f : -1f;
+                    riderFacingX = n.x > 0f ? 1f : -1f;
                     if (riderFacingX != was && donkey != null && donkey)
                     {
                         // The donkey turns in the same moment as the keeper, before this frame's animation runs. Turned
@@ -2133,7 +2165,8 @@ namespace GK2DonkeyAPI
                 // stayed on the donkey's side while the input turned the keeper back every physics step: the rig flipped
                 // every frame for as long as the key was held (the user's repro, 2026-10-03).
                 Vector2 drawnDir = KeeperDrawnDirection(pc);
-                if (Mathf.Abs(drawnDir.x) > 0.05f)
+                drawnVertical = Mathf.Abs(drawnDir.y) > Mathf.Abs(drawnDir.x); // only ever true in armour while attacking (RiderFacing)
+                if (!drawnVertical && Mathf.Abs(drawnDir.x) > 0.05f)
                 {
                     riderFacingX = drawnDir.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
                 }
@@ -2521,9 +2554,11 @@ namespace GK2DonkeyAPI
             // +1 when the keeper faces right (mirrored art), -1 when facing left.
             // +1 facing right, -1 facing left. Taken from the tracked facing: Unity reports the game's mirroring scales
             // back inconsistently, so inspecting transforms gave the same sign for both facings.
+            private bool drawnVertical; // the keeper is drawn facing up or down this frame (armour, attacking): set in Follow
+
             private float TorsoFacingSign()
             {
-                return riderFacingX;
+                return drawnVertical ? 0f : riderFacingX;
             }
 
             internal bool FacingRight => riderFacingX > 0f;

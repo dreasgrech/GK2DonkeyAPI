@@ -135,7 +135,7 @@ survives; `RestoreSpeed` already knows the attack states by name.
 
 ## 8. Built: step 1 (2026-10-14, untested)
 
-- **The armour view rides.** `Mount.EffectivePose` is Walk while the keeper wears armour (every read of the pose goes
+- **The armour view rides.** `Mount.EffectivePose` is Walk (Idle since §10.3) while the keeper wears armour (every read of the pose goes
   through it: the `SetState` prefix, the idle freeze, the gear hiding, the no-sprite warning), so the armour layers
   have frames; the keeper sits with the standing frames, hips at the back line, legs behind the donkey's body as the
   seat places them. The Cart style is refused while armoured ("Not the cart in a fight."), at mounting, at hitching a
@@ -539,3 +539,129 @@ change.
 
 **Decided (the user, 11:20):** no bubble for the cart left at the talk; the cart simply stays outside when the battle
 starts, and whether it should come along is decided later. The held message is removed again; the log line stays.
+
+## 10. The armoured rider's look and aiming up and down (investigation, 2026-10-14 afternoon)
+
+Asked by the user: the armoured rider plays the walk cycle while the donkey moves (the pose is Walk in armour: the
+armour has no seated frame); the wanted direction is **the armour's static (idle) frames with the rider bob doing the
+motion**, and at the same time the ability to shoot (and strike) up and down from the side-view donkey; and whether
+the game's animator layers allow the upper and lower body to be driven independently. Measured first (`Dev/SpriteProbe.cs`,
+dev build only): every sprite the keeper's gfx renderers show in armour is written to `BepInEx/GK2-sprites/<name>.png`
+with rect, pivot, trimmed offset and the renderer's local z in the log, plus which animator layers were up and what
+each played when the sprite appeared (which clip keys which renderer); and the Weapon Container's local rotation,
+position and scale whenever they change during an attack, with the facing and layer 6's weight and clip.
+
+### 10.1 Aiming: the design, corrected
+
+Two corrections to §9.1: **`aimDirection` cannot be read at shot time** (`PlayerMouseCombatHandler` clears it every
+frame unless focus or right click is held, so after a left-click shot it is zero when the `OnBowAimShot` event
+fires), and **`PlayerData.Direction` does not keep the raw cursor** (`UpdatePlayerData` copies the drawn, clamped
+facing into it whenever that changes; in focus it is frozen at the entry frame's aim). So: take a fresh cursor
+reading at the moment of the shot.
+
+- **Bow and sword knockback, one patch point:** a prefix on `public void AttackComponent.ActivateWeapon(Vector3
+  direction)` with `ref direction`. Every player path ends there (the public `PerformAttack` and
+  `PerformAttackByTrigger` go through the private `PerformAttack`, which calls `ActivateWeapon(useCustomDirection ?
+  customDirection : GetDirection().XZ())`; `OnBowAimShot` leaves `activateWeapon` true). Guard: mounted, side view,
+  `__instance` is the keeper's `AttackComponent`, weapon a `BowWeapon` (or a sword for the knockback direction).
+- **The aim (`Mount.TryRiderAim`):** mouse (`!LazyInput.IsGamepadActive`): `MouseAimHelper.TryGetAimDirection(body
+  position, out d)` → `(d.x, 0, d.y / 1.25)` normalised (undoes the helper's z × 1.25, so the arrow points at the
+  cursor's ground point); keyboard/gamepad: `LazyInput.GetDirection()` when its length is above 0.2; otherwise the
+  vanilla ±X. y stays 0 (the keeper's bow is at body height; the zombie archer adds y for its target).
+- **Free angle, not snapped** (a setting for 4/8-way possible): on foot the keeper is 4-way only (`GetDirection`
+  reads the stepped angle), so a free angle is stronger than vanilla, a balance call. Mechanically sound: the zombie
+  archer and `BowAttackEmulationComponent` pass free 3D vectors into the same `ActivateWeapon`; `Projectile.Tick`
+  moves along `direction`; `ArrowProjectile.LateUpdate` box-sweeps along the arrow's own rotation, no axis assumed.
+  `Projectile.Launch` sets `rotation = FromToRotation(right, direction)`: a vertical shot is a ±90° yaw, exactly what
+  an on-foot up/down shot produces today (unconfirmed whether it reads as a sliver). The arrow starts at the Bow
+  object under the held Weapon Container, so a vertical arrow leaves a sideways-drawn bow.
+- **Sword: no direction test rejects an up/down hit.** `SwordHitBox.OnTriggerEnter` is pure trigger geometry (team,
+  accumulator, `HitZone`); `HitZone.ProcessHit` and `AttackComponent.HandleHit` do no angle test; the only compare is
+  the door backstab. `AttackContext.direction` feeds knockback, the damage effect and projectiles. So **turning the
+  wedges is enough to hit.** `Weapon.Dealers` is `GetComponentsInChildren<IDamageDealer>`, no per-facing selection in
+  code: rotation is the mechanism (if the probe shows layer 6 writes a pure yaw, a free angle is possible: side yaw
+  plus the atan2 delta). Override: in `OnKeeperLateUpdate` after `HoldWeapons` (after the animator), while layer 6's
+  weight is above 0 and a sword state is active and the snapped aim is Up or Down, write `weaponRoot.localRotation =
+  measured[facing]` every frame (layer 6 rewrites it each pass; FixedUpdate runs before the next pass, so physics sees
+  ours). What the probe must show first: the four `weapon_hitbox_container_*` clips differ only in yaw; whether they
+  key position (`HoldWeapons` adopts it already), scale, or the PrismRoot children; whether facing right sits under a
+  mirrored parent so the up/down values need mirroring; what enables the wedge colliders (no code toggles them:
+  probably an animation key, unconfirmed).
+- **Focus stance facts:** `PlayerData.Direction` is frozen for the whole focus at the entry frame's raw aim (the lock
+  setter ignores writes; the body's `isSetRotationLocked` makes `SetAimDirection` skip it); the mod's clamp acts on the
+  view only; `aimDirection` stays raw and follows the cursor while held. `focusedDirection` is read only by the
+  fighting-controls UI hint.
+- **Clamp hysteresis (`RiderFacing`):** flip only when the normalised request's x against the current side is below
+  −0.25 (the cursor about 14.5° past vertical); WASD and stick diagonals (|x| ≥ 0.707) still flip at once. The aim
+  patches read the raw cursor independently of `riderFacingX`, so a vertical shot is truly vertical; inside the band
+  the arrow may go up to 14.5° to the back side.
+- **New game members (manifest, `Access.Verify`, a `core` patch class `AttackComponent_ActivateWeapon_Patch`):**
+  `AttackComponent.ActivateWeapon(Vector3)`, `AttackComponent.weapon`, `BowWeapon`, `Weapon.ItemType`,
+  `PlayerController.AttackComponent`, `MouseAimHelper.TryGetAimDirection(Vector3, out Vector2)`, `LazyInput.IsGamepadActive`,
+  `LazyInput.GetDirection()`; for the sword override `PlayerAnimation.Animator` and layer index 6. Not the private
+  `PlayerPhysicalBody.aimDirection`.
+
+### 10.2 What the measurements and the art show
+
+- **The weapon layer (6) keys only the yaw** of `Weapon Container`: on foot, swinging in all four facings, the container's
+  local rotation was 0° for right, 90° for up, 0° for left (the left/right difference is the parent's mirror), 270° for
+  down; position (0, 0.032, 0) and scale 1 never changed; the three `PrismRoot` wedges keep 133°/90°/48° and switch on
+  with the layer. Mounted, the container sat at the hold (±0.060, −0.189). A yaw about Y maps the fan's local −X to +Z
+  for 90° and −Z for 270° whatever the parent's x mirror, so **up and down are 90° and 270° in both facings.**
+- **The live config is not what §9.4 assumed:** `[Ride] NearLeg = false`, `AutoSeat = false`, `Depth = 0.24` (the donkey is
+  drawn *behind* the keeper), `SeatOffset = 0.22` (6.6 art px), `RiderOffsetPx = −6`, `TorsoOffsetPx = −3`. `RiderLeg`
+  never attaches and `ComputeAutoSeat` never runs; nothing hides the keeper's lower body. The riding pose's frame
+  (`*_bdy_fishing_idle_left_*`, 29×37 px, feet at row 29 like the standing frame) is lifted whole and drawn in front of
+  the donkey, legs hanging down its flank.
+- **The armour layers 7, 8, 9, 10 and 18 share the base layer's state** (the same state hash in the dump): base Idle
+  gives `armor_static_*`, base Walk `armor_walk_*`. The attack layers 6, 11, 12, 13 and 15 have their own state,
+  driven by `attack`, `bow_*`, `attack_focus`, `MovementDirection` and `walk_speed`. **Independent upper and lower
+  body:** the parts are separate renderers (bdy, arm, leg, hed), and in armour the legs are their own renderer
+  (`gfx/leg`, `9019_leg_*`, 72 walk frames, 56 death frames) that the skin changer never re-skins (its enabled flag is
+  rewritten every LateUpdate from the clip's sprite), so a mod can drive the legs separately by setting that
+  renderer's sprite after the animator; the game itself has no legs-only or torso-only layer (unconfirmed for layer 13,
+  which has no transition dump).
+- **The art, from the earlier atlas extraction** (`BepInEx/GK2-sprites/sprites.csv` + atlas PNGs; composed by
+  `tools/frames.py` and `tools/frames2.py` into `docs/img/mounted-combat-*.png`): the armour's static frame is a
+  standing knight, legs 22 px (rows 29-50) on `leg`, torso 26 px (rows 41-66) on `bdy`, same footprint as the base
+  standing frame (rows 29-66). The up and down frames are true front and back views with the same footprint. The bow
+  and sword attack frames exist up and down. On the donkey at the real seat (the composite): side-on, the knight sits
+  with his hips on the back line and his legs down the flank, like today's rider; facing the camera he reads more as
+  standing on the donkey's back, since his spread legs stay visible.
+
+### 10.3 Built (2026-10-14 afternoon, untested)
+
+- **The armour's static frames with the bob:** `EffectivePose` is Idle in armour (was Walk). The bob is the seat's
+  (`SeatOffset + RiderBobPx`), unchanged. The static legs hang in front of the donkey as the riding pose's do.
+- **Aiming up and down, the game's way:** `Mount.VerticalFacingAllowed` (mounted, in armour, in an attack or focus
+  state) lets a mostly vertical facing request through `RiderFacing` (both `SetDirection` prefixes), so the game's
+  4-way snap draws the keeper facing up or down while the donkey keeps its side (`Follow` leaves `riderFacingX` alone
+  for a vertical drawn facing; the torso shift is zero then). The attack direction, the arrow's flight and the
+  weapon layer's fan rotation follow the drawn facing with no further patch. When the attack or focus ends, the next
+  movement snaps him back to the side. Outside armour nothing changes (the riding pose has side frames only).
+- **Hysteresis on the side flip:** `RiderFacing` turns to the other side only when the request's normalised x against
+  the current side is below −0.25 (about 14.5° past vertical for the cursor); keys and stick diagonals turn at once.
+- Not built: option (c) of §9.1 (sideways body, turned damage). The measurements make it a small step (`ActivateWeapon`
+  prefix with a fresh cursor reading; container yaw 90°/270° after the animator) if the up/down look is rejected.
+
+**To check in game (armour, mounted):** 1. standing still and walking: the knight keeps the static frame, bobbing with
+the donkey, no stepping; 2. right click held with the cursor above or below: the knight faces up or down on the
+side-on donkey (judge the look: `docs/img/mounted-combat-rider-on-donkey.png` is the prediction), the strafe plays the
+up/down stance clips; 3. an arrow shot up or down flies up or down; a sword swing up or down hits a zombie there;
+4. let go: he turns back to the side on the next step; 5. a near-vertical cursor no longer flips keeper and donkey
+on small mouse moves; 6. no warning in the log.
+
+### 10.4 The first run of the up/down build (the user's video, 11:56) and the probe's layer map
+
+- **It works mechanically**, from the video's stills: the knight sits side-on with the bow and the static frame; with
+  the cursor above or below he turns to the back or front view on the side-on donkey and draws the bow or swings the
+  sword there; he turns back to the side afterwards. The look is the user's call (the composite predicted it well).
+- **The probe's layer map** (159 sprite sightings, which layers were up and what each played): the base layer never
+  played a walk clip while mounted (the Idle pose holds); the armour layers 8 (sword) and 10 (bow) give the body, arm
+  and leg their static and walk frames, following the base state; the attack layers give the body and arm their
+  attack frames (11 sword, 12 bow); **the legs are keyed by the bow attack layer too** (`9019_leg_atk_bow_{left,up,
+  down}` appear with layer 12's prepare clip: a stance), and by the armour layers' static and walk clips. So the game
+  has no legs-only or torso-only layer; the parts are separate renderers, and a mod could drive `gfx/leg` after the
+  animator (the skin changer never re-skins it) if a seated leg were ever drawn. `Dev/SpriteProbe.cs` removed again;
+  the atlas scripts (`tools/frames.py`, `tools/frames2.py`) stay.
+- No warning or error in the session's log.
