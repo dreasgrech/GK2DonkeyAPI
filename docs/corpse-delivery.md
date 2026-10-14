@@ -222,4 +222,4 @@ nun's "many" answer (two bodies, both separated), with the setting off (vanilla)
 - Extraction: UnityPy 1.25.4 against the `aa/StandaloneWindows64` bundles (Unity 6000.3.9f1 given as the fallback
   version) and `resources.assets` for the balance object (path id 2455) and the `lng_*` language tables. The scripts
   (bundle scan, graph print, subgraph trace, balance byte contexts, locale lookup) are kept in
-  `C:\Users\User\.claude\jobs\5184282a\tmp\graphtools\` with a README, for the re-audit after the next game update.
+  the job's temp folder (`graphtools`, with a README), for the re-audit after the next game update.

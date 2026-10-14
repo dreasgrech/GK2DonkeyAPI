@@ -6,7 +6,7 @@ import csv, os, sys
 from PIL import Image, ImageDraw
 
 D = r"C:\Program Files (x86)\Steam\steamapps\common\Graveyard Keeper 2\BepInEx\GK2-sprites"
-OUT = r"C:\Users\User\AppData\Local\Temp\claude\C--ClaudeCodeTemp\5184282a-9684-4b39-b483-2e43fc08430c\scratchpad"
+OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "frames-out")  # the sheets, next to the script (ignored by git)
 os.makedirs(OUT, exist_ok=True)
 rows = {}
 with open(os.path.join(D, "sprites.csv"), encoding="utf-8") as f:

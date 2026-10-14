@@ -4,7 +4,7 @@ On 2026-10-13 the game was updated on Steam from 25752683 (the 1.009 hotfix) to 
 calls 1.010. The game folder's git has the update committed ("game version 1.010"); the previous DLLs came from
 `HEAD~1` ("before update") for the "old" side of the diff. The mods were audited against the new build before the
 game was started with it. The changelog the user pasted is kept beside the decompile
-(`C:\Users\User\.claude\jobs\5184282a\tmp\changelog_1010.txt`).
+(`changelog_1010.txt` in the job's temp folder).
 
 ## What changed
 

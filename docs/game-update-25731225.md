@@ -42,7 +42,7 @@ On 2026-10-06 the game was updated on Steam from 25676698 (1.008) to 25731225, t
   ReservoirInteractionHandler, SaveCodeFixes(_Helper), StationInteractionHandler, UICreditsWindow(Element),
   UIMultiInventoryWindow, UIResourceBasedCraftWindowData, UITooltip, WgoData, WgoPartPool, Wso, ZombieHPActivity,
   ZombieWgoData.
-- The 1.009 decompile was written to the job's temp folder (`C:\Users\User\.claude\jobs\5184282a\tmp\decomp_1009`
+- The 1.009 decompile was written to the job's temp folder (`decomp_1009`
   and `lbt_1009`), not next to `decomp_1008` in the scratchpad (that folder is kept read-only). Move it there if it
   should outlive the job.
 
