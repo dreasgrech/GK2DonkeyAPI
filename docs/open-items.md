@@ -296,14 +296,17 @@ closed):
   (docs/instances.md "Settings per instance"). The user does not want that: a game can have many spawned carts, each
   should keep its own look when hitched. To decide and build: a free cart's look is its own (a plain cart brings
   "game default" keys that replace the donkey's cart keys on hitch, or the donkey's cart keys only ever apply to the
-  cart it was summoned with), and what Saddle Up's Paint/Wheels settings then mean for a foreign cart.
+  cart it was summoned with), and what Saddle Up's Paint/Wheels settings then mean for a foreign cart. **Built
+  2026-10-14:** the companion applies its cart look to its own cart only; a hitched foreign cart keeps its look and
+  stays its own when left (`MountCompanion.foreignCart`, kept in the donkey's data). To check in game.
 - **A chest left standing blocks its cart** (seen 2026-10-14, round 4 of the dependency-check test): with the chest
   feature frozen (or forced off) the chest stays where the save holds it, which is the cart body's spot, so the keeper
   cannot reach the cart's seat ("hitching refused: his body hits Obstacle") and nothing can lift the chest. No item
   at risk; the cart is unusable until a re-audited build (Move Building can move the chest). Suggested: when a load
   leaves a chest standing at its cart (`Persistence.ReclaimChest` false with the chest within the cart), place the
   restored free cart one step behind the chest (the chest's set-down offset); the cart is the mod's temp object,
-  nothing saved moves. Same for the forced run.
+  nothing saved moves. Same for the forced run. **Built 2026-10-14** (`Persistence.ClearCartOfChest`: the game's
+  drop-spot search one cart length ahead of the chest, in the loaded scene only). To check in game.
 
 ## Deferred
 

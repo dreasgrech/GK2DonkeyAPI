@@ -682,13 +682,17 @@ namespace GK2DonkeyAPI
                     }
                     if (!string.IsNullOrEmpty(r.Chest) && r.Cart && reclaimedChests.Add(r.Chest))
                     {
-                        if (ReclaimChest(i, r.Chest, r.Position))
+                        if (ReclaimChest(i, r.Chest, r.Position, out Vector3? standing))
                         {
                             chests++;
                         }
                         else
                         {
                             chestsLeft++; // standing where it is (said above), never lost
+                            if (standing.HasValue)
+                            {
+                                ClearCartOfChest(i, standing.Value, r.FacingRight);
+                            }
                         }
                     }
                     Register(i); // InstanceSpawned, now that it is complete
@@ -723,8 +727,10 @@ namespace GK2DonkeyAPI
         }
 
         // The chest with this GUID, standing within ReclaimRadius of where its cart stood, back onto the cart (CartChest).
-        private static bool ReclaimChest(Instance i, string guid, Vector3 at)
+        // standing: where the chest was left when it stands on the cart's own point (the cart then moves, ClearCartOfChest).
+        private static bool ReclaimChest(Instance i, string guid, Vector3 at, out Vector3? standing)
         {
+            standing = null;
             try
             {
                 WgoData d = MainGame.WorldData.GetWgoData(new SGuid(Guid.Parse(guid)));
@@ -742,6 +748,10 @@ namespace GK2DonkeyAPI
                 if (!i.ChestRig.Restore(d, "restored with the save"))
                 {
                     Plugin.Log.LogInfo($"Persistence: the chest {d.id} of {i.Describe()} is left standing at {d.Position:F1} (see the line above).");
+                    if (new Vector2(d.Position.x - at.x, d.Position.z - at.z).magnitude <= 0.8f)
+                    {
+                        standing = d.Position;
+                    }
                     return false;
                 }
                 return true;
@@ -750,6 +760,38 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning($"Persistence: putting the chest {guid} back onto {i.Describe()} failed: {e.Message}");
                 return false;
+            }
+        }
+
+        // A chest left standing on the cart's own point (SetDownForSave stands it at the cart point, which is a free cart's
+        // root) blocks the seat, so the cart could not be hitched again and nothing lifts the chest while the feature is
+        // off (seen 2026-10-14). The cart is the mod's own temporary object: it moves one cart length ahead, so the chest
+        // ends up behind its back end, where a set-down chest lies. Only in the loaded scene (the game's drop-spot search
+        // is physics); elsewhere it stays until that scene's next load.
+        private static void ClearCartOfChest(Instance i, Vector3 chest, bool facingRight)
+        {
+            try
+            {
+                if (LoadedScene(i.SceneId) == null)
+                {
+                    return;
+                }
+                Vector3 ahead = new Vector3(facingRight ? 1f : -1f, 0f, 0f);
+                const float Length = 1.6f;    // the cart body (0.9) and a chest (0.8) with a gap between
+                const float NearestRing = 0.75f; // GetPlayerDropPosition's first distance
+                Vector3 anchor = chest + ahead * (Length - NearestRing);
+                if (!SpecialPhysicsCastUtils.GetPlayerDropPosition(anchor, new Vector2(ahead.x, ahead.z), out Vector3 spot)
+                    || new Vector2(spot.x - chest.x, spot.z - chest.z).magnitude < 1.2f)
+                {
+                    Plugin.Log.LogInfo($"Persistence: {i.Describe()} stays where its chest stands (no free spot ahead of it); move the chest to hitch it.");
+                    return;
+                }
+                i.MoveTo(spot, null);
+                Plugin.Log.LogInfo($"Persistence: {i.Describe()} moved to {spot:F1}, one length ahead of its chest at {chest:F1}, so it can be hitched with the chest standing behind it.");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Persistence: moving {i.Describe()} clear of its chest failed; it stays where it is: {e.Message}");
             }
         }
 

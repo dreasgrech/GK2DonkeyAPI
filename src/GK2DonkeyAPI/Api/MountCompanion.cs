@@ -121,6 +121,12 @@ namespace GK2DonkeyAPI.Api
         // null when that foal isn't there). Null when none.
         public MountHandle Donkey { get; private set; }
         public MountHandle Cart { get; private set; }
+
+        // The donkey pulls a cart this companion did not summon (hitched in the world, 2026-10-14): that cart keeps its
+        // own look (the paint, wheels, hubs and lantern colours are this companion's own cart's), and when it is left
+        // standing again it stays a cart of its own, not this companion's. Kept in the donkey's data for a load.
+        private bool foreignCart;
+        private const string CartDataKey = "cart";
         public IReadOnlyList<MountHandle> Foals => foalHandles;
 
         private readonly MountHandle[] foalHandles = new MountHandle[MaxFoals];
@@ -455,6 +461,7 @@ namespace GK2DonkeyAPI.Api
             pending = null;
             Donkey = Mounts.Find(OwnerId, DonkeyKey);
             Cart = Mounts.Find(OwnerId, CartKey);
+            foreignCart = Donkey != null && Donkey.HasCart && Donkey.GetData(OwnerId, CartDataKey) == "foreign";
             int found = 0;
             for (int i = 0; i < MaxFoals; i++)
             {
@@ -481,12 +488,15 @@ namespace GK2DonkeyAPI.Api
 
         private void OnHitched(MountHandle d, MountHandle c)
         {
-            if (c == Cart)
+            bool own = c == Cart;
+            if (own)
             {
                 Cart = null; // part of the donkey now
             }
             if (d == Donkey)
             {
+                foreignCart = !own;
+                Donkey.SetData(OwnerId, CartDataKey, own ? "own" : "foreign");
                 ApplyLook();
             }
         }
@@ -495,6 +505,14 @@ namespace GK2DonkeyAPI.Api
         {
             if (d != Donkey)
             {
+                return;
+            }
+            if (foreignCart)
+            {
+                // Not this companion's cart: it stands on as its own, with its own look and no key of ours.
+                foreignCart = false;
+                Donkey.SetData(OwnerId, CartDataKey, "own");
+                ApplyLook();
                 return;
             }
             Cart = c;
@@ -645,8 +663,9 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, HarnessKeys, harnessKeys);
                 }
             }
-            // The cart's colours sit on whichever holds the cart (they move with it at hitch and unhitch).
-            MountHandle withCart = Donkey != null && Donkey.Exists && Donkey.HasCart ? Donkey : Cart != null && Cart.Exists ? Cart : null;
+            // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);
+            // a cart of someone else's that the donkey pulls keeps its own.
+            MountHandle withCart = Donkey != null && Donkey.Exists && Donkey.HasCart && !foreignCart ? Donkey : Cart != null && Cart.Exists ? Cart : null;
             if (withCart != null)
             {
                 Instance(withCart, PaintKeys, paintKeys);

@@ -68,6 +68,8 @@ Each one says why.
   stays where it is, with its cart and cargo. Nothing is handed back to the keeper.
 - **Hitching:** riding a donkey without a cart, press the hitch key (General.HitchKey, J) or the interact key near
   a free cart's shafts. The cart, its cargo and its settings join the donkey, and the ride goes on in Cart style.
+  A companion's donkey (Saddle Up) pulling a cart it did not summon leaves that cart's look alone and does not make
+  it its own when it is left again (`MountCompanion`, 2026-10-14).
 - **Unhitching:** riding a donkey with its cart, press the hitch key. The cart stays where it stands, as a free
   cart with its cargo and settings, and the ride goes on in Ride style. A standing donkey's cart is left the same
   way (`Mounts.Unhitch`), also one without a view (asleep far away, or in a scene that isn't loaded): the cart stays
