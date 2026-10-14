@@ -710,3 +710,42 @@ the first run's gap was several rows; what else differed in the first run is not
 zero trimmed offset being read as a source once), so the screen-space measurement stays as the rule and the first
 model is not reinstated.
 
+**Third run (12:57), the cut adjusted by hand:** acceptable, but "the perfectly straight line cut at the rider's hip"
+(the user's red line) is not wanted. **Replaced:** no crop any more. The donkey is let in front of his body for this
+one facing without moving anything on screen: `RiderBack` pushes the `gfx/bdy` and `gfx/arm` transforms 0.6 behind the
+keeper's plane along the view axis (the game orders the keeper's own parts the same way, with local z offsets of a
+few thousandths that do not show), past the donkey's body plane (Ride.Depth 0.24 along the ground), so the donkey's
+own outline, saddle cloth included, covers his hips pixel for pixel; the legs stay switched off. The positions are
+remembered and restored like RiderMotion's parts (the animator may write them). The `BackCutAdjustPx` setting and
+its slider are removed again (nothing to cut); a stale key may sit in the cfg from the one run, harmless. Also built
+this round: the dev panel swallows the game's player input while the mouse is over it or a slider is held
+(`TuningWindow.PointerOverPanel` in the input-update prefix), so setting a value no longer swings or turns the keeper.
+**To check:** facing up, the hips disappear behind the donkey's back along its real outline, no straight edge; the
+head and shoulders stay in front; the donkey's neck covers the near shoulder where they overlap (as in the composite's
+second frame); turning back restores the body at once; the panel can be used without the keeper reacting.
+
+### 10.6 Open: the arrow leaves from where the keeper would stand (reported 13:05)
+
+The arrow appears at the keeper's unmounted height, not at the drawn bow: by design of step 1, `Weapon Container`
+(the Bow object is the arrow's origin, `AttackComponent` line 60) is held at its rest height over the physical body so
+that arrows and the sword fan meet the enemies' colliders (a zombie's capsule tops out near y 1); the drawn bow sits
+the seat's 0.22 (plus the torso) higher. Options, none built yet: (a) keep the origin at rest height (hits are sure,
+the picture is off by the seat); (b) spawn at the drawn bow (`Bow` at rest 0.632 + 0.15 over the body, lifted 0.22 →
+about 1.0 over the ground, at the top of a zombie capsule: hits uncertain, to measure against the enemies' `HitZone`
+colliders and the arrow's sweep box); (c) spawn at the drawn bow and let the mod set the projectile's height to the
+rest height on its first frame, or give the arrow a slight downward pitch so it crosses the capsule band; (d) hold the
+container at rest height for the sword only and lift the Bow child by the seat for the shot's origin while giving
+the arrow the rest height a frame later. Needs: the zombie collider heights from the decompile/prefab dump, and the
+arrow's sweep geometry (`ArrowProjectile.LateUpdate`), before choosing.
+
+**Fourth run (13:15), the push along the view ray:** mechanically right (the body stayed put on screen, the donkey's
+outline covered the hips) and wrong as a picture: with the whole flank in front of him he looked stuck behind the
+donkey, not sitting on it. The user: the straight cut had looked better, apart from its ruler line. **The model that
+fits:** a rider who turns his back to the camera on a sideways donkey sits side-saddle with both legs on the far
+flank; the donkey hides them and his seat rests on the back line *in front of* the donkey. Composed
+(`docs/img/mounted-combat-rider-up-sidesaddle.png`): the body in front with the legs hidden and no lift leaves the
+armour skirt ten rows down the flank (glued to the side); lifted about 5 px the skirt's own rounded hem meets the back
+line, the picture of the cut without the line. **Built:** `RiderBack` only hides `gfx/leg`; `TickSeat` adds
+`Ride.BackSeatExtraPx` (default 5, the Riding tab: "Seen from behind: sits higher by (px)", 0-12) to the seat while it
+is active; no crop, no push. Cost: a small hop of the body when he turns away and back.
+

@@ -693,8 +693,8 @@ namespace GK2DonkeyAPI
             Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
 
             Header("Rider in armour (the fights)");
-            IntSlider("Seen from behind: cut the body lower (-) / higher (+), pixels", s.BackCutAdjustPx, -12, 12, null);
-            GUILayout.Label("In armour, aiming up, the rider's legs are hidden and his body is cut at the donkey's back line so he sits behind it; this moves that cut. Nothing else uses it.", small);
+            IntSlider("Seen from behind: sits higher by (px)", s.BackSeatExtraPx, 0, 12, null);
+            GUILayout.Label("Aiming up in armour he sits side-saddle: the legs are hidden on the far side and he sits this much higher, so the armour skirt's hem meets the donkey's back.", small);
 
             Header("Rider legs (drawn on the donkey's side)");
             Toggle("Show legs on the donkey's side", s.NearLeg, Mount.RefreshLeg);

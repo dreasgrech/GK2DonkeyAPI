@@ -2829,11 +2829,11 @@ namespace GK2DonkeyAPI
                     }
                     if (!seatPending)
                     {
+                        // Facing up in armour: legs hidden, the seat lifted (RiderBack.cs; before TickSeat, which reads it).
+                        RiderBack.Update(seatRoot, drawnVertical && drawnUp && InArmour(pc));
                         TickSeat(pc);
                         HoldWeapons(pc);
                         TickRiderParts(pc);
-                        // Facing up in armour: legs hidden, torso and arm cut at the donkey's back line (RiderBack.cs).
-                        RiderBack.Update(seatRoot, keeperBodyRenderer, donkeyBodyRenderer, drawnVertical && drawnUp && InArmour(pc));
                     }
                 }
                 catch (Exception e)
@@ -2862,6 +2862,12 @@ namespace GK2DonkeyAPI
                 if (!seat.HasValue)
                 {
                     return;
+                }
+                if (RiderBack.Active)
+                {
+                    // Seen from behind (armour, facing up): side-saddle, the legs hidden on the far flank, the seat lifted so
+                    // the armour skirt's hem meets the back line instead of hanging down the near flank (RiderBack.cs).
+                    seat = seat.Value + S.BackSeatExtraPx.Value * PxWorldY;
                 }
                 bool torsoShiftStale = (TorsoShiftWorld - Vector3.right * (TorsoFacingSign() * S.TorsoOffsetPx.Value * 0.02f)).sqrMagnitude > 0.000001f;
                 if (Mathf.Abs(seat.Value - seatApplied) > 0.0005f || torsoShiftStale)

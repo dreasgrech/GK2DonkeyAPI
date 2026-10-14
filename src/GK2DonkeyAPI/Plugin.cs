@@ -34,7 +34,7 @@ namespace GK2DonkeyAPI
         public readonly Tuned<int> LegHeightPx;
         public readonly Tuned<int> LegAdjustXPx;
         public readonly Tuned<int> LegAdjustYPx;
-        public readonly Tuned<int> BackCutAdjustPx;
+        public readonly Tuned<int> BackSeatExtraPx;
         public readonly Tuned<bool> SnapToGround;
         public readonly Tuned<bool> CartFollowsGround;
         public readonly Tuned<float> CartGroundMaxShift;
@@ -106,8 +106,8 @@ namespace GK2DonkeyAPI
                 "Fine adjustment of the legs along the donkey, relative to the torso, in art pixels (positive = towards the rear).");
             LegAdjustYPx = cfg.Bind(section, "LegAdjustYPx", Defaults.Get(section, "LegAdjustYPx", legY),
                 "Fine adjustment of the legs' height, relative to the donkey's back line, in art pixels (positive = higher).");
-            BackCutAdjustPx = cfg.Bind(section, "BackCutAdjustPx", Defaults.Get(section, "BackCutAdjustPx", 0),
-                "Seen from behind in armour (aiming up), the rider's body is cut at the donkey's back line so he sits behind it: this moves the cut, in art pixels (positive = higher, more of him hidden).");
+            BackSeatExtraPx = cfg.Bind(section, "BackSeatExtraPx", Defaults.Get(section, "BackSeatExtraPx", 5),
+                "Seen from behind in armour (aiming up) the rider sits side-saddle, legs hidden on the far side: how much higher he sits then, in art pixels, so the armour skirt's hem meets the donkey's back.");
             SnapToGround = cfg.Bind(section, "SnapToGround", Defaults.Get(section, "SnapToGround", true),
                 "Place the donkey at the ground height under its own position (the game does this for every walking object). Off: it takes the keeper's height, which digs it into slopes when it stands beside or behind him.");
             CartFollowsGround = cfg.Bind(section, "CartFollowsGround", Defaults.Get(section, "CartFollowsGround", true),
@@ -321,7 +321,7 @@ namespace GK2DonkeyAPI
                 {
                     SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
-                    NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, BackCutAdjustPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
+                    NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, BackSeatExtraPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
                     CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift,
                     LanternAlong, LanternUp, LanternAcross, LanternTilt, LanternLean, LanternFlip, LanternHangs,
                     LanternSwayDegrees, LanternSwaySeconds, IdleFidgetEverySeconds, IdleFidgetSpeed, IdleCrawlSpeed,
