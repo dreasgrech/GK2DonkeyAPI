@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx;
 using GK2DonkeyAPI.Api;
+using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 
@@ -703,6 +704,10 @@ namespace GK2DonkeyAPI
                 {
                     return "I'm busy.";
                 }
+                if (InArmour(pc))
+                {
+                    return "Not in armour.";
+                }
                 if (BuildController.Instance != null && BuildController.Instance.IsBuildModeActive)
                 {
                     return "Not while building.";
@@ -743,9 +748,32 @@ namespace GK2DonkeyAPI
             }
 
             // Anything that takes the keeper out of free walking ends the ride: work, ladders, building, planting,
-            // fishing, combat, sleep, death, cutscenes. UI (chests, inventory) and doors (teleport) do not.
+            // fishing, combat, the armour view (the town's battles from their pre-fight on, a script's "Equip Armor"), sleep,
+            // death, cutscenes. UI (chests, inventory) and doors (teleport) do not.
             // Asked every frame while riding: Enum.GetValues makes a new array each call, and a foreach over it boxes each value.
             private static readonly TakenControlType[] ControlTypes = (TakenControlType[])Enum.GetValues(typeof(TakenControlType));
+
+            // The keeper in his armour view (PlayerController.SetArmorView): the game's own fights put it on from the
+            // quest's talk (FightingGameController.StartPreFight, armour and weapon, the keeper teleported to the fight
+            // point) and take it off when the fight ends or is cancelled; a script can too (Flow_SetPlayerArmorState); and
+            // equipping body armour during a fight does. The armour is an animator layer over the body
+            // (AnimationComponent.Layers.Armor*) with no frames for the rider poses, so a mounted keeper vanished into a
+            // blue shape (2026-10-14, the first town battle), and a fight is no place for the donkey anyway. The ride ends
+            // as the armour goes on and cannot start again until it is off. The flag is private; the field is in the
+            // dependency manifest and Access.Verify names it.
+            private static readonly AccessTools.FieldRef<PlayerController, bool> ArmourViewActive = AccessTools.FieldRefAccess<PlayerController, bool>("isArmorViewActive");
+
+            internal static bool InArmour(PlayerController pc)
+            {
+                try
+                {
+                    return pc != null && ArmourViewActive(pc);
+                }
+                catch
+                {
+                    return false;
+                }
+            }
 
             private string WhyMustDismount(PlayerController pc)
             {
@@ -753,6 +781,10 @@ namespace GK2DonkeyAPI
                 if (!(cur is FreePlayerState))
                 {
                     return "state " + (cur?.GetType().Name ?? "none");
+                }
+                if (InArmour(pc))
+                {
+                    return "the keeper's armour";
                 }
                 foreach (TakenControlType t in ControlTypes)
                 {

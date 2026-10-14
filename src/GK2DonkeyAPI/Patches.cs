@@ -27,6 +27,7 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Method(typeof(Wgo), "TryRegisterInChunkManager"), "Wgo.TryRegisterInChunkManager");
             Require(AccessTools.Method(typeof(Wgo), "TryUnregisterInChunkManager"), "Wgo.TryUnregisterInChunkManager");
             Require(AccessTools.Field(typeof(WGOInteractionHandlerBase), "assignedWgo"), "WGOInteractionHandlerBase.assignedWgo");
+            Require(AccessTools.Field(typeof(PlayerController), "isArmorViewActive"), "PlayerController.isArmorViewActive"); // no riding in armour (Mount.InArmour)
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.SetTrigger), new[] { typeof(string) }), "AnimationComponentBase.SetTrigger(string)");
             Require(AccessTools.Property(typeof(PlayerController), nameof(PlayerController.MovementComponent)), "PlayerController.MovementComponent");
             Require(typeof(PlayerAnimation).IsSubclassOf(typeof(AnimationComponentBase)) ? typeof(PlayerAnimation) : null, "PlayerAnimation : AnimationComponentBase");

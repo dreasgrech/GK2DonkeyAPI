@@ -307,6 +307,29 @@ closed):
   restored free cart one step behind the chest (the chest's set-down offset); the cart is the mod's temp object,
   nothing saved moves. Same for the forced run. **Built 2026-10-14** (`Persistence.ClearCartOfChest`: the game's
   drop-spot search one cart length ahead of the chest, in the loaded scene only). To check in game.
+- **A town battle while mounted** (seen 2026-10-14, game 1.010): the quest's talk starts the pre-fight, which puts the
+  keeper into his armour view (`PlayerController.SetArmorView`) with his state machine still free, so the ride went on
+  and the keeper showed as a blue shape (the armour skin has no frame for the rider pose: "the keeper body has no
+  sprite this frame"); the attack dismounted him, and mounting again showed the shape again. The armour is an animator
+  layer (`AnimationComponent.Layers.Armor*`) without the rider poses' frames; the same view goes on from a script's
+  "Equip Armor" node (`Flow_SetPlayerArmorState`) and from equipping body armour during a fight, and only
+  `SetArmorView(false)` (fight end, the script's "Unequip", leaving the game) takes it off; the other player skin
+  swaps (`PlayerSkinHelper`, customisation) keep the base body, which has the frames. **Built 2026-10-14:**
+  `Mount.InArmour(pc)` (the private `PlayerController.isArmorViewActive`, verified at start) ends the ride ("the
+  keeper's armour") and refuses to mount ("Not in armour.") until the armour is off. (`FightingGameController`'s
+  state was the first idea; its `LazySingleton.Instance` creates the controller when none exists, so it is not read.)
+  To check in game: talk to the quest giver while mounted (dismounts as the armour goes on), H during the pre-fight
+  and the fight (refused), H after it (works).
+- **Mounted combat** (wanted 2026-10-14: "attack while mounted, both with the sword and also with the arrow"). Not
+  built; the armour check above is the safe baseline until it is. What it takes, from the game's code: the attack
+  states (`AttackSword*PlayerState`, `AttackBow*PlayerState`) leave `FreePlayerState`, which ends the ride today; the
+  armour and weapon views are animator layers (`AnimationComponent.Layers.Armor`, `ArmorWithSword`, `ArmorWithBow`,
+  `SwordAttack`, `BowAttack`) over the body with their own frames, so a rider pose needs frames in those layers or the
+  rider must be drawn from the attack frames themselves; the attack states set the speed multiplier on enter and reset
+  it on exit (the mount restores its own, Mount.cs "don't fight them"); the fight levels teleport the keeper and
+  bound the arena (`SetBorderObjectsActive`), where the donkey's safe-ground rules would apply. To investigate first:
+  which attack frames exist per facing, whether the hit boxes (`WeaponHitBox` layer) follow the keeper's sprite
+  offset on the donkey, and the allies/enemies' targeting of a moving mounted keeper.
 
 ## Deferred
 
