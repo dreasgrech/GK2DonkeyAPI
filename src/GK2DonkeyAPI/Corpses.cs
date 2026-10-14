@@ -64,6 +64,14 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogError("Corpses: unavailable, the game's code changed (" + why + "). The game's own delivery runs; the rest of GK2 Donkey API is unaffected.");
         }
 
+        // The start-up check found the game changed code this feature uses (GameCode.cs): off for the session, the
+        // switch does nothing (the gate's warning said so; the game's own delivery runs).
+        internal static void Freeze(string why)
+        {
+            failed = true;
+            ApplyError = "unavailable: " + why;
+        }
+
         // Called every frame by the plugin: the patches follow the switch.
         internal static void Tick()
         {
@@ -95,9 +103,9 @@ namespace GK2DonkeyAPI
             try
             {
                 harmony = new Harmony(Plugin.Guid + ".corpses");
-                Patch(typeof(Flow_TryToAddCorpseToPallet), "TryToAddCorpseToPallet", nameof(PalletPrefix));
-                Patch(typeof(Flow_DropItem), "Drop", nameof(DropPrefix));
-                Patch(typeof(Flow_GoTo), "GoTo", nameof(GoToPrefix));
+                Patch(AccessTools.DeclaredMethod(typeof(Flow_TryToAddCorpseToPallet), "TryToAddCorpseToPallet"), "Flow_TryToAddCorpseToPallet.TryToAddCorpseToPallet", nameof(PalletPrefix));
+                Patch(AccessTools.DeclaredMethod(typeof(Flow_DropItem), "Drop"), "Flow_DropItem.Drop", nameof(DropPrefix));
+                Patch(AccessTools.DeclaredMethod(typeof(Flow_GoTo), "GoTo"), "Flow_GoTo.GoTo", nameof(GoToPrefix));
                 harmony.Patch(AccessTools.Method(typeof(UINotificator), nameof(UINotificator.ShowNewBodyNotification), new[] { typeof(string) }),
                     prefix: new HarmonyMethod(typeof(Corpses), nameof(NotificationPrefix)));
                 Applied = true;
@@ -115,12 +123,12 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void Patch(Type type, string method, string prefix)
+        // The target is looked up at the call (a literal type and name: the dependency manifest reads those).
+        private static void Patch(MethodInfo original, string what, string prefix)
         {
-            MethodInfo original = AccessTools.DeclaredMethod(type, method);
             if (original == null)
             {
-                throw new InvalidOperationException($"{type.Name}.{method} not found.");
+                throw new InvalidOperationException($"{what} not found.");
             }
             harmony.Patch(original, prefix: new HarmonyMethod(typeof(Corpses), prefix));
         }
@@ -144,18 +152,20 @@ namespace GK2DonkeyAPI
         // rather than failing at the first delivery.
         internal static void Verify()
         {
-            foreach (string f in new[] { "item", "yes" })
-            {
-                if (AccessTools.Field(typeof(Flow_TryToAddCorpseToPallet), f) == null) throw new InvalidOperationException("Flow_TryToAddCorpseToPallet." + f + " not found.");
-            }
-            foreach (string f in new[] { "out", "item", "gdPointDataDropOn" })
-            {
-                if (AccessTools.Field(typeof(Flow_DropItem), f) == null) throw new InvalidOperationException("Flow_DropItem." + f + " not found.");
-            }
-            foreach (string f in new[] { "out", "onFinish", "fireEventOnFinish", "gdPointData", "gdPointId", "useGdDataInsteadId", "navigation", "speed" })
-            {
-                if (AccessTools.Field(typeof(Flow_GoTo), f) == null) throw new InvalidOperationException("Flow_GoTo." + f + " not found.");
-            }
+            // One literal per lookup: the dependency manifest lists each (a computed name would hide it from the check).
+            Port(AccessTools.Field(typeof(Flow_TryToAddCorpseToPallet), "item"), "Flow_TryToAddCorpseToPallet.item");
+            Port(AccessTools.Field(typeof(Flow_TryToAddCorpseToPallet), "yes"), "Flow_TryToAddCorpseToPallet.yes");
+            Port(AccessTools.Field(typeof(Flow_DropItem), "out"), "Flow_DropItem.out");
+            Port(AccessTools.Field(typeof(Flow_DropItem), "item"), "Flow_DropItem.item");
+            Port(AccessTools.Field(typeof(Flow_DropItem), "gdPointDataDropOn"), "Flow_DropItem.gdPointDataDropOn");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "out"), "Flow_GoTo.out");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "onFinish"), "Flow_GoTo.onFinish");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "fireEventOnFinish"), "Flow_GoTo.fireEventOnFinish");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "gdPointData"), "Flow_GoTo.gdPointData");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "gdPointId"), "Flow_GoTo.gdPointId");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "useGdDataInsteadId"), "Flow_GoTo.useGdDataInsteadId");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "navigation"), "Flow_GoTo.navigation");
+            Port(AccessTools.Field(typeof(Flow_GoTo), "speed"), "Flow_GoTo.speed");
             if (GetWgoDataMethod == null) throw new InvalidOperationException("GKCustomFlowNodeWithWgoData.GetWgoData not found.");
             if (AccessTools.DeclaredMethod(typeof(Flow_TryToAddCorpseToPallet), "TryToAddCorpseToPallet") == null
                 || AccessTools.DeclaredMethod(typeof(Flow_DropItem), "Drop") == null
@@ -164,6 +174,11 @@ namespace GK2DonkeyAPI
             {
                 throw new InvalidOperationException("A corpse-delivery patch target is missing.");
             }
+        }
+
+        private static void Port(FieldInfo f, string what)
+        {
+            if (f == null) throw new InvalidOperationException(what + " not found.");
         }
 
         internal static string Describe()

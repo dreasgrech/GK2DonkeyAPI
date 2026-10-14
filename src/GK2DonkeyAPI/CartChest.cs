@@ -156,11 +156,12 @@ namespace GK2DonkeyAPI
 
         internal static bool On => Plugin.CargoChest != null && Plugin.CargoChest.Value && !Locked;
 
-        // The feature's own fail-safe. Locked, no chest is lifted any more this session; whatever rides is set down
-        // at its cart at once. Set when the game is not the audited build and the player forced the mod on anyway
-        // (this is the one feature that touches saved state), and when any chest operation throws (whatever the
-        // cause: a broken mod can then hurt at most once, loudly). The after-load repair and the pre-save pass keep
-        // running regardless: they use only the game's most basic calls.
+        // The feature's own fail-safe. Locked, no chest is lifted any more this session (nor put back onto a cart after
+        // a load: it stands where the save holds it); whatever rides is set down at its cart at once. Set at start by
+        // the check of the game's code (GameCode: the game changed code this feature uses, or the player forced the
+        // mod on over a core change; this is the one feature that moves saved objects), and when any chest operation
+        // throws (whatever the cause: a broken mod can then hurt at most once, loudly). The after-load repair and the
+        // pre-save pass keep running regardless: they use only the game's most basic calls.
         internal static bool Locked { get; private set; }
         internal static string LockReason { get; private set; }
 
@@ -172,7 +173,7 @@ namespace GK2DonkeyAPI
             LockReason = null;
         }
 
-        internal static void Lock(string reason)
+        internal static void Lock(string reason, bool loud = true)
         {
             if (Locked)
             {
@@ -180,7 +181,10 @@ namespace GK2DonkeyAPI
             }
             Locked = true;
             LockReason = reason;
-            Plugin.Log.LogError($"Chest: the chest on the cart is switched off for this session: {reason}. Any chest riding is set down at its cart now.");
+            if (loud)
+            {
+                Plugin.Log.LogError($"Chest: the chest on the cart is switched off for this session: {reason}. Any chest riding is set down at its cart now.");
+            }
             try
             {
                 foreach (Mount.Instance i in Mount.All.ToArray())
@@ -508,6 +512,11 @@ namespace GK2DonkeyAPI
             {
                 if (chest != null || d == null || !IsChest(d) || (d.CraftComponent != null && d.CraftComponent.IsDestroyingCraftActive))
                 {
+                    return false;
+                }
+                if (Locked)
+                {
+                    Plugin.Log.LogInfo($"Chest: {d.id} stays standing at {owner.Describe()}'s cart: the chest on the cart is off ({LockReason}).");
                     return false;
                 }
                 if (!owner.HasCart)

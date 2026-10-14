@@ -145,3 +145,9 @@ None. The pins moved in every `Plugin.cs` (and the probe tool), the READMEs, `di
 
 The first-run rehearsal of `docs/release-checklist.md` §5 was run on the 1.009-hotfix dist; the 1.010 dist built
 the same evening has not been rehearsed (only the pins changed in this repo).
+
+## The gate itself
+
+Whether the MVID pin should stay this strict was investigated the same evening, with data from all four updates so far:
+`GK2QOLMods/docs/update-gate.md` (recommendation: a dependency fingerprint for the QOL mods, the strict pin for this repo).
+The next day the pin went here too, decided per feature: `docs/dependency-check.md`.

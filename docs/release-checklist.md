@@ -12,8 +12,10 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   API change. Saddle Up has its own version and asks for the API twice (`NeedsApi` and the `BepInDependency` minimum in
   `src/SaddleUp/Plugin.cs`, kept equal),
   and `tests/ApiSurface` is green (its snapshot is the public API).
-- The audited game: `AuditedGameMvid` / `AuditedLazyBearMvid` in `src/GK2DonkeyAPI/Plugin.cs` are the installed
-  game's (`tests/GameDiff` after any update; the audit notes are `docs/game-update-*.md`).
+- The audited game: the build embeds the dependency manifest against the installed game (`docs/dependency-check.md`;
+  no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list (the
+  audit notes are `docs/game-update-*.md`); `tests/CecilScan-DonkeyAPI` must report the manifest identical and every
+  class sorted in `src/GK2DonkeyAPI/game-code.txt`.
 - The dev tools cannot reach a player by accident: the `[Debug]` keys exist only with the dev tools unlocked
   (`DevTools.cs`: the sources on this machine, or the marker file `BepInEx\config\dreas.gk2.dev`); a player's cfg
   has no `[Debug]` section at all. Unlocked, `Debug.TuningWindow` is off by default and is the only way in;
@@ -48,7 +50,8 @@ python tools\check-dist.py
 `-p:ForDist=true` leaves out the debug directory (its PDB path would hold this machine's user folder) and the
 `GK2DonkeyAPISourceDir` marker (so the DLL reads its embedded `defaults.cfg`, `cargo-layout.cfg` and
 `cargo-shapes.cfg`, and the panel has no "Make these the mod defaults" button). `check-dist.py` fails on any baked
-path, a `.pdb` reference, the source-folder marker, or a pinned MVID that is not the one in `Plugin.cs`.
+path, a `.pdb` reference, the source-folder marker, an API manifest whose members changed or vanished in the
+installed game, or a Saddle Up DLL that references a game assembly (it carries no manifest).
 `--no-incremental` matters: after a dev build, a `ForDist` build of the unchanged sources reuses the dev output (the
 property change doesn't invalidate the compile), and the check then fails on the PDB path (seen 2026-10-13).
 
@@ -58,8 +61,8 @@ again; `bin/` holds whichever was built last.
 ## 4. The texts
 
 - `dist/README.md`: versions, API version, game build and date.
-- `README.md` (the table), `src/GK2DonkeyAPI/README.md` (version line, the audited MVIDs, the install step's log
-  line), `src/SaddleUp/README.md` (version line, the key table): the API version and the game build.
+- `README.md` (the table), `src/GK2DonkeyAPI/README.md` (version line, the install step's log line),
+  `src/SaddleUp/README.md` (version line, the key table): the API version and the game build.
 - `docs/open-items.md`: what is built but not yet seen in game, so the release notes can say so.
 
 ## 5. A first run as a player (this machine)

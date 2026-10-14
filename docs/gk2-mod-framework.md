@@ -49,7 +49,7 @@ matches its docs.
 
 | | Framework | Ours |
 |---|---|---|
-| Game-update safety | SHA-256 of Assembly-CSharp; mods with `requiresKnownBuild` are blocked on unknown builds unless they run their own contract check and call `ConfirmCurrentBuildCompatibility` | MVID guard on Assembly-CSharp **and** LazyBearTechnology, `Safety.DisableOnGameUpdate`, re-audit per update (`tests/GameDiff`) |
+| Game-update safety | SHA-256 of Assembly-CSharp; mods with `requiresKnownBuild` are blocked on unknown builds unless they run their own contract check and call `ConfirmCurrentBuildCompatibility` | every game member the mod uses compared with the installed game at start, by feature (`docs/dependency-check.md`; before 2026-10-14 an MVID pin on Assembly-CSharp and LazyBearTechnology), re-audit per update (`tests/GameDiff`) |
 | Settings UI | a generated menu inside the game UI, with gamepad support | only the BepInEx cfg (plus Mounts' own IMGUI panel on F8) |
 | Enable/disable | its own Enabled entry, or the mod's (optional mode) | `General.Enabled` in each mod |
 
@@ -228,7 +228,7 @@ reference, shows it too.
    - register the main `ConfigFile`, with `frameworkManagesEnabledState: false` and `requiresKnownBuild: false`;
    - one row per setting, same Section/Key/type, with player-facing names, sections and order;
    - Debug entries left out;
-   - a read-only status row: active, or disabled because the game updated.
+   - a read-only status row: active, or what the start-up check of the game's code decided.
 10. Test in game:
     - a change in the menu reaches the cfg and takes effect;
     - Reset works;

@@ -22,6 +22,10 @@ namespace GK2DonkeyAPI
     // scale -1 in one facing) changes nothing.
     internal static partial class Lantern
     {
+        // Set at start by the check of the game's code (GameCode): the game changed code this feature uses, so the
+        // pole and lamp (the game's pooled parts) are left as the prefab has them and the settings do nothing.
+        internal static bool Frozen;
+
         // The bound instance's lantern (Mount.Current, see Mount.Instance): what the panel shows and edits.
         internal static Rig Current => Mount.Current?.LanternRig;
         public static bool Attached => Current != null && Current.Attached;
@@ -91,6 +95,11 @@ namespace GK2DonkeyAPI
             public void AttachRoot(Transform root)
             {
                 Detach();
+                if (Frozen)
+                {
+                    Note = "off: the game changed code the lantern uses";
+                    return;
+                }
                 try
                 {
                     Transform poleSway = FindTopLevel(root, "donkey_cart_lantern_sway");

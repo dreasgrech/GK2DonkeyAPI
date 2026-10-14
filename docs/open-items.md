@@ -235,6 +235,10 @@ closed):
     Custom colours), so still 3 pages.
 11. **Speed labels fit** the game's narrow value field ("Fastest (x2.5 walking speed)"); if they're cut off,
     shorten them for that window only.
+12. **The dependency check** (2026-10-14, `docs/dependency-check.md` §"Testing it"): the three tampered-manifest
+    starts (core stop with the mod-removed load and the force switch, features frozen, dev tools locked), and the
+    plain start on the real manifest (nothing logged, "Compatible"). **Passed 2026-10-14**, all six starts; one
+    finding (the chest left standing blocks its cart, under Undecided).
 
 ## Undecided
 
@@ -286,6 +290,20 @@ closed):
   holds one relation (beside or on top), so six logs need both. Recommended: both relations per pair as the unit
   of tuning, support-aware placement, relation blocks and an isolate button on the panel, the sheet picturing
   each pair twice. Steps 1-4 built 2026-10-10 (file v2 and migration, packer from relations, the sheet's second picture per pair, the panel's relation rows with Isolate). To check in game: the sheet (two-item pictures unchanged), six logs, four crates, three logs, a crate over a log and a slab; then calibrate the on-top relations.
+- **A hitched cart takes the donkey's colours** (seen 2026-10-14 during the dependency-check test): a cart spawned
+  from the Instances tab (the game's plain art) hitched to the Saddle Up donkey shows that donkey's paint and wheels,
+  because cart colour keys travel with the cart and a plain cart carries none, so the donkey's own cart keys stay
+  (docs/instances.md "Settings per instance"). The user does not want that: a game can have many spawned carts, each
+  should keep its own look when hitched. To decide and build: a free cart's look is its own (a plain cart brings
+  "game default" keys that replace the donkey's cart keys on hitch, or the donkey's cart keys only ever apply to the
+  cart it was summoned with), and what Saddle Up's Paint/Wheels settings then mean for a foreign cart.
+- **A chest left standing blocks its cart** (seen 2026-10-14, round 4 of the dependency-check test): with the chest
+  feature frozen (or forced off) the chest stays where the save holds it, which is the cart body's spot, so the keeper
+  cannot reach the cart's seat ("hitching refused: his body hits Obstacle") and nothing can lift the chest. No item
+  at risk; the cart is unusable until a re-audited build (Move Building can move the chest). Suggested: when a load
+  leaves a chest standing at its cart (`Persistence.ReclaimChest` false with the chest within the cart), place the
+  restored free cart one step behind the chest (the chest's set-down offset); the cart is the mod's temp object,
+  nothing saved moves. Same for the forced run.
 
 ## Deferred
 

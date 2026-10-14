@@ -23,9 +23,12 @@ through the rename.
    the game's **Mods** menu. Without it, everything works the same and the settings are in
    `BepInEx\config\dreas.gk2.saddleup.cfg`.
 
-**After a game update** both mods switch themselves off until they've been checked against the new game code
-(`Safety.DisableOnGameUpdate`); the game then runs unmodified. The log says "Game code changed since this mod was
-audited".
+**After a game update** the API compares every game member it uses with the new game at start (a list embedded
+in the DLL, [`docs/dependency-check.md`](docs/dependency-check.md)). All identical: it runs as before. A member gone, or the code of
+the core changed: it stops and the game runs unmodified; your donkeys, carts and their loads stay in the save as the
+game holds them (the cargo lies at the cart, a chest stands there), nothing is lost. Only a feature's code changed:
+that feature is off or runs with a warning, the rest works. The log line starts with `GK2 Donkey API: the game
+changed the code of`; Saddle Up follows the API.
 
 ## Building on the API (mod authors)
 

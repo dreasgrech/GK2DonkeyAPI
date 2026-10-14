@@ -52,6 +52,20 @@ namespace GK2DonkeyAPI
         // The chunk that holds this view, for the self-test's check that a moved view sits in a chunk around its new
         // spot: centre and size of that chunk's bounds, or false when no chunk holds it. Reads the chunk manager's
         // private layer list; BurstableBounds is Unity.Mathematics, read by reflection so the project needs no reference.
+        // A field or property of an object whose type is only known at run time (a chunk layer, the chunkable data):
+        // System.Type's reflection, not AccessTools, so the dependency manifest does not list it (it cannot name a
+        // computed type); a member that is gone throws into the probe's own try.
+        private static object Read(object o, string name)
+        {
+            const System.Reflection.BindingFlags Any = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic;
+            Type t = o.GetType();
+            System.Reflection.FieldInfo f = t.GetField(name, Any);
+            if (f != null) return f.GetValue(o);
+            System.Reflection.PropertyInfo p = t.GetProperty(name, Any);
+            if (p != null) return p.GetValue(o);
+            throw new MissingMemberException(t.Name, name);
+        }
+
         internal static bool ChunkOf(Wgo v, out Vector3 center, out Vector3 size, out int chunks)
         {
             center = size = Vector3.zero;
@@ -65,8 +79,8 @@ namespace GK2DonkeyAPI
             bool found = false;
             foreach (object layer in layers ?? Array.Empty<object>())
             {
-                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
-                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                var arr = Read(layer, "chunks") as Chunk[];
+                int count = (int)Read(layer, "Count");
                 for (int i = 0; i < count && arr != null && i < arr.Length; i++)
                 {
                     Chunk c = arr[i];
@@ -76,8 +90,8 @@ namespace GK2DonkeyAPI
                         if (!found)
                         {
                             object b = c.GetChunkableData();
-                            center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
-                            size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                            center = Float3(Read(b, "center"));
+                            size = Float3(Read(b, "size"));
                             found = true;
                         }
                     }
@@ -101,8 +115,8 @@ namespace GK2DonkeyAPI
             bool holds = false;
             foreach (object layer in layers ?? Array.Empty<object>())
             {
-                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
-                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                var arr = Read(layer, "chunks") as Chunk[];
+                int count = (int)Read(layer, "Count");
                 for (int i = 0; i < count && arr != null && i < arr.Length; i++)
                 {
                     Chunk c = arr[i];
@@ -112,8 +126,8 @@ namespace GK2DonkeyAPI
                     }
                     chunks++;
                     object b = c.GetChunkableData();
-                    Vector3 center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
-                    Vector3 size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                    Vector3 center = Float3(Read(b, "center"));
+                    Vector3 size = Float3(Read(b, "size"));
                     where += $"{(where.Length > 0 ? "; " : "")}centre {center:F1} size {size:F1}";
                     if (Mathf.Abs(point.x - center.x) <= size.x * 0.5f + 0.01f && Mathf.Abs(point.z - center.z) <= size.z * 0.5f + 0.01f)
                     {
@@ -127,13 +141,13 @@ namespace GK2DonkeyAPI
         internal static Vector3 ViewBoundsCenter(Wgo v)
         {
             object b = v.GetChunkableData();
-            return Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
+            return Float3(Read(b, "center"));
         }
 
         internal static Bounds ViewBounds(Wgo v)
         {
             object b = v.GetChunkableData();
-            return new Bounds(Float3(AccessTools.Field(b.GetType(), "center").GetValue(b)), Float3(AccessTools.Field(b.GetType(), "size").GetValue(b)));
+            return new Bounds(Float3(Read(b, "center")), Float3(Read(b, "size")));
         }
 
         // Each chunk holding the view, with the chunk system's own verdict on it (Chunk.isVisible after the last pass).
@@ -148,8 +162,8 @@ namespace GK2DonkeyAPI
             var sb = new StringBuilder();
             foreach (object layer in layers ?? Array.Empty<object>())
             {
-                var arr = AccessTools.Field(layer.GetType(), "chunks").GetValue(layer) as Chunk[];
-                int count = (int)AccessTools.Property(layer.GetType(), "Count").GetValue(layer);
+                var arr = Read(layer, "chunks") as Chunk[];
+                int count = (int)Read(layer, "Count");
                 for (int i = 0; i < count && arr != null && i < arr.Length; i++)
                 {
                     Chunk c = arr[i];
@@ -158,8 +172,8 @@ namespace GK2DonkeyAPI
                         continue;
                     }
                     object b = c.GetChunkableData();
-                    Vector3 center = Float3(AccessTools.Field(b.GetType(), "center").GetValue(b));
-                    Vector3 size = Float3(AccessTools.Field(b.GetType(), "size").GetValue(b));
+                    Vector3 center = Float3(Read(b, "center"));
+                    Vector3 size = Float3(Read(b, "size"));
                     object vis = AccessTools.Field(typeof(Chunk), "isVisible")?.GetValue(c);
                     sb.Append(sb.Length > 0 ? "; " : "").Append($"chunk centre {center:F1} size {size:F1} isVisible {vis ?? "?"}, {c.Count} object(s)");
                 }
@@ -188,7 +202,7 @@ namespace GK2DonkeyAPI
             var pools = AccessTools.Field(typeof(WgoPartPool), "pools").GetValue(pool) as System.Collections.IDictionary;
             if (pools != null && pools.Contains(key))
             {
-                idle = (int)AccessTools.Property(pools[key].GetType(), "Count").GetValue(pools[key]);
+                idle = (int)Read(pools[key], "Count");
             }
             var b = AccessTools.Field(typeof(WgoPartPool), "borrowedCounts").GetValue(pool) as System.Collections.IDictionary;
             if (b != null && b.Contains(key))

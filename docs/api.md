@@ -43,8 +43,9 @@ does.
 - **You can add restrictions but never remove the core's.** Co-op, indoors, "busy" (work, fishing, combat,
   cutscenes), build mode, the save hand-back and the mount-object check always apply. `TryMount` returns their
   reason like any other.
-- `Mounts.IsAvailable` is false when the player switched the core off (`General.Enabled`) or it disabled itself
-  after a game update. Every call then refuses or does nothing; nothing throws.
+- `Mounts.IsAvailable` is false when the player switched the core off (`General.Enabled`) or its start-up check of
+  the game's code stopped it (a member gone or the core's code changed since the build). Every call then refuses or
+  does nothing; nothing throws. `Mounts.StatusText` says which, and names a feature the check switched off.
 
 ## Riding
 
@@ -482,7 +483,7 @@ Where they apply:
 - **Set by you**, as your owner id, so the dev panel shows who set them. A value another mod set is never cleared.
 
 **`MountSettingsPage`** (`Mounts.SettingsPage(owner, Config, title, author, description, status)`; without `status`,
-`Mounts.StatusText`: "Active", or why the API is off):
+`Mounts.StatusText`: "Active", or what the API is doing instead and why: a feature off after a game update, stopped, or switched off):
 
 | Row | Binds | In the game's Settings window |
 |---|---|---|
@@ -553,7 +554,7 @@ core; a mod switches it on for its player. How the game delivers and what the fe
 - **Off means untouched.** The four prefixes (the graph's pallet node, its own fallback drop node, its walk node, the
   "New Body" notification) are applied when `CorpsesAtCrossroads` turns on and removed when it turns off (`Corpses.Tick`,
   every frame). A missing patch target after a game update switches this feature off for good and leaves the rest of
-  the API running.
+  the API running; so does a changed one, found by the start-up check (`docs/dependency-check.md`).
 - **The game's rules stay:** deliveries every second day in the early afternoon, the body roll and its chance, the
   morgue's capacity (bodies on the ground count, so deliveries thin out and then stop until they're hauled), and the
   five quests that keep the donkey at the morgue for a scripted talk (`21_base_donkey_nun` awaiting;

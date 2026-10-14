@@ -355,10 +355,8 @@ namespace GK2DonkeyAPI
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
         public const string Version = "0.28.0";
 
-        // Module version id of the Assembly-CSharp.dll this plugin was audited against (Steam build 25601286).
-        private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
-        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
-        private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
+        // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
+        // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
 
         internal static ManualLogSource Log;
 
@@ -439,8 +437,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<float> TuningWindowFontScale;
         internal static ConfigEntry<float> TuningWindowWidth;
 
-        // [Safety]
-        internal static ConfigEntry<bool> DisableOnGameUpdate;
+        // [Safety]: GameCode.cs (StopOnChangedGameCode, ForceRunOnChangedGameCode, LastDependencyCheck)
 
         private Harmony harmony;
 
@@ -571,8 +568,12 @@ namespace GK2DonkeyAPI
             // General.IdleShuffle and [Shuffle]: standing donkeys without a cart take a few slow steps (IdleShuffle.cs).
             IdleShuffle.Bind(Config);
 
+            // The check of the game's code (GameCode.cs), before the [Debug] keys bind: a change in the members the dev
+            // tools use locks them for the session. Its verdict is applied after every key is bound (GameCode.Apply).
+            GameCode.Bind(Config);
+            GameCode.Check();
             // The [Debug] keys: in the cfg only with the dev tools unlocked (DevTools.cs), else in a scratch config nobody sees.
-            ConfigFile dbg = DevTools.DebugConfig(Config);
+            ConfigFile dbg = DevTools.DebugConfig(Config, GameCode.DevToolsChanged ? "the game changed code the dev tools use" : null);
             TuningWindowEnabled = dbg.Bind("Debug", "TuningWindow", false,
                 "Dev tool for mod authors: a tuning panel for every mount value in the top-right corner while mounted, plus the investigation tools on its Debug tab (and F5). Values apply live and are saved to this file as you change them.");
             TuningWindowKey = dbg.Bind("Debug", "TuningWindowKey", KeyCode.F11,
@@ -602,24 +603,15 @@ namespace GK2DonkeyAPI
             {
                 Log.LogInfo("Dev tools unlocked by " + DevTools.How + ": the [Debug] keys are in the cfg (Debug.TuningWindow is the panel).");
             }
-            DisableOnGameUpdate = Config.Bind("Safety", "DisableOnGameUpdate", true,
-                "Do not patch anything if the game's code has changed since this mod was audited. Rebuild/re-audit after game updates.");
-
             CargoLayout.Load(); // cargo-layout.cfg: the repo file on the machine with the sources, else the embedded copy
             CargoShapes.Load(); // cargo-shapes.cfg: the measured item shapes, the same way
             Log.LogInfo("Cargo layout: " + CargoLayout.Summary());
 
-            System.Guid gameMvid = typeof(WgoData).Assembly.ManifestModule.ModuleVersionId;
-            System.Guid lazyBearMvid = typeof(LazyBearTechnology.LazyAudio).Assembly.ManifestModule.ModuleVersionId;
-            if (gameMvid != AuditedGameMvid || lazyBearMvid != AuditedLazyBearMvid)
+            // Identical game members: patch. Changed ones: by feature (GameCode.cs: stop, freeze, warn, lock the dev tools).
+            // A member gone, or a check that could not run: stop; the game runs unmodified.
+            if (!GameCode.Apply())
             {
-                if (DisableOnGameUpdate.Value)
-                {
-                    Log.LogError($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, expected {AuditedGameMvid}; LazyBearTechnology {lazyBearMvid}, expected {AuditedLazyBearMvid}). Mod is DISABLED; the game runs unmodified. Set Safety.DisableOnGameUpdate=false to force-enable at your own risk.");
-                    return;
-                }
-                Log.LogWarning($"Game code changed since this mod was audited (Assembly-CSharp {gameMvid}, LazyBearTechnology {lazyBearMvid}). Running anyway because DisableOnGameUpdate=false.");
-                CartChest.Lock("the game changed since this mod was audited (DisableOnGameUpdate=false); the chest on the cart touches saved state and stays off until the mod is re-audited");
+                return;
             }
 
             harmony = new Harmony(Guid);
@@ -630,6 +622,10 @@ namespace GK2DonkeyAPI
                 // one deriving from its base class (FrameworkLink) can't load, so Harmony would warn at every start.
                 foreach (Type patch in PatchClasses)
                 {
+                    if (GameCode.SkipsPatch(patch))
+                    {
+                        continue; // a frozen feature's patch (GameCode): the game's code is not hooked there at all
+                    }
                     harmony.PatchAll(patch);
                 }
             }
@@ -638,6 +634,7 @@ namespace GK2DonkeyAPI
                 harmony.UnpatchSelf();
                 harmony = null;
                 Log.LogError($"Patching failed; all patches removed, game runs unmodified. {e}");
+                GameCode.StoppedBy("patching failed (see BepInEx/LogOutput.log)");
                 return;
             }
             Patched = true;

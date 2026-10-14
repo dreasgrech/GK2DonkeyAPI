@@ -18,8 +18,11 @@ namespace GK2DonkeyProbe
         public const string Guid = "dreas.gk2.donkeyprobe";
         public const string Version = "0.1.0";
 
+        // The game build this probe was last run against (1.010, Steam 25910882). A plain pin, on purpose: the probe is a
+        // dev tool that is never deployed by a plain build (Deploy=false in its csproj) and whose job after an update is
+        // to dump the new build, so "the game changed, running anyway" is the wanted answer; the shipped mods carry the
+        // dependency manifest instead (docs/dependency-check.md).
         private static readonly System.Guid AuditedGameMvid = new System.Guid("5ec8094e-4c33-4615-9eb8-011501193186");
-        // And of LazyBearTechnology.dll (the engine library the plugin also uses), same build (Steam 25601286).
         private static readonly System.Guid AuditedLazyBearMvid = new System.Guid("6cd86a0b-b1ed-40ba-88b0-a9313146514b");
 
         internal static ManualLogSource Log;

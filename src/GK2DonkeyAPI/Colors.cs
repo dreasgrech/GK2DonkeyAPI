@@ -173,6 +173,9 @@ namespace GK2DonkeyAPI
         }
 
         internal static Tuned<bool> Enabled;
+        // Set at start by the check of the game's code (GameCode): the game changed code this feature uses, so no
+        // part is touched this session (the parts are the game's pooled ones) and the settings do nothing.
+        internal static bool Frozen;
         internal static Tuned<SpriteColorMethod> SpriteMethod;
         internal static Tuned<string> GlowColor, LitGlassTint, CharacterLightColor;
 
@@ -555,6 +558,11 @@ namespace GK2DonkeyAPI
                 Detach();
                 if (root == null || !root)
                 {
+                    return;
+                }
+                if (Frozen)
+                {
+                    Note = "off: the game changed code the colours use";
                     return;
                 }
                 attachedTo = owner;
@@ -1129,7 +1137,7 @@ namespace GK2DonkeyAPI
 
             internal static Color GlowRgb(Color game)
             {
-                if (Enabled.Value && TryHex(GlowColor.Value, out Color32 c))
+                if (Enabled.Value && !Frozen && TryHex(GlowColor.Value, out Color32 c))
                 {
                     Color k = c;
                     k.a = game.a;
@@ -1140,7 +1148,7 @@ namespace GK2DonkeyAPI
 
             internal static Color CharacterLight(Color current)
             {
-                return Enabled.Value && TryHex(CharacterLightColor.Value, out Color32 c) ? (Color)c : current;
+                return Enabled.Value && !Frozen && TryHex(CharacterLightColor.Value, out Color32 c) ? (Color)c : current;
             }
 
             private static readonly int IdTintColor = Shader.PropertyToID("_TintColor");
@@ -1152,7 +1160,7 @@ namespace GK2DonkeyAPI
             internal void ApplyGlass(SpriteRenderer glass)
             {
                 if (glass == null || !glass) return;
-                bool want = Enabled.Value && TryHex(LitGlassTint.Value, out Color32 tint) && !(tint.r == 255 && tint.g == 255 && tint.b == 255);
+                bool want = Enabled.Value && !Frozen && TryHex(LitGlassTint.Value, out Color32 tint) && !(tint.r == 255 && tint.g == 255 && tint.b == 255);
                 if (!want)
                 {
                     RestoreGlass();

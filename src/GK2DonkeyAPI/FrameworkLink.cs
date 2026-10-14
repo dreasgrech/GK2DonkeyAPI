@@ -48,7 +48,8 @@ namespace GK2DonkeyAPI
         }
 
         // GK2 Donkey API itself in the Mods list (no settings there): so the pages' mods can name it as their
-        // dependency, which the framework checks against its own list. Its build is confirmed only while it runs.
+        // dependency, which the framework checks against its own list. Its build is confirmed only while it runs with
+        // every game member its features use identical (Mounts.StatusText "Active"; a frozen or forced run is not).
         internal static void TryRegisterApi(ConfigFile config)
         {
             if (!Chainloader.PluginInfos.TryGetValue(FrameworkGuid, out var info) || info.Instance == null)
@@ -82,9 +83,9 @@ namespace GK2DonkeyAPI
 
             public override void OnRegister(Gk2ModContext context)
             {
-                if (Mounts.IsAvailable)
+                if (Mounts.IsAvailable && Mounts.StatusText == "Active")
                 {
-                    context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                    context.ConfirmCurrentBuildCompatibility("Its own check passed: every game member its features use is identical to the audited build.");
                 }
             }
         }
@@ -120,7 +121,7 @@ namespace GK2DonkeyAPI
                 {
                     try
                     {
-                        context.ConfirmCurrentBuildCompatibility("Its own check of the game code passed (the audited build).");
+                        context.ConfirmCurrentBuildCompatibility("Its own check passed: every game member its features use is identical to the audited build.");
                     }
                     catch (Exception e)
                     {

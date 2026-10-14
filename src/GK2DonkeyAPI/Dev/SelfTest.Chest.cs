@@ -106,7 +106,8 @@ namespace GK2DonkeyAPI
             {
                 try
                 {
-                    return AccessTools.Field(typeof(Wgo), name)?.GetValue(v)?.ToString() ?? "?";
+                    // System.Type's reflection: a diagnostic over names given at the call, not a dependency the manifest lists.
+                    return typeof(Wgo).GetField(name, System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic)?.GetValue(v)?.ToString() ?? "?";
                 }
                 catch
                 {

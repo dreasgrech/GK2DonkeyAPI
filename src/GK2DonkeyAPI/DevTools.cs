@@ -11,7 +11,8 @@ namespace GK2DonkeyAPI
     // one). Locked, the same keys bind into a scratch config that is never written: every read works and answers its
     // default, the player's cfg shows no [Debug] section, and none of the keys does anything (the release audit of
     // 2026-10-13: the Debug tab spawns items, zombies and deliveries, and the self-tests move things, so a player
-    // who finds the switch in the cfg must not be able to flip it).
+    // who finds the switch in the cfg must not be able to flip it). Locked as well, whatever unlocked them, when the
+    // game changed the code of a member only the dev tools use (GameCode.DevToolsChanged): a rebuild sorts that out.
     internal static class DevTools
     {
         public const string MarkerName = "dreas.gk2.dev";
@@ -26,7 +27,7 @@ namespace GK2DonkeyAPI
 
         // The config the [Debug] keys bind into: the mod's own when unlocked, else the scratch one (a path that never
         // exists: the ConfigFile reads a file only when it is there, and SaveOnConfigSet off means it never writes one).
-        public static ConfigFile DebugConfig(ConfigFile own)
+        public static ConfigFile DebugConfig(ConfigFile own, string lockedBecause)
         {
             bool sources = Defaults.RepoPath(Defaults.FileName) != null;
             bool marker = false;
@@ -37,8 +38,8 @@ namespace GK2DonkeyAPI
             catch
             {
             }
-            Unlocked = sources || marker;
-            How = sources ? "the sources on this machine" : marker ? "the marker file " + MarkerPath : "locked";
+            Unlocked = (sources || marker) && lockedBecause == null;
+            How = lockedBecause != null ? "locked: " + lockedBecause : sources ? "the sources on this machine" : marker ? "the marker file " + MarkerPath : "locked";
             if (Unlocked)
             {
                 return own;

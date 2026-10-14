@@ -583,8 +583,9 @@ namespace GK2DonkeyAPI
                 Plugin.MountWgoId.Value = wgo;
             }
             GUILayout.Label("Used at the next mount. The game defines npc_donkey (and npc_donkey_test, the same art); anything without a cart gives Ride style only.", small);
-            Toggle("Safety: do nothing if the game's code changed since the audit (Safety.DisableOnGameUpdate)", Plugin.DisableOnGameUpdate, null);
-            GUILayout.Label($"Checked once at game start; a change here counts from the next start. General.Enabled is {Plugin.Enabled.Value} (set in the cfg; turning the mod off while mounted would strand the donkey, so it is not a switch here).", small);
+            Toggle("Safety: stop the mod whenever the game changed code it uses (Safety.StopOnChangedGameCode)", GK2Shared.GameDependencies.StopOnChangedGameCode, null);
+            Toggle("Safety: run the mod even over changed core code, the chest off (Safety.ForceRunOnChangedGameCode)", GameCode.ForceRun, null);
+            GUILayout.Label($"The game's code is checked once at game start (a change here counts from the next start): {GameCode.Status} General.Enabled is {Plugin.Enabled.Value} (set in the cfg; turning the mod off while mounted would strand the donkey, so it is not a switch here).", small);
         }
 
         private static void DrawRiding()

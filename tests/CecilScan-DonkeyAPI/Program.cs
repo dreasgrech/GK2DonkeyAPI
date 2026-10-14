@@ -172,5 +172,45 @@ Method("SurfaceStepSoundSettings", "GetStepSoundIdForSurfaceType", 1);
 { bool good = !game.Types.Any(t => t.Name != "AnimationComponentBase" && t.Methods.Any(m => (m.Name == "OnAnimationStepCompleted" || m.Name == "PlaySound") && m.IsVirtual && !m.IsNewSlot && IsSubOf(t, "AnimationComponentBase")));
   Console.WriteLine((good?"PASS":"FAIL") + " no override of AnimationComponentBase.OnAnimationStepCompleted/PlaySound"); if (!good) fails++; }
 bool IsSubOf(TypeDefinition t, string baseName) { var b = t.BaseType; while (b != null) { if (b.Name == baseName) return true; try { b = b.Resolve()?.BaseType; } catch { return false; } } return false; }
+// The dependency manifest (docs/dependency-check.md): every game member the DLL uses, found in the installed game
+// unchanged; and every class of the DLL that uses game members sorted in game-code.txt (GameCode decides per class
+// what a changed member means; a class listed nowhere counts as core, so a new one gets sorted on purpose).
+{
+  string? Res(string name) { var r = mod.Resources.OfType<EmbeddedResource>().FirstOrDefault(x => x.Name == name); return r == null ? null : System.Text.Encoding.UTF8.GetString(r.GetResourceData()); }
+  string? deps = Res("gk2deps.txt"), table = Res("GK2DonkeyAPI.game-code.txt");
+  if (deps == null || table == null) { Console.WriteLine("FAIL resources: gk2deps.txt " + (deps != null) + ", game-code.txt " + (table != null)); fails++; }
+  else
+  {
+    var owners = new SortedSet<string>(); int entries = 0; var changed = new List<string>(); var missing = new List<string>();
+    foreach (var raw in deps.Split('\n'))
+    {
+      var line = raw.TrimEnd('\r'); if (line.Length < 2 || line[1] != ' ') continue;
+      entries++;
+      int tab = line.IndexOf('\t');
+      if (tab >= 0) foreach (var o in line.Substring(tab + 1).Split(',')) owners.Add(o.Substring(o.LastIndexOf('.') + 1));
+    }
+    var listed = new HashSet<string>();
+    foreach (var raw in table.Split('\n'))
+    {
+      var line = raw.Trim(); if (line.Length == 0 || line[0] == '#') continue;
+      int sp = line.IndexOf(' '); if (sp < 0) continue;
+      var rest = line.Substring(sp + 1); int colon = rest.IndexOf(':'); if (colon >= 0) rest = rest.Substring(colon + 1);
+      foreach (var n in rest.Split(' ', StringSplitOptions.RemoveEmptyEntries)) listed.Add(n);
+    }
+    var unsorted = owners.Where(o => !listed.Contains(o)).ToList();
+    Console.WriteLine((unsorted.Count == 0 ? "PASS" : "FAIL") + $" game-code.txt sorts every class that uses game members ({owners.Count} classes, {entries} manifest entries)" + (unsorted.Count == 0 ? "" : ": unsorted " + string.Join(", ", unsorted)));
+    if (unsorted.Count > 0) fails++;
+    var stale = listed.Where(l => !owners.Contains(l)).ToList();
+    Console.WriteLine((stale.Count == 0 ? "PASS" : "FAIL") + " game-code.txt names only classes that use game members" + (stale.Count == 0 ? "" : ": " + string.Join(", ", stale)));
+    if (stale.Count > 0) fails++;
+    var lbt = ModuleDefinition.ReadModule(managed + "LazyBearTechnology.dll", rp);
+    var manifest = GK2Shared.DepManifest.Parse(deps);
+    var verdict = GK2Shared.DepCompare.Compare(manifest, scope => scope == "Assembly-CSharp" ? game : scope == "LazyBearTechnology" ? lbt : null!);
+    Console.WriteLine((verdict.Identical ? "PASS" : "FAIL") + $" dependency manifest: {verdict.Checked} game members (made against game {manifest.GameMvid}{(manifest.GameMvid == game.Mvid ? "" : ", the installed game is a different build")}): {verdict.Kind}");
+    foreach (var s in verdict.Missing) Console.WriteLine("  MISSING " + s);
+    foreach (var s in verdict.Changed) Console.WriteLine("  CHANGED " + s);
+    if (!verdict.Identical) fails++;
+  }
+}
 Console.WriteLine(fails == 0 ? "ALL PASS" : "FAILURES: " + fails);
 return fails;

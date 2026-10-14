@@ -1,0 +1,31 @@
+# How GK2 Donkey API answers a game update that changed the code of a game member it uses, by the mod's own class
+# that uses the member (GameCode.cs reads this at start; docs/dependency-check.md). tests/CecilScan-DonkeyAPI fails
+# when a class of the built DLL that uses game members is listed nowhere here, so every new class gets sorted.
+#
+#   core <classes>               the mod stops (Safety.ForceRunOnChangedGameCode runs it anyway, the chest off)
+#   frozen <feature>: <classes>  that feature is off for the session (its patches are not applied), the rest runs
+#   warned <feature>: <classes>  that feature runs on the changed code; the warning names it
+#   dev <classes>                the dev tools are locked for the session; the mod runs
+#   verify <classes>             the start-up verifier: not a user of the member (Access.Verify names what others use)
+# A member used by classes of several kinds takes the most serious one. A class listed nowhere counts as core.
+
+verify Access
+
+core Plugin GameCode Mount ViewPool Cargo CargoLayout HeadReroute InstanceControls PreviewStage Mounts MountHandle MountCompanion
+core AnimationComponentBase_SetDirection_Patch AnimationComponentBase_SetState_Patch AnimationComponentBase_SetDirectionEnum_Patch AnimationComponentBase_SetTrigger_Patch
+core WgoDataScriptsManager_CreateScript_Patch Flow_Body_DoAction_Patch Wgo_CompleteVisualPartsLoad_Patch Wgo_OnDestroy_Patch SaveSystem_Save_Patch SaveSystem_Remove_Patch
+core PlayerData_AddOverheadItem_Patch PlayerData_HasFreeOverheadSlot_Patch PlayerData_TryGetOverheadItem_Patch PlayerData_RemoveOverheadItem_Patch PlayerData_InsertOverheadItemTo_Patch
+core BigDropInteractionHandler_HasInteraction_Patch PlayerInteractionComponent_CanInteractWithDrop_Patch PlayerInputHandler_UpdateInput_Patch LazyExpressionEvaluationScope_GetOverheadItemForMutation_Patch
+core ZombieInteractionHandler_HasInteraction_Patch ZombieInteractionHandler_FormInteractionInfo_Patch ZombieStations_TakeBack_Patch
+core PlayerController_Teleport_DoorNote_Patch
+
+frozen the corpses at the crossroads: Corpses
+frozen the chest on the cart: CartChest ChestMoves ChestInteractionHandler_Interact_Patch ChestInteractionHandler_Interact2_Patch ChestInteractionHandler_HasInteraction2_Patch ChestInteractionHandler_FormInteractionInfo_Patch PlayerController_Teleport_Patch WorldZoneData_TryAddWgoData_Patch GameSave_PrepareToSave_Patch
+frozen the colours: Colors
+frozen the lantern: Lantern
+
+warned the sounds: MountSounds AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
+warned the look bar: LookBar
+warned the settings page in the game's Settings window: SettingsRows
+
+dev SelfTest TestLoads CargoSheet TuningWindow ScriptDump CarryProbe ChestProbe HeadProbe HeldItemProbe LanternProbe ReachProbe ShapeProbe

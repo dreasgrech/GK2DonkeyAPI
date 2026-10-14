@@ -10,9 +10,9 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.28.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010 (Assembly-CSharp
-MVID `5ec8094e-…`, LazyBearTechnology `6cd86a0b-…`; re-audit in
-[`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)).
+Version 0.28.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+(re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
+game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
 - **Every setting and how it works inside the game:** [`docs/reference.md`](../../docs/reference.md).
 - **Design:** [`docs/api-design.md`](../../docs/api-design.md), [`FEASIBILITY.md`](FEASIBILITY.md), and
@@ -169,7 +169,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 | Feature | Reached by | Status |
 |---|---|---|
 | **No save changes:** the ridden donkey is a temporary world object the game never saves; a save made while mounted loads without the mod as if on foot. | always | tested |
-| **Game-update guard:** does nothing if the game's code changed since the audit, and checks every game member it uses at start. | cfg | tested |
+| **Game-update check:** every game member the mod uses is compared with the installed game at start. All identical: runs. One gone, or the core's code changed: stops (`Safety.ForceRunOnChangedGameCode` runs it anyway, the chest off). Only a feature's code changed: that feature off (chest, corpses, colours, lantern) or warned (sounds, look bar, settings page), the rest runs ([`docs/dependency-check.md`](../../docs/dependency-check.md)). | cfg | tested |
 | **Master switch** (`General.Enabled`): off, no mod can mount; the kill switch if a mod built on this misbehaves. | cfg | tested |
 | **Crash cleanup:** a failure mid-ride hands the cargo back and restores the keeper. | always | tested |
 | **The real donkey NPC is never touched;** the mod only reads its prefab. | always | tested |

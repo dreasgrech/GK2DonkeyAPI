@@ -399,25 +399,34 @@ namespace GK2DonkeyAPI
     [HarmonyPatch]
     internal static class ZombieStations_TakeBack_Patch
     {
+        // One literal per target, so the dependency manifest lists exactly what is patched (a loop over names would hide
+        // them from the check). Only the methods each handler declares itself: an inherited one is patched on its base.
         private static IEnumerable<MethodBase> TargetMethods()
         {
-            var types = new[]
-            {
-                typeof(PorterStationInteractionHandler), typeof(PowerSourceInteractionHandler), typeof(ZombieCarrierInteractionHandler),
-                typeof(ZombieClayInteractionHandler), typeof(ZombieMineInteractionHandler), typeof(ZombieSandInteractionHandler),
-                typeof(ZombieSawmillInteractionHandler), typeof(StationInteractionHandler),
-            };
-            foreach (Type t in types)
-            {
-                foreach (string name in new[] { "Interact", "HasInteraction", "FormInteractionInfo" })
-                {
-                    MethodInfo m = AccessTools.DeclaredMethod(t, name);
-                    if (m != null)
-                    {
-                        yield return m;
-                    }
-                }
-            }
+            yield return AccessTools.DeclaredMethod(typeof(PorterStationInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(PorterStationInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(PorterStationInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(PowerSourceInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(PowerSourceInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(PowerSourceInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieCarrierInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieCarrierInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieCarrierInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieClayInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieClayInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieClayInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieMineInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieMineInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieMineInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSandInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSandInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSandInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSawmillInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSawmillInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(ZombieSawmillInteractionHandler), "FormInteractionInfo");
+            yield return AccessTools.DeclaredMethod(typeof(StationInteractionHandler), "Interact");
+            yield return AccessTools.DeclaredMethod(typeof(StationInteractionHandler), "HasInteraction");
+            yield return AccessTools.DeclaredMethod(typeof(StationInteractionHandler), "FormInteractionInfo");
         }
 
         private static void Prefix()

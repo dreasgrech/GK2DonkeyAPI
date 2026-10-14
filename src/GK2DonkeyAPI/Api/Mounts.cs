@@ -54,12 +54,14 @@ namespace GK2DonkeyAPI.Api
         // for breaking changes.
         public static readonly Version ApiVersion = new Version(Plugin.Version);
 
-        // False when the core is switched off (General.Enabled) or disabled itself after a game update.
+        // False when the core is switched off (General.Enabled) or its start-up check of the game's code stopped it.
         public static bool IsAvailable => Plugin.Patched && Plugin.Enabled != null && Plugin.Enabled.Value;
 
-        // For a mod's status line: "Active", or why the API is off.
-        public static string StatusText => IsAvailable ? "Active"
-            : "Off: GK2 Donkey API is off (its General.Enabled, or it switched itself off after a game update; see BepInEx/LogOutput.log).";
+        // For a mod's status line: "Active", or what the API is doing instead and why: a feature off or on changed code
+        // after a game update (its start-up check, GameCode), stopped by that check, or switched off (General.Enabled).
+        public static string StatusText => IsAvailable ? GameCode.Status
+            : GameCode.Stopped ? GameCode.Status
+            : "Off: GK2 Donkey API is off (its General.Enabled; see BepInEx/LogOutput.log).";
 
         public static bool IsMounted => Mount.IsMounted;
 
