@@ -93,10 +93,19 @@ a failure of the mod. Try another spot.
 **After every scenario that moves the keeper:** every donkey in the world with its view on has a view of its own size,
 and its cart parts match whether it has a cart. That covers reused views taken by any donkey, not only the test's.
 
+| Fight: the armour on and off while riding | a test donkey ridden; the game's `SetArmorView(true)` then `false` | the ride goes on both ways; in armour the animator's State is Idle/Walk, the body is drawn with an armour frame, no rod, the weapon container at its rest height over the body; the riding pose is back after |
+| Fight: mounting in armour, every cart path refused | armour on; a donkey with its cart, a plain donkey and a free cart | the donkey with its cart, a hitch on foot, the style switch and a hitch from the saddle all refuse with "Not the cart in a fight."; the plain donkey rides; the same hitch works once the armour is off |
+| Fight: the armour on while driving leaves the cart | driving a test donkey's cart; armour on | the ride goes on in Ride style, the cart stands as a free cart by the keeper, the rider checks as above |
+| Fight: a sword attack from the saddle | armour on, the view's sword equipped (no item), `ForceEnterState<AttackSwordDefaultPlayerState>` | the attack state does not end the ride, ends by itself, the ride is still on |
+| Fight: build mode dismounts | `SetControlTakenType(ByBuilding, false)` while riding | the ride ends with "control taken ByBuilding"; control given back; ridden again |
+
 **At the end of the run:** every one of the world's own donkeys (not the tests') is still there, with the same owner,
 number, scene, kind, keep setting and key. No test donkey is left behind.
 
 ## Not automated
+
+- **The fight itself** (docs/mounted-combat.md): the armoured rider's look, the swing and hoof sounds, hits landing, being
+  shoved, death, the fight's end and the strafe's feel need a real town battle; the scenarios above cover the rules.
 
 - **Persistence through a real save and load.** That needs sleeping and the menu, and the tests don't touch the real
   save. See `persistence-tests.md`.

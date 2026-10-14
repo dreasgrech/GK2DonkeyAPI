@@ -517,7 +517,9 @@ namespace GK2DonkeyAPI
                 {
                     return "It isn't here right now.";
                 }
-                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(activeStyle);
+                // The cart's refusal in armour here too: the self-test "mounting in armour, every cart path refused" rode
+                // a donkey standing with its cart through this path (2026-10-14), the one path that did not ask.
+                string reason = WhyCannotMount(pc) ?? (activeStyle == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(activeStyle);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo($"Mount refused ({Describe()}): " + reason);

@@ -323,8 +323,13 @@ closed):
   fixed three things (weapon hold lost during swings, armoured arm drifting off its weapon, idle-freeze speed during
   an attack) and built step 2 (reversed donkey walk + hoof sounds in reverse). First in-game test 10:01: blue shape
   while idle in armour (pose not re-applied when the armour goes on mid-ride) and the cart riding into the arena
-  (refusal inconsistent across paths): both fixed, §9.6. Eleven checks in §8. Step 3 options (aiming up/down) in
-  §9.1 with a recommendation; the user's choices in §6 (the cart in fights, focus speed, aiming up/down).
+  (refusal inconsistent across paths): both fixed, §9.6; the blue shape's real cause (the static pose accessor the
+  prefix reads) found by probe and fixed, §9.7. Five fight self-tests (§9.8) found and fixed the fifth cart path.
+  Seen in game 2026-10-14 11:01: cart left at the talk, armoured rider, swings/arrows, strafe with the reversed
+  donkey walk (confirmed in the log), fight end ridden through, barricade dismount, death (ByDeath dismount, donkey
+  stays in the arena). All of §8 seen. The cart-at-the-talk bubble was dropped on the user's word (the cart simply
+  stays outside; whether it comes along is decided later). **Open:** step 3 options (§9.1) and the §6 choices (focus
+  speed, aiming up/down).
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after

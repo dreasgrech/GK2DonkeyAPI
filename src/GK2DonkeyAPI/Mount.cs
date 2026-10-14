@@ -402,10 +402,6 @@ namespace GK2DonkeyAPI
                 {
                     return; // the view was rebuilt without the cart: ready in a frame or two
                 }
-                if (lastArmour == true)
-                {
-                    ArmourDumpMounted(pc); // temporary: the keeper's animator in armour while mounted, once (ArmourDump.cs)
-                }
                 MountRules.Poll(force: false);
                 string ruleWhy = MountRules.WhyMustDismountIfDue();
                 if (ruleWhy != null)
@@ -831,11 +827,11 @@ namespace GK2DonkeyAPI
                 }
                 if (armour && activeStyle == MountStyle.Cart)
                 {
-                    const string stays = "The cart stays here: a fight.";
+                    // No message for it (the user, 2026-10-14: the cart simply stays outside; whether it should come along
+                    // is decided later); the log line below says what happened.
                     MountHandle left = Mounts.UnhitchRidden(out string notLeft);
                     if (left != null)
                     {
-                        Say(stays);
                         string where = "where the keeper stood";
                         if (CameThroughDoorJustNow(10, out Vector3 from, out string fromScene)
                             && left.I.SceneId == fromScene && (left.I.Position - from).sqrMagnitude > 1f)
@@ -2293,10 +2289,10 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 float want = 1.5f * pc.PhysicalBody.SpeedMultiplier;
+                SSMState cur = pc.Ssm?.CurState;
+                bool focus = cur is AttackSwordFocusedPlayerState || cur is AttackBowFocusedPlayerState;
                 if (state == AnimationState.Walk && rb != null && SideView)
                 {
-                    SSMState cur = pc.Ssm?.CurState;
-                    bool focus = cur is AttackSwordFocusedPlayerState || cur is AttackBowFocusedPlayerState;
                     if (focus && rb.linearVelocity.x * riderFacingX < -0.3f)
                     {
                         want = -want;
@@ -2726,6 +2722,7 @@ namespace GK2DonkeyAPI
             // player actually sees (a plugin LateUpdate can run before that swap and would read the naked base body).
             private Action keeperLateUpdate;
             private bool warnedNoSprite;
+            private int noSpriteFrames;
             private AnimationComponent hookedAnimation;
 
             private void HookKeeperLateUpdate(PlayerController pc)
@@ -2772,10 +2769,21 @@ namespace GK2DonkeyAPI
                 }
                 try
                 {
-                    if (keeperBodyRenderer != null && keeperBodyRenderer.sprite == null && !warnedNoSprite)
+                    // Two frames in a row without a sprite is a pose with no frame for this facing; a single frame is the
+                    // armour's skin swap (the body's old frame has no armour counterpart for one LateUpdate, until the pose
+                    // follows the armour in this same frame's tick), seen in the fight self-tests 2026-10-14.
+                    if (keeperBodyRenderer != null && keeperBodyRenderer.sprite == null)
                     {
-                        warnedNoSprite = true;
-                        Plugin.Log.LogWarning($"Mount: the keeper body has no sprite this frame (pose {EffectivePose}, facing {pc.PlayerData.Direction}); the pose has no frame for this facing.");
+                        noSpriteFrames++;
+                        if (noSpriteFrames >= 2 && !warnedNoSprite)
+                        {
+                            warnedNoSprite = true;
+                            Plugin.Log.LogWarning($"Mount: the keeper body has no sprite for {noSpriteFrames} frames (pose {EffectivePose}, facing {pc.PlayerData.Direction}); the pose has no frame for this facing.");
+                        }
+                    }
+                    else
+                    {
+                        noSpriteFrames = 0;
                     }
                     if (RiderLeg.IsAttached)
                     {

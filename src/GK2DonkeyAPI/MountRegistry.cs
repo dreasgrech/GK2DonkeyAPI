@@ -485,7 +485,6 @@ namespace GK2DonkeyAPI
             try
             {
                 IndoorsTick(pc); // foals coming through a door with the keeper (FoalsIndoors.cs)
-                ArmourDumpOnFoot(pc); // temporary: the keeper's animator in armour, once (ArmourDump.cs)
             }
             catch (Exception e)
             {

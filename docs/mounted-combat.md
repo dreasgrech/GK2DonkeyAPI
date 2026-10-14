@@ -122,7 +122,7 @@ as a look (the keeper turned on the saddle; the frames exist) with the donkey ke
 
 ## 6. Open questions for the user
 
-- Should the cart be allowed in a fight at all (step 1 says no for now)?
+- Should the cart be allowed in a fight at all? (2026-10-14: parked; for now it stays outside at the talk, no message.)
 - In focus, mounted speed = mount × 0.5, or the mount's full speed (a cavalry charge)?
 - Step 3: is a keeper facing up or down on a side-view donkey acceptable, or do attacks stay sideways?
 
@@ -485,5 +485,57 @@ under it); the armour layer 8 is in the same FishingIdle state with no clip, so 
 `static_down` sprite and is inactive. **Cause:** the `SetState` prefix reads the static `Mount.RiderPoseState`
 (MountRegistry.cs), which still returned the *configured* pose; only the instance's `RiderPoseState` had been routed
 through `EffectivePose`. The re-apply of §9.6 therefore wrote 203 again. **Fix:** the static accessor returns the
-ridden instance's `RiderPoseState`. `ArmourDump.cs` stays one more round to see `State = 1` mounted in armour, then
-goes.
+ridden instance's `RiderPoseState`. **Third round (10:41):** mounted in armour `State = 0`, base layer `static_right`,
+layer 8 `armor_static_sword_right`, body `9019_bdy_static_sword_left` drawn, rod inactive, no warning; the user: "that
+worked". `ArmourDump.cs` removed again; its assertions live on in the fight self-tests (§9.8).
+
+### 9.8 Self-tests and the first passes (2026-10-14, 10:45)
+
+Five scenarios in the group "Fights from the saddle" (`Dev/SelfTest.Fight.cs`, the panel's Tests tab): the armour on
+and off while riding (pose Idle/Walk, body drawn with an armour frame, no rod, weapons at rest height over the body,
+the pose back when the armour goes off); mounting in armour with every cart path refused by the same words (a donkey
+with its cart, a hitch on foot, the style switch, a hitch from the saddle) and the hitch working again once the armour
+is off; the armour on while driving leaving the cart as a free cart by the keeper; a sword attack entered as the
+input handler enters it (`Ssm.ForceEnterState`, the view's sword equipped, no item touched) that does not end the
+ride and ends by itself; build mode (`SetControlTakenType(ByBuilding)`) ending the ride with its reason. They need
+body armour on the tool belt (otherwise `SetArmorView` would move one there or log the game's warning) and skip with
+a warning without it. Not automatable: the look, the sounds, hits, being hit, death, the fight's end, the strafe.
+
+**The user's round, same morning:** checks 1-6 and 9 of the test list pass in game (the cart left at the talk, the
+armoured rider's look, the cart refusals inside, the swings, the strafe with the reversed donkey walk, the hits, the
+barricade dismount); death (7) and the fight's end (8) not yet reached.
+
+**First run of the group (the user, 10:55):** 4 of 5 scenarios pass; "mounting in armour, every cart path refused"
+found a real gap: a donkey standing with its cart was ridden in armour through the handle's `Ride` path
+(`Instance.RideFromWorld` asked `WhyCannotMount` and the other mods' rules but not `WhyNotCart`), the fifth way to a
+cart. Fixed the same minute; the second failure ("Already mounted.") was its consequence. The cart at the talk was
+seen in game the same round: the cart stayed behind at the talk (the message bubble did not show; the log decides).
+
+**Second in-game round (the user, 11:01), from the log:** the cart at the talk works as designed: "a door while riding
+… 2 item(s) on the cart", then "left its cart as … free cart at (83.21, 3.60, 14.85)" and "the armour went on while
+driving: the cart was left standing (…, where the keeper stood)": the armour's tick came before the teleport moved
+him, so the cart stood at the talk's spot (the user: it did not come into the arena; the bubble did not show, a
+cosmetic point). **The reversed walk is confirmed:** "[focus] … velocity x −3.92, facing +1, product −3.92, multiplier
+−1.50" and "reversed walk confirmed, the donkey's walk clip runs backwards (clip time 2.500 → 2.475)"; the first
+round simply had no three frames of backing away. **The fight's end** rode through: "a door while riding: to
+RT_fightback_player_spawn … no cart", "the armour went off while riding: pose FishingIdle re-applied". The focus probe
+is removed again. One warning, "the keeper body has no sprite this frame", fired in the self-test the frame the armour
+went on: the skin swap leaves the body's old frame without an armour counterpart for the one LateUpdate before the
+pose follows in the same frame's tick; the warning now needs two frames in a row without a sprite. Death (check 7)
+still unseen.
+
+**Death (the user, 11:07):** "Dismounted (control taken ByDeath); … donkey stays at (105.06, 3.60, 15.79) in
+RuinedTemple" at the moment of death, as §9.3 describes; the same session re-ran the fight group with 48 checks
+passed, 0 failed, and no warning or error line from the mod or Unity. Every check of §8 is now seen in game; what is
+left is the missing "The cart stays here: a fight." bubble (cosmetic) and the §6 choices.
+
+**The missing bubble (11:15):** "The cart stays here: a fight." was said in the frame of the quest script's teleport and
+the armour's skin swap (the log order: the door line, the cart left, the armour line, all in one frame). No game code
+hides bubbles at a fight's start (`Bubble.SetVisibility` and the hide-all calls have no callers outside the bubble
+classes), and Unity's own log lines are not captured by BepInEx here, so whether `Bubble.Talk` ran cannot be read
+from the log. The message is now held (`pendingSay`) until the keeper has control back, four seconds at the latest,
+and dropped with the ride. If it still does not show, the next step is a probe of the bubble's state, not another
+change.
+
+**Decided (the user, 11:20):** no bubble for the cart left at the talk; the cart simply stays outside when the battle
+starts, and whether it should come along is decided later. The held message is removed again; the log line stays.
