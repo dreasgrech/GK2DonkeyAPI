@@ -283,7 +283,7 @@ closed):
   full cart), E on a working zombie pulls it off its job and lays it on the ground (§5 finding 4). Zombies are now unlocked in the user's save, so the old zombie tests can run.
 - **More than two items on the cart** ([cart-capacity.md](cart-capacity.md), investigated and built 2026-10-10, API
   0.28.0): `CartSlots` (2 / 4 / 6 in Saddle Up's "Cart capacity"), the packer in layers of two, the door re-add and
-  the chest restore fixed, self-tested. To check in game: four crates, four logs, two bodies and two logs, four
+  the chest restore fixed, self-tested. **Six aboard seen in game by the user 2026-10-14.** The listed checks were: four crates, four logs, two bodies and two logs, four
   zombies (the lantern pole, the rider), the two-item pictures unchanged, a door and a save with four aboard. Then
   the shipped default is 6 (decided 2026-10-13; 2 before) and whether the Carrier perk should count (option B, not built).
 - **Tuning stacks by hand** ([cargo-layout-layers.md](cargo-layout-layers.md), investigated 2026-10-10): a pair entry
@@ -347,7 +347,7 @@ closed):
 - **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
 - **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
   component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
-- **`dist/` at release:** rebuilt 2026-10-14 15:25 (API 0.29.0, Saddle Up 0.9.0 unchanged; 24 offline scans green, check-dist
+- **`dist/` at release:** rebuilt 2026-10-14 16:59 (API 0.29.0, Saddle Up 0.9.0, now named GK2 Saddle Up without the mark; 24 offline scans green, check-dist
   identical manifest, 692 entries) ([release-checklist.md](release-checklist.md)); the QOL repo's dist is current (03:02).
   Rebuild again after any change. The player rehearsal (checklist §5) has not been run on this dist.
 - **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;

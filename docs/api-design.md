@@ -363,7 +363,10 @@ alter the save, which is the reason Built Count never evaluates one.
 - **The animal:** the donkey ("horse" was a slip).
 - **The tuning panel:** stays in the **core as a dev tool** for authors, off by default and switched on in the cfg.
   Before release, the "Make these the mod defaults" button and the baked repo path have to go.
-- **Showcase name:** decided 2026-10-02: GK2 Saddle Up! (`src/SaddleUp`); until then it was the placeholder GK2 Showcase.
+- **Showcase name:** decided 2026-10-02: GK2 Saddle Up (`src/SaddleUp`); until then it was the placeholder GK2 Showcase.
+  The exclamation mark it carried ("Saddle Up!") was dropped 2026-10-14 before the first release: it was only ever a
+  display string (the GUID, the DLL and the cfg never had it), and it collided with sentence punctuation and shouted
+  in the loaded log line.
 - **Showcase keys:** ride on **H**, cart on **G**.
   - Checked against the game's default keyboard bindings, stored in the settings (the registry value `settings`,
     `defaultKeyboardKeybindings`): W A S D, Space, Esc, Tab, E, F, I, M, P, Q, R, T, 1–4, the arrow keys, Left Shift

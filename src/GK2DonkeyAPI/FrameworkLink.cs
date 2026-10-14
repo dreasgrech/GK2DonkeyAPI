@@ -76,7 +76,7 @@ namespace GK2DonkeyAPI
         {
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(Plugin.Guid, "GK2 Donkey API", "dreas", Plugin.Version,
                 $"The donkeys, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
-                + "install a mod that uses it, like GK2 Saddle Up!.",
+                + "install a mod that uses it, like GK2 Saddle Up.",
                 supportsRuntimeToggle: false, requiresKnownBuild: true, frameworkManagesEnabledState: false);
 
             public override Gk2ModMetadata Metadata => metadata;

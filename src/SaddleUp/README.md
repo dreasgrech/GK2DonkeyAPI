@@ -1,4 +1,4 @@
-# GK2 Saddle Up!
+# GK2 Saddle Up
 
 Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart, haul logs, stone and corpses on it,
 leave it standing with its load, and find it where you left it after a reload.
@@ -31,7 +31,7 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 
 All of these apply at once:
 - **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
-  game's **Mods** menu, under GK2 Saddle Up!. Its sections are numbered (1. Keys first) to keep them in this order.
+  game's **Mods** menu, under GK2 Saddle Up. Its sections are numbered (1. Keys first) to keep them in this order.
 - **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
   settings and Saddle Up's pages. To set a key, press either arrow of its row, then the key (Backspace: no key; Esc: cancel). The
   name shows there read-only; you set it in the cfg.

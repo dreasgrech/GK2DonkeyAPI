@@ -16,10 +16,10 @@ panel's, and a wrong value there breaks the picture.
 3. **Speed:** steps (Normal / Faster / Fastest), not a slider.
 4. **Riding through scene doors:** not offered; the ride ends at such doors, as now. It can come in an update once
    it's tested.
-5. **The name:** GK2 Saddle Up!
+5. **The name:** GK2 Saddle Up (the exclamation mark dropped 2026-10-14, see api-design.md)
 6. **Where the settings are** (uGUI, the game's own controls; never IMGUI for players):
    - **With GK2 Mod Framework:** its Mods menu, every option including the keys and the donkey's name.
-   - **Without it:** rows added to the game's own Settings window under a "Saddle Up!" heading, copies of the
+   - **Without it:** rows added to the game's own Settings window under a "Saddle Up" heading, copies of the
      game's own ◀ value ▶ and slider rows. A key is set there by pressing either arrow, then
      the key (Backspace: none; Esc cancels). The name can't be edited there (the game has no text row): it shows
      read-only and is set in the cfg.

@@ -5,7 +5,7 @@ pulling its cart (**Cart**), with cargo, a lantern, sounds and colours. Donkeys 
 any number of them, and be kept with the save.
 
 **On its own it does nothing.** A mod built on it decides when the keeper may mount and what the ride can do:
-- **For players:** **GK2 Saddle Up!** ([`src/SaddleUp`](../SaddleUp/README.md)) is the
+- **For players:** **GK2 Saddle Up** ([`src/SaddleUp`](../SaddleUp/README.md)) is the
   playable version. Install both DLLs.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.

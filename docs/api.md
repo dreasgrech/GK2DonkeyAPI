@@ -672,7 +672,7 @@ History:
   game's Settings window), `MountHandle.DisplayName` / `SetDisplayName`, and `HitchKey` in `Mounts.Behaviour`.
 - 0.13.0 (breaking, pre-release): the rename. GK2 Mounts is now GK2 Donkey API: `GK2DonkeyAPI.dll`, GUID
   `dreas.gk2.donkeyapi`, namespace `GK2DonkeyAPI.Api` (was `GK2Mounts.Api`). Type and member names are unchanged.
-  The showcase is now GK2 Saddle Up! (`dreas.gk2.saddleup`). A save's old side file and old owner ids are read and
+  The showcase is now GK2 Saddle Up (`dreas.gk2.saddleup`). A save's old side file and old owner ids are read and
   mapped (`docs/persistence.md`).
 - 0.12.0: `MountHandle.LoadFromHead` and `TakeToHead`, loading and unloading a standing cart on foot (docs/load-on-foot.md).
 - 0.11.0 (breaking, pre-release): `ComeToKeeper` gains `forRide` and `showMessage`, and refuses to bring a donkey for a ride that would be refused (found in play: Saddle Up's H indoors said "Not indoors." and the donkey came in anyway).

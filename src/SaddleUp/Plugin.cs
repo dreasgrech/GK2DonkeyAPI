@@ -11,7 +11,7 @@ namespace SaddleUp
     // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs.
-    [BepInPlugin(Guid, "GK2 Saddle Up!", Version)]
+    [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
     [BepInDependency("dreas.gk2.donkeyapi", "0.28.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
@@ -37,7 +37,7 @@ namespace SaddleUp
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
             Mounts.Behaviour.Set(Guid, "DismountIndoors", true); // always outside only (the API can allow it; Saddle Up doesn't offer it)
 
-            MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up!", "dreas",
+            MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
                 "Your own donkey and cart: ride it (H), drive it (G), haul with the cart. Built on GK2 Donkey API.");
             p.Status("Keys");
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride the donkey", "Your donkey comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
@@ -89,7 +89,7 @@ namespace SaddleUp
             p.Toggle("Sound", "Brays", me.Brays, "Bray sounds", "Now and then, and when you get on.", v => me.Brays = v);
             p.Steps("Sound", "Volume", Mathf.RoundToInt(me.SoundVolume * 100f), 0, 150, 10, "Donkey and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");
             p.Publish();
-            Logger.LogInfo($"GK2 Saddle Up! {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
+            Logger.LogInfo($"GK2 Saddle Up {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }
     }
 }

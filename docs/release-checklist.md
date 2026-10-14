@@ -72,7 +72,7 @@ Rehearse the first start on a clean config, with the game closed:
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
 2. Put the two `dist/` DLLs into `BepInEx\plugins` over the dev builds.
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up! 0.9.0 loaded`,
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up 0.9.0 loaded`,
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).

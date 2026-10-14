@@ -253,7 +253,7 @@ index.
 
 **The panel:**
 - **The list is grouped by mod,** under a header with the mod's name from its BepInEx metadata, its GUID, and its
-  counts: in the world, kept, dormant. For example, `GK2 Saddle Up! (dreas.gk2.saddleup): 2 in the world, 1 kept`. The
+  counts: in the world, kept, dormant. For example, `GK2 Saddle Up (dreas.gk2.saddleup): 2 in the world, 1 kept`. The
   panel's own spawns and the core's are groups too.
 - **Each row** shows `#2` within its group. The world markers show `Showcase #2`, with a colour per mod and the same
   colour on the group header.
