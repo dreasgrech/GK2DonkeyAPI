@@ -299,6 +299,15 @@ closed):
   cart it was summoned with), and what Saddle Up's Paint/Wheels settings then mean for a foreign cart. **Built
   2026-10-14:** the companion applies its cart look to its own cart only; a hitched foreign cart keeps its look and
   stays its own when left (`MountCompanion.foreignCart`, kept in the donkey's data). **Seen in game 2026-10-14.**
+  **Bug found the same evening** (the director's status said "no cart" after E hitched the companion's own parked
+  cart and H left it again): `MountInstance.Hitch` raised the old cart's `InstanceRemoved` (the companion's
+  `OnRemoved` nulls `Cart`) before `Hitched`, so `OnHitched` saw `c != Cart` and marked the own cart foreign; the
+  next unhitch then left it without the key and the next G would have spawned a second cart. The G path
+  (`BringCart` → `Mounts.Hitch`) had the same order. Fixed: `Hitched` first, then `InstanceRemoved`
+  (`MountRegistry.Unregister(i, raiseRemoved: false)`), checked by the cargo self-test. **To see in game:** H while
+  driving, then G: the same cart comes back (one cart in the Instances list, the Paint setting still applied). A
+  save made while the donkey's data said "foreign" for its own cart heals at the next unhitch (the flag is cleared
+  there) or hitch of its own cart.
 - **A chest left standing blocks its cart** (seen 2026-10-14, round 4 of the dependency-check test): with the chest
   feature frozen (or forced off) the chest stays where the save holds it, which is the cart body's spot, so the keeper
   cannot reach the cart's seat ("hitching refused: his body hits Obstacle") and nothing can lift the chest. No item
@@ -347,9 +356,12 @@ closed):
 - **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
 - **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
   component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
-- **`dist/` at release:** rebuilt 2026-10-14 16:59 (API 0.29.0, Saddle Up 0.9.0, now named GK2 Saddle Up without the mark; 24 offline scans green, check-dist
+- **`dist/` at release:** API rebuilt 2026-10-14 18:41 (the hitch event order fix and the rewritten isolate self-test checks; 24 scans green; Saddle Up 0.9.0 of 16:59 unchanged, now named GK2 Saddle Up without the mark; 24 offline scans green, check-dist
   identical manifest, 692 entries) ([release-checklist.md](release-checklist.md)); the QOL repo's dist is current (03:02).
   Rebuild again after any change. The player rehearsal (checklist §5) has not been run on this dist.
+- **Publishing (Nexus Mods):** the page description is drafted in [nexus/saddleup-description.txt](nexus/saddleup-description.txt)
+  (2026-10-14, notes in `nexus/README.md`): 15 `{{ }}` placeholders for screenshots, GIFs, a trailer and the repo URL.
+  Open: the user's review of the text, the media, the zip layout (both DLLs + a short readme), the GitHub repo URL.
 - **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;
   it could use the API's key actions instead.
 - **Earlier showcase tests:** zombie, scene-door and save-while-mounted tests, and the persistence check J8

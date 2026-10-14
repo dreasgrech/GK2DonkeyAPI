@@ -23,20 +23,21 @@ namespace GK2ShowcaseDirector
     //   While a time is held, the few things that read the shown time see it: fishing's day/night fish, the scripts'
     //   "time between" and "time of day" checks, fog and lighting. Nothing is saved from it.
     // Every change is logged with the prefix [director].
-    [BepInPlugin(Guid, "GK2 Showcase Director", "0.1.0")]
+    [BepInPlugin(Guid, "GK2 Showcase Director", "0.2.0")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.showcasedirector";
 
         private ConfigEntry<KeyboardShortcut> toggleKey;
         private bool open;
-        private Rect window = new Rect(40f, 120f, 360f, 10f);
+        private Rect window = new Rect(40f, 60f, 440f, 10f);
         private Vector2 weatherScroll;
 
         private bool timeHeld;
         private float shownTime = 0.5f;
         private string lastPreset; // the lighting preset (indoor/outdoor) seen last frame
         private List<string> weathers;
+        private Shots shots;
 
         // The weather as it was before the director's first change (always a rolling one: a weather the game holds is
         // never changed), put back by "back". Null while the director holds none.
@@ -50,11 +51,16 @@ namespace GK2ShowcaseDirector
         private void Awake()
         {
             toggleKey = Config.Bind("General", "ToggleKey", new KeyboardShortcut(KeyCode.F9), "Opens and closes the director's window.");
-            Logger.LogInfo($"[director] ready; {toggleKey.Value} opens the window.");
+            shots = new Shots(this, Config, Logger);
+            Logger.LogInfo($"[director] ready; {toggleKey.Value} opens the window, {shots.CaptureKey} takes a screenshot.");
         }
 
         private void Update()
         {
+            if (InGame)
+            {
+                shots.Tick();
+            }
             if (toggleKey.Value.IsDown())
             {
                 open = !open;
@@ -97,7 +103,7 @@ namespace GK2ShowcaseDirector
 
         private void OnGUI()
         {
-            if (!open)
+            if (!open || shots.Capturing) // not in the picture
             {
                 return;
             }
@@ -117,6 +123,8 @@ namespace GK2ShowcaseDirector
             DrawTime();
             GUILayout.Space(8f);
             DrawWeather();
+            GUILayout.Space(8f);
+            shots.Draw();
             GUILayout.Space(8f);
             // While a time is held, a few game checks see it (fishing, the scripts' time checks, fog and light) and the rest
             // the real time, which stands still: fine for filming, not for playing. The weather is the game's real one,

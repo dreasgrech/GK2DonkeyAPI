@@ -233,7 +233,8 @@ namespace GK2DonkeyAPI
             }
         }
 
-        internal static void Unregister(Instance i)
+        // raiseRemoved false: the caller raises InstanceRemoved itself, later (the hitch: after Hitched).
+        internal static void Unregister(Instance i, bool raiseRemoved = true)
         {
             if (!instances.Remove(i))
             {
@@ -248,7 +249,7 @@ namespace GK2DonkeyAPI
             {
                 Ridden = null;
             }
-            if (!i.Ephemeral)
+            if (raiseRemoved && !i.Ephemeral)
             {
                 Mounts.RaiseInstanceRemoved(i.Handle);
             }

@@ -77,6 +77,54 @@ if it keeps going wrong by hand.
   over (the game's `Flow_TimeController`), and the director notices and lets go.
 - Its own window, not a tab of the donkey API's panel (one feature per plugin). Log prefix `[director]`.
 
+**Built 2026-10-14, second part: the shots** (`tools/GK2ShowcaseDirector/Shots.cs`, director 0.2.0, deployed, untested
+in game). Standalone: the public Donkey API (referenced as the deployed DLL, never a ProjectReference, so a director
+build can't disturb the dist pipeline) and the game's own calls; nothing of the API's internals.
+- **Capture:** F10 (cfg `Shots.CaptureKey`) or the button: the director's window is withdrawn for the frame, the HUD
+  hidden if `HideHudForCapture` (on), then `ScreenCapture.CaptureScreenshot(path, SuperSize)` at the end of the frame;
+  the HUD comes back once the file exists. Files `shot_<date>_<n>.png` in `Shots.Folder` (default
+  `Pictures\GK2 Saddle Up shots`). `SuperSize` 1 by default (2 offered; the game's post-processing may not survive
+  it), and the written size is logged.
+- **HUD:** `LazyUI.Get<HUD>().SetDisableState(HudStateType.AnimationTestingManager, false)` hides it all (that flag is
+  the one no game code sets); live state read from the widget's game object, since the game re-enables every flag on
+  scene changes. World prompts and thought bubbles are other widgets and stay.
+- **Spots 1–8:** the keeper's scene and position in the cfg (`Spots.SpotN`); Go = `PlayerController.SetPosition`,
+  same scene only, a ride ended first.
+- **Donkey and cart:** Saddle Up's companion (`Mounts.Companion("dreas.gk2.saddleup")`): "Donkey here ←/→"
+  (`ComeToKeeper(forRide: false)`), "Cart here", "Get off". Coat variants (Brown, Dark, Cream, Black) and cart paint
+  variants (Dark wood, Red, Green, Blue): set, three frames, capture, four times, then the look put back.
+- **Loads** onto the standing cart on foot, the real path (item into the hands with
+  `PlayerData.TryAddOverheadItemNoReplace`, then `MountHandle.LoadFromHead`, one per frame): six logs, mixed six,
+  corpse + logs, two logs. **Drops** at the keeper's feet: 3 logs, 2 stone, a corpse. Items are made as the API's
+  test loads make them (`ItemDef` by id, a body from `body_0_1`); zombies are not made (that shot is by hand).
+- **Remove what I made:** every item the director made is listed with its GUID and scene in
+  `BepInEx/GK2-director-items.txt`; the button takes back those in the hands and those lying in their scene, reports
+  the ones still on the cart (set them down, then again) and forgets the ones no longer found. Nothing else is touched.
+  Shoot in a showcase save all the same: a made corpse counts toward the morgue and rots like any other.
+- **Series for GIFs** (same evening): the keeper stands still (the camera follows him, so the frame is fixed) and
+  one crop rectangle is computed at the start from a world box around the subject through the game's world camera
+  (`CameraSystem.Instance.WorldCamera`, 8 corners projected, a pixel margin, even sizes); every frame is the screen
+  grabbed at the end of the frame (`CaptureScreenshotAsTexture`) and cut to that rectangle, so all frames match.
+  - **Cargo series:** per load of cfg `Series.CargoSeries` (loads separated by |, ids by ,; default eight loads from
+    one log to six mixed) the cart is cleared (a director-only load set down and taken back), the load put on, the
+    frame grabbed. "Random series 1..6" does six random loads. Box `Series.BoxX/Y/Z` (1.7 / 1.9 / 0.7).
+  - **Look series:** one frame per preset of each part (Coat, Harness, Paint, Wheels, Hubs, LanternLight; Custom
+    left out), each part walked against the base look and put back before the next; cfg `Series.LookSeries` gives
+    explicit frames instead (`Coat=Brown,Paint=Blue | ...`); "All parts at once" (`Series.AllPartsFrames`, 8) sets every
+    part to a random preset per frame, no two alike. The same box as the cart series (one set of dimensions for all
+    GIFs, the user's choice 20:45). Hold the time at dusk first for the lantern light. `frames.txt` lists the frames.
+  - Each series goes into `series_<kind>_<stamp>/NN.png` with a `make-gif.sh` (ffmpeg: `-framerate 1/FrameSeconds`,
+    nearest-neighbour scale by an optional factor, palettegen/paletteuse without dither: pixel art). Untested in game.
+- **Driving (same evening, 18:55):** loads, clears, the series and the removal work while the keeper drives the
+  cart, so a series never gets him off (the user's ask): items go in through `PlayerData.AddOverheadItem`, which the
+  API reroutes onto the cart (its own pickup sink), and come off through `PlayerData.RemoveOverheadItem` with a stub
+  item carrying the GUID (the API's take-from-hands). Riding the donkey without the cart is refused with a hint. The
+  API's dev panel and its zone outlines (drawn only while the panel shows) are hidden for every capture and series
+  through `Plugin.TuningWindowHidden` (reflection, dev tool to dev tool) and put back after. First series frames
+  (19:20): the panel covered the right half and the keeper sat where the dismount had left him; crop 1408x888 at
+  the default box fits the cart with the donkey's head.
+- **Not built:** the key overlay, the OBS script, the edit script.
+
 Its own plugin (`dreas.gk2.showcasedirector`, one feature per plugin), using the public API wherever it can. A
 number key per shot (or a panel row) puts the game in that shot's starting state:
 

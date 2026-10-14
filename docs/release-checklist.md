@@ -71,7 +71,9 @@ Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
 2. Put the two `dist/` DLLs into `BepInEx\plugins` over the dev builds.
-3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, quit.
+3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
+   standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
+   paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
 4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up 0.9.0 loaded`,
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
@@ -83,7 +85,8 @@ no warning, error or exception in 101 log lines; the fresh cfgs at defaults; no 
 Second run the same day with the marker-file lock built: cart, ride, two logs loaded; 132 lines, no warning or error,
 no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scratch cfg file written. Both runs
 were on the 1.009-hotfix dist; the 1.010 dist of the same evening (pins only: `docs/game-update-25910882.md`) has
-not been rehearsed, nor the 0.29.0 dist of 2026-10-14 (mounted combat).
+not been rehearsed, nor the 0.29.0 dist of 2026-10-14 (mounted combat; the API rebuilt 18:08 with the hitch event
+order fix).
 
 ## 6. Hand-off
 

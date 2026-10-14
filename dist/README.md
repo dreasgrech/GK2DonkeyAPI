@@ -6,7 +6,7 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.29.0 | 25910882 (1.010), built 2026-10-14 16:59 |
+| `GK2DonkeyAPI.dll` | 0.29.0 | 25910882 (1.010), built 2026-10-14 18:41 (hitch event order fix, self-test isolate checks rewritten) |
 | `SaddleUp.dll` | 0.9.0 (needs GK2 Donkey API 0.28.0 or newer; its name is now GK2 Saddle Up, without the mark) | 25910882 (1.010), built 2026-10-14 16:59 |
 
 The API DLL carries the list of every game member it uses (692 entries against this build); at start it compares

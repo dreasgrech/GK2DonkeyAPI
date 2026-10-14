@@ -1,0 +1,87 @@
+[center][size=6][b]GK2 Saddle Up[/b][/size]
+[size=4]Your own donkey and cart in Graveyard Keeper 2.[/size]
+
+[youtube]Ww9S6X9hTOU[/youtube] 
+[/center]
+
+Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load, and find it where you left it after a reload.
+
+[line]
+
+[size=5][b]What you get[/b][/size]
+
+[b]Your own donkey as a mount.[/b] Press H anywhere and it comes to you; you ride. Press G and it comes with its cart; you drive.
+{{ GIF: the donkey trotting up to the keeper and him getting on }}
+
+[b]Ride fast.[/b] Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.
+{{ GIF: riding across the graveyard }}
+
+[b]A cart that carries six.[/b] Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item.
+{{ SCREENSHOT: the cart loaded with six items }}
+
+[b]Haul corpses.[/b] Bodies ride on the cart like anything else. Drive to the morgue door, step off, and you walk in with the body in your hands.
+{{ GIF: a corpse put on the cart and driven to the morgue }}
+
+[b]Zombies ride too.[/b] Pick up a zombie while driving and it lies on the cart. Hand it to its work straight from the cart.
+{{ SCREENSHOT: zombies on the cart }}
+
+[b]A storage chest on wheels.[/b] Drive up to a storage chest and take it with you, everything inside. Set it down wherever you want it.
+{{ GIF: picking up a chest, driving off, setting it down }}
+
+[b]Leave it standing.[/b] Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with E.
+{{ SCREENSHOT: the cart parked with its load }}
+
+[b]Kept with your save.[/b] After a reload your donkey is where you left it, the load still on the cart. Steam Cloud carries it along with the save.
+
+[b]Fight from the saddle.[/b] In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim.
+{{ GIF: the knight shooting from the donkey }}
+
+[b]Your donkey, your colours.[/b] Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.
+{{ SCREENSHOT: the colour preview, two or three donkeys in different colours }}
+
+[b]Name it, and give it foals.[/b] "[E] Ride Bella". Up to five baby donkeys follow yours around, and can come indoors with you.
+{{ GIF: the donkey with foals trailing it }}
+
+[b]It lives.[/b] Hoofsteps by surface, wheels on stone, the thump of cargo, brays, a bell. Left alone, it shuffles a few steps and grazes.
+{{ VIDEO or GIF with sound: the cart rolling over gravel and grass }}
+
+[b]Optional: the delivery donkey leaves bodies at the crossroads.[/b] Off by default. The game's own donkey drops its corpses by the nun's crossroads and you cart them in yourself.
+
+[line]
+
+[size=5][b]Keys[/b][/size]
+
+[list]
+[*][b]H[/b]  your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/*]
+[*][b]G[/b]  your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/*]
+[*][b]E[/b]  at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item.[/*]
+[*][b]B[/b]  ring the bell.[/*]
+[/list]
+All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.
+
+[line]
+
+[size=5][b]Settings[/b][/size]
+
+With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu. Without it: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.
+{{ SCREENSHOT: the Mods menu page with the donkey preview }}
+
+[line]
+
+[size=5][b]Install[/b][/size]
+
+[list=1]
+[*]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/*]
+[*]Drop [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from the download into [i]BepInEx\plugins[/i].[/*]
+[*]Start the game. Press H.[/*]
+[/list]
+
+Built for Steam game build 25910882 (1.010). After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so. Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
+
+[line]
+
+[size=5][b]For modders[/b][/size]
+
+Saddle Up is built on the [b]GK2 Donkey API[/b], which ships in the same download. Your own mod can give the player a donkey, a cart, foals, a herd, cargo events or riding rules through it. Documentation and examples: {{ GITHUB_URL }}
+
+[size=2]Source and issue tracker: {{ GITHUB_URL }}[/size]

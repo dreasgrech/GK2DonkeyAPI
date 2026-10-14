@@ -799,7 +799,11 @@ namespace GK2DonkeyAPI
                 MergeData(cart, this);
                 Vector3 at = cart.Position;
                 float facing = cart.riderFacingX;
-                Unregister(cart);
+                // The cart's InstanceRemoved is raised below, AFTER Hitched: a listener that drops its handle on the
+                // removal (the companion) must still recognise the cart in Hitched(donkey, oldCart). Found 2026-10-14:
+                // raised here, the companion took its own cart for a foreign one at every hitch, left it without its
+                // key at the next unhitch, and would have spawned a second cart at the next call.
+                Unregister(cart, raiseRemoved: false);
                 cart.ChestRig.TransferTo(ChestRig); // the chest goes with the cart, before anything below can fail
                 cart.Discard();
                 if (mounted)
@@ -820,6 +824,10 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart {cart.FullId} ({items.Count} item(s) on it).");
                 MountSounds.Moment(this, "hitch");
                 Mounts.RaiseHitched(Handle, cart.Handle);
+                if (!cart.Ephemeral)
+                {
+                    Mounts.RaiseInstanceRemoved(cart.Handle); // the old cart is gone: after Hitched, see above
+                }
                 return null;
             }
 

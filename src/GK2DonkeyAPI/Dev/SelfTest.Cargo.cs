@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -71,16 +72,15 @@ namespace GK2DonkeyAPI
                     && placed[2].Relation == "on" && placed[2].Partner >= 0 && placed[2].Partner <= 1 && placed[3].Partner == 2 && (placed[3].Relation == "side" || placed[3].Relation == "along"),
                     $"the relations are recorded (bed; {placed[1].Relation} 0; {placed[2].Relation} {placed[2].Partner}; {placed[3].Relation} {placed[3].Partner})");
                 Check(placed.Count == 4 && placed[2].Rel.y > 0.1f && Vector3.Distance(placed[3].LayerPos - placed[2].LayerPos, placed[3].Rel) < 0.001f, "relative places: the upper item is above its support; the beside partner's place relative to the layer agrees");
-                // Isolation: two of the four, laid out as a two-item cart in the asked relation; the load untouched.
+                // Isolation is the ridden cart's (the panel's Cargo tab): on a standing cart it is let go at the next layout and
+                // the whole load stays drawn (IsolationHolds: "a parked cart shows its whole load"). The checks written
+                // 2026-10-10 expected a standing cart to isolate; found failing 2026-10-14 and rewritten to the rule.
                 h.I.CargoRig.Isolate(placed[0].Guid, placed[2].Guid, "stack");
                 yield return Frames(1);
-                Check(h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 2 && h.I.CargoRig.LastPairMode == "stack" && h.I.CargoRig.Count == 4, $"isolated: two drawn as a stack ({h.I.CargoRig.Placed.Count} placed, {h.I.CargoRig.LastPairMode}), four still on the cart");
-                h.I.CargoRig.Isolate(placed[0].Guid, placed[1].Guid, "beside");
-                yield return Frames(1);
-                Check(h.I.CargoRig.Placed.Count == 2 && h.I.CargoRig.LastPairMode != "stack", $"isolated beside: two drawn side by side ({h.I.CargoRig.LastPairMode})");
+                Check(!h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 4 && h.I.CargoRig.Count == 4, $"isolating on a standing cart is let go: four drawn, four on the cart ({h.I.CargoRig.Placed.Count} placed, isolating {h.I.CargoRig.Isolating})");
                 h.I.CargoRig.ClearIsolation();
                 yield return Frames(1);
-                Check(!h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 4, "back to the whole load: four drawn again");
+                Check(!h.I.CargoRig.Isolating && h.I.CargoRig.Placed.Count == 4, "clearing a let-go isolation changes nothing: four drawn");
 
                 // The door path: a new view gets a new inventory and the carried-over items go back on. Unhitch and hitch
                 // re-make the cart's inventory the same way.
@@ -91,8 +91,25 @@ namespace GK2DonkeyAPI
                 {
                     int ls = left.I.CargoRig.Inv != null ? left.I.CargoRig.Inv.Data.InventorySize : -1;
                     Check(left.I.CargoRig.Count == 4 && ls == 4, $"the free cart took all four on a 4-slot inventory ({left.I.CargoRig.Count} on it, {ls} slots)");
-                    MountResult back = Mounts.Hitch(h, left);
+                    // The events at a hitch: Hitched(donkey, oldCart) first, then the old cart's InstanceRemoved (a listener
+                    // that drops its handle on the removal must still recognise the cart in Hitched; 2026-10-14).
+                    var order = new List<string>();
+                    Action<MountHandle, MountHandle> onHitched = (d, c) => order.Add(d == h && c == left ? "Hitched" : "Hitched(other)");
+                    Action<MountHandle> onRemoved = r => order.Add(r == left ? "Removed" : "Removed(other)");
+                    Mounts.Hitched += onHitched;
+                    Mounts.InstanceRemoved += onRemoved;
+                    MountResult back;
+                    try
+                    {
+                        back = Mounts.Hitch(h, left);
+                    }
+                    finally
+                    {
+                        Mounts.Hitched -= onHitched;
+                        Mounts.InstanceRemoved -= onRemoved;
+                    }
                     Check(back.Ok, $"hitched again{(back.Ok ? "" : " (" + back.Reason + ")")}");
+                    Check(order.Count == 2 && order[0] == "Hitched" && order[1] == "Removed", $"at a hitch, Hitched comes before the old cart's InstanceRemoved ({string.Join(", ", order)})");
                     yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 4f);
                     Check(h.I.CargoRig.Count == 4 && Inv() != null && Inv().Data.InventorySize == 4, $"all four back on the re-made inventory, nothing dropped ({h.I.CargoRig.Count} on it, {Inv()?.Data.InventorySize} slots)");
                 }
