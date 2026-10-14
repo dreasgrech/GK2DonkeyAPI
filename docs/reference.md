@@ -99,6 +99,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
 | `SpeedMultiplier` | 1.75 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). |
+| `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
 | `CenterOffset` | 0.48 | 0 | Above 0: keep the donkey centred under the rider (its sprite's sideways offset is measured and cancelled every frame). 0: leave it where the game draws it, half a body to the side. A toggle in the panel. |
 | `RiderOffsetPx` | -4 | 0 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
@@ -119,6 +120,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | `LegSource` | `Body` | `Body` | `Body`: his own trousers and boots re-sliced from the current body frame (outfit-exact, follows the pose). `Drawn`: a hand-drawn bent leg in outfit colours. |
 | `LegHeightPx` | 15 | 10 | With `Body`: how many bottom rows of the body frame are legs (feet to belt). |
 | `LegAdjustXPx` / `LegAdjustYPx` | 3 / 1 | 0 / 0 | Legs along the donkey relative to the torso (positive = towards the rear) and up/down relative to the back line (positive = higher). |
+| `BackSeatExtraPx` | 0 | 5 | In armour, facing up (seen from behind): the leg renderer is hidden (he sits side-saddle, legs on the far flank) and the seat is lifted by this many art pixels on top of `SeatOffset`. |
 | `SnapToGround` | true | false | Place the donkey at the ground height under its own position, as the game does for walking objects. Off: it takes the keeper's height and digs into slopes when beside or behind him. The ground under the donkey and under the keeper always come from one source (the navmesh for both, else the raycast for both), so stacked levels such as a bridge deck over the navmesh can't be mixed; a difference over 0.5 is ignored and logged as `[ground]`. Cart style keeps it off: the cart follows the ground itself (`CartFollowsGround`). |
 | `CartFollowsGround` | true | true | Cart style only: the whole cart (wheels, cart body, lantern) is raised or lowered every frame, as one, by the difference between the ground under the cart body and the ground under the donkey, so the rigid 3D cart no longer sinks into a slope behind the donkey. The bars between donkey and cart take half of that shift. Sprites stay upright; nothing rotates. |
 | `CartSlope` | WholeCartPitch | WholeCartPitch | Cart style, with `CartFollowsGround`: how the cart meets a slope. `WholeCartPitch`: the wheels follow the ground and the cart body, shafts, pole and cargo pitch about the axle (the point the walk animation rocks the cart about), so the shafts stay at the donkey; the lamp keeps hanging upright at the pole head. `ShaftsTilt`: the cart is lifted level and only the shafts turn about their harness end. `HalfLift`: the cart is lifted level and the shafts by half (a gap at both ends). The Riding tab has a button that switches between them live, to compare. |
@@ -298,7 +300,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.28.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.29.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

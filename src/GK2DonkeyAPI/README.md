@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.28.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+Version 0.29.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
 (re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
 game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
@@ -42,7 +42,7 @@ Every feature the library has, grouped by area. **Reached by** says how a player
 | **Faster while mounted:** a speed multiplier per style (1.75 Ride, 1.5 Cart), measured to scale exactly. | cfg, API | tested |
 | **Left/right only:** the keeper always faces left or right while mounted, like the donkey (it has no up/down art). The donkey turns in the same frame as the keeper. | always | tested |
 | **Rider pose:** reins-holding pose, idle, walk or focused walk; frozen while standing, with an occasional fidget so the rider doesn't look like a still image; pose speed follows the donkey's walk. | cfg, API | tested |
-| **Fights from the saddle**: the keeper rides in his fight armour, swings the sword and shoots the bow from the donkey (sideways, the shared facing), strafes in the focus stance at half the mount's speed with the donkey walking backwards when he backs away, sits with the armour's static frame and the bob, turns to face up or down to aim there; the cart is refused in a fight, and a hitched cart is left standing when the armour goes on ([`docs/mounted-combat.md`](../../docs/mounted-combat.md)). | always | steps 1-2 built 2026-10-14, in-game test pending |
+| **Fights from the saddle**: the keeper rides in his fight armour, swings the sword and shoots the bow from the donkey (sideways, the shared facing), strafes in the focus stance at half the mount's speed with the donkey walking backwards when he backs away, sits with the armour's static frame and the bob, turns to face up or down to aim there (seen from behind he sits side-saddle, legs hidden), his arrows leave the drawn bow and fly level, the speed while aiming is `FocusSpeed`; the cart is refused in a fight, and a hitched cart is left standing when the armour goes on ([`docs/mounted-combat.md`](../../docs/mounted-combat.md)). | always | built and seen in game 2026-10-14 (five self-tests, 48 checks) |
 | **Seat and position:** depth, centring under the rider, rider and torso offsets, seat height (fixed or computed from the sprites), a 1 px bob with the donkey's back. | cfg, API | tested |
 | **Rider's legs:** drawn in front of the donkey, re-sliced from the keeper's own outfit (or a drawn leg), following the pose. | cfg, API | tested |
 | **Ground following:** the donkey stands on the ground under itself, not at the keeper's height; donkey and keeper read the same ground source, so bridges over the navmesh don't flicker. | cfg, API | tested |
@@ -198,7 +198,7 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`.
-3. Start the game once; the log says `GK2 Donkey API 0.28.0 loaded; nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.29.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

@@ -22,8 +22,10 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 - **It's kept with the save:** after loading, it's where you left it, the load on the cart.
 - **The cart carries six items** in three layers of two (two or four with "Cart capacity"). Anything you pick up while driving goes onto it; piles, tables, graves and quest
   hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
-- **You're faster while mounted**, and you get off by yourself for work, ladders, building, fishing, fighting and
-  sleep, and at building doors. Chests and the inventory keep you mounted.
+- **You're faster while mounted**, and you get off by yourself for work, ladders, building, fishing and sleep, and
+  at building doors. Chests and the inventory keep you mounted. **Fights are ridden:** in your armour you swing the
+  sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim (half
+  speed, the game's own). The cart stays outside a fight: it is left standing when the armour goes on.
 
 ## Settings
 

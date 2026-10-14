@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.28.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.29.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -16,7 +16,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ```csharp
 [BepInPlugin("you.gk2.mymod", "My Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.28.0")]          // hard: your mod needs the core, at least this version
+[BepInDependency("dreas.gk2.donkeyapi", "0.29.0")]          // hard: your mod needs the core, at least this version
 public class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -657,6 +657,7 @@ History:
 - 0.26.0: corpses at the crossroads ([corpse-delivery.md](corpse-delivery.md)): `Mounts.Corpses` (the `[Corpses]` keys, `CorpsesAtCrossroads` off), `Mounts.CorpsesActive`, `Mounts.CorpseLeft` with a `CorpseInfo`, `Mounts.StartCorpseDelivery()`. With the switch on, the game's own delivery donkey walks out beside the nun, leaves its bodies there for the keeper to haul and walks back; its four patches exist only while the switch is on.
 - 0.27.0: a corpse into the morgue ([above](#a-corpse-into-the-morgue-0270)): the `Mounts.Behaviour` keys `CorpseIntoMorgue` (on) and `CorpseIntoMorguePlaces`. The ride ends at the morgue door as always; the corpse comes off the parked cart into the keeper's hands, so he walks in carrying it. The game's doors are noted while riding (`PlayerController.Teleport` prefix, never refusing).
 - 0.28.0: the cart's capacity ([cart-capacity.md](cart-capacity.md)): the `Mounts.Behaviour` key `CartSlots` (2; 1 to 6). Each cart's inventory is sized when its view is prepared, before carried-over items go back on (a door never sheds any), and again when the setting or an override changes; the game's `npc_donkey.inventorySize` is untouched. The packer lays three and more items out in layers of up to two; one and two items are placed exactly as before.
+- 0.29.0: fights from the saddle ([mounted-combat.md](mounted-combat.md)): the armour view and the attack states no longer end the ride (`MountRules`: attacks are not work), the keeper fights in the Ride style with the sword and the bow, aims up and down, strafes with the donkey walking backwards; the cart is refused while he wears armour (`Mounts.TryMount(Cart)`, `Hitch`, `MountCompanion.Use(Cart)` and `BringCart` all say why) and a hitched cart is left standing when the armour goes on. New `[Ride]`/`[Cart]` tuning keys `FocusSpeed` (0.5: the speed while aiming, times the riding speed) and `BackSeatExtraPx` (0 / 5: how much higher he sits when seen from behind). No change to the public surface.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).

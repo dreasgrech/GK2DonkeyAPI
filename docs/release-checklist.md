@@ -83,7 +83,7 @@ no warning, error or exception in 101 log lines; the fresh cfgs at defaults; no 
 Second run the same day with the marker-file lock built: cart, ride, two logs loaded; 132 lines, no warning or error,
 no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scratch cfg file written. Both runs
 were on the 1.009-hotfix dist; the 1.010 dist of the same evening (pins only: `docs/game-update-25910882.md`) has
-not been rehearsed.
+not been rehearsed, nor the 0.29.0 dist of 2026-10-14 (mounted combat).
 
 ## 6. Hand-off
 

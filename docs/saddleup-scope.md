@@ -42,7 +42,7 @@ find it where you left it after a reload.
 | **Cart as your hands** | Pickups go onto the cart (2 items); piles, tables, graves and quest hand-ins take from it; E with nothing in front sets the top item down behind the cart. |
 | **Loading on foot** | At a standing cart: "[E] Load on cart" and "[E] Take from cart". |
 | **Hitch and unhitch** | Leave the cart standing as storage and ride on (J), take it back (J or E at its shafts). |
-| **Riding rules** | Faster while mounted; automatic dismount for work, ladders, fishing, fighting, sleep; off at building doors. |
+| **Riding rules** | Faster while mounted; automatic dismount for work, ladders, fishing, sleep; off at building doors. Fights are ridden: sword and bow from the saddle in the fight armour, the cart refused ([mounted-combat.md](mounted-combat.md)). |
 | **The look** | The tuned seat, pose, legs, cart on slopes, cargo on the cart, the lantern hanging from its pole. |
 | **Sounds** | Hoofsteps by surface, wheels, cargo thump, grazing, brays, the bell. |
 | **Idle life** | Your donkey, standing without its cart, shuffles a few steps now and then. |

@@ -298,7 +298,7 @@ closed):
   "game default" keys that replace the donkey's cart keys on hitch, or the donkey's cart keys only ever apply to the
   cart it was summoned with), and what Saddle Up's Paint/Wheels settings then mean for a foreign cart. **Built
   2026-10-14:** the companion applies its cart look to its own cart only; a hitched foreign cart keeps its look and
-  stays its own when left (`MountCompanion.foreignCart`, kept in the donkey's data). To check in game.
+  stays its own when left (`MountCompanion.foreignCart`, kept in the donkey's data). **Seen in game 2026-10-14.**
 - **A chest left standing blocks its cart** (seen 2026-10-14, round 4 of the dependency-check test): with the chest
   feature frozen (or forced off) the chest stays where the save holds it, which is the cart body's spot, so the keeper
   cannot reach the cart's seat ("hitching refused: his body hits Obstacle") and nothing can lift the chest. No item
@@ -306,7 +306,7 @@ closed):
   leaves a chest standing at its cart (`Persistence.ReclaimChest` false with the chest within the cart), place the
   restored free cart one step behind the chest (the chest's set-down offset); the cart is the mod's temp object,
   nothing saved moves. Same for the forced run. **Built 2026-10-14** (`Persistence.ClearCartOfChest`: the game's
-  drop-spot search one cart length ahead of the chest, in the loaded scene only). To check in game.
+  drop-spot search one cart length ahead of the chest, in the loaded scene only). **Seen in game 2026-10-14.**
 - **A town battle while mounted** (seen 2026-10-14, game 1.010): the quest's talk starts the pre-fight, which puts the
   keeper into his armour view (`PlayerController.SetArmorView`) with his state machine still free, so the ride went on
   and the keeper showed as a blue shape (the armour animator layers have no frame for the rider pose). Investigated in
@@ -333,7 +333,10 @@ closed):
   facing during attacks and focus in armour (the game's own aiming), side-flip hysteresis. The back view settled 13:25 (side-saddle: legs
   hidden, seat +5 px, `BackSeatExtraPx`), the user: "beautiful". The arrow's origin fixed 14:12 (§10.6: it
   leaves the drawn bow and flies level; the enemies' hit capsules measured 0.04..1.44, both heights inside); the focus
-  speed is a setting (`FocusSpeed`, default 0.5, §10.7). **Open:** the user's verdicts on both.
+  speed is a setting (`FocusSpeed`, default 0.5, §10.7). **Seen in game 14:30**, the user: "looks good now"; the log
+  confirms the arrow from the drawn bow (y 4.60 = 4.38 + 0.22), the reversed walk and the back view, no warnings.
+  Committed. **Left to decide:** the shipped `BackSeatExtraPx` (the user rode with 0 in Ride, the default is 5), and
+  whether the cart ever comes along into a fight (parked: it stays outside).
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after
@@ -344,7 +347,9 @@ closed):
 - **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
 - **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
   component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
-- **`dist/` at release:** rebuilt 2026-10-13 in both repos ([release-checklist.md](release-checklist.md)); rebuild again after any change.
+- **`dist/` at release:** rebuilt 2026-10-14 15:25 (API 0.29.0, Saddle Up 0.9.0 unchanged; 24 offline scans green, check-dist
+  identical manifest, 692 entries) ([release-checklist.md](release-checklist.md)); the QOL repo's dist is current (03:02).
+  Rebuild again after any change. The player rehearsal (checklist §5) has not been run on this dist.
 - **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;
   it could use the API's key actions instead.
 - **Earlier showcase tests:** zombie, scene-door and save-while-mounted tests, and the persistence check J8
