@@ -118,7 +118,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Success;
             }
-            string reason = MountRules.WhyCannotMount(style);
+            string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) : null) ?? MountRules.WhyCannotMount(style);
             if (reason != null)
             {
                 if (showMessage)

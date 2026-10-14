@@ -261,7 +261,10 @@ namespace GK2DonkeyAPI
         public static MountStyle CurrentStyle => Ridden != null ? Ridden.CurrentStyle : MountStyle.Ride;
         internal static StyleSettings S => Current != null ? Current.S : Plugin.For(MountStyle.Ride);
         public static bool SideView => Ridden != null;
-        public static AnimationState RiderPoseState => (AnimationState)(int)S.Pose.Value;
+        // The ridden instance's effective pose (Walk in the keeper's armour, docs/mounted-combat.md): this is what the
+        // SetState prefix writes. It read the configured pose directly until 2026-10-14, so the armour rode on the fishing
+        // frame (State 203 in the probe's dump) whatever EffectivePose said.
+        public static AnimationState RiderPoseState => Ridden != null ? Ridden.RiderPoseState : (AnimationState)(int)S.Pose.Value;
         public static Vector2 RiderFacing(Vector2 requested) => Ridden != null ? Ridden.RiderFacing(requested) : requested;
         internal static Wgo Donkey => Ridden?.Donkey;
         internal static bool FacingRight => Ridden == null || Ridden.FacingRight;
@@ -482,6 +485,7 @@ namespace GK2DonkeyAPI
             try
             {
                 IndoorsTick(pc); // foals coming through a door with the keeper (FoalsIndoors.cs)
+                ArmourDumpOnFoot(pc); // temporary: the keeper's animator in armour, once (ArmourDump.cs)
             }
             catch (Exception e)
             {

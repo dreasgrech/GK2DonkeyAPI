@@ -162,11 +162,15 @@ namespace GK2DonkeyAPI
                     lastWheelK = wk - 1;
                     inWalkClip = true;
                 }
-                if (hk < lastHoofK)
+                // A step on any change of the step index, in either direction: the walk clip runs backwards while the
+                // keeper backs away in a focus stance (docs/mounted-combat.md §9.2), and counting forwards only left the
+                // hooves silent then. A jump of more than one step (the clip restarted or turned round) resets without a
+                // burst of steps.
+                if (Math.Abs(hk - lastHoofK) > 1)
                 {
-                    lastHoofK = hk; // the clip restarted (turned round): no burst of steps
+                    lastHoofK = hk;
                 }
-                if (hk > lastHoofK)
+                if (hk != lastHoofK)
                 {
                     lastHoofK = hk;
                     if (S.HoofOn.Value)
@@ -174,11 +178,11 @@ namespace GK2DonkeyAPI
                         Hoof(ac, at);
                     }
                 }
-                if (wk < lastWheelK)
+                if (Math.Abs(wk - lastWheelK) > 1)
                 {
                     lastWheelK = wk;
                 }
-                if (wk > lastWheelK)
+                if (wk != lastWheelK)
                 {
                     lastWheelK = wk;
                     if (S.WheelOn.Value && Mount.CurrentStyle == MountStyle.Cart)
@@ -303,7 +307,7 @@ namespace GK2DonkeyAPI
             {
                 try
                 {
-                    pitch *= Mathf.Clamp(a.GetFloat("walk_speed"), 0.5f, 2.5f);
+                    pitch *= Mathf.Clamp(Mathf.Abs(a.GetFloat("walk_speed")), 0.5f, 2.5f); // Abs: negative while the walk runs backwards
                 }
                 catch
                 {

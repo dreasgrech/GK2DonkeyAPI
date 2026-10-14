@@ -331,6 +331,16 @@ namespace GK2DonkeyAPI.Api
         // Its cart (spawned the first time) comes to where the donkey stands or is ridden, and is hitched.
         private string BringCart(MountHandle to)
         {
+            // Asked before the cart is moved: refused, it stays where it is (in a fight the keeper's armour refuses it).
+            if (Mount.Instance.IsInGame(out PlayerController keeper, out _))
+            {
+                string no = Mount.Instance.WhyNotCart(keeper);
+                if (no != null)
+                {
+                    Mount.Say(no);
+                    return no;
+                }
+            }
             if (Cart == null || !Cart.Exists)
             {
                 Cart = Mounts.Spawn(OwnerId, new MountSpawn { Position = Vector3.zero, Donkey = false, WithCart = true, Key = CartKey, Persist = keep });

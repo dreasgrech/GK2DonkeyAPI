@@ -405,6 +405,7 @@ namespace GK2DonkeyAPI
                         // Switched off, its animator lost its state and parameters (and the game's OnDisable set Idle):
                         // the stand pose (with its walk rate) and the facing are sent again.
                         lastMirrored = (AnimationState)(-1);
+                        lastWalkMultiplier = 0f;
                         try
                         {
                             donkey.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));
@@ -443,6 +444,7 @@ namespace GK2DonkeyAPI
                     if (any)
                     {
                         lastMirrored = (AnimationState)(-1); // the stand pose is sent again on its next frame
+                        lastWalkMultiplier = 0f;
                         // The facing too, straight to the animation: one set while the animator was off (Saddle Up's H
                         // turning a frozen donkey towards the keeper) never reached it, and the data, already holding the
                         // new facing, doesn't tell it again: mounted, the donkey faced away until the first turn
@@ -589,6 +591,7 @@ namespace GK2DonkeyAPI
                 // again, as when an idle view is switched back on, and checked two frames later ([wake]). (The still head
                 // over the walk, once blamed on this, is the animator's head fallback: RestartWithoutHead, HeadWatch.cs.)
                 lastMirrored = (AnimationState)(-1);
+                lastWalkMultiplier = 0f;
                 try
                 {
                     v.MainWgoPart?.AnimationComponent?.SetDirection(new Vector2(riderFacingX, 0f));

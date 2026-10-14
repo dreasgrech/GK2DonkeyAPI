@@ -136,8 +136,14 @@ namespace GK2DonkeyAPI
             }
 
             private bool logGeometry = true;
+            private bool? lastArmour; // the keeper's armour view at the last tick (null: first tick of this ride)
             private float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
             private AnimationState lastMirrored = (AnimationState)(-1);
+            private float lastWalkMultiplier; // what the donkey's walk_speed was last set to (sign = direction), 0 = unset
+            private bool reversedWalkLogged;
+            private float reversedWalkT0 = -1f; // clip time when the walk was first reversed (one-time confirmation)
+            private int reversedWalkFrame;
+            private int reversedWalkHash; // the base layer's state at arming; another state at the read means try again
             private Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
             private SpriteRenderer donkeyBodyRenderer;
             private SpriteRenderer keeperBodyRenderer;
@@ -317,6 +323,12 @@ namespace GK2DonkeyAPI
             private Transform seatRoot;
             private Vector3 seatRest;
             private float seatApplied;
+            private Transform weaponRoot;   // the keeper's Weapon Container, held at rest under the lifted seat root
+            private Vector3 weaponRest;
+            private bool weaponLogged;
+            private Vector3 weaponWritten; // what HoldWeapons last wrote; a different value next frame was the animator's
+            private bool weaponHeld;
+            private bool weaponAnimLogged;
 
             public bool IsMounted => mounted;
 
@@ -330,9 +342,13 @@ namespace GK2DonkeyAPI
             // ever looked wrong.
             public bool SideView => mounted;
 
+            // The pose in use: the style's Pose, or Walk while the keeper wears armour (the armour layers have frames for
+            // Walk and Idle only, and for the attacks; docs/mounted-combat.md). Every read of the pose goes through this.
+            internal RiderPose EffectivePose => InArmour(MainGame.PlayerController) ? RiderPose.Walk : S.Pose.Value;
+
             // The animator state the keeper is held in while riding (see the SetState prefix); Cart keeps the walk.
             public AnimationState RiderPoseState =>
-                (AnimationState)(int)S.Pose.Value;
+                (AnimationState)(int)EffectivePose;
 
             // Horizontal facing shared by rider and mount while mounted: +1 right, -1 left.
             private float riderFacingX = 1f;
@@ -368,6 +384,7 @@ namespace GK2DonkeyAPI
                 CargoRig.TickTint(); // the panel's Cargo tab tints the items by role while it is open
                 if (!mounted)
                 {
+                    lastArmour = null;
                     return;
                 }
 
@@ -380,6 +397,14 @@ namespace GK2DonkeyAPI
                 {
                     Dismount(pc, why);
                     return;
+                }
+                if (ArmourChanged(pc))
+                {
+                    return; // the view was rebuilt without the cart: ready in a frame or two
+                }
+                if (lastArmour == true)
+                {
+                    ArmourDumpMounted(pc); // temporary: the keeper's animator in armour while mounted, once (ArmourDump.cs)
                 }
                 MountRules.Poll(force: false);
                 string ruleWhy = MountRules.WhyMustDismountIfDue();
@@ -434,10 +459,16 @@ namespace GK2DonkeyAPI
                     }
                 }
 
-                // Only the attack states touch SpeedMultiplier, and we dismount before they can run; still, keep it ours.
-                if (pc.Ssm?.CurState is FreePlayerState && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - S.SpeedMultiplier.Value) > 0.001f)
+                // The attack states set the multiplier themselves (the focus stances 0.5 on enter, 1 on exit), the rest of
+                // the time it is ours: the mount's speed in free walking, and half of it in a focus stance, as the game
+                // halves the keeper's own (docs/mounted-combat.md).
+                SSMState curState = pc.Ssm?.CurState;
+                float wantSpeed = curState is FreePlayerState ? S.SpeedMultiplier.Value
+                    : curState is AttackSwordFocusedPlayerState || curState is AttackBowFocusedPlayerState ? S.SpeedMultiplier.Value * 0.5f
+                    : pc.PhysicalBody.SpeedMultiplier;
+                if (Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantSpeed) > 0.001f)
                 {
-                    pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
+                    pc.PhysicalBody.SpeedMultiplier = wantSpeed;
                 }
 
                 Follow(pc);
@@ -467,7 +498,7 @@ namespace GK2DonkeyAPI
                     seatPending = false;
                     ApplyAutoSeat(pc);
                 }
-                lastRiderPose = S.Pose.Value;
+                lastRiderPose = EffectivePose;
                 HidePoseGear(pc, lastRiderPose);
 
                 // A pose whose animator state takes control (BySelf) freezes the keeper: the free state goes inactive
@@ -641,7 +672,7 @@ namespace GK2DonkeyAPI
             private string TryMount(PlayerController pc, GameScene scene, MountStyle style, bool showMessage)
             {
                 // The core's own checks first (safety); other mods' rules can only add refusals on top.
-                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(style);
+                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(style);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo("Mount refused: " + reason);
@@ -703,10 +734,6 @@ namespace GK2DonkeyAPI
                 if (!(pc.Ssm?.CurState is FreePlayerState) || (pc.MovementComponent != null && pc.MovementComponent.IsMoving))
                 {
                     return "I'm busy.";
-                }
-                if (InArmour(pc))
-                {
-                    return "Not in armour.";
                 }
                 if (BuildController.Instance != null && BuildController.Instance.IsBuildModeActive)
                 {
@@ -775,24 +802,84 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // The cart in a fight: not for now (a wide object in a bordered arena, cargo and zombies aboard during a dash,
+            // the cart's own interaction key handling); the Ride style fights (docs/mounted-combat.md).
+            internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? "Not the cart in a fight." : null;
+
+            // The armour view going on or off during the ride (the quest's talk puts it on before the fight, the fight's
+            // end takes it off). Seen 2026-10-14: the pose is only rewritten when the game next sets the keeper's state,
+            // which it did not, so the armour showed on the fishing pose's frame (a blue shape with the rod in hand) until
+            // an attack; and a cart already hitched at the talk rode into the arena, past the refusal that only guards
+            // mounting and hitching. Now: the pose and its gear are re-applied at once, and a hitched cart is left
+            // standing with the ride going on without it; if it cannot be left here the ride ends instead. The quest
+            // script teleports the keeper to the fight's point and puts the armour on in the same breath (the log: the
+            // door line, then the armour's first frame), so a cart left "here" may already stand at the fight's point:
+            // when a door was passed within the last frames, the cart is moved back to where the keeper came from, the
+            // talk's spot. Returns true when the view is being rebuilt this frame.
+            private bool ArmourChanged(PlayerController pc)
+            {
+                bool armour = InArmour(pc);
+                if (lastArmour == armour)
+                {
+                    return false;
+                }
+                bool first = lastArmour == null;
+                lastArmour = armour;
+                if (first)
+                {
+                    return false;
+                }
+                if (armour && activeStyle == MountStyle.Cart)
+                {
+                    const string stays = "The cart stays here: a fight.";
+                    MountHandle left = Mounts.UnhitchRidden(out string notLeft);
+                    if (left != null)
+                    {
+                        Say(stays);
+                        string where = "where the keeper stood";
+                        if (CameThroughDoorJustNow(10, out Vector3 from, out string fromScene)
+                            && left.I.SceneId == fromScene && (left.I.Position - from).sqrMagnitude > 1f)
+                        {
+                            left.I.MoveTo(from, null);
+                            where = $"back at the door's far side, {from:F1}, not at the fight's point";
+                        }
+                        Plugin.Log.LogInfo($"Mount: the keeper's armour went on while driving: the cart was left standing ({left.FullId}, {where}), the ride goes on without it.");
+                        ApplyPoseNow();
+                        lastRiderPose = EffectivePose;
+                        HidePoseGear(pc, lastRiderPose);
+                        return true;
+                    }
+                    Plugin.Log.LogInfo($"Mount: the keeper's armour went on while driving and the cart could not be left here ({notLeft}): the ride ends.");
+                    Dismount(pc, "the cart in a fight");
+                    return true;
+                }
+                ApplyPoseNow(); // the SetState prefix maps the real state to EffectivePose: Walk/Idle in armour, the pose otherwise
+                lastRiderPose = EffectivePose;
+                HidePoseGear(pc, lastRiderPose);
+                Plugin.Log.LogInfo($"Mount: the keeper's armour went {(armour ? "on" : "off")} while riding: pose {EffectivePose} re-applied.");
+                return false;
+            }
+
+            // The game's attack states (sword, bow, their focus stances, the spear): the keeper fights from the saddle, so
+            // they do not end the ride; RestoreSpeed leaves their speed alone. One rule for both (by name: eight classes,
+            // and the game adds to them).
+            internal static bool IsAttackState(SSMState s) => s != null && s.GetType().Name.StartsWith("Attack", StringComparison.Ordinal);
+
             private string WhyMustDismount(PlayerController pc)
             {
                 SSMState cur = pc.Ssm?.CurState;
-                if (!(cur is FreePlayerState))
+                if (!(cur is FreePlayerState) && !IsAttackState(cur))
                 {
                     return "state " + (cur?.GetType().Name ?? "none");
-                }
-                if (InArmour(pc))
-                {
-                    return "the keeper's armour";
                 }
                 foreach (TakenControlType t in ControlTypes)
                 {
                     // ByUI: chests/inventory. ByTeleport: doors. BySelf: set by the animator itself while certain
                     // states play (tool, work and some fishing poses carry CharacterSelfStateMachineBehaviour); with a
-                    // pose like that selected it is our own doing, so it must not end the ride. ByFlow: below.
+                    // pose like that selected it is our own doing, so it must not end the ride. ByAttack: a sword swing
+                    // (AttackSwordPlayerState takes it for the dash). ByFlow: below.
                     if (t == TakenControlType.ByUI || t == TakenControlType.ByTeleport || t == TakenControlType.BySelf
-                        || t == TakenControlType.ByFlow)
+                        || t == TakenControlType.ByFlow || t == TakenControlType.ByAttack)
                     {
                         continue;
                     }
@@ -978,8 +1065,7 @@ namespace GK2DonkeyAPI
                     {
                         return;
                     }
-                    SSMState cur = pc.Ssm?.CurState;
-                    if (cur != null && cur.GetType().Name.StartsWith("Attack"))
+                    if (IsAttackState(pc.Ssm?.CurState))
                     {
                         return;
                     }
@@ -1008,6 +1094,7 @@ namespace GK2DonkeyAPI
                         partsReady = false;
                         cartParts.Clear();
                         lastMirrored = (AnimationState)(-1);
+                        lastWalkMultiplier = 0f;
                         return true;
                     }
                     WgoData data;
@@ -1037,6 +1124,7 @@ namespace GK2DonkeyAPI
                     partsReady = false;
                     cartParts.Clear();
                     lastMirrored = (AnimationState)(-1);
+                    lastWalkMultiplier = 0f;
                     return true;
                 }
                 catch (Exception e)
@@ -1123,7 +1211,7 @@ namespace GK2DonkeyAPI
                     cartParts.Clear();
                     if (cart)
                     {
-                        CargoRig.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
+                        CargoRig.Attach(donkey); // the cart's inventory is the cargo; creates the cargo holder before the parts are collected
                         ChestRig.OnCartInventory(CargoRig.Inv); // a chest aboard keeps the new inventory at 0 slots
                         cartParts.Clear();    // (re-adding carried-over cargo may already have collected once)
                         CollectCartParts();
@@ -2179,14 +2267,109 @@ namespace GK2DonkeyAPI
                             anim.SetTrigger(AnimationComponentBase.RESET_TO_IDLE_TRIGGER);
                         }
                         donkey.Data.SetStateToAnimator(state);
-                        anim?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
+                        lastWalkMultiplier = 0f; // set below, this frame
                     }
                     catch
                     {
                         donkey.Data.SetStateToAnimator(state);
                     }
                 }
+                SetDonkeyWalkMultiplier(pc, rb, state);
+                ConfirmReversedWalk();
                 FreezeRiderWhenIdle(pc, state);
+            }
+
+            // The donkey's walk pace follows the keeper's speed multiplier every frame (the focus stance halves it in the
+            // middle of a walk; set only on a pose change, the old pace stayed), and its sign follows the movement: in a
+            // focus stance the keeper faces his aim and can back away from it, and the donkey, which shares his facing,
+            // walked forwards while sliding backwards (step 2 of docs/mounted-combat.md). The game's walk_speed takes a
+            // negative value as it is (AnimationComponentBase.SetWalkAnimationSpeedMultiplier has no clamp; the game's own
+            // focus states write a negative one), which plays the walk clip backwards. The deadband keeps a standing or
+            // sideways-only movement from flapping the sign.
+            private void SetDonkeyWalkMultiplier(PlayerController pc, Rigidbody rb, AnimationState state)
+            {
+                if (donkey == null || !donkey)
+                {
+                    return;
+                }
+                float want = 1.5f * pc.PhysicalBody.SpeedMultiplier;
+                if (state == AnimationState.Walk && rb != null && SideView)
+                {
+                    SSMState cur = pc.Ssm?.CurState;
+                    bool focus = cur is AttackSwordFocusedPlayerState || cur is AttackBowFocusedPlayerState;
+                    if (focus && rb.linearVelocity.x * riderFacingX < -0.3f)
+                    {
+                        want = -want;
+                    }
+                    else if (focus && lastWalkMultiplier < 0f && rb.linearVelocity.x * riderFacingX < 0.1f)
+                    {
+                        want = -want; // hysteresis: stay reversed until the movement clearly turns forwards
+                    }
+                }
+                if (Mathf.Abs(want - lastWalkMultiplier) < 0.001f)
+                {
+                    return;
+                }
+                try
+                {
+                    AnimationComponentBase anim = donkey.MainWgoPart?.AnimationComponent;
+                    if (anim == null)
+                    {
+                        return;
+                    }
+                    anim.SetWalkAnimationSpeedMultiplier(want);
+                    lastWalkMultiplier = want;
+                }
+                catch
+                {
+                }
+            }
+
+            // One info line the first time the walk is reversed: whether the clip's time really runs backwards (the one
+            // link not in any dump: that the base Walk state's speed parameter is walk_speed). Armed while the multiplier
+            // is negative, read three frames later in the same animator state; another state at the read re-arms.
+            private void ConfirmReversedWalk()
+            {
+                if (reversedWalkLogged)
+                {
+                    return;
+                }
+                try
+                {
+                    Animator a = donkey?.MainWgoPart?.AnimationComponent?.Animator;
+                    if (a == null || lastWalkMultiplier >= 0f)
+                    {
+                        reversedWalkT0 = -1f;
+                        return;
+                    }
+                    AnimatorStateInfo info = a.GetCurrentAnimatorStateInfo(0);
+                    if (reversedWalkT0 < 0f)
+                    {
+                        reversedWalkT0 = info.normalizedTime;
+                        reversedWalkFrame = Time.frameCount;
+                        reversedWalkHash = info.shortNameHash;
+                        return;
+                    }
+                    if (Time.frameCount < reversedWalkFrame + 3)
+                    {
+                        return;
+                    }
+                    if (info.shortNameHash != reversedWalkHash)
+                    {
+                        reversedWalkT0 = -1f; // the state changed under the read: arm again
+                        return;
+                    }
+                    float t0 = reversedWalkT0;
+                    float t1 = info.normalizedTime;
+                    reversedWalkT0 = -1f;
+                    reversedWalkLogged = true;
+                    Plugin.Log.LogInfo(t1 < t0
+                        ? $"Mount: reversed walk confirmed, the donkey's walk clip runs backwards while the keeper backs away (clip time {t0:F3} -> {t1:F3})."
+                        : $"Mount: reversed walk NOT confirmed, the walk clip's time still rises ({t0:F3} -> {t1:F3}) with walk_speed negative; the Walk state's speed parameter is not walk_speed.");
+                }
+                catch
+                {
+                }
             }
 
             // Ride.FreezePoseWhenIdle: the riding pose is a breathing loop (arms move). Standing still, pause the keeper's
@@ -2208,8 +2391,11 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
+                // Never during an attack: the attack layers run on this same animator, and a swing or a bow draw from
+                // standing still would stop mid-frame.
+                RiderPose pose = EffectivePose;
                 bool wantFreeze = S.FreezePoseWhenIdle.Value && state == AnimationState.Idle
-                                  && S.Pose.Value != RiderPose.Idle && S.Pose.Value != RiderPose.Walk;
+                                  && pose != RiderPose.Idle && pose != RiderPose.Walk && !IsAttackState(pc.Ssm?.CurState);
                 if (!wantFreeze)
                 {
                     idleSince = -1f;
@@ -2217,7 +2403,7 @@ namespace GK2DonkeyAPI
                     // Playback speed of the pose: PoseSpeed while moving (optionally scaled by the riding speed so it keeps
                     // pace with the donkey's walk animation), the clip's own speed otherwise. Game poses (Idle/Walk) untouched.
                     float target = 1f;
-                    if (S.Pose.Value != RiderPose.Idle && S.Pose.Value != RiderPose.Walk)
+                    if (pose != RiderPose.Idle && pose != RiderPose.Walk && !IsAttackState(pc.Ssm?.CurState))
                     {
                         target = state == AnimationState.Walk
                             ? S.PoseSpeed.Value * (S.PoseSpeedFollowsDonkey.Value ? S.SpeedMultiplier.Value : 1f)
@@ -2367,10 +2553,64 @@ namespace GK2DonkeyAPI
                     TorsoShiftWorld = Vector3.right * (TorsoFacingSign() * S.TorsoOffsetPx.Value * 0.02f);
                     seatRoot.localPosition = seatRest + Vector3.up * offset + TorsoShiftWorld;
                     seatApplied = offset;
+                    // The weapons hang under this same root (Weapon Container: the sword's hit box, the bow's arrow origin).
+                    // Lifted with the seat they would strike above the enemies' colliders (a zombie's capsule tops out
+                    // near y 1), so they are held at their rest place, over the physical body (docs/mounted-combat.md).
+                    if (weaponRoot == null || !weaponRoot)
+                    {
+                        weaponRoot = seatRoot.Find("Weapon Container");
+                        if (weaponRoot != null)
+                        {
+                            weaponRest = weaponRoot.localPosition;
+                        }
+                    }
+                    HoldWeapons(pc);
                 }
                 catch (Exception e)
                 {
                     Plugin.Log.LogWarning($"Mount: seat offset failed: {e.Message}");
+                }
+            }
+
+            // Every frame after the animator (OnKeeperLateUpdate), not only when the seat changes: the "Weapon HitBox
+            // Container" animator layer (6) holds a zero-length pose clip per facing and runs at weight 1 during every
+            // attack; if that clip keys the container's position, the animator puts the container back up with the seat
+            // in the middle of each swing or shot, exactly when the hold matters. One write per frame when it differs.
+            private void HoldWeapons(PlayerController pc)
+            {
+                if (weaponRoot == null || !weaponRoot)
+                {
+                    return;
+                }
+                Vector3 cur = weaponRoot.localPosition;
+                if (weaponHeld && (cur - weaponWritten).sqrMagnitude > 1e-10f)
+                {
+                    // The animator wrote the container since our last write (the "Weapon HitBox Container" layer's pose
+                    // clip for the facing): that is the new rest place to hold from, not the one captured at mounting.
+                    weaponRest = cur;
+                    if (!weaponAnimLogged && IsAttackState(pc.Ssm?.CurState))
+                    {
+                        weaponAnimLogged = true;
+                        Plugin.Log.LogInfo($"Mount: the animator moves the weapon container during an attack (local position {cur:F3}, rotation {weaponRoot.localEulerAngles:F0}): the hold follows it.");
+                    }
+                }
+                Vector3 want = weaponRest - Vector3.up * seatApplied - TorsoShiftWorld;
+                if ((cur - want).sqrMagnitude > 1e-10f)
+                {
+                    weaponRoot.localPosition = want;
+                }
+                weaponWritten = want;
+                weaponHeld = true;
+                if (!weaponLogged && InArmour(pc))
+                {
+                    weaponLogged = true;
+                    Transform hitBox = weaponRoot.Find("Sword/Sword Hit Box");
+                    Transform leg = seatRoot != null ? seatRoot.Find("gfx/leg") : null;
+                    SpriteRenderer legR = leg != null ? leg.GetComponent<SpriteRenderer>() : null;
+                    Plugin.Log.LogInfo($"Mount: weapons held at their rest height under the seat (seat {seatApplied:F2}): weapon container at world y {weaponRoot.position.y:F2}, sword hit box {(hitBox != null ? hitBox.position.y.ToString("F2") : "not found")}, the keeper's body at {pc.PhysicalBody.transform.position.y:F2}.");
+                    // Which renderer carries the legs in the armour frames (RiderLeg slices the body's bottom rows; a separate
+                    // leg sprite would show the real legs unsliced): settles the look question of docs/mounted-combat.md §9.4.
+                    Plugin.Log.LogInfo($"Mount: armour frames this moment: body sprite {(keeperBodyRenderer != null && keeperBodyRenderer.sprite != null ? keeperBodyRenderer.sprite.name : "none")}, leg sprite {(legR != null && legR.sprite != null ? legR.sprite.name : "none")} ({(legR != null ? (legR.enabled ? "on" : "off") : "no leg renderer")}).");
                 }
             }
 
@@ -2382,6 +2622,14 @@ namespace GK2DonkeyAPI
                     {
                         seatRoot.localPosition = seatRest;
                     }
+                    if (weaponRoot != null && weaponRoot)
+                    {
+                        weaponRoot.localPosition = weaponRest;
+                    }
+                    weaponRoot = null;
+                    weaponLogged = false;
+                    weaponHeld = false;
+                    weaponAnimLogged = false;
                     TorsoShiftWorld = Vector3.zero;
                 }
                 catch
@@ -2527,7 +2775,7 @@ namespace GK2DonkeyAPI
                     if (keeperBodyRenderer != null && keeperBodyRenderer.sprite == null && !warnedNoSprite)
                     {
                         warnedNoSprite = true;
-                        Plugin.Log.LogWarning($"Mount: the keeper body has no sprite this frame (pose {S.Pose.Value}, facing {pc.PlayerData.Direction}); the pose has no frame for this facing.");
+                        Plugin.Log.LogWarning($"Mount: the keeper body has no sprite this frame (pose {EffectivePose}, facing {pc.PlayerData.Direction}); the pose has no frame for this facing.");
                     }
                     if (RiderLeg.IsAttached)
                     {
@@ -2536,7 +2784,8 @@ namespace GK2DonkeyAPI
                     if (!seatPending)
                     {
                         TickSeat(pc);
-                        TickRiderParts();
+                        HoldWeapons(pc);
+                        TickRiderParts(pc);
                     }
                 }
                 catch (Exception e)

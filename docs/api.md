@@ -40,10 +40,10 @@ does.
 - **Main thread only:** call from Update, from event handlers, and from Harmony patches of game code.
 - **Owner id:** pass your plugin GUID wherever it's asked for. It's how the core tells mods apart in rules, rides,
   overrides and the log.
-- **You can add restrictions but never remove the core's.** Co-op, indoors, "busy" (work, fishing, combat,
-  cutscenes), the keeper's armour view (the town's battles from their pre-fight on, a script's "Equip Armor": the
-  armour layer has no frames for the rider poses), build mode, the save hand-back and the mount-object check always
-  apply. `TryMount` returns their reason like any other.
+- **You can add restrictions but never remove the core's.** Co-op, indoors, "busy" (work, fishing, cutscenes;
+  not the game's attack states: the keeper fights from the saddle, [mounted-combat.md](mounted-combat.md)), the cart
+  while the keeper wears armour (fights are for the Ride style), build mode, the save hand-back and the mount-object
+  check always apply. `TryMount` returns their reason like any other.
 - `Mounts.IsAvailable` is false when the player switched the core off (`General.Enabled`) or its start-up check of
   the game's code stopped it (a member gone or the core's code changed since the build). Every call then refuses or
   does nothing; nothing throws. `Mounts.StatusText` says which, and names a feature the check switched off.

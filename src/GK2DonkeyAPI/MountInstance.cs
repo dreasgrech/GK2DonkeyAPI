@@ -486,7 +486,8 @@ namespace GK2DonkeyAPI
                 {
                     return "Already mounted.";
                 }
-                string reason = WhyCannotMount(pc) ?? MountRules.WhyCannotMount(asStyle ?? activeStyle);
+                MountStyle style = asStyle ?? activeStyle;
+                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(style);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo($"Mount refused ({Describe()}, not brought to the keeper): " + reason);
@@ -575,6 +576,7 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogWarning($"Mount: attaching the rider to {Describe()} failed: {e.Message}");
                 }
                 lastMirrored = (AnimationState)(-1);
+                lastWalkMultiplier = 0f;
                 if (HasCart)
                 {
                     CargoRig.LoadFromHead("mount");
@@ -610,6 +612,7 @@ namespace GK2DonkeyAPI
                 MountSounds.OnDonkeyGone();
                 riderAttached = false;
                 lastMirrored = (AnimationState)(-1);
+                lastWalkMultiplier = 0f;
                 Plugin.Log.LogInfo($"Dismounted ({reason}); {Describe()} stays at {Position:F2} in {SceneId} with {CargoRig.Count} item(s).");
                 Mounts.RaiseDismounted(reason);
             }
@@ -626,6 +629,7 @@ namespace GK2DonkeyAPI
                 DestroyDonkey();
                 activeStyle = style;
                 lastMirrored = (AnimationState)(-1);
+                lastWalkMultiplier = 0f;
                 if (!TrySpawn(pc, scene))
                 {
                     if (mounted)
@@ -766,13 +770,13 @@ namespace GK2DonkeyAPI
                 {
                     return "Not while the scene is not loaded.";
                 }
-                if (mounted)
+                // Not in armour, riding or on foot (a hitch on foot is the companion's G and the world's E): the cart is
+                // refused in a fight everywhere, or it slips in by one path and not another (seen 2026-10-14). Other mods'
+                // rules for the Cart style are asked when the hitch mounts the keeper in that style.
+                string rule = WhyNotCart(pc) ?? (mounted ? MountRules.WhyCannotMount(MountStyle.Cart) : null);
+                if (rule != null)
                 {
-                    string rule = MountRules.WhyCannotMount(MountStyle.Cart);
-                    if (rule != null)
-                    {
-                        return rule;
-                    }
+                    return rule;
                 }
                 float seatFloor = float.NegativeInfinity;
                 if (mounted)
@@ -873,6 +877,7 @@ namespace GK2DonkeyAPI
                     DestroyDonkey(); // a stale reference at most
                     activeStyle = MountStyle.Ride;
                     lastMirrored = (AnimationState)(-1);
+                    lastWalkMultiplier = 0f;
                 }
                 Plugin.Log.LogInfo($"Mount: {Describe()} left its cart as {cart.Describe()} at {cart.Position:F2} ({cart.CargoRig.Count} item(s) on it){(viewed ? "" : ", without a view")}.");
                 Mounts.RaiseUnhitched(Handle, cart.Handle);

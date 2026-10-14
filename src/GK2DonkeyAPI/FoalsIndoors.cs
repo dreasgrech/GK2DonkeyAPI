@@ -26,6 +26,16 @@ namespace GK2DonkeyAPI
         private static bool loadedCheckDue;     // the first steady check of a newly loaded game
         private static bool placeAgainDue;      // a foal placed at a door without a clear slot tries again until control is back
 
+        // The door the keeper went through within the last 'frames' frames, if any: where he came from. A quest script
+        // teleports him to a fight's point and puts his armour on in the same breath (seen in the log 2026-10-14: the
+        // door line, then the armour's first frame); what must happen "at the talk" happens here instead.
+        internal static bool CameThroughDoorJustNow(int frames, out Vector3 from, out string fromScene)
+        {
+            from = doorFrom;
+            fromScene = doorFromScene;
+            return doorFrame >= 0 && Time.frameCount - doorFrame <= frames && !string.IsNullOrEmpty(doorFromScene);
+        }
+
         // PlayerController.OnPlayerTeleported (subscribed by Plugin): every door, the map's fast travel, a script's move.
         internal static void OnKeeperTeleported()
         {

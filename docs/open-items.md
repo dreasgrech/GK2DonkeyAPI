@@ -309,28 +309,22 @@ closed):
   drop-spot search one cart length ahead of the chest, in the loaded scene only). To check in game.
 - **A town battle while mounted** (seen 2026-10-14, game 1.010): the quest's talk starts the pre-fight, which puts the
   keeper into his armour view (`PlayerController.SetArmorView`) with his state machine still free, so the ride went on
-  and the keeper showed as a blue shape (the armour skin has no frame for the rider pose: "the keeper body has no
-  sprite this frame"); the attack dismounted him, and mounting again showed the shape again. The armour is an animator
-  layer (`AnimationComponent.Layers.Armor*`) without the rider poses' frames; the same view goes on from a script's
-  "Equip Armor" node (`Flow_SetPlayerArmorState`) and from equipping body armour during a fight, and only
-  `SetArmorView(false)` (fight end, the script's "Unequip", leaving the game) takes it off; the other player skin
-  swaps (`PlayerSkinHelper`, customisation) keep the base body, which has the frames. **Built 2026-10-14:**
-  `Mount.InArmour(pc)` (the private `PlayerController.isArmorViewActive`, verified at start) ends the ride ("the
-  keeper's armour") and refuses to mount ("Not in armour.") until the armour is off. (`FightingGameController`'s
-  state was the first idea; its `LazySingleton.Instance` creates the controller when none exists, so it is not read.)
-  To check in game: talk to the quest giver while mounted (dismounts as the armour goes on), H during the pre-fight
-  and the fight (refused), H after it (works).
-- **Mounted combat** (wanted 2026-10-14: "attack while mounted, both with the sword and also with the arrow"). Not
-  built; the armour check above is the safe baseline until it is. What it takes, from the game's code: the attack
-  states (`AttackSword*PlayerState`, `AttackBow*PlayerState`) leave `FreePlayerState`, which ends the ride today; the
-  armour and weapon views are animator layers (`AnimationComponent.Layers.Armor`, `ArmorWithSword`, `ArmorWithBow`,
-  `SwordAttack`, `BowAttack`) over the body with their own frames, so a rider pose needs frames in those layers or the
-  rider must be drawn from the attack frames themselves; the attack states set the speed multiplier on enter and reset
-  it on exit (the mount restores its own, Mount.cs "don't fight them"); the fight levels teleport the keeper and
-  bound the arena (`SetBorderObjectsActive`), where the donkey's safe-ground rules would apply. To investigate first:
-  which attack frames exist per facing, whether the hit boxes (`WeaponHitBox` layer) follow the keeper's sprite
-  offset on the donkey, and the allies/enemies' targeting of a moving mounted keeper.
-
+  and the keeper showed as a blue shape (the armour animator layers have no frame for the rider pose). Investigated in
+  full: [mounted-combat.md](mounted-combat.md) (the fight flow, the attack states, the focus stance, the frames, the
+  hit box and arrows, where the mount collides). The first answer (armour ends the ride) was replaced the same day by
+  mounted combat step 1, below.
+- **Mounted combat** (wanted 2026-10-14: attack while mounted, sword and bow; the focus stance's strafing and its
+  halved speed noted). **Step 1 built 2026-10-14, not yet seen in game** ([mounted-combat.md](mounted-combat.md) §8):
+  the armour view rides with the Walk/Idle frames, the attack states and `ByAttack` no longer end the ride, the focus
+  stance is a side-facing strafe (the donkey slides when the keeper backs away), the weapons are held at ground level
+  under the lifted seat, the cart is refused in armour. **Morning 2026-10-14:** the deeper investigation (§9: aim
+  paths, reversed walk, enemies/physics/death/fight end, sounds and parts) corrected two claims (the pre-fight
+  teleport is the quest script's own node; the donkey comes along at a win, stays only after a death), found and
+  fixed three things (weapon hold lost during swings, armoured arm drifting off its weapon, idle-freeze speed during
+  an attack) and built step 2 (reversed donkey walk + hoof sounds in reverse). First in-game test 10:01: blue shape
+  while idle in armour (pose not re-applied when the armour goes on mid-ride) and the cart riding into the arena
+  (refusal inconsistent across paths): both fixed, §9.6. Eleven checks in §8. Step 3 options (aiming up/down) in
+  §9.1 with a recommendation; the user's choices in §6 (the cart in fights, focus speed, aiming up/down).
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after

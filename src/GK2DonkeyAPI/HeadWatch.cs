@@ -46,6 +46,7 @@ namespace GK2DonkeyAPI
                     a.gameObject.SetActive(false);
                     a.gameObject.SetActive(true);
                     lastMirrored = (AnimationState)(-1);
+                    lastWalkMultiplier = 0f;
                 }
                 catch (Exception e)
                 {

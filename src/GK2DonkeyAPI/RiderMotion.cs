@@ -132,7 +132,7 @@ namespace GK2DonkeyAPI
             }
 
             // After TickSeat, from the keeper's LateUpdate (after the animator and the skin swap).
-            private void TickRiderParts()
+            private void TickRiderParts(PlayerController pc)
             {
                 if (seatRoot == null || !seatRoot)
                 {
@@ -140,7 +140,14 @@ namespace GK2DonkeyAPI
                 }
                 FindRiderParts();
                 float body = RiderBobPx(0);
-                if (armPart != null)
+                if (armPart != null && (InArmour(pc) || IsAttackState(pc.Ssm?.CurState)))
+                {
+                    // The weapons (sword, bow, arrow, quiver) are drawn on the tol/* layers, which this motion does not
+                    // move: a swaying arm would drift off its weapon by the sway and bob pixels (docs/mounted-combat.md
+                    // §9.4). The arm stays where the animator draws it; the head keeps its lag.
+                    ApplyPart(armPart, Vector3.zero);
+                }
+                else if (armPart != null)
                 {
                     int f = CurrentWalkFrame();
                     // Forward on frames 2 and 6, back on 4 and 8 (twice a stride, with the donkey's nod). The art faces
