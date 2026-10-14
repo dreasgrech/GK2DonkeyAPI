@@ -749,3 +749,35 @@ line, the picture of the cut without the line. **Built:** `RiderBack` only hides
 `Ride.BackSeatExtraPx` (default 5, the Riding tab: "Seen from behind: sits higher by (px)", 0-12) to the seat while it
 is active; no crop, no push. Cost: a small hop of the body when he turns away and back.
 
+**Fifth run (13:25): "beautiful, looks much better now."** The side-saddle back view stands (legs hidden, seat +5 px
+default). The rider's look is settled for all four facings in armour.
+
+**Built (13:40):** option (c), refined. `Projectile.Tick` adds `direction × speed` to the transform each Update and the
+sweep in `ArrowProjectile.LateUpdate` follows the transform, so a y written each Update is kept and swept. A postfix on
+`Projectile.Launch` (the keeper's arrows while mounted only: the launch position is the held Bow's, within 0.05;
+`Mount.Instance.ArrowLiftAt`) starts the arrow at the drawn bow (the held position plus the seat's lift) and a small
+component on the pooled arrow (`ArrowDip`, re-armed at each launch) sinks it to the rest height over its first 1.5
+units of flight: the arrow leaves the bow as drawn and flies on at the height it always had, so the hits are those of
+the keeper on foot. The arrow's own direction is untouched (no pitch, no range loss). One info line at the first shot
+gives both heights. Still open and measured by `Dev/ZoneProbe.cs` (dev build, every two seconds in armour, up to
+twelve owners): the enemies' hit zones' heights over their roots, to know whether level flight at the drawn height
+would also have hit; the probe goes once read.
+
+### 10.7 The focus stance's speed (asked 13:30)
+
+The game halves the keeper's walking speed in a focus stance (`SpeedMultiplier = 0.5` on entering
+`AttackSword/BowFocusedPlayerState`, 1 on leaving); the mod overwrites the multiplier every frame while mounted, and
+step 1 chose the mount's speed × 0.5 there (at the default riding speed 2 that is normal walking speed, which reads
+as "the mount slows down while I hold right click"). Now a setting: `Ride.FocusSpeed` (and `Cart.FocusSpeed`), the
+fraction of the riding speed used in a focus stance, default 0.5, 0.25-1 (1 = no slowdown), on the Riding tab under
+"Rider in armour (the fights)". The donkey's walk pace follows the keeper's multiplier, so it matches either way.
+
+**Measured (the user's fights, 13:50-14:10; `Dev/ZoneProbe.cs`, removed again):** the town battle's enemies
+(`zmb_wild_mob`) carry one `HitZone` capsule from 0.04 to 1.44 over the ground (0.34 wide, layer 29); the allied
+mercenaries a trigger capsule 0..1.00 (layer 6) and a physics capsule 0..1.45 (layer 29); the arrow's sweep box is
+0.50 × 0.034 × 0.078 and sweeps every layer. The held bow is 0.78 over the ground, the drawn bow 1.00: both inside the
+enemies' band, inside its full-width part (0.21..1.27). The user disliked the dip ("starting at the correct position
+but then curving to the old trajectory"). **Built (14:12):** no dip; the arrow is lifted to the drawn bow at launch and
+flies level. Two probe lessons on the way: every world object is an `ICombatEntity` (`Wgo` implements it), and the
+zombies are children of the scene transform, so the fighters are found by `FightingAgent` and listed from their own
+transform, never `transform.root`.

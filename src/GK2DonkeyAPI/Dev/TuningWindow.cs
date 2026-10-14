@@ -693,6 +693,7 @@ namespace GK2DonkeyAPI
             Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
 
             Header("Rider in armour (the fights)");
+            FloatSlider("Speed while aiming (right click held), x the riding speed", s.FocusSpeed, 0.25f, 1f, 2, null);
             IntSlider("Seen from behind: sits higher by (px)", s.BackSeatExtraPx, 0, 12, null);
             GUILayout.Label("Aiming up in armour he sits side-saddle: the legs are hidden on the far side and he sits this much higher, so the armour skirt's hem meets the donkey's back.", small);
 

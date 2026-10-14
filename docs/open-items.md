@@ -330,9 +330,10 @@ closed):
   stays in the arena). All of §8 seen. The cart-at-the-talk bubble was dropped on the user's word (the cart simply
   stays outside; whether it comes along is decided later). **Afternoon:** §10 (measurements, the art from the atlas,
   the composite `docs/img/mounted-combat-rider-on-donkey.png`); built: Idle pose in armour with the bob, up/down
-  facing during attacks and focus in armour (the game's own aiming), side-flip hysteresis. **Open:** the arrow's origin
-  (it leaves from the keeper's unmounted height: the weapons are held at rest height for the hits; §10.6 options), the
-  back-view look (depth push, 13:00, to be seen), the focus-speed choice.
+  facing during attacks and focus in armour (the game's own aiming), side-flip hysteresis. The back view settled 13:25 (side-saddle: legs
+  hidden, seat +5 px, `BackSeatExtraPx`), the user: "beautiful". The arrow's origin fixed 14:12 (§10.6: it
+  leaves the drawn bow and flies level; the enemies' hit capsules measured 0.04..1.44, both heights inside); the focus
+  speed is a setting (`FocusSpeed`, default 0.5, §10.7). **Open:** the user's verdicts on both.
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after

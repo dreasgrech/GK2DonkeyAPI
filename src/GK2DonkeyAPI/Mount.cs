@@ -492,7 +492,7 @@ namespace GK2DonkeyAPI
                 // halves the keeper's own (docs/mounted-combat.md).
                 SSMState curState = pc.Ssm?.CurState;
                 float wantSpeed = curState is FreePlayerState ? S.SpeedMultiplier.Value
-                    : curState is AttackSwordFocusedPlayerState || curState is AttackBowFocusedPlayerState ? S.SpeedMultiplier.Value * 0.5f
+                    : curState is AttackSwordFocusedPlayerState || curState is AttackBowFocusedPlayerState ? S.SpeedMultiplier.Value * S.FocusSpeed.Value
                     : pc.PhysicalBody.SpeedMultiplier;
                 if (Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantSpeed) > 0.001f)
                 {
@@ -2603,6 +2603,22 @@ namespace GK2DonkeyAPI
                 {
                     Plugin.Log.LogWarning($"Mount: seat offset failed: {e.Message}");
                 }
+            }
+
+            // The seat's lift the held weapons are under, when 'at' is the held Bow's position (within 0.05): the arrow's
+            // origin (Projectile_Launch_Patch). 0 for anything else (another archer's arrow, or not held).
+            internal float ArrowLiftAt(Vector3 at)
+            {
+                if (!mounted || weaponRoot == null || !weaponRoot)
+                {
+                    return 0f;
+                }
+                Transform bow = weaponRoot.Find("Bow");
+                if (bow == null || (bow.position - at).sqrMagnitude > 0.05f * 0.05f)
+                {
+                    return 0f;
+                }
+                return seatApplied;
             }
 
             // Every frame after the animator (OnKeeperLateUpdate), not only when the seat changes: the "Weapon HitBox

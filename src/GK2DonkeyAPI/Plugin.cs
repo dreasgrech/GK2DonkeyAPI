@@ -17,6 +17,7 @@ namespace GK2DonkeyAPI
     {
         public readonly string Section;
         public readonly Tuned<float> SpeedMultiplier;
+        public readonly Tuned<float> FocusSpeed;
         public readonly Tuned<float> Depth;
         public readonly Tuned<float> CenterOffset;
         public readonly Tuned<int> RiderOffsetPx;
@@ -72,6 +73,8 @@ namespace GK2DonkeyAPI
             string who = section == "Cart" ? "in cart style" : "while riding";
             SpeedMultiplier = cfg.Bind(section, "SpeedMultiplier", Defaults.Get(section, "SpeedMultiplier", speed),
                 new ConfigDescription($"Walking speed {who}, as a multiple of normal (measured: exactly linear).", new AcceptableValueRange<float>(0.5f, 4f)));
+            FocusSpeed = cfg.Bind(section, "FocusSpeed", Defaults.Get(section, "FocusSpeed", 0.5f),
+                new ConfigDescription($"Speed {who} in a fight's focus stance (right click held: aiming while moving), as a fraction of the speed above. The game halves the keeper's own walking speed there; 1 keeps the full speed.", new AcceptableValueRange<float>(0.25f, 1f)));
             Depth = cfg.Bind(section, "Depth", Defaults.Get(section, "Depth", depth),
                 "Donkey offset towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind), in world units.");
             CenterOffset = cfg.Bind(section, "CenterOffset", Defaults.Get(section, "CenterOffset", center),
@@ -319,7 +322,7 @@ namespace GK2DonkeyAPI
             {
                 var list = new System.Collections.Generic.List<ConfigEntryBase>
                 {
-                    SpeedMultiplier, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
+                    SpeedMultiplier, FocusSpeed, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
                     NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, BackSeatExtraPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
                     CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift,
@@ -396,6 +399,7 @@ namespace GK2DonkeyAPI
             typeof(ChestInteractionHandler_HasInteraction2_Patch),
             typeof(PlayerController_Teleport_Patch),
             typeof(PlayerController_Teleport_DoorNote_Patch),
+            typeof(Projectile_Launch_Patch), // the arrow leaves the drawn bow while mounted (ArrowOrigin.cs)
             typeof(WorldZoneData_TryAddWgoData_Patch),
             typeof(GameSave_PrepareToSave_Patch),
             typeof(ChestInteractionHandler_Interact2_Patch),
