@@ -665,3 +665,48 @@ on small mouse moves; 6. no warning in the log.
   animator (the skin changer never re-skins it) if a seated leg were ever drawn. `Dev/SpriteProbe.cs` removed again;
   the atlas scripts (`tools/frames.py`, `tools/frames2.py`) stay.
 - No warning or error in the session's log.
+
+### 10.5 The back view: sitting behind the donkey (2026-10-14, 12:10)
+
+The user's verdict on the up/down build: good for nearly every pose; facing **down** reads as sitting with the legs
+dangling towards the south; facing **up** (the back view) his lower body hangs in front of the donkey and he reads as
+standing on its back. Wanted: hide the lower body so he sits with his legs on the far side.
+
+Two ways, both composed first from the atlas (`tools/frames3.py` → `docs/img/mounted-combat-rider-up-options.png`):
+the donkey drawn in front of him for that facing (its neck covers part of his torso too), or his legs hidden and the
+torso and arm cut at the donkey's back line with the donkey behind as now. The pictures are nearly the same; the
+second touches nothing in the world (flipping `Depth` moves the donkey along the camera's axis and shifts it on
+screen) and is self-healing, so it is built: **`RiderBack.cs`**, every frame after the animator and the skin changer
+(`OnKeeperLateUpdate`), while the keeper is drawn facing up, mounted, in armour: `gfx/leg` switched off; `gfx/bdy` and
+`gfx/arm` show a copy of their sprite cropped at the back line, a sprite wholly below it switches its renderer off.
+The back line in the keeper's own rows is `donkey trimmed bottom + 2 + BackHeightPx − (keeper lift in the donkey
+body's local space / 0.02)`: the same anchors RiderLeg uses, about row 48 for the 0.22 seat (the composite's cut).
+The cut sprites keep the **source's name**: the skin changer resolves by the current sprite's name (`ResolveSkinnedSprite`
+reads `name[5..7]`) and would switch off a renderer whose sprite it cannot place; with the same name it resolves the
+original, writes it back before our hook, and the cut is applied again (or, if nothing rewrote the sprite, the cut's
+source is looked up in a reverse map). When the facing is not up, or at dismount (`RestoreSeat` → `RiderBack.Detach`),
+every touched renderer gets its source sprite and enabled flag back. One info line gives the cut row and the lift.
+Sprites are created once per source and cut row (`RiderLeg.CreateSlice`, shared, copies the secondary textures).
+
+**To check in game (armour, mounted, facing up with right click):** the legs are gone and the torso ends at the
+donkey's back line (`docs/img/mounted-combat-rider-up-options.png`, third frame); a bow shot and a sword swing
+upwards still animate (the attack frames are cut the same way); turning back to the side or down restores the full
+body at once; the log has the "rider from behind: body and arm cut at frame row …" line and no warning.
+
+**First run (the user, 12:23): "looks awful", a gap between him and the donkey.** The log: "cut at frame row 49 (donkey
+back 57.1, keeper lift 8.1 px)": the arithmetic did what it was designed to, so the model was wrong: the lift was
+converted through the donkey body's local space, which ignores that the donkey stands 0.24 further from the camera
+(Ride.Depth) and so sits higher on screen than a plain overlay of the two frames; the keeper's cut row landed several
+rows above the back as drawn. **Fix:** the cut row is measured on screen (`CameraSystem.WorldToScreenPoint`): the back
+line's screen height against the keeper sprite's bottom and top rows gives the row where the two really meet,
+whatever the depth and the camera's tilt. A new Ride setting `BackCutAdjustPx` (the Riding tab: "Back view: cut lower
+(-) / higher (+), pixels", default 0) moves the cut by hand. The info line now gives the screen heights and the
+screen px per row, so the next log can be checked against the look.
+
+**Second run (12:35):** the screenshot shows the torso ending on the donkey's back, no gap. The log: "cut at frame row 50
+(donkey back row 56.1 at screen y 892.7; keeper body 9019_bdy_atk_sword_up_01 rows 39..61 at screen y 821.7..964.0,
+6.50 screen px per row; adjust 0)". Note: the screen-space row (50) is only one row from the first model's 49, while
+the first run's gap was several rows; what else differed in the first run is not known (possibly the cut sprite's
+zero trimmed offset being read as a source once), so the screen-space measurement stays as the rule and the first
+model is not reinstated.
+

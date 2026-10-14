@@ -1,4 +1,5 @@
 using System;
+using BepInEx;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using UnityEngine;
@@ -47,6 +48,39 @@ namespace GK2DonkeyAPI
         {
             bool inGame = Mount.IsMounted || (MainGame.Instance != null && MainGame.PlayerData != null);
             return inGame && DevTools.Unlocked && Plugin.TuningWindowEnabled.Value && !Plugin.TuningWindowHidden && !CargoSheet.Running;
+        }
+
+        // The mouse is over the panel, or a panel control is being dragged: the game's player input is skipped that
+        // frame (PlayerInputHandler_UpdateInput_Patch), so a click on a slider no longer swings the sword or turns the
+        // keeper (the user, 2026-10-14). The panel is immediate-mode GUI and consumes its own events, but the game polls
+        // the mouse directly. Mouse y counts from the bottom, GUI y from the top; the panel draws under GUI.matrix's scale.
+        internal static bool PointerOverPanel()
+        {
+            if (!Showing())
+            {
+                return false;
+            }
+            try
+            {
+                float scale = Mathf.Clamp(Plugin.TuningWindowScale.Value, 0.75f, 3f);
+                Vector3 m = UnityInput.Current.mousePosition;
+                var gui = new Vector2(m.x / scale, (Screen.height - m.y) / scale);
+                if (rect.Contains(gui))
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+            try
+            {
+                return GUIUtility.hotControl != 0; // a slider still held while the mouse left the panel
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         public static void Draw()
@@ -657,6 +691,10 @@ namespace GK2DonkeyAPI
             }
             FloatSlider("Pose animation speed while moving (x clip speed)", s.PoseSpeed, 0.1f, 4f, 2, null);
             Toggle("Scale pose animation speed with the riding speed", s.PoseSpeedFollowsDonkey, null);
+
+            Header("Rider in armour (the fights)");
+            IntSlider("Seen from behind: cut the body lower (-) / higher (+), pixels", s.BackCutAdjustPx, -12, 12, null);
+            GUILayout.Label("In armour, aiming up, the rider's legs are hidden and his body is cut at the donkey's back line so he sits behind it; this moves that cut. Nothing else uses it.", small);
 
             Header("Rider legs (drawn on the donkey's side)");
             Toggle("Show legs on the donkey's side", s.NearLeg, Mount.RefreshLeg);

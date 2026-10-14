@@ -2166,6 +2166,7 @@ namespace GK2DonkeyAPI
                 // every frame for as long as the key was held (the user's repro, 2026-10-03).
                 Vector2 drawnDir = KeeperDrawnDirection(pc);
                 drawnVertical = Mathf.Abs(drawnDir.y) > Mathf.Abs(drawnDir.x); // only ever true in armour while attacking (RiderFacing)
+                drawnUp = drawnVertical && drawnDir.y > 0f;
                 if (!drawnVertical && Mathf.Abs(drawnDir.x) > 0.05f)
                 {
                     riderFacingX = drawnDir.x > 0f ? 1f : -1f; // the one facing source for torso shift and legs
@@ -2555,6 +2556,7 @@ namespace GK2DonkeyAPI
             // +1 facing right, -1 facing left. Taken from the tracked facing: Unity reports the game's mirroring scales
             // back inconsistently, so inspecting transforms gave the same sign for both facings.
             private bool drawnVertical; // the keeper is drawn facing up or down this frame (armour, attacking): set in Follow
+            private bool drawnUp;       // ... and it is up (the back view)
 
             private float TorsoFacingSign()
             {
@@ -2661,6 +2663,7 @@ namespace GK2DonkeyAPI
                     weaponLogged = false;
                     weaponHeld = false;
                     weaponAnimLogged = false;
+                    RiderBack.Detach();
                     TorsoShiftWorld = Vector3.zero;
                 }
                 catch
@@ -2829,6 +2832,8 @@ namespace GK2DonkeyAPI
                         TickSeat(pc);
                         HoldWeapons(pc);
                         TickRiderParts(pc);
+                        // Facing up in armour: legs hidden, torso and arm cut at the donkey's back line (RiderBack.cs).
+                        RiderBack.Update(seatRoot, keeperBodyRenderer, donkeyBodyRenderer, drawnVertical && drawnUp && InArmour(pc));
                     }
                 }
                 catch (Exception e)

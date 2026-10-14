@@ -165,16 +165,29 @@ namespace GK2DonkeyAPI
             // pivot in the slice's pixel space: frame pivot minus trimmed offset, top edge
             Vector2 pivotPx = new Vector2(body.pivot.x - off.x, h);
             Vector2 pivot = new Vector2(pivotPx.x / rect.width, pivotPx.y / rect.height);
-            // Sprites can carry secondary textures the shader samples alongside the main atlas (palette index, light
-            // masks); copy them so the slice renders exactly like the body.
+            Sprite slice = CreateSlice(body, rect, pivot, "mount_rider_legs:" + body.name);
+            if (!loggedSlice)
+            {
+                loggedSlice = true;
+                Plugin.Log.LogInfo($"Mount: leg slice from {body.name} tex={body.texture?.name} rect={rect} material={renderer?.sharedMaterial?.name}/{renderer?.sharedMaterial?.shader?.name}");
+            }
+            sliceCache[body] = slice;
+            return slice;
+        }
+
+        // A sprite over part of another's texture rect, drawn exactly like it: the same texture, pixels per unit and
+        // secondary textures (the shader samples those alongside the main atlas: palette index, light masks). Also
+        // used by RiderBack for the torso cut at the donkey's back line.
+        internal static Sprite CreateSlice(Sprite source, Rect rect, Vector2 pivot, string name)
+        {
             SecondarySpriteTexture[] secondary = null;
             try
             {
-                int n = body.GetSecondaryTextureCount();
+                int n = source.GetSecondaryTextureCount();
                 if (n > 0)
                 {
                     secondary = new SecondarySpriteTexture[n];
-                    body.GetSecondaryTextures(secondary);
+                    source.GetSecondaryTextures(secondary);
                 }
             }
             catch
@@ -182,15 +195,9 @@ namespace GK2DonkeyAPI
                 secondary = null;
             }
             Sprite slice = secondary != null
-                ? Sprite.Create(body.texture, rect, pivot, body.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false, secondary)
-                : Sprite.Create(body.texture, rect, pivot, body.pixelsPerUnit, 0, SpriteMeshType.FullRect);
-            slice.name = "mount_rider_legs:" + body.name;
-            if (!loggedSlice)
-            {
-                loggedSlice = true;
-                Plugin.Log.LogInfo($"Mount: leg slice from {body.name} tex={body.texture?.name} rect={rect} secondaryTextures={(secondary?.Length ?? 0)} material={renderer?.sharedMaterial?.name}/{renderer?.sharedMaterial?.shader?.name}");
-            }
-            sliceCache[body] = slice;
+                ? Sprite.Create(source.texture, rect, pivot, source.pixelsPerUnit, 0, SpriteMeshType.FullRect, Vector4.zero, false, secondary)
+                : Sprite.Create(source.texture, rect, pivot, source.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            slice.name = name;
             return slice;
         }
 

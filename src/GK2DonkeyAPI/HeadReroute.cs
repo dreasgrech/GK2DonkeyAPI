@@ -633,6 +633,11 @@ namespace GK2DonkeyAPI
 
         private static bool Prefix(PlayerInputHandler __instance)
         {
+            // The dev panel under the mouse: the game's input skipped this frame, so clicks on it stay on it (TuningWindow).
+            if (TuningWindow.PointerOverPanel())
+            {
+                return false;
+            }
             // Donkeys and carts standing in the world (InstanceControls): riding one, or hitching a free cart, when the
             // game has nothing of its own to do with the key. On foot and in Ride style too, so asked first.
             if (!CargoSheet.Running && LazyInput.GetKeyDown(GameKey.Interaction))
