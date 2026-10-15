@@ -202,7 +202,7 @@ namespace GK2DonkeyAPI
                 TestLoads.TakeOff();
             }
             GUI.enabled = was;
-            GUILayout.Label(TestLoads.Status, small);
+            OneLine(TestLoads.Status, smallFont: true);
             GUILayout.EndHorizontal();
             GUILayout.EndVertical();
         }
@@ -251,7 +251,7 @@ namespace GK2DonkeyAPI
                 TestLoads.TakeOff();
             }
             GUI.enabled = en;
-            GUILayout.Label(riding ? TestLoads.Status : "ride in Cart style to use this", small);
+            OneLine(riding ? TestLoads.Status : "ride in Cart style to use this", smallFont: true);
             GUILayout.EndHorizontal();
             Help("Real items put straight onto the ridden cart (a corpse with its organs, a zombie made the way the game makes one): no searching the world. Each press re-makes the test load with the new count; the cart must hold nothing else. Items you set down stay yours. The Cargo tab's Tune next list has a Load button per contact.");
             if (change != null)

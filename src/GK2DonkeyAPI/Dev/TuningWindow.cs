@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, step, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill;
+        private static GUIStyle label, header, step, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill, oneLine, oneLineSmall;
 
         // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
         // which shows again once the override ends); else yellow when it differs from its mod default.
@@ -193,6 +193,10 @@ namespace GK2DonkeyAPI
             instanceSet = new GUIStyle(label);
             instanceSet.normal.textColor = new Color(1f, 0.5f, 0.95f);
             wrapLabel = new GUIStyle(label) { wordWrap = true };
+            // A line whose text changes length: one line, clipped at the right, never a second line (a status that
+            // wrapped to two lines moved everything below it up and down as it changed, 2026-10-15).
+            oneLine = new GUIStyle(label) { wordWrap = false, clipping = TextClipping.Clip };
+            oneLineSmall = new GUIStyle(small) { wordWrap = false, clipping = TextClipping.Clip };
             good = new GUIStyle(wrapLabel);
             good.normal.textColor = new Color(0.55f, 0.9f, 0.55f);
             bad = new GUIStyle(wrapLabel);
@@ -272,6 +276,15 @@ namespace GK2DonkeyAPI
         private static GUIStyle tipStyle;
 
         internal static GUIContent Tip(string text, string tip) => string.IsNullOrEmpty(tip) ? new GUIContent(text) : new GUIContent(text, tip);
+
+        // A label of exactly one line for text whose length changes: clipped at the right, the whole text in the tooltip,
+        // so the rows below never move. small: the smaller font.
+        private static void OneLine(string text, bool smallFont = false)
+        {
+            GUIStyle st = smallFont ? oneLineSmall : oneLine;
+            string plain = text ?? "";
+            GUILayout.Label(new GUIContent(plain, plain), st, GUILayout.Height(st.lineHeight + 4f), GUILayout.ExpandWidth(true));
+        }
 
         // A settings row's tooltip: the one given, else the setting's own description (the text written for the cfg file),
         // cut to whole sentences within ~260 characters so the box stays short. Every settings row on every tab gets one.

@@ -307,17 +307,13 @@ namespace GK2DonkeyAPI
             string when = mark != null && mark.When.Length > 0 ? $" <color=#9a9a9a>{mark.When}</color>" : "";
             string tags = mark != null && mark.Tags.Length > 0 ? $" <color=#ff8c69>{mark.Tags}</color>" : "";
             string note = mark != null && mark.Note.Length > 0 ? $" <color=#9a9a9a>\"{mark.Note}\"</color>" : "";
-            GUILayout.Label($"Load {reviewIndex + 1} of {reviewWalk.Count}{(reviewWalk.Count != total ? $" <color=#9a9a9a>(of {total})</color>" : "")}: <b>{coverage.Describe(load.Classes)}</b> · {load.Untuned} untuned · {stateText}{when}{tags}{note}", wrapLabel);
-            if (!onCart)
-            {
-                GUILayout.Label("Mount in Cart style to put the loads on the cart.", wrapLabel);
-            }
-            else if (!matches)
-            {
-                GUILayout.Label(reviewVisited
+            OneLine($"Load {reviewIndex + 1} of {reviewWalk.Count}{(reviewWalk.Count != total ? $" <color=#9a9a9a>(of {total})</color>" : "")}: <b>{coverage.Describe(load.Classes)}</b> · {load.Untuned} untuned · {stateText}{when}{tags}{note}");
+            // Always one line here (empty when the cart shows the load), so the verdict row never moves.
+            OneLine(!onCart ? "Mount in Cart style to put the loads on the cart."
+                : !matches ? (reviewVisited
                     ? $"<color=#ffd257>The cart does not show this load</color> (Load it, or step with 'load as I step' on).{(TestLoads.Status.Length > 0 ? " " + TestLoads.Status : "")}"
-                    : "<color=#ffd257>Not on the cart yet:</color> press > (or Load it) to put this first load on the cart; the next > then moves on.", wrapLabel);
-            }
+                    : "<color=#ffd257>Not on the cart yet:</color> press > (or Load it) to put this first load on the cart; the next > then moves on.")
+                : "", smallFont: true);
 
             // Verdicts.
             GUILayout.BeginHorizontal();
@@ -356,7 +352,8 @@ namespace GK2DonkeyAPI
             reviewAutoAdvance = GUILayout.Toggle(reviewAutoAdvance, Tip("next after a verdict", "After Looks right or Later the walk moves to the next unreviewed load and loads it."), Wd(140f));
             GUILayout.EndHorizontal();
             string keys = $"{Plugin.ReviewPrevKey.Value}/{Plugin.ReviewNextKey.Value} step, {Plugin.ReviewOkKey.Value} ok, {Plugin.ReviewWrongKey.Value} wrong, {Plugin.ReviewLaterKey.Value} later";
-            GUILayout.Label($"<color=#9a9a9a>{keys} (while this tab shows and no text field has the focus). {CargoReview.LastSaveNote} {reviewStatus}</color>", wrapLabel);
+            OneLine($"<color=#9a9a9a>{keys} (while this tab shows and no text field has the focus).</color>", smallFont: true);
+            OneLine($"<color=#9a9a9a>{CargoReview.LastSaveNote} {reviewStatus}</color>", smallFont: true);
             GUILayout.EndVertical();
 
             PollReviewKeys(li, placed, isolating, matches, canAct);
