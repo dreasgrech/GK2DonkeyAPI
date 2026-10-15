@@ -3,8 +3,8 @@
 
 [youtube]Ww9S6X9hTOU[/youtube]
 
-[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load, and find it where you left it after a reload.[/size]
-[/center]
+[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load, and find it where you left it after a reload.[/size][/center]
+
 [line]
 [size=5][b][color=#f0b45a]What you get[/color][/b][/size]
 
@@ -68,9 +68,9 @@
 [size=4][b]Optional: bodies left at the crossroads[/b][/size]
 [size=3]Off by default. The game's delivery donkey drops its corpses by the nun's crossroads, and you cart them in yourself.[/size]
 
-
 [line]
 [size=5][b][color=#f0b45a]Keys[/color][/b][/size]
+
 [size=3][list]
 [*][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/*]
 [*][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/*]
@@ -86,9 +86,9 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png?v=2[/img][/center]
 
-
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
+
 [size=3][list=1]
 [*]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/*]
 [*]Drop [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from the download into [i]BepInEx\plugins[/i].[/*]
@@ -100,6 +100,7 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 
 [line]
 [size=5][b][color=#f0b45a]For modders[/color][/b][/size]
+
 [size=3]Saddle Up is built on the [b]GK2 Donkey API[/b], which ships in the same download. Your own mod can give the player a donkey, a cart, foals, a herd, cargo events or riding rules through it. Documentation and examples: {{ GITHUB_URL }}[/size]
 
 [size=2]Source and issue tracker: {{ GITHUB_URL }}[/size]
