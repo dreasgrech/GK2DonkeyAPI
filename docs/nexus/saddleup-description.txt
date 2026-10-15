@@ -1,7 +1,7 @@
 [center][size=6][b]GK2 Saddle Up[/b][/size]
 [size=4]Your own donkey and cart in Graveyard Keeper 2.[/size]
 
-[youtube]Ww9S6X9hTOU[/youtube] 
+[youtube]Ww9S6X9hTOU[/youtube]
 [/center]
 
 Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load, and find it where you left it after a reload.
@@ -11,39 +11,37 @@ Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it s
 [size=5][b]What you get[/b][/size]
 
 [b]Your own donkey as a mount.[/b] Press H anywhere and it comes to you; you ride. Press G and it comes with its cart; you drive.
-{{ GIF: the donkey trotting up to the keeper and him getting on }}
-
-[b]Ride fast.[/b] Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.
-{{ GIF: riding across the graveyard }}
-
-[b]A cart that carries six.[/b] Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item.
-{{ SCREENSHOT: the cart loaded with six items }}
-
-[b]Haul corpses.[/b] Bodies ride on the cart like anything else. Drive to the morgue door, step off, and you walk in with the body in your hands.
-{{ GIF: a corpse put on the cart and driven to the morgue }}
-
-[b]Zombies ride too.[/b] Pick up a zombie while driving and it lies on the cart. Hand it to its work straight from the cart.
-{{ SCREENSHOT: zombies on the cart }}
-
-[b]A storage chest on wheels.[/b] Drive up to a storage chest and take it with you, everything inside. Set it down wherever you want it.
-{{ GIF: picking up a chest, driving off, setting it down }}
-
-[b]Leave it standing.[/b] Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with E.
-{{ SCREENSHOT: the cart parked with its load }}
-
-[b]Kept with your save.[/b] After a reload your donkey is where you left it, the load still on the cart. Steam Cloud carries it along with the save.
-
-[b]Fight from the saddle.[/b] In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim.
-{{ GIF: the knight shooting from the donkey }}
-
-[b]Your donkey, your colours.[/b] Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.
-{{ SCREENSHOT: the colour preview, two or three donkeys in different colours }}
+Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-comes.gif[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif[/img]
 
 [b]Name it, and give it foals.[/b] "[E] Ride Bella". Up to five baby donkeys follow yours around, and can come indoors with you.
-{{ GIF: the donkey with foals trailing it }}
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Foals.png[/img]
 
-[b]It lives.[/b] Hoofsteps by surface, wheels on stone, the thump of cargo, brays, a bell. Left alone, it shuffles a few steps and grazes.
-{{ VIDEO or GIF with sound: the cart rolling over gravel and grass }}
+[b]A cart that carries six.[/b] Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif[/img]
+
+[b]Haul corpses.[/b] Bodies ride on the cart like anything else. Drive to the morgue door, step off, and you walk in with the body in your hands.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/corpse-to-morgue.gif[/img]
+
+[b]Zombies ride too.[/b] Pick up a zombie while driving and it lies on the cart. Hand it to its work straight from the cart.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/ZombieWorkstation.png[/img]
+
+[b]A storage chest on wheels.[/b] Drive up to a storage chest and take it with you, everything inside. Set it down wherever you want it.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/chest-on-cart.gif[/img]
+
+[b]Fight from the saddle.[/b] In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-a.gif[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-b.gif[/img]
+
+[b]Your donkey, your colours.[/b] Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif[/img]
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Donkey-Cart-Colors-Editor.png[/img]
+
+[b]Leave it standing.[/b] Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with E.
+Also kept with your save. After a reload your donkey is where you left it, the load still on the cart. 
+Steam Cloud carries it along with the save.
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png[/img]
 
 [b]Optional: the delivery donkey leaves bodies at the crossroads.[/b] Off by default. The game's own donkey drops its corpses by the nun's crossroads and you cart them in yourself.
 
@@ -64,7 +62,8 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 [size=5][b]Settings[/b][/size]
 
 With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu. Without it: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.
-{{ SCREENSHOT: the Mods menu page with the donkey preview }}
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png[/img]
+
 
 [line]
 
