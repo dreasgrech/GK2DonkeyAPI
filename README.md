@@ -9,10 +9,6 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
-Until 2026-10-02 the two were called GK2 Mounts and GK2 Showcase, and lived in the
-[GK2QOLMods](https://github.com/dreasgrech/GK2QOLMods) repo. Their history came along: `git log --follow` works
-through the rename.
-
 ## Installing (players)
 
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
