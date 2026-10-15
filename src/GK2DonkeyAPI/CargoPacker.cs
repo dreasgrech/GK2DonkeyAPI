@@ -21,6 +21,10 @@ namespace GK2DonkeyAPI
     // they did before layers existed: a two-item cart shows the relation of the pair's mode.
     internal static class CargoPacker
     {
+        // Bumped by hand whenever the packing changes with the same stored values (a new pass, another rule): the cargo
+        // review's fingerprints include it, so every ok asks to be looked at again (docs/cargo-review.md).
+        internal const int AlgorithmVersion = 1;
+
         internal struct Item
         {
             public string Id;

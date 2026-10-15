@@ -114,7 +114,8 @@ namespace GK2DonkeyAPI
         {
             string s = coverageSig ?? "";
             int bar = s.IndexOf('|');
-            return bar >= 0 ? s.Substring(bar + 1) : s;
+            // plus the seat pass switch: an untuned item is seated on the measured shapes only while it is on
+            return (bar >= 0 ? s.Substring(bar + 1) : s) + "|seat=" + (Plugin.CargoSeatOnShapes != null && Plugin.CargoSeatOnShapes.Value);
         }
 
         private static void EnsureReviewWalk()
@@ -228,18 +229,34 @@ namespace GK2DonkeyAPI
                 GUILayout.EndVertical();
                 return;
             }
+            // The fingerprint format changed since this file's marks were made: every ok would show as to re-check.
+            // One press re-stamps them with today's fingerprints; the user vouches that the layout is as it was.
+            if (CargoReview.FileFingerprintVersion != CargoReview.FingerprintVersion && rvOk + rvRecheck > 0)
+            {
+                GUILayout.Label($"<color=#ffd257>The fingerprint format changed (file v{CargoReview.FileFingerprintVersion}, code v{CargoReview.FingerprintVersion}): {rvRecheck} ok(s) read as to re-check.</color> Re-stamp them if the layout is unchanged since; if it did change, look at them instead.", wrapLabel);
+                if (GUILayout.Button(Tip("Re-stamp the ok marks", "The fingerprint format changed (a code update). If nothing of the layout changed since these marks were made, press this: every ok takes today's fingerprint and stays ok. If the layout did change, do not: look at the 'to re-check' loads instead."), Wd(170f)))
+                {
+                    var byKey = new Dictionary<string, string>(StringComparer.Ordinal);
+                    for (int i = 0; i < reviewKeys.Length; i++) byKey[reviewKeys[i]] = reviewFps[i];
+                    int n = CargoReview.Restamp(k => byKey.TryGetValue(k, out string f) ? f : null);
+                    reviewStatus = $"{n} ok mark(s) re-stamped.";
+                    reviewFpSig = null;
+                }
+            }
 
             // Filters: items, what to show, classes.
             GUILayout.BeginHorizontal();
             GUILayout.Label("Items:", Wd(44f));
             for (int i = 1; i <= 6; i++)
             {
-                bool on = GUILayout.Toggle(reviewSizes[i], Tip($"{i}  <color=#9a9a9a>{rvSizeOk[i]}/{rvSizeTotal[i]}</color>", $"Loads of {i} item{(i == 1 ? "" : "s")}: {rvSizeOk[i]} ok of {rvSizeTotal[i]}."), Wd(78f));
+                bool on = GUILayout.Toggle(reviewSizes[i], Tip($"{i}  <color=#9a9a9a>{rvSizeOk[i]}/{rvSizeTotal[i]}</color>", $"Loads of {i} item{(i == 1 ? "" : "s")}: {rvSizeOk[i]} ok of {rvSizeTotal[i]}."), Wd(96f));
                 if (on != reviewSizes[i]) reviewSizes[i] = on;
             }
-            GUILayout.Label("Show:", Wd(40f));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Show:", Wd(44f));
             var shows = new[] { "all", "unreviewed", "wrong", "to re-check", "later", "ok" };
-            int sel = GUILayout.SelectionGrid((int)reviewShow, shows, shows.Length, Wd(440f));
+            int sel = GUILayout.SelectionGrid((int)reviewShow, shows, shows.Length, Wd(520f));
             if (sel != (int)reviewShow) reviewShow = (ReviewShow)sel;
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
@@ -289,16 +306,16 @@ namespace GK2DonkeyAPI
             string when = mark != null && mark.When.Length > 0 ? $" <color=#9a9a9a>{mark.When}</color>" : "";
             string tags = mark != null && mark.Tags.Length > 0 ? $" <color=#ff8c69>{mark.Tags}</color>" : "";
             string note = mark != null && mark.Note.Length > 0 ? $" <color=#9a9a9a>\"{mark.Note}\"</color>" : "";
-            GUILayout.Label($"Load {reviewIndex + 1} of {reviewWalk.Count}{(reviewWalk.Count != total ? $" <color=#9a9a9a>(of {total})</color>" : "")}: <b>{coverage.Describe(load.Classes)}</b> · {load.Untuned} untuned · {stateText}{when}{tags}{note}", label);
+            GUILayout.Label($"Load {reviewIndex + 1} of {reviewWalk.Count}{(reviewWalk.Count != total ? $" <color=#9a9a9a>(of {total})</color>" : "")}: <b>{coverage.Describe(load.Classes)}</b> · {load.Untuned} untuned · {stateText}{when}{tags}{note}", wrapLabel);
             if (!onCart)
             {
-                GUILayout.Label("Mount in Cart style to put the loads on the cart.", small);
+                GUILayout.Label("Mount in Cart style to put the loads on the cart.", wrapLabel);
             }
             else if (!matches)
             {
                 GUILayout.Label(reviewVisited
                     ? $"<color=#ffd257>The cart does not show this load</color> (Load it, or step with 'load as I step' on).{(TestLoads.Status.Length > 0 ? " " + TestLoads.Status : "")}"
-                    : "<color=#ffd257>Not on the cart yet:</color> press > (or Load it) to put this first load on the cart; the next > then moves on.", small);
+                    : "<color=#ffd257>Not on the cart yet:</color> press > (or Load it) to put this first load on the cart; the next > then moves on.", wrapLabel);
             }
 
             // Verdicts.
@@ -326,10 +343,12 @@ namespace GK2DonkeyAPI
                 reviewFpSig = null;
             }
             GUI.enabled = wasEnabled;
-            GUILayout.Label("Why:", Wd(34f));
+            GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Why:", Wd(44f));
             for (int t = 0; t < CargoReview.TagNames.Length; t++)
             {
-                reviewTags[t] = GUILayout.Toggle(reviewTags[t], CargoReview.TagNames[t], Wd(t == 3 ? 86f : 72f));
+                reviewTags[t] = GUILayout.Toggle(reviewTags[t], CargoReview.TagNames[t], Wd(t == 3 || t == 4 ? 100f : 80f));
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
@@ -339,7 +358,7 @@ namespace GK2DonkeyAPI
             reviewAutoAdvance = GUILayout.Toggle(reviewAutoAdvance, Tip("next after a verdict", "After Looks right or Later the walk moves to the next unreviewed load and loads it."), Wd(140f));
             GUILayout.EndHorizontal();
             string keys = $"{Plugin.ReviewPrevKey.Value}/{Plugin.ReviewNextKey.Value} step, {Plugin.ReviewOkKey.Value} ok, {Plugin.ReviewWrongKey.Value} wrong, {Plugin.ReviewLaterKey.Value} later";
-            GUILayout.Label($"<color=#9a9a9a>{keys} (while this tab shows and no text field has the focus). {CargoReview.LastSaveNote} {reviewStatus}</color>", small);
+            GUILayout.Label($"<color=#9a9a9a>{keys} (while this tab shows and no text field has the focus). {CargoReview.LastSaveNote} {reviewStatus}</color>", wrapLabel);
             GUILayout.EndVertical();
 
             PollReviewKeys(li, placed, isolating, matches, canAct);

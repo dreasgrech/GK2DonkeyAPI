@@ -111,7 +111,24 @@ opens where it stopped; tune a contact one of them uses, it flips to re-check an
 it flips back; mark one wrong with a tag, `Next wrong` finds it; the file's diff after the session shows only the lines
 touched; the keys step and mark, and do nothing while the note field has the focus.
 
+`tests/PackerScan -- --review-check`: the repo's `cargo-review.cfg` against the layout as it is now: every ok of a
+fully tuned load must carry the fingerprint the layout gives today (the game wrote it, the scan recomputes it: the two
+paths agree and nothing was edited since); the ones that differ are listed, as the panel lists them under
+"to re-check". Run after a session to see what the next session will ask to look at again.
+
 ## Build log
 
 - 2026-10-14 22:25: built (store, strip, keys, test), dev build deployed. The dist must be rebuilt before the release
   (the Dev folder ships in the DLL), with check-dist and the scans.
+- 2026-10-15, the first in-game run (15 ok marks, 46 loads stepped): the strip, the file and the position resume work.
+  Found and fixed on the way: (1) the first `>` of a session moved past load 1 before anything was on the cart (the
+  lone corpse was skipped); (2) an ok's fingerprint read "tuned or not" from the analysis, which is recomputed half a
+  second after the accept, so an ok taken right after freezing a load carried the fallbacks and flipped to re-check
+  on its own (4 of the 15 marks, the corpse pairs: they ask for one more Looks right each); now the entries decide;
+  (3) a verdict made in the last 0.75 s before quitting was not written: the quit hook and the per-frame save now
+  flush the review too; (4) the offline test loaded the real file under its own marks once that file existed.
+- 2026-10-15, hardening before the long run: (1) `CargoPacker.AlgorithmVersion` goes into every fingerprint, so a change
+  to how loads are built (same stored values, another look) flags every ok; (2) the seat-on-shapes switch is part of
+  the fallbacks; (3) the file carries `fingerprint-version`; when the code's format moves on, the strip offers one
+  press to re-stamp the ok marks (the user vouching that the layout is unchanged), so a format change never costs the
+  review; (4) the file is written to a temp file and swapped in, never torn by a crash mid-write. Test 15/15.

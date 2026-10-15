@@ -37,6 +37,10 @@ namespace GK2DonkeyAPI
         }
 
         internal const string FileName = "cargo-review.cfg";
+        // The fingerprint's format. Bumped when what goes into a fingerprint changes; the file remembers the version its
+        // marks were made with, and the panel offers to re-stamp the ok marks when the two differ (the layout unchanged).
+        internal const int FingerprintVersion = 2;
+        internal static int FileFingerprintVersion { get; private set; } = FingerprintVersion;
         internal static readonly string[] TagNames = { "floats", "sinks", "overlaps", "off the bed", "wrong spot", "other" };
 
         private static readonly Dictionary<string, Mark> marks = new Dictionary<string, Mark>(StringComparer.Ordinal);
@@ -115,6 +119,7 @@ namespace GK2DonkeyAPI
             Func<string, CargoLayout.ItemEntry> forItem, Func<string, string, CargoLayout.PairEntry> forPair, string fallbacks)
         {
             var sb = new StringBuilder();
+            sb.Append("alg=").Append(CargoPacker.AlgorithmVersion).Append(';');
             bool twoItems = load.Classes.Length == 2;
             foreach (string key in load.Keys)
             {
@@ -124,34 +129,41 @@ namespace GK2DonkeyAPI
                     continue;
                 }
                 sb.Append(key).Append('=');
+                // Tuned or not is read from the entry itself, never from the report: an ok is taken right after the
+                // accept froze the load, when the report (recomputed half a second later) still says untuned.
+                bool tuned;
                 switch (c.Kind)
                 {
                     case "on":
                     {
                         CargoLayout.PairEntry p = forPair(c.Lower, c.Upper);
+                        tuned = p != null && p.TopTuned;
                         sb.Append(p == null ? "none" : $"{p.TopTuned}:{V(p.TopA)}:{V(p.TopB)}{(twoItems ? ":" + p.Mode : "")}");
                         break;
                     }
                     case "beside":
                     {
                         CargoLayout.PairEntry p = forPair(c.Lower, c.Upper);
+                        tuned = p != null && p.BesideTuned;
                         sb.Append(p == null ? "none" : $"{p.BesideTuned}:{V(p.BesideA)}:{V(p.BesideB)}{(twoItems ? ":" + p.Mode : "")}");
                         break;
                     }
                     case "onpair":
                     {
                         CargoLayout.ItemEntry e = forItem(c.Lower);
+                        tuned = e != null && e.OnPairTuned;
                         sb.Append(e == null ? "none" : $"{e.HasOnPair}:{V(e.OnPair)}");
                         break;
                     }
                     default:
                     {
                         CargoLayout.ItemEntry e = forItem(c.Lower);
+                        tuned = e != null && e.HasAlone;
                         sb.Append(e == null ? "none" : $"{e.HasAlone}:{V(e.Alone)}");
                         break;
                     }
                 }
-                if (!c.Tuned && fallbacks != null)
+                if (!tuned && fallbacks != null)
                 {
                     sb.Append(":fb=").Append(fallbacks);
                 }
@@ -170,6 +182,24 @@ namespace GK2DonkeyAPI
                 sb.Append("cls:").Append(id).Append('=').Append(e == null ? "none" : $"{V(e.Base)}:{V(e.Top)}").Append(';');
             }
             return Hash(sb.ToString());
+        }
+
+        // Every contact of the load tuned, by the entries (as the fingerprint judges it).
+        internal static bool AllTuned(CargoCoverage.Report rep, CargoCoverage.Load load,
+            Func<string, CargoLayout.ItemEntry> forItem, Func<string, string, CargoLayout.PairEntry> forPair)
+        {
+            foreach (string key in load.Keys)
+            {
+                if (!rep.ByKey.TryGetValue(key, out CargoCoverage.Contact c)) return false;
+                switch (c.Kind)
+                {
+                    case "on": { var p = forPair(c.Lower, c.Upper); if (p == null || !p.TopTuned) return false; break; }
+                    case "beside": { var p = forPair(c.Lower, c.Upper); if (p == null || !p.BesideTuned) return false; break; }
+                    case "onpair": { var e = forItem(c.Lower); if (e == null || !e.OnPairTuned) return false; break; }
+                    default: { var e = forItem(c.Lower); if (e == null || !e.HasAlone) return false; break; }
+                }
+            }
+            return true;
         }
 
         private static string V(Vector3 v) => string.Format(CultureInfo.InvariantCulture, "{0:0.000},{1:0.000},{2:0.000}", v.x, v.y, v.z);
@@ -226,8 +256,10 @@ namespace GK2DonkeyAPI
 
         internal static void Parse(string text)
         {
+            loaded = true; // parsed text IS the store (the offline scan parses its own; the file is not read over it)
             marks.Clear();
             LastPositionKey = "";
+            FileFingerprintVersion = 1; // a file without the line was written by the first format
             foreach (string raw in text.Split('\n'))
             {
                 string line = raw.Trim();
@@ -245,6 +277,11 @@ namespace GK2DonkeyAPI
                 if (key == "position")
                 {
                     LastPositionKey = rest;
+                    continue;
+                }
+                if (key == "fingerprint-version")
+                {
+                    FileFingerprintVersion = int.TryParse(rest, out int fv) ? fv : 1;
                     continue;
                 }
                 string[] f = rest.Split('|');
@@ -273,6 +310,7 @@ namespace GK2DonkeyAPI
             sb.AppendLine("# An ok whose fingerprint no longer matches the layout shows as 'to re-check' in the panel (something it depends on was edited since).");
             sb.AppendLine("# Written by the panel as you mark; not embedded, not shipped.");
             sb.AppendLine("position = " + (LastPositionKey ?? ""));
+            sb.AppendLine("fingerprint-version = " + FileFingerprintVersion);
             sb.AppendLine();
             var written = new HashSet<string>(StringComparer.Ordinal);
             if (order != null)
@@ -306,6 +344,10 @@ namespace GK2DonkeyAPI
         // Called every pass by the panel: writes 0.75 s after the last change (as the layout does).
         internal static void SaveIfDue(IList<string> order, bool now = false)
         {
+            if (order != null)
+            {
+                lastOrder = order;
+            }
             if (!dirty || (!now && unchecked(Environment.TickCount - lastChange) < 750))
             {
                 return;
@@ -318,7 +360,16 @@ namespace GK2DonkeyAPI
             }
             try
             {
-                File.WriteAllText(path, ToText(order));
+                string tmp = path + ".tmp";
+                File.WriteAllText(tmp, ToText(order ?? lastOrder));
+                if (File.Exists(path))
+                {
+                    File.Replace(tmp, path, null);
+                }
+                else
+                {
+                    File.Move(tmp, path);
+                }
                 LastSaveNote = "Saved to the repo's " + FileName + " at " + DateTime.Now.ToString("HH:mm:ss") + ".";
             }
             catch (Exception e)
@@ -329,5 +380,35 @@ namespace GK2DonkeyAPI
         }
 
         internal static void MarkPositionDirty() => Touch();
+
+        // Every ok mark re-stamped with the fingerprint the layout gives now (fpOf: key -> fingerprint, null when the load
+        // is unknown). For a fingerprint format change, when the layout is unchanged since the marks were made.
+        internal static int Restamp(Func<string, string> fpOf)
+        {
+            EnsureLoaded();
+            int n = 0;
+            foreach (Mark m in marks.Values)
+            {
+                if (m.Verdict != Verdict.Ok) continue;
+                string fp = fpOf(m.Key);
+                if (fp == null) continue;
+                m.Fingerprint = fp;
+                n++;
+            }
+            FileFingerprintVersion = FingerprintVersion;
+            Touch();
+            return n;
+        }
+
+        private static IList<string> lastOrder;
+
+        // The quit hook and the per-frame save: written at once when anything is pending, in the last order the panel gave.
+        internal static void Flush()
+        {
+            if (dirty)
+            {
+                SaveIfDue(lastOrder, now: true);
+            }
+        }
     }
 }

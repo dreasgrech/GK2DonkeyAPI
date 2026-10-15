@@ -637,15 +637,19 @@ namespace GK2DonkeyAPI
                 return Color.Lerp(hue, Color.white, Mathf.Clamp01(p.Layer * 0.3f));
             }
 
+            // The second item of its relation (orange): beside another, or alone on top. PlacedItem is a struct, so the
+            // items are counted by layer, never compared by reference (ReferenceEquals on two boxings is always false:
+            // every lone on-top item was drawn blue, found 2026-10-15 on slab + slab).
             internal static bool IsSecond(PlacedItem p, List<PlacedItem> all)
             {
                 if (p.Relation == "side" || p.Relation == "along") return true;
                 if (p.Relation != "on") return false;
+                int inLayer = 0;
                 foreach (PlacedItem o in all)
                 {
-                    if (o.Layer == p.Layer && !ReferenceEquals(o, p)) return false; // the layer has a second item: this is its first
+                    if (o.Layer == p.Layer) inLayer++;
                 }
-                return true;
+                return inLayer == 1; // alone in its layer: on top; with a second item there, this one is the layer's first
             }
 
             // Every frame (Mount.Instance.Tick): applies or clears the tints when the tab opens or closes, or after a pack.

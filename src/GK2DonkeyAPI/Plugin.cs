@@ -496,6 +496,7 @@ namespace GK2DonkeyAPI
                 try
                 {
                     CargoLayout.SaveIfDue(now: true);
+                    CargoReview.Flush(); // the review's last verdict too
                 }
                 catch (Exception e)
                 {
@@ -740,6 +741,7 @@ namespace GK2DonkeyAPI
                 {
                     // The panel is off this frame (LateUpdate): no GUILayout without the layout pass.
                     CargoLayout.SaveIfDue(now: !Mount.IsMounted);
+                    CargoReview.SaveIfDue(null); // pending marks, 0.75 s after the last (the panel passes the order; this keeps the last one)
                     return;
                 }
                 using (Perf.Measure(Perf.S.Panel))

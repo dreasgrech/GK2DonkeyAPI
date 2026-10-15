@@ -39,6 +39,67 @@ static class Review
 
     static string C(string id) => ClassOfId.TryGetValue(id, out var c) ? c : id;
 
+    // --review-check: the repo's cargo-review.cfg against the layout as it is now. Every ok of a fully tuned load must
+    // carry the fingerprint the layout gives today (the game wrote it, the scan recomputes it: the two paths agree, and
+    // nothing was edited since); an ok whose fingerprint differs is listed (it shows as 'to re-check' in the panel).
+    public static int CheckFile(string cfgPath)
+    {
+        var (rep, fi, fp) = Build(cfgPath);
+        var T = typeof(CargoLayout).Assembly.GetType("GK2DonkeyAPI.CargoReview")!;
+        var keyOf = T.GetMethod("KeyOf", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var fingerprint = T.GetMethod("Fingerprint", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var allTuned = T.GetMethod("AllTuned", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var parse = T.GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var all = T.GetProperty("All", BindingFlags.NonPublic | BindingFlags.Static)!;
+        string reviewPath = Path.Combine(Path.GetDirectoryName(cfgPath)!, "cargo-review.cfg");
+        if (!File.Exists(reviewPath)) { Console.WriteLine("no cargo-review.cfg next to the layout"); return 1; }
+        parse.Invoke(null, new object[] { File.ReadAllText(reviewPath) });
+        var byKey = rep.Loads.ToDictionary(l => (string)keyOf.Invoke(null, new object[] { rep, l.Classes })!);
+        int ok = 0, same = 0, stale = 0, untunedOk = 0, unknown = 0, wrong = 0, later = 0;
+        foreach (object m in (System.Collections.IEnumerable)all.GetValue(null)!)
+        {
+            var mt = m.GetType();
+            string key = (string)mt.GetField("Key")!.GetValue(m)!;
+            string verdict = mt.GetField("Verdict")!.GetValue(m)!.ToString()!;
+            string stored = (string)mt.GetField("Fingerprint")!.GetValue(m)!;
+            if (!byKey.TryGetValue(key, out var load)) { unknown++; Console.WriteLine($"  unknown load key: {key}"); continue; }
+            if (verdict == "Wrong") { wrong++; continue; }
+            if (verdict == "Later") { later++; continue; }
+            ok++;
+            bool tuned = (bool)allTuned.Invoke(null, new object[] { rep, load, fi, fp })!;
+            if (!tuned) { untunedOk++; Console.WriteLine($"  ok but a contact is untuned (fallbacks differ offline, not compared): {key}"); continue; }
+            string now = (string)fingerprint.Invoke(null, new object[] { rep, load, fi, fp, "fb" })!;
+            if (now == stored) same++;
+            else { stale++; Console.WriteLine($"  to re-check: {key} (stored {stored}, now {now})"); }
+        }
+        Console.WriteLine($"{ok} ok marks: {same} match the layout now, {stale} to re-check, {untunedOk} not comparable; {wrong} wrong, {later} later, {unknown} unknown keys");
+        return unknown == 0 ? 0 : 1;
+    }
+
+    static (CargoCoverage.Report, Func<string, CargoLayout.ItemEntry>, Func<string, string, CargoLayout.PairEntry>) Build(string cfgPath)
+    {
+        string text = File.ReadAllText(cfgPath);
+        typeof(CargoLayout).GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, new object[] { text });
+        var items = CargoLayout.Items.Values.ToList();
+        var pairs = CargoLayout.Pairs.ToList();
+        bool Same(string a, string b) => C(a) == C(b);
+        CargoLayout.ItemEntry ForItem(string id) => CargoLayout.Items.TryGetValue(id, out var e) ? e : items.FirstOrDefault(x => Same(x.Id, id));
+        CargoLayout.PairEntry ForPair(string a, string b) =>
+            pairs.FirstOrDefault(p => (p.A == a && p.B == b) || (p.A == b && p.B == a))
+            ?? pairs.FirstOrDefault(p => (Same(p.A, a) && Same(p.B, b)) || (Same(p.A, b) && Same(p.B, a)));
+        bool FirstIsA(CargoLayout.PairEntry p, string first, string second)
+        {
+            if (p.A == first && p.B == second) return true;
+            if (p.A == second && p.B == first) return false;
+            bool straight = Same(p.A, first) && Same(p.B, second), crossed = Same(p.A, second) && Same(p.B, first);
+            return straight || !crossed;
+        }
+        var L = new CargoPacker.Lookup { ForItem = ForItem, ForPair = ForPair, FirstIsA = FirstIsA, SameClass = Same, BoxOf = id => Box[C(id)] };
+        var S = new CargoPacker.Settings { Floor = -0.26f, Gap = 0.02f, Overhang = 0.12f, Nestle = 0.03f, LayerShift = -0.03f, BedWidth = 0.75f, BedLength = 0.90f };
+        var rep = CargoCoverage.Analyse(Box.Keys.ToList(), 6, null, L, S, pairs, items, id => Name[C(id)]);
+        return (rep, ForItem, ForPair);
+    }
+
     public static int Run(string cfgPath)
     {
         int pass = 0, fail = 0;
@@ -142,7 +203,7 @@ static class Review
         parse.Invoke(null, new object[] { t1 });
         string t2 = (string)toText.Invoke(null, new object[] { keys })!;
         Check(t1 == t2, "the review file's text reads back unchanged");
-        var lines = t1.Split('\n').Where(l => l.Contains(" = ") && !l.StartsWith("#") && !l.StartsWith("position")).ToList();
+        var lines = t1.Split('\n').Where(l => l.Contains(" = ") && !l.StartsWith("#") && !l.StartsWith("position") && !l.StartsWith("fingerprint-version")).ToList();
         Check(lines.Count == 3 && lines[0].StartsWith(keys[2]) && lines[1].StartsWith(keys[5]) && lines[2].StartsWith(keys[9]), "marks are written in the loads' order");
         var m2 = get.Invoke(null, new object[] { keys[2] })!;
         var mT = m2.GetType();
@@ -150,6 +211,18 @@ static class Review
         Check((string)posProp.GetValue(null)! == keys[9], "the saved position comes back");
         var m5 = get.Invoke(null, new object[] { keys[5] })!;
         Check((string)mT.GetField("Fingerprint")!.GetValue(m5)! == fps[5], "an ok keeps its fingerprint");
+        // the fingerprint format's version: a file without the line is v1; a re-stamp brings it to the code's version
+        var fileVer = T.GetProperty("FileFingerprintVersion", BindingFlags.NonPublic | BindingFlags.Static)!;
+        int codeVer = (int)T.GetField("FingerprintVersion", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        parse.Invoke(null, new object[] { "position = x\n" + keys[5] + " = ok | d | oldfp |  | \n" });
+        Check((int)fileVer.GetValue(null)! == 1, "a file without a version line is v1");
+        var restamp = T.GetMethod("Restamp", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var fpByKey = rep.Loads.ToDictionary(Key, Fp);
+        int n = (int)restamp.Invoke(null, new object[] { (Func<string, string>)(k => fpByKey.TryGetValue(k, out var f) ? f : null) })!;
+        var m5b = get.Invoke(null, new object[] { keys[5] })!;
+        Check(n == 1 && (string)mT.GetField("Fingerprint")!.GetValue(m5b)! == fps[5] && (int)fileVer.GetValue(null)! == codeVer, $"re-stamp gives the ok today's fingerprint and the file the code's version v{codeVer}");
+        string t4 = (string)toText.Invoke(null, new object[] { keys })!;
+        Check(t4.Contains("fingerprint-version = " + codeVer), "the version line is written");
 
         Console.WriteLine($"{pass} passed, {fail} failed");
         return fail == 0 ? 0 : 1;
