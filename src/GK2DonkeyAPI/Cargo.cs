@@ -630,11 +630,41 @@ namespace GK2DonkeyAPI
             private readonly List<DropViewAtomMesh> placedViews = new List<DropViewAtomMesh>();
             private bool tintApplied, tintDirty;
 
-            // Hue by role (which slider block moves it), shade by layer: each layer up is lighter.
+            // One and two items: hue by role (blue the first, orange the second: the pair box and Alone are built on it).
+            // Three or more: one colour per item, by its place in the load, the same for its name in the panel; two
+            // shades of one orange (a layer-lightened role colour) read as the same to the user (2026-10-15).
+            internal static readonly Color[] TintByIndex =
+            {
+                new Color(0.35f, 0.65f, 1f),   // blue
+                new Color(1f, 0.6f, 0.2f),     // orange
+                new Color(0.45f, 0.9f, 0.4f),  // green
+                new Color(1f, 0.45f, 0.95f),   // magenta
+                new Color(1f, 0.92f, 0.3f),    // yellow
+                new Color(0.3f, 0.95f, 0.95f), // cyan
+            };
+
             internal static Color TintFor(PlacedItem p, List<PlacedItem> all)
             {
-                Color hue = IsSecond(p, all) ? TintSecond : TintFirst;
-                return Color.Lerp(hue, Color.white, Mathf.Clamp01(p.Layer * 0.3f));
+                if (all.Count <= 2)
+                {
+                    return IsSecond(p, all) ? TintSecond : TintFirst;
+                }
+                int index = IndexOf(p, all);
+                return TintByIndex[index < 0 ? 0 : index % TintByIndex.Length];
+            }
+
+            // The item's place in the load (PlacedItem is a struct: matched by what it is and where it lies).
+            internal static int IndexOf(PlacedItem p, List<PlacedItem> all)
+            {
+                for (int i = 0; i < all.Count; i++)
+                {
+                    PlacedItem o = all[i];
+                    if (o.Id == p.Id && o.Layer == p.Layer && o.Partner == p.Partner && o.Relation == p.Relation && o.Pos == p.Pos)
+                    {
+                        return i;
+                    }
+                }
+                return -1;
             }
 
             // The second item of its relation (orange): beside another, or alone on top. PlacedItem is a struct, so the

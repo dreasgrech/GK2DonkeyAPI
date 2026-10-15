@@ -27,8 +27,8 @@ namespace GK2DonkeyAPI
         private const string TipSeat = "Rest this item on what is really under it (its measured shape, 3 cm sunk in). Written as a tuning; one Undo step.";
         private const string TipReset = "Forget this contact's tuning; it follows the fallbacks again.";
         private const string TipAlone = "Show just these two on the cart, as a two-item cart, to tune them without the rest. The whole load stays aboard.";
-        private const string TipAcceptLoad = "Freeze every untuned contact in this load exactly as it lies. You stay on this load.";
-        private const string TipAcceptNext = "Freeze every untuned contact here, then put the next contact's load on the cart (a test load): ready ones first, up the ladder.";
+        private const string TipAcceptLoad = "Freeze every untuned contact in this load exactly as it lies, and mark the load ok in the review. You stay on this load.";
+        private const string TipAcceptNext = "Freeze every untuned contact here and mark the load ok in the review, then put the next contact's load on the cart (a test load): ready ones first, up the ladder. The review walk stays where it is.";
         private const string TipSkip = "Put the next untuned contact's load on the cart without accepting anything here. Skipped contacts go to the back of the queue.";
         private const string TipLoad = "Put this contact's smallest load on the cart as a test load (real items, made for you). Replaces the last test load; refused while the cart holds other cargo.";
         private const string TipCoverLoad = "The fewest loads that together show every contact: load them one by one and you have seen everything.";
@@ -771,9 +771,9 @@ namespace GK2DonkeyAPI
                     GUILayout.BeginHorizontal();
                     GUILayout.Label(Tip("  Show on the cart", TipShow), label, Wd(130f));
                     bool changed = false;
-                    bool showFirst = GUILayout.Toggle(!Cargo.Rig.HideFirst, Tip("blue", TipShow), GUI.skin.button, Wd(60f));
+                    bool showFirst = GUILayout.Toggle(!Cargo.Rig.HideFirst, Tip(n <= 2 ? "blue" : "first items", TipShow), GUI.skin.button, Wd(n <= 2 ? 60f : 90f));
                     if (showFirst == Cargo.Rig.HideFirst) { Cargo.Rig.HideFirst = !showFirst; changed = true; }
-                    bool showSecond = GUILayout.Toggle(!Cargo.Rig.HideSecond, Tip("orange", TipShow), GUI.skin.button, Wd(70f));
+                    bool showSecond = GUILayout.Toggle(!Cargo.Rig.HideSecond, Tip(n <= 2 ? "orange" : "second items", TipShow), GUI.skin.button, Wd(n <= 2 ? 70f : 100f));
                     if (showSecond == Cargo.Rig.HideSecond) { Cargo.Rig.HideSecond = !showSecond; changed = true; }
                     for (int l = 0; l < layers; l++)
                     {
@@ -833,6 +833,7 @@ namespace GK2DonkeyAPI
                 if (GUILayout.Button(Tip(open > 0 ? $"Accept this load ({open})" : "Accept this load", TipAcceptLoad), Wd(170f)))
                 {
                     refresh |= AcceptAll(placed, isolating, cargoViewPairMode) > 0;
+                    ReviewRecordCart(placed); // the review's ok too: an accepted load is a judged load
                 }
                 // greyed only when nothing untuned is left anywhere (the queue is empty); read from the analysis, never changed in this pass
                 bool anyLeft = coverage == null || coverage.Tuned < coverage.Total || open > 0;
@@ -841,6 +842,7 @@ namespace GK2DonkeyAPI
                 {
                     bool any = AcceptAll(placed, isolating, cargoViewPairMode) > 0;
                     refresh |= any;
+                    ReviewRecordCart(placed); // the review's ok too (the ladder's next load is not the review walk's)
                     LoadNextUntuned(afterAccept: any);
                 }
                 GUI.enabled = en && coverage != null && coverage.Tuned < coverage.Total;

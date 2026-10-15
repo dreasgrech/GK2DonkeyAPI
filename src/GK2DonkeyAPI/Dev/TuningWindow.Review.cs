@@ -221,7 +221,7 @@ namespace GK2DonkeyAPI
                 reviewOpen = open;
             }
             string col = reviewed == total && rvRecheck == 0 && rvWrong == 0 ? "#8ee68e" : "#ffd257";
-            GUILayout.Label($"<color={col}>{reviewed} of {total} reviewed</color> · <color=#8ee68e>{rvOk} ok</color> · <color=#ff8c69>{rvWrong} wrong</color> · {rvLater} later" + (rvRecheck > 0 ? $" · <color=#ffd257>{rvRecheck} to re-check</color>" : ""), label);
+            GUILayout.Label($"<color={col}>{reviewed} of {total} reviewed</color> · <color=#8ee68e>{rvOk} ok</color> · <color=#ff8c69>{rvWrong} wrong</color> · <color=#ffd257>{rvLater} later</color>" + (rvRecheck > 0 ? $" · <color=#ffd257>{rvRecheck} to re-check</color>" : ""), label);
             GUILayout.EndHorizontal();
             DrawBar(total == 0 ? 0f : (float)rvOk / total, total == 0 ? 0f : (float)(rvWrong + rvRecheck) / total);
             if (!reviewOpen)
@@ -292,17 +292,18 @@ namespace GK2DonkeyAPI
 
             // Position and stepping.
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button("<", Wd(28f))) Step(-1, null);
-            if (GUILayout.Button(">", Wd(28f))) Step(1, null);
-            if (TipButton("Next unreviewed", "The next load after this one with no mark at all (a 'later' has its own filter).", 120f)) Step(1, ReviewState.Unreviewed);
-            if (TipButton("Next wrong", "The next load marked wrong.", 90f)) Step(1, ReviewState.Wrong);
-            if (TipButton("Next to re-check", "The next load marked ok whose tuning changed since.", 125f, rvRecheck > 0)) Step(1, ReviewState.Recheck);
+            if (TintedButton(new GUIContent("<"), TintStep, 28f)) Step(-1, null);
+            if (TintedButton(new GUIContent(">"), TintStep, 28f)) Step(1, null);
+            if (TintedButton(Tip("Next unreviewed", "The next load after this one with no mark at all (a 'later' has its own filter)."), TintStep, 120f)) Step(1, ReviewState.Unreviewed);
+            if (TintedButton(Tip("Next wrong", "The next load marked wrong."), TintWrong, 90f, rvWrong > 0)) Step(1, ReviewState.Wrong);
+            if (TintedButton(Tip("Next to re-check", "The next load marked ok whose tuning changed since."), TintLater, 125f, rvRecheck > 0)) Step(1, ReviewState.Recheck);
+            if (TintedButton(Tip("Next later", "The next load marked later."), TintLater, 85f, rvLater > 0)) Step(1, ReviewState.Later);
             if (TipButton("Load it", TipReviewLoad, 70f, onCart && !matches)) PutReviewLoad(load);
             GUILayout.EndHorizontal();
             string stateText = state == ReviewState.Unreviewed ? "<color=#9a9a9a>unreviewed</color>"
                 : state == ReviewState.Ok ? "<color=#8ee68e>ok</color>"
                 : state == ReviewState.Wrong ? "<color=#ff8c69>wrong</color>"
-                : state == ReviewState.Later ? "<color=#9a9a9a>later</color>" : "<color=#ffd257>to re-check (tuned since)</color>";
+                : state == ReviewState.Later ? "<color=#ffd257>later</color>" : "<color=#ffd257>to re-check (tuned since)</color>";
             string when = mark != null && mark.When.Length > 0 ? $" <color=#9a9a9a>{mark.When}</color>" : "";
             string tags = mark != null && mark.Tags.Length > 0 ? $" <color=#ff8c69>{mark.Tags}</color>" : "";
             string note = mark != null && mark.Note.Length > 0 ? $" <color=#9a9a9a>\"{mark.Note}\"</color>" : "";
@@ -320,29 +321,26 @@ namespace GK2DonkeyAPI
 
             // Verdicts.
             GUILayout.BeginHorizontal();
-            bool wasEnabled = GUI.enabled;
-            GUI.enabled = wasEnabled && canAct && matches;
-            if (GUILayout.Button(Tip("Looks right", TipReviewOk), Wd(100f)))
+            bool verdictsOn = canAct && matches;
+            if (TintedButton(Tip("Looks right", TipReviewOk), TintOk, 100f, verdictsOn))
             {
                 ReviewOk(li, placed, isolating);
             }
-            if (GUILayout.Button(Tip("Wrong", TipReviewWrong), Wd(70f)))
+            if (TintedButton(Tip("Wrong", TipReviewWrong), TintWrong, 70f, verdictsOn))
             {
                 ReviewWrong(li);
             }
-            if (GUILayout.Button(Tip("Later", TipReviewLater), Wd(60f)))
+            if (TintedButton(Tip("Later", TipReviewLater), TintLater, 60f, verdictsOn))
             {
                 CargoReview.Set(reviewKeys[li], CargoReview.Verdict.Later, "", "", "");
                 reviewFpSig = null;
                 if (reviewAutoAdvance) Step(1, ReviewState.Unreviewed);
             }
-            GUI.enabled = wasEnabled && canAct;
-            if (TipButton("Clear", TipReviewClear, 60f, mark != null))
+            if (TipButton("Clear", TipReviewClear, 60f, canAct && mark != null))
             {
                 CargoReview.Clear(reviewKeys[li]);
                 reviewFpSig = null;
             }
-            GUI.enabled = wasEnabled;
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
             GUILayout.Label("Why:", Wd(44f));
@@ -362,6 +360,22 @@ namespace GK2DonkeyAPI
             GUILayout.EndVertical();
 
             PollReviewKeys(li, placed, isolating, matches, canAct);
+        }
+
+        // The verdicts and the jumps in their colours (green ok, red wrong, yellow later / re-check, grey the rest), so the
+        // strip can be read at a glance. The tint is the button's background; a disabled button keeps it, dimmed.
+        private static readonly Color TintOk = new Color(0.55f, 1f, 0.55f), TintWrong = new Color(1f, 0.55f, 0.5f), TintLater = new Color(1f, 0.9f, 0.45f), TintStep = new Color(0.8f, 0.85f, 1f);
+
+        private static bool TintedButton(GUIContent content, Color tint, float width, bool active = true)
+        {
+            bool was = GUI.enabled;
+            Color back = GUI.backgroundColor;
+            GUI.enabled = was && active;
+            GUI.backgroundColor = tint;
+            bool pressed = GUILayout.Button(content, Wd(width));
+            GUI.backgroundColor = back;
+            GUI.enabled = was;
+            return pressed;
         }
 
         private static void DrawBar(float ok, float bad)
@@ -461,6 +475,28 @@ namespace GK2DonkeyAPI
             ClearReviewReason();
             reviewFpSig = null;
             if (reviewAutoAdvance) Step(1, ReviewState.Unreviewed);
+        }
+
+        // The load on the cart marked ok in the review (the Accept buttons of the tuning ladder call this after their
+        // freeze): found by its key among the analysis's loads; nothing when the cart shows no known load.
+        private static void ReviewRecordCart(List<Cargo.PlacedItem> placed)
+        {
+            if (coverage == null || placed == null || placed.Count == 0 || reviewKeys == null)
+            {
+                return;
+            }
+            var names = new List<string>();
+            foreach (Cargo.PlacedItem p in placed) names.Add(coverage.Label(CargoSheet.ClassOf(p.Id)));
+            names.Sort(StringComparer.Ordinal);
+            string key = string.Join("+", names);
+            int li = Array.IndexOf(reviewKeys, key);
+            if (li < 0)
+            {
+                return;
+            }
+            string fp = CargoReview.Fingerprint(coverage, coverage.Loads[li], CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature());
+            CargoReview.Set(key, CargoReview.Verdict.Ok, fp, "", "");
+            reviewFpSig = null;
         }
 
         private static void ReviewWrong(int li)

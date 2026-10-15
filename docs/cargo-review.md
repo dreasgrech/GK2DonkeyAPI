@@ -46,6 +46,9 @@ Keypad4/Keypad6 step, Keypad1 ok, Keypad3 wrong, Keypad2 later (while this tab s
   later*) so the walk can end and the laters are found again; the walk moves on. Like the other verdicts it needs the
   load on the cart.
 - **Clear** removes the mark.
+- **The ladder's Accept buttons** ("Accept this load", "Accept and next" under *Tune this load*) freeze the same way
+  and record the ok in the review too, so an accepted load is never left unreviewed; "Accept and next" then follows
+  the contact ladder, not the review walk, which stays where it is (asked 2026-10-15).
 - **Where you stopped** is kept (`position =` in the file): the next session opens the strip on that load.
 - **Keys**, `[Debug]` cfg: `ReviewPrevKey` / `ReviewNextKey` (Keypad4 / Keypad6), `ReviewOkKey` (Keypad1),
   `ReviewWrongKey` (Keypad3), `ReviewLaterKey` (Keypad2). Polled only while the Cargo tab shows with the strip open
@@ -132,3 +135,9 @@ paths agree and nothing was edited since); the ones that differ are listed, as t
   the fallbacks; (3) the file carries `fingerprint-version`; when the code's format moves on, the strip offers one
   press to re-stamp the ok marks (the user vouching that the layout is unchanged), so a format change never costs the
   review; (4) the file is written to a temp file and swapped in, never torn by a crash mid-write. Test 15/15.
+- 2026-10-15, colours while reviewing: the tint rule compared placed items by reference (a struct: every lone on-top item
+  was blue); fixed. Then the layer shading (30% toward white per layer) washed a top item's orange out on the pale corpse
+  sprite, and two shades of one orange read as the same: loads of three or more now tint one colour per item (blue,
+  orange, green, magenta, yellow, cyan by place in the load), the same colour on the cart and in the panel's names; one
+  and two items keep blue / orange by role, which the pair box and Alone are built on. The verdict and jump buttons are
+  coloured (green ok, red wrong, yellow later / re-check). The ladder's Accept buttons record the review's ok too.
