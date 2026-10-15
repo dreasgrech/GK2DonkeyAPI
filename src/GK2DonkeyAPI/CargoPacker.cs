@@ -46,6 +46,7 @@ namespace GK2DonkeyAPI
             public Func<string, string, bool> SameClass;
             public Func<string, Vector3> BoxOf; // the size class's box; zero when unknown (the live box is used then)
             public Func<string, CargoShapes.Shape> ShapeOf; // the measured shapes (null: boxes only, as before)
+            public Func<string, string, string, CargoLayout.OnPairEntry> ForOnPair; // a one-pair alone-on-a-pair offset (item, a, b), or null; null: none
         }
 
         internal sealed class Result
@@ -307,9 +308,11 @@ namespace GK2DonkeyAPI
                 // and the correction apply only to a lone item; never on a two-item cart (its layer below is one item).
                 // (Before, the lone item sat at the origin plus the correction, and one per-class correction had to
                 // centre it over every pair it could lie on, whose middles differ: 2026-10-12.)
+                // A one-pair offset ([onpair <item> on <a>+<b>]) replaces the class's on this pair only.
                 if (belowPair)
                 {
-                    target[i] = new Vector3(cx, target[i].y, cz) + (e != null ? e.OnPair : Vector3.zero);
+                    CargoLayout.OnPairEntry one = L.ForOnPair?.Invoke(cur, r.Id[belowStart], r.Id[belowEnd]);
+                    target[i] = new Vector3(cx, target[i].y, cz) + (one != null ? one.Offset : e != null ? e.OnPair : Vector3.zero);
                 }
                 centre = new Vector3(layerOrigin.x, 0f, layerOrigin.z);
                 layerFloor = layerOrigin.y;

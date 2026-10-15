@@ -127,6 +127,7 @@ namespace GK2DonkeyAPI
             FirstIsA = CargoLayout.FirstIsA,
             SameClass = CargoLayout.SameClass,
             BoxOf = CargoLayout.BoxOf,
+            ForOnPair = CargoLayout.ForOnPair,
         };
 
         private static readonly CargoPacker.Lookup ScanLookup = new CargoPacker.Lookup
@@ -136,6 +137,7 @@ namespace GK2DonkeyAPI
             FirstIsA = CargoLayout.FirstIsA,
             SameClass = CargoLayout.SameClass,
             BoxOf = CargoLayout.BoxOf,
+            ForOnPair = CargoLayout.ForOnPair,
             ShapeOf = id => Plugin.CargoSeatOnShapes.Value ? ShapeOf(id) : null,
         };
 

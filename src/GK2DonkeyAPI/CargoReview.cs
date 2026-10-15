@@ -39,7 +39,10 @@ namespace GK2DonkeyAPI
         internal const string FileName = "cargo-review.cfg";
         // The fingerprint's format. Bumped when what goes into a fingerprint changes; the file remembers the version its
         // marks were made with, and the panel offers to re-stamp the ok marks when the two differ (the layout unchanged).
-        internal const int FingerprintVersion = 2;
+        // v3 (2026-10-15): the class offsets in id order, not in the analysis's class order (the game and PackerScan
+        // number the classes differently, so no mixed load's ok could be checked offline; a game update that added an
+        // item could have reordered them in the game too).
+        internal const int FingerprintVersion = 3;
         internal static int FileFingerprintVersion { get; private set; } = FingerprintVersion;
         internal static readonly string[] TagNames = { "floats", "sinks", "overlaps", "off the bed", "wrong spot", "other" };
 
@@ -114,9 +117,20 @@ namespace GK2DonkeyAPI
         // The load's tuning, as a short hash of everything that places its items: see the class comment.
         // forItem / forPair: the layout's lookups (CargoLayout.ForItem / ForPair in the game; the scan passes its own).
         // fallbacks: the packer settings an untuned contact is placed with (CargoSheet.CurrentSignature without the
-        // layout version), or null when they are not known.
+        // layout version), or null when they are not known. onPairs / same: the one-pair alone-on-a-pair offsets and the
+        // size-class test; every offset whose item and pair all fit in the load is added (it may place an item here: a
+        // superset, never a miss). None: the text is exactly as before they existed, so no ok needs a re-stamp.
         internal static string Fingerprint(CargoCoverage.Report rep, CargoCoverage.Load load,
-            Func<string, CargoLayout.ItemEntry> forItem, Func<string, string, CargoLayout.PairEntry> forPair, string fallbacks)
+            Func<string, CargoLayout.ItemEntry> forItem, Func<string, string, CargoLayout.PairEntry> forPair, string fallbacks,
+            IList<CargoLayout.OnPairEntry> onPairs = null, Func<string, string, bool> same = null) =>
+            Hash(FingerprintText(rep, load, forItem, forPair, fallbacks, onPairs, same));
+
+        // What the fingerprint hashes, readable: the panel logs it with each ok and each load it puts on the cart, and
+        // PackerScan --review-check --verbose prints its own, so the two can be compared line by line (2026-10-15: 38
+        // oks read as to re-check offline against every recent layout).
+        internal static string FingerprintText(CargoCoverage.Report rep, CargoCoverage.Load load,
+            Func<string, CargoLayout.ItemEntry> forItem, Func<string, string, CargoLayout.PairEntry> forPair, string fallbacks,
+            IList<CargoLayout.OnPairEntry> onPairs = null, Func<string, string, bool> same = null)
         {
             var sb = new StringBuilder();
             sb.Append("alg=").Append(CargoPacker.AlgorithmVersion).Append(';');
@@ -169,19 +183,52 @@ namespace GK2DonkeyAPI
                 }
                 sb.Append(';');
             }
-            // the class offsets of every class in the load (the item boxes' along / up / across and the on-top ones)
-            var seen = new HashSet<int>();
+            // the class offsets of every class in the load (the item boxes' along / up / across and the on-top ones), by id
+            var ids = new List<string>();
             foreach (int ci in load.Classes)
             {
-                if (!seen.Add(ci))
-                {
-                    continue;
-                }
-                string id = rep.Classes[ci];
+                if (!ids.Contains(rep.Classes[ci])) ids.Add(rep.Classes[ci]);
+            }
+            ids.Sort(StringComparer.Ordinal);
+            foreach (string id in ids)
+            {
                 CargoLayout.ItemEntry e = forItem(id);
                 sb.Append("cls:").Append(id).Append('=').Append(e == null ? "none" : $"{V(e.Base)}:{V(e.Top)}").Append(';');
             }
-            return Hash(sb.ToString());
+            if (onPairs != null && onPairs.Count > 0 && same != null)
+            {
+                var lines = new List<string>();
+                foreach (CargoLayout.OnPairEntry o in onPairs)
+                {
+                    if (Fits(rep, load, same, o.Item, o.A, o.B))
+                    {
+                        lines.Add($"op:{o.Item}@{o.A}+{o.B}={V(o.Offset)};");
+                    }
+                }
+                lines.Sort(StringComparer.Ordinal);
+                foreach (string l in lines) sb.Append(l);
+            }
+            return sb.ToString();
+        }
+
+        // The ids, one class each, all fit in the load's classes at once (a class asked twice needs two of it).
+        private static bool Fits(CargoCoverage.Report rep, CargoCoverage.Load load, Func<string, string, bool> same, params string[] ids)
+        {
+            var used = new bool[load.Classes.Length];
+            foreach (string id in ids)
+            {
+                bool found = false;
+                for (int k = 0; k < load.Classes.Length && !found; k++)
+                {
+                    if (!used[k] && same(rep.Classes[load.Classes[k]], id))
+                    {
+                        used[k] = true;
+                        found = true;
+                    }
+                }
+                if (!found) return false;
+            }
+            return true;
         }
 
         // Every contact of the load tuned, by the entries (as the fingerprint judges it).

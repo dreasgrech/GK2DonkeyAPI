@@ -1564,6 +1564,7 @@ namespace GK2DonkeyAPI
                 FirstIsA = CargoLayout.FirstIsA,
                 SameClass = CargoLayout.SameClass,
                 BoxOf = CargoLayout.BoxOf,
+                ForOnPair = CargoLayout.ForOnPair,
                 ShapeOf = ShapeForPacker, // the seat pass (CargoPacker.SeatOnShapes) when the shapes are measured and the switch is on
             };
 

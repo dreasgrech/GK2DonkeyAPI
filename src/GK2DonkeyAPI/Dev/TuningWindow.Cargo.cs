@@ -17,12 +17,15 @@ namespace GK2DonkeyAPI
         private const string TipHeightOn = "How high this item (and everything above it) sits on the one below. Applies wherever these two meet this way.";
         private const string TipAcross = "Toward (-) or away from (+) the camera.";
         private const string TipAlong = "Toward the donkey (+) or the back of the cart (-).";
+        private const string TipOverPair = "Not used in this load: the item on top lies alone on a pair, so it is placed over the middle of the two below, and its own 'alone on top of a pair' box moves it. These values place a layer of two (other loads); Height still applies here.";
         private const string TipHeightAlone = "Height above the cart floor when this is the only item aboard.";
         private const string TipHeightBed = "Height above the cart floor, in the bed layer.";
         private const string TipHeightRel = "Height relative to the layer's first item. The layer itself rests by the box above.";
         private const string TipHeightLayerFirst = "The first item sits where its layer sits: set the layer's height in the 'x on y' box above.";
         private const string TipHeightTwo = "Height above the cart floor. For the item on top this is how the two stack.";
         private const string TipOnPair = "This item starts over the middle of the two below. This is an extra move for it, only when it lies alone on top of a pair. Nothing under it moves.";
+        private const string TipOnPairEvery = "One offset for this item wherever it lies alone on top of a pair, whatever the pair (the class's onpair_*).";
+        private const string TipOnPairOnly = "An offset for this item only when it lies alone on top of this pair (these two size classes): it replaces the every-pair offset here and nowhere else. Back to 'on every pair' drops it.";
         private const string TipLooksRight = "Freeze this contact exactly as it lies now. It counts as tuned and no fallback can move it again.";
         private const string TipSeat = "Rest this item on what is really under it (its measured shape, 3 cm sunk in). Written as a tuning; one Undo step.";
         private const string TipReset = "Forget this contact's tuning; it follows the fallbacks again.";
@@ -316,6 +319,7 @@ namespace GK2DonkeyAPI
         private static readonly CargoPacker.Lookup CoverageLayoutLookup = new CargoPacker.Lookup
         {
             ForItem = CargoLayout.ForItem, ForPair = CargoLayout.ForPair, FirstIsA = CargoLayout.FirstIsA, SameClass = CargoLayout.SameClass, BoxOf = CargoLayout.BoxOf,
+            ForOnPair = CargoLayout.ForOnPair,
         };
 
         private static bool AcceptBeside(Cargo.PlacedItem pl, Cargo.PlacedItem q)
@@ -334,6 +338,18 @@ namespace GK2DonkeyAPI
             e.HasOnPair = true; // its offset stays as it is (zero)
             Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair accepted as it lies.");
             return true;
+        }
+
+        // The one-pair offset placing a lone item on its pair here, or null (the class's onpair offset places it). While
+        // one does, the class's offset is not on the cart, so no accept may freeze it from this load.
+        private static CargoLayout.OnPairEntry OnePairOf(List<Cargo.PlacedItem> placed, Cargo.PlacedItem it)
+        {
+            var below = new List<Cargo.PlacedItem>();
+            foreach (Cargo.PlacedItem o in placed)
+            {
+                if (o.Layer == it.Layer - 1) below.Add(o);
+            }
+            return below.Count == 2 ? CargoLayout.ForOnPair(it.Id, below[0].Id, below[1].Id) : null;
         }
 
         private static bool IsLoneOnPair(List<Cargo.PlacedItem> placed, Cargo.PlacedItem it)
@@ -367,7 +383,7 @@ namespace GK2DonkeyAPI
                 if (it.Relation == null || it.Relation == "bed" || it.Partner < 0 || it.Partner >= n) continue;
                 Cargo.PlacedItem q = LiveOf(view, it.Partner);
                 if (it.Relation == "on" ? AcceptOn(it, q, view, k) : AcceptBeside(it, q)) done++;
-                if (IsLoneOnPair(view, it) && AcceptOnPair(it)) done++;
+                if (IsLoneOnPair(view, it) && OnePairOf(view, it) == null && AcceptOnPair(it)) done++;
             }
             return done;
         }
@@ -394,7 +410,7 @@ namespace GK2DonkeyAPI
                 if (it.Relation == null || it.Relation == "bed" || it.Partner < 0 || it.Partner >= n) continue;
                 string key = KeyOf(it.Relation, it.Id, view[it.Partner].Id);
                 if (seen.Add(key) && !it.Tuned) open++;
-                if (IsLoneOnPair(view, it) && seen.Add("onpair:" + CargoSheet.ClassOf(it.Id)))
+                if (IsLoneOnPair(view, it) && seen.Add("onpair:" + CargoSheet.ClassOf(it.Id)) && OnePairOf(view, it) == null)
                 {
                     CargoLayout.ItemEntry e = CargoLayout.ForItem(it.Id);
                     if (e == null || !e.OnPairTuned) open++;
@@ -1134,10 +1150,20 @@ namespace GK2DonkeyAPI
                 }
                 if (inLayer != 1 || inBelow < 2 || !lone.Add(it.Id)) continue;
                 CargoLayout.ItemEntry e = CargoLayout.EditItem(it.Id);
+                // the pair it lies on: the two items of the layer below
+                var below = new List<Cargo.PlacedItem>();
+                foreach (Cargo.PlacedItem o in placed)
+                {
+                    if (o.Layer == it.Layer - 1) below.Add(o);
+                }
+                // A one-pair offset ([onpair <item> on <a>+<b>]) replaces the class's on this pair: the sliders edit it
+                // when there is one, else the class's (every pair).
+                CargoLayout.OnPairEntry one = below.Count == 2 ? CargoLayout.ForOnPair(it.Id, below[0].Id, below[1].Id) : null;
+                string pairName = below.Count == 2 ? $"{Tinted(below[0], placed)} + {Tinted(below[1], placed)}" : "";
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"{Tinted(it, placed)} alone on top of a pair   ({(e.OnPairTuned ? TunedWord : RulesWord)}; layer {it.Layer + 1}){UsedIn("onpair:" + CargoSheet.ClassOf(it.Id))}", label);
-                if (LooksRightButton(!e.OnPairTuned))
+                GUILayout.Label($"{Tinted(it, placed)} alone on top of a pair   ({(one != null ? "this pair only" : e.OnPairTuned ? TunedWord : RulesWord)}; layer {it.Layer + 1}){UsedIn("onpair:" + CargoSheet.ClassOf(it.Id))}", label);
+                if (LooksRightButton(one == null && !e.OnPairTuned)) // this pair only: the class's offset is not what shows
                 {
                     refresh |= AcceptOnPair(it);
                 }
@@ -1146,28 +1172,75 @@ namespace GK2DonkeyAPI
                     float d = CargoShapes.SeatDelta(LiveResult(placed), k, CargoSheet.ShapeOf);
                     if (!float.IsNaN(d))
                     {
-                        e.OnPair.y += d;
-                        e.HasOnPair = true;
+                        if (one != null)
+                        {
+                            one.Offset.y += d;
+                        }
+                        else
+                        {
+                            e.OnPair.y += d;
+                            e.HasOnPair = true;
+                        }
                         refresh = true;
-                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair seated ({d:+0.000;-0.000}).");
+                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair seated ({d:+0.000;-0.000}){(one != null ? " (this pair only)" : "")}.");
                     }
                 }
-                if (ResetButton(e.OnPairTuned))
+                if (ResetButton(one != null ? one.Offset != Vector3.zero : e.OnPairTuned))
                 {
-                    e.OnPair = Vector3.zero;
-                    e.HasOnPair = false;
+                    if (one != null)
+                    {
+                        one.Offset = Vector3.zero;
+                    }
+                    else
+                    {
+                        e.OnPair = Vector3.zero;
+                        e.HasOnPair = false;
+                    }
                     refresh = true;
                 }
                 GUILayout.EndHorizontal();
+                if (below.Count == 2)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label("  Applies", label, Wd(120f));
+                    bool every = GUILayout.Toggle(one == null, Tip("on every pair", TipOnPairEvery), GUI.skin.button, Wd(110f));
+                    bool only = GUILayout.Toggle(one != null, Tip("only on this pair", TipOnPairOnly), GUI.skin.button, Wd(130f));
+                    GUILayout.Label("  " + pairName, label);
+                    GUILayout.EndHorizontal();
+                    if (only && one == null)
+                    {
+                        // starts where the item lies now (the class's offset), so nothing jumps
+                        one = CargoLayout.AddOnPair(it.Id, below[0].Id, below[1].Id, e.OnPair);
+                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: an offset for this pair only.");
+                        refresh = true;
+                    }
+                    else if (every && one != null)
+                    {
+                        CargoLayout.RemoveOnPair(one);
+                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: back to the offset for every pair.");
+                        one = null;
+                        refresh = true;
+                    }
+                }
                 TuneFirstNote(placed, "onpair");
                 bool movedP = false;
-                movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
-                movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
-                movedP |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
-                if (movedP)
+                if (one != null)
                 {
-                    e.HasOnPair = true;
-                    refresh = true;
+                    movedP |= RawSlider("  Height", ref one.Offset.y, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    movedP |= RawSlider("  " + AcrossLabel, ref one.Offset.z, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    movedP |= RawSlider("  " + AlongLabel, ref one.Offset.x, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    refresh |= movedP;
+                }
+                else
+                {
+                    movedP |= RawSlider("  Height", ref e.OnPair.y, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
+                    movedP |= RawSlider("  " + AcrossLabel, ref e.OnPair.z, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
+                    movedP |= RawSlider("  " + AlongLabel, ref e.OnPair.x, -0.4f, 0.4f, canReset: false, tip: TipOnPair);
+                    if (movedP)
+                    {
+                        e.HasOnPair = true;
+                        refresh = true;
+                    }
                 }
                 GUILayout.EndVertical();
             }
@@ -1205,12 +1278,40 @@ namespace GK2DonkeyAPI
                 TuneFirstNote(placed, onTop ? "on" : "beside");
                 if (onTop)
                 {
+                    // Where this contact's upper item lies alone on a pair, the packer places it over the pair's middle
+                    // (CargoPacker, "Alone on top of a pair"): the relation's across and along do nothing to it, only its
+                    // height. Counted over every occurrence of the contact in the load: greyed only when none is a
+                    // layer of two, else a note names the lone one (a slider that moves nothing on the cart but changes
+                    // other loads looked broken, 2026-10-15).
+                    int occ = 0, loneOcc = 0;
+                    var loneLayers = new List<int>();
+                    for (int k = 0; k < placed.Count; k++)
+                    {
+                        Cargo.PlacedItem it = placed[k];
+                        if (it.Relation != "on" || it.Partner < 0 || it.Partner >= placed.Count) continue;
+                        if (KeyOf(it.Relation, it.Id, placed[it.Partner].Id) != key) continue;
+                        occ++;
+                        if (IsLoneOnPair(placed, it)) { loneOcc++; loneLayers.Add(it.Layer + 1); }
+                    }
+                    bool allLone = occ > 0 && loneOcc == occ;
+                    if (allLone)
+                    {
+                        OneLine($"  <color=#ffd257>Here it lies alone on a pair: the box above moves it; only Height applies from this box.</color>", smallFont: true);
+                    }
+                    else if (loneOcc > 0)
+                    {
+                        OneLine($"  <color=#9a9a9a>Layer {string.Join(", ", loneLayers)}: alone on a pair, moved by its own box (only Height from here).</color>", smallFont: true);
+                    }
                     Vector3 v = pl.Rel;
                     Vector3 was = v;
                     bool moved = false;
                     moved |= RawSlider("  Height", ref v.y, -0.3f, 1.0f, canReset: false, tip: TipHeightOn + $" ({CargoSheet.ClassLabel(q.Id)} is {q.Box.y:0.00} tall.)");
-                    moved |= RawSlider("  " + AcrossLabel, ref v.z, -0.5f, 0.5f, canReset: false, tip: TipAcross);
-                    moved |= RawSlider("  " + AlongLabel, ref v.x, -0.6f, 0.6f, canReset: false, tip: TipAlong);
+                    // always drawn (the control order), greyed when they move nothing here
+                    bool enOn = GUI.enabled;
+                    GUI.enabled = enOn && !allLone;
+                    moved |= RawSlider("  " + AcrossLabel + (allLone ? "  (not used here)" : ""), ref v.z, -0.5f, 0.5f, canReset: false, tip: allLone ? TipOverPair : TipAcross);
+                    moved |= RawSlider("  " + AlongLabel + (allLone ? "  (not used here)" : ""), ref v.x, -0.6f, 0.6f, canReset: false, tip: allLone ? TipOverPair : TipAlong);
+                    GUI.enabled = enOn;
                     if (moved)
                     {
                         if (!pair.TopTuned)

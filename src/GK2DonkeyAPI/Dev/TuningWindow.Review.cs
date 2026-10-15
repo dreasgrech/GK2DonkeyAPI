@@ -83,7 +83,7 @@ namespace GK2DonkeyAPI
             for (int i = 0; i < n; i++)
             {
                 CargoCoverage.Load ld = coverage.Loads[i];
-                reviewFps[i] = CargoReview.Fingerprint(coverage, ld, CargoLayout.ForItem, CargoLayout.ForPair, fallbacks);
+                reviewFps[i] = CargoReview.Fingerprint(coverage, ld, CargoLayout.ForItem, CargoLayout.ForPair, fallbacks, CargoLayout.OnPairs, CargoLayout.SameClass);
                 CargoReview.Mark m = CargoReview.Get(reviewKeys[i]);
                 ReviewState st = ReviewState.Unreviewed;
                 if (m != null)
@@ -456,9 +456,21 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The probe for the offline check (PackerScan --review-check --verbose prints the same line): the load's key, its
+        // stored fingerprint, today's, and what today's hashes.
+        private static void LogFingerprint(string what, CargoCoverage.Load load)
+        {
+            string key = CargoReview.KeyOf(coverage, load.Classes);
+            CargoReview.Mark m = CargoReview.Get(key);
+            string text = CargoReview.FingerprintText(coverage, load, CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature(), CargoLayout.OnPairs, CargoLayout.SameClass);
+            string now = CargoReview.Fingerprint(coverage, load, CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature(), CargoLayout.OnPairs, CargoLayout.SameClass);
+            Plugin.Log.LogInfo($"[review] {what} {key}: stored {(m == null || string.IsNullOrEmpty(m.Fingerprint) ? "none" : m.Fingerprint)}, now {now} <- {text}");
+        }
+
         private static void PutReviewLoad(CargoCoverage.Load load)
         {
             reviewVisited = true;
+            LogFingerprint("at", load);
             string r = TestLoads.Put(LoadIds(load.Classes), "review: " + coverage.Describe(load.Classes));
             reviewStatus = r != null && r.StartsWith("on the cart", StringComparison.Ordinal) ? "" : r ?? "";
         }
@@ -467,8 +479,9 @@ namespace GK2DonkeyAPI
         {
             AcceptAll(placed, isolating, cargoViewPairMode);
             // the fingerprint of the tuning as it is now (the accept just wrote it)
-            string fp = CargoReview.Fingerprint(coverage, coverage.Loads[li], CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature());
+            string fp = CargoReview.Fingerprint(coverage, coverage.Loads[li], CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature(), CargoLayout.OnPairs, CargoLayout.SameClass);
             CargoReview.Set(reviewKeys[li], CargoReview.Verdict.Ok, fp, "", "");
+            LogFingerprint("ok", coverage.Loads[li]);
             ClearReviewReason();
             reviewFpSig = null;
             if (reviewAutoAdvance) Step(1, ReviewState.Unreviewed);
@@ -491,7 +504,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            string fp = CargoReview.Fingerprint(coverage, coverage.Loads[li], CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature());
+            string fp = CargoReview.Fingerprint(coverage, coverage.Loads[li], CargoLayout.ForItem, CargoLayout.ForPair, FallbackSignature(), CargoLayout.OnPairs, CargoLayout.SameClass);
             CargoReview.Set(key, CargoReview.Verdict.Ok, fp, "", "");
             reviewFpSig = null;
         }

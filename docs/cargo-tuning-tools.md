@@ -328,3 +328,34 @@ contact), then by kind up the ladder, then by use; choose each contact's Smalles
 only untuned contact when one exists; a box header says "needs X first" when a lower-kind contact of the same load is
 untuned; the "1 item / 2 items / 3 or more" chips become the ladder's step. Not built yet.
 
+
+## The on-top box over a lone item (2026-10-15)
+
+An item alone on top of a pair is placed over the middle of the two below plus its class's `onpair_*` correction
+(`CargoPacker`, "Alone on top of a pair"): the on-top relation it came by gives it only its height. Its across and
+along still place a layer of two in other loads. In a load where every item of that contact lies alone on a pair, the
+contact box now greys Near / far and Forward / back ("not used here", tooltip pointing at the item's own box) and says
+which box moves it; when the contact is also a layer of two in the same load, a grey note names the lone layer. Seen
+by the user on low crate x3: the box read "low crate on low crate" and its sliders did nothing to the top crate while
+changing the contact for 106 loads (an ok in those loads then shows as to re-check). Panel only: no packing change,
+`AlgorithmVersion` unchanged.
+
+## One-pair offsets for an item alone on a pair (2026-10-15)
+
+Before, the alone-on-a-pair correction belonged to the item's class (`onpair_*` in its `[item]` entry): one value for
+every pair it could lie on, so a crate could not sit differently on two crates than on two corpses. Now the
+alone-on-a-pair box has an **Applies** row: **on every pair** (the class's `onpair_*`, as before) or **only on this
+pair**, which creates `[onpair <item> on <a>+<b>]` (size classes, either order) starting at the class's value, so
+nothing jumps. While it exists the box's sliders, Seat it and Reset edit it, the header says "this pair only", and on
+that pair it replaces the class's correction; everywhere else the class's applies. **On every pair** again drops it
+(Undo brings it back). The on-top relation's height still applies under it, as for the class's correction.
+
+The tuning ladder is unchanged: the contact is still `onpair:<class>`, tuned by the class entry, and a one-pair offset
+is an exception to it, so the "in N of 1715 loads" counts do not move. The review fingerprint takes the offset in for
+every load it can apply to (`docs/cargo-review.md`). Packer: `Lookup.ForOnPair` (`CargoLayout.ForOnPair` in the game,
+`CargoLayout.FindOnPair` with the scan's own class test offline). `AlgorithmVersion` unchanged: without an entry the
+packing is identical.
+While a one-pair offset places the lone item, the class's correction is not on the cart, so nothing freezes it from
+that load: the box's Looks right is greyed, Accept this load / Accept and next / the review's Looks right skip it,
+and the open count leaves it out (found in review before it shipped, 2026-10-15). The contact can still be tuned from a
+load where the class's correction shows.

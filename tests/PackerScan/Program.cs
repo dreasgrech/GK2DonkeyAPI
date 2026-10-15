@@ -18,6 +18,7 @@ bool Near(Vector3 a, Vector3 b, float eps = 1e-4f) => Mathf.Abs(a.x - b.x) <= ep
 string V(Vector3 v) => $"({v.x:0.000}, {v.y:0.000}, {v.z:0.000})";
 
 // --cfg <path>: another layout file (a scratch copy for an experiment); the shapes file is looked for next to it
+if (args.Contains("--review-migrate")) return Review.Migrate(Array.IndexOf(args, "--cfg") is int cm && cm >= 0 && cm + 1 < args.Length ? args[cm + 1] : Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"), args.Contains("--write"));
 if (args.Contains("--review-check")) return Review.CheckFile(Array.IndexOf(args, "--cfg") is int cc && cc >= 0 && cc + 1 < args.Length ? args[cc + 1] : Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"));
 if (args.Contains("--review")) return Review.Run(Array.IndexOf(args, "--cfg") is int cr && cr >= 0 && cr + 1 < args.Length ? args[cr + 1] : Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"));
 if (args.Contains("--real")) return Real.Run(Array.IndexOf(args, "--cfg") is int ca && ca >= 0 && ca + 1 < args.Length ? args[ca + 1] : Path.Combine("..", "..", "src", "GK2DonkeyAPI", "cargo-layout.cfg"), args.Contains("--verbose"));

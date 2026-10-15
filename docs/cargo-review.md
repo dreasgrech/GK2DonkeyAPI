@@ -141,3 +141,22 @@ paths agree and nothing was edited since); the ones that differ are listed, as t
   orange, green, magenta, yellow, cyan by place in the load), the same colour on the cart and in the panel's names; one
   and two items keep blue / orange by role, which the pair box and Alone are built on. The verdict and jump buttons are
   coloured (green ok, red wrong, yellow later / re-check). The ladder's Accept buttons record the review's ok too.
+- 2026-10-15 evening, **fingerprint v3 and one-pair offsets:**
+  - `PackerScan --review-check` read 38 of 61 oks as to re-check, and none of the 38 matched the layout at any commit
+    since the morning. Every one was a load of two or more classes; every one-class load matched. Cause: the
+    fingerprint listed the class offsets in the analysis's class order, and the game numbers the classes differently
+    from the scan (log before corpse offline, corpse first in the game). In the game the marks were consistent; offline
+    they could never be checked, and a game update that added an item could have reordered them in the game too.
+  - **v3** lists the class offsets in id order (`FingerprintVersion = 3`). The file was brought over by
+    `PackerScan --review-migrate --write`, which checks every ok against every ordering of the old class section and
+    re-stamps only an ok whose stored fingerprint one of them reproduces. All 61 were proven unchanged, so nothing was
+    re-stamped blindly; an unproven ok would have kept its old fingerprint and shown as to re-check. The old file is
+    kept outside the repo. Afterwards `--review-check`: 61 of 61 match.
+  - **Probe:** the panel logs `[review] at <load>: stored X, now Y <- <text>` for each load it puts on the cart, and the
+    same line with `ok` for each ok; `--review-check --verbose` prints the scan's line for each stale ok, so a future
+    mismatch can be compared field by field instead of guessed at.
+  - **One-pair offsets** (`[onpair <item> on <a>+<b>]` in `cargo-layout.cfg`) go into the fingerprint of every load the
+    item and the pair fit in (a superset, never a miss). With none, the text is exactly the v3 text, so adding the
+    feature re-flagged nothing. PackerScan `--review` checks 4: none changes nothing; one for low crate on two low crates
+    changes exactly the 120 loads with three or more low crates; the packer moves only the lone crate and only on that
+    pair (not on two corpses); the entry reads back.

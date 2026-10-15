@@ -48,6 +48,8 @@ static class Review
         var T = typeof(CargoLayout).Assembly.GetType("GK2DonkeyAPI.CargoReview")!;
         var keyOf = T.GetMethod("KeyOf", BindingFlags.NonPublic | BindingFlags.Static)!;
         var fingerprint = T.GetMethod("Fingerprint", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var fingerprintText = T.GetMethod("FingerprintText", BindingFlags.NonPublic | BindingFlags.Static)!;
+        bool verbose = Environment.GetCommandLineArgs().Contains("--verbose");
         var allTuned = T.GetMethod("AllTuned", BindingFlags.NonPublic | BindingFlags.Static)!;
         var parse = T.GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!;
         var all = T.GetProperty("All", BindingFlags.NonPublic | BindingFlags.Static)!;
@@ -68,12 +70,104 @@ static class Review
             ok++;
             bool tuned = (bool)allTuned.Invoke(null, new object[] { rep, load, fi, fp })!;
             if (!tuned) { untunedOk++; Console.WriteLine($"  ok but a contact is untuned (fallbacks differ offline, not compared): {key}"); continue; }
-            string now = (string)fingerprint.Invoke(null, new object[] { rep, load, fi, fp, "fb" })!;
+            var fargs = new object[] { rep, load, fi, fp, "fb", CargoLayout.OnPairs, (Func<string, string, bool>)((a, b) => C(a) == C(b)) };
+            string now = (string)fingerprint.Invoke(null, fargs)!;
             if (now == stored) same++;
-            else { stale++; Console.WriteLine($"  to re-check: {key} (stored {stored}, now {now})"); }
+            else
+            {
+                stale++;
+                Console.WriteLine($"  to re-check: {key} (stored {stored}, now {now})");
+                // the same line the panel logs ([review] at / ok), to compare with LogOutput.log
+                if (verbose) Console.WriteLine($"    [review] scan {key}: stored {stored}, now {now} <- {(string)fingerprintText.Invoke(null, fargs)!}");
+            }
         }
         Console.WriteLine($"{ok} ok marks: {same} match the layout now, {stale} to re-check, {untunedOk} not comparable; {wrong} wrong, {later} later, {unknown} unknown keys");
         return unknown == 0 ? 0 : 1;
+    }
+
+    // --review-migrate [--write]: brings the review file's ok marks from fingerprint v2 to v3 (2026-10-15: the class
+    // offsets in id order). v2 listed them in the analysis's class order, which differs between the game and this scan,
+    // so a v2 fingerprint is checked against every order of the class section: an ok whose stored fingerprint one of
+    // them reproduces is proven unchanged since it was marked and gets today's v3 fingerprint; any other ok keeps its
+    // old one and shows as to re-check. Without --write nothing is written. The file is replaced atomically, the old
+    // one kept as cargo-review.cfg.v2.bak.
+    public static int Migrate(string cfgPath, bool write)
+    {
+        var (rep, fi, fp) = Build(cfgPath);
+        var T = typeof(CargoLayout).Assembly.GetType("GK2DonkeyAPI.CargoReview")!;
+        var keyOf = T.GetMethod("KeyOf", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var text = T.GetMethod("FingerprintText", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var hash = T.GetMethod("Hash", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var allTuned = T.GetMethod("AllTuned", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var parse = T.GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var toText = T.GetMethod("ToText", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var all = T.GetProperty("All", BindingFlags.NonPublic | BindingFlags.Static)!;
+        var fileVer = T.GetProperty("FileFingerprintVersion", BindingFlags.NonPublic | BindingFlags.Static)!;
+        int codeVer = (int)T.GetField("FingerprintVersion", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null)!;
+        string reviewPath = Path.Combine(Path.GetDirectoryName(cfgPath)!, "cargo-review.cfg");
+        string before = File.ReadAllText(reviewPath);
+        parse.Invoke(null, new object[] { before });
+        int fromVer = (int)fileVer.GetValue(null)!;
+        if (fromVer == codeVer) { Console.WriteLine($"the file is already v{codeVer}: nothing to do"); return 0; }
+        if (fromVer != 2 || codeVer != 3) { Console.WriteLine($"this migration is v2 -> v3 only (file v{fromVer}, code v{codeVer}): nothing written"); return 1; }
+        var keys = rep.Loads.Select(l => (string)keyOf.Invoke(null, new object[] { rep, l.Classes })!).ToList();
+        var byKey = rep.Loads.Zip(keys).ToDictionary(z => z.Second, z => z.First);
+        Func<string, string, bool> same = (a, b) => C(a) == C(b);
+        int ok = 0, proven = 0, notComparable = 0;
+        var unproven = new List<string>();
+        var marks = ((System.Collections.IEnumerable)all.GetValue(null)!).Cast<object>().ToList();
+        foreach (object m in marks)
+        {
+            var mt = m.GetType();
+            if (mt.GetField("Verdict")!.GetValue(m)!.ToString() != "Ok") continue;
+            ok++;
+            string key = (string)mt.GetField("Key")!.GetValue(m)!;
+            string stored = (string)mt.GetField("Fingerprint")!.GetValue(m)!;
+            var load = byKey[key];
+            if (!(bool)allTuned.Invoke(null, new object[] { rep, load, fi, fp })!) { notComparable++; unproven.Add(key + " (a contact is untuned: the fallbacks differ offline)"); continue; }
+            string now = (string)text.Invoke(null, new object[] { rep, load, fi, fp, "fb", CargoLayout.OnPairs, same })!;
+            // split the text into its parts: the class section is the run of "cls:" parts
+            var parts = now.Split(';').Where(x => x.Length > 0).Select(x => x + ";").ToList();
+            var cls = parts.Where(x => x.StartsWith("cls:")).ToList();
+            int first = parts.FindIndex(x => x.StartsWith("cls:"));
+            var head = parts.Take(first).ToList();
+            var tail = parts.Skip(first + cls.Count).ToList();
+            bool match = false;
+            foreach (var perm in Perms(cls))
+            {
+                string old = string.Concat(head) + string.Concat(perm) + string.Concat(tail);
+                if ((string)hash.Invoke(null, new object[] { old })! == stored) { match = true; break; }
+            }
+            if (match)
+            {
+                proven++;
+                mt.GetField("Fingerprint")!.SetValue(m, (string)hash.Invoke(null, new object[] { now })!);
+            }
+            else unproven.Add(key);
+        }
+        Console.WriteLine($"v{fromVer} -> v{codeVer}: {ok} ok marks, {proven} proven unchanged (re-stamped), {unproven.Count} left as to re-check ({notComparable} not comparable offline)");
+        foreach (string k in unproven) Console.WriteLine("  to re-check: " + k);
+        if (!write) { Console.WriteLine("dry run: nothing written (add --write)"); return 0; }
+        fileVer.GetSetMethod(true)!.Invoke(null, new object[] { codeVer });
+        string after = (string)toText.Invoke(null, new object[] { keys })!;
+        // every mark is still there: same number of mark lines before and after
+        int Lines(string t) => t.Split('\n').Count(l => l.Contains(" = ") && !l.TrimStart().StartsWith("#") && !l.StartsWith("position") && !l.StartsWith("fingerprint-version"));
+        if (Lines(after) != Lines(before)) { Console.WriteLine($"ABORT: {Lines(before)} mark lines before, {Lines(after)} after; nothing written"); return 1; }
+        string tmp = reviewPath + ".tmp";
+        File.WriteAllText(tmp, after);
+        File.Replace(tmp, reviewPath, reviewPath + ".v2.bak");
+        Console.WriteLine($"written: {reviewPath} (the old file is {reviewPath}.v2.bak)");
+        return 0;
+    }
+
+    static IEnumerable<List<string>> Perms(List<string> xs)
+    {
+        if (xs.Count <= 1) { yield return new List<string>(xs); yield break; }
+        for (int i = 0; i < xs.Count; i++)
+        {
+            var rest = xs.Where((_, j) => j != i).ToList();
+            foreach (var p in Perms(rest)) { p.Insert(0, xs[i]); yield return p; }
+        }
     }
 
     static (CargoCoverage.Report, Func<string, CargoLayout.ItemEntry>, Func<string, string, CargoLayout.PairEntry>) Build(string cfgPath)
@@ -142,7 +236,10 @@ static class Review
         Func<string, CargoLayout.ItemEntry> fi = ForItem;
         Func<string, string, CargoLayout.PairEntry> fp = ForPair;
         string Key(CargoCoverage.Load ld) => (string)keyOf.Invoke(null, new object[] { rep, ld.Classes })!;
-        string Fp(CargoCoverage.Load ld) => (string)fingerprint.Invoke(null, new object[] { rep, ld, fi, fp, "fb" })!;
+        Func<string, string, bool> same = Same;
+        var ops = new List<CargoLayout.OnPairEntry>(CargoLayout.OnPairs);
+        string Fp(CargoCoverage.Load ld) => (string)fingerprint.Invoke(null, new object[] { rep, ld, fi, fp, "fb", ops, same })!;
+        string FpNone(CargoCoverage.Load ld) => (string)fingerprint.Invoke(null, new object[] { rep, ld, fi, fp, "fb", null!, null! })!;
 
         // 1. keys: one per load, unique, class order independent, readable
         var keys = rep.Loads.Select(Key).ToList();
@@ -223,6 +320,59 @@ static class Review
         Check(n == 1 && (string)mT.GetField("Fingerprint")!.GetValue(m5b)! == fps[5] && (int)fileVer.GetValue(null)! == codeVer, $"re-stamp gives the ok today's fingerprint and the file the code's version v{codeVer}");
         string t4 = (string)toText.Invoke(null, new object[] { keys })!;
         Check(t4.Contains("fingerprint-version = " + codeVer), "the version line is written");
+
+        // 4. one-pair offsets ([onpair <item> on <a>+<b>], 2026-10-15): none gives the fingerprint exactly as before they
+        // existed; one changes exactly the loads it fits in; the packer moves the lone item on that pair only; the
+        // file reads back.
+        Check(ops.Count > 0 || rep.Loads.All(l => Fp(l) == FpNone(l)), "without one-pair offsets the fingerprints are as before they existed");
+        var lowOnLows = new CargoLayout.OnPairEntry { Item = "box_appliances_1", A = "box_appliances_1", B = "box_appliances_1", Offset = new Vector3(0.05f, 0f, -0.04f) };
+        var before = rep.Loads.Select(Fp).ToList();
+        ops.Add(lowOnLows);
+        var after = rep.Loads.Select(Fp).ToList();
+        ops.Remove(lowOnLows);
+        int fitBad = 0, fitN = 0;
+        for (int k = 0; k < rep.Loads.Count; k++)
+        {
+            bool fits = rep.Loads[k].Classes.Count(c => rep.Classes[c] == "box_appliances_1") >= 3;
+            if (fits) fitN++;
+            if (fits != (before[k] != after[k])) fitBad++;
+        }
+        Check(fitBad == 0 && fitN > 0, $"a one-pair offset for low crate on two low crates changes exactly the {fitN} loads with three low crates or more ({fitBad} wrong)");
+        CargoPacker.Item It(string id, int o) => new CargoPacker.Item { Id = id, Box = Box[C(id)], LoadOrder = o };
+        int LoneOf(CargoPacker.Result r)
+        {
+            int top = r.Layer.Max();
+            var inTop = Enumerable.Range(0, r.Count).Where(q => r.Layer[q] == top).ToList();
+            return inTop.Count == 1 && top > 0 && Enumerable.Range(0, r.Count).Count(q => r.Layer[q] == top - 1) == 2 ? inTop[0] : -1;
+        }
+        var threeLow = new List<CargoPacker.Item> { It("box_appliances_1", 0), It("box_appliances_2", 1), It("box_tools_iron", 2) };
+        var lowOnCorpses = new List<CargoPacker.Item> { It("body_corpse", 0), It("body_corpse", 1), It("box_appliances_1", 2) };
+        var a0 = CargoPacker.Pack(threeLow, S, L);
+        var b0 = CargoPacker.Pack(lowOnCorpses, S, L);
+        var opsL = new List<CargoLayout.OnPairEntry> { lowOnLows };
+        L.ForOnPair = (it, a, b) => CargoLayout.FindOnPair(opsL, it, a, b, Same);
+        var a1 = CargoPacker.Pack(threeLow, S, L);
+        var b1 = CargoPacker.Pack(lowOnCorpses, S, L);
+        L.ForOnPair = null;
+        int la = LoneOf(a0), lb = LoneOf(b0);
+        var cls = ForItem("box_appliances_1");
+        Vector3 classOff = cls != null ? cls.OnPair : Vector3.zero;
+        Vector3 moved = la >= 0 ? a1.Target[la] - a0.Target[la] : new Vector3(9f, 9f, 9f);
+        Vector3 expect = lowOnLows.Offset - classOff;
+        Check(la >= 0 && (moved - expect).magnitude < 0.0005f && Enumerable.Range(0, a0.Count).Where(q => q != la).All(q => a1.Target[q] == a0.Target[q]),
+            $"on three low crates the top crate moves by the one-pair offset less the class's ({moved.x:0.000}, {moved.y:0.000}, {moved.z:0.000}), nothing else moves");
+        Check(lb >= 0 && Enumerable.Range(0, b0.Count).All(q => b1.Target[q] == b0.Target[q]), "a low crate alone on two corpses does not move");
+        // Restore (not Parse) clears the file order of the items too, so a second read does not list them twice
+        var restoreL = typeof(CargoLayout).GetMethod("Restore", BindingFlags.NonPublic | BindingFlags.Static)!;
+        restoreL.Invoke(null, new object[] { text, false });
+        CargoLayout.OnPairs.Add(new CargoLayout.OnPairEntry { Item = lowOnLows.Item, A = lowOnLows.A, B = lowOnLows.B, Offset = lowOnLows.Offset });
+        string lt1 = CargoLayout.ToText();
+        restoreL.Invoke(null, new object[] { lt1, false });
+        string lt2 = CargoLayout.ToText();
+        var back = CargoLayout.OnPairs.FirstOrDefault(o => o.Item == "box_appliances_1");
+        if (lt1 != lt2 || CargoLayout.OnPairs.Count != ops.Count + 1) Console.WriteLine($"  round trip: same text {lt1 == lt2}, {CargoLayout.OnPairs.Count} one-pair offsets read back (expected {ops.Count + 1}), back {(back == null ? "none" : back.Offset.ToString("F3"))}");
+        Check(lt1 == lt2 && CargoLayout.OnPairs.Count == ops.Count + 1 && back != null && back.Offset == lowOnLows.Offset && lt1.Contains("[onpair box_appliances_1 on box_appliances_1+box_appliances_1]"),
+            "a one-pair offset is written as [onpair <item> on <a>+<b>] and reads back unchanged");
 
         Console.WriteLine($"{pass} passed, {fail} failed");
         return fail == 0 ? 0 : 1;

@@ -29,6 +29,10 @@ namespace GK2DonkeyAPI
     //                 shift and the load order no longer change it; only the floor (CargoBedDepth) moves it.
     //                 Positions belong to a and b by id, not to "first" and "second", so which item was picked up
     //                 first does not matter.
+    //   [onpair <item> on <a>+<b>] the alone-on-a-pair offset of <item>'s size class, only when it lies alone on top
+    //                 of a pair of <a> and <b> (size classes, either order): along/up/across, all three written. It
+    //                 replaces the class's onpair_* there, so one crate can sit differently on two crates than on two
+    //                 bodies (asked 2026-10-15); everywhere else the class's onpair_* applies.
     //   Lookup is deterministic: an exact id (or id pair) wins over a size-class match; among class matches the
     //   first in the file wins, and a second one is reported once in the log (it would never apply).
     //
@@ -154,6 +158,7 @@ namespace GK2DonkeyAPI
             Items.Clear();
             itemOrder.Clear();
             Pairs.Clear();
+            OnPairs.Clear();
             Parse(text);
             Version++;
             if (save)
@@ -236,8 +241,16 @@ namespace GK2DonkeyAPI
 
         }
 
+        // An item's alone-on-a-pair offset on one pair only ([onpair <item> on <a>+<b>]); its presence is the choice.
+        public class OnPairEntry
+        {
+            public string Item, A, B;
+            public Vector3 Offset; // along, up, across: in place of the item class's OnPair on this pair
+        }
+
         public static readonly Dictionary<string, ItemEntry> Items = new Dictionary<string, ItemEntry>(StringComparer.Ordinal);
         public static readonly List<PairEntry> Pairs = new List<PairEntry>();
+        public static readonly List<OnPairEntry> OnPairs = new List<OnPairEntry>();
         public static string Source { get; private set; } = "(not loaded)";
 
         // Boxes by item id, measured from the keeper's overhead mesh set; filled lazily, once per session.
@@ -259,6 +272,7 @@ namespace GK2DonkeyAPI
             Items.Clear();
             itemOrder.Clear();
             Pairs.Clear();
+            OnPairs.Clear();
             dirty = false;
             string repo = Defaults.RepoFile(RepoFileName);
             try
@@ -294,6 +308,7 @@ namespace GK2DonkeyAPI
         {
             ItemEntry item = null;
             PairEntry pair = null;
+            OnPairEntry onPair = null;
             foreach (string raw in text.Split('\n'))
             {
                 string line = raw.Trim();
@@ -311,7 +326,24 @@ namespace GK2DonkeyAPI
                     string head = line.Substring(1, line.Length - 2).Trim();
                     item = null;
                     pair = null;
-                    if (head.StartsWith("item ", StringComparison.OrdinalIgnoreCase))
+                    onPair = null;
+                    if (head.StartsWith("onpair ", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // [onpair <item> on <a>+<b>]
+                        string rest = head.Substring(7).Trim();
+                        int on = rest.IndexOf(" on ", StringComparison.OrdinalIgnoreCase);
+                        string[] ab = on < 0 ? new string[0] : rest.Substring(on + 4).Split('+');
+                        if (on > 0 && ab.Length == 2)
+                        {
+                            onPair = new OnPairEntry { Item = rest.Substring(0, on).Trim(), A = ab[0].Trim(), B = ab[1].Trim() };
+                            OnPairs.Add(onPair);
+                        }
+                        else
+                        {
+                            WarnOnce($"[{head}]: not of the form [onpair <item> on <a>+<b>]; skipped.");
+                        }
+                    }
+                    else if (head.StartsWith("item ", StringComparison.OrdinalIgnoreCase))
                     {
                         item = new ItemEntry { Id = head.Substring(5).Trim() };
                         if (!Items.ContainsKey(item.Id)) itemOrder.Add(item.Id);
@@ -336,7 +368,16 @@ namespace GK2DonkeyAPI
                 string key = line.Substring(0, eq).Trim().ToLowerInvariant();
                 string val = line.Substring(eq + 1).Trim();
                 float.TryParse(val, NumberStyles.Float, CultureInfo.InvariantCulture, out float f);
-                if (item != null)
+                if (onPair != null)
+                {
+                    switch (key)
+                    {
+                        case "along": onPair.Offset.x = f; break;
+                        case "up": onPair.Offset.y = f; break;
+                        case "across": onPair.Offset.z = f; break;
+                    }
+                }
+                else if (item != null)
                 {
                     switch (key)
                     {
@@ -397,6 +438,7 @@ namespace GK2DonkeyAPI
             sb.AppendLine("#   beside_a_* / beside_b_*: the two lying beside each other (side or along), the exact place of a and b (along, height above the layer's floor, across);");
             sb.AppendLine("#   top_a_* / top_b_*: b on top of a, both places as a two-item cart shows them; inside a bigger load b is placed relative to a.");
             sb.AppendLine("#   mode = auto | side (across the bed) | along (end to end) | stack: which relation a two-item cart shows. A tuned relation is frozen against everything but the floor.");
+            sb.AppendLine("# [onpair <item> on <a>+<b>]: along / up / across in place of the item's onpair_* when it lies alone on top of a pair of <a> and <b> (size classes, either order; all three written).");
             sb.AppendLine("# Exact ids win over size-class matches; among class matches the first in this file wins.");
             sb.AppendLine("#");
             sb.AppendLine("# Size classes at the time of writing (27 items): log (wood); flour sack (box_flour); tall crate (box_beer,");
@@ -429,6 +471,14 @@ namespace GK2DonkeyAPI
                     sb.AppendLine("alone_up = " + e.Alone.y.ToString("0.###", CultureInfo.InvariantCulture));
                     sb.AppendLine("alone_across = " + e.Alone.z.ToString("0.###", CultureInfo.InvariantCulture));
                 }
+            }
+            foreach (OnPairEntry o in OnPairs)
+            {
+                // all three, zeros too: the entry's presence is the choice
+                sb.AppendLine().AppendLine("[onpair " + o.Item + " on " + o.A + "+" + o.B + "]");
+                sb.AppendLine("along = " + o.Offset.x.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("up = " + o.Offset.y.ToString("0.###", CultureInfo.InvariantCulture));
+                sb.AppendLine("across = " + o.Offset.z.ToString("0.###", CultureInfo.InvariantCulture));
             }
             foreach (PairEntry p in Pairs)
             {
@@ -617,6 +667,42 @@ namespace GK2DonkeyAPI
             return found;
         }
 
+        // The one-pair offset for item lying alone on a pair of a and b, or null (the class's OnPair applies then). Exact
+        // ids win over class matches; among class matches the first in the file. same: the size-class test (the scan
+        // passes its own).
+        internal static OnPairEntry FindOnPair(IList<OnPairEntry> list, string item, string a, string b, Func<string, string, bool> same)
+        {
+            if (list == null || list.Count == 0 || item == null || a == null || b == null)
+            {
+                return null;
+            }
+            foreach (OnPairEntry o in list)
+            {
+                if (o.Item == item && ((o.A == a && o.B == b) || (o.A == b && o.B == a))) return o;
+            }
+            foreach (OnPairEntry o in list)
+            {
+                if (same(o.Item, item) && ((same(o.A, a) && same(o.B, b)) || (same(o.A, b) && same(o.B, a)))) return o;
+            }
+            return null;
+        }
+
+        public static OnPairEntry ForOnPair(string item, string a, string b) => FindOnPair(OnPairs, item, a, b, SameClass);
+
+        // A one-pair offset for item on (a, b), starting at start (where the item lies now, so nothing jumps).
+        public static OnPairEntry AddOnPair(string item, string a, string b, Vector3 start)
+        {
+            OnPairEntry o = ForOnPair(item, a, b);
+            if (o == null)
+            {
+                o = new OnPairEntry { Item = item, A = a, B = b, Offset = start };
+                OnPairs.Add(o);
+            }
+            return o;
+        }
+
+        public static void RemoveOnPair(OnPairEntry o) => OnPairs.Remove(o);
+
         // Entry to edit for this item: the existing class entry, or a new one keyed by this item's id.
         public static ItemEntry EditItem(string itemId)
         {
@@ -659,7 +745,8 @@ namespace GK2DonkeyAPI
                 }
             }
             string from = Source.EndsWith(RepoFileName, StringComparison.OrdinalIgnoreCase) && Source.IndexOf('\\') >= 0 ? "the repo's cargo-layout.cfg" : Source;
-            return $"{items} item entr{(items == 1 ? "y" : "ies")}, {pairs} pair entr{(pairs == 1 ? "y" : "ies")}, from {from}";
+            string one = OnPairs.Count == 0 ? "" : $", {OnPairs.Count} one-pair offset{(OnPairs.Count == 1 ? "" : "s")}";
+            return $"{items} item entr{(items == 1 ? "y" : "ies")}, {pairs} pair entr{(pairs == 1 ? "y" : "ies")}{one}, from {from}";
         }
     }
 }
