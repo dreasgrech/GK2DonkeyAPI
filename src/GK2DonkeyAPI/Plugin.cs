@@ -438,6 +438,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
         internal static ConfigEntry<bool> TuningWindowEnabled;
         internal static ConfigEntry<KeyCode> TuningWindowKey;
+        internal static ConfigEntry<KeyCode> ReviewPrevKey, ReviewNextKey, ReviewOkKey, ReviewWrongKey, ReviewLaterKey; // the Cargo tab's review strip
         internal static bool TuningWindowHidden; // toggled by TuningWindowKey; starts as remembered (TuningWindowHiddenCfg); the self-tests hide it for the run only
         internal static ConfigEntry<bool> TuningWindowHiddenCfg; // the hide remembered across sessions: left hidden, it stays hidden after a restart
         internal static ConfigEntry<float> TuningWindowScale;
@@ -596,6 +597,11 @@ namespace GK2DonkeyAPI
                 "Width of the tuning panel in panel units before the overall size is applied (470 = original).");
             CargoNudgeUp = dbg.Bind("Debug", "CargoNudgeUp", KeyCode.KeypadPlus, "Cargo tab: moves the last slider dragged up by 0.01 (Shift: 0.05).");
             CargoNudgeDown = dbg.Bind("Debug", "CargoNudgeDown", KeyCode.KeypadMinus, "Cargo tab: moves the last slider dragged down by 0.01 (Shift: 0.05).");
+            ReviewPrevKey = dbg.Bind("Debug", "ReviewPrevKey", KeyCode.Keypad4, "Cargo tab, review strip: the previous load.");
+            ReviewNextKey = dbg.Bind("Debug", "ReviewNextKey", KeyCode.Keypad6, "Cargo tab, review strip: the next load.");
+            ReviewOkKey = dbg.Bind("Debug", "ReviewOkKey", KeyCode.Keypad1, "Cargo tab, review strip: this load looks right.");
+            ReviewWrongKey = dbg.Bind("Debug", "ReviewWrongKey", KeyCode.Keypad3, "Cargo tab, review strip: this load is wrong.");
+            ReviewLaterKey = dbg.Bind("Debug", "ReviewLaterKey", KeyCode.Keypad2, "Cargo tab, review strip: later.");
             CargoSeatOnShapes = Config.Bind("General", "CargoSeatOnShapes", true,
                 "Upper layers of cargo rest on the items' measured shapes (cargo-shapes.cfg) instead of their boxes: a layer on a round log or a zombie sits on it, not on its box. Tuned contacts keep their values. Off: the boxes only.");
             CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();

@@ -124,6 +124,9 @@ levels**, **Logs & checks** (value and geometry lines, ground probe, keeper move
 4. Now and then, *Photograph the coverage set* and look at the covering loads: they are every contact of every load,
    in a couple of dozen pictures.
 5. Before calling it done: *Photograph every load* and filter by class or contact to look for anything odd.
+6. Then look at every load for real, one by one, with the Cargo tab's **review strip** ([cargo-review.md](cargo-review.md)):
+   step, judge, mark; the marks are kept in `cargo-review.cfg` and an ok is tied to the load's tuning, so a later edit
+   flags the loads it touched for a re-check.
 
 ## Tests
 

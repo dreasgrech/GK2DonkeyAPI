@@ -356,6 +356,12 @@ closed):
 - **Preset colours are first guesses:** judge them in game (Coat, Harness, Paint, Lantern light presets).
 - **No offline test for the game's Settings-window row names:** the native pages rely on the game's row and
   component names, guarded only at run time (a failure logs once and leaves the settings in the cfg).
+- **Cargo review strip** ([cargo-review.md](cargo-review.md)), built 2026-10-14 22:25, dev build deployed, offline test
+  12/12 (PackerScan `--review`, in the release scans). **To see in game:** mark three loads ok, restart, they are still
+  ok and the strip opens where it stopped; tune a contact one of them uses, it flips to re-check and Next to re-check
+  reaches it; undo, it flips back; mark one wrong with a tag, Next wrong finds it; the keys step and mark and do
+  nothing while the note field has the focus; the file's diff shows only the lines touched. **Then the dist must be
+  rebuilt** (the Dev folder ships in the DLL): check-dist, the scans, the self-tests.
 - **`dist/` at release:** API rebuilt 2026-10-14 18:41 (the hitch event order fix and the rewritten isolate self-test checks; 24 scans green; Saddle Up 0.9.0 of 16:59 unchanged, now named GK2 Saddle Up without the mark; 24 offline scans green, check-dist
   identical manifest, 692 entries) ([release-checklist.md](release-checklist.md)); the QOL repo's dist is current (03:02).
   Rebuild again after any change. The player rehearsal (checklist §5) has not been run on this dist.

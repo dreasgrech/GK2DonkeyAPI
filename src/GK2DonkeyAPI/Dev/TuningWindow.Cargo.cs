@@ -733,6 +733,7 @@ namespace GK2DonkeyAPI
             UpdateCoverage();
             DrawCoverageLine();
             DrawUndoRow();
+            DrawReviewStrip(placed, isolating, onCart);
             if (!onCart)
             {
                 GUILayout.Label("Mount in Cart style and load items. 'Tune this load' shows the controls for what is on the cart.", small);
