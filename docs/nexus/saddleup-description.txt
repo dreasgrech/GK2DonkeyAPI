@@ -71,13 +71,13 @@
 [line]
 [size=5][b][color=#f0b45a]Keys[/color][/b][/size]
 
-[size=3][list]
-[*][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/*]
-[*][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/*]
-[*][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item.[/*]
-[*][b]B[/b] — ring the bell.[/*]
+[list]
+[*][size=3][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/size][/*]
+[*][size=3][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/size][/*]
+[*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item.[/size][/*]
+[*][size=3][b]B[/b] — ring the bell.[/size][/*]
 [/list]
-All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
+[size=3]All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
@@ -89,12 +89,13 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
-[size=3][list=1]
-[*]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/*]
-[*]Drop [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from the download into [i]BepInEx\plugins[/i].[/*]
-[*]Start the game. Press [b]H[/b].[/*]
+[list=1]
+[*][size=3]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/size][/*]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
+[*][size=3]Drop [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from the download into [i]BepInEx\plugins[/i].[/size][/*]
+[*][size=3]Start the game. Press [b]H[/b].[/size][/*]
 [/list]
-[b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
+[size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
 [b]Game updates.[/b] Built for Steam game build 25910882 (1.010). After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.[/size]
 
