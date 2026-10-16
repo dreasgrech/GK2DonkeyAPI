@@ -3,20 +3,23 @@
 
 [youtube]Ww9S6X9hTOU[/youtube]
 
-[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load, and find it where you left it after a reload.[/size][/center]
-
+[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.[/size][/center]
 [line]
 [size=5][b][color=#f0b45a]What you get[/color][/b][/size]
 
 [size=4][b]Your own donkey as a mount[/b][/size]
-[size=3]Press [b]H[/b] anywhere and it comes to you; you ride. Press [b]G[/b] and it comes with its cart; you drive. Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.[/size]
+[size=3]Press [b]H[/b] anywhere and it comes to you; you ride.  [/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-comes.gif?v=2[/img][/center]
+
+[size=3]Press [b]G[/b] and it comes with its cart; you drive.[/size]
+
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif?v=2[/img][/center]
 
+[size=3]Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.[/size]
 
 [size=4][b]Name it, and give it foals[/b][/size]
-[size=3]"[E] Ride Bella". Up to five baby donkeys follow yours around, and can come indoors with you.[/size]
+[size=3]"[E] Ride Balthazar". Up to five baby donkeys follow yours around, and can come indoors with you.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Foals.png?v=2[/img][/center]
 
@@ -88,30 +91,48 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png?v=2[/img][/center]
 
-[size=3]Without it: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings.gif?v=2[/img][/center]
+
+[size=3]Without any mod framework: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/NoGK2ModFrameworkSettings.png?v=2[/img][/center]
 
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/size]
+[*][size=3]Install the [url=https://www.nexusmods.com/graveyardkeeper2/mods/48]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
-[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plugins[/i].[/size][/*]
-[*][size=3]Start the game. Press [b]H[/b].[/size][/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is).
+It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plugins[/i].[/size]
+[/*]
+[*][size=3]Start the game. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.[/size][/*]
 [/list]
+
 [size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
-[b]Game updates.[/b] Built for Steam game build 25910882 (1.010). After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
+[b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
 
 [b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i]. Your saves still load without them.
 
-[b]Found a bug?[/b] Report it in the Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
+[b]Found a bug?[/b] Report it in the [url=https://www.nexusmods.com/graveyardkeeper2/mods/391?tab=bugs]Bugs tab[/url] and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
+
+[line]
+[size=5][b][color=#f0b45a]One visual limitation[/color][/b][/size]
+
+[size=3]Unfortunately, although the donkey can move in any direction, since the game only has left and right facing donkey sprites, those are the only two directions I could have the donkey face in visually.  This means that when you go up or down, the donkey will still keep facing the left/right direction but this is only a visual thing.
+
+In the future I am planning to investigate with external assets so maybe we can have sprites of the donkey which face up and down.  That would be cool.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]For modders[/color][/b][/size]
 
-[size=3]Saddle Up is built on the [b]GK2 Donkey API[/b], which ships in the same download. Your own mod can give the player a donkey, a cart, foals, a herd, cargo events or riding rules through it. Documentation and examples: {{ GITHUB_URL }}[/size]
+[size=3]The way I've built this mod is in two parts: the [b]GK2 Donkey API[/b] mod and the [b]Saddle Up[/b] mod. The Donkey API mod does the heavy lifting and can be used by mod authors to gain full control of the donkey functionalities that are demonstrated on this page and more, while this Saddle Up mod is a full playable showcase of most the features that the Donkey API exposes.
 
-[size=2]Source and issue tracker: {{ GITHUB_URL }}[/size]
+This SaddleUp mod download already contains the DonkeyAPI bundled with it because it needs it to work since it's build on top of it, but I will later be creating a separate page on here for the DonkeyAPI where it could be downloaded separately as well.
+
+This is because multiple mods can make use of the DonkeyAPI and unless they are specifically doing the same things, there will not be clashes.  This allows anyone who wants to create anything with the donkey to call the api and do whatever they want with it.
+
+The full source code will also come with it.[/size]
