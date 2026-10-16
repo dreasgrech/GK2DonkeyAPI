@@ -21,3 +21,5 @@ tools/frames-out/
 
 # Release zips (tools/make-release-zip.py, uploaded to Nexus) and the logs of tools/build-dist.sh and release-scans.sh
 release/
+
+*.un~
