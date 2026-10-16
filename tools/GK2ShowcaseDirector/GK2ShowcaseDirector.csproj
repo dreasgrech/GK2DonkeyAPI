@@ -17,7 +17,7 @@
     <!-- The API as deployed in the game, not a ProjectReference: building the director must never rebuild the API
          (the release scans and the dist copy read src/GK2DonkeyAPI/bin/Release). The director compiles against exactly
          what the game loads. -->
-    <Reference Include="GK2DonkeyAPI"><HintPath>$(GameDir)\BepInEx\plugins\GK2DonkeyAPI.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="GK2DonkeyAPI"><HintPath>$(GameDir)\BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="UnityEngine.ScreenCaptureModule"><HintPath>$(Managed)\UnityEngine.ScreenCaptureModule.dll</HintPath><Private>false</Private></Reference>

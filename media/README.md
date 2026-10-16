@@ -11,6 +11,15 @@ file and no page needs an edit. Hotlink the raw URL:
 GitHub Release as an asset and is hotlinked from there. The working series folders (every frame, every take) stay in
 `Pictures\GK2 Saddle Up shots` on the shooting machine, not here.
 
+**A looping GIF from a take** (the Nexus thumbnail): `python tools/loop-gif.py <take.mp4>` cuts a loop out of an OBS
+take and blends the seam, writing the GIF (560 wide, `--width` for another size) and an MP4 preview. Given `--start` and
+`--end` (seconds) it cuts exactly there; without them it searches the take for the stretch whose end best matches its
+start (`--min` / `--max` bound the length). `--fade N` blends the seam over N frames (25 per second), `--fade-before`
+takes the blend from the frames just before the start, so nothing after the end shows (a cart slowing down after it),
+`--crop W:H:X:Y` cuts the picture first. The thumbnail (a following camera, so the seam is a dissolve):
+
+    python tools/loop-gif.py "2026-10-16 16-48-24.mp4" --from 2.0 --to 8.0 --start 3.0 --end 7.22 --fade 10 --fade-before --width 286
+
 | File | Shows | Source |
 |---|---|---|
 | `donkey-comes.gif` | H: the donkey trots up and the keeper gets on | OBS take |
