@@ -12,7 +12,8 @@ Both are built and audited against Steam game build 25910882 (game 1.010).
 ## Installing (players)
 
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
-2. Both `GK2DonkeyAPI.dll` and `SaddleUp.dll` into `BepInEx\plugins`.
+2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
+   `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
 3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.29.0 loaded` and `GK2 Saddle Up 0.9.0
    loaded`.
 4. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in

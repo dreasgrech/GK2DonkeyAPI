@@ -466,7 +466,7 @@ guard directly, since in normal play none of them ever runs), two checks only th
    copy** (what a mod-less game loads) is checked: not hidden, interactable, the same items, standing by the cart
    on ground, in a zone's list; then the take-back, and the chest rides again. The same scenario trips the
    fail-safe lock with a chest aboard (set down at the cart, pickups refused) and undoes it. By hand, for the eyes:
-   sleep with a chest aboard, close the game, rename `BepInEx/plugins/GK2DonkeyAPI.dll` and `SaddleUp.dll` to
+   sleep with a chest aboard, close the game, rename `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `GK2SaddleUp/GK2SaddleUp.dll` to
    `.off`, start the game, load: the chest stands beside where the cart stood, openable, with its items; remove mode
    takes it down normally. Rename back, load again: the chest is lifted back onto the cart (`restored with the
    save`). Status: automated check **passed 2026-10-09** (the zoned case, in the yard); by hand **passed 2026-10-09** in

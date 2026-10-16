@@ -3,14 +3,14 @@
 A release build (-p:ForDist=true) must carry no debug directory (its PDB path would hold this machine's user folder),
 no path into this machine and no source-folder marker, and the API's dependency manifest (the gk2deps.txt resource,
 docs/dependency-check.md) must find every game member it names in the installed game, unchanged: a dist whose members
-changed or vanished needs a re-audit and a rebuild before it ships. SaddleUp carries no manifest: it uses no game
+changed or vanished needs a re-audit and a rebuild before it ships. GK2SaddleUp carries no manifest: it uses no game
 member of its own (only the API), which this checks too.
 Exit code 1 on any finding."""
 import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
-NO_MANIFEST = {"SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable)"}
+NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable)"}
 
 props = open(os.path.join(REPO, "Directory.Build.props"), encoding="utf-8").read()
 GAME = re.search(r"<GameDir[^>]*>([^<]+)</GameDir>", props).group(1).strip()

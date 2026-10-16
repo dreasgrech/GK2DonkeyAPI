@@ -10,7 +10,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
 
-1. Reference `GK2DonkeyAPI.dll` (from the release zip, or the installed `BepInEx/plugins/GK2DonkeyAPI.dll`) with
+1. Reference `GK2DonkeyAPI.dll` (from the release zip, or the installed `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll`) with
    `Private=false`, so you never ship a copy of it.
 2. Declare the dependency, then check the API version at startup:
 

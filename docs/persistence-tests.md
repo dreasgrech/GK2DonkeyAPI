@@ -12,8 +12,8 @@ These are the step-by-step tests for donkeys and carts kept with a save (API 0.1
 **After updating to 0.10.0:** the side file moved to format 2. The first load logs `has format 1, this version reads
 2; nothing restored`, so spawn your test donkeys once more, then sleep. From then on the file is format 2.
 
-**Installed for these tests:** `GK2DonkeyAPI.dll`, `SaddleUp.dll` and the test mod `GK2DonkeyHerd.dll` in
-`BepInEx\plugins`. The first two are deployed by every build. The herd mod is only for testing and isn't deployed by
+**Installed for these tests:** `GK2DonkeyAPI.dll`, `GK2SaddleUp.dll` and the test mod `GK2DonkeyHerd.dll` in
+`BepInEx\plugins`, each in its own folder. The first two are deployed by every build. The herd mod is only for testing and isn't deployed by
 default (since 2026-10-01, so normal play doesn't get its keys): build it with `dotnet build -c Release -p:Deploy=true`
 in `examples/GK2DonkeyHerd` while the game is closed. Remove it afterwards (that is test J5).
 
@@ -207,7 +207,7 @@ Needs a second slot: start a new game, sleep once, and you have `Steam_2`.
 ### T16. Played without the mod in between
 
 1. With kept donkeys and cargo, sleep and quit.
-2. Move `GK2DonkeyAPI.dll` and `SaddleUp.dll` out of `BepInEx\plugins`.
+2. Move the folders `GK2DonkeyAPI` and `GK2SaddleUp` out of `BepInEx\plugins`.
 3. Start the game, load `Steam_1` (no donkeys; the cargo lies on the ground), sleep, quit.
 4. Put both DLLs back. Start and load `Steam_1`.
    - **Log:** `... belongs to the save of <time> (day N), but Steam_1 was saved <later time> ...; ignored, nothing

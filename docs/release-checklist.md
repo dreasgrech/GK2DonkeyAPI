@@ -29,8 +29,12 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 ## 2. The offline checks (no game launch)
 
-In `tests/`, each with `dotnet run -c Release`: `CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`,
-`FrameworkScan`, `PackerScan` (plain, `-- --shapes`, `-- --real --thorough`). All must end green; `FrameworkScan`
+`bash tools/release-scans.sh` (after the release build of section 3: the manifest check reads its DLL) runs them
+all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: the dependency
+manifest verified against the installed game (`tools/DepManifest`), `check-dist.py`, and in `tests/`
+`CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
+`--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game). All must
+end green; `FrameworkScan`
 also fails on any `Plugin` method named after a Unity message (a quit-time save once sat in `OnApplicationQuit`; it
 is in the `Application.quitting` handler now).
 
@@ -40,12 +44,14 @@ The game may be running: a build is fine, only the deploy copy into the game nee
 from `bin/`, not from the game folder.
 
 ```
-cd src\GK2DonkeyAPI && dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false
-cd src\SaddleUp     && dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false
-copy src\GK2DonkeyAPI\bin\Release\netstandard2.1\GK2DonkeyAPI.dll dist\
-copy src\SaddleUp\bin\Release\netstandard2.1\SaddleUp.dll dist\
-python tools\check-dist.py
+bash tools/build-dist.sh           # GK2DonkeyAPI.dll and GK2SaddleUp.dll into dist/, then check-dist.py
+bash tools/release-scans.sh        # section 2
+python tools/make-release-zip.py   # release/GK2-Saddle-Up-<version>.zip
 ```
+
+`build-dist.sh` builds each with `dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false`, stops on
+a failed build or any compiler warning, copies the DLLs into `dist/` and runs `check-dist.py` (build output in
+`release/logs/build-dist.log`).
 
 `-p:ForDist=true` leaves out the debug directory (its PDB path would hold this machine's user folder) and the
 `GK2DonkeyAPISourceDir` marker (so the DLL reads its embedded `defaults.cfg`, `cargo-layout.cfg` and
@@ -54,6 +60,11 @@ path, a `.pdb` reference, the source-folder marker, an API manifest whose member
 installed game, or a Saddle Up DLL that references a game assembly (it carries no manifest).
 `--no-incremental` matters: after a dev build, a `ForDist` build of the unchanged sources reuses the dev output (the
 property change doesn't invalidate the compile), and the check then fails on the PDB path (seen 2026-10-13).
+
+`make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
+`BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod),
+read back and compared with `dist/`; this zip is
+the Nexus upload (extracts into the game folder). `release/` is not kept in git.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
 again; `bin/` holds whichever was built last.
@@ -70,7 +81,8 @@ again; `bin/` holds whichever was built last.
 Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
-2. Put the two `dist/` DLLs into `BepInEx\plugins` over the dev builds.
+2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
+   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.

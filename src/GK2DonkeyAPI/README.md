@@ -197,7 +197,8 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 ## Install
 
 1. BepInEx 5 in the Steam game folder.
-2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`.
+2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`, each in its own folder
+   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
 3. Start the game once; the log says `GK2 Donkey API 0.29.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
