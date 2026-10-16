@@ -18,7 +18,7 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.9.0";
+        public const string Version = "0.9.1";
 
         // The API this mod is written against: 0.28 has the CartSlots behaviour key (0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22
         // CargoZombies). Checked before anything of the API is used, so an older API gets a clear message instead of a

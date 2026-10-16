@@ -51,7 +51,7 @@ judged.
 ## The probe run (built 2026-10-15, director only)
 
 `tools/GK2ShowcaseDirector/PictureProbe.cs` and `ProbeRun.cs` (the director never ships in the dist). Buttons in the
-director window (F9): **Probe this load** (the load on the cart now) and **Probe run (reviewed + 1-3 items + samples)**,
+director window (Shift+F9): **Probe this load** (the load on the cart now) and **Probe run (reviewed + 1-3 items + samples)**,
 with **Stop**. The run takes every load with a review mark, every load of one to three items and a fixed random 25 each
 of four, five and six items, puts each on the cart as an API test load (`TestLoads.Put`: replaces only test items,
 refuses while anything else is aboard; `TakeOff` at the end) and probes it in one frame step:

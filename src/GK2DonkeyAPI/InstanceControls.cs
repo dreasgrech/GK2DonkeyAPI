@@ -43,6 +43,7 @@ namespace GK2DonkeyAPI
         {
             target = null;
             label = null;
+            zoneCache.Clear();
             DestroyZoneLines();
             UpdateHint();
         }
@@ -405,6 +406,12 @@ namespace GK2DonkeyAPI
         }
 
         private static readonly Dictionary<Mount.Instance, CachedZones> zoneCache = new Dictionary<Mount.Instance, CachedZones>();
+
+        // An instance left the registry (Mount.Unregister): its zones go too. Kept, the entry held the removed instance
+        // and everything it holds until the cache passed 32 entries: a cart left standing and hitched again is a new
+        // instance each time, about 52 objects each (GK2PerfRunner's census and Performance Hog, 2026-10-16: +6 entries
+        // and +314 objects every suite).
+        internal static void Forget(Mount.Instance i) => zoneCache.Remove(i);
 
         private static bool ZonesOf(Mount.Instance i, out CartZones z)
         {

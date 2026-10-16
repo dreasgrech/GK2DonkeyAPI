@@ -8,8 +8,8 @@ using UnityEngine;
 
 namespace GK2ShowcaseDirector
 {
-    // Dev-only director for the showcase video (docs/showcase-video.md, "Automation"). A small window (F9) that sets the
-    // look of a shot without touching the save:
+    // Dev-only director for the showcase video (docs/showcase-video.md, "Automation"). A small window (Shift+F9; plain F9
+    // and Ctrl+F9 are Performance Hog's) that sets the look of a shot without touching the save:
     //   Time of day: EnvironmentEngine.SetTimeOfDayFake, the game's own "show this time" call. It changes the light, the
     //     HUD's sun-and-moon wheel and the town's ambient sounds, and pauses the clock; the save's time and day don't
     //     move, and the game's time-triggered scripts ignore it (Flow_OnTimeOfDayEvent skips fake times).
@@ -50,7 +50,7 @@ namespace GK2ShowcaseDirector
 
         private void Awake()
         {
-            toggleKey = Config.Bind("General", "ToggleKey", new KeyboardShortcut(KeyCode.F9), "Opens and closes the director's window.");
+            toggleKey = Config.Bind("General", "ToggleKey", new KeyboardShortcut(KeyCode.F9, KeyCode.LeftShift), "Opens and closes the director's window.");
             shots = new Shots(this, Config, Logger);
             Logger.LogInfo($"[director] ready; {toggleKey.Value} opens the window, {shots.CaptureKey} takes a screenshot.");
         }
@@ -94,7 +94,7 @@ namespace GK2ShowcaseDirector
                 lastPreset = null;
             }
             // Something of the game's own (sleeping, a cutscene) may have resumed the real time: the window follows.
-            if (timeHeld && EnvironmentEngine.Instance != null && !EnvironmentEngine.Instance.IsPaused)
+            if (timeHeld && InGame && !EnvironmentEngine.Instance.IsPaused)
             {
                 timeHeld = false;
                 Logger.LogInfo("[director] the game resumed the real time itself.");
@@ -110,7 +110,9 @@ namespace GK2ShowcaseDirector
             window = GUILayout.Window(0x5D1EC7, window, DrawWindow, "Showcase director (" + toggleKey.Value + ")");
         }
 
-        private static bool InGame => EnvironmentEngine.Instance != null && MainGame.Instance != null && MainGame.Instance.GameSave != null;
+        // MainGame first: EnvironmentEngine.Instance searches the scene and logs an error each time it finds none (the menu:
+        // 2174 errors a minute, 2026-10-16, Performance Hog).
+        private static bool InGame => MainGame.Instance != null && MainGame.Instance.GameSave != null && EnvironmentEngine.Instance != null;
 
         private void DrawWindow(int id)
         {

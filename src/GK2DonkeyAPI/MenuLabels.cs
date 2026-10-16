@@ -54,7 +54,7 @@ namespace GK2DonkeyAPI
             next = Time.unscaledTime + Every;
             try
             {
-                GameObject w = GameObject.Find("GK2ModsMenuWindow");
+                GameObject w = ModsWindow.Showing();
                 if (w == null)
                 {
                     return;

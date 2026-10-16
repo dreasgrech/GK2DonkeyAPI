@@ -240,6 +240,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            InstanceControls.Forget(i);
             if (byFullId.TryGetValue(i.FullId, out Instance same) && same == i)
             {
                 byFullId.Remove(i.FullId);

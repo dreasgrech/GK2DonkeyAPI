@@ -114,7 +114,7 @@ namespace GK2DonkeyAPI
             {
                 return null;
             }
-            GameObject w = GameObject.Find(FrameworkWindow);
+            GameObject w = ModsWindow.Showing();
             if (w == null)
             {
                 return null;

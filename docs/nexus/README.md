@@ -14,7 +14,7 @@ with `[img]URL[/img]` (Nexus hosts the image once it is uploaded to the mod's Im
 heading tag that renders everywhere, so headings are `[size=5][b]`. Nexus strips unknown tags rather than showing
 them, so the `{{ }}` lines render as plain text if one is forgotten: search for `{{` before saving the page.
 
-**Taking the pictures:** the showcase director (`tools/GK2ShowcaseDirector`, dev-only, F9) sets a shot up and takes
+**Taking the pictures:** the showcase director (`tools/GK2ShowcaseDirector`, dev-only, Shift+F9) sets a shot up and takes
 it: time of day and weather, HUD off, the keeper at a saved spot, Saddle Up's donkey and cart brought and placed,
 the cart loaded (six logs, mixed, corpse, random), items dropped along a route, coat and paint variants in a loop, F10 to
 capture into `Pictures\GK2 Saddle Up shots`; a cargo series and a look series write same-crop frames with a

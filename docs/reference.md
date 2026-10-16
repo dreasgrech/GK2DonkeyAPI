@@ -300,7 +300,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.29.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.29.1 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

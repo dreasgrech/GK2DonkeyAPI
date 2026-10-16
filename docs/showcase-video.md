@@ -50,7 +50,7 @@ if it keeps going wrong by hand.
 
 ### 1. The director (a dev plugin, not shipped)
 
-**Built 2026-10-05, first part: time of day and weather** (`tools/GK2ShowcaseDirector`, F9; untested in game):
+**Built 2026-10-05, first part: time of day and weather** (`tools/GK2ShowcaseDirector`, Shift+F9; untested in game):
 - **Time:** a slider and presets (dawn, morning, noon, afternoon, dusk, night, midnight) through the game's
   `EnvironmentEngine.SetTimeOfDayFake`. It changes the light, the HUD's sun-and-moon wheel (`UIHUDWheel` follows fake
   times) and the town's ambient sounds. The clock pauses; the save's time and day don't move, and the game's

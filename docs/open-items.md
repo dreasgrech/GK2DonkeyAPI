@@ -273,7 +273,7 @@ closed):
   cache still pointed into it. Now cleared when a view is parked, and only used while it is inside this donkey's
   current view (`IsChildOf`). Test: with several standing donkeys (some far enough to be parked and woken), every
   "[E] Ride" sits over its own donkey.
-- **Showcase director, time and weather** (built 2026-10-05, [showcase-video.md](showcase-video.md)): F9 window,
+- **Showcase director, time and weather** (built 2026-10-05, [showcase-video.md](showcase-video.md)): Shift+F9 window,
   untested. Check: the presets change the light and the HUD wheel; the real time stays (the label); back to the real
   time; the weather list (`[director] N weather states: …`), holding one, back to normal.
 - **Zombies on the cart** ([zombies-on-cart.md](zombies-on-cart.md), investigated 2026-10-04): possible with

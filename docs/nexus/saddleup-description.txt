@@ -101,7 +101,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]Install the [url=https://www.nexusmods.com/graveyardkeeper2/mods/48]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+[*][size=3]Install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
@@ -125,6 +125,18 @@ It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plu
 [size=3]Unfortunately, although the donkey can move in any direction, since the game only has left and right facing donkey sprites, those are the only two directions I could have the donkey face in visually.  This means that when you go up or down, the donkey will still keep facing the left/right direction but this is only a visual thing.
 
 In the future I am planning to investigate with external assets so maybe we can have sprites of the donkey which face up and down.  That would be cool.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]A work in progress[/color][/b][/size]
+
+[size=3]This is a big mod and it has taken a lot of time to arrive to it's current state and a lot of testing was involved as well.  But all my testing was conducted in the starting areas and that's because I have spent more time developing this mod than actually playing the game, which means that there are areas in the game where I haven't yet been able to test the donkeys.
+
+So it would be immensely appreciated if you let me know what issues you encounter when using the donkey in different places.
+
+One other thing is the cargo on the cart, and I currently support up to six carryable items on the cart and as you can image, given the amount of different carryable items in the game and the cart supporting up to six different items, there are lot of different combinations of cargo layout configurations.
+If you encounter any cargo set of items on the cart which doesn't look right, please also let me know about it so I can fix it.
+
+I would say that most of the combinations of cargo items look alright but there are a lot.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]For modders[/color][/b][/size]

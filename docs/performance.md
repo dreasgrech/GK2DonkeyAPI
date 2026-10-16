@@ -277,9 +277,89 @@ least twice a frame, a layout pass and a repaint).
 - **What would still help:** fewer controls per event. The help texts are most of them: hiding them behind a switch
   would cut the panel's work by about half. The panel is a dev tool, closed in normal play, so this is optional.
 
+## The Mods-window lookups (2026-10-16, Performance Hog)
+
+**Seen:** a 5 s recording of Performance Hog 1.0.1 (a per-mod profiler for GK2, dev machine only;
+[performance-hog.md](performance-hog.md) has how to profile with it) put the API at
+0.29 ms a frame of 8.3 (6 donkeys, 4 foals), but `Plugin.LateUpdate` had 2-3 ms frames all through the recording.
+Our `[perf]` line agreed (Tick worst 2.4-3.2 ms per 10 s) while every part it times stayed at or under 0.2 ms: the
+time was outside the parts.
+
+**Measured** with a temporary probe that timed each step of `MountRegistry.Tick` (worst per 10 s, frames over 1 ms):
+`LookPreview.Tick` 1.7-2.1 ms and `MenuLabels.Tick` 0.7-1.3 ms, 40 frames in each 10 s (their 4-a-second timer),
+while playing with the Mods window closed. Each looked the window up with `GameObject.Find("GK2ModsMenuWindow")`, a
+walk of the whole scene that found nothing. Every other step stayed under 0.5 ms apart from one-off peaks (views
+built after a load, a door, a foal's route).
+
+**Fixed** (`ModsWindow.cs`, both use it): the window is looked for only at the main menu or while the game is paused
+(it opens only from the main menu or over the pause menu, a window on the game's modal stack, and `MainGame` pauses
+while one is open), and once found it is kept (the framework makes it once: `ModsMenuWindow.CreateInstance`) and only
+checked for `activeInHierarchy`. Probe after: both 0.00-0.01 ms while playing; the Mods menu page, its picture and
+its dropdown labels as before. The probe is gone again.
+
+## The first scripted suite (2026-10-16, tools/GK2PerfRunner, docs/performance-hog.md)
+
+RuinedTemple, a 23.4-unit loop, night held (lantern lit), dev panel off, 4 foals; 120 FPS cap, so the frame rate
+can't show our cost: the main-thread milliseconds do. `suite-2026-10-16_21-02-31.txt`.
+
+| Run | API ms/frame | API worst ms | API alloc/frame | Mods of the frame's work |
+|---|---|---|---|---|
+| walk | 0.159 | 0.62 | 2.4 KB | 0.21 of 4.81 ms |
+| ride | 0.209 | 0.46 | 2.1 KB | 0.26 of 4.92 ms |
+| cart (6 items) | 0.222 | 0.50 | 1.4 KB | 0.27 of 5.21 ms |
+| idle | 0.173 | 0.43 | 1.2 KB | 0.22 of 4.74 ms |
+| hitch | 0.220 | 17.09 | 3.2 KB | |
+
+- **Steady cost**: 0.16-0.22 ms a frame in every state, worst frames under 0.7 ms; no garbage collection started in
+  our code in any run; the game's own collections (about 13 ms) show in each run's longest frames.
+- **Cargo changes are the hitch**: `Cargo.Rig.OnChanged` took up to 4 ms a call, and 10-17 ms in the frames where
+  the test load put six items on or took six off at once (one call per item, each refreshing the views of everything
+  on the cart). A player loads one item at a time: about 2-4 ms for that frame, more the fuller the cart. The take-off
+  frames also hold six writes of `BepInEx/GK2-test-loads.txt` (TestLoads.CartChanged, dev only), so they overstate it.
+  Not changed (close to release); a refresh of only the item that changed would cut it.
+- **H and G**: Saddle Up's handlers 2.2-2.6 ms at worst (the summon and hitch).
+- **Memory**: the API held 1.2 MB, +105 KB and +500 objects over the 9 minutes. Caches filling for the first time,
+  or a leak: a second suite in the same session tells (Performance Hog compares with the last snapshot).
+- **Two more suites in one session** (`suite-2026-10-16_21-18-26.txt`, `suite-2026-10-16_21-29-15.txt`): the steady
+  numbers repeat within about 0.02 ms (walk 0.138 / 0.164, ride 0.211 / 0.219, cart 0.219 / 0.233, idle 0.171 /
+  0.177 ms a frame), hitch worst 18.9 / 17.5 ms (the cargo changes again). One frame of 3.3 ms in `Plugin.LateUpdate`
+  in two runs (cart, walk), once each: not in the parts Performance Hog can see; the `[perf]` line of a pass 2 names it.
+  Memory: +99 KB in the first (from a fresh start, as the first session's +105 KB), **+39 KB and +314 objects in the
+  second**: slowing, not flat. Caches still filling or a slow leak (about 4 KB a minute); the runner's census (a count
+  of every static collection of the API at the start, after the walk run and at the end of a suite, built
+  2026-10-16) names what grew. The dev test load's file was opened 109 times and written 108 times in the session
+  (TestLoads.CartChanged on every cargo change): dev-only, but in the cargo-change frames.
+- **Log**: about 16 lines every two minutes with the foals about (the routine `[foal]`/`[shuffle]` lines below).
+
+## The zone cache held removed instances (2026-10-16, found by the suites)
+
+**Seen:** three suites in one session: the API at 3,770, 4,080 and 4,394 objects (Performance Hog's memory
+snapshots), +38-40 KB and about 310 objects every suite after the first. The runner's census of the API's static
+collections: everything flat after the first suite except `InstanceControls.zoneCache`, +6 entries every suite
+(7, 13, 19).
+
+**Cause:** a cart left standing (H while driving) is an instance of its own; hitched again (G), it leaves the
+registry. `zoneCache` (the load-on-foot zones of the standing instances, InstanceControls.cs) is keyed by the
+instance and kept the entry, so the removed instance and everything it holds (about 52 objects) stayed alive until
+the cache passed 32 entries and was emptied. Six such instances a suite (the hitch run's five, the idle run's one):
+bounded at about 33 instances (about 215 KB), but held for nothing.
+
+**Fixed:** `Mount.Unregister` drops the instance's entry (`InstanceControls.Forget`), and `InstanceControls.Clear`
+(the game left, every instance gone) empties the cache. **Confirmed 2026-10-16** with three suites in a row
+(`suite-2026-10-16_22-34-57.txt`, `_22-44-30`, `_22-54-10`): the API at 3,509 objects after each (+66 KB warming
+up, then +1.3 KB and +8 B; before the fix 3,770, 4,080, 4,394), `zoneCache` at 1-2 entries, and the third suite's
+census without any growth. The steady numbers as before: walk 0.15-0.16, ride 0.21-0.22, cart 0.22, idle 0.17-0.18
+ms a frame; hitch worst 16.5-19.0 ms (the cargo changes, unchanged).
+
 ## Still open
 
 - **The per-frame work, about 0.5 ms with 63:** Shuffle, Pose and Ground checks. Not visible at the cap. Worth a pass
   if slower PCs or hundreds of donkeys matter.
+- **What the API logs for players:** the routine `[foal]` and `[shuffle]` lines (follows, works out a way round, route
+  found, found no step) are written without the dev tools too, up to 4 a second, for as long as foals are about; their
+  text is built before the 4-a-second budget is checked. Proposed 2026-10-16: those dev-only, the ones a bug report
+  needs kept (can't follow, stood inside, caught up out of sight); not decided.
+- **One-off hitches:** calling the cart (G) took 25.8 ms in one frame (Performance Hog bills it to Saddle Up's key
+  handler; the work is the API's view build). Not looked into yet.
 - **The `[shuffle] frame +N` turn diagnostics** read the body before the frame's own position write. They can't tell
   whether a turn jumps on screen.

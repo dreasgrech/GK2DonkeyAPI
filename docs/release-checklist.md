@@ -81,12 +81,14 @@ again; `bin/` holds whichever was built last.
 Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
+   Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\` and the
+   dev marker `BepInEx\config\dreas.gk2.dev`.
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up 0.9.0 loaded`,
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`,
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).
@@ -104,7 +106,35 @@ the director: H, G, two items, H leaves the cart, G brings the same cart back wi
 all seven plugins loaded, layout `from embedded`, no `Dev tools unlocked`, no warning, error or exception in 387 lines,
 the fresh cfgs have no `[Debug]` section.
 
-## 6. Hand-off
+Run 2026-10-16 18:05 with the release zip itself (`release/GK2-Saddle-Up-0.9.0.zip` extracted into the game folder:
+`plugins\GK2DonkeyAPI\`, `plugins\GK2SaddleUp\`), as a true first start: no cfgs, no dev marker, no director, and the
+save's side file moved aside with Steam Cloud switched off (with it on, Steam downloads the side file again before the
+game starts). No donkey after loading; H spawned it, G the cart, six logs loaded, set down behind the cart, H left the
+cart, G hitched the same cart, items taken off on foot; the Mods menu page; 460 lines, no warning, error or exception;
+layout from embedded, fresh cfgs at defaults (6 slots, foals indoors on) without `[Debug]`. Nothing saved; every save
+file verified identical afterwards.
 
-The user commits and tags; the release notes name the game build (`25910882`, 1.010 as of 2026-10-13) and
-what `docs/open-items.md` still lists as unseen in game.
+Run 2026-10-16 23:20 with the zip rebuilt at 23:03 (two performance fixes after the 18:05 one: the Mods-window lookup
+and the zone cache, docs/performance.md; self-tests 332/332, scans 12/12 after `ModsWindow` was sorted into
+`game-code.txt`), the same true first start (cfgs, marker, director, perf runner, Performance Hog and the side file
+aside, Steam Cloud off): no donkey after loading; H, G (cart 2), two items, H left it as 3, G hitched 3 with both items,
+H left it again, on foot E loaded a log onto the standing cart and took one off (the zone path of the fix); the Mods
+page's picture built; 369 lines, no warning, error or exception; layout from embedded; fresh cfgs without `[Debug]`.
+Nothing saved; every save file verified identical; everything restored and the dev builds redeployed.
+
+## 6. Versions, changelog and hand-off
+
+Released versions are never reused (0.9.0 went public 2026-10-16): a release with any change gets new numbers.
+
+- **The numbers**: major.minor.patch. Fixes only: the patch (0.9.0 -> 0.9.1); new features or settings: the minor
+  (0.9.x -> 0.10.0). The API's own number moves the same way (`Plugin.Version`, and `<Version>` in its csproj); a
+  change to its public surface (`tests/ApiSurface`) is at least a minor. Saddle Up's `Version` in `Plugin.cs` and its
+  csproj, kept equal. Then the version lines: `README.md` (the table, the log line), `src/GK2DonkeyAPI/README.md`,
+  `src/SaddleUp/README.md`, `docs/api.md` (the version line, the `BepInDependency` example, a history entry),
+  `docs/reference.md` (the log line), `dist/README.md`. `git grep` the old numbers: history entries stay.
+- **The changelog** (`CHANGELOG.md`): every change goes under **Unreleased** when it is made, not at release. At
+  release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
+  goes on top. Its "For players" part is the Nexus changelog text for that version.
+- **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
+  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`25910882`,
+  1.010 as of 2026-10-13) and what `docs/open-items.md` still lists as unseen in game.
