@@ -369,7 +369,7 @@ static class Review
         string lt1 = CargoLayout.ToText();
         restoreL.Invoke(null, new object[] { lt1, false });
         string lt2 = CargoLayout.ToText();
-        var back = CargoLayout.OnPairs.FirstOrDefault(o => o.Item == "box_appliances_1");
+        var back = CargoLayout.OnPairs.FirstOrDefault(o => o.Item == lowOnLows.Item && o.A == lowOnLows.A && o.B == lowOnLows.B); // the file may hold other offsets for the same item
         if (lt1 != lt2 || CargoLayout.OnPairs.Count != ops.Count + 1) Console.WriteLine($"  round trip: same text {lt1 == lt2}, {CargoLayout.OnPairs.Count} one-pair offsets read back (expected {ops.Count + 1}), back {(back == null ? "none" : back.Offset.ToString("F3"))}");
         Check(lt1 == lt2 && CargoLayout.OnPairs.Count == ops.Count + 1 && back != null && back.Offset == lowOnLows.Offset && lt1.Contains("[onpair box_appliances_1 on box_appliances_1+box_appliances_1]"),
             "a one-pair offset is written as [onpair <item> on <a>+<b>] and reads back unchanged");

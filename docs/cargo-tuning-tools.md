@@ -349,6 +349,10 @@ pair**, which creates `[onpair <item> on <a>+<b>]` (size classes, either order) 
 nothing jumps. While it exists the box's sliders, Seat it and Reset edit it, the header says "this pair only", and on
 that pair it replaces the class's correction; everywhere else the class's applies. **On every pair** again drops it
 (Undo brings it back). The on-top relation's height still applies under it, as for the class's correction.
+Since 2026-10-16 **only on this pair** comes first and is the default: with no one-pair offset yet, the box shows the
+class's values and the first slider move or Seat it creates the one-pair offset there (Reset has nothing to reset
+until then). **On every pair** switches that item-on-pair to editing the class's value for the rest of the session.
+An existing one-pair offset always wins over the class's on its pair (`Lookup.ForOnPair` in the packer).
 
 The tuning ladder is unchanged: the contact is still `onpair:<class>`, tuned by the class entry, and a one-pair offset
 is an exception to it, so the "in N of 1715 loads" counts do not move. The review fingerprint takes the offset in for

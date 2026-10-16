@@ -25,7 +25,7 @@ namespace GK2DonkeyAPI
         private const string TipHeightTwo = "Height above the cart floor. For the item on top this is how the two stack.";
         private const string TipOnPair = "This item starts over the middle of the two below. This is an extra move for it, only when it lies alone on top of a pair. Nothing under it moves.";
         private const string TipOnPairEvery = "One offset for this item wherever it lies alone on top of a pair, whatever the pair (the class's onpair_*).";
-        private const string TipOnPairOnly = "An offset for this item only when it lies alone on top of this pair (these two size classes): it replaces the every-pair offset here and nowhere else. Back to 'on every pair' drops it.";
+        private const string TipOnPairOnly = "An offset for this item only when it lies alone on top of this pair (these two size classes): it replaces the every-pair offset here and nowhere else. The default: the first slider move or Seat makes it, starting where the item lies. Back to 'on every pair' drops it.";
         private const string TipLooksRight = "Freeze this contact exactly as it lies now. It counts as tuned and no fallback can move it again.";
         private const string TipSeat = "Rest this item on what is really under it (its measured shape, 3 cm sunk in). Written as a tuning; one Undo step.";
         private const string TipReset = "Forget this contact's tuning; it follows the fallbacks again.";
@@ -425,6 +425,12 @@ namespace GK2DonkeyAPI
         // load again (it holds the next untuned contact, which is why it was loaded). When only skipped ones are
         // left, the queue goes round to them.
         private static readonly HashSet<string> skippedKeys = new HashSet<string>(StringComparer.Ordinal);
+
+        // A lone item's "Applies" row: "only on this pair" is the default, so a slider move makes a one-pair offset; the
+        // item-on-pair keys (EveryPairKey) the user switched to "on every pair" this session edit the class's instead.
+        private static readonly HashSet<string> onPairEvery = new HashSet<string>(StringComparer.Ordinal);
+
+        private static string EveryPairKey(string item, string a, string b) => string.CompareOrdinal(a, b) <= 0 ? $"{item}|{a}|{b}" : $"{item}|{b}|{a}";
 
         // The untuned contacts in the order they are offered: not skipped first; then the READY ones (a load exists where
         // it is the only untuned contact, so it is tuned on its own, on top of tuned ones); then up the ladder (alone,
@@ -1160,6 +1166,9 @@ namespace GK2DonkeyAPI
                 // when there is one, else the class's (every pair).
                 CargoLayout.OnPairEntry one = below.Count == 2 ? CargoLayout.ForOnPair(it.Id, below[0].Id, below[1].Id) : null;
                 string pairName = below.Count == 2 ? $"{Tinted(below[0], placed)} + {Tinted(below[1], placed)}" : "";
+                string everyKey = below.Count == 2 ? EveryPairKey(it.Id, below[0].Id, below[1].Id) : null;
+                // this pair only: an existing one-pair offset, or (the default) none yet, made by the first edit
+                bool onlyMode = one != null || (everyKey != null && !onPairEvery.Contains(everyKey));
                 GUILayout.BeginVertical(GUI.skin.box);
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{Tinted(it, placed)} alone on top of a pair   ({(one != null ? "this pair only" : e.OnPairTuned ? TunedWord : RulesWord)}; layer {it.Layer + 1}){UsedIn("onpair:" + CargoSheet.ClassOf(it.Id))}", label);
@@ -1172,6 +1181,11 @@ namespace GK2DonkeyAPI
                     float d = CargoShapes.SeatDelta(LiveResult(placed), k, CargoSheet.ShapeOf);
                     if (!float.IsNaN(d))
                     {
+                        if (onlyMode && one == null)
+                        {
+                            one = CargoLayout.AddOnPair(it.Id, below[0].Id, below[1].Id, e.OnPair);
+                            Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: an offset for this pair only.");
+                        }
                         if (one != null)
                         {
                             one.Offset.y += d;
@@ -1185,7 +1199,7 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on a pair seated ({d:+0.000;-0.000}){(one != null ? " (this pair only)" : "")}.");
                     }
                 }
-                if (ResetButton(one != null ? one.Offset != Vector3.zero : e.OnPairTuned))
+                if (ResetButton(one != null ? one.Offset != Vector3.zero : !onlyMode && e.OnPairTuned))
                 {
                     if (one != null)
                     {
@@ -1203,23 +1217,27 @@ namespace GK2DonkeyAPI
                 {
                     GUILayout.BeginHorizontal();
                     GUILayout.Label("  Applies", label, Wd(120f));
-                    bool every = GUILayout.Toggle(one == null, Tip("on every pair", TipOnPairEvery), GUI.skin.button, Wd(110f));
-                    bool only = GUILayout.Toggle(one != null, Tip("only on this pair", TipOnPairOnly), GUI.skin.button, Wd(130f));
+                    bool only = GUILayout.Toggle(onlyMode, Tip("only on this pair", TipOnPairOnly), GUI.skin.button, Wd(130f));
+                    bool every = GUILayout.Toggle(!onlyMode, Tip("on every pair", TipOnPairEvery), GUI.skin.button, Wd(110f));
                     GUILayout.Label("  " + pairName, label);
                     GUILayout.EndHorizontal();
-                    if (only && one == null)
+                    if (only && !onlyMode)
                     {
-                        // starts where the item lies now (the class's offset), so nothing jumps
-                        one = CargoLayout.AddOnPair(it.Id, below[0].Id, below[1].Id, e.OnPair);
-                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: an offset for this pair only.");
-                        refresh = true;
+                        // the one-pair offset is made by the first edit, starting where the item lies now (nothing jumps)
+                        onPairEvery.Remove(everyKey);
+                        onlyMode = true;
                     }
-                    else if (every && one != null)
+                    else if (every && onlyMode)
                     {
-                        CargoLayout.RemoveOnPair(one);
-                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: back to the offset for every pair.");
-                        one = null;
-                        refresh = true;
+                        onPairEvery.Add(everyKey);
+                        onlyMode = false;
+                        if (one != null)
+                        {
+                            CargoLayout.RemoveOnPair(one);
+                            Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: back to the offset for every pair.");
+                            one = null;
+                            refresh = true;
+                        }
                     }
                 }
                 TuneFirstNote(placed, "onpair");
@@ -1230,6 +1248,19 @@ namespace GK2DonkeyAPI
                     movedP |= RawSlider("  " + AcrossLabel, ref one.Offset.z, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
                     movedP |= RawSlider("  " + AlongLabel, ref one.Offset.x, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
                     refresh |= movedP;
+                }
+                else if (onlyMode)
+                {
+                    Vector3 v = e.OnPair;
+                    movedP |= RawSlider("  Height", ref v.y, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    movedP |= RawSlider("  " + AcrossLabel, ref v.z, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    movedP |= RawSlider("  " + AlongLabel, ref v.x, -0.4f, 0.4f, canReset: false, tip: TipOnPairOnly);
+                    if (movedP)
+                    {
+                        one = CargoLayout.AddOnPair(it.Id, below[0].Id, below[1].Id, v);
+                        Plugin.Log.LogInfo($"Cargo layout: {it.Id} alone on {below[0].Id}+{below[1].Id}: an offset for this pair only.");
+                        refresh = true;
+                    }
                 }
                 else
                 {

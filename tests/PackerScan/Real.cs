@@ -50,7 +50,7 @@ static class Real
         var parse = typeof(CargoLayout).GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!;
         string t1 = CargoLayout.ToText();
         int ni = CargoLayout.Items.Count, np = CargoLayout.Pairs.Count;
-        CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear();
+        CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear(); CargoLayout.OnPairs.Clear();
         typeof(CargoLayout).GetField("itemOrder", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null).GetType().GetMethod("Clear")!.Invoke(typeof(CargoLayout).GetField("itemOrder", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null), null);
         parse.Invoke(null, new object[] { t1 });
         string t2 = CargoLayout.ToText();
@@ -61,7 +61,7 @@ static class Real
         bool had = probe.HasOnPair; Vector3 hadV = probe.OnPair;
         probe.HasOnPair = true; probe.OnPair = Vector3.zero;
         string t3 = CargoLayout.ToText();
-        CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear();
+        CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear(); CargoLayout.OnPairs.Clear();
         typeof(CargoLayout).GetField("itemOrder", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null).GetType().GetMethod("Clear")!.Invoke(typeof(CargoLayout).GetField("itemOrder", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null), null);
         parse.Invoke(null, new object[] { t3 });
         var back = CargoLayout.Items[probe.Id];
@@ -83,7 +83,7 @@ static class Real
             bool straight = Same(p.A, first) && Same(p.B, second), crossed = Same(p.A, second) && Same(p.B, first);
             return straight || !crossed;
         }
-        var L = new CargoPacker.Lookup { ForItem = ForItem, ForPair = ForPair, FirstIsA = FirstIsA, SameClass = Same, BoxOf = id => Box[C(id)] };
+        var L = new CargoPacker.Lookup { ForItem = ForItem, ForPair = ForPair, FirstIsA = FirstIsA, SameClass = Same, BoxOf = id => Box[C(id)], ForOnPair = (it, a, b) => CargoLayout.FindOnPair(CargoLayout.OnPairs, it, a, b, Same) }; // the one-pair offsets as the game uses them
         var S = new CargoPacker.Settings { Floor = -0.26f, Gap = 0.02f, Overhang = 0.12f, Nestle = 0.03f, LayerShift = -0.03f, BedWidth = 0.75f, BedLength = 0.90f };
         var reps = Box.Keys.ToList();
         var rep = CargoCoverage.Analyse(reps, 6, null, L, S, pairs, items, id => Name[C(id)]);
@@ -116,7 +116,7 @@ static class Real
             }
             void RestoreLayout(string text)
             {
-                CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear();
+                CargoLayout.Items.Clear(); CargoLayout.Pairs.Clear(); CargoLayout.OnPairs.Clear();
                 var order = typeof(CargoLayout).GetField("itemOrder", BindingFlags.NonPublic | BindingFlags.Static)!.GetValue(null);
                 order.GetType().GetMethod("Clear")!.Invoke(order, null);
                 typeof(CargoLayout).GetMethod("Parse", BindingFlags.NonPublic | BindingFlags.Static)!.Invoke(null, new object[] { text });
@@ -219,7 +219,8 @@ static class Real
                         if (inLayer != 1 || be == bs) continue;
                         lone++;
                         var e = ForItem(r.Id[i]);
-                        Vector3 op = e != null ? e.OnPair : Vector3.zero;
+                        var one = CargoLayout.FindOnPair(CargoLayout.OnPairs, r.Id[i], r.Id[bs], r.Id[be], Same); // a one-pair offset replaces the class's there
+                        Vector3 op = one != null ? one.Offset : e != null ? e.OnPair : Vector3.zero;
                         float mx = (r.Target[bs].x + r.Target[be].x) * 0.5f + op.x, mz = (r.Target[bs].z + r.Target[be].z) * 0.5f + op.z;
                         if (Mathf.Abs(r.Target[i].x - mx) > 1e-4f || Mathf.Abs(r.Target[i].z - mz) > 1e-4f)
                         {

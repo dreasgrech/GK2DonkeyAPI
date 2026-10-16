@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cargo Series Check</title>
+<style>
+:root { --bg: #1d1f22; --card: #2a2d31; --text: #e8e6e3; --muted: #9a9a9a; --ok: #3f9b4f; --bad: #c0463c; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+header { position: sticky; top: 0; background: var(--bg); padding: 12px 16px; border-bottom: 1px solid #333; z-index: 2; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.muted { color: var(--muted); }
+.rowcard { background: var(--card); border-radius: 8px; margin: 12px 16px; padding: 10px; border: 3px solid transparent; }
+.rowcard.done { border-color: #555; }
+.pics { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.pic { position: relative; border: 3px solid var(--ok); border-radius: 6px; overflow: hidden; cursor: pointer; background: #111; }
+.pic.wrong { border-color: var(--bad); }
+.pic.wrong::after { content: "wrong"; position: absolute; top: 4px; right: 6px; background: var(--bad); color: #fff; font-weight: 700; font-size: 12px; padding: 1px 6px; border-radius: 4px; }
+.pic img { width: 100%; display: block; image-rendering: pixelated; }
+.pic .step { position: absolute; left: 6px; top: 4px; background: rgba(0,0,0,.6); padding: 0 6px; border-radius: 4px; font-size: 12px; }
+.pic.tuned .step { background: #2f5d8a; }
+.head { display: flex; gap: 12px; align-items: center; margin-bottom: 6px; flex-wrap: wrap; }
+button { border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; color: #fff; background: #444; }
+button.check { background: #2f5d8a; }
+textarea { width: calc(100% - 32px); margin: 0 16px 16px; height: 90px; background: #111; color: var(--text); border: 1px solid #444; border-radius: 6px; }
+@media (max-width: 900px) { .pics { grid-template-columns: repeat(3, 1fr); } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cargo series check</h1>
+  <div class="muted">Each row: one item moved along one axis, -8 to +8 cm; the blue "tuned" picture is where it is now. Click every picture that looks wrong (click again to undo); the rest count as ok. Then press "Checked" for the row.</div>
+  <div class="head" style="margin-top:8px"><span id="count"></span><button id="copy">Copy my marks</button><button id="dl">Download my marks</button></div>
+</header>
+<div id="rows"></div>
+<textarea id="out" readonly placeholder="Your marks appear here after Copy"></textarea>
+<script>
+const DATA = __DATA__;
+const STEPS = [-8, -4, 0, 4, 8];
+const KEY = "cargo-series-check-" + DATA.length;
+let state = {};
+try { state = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { state = {}; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} count(); }
+function count() { const n = DATA.filter(d => state[d.n] && state[d.n].done).length; document.getElementById("count").textContent = n + " of " + DATA.length + " rows checked"; }
+const rowsEl = document.getElementById("rows");
+for (const d of DATA) {
+  const st = state[d.n] || (state[d.n] = { wrong: [], done: false });
+  const card = document.createElement("div");
+  card.className = "rowcard" + (st.done ? " done" : "");
+  const head = document.createElement("div");
+  head.className = "head";
+  const t = document.createElement("b");
+  t.textContent = "#" + d.n + "  moving " + d.axis + (d.axis === "up" ? " (height)" : d.axis === "along" ? " (toward / away from the donkey)" : " (near / far)");
+  head.appendChild(t);
+  const b = document.createElement("button");
+  b.className = "check";
+  b.textContent = st.done ? "Checked" : "Checked?";
+  b.onclick = () => { st.done = !st.done; card.className = "rowcard" + (st.done ? " done" : ""); b.textContent = st.done ? "Checked" : "Checked?"; save(); };
+  head.appendChild(b);
+  card.appendChild(head);
+  const pics = document.createElement("div");
+  pics.className = "pics";
+  d.srcs.forEach((src, i) => {
+    const s = STEPS[i];
+    const p = document.createElement("div");
+    p.className = "pic" + (s === 0 ? " tuned" : "") + (st.wrong.includes(s) ? " wrong" : "");
+    const img = document.createElement("img");
+    img.loading = "lazy";
+    img.src = src;
+    p.appendChild(img);
+    const lab = document.createElement("span");
+    lab.className = "step";
+    lab.textContent = s === 0 ? "tuned" : (s > 0 ? "+" : "") + s + " cm";
+    p.appendChild(lab);
+    p.onclick = () => {
+      const j = st.wrong.indexOf(s);
+      if (j >= 0) st.wrong.splice(j, 1); else st.wrong.push(s);
+      p.className = "pic" + (s === 0 ? " tuned" : "") + (st.wrong.includes(s) ? " wrong" : "");
+      save();
+    };
+    pics.appendChild(p);
+  });
+  card.appendChild(pics);
+  rowsEl.appendChild(card);
+}
+function result() {
+  return JSON.stringify(DATA.map(d => ({ n: d.n, key: d.key, k: d.k, id: d.id, relation: d.relation, partner: d.partner, axis: d.axis, checked: !!(state[d.n] && state[d.n].done), wrong: (state[d.n] && state[d.n].wrong) || [] })));
+}
+document.getElementById("copy").onclick = () => { const r = result(); document.getElementById("out").value = r; try { navigator.clipboard.writeText(r); } catch (e) {} };
+document.getElementById("dl").onclick = () => { const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([result()], { type: "application/json" })); a.download = "cargo-series-marks.json"; a.click(); };
+count();
+</script>
+</body>
+</html>

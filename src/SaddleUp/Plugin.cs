@@ -71,7 +71,7 @@ namespace SaddleUp
             ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness colour", "", v => me.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
             p.Color("Donkey", "CustomHarness", "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
             p.Steps("Donkey", "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Baby donkeys", "Foals that stay with yours and follow it around.", v => me.FoalCount = v, v => v == 0 ? "None" : v.ToString());
-            p.Toggle("Donkey", "FoalsIndoors", me.FoalsComeIndoors, "Baby donkeys come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
+            p.Toggle("Donkey", "FoalsIndoors", true, "Baby donkeys come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
 
             p.Preview("Cart", me, "Your cart");
             ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", me.Paint, "Paint", "", v => me.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);

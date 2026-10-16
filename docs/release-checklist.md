@@ -87,6 +87,10 @@ no `Dev tools unlocked` line, the fresh API cfg has no `[Debug]` section, no scr
 were on the 1.009-hotfix dist; the 1.010 dist of the same evening (pins only: `docs/game-update-25910882.md`) has
 not been rehearsed, nor the 0.29.0 dist of 2026-10-14 (mounted combat; the API rebuilt 18:08 with the hitch event
 order fix).
+Run 2026-10-16 14:21 with the 0.29.0 dist of that day (one-pair cargo offsets, 9 embedded) without the dev marker and
+the director: H, G, two items, H leaves the cart, G brings the same cart back with both items and its paint, one cart;
+all seven plugins loaded, layout `from embedded`, no `Dev tools unlocked`, no warning, error or exception in 387 lines,
+the fresh cfgs have no `[Debug]` section.
 
 ## 6. Hand-off
 

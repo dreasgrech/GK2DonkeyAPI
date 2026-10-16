@@ -57,7 +57,7 @@ namespace GK2ShowcaseDirector
     //     is withdrawn (an IMGUI window is in the picture) and the HUD hidden if asked; the HUD comes back once the file
     //     exists. SuperSize 1 by default: the game's post-processing (CameraFilterPack) may not survive a supersized
     //     capture; 2 is offered and the written size is logged, so a black or shifted file shows at once.
-    internal sealed class Shots
+    internal sealed partial class Shots
     {
         private const string SaddleUpId = "dreas.gk2.saddleup";
         private const int SpotCount = 8;
@@ -168,6 +168,29 @@ namespace GK2ShowcaseDirector
                 SetHud(!hudVisible);
             }
             GUILayout.EndHorizontal();
+            // the cargo picture probe (PictureProbe, ProbeRun; docs/cargo-auto-tune.md)
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button("Probe this load"))
+            {
+                Run(ProbeRoutine());
+            }
+            if (GUILayout.Button("Probe run (atlas + reviewed + 1-3 items + samples)"))
+            {
+                Run(ProbeRunRoutine(false));
+            }
+            if (GUILayout.Button("Atlas only (another facing)"))
+            {
+                Run(ProbeRunRoutine(true));
+            }
+            bool wasOn = GUI.enabled;
+            GUI.enabled = probeStatus.Length > 0;
+            if (GUILayout.Button("Stop", GUILayout.Width(60f)))
+            {
+                probeStop = true;
+            }
+            GUI.enabled = wasOn;
+            GUILayout.EndHorizontal();
+            if (probeStatus.Length > 0) GUILayout.Label("Probe run: " + probeStatus + (probeStop ? " (stopping after this load)" : ""), rich);
             GUILayout.Label($"Size x{superSize.Value}, HUD {(hideHudForCapture.Value ? "hidden" : "kept")} for the capture, into {folder.Value}", rich);
 
             // Spots
@@ -1604,6 +1627,22 @@ namespace GK2ShowcaseDirector
             }
             RestorePanel();
             Capturing = false;
+        }
+
+        // The cargo picture probe (PictureProbe): the load on the cart measured in the game's pixels, the id picture and
+        // the numbers written next to the shots, the numbers logged.
+        private IEnumerator ProbeRoutine()
+        {
+            HidePanel();
+            yield return null; // out of OnGUI, the panel's tint gone: the probe renders and reads back from a normal frame step
+            yield return null;
+            string dir = Path.Combine(folder.Value, "probe");
+            Directory.CreateDirectory(dir);
+            var summary = new System.Text.StringBuilder();
+            string why = ProbeOne(dir, (int)(DateTime.Now.TimeOfDay.TotalSeconds), "this-load", "", "the load on the cart", true, summary);
+            RestorePanel();
+            Say(why == null ? $"Probed the load on the cart into {dir}: {summary.ToString().Trim()}" : "Probe: " + why);
+            log.LogInfo("[probe] " + (why ?? summary.ToString().Trim()));
         }
 
         private static string PngSize(string path)

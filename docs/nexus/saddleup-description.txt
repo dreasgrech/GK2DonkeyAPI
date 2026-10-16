@@ -22,7 +22,7 @@
 
 
 [size=4][b]A cart that carries six[/b][/size]
-[size=3]Everything you pick up while driving goes on the cart, stacked in three layers. Piles, tables, graves and quest hand-ins take from it as if you held the item.[/size]
+[size=3]Everything you pick up while driving goes on the cart, stacked in three layers (or four or two items, in the settings). Piles, tables, graves and quest hand-ins take from it as if you held the item.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img][/center]
 
@@ -46,7 +46,7 @@
 
 
 [size=4][b]Fight from the saddle[/b][/size]
-[size=3]In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim.[/size]
+[size=3]In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim. The cart stays out of fights: it is left standing when your armour goes on.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-a.gif?v=2[/img][/center]
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-b.gif?v=2[/img][/center]
@@ -60,7 +60,8 @@
 
 
 [size=4][b]Leave it standing[/b][/size]
-[size=3]Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with [b]E[/b]. Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.[/size]
+[size=3]Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with [b]E[/b].
+Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png?v=2[/img][/center]
 
@@ -74,30 +75,39 @@
 [list]
 [*][size=3][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/size][/*]
 [*][size=3][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/size][/*]
-[*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item.[/size][/*]
+[*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
 [*][size=3][b]B[/b] — ring the bell.[/size][/*]
+[*][size=3][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.[/size][/*]
 [/list]
 [size=3]All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
 
-[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu. Without it: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
+[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png?v=2[/img][/center]
+
+[size=3]Without it: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/size][/*]
+[*][size=3]Install [url=https://github.com/BepInEx/BepInEx/releases]BepInEx 5[/url] (5.4.23 or newer) into the game folder and start the game once.[/size]
+
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
+[/*]
 [*][size=3]Drop [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from the download into [i]BepInEx\plugins[/i].[/size][/*]
 [*][size=3]Start the game. Press [b]H[/b].[/size][/*]
 [/list]
 [size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
-[b]Game updates.[/b] Built for Steam game build 25910882 (1.010). After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.[/size]
+[b]Game updates.[/b] Built for Steam game build 25910882 (1.010). After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
+
+[b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete [b]GK2DonkeyAPI.dll[/b] and [b]SaddleUp.dll[/b] from [i]BepInEx\plugins[/i]. Your saves still load without them.
+
+[b]Found a bug?[/b] Report it in the Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
 
 [line]
 [size=5][b][color=#f0b45a]For modders[/color][/b][/size]

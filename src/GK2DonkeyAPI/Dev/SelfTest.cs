@@ -176,6 +176,11 @@ namespace GK2DonkeyAPI
             // scenario hides it, its own cost would be in the measurement.
             bool lodOn = Lod.On, idleOff = Lod.IdleSwitchesOff;
             int perFrame = Lod.SpawnsPerFrame;
+            // A test load left on the cart from the panel (TestLoads.Put, e.g. the review's Load it) holds every cart at
+            // its size until Take off; the scenarios check the setting alone, so the floor is off for the run and back
+            // after it. Found 2026-10-16: "two off: the size follows the setting (2 on it, 3 slots)" after a review session.
+            int slotFloorWas = Cargo.SlotFloor;
+            Cargo.SlotFloor = 0;
             // Where the keeper stood: he is put back there at the end. The run itself starts from the remembered spot
             // (Debug.SelfTestSpot, written by a run that passed everywhere) when it is in this scene.
             Vector3 origin = Keeper();
@@ -288,6 +293,7 @@ namespace GK2DonkeyAPI
             Lod.On = lodOn;
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
+            Cargo.SlotFloor = slotFloorWas;
             current = "the world's own donkeys";
             var after = new Dictionary<string, string>();
             foreach (Mount.Instance i in Mount.All)

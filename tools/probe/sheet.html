@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cargo Look Check</title>
+<style>
+:root { --bg: #1d1f22; --card: #2a2d31; --text: #e8e6e3; --muted: #9a9a9a; --ok: #3f9b4f; --bad: #c0463c; --unsure: #b8962e; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, sans-serif; }
+header { position: sticky; top: 0; background: var(--bg); padding: 12px 16px; border-bottom: 1px solid #333; z-index: 2; }
+h1 { font-size: 18px; margin: 0 0 4px; }
+.muted { color: var(--muted); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(360px, 1fr)); gap: 14px; padding: 16px; }
+.card { background: var(--card); border-radius: 8px; padding: 10px; border: 3px solid transparent; }
+.card.ok { border-color: var(--ok); }
+.card.wrong { border-color: var(--bad); }
+.card.unsure { border-color: var(--unsure); }
+.card img { width: 100%; image-rendering: pixelated; background: #111; border-radius: 4px; display: block; }
+.row { display: flex; gap: 8px; margin-top: 8px; align-items: center; flex-wrap: wrap; }
+button { border: 0; border-radius: 6px; padding: 7px 14px; font-weight: 600; cursor: pointer; color: #fff; background: #444; }
+button.ok { background: var(--ok); }
+button.wrong { background: var(--bad); }
+button.unsure { background: var(--unsure); }
+textarea { width: 100%; height: 90px; background: #111; color: var(--text); border: 1px solid #444; border-radius: 6px; box-sizing: border-box; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Cargo look check</h1>
+  <div class="muted">For each picture: does the cargo look right (ok), wrong (something pokes through, floats or overlaps badly), or unsure? Judge it as a player would. Hover a card and press 1 ok, 2 unsure, 3 wrong.</div>
+  <div class="row"><span id="count"></span><button id="copy">Copy my marks</button><button id="dl">Download my marks</button></div>
+</header>
+<div class="grid" id="grid"></div>
+<div style="padding:16px"><textarea id="out" readonly placeholder="Your marks appear here after Copy"></textarea></div>
+<script>
+const DATA = __DATA__;
+const KEY = "cargo-look-check-" + DATA.length;
+let marks = {};
+try { marks = JSON.parse(localStorage.getItem(KEY) || "{}"); } catch (e) { marks = {}; }
+function count() { document.getElementById("count").textContent = Object.keys(marks).length + " of " + DATA.length + " marked"; }
+function save() { try { localStorage.setItem(KEY, JSON.stringify(marks)); } catch (e) {} count(); }
+const grid = document.getElementById("grid");
+let hovered = null;
+function mark(d, c, v) { marks[d.n] = v; c.className = "card " + v; save(); }
+for (const d of DATA) {
+  const c = document.createElement("div");
+  c.className = "card " + (marks[d.n] || "");
+  const img = document.createElement("img");
+  img.loading = "lazy";
+  img.src = d.src;
+  c.appendChild(img);
+  const row = document.createElement("div");
+  row.className = "row";
+  const num = document.createElement("b");
+  num.textContent = "#" + d.n;
+  row.appendChild(num);
+  for (const v of ["ok", "unsure", "wrong"]) {
+    const b = document.createElement("button");
+    b.className = v;
+    b.textContent = v;
+    b.onclick = () => mark(d, c, v);
+    row.appendChild(b);
+  }
+  c.appendChild(row);
+  c.onmouseenter = () => { hovered = [d, c]; };
+  grid.appendChild(c);
+}
+document.addEventListener("keydown", e => {
+  if (!hovered) return;
+  const v = { "1": "ok", "2": "unsure", "3": "wrong" }[e.key];
+  if (v) mark(hovered[0], hovered[1], v);
+});
+function result() {
+  return JSON.stringify(DATA.map(d => ({ n: d.n, mark: marks[d.n] || "", key: d.key, k: d.k, axis: d.axis, d: d.d, kind: d.kind, src: d.src })));
+}
+document.getElementById("copy").onclick = () => {
+  const t = result();
+  document.getElementById("out").value = t;
+  try { navigator.clipboard.writeText(t); } catch (e) {}
+};
+document.getElementById("dl").onclick = () => {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([result()], { type: "application/json" }));
+  a.download = "cargo-look-marks.json";
+  a.click();
+};
+count();
+</script>
+</body>
+</html>

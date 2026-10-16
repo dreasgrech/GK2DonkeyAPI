@@ -55,7 +55,7 @@ All of these apply at once:
 | | Coat colour | Game default | Brown, Dark, Cream, Black, or Custom. |
 | | Harness colour | Game default | Black, Red, Blue, Green, or Custom. |
 | | Baby donkeys | none | Up to 5 foals that stay with yours and follow it around. |
-| | Baby donkeys come indoors | off | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
+| | Baby donkeys come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | 4. Cart | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
 | | Wheel colour | Game default | The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
 | | Wheel hub colour | Game default | The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |
