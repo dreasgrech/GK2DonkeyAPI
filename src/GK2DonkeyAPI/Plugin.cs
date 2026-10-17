@@ -37,6 +37,7 @@ namespace GK2DonkeyAPI
         public readonly Tuned<int> LegAdjustYPx;
         public readonly Tuned<int> BackSeatExtraPx;
         public readonly Tuned<bool> SnapToGround;
+        public readonly Tuned<int> HitchGapPx;
         public readonly Tuned<bool> CartFollowsGround;
         public readonly Tuned<float> CartGroundMaxShift;
         public readonly Tuned<CartSlopeStyle> CartSlope;
@@ -113,6 +114,8 @@ namespace GK2DonkeyAPI
                 "Seen from behind in armour (aiming up) the rider sits side-saddle, legs hidden on the far side: how much higher he sits then, in art pixels, so the armour skirt's hem meets the donkey's back.");
             SnapToGround = cfg.Bind(section, "SnapToGround", Defaults.Get(section, "SnapToGround", true),
                 "Place the donkey at the ground height under its own position (the game does this for every walking object). Off: it takes the keeper's height, which digs it into slopes when it stands beside or behind him.");
+            HitchGapPx = cfg.Bind(section, "HitchGapPx", Defaults.Get(section, "HitchGapPx", 0),
+                new ConfigDescription("Cart style only: the whole cart (shafts, wheels, body, lantern, load) sits this much further behind the mount, in art pixels (negative: closer). 0 for the donkey; a longer mount sets its own through its mount file, so its body isn't drawn inside the cart.", new AcceptableValueRange<int>(-32, 64)));
             CartFollowsGround = cfg.Bind(section, "CartFollowsGround", Defaults.Get(section, "CartFollowsGround", true),
                 "Cart style only: raise or lower the whole cart (wheels, cart body, lantern) as one, every frame, by the ground difference between the cart and the donkey, so the rigid 3D cart does not sink into a slope behind the donkey. The bars between donkey and cart take half of that shift. Nothing rotates.");
             CartGroundMaxShift = cfg.Bind(section, "CartGroundMaxShift", Defaults.Get(section, "CartGroundMaxShift", 0.8f),

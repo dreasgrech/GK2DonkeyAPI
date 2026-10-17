@@ -41,6 +41,13 @@ namespace GK2DonkeyAPI
                 return null;
             }
 
+            // The drawn cart body's place in the world (CartPoint; null without a cart body), the way from the mount
+            // to its cart as the view measured it, and the hitch gap in effect: the "hitch and unhitch" self-test
+            // checks HitchGapPx with these.
+            internal Vector3? TestCartBodyWorld() => cartBodyPart != null && cartBodyPart.T != null && cartBodyPart.T ? CartPoint() : (Vector3?)null;
+            internal Vector3 TestHitchDir() => HitchDirWorld;
+            internal float TestHitchGap() => HitchGapWorld;
+
             // How many of the cart's parts are switched on (a donkey without a cart: none).
             internal int TestCartPartsOn()
             {

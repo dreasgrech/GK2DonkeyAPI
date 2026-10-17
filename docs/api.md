@@ -498,7 +498,7 @@ Where they apply:
 | `Info(section, label, value)` | nothing | read-only |
 | `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
 | `Choice` / `Steps` with `look: true` | as above | also in the look bar |
-| `Preview(section, companion, label = "Your donkey", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
+| `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
 
 - **In the Mods menu:** your mod lists `dreas.gk2.donkeyapi` as its dependency, and GK2 Donkey API has its own entry
@@ -510,7 +510,10 @@ Where they apply:
   `2. Behaviour`, ...), because the framework's Mods menu sorts sections by name and offers no other way to order
   them. The game's Settings window shows the plain names. Moving a section in a later version renumbers it, and the
   page carries a player's values over: a key the cfg lacks under its section takes the value the cfg has under the
-  same name with another number (the old lines stay in the file as orphans; the log says which section moved).
+  same name with another number (of several old copies, the fullest section wins, then the highest number), and the
+  old copy is dropped from the file at the next save; the log says which section moved. A key you move to another
+  section or name: `page.MovedKey("Mount", "Name", "Donkey")` before the row (old key name as a fourth argument when
+  it changed too), and the first bind with nothing in the cfg takes the old value the same way.
 - **`Publish()`, once, after the rows, from your `Awake`:**
   - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
     sorts the sections by name);
@@ -639,12 +642,13 @@ ability that throws is switched off on that instance with one warning. Keys, set
 your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker beast burns while ridden, through the
 instance's `Effect` key).
 
-A settings page gets the rows in two calls, each for a section of its own: `page.MountRows("Mount", companion)`
-adds a **Mount** dropdown (every mount), a **Skin** dropdown with the chosen mount's skins (one row per mount, shown
-for the chosen one only: a dropdown's choices are fixed once built) and the foals toggle, on the cfg keys `Mount`,
-`Skin_<mount id>`, `FoalsWearSkin` (`legacySection` names a section whose older single `Skin` key is read once);
-`page.EffectRows("Effect", companion)` adds the effect list ("As the mount", none, every effect), when it shows and
-how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`. Mounts, skins and
+A settings page gets the rows in three calls: `page.MountRows("Mount", companion)` adds a **Mount** dropdown (every
+mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
+dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>`; `page.FoalRows("Mount",
+companion)` adds the babies rows (how many, come indoors, the same mount and skin) on `Foals`, `FoalsIndoors`,
+`FoalsWearSkin`; `page.EffectRows("Effect", companion)` adds the effect list ("As the mount", none, every effect),
+when it shows and how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`.
+The labels say "mount" and "babies", never "donkey": the mount may be a dragon. Mounts, skins and
 effects registered before the page is built appear with no change to yours; later ones after a restart. `KindsChanged` fires on a
 registration, a pack's declaration or a withdrawal.
 
@@ -689,11 +693,16 @@ same frame keys, as a pack's `front/` subfolder, a sheet pack's `sheet_front`, o
 sorts them on the keeper's own layer above his body while he rides (as the leg overlay), just above the creature
 otherwise.
 
-A skin can carry its own rider settings: `MountSkinDef.Tuning` (a pack's `[Tuning]` section) holds existing tuning
-keys (`SeatAdjustPx`, `RiderOffsetPx`, `LegAdjustYPx`, ...) that the API sets on the wearer as overrides owned by the
-skin (`SetBy` = `dreas.gk2.donkeyapi.skin`) while it is worn, both styles, cleared when it comes off, never saved; a
-key another mod has set on that donkey is left to it. `Offset` / `CartOffset` (a pack's `offset` / `offset_cart`) move
-the pictures on the donkey in art pixels, riding and hitched.
+A skin is the drawing, the mount the creature (docs/mounts-design.md §1). So a skin can move the rider and the cart
+to fit its pictures, when they differ from the mount's other skins: `MountSkinDef.Tuning` (a pack's `[Tuning]`
+section) holds the picture-dependent tuning keys only (`SeatAdjustPx`, `SeatOffset`, `RiderOffsetPx`,
+`TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`, `HitchGapPx`, `Depth`,
+`CenterOffset`; any other key is refused, said once in the log: speed, the cart, foals, the effect and abilities are
+the mount's), which the API sets on the wearer as overrides owned by the skin (`SetBy` = `dreas.gk2.donkeyapi.skin`)
+while it is worn, both styles, cleared when it comes off, never saved; a key another mod has set on that donkey is
+left to it. `Offset` / `CartOffset` (a pack's `offset` / `offset_cart`) move the pictures on the donkey in art pixels,
+riding and hitched. Whether foals wear a skin follows its mount (`MountKindDef.Foals`) and the player's
+`FoalsWearSkin`; a skin has no foals flag of its own.
 
 Every registration returns an `IDisposable`: dispose it to withdraw the skin; `Unregister(owner, id)` does the same.
 Wearers show the game's own look from their next frame and keep their choice, so the skin returns with its provider.

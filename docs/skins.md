@@ -43,10 +43,10 @@ version = 1.0
 kind = own          # own: your colours as drawn. palette: drawn in the donkey's exact colours, so the player's
                     #      coat and harness colours recolour it
 layer = replace     # replace: instead of the donkey. over: on top of the donkey (a saddle, a hat)
-foals = true        # may the baby donkeys wear it
 canvas = 96 96      # every picture is this size (see below)
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
-mount = donkey      # the creature this skin is a look of: donkey, or a mount declared below or by another pack or mod
+mount = donkey      # the mount this skin is a look of: donkey, or a mount declared below or by another pack or mod
+                    # (the baby donkeys wear the skin when the mount has foals and the player keeps that on)
 # sheet = sheet.png # one PNG of cells instead of a file per frame (see above); with it, optionally:
 # columns = 8       # cells per row (default: the sheet's width over the canvas width)
 # frames = ...      # the keys in cell order (default: the list above)
@@ -71,23 +71,27 @@ foals = true          # may the baby donkeys be it
 effect = none         # an effect it comes with (hellfire, or one a mod added); players pick "As the mount" to see it
 effect_when = Always  # Never, Night or Always
 
-[Mount.Tuning]        # the rider on this creature, both styles (the keys of docs/reference.md [Ride] and [Cart])
+[Mount.Tuning]        # the rider on this mount, both styles (the keys of docs/reference.md [Ride] and [Cart])
 SeatAdjustPx = 2
 [Mount.Tuning.Ride]   # riding only
 [Mount.Tuning.Cart]   # with the cart only
+HitchGapPx = 24       # a longer body: the whole cart sits 24 art pixels further behind, so the body isn't inside it
 ```
 
 The settings list shows the skin under its kind ("Dragon: Red Dragon"; a kind with one skin just by that name).
 
 Two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up): `offset = 0 0` while
-riding and `offset_cart = 0 0` with the cart hitched (a creature that should stand closer to the shafts). And a
-`[Tuning]` section sets the mod's own rider settings for your creature while it is worn, with the same keys and values
-as the mod's cfg (docs/reference.md `[Ride]` and `[Cart]`; the ones that matter for a skin: `SeatAdjustPx`,
-`RiderOffsetPx`, `TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `NearLeg`):
+riding and `offset_cart = 0 0` with the cart hitched (a skin that should stand closer to the shafts). And a
+`[Tuning]` section moves the rider and the cart to fit these pictures, when they differ from the mount's other skins,
+with the same keys and values as the mod's cfg (docs/reference.md `[Ride]` and `[Cart]`). A skin is the drawing, so
+only the picture-dependent keys are taken: `SeatAdjustPx`, `SeatOffset`, `RiderOffsetPx`, `TorsoOffsetPx`,
+`LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`, `HitchGapPx`, `Depth`, `CenterOffset`. Anything
+about the creature itself (speed, the cart, foals, the effect, abilities) belongs in the `[Mount]` sections below and
+is refused here, said once in the log.
 
 ```
 [Tuning]
-SeatAdjustPx = 4      # the rider four pixels higher on this creature
+SeatAdjustPx = 4      # the rider four pixels higher on these pictures
 RiderOffsetPx = -2    # and two towards the rear
 ```
 

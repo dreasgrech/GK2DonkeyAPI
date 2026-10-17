@@ -100,7 +100,6 @@ version = 1.0
 base = donkey           # the frame-key namespace (default donkey)
 kind = own              # palette | own (default own)
 layer = replace         # replace | over (default replace)
-foals = true            # foals may wear it (default true)
 canvas = 96 96          # picture size; every picture must be this size (default 96 96)
 pivot = 48 48           # the donkey's ground anchor in the picture, from the bottom left (default: the centre)
 ```
@@ -189,7 +188,8 @@ runs after the restore.
 
 Free carts (`!HasDonkey`): the rig does nothing; the donkey is hidden by `HideDonkeyOnly` already. Foals: the same rig
 on the same prefab; the root scale (0.6) is inherited by the overlay as a child; a foal wears the skin only when the
-skin allows (`foals = true`) and the instance's `FoalsWearSkin` is on.
+skin's mount has foals (`[Mount] foals`) and the instance's `FoalsWearSkin` is on (a skin has no foals flag of its
+own: the mount is the creature, the skin its drawing).
 
 ### 5.2 The per-frame apply
 

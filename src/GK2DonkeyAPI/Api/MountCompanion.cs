@@ -275,7 +275,7 @@ namespace GK2DonkeyAPI.Api
                 Donkey = Mounts.Spawn(OwnerId, new MountSpawn { Position = Vector3.zero, Key = DonkeyKey, Persist = keep });
                 if (Donkey == null)
                 {
-                    return MountResult.Refused("The donkey could not be spawned (see the log).");
+                    return MountResult.Refused("Your mount could not be spawned (see the log).");
                 }
                 Plugin.Log.LogInfo($"Companion: spawned {Donkey.FullId} for {OwnerId}.");
                 ApplyAll();

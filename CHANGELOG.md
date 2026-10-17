@@ -14,7 +14,7 @@ For players:
 
 - **Skins.** Your donkey can be drawn as something else: the giant rat, the giant snail, the giant worm and a red and a blue dragon (their wings raised above the rider) are built in
   (our own art). Donkey settings: "Skin", a list to pick from (the donkey, the built-in skins, every pack installed;
-  in the Mods menu, the game's Settings window and the colours bar), and "Baby donkeys wear the skin too". The skin is
+  in the Mods menu, the game's Settings window and the colours bar), and "Babies are the same mount and skin". The skin is
   kept with the save. Skins from other mods come later.
 - **Five more built-in skins, made from the donkey's own frames:** Zebra, Ghost, Ember, Golden and Shadow. They are
   drawn the first time a donkey wears them, a few frames at a time, and the donkey keeps its look until the whole set
@@ -27,10 +27,22 @@ For players:
 - **Mounts and skins.** A mount (Donkey, Giant Rat, Giant Snail, Giant Worm, Dragon) has skins (the donkey: the game's
   own, Zebra, Ghost, Ember, Golden, Shadow; the dragon: Red Dragon, Blue Dragon). A "Mount" section of its own right
   after Keys (its picture, a Mount dropdown, then a Skin dropdown with that mount's skins, the foals toggle) and an
-  "Effect" section after it, before Behaviour (cfg keys Mount, Skin_<mount>, FoalsWearSkin, Effect...; the old
-  Donkey.Skin key is read once). Your Behaviour, Donkey, Cart and Sound settings stay as they were, though their
-  sections moved down in the cfg. A mount carries its own seat for the rider
+  "Effect" section after it, before Behaviour (cfg keys Mount, Skin_<mount>, FoalsWearSkin, Effect...). Your
+  Behaviour, Donkey, Cart and Sound settings stay as they were, though their sections moved down in the cfg (the old
+  copies are cleaned out of the file on the first save). A mount carries its own seat for the rider
   and its rules (a mount can refuse the cart), and mods can give one abilities. The "Effect" row gains "As the mount".
+- **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
+  "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
+  ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the
+  babies rows live in the Mount section now (your values move with them); the Donkey section keeps the donkey's own
+  coat and harness colours. The keeper's refusals name the mount ("This dragon already pulls a cart", "That is a
+  cart without a mount", "Your mount is nowhere to be found"). The F11 panel's Mounts tab says "mount" instead of
+  "creature". The game's delivery donkey is still a donkey.
+- **The cart sits behind a longer mount.** A mount file can set `HitchGapPx` (the whole cart, shafts included, that
+  many art pixels further behind than behind the donkey); the dragons set 24, so their body isn't drawn inside the
+  cart. A cart left standing stays where it was drawn, and a mount taking a cart stands its gap ahead of it. The F11
+  panel's Mounts tab has the row for the cart style; the "hitch and unhitch" self-test checks it on both facings and
+  across leaving and taking the cart.
 - **Hellfire.** Donkey settings: "Effect" (None or Hellfire: the game's own lamp fire in a ring round your donkey, with
   its sparks and a trail of flames that burn out behind it; mods can add other effects), "Effect shown" (never, at
   night, always), and whether it leaves the trail, goes round the cart too, shows in fights and on the baby donkeys.
@@ -38,9 +50,20 @@ For players:
 
 For mod authors:
 
+- **A skin is the drawing, a mount the creature** (docs/mounts-design.md §1): a skin's `[Tuning]` / `MountSkinDef.Tuning`
+  takes only the picture-dependent keys (seat, torso, legs, hitch gap, depth, centring) and refuses the rest with one
+  log line; the per-skin foals flag is gone (`skin.cfg foals`, `MountSkinDef.Foals`, `MountSkinInfo.Foals`, the
+  `foals` argument of `RegisterRecipe`): whether foals wear a skin follows its mount's `Foals` and the player's
+  `FoalsWearSkin`. `HitchGapPx` is a tuning key of the cart style (docs/reference.md); `Looks.LayeredValue` gives a
+  creature's value for a style it isn't in yet.
 - `MountSettingsPage`: a section moved to another place on the page (its cfg number changes) keeps a player's values:
-  a key the cfg lacks under its section takes the value under the same name with another number (docs/api.md,
-  "Sections keep your order"); self-test "settings: a moved section keeps a player's values".
+  a key the cfg lacks under its section takes the value under the same name with another number (of several old
+  copies the fullest, then the highest-numbered), and the old copy is dropped from BepInEx's orphans so the file holds
+  each value once; `MovedKey(section, key, oldSection, oldKey)` does the same for a key moved to another section or
+  name (docs/api.md, "Sections keep your order"); self-test "settings: a moved section keeps a player's values".
+  `MountRows` lost its `legacySection` argument (it served one development cfg). `MountRows` is the Mount and Skin
+  dropdowns; the babies rows are `FoalRows(section, companion)` (Foals, FoalsIndoors, FoalsWearSkin); `Preview`'s
+  default label is "Your mount". Refusal texts name the instance's mount (`Instance.Noun`, internal).
 - `MountCompanion.Skin` and `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`,
   saved with the instance; "donkey" or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`,
   `MountSkinInfo`); the settings row kind `MountSettingsPage.List` (a pick list of ids with labels, read when first
@@ -68,6 +91,15 @@ For mod authors:
 
 Development:
 
+- Tests of the mounts and skins system (docs/self-tests.md): a headless `tests/SkinsScan` (every built-in skin.cfg
+  parses as the loader reads it, all 44 pictures per skin at the canvas size, the front layer, a skin's `[Tuning]`
+  holds picture keys only, a mount's tuning keys exist, a mount declared by several skins is declared the same way;
+  in `release-scans.sh`); self-tests "settings: the Mount, Skin, babies and effect rows" and "skins and kinds: the
+  changed events"; "hitch and unhitch" checks the hitch gap on both facings and across leaving and taking the cart;
+  "kept-with-save text" keeps the skin id and leaves the mount's own values out; "settings: a moved section keeps a
+  player's values" covers several old copies, `MovedKey` and the orphan cleanup; the pack tests announce the warning
+  they cause. The eight looks scenarios are in docs/self-tests.md now. docs/gerry-mount.md: Gerry's sprites (73
+  frames, 96 canvas, a hopping skull) and three ways to make him a mount.
 - Looks.cs: the skin rig (docs/skins-design.md step 1): overlays under bdy/hed, the hide re-asserted per frame, the apply
   in Camera.onPreCull, attach/detach at the view's lifecycle points, refcounted pictures; the self-test "skin: on, off,
   removed"; the built-in skins under src/GK2DonkeyAPI/assets/skins (tools/creature_sprites.py writes them).

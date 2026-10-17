@@ -16,14 +16,17 @@ since a mount can have several skins; think about performance.*
 | | What it is | Owns | Examples |
 |---|---|---|---|
 | **Base** (`Looks.SkinBase`, internal) | The game's view a mount is drawn on: its sprite parts, frame keys, canvas, pivot, pixels per unit, atlas. | Nothing a player sees. | the donkey (the only one) |
-| **Mount kind** (`MountKindDef`, `Mounts.Kinds`) | *What the player rides*: a creature type. | Identity; the rider's seat and legs for it (values for existing tuning keys, per style); rules (may it pull the cart, may it have foals); defaults (an effect); **abilities** (code hooks); later its sounds. | donkey, giant rat, giant snail, giant worm, dragon |
-| **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a set of pictures for one kind. | The pictures (two layers), the canvas; optional refinements of the kind's values (its own `[Tuning]`, `offset`). | the red dragon, the blue dragon (kind dragon); zebra, ghost, ember, golden, shadow (kind donkey); rat; snail; worm |
+| **Mount kind** (`MountKindDef`, `Mounts.Kinds`) | *What the player rides*: a creature type. | Identity; the rider's seat and legs for it (values for existing tuning keys, per style); where its cart sits (`HitchGapPx`, cart style); rules (may it pull the cart, may it have foals); defaults (an effect); **abilities** (code hooks); later its sounds. | donkey, giant rat, giant snail, giant worm, dragon |
+| **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a complete set of pictures for one kind's frame keys, made any way (a recolour recipe, a folder of PNGs, a sheet, own art, code sprites). | The pictures (behind and in front of the rider), the canvas, where the pictures sit (`offset`, `offset_cart`); and only when its drawing differs from the mount's other skins, the picture-dependent keys of the mount's tuning (its own `[Tuning]`: seat, torso, legs, hitch gap). | the red dragon, the blue dragon (kind dragon); zebra, ghost, ember, golden, shadow (kind donkey); rat; snail; worm |
 
 **In one sentence: a mount has skins.** The Donkey is a mount; the game's own donkey, Zebra, Ghost, Ember, Golden
 and Shadow are its skins. The Dragon is a mount; Red Dragon and Blue Dragon are its skins. The Giant Rat, Giant Snail
-and Giant Worm are mounts with one skin each. A mount's values (seat, cart, foals, effect, abilities) are shared by
-all its skins; a skin's values (pictures, offsets) are that look's only. (In code the mount is `MountKindDef` /
-`Mounts.Kinds`, because `Mounts` is the API's root.)
+and Giant Worm are mounts with one skin each. **The mount is the creature, the skin is the drawing**: a mount's values
+(seat, hitch gap, cart, foals, effect, abilities, speed) are shared by all its skins; a skin's values (pictures,
+offsets) are that look's only, and a value lives on the mount unless it exists only because of this skin's picture.
+A skin cannot change what the mount is: its `[Tuning]` takes the picture-dependent keys (seat, torso, legs, hitch
+gap) and refuses the creature's (speed, cart, foals, effect; said once in the log). (In code the mount is
+`MountKindDef` / `Mounts.Kinds`, because `Mounts` is the API's root.)
 
 A skin **names its kind** (`mount = dragon` in skin.cfg, `MountSkinDef.Mount`; the default is `donkey`). A kind has
 one or more skins; the game's own donkey art is the donkey kind's first skin (`MountLooks.DonkeyId`). A kind without
@@ -149,15 +152,21 @@ rows into every file that declares the mount), asks once more, and "Reload" read
 kinds say so and keep their changes for the session. The creature generator no longer overwrites an existing
 skin.cfg, so saved values survive a redraw.
 
-Saddle Up has a **Mount** section (its picture, the Mount dropdown, the Skin dropdown, the foals toggle) right after
-Keys (what you ride comes first), then an **Effect** section, then Behaviour, Donkey (name, colours), Cart, Sound.
-Moving the sections renumbered them in the cfg; the page carries a player's values over (docs/api.md, "Sections keep
-your order"), so nothing resets on the update. `MountSettingsPage.MountRows(section, companion)` adds the rows every player mod wants, in one call: the mount list
-(skins labelled by kind), "Baby donkeys wear it too", the effect list with "As the mount" / none / every effect, when
-it shows, and the four effect toggles. Saddle Up calls it instead of its own six rows, so a new kind, skin or effect
-from any mod appears in the Mods menu, the game's Settings window and the colours bar with no change to Saddle Up.
-Labels: `<kind name>` when the skin is its kind's only one, else `<kind name>: <skin name>`; the donkey's own art is
-"Donkey".
+Saddle Up has a **Mount** section (its picture, Name, the Mount dropdown, the Skin dropdown, the three baby rows)
+right after Keys (what you ride comes first), then an **Effect** section, then Behaviour, Donkey (the donkey's own
+colours), Cart, Sound. Moving the sections renumbered them in the cfg, and Name and the baby rows moved from Donkey
+to Mount; the page carries a player's values over both ways (docs/api.md, "Sections keep your order"; `MovedKey`),
+so nothing resets on the update. Three calls add the rows every player mod wants: `MountRows(section, companion)`
+(the Mount dropdown, a Skin dropdown per mount), `FoalRows` (babies: how many, indoors, the same mount and skin),
+`EffectRows` (the effect list with "As the mount" / none / every effect, when it shows, the four effect toggles).
+Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears in the Mods
+menu, the game's Settings window and the colours bar with no change to Saddle Up.
+
+**Words.** Player-facing text says *mount* where the thing may not be a donkey ("Ride your mount", "Your mount is
+nowhere to be found", "Mount and cart sounds"), *babies* for the young (a dragon's are not foals), and the mount's
+own name where an instance is in hand (`Instance.Noun`: "This dragon already pulls a cart"). *Donkey* stays where
+it is the donkey: the game's delivery donkey (corpses at the crossroads), the Donkey section's coat and harness,
+the ids and keys (`npc_donkey`, `FoalCount`, the API's names: 0.9.x is public, those are not strings).
 
 ## 7. Performance
 

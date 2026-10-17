@@ -143,7 +143,7 @@ namespace GK2DonkeyAPI.Api
                     }
                     return MountResult.Refused("Not right now.");
                 }
-                const string noCart = "This donkey has no cart here; ride it up to one.";
+                string noCart = $"This {Mount.Current?.Noun ?? "mount"} has no cart here; ride it up to one.";
                 if (showMessage)
                 {
                     Mount.Say(noCart);

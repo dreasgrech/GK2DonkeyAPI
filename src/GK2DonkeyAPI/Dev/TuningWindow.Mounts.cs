@@ -5,44 +5,46 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // The Mounts tab (docs/mounts-design.md §6): one creature at a time, what you ride by default. The rows are the
-    // creature's own values (its mount kind's: the rider's seat per style, the cart, foals, an effect; its skin's: the
+    // The Mounts tab (docs/mounts-design.md §6): one mount at a time, what you ride by default. The rows are the
+    // mount's own values (its mount kind's: the rider's seat per style, the cart, foals, an effect; its skin's: the
     // pictures' offsets, the foals), kept apart from your settings on the other tabs: a value set here belongs to every
-    // donkey that is this creature, in every save, and your own values (Riding tab) are untouched. Yellow = set for
-    // the creature; right-click = not set (your value applies). Changes show on the ridden donkey at once; "Save" writes
-    // them into the creature's skin.cfg (a pack's own file, a built-in's in the repo on the machine with the sources).
+    // donkey that is this mount, in every save, and your own values (Riding tab) are untouched. Yellow = set for
+    // the mount; right-click = not set (your value applies). Changes show on the ridden donkey at once; "Save" writes
+    // them into the mount's skin.cfg (a pack's own file, a built-in's in the repo on the machine with the sources).
     internal static partial class TuningWindow
     {
-        private static string mountsSkinId;           // the creature being tuned (a skin id, "" = the donkey)
+        private static string mountsSkinId;           // the mount being tuned (a skin id, "" = the donkey)
         private static bool mountsFollowRide = true;  // follow what is ridden until the user picks one
         private static bool mountsSaveConfirm;
         private static float mountsSaveConfirmUntil;
         private static string mountsNote = "";
         private static float mountsNoteUntil;
 
-        // The seat and leg keys a creature may set (reference.md [Ride] / [Cart]), with the ranges the Riding tab uses.
-        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int)[] MountKeys =
+        // The seat, leg and cart keys a mount may set (reference.md [Ride] / [Cart]), with the ranges the Riding tab
+        // uses. CartOnly: the key means nothing while riding plain, so its row shows for the cart style only.
+        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MountKeys =
         {
-            ("RiderOffsetPx", "Whole rider along the creature: tail (-) / head (+)", "Art pixels. The same key as the Riding tab's; this value replaces yours while a donkey is this creature.", -16, 16, true),
-            ("TorsoOffsetPx", "Torso only along the creature: tail (-) / head (+)", "Art pixels; the legs stay put.", -16, 16, true),
-            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels, with the automatic seat (the hip on the back line).", -16, 16, true),
-            ("LegAdjustXPx", "Legs along the creature: head (-) / tail (+)", "Art pixels, relative to the torso.", -8, 8, true),
-            ("LegAdjustYPx", "Legs down (-) / up (+)", "Art pixels, relative to the back line.", -8, 8, true),
-            ("LegHeightPx", "Rows of the body frame that are legs", "How many bottom rows of the keeper's frame are cut as legs (feet to belt).", 0, 30, true),
-            ("BackSeatExtraPx", "Seen from behind (armour): seat lifted by", "Art pixels on top of the seat when the rider faces up in armour.", 0, 12, true),
-            ("SpeedMultiplier", "Speed (x normal walking)", "How fast this creature goes.", 0.5f, 4f, false),
+            ("RiderOffsetPx", "Whole rider along the mount: tail (-) / head (+)", "Art pixels. The same key as the Riding tab's; this value replaces yours while the mount is this one.", -16, 16, true, false),
+            ("TorsoOffsetPx", "Torso only along the mount: tail (-) / head (+)", "Art pixels; the legs stay put.", -16, 16, true, false),
+            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels, with the automatic seat (the hip on the back line).", -16, 16, true, false),
+            ("LegAdjustXPx", "Legs along the mount: head (-) / tail (+)", "Art pixels, relative to the torso.", -8, 8, true, false),
+            ("LegAdjustYPx", "Legs down (-) / up (+)", "Art pixels, relative to the back line.", -8, 8, true, false),
+            ("LegHeightPx", "Rows of the body frame that are legs", "How many bottom rows of the keeper's frame are cut as legs (feet to belt).", 0, 30, true, false),
+            ("BackSeatExtraPx", "Seen from behind (armour): seat lifted by", "Art pixels on top of the seat when the rider faces up in armour.", 0, 12, true, false),
+            ("HitchGapPx", "Cart further behind (+) / closer (-)", "Art pixels. The whole cart, shafts included, sits this much further behind the mount than behind the donkey, so a longer body isn't drawn inside the cart. The cart stays where it was drawn when it is left and taken again.", -32, 64, true, true),
+            ("SpeedMultiplier", "Speed (x normal walking)", "How fast this mount goes.", 0.5f, 4f, false, false),
         };
 
         private static void DrawMounts()
         {
-            Looks.SkinDef skin = PickCreature();
+            Looks.SkinDef skin = PickMount();
             Kinds.KindDef kind = skin != null ? skin.Kind : Kinds.Donkey;
-            string creature = MountLabel(skin, kind);
+            string mount = MountLabel(skin, kind);
             bool ride = PanelStyle == MountStyle.Ride;
             Mount.Instance r = Mount.Ridden;
             bool ridingIt = r != null && string.Equals(r.LooksRig.Wearing, skin?.Id ?? "", StringComparison.OrdinalIgnoreCase);
 
-            Header("Tuning: " + creature);
+            Header("Tuning: " + mount);
             GUILayout.BeginHorizontal();
             GUILayout.Label(Tip("Mount and skin", "Whose values the rows below are: a mount (Donkey, Dragon, ...) and one of its skins. It follows what you ride until you pick one here; 'Follow my ride' goes back to that."), label, Wd(LabelW));
             IReadOnlyList<(string Id, string Label)> choices = Looks.SkinChoices();
@@ -55,7 +57,7 @@ namespace GK2DonkeyAPI
             GUILayout.Label(choices.Count > 0 ? choices[idx].Label : "-", label, Wd(SliderW - 44f));
             if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % choices.Count; mountsSkinId = choices[idx].Id; mountsFollowRide = false; }
             GUILayout.EndHorizontal();
-            if (!mountsFollowRide && GUILayout.Button(Tip("Follow my ride", "The rows show the creature you ride, and change with it."), Wd(LabelW)))
+            if (!mountsFollowRide && GUILayout.Button(Tip("Follow my ride", "The rows show the mount you ride, and change with it."), Wd(LabelW)))
             {
                 mountsFollowRide = true;
             }
@@ -85,7 +87,7 @@ namespace GK2DonkeyAPI
             DrawMountSaving(skin, kind);
         }
 
-        private static Looks.SkinDef PickCreature()
+        private static Looks.SkinDef PickMount()
         {
             Mount.Instance r = Mount.Ridden;
             if (mountsFollowRide && r != null)
@@ -120,7 +122,7 @@ namespace GK2DonkeyAPI
                 kind.Cart = !kind.Cart;
                 Kinds.Touch(kind);
             }
-            if (OnOffRow("Baby donkeys can be it", kind.Foals, kind.Foals ? label : changed, tip: "Off: the foals stay donkeys whatever the parent is (a skin can say otherwise below)."))
+            if (OnOffRow("Babies can be it", kind.Foals, kind.Foals ? label : changed, tip: "Off: the babies stay plain donkeys whatever the parent is."))
             {
                 kind.Foals = !kind.Foals;
                 Kinds.Touch(kind);
@@ -139,9 +141,10 @@ namespace GK2DonkeyAPI
             Dictionary<string, object> both = kind.Tuning;
             foreach (var k in MountKeys)
             {
+                if (k.CartOnly && ride) continue;
                 KindValueRow(kind, ride, k.Key, k.Label, k.Tip, k.Min, k.Max, k.Int);
             }
-            KindBoolRow(kind, ride, "NearLeg", "Rider's legs drawn in front of the creature", "His own baked-in legs hidden, a leg overlay drawn in front (the Riding tab's NearLeg).");
+            KindBoolRow(kind, ride, "NearLeg", "Rider's legs drawn in front of the mount", "His own baked-in legs hidden, a leg overlay drawn in front (the Riding tab's NearLeg).");
             OtherKindKeys(kind, ride);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip(ride ? "Copy these to the cart style" : "Copy these to riding", "The rows set for this style become the other style's too."), Wd(LabelW)))
@@ -271,8 +274,8 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Keys a creature sets that the rows above don't show (any tuning key may be set in its file or by code): listed,
-        // so nothing a creature does is hidden here.
+        // Keys a mount sets that the rows above don't show (any tuning key may be set in its file or by code): listed,
+        // so nothing a mount does is hidden here.
         private static void OtherKindKeys(Kinds.KindDef kind, bool ride)
         {
             var shown = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "NearLeg" };
@@ -310,26 +313,18 @@ namespace GK2DonkeyAPI
             Vector2 ov = skin.OffsetRide;
             Vector2 oc = skin.OffsetCart;
             bool same = ov == oc;
-            if (OffsetRow("Pictures along the creature (riding): tail (-) / head (+)", ref ov.x, -32f, 32f)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; Kinds.Touch(kind); }
+            if (OffsetRow("Pictures along the mount (riding): tail (-) / head (+)", ref ov.x, -32f, 32f)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; Kinds.Touch(kind); }
             if (OffsetRow("Pictures down (-) / up (+) (riding)", ref ov.y, -32f, 32f)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; Kinds.Touch(kind); }
-            if (OnOffRow("With the cart: the same offsets", same, same ? label : changed, tip: "Off: the cart's own two rows below (a creature that should stand closer to the shafts)."))
+            if (OnOffRow("With the cart: the same offsets", same, same ? label : changed, tip: "Off: the cart's own two rows below (a mount that should stand closer to the shafts)."))
             {
                 skin.OffsetCart = same ? ov + new Vector2(1f, 0f) : ov;
                 Kinds.Touch(kind);
             }
             if (!same)
             {
-                if (OffsetRow("Pictures along the creature (cart): tail (-) / head (+)", ref oc.x, -32f, 32f)) { skin.OffsetCart = oc; Kinds.Touch(kind); }
+                if (OffsetRow("Pictures along the mount (cart): tail (-) / head (+)", ref oc.x, -32f, 32f)) { skin.OffsetCart = oc; Kinds.Touch(kind); }
                 if (OffsetRow("Pictures down (-) / up (+) (cart)", ref oc.y, -32f, 32f)) { skin.OffsetCart = oc; Kinds.Touch(kind); }
             }
-            string[] foalNames = { "As the mount (" + (kind.Foals ? "yes" : "no") + ")", "Yes", "No" };
-            int f = skin.Foals.HasValue ? (skin.Foals.Value ? 1 : 2) : 0;
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("Baby donkeys wear this skin", "Whether the foals may be drawn with these pictures; 'As the mount' follows the kind's row above."), f > 0 ? changed : label, Wd(LabelW));
-            if (GUILayout.Button("<", Wd(22f))) { f = (f + 2) % 3; skin.Foals = f == 0 ? (bool?)null : f == 1; Kinds.Touch(kind); Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); }
-            GUILayout.Label(foalNames[f], label, Wd(SliderW - 44f));
-            if (GUILayout.Button(">", Wd(22f))) { f = (f + 1) % 3; skin.Foals = f == 0 ? (bool?)null : f == 1; Kinds.Touch(kind); Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); }
-            GUILayout.EndHorizontal();
         }
 
         private static bool OffsetRow(string name, ref float value, float min, float max)

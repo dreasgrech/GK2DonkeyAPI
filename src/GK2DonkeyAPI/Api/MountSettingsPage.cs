@@ -62,47 +62,140 @@ namespace GK2DonkeyAPI.Api
         // section (Saddle Up 0.11 put Mount right after Keys: Donkey went from "3. Donkey" to "5. Donkey"), a cfg from
         // before has the values under the old number, and BepInEx would bind the defaults and leave the old lines as
         // orphans: every player's settings reset on an update. So a key the file doesn't have under its section takes
-        // the value the file has for it under the same name with another number (the file's text, read once per page).
+        // the value the file has for it under the same name with another number, or under a place the mod says the
+        // key moved from (MovedKey). The file's text is read once per page. The old copy is then dropped from
+        // BepInEx's orphans, so the file holds each value in one place: BepInEx writes orphans back on every save, and
+        // a stale copy under a third number would otherwise be found first the next time the section moves.
         private ConfigEntry<T> Bind<T>(string cfgSection, string key, T value, string description) => Bind(cfgSection, key, value, new ConfigDescription(description));
 
         private ConfigEntry<T> Bind<T>(string cfgSection, string key, T value, ConfigDescription description)
         {
             ConfigEntry<T> e = Config.Bind(cfgSection, key, value, description);
-            string moved = MovedValue(cfgSection, key, out string from);
+            string moved = MovedValue(cfgSection, key, out string from, out string fromKey);
             if (moved != null)
             {
                 try
                 {
                     e.SetSerializedValue(moved);
-                    if (movedNoted.Add(from)) Plugin.Log.LogInfo($"Settings: {Title}: the section \"{from}\" is \"{cfgSection}\" now; its values carried over.");
+                    bool keyMove = fromKey != key || PlainName(from) != PlainName(cfgSection); // MovedKey, not a renumbered section
+                    if (movedNoted.Add(keyMove ? from + "|" + cfgSection + "|" + key : from + "|" + cfgSection)) // once per moved section, once per moved key
+                    {
+                        Plugin.Log.LogInfo(keyMove
+                            ? $"Settings: {Title}: [{from}] {fromKey} is [{cfgSection}] {key} now; the value carried over."
+                            : $"Settings: {Title}: the section \"{from}\" is \"{cfgSection}\" now; its values carried over.");
+                    }
                 }
                 catch (Exception x)
                 {
-                    Plugin.Log.LogWarning($"Settings: {Title}: [{from}] {key} = {moved} can't be read as {typeof(T).Name} ({x.Message}); the default applies.");
+                    Plugin.Log.LogWarning($"Settings: {Title}: [{from}] {fromKey} = {moved} can't be read as {typeof(T).Name} ({x.Message}); the default applies.");
                 }
             }
+            DropOldCopies(cfgSection, key);
             return e;
         }
 
+        // A key that moved to another section (or name) on the page: the first bind of (section, key) with nothing in
+        // the cfg takes the value the cfg has as (oldSection, oldKey), whatever number oldSection had. Call it before
+        // the row. Sections that only moved on the page keep their values without this.
+        public void MovedKey(string section, string key, string oldSection, string oldKey = null)
+        {
+            if (string.IsNullOrEmpty(section) || string.IsNullOrEmpty(key) || string.IsNullOrEmpty(oldSection)) throw new ArgumentException("section, key and oldSection are needed.");
+            movedKeys[section + "\n" + key] = (oldSection, oldKey ?? key);
+        }
+
+        private readonly Dictionary<string, (string Section, string Key)> movedKeys = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
         private Dictionary<string, Dictionary<string, string>> fileSections; // the cfg file's sections and their keys, raw
         private readonly HashSet<string> movedNoted = new HashSet<string>();
 
-        // The file's value for key under a section of the same plain name but another number, when it has none under
-        // cfgSection itself; null otherwise. from: the section it came from.
-        private string MovedValue(string cfgSection, string key, out string from)
+        // Every section in the file that may hold a copy of (cfgSection, key): the same plain name under another
+        // number, and the place MovedKey named, under any number. (section, key) pairs.
+        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key)
+        {
+            string plain = PlainName(cfgSection);
+            movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out (string Section, string Key) alias);
+            foreach (string s in fileSections.Keys)
+            {
+                if (s == cfgSection) continue;
+                string p = PlainName(s);
+                if (p == plain) yield return (s, key);
+                else if (alias.Section != null && p == alias.Section) yield return (s, alias.Key);
+            }
+        }
+
+        // The file's value for key from an old place (OldPlaces) when the file has none under cfgSection itself; null
+        // otherwise. Several old copies: the section with the most keys wins (a newer version binds at least as many),
+        // then the highest number.
+        private string MovedValue(string cfgSection, string key, out string from, out string fromKey)
         {
             from = null;
+            fromKey = null;
             if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
             if (fileSections.Count == 0) return null;
             if (fileSections.TryGetValue(cfgSection, out Dictionary<string, string> own) && own.ContainsKey(key)) return null;
-            string plain = PlainName(cfgSection);
-            foreach (KeyValuePair<string, Dictionary<string, string>> s in fileSections)
+            string best = null;
+            int bestKeys = -1, bestNumber = -1;
+            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key))
             {
-                if (s.Key == cfgSection || PlainName(s.Key) != plain || !s.Value.TryGetValue(key, out string raw)) continue;
-                from = s.Key;
-                return raw;
+                Dictionary<string, string> s = fileSections[place.Section];
+                if (!s.TryGetValue(place.Key, out string raw)) continue;
+                int number = SectionNumber(place.Section);
+                if (s.Count > bestKeys || (s.Count == bestKeys && number > bestNumber))
+                {
+                    best = raw;
+                    bestKeys = s.Count;
+                    bestNumber = number;
+                    from = place.Section;
+                    fromKey = place.Key;
+                }
             }
-            return null;
+            return best;
+        }
+
+        // Every old copy of (cfgSection, key) out of BepInEx's orphans (the entries it read from the file and nothing
+        // bound), so the next save drops those lines. The orphans are BepInEx's own (ConfigFile.OrphanedEntries, not
+        // public); without them the file merely keeps the old lines.
+        private void DropOldCopies(string cfgSection, string key)
+        {
+            if (fileSections == null || fileSections.Count == 0) return;
+            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key))
+            {
+                if (!fileSections[place.Section].ContainsKey(place.Key)) continue;
+                System.Collections.Generic.Dictionary<ConfigDefinition, string> orphans = OrphansOf(Config);
+                if (orphans == null) return;
+                orphans.Remove(new ConfigDefinition(place.Section, place.Key));
+            }
+        }
+
+        private static System.Reflection.PropertyInfo orphansProperty;
+        private static bool orphansLooked;
+
+        internal static Dictionary<ConfigDefinition, string> OrphansOf(ConfigFile cfg)
+        {
+            if (!orphansLooked)
+            {
+                orphansLooked = true;
+                orphansProperty = typeof(ConfigFile).GetProperty("OrphanedEntries", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Public);
+                if (orphansProperty == null || orphansProperty.PropertyType != typeof(Dictionary<ConfigDefinition, string>))
+                {
+                    orphansProperty = null;
+                    Plugin.Log.LogWarning("Settings: this BepInEx has no ConfigFile.OrphanedEntries dictionary; old copies of moved settings stay in the cfg files (harmless).");
+                }
+            }
+            return orphansProperty != null ? orphansProperty.GetValue(cfg) as Dictionary<ConfigDefinition, string> : null;
+        }
+
+        // "5. Donkey" -> 5; -1 without a number.
+        internal static int SectionNumber(string section)
+        {
+            int dot = section.IndexOf(". ", StringComparison.Ordinal);
+            if (dot <= 0) return -1;
+            int n = 0;
+            for (int i = 0; i < dot; i++)
+            {
+                if (!char.IsDigit(section[i])) return -1;
+                n = n * 10 + (section[i] - '0');
+            }
+            return n;
         }
 
         // "5. Donkey" -> "Donkey"; a section without a number is its own name.
@@ -173,29 +266,23 @@ namespace GK2DonkeyAPI.Api
         // The rows every player mod wants for choosing its mount, in one call (docs/mounts-design.md §6), meant for a
         // section of their own ("Mount"): a Mount dropdown (every mount), a Skin dropdown with that mount's skins, and
         // whether the foals are the same mount and skin. Cfg keys: Mount, Skin_<mount id>, FoalsWearSkin in the section
-        // given; legacySection names a section whose older single "Skin" key picks the rows' first values (a mod that
-        // had the skin row elsewhere before). The effect rows are EffectRows. Mounts and skins registered before the page
-        // is built appear here with no change to yours; later ones after a restart.
-        public void MountRows(string section, MountCompanion companion, string legacySection = null)
+        // given. The effect rows are EffectRows. Mounts and skins registered before the page is built appear here with
+        // no change to yours; later ones after a restart.
+        public void MountRows(string section, MountCompanion companion)
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
             // A mount (Donkey, Giant Rat, Dragon) has skins (the game's donkey, Zebra; Red Dragon, Blue Dragon): a Mount
             // dropdown, then a Skin dropdown with that mount's skins. A dropdown's choices are fixed once built, so there
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
-            // companion gets, and the save keeps, is one thing: the skin id (companion.Skin). The old single "Skin" key
-            // is read once to pick the rows' first values and mirrors the result afterwards.
-            string cfgSection = Sec(section);
-            ConfigEntry<string> legacy = Bind(Sec(legacySection ?? section), "Skin", MountLooks.DonkeyId, "The skin in effect (the Mount and Skin rows decide it; kept for older versions of this cfg).");
+            // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
             ConfigEntry<string> mountE = null;
             var skinRows = new Dictionary<string, ConfigEntry<string>>(StringComparer.OrdinalIgnoreCase);
             void Apply()
             {
                 if (mountE == null) return;
                 string kind = mountE.Value ?? MountKinds.DonkeyId;
-                string skin = skinRows.TryGetValue(kind, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value) ? row.Value : Looks.FirstSkinOf(kind);
-                me.Skin = skin;
-                if (legacy.Value != skin) legacy.Value = skin;
+                me.Skin = skinRows.TryGetValue(kind, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value) ? row.Value : Looks.FirstSkinOf(kind);
             }
             mountE = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
                 "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row.",
@@ -209,19 +296,19 @@ namespace GK2DonkeyAPI.Api
                     v => Apply(), look: true, visible: () => string.Equals(mountE?.Value, id, StringComparison.OrdinalIgnoreCase));
                 skinRows[id] = row;
             }
-            // an older cfg: its single Skin key picks the rows' values once (when the Mount row is still at its default)
-            string old = legacy.Value;
-            if (!string.IsNullOrEmpty(old) && mountE.Value == MountKinds.DonkeyId && !old.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
-            {
-                MountSkinInfo s = Mounts.Looks.Find(old);
-                if (s != null && skinRows.TryGetValue(s.Mount, out ConfigEntry<string> row))
-                {
-                    row.Value = old;
-                    mountE.Value = s.Mount; // SettingChanged runs Apply
-                }
-            }
             Apply();
-            Toggle(section, "FoalsWearSkin", me.FoalsWearSkin, "Baby donkeys are the same mount and skin", "Off: the foals stay plain donkeys whatever yours is.", v => me.FoalsWearSkin = v);
+        }
+
+        // The rows for the mount's babies (foals), for the same section as MountRows: how many, whether they come
+        // indoors, whether they are the same mount and skin. Cfg keys: Foals, FoalsIndoors, FoalsWearSkin in the section
+        // given (a mod that had them in another section names it with MovedKey first).
+        public void FoalRows(string section, MountCompanion companion)
+        {
+            if (companion == null) throw new ArgumentNullException(nameof(companion));
+            MountCompanion me = companion;
+            Steps(section, "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "Little ones of your mount that stay with it and follow it around.", v => me.FoalCount = v, v => v == 0 ? "None" : v.ToString());
+            Toggle(section, "FoalsIndoors", true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
+            Toggle(section, "FoalsWearSkin", me.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => me.FoalsWearSkin = v);
         }
 
         // The effect rows (docs/api.md "Effects"), for a section of their own ("Effect"): the effect (the mount's own,
@@ -239,7 +326,7 @@ namespace GK2DonkeyAPI.Api
             Toggle(section, "EffectTrail", true, "The effect leaves a trail", "Hellfire: flames left behind while it walks, burning out.", v => Mounts.EffectSettings.Set(OwnerId, "EffectTrail", v), on);
             Toggle(section, "EffectWithCart", false, "The effect goes round the cart too", "With the cart hitched, one wider ring round the mount and the cart.", v => Mounts.EffectSettings.Set(OwnerId, "EffectWithCart", v), on);
             Toggle(section, "EffectInFights", true, "The effect shows in fights", "Off: it goes out while you fight in armour.", v => Mounts.EffectSettings.Set(OwnerId, "EffectInFights", v), on);
-            Toggle(section, "EffectOnFoals", false, "Baby donkeys have it too", "A smaller one round each foal.", v => Mounts.EffectSettings.Set(OwnerId, "EffectOnFoals", v), on);
+            Toggle(section, "EffectOnFoals", false, "Babies have it too", "A smaller one round each of your mount's babies.", v => Mounts.EffectSettings.Set(OwnerId, "EffectOnFoals", v), on);
         }
 
         // On or off.
@@ -402,7 +489,7 @@ namespace GK2DonkeyAPI.Api
         // window it's always with the cart). Above the game's Settings window without the Mods menu; in the look bar
         // too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so it shows
         // in the main menu and indoors.
-        public void Preview(string section, MountCompanion companion, string label = "Your donkey", bool cart = true)
+        public void Preview(string section, MountCompanion companion, string label = "Your mount", bool cart = true)
         {
             PreviewOf = companion;
             Add(new Row

@@ -747,6 +747,6 @@ for name, fn, title, size, (kind, kind_name) in CREATURES:
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\n").write(
                 "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/creature_sprites.py: our own art.\n"
                 "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
-                "kind = own\nlayer = replace\nfoals = true\ncanvas = " + str(size) + " " + str(size) + "\nmount = " + kind + "\n"
+                "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nmount = " + kind + "\n"
                 "\n[Mount]\nid = " + kind + "\nname = " + kind_name + "\n")
     print(name, len(fr), "pictures ->", ", ".join(outs))

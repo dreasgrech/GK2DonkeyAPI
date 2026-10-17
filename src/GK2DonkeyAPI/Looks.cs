@@ -149,7 +149,6 @@ namespace GK2DonkeyAPI
             internal SkinBase Base = Donkey;
             internal bool OwnColours = true;   // false: drawn in the base's palette colours (Colors recolours it)
             internal bool Over;               // true: drawn over the base, which stays visible
-            internal bool? Foals;             // null: the kind's
             internal string KindId = Kinds.DonkeyId;   // the mount kind this skin is a look of (docs/mounts-design.md)
             internal Kinds.KindDef DeclaredKind;       // a pack's [Mount] section: declared when the skin registers
             private Kinds.KindDef kind;
@@ -181,7 +180,6 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            internal bool FoalsEffective => Foals ?? Kind.Foals;
             internal int CanvasW, CanvasH;    // a picture's size (the base's by default)
             internal float PivotX, PivotY;    // the base's anchor in the picture, from the bottom left
             internal bool BuiltIn;
@@ -444,7 +442,6 @@ namespace GK2DonkeyAPI
                     case "base": baseId = value; break;
                     case "kind": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); break;
                     case "layer": d.Over = value.Equals("over", StringComparison.OrdinalIgnoreCase); break;
-                    case "foals": d.Foals = !value.Equals("false", StringComparison.OrdinalIgnoreCase); break;
                     case "mount": d.KindId = value; break;
                     case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); break;
                     case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; break;
@@ -655,7 +652,7 @@ namespace GK2DonkeyAPI
                         {
                             int eq = line.IndexOf('=');
                             string key = eq > 0 ? line.Substring(0, eq).Trim().ToLowerInvariant() : "";
-                            if (key == "foals" || key == "mount" || key == "offset" || key == "offset_cart") continue;
+                            if (key == "mount" || key == "offset" || key == "offset_cart") continue;
                             skinLines.Add(raw);
                         }
                     }
@@ -666,7 +663,6 @@ namespace GK2DonkeyAPI
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
                 Kinds.KindDef k = d.Kind;
                 sb.Append("mount = ").Append(d.KindId).Append('\n');
-                if (d.Foals.HasValue) sb.Append("foals = ").Append(d.Foals.Value ? "true" : "false").Append('\n');
                 if (d.OffsetRide != Vector2.zero || d.OffsetCart != Vector2.zero)
                 {
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
@@ -762,6 +758,51 @@ namespace GK2DonkeyAPI
             if (i == null) return null;
             Kinds.KindDef k = KindWanted(i);
             return k.Cart ? null : $"A {k.Label.ToLowerInvariant()} can't pull the cart.";
+        }
+
+        // The tuning keys a skin's [Tuning] may set: the ones that exist because of how the pictures are drawn (where
+        // the rider sits on them, where the cart meets them). Everything else is the mount's (docs/mounts-design.md §1).
+        internal static readonly HashSet<string> SkinTuningKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "RiderOffsetPx", "TorsoOffsetPx", "SeatAdjustPx", "SeatOffset", "LegAdjustXPx", "LegAdjustYPx", "LegHeightPx", "BackSeatExtraPx",
+            "HitchGapPx", "Depth", "CenterOffset",
+        };
+
+        // The value a creature's layers give key on instance i for style, in the order Rig.ApplyTuning merges them
+        // (another owner's override first, then the skin's [Tuning], the kind's per-style tuning, the kind's both-styles
+        // tuning), or null when none sets it: for a reader that needs a style the instance isn't in yet (the hitch
+        // wants the cart style's gap while the mount is still ridden plain).
+        internal static object LayeredValue(Mount.Instance i, MountStyle style, string key)
+        {
+            if (i == null) return null;
+            if (i.OverrideOwners.TryGetValue(key, out string by) && by != TuningOwner && i.Overrides.TryGetValue(key, out object o)) return o;
+            SkinDef d = i.LooksRig?.DefNow;
+            Kinds.KindDef k = d != null ? d.Kind : Kinds.Donkey;
+            if (d != null && d.TuningValues != null && d.TuningValues.TryGetValue(key, out object typed)) return typed;
+            if (d != null && d.Tuning != null && d.Tuning.TryGetValue(key, out string text)) return text;
+            Dictionary<string, object> perStyle = style == MountStyle.Cart ? k.TuningCart : k.TuningRide;
+            if (perStyle != null && perStyle.TryGetValue(key, out object styled)) return styled;
+            if (k.Tuning != null && k.Tuning.TryGetValue(key, out object both)) return both;
+            return null;
+        }
+
+        // The hitch gap this instance has in the cart style, in world units: HitchGapPx from its layers, else the cfg.
+        internal static float HitchGapWorldFor(Mount.Instance i)
+        {
+            int px = Plugin.For(MountStyle.Cart).HitchGapPx.Entry.Value;
+            object v = LayeredValue(i, MountStyle.Cart, "HitchGapPx");
+            if (v != null)
+            {
+                try
+                {
+                    px = Convert.ToInt32(v is string s ? BepInEx.Configuration.TomlTypeConverter.ConvertToValue(s, typeof(int)) : v, System.Globalization.CultureInfo.InvariantCulture);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Looks: {i.Describe()}: HitchGapPx = {v} isn't a whole number ({e.Message}); the cfg's {px} applies.");
+                }
+            }
+            return Mathf.Clamp(px, -32, 64) * Mount.Instance.PxWorld;
         }
 
         // For a settings page's Mount dropdown: every mount, the donkey first, the rest by name.
@@ -1195,6 +1236,7 @@ namespace GK2DonkeyAPI
 
             // The kind this instance is now: its worn skin's (the donkey's while it wears none).
             internal Kinds.KindDef KindNow => skin != null ? skin.Def.Kind : Kinds.Donkey;
+            internal SkinDef DefNow => skin?.Def;
             private GameObject root;
             private readonly Slot[] slots;
             private int slotCount;
@@ -1322,7 +1364,7 @@ namespace GK2DonkeyAPI
                     {
                         if (missingIdLogged.Add(want)) Plugin.Log.LogWarning($"Looks: skin '{want}' is drawn on a {d.Base.Id}, not a {viewBase.Id}; not worn.");
                     }
-                    else if (owner != null && owner.ViewScale != 1f && !d.FoalsEffective)
+                    else if (owner != null && owner.ViewScale != 1f && !d.Kind.Foals)
                     {
                         next = null; // the skin says no foals
                     }
@@ -1372,8 +1414,15 @@ namespace GK2DonkeyAPI
                 Take(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
                 if (d != null)
                 {
-                    if (d.Tuning != null) foreach (var kv in d.Tuning) merged[kv.Key] = kv.Value;
-                    Take(d.TuningValues);
+                    // A skin is the drawing: its [Tuning] may move the rider and the cart to fit its pictures, never
+                    // change what the mount is (speed, cart, foals, effect belong to the mount; docs/mounts-design.md §1).
+                    void TakeSkin(string key, object value)
+                    {
+                        if (SkinTuningKeys.Contains(key)) merged[key] = value;
+                        else if (tuningLogged.Add(d.Id + "/" + key)) Plugin.Log.LogWarning($"Looks: skin '{d.Id}' wants to set {key}: a skin may only move the rider and the cart to fit its pictures ({string.Join(", ", SkinTuningKeys)}); the mount '{k.Id}' sets the rest. Not applied.");
+                    }
+                    if (d.Tuning != null) foreach (var kv in d.Tuning) TakeSkin(kv.Key, kv.Value);
+                    if (d.TuningValues != null) foreach (var kv in d.TuningValues) TakeSkin(kv.Key, kv.Value);
                 }
                 var tuning = new InstanceTuning(owner);
                 bool any = tunedKeysWereCleared; // nothing left to set: the clear alone is the change to refresh

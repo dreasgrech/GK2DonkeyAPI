@@ -32,7 +32,7 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest check reads its DLL) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: the dependency
 manifest verified against the installed game (`tools/DepManifest`), `check-dist.py`, and in `tests/`
-`CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
+`CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
 `--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game). All must
 end green; `FrameworkScan`
 also fails on any `Plugin` method named after a Unity message (a quit-time save once sat in `OnApplicationQuit`; it

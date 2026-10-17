@@ -102,13 +102,13 @@ namespace GK2DonkeyAPI.Api
 
         // A rule over the donkey's own frames: pixels(frame) returns the new pixels (the same size as frame.Pixels, the
         // same layout). Built when first worn, a few frames a tick, and worn once complete.
-        public IDisposable RegisterRecipe(string ownerId, string id, string name, Func<MountSkinFrame, Color32[]> pixels, string author = null, string version = null, bool foals = true)
+        public IDisposable RegisterRecipe(string ownerId, string id, string name, Func<MountSkinFrame, Color32[]> pixels, string author = null, string version = null)
         {
             Owner(ownerId);
             if (pixels == null) throw new ArgumentNullException(nameof(pixels));
             var d = new Looks.SkinDef
             {
-                Id = id, Name = name, Author = author, Version = version, Owner = ownerId, OwnColours = true, Foals = foals,
+                Id = id, Name = name, Author = author, Version = version, Owner = ownerId, OwnColours = true,
                 Recipe = f => pixels(new MountSkinFrame(f)),
                 Report = "a recipe: drawn from the donkey's own frames when first worn",
             };
@@ -178,8 +178,6 @@ namespace GK2DonkeyAPI.Api
         public bool PaletteColours;
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over;
-        // Foals may wear it; null: as the kind says.
-        public bool? Foals;
         // The mount kind this skin is a look of (Mounts.Kinds; "donkey" by default: a differently drawn donkey).
         public string Mount = MountKinds.DonkeyId;
         // For information (the sprites carry their own size and pivot): the pictures' size and where the donkey's
@@ -205,7 +203,7 @@ namespace GK2DonkeyAPI.Api
             return new Looks.SkinDef
             {
                 Id = Id, Name = string.IsNullOrEmpty(Name) ? Id : Name, Author = Author, Version = Version, Owner = owner,
-                OwnColours = !PaletteColours, Over = Over, Foals = Foals, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
+                OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
                 KindId = string.IsNullOrWhiteSpace(Mount) ? MountKinds.DonkeyId : Mount.Trim(),
                 OffsetRide = Offset, OffsetCart = CartOffset ?? Offset,
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
@@ -265,7 +263,6 @@ namespace GK2DonkeyAPI.Api
             Owner = "";
             IsBuiltIn = true;
             OwnColours = false;
-            Foals = true;
             CanvasWidth = CanvasHeight = 96;
         }
 
@@ -279,7 +276,6 @@ namespace GK2DonkeyAPI.Api
             IsBuiltIn = d.BuiltIn;
             OwnColours = d.OwnColours;
             Over = d.Over;
-            Foals = d.FoalsEffective;
             Mount = d.Kind.Id;
             CanvasWidth = d.CanvasW;
             CanvasHeight = d.CanvasH;
@@ -300,8 +296,6 @@ namespace GK2DonkeyAPI.Api
         public bool OwnColours { get; }
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over { get; }
-        // Foals may wear it.
-        public bool Foals { get; }
         // The mount kind this skin is a look of.
         public string Mount { get; }
         public int CanvasWidth { get; }

@@ -150,6 +150,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "effect: hellfire lit, follows, out, gone with the donkey", Body = EffectOnOff },
             new Scenario { Group = GroupLooks, Name = "mount kind from a pack: declared, worn, no cart, its tuning, withdrawn", Body = KindPack },
             new Scenario { Group = GroupLooks, Name = "mount kind from code: the ability's hooks on spawn, ride, dismount, removal", Body = KindAbility },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
+            new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
         };
 
         // The groups in the order they first appear in the catalog (after Catalog: static fields initialise in order).
@@ -764,7 +766,9 @@ namespace GK2DonkeyAPI
             string v2 = "tab\there, new\nline, back\\slash"; // a tab, a line break and a backslash in one value
             parent.SetData(Owner, "tricky", v2);
             parent.Tuning.Set(Owner, "CoatColorize", "00FF80");
-            yield return null;
+            cartDonkey.Tuning.Set(Owner, "Skin", "dragon"); // a skin whose mount sets a cart-style value (HitchGapPx): the skin id is kept, the mount's value is not
+            yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the dragon's cart-style values once the view is up
+            yield return Frames(2);
             List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
             Check(kept.Count == (foal != null ? 4 : 3), $"the kept list has the test's {kept.Count} (parent, foal, donkey with cart, free cart)");
             string text = Mount.BuildSideText("selftest", "saved at test time", 42, kept, withDormant: false, out _);
@@ -795,7 +799,9 @@ namespace GK2DonkeyAPI
                 if (r.ParentFull != wantParent) bad.Add($"parent {r.ParentFull}");
                 foreach (var kv in i.Overrides)
                 {
-                    if (!r.Sets.Exists(x => x[0] == kv.Key)) bad.Add("setting " + kv.Key);
+                    bool mountsOwn = i.OverrideOwners.TryGetValue(kv.Key, out string by) && by == Looks.TuningOwner;
+                    if (mountsOwn && r.Sets.Exists(x => x[0] == kv.Key)) bad.Add("the mount's own " + kv.Key + " written (it comes back with the skin)");
+                    else if (!mountsOwn && !r.Sets.Exists(x => x[0] == kv.Key)) bad.Add("setting " + kv.Key);
                 }
                 foreach (var mod in i.Data)
                 {
@@ -808,6 +814,9 @@ namespace GK2DonkeyAPI
             }
             Mount.Record pr = records.Find(x => x.Key == "rt parent");
             Check(pr != null && pr.DataLines.Exists(x => x[1] == "tricky" && x[2] == v2), "a value with a tab, a line break and a backslash comes back exactly");
+            Mount.Record cr = records.Find(x => x.Key == "rt cart");
+            Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == "dragon"), "the skin id is in the record (Skin = dragon)");
+            Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the dragon's own hitch gap is on the wearer (cart style) but not in the record");
         }
 
         // A donkey takes a free cart and leaves it again: one instance with the cart (the cart's data merged, its parts
@@ -837,6 +846,29 @@ namespace GK2DonkeyAPI
             yield return Until(() => d.IsReady, 4f);
             yield return Frames(3);
             Check(d.I.TestCartPartsOn() > 0, $"the cart's parts are on ({d.I.TestCartPartsOn()})");
+            // The hitch gap (HitchGapPx): the whole cart sits further behind the mount, on both facings; a cart left
+            // standing stays where it was drawn, and taken again it is drawn there still.
+            float Along(MountHandle m) // the cart body's distance behind the body, along the ground
+            {
+                Vector3? cart = m.I.TestCartBodyWorld();
+                if (cart == null) return float.NaN;
+                Vector3 v = cart.Value - m.I.BodyPoint();
+                v.y = 0f;
+                return v.magnitude;
+            }
+            float plain = Along(d);
+            float facing = d.I.FacingRight ? 1f : -1f;
+            Vector3 dir = d.I.TestHitchDir();
+            Check(dir != Vector3.zero && dir.x * facing < 0f, $"the cart trails the mount: the measured way to it ({dir:F2}) is against the facing ({facing})");
+            d.Tuning.Set(Owner, "HitchGapPx", 20);
+            yield return Frames(3);
+            float wide = Along(d);
+            Check(Mathf.Abs(d.I.TestHitchGap() - 0.4f) < 0.001f && Mathf.Abs(wide - plain - 0.4f) < 0.03f, $"HitchGapPx 20: the cart body is 0.40 further behind ({plain:F2} -> {wide:F2})");
+            d.I.MoveTo(d.Position, -facing);
+            yield return Frames(3);
+            float turned = Along(d);
+            Check(Mathf.Abs(turned - wide) < 0.03f, $"turned round: the same gap on the other side ({turned:F2})");
+            Vector3 drawn = d.I.TestCartBodyWorld() ?? Vector3.zero;
             MountHandle left = Mounts.Unhitch(d);
             Check(left != null && left.Exists && !left.HasDonkey && left.HasCart, "unhitched: a free cart again");
             if (left == null) yield break;
@@ -845,6 +877,21 @@ namespace GK2DonkeyAPI
             yield return Until(() => d.IsReady && left.IsReady, 4f);
             yield return Frames(3);
             Check(d.I.TestCartPartsOn() == 0, $"the donkey's cart parts are off ({d.I.TestCartPartsOn()} on)");
+            Vector3 standing = left.I.TestCartBodyWorld() ?? Vector3.one * 99f;
+            Check(Vector3.Distance(new Vector3(drawn.x, 0f, drawn.z), new Vector3(standing.x, 0f, standing.z)) < 0.05f, $"the free cart stands where the cart was drawn, gap and all ({drawn:F2} -> {standing:F2})");
+            MountResult again = Mounts.Hitch(d, left);
+            Check(again.Ok, $"hitched again{(again.Ok ? "" : " (" + again.Reason + ")")}");
+            if (again.Ok)
+            {
+                yield return Until(() => d.IsReady, 4f);
+                yield return Frames(3);
+                Vector3 back = d.I.TestCartBodyWorld() ?? Vector3.one * 99f;
+                Check(Vector3.Distance(new Vector3(drawn.x, 0f, drawn.z), new Vector3(back.x, 0f, back.z)) < 0.05f, $"taken again: the cart is drawn where it stood ({back:F2})");
+                Check(Mathf.Abs(Along(d) - wide) < 0.03f, "and the gap is on it again");
+            }
+            d.Tuning.Clear("HitchGapPx");
+            yield return Frames(3);
+            Check(Mathf.Abs(Along(d) - plain) < 0.03f, $"gap cleared: the prefab's distance again ({Along(d):F2})");
         }
 
         // A standing donkey with its cart far away has no view (asleep): its cart is left where it stands all the same,
@@ -944,31 +991,131 @@ namespace GK2DonkeyAPI
         // A mod moving a section on its settings page (Saddle Up 0.11: Mount right after Keys) renumbers the cfg
         // sections ("3. Donkey" -> "4. Donkey" here); a player's cfg from before keeps its values: a key the file lacks
         // under its section takes the value under the same name with another number (MountSettingsPage.Bind), the
-        // section's own value wins when it has one, and a key the file has nowhere keeps its default.
+        // section's own value wins when it has one, a key the file has nowhere keeps its default, of several old
+        // copies the fullest (then the highest-numbered) wins, a key moved to another section (MovedKey) is found
+        // there, and the old copies are gone from the file after a save (BepInEx writes orphans back otherwise).
         private static IEnumerator MovedSections()
         {
             string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-moved.cfg");
             try
             {
-                System.IO.File.WriteAllText(path, "## Settings file was created by plugin Moved test\n\n[1. Keys]\n\n[2. Behaviour]\n\n# Setting type: Int32\nCartSlots = 4\n\n[3. Donkey]\n\nName = Bella\n\nFoals = 2\n\n[4. Cart]\n\nLantern = false\n\n[5. Cart]\n\nLantern = true\n");
+                System.IO.File.WriteAllText(path, "## Settings file was created by plugin Moved test\n\n[1. Keys]\n\n[2. Behaviour]\n\n# Setting type: Int32\nCartSlots = 4\n\n[3. Donkey]\n\nName = Bella\n\nFoals = 2\n\n[4. Cart]\n\nLantern = false\n\n[5. Cart]\n\nLantern = true\n\n[2. Sound]\n\nBrays = false\n\n[7. Sound]\n\nBrays = true\n\nVolume = 80\n");
                 var cfg = new ConfigFile(path, false) { SaveOnConfigSet = false };
                 var page = new MountSettingsPage("dreas.gk2.selftest.moved", cfg, "Moved test", "test", "", null);
                 page.Status("Keys");
+                page.MovedKey("Mount", "MountName", "Donkey", "Name");
                 page.Toggle("Mount", "Foo", true, "Foo", "");
+                ConfigEntry<string> mountName = page.Text("Mount", "MountName", "", "Name", "");
                 ConfigEntry<int> slots = page.Steps("Behaviour", "CartSlots", 6, 2, 6, 2, "Cart capacity", "");
-                ConfigEntry<string> name = page.Text("Donkey", "Name", "", "Name", "");
                 ConfigEntry<int> foals = page.Steps("Donkey", "Foals", 0, 0, 5, 1, "Foals", "");
                 ConfigEntry<bool> lantern = page.Toggle("Cart", "Lantern", false, "Lantern", "");
                 ConfigEntry<bool> bell = page.Toggle("Sound", "Bell", true, "Bell", "");
+                ConfigEntry<bool> brays = page.Toggle("Sound", "Brays", false, "Brays", "");
                 Check(slots.Value == 4, $"Behaviour moved from 2 to 3: CartSlots is the file's 4 ({slots.Value})");
-                Check(name.Value == "Bella" && foals.Value == 2, $"Donkey moved from 3 to 4: Name and Foals are the file's (\"{name.Value}\", {foals.Value})");
+                Check(foals.Value == 2, $"Donkey moved from 3 to 4: Foals is the file's ({foals.Value})");
+                Check(mountName.Value == "Bella", $"a key moved to another section and name (MovedKey): Mount.MountName is the old Donkey.Name (\"{mountName.Value}\")");
                 Check(lantern.Value, "Cart is 5 and the file has it under 5 too: its own value wins over the older 4");
                 Check(bell.Value, "a key the file has nowhere keeps its default");
+                Check(brays.Value, "Sound is 6 with two old copies (2 and 7): the fullest, 7, wins");
                 Check(MountSettingsPage.PlainName("12. Sound") == "Sound" && MountSettingsPage.PlainName("General") == "General" && MountSettingsPage.PlainName("A. B") == "A. B", "plain section names");
+                Check(MountSettingsPage.SectionNumber("12. Sound") == 12 && MountSettingsPage.SectionNumber("General") == -1, "section numbers");
+                Check(MountSettingsPage.OrphansOf(cfg) != null, "BepInEx's orphan dictionary is reachable");
+                cfg.Save();
+                Dictionary<string, Dictionary<string, string>> after = MountSettingsPage.ReadSections(path);
+                Check(after.TryGetValue("3. Behaviour", out Dictionary<string, string> b3) && b3.ContainsKey("CartSlots") && !after.ContainsKey("2. Behaviour"), "saved: CartSlots is under 3. Behaviour only, the 2. Behaviour copy is gone");
+                Check(!after.ContainsKey("3. Donkey") || !after["3. Donkey"].ContainsKey("Name"), "saved: the old Donkey.Name line is gone");
+                Check(!after.ContainsKey("4. Cart") && after.ContainsKey("5. Cart"), "saved: the old 4. Cart copy is gone, 5. Cart stays");
+                Check(!after.ContainsKey("2. Sound") && after.TryGetValue("7. Sound", out Dictionary<string, string> s7) && !s7.ContainsKey("Brays") && s7.ContainsKey("Volume"), "saved: both old Brays copies are gone; 7. Sound keeps its Volume (a key nothing bound: an orphan, as before)");
             }
             finally
             {
                 try { System.IO.File.Delete(path); } catch { }
+            }
+            yield break;
+        }
+
+        // The settings rows every player mod gets (MountRows, FoalRows, EffectRows), on a throwaway page and a test
+        // companion: the Mount dropdown picks a mount and its Skin dropdown that mount's skin; the companion's Skin
+        // follows; one Skin row shows at a time; each mount remembers its own skin; the babies rows bind the companion's
+        // foal values; the effect row defaults to "As the mount".
+        private static IEnumerator SettingsRows()
+        {
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-rows.cfg");
+            try
+            {
+                try { System.IO.File.Delete(path); } catch { }
+                var cfg = new ConfigFile(path, false) { SaveOnConfigSet = false };
+                const string owner = Owner + ".rows";
+                MountCompanion me = Mounts.Companion(owner);
+                var page = new MountSettingsPage(owner, cfg, "Rows test", "test", "", null);
+                page.MountRows("Mount", me);
+                page.FoalRows("Mount", me);
+                page.EffectRows("Effect", me);
+                ConfigEntry<T> Row<T>(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key)?.Entry as ConfigEntry<T>;
+                ConfigEntry<string> mount = Row<string>("Mount"), skinDonkey = Row<string>("Skin_" + MountKinds.DonkeyId), skinDragon = Row<string>("Skin_dragon");
+                Check(mount != null && skinDonkey != null && skinDragon != null, "the Mount row and a Skin row per mount are bound");
+                if (mount == null || skinDragon == null) yield break;
+                Check(mount.Value == MountKinds.DonkeyId && me.Skin == MountLooks.DonkeyId, $"defaults: the donkey, the game's own art (\"{me.Skin}\")");
+                int visible = page.Rows.FindAll(r => r.Entry != null && r.Entry.Definition.Key.StartsWith("Skin_", StringComparison.Ordinal) && (r.Visible == null || r.Visible())).Count;
+                Check(visible == 1, $"one Skin row shows at a time ({visible})");
+                mount.Value = "dragon";
+                Check(me.Skin == Looks.FirstSkinOf("dragon") && Mounts.Looks.Find(me.Skin)?.Mount == "dragon", $"Mount = dragon: the companion's skin is the dragon's first (\"{me.Skin}\")");
+                skinDragon.Value = "dragon";
+                Check(me.Skin == "dragon", $"Skin = Red Dragon: the companion follows (\"{me.Skin}\")");
+                mount.Value = MountKinds.DonkeyId;
+                Check(me.Skin == MountLooks.DonkeyId, $"back to the donkey: its own art again (\"{me.Skin}\")");
+                mount.Value = "dragon";
+                Check(me.Skin == "dragon", $"the dragon again: it remembered Red Dragon (\"{me.Skin}\")");
+                ConfigEntry<int> foals = Row<int>("Foals");
+                ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
+                Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null, "the three babies rows are bound");
+                if (foals != null)
+                {
+                    foals.Value = 2;
+                    Check(me.FoalCount == 2, $"Babies = 2 reaches the companion ({me.FoalCount})");
+                    foals.Value = 0;
+                }
+                if (wear != null)
+                {
+                    wear.Value = false;
+                    Check(!me.FoalsWearSkin, "Babies are the same mount and skin = off reaches the companion");
+                    wear.Value = true;
+                }
+                ConfigEntry<string> effect = Row<string>("Effect");
+                Check(effect != null && effect.Value == MountEffects.KindId, $"Effect defaults to As the mount (\"{effect?.Value}\")");
+                mount.Value = MountKinds.DonkeyId;
+            }
+            finally
+            {
+                try { System.IO.File.Delete(path); } catch { }
+            }
+            yield break;
+        }
+
+        // Mounts.Looks.SkinsChanged and Mounts.Kinds.KindsChanged fire on a register and on an unregister.
+        private static IEnumerator ChangedEvents()
+        {
+            int skins = 0, kinds = 0;
+            Action onSkins = () => skins++;
+            Action onKinds = () => kinds++;
+            Mounts.Looks.SkinsChanged += onSkins;
+            Mounts.Kinds.KindsChanged += onKinds;
+            try
+            {
+                IDisposable skin = Mounts.Looks.RegisterRecipe(Owner, "evt-skin", "Event Skin", f => f.Pixels);
+                Check(skins >= 1, $"SkinsChanged fired on the register ({skins})");
+                IDisposable kind = Mounts.Kinds.Register(Owner, new MountKindDef { Id = "evt-kind", Name = "Event Kind" });
+                Check(kinds >= 1, $"KindsChanged fired on the register ({kinds})");
+                int skinsBefore = skins, kindsBefore = kinds;
+                skin?.Dispose();
+                kind?.Dispose();
+                Check(skins > skinsBefore && kinds > kindsBefore, $"both fired again on the unregister ({skinsBefore} -> {skins}, {kindsBefore} -> {kinds})");
+                Check(Mounts.Looks.Find("evt-skin") == null && Mounts.Kinds.Find("evt-kind") == null, "both are gone");
+            }
+            finally
+            {
+                Mounts.Looks.SkinsChanged -= onSkins;
+                Mounts.Kinds.KindsChanged -= onKinds;
             }
             yield break;
         }
@@ -1083,6 +1230,7 @@ namespace GK2DonkeyAPI
                 yield return Frames(3);
                 Check(a != null && a.Tuning.IsSet("LegAdjustYPx") && a.Tuning.Get<int>("LegAdjustYPx") == 2, "the wearer has the reloaded value");
             }
+            Info("the next \"no skin 'kind-test' is installed\" warning is this test's own: it withdraws the skin from under the wearer");
             Check(Looks.Unregister("kind-test", owner), "the owner withdraws the skin");
             yield return Frames(3);
             Check(Mounts.Kinds.Find("test-beast") != null, "the kind stays listed after its skin is withdrawn");
@@ -1232,6 +1380,7 @@ namespace GK2DonkeyAPI
             Check(a != null && a.I.TestSkinFrontShowing(), "its front picture (front/bdy.png, every body frame) is drawn above");
             Check(a != null && a.Tuning.Get<int>("SeatAdjustPx") == 9 && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner, "its [Tuning] key is set on the wearer, owned by the skin");
             Check(!Looks.Unregister("pack-test", Owner), "a withdrawal by another owner is refused");
+            Info("the next \"no skin 'pack-test' is installed\" warning is this test's own: it withdraws the skin from under the wearer");
             Check(Looks.Unregister("pack-test", owner), "the owner withdraws it");
             yield return Frames(3);
             Check(a != null && a.I.TestSkinWearing() == "" && !a.I.TestSkinShowing(), "withdrawn: the donkey shows again (the choice is kept)");

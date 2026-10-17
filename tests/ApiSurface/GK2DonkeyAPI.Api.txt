@@ -272,7 +272,7 @@ class GK2DonkeyAPI.Api.MountLooks
   method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountSkinDef def)
   method int RegisterEmbedded(string ownerId, System.Reflection.Assembly assembly, string prefix)
   method int RegisterFolder(string ownerId, string folder)
-  method System.IDisposable RegisterRecipe(string ownerId, string id, string name, System.Func<GK2DonkeyAPI.Api.MountSkinFrame, UnityEngine.Color32[]> pixels, string author = null, string version = null, bool foals = True)
+  method System.IDisposable RegisterRecipe(string ownerId, string id, string name, System.Func<GK2DonkeyAPI.Api.MountSkinFrame, UnityEngine.Color32[]> pixels, string author = null, string version = null)
   method string Report(string id)
   method bool Unregister(string ownerId, string id)
 static class GK2DonkeyAPI.Api.MountPalette
@@ -348,12 +348,14 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void EffectRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
+  method void FoalRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null, System.Action pressed = null)
   method BepInEx.Configuration.ConfigEntry<string> List(string section, string key, string value, System.Func<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, string>>> choices, string label, string description, System.Action<string> apply = null, bool look = False, System.Func<bool> visible = null)
   method void LookButton(string section, string label, string description)
-  method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion, string legacySection = null)
-  method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your donkey, bool cart = True)
+  method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
+  method void MovedKey(string section, string key, string oldSection, string oldKey = null)
+  method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your mount, bool cart = True)
   method void Publish()
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
@@ -364,7 +366,6 @@ class GK2DonkeyAPI.Api.MountSkinDef
   field int CanvasHeight
   field int CanvasWidth
   field System.Nullable<UnityEngine.Vector2> CartOffset
-  field System.Nullable<bool> Foals
   field GK2DonkeyAPI.Api.IMountSkinSource FrontSource
   field string Id
   field string Mount
@@ -394,7 +395,6 @@ class GK2DonkeyAPI.Api.MountSkinInfo
   property string Author { get; }
   property int CanvasHeight { get; }
   property int CanvasWidth { get; }
-  property bool Foals { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }
   property bool IsRecipe { get; }

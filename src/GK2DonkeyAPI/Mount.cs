@@ -186,6 +186,9 @@ namespace GK2DonkeyAPI
                 // The cargo holder (Cargo.ContainerName), told once: a Transform's name is a new string on every read,
                 // and the cart's parts are walked every frame.
                 public bool IsContainer;
+                // Rest: the prefab's local position and the renderer's centre in parent space, taken once at collection.
+                // Base and Sample are those plus the hitch gap (ApplyHitchGap); everything drawn derives from Base.
+                public Vector3 Rest, RestSample;
                 public Vector3 Base;
                 public Vector3 Sample;
                 public float Weight;
@@ -724,7 +727,7 @@ namespace GK2DonkeyAPI
                 riderAttached = true; // sounds are bound from the mount on (MountSounds.OnMounted below)
                 if (!TrySpawn(pc, scene))
                 {
-                    reason = "The donkey is nowhere to be found.";
+                    reason = "Your mount is nowhere to be found.";
                     if (showMessage)
                     {
                         Say(reason);
@@ -1339,12 +1342,14 @@ namespace GK2DonkeyAPI
                     {
                         continue;
                     }
-                    var part = new CartPart { T = t, IsContainer = t.name == Cargo.ContainerName, Base = t.localPosition, Sample = t.localPosition, Weight = t.name == "donkey_cart_bars" ? 0.5f : 1f };
+                    var part = new CartPart { T = t, IsContainer = t.name == Cargo.ContainerName, Rest = t.localPosition, RestSample = t.localPosition, Weight = t.name == "donkey_cart_bars" ? 0.5f : 1f };
                     Renderer r = t.GetComponentInChildren<Renderer>(includeInactive: false);
                     if (r != null)
                     {
-                        part.Sample = t.parent.InverseTransformPoint(r.bounds.center);
+                        part.RestSample = t.parent.InverseTransformPoint(r.bounds.center);
                     }
+                    part.Base = part.Rest;
+                    part.Sample = part.RestSample;
                     cartParts.Add(part);
                     if (t.name == "donkey_cart_empty_sway" || (t.name == "donkey_cart_body_sway" && cartBodyPart == null))
                     {
@@ -1354,6 +1359,56 @@ namespace GK2DonkeyAPI
                 if (cartBodyPart == null && cartParts.Count > 0)
                 {
                     cartBodyPart = cartParts.Find(p => p.Weight >= 1f) ?? cartParts[0];
+                }
+                hitchGapApplied = float.NaN; // ApplyHitchGap measures the shafts and classifies the parts, gap or no gap
+                ApplyHitchGap();
+                if (logGeometry) Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? "(pitched)" : ""))));
+            }
+
+            // The hitch gap (HitchGapPx, docs/reference.md [Cart]): the whole cart, shafts included, sits this much
+            // further behind the mount than the prefab puts it, so a longer mount (the dragon) isn't drawn inside the
+            // cart. Every part's Base and Sample are the prefab's rest plus the gap in the part's parent space; the
+            // shafts and the pitch pivots are measured from the moved Base, so every style draws from the same geometry.
+            // Called at collection and whenever the value changes (FollowCartParts checks it every frame: a creature's
+            // own value arrives with its skin, the panel's with a drag).
+            private float hitchGapApplied = float.NaN;
+            internal float HitchGapWorld => float.IsNaN(hitchGapApplied) ? 0f : hitchGapApplied;
+
+            // The way from this mount's spot to its cart in the world, from the live transforms (the prefab's own
+            // geometry: the cart body's rest centre against the root), so it follows a turn (facing flips the view's
+            // scale, and the cart swaps sides with it); zero without a live cart body, and the facing rule applies.
+            internal Vector3 HitchDirWorld
+            {
+                get
+                {
+                    if (cartBodyPart == null || cartBodyPart.T == null || !cartBodyPart.T || cartBodyPart.T.parent == null || donkey == null || !donkey)
+                    {
+                        return Vector3.zero;
+                    }
+                    Vector3 w = cartBodyPart.T.parent.TransformPoint(cartBodyPart.RestSample) - donkey.transform.position;
+                    w.y = 0f;
+                    return w.sqrMagnitude > 0.0001f ? w.normalized : Vector3.zero;
+                }
+            }
+
+            private void ApplyHitchGap()
+            {
+                float gap = S.HitchGapPx.Value * PxWorld;
+                if (!float.IsNaN(hitchGapApplied) && Mathf.Abs(gap - hitchGapApplied) < 0.0005f)
+                {
+                    return;
+                }
+                hitchGapApplied = gap;
+                Vector3 dir = HitchDirWorld; // live: right for the facing of this moment
+                foreach (CartPart p in cartParts)
+                {
+                    if (p.T == null || !p.T || p.T.parent == null)
+                    {
+                        continue;
+                    }
+                    Vector3 local = Mathf.Abs(gap) < 0.0005f || dir == Vector3.zero ? Vector3.zero : p.T.parent.InverseTransformVector(dir * gap);
+                    p.Base = p.Rest + local;
+                    p.Sample = p.RestSample + local;
                 }
                 CartPart shafts = cartParts.Find(p => p.T.name == "donkey_cart_bars");
                 if (shafts != null)
@@ -1365,8 +1420,16 @@ namespace GK2DonkeyAPI
                 swayRefPart = cartParts.Find(p => p.T.name == "donkey_cart_lantern_sway")
                               ?? cartParts.Find(p => p.T.name == "donkey_cart_empty_sway")
                               ?? cartParts.Find(p => p.T.name == "donkey_cart_body_sway");
+                // A re-apply mid-session: ClassifyForPitch reads each node's rotation as the animator's, but a posed
+                // node holds the mod's last write (the pitch on top), so the animator's own is kept from before.
+                var anim = new System.Collections.Generic.List<(CartPart Part, Quaternion Rot, bool Written)>(cartParts.Count);
+                foreach (CartPart p in cartParts) anim.Add((p, p.AnimRot, p.Written));
                 ClassifyForPitch();
-                if (logGeometry) Plugin.Log.LogInfo($"Mount: {cartParts.Count} cart parts follow the ground as one (sampled under {cartBodyPart?.T.name}): " + string.Join(", ", cartParts.ConvertAll(p => p.T.name + (p.Pitched ? "(pitched)" : ""))));
+                foreach ((CartPart Part, Quaternion Rot, bool Written) a in anim)
+                {
+                    if (a.Written) a.Part.AnimRot = a.Rot;
+                }
+                if (Mathf.Abs(gap) >= 0.0005f && logGeometry) Plugin.Log.LogInfo($"Mount: {Describe()}: hitch gap {S.HitchGapPx.Value} px ({gap:F3}) along {dir:F2}.");
             }
 
             // The shafts are one rigid mesh from the donkey's harness to the front of the cart (0.76 long). Their extent
@@ -1673,6 +1736,7 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
+                ApplyHitchGap(); // a changed HitchGapPx (a skin arriving, a panel drag) moves the rest geometry first
                 bool on = S.CartFollowsGround.Value;
                 float cap = Mathf.Max(0f, S.CartGroundMaxShift.Value);
                 float target = 0f;
@@ -2055,6 +2119,7 @@ namespace GK2DonkeyAPI
             // One art pixel of vertical movement on screen equals this much world Y (sprites are stretched 1.667x
             // vertically to counter the 53° camera, so 1 px = 0.02 * 1.667 world units).
             private const float PxWorldY = 0.02f * 1.6667f;
+            internal const float PxWorld = 0.02f; // one art pixel along the ground (50 pixels per unit)
 
             // Debug.TuningKeys: PageUp/PageDown seat, Home/End leg X, Insert/Delete leg Y, all in art pixels. They edit
             // the same config values the tuning window shows.

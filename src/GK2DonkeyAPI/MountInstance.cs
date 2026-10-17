@@ -73,6 +73,10 @@ namespace GK2DonkeyAPI
 
             internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : !Rideable && ViewScale < 1f ? "foal" : "donkey";
 
+            // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "dragon",
+            // "giant rat"); a free cart has no mount, so "mount".
+            internal string Noun => HasDonkey ? (LooksRig?.KindNow?.Name ?? "donkey").ToLowerInvariant() : "mount";
+
             // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.saddleup#1.
             internal string FullId => FullIdOf(OwnerId, Id);
 
@@ -489,7 +493,7 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey)
                 {
-                    return "That is a cart without a donkey.";
+                    return "That is a cart without a mount.";
                 }
                 if (!Rideable)
                 {
@@ -516,7 +520,7 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey)
                 {
-                    return "That is a cart without a donkey.";
+                    return "That is a cart without a mount.";
                 }
                 if (!Rideable)
                 {
@@ -766,7 +770,7 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey || HasCart)
                 {
-                    return "This donkey already pulls a cart.";
+                    return $"This {Noun} already pulls a cart.";
                 }
                 if (!Rideable || ViewScale != 1f)
                 {
@@ -798,12 +802,17 @@ namespace GK2DonkeyAPI
                 {
                     return rule;
                 }
+                // Where this mount stands to pull the cart: a free cart's Position is where a donkey stands for it (the
+                // prefab's geometry); a mount with a hitch gap (HitchGapPx, its own value for the cart style) stands
+                // that much further ahead, so the cart stays drawn where it was.
+                float facing = cart.riderFacingX;
+                Vector3 at = cart.Position - HitchDirFor(cart, facing) * Looks.HitchGapWorldFor(this);
                 float seatFloor = float.NegativeInfinity;
                 if (mounted)
                 {
                     // The keeper is moved to where the cart's donkey sits: only onto ground he can stand on, never below
                     // it (SafeGround.cs). Checked before anything changes; the seat itself is taken below, as always.
-                    Vector3 seat = KeeperSpotFor(cart.Position, cart.riderFacingX, Plugin.For(MountStyle.Cart));
+                    Vector3 seat = KeeperSpotFor(at, facing, Plugin.For(MountStyle.Cart));
                     string offGround = WhyKeeperCannotStandAt(pc, ref seat);
                     if (offGround != null)
                     {
@@ -815,8 +824,6 @@ namespace GK2DonkeyAPI
                 List<Item> items = cart.CargoRig.TakeAllForTransfer();
                 MoveCartSettings(cart, this);
                 MergeData(cart, this);
-                Vector3 at = cart.Position;
-                float facing = cart.riderFacingX;
                 // The cart's InstanceRemoved is raised below, AFTER Hitched: a listener that drops its handle on the
                 // removal (the companion) must still recognise the cart in Hitched(donkey, oldCart). Found 2026-10-14:
                 // raised here, the companion took its own cart for a foreign one at every hitch, left it without its
@@ -881,9 +888,13 @@ namespace GK2DonkeyAPI
                         return null;
                     }
                 }
+                // The free cart's Position is where a donkey stands to pull it: this mount's hitch gap ahead of the
+                // cart (its parts were drawn that much further back), so the cart stays exactly where it was drawn.
+                Vector3 stood = viewed ? donkey.Data.Position : Position;
+                float gapWorld = viewed ? HitchGapWorld : Looks.HitchGapWorldFor(this);
                 var cart = new Instance(NextId(OwnerId), OwnerId, ephemeral: false, hasDonkey: false, hasCart: true)
                 {
-                    Position = viewed ? donkey.Data.Position : Position,
+                    Position = stood + HitchDirFor(this, riderFacingX) * gapWorld,
                     SceneId = SceneId,
                     riderFacingX = riderFacingX,
                     // Kept with the save as its donkey is; a cart left by the summon is the keeper's, kept too.
@@ -944,6 +955,15 @@ namespace GK2DonkeyAPI
             // ------------------------------------------------------------------ places
 
             // The world point of the cart body (cargo is set down there around a save); the root without a view.
+            // The way from a mount's spot to its cart, in the world: the one its view measured from the prefab's
+            // geometry (HitchDirWorld, a mount with cart parts or a free cart alike), else the side the cart is drawn on
+            // for this facing (the cart trails the mount: the self-test "hitch and unhitch" checks the sign).
+            internal static Vector3 HitchDirFor(Instance i, float facingX)
+            {
+                Vector3 d = i != null ? i.HitchDirWorld : Vector3.zero;
+                return d != Vector3.zero ? d : Vector3.right * (facingX >= 0f ? -1f : 1f);
+            }
+
             internal Vector3 CartPoint()
             {
                 if (cartBodyPart != null && cartBodyPart.T != null && cartBodyPart.T)

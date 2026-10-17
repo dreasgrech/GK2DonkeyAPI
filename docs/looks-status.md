@@ -70,11 +70,15 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
 Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the log comes out on "check log".
 
 **A. Start and menus (5 min)**
-1. Start the game. Main menu → Mods → GK2 Saddle Up. Sections: Keys, **Mount** (its picture, Mount dropdown, Skin
-   dropdown, Baby donkeys are the same mount and skin), **Effect** (Effect, Effect shown while it isn't None, the four
-   toggles), Behaviour, Donkey (name, colours, foals), Cart, Sound. Your Behaviour, Donkey, Cart and Sound values are
-   as before (the sections moved from 2-5 to 4-7 in the cfg; the log has one "Settings: ... carried over" line per
-   moved section on this first start).
+1. Start the game. Main menu → Mods → GK2 Saddle Up. Sections: Keys ("Ride your mount", "Drive the cart", "Ring the
+   bell", "Send your mount away"), **Mount** (its picture, Name, Mount dropdown, Skin dropdown, Babies, Babies come
+   indoors, Babies are the same mount and skin), **Effect** (Effect, Effect shown while it isn't None, the four
+   toggles), Behaviour, Donkey (Choose colours, coat, harness: the donkey's own), Cart, Sound, in that order. Your
+   name and babies rows moved from Donkey to Mount with their values (the log says "[3. Donkey] Name is [2. Mount]
+   Name now" and the like). Your Behaviour, Donkey, Cart and
+   Sound values are as before (the sections are numbered 1 to 7 in that order in the cfg; the log has one "Settings:
+   ... carried over" line per section whose number changed on this first start, and the cfg holds each section once
+   after it).
 2. Mount lists: Donkey, Checker Beast (example), Dragon, Giant Rat, Giant Snail, Giant Worm. The Skin row shows the
    chosen mount's skins only: Donkey → The game's own, Ember, Ghost, Golden, Sepia (example), Shadow, Zebra; Dragon →
    Blue Dragon, Red Dragon; Giant Worm → Giant Worm, Worm (from a pack); the rat, snail and beast one each.
@@ -96,7 +100,7 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 10. Donkey: Zebra: on the first pick, no flash of the plain donkey while it builds (a few frames later the stripes
     are there, moving with the body). Ghost once (translucent look).
 11. Giant Worm: Worm (from a pack): the worm again (it joined the worm mount; the log says so).
-12. Foals: Baby donkeys = 2, "same mount and skin" on → two small dragons following; off → two plain foals.
+12. Foals: Babies = 2, "Babies are the same mount and skin" on → two small dragons following; off → two plain foals.
 
 **C. Hellfire (5 min)**
 13. Effect = Hellfire, Effect shown = Always, on the dragon: a ring of six flames with sparks; walk: a trail of flames
@@ -112,7 +116,7 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 **E. The tuning panel, Mounts tab (10 min)** — ride the Red Dragon, F11 → Mounts.
 18. Header: "Tuning: Dragon (skin: Red Dragon)"; the line says you ride it; the "Mount and skin" cycler changes the
     creature shown; "Follow my ride" comes back.
-19. "The mount: Dragon (shared by Blue Dragon, Red Dragon)": Pulls the cart On, Baby donkeys can be it On, Comes with
+19. "The mount: Dragon (shared by Blue Dragon, Red Dragon)": Pulls the cart On, Babies can be it On, Comes with
     the effect none.
 20. "Rider on this mount: riding": drag "Torso down/up" to +6: the rider rises at once, the row goes yellow.
     Right-click the slider: back to your value, plain. Drag "Whole rider along" to -4: the rider shifts.
@@ -120,6 +124,9 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
     this (its skin.cfg, the Mounts tab)". Other rows are editable as always.
 22. Mounts tab → "Go to cart": the header says "with the cart"; the rows are the cart style's (not set: your values);
     "Copy these to the cart style" from riding copies them; "Clear this style" empties them. Go to riding.
+    With the cart, the dragon's rows include "Cart further behind (+) / closer (-)" = 24 (its skin.cfg): hitch the
+    cart (G): the whole cart, shafts included, sits behind the dragon's body instead of around it. Drag the row: the
+    cart moves live. H leaves the cart exactly where it was drawn; G takes it again without the cart jumping.
 23. "This skin: Red Dragon": drag "Pictures down/up (riding)" to -3: the dragon's pictures move, the rider doesn't;
     right-click: 0. "With the cart: the same offsets" Off → two more rows for the cart.
 24. Keeping these values: the text names the repo file `src/GK2DonkeyAPI/assets/skins/dragon/skin.cfg` "and the
