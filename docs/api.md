@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.29.1** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.30.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -16,7 +16,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ```csharp
 [BepInPlugin("you.gk2.mymod", "My Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.29.1")]          // hard: your mod needs the core, at least this version
+[BepInDependency("dreas.gk2.donkeyapi", "0.30.0")]          // hard: your mod needs the core, at least this version
 public class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -508,7 +508,9 @@ Where they apply:
   Settings window or the cfg.
 - **Sections keep your order:** the cfg section is numbered in the order you first use them (`1. Keys`,
   `2. Behaviour`, ...), because the framework's Mods menu sorts sections by name and offers no other way to order
-  them. The game's Settings window shows the plain names.
+  them. The game's Settings window shows the plain names. Moving a section in a later version renumbers it, and the
+  page carries a player's values over: a key the cfg lacks under its section takes the value the cfg has under the
+  same name with another number (the old lines stay in the file as orphans; the log says which section moved).
 - **`Publish()`, once, after the rows, from your `Awake`:**
   - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
     sorts the sections by name);
@@ -599,6 +601,154 @@ keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/
   cart.`, and a door with a corpse aboard then `... goes into the keeper's hands if this is the morgue.` followed by
   either the hand-over line or `the corpse stays on ...: not the morgue (area <a>, door to <d>)`.
 
+## Mount kinds (0.30.0)
+
+What the player rides as a creature type, against a skin, which is how it is drawn ([mounts-design.md](mounts-design.md)).
+A kind (`Mounts.Kinds`, `MountKindDef`) owns the rider's seat for it (values for existing tuning keys: `Tuning` for both
+styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`), a default
+effect (`Effect` / `EffectWhen`, shown when an instance's own `Effect` key is `MountEffects.KindId`, "mount"), and its
+**abilities**. A skin names its kind (`MountSkinDef.Mount`, a pack's `mount =`; the donkey by default), so the red and
+the blue dragon are two skins of the dragon kind, and a zebra is a skin of the donkey kind. An instance's kind is its
+skin's (`MountHandle.Kind`): the player picks a skin, the kind follows, and nothing new is saved.
+
+```csharp
+foreach (MountKindInfo k in Mounts.Kinds.Kinds) Log(k.Name + ": " + string.Join(", ", k.Skins));
+IDisposable reg = Mounts.Kinds.Register(Guid, new MountKindDef
+{
+    Id = "checker-beast", Name = "Checker Beast", Cart = false,
+    TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },
+    Abilities = { new BurnsWhenRidden(Guid) },
+});
+Mounts.Looks.Register(Guid, new MountSkinDef { Id = "checker", Name = "Checker", Mount = "checker-beast", Source = src });
+```
+
+Where a value comes from, per instance and key: an override another mod set on it; the skin's own `Tuning`; the kind's
+for the style, then for both; the player's cfg. A value of another numeric type than the key's is converted (`4f`
+for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged set goes on the wearer as overrides owned by the skin
+system and is re-applied only when the skin, the kind or the style changes.
+
+A **pack declares a kind without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `cart`, `foals`,
+`effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its values); the first
+declaration of an id wins and later skins join it. The built-in creatures declare theirs this way.
+
+An **ability** (`MountAbility`, abstract: override what you need) is code the API calls for every instance of the
+kind that has a handle: `Attached` / `Detached` when the instance becomes / stops being the kind, `Mounted(style)` /
+`Dismounted` on the keeper getting on and off (a style switch is a Dismounted then a Mounted), `Tick(dt)` every
+frame while ridden (and while standing when `TicksWhileStanding`). One object per kind, shared by its instances; an
+ability that throws is switched off on that instance with one warning. Keys, settings rows, sounds and effects are
+your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker beast burns while ridden, through the
+instance's `Effect` key).
+
+A settings page gets the rows in two calls, each for a section of its own: `page.MountRows("Mount", companion)`
+adds a **Mount** dropdown (every mount), a **Skin** dropdown with the chosen mount's skins (one row per mount, shown
+for the chosen one only: a dropdown's choices are fixed once built) and the foals toggle, on the cfg keys `Mount`,
+`Skin_<mount id>`, `FoalsWearSkin` (`legacySection` names a section whose older single `Skin` key is read once);
+`page.EffectRows("Effect", companion)` adds the effect list ("As the mount", none, every effect), when it shows and
+how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`. Mounts, skins and
+effects registered before the page is built appear with no change to yours; later ones after a restart. `KindsChanged` fires on a
+registration, a pack's declaration or a withdrawal.
+
+## Skins (0.30.0)
+
+A skin draws the donkey as something else. `Mounts.Looks` lists them and takes new ones; a donkey wears one through its
+tuning key `Skin` (also `MountCompanion.Skin` for a player mod's donkey, with `FoalsWearSkin`). The pictures are a PNG
+per donkey frame, 96x96 facing left (`Mounts.Looks.FrameKeys` names the 44 frames; [skins.md](skins.md) says how to
+draw them); the API draws them over the donkey's own sprites and keeps those from rendering, lit like the game and
+recoloured by the colour settings when drawn in the donkey's palette colours.
+
+```csharp
+foreach (MountSkinInfo s in Mounts.Looks.Skins) Log(s.Id + ": " + s.Name);   // "donkey" first, then the rest
+handle.Tuning.Set(Guid, "Skin", "rat");                                        // this donkey wears the rat
+handle.Tuning.Set(Guid, "Skin", MountLooks.DonkeyId);                          // the game's own look ("" does the same)
+companion.Skin = "zebra"; companion.FoalsWearSkin = false;                     // the player's donkey, foals left plain
+```
+
+Where skins come from, in order of how little they need:
+- **Skin packs** (no code): a folder `gk2skins/<id>/` with `skin.cfg` and the PNGs, anywhere one or two levels under
+  `BepInEx/plugins`. The API finds them at start. `Mounts.Looks.RegisterFolder(owner, folder)` reads packs under a
+  folder of your own.
+- **Embedded in your DLL:** the same files as `EmbeddedResource` with logical names `<prefix><skin dir>\<file>`, then
+  `Mounts.Looks.RegisterEmbedded(owner, assembly, "<prefix>")`.
+- **A sheet instead of 44 files:** the same pack with one PNG (`sheet = sheet.png` in `skin.cfg`, cells of the
+  canvas size in reading order, the frames in `Mounts.Looks.FrameKeys` order or as `frames = ...` lists them).
+- **From code:** `Mounts.Looks.Register(owner, new MountSkinDef { Id, Name, Source = yourSource })` with an
+  `IMountSkinSource` giving a `Sprite` per frame key, from any texture of yours (your own sheet, say: 50 pixels per
+  unit, the pivot where the donkey's anchor is). The sprites stay yours; the API only points its overlays at them.
+- **A recipe:** `Mounts.Looks.RegisterRecipe(owner, id, name, frame => pixels)`: a rule over the donkey's own frames
+  (`MountSkinFrame`: the pixels on the canvas, the outline and bob helpers), built when first worn, a few frames a
+  tick, and worn once complete. Nothing of the game's art is shipped.
+
+Whatever the source, the API decodes a skin's pictures into **one texture per skin** (a sheet with a cell per frame)
+a few frames a tick, and the skin is worn once the sheet is whole; every donkey wearing it draws from that one
+texture, and nothing is allocated per frame while it is worn. A skin names its **base** (`base = donkey`, the only
+one today): the frame keys, canvas, pivot and pixels per unit are the base's, so a second creature with its own frames
+is a second base, not a change to the format.
+
+A skin may have a **front layer**: pictures drawn in front of the rider (the near wing, a saddle's near side), the
+same frame keys, as a pack's `front/` subfolder, a sheet pack's `sheet_front`, or `MountSkinDef.FrontSource`; the API
+sorts them on the keeper's own layer above his body while he rides (as the leg overlay), just above the creature
+otherwise.
+
+A skin can carry its own rider settings: `MountSkinDef.Tuning` (a pack's `[Tuning]` section) holds existing tuning
+keys (`SeatAdjustPx`, `RiderOffsetPx`, `LegAdjustYPx`, ...) that the API sets on the wearer as overrides owned by the
+skin (`SetBy` = `dreas.gk2.donkeyapi.skin`) while it is worn, both styles, cleared when it comes off, never saved; a
+key another mod has set on that donkey is left to it. `Offset` / `CartOffset` (a pack's `offset` / `offset_cart`) move
+the pictures on the donkey in art pixels, riding and hitched.
+
+Every registration returns an `IDisposable`: dispose it to withdraw the skin; `Unregister(owner, id)` does the same.
+Wearers show the game's own look from their next frame and keep their choice, so the skin returns with its provider.
+`Report(id)` says what the loader found (pictures, names that match no frame, frames still to draw);
+`SkinsChanged` fires after a registration or withdrawal. Register in `Awake`: a skin registered after Saddle Up's
+settings page is made works at once through the cfg and appears in its list after a restart.
+
+A settings page can offer a pick list of ids: `page.List(section, key, MountLooks.DonkeyId, choices, label,
+description, apply, look: true)`, with `choices` returning `(id, label)` pairs; the id is what the cfg holds, from
+every menu alike, and a stored id that isn't in the list is shown as "not installed" and left alone.
+
+## Effects (0.30.0)
+
+A particle effect on a donkey: the built-in **Hellfire** (the game's own lamp fire on a ring round the donkey, its
+sparks, a trail of flames left behind) and the effects mods register with `Mounts.Effects`. A donkey shows one
+through its tuning keys `Effect` (the id; `MountEffects.NoneId` = "none" or `""`: none) and `EffectWhen` (`MountEffectWhen`: `Off`, `Night`, `Always`;
+kept with the save), or `MountCompanion.Effect` / `EffectWhen`. How effects show is everyone's, in
+`Mounts.EffectSettings`: `EffectTrail` (on), `EffectWithCart` (off: a wider ring round the donkey and the cart),
+`EffectInFights` (on), `EffectOnFoals` (off), `EffectNightBelow` (0.35: the sun value "at night" means). Never
+indoors.
+
+```csharp
+handle.Tuning.Set(Guid, "Effect", "hellfire");                   // this donkey burns
+handle.Tuning.Set(Guid, "EffectWhen", MountEffectWhen.Night);     // only at night
+companion.Effect = "hellfire";                                     // the player's donkey (Saddle Up's Donkey rows)
+Mounts.EffectSettings.Set(Guid, "EffectWithCart", true);           // the ring round the cart too, for every donkey
+```
+
+An effect of your own is a `MountEffectDef`: parts, each a **source** of particles with **emitters** placed round the
+donkey. A source (`IMountEffectSource`) makes a template `GameObject` of particle systems once (the API keeps it,
+never shown, and copies it per emitter; `Release` when it is dropped): the game's own through
+`Mounts.Effects.GameParticles(materialName, addressableMaterialKey)` (a particle system drawn with that material,
+copied and stripped to its particle components, the material held through Addressables so the game can't unload it
+under the copies: the lamp flame is `("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat")`, its sparks
+`sparks_fx`), or your own prefab from your bundle. An emitter (`MountEffectEmitter`) is placed on a `Ring` (`Count`
+emitters at `Radius`, local-space particles that move with the donkey), at the `Body`, or as a `Trail` (left behind
+every `Every` units walked, world space, emitting for `Burst` seconds and burning out), with `Size`, `Height`, an
+`Offset` and (ring) a starting `Angle`. `Foals` says whether foals may show it; `Show` is your own condition on top
+of the built-in ones (mode, indoors, fights, foals). Hellfire is defined through exactly this: six flames and three
+sparks on a ring of 0.8 at 1.5 times the lamp's size, one flame trail.
+
+```csharp
+var fx = new MountEffectDef { Id = "frost", Name = "Frost" };
+var part = new MountEffectPart { Source = Mounts.Effects.GameParticles("sparks_fx", "Assets/AddressableAssets/Materials/sparks_fx.mat") };
+part.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 4, Radius = 0.6f, Size = 1.2f });
+fx.Parts.Add(part);
+IDisposable reg = Mounts.Effects.Register(Guid, fx);               // dispose to withdraw; Unregister(owner, id) too
+foreach (MountEffectInfo e in Mounts.Effects.Effects) Log(e.Id);   // "hellfire" and yours; EffectsChanged fires on changes
+```
+
+The API spawns, follows and scales the emitters (smaller on foals), rebuilds them when the cart is hitched or
+unhitched, relights a source whose game particles weren't in memory yet, and removes everything with the view or the
+donkey; nothing is attached to the game's pooled parts. A settings page offers the list with `page.List(...)` as for
+skins (Saddle Up: Donkey, "Effect").
+
 ## Gating on the game's progress
 
 All of this is the game's own state, reached through `MainGame.Instance.GameSave` (reference `Assembly-CSharp.dll`).
@@ -625,6 +775,8 @@ so on. The full survey is in `docs/api-design.md`.
 
 ## Examples in this repo
 
+- **`examples/GK2DonkeySkins`:** two skins from code, a recipe (`sepia`) and a picture source (`checker`), and a mount
+  kind with an ability (`checker-beast`: no cart, its own seat, burns while ridden).
 - **`examples/GK2DonkeyTechGate`:** the cart needs a tech (a mount rule with a reason) and the lamp's light needs a
   tech (a feature rule). It refreshes on `OnTechUnlocked` and logs your unlocked techs at every game start.
 - **`src/SaddleUp`:** the playable mount. It owns the keys (ride H, cart G, bell) and hands its behaviour
@@ -662,6 +814,18 @@ History:
 - 0.29.1: no API change (the public surface is as in 0.29.0). Performance: the Mods-menu donkey picture and its
   labelled lists no longer look the window up while playing (2-3 ms frames four times a second), and a cart left
   standing and hitched again is no longer kept in memory ([performance.md](performance.md)).
+- 0.30.0: skins ([skins-design.md](skins-design.md)): `MountCompanion.Skin` (a skin id, "" the donkey) and
+  `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`, kept with the save; "donkey"
+  or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`, `FrameKeys`, `MountSkinInfo`, `Register` with
+  an `IMountSkinSource` of sprites, `RegisterRecipe`, `RegisterFolder`, `RegisterEmbedded`, `Unregister`, `SkinsChanged`);
+  `MountSettingsPage.List`, and `Toggle` takes `visible`; the built-in skins rat, snail and worm, the recipes zebra,
+  ghost, ember, golden and shadow. Effects ([above](#effects-0300)): `Mounts.Effects` (`Effects`, `Find`, `Register`,
+  `Unregister`, `GameParticles`, `EffectsChanged`), `MountEffectDef`, `MountEffectPart`, `MountEffectEmitter`,
+  `MountEffectPlacement`, `IMountEffectSource`, `MountEffectInfo`, `MountEffectWhen`; the instance keys `Effect` and
+  `EffectWhen`, `MountCompanion.Effect` / `EffectWhen`, `Mounts.EffectSettings`; Hellfire built in. Mount kinds
+  ([above](#mount-kinds-0300)): `Mounts.Kinds` (`Kinds`, `Find`, `Register`, `Unregister`, `KindsChanged`), `MountKindDef`,
+  `MountKindInfo`, `MountAbility`, `MountHandle.Kind`, `MountSkinDef.Mount` (and `Foals` nullable), `MountSkinInfo.Mount`,
+  `MountEffects.KindId`, `MountSettingsPage.MountRows`; a pack's `[Mount]` section; the built-in creatures as kinds.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).

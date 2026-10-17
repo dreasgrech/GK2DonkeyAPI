@@ -14,6 +14,11 @@ def load_set(d):
     for f in sorted(os.listdir(d)):
         if f.endswith(".png") and f.startswith(("bdy_", "hed_")):
             s[f[:-4]] = "data:image/png;base64," + base64.b64encode(open(os.path.join(d, f), "rb").read()).decode()
+    front = os.path.join(d, "front")   # the front layer: drawn above the rider
+    if os.path.isdir(front):
+        for f in sorted(os.listdir(front)):
+            if f.endswith(".png"):
+                s["front/" + f[:-4]] = "data:image/png;base64," + base64.b64encode(open(os.path.join(front, f), "rb").read()).decode()
     return s
 
 
@@ -25,12 +30,28 @@ if os.path.isdir(caps_dir):
         d = os.path.join(caps_dir, name)
         files = sorted(f for f in os.listdir(d) if f.endswith(".png"))
         if files:
-            captures.append({"name": name, "frames": ["data:image/png;base64," + base64.b64encode(open(os.path.join(d, f), "rb").read()).decode() for f in files]})
+            # referenced, not embedded: the page sits next to captures\ (a capture can be tens of MB)
+            captures.append({"name": name, "frames": ["captures/" + name + "/" + f for f in files]})
 
+# the rider alone (the probe's Capture tab, "Export the rider"): 96x96, in the donkey frames' pixels
+rider_png = os.path.join(probe, "rider.png")
+rider = "data:image/png;base64," + base64.b64encode(open(rider_png, "rb").read()).decode() if os.path.isfile(rider_png) else ""
+
+
+def canvas_size(d):
+    for f in sorted(os.listdir(d)):
+        if f.endswith(".png"):
+            b = open(os.path.join(d, f), "rb").read(24)
+            return int.from_bytes(b[16:20], "big")
+    return 96
+
+
+sizes = {"donkey": 96}
 sets = {"donkey": load_set(frames_dir)}
 for name in sorted(os.listdir(skins_dir)):
     if os.path.isdir(os.path.join(skins_dir, name)):
         sets[name] = load_set(os.path.join(skins_dir, name))
+        sizes[name] = canvas_size(os.path.join(skins_dir, name))
 
 # clips: frame names grouped by clip ("bdy_walk_left_03" -> "walk"), numbered frames in order
 clips = {}
@@ -56,11 +77,15 @@ select, button { background:var(--card); color:var(--fg); border:1px solid var(-
 main { padding:16px; display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:16px; }
 .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; }
 .card h2 { font-size:15px; margin:0 0 8px; text-transform:capitalize; }
-.stage { background:var(--day); border-radius:6px; display:flex; justify-content:center; align-items:center; overflow:hidden; }
+.stage { background:var(--day); border-radius:6px; display:flex; justify-content:center; align-items:center; overflow:hidden; position:relative; width:100%; max-width:384px; aspect-ratio:1; }
+.stage .rider { position:absolute; pointer-events:none; display:none; }
+.stage .front { position:absolute; pointer-events:none; }
+body.with-rider .stage .rider { display:block; }
 body.night .stage { background:var(--night); }
 body.night .stage img { filter:brightness(.55) saturate(.8) hue-rotate(10deg); }
-.stage img { width:100%; max-width:384px; aspect-ratio:1; image-rendering:pixelated; }
+.stage img { width:100%; aspect-ratio:1; image-rendering:pixelated; }
 .stage.flip img { transform:scaleX(-1); }
+.stage.flip .rider { transform:scaleX(-1); }
 p.note { color:var(--muted); margin:6px 16px 0; font-size:13px; }
 #caps { padding:16px 16px 0; display:grid; grid-template-columns:repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
 #caps:empty { display:none; }
@@ -74,6 +99,7 @@ p.note { color:var(--muted); margin:6px 16px 0; font-size:13px; }
   <label>Facing <select id="facing"><option value="left">left (as drawn)</option><option value="right">right (mirrored)</option></select></label>
   <button id="night">Night</button>
   <button id="pause">Pause</button>
+  <button id="rider">Rider: off</button>
 </header>
 <p class="note">Recipe prototypes made from the donkey's own frames (tools/skin_recipes.py). Local only: the frames are the game's art. Night is only a rough tint, not the game's lighting.</p>
 <section id="caps"></section>
@@ -82,6 +108,8 @@ p.note { color:var(--muted); margin:6px 16px 0; font-size:13px; }
 const SETS = __SETS__;
 const CLIPS = __CLIPS__;
 const SPEED = __SPEED__;
+const RIDER = __RIDER__;
+const SIZES = __SIZES__;
 const CAPS = __CAPS__;
 const capsEl = document.getElementById('caps');
 CAPS.forEach(c => {
@@ -113,7 +141,16 @@ Object.keys(SETS).forEach(name => {
   const h = document.createElement('h2'); h.textContent = name; card.appendChild(h);
   const st = document.createElement('div'); st.className = 'stage';
   const im = document.createElement('img'); im.alt = name; st.appendChild(im); card.appendChild(st);
-  grid.appendChild(card); imgs[name] = { im, st };
+  // every skin at the same pixel scale (3 screen px per picture px at full width): a 128 canvas fills the stage,
+  // a 96 one is three quarters of it; the rider (96 px) is drawn centred, where the donkey's frame sits in any canvas
+  const n = SIZES[name] || 96;
+  im.style.width = (100 * n / 128) + '%';
+  const rd = document.createElement('img'); rd.className = 'rider'; rd.alt = ''; rd.src = RIDER;
+  rd.style.width = '75%';
+  st.appendChild(rd);
+  const fr = document.createElement('img'); fr.className = 'front'; fr.alt = ''; fr.style.width = im.style.width;
+  st.appendChild(fr);
+  grid.appendChild(card); imgs[name] = { im, st, fr };
 });
 let frame = 0, paused = false, last = 0;
 function show() {
@@ -122,7 +159,12 @@ function show() {
   for (const name in imgs) {
     const s = SETS[name];
     imgs[name].im.src = s[key] || SETS.donkey[key];
+    const f = s['front/' + key] || s['front/' + key.replace(/_[0-9]+$/, '')] || s['front/' + key.split('_')[0]];
+    imgs[name].fr.style.display = f ? 'block' : 'none';
+    if (f) imgs[name].fr.src = f;
     imgs[name].st.classList.toggle('flip', document.getElementById('facing').value === 'right');
+    const r = imgs[name].st.querySelector('.rider');
+    if (r) r.style.transform = document.getElementById('facing').value === 'right' ? 'scaleX(-1)' : '';
   }
 }
 function tick(t) {
@@ -133,11 +175,14 @@ function tick(t) {
 clipSel.onchange = () => { frame = 0; show(); };
 document.getElementById('facing').onchange = show;
 document.getElementById('night').onclick = e => { document.body.classList.toggle('night'); e.target.textContent = document.body.classList.contains('night') ? 'Day' : 'Night'; };
+const riderBtn = document.getElementById('rider');
+if (!RIDER) { riderBtn.disabled = true; riderBtn.textContent = 'Rider: export it in the probe first'; }
+riderBtn.onclick = () => { document.body.classList.toggle('with-rider'); riderBtn.textContent = document.body.classList.contains('with-rider') ? 'Rider: on' : 'Rider: off'; };
 document.getElementById('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
 show(); requestAnimationFrame(tick); requestAnimationFrame(capTick);
 </script>
 </body></html>
 """
-html = html.replace("__SETS__", json.dumps(sets)).replace("__CLIPS__", json.dumps(clips)).replace("__SPEED__", json.dumps(speed)).replace("__CAPS__", json.dumps(captures))
+html = html.replace("__SETS__", json.dumps(sets)).replace("__CLIPS__", json.dumps(clips)).replace("__SPEED__", json.dumps(speed)).replace("__CAPS__", json.dumps(captures)).replace("__RIDER__", json.dumps(rider)).replace("__SIZES__", json.dumps(sizes))
 open(out, "w", encoding="utf-8").write(html)
 print("ok", out, "captures:", len(captures), "skins:", ", ".join(sets), "clips:", ", ".join(f"{c} {len(v)}" for c, v in clips.items()), f"{len(html)//1024} KB")

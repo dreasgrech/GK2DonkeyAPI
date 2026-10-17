@@ -12,18 +12,18 @@ namespace SaddleUp
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.28.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.30.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.9.1";
+        public const string Version = "0.10.0";
 
-        // The API this mod is written against: 0.28 has the CartSlots behaviour key (0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22
+        // The API this mod is written against: 0.30 has the skins (MountCompanion.Skin; 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22
         // CargoZombies). Checked before anything of the API is used, so an older API gets a clear message instead of a
         // missing-method error. Keep it the same as the BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 28, 0);
+        private static readonly Version NeedsApi = new Version(0, 30, 0);
 
         private void Awake()
         {
@@ -47,6 +47,12 @@ namespace SaddleUp
             p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send the donkey away", "Your donkey, cart and foals go (the cart's load is set down first); the next key brings a new one. None = no key.",
                 pressed: me.SendAway);
+
+            // Right after the keys, what you ride: Mount (the picture shows it), then its skin; Effect: the particle
+            // effect on it. Moving sections renumbers them in the cfg; the page carries a player's values over.
+            p.Preview("Mount", me, "Your mount", cart: false);
+            p.MountRows("Mount", me, legacySection: "Donkey");
+            p.EffectRows("Effect", me);
 
             // The companion's own values are the defaults: written once, in the API (MountCompanion).
             void Speed(MountStyle style, string key, string label, string how, MountSpeed now, Action<MountSpeed> set) =>

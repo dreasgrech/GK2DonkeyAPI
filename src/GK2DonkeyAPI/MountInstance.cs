@@ -47,6 +47,8 @@ namespace GK2DonkeyAPI
             internal readonly CartChest.Rig ChestRig;
             internal readonly Lantern.Rig LanternRig;
             internal readonly Colors.Rig ColorsRig;
+            internal readonly Looks.Rig LooksRig;
+            internal readonly Effects.Rig EffectsRig;
             internal MountHandle Handle;
 
             // Setting overrides of this instance by key name (any tuning, colour or behaviour key), read by Tuned<T>
@@ -65,6 +67,8 @@ namespace GK2DonkeyAPI
                 ChestRig = new CartChest.Rig(this);
                 LanternRig = new Lantern.Rig(this);
                 ColorsRig = new Colors.Rig();
+                LooksRig = new Looks.Rig(this);
+                EffectsRig = new Effects.Rig(this);
             }
 
             internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : !Rideable && ViewScale < 1f ? "foal" : "donkey";
@@ -169,6 +173,11 @@ namespace GK2DonkeyAPI
                 using (Perf.Measure(Perf.S.Colors))
                 {
                     ColorsRig.Tick();
+                }
+                LooksRig.Tick(); // which skin; the drawing is per frame before the cameras (Looks.cs)
+                using (Perf.Measure(Perf.S.Effects))
+                {
+                    EffectsRig.Tick();
                 }
             }
 
@@ -378,6 +387,8 @@ namespace GK2DonkeyAPI
                     if (r != null && r) r.forceRenderingOff = false;
                 }
                 donkeyOnly.Clear();
+                try { LooksRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the skin failed: {e.Message}"); }
+                try { EffectsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the effect failed: {e.Message}"); }
                 try { ColorsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colours failed: {e.Message}"); }
                 try { LanternRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the lantern failed: {e.Message}"); }
                 try { CargoRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the cargo holder failed: {e.Message}"); }
@@ -436,6 +447,8 @@ namespace GK2DonkeyAPI
             {
                 DestroyDonkey();
                 ColorsRig.Release();
+                LooksRig.Release();
+                EffectsRig.Release();
             }
 
             // ------------------------------------------------------------------ getting on and off
@@ -759,6 +772,11 @@ namespace GK2DonkeyAPI
                 {
                     return "This one can't pull a cart.";
                 }
+                string byKind = Looks.WhyNotCartByKind(this);
+                if (byKind != null)
+                {
+                    return byKind;
+                }
                 if (cart == null || cart.HasDonkey || cart.IsRidden || !IsRegistered(cart))
                 {
                     return "That is not a free cart.";
@@ -895,7 +913,8 @@ namespace GK2DonkeyAPI
             }
 
             // The overrides that belong to the cart (IsCartKey) move from one instance to the other; the target's own
-            // cart overrides are replaced.
+            // cart overrides are replaced. A creature's own values (Looks.TuningOwner, a kind's cart-style tuning) never
+            // move: the creature sets them again on whichever instance wears it, and a free cart wears none.
             private static void MoveCartSettings(Instance from, Instance to)
             {
                 foreach (string k in new List<string>(to.Overrides.Keys))
@@ -909,11 +928,15 @@ namespace GK2DonkeyAPI
                 foreach (var kv in new List<KeyValuePair<string, object>>(from.Overrides))
                 {
                     if (!IsCartKey(kv.Key)) continue;
+                    from.OverrideOwners.TryGetValue(kv.Key, out string o);
+                    if (o == Looks.TuningOwner) continue;
                     to.Overrides[kv.Key] = kv.Value;
-                    if (from.OverrideOwners.TryGetValue(kv.Key, out string o)) to.OverrideOwners[kv.Key] = o;
+                    if (o != null) to.OverrideOwners[kv.Key] = o;
                     from.Overrides.Remove(kv.Key);
                     from.OverrideOwners.Remove(kv.Key);
                 }
+                from.LooksRig.RetuneNow();
+                to.LooksRig.RetuneNow();
                 from.ColorsRig.MarkDirty();
                 to.ColorsRig.MarkDirty();
             }

@@ -47,6 +47,12 @@ enum GK2DonkeyAPI.Api.HubColor
   Brass = 2
   Silver = 3
   Custom = 4
+interface GK2DonkeyAPI.Api.IMountEffectSource
+  method UnityEngine.GameObject MakeTemplate()
+  method void Release()
+interface GK2DonkeyAPI.Api.IMountSkinSource
+  property System.Collections.Generic.IEnumerable<string> Keys { get; }
+  method bool TryGetFrame(string key, UnityEngine.Sprite& sprite)
 class GK2DonkeyAPI.Api.InstanceTuning
   property System.Collections.Generic.IReadOnlyList<string> Keys { get; }
   method void Clear(string key)
@@ -64,6 +70,14 @@ enum GK2DonkeyAPI.Api.LanternColor
 enum GK2DonkeyAPI.Api.LegSource
   Body = 0
   Drawn = 1
+class GK2DonkeyAPI.Api.MountAbility
+  property string Id { get; }
+  property bool TicksWhileStanding { get; }
+  method void Attached(GK2DonkeyAPI.Api.MountHandle mount)
+  method void Detached(GK2DonkeyAPI.Api.MountHandle mount)
+  method void Dismounted(GK2DonkeyAPI.Api.MountHandle mount)
+  method void Mounted(GK2DonkeyAPI.Api.MountHandle mount, GK2DonkeyAPI.Api.MountStyle style)
+  method void Tick(GK2DonkeyAPI.Api.MountHandle mount, float dt)
 class GK2DonkeyAPI.Api.MountColorRegion
   field static readonly System.Collections.Generic.IReadOnlyList<string> SettingNames
   property string Area { get; }
@@ -91,9 +105,12 @@ class GK2DonkeyAPI.Api.MountCompanion
   property string CustomPaint { get; set; }
   property string CustomWheels { get; set; }
   property GK2DonkeyAPI.Api.MountHandle Donkey { get; }
+  property string Effect { get; set; }
+  property GK2DonkeyAPI.Api.MountEffectWhen EffectWhen { get; set; }
   property int FoalCount { get; set; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Foals { get; }
   property bool FoalsComeIndoors { get; set; }
+  property bool FoalsWearSkin { get; set; }
   property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
   property GK2DonkeyAPI.Api.HubColor Hubs { get; set; }
   property bool KeepWithSaves { get; set; }
@@ -104,12 +121,65 @@ class GK2DonkeyAPI.Api.MountCompanion
   property string OwnerId { get; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
   property GK2DonkeyAPI.Api.MountSpeed RideSpeed { get; set; }
+  property string Skin { get; set; }
   property float SoundVolume { get; set; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
   method void RingBell()
   method void SendAway()
   method static System.String[] SpeedLabelsFor(GK2DonkeyAPI.Api.MountStyle style)
   method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
+class GK2DonkeyAPI.Api.MountEffectDef
+  field string Author
+  field bool Foals
+  field string Id
+  field string Name
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountEffectPart> Parts
+  field System.Func<GK2DonkeyAPI.Api.MountHandle, bool> Show
+  field string Version
+  method void .ctor()
+class GK2DonkeyAPI.Api.MountEffectEmitter
+  field float Angle
+  field float Burst
+  field int Count
+  field float Every
+  field float Height
+  field UnityEngine.Vector3 Offset
+  field GK2DonkeyAPI.Api.MountEffectPlacement Placement
+  field float Radius
+  field float Size
+  method void .ctor()
+class GK2DonkeyAPI.Api.MountEffectInfo
+  property string Author { get; }
+  property bool Foals { get; }
+  property string Id { get; }
+  property bool IsBuiltIn { get; }
+  property string Name { get; }
+  property string Owner { get; }
+  property int Parts { get; }
+  property string Version { get; }
+  method string ToString()
+class GK2DonkeyAPI.Api.MountEffectPart
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountEffectEmitter> Emitters
+  field GK2DonkeyAPI.Api.IMountEffectSource Source
+  method void .ctor()
+enum GK2DonkeyAPI.Api.MountEffectPlacement
+  Ring = 0
+  Body = 1
+  Trail = 2
+class GK2DonkeyAPI.Api.MountEffects
+  field static const string KindId = mount
+  field static const string NoneId = none
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountEffectInfo> Effects { get; }
+  event System.Action EffectsChanged
+  method GK2DonkeyAPI.Api.MountEffectInfo Find(string id)
+  method GK2DonkeyAPI.Api.IMountEffectSource GameParticles(string materialName, string addressableMaterialKey)
+  method static bool IsNone(string id)
+  method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountEffectDef def)
+  method bool Unregister(string ownerId, string id)
+enum GK2DonkeyAPI.Api.MountEffectWhen
+  Off = 0
+  Night = 1
+  Always = 2
 enum GK2DonkeyAPI.Api.MountFeature
   Cargo = 0
   Lantern = 1
@@ -135,6 +205,7 @@ class GK2DonkeyAPI.Api.MountHandle
   property bool IsStepping { get; }
   property bool IsWithKeeper { get; }
   property string Key { get; }
+  property string Kind { get; }
   property string Owner { get; }
   property GK2DonkeyAPI.Api.MountHandle Parent { get; }
   property bool Persist { get; }
@@ -157,6 +228,53 @@ class GK2DonkeyAPI.Api.MountHandle
   method GK2DonkeyAPI.Api.MountResult SetPersist(string ownerId, bool keep)
   method GK2DonkeyAPI.Api.MountResult TakeToHead(bool showMessage = True)
   method string ToString()
+class GK2DonkeyAPI.Api.MountKindDef
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountAbility> Abilities
+  field string Author
+  field bool Cart
+  field string Effect
+  field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
+  field bool Foals
+  field string Id
+  field string Name
+  field System.Collections.Generic.Dictionary<string, object> Tuning
+  field System.Collections.Generic.Dictionary<string, object> TuningCart
+  field System.Collections.Generic.Dictionary<string, object> TuningRide
+  field string Version
+  method void .ctor()
+class GK2DonkeyAPI.Api.MountKindInfo
+  property int Abilities { get; }
+  property string Author { get; }
+  property bool Cart { get; }
+  property string Effect { get; }
+  property bool Foals { get; }
+  property bool FromPack { get; }
+  property string Id { get; }
+  property bool IsBuiltIn { get; }
+  property string Name { get; }
+  property string Owner { get; }
+  property System.Collections.Generic.IReadOnlyList<string> Skins { get; }
+  property string Version { get; }
+  method string ToString()
+class GK2DonkeyAPI.Api.MountKinds
+  field static const string DonkeyId = donkey
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountKindInfo> Kinds { get; }
+  event System.Action KindsChanged
+  method GK2DonkeyAPI.Api.MountKindInfo Find(string id)
+  method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountKindDef def)
+  method bool Unregister(string ownerId, string id)
+class GK2DonkeyAPI.Api.MountLooks
+  field static const string DonkeyId = donkey
+  property System.Collections.Generic.IReadOnlyList<string> FrameKeys { get; }
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountSkinInfo> Skins { get; }
+  event System.Action SkinsChanged
+  method GK2DonkeyAPI.Api.MountSkinInfo Find(string id)
+  method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountSkinDef def)
+  method int RegisterEmbedded(string ownerId, System.Reflection.Assembly assembly, string prefix)
+  method int RegisterFolder(string ownerId, string folder)
+  method System.IDisposable RegisterRecipe(string ownerId, string id, string name, System.Func<GK2DonkeyAPI.Api.MountSkinFrame, UnityEngine.Color32[]> pixels, string author = null, string version = null, bool foals = True)
+  method string Report(string id)
+  method bool Unregister(string ownerId, string id)
 static class GK2DonkeyAPI.Api.MountPalette
   method static string Hex(GK2DonkeyAPI.Api.PaletteColor c)
   method static string Hex(GK2DonkeyAPI.Api.PaletteColor c, int lightness)
@@ -174,10 +292,14 @@ static class GK2DonkeyAPI.Api.Mounts
   property static GK2DonkeyAPI.Api.MountTuning Colors { get; }
   property static GK2DonkeyAPI.Api.MountTuning Corpses { get; }
   property static bool CorpsesActive { get; }
+  property static GK2DonkeyAPI.Api.MountEffects Effects { get; }
+  property static GK2DonkeyAPI.Api.MountTuning EffectSettings { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Instances { get; }
   property static bool IsAvailable { get; }
   property static bool IsGameReady { get; }
   property static bool IsMounted { get; }
+  property static GK2DonkeyAPI.Api.MountKinds Kinds { get; }
+  property static GK2DonkeyAPI.Api.MountLooks Looks { get; }
   property static string Owner { get; }
   property static GK2DonkeyAPI.Api.MountHandle Riding { get; }
   property static GK2DonkeyAPI.Api.MountTuning Shuffle { get; }
@@ -225,15 +347,65 @@ static class GK2DonkeyAPI.Api.Mounts
 class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
+  method void EffectRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null, System.Action pressed = null)
+  method BepInEx.Configuration.ConfigEntry<string> List(string section, string key, string value, System.Func<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, string>>> choices, string label, string description, System.Action<string> apply = null, bool look = False, System.Func<bool> visible = null)
   method void LookButton(string section, string label, string description)
+  method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion, string legacySection = null)
   method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your donkey, bool cart = True)
   method void Publish()
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)
-  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null)
+  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null, System.Func<bool> visible = null)
+class GK2DonkeyAPI.Api.MountSkinDef
+  field string Author
+  field int CanvasHeight
+  field int CanvasWidth
+  field System.Nullable<UnityEngine.Vector2> CartOffset
+  field System.Nullable<bool> Foals
+  field GK2DonkeyAPI.Api.IMountSkinSource FrontSource
+  field string Id
+  field string Mount
+  field string Name
+  field UnityEngine.Vector2 Offset
+  field bool Over
+  field bool PaletteColours
+  field float PivotX
+  field float PivotY
+  field GK2DonkeyAPI.Api.IMountSkinSource Source
+  field System.Collections.Generic.Dictionary<string, object> Tuning
+  field string Version
+  method void .ctor()
+class GK2DonkeyAPI.Api.MountSkinFrame
+  property int Bob { get; }
+  property int Height { get; }
+  property string Key { get; }
+  property UnityEngine.Color32[] Pixels { get; }
+  property int Width { get; }
+  method bool Inner(int x, int y)
+  method static float Luminance(UnityEngine.Color32 c)
+  method static float Noise(int x, int y, int salt)
+  method bool Opaque(int x, int y)
+  method static UnityEngine.Color32 Ramp(float t, System.ValueTuple`2<System.Single,UnityEngine.Color32>[] stops)
+  method bool Rim(int x, int y)
+class GK2DonkeyAPI.Api.MountSkinInfo
+  property string Author { get; }
+  property int CanvasHeight { get; }
+  property int CanvasWidth { get; }
+  property bool Foals { get; }
+  property string Id { get; }
+  property bool IsBuiltIn { get; }
+  property bool IsRecipe { get; }
+  property string Mount { get; }
+  property string Name { get; }
+  property bool Over { get; }
+  property bool OwnColours { get; }
+  property string Owner { get; }
+  property string Source { get; }
+  property string Version { get; }
+  method string ToString()
 class GK2DonkeyAPI.Api.MountSpawn
   field bool Donkey
   field bool FacingRight

@@ -120,6 +120,10 @@ namespace GK2AssetProbe
             return true;
         }
 
+        // The camera that draws the screen. Camera.main is not it in this game: it's the "Deform Texture Camera" (depth
+        // -50, one layer into a 1280x720 buffer; logged 2026-10-17, and the API's CargoSheet.cs found the same).
+        internal static Camera WorldCam => CameraSystem.Instance != null && CameraSystem.Instance.WorldCamera != null ? CameraSystem.Instance.WorldCamera : Camera.main;
+
         internal static Transform Root => anim != null ? (anim.transform.parent != null ? anim.transform.parent : anim.transform) : null;
 
         // Where the donkey stands as drawn: the root's height and depth, under the middle of the drawn body. The root is
@@ -694,7 +698,7 @@ namespace GK2AssetProbe
                 mat.name = "assetprobe " + label;
                 owned.Add(mat);
             }
-            Camera cam = Camera.main;
+            Camera cam = WorldCam;
             Vector3 right = cam != null ? Vector3.ProjectOnPlane(cam.transform.right, Vector3.up).normalized : Vector3.right;
             var go = new GameObject("assetprobe " + label) { layer = body.gameObject.layer };
             go.transform.position = Root.position + right * (1.3f * (pictures.Count + 1));
@@ -721,7 +725,7 @@ namespace GK2AssetProbe
         internal static void DrawLabels()
         {
             if (pictures.Count == 0) return;
-            Camera cam = Camera.main;
+            Camera cam = WorldCam;
             if (cam == null) return;
             if (labelStyle == null) labelStyle = new GUIStyle(GUI.skin.box) { fontSize = 12, wordWrap = true, alignment = TextAnchor.MiddleCenter };
             foreach (var (go, label) in pictures)
@@ -856,7 +860,7 @@ namespace GK2AssetProbe
             if ((p - lastStep).sqrMagnitude < 0.45f * 0.45f) return;
             lastStep = p;
             leftFoot = !leftFoot;
-            Camera cam = Camera.main;
+            Camera cam = WorldCam;
             Vector3 side = cam != null ? Vector3.ProjectOnPlane(cam.transform.forward, Vector3.up).normalized : Vector3.forward;
             var ep = new ParticleSystem.EmitParams
             {

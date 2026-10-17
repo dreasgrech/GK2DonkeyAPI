@@ -31,6 +31,44 @@ namespace GK2DonkeyAPI
         // event draws the same controls its layout pass measured (IMGUI throws otherwise).
         private static Action pending;
 
+        // The donkey the rows are about when no instance is edited: the ridden one. Its override of a key (a creature's
+        // value from the Mounts tab, or a mod's) wins over the cfg row, so the row shows it and is locked.
+        private static bool RiddenHas(ConfigEntryBase e, out object value, out string owner)
+        {
+            value = null;
+            owner = null;
+            Mount.Instance r = Mount.Ridden;
+            if (EditingNow || e == null || r == null || r.Overrides.Count == 0 || !Tuned.ByEntry.ContainsKey(e)) return false;
+            if (!r.Overrides.TryGetValue(e.Definition.Key, out value)) return false;
+            r.OverrideOwners.TryGetValue(e.Definition.Key, out owner);
+            return true;
+        }
+
+        private static bool IsMountOwner(string owner) => owner == Looks.TuningOwner;
+
+        // The note a row's tooltip starts with when something other than the cfg decides it.
+        private static string LockNote(ConfigEntryBase e)
+        {
+            if (EditsInstance(e))
+            {
+                return editing.OverrideOwners.TryGetValue(e.Definition.Key, out string o) && IsMountOwner(o)
+                    ? "Shown: the mount's value (Mounts tab). Drag to give this donkey its own; right-click puts the mount's back. "
+                    : "";
+            }
+            if (!RiddenHas(e, out _, out string owner)) return "";
+            return IsMountOwner(owner)
+                ? "Locked: the mount you ride sets this (its skin.cfg, the Mounts tab). Your own value underneath applies to every donkey that isn't this mount. "
+                : $"Locked: {FriendlyOwner(owner)} sets this on the donkey you ride; your value underneath shows again when it stops. ";
+        }
+
+        private static string RowTip(ConfigEntryBase e, string tip)
+        {
+            string note = LockNote(e);
+            return note.Length == 0 ? TipFor(e, tip) : note + TipFor(e, tip);
+        }
+
+        internal static string FriendlyOwner(string owner) => IsMountOwner(owner) ? "the mount (Mounts tab)" : owner == PanelOwner ? "this panel" : owner;
+
         // The value a row shows: the edited instance's own, else the value in effect for everyone; the cfg's when not
         // editing (as the panel always did).
         private static T Val<T>(ConfigEntry<T> e)
@@ -75,6 +113,7 @@ namespace GK2DonkeyAPI
         private static void InstanceChanged(Mount.Instance i)
         {
             i.ColorsRig.MarkDirty();
+            i.LooksRig.RetuneNow(); // a key given back: the mount's value returns; a key taken: the mount leaves it
             using (Mount.Bind(i))
             {
                 i.OnTuningChanged(i.CurrentStyle);
@@ -107,7 +146,10 @@ namespace GK2DonkeyAPI
             string ride = r != null
                 ? $"the donkey you ride ({(r.Ephemeral ? "the summoned donkey" : r.Describe())}, {r.CurrentStyle} style)"
                 : "nothing is ridden right now";
-            GUILayout.Label($"Editing everyone's settings (your cfg). They apply to {ride}, to {standing} donkey(s) and cart(s) standing in the world, and to every later ride; a donkey keeps its own value where it has one. Style rows ([Ride] / [Cart]) apply to donkeys in that style; the style tabs show the {PanelStyle} set. One donkey only: Instances tab, Edit its settings.", small);
+            int mountRows = 0;
+            if (r != null) foreach (string o in r.OverrideOwners.Values) if (IsMountOwner(o)) mountRows++;
+            string mountNote = mountRows > 0 ? $" You ride a {MountLabel(Looks.Find(r.LooksRig.Wearing), r.LooksRig.KindNow)}: the {mountRows} row(s) the mount sets are orange and locked here (the Mounts tab tunes them); your values apply to every donkey that isn't this mount." : "";
+            GUILayout.Label($"Editing everyone's settings (your cfg). They apply to {ride}, to {standing} donkey(s) and cart(s) standing in the world, and to every later ride; a donkey keeps its own value where it has one. Style rows ([Ride] / [Cart]) apply to donkeys in that style; the style tabs show the {PanelStyle} set. One donkey only: Instances tab, Edit its settings.{mountNote}", small);
         }
 
         // Over every donkey and cart in the keeper's scene while the Instances tab is open or one is edited: its mod and
@@ -150,6 +192,7 @@ namespace GK2DonkeyAPI
 
         private static string OwnerShortUncached(string owner)
         {
+            if (IsMountOwner(owner)) return "mount";
             string n = Mount.OwnerName(owner);
             if (n.StartsWith("GK2 ", StringComparison.Ordinal) && n.Length > 4)
             {

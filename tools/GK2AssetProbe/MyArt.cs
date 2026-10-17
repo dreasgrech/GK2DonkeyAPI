@@ -164,13 +164,14 @@ namespace GK2AssetProbe
         }
 
         private static float recheckAt;
+        private static float lostSince = -1f, lostLook;
 
-        // Twice a second: is the donkey still the one being dressed? Hitching and unhitching change its view, and the
+        // Four times a second: is the donkey still the one being dressed? Hitching and unhitching change its view, and the
         // old view's parts go back to the API's pool, where a foal can get them (2026-10-17: a foal wore the skin).
         internal static void Recheck()
         {
             if (Dress == Mode.Off || Time.unscaledTime < recheckAt) return;
-            recheckAt = Time.unscaledTime + 0.5f;
+            recheckAt = Time.unscaledTime + 0.25f;
             if (Probe.Recheck())
             {
                 DropOverlays();
@@ -198,13 +199,13 @@ namespace GK2AssetProbe
             if (Dress == Mode.Off || cam == null) return;
             if (camerasSeen.Add(cam.name))
             {
-                Probe.Info($"dressing: camera '{cam.name}' draws (depth {cam.depth}, culling mask {cam.cullingMask:X}, target {(cam.targetTexture != null ? cam.targetTexture.name : "the screen")}, main {cam == Camera.main})");
+                Probe.Info($"dressing: camera '{cam.name}' draws (depth {cam.depth}, culling mask {cam.cullingMask:X}, target {(cam.targetTexture != null ? cam.targetTexture.name : "the screen")}, Unity's Camera.main {cam == Camera.main}, the world camera {cam == Probe.WorldCam})");
             }
             if (dressedFrame == Time.frameCount) return;
             dressedFrame = Time.frameCount;
             try
             {
-                DressNow(Camera.main != null ? Camera.main : cam);
+                DressNow(Probe.WorldCam != null ? Probe.WorldCam : cam);
             }
             catch (Exception e)
             {
@@ -221,15 +222,21 @@ namespace GK2AssetProbe
             if (b == null || root == null || pc == null || !b.gameObject.activeInHierarchy)
             {
                 // its view was swapped (riding <-> driving the cart, a door): the dressing stays on and moves to the new
-                // view once found (2026-10-17: switching to the cart turned it off). Only Off, Clear all or a scene
-                // change turn it off.
+                // view (2026-10-17: switching to the cart turned it off). Looked for at once, every frame until found,
+                // so the new view is dressed the frame it appears (a timed look left the plain donkey showing for up
+                // to a second). Only Off, Clear all or a scene change turn it off.
                 DropOverlays();
-                if (Time.unscaledTime >= recheckAt)
-                {
-                    recheckAt = Time.unscaledTime + 0.25f;
-                    if (Probe.Recheck()) Probe.Info("dressing: the donkey's view changed; dressing the new one");
-                }
-                return;
+                // every frame for the first 2 s (a swap: the new view is dressed the frame it appears), then four times a
+                // second (the donkey sent away: a scene search each frame would cost a few ms for nothing)
+                if (lostSince < 0f) lostSince = Time.unscaledTime;
+                if (Time.unscaledTime - lostSince > 2f && Time.unscaledTime < lostLook) return;
+                lostLook = Time.unscaledTime + 0.25f;
+                if (pc == null || !Probe.Recheck()) return;
+                lostSince = -1f;
+                Probe.Info("dressing: the donkey's view changed; dressing the new one");
+                b = Probe.Body;
+                root = Probe.Root;
+                if (b == null || root == null || !b.gameObject.activeInHierarchy) return;
             }
             if ((root.position - pc.transform.position).sqrMagnitude > 20f * 20f)
             {

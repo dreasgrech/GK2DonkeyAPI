@@ -223,7 +223,7 @@ namespace GK2DonkeyAPI
         }
 
         // What the mod adds to a view (RiderLeg, LampHang, Cargo): removed by their own Detach; one still there is a leftover.
-        private static readonly string[] ModObjects = { "mount_rider_legs", "gk2_hanging_lamp", Cargo.ContainerName };
+        private static readonly string[] ModObjects = { "mount_rider_legs", "gk2_hanging_lamp", Cargo.ContainerName, Looks.OverlayBody, Looks.OverlayHead, Looks.OverlayBody + Looks.FrontSuffix, Looks.OverlayHead + Looks.FrontSuffix };
         private static readonly HashSet<string> unknownSeen = new HashSet<string>(StringComparer.Ordinal);
 
         private static string ParentPath(string path)

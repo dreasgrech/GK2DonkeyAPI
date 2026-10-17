@@ -118,7 +118,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Success;
             }
-            string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) : null) ?? MountRules.WhyCannotMount(style);
+            string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByKind(Mount.Ridden) : null) ?? MountRules.WhyCannotMount(style);
             if (reason != null)
             {
                 if (showMessage)
@@ -320,6 +320,33 @@ namespace GK2DonkeyAPI.Api
                     throw new InvalidOperationException("GK2 Donkey API has not loaded its settings yet.");
                 }
                 return GK2DonkeyAPI.Colors.Tuning;
+            }
+        }
+
+        // The skins a donkey can wear: the list, a lookup, the loader's report (docs/skins-design.md). A donkey wears one
+        // through its tuning key "Skin" or MountCompanion.Skin.
+        public static MountLooks Looks { get; } = new MountLooks();
+
+        // Particle effects on donkeys (docs/mount-looks-design.md): the list, registering, the game's particles as a
+        // source. A donkey shows one through its tuning keys "Effect" and "EffectWhen", or MountCompanion.Effect.
+        public static MountEffects Effects { get; } = new MountEffects();
+
+        // Mount kinds (docs/mounts-design.md): what is ridden as a creature type, with its seat, rules and abilities;
+        // a skin is a look of one kind.
+        public static MountKinds Kinds { get; } = new MountKinds();
+
+        // How effects show, everyone's values, overridable like tuning: EffectTrail, EffectWithCart, EffectInFights,
+        // EffectOnFoals (bool), EffectNightBelow (float); and the defaults Effect (string) and EffectWhen
+        // (MountEffectWhen) for donkeys without their own.
+        public static MountTuning EffectSettings
+        {
+            get
+            {
+                if (GK2DonkeyAPI.Effects.Effect == null)
+                {
+                    throw new InvalidOperationException("GK2 Donkey API has not loaded its settings yet.");
+                }
+                return GK2DonkeyAPI.Effects.Tuning;
             }
         }
 

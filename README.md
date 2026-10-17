@@ -4,8 +4,8 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 | Mod | Version | For | What it is |
 |---|---|---|---|
-| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.9.1 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. |
-| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.29.1 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
+| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.10.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. |
+| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.30.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
@@ -14,7 +14,7 @@ Both are built and audited against Steam game build 25910882 (game 1.010).
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
    `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
-3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.29.1 loaded` and `GK2 Saddle Up 0.9.1
+3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.30.0 loaded` and `GK2 Saddle Up 0.10.0
    loaded`.
 4. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
    the game's **Mods** menu. Without it, everything works the same and the settings are in

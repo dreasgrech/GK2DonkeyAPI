@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     {
         private const int WindowId = 0x6d6e7431; // 'mnt1'
         private static Rect rect = new Rect(0f, 0f, 470f, 10f);
-        private static GUIStyle label, header, step, small, changed, overridden, instanceSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill, oneLine, oneLineSmall;
+        private static GUIStyle label, header, step, small, changed, overridden, instanceSet, mountSet, wrapToggle, wrapLabel, good, bad, warnWrap, barBack, barFill, oneLine, oneLineSmall;
 
         // Cyan while another mod overrides the value this session (the row edits the player's cfg value underneath,
         // which shows again once the override ends); else yellow when it differs from its mod default.
@@ -25,7 +25,11 @@ namespace GK2DonkeyAPI
         {
             if (EditsInstance(e) && editing.Overrides.ContainsKey(e.Definition.Key))
             {
-                return instanceSet;
+                return editing.OverrideOwners.TryGetValue(e.Definition.Key, out string o) && IsMountOwner(o) ? mountSet : instanceSet;
+            }
+            if (RiddenHas(e, out _, out string by))
+            {
+                return IsMountOwner(by) ? mountSet : overridden; // the ridden donkey's own value wins over the row
             }
             if (Tuned.OverriddenBy(e) != null)
             {
@@ -38,8 +42,8 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources" };
-        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9;
+        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources", "Mounts" };
+        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9, TabMounts = 11;
         private const int TabsPerRow = 6; // two rows: eleven names in one row of 470 would be cut short
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
@@ -192,6 +196,8 @@ namespace GK2DonkeyAPI
             overridden.normal.textColor = new Color(0.35f, 0.85f, 1f);
             instanceSet = new GUIStyle(label);
             instanceSet.normal.textColor = new Color(1f, 0.5f, 0.95f);
+            mountSet = new GUIStyle(label);
+            mountSet.normal.textColor = new Color(1f, 0.62f, 0.25f); // orange: the mount's value (Mounts tab)
             wrapLabel = new GUIStyle(label) { wordWrap = true };
             // A line whose text changes length: one line, clipped at the right, never a second line (a status that
             // wrapped to two lines moved everything below it up and down as it changed, 2026-10-15).
@@ -410,7 +416,7 @@ namespace GK2DonkeyAPI
             int own = r != null ? r.Overrides.Count : 0;
             footerDonkeyText = r == null ? ""
                 : own > 0 || r.OwnLook
-                    ? $"The donkey you ride ({r.FullId}) has {own} value{(own == 1 ? "" : "s")} of its own{(r.OwnLook ? " and its own look (your colours don't apply to it)" : "")}, set by {OwnersOf(r)}: they win over every row here. Sources tab."
+                    ? $"The donkey you ride ({r.FullId}) has {own} value{(own == 1 ? "" : "s")} of its own{(r.OwnLook ? " and its own look (your colours don't apply to it)" : "")}, set by {OwnersOf(r)}: they win over every row here (orange: the mount's, cyan: a mod's). Sources tab."
                     : "";
         }
 
@@ -436,7 +442,8 @@ namespace GK2DonkeyAPI
 
         private static string OwnersOf(Mount.Instance i)
         {
-            var set = new SortedSet<string>(i.OverrideOwners.Values, StringComparer.Ordinal);
+            var set = new SortedSet<string>(StringComparer.Ordinal);
+            foreach (string o in i.OverrideOwners.Values) set.Add(FriendlyOwner(o));
             if (set.Count == 0)
             {
                 set.Add(i.OwnerId);
@@ -548,6 +555,7 @@ namespace GK2DonkeyAPI
                     case TabDebug: DrawDebug(); break;
                     case TabTests: DrawTests(); break;
                     case TabPerformance: DrawPerformance(); break;
+                    case TabMounts: DrawMounts(); break;
                     default: DrawDefaults(); break;
                 }
             }
@@ -958,7 +966,7 @@ namespace GK2DonkeyAPI
             bool locked = Locked(entry, out string shown);
             Color c = Lantern.ParseColor(shown, new Color(1f, 0.59f, 0f));
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             GUILayout.Label(shown, label, Wd(70f));
             GUILayout.EndHorizontal();
             if (!locked && ResetOnRightClick(entry, onChange)) { return; }
@@ -1749,7 +1757,7 @@ namespace GK2DonkeyAPI
         private static void Stepper(string name, ConfigEntry<float> entry, float step, float min, float max, string format, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
             if (GUILayout.Button("-", Wd(30f)) && !locked)
@@ -1827,7 +1835,7 @@ namespace GK2DonkeyAPI
         private static void FloatSlider(string name, ConfigEntry<float> entry, float min, float max, int decimals, Action onChange, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out float shown);
             GUI.enabled = !locked;
             float v = GUILayout.HorizontalSlider(shown, min, max, Wd(90f));
@@ -1847,7 +1855,7 @@ namespace GK2DonkeyAPI
         private static void IntSlider(string name, ConfigEntry<int> entry, int min, int max, Action onChange, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             // The slider is laid out between the buttons and reads the value before "+" runs; a button press must
             // therefore win over the slider's (stale) value in the same pass.
             bool pressed = false;
@@ -1884,7 +1892,7 @@ namespace GK2DonkeyAPI
         private static void TextRow(string name, ConfigEntry<string> entry, string tip = null)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool locked = Locked(entry, out string shown);
             GUI.enabled = !locked;
             string v = GUILayout.TextField(shown ?? "", Wd(SliderW));
@@ -1902,7 +1910,7 @@ namespace GK2DonkeyAPI
         private static void Toggle(string name, ConfigEntry<bool> entry, Action onChange, string tip = null)
         {
             bool locked = Locked(entry, out bool shown);
-            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked, tip: TipFor(entry, tip));
+            bool clicked = OnOffRow(name, shown, LabelFor(entry), enabled: !locked, tip: RowTip(entry, tip));
             if (locked) { return; }
             if (ResetOnRightClick(entry, onChange)) { return; }
             if (clicked)
@@ -1942,7 +1950,7 @@ namespace GK2DonkeyAPI
             int idx = Array.IndexOf(values, Val(entry));
             bool locked = Locked(entry, out T shown);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, TipFor(entry, tip)), LabelFor(entry), Wd(LabelW));
+            GUILayout.Label(Tip(name, RowTip(entry, tip)), LabelFor(entry), Wd(LabelW));
             bool changed = false;
             GUI.enabled = !locked;
             if (GUILayout.Button("<", Wd(22f)) && !locked) { idx = (idx - 1 + values.Length) % values.Length; changed = true; }
@@ -1968,6 +1976,11 @@ namespace GK2DonkeyAPI
             {
                 shown = Val(entry);
                 return false;
+            }
+            if (RiddenHas(entry, out object own, out _) && own is T ov)
+            {
+                shown = ov; // the ridden donkey's own value (a mount's, a mod's): the cfg row can't change what it shows
+                return true;
             }
             if (Tuned.OverriddenBy(entry) != null && Tuned.ByEntry.TryGetValue(entry, out ITuned t) && t.Current is T v)
             {

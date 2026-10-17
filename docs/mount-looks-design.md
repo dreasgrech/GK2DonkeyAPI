@@ -1,5 +1,8 @@
 # From proof of concept to features: looks, fire, sounds (design draft, 2026-10-17)
 
+**The skinning system's full specification is [skins-design.md](skins-design.md)** (2026-10-17, designed against the
+code); this file keeps the player-facing proposals, the decisions and what the probe rounds found.
+
 The asset investigation ([external-assets.md](external-assets.md)) proved four things in game:
 - **The game's lamp fire** can ring the donkey (chosen look: 1.5x, staying with the donkey).
 - **Fiery steps or a burning trail** work.
@@ -316,3 +319,67 @@ renderers:
 
 The API already knows which view belongs to which instance (MountRegistry), which the probe can only guess. This test
 is the proof that guessing isn't enough.
+
+## Seen in game: the cameras, and a flash of donkey on a swap (2026-10-17)
+
+**The game draws with two cameras** (logged by the probe):
+- **"Deform Texture Camera":** depth -50, one layer (mask 8) into a 1280×720 buffer, probably for grass that bends.
+- **"Main Camera":** depth -1, the screen.
+
+**Unity's `Camera.main` is the deform camera**, as the API's CargoSheet.cs already noted. So:
+- **Hiding the donkey** for a skin has to last across every camera of the frame. The probe hides it from the first
+  camera's cull to the end of the frame. Hiding only during "the main camera" hid it during the deform camera's draw,
+  and the screen camera still drew the donkey.
+- **Screen positions** (labels, captures) must use `CameraSystem.Instance.WorldCamera`, as the API does.
+- **The API's own two `Camera.main` uses** (Mount.cs: the seat measure's up direction, the away-from-camera
+  direction) only take the camera's orientation, which both cameras share: harmless, left as they are before
+  release.
+
+**A flash of the plain donkey when switching between donkey and cart** (about a second). Hitching swaps the donkey's
+view, and the probe only looked for the new view on a timer. The probe now looks at once, every frame until found,
+right before the cameras draw. The real feature can't flash at all: the API attaches the skin when it makes or wakes
+the view, before that view is ever drawn.
+
+## Creatures of our own, and what comes next (2026-10-17)
+
+**Captures with the rider** (the probe's Capture tab, 15:54-15:55):
+- **Snail:** the keeper sits on the shell, legs down its side; he sat a little *into* the shell, so the snail now
+  has a saddle on the shell's top.
+- **Worm:** he sits on the rear hump with the worm's front rising before his hands; reads well.
+- **The plain donkey never showed through** in any capture.
+
+**The rat** (tools/creature_sprites.py): four short legs in a walk cycle (diagonal pairs together, the feet lifting
+on the forward swing, far legs dark behind the body), a pointed snout, ear, eye, whiskers and a swaying tail; the
+back on the seat line, so the rider sits without tuning.
+
+**Decided:** once the skinning system is settled, **rider settings per skin and per mount** come next: seat height
+and position, the leg and back cuts, the cart hookup, possibly a pose. Not before.
+
+## Built: Hellfire as the first particle effect (2026-10-17 evening)
+
+The user's rule for it: *the fire is one effect of a particle effects system exposed in the API; everything we do
+must be possible through the API.* So Hellfire is not a feature of its own: `Mounts.Effects` (Effects.cs) is the
+system, and Hellfire is registered through the public `MountEffectDef` exactly as a mod would register one.
+
+- **An effect** = parts; a part = a source of particles + emitters. Sources: the game's own particle systems found by
+  material and copied (`GameParticles`; the lamp's `flame_fx` and `sparks_fx`, held through Addressables so the magenta
+  squares of the probe days can't return), or a mod's prefab. Emitters: a ring (local space, follows), the body, a
+  trail (world space, bursts that burn out). Per emitter: count, radius, size, height, offset, angle, every, burst.
+- **Hellfire** = six lamp flames and three sparks on a ring of 0.8 at 1.5× (the "almost satanic" size), a flame left
+  behind every half unit. Ring centred on the drawn body (`BodyPoint`), 1.6× wider and centred between donkey and cart
+  when `EffectWithCart` is on.
+- **Per donkey (look keys, saved):** `Effect` (id) and `EffectWhen` (off / at night / always). **Everyone's:**
+  `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`, `EffectNightBelow`. Never indoors. A mod's
+  effect may add its own `Show` rule on top.
+- **Saddle Up rows (Donkey):** Effect (a list: None, Hellfire, every mod's), Effect shown, and the four toggles, shown
+  only while an effect is picked.
+- **Night** = the shader global `_SunLight` (what the lantern reads) below the threshold: no game member, so Effects
+  stays out of the dependency manifest, like Looks. The fight check goes through `Mount.Instance.RiderInArmour()`.
+- **Nothing on the pooled parts:** every emitter is an object of ours under a holder that follows the body; gone with
+  the view (Detach) or the instance (Release). Self-test "effect: hellfire lit, follows, out, gone with the donkey".
+- **Left for the hand test:** the ring's look on the snail and the rat, the trail at a gallop, the sparks' count,
+  a fight with it on, and whether the lamp's bundle ever goes while a donkey burns (a lost material rebuilds the ring
+  and logs it).
+
+Skins got the same treatment the same evening (skins-design.md status): one sheet texture per skin, a base record so
+nothing of the donkey is assumed by the loader or the rig, sheet packs, and sprite sources for code.

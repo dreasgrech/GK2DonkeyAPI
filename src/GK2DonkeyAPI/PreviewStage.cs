@@ -138,6 +138,9 @@ namespace GK2DonkeyAPI
                         paper.ColorsRig.AttachRoot(copy);
                         paper.ColorsRig.MarkDirty();
                         paper.LanternRig.AttachRoot(copy.transform); // the pole where the tuning puts it, the lamp hanging
+                        paper.LooksRig.AttachRoot(copy);              // the skin's overlays count as the donkey's sprites
+                        donkeyRenderers.RemoveAll(r => r == null);
+                        donkeyRenderers.AddRange(paper.LooksRig.Renderers);
                     }
                     foreach (View each in views)
                     {
@@ -256,6 +259,8 @@ namespace GK2DonkeyAPI
             {
                 paper.LanternRig.Tick();
                 paper.ColorsRig.Tick(); // rebuilt only when the look changed (MountCompanion marks it)
+                paper.LooksRig.Tick();
+                paper.LooksRig.ApplySafe(); // the stage's cameras are rendered by hand: not covered by the per-frame apply
             }
         }
 
@@ -267,6 +272,7 @@ namespace GK2DonkeyAPI
             {
                 dressedAs?.ColorsRig.Detach();
                 dressedAs?.LanternRig.Detach();
+                dressedAs?.LooksRig.Detach();
                 if (loading.IsValid())
                 {
                     UnityEngine.AddressableAssets.Addressables.Release(loading);

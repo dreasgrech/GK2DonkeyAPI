@@ -144,6 +144,11 @@ namespace GK2DonkeyAPI
                         case MountSettingsPage.Kind.Choice:
                             AddChoice(s, r, order);
                             break;
+                        case MountSettingsPage.Kind.List:
+                            // The ids as the choices (what the cfg holds); MenuLabels writes the labels over them.
+                            MountSettingsPage.FillList(r);
+                            s.AddDropdown(r.Section, r.Entry.Definition.Key, (string)r.Entry.DefaultValue, (string[])r.ChoiceValues, r.Label, r.Description, order);
+                            break;
                         case MountSettingsPage.Kind.Steps:
                             s.AddIntSlider(r.Section, r.Entry.Definition.Key, (int)r.Entry.DefaultValue, r.Min, r.Max, r.Label, r.Description, r.Step, order);
                             break;

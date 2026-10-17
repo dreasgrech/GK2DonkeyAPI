@@ -18,8 +18,9 @@ namespace GK2DonkeyAPI
         private const float Every = 0.25f;
         private const string RowPrefix = "Setting_";
 
-        // Unique key ("<section>.<key>") -> the labels, for every Choice row of the pages in the Mods menu.
-        private static readonly Dictionary<string, string[]> labels = new Dictionary<string, string[]>(StringComparer.Ordinal);
+        // Unique key ("<section>.<key>") -> the labels, for every Choice and List row of the pages in the Mods menu (a
+        // List row's are filled when it is first shown).
+        private static readonly Dictionary<string, Func<string[]>> labels = new Dictionary<string, Func<string[]>>(StringComparer.Ordinal);
 
         // Every row of our pages ("<section>.<key>"): their dropdowns' lists are kept to MaxListRows. The framework makes
         // a list 30 px per choice with no limit, and the 24 palette colours ran off the top of the screen (2026-10-03);
@@ -40,7 +41,17 @@ namespace GK2DonkeyAPI
                 }
                 if (r.Kind == MountSettingsPage.Kind.Choice && r.Entry != null && r.ChoiceLabels != null)
                 {
-                    labels[r.Section + "." + r.Entry.Definition.Key] = r.ChoiceLabels;
+                    string[] fixedLabels = r.ChoiceLabels;
+                    labels[r.Section + "." + r.Entry.Definition.Key] = () => fixedLabels;
+                }
+                else if (r.Kind == MountSettingsPage.Kind.List && r.Entry != null)
+                {
+                    MountSettingsPage.Row row = r;
+                    labels[r.Section + "." + r.Entry.Definition.Key] = () =>
+                    {
+                        MountSettingsPage.FillList(row);
+                        return row.ChoiceLabels;
+                    };
                 }
             }
         }
@@ -75,10 +86,11 @@ namespace GK2DonkeyAPI
                             d.template.sizeDelta = new Vector2(size.x, most); // the framework's template: the next list opens this tall
                         }
                     }
-                    if (!labels.TryGetValue(key, out string[] want))
+                    if (!labels.TryGetValue(key, out Func<string[]> wantOf))
                     {
                         continue;
                     }
+                    string[] want = wantOf();
                     if (d.options.Count != want.Length)
                     {
                         if (!loggedMismatch)

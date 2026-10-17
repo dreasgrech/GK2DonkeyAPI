@@ -272,6 +272,8 @@ namespace GK2DonkeyAPI
                 }
                 foreach (var kv in i.Overrides)
                 {
+                    i.OverrideOwners.TryGetValue(kv.Key, out string by);
+                    if (by == Looks.TuningOwner) continue; // a skin's own tuning: set again by the skin when worn, never saved
                     string value;
                     try
                     {
@@ -282,7 +284,6 @@ namespace GK2DonkeyAPI
                         Plugin.Log.LogWarning($"Persistence: {i.Describe()}'s setting {kv.Key} can't be written ({e.Message}); it isn't kept.");
                         continue;
                     }
-                    i.OverrideOwners.TryGetValue(kv.Key, out string by);
                     Line(sb, "set", kv.Key, by ?? "", value);
                 }
                 foreach (var mod in i.Data)
@@ -713,6 +714,7 @@ namespace GK2DonkeyAPI
 
         private static void RestoreSetting(Instance i, string key, string by, string value)
         {
+            if (by == Looks.TuningOwner) return; // a creature's value from an older side file: the creature sets it again, never a fixed value
             try
             {
                 ITuned t = new InstanceTuning(i).Find(key);

@@ -175,6 +175,10 @@ namespace GK2AssetProbe
             if (GUILayout.Button(Capture.Recording ? "Recording..." : "Record 4 seconds")) Capture.Start(this);
             GUILayout.Label("Ride or stand the way you want it filmed. The window hides while recording; the pictures go to captures\\, and tools/skin_preview_html.py plays them.", note);
             if (Capture.Last.Length > 0) GUILayout.Label("Last: captures\\" + Capture.Last, note);
+            GUILayout.Space(6f);
+            GUILayout.Label("The rider alone", head);
+            if (GUILayout.Button("Export the rider (for the preview page)")) Capture.ExportRider();
+            GUILayout.Label("While riding (either facing): saves rider.png, which the preview page lays over every skin.", note);
         }
 
         private void DrawGame()

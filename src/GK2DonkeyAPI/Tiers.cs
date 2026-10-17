@@ -402,6 +402,7 @@ namespace GK2DonkeyAPI
                         // The game's AnimationComponent.OnEnable puts its own skin layers back: the colours are checked on this
                         // frame's Colors tick, so a donkey with its own colours doesn't enter the screen in the game's for 0.2 s.
                         ColorsRig.CheckNow();
+                        LooksRig.CheckNow();
                         // Switched off, its animator lost its state and parameters (and the game's OnDisable set Idle):
                         // the stand pose (with its walk rate) and the facing are sent again.
                         lastMirrored = (AnimationState)(-1);

@@ -31,6 +31,10 @@ namespace GK2DonkeyAPI
             Pose,       // posing a standing view (Stand)
             Lantern,    // lantern rigs of standing carts
             Colors,     // colour rigs
+            Looks,      // skin rigs: the frame's pictures onto the overlays, before the cameras (Looks.cs)
+            LooksBuild, //   decoding a skin's pictures when the first donkey wears it
+            Effects,    // particle effects on donkeys: the ring that follows, the trail (Effects.cs)
+            Abilities,  // the kinds' abilities (MountAbility hooks, Looks.Rig.TickAbilities)
             Controls,   // the keeper's ride / hitch prompt (InstanceControls)
             Panel,      // the dev panel (OnGUI: every event of the frame), without its window's contents
             Window,     // the panel window's contents (IMGUI runs them after OnGUI returns, so they are not in Panel)

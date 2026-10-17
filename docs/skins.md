@@ -1,0 +1,132 @@
+# Making a skin pack for GK2 Donkey API
+
+A skin draws the donkey as something else: a giant rat, a snail, a zebra-striped donkey. Anyone can make one: a
+folder of pictures and one small text file, no code. This page says how. (How the system works inside the mod:
+[skins-design.md](skins-design.md).)
+
+## What a pack is
+
+```
+BepInEx\plugins\gk2skins\<your skin id>\
+    skin.cfg
+    bdy_static_left.png
+    bdy_walk_left_01.png ... bdy_walk_left_08.png
+    bdy_ear_left_01.png ... _05.png
+    bdy_graze_left_01.png ... _05.png
+    bdy_chew_left_01.png ... _03.png
+    bdy_lips_left_01.png ... _13.png
+    bdy_turn_left_01.png ... _06.png
+    hed_static_down.png, hed_static_down_02.png, hed_static_down_03.png
+```
+
+- The `gk2skins` folder can sit straight under `BepInEx\plugins`, or inside any mod's own folder there. Several skins
+  can share one `gk2skins` folder, one subfolder each.
+- The skin id is the folder's name (letters, digits, dots, dashes, underscores). `donkey` is taken: it's the game's
+  own look.
+- The pack is found when the game starts. Its pictures are read only when a donkey wears the skin, a few at a time,
+  and put together on one sheet in memory; the skin shows once they are all in.
+- **One sheet instead of 44 files** works too: put `sheet = sheet.png` in `skin.cfg` and draw every frame as a cell of
+  the canvas size in one PNG, left to right then top to bottom, in the order of the list above (`bdy_static_left`
+  first, the three heads last). Fewer cells than frames is fine (the rest show the donkey); `columns = 8` says how
+  many cells a row holds (by default the sheet's width over the canvas width), and `frames = bdy_static_left,
+  bdy_walk_left_01, ...` gives your own order or subset.
+
+## skin.cfg
+
+```
+[Skin]
+format = 1          # keep 1
+id = my-rat         # the same as the folder name
+name = My Rat       # what the settings show
+author = me
+version = 1.0
+kind = own          # own: your colours as drawn. palette: drawn in the donkey's exact colours, so the player's
+                    #      coat and harness colours recolour it
+layer = replace     # replace: instead of the donkey. over: on top of the donkey (a saddle, a hat)
+foals = true        # may the baby donkeys wear it
+canvas = 96 96      # every picture is this size (see below)
+base = donkey       # what the skin is drawn on (the donkey is the only base today)
+mount = donkey      # the creature this skin is a look of: donkey, or a mount declared below or by another pack or mod
+# sheet = sheet.png # one PNG of cells instead of a file per frame (see above); with it, optionally:
+# columns = 8       # cells per row (default: the sheet's width over the canvas width)
+# frames = ...      # the keys in cell order (default: the list above)
+```
+
+Unknown keys are ignored and named in the log, so a newer pack still loads in an older mod.
+
+**A creature of its own.** A skin can be a look of a *mount kind* other than the donkey: the giant rat, the dragon,
+yours. The kind carries what is the creature's, not the picture's: the rider's seat for it (both styles, or riding
+and with the cart apart), whether it pulls the cart, whether baby donkeys can be it, an effect it comes with. Declare
+it in the same file; the first pack to declare an id defines it, later skins with `mount = <id>` join it (a second
+dragon colour, say):
+
+```
+mount = dragon
+
+[Mount]
+id = dragon
+name = Dragon
+cart = true           # may it pull the cart
+foals = true          # may the baby donkeys be it
+effect = none         # an effect it comes with (hellfire, or one a mod added); players pick "As the mount" to see it
+effect_when = Always  # Never, Night or Always
+
+[Mount.Tuning]        # the rider on this creature, both styles (the keys of docs/reference.md [Ride] and [Cart])
+SeatAdjustPx = 2
+[Mount.Tuning.Ride]   # riding only
+[Mount.Tuning.Cart]   # with the cart only
+```
+
+The settings list shows the skin under its kind ("Dragon: Red Dragon"; a kind with one skin just by that name).
+
+Two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up): `offset = 0 0` while
+riding and `offset_cart = 0 0` with the cart hitched (a creature that should stand closer to the shafts). And a
+`[Tuning]` section sets the mod's own rider settings for your creature while it is worn, with the same keys and values
+as the mod's cfg (docs/reference.md `[Ride]` and `[Cart]`; the ones that matter for a skin: `SeatAdjustPx`,
+`RiderOffsetPx`, `TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `NearLeg`):
+
+```
+[Tuning]
+SeatAdjustPx = 4      # the rider four pixels higher on this creature
+RiderOffsetPx = -2    # and two towards the rear
+```
+
+They apply to the donkey wearing the skin only, both riding and with the cart, and come off with the skin; a value
+another mod has set on that donkey wins, and the log says so. Nothing of it is saved.
+
+## The pictures
+
+- **One PNG per donkey frame**, named exactly as above. There are 44: the donkey standing (1), walking (8), its ear
+  (5), grazing (5), chewing (3), lips (13), turning its head (6), and the standing head (3).
+- **96 by 96 pixels**, facing **left**, transparent background. The donkey stands on row 64 from the top (row 32 from
+  the bottom) with its back at row 41 from the top: put your animal's feet and back there and the rider sits right
+  without any tuning. The mod draws at 50 pixels per unit and stretches upright pictures 1.667 times in height, as it
+  does the game's own art, so draw as the game's frames are drawn.
+- **A bigger canvas is fine** (wings above the head, say): set `canvas = 128 128`; the picture's centre stays the
+  donkey's centre.
+- **The head.** The game draws the head *inside* the body frames (the walk, graze and so on all carry the head);
+  `hed_static_down*.png` is only the standing head, drawn over the standing body. So draw the head in every body
+  frame, and give the standing head picture nothing but the head. A `hed_walk_*.png` is never shown.
+- **The right-facing side is the mirror** of your left-facing pictures; the mod mirrors them as the game does.
+- **You don't have to draw everything.** A frame you leave out shows the donkey's own picture there, and the log
+  lists what is still to draw. Two shortcuts: `bdy_walk_left.png` is used for every walk frame you didn't draw,
+  `bdy.png` for every body frame you didn't draw (and `hed.png` for the head).
+- **In front of the rider.** Anything that should be drawn over the keeper (the near wing, the near side of a
+  saddle) goes in a `front\` subfolder with the same file names; those pictures are drawn in front of the rider
+  (above the creature when nobody rides). The same shortcuts apply (`front\bdy.png` for every body frame); a sheet
+  pack gives `sheet_front = front.png` with the same cells.
+- **Templates to paint over:** the dev tools export every donkey frame at full size (the asset probe's "Export every
+  frame", `BepInEx\GK2-asset-probe\donkey-frames\`). The game's pictures belong to the game: paint your own over them,
+  don't ship them.
+
+## Trying it
+
+Start the game and look at `BepInEx\LogOutput.log` for your skin's line: it says how many pictures it found, any
+name that matches no frame (a typo), and how many frames are still to draw. Then pick it in Saddle Up's settings
+(Donkey, Skin) and call your donkey. The pictures are read again every time the game starts, so you can edit them
+between runs.
+
+## Sharing it
+
+Zip the `gk2skins\<id>\` folder (with `BepInEx\plugins\` above it, so it extracts into place). Only your own art, or
+art you may redistribute, goes in.

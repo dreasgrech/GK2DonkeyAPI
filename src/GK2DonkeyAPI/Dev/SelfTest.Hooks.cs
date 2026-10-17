@@ -67,6 +67,14 @@ namespace GK2DonkeyAPI
 
             // Every coloured sprite wears this instance's own material (null: colours not attached or off).
             internal bool? TestColoursOurs() => ColorsRig.TestSpritesOurs();
+            internal bool TestSkinShowing() => LooksRig.TestShowing();
+            internal bool TestSkinFrontShowing() => LooksRig.TestFrontShowing();
+            internal string TestSkinWearing() => LooksRig.Wearing;
+            internal bool TestSkinBuilding() => LooksRig.Building;
+            internal int TestEffectEmitters() => EffectsRig.TestEmitters;
+            internal bool TestEffectLit() => EffectsRig.Lit;
+            internal Vector3? TestEffectRingPosition() => EffectsRig.TestRingPosition;
+            internal int TestEffectInWorld() => EffectsRig.TestInWorld;
         }
     }
 

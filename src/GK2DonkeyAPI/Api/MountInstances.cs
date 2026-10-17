@@ -65,6 +65,8 @@ namespace GK2DonkeyAPI.Api
 
         // The size of its view (1 = a full-size donkey; a foal is smaller). Set at spawn (MountSpawn.Scale).
         public float Scale => I.ViewScale;
+        // The mount kind this instance is now (its skin's; "donkey" while it wears none): Mounts.Kinds.
+        public string Kind => I.LooksRig.KindNow.Id;
 
         // False for a foal (MountSpawn.Rideable): no interact prompt, Ride and Hitch refused.
         public bool IsRideable => I.Rideable && I.HasDonkey;
@@ -520,6 +522,14 @@ namespace GK2DonkeyAPI.Api
 
         private void Changed()
         {
+            i.LooksRig.MarkDirty();
+            i.LooksRig.RetuneNow(); // a key cleared returns to the creature's value; a key set is left to its owner
+            ChangedByLooks();
+        }
+
+        // A skin's own tuning keys went on or off (Looks.Rig): everything but the skin itself refreshed.
+        internal void ChangedByLooks()
+        {
             i.ColorsRig.MarkDirty();
             using (Mount.Bind(i))
             {
@@ -534,7 +544,8 @@ namespace GK2DonkeyAPI.Api
         {
             MountStyle other = i.CurrentStyle == MountStyle.Cart ? MountStyle.Ride : MountStyle.Cart;
             if (Mounts.Tuning(i.CurrentStyle).TryFind(key, out ITuned t) || Mounts.Tuning(other).TryFind(key, out t)
-                || Mounts.Behaviour.TryFind(key, out t) || Mounts.Shuffle.TryFind(key, out t) || Mounts.Colors.TryFind(key, out t))
+                || Mounts.Behaviour.TryFind(key, out t) || Mounts.Shuffle.TryFind(key, out t) || Mounts.Colors.TryFind(key, out t)
+                || Looks.Tuning.TryFind(key, out t) || GK2DonkeyAPI.Effects.Tuning.TryFind(key, out t))
             {
                 return t;
             }

@@ -476,6 +476,9 @@ namespace GK2DonkeyAPI
                     b.Fields = new[] { "Off", "On" };
                     b.Values = new object[] { false, true };
                     break;
+                case MountSettingsPage.Kind.List:
+                    MountSettingsPage.FillList(r);
+                    goto case MountSettingsPage.Kind.Choice;
                 case MountSettingsPage.Kind.Choice:
                     b.Fields = r.ChoiceLabels;
                     b.Values = new object[r.ChoiceValues.Length];

@@ -147,6 +147,9 @@ namespace GK2DonkeyAPI
             private Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
             private SpriteRenderer donkeyBodyRenderer;
             private SpriteRenderer keeperBodyRenderer;
+            // The keeper's body renderer while he rides this instance (what the leg overlay and a skin's front layer sort
+            // above), or null.
+            internal SpriteRenderer KeeperBody => mounted ? keeperBodyRenderer : null;
             private bool seatPending;
             private float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
             private float lastGoodGroundDelta;
@@ -520,6 +523,11 @@ namespace GK2DonkeyAPI
                 if (partsReady)
                 {
                     ColorsRig.Tick(); // after the lantern: the hanging lamp has copied the pole's look (its LUT too)
+                    LooksRig.Tick();
+                    using (Perf.Measure(Perf.S.Effects))
+                    {
+                        EffectsRig.Tick();
+                    }
                 }
                 if (seatPending && partsReady)
                 {
@@ -700,7 +708,7 @@ namespace GK2DonkeyAPI
             private string TryMount(PlayerController pc, GameScene scene, MountStyle style, bool showMessage)
             {
                 // The core's own checks first (safety); other mods' rules can only add refusals on top.
-                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(style);
+                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) ?? Looks.WhyNotCartByKind(this) : null) ?? MountRules.WhyCannotMount(style);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo("Mount refused: " + reason);
@@ -833,6 +841,9 @@ namespace GK2DonkeyAPI
             // The cart in a fight: not for now (a wide object in a bordered arena, cargo and zombies aboard during a dash,
             // the cart's own interaction key handling); the Ride style fights (docs/mounted-combat.md).
             internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? "Not the cart in a fight." : null;
+
+            // The keeper in the armour view now (a fight on): for the features that keep clear of game members.
+            internal static bool RiderInArmour() => InArmour(MainGame.PlayerController);
 
             // The armour view going on or off during the ride (the quest's talk puts it on before the fight, the fight's
             // end takes it off). Seen 2026-10-14: the pose is only rewritten when the game next sets the keeper's state,
@@ -1007,6 +1018,8 @@ namespace GK2DonkeyAPI
                 CargoRig.Unload(reason); // cargo lives in a temp inventory; hand it back before the view goes
                 DestroyDonkey();
                 ColorsRig.Release();
+                LooksRig.Release();
+                EffectsRig.Release();
                 RestoreSeat();
                 RestoreSpeed(pc);
                 RestorePose(pc);
@@ -1053,6 +1066,8 @@ namespace GK2DonkeyAPI
                 if (Ephemeral)
                 {
                     ColorsRig.Release();
+                    LooksRig.Release();
+                    EffectsRig.Release();
                     Unregister(this);
                 }
                 if (was)
@@ -1270,6 +1285,10 @@ namespace GK2DonkeyAPI
                         AttachRider(pc);
                     }
                     ColorsRig.Attach(donkey); // the Colors tab: nothing is touched while every colour is at its default
+                    if (HasDonkey)
+                    {
+                        LooksRig.Attach(donkey.gameObject); // the skin's overlays, hidden with the rest by the line below
+                    }
                     HideDonkeyForAFrame(); // the facing is applied by Follow this frame; the animator shows it next frame
                 }
                 catch (Exception e)

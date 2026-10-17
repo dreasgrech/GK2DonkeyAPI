@@ -158,6 +158,10 @@ namespace GK2DonkeyAPI.Api
         private string customCoat, customHarness, customPaint, customLantern, customWheels, customHubs;
         private WheelColor wheels;
         private HubColor hubs;
+        private string skin = "";
+        private bool foalsWearSkin = true;
+        private string effect = "";
+        private MountEffectWhen effectWhen = MountEffectWhen.Always;
 
         // Kept with the save: after a load they're back where they were left, cargo on the cart.
         public bool KeepWithSaves { get => keep; set { keep = value; ApplyKeep(); } }
@@ -215,6 +219,18 @@ namespace GK2DonkeyAPI.Api
         public string CustomWheels { get => customWheels; set { customWheels = value; ApplyLook(); } }
         public string CustomHubs { get => customHubs; set { customHubs = value; ApplyLook(); } }
         public string CustomLantern { get => customLantern; set { customLantern = value; ApplyLook(); } }
+
+        // The skin the donkey wears, by id (Mounts.Looks.Skins lists them; "donkey", "" or an unknown id: the donkey as the
+        // game draws it, and an unknown id is kept, so the skin returns with its pack). Foals wear it too unless
+        // FoalsWearSkin is off, or the skin says no foals.
+        public string Skin { get => skin; set { skin = value ?? ""; ApplyLook(); } }
+        public bool FoalsWearSkin { get => foalsWearSkin; set { foalsWearSkin = value; ApplyLook(); } }
+
+        // The particle effect on the donkey (Mounts.Effects lists them; "hellfire" is built in; "" none) and when it
+        // shows. Foals show it too when Mounts.EffectSettings' EffectOnFoals says so. How it shows (the trail, round the
+        // cart, in fights) is everyone's values in Mounts.EffectSettings.
+        public string Effect { get => effect; set { effect = value ?? ""; ApplyLook(); } }
+        public MountEffectWhen EffectWhen { get => effectWhen; set { effectWhen = value; ApplyLook(); } }
 
         // ------------------------------------------------------------------ the keys
 
@@ -645,10 +661,21 @@ namespace GK2DonkeyAPI.Api
             }
             var coatKeys = Look(CoatPreset(coat, customCoat, "coat"));
             var harnessKeys = Look(HarnessPreset(harness, customHarness, "harness"));
+            var skinKeys = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(skin) && !skin.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) skinKeys["Skin"] = skin.Trim();
+            var noSkin = new Dictionary<string, object>();
+            var effectKeys = new Dictionary<string, object>();
+            if (!MountEffects.IsNone(effect))
+            {
+                effectKeys["Effect"] = effect.Trim();
+                effectKeys["EffectWhen"] = effectWhen;
+            }
             if (paper != null)
             {
                 OnPaper(CoatKeys, coatKeys);
                 OnPaper(HarnessKeys, harnessKeys);
+                OnPaper(LookKeys, skinKeys);
+                paper.LooksRig.MarkDirty();
             }
             var paperPaint = Look(PaintPreset(paint, customPaint, "cart paint"));
             var paperLantern = Look(LanternPreset(lanternColor, customLantern, "lantern"));
@@ -671,6 +698,8 @@ namespace GK2DonkeyAPI.Api
                 {
                     Instance(h, CoatKeys, coatKeys);
                     Instance(h, HarnessKeys, harnessKeys);
+                    Instance(h, LookKeys, h == Donkey || foalsWearSkin ? skinKeys : noSkin);
+                    Instance(h, EffectKeys, effectKeys);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);
@@ -716,6 +745,8 @@ namespace GK2DonkeyAPI.Api
         private static readonly string[] WheelKeys = { "WheelsColorize", "WheelsColorizeAmount", "WheelsBrightness", "WheelsSaturation" };
         private static readonly string[] HubKeys = { "HubsColorize", "HubsColorizeAmount", "HubsBrightness", "HubsSaturation" };
         private static readonly string[] LanternKeys = { "LanternLightColor", "GlowColor", "LitGlassTint" };
+        private static readonly string[] LookKeys = { "Skin" };
+        private static readonly string[] EffectKeys = { "Effect", "EffectWhen" };
 
         private void Instance(MountHandle h, string[] keys, Dictionary<string, object> values)
         {
@@ -733,6 +764,10 @@ namespace GK2DonkeyAPI.Api
                         if (v is string s)
                         {
                             h.Tuning.Set(OwnerId, key, s);
+                        }
+                        else if (v is MountEffectWhen w)
+                        {
+                            h.Tuning.Set(OwnerId, key, w);
                         }
                         else
                         {
