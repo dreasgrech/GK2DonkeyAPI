@@ -363,3 +363,33 @@ ms a frame; hitch worst 16.5-19.0 ms (the cargo changes, unchanged).
   handler; the work is the API's view build). Not looked into yet.
 - **The `[shuffle] frame +N` turn diagnostics** read the body before the frame's own position write. They can't tell
   whether a turn jumps on screen.
+
+## Performance Hog's "Exceptions: 8" on the API (2026-10-17)
+
+Every report shows the API with 8 exceptions, **all created and caught, 0 unhandled**: 6x `NotSupportedException` in
+`Corpses.Patch` and 2x in `Corpses.Apply`. Nothing in our code throws them, and `Apply`'s own catch (which logs a
+warning) never fired. They come from inside Harmony's `Patch` call: the corpse feature patches its four methods when
+it switches on, after the game has loaded (so after Performance Hog started counting), and each late patch creates and
+catches two of them. Other authors' mods show the same in other players' reports: 3x `NotSupportedException` in
+`GK2Kit.HubHost.Activate` (Clerk Desk's library, which only calls Harmony there) and in `GK2Codex.SaHost.Activate`.
+The API's start-up patches don't show, because they're applied before Performance Hog loads. Harmless: once per
+session, when the feature is switched on.
+
+## Against another player's reports (2026-10-17)
+
+Six Performance Hog 1.0.1 reports from another player (12-16 October, a different PC, 35 other mods, none of
+ours), next to ours (Performance Hog 1.2.0, our PC, scripted suites). This is a ballpark only: the machines, the
+saves and the profiler versions differ.
+
+| | Theirs (per mod) | Ours |
+|---|---|---|
+| CPU a frame | top mods 0.07-0.16 ms (Timbn Core, Stock Limits, Zombie++); all mods together 0.41-0.75 ms of 6.4-10.4 ms | the API 0.16-0.22 ms of 4.8-5.2 ms; Saddle Up 0.003 ms |
+| Worst frame | many at 17-164 ms (Corpse Preview 164, GK2 Codex 87, Thoughtful Week 55, Graphics Override 44) | under 0.7 ms in steady play; 17-19 ms only in the test hitch (6 items at once); a player's single item 2-4 ms; H/G 2.2-2.7 ms |
+| Allocations a frame | mostly under 0.4 KB; Timbn Core up to 3.6 KB | 1.2-3.2 KB: at the top of the field |
+| Log lines | Zombie++ 2,318 in 43 min, the framework 550 | 686 in a dev session with the perf runner (the routine `[foal]`/`[shuffle]` lines) |
+| Memory | GK2 Codex 1.6 MB, Zombie++ 510 KB | 1.2 MB |
+
+**The API would be the heaviest single mod in their list by average CPU.** That's expected for a mod that animates
+donkeys, foals and a cart every frame, and it's still about 4% of a frame. Its worst frames are better than half of
+theirs. The two open items (docs above) are the ones that show here too: allocations a frame, and the routine log
+lines.

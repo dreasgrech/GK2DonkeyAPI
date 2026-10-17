@@ -1,0 +1,318 @@
+# From proof of concept to features: looks, fire, sounds (design draft, 2026-10-17)
+
+The asset investigation ([external-assets.md](external-assets.md)) proved four things in game:
+- **The game's lamp fire** can ring the donkey (chosen look: 1.5x, staying with the donkey).
+- **Fiery steps or a burning trail** work.
+- **The donkey can be redrawn** frame by frame with outside art, lit like the game.
+- **Outside sounds** play and follow the game's Sounds volume.
+
+This draft turns them into features for Saddle Up. As always, **the API does all the work and Saddle Up only calls
+it** and offers settings. Nothing here is built; the decisions at the end are the user's.
+
+## What makes it gameplay, not a toy
+
+A proof of concept shows something; a feature needs a reason to use it and a place in the game. Three questions for
+each idea:
+1. **What does the player get?** A look, an ability, or an effect on the game (light, speed, fights).
+2. **How do they get it?** Always available as a setting, or earned in the game (a tech, an item, a ritual).
+3. **When does it show?** Always, while riding, at night, in fights, or while a timer runs.
+
+Saddle Up's rule still holds: players choose *what happens* (on/off, which look, which key), never *how it's drawn*
+(sizes, offsets, particle settings: the API's tuned values).
+
+## Proposal 1: Hellfire (the fire ring)
+
+The donkey wreathed in the game's own lamp fire.
+
+| Variant | What the player gets | Cost and risk |
+|---|---|---|
+| **1a. A look** | A setting "Hellfire": off / at night / always. Purely visual. | Small. The probe's code, made proper. |
+| **1b. A light** | The same flames light the way at night like the cart's lantern, so you can ride without the cart and still see. | Small to medium: the lantern's light already exists (Lantern.cs); one more light source to place and tune. |
+| **1c. A weapon in fights** | In a mounted fight, enemies that touch the ring burn: small damage now and then. The game has the parts (`ICombatEntity.CombatEntityHpComponent.ApplyDamage`, used by its own `AOEDamageSource` with a team filter). | Medium to large: fights are the game's balance; it needs its own investigation like mounted-combat.md, and limits (damage, how often, only enemies). |
+| **1d. Earned** | Any of the above unlocked by something in the game: a tech, or burning a rare item on the cart. | Small for a tech (the TechGate example does it); an item needs its id found in the game's data. |
+
+**Recommended first step: 1a + 1b, with 1d as an option** ("Earn it", off by default, as section 6 extra A of
+saddleup-scope.md). 1c only after its own investigation.
+
+## Proposal 2: Fiery steps (the trail)
+
+Fire left behind where the donkey walks. Seen in the probe as step bursts and as a dense burning trail.
+
+| Variant | What the player gets | Cost and risk |
+|---|---|---|
+| **2a. Part of Hellfire** | While Hellfire is on and the donkey moves, small flames are left behind, burning out in about 2 s. | Small: one emitter, the lamp flame in world space. |
+| **2b. A gallop** | A sprint key: a burst of speed for a few seconds, with a cooldown, leaving the fire trail while it lasts. The trail shows the ability is running. | Medium: speed is already the API's (riding multipliers); a timed boost plus a cooldown is new, and must respect the game's energy (does sprinting cost energy?). |
+
+**Recommended: 2a as part of Hellfire.** 2b is a separate ability: decide if Saddle Up should have one at all.
+
+## Proposal 3: Mount skins (another animal)
+
+The donkey redrawn: a rat, a zebra, a skeleton donkey.
+
+**How it works:**
+- **The art:** a skin is a set of pictures named after the donkey's frames, 96×96, facing left: about 15 for stand,
+  walk and ear, more for graze and the head turns. The probe's templates (`donkey-frames\`) are the paint-over set.
+- **Drawing it:** each frame, the API draws the skin's picture for the donkey's current frame over or instead of
+  the donkey (Clerk Desk's method, proven in the probe), with the donkey's material: lit like the game, and
+  recoloured by the Colors feature if drawn in the donkey's colours.
+- **The undo:** the API owns it, as for every change to the reused donkey parts (pooled-parts.md).
+
+| Variant | What the player gets | Cost and risk |
+|---|---|---|
+| **3a. Skins we ship** | A "Look" setting: Donkey, Zebra, Skeleton, ... Each skin is our own art, inside the DLL. | Small in code; **the art is the cost** (about 15-30 pictures each). A different outline also needs its seat, leg and cart offsets: a skin carries its own. |
+| **3b. Skins from anyone** | The API reads skin folders (pictures plus a small text file with the offsets) from a skins folder, so artists can make skins without code, and other mods can register skins. | Medium: a folder format, checks (size, names, missing frames fall back to the donkey), docs for artists. Opens the door to community content. |
+
+**Recommended: 3b's format from the start, with one or two skins of our own as the examples (3a).** Without art,
+skins can't ship; the first question is who draws.
+
+## Proposal 4: Sounds of our own
+
+Sounds that go with a look: a rat's squeak instead of the bray, fire crackling with Hellfire.
+- **The path, proven:** a `.wav` read at runtime, played through the game's mixer (`AudioConfig.audioMixer`, group
+  `sfx_inworld` for sounds in the world), following the Sounds volume.
+- **Where they fit:** a skin brings its sounds (bray, steps) in its folder, and Hellfire can crackle. The game's own
+  fire sounds (furnaces: `ConveyorFurnace_Fire_*`, `furace_fire`) may do for Hellfire without shipping any.
+
+## What the API would offer (sketch, not final)
+
+- **`Mounts.Looks`:**
+  - register a skin (from embedded pictures or a folder), list the skins, pick one per donkey;
+  - turn Hellfire on per donkey, with its mode (night / always) and a light.
+- **The settings page** gets Saddle Up's new rows: Look, Hellfire, Fire trail.
+- **Earning things:** a gate ("unlocked when"), so Saddle Up can offer "Earn it" without knowing how.
+- **Everything else stays inside the API:** the frame matching and the undo on the pooled parts, the game's flame
+  copies, sound routing, the save of who has what.
+
+## Decisions for the user
+
+1. **What kind of mod should Saddle Up become here:** looks (cosmetic), abilities (light, gallop), or fight power
+   (a burning ring that hurts)?
+2. **Earned or free:** are Hellfire and skins settings anyone can switch on, or unlocked in the game (and then by
+   what: a tech, an item, a quest)?
+3. **Skins and art:** who draws them? And should skins be open to anyone (a folder format for artists and other
+   mods), or only ours?
+4. **Which first:** Hellfire (no art needed: everything is the game's) is the quickest to make real; skins need art.
+
+## Decided (2026-10-17)
+
+1. **Looks first, abilities later.** Hellfire and skins ship as looks. The light (1b), the gallop (2b) and fight
+   effects (1c) come later, each designed on its own.
+2. **Free, with an optional "Earn it".** Everything can be chosen in the settings at once. An option, off by default,
+   makes the looks unlock in the game instead (what unlocks them: open, below).
+3. **Skins in an open format.** A skin is a folder of pictures plus a small text file. Artists and other mods can
+   add skins; ours are the examples.
+4. **Both together.** Hellfire and skins are designed and built as one API change, "Looks", one new minor version
+   (API 0.30.0, Saddle Up 0.10.0).
+
+## The specification (draft 1)
+
+### Hellfire
+
+**What the player sees.** The game's own lamp fire, tall flames and a few sparks, in a ring round the donkey,
+moving with it. While the donkey walks, small flames are left behind and burn out in about 2 s (proposal 2a).
+
+**Settings** (Saddle Up, under Donkey):
+
+| Row | Choices | Default |
+|---|---|---|
+| Hellfire | Off / At night / Always | Off |
+| Fire trail | On / Off (only while Hellfire shows) | On |
+
+**When it shows:**
+- **"At night":** from dusk to dawn by the game's clock, like the lantern's own night rule (Lantern.cs).
+- **Riding or standing:** both: it's the donkey's look, not the rider's.
+- **Indoors** (inside a building, where the donkey can follow as foals do): off. Fire in a house reads as a fire,
+  and the flames would go through the furniture.
+- **Mounted fights:** on (a look only; no damage). Open: hide it in fights, so it can't be taken for an attack?
+- **Cutscenes and dialogue:** left as they are, like the donkey itself.
+- **Sleeping:** the donkey isn't with the keeper then; nothing changes.
+
+**Who has it:**
+- **The donkey:** yes.
+- **The cart:** no fire of its own. When hitched, the ring is round the donkey only, and the cart follows inside or
+  beside it. Open: a wider ring round donkey and cart, as in the probe video, if that looked better.
+- **Foals:** no. Open: a small ring at foal size.
+
+**How it's built** (API):
+- **The fire:** copies of the game's `light_fx/flame` and `light_fx/sparks` from the lamp prefab, found the way the
+  probe does. They are made under an inactive holder and kept to the particle systems.
+  - Local space for the ring. World space for the trail, so its flames stay behind.
+  - Size 1.5x, six flames on a ring of radius 0.8 (the probe's values): tuned values, not settings.
+- **Separate objects** that follow the donkey's root each frame, never children of the reused donkey parts. So
+  nothing needs undoing on those parts; the copies are destroyed when the donkey's view goes.
+- **If the game's lamp fire can't be found** (a game update renamed it): no Hellfire, one line in the log, and the
+  setting stays but does nothing. It's a "warned" feature in game-code.txt.
+- **Cost:** about 10 particle systems per donkey with Hellfire on. To be measured with the perf runner before
+  release.
+
+### Skins
+
+**What the player sees.** The donkey drawn as another animal. Anything the skin doesn't draw stays the donkey's own,
+so a half-finished skin still works.
+
+**Settings** (Saddle Up, under Donkey):
+
+| Row | Choices | Default |
+|---|---|---|
+| Look | Donkey, then every skin found | Donkey |
+
+- The coat and harness colours keep working for skins drawn in the donkey's palette colours.
+- A skin with its own colours ignores them; its folder says which kind it is.
+
+**Who wears it:** the player's donkey. The skin's text file can say whether foals wear it too: a foal-sized skin is
+the same pictures, since foals are the donkey scaled down. The cart is never skinned.
+
+**The skin folder** (`BepInEx\plugins\<any mod>\skins\<skin id>\`, or embedded in a mod's DLL under the same names):
+
+| File | What |
+|---|---|
+| `skin.cfg` | Name shown in the settings, author, version; `kind = palette` or `own colours`; foals yes/no; offsets (below). |
+| `bdy_<clip>_<frame>.png` | One picture per body frame, 96×96, facing left, named like the probe's templates (`bdy_walk_left_03.png`). |
+| `bdy_<clip>.png`, `bdy.png` | Fallbacks: one picture for a whole clip, or for everything. |
+| `hed_<...>.png` | The same for the head layer. |
+| `sounds\bray_1.wav` ... | Optional: the skin's sounds instead of the donkey's (below). |
+
+**Offsets in `skin.cfg`**, for an animal of another shape:
+- the rider's seat: up and along, in pixels;
+- the rider's leg and back cut lines;
+- where the cart's shafts attach.
+
+All are optional: missing means the donkey's. They're the only values a skin may tune, in whole pixels, clamped to a
+safe range.
+
+**Checks when a skin loads** (every problem is logged once, and the skin still loads unless it has no usable
+picture):
+- every picture 96×96 PNG: a wrong size is skipped;
+- names that match no donkey frame: listed, so an artist sees typos;
+- frames the skin doesn't draw: listed (the to-do), and drawn as the donkey;
+- offsets outside their range: clamped.
+
+**How it's built** (API):
+- **Drawing:** Clerk Desk's overlay method, proven in the probe. For each body and head sprite, the skin's picture for
+  the current game frame is drawn just before the camera draws, with the donkey's material and per-renderer data.
+  The donkey's own sprite is hidden for the frames the skin draws.
+- **The undo:** the overlays and the hiding are view changes on reused parts. They get their undo in
+  `ReleaseView`, and `DonkeyPrefab`'s audit learns about them (pooled-parts.md).
+- **Pictures:** loaded once per skin, when it's chosen, and kept while it's in use. A skin of 30 pictures is about
+  1 MB in memory.
+
+### Sounds of a skin
+
+Optional, in the skin's `sounds\` folder. Names match the donkey's sound events (bray, step, ...), several numbered
+files for variety. Played through the game's mixer (`sfx_inworld`), so the Sounds volume applies. Missing sounds:
+the donkey's. Hellfire can crackle with the game's own furnace fire sound (to audition, like the foal sounds were).
+
+### Earn it
+
+An option "Earn your looks" (off by default): with it on, Hellfire and the skins show as locked in the settings until
+earned. The API offers a gate, "unlocked when ...", and Saddle Up says what unlocks what. **Open: what unlocks
+them.** It must be something every player reaches, checked in the game's data, not guessed.
+
+### Not in this version
+
+- The light (1b), the gallop (2b) and fire in fights (1c).
+- Skins for the cart.
+- A skin picker with a picture: the settings picture (LookPreview) could show the skin later.
+
+## Open questions (draft 1)
+
+1. **The ring with the cart hitched:** round the donkey only, or wider round donkey and cart?
+2. **Hellfire in fights:** shown (a look) or hidden?
+3. **Foals:** Hellfire on foals (small), and skins on foals when the skin says so: yes?
+4. **Earn it:** what should unlock Hellfire and the skins? Ideas, to check in the game: a tech late in the tree for
+   Hellfire (fire, alchemy, or the dark side of the church), and for skins a cost (coins, or an item) per skin.
+5. **Our first skins:** which animals? This needs art: who draws them?
+
+## Decided, round 2 (2026-10-17)
+
+1. **The cart, fights and foals (open questions 1-3): settings, as many as it takes.** What works best is found by
+   playing, so each choice is a setting.
+   - Hellfire round the donkey only, or round donkey and cart.
+   - Shown in fights or not.
+   - On foals or not.
+   - Foals wear the skin or not.
+
+   Defaults are picked after trying them. The ring's size, radius and flame count stay tuned values (the dev panel),
+   per Saddle Up's rule.
+2. **Earn it: not now.** Everything is available in the settings. The "Earn it" option and the API's gate are left
+   out of this version.
+3. **Skins: get creative.** Our own first skins are made without drawing (below).
+
+## Recipe skins (round 2)
+
+A **recipe** is a rule applied to the donkey's own frames while the game runs, instead of a set of drawn pictures.
+Examples: stripes, a ghostly see-through glow, charcoal with glowing lava cracks.
+
+**Why recipes:**
+- **They animate perfectly.** Every frame of every clip is covered (walk, graze, ear, the head turns), because the
+  recipe works on whatever frame the game shows, with the donkey's exact outline: no seat or cart offsets to tune.
+- **No art to draw.** Nobody has to paint anything.
+- **No game art redistributed.** We ship the rule, not edited copies of the game's sprites, the same way the Colors
+  feature recolours at runtime today.
+
+**How they'd be built:** each recipe makes a texture from the donkey's atlas once (like Colors' palette work, cached
+per frame), drawn with the overlay method. The two kinds of skin then sit side by side:
+- **picture skins:** an artist's folder;
+- **recipe skins:** built in, and maybe a few recipe settings in a skin's `skin.cfg`, so others can make their own:
+  base colours, a pattern, a glow on the outline.
+
+**The first prototypes** (Python on the 15 frames exported so far, a preview only, never shipped:
+`tools/skin_recipes.py`, its output in `BepInEx\GK2-asset-probe\test\skins\` on the dev machine):
+
+| Recipe | The idea |
+|---|---|
+| zebra | white and black stripes over the donkey's own shading, black outline |
+| ghost | pale cyan, see-through (62%), a bright outline |
+| ember | charcoal body, glowing orange outline and lava cracks: Hellfire's partner |
+| zombie | rotten green, purple rot patches, dark stitches |
+| golden | gold ramp with glints, a dark gold outline |
+| shadow | near-black with a violet outline |
+
+**To try in game:** the probe's **Next test skin** button cycles through `test\skins\`, and **10** dresses the
+donkey with the chosen one (best "instead of the donkey"). **Export every donkey frame** saves all the donkey's
+frames, not only those seen in 30 s, so the recipes can be run on the complete set.
+
+## Seen in game (2026-10-17 14:43)
+
+- **Every donkey frame:** 48 in the character atlases, 44 of them the donkey's (4 are the cart wheels):
+  - body: `chew` 3, `ear` 5, `graze` 5, `lips` 13, `static` 1, `turn` 6, `walk` 8;
+  - head: `hed_static_down` 3.
+
+  That's the full set a recipe or a picture skin covers. The recipes are now made on all 44.
+- **The recipe skins on the ridden donkey** (screenshots: ghost, golden, shadow): each sat exactly on the donkey,
+  lit like the scene, with the rider seated as on the plain donkey. Foals stay plain (not skinned in the probe).
+  There were no warnings or errors.
+- **The fire ring wasn't centred on the donkey.** It was centred on the donkey's root, its ground anchor. The body
+  sprite sits beside the root, on a side that flips with the facing; the API's own centering already cancels that
+  offset (Mount.cs). The probe now centres the ring (and the steps) under the middle of the drawn body, and logs the
+  offset. The real feature centres the same way.
+
+## Seen in game: a foal wore the skin (2026-10-17)
+
+While hitching, unhitching and switching skins, the probe's skin moved from the ridden donkey onto a foal (screenshot).
+At the same time the API logged two `[pool]` warnings: the donkey's view went back to the pool with `bdy` and `hed`
+still forced off, and the audit put them right.
+
+**Why:**
+- **It remembered parts, not a donkey.** The probe kept the donkey's body and head renderers from when it first
+  found them.
+- **Hitching and unhitching swap the donkey's view.** The old view's parts go back to the API's pool, and a foal
+  took them.
+- **So it dressed the wrong animal.** The probe went on dressing those renderers wherever they were.
+- **And the hiding travelled with them.** In "instead" mode the probe hid the donkey's own picture with
+  `forceRenderingOff` and left it set between frames, so the pool got the parts still hidden.
+
+**The probe's fix (0.2.0, built):**
+- **Hidden only while drawing.** The donkey's picture is hidden only while the main camera draws (set before it
+  culls, put back after it renders), so no game code ever sees the part hidden.
+- **Re-checked twice a second.** The probe looks again for which donkey is the player's (never a foal: those are
+  drawn at 0.6 size), and moves the dressing when the view changes.
+
+**What it means for the real feature:** skins must be tied to the **view's lifecycle in the API**, not to remembered
+renderers:
+- the overlay is made when a donkey's view is set up for an instance that wears a skin;
+- it's removed in `ReleaseView`, together with any hiding;
+- `DonkeyPrefab`'s audit knows the overlay child.
+
+The API already knows which view belongs to which instance (MountRegistry), which the probe can only guess. This test
+is the proof that guessing isn't enough.

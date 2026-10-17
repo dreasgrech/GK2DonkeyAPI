@@ -6,7 +6,7 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.29.1 | 25910882 (1.010), built 2026-10-16 (cargo layout of commit cc8a7ea, one-pair cargo offsets, review fingerprint v3; the Mods-window and zone-cache fixes) |
+| `GK2DonkeyAPI.dll` | 0.29.1 | 25910882 (1.010), built 2026-10-16 (cargo layout of commit cc8a7ea, one-pair cargo offsets, review fingerprint v3; the Mods-window and zone-cache fixes; the stacked-logs tweak of commit 7ac9a6c) |
 | `GK2SaddleUp.dll` | 0.9.1 (needs GK2 Donkey API 0.28.0 or newer) | 25910882 (1.010), built 2026-10-16 |
 
 The API DLL carries the list of every game member it uses (693 entries against this build); at start it compares

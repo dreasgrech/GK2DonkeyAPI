@@ -81,8 +81,8 @@ again; `bin/` holds whichever was built last.
 Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
-   Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\` and the
-   dev marker `BepInEx\config\dreas.gk2.dev`.
+   Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\`,
+   `plugins\GK2AssetProbe\` and the dev marker `BepInEx\config\dreas.gk2.dev`.
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
