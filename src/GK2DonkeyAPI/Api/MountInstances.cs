@@ -418,6 +418,11 @@ namespace GK2DonkeyAPI.Api
         // False: the keeper can't ride it (no interact prompt, Ride refused) and it is never hitched.
         public bool Rideable = true;
 
+        // The skin it wears from the start (a skin id as Mounts.Looks.Skins lists them), and with it the mount that
+        // skin is a look of; null or "donkey": the game's own donkey. Set as the owner's own Skin value on it, as
+        // handle.Tuning.Set(owner, "Skin", id) would.
+        public string Skin;
+
         // A donkey in the world it stays with: its idle-shuffle home is the parent (switch the shuffle on for it, as
         // Mounts.SpawnFoal does), it trots after the parent when the parent moves, and catches up out of sight when it
         // can't. No chains (a child can't be a parent); any number of children.

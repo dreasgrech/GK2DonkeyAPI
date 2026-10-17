@@ -152,6 +152,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "mount kind from code: the ability's hooks on spawn, ride, dismount, removal", Body = KindAbility },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
+            new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
         };
 
         // The groups in the order they first appear in the catalog (after Catalog: static fields initialise in order).
@@ -1118,6 +1119,48 @@ namespace GK2DonkeyAPI
                 Mounts.Kinds.KindsChanged -= onKinds;
             }
             yield break;
+        }
+
+        // A game-creature skin (LooksGame.cs): Gerry's 0901_ frames are found in memory or through a sprite atlas,
+        // every base key gets a picture (the mapped ones drawn, the head keys empty on purpose), scaled onto the 128
+        // canvas, and a donkey wears it as the Gerry mount.
+        private static IEnumerator GameCreature()
+        {
+            if (Looks.Find("gerry") == null)
+            {
+                Fail("the built-in skin 'gerry' isn't registered");
+                yield break;
+            }
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            a.Tuning.Set(Owner, "Skin", "gerry");
+            // Wearing is set when the skin is acquired; the sheet fills a few frames a tick (44 reads with a blit each),
+            // and the pictures' counts are known once it is whole (Ready): wait for that, not for the acquire.
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "gerry" && Looks.TestCellOpaque("gerry", "bdy_static_left") >= 0, 30f);
+            if (!waited)
+            {
+                Fail($"the skin never became whole ({Looks.LastGameSourceNote})");
+                a.Remove();
+                yield break;
+            }
+            yield return Frames(3);
+            Check(Looks.LastGameSourceFound >= 60, $"Gerry's frames found: {Looks.LastGameSourceNote} (73 expected)");
+            Check(a.Kind == "gerry", $"the wearer is the Gerry mount ({a.Kind})");
+            int rest = Looks.TestCellOpaque("gerry", "bdy_static_left");
+            int walk = Looks.TestCellOpaque("gerry", "bdy_walk_left_05");
+            int turn = Looks.TestCellOpaque("gerry", "bdy_turn_left_03");
+            int head = Looks.TestCellOpaque("gerry", "hed_static_down");
+            Check(rest > 9 * 100, $"the rest picture is drawn and scaled 3x ({rest} opaque pixels; Gerry's skull is about 200 pixels, so 1800 or more)");
+            Check(walk > 0 && turn > 0, $"the walk ({walk}) and the somersault ({turn}) pictures are drawn");
+            Check(head == 0, $"the head key is empty on purpose, so nothing of the donkey's head shows ({head})");
+            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner, "the Gerry mount's seat value is on the wearer");
+            a.Remove();
+            yield return Frames(3);
         }
 
         // A built-in skin on a spawned donkey: drawn (its overlay shows, the donkey's own body kept from rendering),

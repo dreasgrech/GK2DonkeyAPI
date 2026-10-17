@@ -460,13 +460,22 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             bool spawned = false;
+            // A baby's size is its mount's (MountKindDef.FoalScale: the donkey's 0.6, Gerry's 0.33): a baby of another
+            // size (the mount changed under it) is made again at the right one.
+            float babySize = Donkey != null && Donkey.Exists ? (Mounts.Kinds.Find(Donkey.Kind)?.FoalScale ?? 0.6f) : 0.6f;
             for (int i = 0; i < MaxFoals; i++)
             {
                 MountHandle f = foalHandles[i];
                 bool wanted = i < foals;
+                if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.01f && Donkey != null && Donkey.Exists)
+                {
+                    f.Remove();
+                    foalHandles[i] = null;
+                    f = null;
+                }
                 if (wanted && (f == null || !f.Exists) && Donkey != null && Donkey.Exists)
                 {
-                    foalHandles[i] = Mounts.SpawnFoal(OwnerId, Donkey, key: FoalKeyOf(i), persist: keep);
+                    foalHandles[i] = Mounts.SpawnFoal(OwnerId, Donkey, babySize, key: FoalKeyOf(i), persist: keep);
                     spawned |= foalHandles[i] != null;
                 }
                 else if (!wanted && f != null && f.Exists)

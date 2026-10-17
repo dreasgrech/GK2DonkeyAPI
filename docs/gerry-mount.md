@@ -78,8 +78,18 @@ blow-up is ×1.8, closer to Gerry's own size. A mount file says `foals = true`. 
 - **No cart** (`cart = false` in the mount file) unless a skull pulling a cart is the joke; the hitch gap makes
   either work.
 
-## 6. Recommendation
+## 6. Recommendation, and what is built
 
 Build A as a built-in recipe-style source ("game creature" source: prefix + key map + scale), look at it in game,
 then decide on B. The source kind is generic: any character preset in the atlas (`09xx_`, `03xx_`) becomes a
 candidate mount the same way, which is the open, scalable path the skin system wants.
+
+**Built 2026-10-18 (A):** `source = game` skins (`LooksGame.cs`, docs/skins.md): the character's frames found in
+memory or through a loaded sprite atlas asked by name, mapped by the `[Game]` lines and the rules, scaled by whole
+pixels with the feet on the donkey's ground row (`SkinBase.GroundRow`, 28) and the centre on the pivot, into the
+skin's sheet like any other picture. `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg`: Gerry at 3x on a 128 canvas
+(the hop fits), walk 1..8 spread over his 15, the somersault as the turn idle, the speak frames as lips and chew,
+the head keys empty; the Gerry mount with cart and babies and the seat lifted 10 px (a first guess: the Mounts tab
+tunes it). Self-test "game creature: Gerry's frames found, scaled and worn". Not yet seen in game: whether the
+sprites are reachable before Gerry has been on screen (the atlas path), and how the 3x pixels look next to the
+world. Then B or not.

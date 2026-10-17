@@ -19,6 +19,7 @@ namespace GK2DonkeyAPI
             internal bool BuiltIn, FromPack;
             internal bool Cart = true;                 // may pull the cart
             internal bool Foals = true;                // foals may be drawn as it
+            internal float FoalScale = 0.6f;           // a baby's size as a fraction of the grown one (the view's scale)
             internal string Effect;                    // the effect an instance shows when its own key says "the mount's"
             internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
@@ -78,13 +79,13 @@ namespace GK2DonkeyAPI
             d.Abilities = Array.Empty<MountAbility>();
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Kinds: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
+            Plugin.Log.LogInfo($"Kinds: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
             return d;
         }
 
         private static bool Same(KindDef a, KindDef b)
         {
-            return a.Cart == b.Cart && a.Foals == b.Foals && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
+            return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
         }
 
@@ -134,6 +135,7 @@ namespace GK2DonkeyAPI
             into.Name = from.Name ?? into.Name;
             into.Cart = from.Cart;
             into.Foals = from.Foals;
+            into.FoalScale = from.FoalScale;
             into.Effect = from.Effect;
             into.EffectWhen = from.EffectWhen;
             into.Tuning = from.Tuning;

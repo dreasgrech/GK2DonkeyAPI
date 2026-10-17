@@ -282,7 +282,18 @@ namespace GK2DonkeyAPI.Api
             {
                 if (mountE == null) return;
                 string kind = mountE.Value ?? MountKinds.DonkeyId;
-                me.Skin = skinRows.TryGetValue(kind, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value) ? row.Value : Looks.FirstSkinOf(kind);
+                skinRows.TryGetValue(kind, out ConfigEntry<string> row);
+                string value = row?.Value;
+                // The donkey's own art is no skin of another mount: a cfg holding it for one (written while that
+                // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
+                bool donkeyKind = kind.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
+                if (string.IsNullOrEmpty(value) || (!donkeyKind && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(kind);
+                if (row != null && row.Value != value)
+                {
+                    row.Value = value; // SettingChanged runs Apply again with the healed value
+                    return;
+                }
+                me.Skin = value;
             }
             mountE = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
                 "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row.",

@@ -162,6 +162,12 @@ so nothing resets on the update. Three calls add the rows every player mod wants
 Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears in the Mods
 menu, the game's Settings window and the colours bar with no change to Saddle Up.
 
+**The F11 panel's Instances tab** spawns any mount with any of its skins: a "Mount and skin" cycler (the list
+Saddle Up offers, by mount) above the buttons; "with its cart" is greyed when the mount refuses the cart, the family
+button when it has no babies, each with the reason; the babies wear the parent's skin; every instance row names the
+mount and skin ("#3 dragon (Red Dragon) with cart"). `MountSpawn.Skin` is the same for mods: the spawned one wears
+the skin, and with it is that mount, from the first frame.
+
 **Words.** Player-facing text says *mount* where the thing may not be a donkey ("Ride your mount", "Your mount is
 nowhere to be found", "Mount and cart sounds"), *babies* for the young (a dragon's are not foals), and the mount's
 own name where an instance is in hand (`Instance.Noun`: "This dragon already pulls a cart"). *Donkey* stays where

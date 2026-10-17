@@ -98,6 +98,39 @@ RiderOffsetPx = -2    # and two towards the rear
 They apply to the donkey wearing the skin only, both riding and with the cart, and come off with the skin; a value
 another mod has set on that donkey wins, and the log says so. Nothing of it is saved.
 
+## A skin out of the game's own characters (`source = game`)
+
+A skin with no pictures of its own: another character's frames, read out of the game's character atlas at run
+time (as the recipes read the donkey's), mapped onto the donkey's frame keys and scaled by whole pixels onto the
+canvas. Gerry (the talking skull, preset `0901_`) is built in this way (docs/gerry-mount.md). Nothing of the game's
+art is in the pack.
+
+```
+[Skin]
+id = gerry
+name = Gerry
+mount = gerry
+canvas = 128 128      # room for the scaled frames (a 28-pixel hop at 3x is 84)
+source = game
+
+[Game]
+prefix = 0901_        # the character's preset prefix on its sprites (the donkey's is 0301_)
+scale = 3             # a whole number, 1 to 8: each of its pixels becomes a 3x3 block
+bdy_static_left = bdy_walk_left_01       # donkey key = the character's frame (without the prefix)
+bdy_turn_left_01 = bdy_somersault_left_01
+bdy_lips_left_01 = hed_speak_left_01
+bdy_graze_left_02 = none                 # none: this key stays empty on purpose
+```
+
+The creature's feet (the lowest pixel of its rest picture) go on the donkey's ground row and its centre on the
+pivot column. A key the `[Game]` section doesn't name follows these rules: the same frame name when the character
+has it; a frame of the same clip spread over the character's count (the donkey's `walk 1..8` over a 15-frame walk);
+a `hed_*` key stays empty (the character's body frame is the whole creature, so nothing of the donkey's head may
+show); every other key shows the rest picture (`bdy_static_left`, else `bdy_walk_left_01`, else `hed_static_left`).
+The log says how many of the character's frames were found and where (sprites already in memory, or a sprite atlas
+asked by name). Another game character: its prefix, and look at its frames first (`tools/gerry_probe.py` lists any
+prefix).
+
 ## The pictures
 
 - **One PNG per donkey frame**, named exactly as above. There are 44: the donkey standing (1), walking (8), its ear

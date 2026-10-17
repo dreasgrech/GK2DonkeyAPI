@@ -1,0 +1,253 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.U2D;
+using Object = UnityEngine.Object;
+
+namespace GK2DonkeyAPI
+{
+    // Game-creature skins (docs/skins.md "source = game"; docs/gerry-mount.md): the pictures are another character's
+    // frames out of the game's character atlas (Gerry's 0901_*), each base frame key mapped to one of them (by hand in
+    // the skin's [Game] section, else by rule), scaled by whole pixels onto the skin's canvas with the creature's feet
+    // on the base's ground row and its centre on the base's pivot. Nothing of the game's art is shipped: the frames
+    // are read back at run time like the recipes' (ReadFrame), a few per tick (AdvanceBuilds), into the skin's sheet.
+    //
+    // The rules for a key the [Game] section doesn't name: the same frame name when the character has it; a frame of
+    // the same clip spread over the character's count (the base's walk 1..8 over a 15-frame walk); a hed_* key is
+    // left empty (the creature's whole body is its bdy frame, so nothing of the base's head may show); any other key
+    // shows the creature's rest picture (bdy_static_left, else bdy_walk_left_01, else hed_static_left). A value of
+    // "none" leaves the key empty on purpose.
+    internal static partial class Looks
+    {
+        internal sealed class GameSource
+        {
+            internal string Prefix;        // the preset prefix on the character's sprites ("0901_")
+            internal float Scale = 1f;     // a whole number: each of its pixels becomes scale x scale on the canvas
+            internal readonly Dictionary<string, string> Map = new Dictionary<string, string>(StringComparer.Ordinal); // base key -> frame name (without the prefix)
+        }
+
+        // What the last game-source build found, for the log and the self-test: "<n> '0901_*' frames found (loaded sprites)".
+        internal static string LastGameSourceNote = "";
+        internal static int LastGameSourceFound;
+
+        // A frame of the creature: how to get its sprite, and whether that sprite is ours to destroy after the read
+        // (a sprite atlas hands out a copy per call; a sprite already in memory may be on one of the game's renderers).
+        private struct CreatureFrame
+        {
+            internal Func<Sprite> Get;
+            internal bool Owned;
+        }
+
+        private static void StartGameBuild(Loaded l)
+        {
+            SkinDef d = l.Def;
+            GameSource g = d.Game;
+            SkinBase b = d.Base;
+            Dictionary<string, CreatureFrame> frames = FindCreatureFrames(g.Prefix, b.AtlasName, out string how);
+            LastGameSourceFound = frames.Count;
+            LastGameSourceNote = $"{frames.Count} '{g.Prefix}*' frames found ({how})";
+            Plugin.Log.LogInfo($"Looks: skin '{d.Id}': {LastGameSourceNote}; scaled {g.Scale:0}x onto {d.CanvasW}x{d.CanvasH}.");
+            if (frames.Count == 0)
+            {
+                Plugin.Log.LogWarning($"Looks: skin '{d.Id}': no '{g.Prefix}*' sprite is in memory and no sprite atlas hands them out; the {b.Id} shows. Is the prefix right (the character's preset number, like 0901_ for Gerry)?");
+            }
+            // every base key to a frame name, or null (an empty picture)
+            var map = new Dictionary<string, string>(StringComparer.Ordinal);
+            var missing = new List<string>();
+            foreach (string key in b.Keys) map[key] = ResolveGameFrame(key, g, frames, b, missing);
+            if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{d.Id}': [Game] names frames the game doesn't have: {string.Join(", ", missing)}; those keys stay empty.");
+            l.MakeSheet(b.Keys.Length);
+            l.ToBuild = new Queue<string>(b.Keys);
+            int scale = Mathf.Max(1, Mathf.RoundToInt(g.Scale));
+            // The creature's own geometry, from its rest picture: the feet (its lowest opaque row) go on the base's
+            // ground row, its centre column on the base's pivot column. Read once, on the first frame produced.
+            int groundSrc = -1, centreSrc = -1;
+            string restName = ResolveGameFrame("bdy_static_left", g, frames, b, null);
+            l.Produce = key =>
+            {
+                string name = map[key];
+                if (name == null) return new Pixels { P = new Color32[d.CanvasW * d.CanvasH], W = d.CanvasW, H = d.CanvasH }; // empty on purpose
+                if (groundSrc < 0)
+                {
+                    SkinFrame rest = restName != null && frames.TryGetValue(restName, out CreatureFrame restFrame) ? ReadCreatureFrame(restFrame, restName, b) : null;
+                    Measure(rest, out groundSrc, out centreSrc);
+                    if (rest == null) { groundSrc = b.GroundRow; centreSrc = Mathf.RoundToInt(b.PivotX); }
+                }
+                if (!frames.TryGetValue(name, out CreatureFrame get)) return new Pixels { Why = $"the game has no '{g.Prefix}{name}' sprite in memory" };
+                SkinFrame f = ReadCreatureFrame(get, name, b);
+                if (f == null) return new Pixels { Why = "the game's frame could not be read" };
+                Color32[] px = Scaled(f, scale, groundSrc, centreSrc, d);
+                int opaque = 0;
+                for (int i = 0; i < px.Length; i++) if (px[i].a != 0) opaque++;
+                GameSourceOpaque[d.Id + "/" + key] = opaque; // for the self-test: the sheet itself is unreadable once uploaded
+                return new Pixels { P = px, W = d.CanvasW, H = d.CanvasH };
+            };
+            building.Add(l);
+        }
+
+        // The opaque pixels each produced picture had, by "<skin id>/<key>" (the self-test reads them; a key left empty
+        // on purpose has no entry). Small: one int per key of a game-creature skin.
+        internal static readonly Dictionary<string, int> GameSourceOpaque = new Dictionary<string, int>(StringComparer.Ordinal);
+
+        // The creature's sprites by frame name (without the prefix), as a getter each (a sprite atlas hands out a copy
+        // per call, destroyed after the read). First the sprites already in memory (the character has been on screen),
+        // else every loaded sprite atlas asked by name.
+        private static Dictionary<string, CreatureFrame> FindCreatureFrames(string prefix, string atlasName, out string how)
+        {
+            var result = new Dictionary<string, CreatureFrame>(StringComparer.Ordinal);
+            foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())
+            {
+                if (s == null || !s.name.StartsWith(prefix, StringComparison.Ordinal)) continue;
+                if (s.texture == null || s.texture.name.IndexOf(atlasName, StringComparison.OrdinalIgnoreCase) < 0) continue;
+                string name = CleanName(s.name.Substring(prefix.Length));
+                bool clone = s.name.IndexOf("(Clone)", StringComparison.Ordinal) >= 0;
+                if (!result.ContainsKey(name) || !clone)
+                {
+                    Sprite keep = s; // the game's own (maybe on one of its renderers): read, never destroyed
+                    result[name] = new CreatureFrame { Get = () => keep, Owned = false };
+                }
+            }
+            if (result.Count > 0)
+            {
+                how = "sprites in memory";
+                return result;
+            }
+            int atlases = 0;
+            foreach (SpriteAtlas atlas in Resources.FindObjectsOfTypeAll<SpriteAtlas>())
+            {
+                if (atlas == null) continue;
+                atlases++;
+                var all = new Sprite[atlas.spriteCount];
+                atlas.GetSprites(all);
+                foreach (Sprite s in all)
+                {
+                    if (s == null) continue;
+                    if (s.name.StartsWith(prefix, StringComparison.Ordinal))
+                    {
+                        string name = CleanName(s.name.Substring(prefix.Length));
+                        string spriteName = prefix + name;
+                        SpriteAtlas from = atlas;
+                        result[name] = new CreatureFrame { Get = () => from.GetSprite(spriteName), Owned = true }; // a fresh copy per call, ours
+                    }
+                    Object.Destroy(s); // GetSprites made a copy of each for this listing
+                }
+            }
+            how = $"{atlases} sprite atlas(es) asked by name";
+            return result;
+        }
+
+        private static string CleanName(string n)
+        {
+            int clone = n.IndexOf("(Clone)", StringComparison.Ordinal);
+            return (clone >= 0 ? n.Substring(0, clone) : n).Trim();
+        }
+
+        // The frame on its own canvas (ReadFrame); a copy of ours (an atlas hand-out) destroyed afterwards, the game's
+        // own sprite left alone.
+        private static SkinFrame ReadCreatureFrame(CreatureFrame fr, string name, SkinBase b)
+        {
+            Sprite s = fr.Get();
+            if (s == null) return null;
+            try
+            {
+                return ReadFrame(name, s, b);
+            }
+            finally
+            {
+                if (fr.Owned) Object.Destroy(s);
+            }
+        }
+
+        // The feet's row (from the bottom) and the centre column of a frame's opaque pixels; -1 for none.
+        private static void Measure(SkinFrame f, out int ground, out int centre)
+        {
+            ground = -1;
+            centre = -1;
+            if (f == null) return;
+            int minX = int.MaxValue, maxX = -1, minY = int.MaxValue;
+            for (int y = 0; y < f.H; y++)
+            {
+                for (int x = 0; x < f.W; x++)
+                {
+                    if (f.P[y * f.W + x].a == 0) continue;
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                }
+            }
+            if (maxX < 0) return;
+            ground = minY;
+            centre = (minX + maxX) / 2;
+        }
+
+        // The frame scaled by whole pixels onto the skin's canvas: the creature's ground row lands on the base's
+        // ground row, its centre column on the pivot column; nearest neighbour, so each source pixel is a scale x scale
+        // block and nothing is blurred.
+        private static Color32[] Scaled(SkinFrame f, int scale, int groundSrc, int centreSrc, SkinDef d)
+        {
+            int w = d.CanvasW, h = d.CanvasH;
+            var o = new Color32[w * h];
+            int groundDst = Mathf.RoundToInt(d.PivotY) - (Mathf.RoundToInt(d.Base.PivotY) - d.Base.GroundRow); // the base's feet, below its pivot
+            int centreDst = Mathf.RoundToInt(d.PivotX);
+            for (int y = 0; y < h; y++)
+            {
+                int sy = FloorDiv(y - groundDst, scale) + groundSrc;
+                if (sy < 0 || sy >= f.H) continue;
+                for (int x = 0; x < w; x++)
+                {
+                    int sx = FloorDiv(x - centreDst, scale) + centreSrc;
+                    if (sx < 0 || sx >= f.W) continue;
+                    o[y * w + x] = f.P[sy * f.W + sx];
+                }
+            }
+            return o;
+        }
+
+        private static int FloorDiv(int a, int b) => a >= 0 ? a / b : -((-a + b - 1) / b);
+
+        // The frame name for a base key, in this order: by hand ([Game] lines; "none" = empty; a name the game
+        // doesn't have is reported through missing and left empty); nothing for a hed_* key (the creature's body frame
+        // is the whole creature); a numbered clip spread over the creature's count of that clip (the base's walk 1..8
+        // over a 15-frame walk: 1, 2, 4, 6, 8, 10, 12, 14, so the whole hop is in it); the same name; else the rest
+        // picture.
+        private static string ResolveGameFrame(string key, GameSource g, Dictionary<string, CreatureFrame> frames, SkinBase b, List<string> missing)
+        {
+            if (g.Map.TryGetValue(key, out string named))
+            {
+                if (string.IsNullOrEmpty(named) || named.Equals("none", StringComparison.OrdinalIgnoreCase)) return null;
+                if (frames.ContainsKey(named)) return named;
+                if (missing != null && !missing.Contains(named)) missing.Add(named);
+                return null;
+            }
+            if (key.StartsWith("hed_", StringComparison.Ordinal)) return null;
+            string clip = ClipOf(key);
+            if (clip != key)
+            {
+                int n = int.Parse(key.Substring(clip.Length + 1));
+                int baseCount = 0, gameCount = 0;
+                foreach (string k in b.Keys) if (ClipOf(k) == clip) baseCount++;
+                while (frames.ContainsKey($"{clip}_{gameCount + 1:00}")) gameCount++;
+                if (gameCount > 0 && baseCount > 0)
+                {
+                    int idx = 1 + (n - 1) * gameCount / baseCount;
+                    return $"{clip}_{Mathf.Clamp(idx, 1, gameCount):00}";
+                }
+            }
+            if (frames.ContainsKey(key)) return key;
+            foreach (string rest in new[] { "bdy_static_left", "bdy_walk_left_01", "hed_static_left" })
+            {
+                if (g.Map.TryGetValue(rest, out string r) && frames.ContainsKey(r)) return r;
+                if (frames.ContainsKey(rest)) return rest;
+            }
+            return null;
+        }
+
+        // For the self-test: the opaque pixels a game-creature skin's picture had for a key (0 for one left empty on
+        // purpose, -1 when the skin isn't loaded or the key wasn't produced).
+        internal static int TestCellOpaque(string skinId, string key)
+        {
+            if (!loaded.TryGetValue(skinId, out Loaded l) || !l.Ready) return -1;
+            return GameSourceOpaque.TryGetValue(skinId + "/" + key, out int n) ? n : (l.Frames.ContainsKey(key) ? 0 : -1);
+        }
+    }
+}

@@ -28,7 +28,7 @@ if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys rea
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source" };
 
 static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
 {
@@ -92,7 +92,24 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
         if (parts.Length != 2 || !int.TryParse(parts[0], out cw) || !int.TryParse(parts[1], out ch)) Bad($"canvas = {canvas}: two numbers expected");
     }
     bool sheet = skin.ContainsKey("sheet");
-    if (!sheet)
+    bool game = skin.TryGetValue("source", out var src) && src.Equals("game", StringComparison.OrdinalIgnoreCase);
+    if (game)
+    {
+        // another game character's frames (docs/skins.md, source = game): no pictures of its own; [Game] says whose
+        if (!cfg.TryGetValue("Game", out var gameSec)) Bad("source = game without a [Game] section");
+        else
+        {
+            if (string.IsNullOrWhiteSpace(gameSec.GetValueOrDefault("prefix"))) Bad("[Game] prefix missing (the character's preset prefix, like 0901_)");
+            if (!int.TryParse(gameSec.GetValueOrDefault("scale") ?? "1", out int scale) || scale < 1 || scale > 8) Bad($"[Game] scale = {gameSec.GetValueOrDefault("scale")}: a whole number from 1 to 8");
+            foreach (var k in gameSec.Keys)
+            {
+                if (k.Equals("prefix", StringComparison.OrdinalIgnoreCase) || k.Equals("scale", StringComparison.OrdinalIgnoreCase)) continue;
+                if (!knownKeys.Contains(k)) Bad($"[Game] {k}: not a frame key of the donkey base");
+            }
+        }
+        if (Directory.GetFiles(dir, "*.png").Length > 0) Bad("source = game but PNGs are in the folder (they would be ignored)");
+    }
+    else if (!sheet)
     {
         int found = 0;
         foreach (var key in knownKeys)
@@ -154,7 +171,7 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
         else mountDecl[mid] = (id, text);
     }
     else if (mount != "donkey") Bad($"names the mount '{mount}' but declares no [Mount] section (a built-in declares its own)");
-    if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
+    if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
 Console.WriteLine($"INFO {skins} built-in skins, {mountDecl.Count} mounts declared ({string.Join(", ", mountDecl.Keys.OrderBy(k => k))}), {pictures} pictures");
 Console.WriteLine(fails == 0 ? $"ALL PASS ({passes})" : $"FAILURES: {fails}");

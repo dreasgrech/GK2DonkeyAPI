@@ -427,8 +427,13 @@ namespace GK2DonkeyAPI.Api
             if (i == null)
             {
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
+                return null;
             }
-            return i?.Handle;
+            if (!string.IsNullOrEmpty(spec.Skin) && spec.Donkey)
+            {
+                i.Handle.Tuning.Set(ownerId, "Skin", spec.Skin); // the skin, and with it the mount it is a look of
+            }
+            return i.Handle;
         }
 
         // A foal of a donkey in the world: small (scale, 0.6 by default), not rideable, next to its parent, and with its

@@ -100,6 +100,12 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 10. Donkey: Zebra: on the first pick, no flash of the plain donkey while it builds (a few frames later the stripes
     are there, moving with the body). Ghost once (translucent look).
 11. Giant Worm: Worm (from a pack): the worm again (it joined the worm mount; the log says so).
+11b. Mount = Gerry: a skull three times Gerry's size hops along under you, jaw chattering; standing still it does a
+    somersault now and then (the turn idle) and chatters (lips). The log says "skin 'gerry': 73 '0901_*' frames
+    found (...)": "sprites in memory" if Gerry has been on screen this session, else "N sprite atlas(es) asked by
+    name" (the thing to confirm: that the atlas path finds them at all). Judge the 3x pixels against the world; the
+    seat (Mounts tab, SeatAdjustPx 10) and the hitch gap are first guesses. F11 → Instances: spawn "Gerry with its
+    cart" and "a family: a gerry and 2 babies".
 12. Foals: Babies = 2, "Babies are the same mount and skin" on → two small dragons following; off → two plain foals.
 
 **C. Hellfire (5 min)**

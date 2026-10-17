@@ -127,6 +127,20 @@ namespace GK2DonkeyAPI
                 kind.Foals = !kind.Foals;
                 Kinds.Touch(kind);
             }
+            if (kind.Foals)
+            {
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(Tip("Babies' size (x the grown one)", "The view's scale of a baby: the donkey's foals are 0.60; a mount drawn three times its creature's size (Gerry) wants 0.33 so its babies are the creature's own size. Saddle Up's babies take the new size within a second. Saved as foal_scale in the mount's file."), Mathf.Abs(kind.FoalScale - 0.6f) > 0.001f ? changed : label, Wd(LabelW));
+                float size = GUILayout.HorizontalSlider(kind.FoalScale, 0.2f, 1f, Wd(SliderW - 50f));
+                GUILayout.Label(kind.FoalScale.ToString("0.00"), label, Wd(50f));
+                GUILayout.EndHorizontal();
+                size = Mathf.Round(size * 100f) / 100f;
+                if (Mathf.Abs(size - kind.FoalScale) > 0.001f)
+                {
+                    kind.FoalScale = Mathf.Clamp(size, 0.2f, 1f);
+                    Kinds.Touch(kind);
+                }
+            }
             EffectRows(kind);
 
             Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "[Mount.Tuning.Ride]" : "[Mount.Tuning.Cart]") + ")");

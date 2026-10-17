@@ -72,6 +72,7 @@ namespace GK2DonkeyAPI
             internal string GamePrefix;         // the game's preset prefix on its frame sprites ("0301_bdy_walk_left_03")
             internal string AtlasName;          // the atlas its frames live in (for the recipes' read-back)
             internal int BackCol, BackRow;      // the back line in the standing frame (column, row from the top)
+            internal int GroundRow;             // the feet's row in the standing frame (from the bottom): where a game creature's feet go
         }
 
         // The donkey's frame keys (the character atlases' 0301_* sprites, 2026-10-17, docs/external-assets.md): the names
@@ -94,6 +95,7 @@ namespace GK2DonkeyAPI
             Id = MountLooks.DonkeyId, Keys = KnownKeys, KeySet = new HashSet<string>(KnownKeys, StringComparer.Ordinal), Parts = new[] { "bdy", "hed" },
             CanvasW = 96, CanvasH = 96, PivotX = 48f, PivotY = 48f, PixelsPerUnit = 50f, GamePrefix = "0301_", AtlasName = "Characters",
             BackCol = 58, BackRow = 41, // measured 2026-10-17
+            GroundRow = 28, // the standing frame is drawn 50x47 at 23,28 on its canvas (the settings picture's log line)
         };
 
         private static readonly Dictionary<string, SkinBase> bases = new Dictionary<string, SkinBase>(StringComparer.OrdinalIgnoreCase) { [Donkey.Id] = Donkey };
@@ -206,6 +208,7 @@ namespace GK2DonkeyAPI
             internal IMountSkinSource Sprites;                // a mod's own sprites (not owned here)
             internal IMountSkinSource FrontSprites;           // ... and its front layer's (optional)
             internal Func<SkinFrame, Color32[]> Recipe;       // a rule over the base's own frames (LooksRecipes.cs)
+            internal GameSource Game;                         // another game character's frames, mapped and scaled (LooksGame.cs)
 
             internal bool OwnsSheet => Sprites == null;
         }
@@ -227,6 +230,13 @@ namespace GK2DonkeyAPI
                 if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Skin id '{d.Id}': letters, digits, dots, dashes and underscores only.");
             }
             if (d.Base == null) throw new ArgumentException($"Skin '{d.Id}' names no base.");
+            // Everything that can refuse the skin comes before its mount is declared: a mount with no skin would be
+            // offered with nothing to wear (seen 2026-10-18: Gerry listed, "donkey (not installed)" for its skin).
+            if (d.Sprites == null && d.Recipe == null && d.Game == null && d.LoadSheetPng == null && (d.Keys == null || d.LoadPng == null)) throw new ArgumentException($"Skin '{d.Id}' has no source of pictures.");
+            if (defs.TryGetValue(d.Id, out SkinDef old) && old.Owner != d.Owner)
+            {
+                throw new ArgumentException($"Skin id '{d.Id}' is already registered by {old.Owner}.");
+            }
             if (d.DeclaredKind != null)
             {
                 d.DeclaredKind.Owner = d.Owner;
@@ -239,11 +249,6 @@ namespace GK2DonkeyAPI
                 d.CanvasH = d.Base.CanvasH;
                 d.PivotX = d.Base.PivotX;
                 d.PivotY = d.Base.PivotY;
-            }
-            if (d.Sprites == null && d.Recipe == null && d.LoadSheetPng == null && (d.Keys == null || d.LoadPng == null)) throw new ArgumentException($"Skin '{d.Id}' has no source of pictures.");
-            if (defs.TryGetValue(d.Id, out SkinDef old) && old.Owner != d.Owner)
-            {
-                throw new ArgumentException($"Skin id '{d.Id}' is already registered by {old.Owner}.");
             }
             defs[d.Id] = d;
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
@@ -405,6 +410,8 @@ namespace GK2DonkeyAPI
             bool pivotGiven = false;
             string section = "skin";
             var mount = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
+            string source = null;
             Dictionary<string, object> kt = null, ktRide = null, ktCart = null;
             var unknownSections = new List<string>();
             foreach (string raw in text.Split('\n'))
@@ -414,7 +421,7 @@ namespace GK2DonkeyAPI
                 if (line[0] == '[')
                 {
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart") unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart") unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -425,6 +432,7 @@ namespace GK2DonkeyAPI
                 switch (section)
                 {
                     case "tuning": (d.Tuning ?? (d.Tuning = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.ride": (ktRide ?? (ktRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
@@ -451,6 +459,7 @@ namespace GK2DonkeyAPI
                     case "sheet_front": frontSheet = value; break;
                     case "columns": int.TryParse(value, out d.SheetColumns); break;
                     case "frames": frames = value; break;
+                    case "source": source = value.ToLowerInvariant(); break;
                     default: unknown.Add(key); break;
                 }
             }
@@ -478,6 +487,7 @@ namespace GK2DonkeyAPI
                 if (mount.TryGetValue("version", out string mv)) k.Version = mv;
                 if (mount.TryGetValue("cart", out string mc)) k.Cart = !mc.Equals("false", StringComparison.OrdinalIgnoreCase);
                 if (mount.TryGetValue("foals", out string mf)) k.Foals = !mf.Equals("false", StringComparison.OrdinalIgnoreCase);
+                if (mount.TryGetValue("foal_scale", out string ms) && float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
                 if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
                 if (mount.TryGetValue("effect_when", out string mw) && Enum.TryParse(mw.Trim(), true, out MountEffectWhen when)) k.EffectWhen = when;
                 d.DeclaredKind = k;
@@ -487,7 +497,30 @@ namespace GK2DonkeyAPI
             {
                 d.Report += "a [Mount.Tuning] section without a [Mount] id is ignored; ";
             }
-            if (sheet != null)
+            if (source == "game")
+            {
+                // another game character's frames (LooksGame.cs): no pictures of its own; [Game] says whose and how
+                var g = new GameSource();
+                foreach (var kv in game)
+                {
+                    switch (kv.Key.ToLowerInvariant())
+                    {
+                        case "prefix": g.Prefix = kv.Value; break;
+                        case "scale": float.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out g.Scale); break;
+                        default: g.Map[kv.Key] = kv.Value; break;
+                    }
+                }
+                if (string.IsNullOrEmpty(g.Prefix)) throw new FormatException($"{where}: source = game needs a [Game] section with prefix = <the character's preset prefix, like 0901_>");
+                if (g.Scale < 1f || g.Scale > 8f || Mathf.Abs(g.Scale - Mathf.Round(g.Scale)) > 0.001f) throw new FormatException($"{where}: [Game] scale = {g.Scale} must be a whole number from 1 to 8");
+                d.Game = g;
+                d.Keys = () => d.Base.Keys;
+                d.Report += $"the game's own '{g.Prefix}*' frames scaled {g.Scale:0}x, {g.Map.Count} key(s) mapped by hand; ";
+            }
+            else if (source != null && source != "pictures")
+            {
+                throw new FormatException($"{where}: source = {source} is not known (pictures, or game)");
+            }
+            else if (sheet != null)
             {
                 string file = sheet, frontFile = frontSheet;
                 d.LoadSheetPng = () => bytes(file);
@@ -634,6 +667,7 @@ namespace GK2DonkeyAPI
             {
                 var head = new List<string>();
                 var skinLines = new List<string>();
+                var otherSections = new List<(string Header, List<string> Lines)>(); // [Game] and anything else: kept as written
                 bool declaresMount = false;
                 string section = null;
                 if (File.Exists(path))
@@ -645,6 +679,7 @@ namespace GK2DonkeyAPI
                         {
                             section = line.Trim('[', ']', ' ').ToLowerInvariant();
                             if (section == "mount") declaresMount = true;
+                            if (section != "skin" && section != "tuning" && !section.StartsWith("mount", StringComparison.Ordinal)) otherSections.Add((raw.Trim(), new List<string>()));
                             continue;
                         }
                         if (section == null) head.Add(raw);
@@ -654,6 +689,10 @@ namespace GK2DonkeyAPI
                             string key = eq > 0 ? line.Substring(0, eq).Trim().ToLowerInvariant() : "";
                             if (key == "mount" || key == "offset" || key == "offset_cart") continue;
                             skinLines.Add(raw);
+                        }
+                        else if (section != "tuning" && !section.StartsWith("mount", StringComparison.Ordinal) && otherSections.Count > 0)
+                        {
+                            otherSections[otherSections.Count - 1].Lines.Add(raw);
                         }
                     }
                 }
@@ -673,12 +712,18 @@ namespace GK2DonkeyAPI
                     sb.Append("\n[Tuning]\n");
                     foreach (var kv in d.Tuning) sb.Append(kv.Key).Append(" = ").Append(kv.Value).Append('\n');
                 }
+                foreach ((string Header, List<string> Lines) other in otherSections)
+                {
+                    sb.Append('\n').Append(other.Header).Append('\n');
+                    foreach (string l in other.Lines) sb.Append(l).Append('\n');
+                }
                 if (declaresMount && k != Kinds.Donkey)
                 {
                     sb.Append("\n[Mount]\nid = ").Append(k.Id).Append("\nname = ").Append(k.Label).Append('\n');
                     if (!string.IsNullOrEmpty(k.Author)) sb.Append("author = ").Append(k.Author).Append('\n');
                     if (!string.IsNullOrEmpty(k.Version)) sb.Append("version = ").Append(k.Version).Append('\n');
                     sb.Append("cart = ").Append(k.Cart ? "true" : "false").Append("\nfoals = ").Append(k.Foals ? "true" : "false").Append('\n');
+                    if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) sb.Append("foal_scale = ").Append(Num(k.FoalScale)).Append('\n');
                     if (!string.IsNullOrEmpty(k.Effect)) sb.Append("effect = ").Append(k.Effect).Append("\neffect_when = ").Append(k.EffectWhen).Append('\n');
                     WriteSection(sb, "[Mount.Tuning]", k.Tuning);
                     WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide);
@@ -1019,6 +1064,10 @@ namespace GK2DonkeyAPI
                     }
                     l.Finish();
                     Plugin.Log.LogInfo($"Looks: skin '{d.Id}' loaded: {n} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")} ({l.SizeNote}).");
+                }
+                else if (d.Game != null)
+                {
+                    StartGameBuild(l);
                 }
                 else if (d.Recipe != null)
                 {

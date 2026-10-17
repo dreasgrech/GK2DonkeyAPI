@@ -67,7 +67,7 @@ namespace GK2DonkeyAPI.Api
             var d = new GK2DonkeyAPI.Kinds.KindDef
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
+                Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
             };
@@ -118,8 +118,11 @@ namespace GK2DonkeyAPI.Api
         public string Version;
         // May pull the cart (false: the cart style, Hitch and MountCompanion.Use(Cart) are refused for this kind).
         public bool Cart = true;
-        // Foals may be drawn as it (a skin's own Foals refines this).
+        // Foals (babies) may be drawn as it.
         public bool Foals = true;
+        // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
+        // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
+        public float FoalScale = 0.6f;
         // The effect an instance of this kind shows when its own Effect key is MountEffects.KindId ("mount"): an effect
         // id, or null for none; and when.
         public string Effect;
@@ -185,6 +188,7 @@ namespace GK2DonkeyAPI.Api
             FromPack = d.FromPack;
             Cart = d.Cart;
             Foals = d.Foals;
+            FoalScale = d.FoalScale;
             Effect = d.Effect ?? "";
             Abilities = d.Abilities.Length;
             var skins = new List<string>();
@@ -202,6 +206,8 @@ namespace GK2DonkeyAPI.Api
         public bool FromPack { get; }
         public bool Cart { get; }
         public bool Foals { get; }
+        // A baby's size as a fraction of the grown one.
+        public float FoalScale { get; }
         public string Effect { get; }
         public int Abilities { get; }
         // The ids of its skins (the donkey kind's first is "donkey", the game's own art).

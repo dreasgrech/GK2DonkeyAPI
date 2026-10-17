@@ -418,6 +418,7 @@ class GK2DonkeyAPI.Api.MountSpawn
   field bool Rideable
   field float Scale
   field string SceneId
+  field string Skin
   field bool WithCart
   method void .ctor()
 enum GK2DonkeyAPI.Api.MountSpeed

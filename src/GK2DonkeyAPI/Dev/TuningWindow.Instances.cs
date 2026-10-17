@@ -52,7 +52,7 @@ namespace GK2DonkeyAPI
             if (EditsInstance(e))
             {
                 return editing.OverrideOwners.TryGetValue(e.Definition.Key, out string o) && IsMountOwner(o)
-                    ? "Shown: the mount's value (Mounts tab). Drag to give this donkey its own; right-click puts the mount's back. "
+                    ? "Shown: the mount's value (Mounts tab). Drag to give this mount its own; right-click puts the mount's back. "
                     : "";
             }
             if (!RiddenHas(e, out _, out string owner)) return "";
@@ -332,8 +332,8 @@ namespace GK2DonkeyAPI
 
         private static void DrawInstances()
         {
-            Header("Donkeys and carts standing in the world");
-            GUILayout.Label("Each is its own donkey (with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a donkey with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a donkey without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). The ones marked kept with saves (the panel's spawns are) come back when that save is loaded, with their cargo and own settings; the game's save itself is never changed (a side file next to it). The others are gone after a reload, with their cargo on the ground where they stood.", small);
+            Header("Mounts and carts standing in the world");
+            GUILayout.Label("Each is its own mount (a donkey, a dragon, ... with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a mount with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a mount without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). The ones marked kept with saves (the panel's spawns are) come back when that save is loaded, with their cargo and own settings; the game's save itself is never changed (a side file next to it). The others are gone after a reload, with their cargo on the ground where they stood.", small);
             GUILayout.Label("Saves: " + Mount.PersistenceNote, small);
             Toggle("Controls in the game (the interact key rides and hitches, the label shows)", Plugin.InstanceControls, null);
             HitchKeyRow();
@@ -370,28 +370,50 @@ namespace GK2DonkeyAPI
             FloatSlider("Foals: a way round may reach this far", IdleShuffle.RouteRange, 2f, 8f, 1, null);
 
             Header("Spawn one in front of the keeper");
+            // Any mount with any of its skins (the same list Saddle Up offers, by mount): the buttons spawn that, and
+            // the ones a mount refuses (the cart, babies) are greyed with the reason.
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Tip("Donkey", "Spawns a new donkey without a cart in front of the keeper, facing his way. It is kept with saves in a side file; the game's save is untouched.")))
+            GUILayout.Label(Tip("Mount and skin", "What the buttons below spawn: a mount (Donkey, Dragon, ...) and one of its skins, as Saddle Up's Mount and Skin rows offer them."), label, Wd(LabelW));
+            IReadOnlyList<(string Id, string Label)> choices = Looks.SkinChoices();
+            int idx = 0;
+            for (int k = 0; k < choices.Count; k++)
+            {
+                if (string.Equals(choices[k].Id, spawnSkinId, StringComparison.OrdinalIgnoreCase)) idx = k;
+            }
+            if (GUILayout.Button("<", Wd(22f)) && choices.Count > 0) { idx = (idx - 1 + choices.Count) % choices.Count; spawnSkinId = choices[idx].Id; }
+            GUILayout.Label(choices.Count > 0 ? choices[idx].Label : "-", label, Wd(SliderW - 44f));
+            if (GUILayout.Button(">", Wd(22f)) && choices.Count > 0) { idx = (idx + 1) % choices.Count; spawnSkinId = choices[idx].Id; }
+            GUILayout.EndHorizontal();
+            Looks.SkinDef spawnSkin = Looks.Find(spawnSkinId);
+            Kinds.KindDef spawnKind = spawnSkin != null ? spawnSkin.Kind : Kinds.Donkey;
+            string noun = spawnKind.Name.ToLowerInvariant();
+            string Noun1 = char.ToUpperInvariant(noun[0]) + noun.Substring(1);
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Tip(Noun1, $"Spawns a new {noun} without a cart in front of the keeper, facing his way, wearing the skin above. It is kept with saves in a side file; the game's save is untouched.")))
             {
                 pending = () => SpawnHere(true, false);
             }
-            if (GUILayout.Button(Tip("Donkey with its cart", "Spawns a new donkey already hitched to its own cart in front of the keeper. Kept with saves; remove it with its row below.")))
+            GUI.enabled = spawnKind.Cart;
+            if (GUILayout.Button(Tip($"{Noun1} with its cart", spawnKind.Cart ? $"Spawns a new {noun} already hitched to its own cart in front of the keeper. Kept with saves; remove it with its row below." : $"A {noun} can't pull the cart (its mount file says so).")))
             {
                 pending = () => SpawnHere(true, true);
             }
-            if (GUILayout.Button(Tip("Cart on its own", "Spawns a free cart in front of the keeper; a ridden donkey without a cart can take it at its shafts. Kept with saves.")))
+            GUI.enabled = true;
+            if (GUILayout.Button(Tip("Cart on its own", "Spawns a free cart in front of the keeper; a ridden mount without a cart can take it at its shafts. Kept with saves.")))
             {
                 pending = () => SpawnHere(false, true);
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Tip($"A donkey family: a donkey and {familyFoals} foal{(familyFoals == 1 ? "" : "s")}", "Spawns a donkey with the number and size of foals set below; the foals follow it and its idle shuffle is switched on. Kept with saves.")))
+            GUI.enabled = spawnKind.Foals;
+            if (GUILayout.Button(Tip($"A family: a {noun} and {familyFoals} bab{(familyFoals == 1 ? "y" : "ies")}", spawnKind.Foals ? $"Spawns a {noun} with the number and size of babies set below, all wearing the skin above; the babies follow it and its idle shuffle is switched on. Kept with saves." : $"A {noun} has no babies (its mount file says so).")))
             {
                 pending = SpawnFamily;
             }
+            GUI.enabled = true;
             GUILayout.EndHorizontal();
-            familyFoals = SessionIntRow("Foals in a family", familyFoals, 1, 20);
-            foalScale = SessionFloatRow("Foal size (1 = a full-size donkey)", foalScale, 0.3f, 0.9f);
+            familyFoals = SessionIntRow("Babies in a family", familyFoals, 1, 20);
+            foalScale = SessionFloatRow("Baby size (1 = full size)", foalScale, 0.3f, 0.9f);
             GUILayout.Label(spawnNote, small);
 
             Mount.Instance r = Mount.Ridden;
@@ -473,6 +495,19 @@ namespace GK2DonkeyAPI
 
         private static string spawnNote = "Spawned where the keeper looks, facing his way. Removing one takes its cargo with it.";
 
+        // The skin (and with it the mount) the spawn buttons use: the donkey's own art unless picked above.
+        private static string spawnSkinId = MountLooks.DonkeyId;
+        private static string SpawnSkin => string.IsNullOrEmpty(spawnSkinId) || spawnSkinId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : spawnSkinId;
+
+        // " (Red Dragon)" after an instance's kind in its row; nothing for the donkey's own art.
+        private static string SkinText(Mount.Instance i)
+        {
+            string w = i.LooksRig?.Wearing;
+            if (string.IsNullOrEmpty(w)) return "";
+            Looks.SkinDef d = Looks.Find(w);
+            return " (" + (d != null ? (string.IsNullOrEmpty(d.Name) ? d.Id : d.Name) : w + ", not installed") + ")";
+        }
+
         private static void SpawnHere(bool donkey, bool cart)
         {
             PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
@@ -483,16 +518,16 @@ namespace GK2DonkeyAPI
             }
             Vector3 at = InFront(pd, cart ? 2.2f : 1.6f);
             bool right = pd.Direction.x >= 0f;
-            MountHandle h = Mounts.Spawn(PanelOwner, new MountSpawn { Position = at, FacingRight = right, Donkey = donkey, WithCart = cart, Persist = true });
-            spawnNote = h != null ? $"Spawned {h.I.Describe()} at {h.Position:F1}." : "Could not spawn (see the log).";
+            MountHandle h = Mounts.Spawn(PanelOwner, new MountSpawn { Position = at, FacingRight = right, Donkey = donkey, WithCart = cart, Persist = true, Skin = donkey ? SpawnSkin : null });
+            spawnNote = h != null ? $"Spawned {h.I.Describe()}{SkinText(h.I)} at {h.Position:F1}." : "Could not spawn (see the log).";
         }
 
         // The panel's own spawn choices (this session only, not settings).
         private static int familyFoals = 2;
         private static float foalScale = 0.6f;
 
-        // A donkey with foals in front of the keeper; the donkey's own idle shuffle is switched on too, so the family
-        // moves even when no mod switches the shuffle on for everyone.
+        // A mount with babies in front of the keeper, all in the chosen skin; the parent's own idle shuffle is switched
+        // on too, so the family moves even when no mod switches the shuffle on for everyone.
         private static void SpawnFamily()
         {
             PlayerData pd = MainGame.Instance != null ? MainGame.PlayerData : null;
@@ -501,22 +536,24 @@ namespace GK2DonkeyAPI
                 spawnNote = "Not in a game.";
                 return;
             }
-            MountHandle parent = Mounts.Spawn(PanelOwner, new MountSpawn { Position = InFront(pd, 2.6f), FacingRight = pd.Direction.x >= 0f, Persist = true });
+            MountHandle parent = Mounts.Spawn(PanelOwner, new MountSpawn { Position = InFront(pd, 2.6f), FacingRight = pd.Direction.x >= 0f, Persist = true, Skin = SpawnSkin });
             if (parent == null)
             {
-                spawnNote = "Could not spawn the donkey (see the log).";
+                spawnNote = "Could not spawn the parent (see the log).";
                 return;
             }
             parent.Tuning.Set(PanelOwner, "IdleShuffle", true);
             int n = 0;
             for (int k = 0; k < familyFoals; k++)
             {
-                if (Mounts.SpawnFoal(PanelOwner, parent, foalScale) != null)
+                MountHandle f = Mounts.SpawnFoal(PanelOwner, parent, foalScale);
+                if (f != null)
                 {
+                    if (SpawnSkin != null) f.Tuning.Set(PanelOwner, "Skin", SpawnSkin);
                     n++;
                 }
             }
-            spawnNote = $"Spawned {parent.I.Describe()} with {n} foal(s) of size {foalScale:F2}.";
+            spawnNote = $"Spawned {parent.I.Describe()}{SkinText(parent.I)} with {n} bab{(n == 1 ? "y" : "ies")} of size {foalScale:F2}.";
         }
 
         private static int SessionIntRow(string name, int value, int min, int max, string tip = null)
@@ -650,7 +687,7 @@ namespace GK2DonkeyAPI
                 : $"in {i.SceneId}";
             string family = i.Parent != null ? $", foal of {Ref(i, i.Parent)}" : "";
             string level = i.tier == Mount.Tier.Idle ? ", idle (off screen)" : i.tier == Mount.Tier.Asleep ? ", asleep (far)" : "";
-            string text = $"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{level}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}";
+            string text = $"#{i.Id} {i.KindName}{SkinText(i)}{(i.Key != null ? $" '{i.Key}'" : "")}{family}, {where}{level}{(i.IsStepping ? ", stepping" : "")}{(i.Persist ? "" : ", not kept")}";
             rowText[i] = (Time.unscaledTime + 0.25f, text);
             return text;
         }
@@ -683,14 +720,14 @@ namespace GK2DonkeyAPI
             List<string> cargo = i.CargoRig.Ids();
             string family = i.Parent != null ? $" foal of {Ref(i, i.Parent)}, size {i.ViewScale:F2};"
                 : i.Children().Count > 0 ? $" parent of {string.Join(", ", i.Children().ConvertAll(c => Ref(i, c)))};" : "";
-            GUILayout.Label($"#{i.Id} {i.KindName}{(i.Key != null ? $" '{i.Key}'" : "")}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
+            GUILayout.Label($"#{i.Id} {i.KindName}{SkinText(i)}{(i.Key != null ? $" '{i.Key}'" : "")}:{family} {where}, facing {(i.FacingRight ? "right" : "left")}{(i.HasCart ? $", cargo [{string.Join(", ", cargo)}]" : "")}; {i.Overrides.Count} own setting(s); {(i.Persist ? "kept with saves" : "not kept with saves")}", editing == i ? instanceSet : label);
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Tip(editing == i ? "Stop editing" : "Edit its settings", editing == i ? "Ends editing this donkey's own settings; the rows on every tab change everyone's again." : "Makes every row on every tab change only this donkey (its own values show magenta; right-click puts one back to everyone's). It is marked in the world."), Wd(120f)))
+            if (GUILayout.Button(Tip(editing == i ? "Stop editing" : "Edit its settings", editing == i ? "Ends editing this mount's own settings; the rows on every tab change everyone's again." : "Makes every row on every tab change only this mount (its own values show magenta; right-click puts one back to everyone's). It is marked in the world."), Wd(120f)))
             {
                 editing = editing == i ? null : i;
             }
             GUI.enabled = i.HasDonkey && i.Rideable && !i.IsRidden && !Mount.IsMounted && i.Ready;
-            if (GUILayout.Button(Tip("Ride", "Mounts this donkey from here, wherever it stands. Greyed while something is ridden, while it is not ready or while it cannot be ridden."), Wd(60f)))
+            if (GUILayout.Button(Tip("Ride", "Mounts this mount from here, wherever it stands. Greyed while something is ridden, while it is not ready or while it cannot be ridden."), Wd(60f)))
             {
                 pending = () => i.Handle.Ride();
             }
@@ -700,13 +737,13 @@ namespace GK2DonkeyAPI
                 pending = () => i.Handle.MoveTo(InFront(pd, 1.8f), pd.Direction.x >= 0f);
             }
             GUI.enabled = i.HasDonkey && i.HasCart && i.Ready;
-            if (GUILayout.Button(Tip("Unhitch", "Leaves this donkey's cart standing where it is, with its cargo; the donkey is on its own afterwards. Needs a donkey with a cart."), Wd(80f)))
+            if (GUILayout.Button(Tip("Unhitch", "Leaves this mount's cart standing where it is, with its cargo; the donkey is on its own afterwards. Needs a donkey with a cart."), Wd(80f)))
             {
                 pending = () => Mounts.Unhitch(i.Handle);
             }
             Mount.Instance cart = NearestFreeCart(i);
             GUI.enabled = i.HasDonkey && i.Rideable && !i.HasCart && cart != null;
-            if (GUILayout.Button(Tip(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", cart != null ? "Hooks this donkey to the nearest free cart in its scene, however far away, and brings them together. A refusal shows in the note above." : "No free cart in this scene to take: spawn one or unhitch another donkey first."), Wd(110f)))
+            if (GUILayout.Button(Tip(cart != null ? $"Hitch {Ref(i, cart)}" : "Hitch", cart != null ? "Hooks this mount to the nearest free cart in its scene, however far away, and brings them together. A refusal shows in the note above." : "No free cart in this scene to take: spawn one or unhitch another donkey first."), Wd(110f)))
             {
                 pending = () =>
                 {
@@ -715,7 +752,7 @@ namespace GK2DonkeyAPI
                 };
             }
             GUI.enabled = true;
-            if (GUILayout.Button(Tip("Remove", "Deletes this donkey or cart for good, with everything on its cart. A ridden one is dismounted first; unload first to keep the cargo."), Wd(80f)))
+            if (GUILayout.Button(Tip("Remove", "Deletes this mount or cart for good, with everything on its cart. A ridden one is dismounted first; unload first to keep the cargo."), Wd(80f)))
             {
                 pending = () =>
                 {
@@ -736,7 +773,7 @@ namespace GK2DonkeyAPI
             }
             if (i.HasDonkey && i.Parent == null && i.Rideable)
             {
-                if (GUILayout.Button(Tip($"Add a foal (size {foalScale:F2})", "Spawns a foal of the size chosen above next to this donkey; it follows it around. Kept with saves if the parent is.")))
+                if (GUILayout.Button(Tip($"Add a foal (size {foalScale:F2})", "Spawns a foal of the size chosen above next to this mount; it follows it around. Kept with saves if the parent is.")))
                 {
                     pending = () =>
                     {
@@ -759,7 +796,7 @@ namespace GK2DonkeyAPI
                     parts.Add($"{kv.Key} = {kv.Value}");
                 }
                 GUILayout.Label("Own settings: " + string.Join("; ", parts), small);
-                if (GUILayout.Button(Tip("Back to everyone's settings (clear its own)", "Removes every value this donkey has of its own; from now on it uses the shared settings for everything.")))
+                if (GUILayout.Button(Tip("Back to everyone's settings (clear its own)", "Removes every value this mount has of its own; from now on it uses the shared settings for everything.")))
                 {
                     pending = () => i.Handle.Tuning.Reset();
                 }

@@ -31,6 +31,10 @@ For players:
   Behaviour, Donkey, Cart and Sound settings stay as they were, though their sections moved down in the cfg (the old
   copies are cleaned out of the file on the first save). A mount carries its own seat for the rider
   and its rules (a mount can refuse the cart), and mods can give one abilities. The "Effect" row gains "As the mount".
+- **Gerry.** The game's talking skull as a mount (Mount: Gerry): his own frames out of the game, three times his
+  size, hopping along with the jaw chattering, a somersault for an idle; cart and babies allowed. A skin pack can do
+  the same with any character of the game (`source = game`, docs/skins.md): no pictures to draw, just the
+  character's preset prefix and which frame goes where.
 - **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
   "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
   ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the
@@ -63,7 +67,11 @@ For mod authors:
   name (docs/api.md, "Sections keep your order"); self-test "settings: a moved section keeps a player's values".
   `MountRows` lost its `legacySection` argument (it served one development cfg). `MountRows` is the Mount and Skin
   dropdowns; the babies rows are `FoalRows(section, companion)` (Foals, FoalsIndoors, FoalsWearSkin); `Preview`'s
-  default label is "Your mount". Refusal texts name the instance's mount (`Instance.Noun`, internal).
+  default label is "Your mount". Refusal texts name the instance's mount (`Instance.Noun`, internal). Skin packs:
+  `source = game` with a `[Game]` section (prefix, scale, key lines) makes a skin out of another game character's
+  frames (docs/skins.md); a skin.cfg's other sections survive the Mounts tab's Save. `MountSpawn.Skin`:
+  the spawned one wears that skin (and is that mount) from the first frame, as `handle.Tuning.Set(owner, "Skin", id)`
+  would; a handle's description says "dragon with cart" rather than "donkey with cart".
 - `MountCompanion.Skin` and `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`,
   saved with the instance; "donkey" or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`,
   `MountSkinInfo`); the settings row kind `MountSettingsPage.List` (a pick list of ids with labels, read when first
@@ -91,6 +99,9 @@ For mod authors:
 
 Development:
 
+- The F11 panel's Instances tab spawns any mount with any of its skins ("Mount and skin" cycler above the buttons;
+  "with its cart" and the family button greyed with the reason when the mount refuses the cart or has no babies; the
+  babies wear the parent's skin; rows name the mount and skin). Its wording says mount, not donkey.
 - Tests of the mounts and skins system (docs/self-tests.md): a headless `tests/SkinsScan` (every built-in skin.cfg
   parses as the loader reads it, all 44 pictures per skin at the canvas size, the front layer, a skin's `[Tuning]`
   holds picture keys only, a mount's tuning keys exist, a mount declared by several skins is declared the same way;

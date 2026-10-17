@@ -71,7 +71,8 @@ namespace GK2DonkeyAPI
                 EffectsRig = new Effects.Rig(this);
             }
 
-            internal string KindName => !HasDonkey ? "free cart" : HasCart ? "donkey with cart" : !Rideable && ViewScale < 1f ? "foal" : "donkey";
+            // "dragon with cart", "free cart", "foal", "donkey": the mount's name (Noun) where there is one.
+            internal string KindName => !HasDonkey ? "free cart" : HasCart ? Noun + " with cart" : !Rideable && ViewScale < 1f ? "foal" : Noun;
 
             // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "dragon",
             // "giant rat"); a free cart has no mount, so "mount".
