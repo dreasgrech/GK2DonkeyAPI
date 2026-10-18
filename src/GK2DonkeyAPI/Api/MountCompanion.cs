@@ -467,8 +467,11 @@ namespace GK2DonkeyAPI.Api
             {
                 MountHandle f = foalHandles[i];
                 bool wanted = i < foals;
-                if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.01f && Donkey != null && Donkey.Exists)
+                // (the view's scale is kept in steps of 0.02: 0.33 comes back as 0.32, so a hundredth is no difference;
+                // seen 2026-10-18: a baby made again every second)
+                if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.015f && Donkey != null && Donkey.Exists)
                 {
+                    Plugin.Log.LogInfo($"Companion: {OwnerId}: baby {f.FullId} is {f.Scale:F2} of the grown one, the mount '{Donkey.Kind}' wants {babySize:F2}: made again at that size.");
                     f.Remove();
                     foalHandles[i] = null;
                     f = null;

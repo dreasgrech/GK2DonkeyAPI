@@ -23,6 +23,7 @@ namespace GK2DonkeyAPI
         {
             internal string Prefix;        // the preset prefix on the character's sprites ("0901_")
             internal float Scale = 1f;     // a whole number: each of its pixels becomes scale x scale on the canvas
+            internal float Lift = 1f;      // how much of the creature's own jump is kept (a frame whose feet leave the rest row is moved down by the rest): 1 all, 0.25 a quarter
             internal readonly Dictionary<string, string> Map = new Dictionary<string, string>(StringComparer.Ordinal); // base key -> frame name (without the prefix)
         }
 
@@ -71,12 +72,21 @@ namespace GK2DonkeyAPI
                 {
                     SkinFrame rest = restName != null && frames.TryGetValue(restName, out CreatureFrame restFrame) ? ReadCreatureFrame(restFrame, restName, b) : null;
                     Measure(rest, out groundSrc, out centreSrc);
-                    if (rest == null) { groundSrc = b.GroundRow; centreSrc = Mathf.RoundToInt(b.PivotX); }
+                    if (rest == null || groundSrc < 0) { groundSrc = b.GroundRow; centreSrc = Mathf.RoundToInt(b.PivotX); }
+                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}': the rest picture '{restName}' has its feet on row {groundSrc} and its centre on column {centreSrc} of the game's {b.CanvasW}x{b.CanvasH} canvas; they go to row {Mathf.RoundToInt(d.PivotY) - (Mathf.RoundToInt(b.PivotY) - b.GroundRow)} and column {Mathf.RoundToInt(d.PivotX)} of the {d.CanvasW}x{d.CanvasH} one, {scale}x.");
                 }
                 if (!frames.TryGetValue(name, out CreatureFrame get)) return new Pixels { Why = $"the game has no '{g.Prefix}{name}' sprite in memory" };
                 SkinFrame f = ReadCreatureFrame(get, name, b);
                 if (f == null) return new Pixels { Why = "the game's frame could not be read" };
-                Color32[] px = Scaled(f, scale, groundSrc, centreSrc, d);
+                // The creature's own jump, reduced: a frame whose feet are above the rest row (a hop) is moved down by
+                // the part of the rise the skin doesn't keep (Lift), so a mount under a rider hops a little, not a lot.
+                int groundThis = groundSrc;
+                if (g.Lift < 0.999f)
+                {
+                    Measure(f, out int feet, out _);
+                    if (feet > groundSrc) groundThis = groundSrc + Mathf.RoundToInt((feet - groundSrc) * (1f - g.Lift));
+                }
+                Color32[] px = Scaled(f, scale, groundThis, centreSrc, d);
                 int opaque = 0;
                 for (int i = 0; i < px.Length; i++) if (px[i].a != 0) opaque++;
                 GameSourceOpaque[d.Id + "/" + key] = opaque; // for the self-test: the sheet itself is unreadable once uploaded

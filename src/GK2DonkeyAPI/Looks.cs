@@ -209,6 +209,9 @@ namespace GK2DonkeyAPI
             internal IMountSkinSource FrontSprites;           // ... and its front layer's (optional)
             internal Func<SkinFrame, Color32[]> Recipe;       // a rule over the base's own frames (LooksRecipes.cs)
             internal GameSource Game;                         // another game character's frames, mapped and scaled (LooksGame.cs)
+            // skin.cfg "seat = picture": the rider sits on this skin's own picture (its top at the pivot column, per
+            // frame, so he rides a hop), whatever the player's seat settings; else the base's back line / the seat height.
+            internal bool SeatFromPicture;
 
             internal bool OwnsSheet => Sprites == null;
         }
@@ -460,6 +463,7 @@ namespace GK2DonkeyAPI
                     case "columns": int.TryParse(value, out d.SheetColumns); break;
                     case "frames": frames = value; break;
                     case "source": source = value.ToLowerInvariant(); break;
+                    case "seat": d.SeatFromPicture = value.Equals("picture", StringComparison.OrdinalIgnoreCase); break;
                     default: unknown.Add(key); break;
                 }
             }
@@ -507,6 +511,7 @@ namespace GK2DonkeyAPI
                     {
                         case "prefix": g.Prefix = kv.Value; break;
                         case "scale": float.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out g.Scale); break;
+                        case "lift": if (float.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lift)) g.Lift = Mathf.Clamp01(lift); break;
                         default: g.Map[kv.Key] = kv.Value; break;
                     }
                 }
@@ -934,6 +939,10 @@ namespace GK2DonkeyAPI
             internal Queue<string> ToBuild;     // the keys still to produce
             internal Func<string, Pixels> Produce;
             internal int Bad, NotInSheet;
+            // The picture's top at the pivot column per key (a row from the bottom; -1: nothing drawn there) and per
+            // sheet sprite: where a rider sits on a skin that says "seat = picture" (Rig.TrySeatTop).
+            private readonly Dictionary<string, int> seatTopByKey = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal readonly Dictionary<Sprite, int> SeatTopBySprite = new Dictionary<Sprite, int>();
 
             // the sheet: one texture, a cell per key with a one-pixel gutter
             internal Texture2D Sheet;
@@ -982,6 +991,19 @@ namespace GK2DonkeyAPI
                 var cell = new RectInt(1 + (i % cols) * (cellW + 1), 1 + (i / cols) * (cellH + 1), cellW, cellH);
                 Sheet.SetPixels32(cell.x, cell.y, cellW, cellH, px.P);
                 cells.Add((key, cell));
+                if (!key.StartsWith(FrontKey, StringComparison.Ordinal))
+                {
+                    // the top of what is drawn at the pivot column (five columns wide), for the rider's seat
+                    int col = Mathf.Clamp(Mathf.RoundToInt(Def.PivotX), 0, cellW - 1), top = -1;
+                    for (int y = cellH - 1; y >= 0 && top < 0; y--)
+                    {
+                        for (int x = Mathf.Max(0, col - 2); x <= Mathf.Min(cellW - 1, col + 2); x++)
+                        {
+                            if (px.P[y * cellW + x].a != 0) { top = y; break; }
+                        }
+                    }
+                    seatTopByKey[key] = top;
+                }
                 return true;
             }
 
@@ -997,6 +1019,7 @@ namespace GK2DonkeyAPI
                         Sprite sp = Sprite.Create(Sheet, new Rect(cell.x, cell.y, cell.width, cell.height), pivot, Def.Base.PixelsPerUnit, 0, SpriteMeshType.FullRect);
                         sp.name = "gk2skin " + Def.Id + " " + key;
                         Frames[key] = sp;
+                        if (seatTopByKey.TryGetValue(key, out int top)) SeatTopBySprite[sp] = top;
                     }
                     cells.Clear();
                 }
@@ -1661,6 +1684,20 @@ namespace GK2DonkeyAPI
                 {
                     if (slots[i].Overlay != null) ApplyPart(slots[i]);
                 }
+            }
+
+            // Where the rider sits on a skin that says "seat = picture": the top of the body picture at the pivot
+            // column, this frame, in the world (the overlay's transform carries the trim and the skin's offset, and the
+            // view's scale and stretch). False when the skin doesn't say so, isn't shown, or draws nothing there.
+            internal bool TrySeatTop(out Vector3 world)
+            {
+                world = default;
+                if (skin == null || !skin.Def.SeatFromPicture || slots == null || slots.Length == 0) return false;
+                SpriteRenderer ov = slots[0].Overlay;
+                if (ov == null || !ov || !ov.enabled || ov.sprite == null) return false;
+                if (!skin.SeatTopBySprite.TryGetValue(ov.sprite, out int top) || top < 0) return false;
+                world = ov.transform.TransformPoint(new Vector3(0f, (top + 1 - skin.Def.PivotY) / skin.Def.Base.PixelsPerUnit, 0f));
+                return true;
             }
 
             private void ApplyPart(Slot s)

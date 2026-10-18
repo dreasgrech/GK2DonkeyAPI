@@ -34,7 +34,13 @@ For players:
 - **Gerry.** The game's talking skull as a mount (Mount: Gerry): his own frames out of the game, three times his
   size, hopping along with the jaw chattering, a somersault for an idle; cart and babies allowed. A skin pack can do
   the same with any character of the game (`source = game`, docs/skins.md): no pictures to draw, just the
-  character's preset prefix and which frame goes where.
+  character's preset prefix and which frame goes where. A mount's babies have their own size (`foal_scale` in the
+  mount file, the Mounts tab's "Babies' size"; Gerry's are his own size, the donkey's foals stay 0.6), and Saddle
+  Up's babies take it within a second. The rider sits on Gerry's skull and rides its (much reduced) hop: a skin may
+  say `seat = picture` (the rider's seat is the picture's own top, per frame) and a game-creature skin `lift` (how
+  much of the creature's jump is kept). The Mounts tab says when the player's AutoSeat (off by default) makes the
+  torso rows moot, and lets a mount set the torso height players actually use; the Instances tab's "Log drawing"
+  writes every renderer around a mount into the log.
 - **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
   "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
   ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the

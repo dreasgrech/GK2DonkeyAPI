@@ -26,7 +26,8 @@ namespace GK2DonkeyAPI
         {
             ("RiderOffsetPx", "Whole rider along the mount: tail (-) / head (+)", "Art pixels. The same key as the Riding tab's; this value replaces yours while the mount is this one.", -16, 16, true, false),
             ("TorsoOffsetPx", "Torso only along the mount: tail (-) / head (+)", "Art pixels; the legs stay put.", -16, 16, true, false),
-            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels, with the automatic seat (the hip on the back line).", -16, 16, true, false),
+            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels on top of the seat: the skin's own picture top (seat = picture), the automatic seat (AutoSeat on), else nothing: the torso height row below is the seat then.", -16, 16, true, false),
+            ("SeatOffset", "Torso height (AutoSeat off)", "World units above the ground, the seat most players have (AutoSeat is off by default): what the mount's seat should be for its drawing. Ignored on a skin with seat = picture.", 0f, 1.5f, false, false),
             ("LegAdjustXPx", "Legs along the mount: head (-) / tail (+)", "Art pixels, relative to the torso.", -8, 8, true, false),
             ("LegAdjustYPx", "Legs down (-) / up (+)", "Art pixels, relative to the back line.", -8, 8, true, false),
             ("LegHeightPx", "Rows of the body frame that are legs", "How many bottom rows of the keeper's frame are cut as legs (feet to belt).", 0, 30, true, false),
@@ -146,6 +147,8 @@ namespace GK2DonkeyAPI
             Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "[Mount.Tuning.Ride]" : "[Mount.Tuning.Cart]") + ")");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Each style has its own values; the other style's rows show after a style switch.", small);
+            if (skin != null && skin.SeatFromPicture) GUILayout.Label("This skin says seat = picture: the rider sits on its own picture, this frame's top, and 'Torso down / up' adjusts from there. The torso height row is ignored on it.", small);
+            else if (!Plugin.For(ride ? MountStyle.Ride : MountStyle.Cart).AutoSeat.Entry.Value) GUILayout.Label("Your Riding tab has AutoSeat off (the default for everyone): the seat is the torso height, and 'Torso down / up' does nothing. Set the mount's torso height here, or give its skin seat = picture.", small);
             if (Mount.IsMounted && GUILayout.Button(Tip(ride ? "Go to cart" : "Go to riding", "Dismounts and mounts again in the other style, in place, as on the Riding tab."), Wd(SliderW)))
             {
                 Mounts.SwitchStyle(ride ? MountStyle.Cart : MountStyle.Ride);
@@ -262,7 +265,7 @@ namespace GK2DonkeyAPI
             float value = set ? Convert.ToSingle(raw, System.Globalization.CultureInfo.InvariantCulture) : PlayerValue(ride, key);
             GUILayout.BeginHorizontal();
             GUILayout.Label(Tip(name, tip + (set ? "" : " Not set for the mount: your own value is shown. Drag to set it.")), set ? changed : label, Wd(LabelW));
-            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW));
+            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW - 84f)); // room for the number and the x
             Rect r = GUILayoutUtility.GetLastRect();
             bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
             GUILayout.Label(isInt ? Mathf.RoundToInt(value).ToString() : value.ToString("0.00"), label, Wd(50f));
@@ -345,7 +348,7 @@ namespace GK2DonkeyAPI
         {
             GUILayout.BeginHorizontal();
             GUILayout.Label(Tip(name, "Art pixels: this skin's pictures moved on the donkey's own frame (the mount's other skins keep theirs). Right-click: 0."), value != 0f ? changed : label, Wd(LabelW));
-            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW));
+            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW - 84f)); // room for the number and the x
             Rect r = GUILayoutUtility.GetLastRect();
             if (GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {

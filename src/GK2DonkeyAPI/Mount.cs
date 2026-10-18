@@ -2784,14 +2784,27 @@ namespace GK2DonkeyAPI
                     return null;
                 }
                 const float px = 1f / 50f;
-                Sprite k = keeperBodyRenderer.sprite;
                 Sprite d = donkeyBodyRenderer.sprite;
-                float keeperHipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) * px;
                 float back = 25f + RiderBobPx(0);
                 float donkeyBackLocalY = (d.textureRectOffset.y + 2f + back - d.pivot.y) * px;
+                Vector3 backWorld = donkeyBodyRenderer.transform.TransformPoint(new Vector3(0f, donkeyBackLocalY, 0f));
+                return SeatOn(backWorld);
+            }
+
+            // The seat height that puts the keeper's hip (7 px above his feet) on a point in the world (the donkey's
+            // back line, or a skin's own picture top), compared along screen-up, plus the pixel adjustment. Null
+            // without the keeper's sprite.
+            private float? SeatOn(Vector3 backWorld)
+            {
+                if (keeperBodyRenderer == null || keeperBodyRenderer.sprite == null)
+                {
+                    return null;
+                }
+                const float px = 1f / 50f;
+                Sprite k = keeperBodyRenderer.sprite;
+                float keeperHipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) * px;
                 // Measure with the seat at rest so the result is absolute, not relative to the current seat.
                 Vector3 hipWorld = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, keeperHipLocalY, 0f)) - Vector3.up * seatApplied;
-                Vector3 backWorld = donkeyBodyRenderer.transform.TransformPoint(new Vector3(0f, donkeyBackLocalY, 0f));
                 Camera cam = Camera.main;
                 Vector3 up = cam != null ? cam.transform.up : Vector3.up;
                 if (Mathf.Abs(up.y) < 0.1f)
@@ -2950,7 +2963,13 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 float? seat;
-                if (S.AutoSeat.Value)
+                if (LooksRig.TrySeatTop(out Vector3 pictureTop))
+                {
+                    // A skin that says "seat = picture" (Gerry): the rider sits on its own picture, this frame's top at
+                    // the pivot column, whatever the player's seat settings; SeatAdjustPx still adjusts.
+                    seat = SeatOn(pictureTop);
+                }
+                else if (S.AutoSeat.Value)
                 {
                     seat = ComputeAutoSeat();
                 }

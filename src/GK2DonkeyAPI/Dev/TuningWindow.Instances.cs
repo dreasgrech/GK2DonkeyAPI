@@ -386,6 +386,11 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             Looks.SkinDef spawnSkin = Looks.Find(spawnSkinId);
             Kinds.KindDef spawnKind = spawnSkin != null ? spawnSkin.Kind : Kinds.Donkey;
+            if (spawnKindId != spawnKind.Id)
+            {
+                spawnKindId = spawnKind.Id;
+                foalScale = spawnKind.FoalScale; // the mount's own babies' size, until changed below
+            }
             string noun = spawnKind.Name.ToLowerInvariant();
             string Noun1 = char.ToUpperInvariant(noun[0]) + noun.Substring(1);
             GUILayout.BeginHorizontal();
@@ -424,6 +429,10 @@ namespace GK2DonkeyAPI
                 if (r.HasCart && GUILayout.Button(Tip("Leave the cart standing here (unhitch)", "Unhooks the cart from the donkey you ride; it stays here with its cargo and you ride on without it. Same as the hitch key.")))
                 {
                     pending = () => Mounts.UnhitchRidden();
+                }
+                if (GUILayout.Button(Tip("Log what is drawn here", "Writes every sprite renderer around the ridden mount into the log: its name, sprite, size, texture, sorting, scale and bounds, the skin's overlays marked. For finding a wrong picture, a box, a clipped frame.")))
+                {
+                    pending = () => r.LogDrawing();
                 }
             }
 
@@ -497,6 +506,7 @@ namespace GK2DonkeyAPI
 
         // The skin (and with it the mount) the spawn buttons use: the donkey's own art unless picked above.
         private static string spawnSkinId = MountLooks.DonkeyId;
+        private static string spawnKindId; // the mount the babies' size row was last set from
         private static string SpawnSkin => string.IsNullOrEmpty(spawnSkinId) || spawnSkinId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : spawnSkinId;
 
         // " (Red Dragon)" after an instance's kind in its row; nothing for the donkey's own art.
@@ -763,6 +773,10 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             // A second row: the first one is full (Keep in it pushed Remove off the edge, seen 2026-10-01).
             GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Tip("Log drawing", "Writes every sprite renderer around this one into the log: name, sprite, size, texture, sorting, scale, bounds; the skin's overlays marked."), Wd(100f)))
+            {
+                pending = () => i.LogDrawing();
+            }
             if (GUILayout.Button(Tip("Fewer details", "Folds this row back to its one-line summary."), Wd(120f)))
             {
                 pending = () => expanded.Remove(i);

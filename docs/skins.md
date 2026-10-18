@@ -110,12 +110,15 @@ art is in the pack.
 id = gerry
 name = Gerry
 mount = gerry
-canvas = 128 128      # room for the scaled frames (a 28-pixel hop at 3x is 84)
+canvas = 160 160      # room for the scaled frames (a 29-pixel hop at 3x is 87 above the ground row)
 source = game
+seat = picture        # the rider sits on this skin's own picture (its top at the pivot column, per frame), whatever
+                      # the player's seat settings; without it the seat is the player's (AutoSeat off: a fixed height)
 
 [Game]
 prefix = 0901_        # the character's preset prefix on its sprites (the donkey's is 0301_)
 scale = 3             # a whole number, 1 to 8: each of its pixels becomes a 3x3 block
+lift = 0.25           # 0 to 1: how much of the creature's own jump is kept (a mount under a rider hops a little)
 bdy_static_left = bdy_walk_left_01       # donkey key = the character's frame (without the prefix)
 bdy_turn_left_01 = bdy_somersault_left_01
 bdy_lips_left_01 = hed_speak_left_01
