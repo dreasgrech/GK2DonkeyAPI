@@ -159,6 +159,11 @@ Development:
   from the eye, the rump, the ear and the torso's box; prototyped in Python over exported frames first). The five
   recolour recipes, Blue Dragon and their tests are gone; `Colors.RegionSourceColours` gives a recipe the donkey's
   coat and outline colours; a code recipe can declare colour regions (`SkinDef.ColorRegions`).
+  The game's Hellfire was checked against the prototype over all 44 frames, at the game's own canvas offset: the same
+  pixels. To get there, everything that rounds now rounds the same way in both and relative to its own box (half up;
+  the game's half-to-even and absolute positions moved a crack by a pixel with the frame's place on the canvas), in
+  double precision, and the torso's edge is measured again after the tail is gone in the head-down frames. The hand
+  tables (ears, horns, eyes) are relative to the drawn area, the horns sit on the eye as in the ear-twitch frames.
 - `MountSettingsPage.PerMount(rows)`: a row set per registered mount (the donkey's keys plain, the others suffixed
   `_<mount>`), the chosen mount's shown (`Row.Shown`), a row's own condition apart (`Row.Enabled`: the look bar
   greys instead of hiding); `MountCompanion.LookOf(mount)`, `MountId` and the `MountLook` type; the companion's

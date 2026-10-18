@@ -19,12 +19,12 @@ namespace GK2DonkeyAPI
         private static readonly Color32 HfEye = new Color32(255, 170, 40, 255), HfEyeRim = new Color32(220, 60, 20, 255);
         private static readonly Color32 HfTail = new Color32(44, 18, 16, 255), HfTailUnder = new Color32(70, 26, 20, 255), HfSpade = new Color32(200, 40, 30, 255), HfSpadeDark = new Color32(120, 20, 16, 255);
         // the cracks, in torso coordinates (u across from the shoulder, v down from the back line); the third branches off the second
-        private static readonly float[][] HfCracks =
+        private static readonly double[][] HfCracks =
         {
-            new[] { 0.12f, 0.30f, 0.20f, 0.48f, 0.16f, 0.66f, 0.26f, 0.84f },
-            new[] { 0.46f, 0.22f, 0.52f, 0.40f, 0.62f, 0.50f, 0.58f, 0.72f },
-            new[] { 0.52f, 0.40f, 0.42f, 0.56f },
-            new[] { 0.80f, 0.34f, 0.86f, 0.52f, 0.78f, 0.70f, 0.84f, 0.86f },
+            new[] { 0.12, 0.30, 0.20, 0.48, 0.16, 0.66, 0.26, 0.84 },
+            new[] { 0.46, 0.22, 0.52, 0.40, 0.62, 0.50, 0.58, 0.72 },
+            new[] { 0.52, 0.40, 0.42, 0.56 },
+            new[] { 0.80, 0.34, 0.86, 0.52, 0.78, 0.70, 0.84, 0.86 },
         };
 
         // The colours Hellfire adds, by region, for the colour engine (a skin's other colours are its Coat).
@@ -94,6 +94,10 @@ namespace GK2DonkeyAPI
         private static Color32[] Hellfire(SkinFrame f)
         {
             var g = new Grid(f, Colors.RegionSourceColours("Coat"), Colors.RegionSourceColours("Dark"));
+            // the hand-made tables (HfEarFrames, HfHornFrames) were measured on frames whose drawn area starts at
+            // (HfTableOriginX, HfTableOriginY); the game's canvas puts each frame at its own offset: shift them by it
+            g.Bounds(out int drawnX, out int drawnY, out _, out _);
+            int tdx = drawnX - HfTableOriginX, tdy = drawnY - HfTableOriginY;
             bool headOnly = f.Key.StartsWith("hed_", StringComparison.Ordinal);
             // the eye: the white pixels
             var eye = new List<(int X, int Y)>();
@@ -106,7 +110,7 @@ namespace GK2DonkeyAPI
             if (HfEarFrames.TryGetValue(f.Key, out var byHand) && byHand.Eyes != null)
             {
                 eye.Clear();
-                eye.AddRange(byHand.Eyes);
+                foreach (var e in byHand.Eyes) eye.Add((e.X + tdx, e.Y + tdy));
             }
             float ex = 0f, ey = 0f;
             foreach (var p in eye) { ex += p.X; ey += p.Y; }
@@ -114,13 +118,19 @@ namespace GK2DonkeyAPI
             (int X, int Y)? root = null;
             if (!headOnly)
             {
-                int left;
-                if (eye.Count > 0) left = Mathf.RoundToInt(ex) + 10;
-                else { g.Bounds(out int bx0, out _, out int bx1, out _); left = bx0 + (int)(0.4f * (bx1 - bx0)); }
-                if (HfTorsoBox(g, left, out int tx0, out int ty0, out int tx1, out int ty1))
+                // the torso starts past the eye; with the head down and no eye in view, at 40% of the drawn width,
+                // measured again once the tail is gone (as the prototype does: the cracks sat a column off in the
+                // grazing frames, 2026-10-19)
+                int TorsoLeft()
+                {
+                    if (eye.Count > 0) return (int)Math.Floor(ex) + 10;
+                    g.Bounds(out int bx0, out _, out int bx1, out _);
+                    return bx0 + (int)(0.4 * (bx1 - bx0));
+                }
+                if (HfTorsoBox(g, TorsoLeft(), out int tx0, out int ty0, out int tx1, out int ty1))
                 {
                     int tailFrom = HfEraseTail(g);
-                    HfTorsoBox(g, left, out tx0, out ty0, out tx1, out ty1); // without the tail
+                    HfTorsoBox(g, TorsoLeft(), out tx0, out ty0, out tx1, out ty1); // without the tail
                     HfCracks_(g, tx0, ty0, tx1, ty1);
                     if (tailFrom >= 0)
                     {
@@ -135,22 +145,36 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
-            // the ears out, the horns where they were: a few frames by hand (HfEarFrames), the rest by rule, the horns
-            // from the skull's top (it moves only with the head; the eye pixel animates on its own and is gone in the
-            // blinks: the horns jumped or vanished in the idles, 2026-10-19), placed as they were from the eye in the
-            // standing frame: skull top right end (31, 25) -> horns at (29, 26) and (34, 27)
+            // the ears out, the horns where they were: a few frames by hand (HfEarFrames, HfHornFrames for the head
+            // mid-turn), the rest by rule: the horns from the eye as in ear twitch 2-4 (the user's reference,
+            // 2026-10-19), eye + (4, -4) and eye + (9, -3); in a blink (no eye drawn) from the skull's top, calibrated so
+            // the standing frame gets the same
             (int X, int Y, int Lean)[] horns;
             if (HfEarFrames.TryGetValue(f.Key, out var special))
             {
-                foreach (var box in special.Erase) for (int y = Math.Max(0, box.Y0); y <= Math.Min(g.H - 1, box.Y1); y++) for (int x = Math.Max(0, box.X0); x <= Math.Min(g.W - 1, box.X1); x++) g.Clear(x, y);
+                foreach (var box in special.Erase) for (int y = Math.Max(0, box.Y0 + tdy); y <= Math.Min(g.H - 1, box.Y1 + tdy); y++) for (int x = Math.Max(0, box.X0 + tdx); x <= Math.Min(g.W - 1, box.X1 + tdx); x++) g.Clear(x, y);
                 HfOutlineBaredTop(g);
-                horns = special.Horns;
+                horns = Array.ConvertAll(special.Horns, hn => (hn.X + tdx, hn.Y + tdy, hn.Lean));
             }
             else
             {
-                HfEraseEars(g, eye.Count > 0 ? (int?)Mathf.RoundToInt(ey) : null);
-                HfSkullTop(g, out int sx, out int sy);
-                horns = new[] { (sx - 2, sy + 1, 1), (sx + 3, sy + 2, 1) };
+                HfEraseEars(g, eye.Count > 0 ? (int?)(int)Math.Floor(ey) : null);
+                if (HfHornFrames.TryGetValue(f.Key, out var byHandHorns))
+                {
+                    horns = Array.ConvertAll(byHandHorns, hn => (hn.X + tdx, hn.Y + tdy, hn.Lean)); // the head mid-turn: the ears (and so the horns) move forward on the face
+                }
+                else if (eye.Count > 0)
+                {
+                    // from the eye, as in ear twitch 2-4 (the user's reference, 2026-10-19): eye + (4, -4), eye + (9, -3)
+                    int ex0 = HfRound(ex), ey0 = HfRound(ey);
+                    horns = new[] { (ex0 + 4, ey0 - 4, 1), (ex0 + 9, ey0 - 3, 1) };
+                }
+                else
+                {
+                    // a blink (no eye drawn): from the skull's top, calibrated so the standing frame gets the same spot
+                    HfSkullTop(g, out int sx, out int sy);
+                    horns = new[] { (sx - 2, sy + 2, 1), (sx + 3, sy + 3, 1) };
+                }
             }
             HfDarken(g);
             if (eye.Count > 0)
@@ -166,8 +190,9 @@ namespace GK2DonkeyAPI
             {
                 // on the head, not above it: the base drops until the head is right under it (the second horn floated in
                 // walk 4 and 8 and lips 6, where the skull slopes away, 2026-10-19)
+                // rooted in the head: the base and the pixel beside it inside the head, not perched on its edge
                 int hy = hn.Y;
-                for (int k = 0; k < 4 && !g.Opaque(hn.X, hy + 1); k++) hy++;
+                for (int k = 0; k < 5 && !(g.Opaque(hn.X, hy) && g.Opaque(hn.X - hn.Lean, hy)); k++) hy++;
                 HfHorn(g, hn.X, hy, hn.Lean);
             }
             if (root.HasValue)
@@ -288,7 +313,7 @@ namespace GK2DonkeyAPI
         // to the back of the thigh (the first row where the body splits into legs), fullest about a third of the way
         // down and turning in gradually, so it rolls into the leg. Every row between is set to the curve: filled out in
         // the row's coat colour or trimmed, the outline at the end. Returns the curve's column per row (-1: none).
-        private const float HfRumpShape = 0.65f, HfRumpBulgePerRow = 1f / 7f;
+        private const double HfRumpShape = 0.65, HfRumpBulgePerRow = 1.0 / 7.0; // double, as the prototype
 
         private static int[] HfFillRump(Grid g, int y0, int yb)
         {
@@ -308,12 +333,12 @@ namespace GK2DonkeyAPI
             if (top < 0 || yl < 0) return curve;
             Color32 outline = g.Get(top, y0 - 1);
             int n = yl - (y0 - 1);
-            float bulge = Mathf.Max(1f, n * HfRumpBulgePerRow);
+            double bulge = Math.Max(1.0, n * HfRumpBulgePerRow);
             var want = new int[yl + 1];
             for (int y = y0; y < yl; y++)
             {
-                float tt = (float)(y - (y0 - 1)) / n;
-                want[y] = Mathf.RoundToInt(top + (bot - top) * tt + bulge * Mathf.Sin(Mathf.PI * Mathf.Pow(tt, HfRumpShape)));
+                double tt = (double)(y - (y0 - 1)) / n;
+                want[y] = top + HfRound((bot - top) * tt + bulge * Math.Sin(Math.PI * Math.Pow(tt, HfRumpShape)));
             }
             want[y0 - 1] = top;
             want[yl] = bot;
@@ -377,6 +402,10 @@ namespace GK2DonkeyAPI
             internal (int X, int Y)[] Eyes; // the face drawn from the front: its eyes are light pixels, not the white one
         }
 
+        // Where the drawn area of a frame starts in the frames the tables below were measured on (the exports of
+        // tools/gerry_probe.py-style dumps, trimmed sprites with a margin): every table entry is relative to it.
+        private const int HfTableOriginX = 16, HfTableOriginY = 16;
+
         private static readonly Dictionary<string, HfEarFrame> HfEarFrames = new Dictionary<string, HfEarFrame>(StringComparer.Ordinal)
         {
             ["bdy_graze_left_03"] = new HfEarFrame { Erase = new[] { (19, 26, 0, 22) }, Horns = new[] { (22, 23, 1), (26, 24, 1) } },
@@ -385,6 +414,14 @@ namespace GK2DonkeyAPI
             ["bdy_turn_left_04"] = new HfEarFrame { Erase = new[] { (15, 35, 0, 22) }, Horns = new[] { (20, 23, -1), (30, 23, 1) }, Eyes = new[] { (20, 30), (27, 30) } },
             ["bdy_turn_left_05"] = new HfEarFrame { Erase = new[] { (15, 35, 0, 22) }, Horns = new[] { (20, 23, -1), (30, 23, 1) }, Eyes = new[] { (21, 31), (27, 31) } },
             ["bdy_turn_left_06"] = new HfEarFrame { Erase = new[] { (15, 35, 0, 22) }, Horns = new[] { (20, 23, -1), (30, 23, 1) }, Eyes = new[] { (21, 31), (27, 31) } },
+        };
+
+        // The head mid-turn (turn 2 and 3): the ears' roots move forward as the face turns, so the eye-based offset lands
+        // behind them; the horns at the ears' roots by hand.
+        private static readonly Dictionary<string, (int X, int Y, int Lean)[]> HfHornFrames = new Dictionary<string, (int X, int Y, int Lean)[]>(StringComparer.Ordinal)
+        {
+            ["bdy_turn_left_02"] = new[] { (27, 28, 1), (32, 29, 1) },
+            ["bdy_turn_left_03"] = new[] { (19, 26, 1), (25, 26, 1) },
         };
 
         private static void HfOutlineBaredTop(Grid g)
@@ -466,17 +503,24 @@ namespace GK2DonkeyAPI
             return x1 >= 0;
         }
 
+        // Round half up (the prototype does the same; Mathf.RoundToInt goes half to even, which depends on the parity of
+        // the canvas position).
+        private static int HfRound(double v) => (int)Math.Floor(v + 0.5);
+
         private static void HfCracks_(Grid g, int x0, int y0, int x1, int y1)
         {
-            foreach (float[] poly in HfCracks)
+            foreach (double[] poly in HfCracks)
             {
                 var path = new List<(int X, int Y)>();
                 for (int i = 0; i + 3 < poly.Length; i += 2)
                 {
-                    float ax = x0 + poly[i] * (x1 - x0), ay = y0 + poly[i + 1] * (y1 - y0);
-                    float bx = x0 + poly[i + 2] * (x1 - x0), by = y0 + poly[i + 3] * (y1 - y0);
-                    int n = Math.Max(1, Mathf.RoundToInt(Math.Max(Math.Abs(bx - ax), Math.Abs(by - ay))));
-                    for (int k = 0; k <= n; k++) path.Add((Mathf.RoundToInt(ax + (bx - ax) * k / n), Mathf.RoundToInt(ay + (by - ay) * k / n)));
+                    // relative to the torso box, rounded there (half up), then placed: the same cracks wherever the frame
+                    // sits on its canvas (absolute rounding shifted them by a pixel with the frame's offset, 2026-10-19)
+                    // in double, as the prototype: float put some steps a hair under .5 and rounded them the other way
+                    double ax = poly[i] * (x1 - x0), ay = poly[i + 1] * (y1 - y0);
+                    double bx = poly[i + 2] * (x1 - x0), by = poly[i + 3] * (y1 - y0);
+                    int n = Math.Max(1, HfRound(Math.Max(Math.Abs(bx - ax), Math.Abs(by - ay))));
+                    for (int k = 0; k <= n; k++) path.Add((x0 + HfRound(ax + (bx - ax) * k / n), y0 + HfRound(ay + (by - ay) * k / n)));
                 }
                 for (int i = 0; i < path.Count; i++)
                 {
@@ -529,8 +573,8 @@ namespace GK2DonkeyAPI
             var pts = new List<(int X, int Y)>();
             for (int i = 0; i <= 60; i++)
             {
-                float t = i / 60f;
-                var p = (rx + Mathf.RoundToInt(12 * t), Math.Min(ry, ry + Mathf.RoundToInt(-14 * t * t + 2.5f * phase * t)));
+                double t = i / 60.0;
+                var p = (rx + HfRound(12 * t), Math.Min(ry, ry + HfRound(-14 * t * t + 2.5 * phase * t)));
                 if (pts.Count == 0 || pts[pts.Count - 1] != p) pts.Add(p);
             }
             int limit = rx;

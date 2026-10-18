@@ -11,7 +11,10 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   ear and lip idles have it too; the head sprite's horns sit on the body's (no double horns while standing); a custom
   coat tints the ash and leaves the cracks (Muzzle) alone. Tests tab: "recipe: built from the donkey's frames" PASS.
   Judge: the tail's spade at game size, the horns' size, whether the standing frame's horns and the head sprite's
-  line up.
+  line up. Rebuilt and deployed 2026-10-19 with every fix of the frame-by-frame rounds (no old tail, rump curve to the
+  thigh, horns on the eye in every frame, red eyes in turn 4-6, graze 2 whole); the game's code gives the same pixels
+  as the reviewed frames (C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-frames-v14, drawn from the game's code). Look
+  for: the pixel at the rump's edge gone, horns steady in the idles.
 - **Colours per mount** (built 2026-10-19 00:10): in the colours window set the donkey's coat to Custom Chestnut,
   switch Mount to Dragon: the coat rows show the dragon's own (Game default), set Custom Moss; back to Donkey:
   Chestnut again; the dragon in the world is green, the donkey brown; after a restart both are as left (cfg keys
