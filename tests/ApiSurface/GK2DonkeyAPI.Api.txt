@@ -235,6 +235,7 @@ class GK2DonkeyAPI.Api.MountKindDef
   field string Effect
   field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
   field bool Foals
+  field float FoalScale
   field string Id
   field string Name
   field System.Collections.Generic.Dictionary<string, object> Tuning
@@ -248,6 +249,7 @@ class GK2DonkeyAPI.Api.MountKindInfo
   property bool Cart { get; }
   property string Effect { get; }
   property bool Foals { get; }
+  property float FoalScale { get; }
   property bool FromPack { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }

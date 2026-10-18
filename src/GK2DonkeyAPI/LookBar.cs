@@ -15,14 +15,22 @@ namespace GK2DonkeyAPI
     // Built from the game's own parts, copied out of its Settings window: a "< value >" row per setting (SettingsRows),
     // and its dialog button for Done and Cancel. Its own canvas sorts above the HUD. If a part can't be found or copied,
     // the bar doesn't open and the log says so; nothing else changes.
+    //
+    // Nothing in it ever moves (2026-10-18: with every row in one column, growing from the bottom, the custom colour
+    // and lightness rows came and went as a preset changed, the whole stack shifted under the cursor, and 21 rows left
+    // the screen at the top): the picture sits in a slot of fixed size, the rows stand in two columns, by section,
+    // balanced on their counts, with a heading per section; a row shown only with a preset ("Custom") stays in place
+    // greyed instead of hiding; and a bar taller than the screen allows is scaled down as a whole, never cut.
     internal static class LookBar
     {
-        private static GameObject bar, picture;
+        private static GameObject bar, picture, pictureSlot;
         private static RawImage pictureImage;
         private static Texture2D pictureTex;
         private static float nextPicture;
         private static MountSettingsPage page;
-        private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh)> rows = new List<(MountSettingsPage.Row, GameObject, Action)>();
+        private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
+        private const float PictureSlotW = 440f, PictureSlotH = 200f, PictureScale = 2f; // the slot in canvas units; pictures up to 2x
+        private const float BottomGap = 120f, TopGap = 24f; // above the hotbar; the least room left at the top
         private static readonly Dictionary<ConfigEntryBaseKey, object> before = new Dictionary<ConfigEntryBaseKey, object>();
 
         // ConfigEntryBase as a key without a BepInEx using here.
@@ -110,7 +118,7 @@ namespace GK2DonkeyAPI
             }
             var layout = bar.GetComponent<VerticalLayoutGroup>();
             layout.padding = new RectOffset(24, 24, 16, 16);
-            layout.spacing = 4f;
+            layout.spacing = 8f;
             layout.childAlignment = TextAnchor.UpperCenter;
             layout.childControlWidth = layout.childControlHeight = false;
             layout.childForceExpandWidth = layout.childForceExpandHeight = false;
@@ -119,16 +127,31 @@ namespace GK2DonkeyAPI
             var rt = (RectTransform)bar.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
-            rt.anchoredPosition = new Vector2(0f, 120f); // above the hotbar
+            rt.anchoredPosition = new Vector2(0f, BottomGap); // above the hotbar
 
             before.Clear();
             rows.Clear();
-            // The picture first: it shows the colours wherever the donkey is (indoors it's in another scene).
-            picture = new GameObject("GK2DonkeyAPI look bar picture", typeof(RectTransform), typeof(RawImage), typeof(LayoutElement));
-            picture.transform.SetParent(bar.transform, false);
+            // The picture first, in a slot of fixed size (the bar never changes height with the mount shown): it shows
+            // the colours wherever the donkey is (indoors it's in another scene).
+            pictureSlot = new GameObject("GK2DonkeyAPI look bar picture slot", typeof(RectTransform), typeof(LayoutElement));
+            pictureSlot.transform.SetParent(bar.transform, false);
+            var slotLe = pictureSlot.GetComponent<LayoutElement>();
+            slotLe.preferredWidth = PictureSlotW;
+            slotLe.preferredHeight = PictureSlotH;
+            ((RectTransform)pictureSlot.transform).sizeDelta = new Vector2(PictureSlotW, PictureSlotH);
+            picture = new GameObject("GK2DonkeyAPI look bar picture", typeof(RectTransform), typeof(RawImage));
+            picture.transform.SetParent(pictureSlot.transform, false);
+            var prt = (RectTransform)picture.transform;
+            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+            prt.pivot = new Vector2(0.5f, 0.5f);
             pictureImage = picture.GetComponent<RawImage>();
             pictureImage.raycastTarget = false;
             picture.SetActive(false);
+
+            // The look rows by section, in page order; the sections dealt into two columns, left first, until the left
+            // holds at least half the rows (Saddle Up: Mount, Effect and Donkey left, Cart right).
+            var sections = new List<(string Name, List<MountSettingsPage.Row> Rows)>();
+            int total = 0;
             foreach (MountSettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook)
@@ -139,8 +162,41 @@ namespace GK2DonkeyAPI
                 {
                     before[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 }
-                GameObject go = SettingsRows.MakeRow(templateRow, bar.transform, r, page, out Action refresh);
-                rows.Add((r, go, refresh));
+                if (sections.Count == 0 || sections[sections.Count - 1].Name != r.ShownSection)
+                {
+                    sections.Add((r.ShownSection, new List<MountSettingsPage.Row>()));
+                }
+                sections[sections.Count - 1].Rows.Add(r);
+                total++;
+            }
+            var columns = new GameObject("GK2DonkeyAPI look bar columns", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
+            columns.transform.SetParent(bar.transform, false);
+            var ch = columns.GetComponent<HorizontalLayoutGroup>();
+            ch.spacing = 32f;
+            ch.childAlignment = TextAnchor.UpperCenter;
+            ch.childControlWidth = ch.childControlHeight = false;
+            ch.childForceExpandWidth = ch.childForceExpandHeight = false;
+            var cf = columns.GetComponent<ContentSizeFitter>();
+            cf.horizontalFit = cf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            Transform left = Column(columns.transform, "left"), right = sections.Count > 1 ? Column(columns.transform, "right") : null;
+            int inLeft = 0;
+            for (int s = 0; s < sections.Count; s++)
+            {
+                Transform column = right == null || (inLeft < (total + 1) / 2 && s < sections.Count - 1) ? left : right;
+                if (column == left) inLeft += sections[s].Rows.Count;
+                SettingsRows.MakeHeading(templateRow, column, page, sections[s].Name);
+                foreach (MountSettingsPage.Row r in sections[s].Rows)
+                {
+                    GameObject go = SettingsRows.MakeRow(templateRow, column, r, page, out Action refresh);
+                    go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
+                    // a row shown only with a preset (the custom colour, its lightness): in place always, greyed when not
+                    CanvasGroup group = r.Visible != null ? go.AddComponent<CanvasGroup>() : null;
+                    rows.Add((r, go, refresh, group));
+                }
+            }
+            if (right != null && right.childCount == 0)
+            {
+                UnityEngine.Object.Destroy(right.gameObject);
             }
 
             var buttons = new GameObject("GK2DonkeyAPI look bar buttons", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
@@ -155,7 +211,36 @@ namespace GK2DonkeyAPI
 
             Refresh();
             bar.SetActive(true);
-            Plugin.Log.LogInfo($"Settings: the look bar of {page.Title} is open ({rows.Count} rows).");
+            FitToScreen();
+            Plugin.Log.LogInfo($"Settings: the look bar of {page.Title} is open ({rows.Count} rows in {sections.Count} section(s), {(right != null ? "two columns" : "one column")}{(bar.transform.localScale.x < 1f ? $", scaled to {bar.transform.localScale.x:0.##} to fit the screen" : "")}).");
+        }
+
+        private static Transform Column(Transform parent, string name)
+        {
+            var col = new GameObject("GK2DonkeyAPI look bar " + name, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            col.transform.SetParent(parent, false);
+            var vl = col.GetComponent<VerticalLayoutGroup>();
+            vl.spacing = 4f;
+            vl.childAlignment = TextAnchor.UpperCenter;
+            vl.childControlWidth = vl.childControlHeight = false;
+            vl.childForceExpandWidth = vl.childForceExpandHeight = false;
+            var f = col.GetComponent<ContentSizeFitter>();
+            f.horizontalFit = f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            return col.transform;
+        }
+
+        // The whole bar scaled down when it would reach past the top of the screen (the game's canvas), never cut.
+        private static void FitToScreen()
+        {
+            var rt = (RectTransform)bar.transform;
+            rt.RefreshContentFitter();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            var canvasRt = bar.transform.parent as RectTransform;
+            if (canvasRt == null) return;
+            float room = canvasRt.rect.height - BottomGap - TopGap;
+            float height = rt.rect.height;
+            float scale = height > room && height > 0f ? Mathf.Max(0.5f, room / height) : 1f;
+            bar.transform.localScale = new Vector3(scale, scale, 1f);
         }
 
         private static void Button(UIDialogWindowButton template, Transform parent, string text, Action onClick)
@@ -176,23 +261,29 @@ namespace GK2DonkeyAPI
             go.SetActive(true);
         }
 
-        // After a change: the rows shown only with Custom, and every row's value (one row's change can show another).
+        // After a change: every row's value (one row's change can show another), and the rows that go with a preset
+        // greyed or live; the layout never moves.
         internal static void Refresh()
         {
             if (bar == null)
             {
                 return;
             }
-            foreach (var (row, go, refresh) in rows)
+            foreach (var (row, go, refresh, group) in rows)
             {
                 bool on = row.Visible == null || row.Visible();
-                if (on)
+                refresh?.Invoke();
+                if (group != null)
                 {
-                    refresh?.Invoke();
+                    group.alpha = on ? 1f : 0.4f;
+                    group.interactable = on;
+                    group.blocksRaycasts = on;
+                    foreach (GamepadNavigationItem n in go.GetComponentsInChildren<GamepadNavigationItem>(true))
+                    {
+                        n.enabled = on;
+                    }
                 }
-                go.SetActive(on);
             }
-            ((RectTransform)bar.transform).RefreshContentFitter();
         }
 
         internal static void Tick()
@@ -218,12 +309,11 @@ namespace GK2DonkeyAPI
                 }
                 if (pic != null)
                 {
+                    // as large as the slot allows, up to PictureScale, centred in it: the slot's size never changes
                     pictureImage.texture = pic;
-                    var le = picture.GetComponent<LayoutElement>();
                     Vector2 art = PreviewStage.ArtSize(pic);
-                    le.preferredWidth = art.x * 2f;
-                    le.preferredHeight = art.y * 2f;
-                    ((RectTransform)picture.transform).sizeDelta = new Vector2(le.preferredWidth, le.preferredHeight);
+                    float k = Mathf.Min(PictureScale, PictureSlotW / Mathf.Max(1f, art.x), PictureSlotH / Mathf.Max(1f, art.y));
+                    ((RectTransform)picture.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
                 }
                 picture.SetActive(pic != null);
             }
@@ -267,6 +357,7 @@ namespace GK2DonkeyAPI
                 pictureTex = null;
             }
             picture = null;
+            pictureSlot = null;
             nextPicture = 0f;
             page = null;
         }

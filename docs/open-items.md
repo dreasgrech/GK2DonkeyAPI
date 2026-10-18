@@ -5,6 +5,23 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **The colours window** (built 2026-10-18 23:15): Esc → Settings → Saddle Up → Choose colours: the picture centred
+  in its slot with the lantern on the cart; two columns with the section headings; picking Custom on a preset makes
+  the greyed colour and lightness rows live without anything moving; the bar fits under the top of the screen at
+  2560x1440 and at 1920x1080 (scaled down if it had to; the log line says); Done and Cancel as before.
+- **Colours on every mount** (built 2026-10-18 22:30, docs/mount-colours.md): ride the Giant Worm with Coat = Custom
+  Olive: the worm is olive, its outline stays dark; the Red Dragon with Coat Custom and a Harness colour: the scales
+  change, the belly and the horns don't, the harness rows do nothing (it has no harness); the rat: Coat changes the
+  fur, not the tail; the Mods menu picture follows each. Tests tab: "colours: the player's regions on a mount in its
+  own colours" PASS. Log: no "[Colors] names ... colour(s) its pictures don't have" warning.
+- **The settings picture on a mount change** (built 2026-10-18 21:45): Mods → Saddle Up, change Mount from Giant
+  Worm to Gerry to Giant Snail: each picture appears once at its final size, no shrinking or growing afterwards; the
+  log has one "[preview] ... framed on what's drawn over 2 s of the walk" line per picture per change.
+- **Gerry's babies after the sleeping-kind fix** (built 2026-10-18 21:30): load the save, go indoors with the babies
+  before calling Gerry: they are a third of him from the start (one "made again at that size" line per baby at most
+  once, right after the load, if the save still holds 0.6 ones). The self-test "game creature" has the sleeping
+  check (a Gerry 42-50 away, asleep without a view, reports the Gerry mount).
+
 With GK2 Mod Framework installed:
 
 1. **Choice labels in the Mods menu** (`MenuLabels.cs`): the framework shows each value's plain name, so the API
@@ -242,6 +259,12 @@ closed):
 
 ## Undecided
 
+- **Changed defaults never reach existing players** (docs/compatibility.md section 3): BepInEx writes every key
+  with its value, so a player who never touched a key keeps the old default when the mod's default moves. The
+  mechanism on the table: a version stamp in the cfg plus the released defaults per version
+  (`tests/fixtures/released/<version>/defaults.cfg`), moving a key whose file value equals the old default to the
+  new one, one log line each, once. Not needed for 0.10.0 (no default a 0.9.1 player holds changed); decide before
+  the first release that changes one.
 - **Rebinding in the Mods menu may fire the key's action:** e.g. setting Ride to G might also bring the cart. The
   API's key actions pause only during the game window's own capture (`SettingsRows.CapturingKey`), not the
   framework's. If it happens, extend the pause to the Mods menu's capture.

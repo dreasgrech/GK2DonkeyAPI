@@ -1,0 +1,53 @@
+# GK2 Donkey API: the donkeys and carts kept with this save, written after each save (docs/persistence.md).
+# The game's own save does not need this file; without it the donkeys simply don't come back.
+format	2
+slot	Steam_1
+saved	10/16/2026 6:05:12 PM
+day	42
+next	dreas.gk2.saddleup	4
+instance
+owner	dreas.gk2.saddleup
+id	1
+key	donkey
+name	Bella
+donkey	true
+cart	false
+scene	village
+position	12.5	-3.25	0
+facing	left
+scale	1
+rideable	true
+removeWithParent	false
+set	SeatAdjustPx	dreas.gk2.saddleup	3
+data	dreas.gk2.saddleup	note	a\ttab and a \\ backslash
+end
+instance
+owner	dreas.gk2.saddleup
+id	2
+key	foal
+donkey	true
+cart	false
+scene	village
+position	13.5	-3.5	0
+facing	left
+scale	0.6
+rideable	false
+parent	dreas.gk2.saddleup	1
+removeWithParent	true
+end
+instance
+owner	dreas.gk2.saddleup
+id	3
+key	cart
+donkey	false
+cart	true
+scene	village
+position	9	-4	0
+facing	right
+scale	1
+rideable	false
+removeWithParent	false
+cargo	6f1c2a9e-0000-4000-8000-000000000001
+cargo	6f1c2a9e-0000-4000-8000-000000000002
+chest	6f1c2a9e-0000-4000-8000-000000000003
+end

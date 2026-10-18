@@ -23,6 +23,9 @@ static HashSet<string> StringsIn(string source, string arrayName)
 }
 var knownKeys = StringsIn(looksCs, "KnownKeys");
 var skinTuningKeys = StringsIn(looksCs, "SkinTuningKeys");
+var colorsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Colors.cs"));
+var mountRegions = StringsIn(colorsCs, "MountRegionKeys");
+if (mountRegions.Count != 5) Fail($"Colors.cs MountRegionKeys: {mountRegions.Count} regions read (5 expected)"); else Pass("Colors.cs MountRegionKeys: 5 mount regions");
 var tuningKeys = new HashSet<string>(Regex.Matches(pluginCs, @"cfg\.Bind\(section,\s*""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys read (44 expected)"); else Pass("Looks.cs KnownKeys: 44 frame keys");
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
@@ -61,6 +64,76 @@ static (int W, int H) PngSize(string path)
     int w = (b[16] << 24) | (b[17] << 16) | (b[18] << 8) | b[19];
     int h = (b[20] << 24) | (b[21] << 16) | (b[22] << 8) | b[23];
     return (w, h);
+}
+
+// Every distinct opaque colour (RRGGBB, any alpha above zero) of the PNGs in a skin folder and its front/ folder: a
+// small PNG reader of its own (8-bit RGB/RGBA, not interlaced: what the art tools write), so the scan needs no package.
+static HashSet<string> PngColours(string dir)
+{
+    var set = new HashSet<string>(StringComparer.Ordinal);
+    IEnumerable<string> files = Directory.GetFiles(dir, "*.png");
+    string front = Path.Combine(dir, "front");
+    if (Directory.Exists(front)) files = files.Concat(Directory.GetFiles(front, "*.png"));
+    foreach (var png in files)
+    {
+        var bytes = File.ReadAllBytes(png);
+        int w = (bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19];
+        int h = (bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23];
+        int depth = bytes[24], type = bytes[25], interlace = bytes[28];
+        if (depth != 8 || (type != 6 && type != 2) || interlace != 0) throw new InvalidDataException($"{png}: only 8-bit RGB/RGBA non-interlaced PNGs are read here (depth {depth}, type {type}, interlace {interlace})");
+        int bpp = type == 6 ? 4 : 3;
+        var idat = new MemoryStream();
+        int pos = 8;
+        while (pos + 8 <= bytes.Length)
+        {
+            int len = (bytes[pos] << 24) | (bytes[pos + 1] << 16) | (bytes[pos + 2] << 8) | bytes[pos + 3];
+            string chunk = System.Text.Encoding.ASCII.GetString(bytes, pos + 4, 4);
+            if (chunk == "IDAT") idat.Write(bytes, pos + 8, len);
+            pos += 12 + len;
+            if (chunk == "IEND") break;
+        }
+        idat.Position = 0;
+        var raw = new byte[(w * bpp + 1) * h];
+        using (var z = new System.IO.Compression.ZLibStream(idat, System.IO.Compression.CompressionMode.Decompress))
+        {
+            int read = 0;
+            while (read < raw.Length) { int n = z.Read(raw, read, raw.Length - read); if (n <= 0) break; read += n; }
+        }
+        int stride = w * bpp;
+        var prev = new byte[stride];
+        var cur = new byte[stride];
+        for (int y = 0; y < h; y++)
+        {
+            int filter = raw[y * (stride + 1)];
+            Array.Copy(raw, y * (stride + 1) + 1, cur, 0, stride);
+            for (int i = 0; i < stride; i++)
+            {
+                int a = i >= bpp ? cur[i - bpp] : 0, b = prev[i], c = i >= bpp ? prev[i - bpp] : 0;
+                int add = filter switch
+                {
+                    1 => a,
+                    2 => b,
+                    3 => (a + b) / 2,
+                    4 => Paeth(a, b, c),
+                    _ => 0,
+                };
+                cur[i] = (byte)(cur[i] + add);
+            }
+            for (int x = 0; x < w; x++)
+            {
+                int o = x * bpp;
+                if (bpp == 3 || cur[o + 3] != 0) set.Add($"{cur[o]:X2}{cur[o + 1]:X2}{cur[o + 2]:X2}");
+            }
+            (prev, cur) = (cur, prev);
+        }
+    }
+    return set;
+}
+
+static int Paeth(int a, int b, int c)
+{
+    int p = a + b - c, pa = Math.Abs(p - a), pb = Math.Abs(p - b), pc = Math.Abs(p - c);
+    return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
 }
 
 static string SectionText(Dictionary<string, Dictionary<string, string>> cfg, string name)
@@ -149,6 +222,30 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
     if (cfg.TryGetValue("Tuning", out var tuning))
     {
         foreach (var k in tuning.Keys) if (!skinTuningKeys.Contains(k)) Bad($"[Tuning] {k}: a skin may only set the picture keys ({string.Join(", ", skinTuningKeys)}); the mount sets the rest");
+    }
+    // [Colors] (docs/mount-colours.md): regions from the mount vocabulary (Colors.cs MountRegionKeys, never Coat: it is
+    // everything not named), every colour RRGGBB, in the pictures, and under one region only. A game-source skin has
+    // no pictures here to check against.
+    if (cfg.TryGetValue("Colors", out var colorsSec))
+    {
+        var seen = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        HashSet<string>? inPictures = game || sheet ? null : PngColours(dir);
+        int named = 0;
+        foreach (var kv in colorsSec)
+        {
+            if (!mountRegions.Contains(kv.Key)) { Bad($"[Colors] {kv.Key}: not a mount region ({string.Join(", ", mountRegions)})"); continue; }
+            if (kv.Key.Equals("Coat", StringComparison.OrdinalIgnoreCase)) { Bad("[Colors] Coat: every colour not named is Coat; don't list it"); continue; }
+            foreach (var tok in kv.Value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string hex = tok.TrimStart('#').ToUpperInvariant();
+                if (!Regex.IsMatch(hex, "^[0-9A-F]{6}$")) { Bad($"[Colors] {kv.Key}: '{tok}' is not a colour (RRGGBB)"); continue; }
+                if (seen.TryGetValue(hex, out var other) && !other.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)) Bad($"[Colors] {hex} is under {other} and {kv.Key}; one region per colour");
+                seen[hex] = kv.Key;
+                if (inPictures != null && !inPictures.Contains(hex)) Bad($"[Colors] {kv.Key} {hex}: no picture of the skin has this colour (a stale list)");
+                named++;
+            }
+        }
+        if (ok) Pass($"{id}: [Colors] names {named} colour(s) under {colorsSec.Count} region(s)" + (inPictures != null ? $" of the pictures' {inPictures.Count}" : ""));
     }
     if (cfg.TryGetValue("Mount", out var m))
     {

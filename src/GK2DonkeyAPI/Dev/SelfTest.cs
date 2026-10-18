@@ -112,6 +112,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupCore, Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
             new Scenario { Group = GroupCore, Name = "shared colour textures", Body = SharedColours },
             new Scenario { Group = GroupCore, Name = "settings: a moved section keeps a player's values", Body = MovedSections },
+            new Scenario { Group = GroupCore, Name = "upgrade: a released version's player files are all read", Body = UpgradeFiles },
             new Scenario { Group = GroupLevels, Name = "one new view per frame", Body = SpawnCap },
             new Scenario { Group = GroupLevels, Name = "waking (view switched off)", Body = () => Wake(switchOff: true) },
             new Scenario { Group = GroupLevels, Name = "waking (view frozen)", Body = () => Wake(switchOff: false) },
@@ -153,6 +154,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
+            new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
         };
 
         // The groups in the order they first appear in the catalog (after Catalog: static fields initialise in order).
@@ -1027,10 +1029,176 @@ namespace GK2DonkeyAPI
                 Check(!after.ContainsKey("3. Donkey") || !after["3. Donkey"].ContainsKey("Name"), "saved: the old Donkey.Name line is gone");
                 Check(!after.ContainsKey("4. Cart") && after.ContainsKey("5. Cart"), "saved: the old 4. Cart copy is gone, 5. Cart stays");
                 Check(!after.ContainsKey("2. Sound") && after.TryGetValue("7. Sound", out Dictionary<string, string> s7) && !s7.ContainsKey("Brays") && s7.ContainsKey("Volume"), "saved: both old Brays copies are gone; 7. Sound keeps its Volume (a key nothing bound: an orphan, as before)");
+
+                // A mod's cfg saves on every set (BepInEx's default): the page holds the saves while it binds and writes
+                // once at the end, so the last row's old copy is dropped too (the 2026-10-18 live run left
+                // "[5. Sound] Volume" in the file: BepInEx had saved inside the last Bind, before the drop).
+                System.IO.File.WriteAllText(path, "[1. Keys]\n\n[2. Sound]\n\nVolume = 120\n");
+                var cfg2 = new ConfigFile(path, false); // SaveOnConfigSet true, as a mod's own ConfigFile has it
+                var page2 = new MountSettingsPage("dreas.gk2.selftest.moved2", cfg2, "Moved test 2", "test", "", null);
+                Check(!cfg2.SaveOnConfigSet, "the page holds the mod's save-on-set while it binds");
+                page2.Status("Keys");
+                page2.Toggle("Mount", "Foo", true, "Foo", "");
+                ConfigEntry<int> volume = page2.Steps("Sound", "Volume", 100, 0, 150, 10, "Volume", "");
+                Check(volume.Value == 120, $"the last row bound carries its value ({volume.Value})");
+                page2.FinishBinding();
+                Check(cfg2.SaveOnConfigSet, "finished: the mod's save-on-set is back");
+                Dictionary<string, Dictionary<string, string>> after2 = MountSettingsPage.ReadSections(path);
+                Check(!after2.ContainsKey("2. Sound") && after2.TryGetValue("3. Sound", out Dictionary<string, string> s3) && s3.TryGetValue("Volume", out string v3) && v3 == "120", "saved once at the end: the old copy of the last row is gone and 3. Sound has the value");
             }
             finally
             {
                 try { System.IO.File.Delete(path); } catch { }
+            }
+            yield break;
+        }
+
+        // The player-owned files as every public release wrote them (tests/fixtures/released/<version>/,
+        // docs/compatibility.md): an update must read every value a player has on disk. Saddle Up's cfg goes through
+        // the live page's own carry-over (renumbered sections, moved keys): every line of the old file lands on a row
+        // of today's page and reads as the row's type (an enum name that changed shows here). The API's cfg: every
+        // key is still bound by this build and reads as its type. The side file: the reader takes every record whole.
+        // And a side file of a format this version doesn't read is set aside, never left for the next save to delete.
+        private static IEnumerator UpgradeFiles()
+        {
+            string root = Defaults.RepoPath(System.IO.Path.Combine("..", "..", "tests", "fixtures", "released"));
+            if (root == null || !System.IO.Directory.Exists(root))
+            {
+                Warn("tests/fixtures/released isn't on this machine (no sources): skipped");
+                yield break;
+            }
+            string[] dirs = System.IO.Directory.GetDirectories(root);
+            Array.Sort(dirs, StringComparer.OrdinalIgnoreCase);
+            Check(dirs.Length > 0, $"released versions on file: {dirs.Length}");
+            foreach (string dir in dirs)
+            {
+                string version = System.IO.Path.GetFileName(dir);
+
+                // Saddle Up's cfg through the live page (its real sections, keys and MovedKey calls)
+                string su = System.IO.Path.Combine(dir, "dreas.gk2.saddleup.cfg");
+                if (System.IO.File.Exists(su))
+                {
+                    MountSettingsPage page = MountSettingsPage.All.Find(p => p.Config != null && string.Equals(System.IO.Path.GetFileName(p.Config.ConfigFilePath), "dreas.gk2.saddleup.cfg", StringComparison.OrdinalIgnoreCase));
+                    if (page == null)
+                    {
+                        Warn($"{version}: GK2 Saddle Up isn't loaded, its cfg isn't checked");
+                    }
+                    else
+                    {
+                        Dictionary<string, Dictionary<string, string>> file = MountSettingsPage.ReadSections(su);
+                        int n = 0;
+                        foreach (var s in file) n += s.Value.Count;
+                        List<MountSettingsPage.UpgradeClaim> claims = page.Upgrade(file, out List<(string Section, string Key, string Raw)> unclaimed);
+                        var lost = new StringBuilder();
+                        foreach (var u in unclaimed) lost.Append(lost.Length > 0 ? ", " : "").Append('[').Append(u.Section).Append("] ").Append(u.Key);
+                        Check(unclaimed.Count == 0, $"{version} Saddle Up cfg: every one of its {n} values lands on a row of today's page" + (unclaimed.Count > 0 ? $"; lost: {lost}" : ""));
+                        var bad = new StringBuilder();
+                        int found = 0, moved = 0;
+                        foreach (MountSettingsPage.UpgradeClaim c in claims)
+                        {
+                            if (c.Raw == null) continue;
+                            found++;
+                            if (c.Moved) moved++;
+                            try
+                            {
+                                TomlTypeConverter.ConvertToValue(c.Raw, c.Row.Entry.SettingType);
+                            }
+                            catch (Exception e)
+                            {
+                                bad.Append(bad.Length > 0 ? "; " : "").Append('[').Append(c.Section).Append("] ").Append(c.Key).Append(" = ").Append(c.Raw).Append(" as ").Append(c.Row.Entry.SettingType.Name).Append(": ").Append(e.Message);
+                            }
+                        }
+                        Check(bad.Length == 0, $"{version} Saddle Up cfg: every carried value reads as its row's type (enum names, keys)" + (bad.Length > 0 ? $": {bad}" : ""));
+                        Info($"{version} Saddle Up cfg: {found} values found, {moved} of them from a moved section or key; {claims.Count - found} rows are new since");
+                    }
+                }
+
+                // the API's cfg: every key still bound, every value still of the key's type. That release's
+                // defaults.cfg (the same section and key names, written by that build) is a second witness: a cfg
+                // fixture reconstructed from a later file can't show a key renamed in between, the defaults can.
+                foreach (string name in new[] { "dreas.gk2.donkeyapi.cfg", "defaults.cfg" })
+                {
+                    string api = System.IO.Path.Combine(dir, name);
+                    if (!System.IO.File.Exists(api) || Plugin.Instance == null) continue;
+                    Dictionary<string, Dictionary<string, string>> file = MountSettingsPage.ReadSections(api);
+                    var lost = new StringBuilder();
+                    var bad = new StringBuilder();
+                    int n = 0, lostCount = 0, badCount = 0;
+                    foreach (var s in file)
+                    {
+                        foreach (var kv in s.Value)
+                        {
+                            n++;
+                            var def = new ConfigDefinition(s.Key, kv.Key);
+                            if (!Plugin.Instance.Config.ContainsKey(def))
+                            {
+                                lostCount++;
+                                lost.Append(lost.Length > 0 ? ", " : "").Append('[').Append(s.Key).Append("] ").Append(kv.Key);
+                                continue;
+                            }
+                            try
+                            {
+                                TomlTypeConverter.ConvertToValue(kv.Value, Plugin.Instance.Config[def].SettingType);
+                            }
+                            catch (Exception e)
+                            {
+                                badCount++;
+                                bad.Append(bad.Length > 0 ? "; " : "").Append('[').Append(s.Key).Append("] ").Append(kv.Key).Append(" = ").Append(kv.Value).Append(": ").Append(e.Message);
+                            }
+                        }
+                    }
+                    Check(lostCount == 0, $"{version} {name}: every one of its {n} keys is still bound (a renamed or dropped key resets a player's value)" + (lostCount > 0 ? $"; not bound: {lost}" : ""));
+                    Check(badCount == 0, $"{version} {name}: every value reads as its key's type" + (badCount > 0 ? $": {bad}" : ""));
+                }
+
+                // the side file(s) as that version wrote them
+                foreach (string dat in System.IO.Directory.GetFiles(dir, "*.gk2donkeyapi.dat"))
+                {
+                    var header = new Dictionary<string, string>();
+                    var nexts = new List<string[]>();
+                    var records = new List<Mount.Record>();
+                    Mount.ParseSideText(System.IO.File.ReadAllLines(dat), header, nexts, records);
+                    header.TryGetValue("format", out string format);
+                    Check(format == Mount.SideFileFormat.ToString(), $"{version} side file: format {format} is the one this version reads ({Mount.SideFileFormat}); a newer format needs a reader for this one, never \"nothing restored\"");
+                    int whole = 0, cargo = 0, chests = 0, sets = 0, data = 0;
+                    foreach (Mount.Record r in records)
+                    {
+                        if (r.Complete && !string.IsNullOrEmpty(r.Owner) && r.Id > 0 && !string.IsNullOrEmpty(r.Scene)) whole++;
+                        cargo += r.Cargo.Count;
+                        if (r.Chest != null) chests++;
+                        sets += r.Sets.Count;
+                        data += r.DataLines.Count;
+                    }
+                    Check(records.Count > 0 && whole == records.Count, $"{version} side file: all {records.Count} records read whole ({whole}), {nexts.Count} counter(s)");
+                    Info($"{version} side file: {cargo} cargo item(s), {chests} chest(s), {sets} setting(s), {data} data line(s)");
+                    if (version == "0.9.1")
+                    {
+                        Mount.Record parent = records.Find(r => r.Id == 1), foal = records.Find(r => r.Id == 2), cart = records.Find(r => r.Id == 3);
+                        Check(parent != null && parent.Name == "Bella" && parent.Kind == "donkey" && !parent.FacingRight && parent.Position == new Vector3(12.5f, -3.25f, 0f) && parent.Sets.Count == 1 && parent.Sets[0][0] == "SeatAdjustPx" && parent.Sets[0][2] == "3",
+                            "0.9.1: the named donkey with its position, facing and its own setting");
+                        Check(parent != null && parent.DataLines.Count == 1 && parent.DataLines[0][2] == "a\ttab and a \\ backslash", "0.9.1: a mod's data line with its escaped tab and backslash");
+                        Check(foal != null && foal.Kind == "foal" && Math.Abs(foal.Scale - 0.6f) < 0.001f && foal.ParentFull == parent?.FullId && foal.RemoveWithParent, "0.9.1: the foal of size 0.6 with its parent");
+                        Check(cart != null && cart.Kind == "free cart" && cart.FacingRight && cart.Cargo.Count == 2 && cart.Chest == "6f1c2a9e-0000-4000-8000-000000000003", "0.9.1: the free cart with two items and its chest");
+                    }
+                }
+            }
+
+            // a side file this version can't read is set aside under its format's name, not left for the save to delete
+            string tmp = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-upgrade");
+            try
+            {
+                System.IO.Directory.CreateDirectory(tmp);
+                string p = System.IO.Path.Combine(tmp, "Slot.gk2donkeyapi.dat");
+                System.IO.File.WriteAllText(p, "format\t99\n");
+                string aside = Mount.SetAside(p, "99");
+                Check(aside != null && !System.IO.File.Exists(p) && System.IO.File.Exists(aside) && System.IO.Path.GetFileName(aside) == "Slot.gk2donkeyapi.format99.dat", $"a side file of format 99 is set aside as {System.IO.Path.GetFileName(aside ?? "(none)")}");
+                System.IO.File.WriteAllText(p, "format\t99\nslot\tnewer\n");
+                string again = Mount.SetAside(p, "99");
+                Check(again == aside && System.IO.File.ReadAllText(again).Contains("newer"), "set aside again: the newer file replaces the one already aside");
+            }
+            finally
+            {
+                try { System.IO.Directory.Delete(tmp, true); } catch { }
             }
             yield break;
         }
@@ -1159,8 +1327,124 @@ namespace GK2DonkeyAPI
             Check(walk > 0 && turn > 0, $"the walk ({walk}) and the somersault ({turn}) pictures are drawn");
             Check(head == 0, $"the head key is empty on purpose, so nothing of the donkey's head shows ({head})");
             Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner, "the Gerry mount's seat value is on the wearer");
+            // seat = picture: the rider's seat is the skull picture's top at the pivot column, above the ground and
+            // within the picture (160 px canvas: under 3.2 units) whatever the player's AutoSeat / SeatOffset
+            bool seatOnPicture = a.I.LooksRig.TrySeatTop(out Vector3 seatTop);
+            float seatUp = seatTop.y - a.Position.y;
+            Check(seatOnPicture && seatUp > 0.2f && seatUp < 6f, $"the seat is the picture's own top, {seatUp:0.00} above the ground");
+            // the babies' size lives on the mount: Gerry's 0.33 (its skin.cfg), the donkey's 0.6
+            MountKindInfo gk = Mounts.Kinds.Find("gerry");
+            Check(gk != null && Math.Abs(gk.FoalScale - 0.33f) < 0.001f, $"the Gerry mount's babies are 0.33x ({gk?.FoalScale})");
+            MountKindInfo dk = Mounts.Kinds.Find(MountKinds.DonkeyId);
+            Check(dk != null && Math.Abs(dk.FoalScale - 0.6f) < 0.001f, $"the donkey's babies are 0.6x ({dk?.FoalScale})");
             a.Remove();
             yield return Frames(3);
+
+            // A Gerry asleep far away, with no view to draw the skin on, is still a Gerry: its kind comes from its
+            // "Skin" key, not from the sheet it wears (2026-10-18: a sleeping parent counted as a donkey and its
+            // babies stayed at 0.6 until it woke).
+            Vector3? far = Spot(home, 50f) ?? Spot(home, 42f);
+            if (far == null)
+            {
+                Warn("no spot 42-50 away for the sleeping check: skipped");
+                yield break;
+            }
+            MountHandle s = Spawn(far.Value, true);
+            if (s == null)
+            {
+                Fail("could not spawn far away");
+                yield break;
+            }
+            s.Tuning.Set(Owner, "Skin", "gerry");
+            yield return Until(() => s.I.tier == Mount.Tier.Asleep && !s.I.HasViewObject, 6f);
+            if (!waited)
+            {
+                Warn($"not asleep without a view {Vector3.Distance(home, far.Value):F0} away (level {s.I.tier}): the sleeping check skipped");
+            }
+            else
+            {
+                Check(s.Kind == "gerry" && s.I.Noun == "gerry", $"asleep without a view it is still the Gerry mount ({s.Kind}, \"{s.I.Noun}\")");
+                s.Tuning.Set(Owner, "Skin", "");
+                Check(s.Kind == MountKinds.DonkeyId, $"the key cleared: a donkey again ({s.Kind})");
+            }
+            s.Remove();
+            yield return Frames(2);
+        }
+
+        // The colour settings mean the same on every mount (docs/mount-colours.md): the worm (720 colours of its own,
+        // none of the donkey's) on the test companion's paper donkey, its coat set to a green through the rows a
+        // player uses, the settings picture rendered and read back: the pink is gone and the worm leans green; the
+        // engine took the worm's own colours through the colour cube. Then the dragon on a spawned donkey: its
+        // Muzzle setting changes the belly's colours only (its [Colors]).
+        private static IEnumerator SkinColours()
+        {
+            if (Looks.Find("worm") == null || Looks.Find("dragon") == null)
+            {
+                Warn("the built-in worm or dragon isn't registered: skipped");
+                yield break;
+            }
+            const string owner = Owner + ".colours";
+            MountCompanion me = Mounts.Companion(owner);
+            me.Coat = CoatColor.Game;
+            me.Skin = "worm";
+            Mount.Instance paper = me.Paper;
+            // the stage builds on the first ask (the donkey prefab loads over a few frames); ask every frame until a
+            // picture of the worn worm comes
+            yield return Until(() => PreviewStage.Picture(paper, withCart: false) != null && paper.LooksRig.Wearing == "worm" && !paper.LooksRig.Building, 20f);
+            if (!waited)
+            {
+                Warn($"no settings picture of the worm within 20 s (stage failed: {PreviewStage.Failed}): skipped");
+                me.Skin = "";
+                yield break;
+            }
+            for (int i = 0; i < 4; i++) { PreviewStage.Picture(paper, withCart: false); yield return null; }
+            float before = PreviewStage.TestDominantHue(false, out int pinkPixels, out string topBefore);
+            Check(pinkPixels > 100 && (before >= 320f || before <= 20f), $"the worm as drawn leans pink ({before:0}°, {pinkPixels} coloured pixels; most drawn: {topBefore})");
+            var before2 = paper.ColorsRig.TestMountGroup();
+            bool regionsAtDefault = true;
+            foreach (string r in Colors.MountRegionKeys) regionsAtDefault &= !Colors.RegionChanged(r);
+            if (regionsAtDefault) Check(before2.Colours > Colors.PaletteMaxColours && before2.Changed == 0, $"the game's colours: the worm's {before2.Colours} colours mapped, none changed");
+            else Info($"the mount regions aren't at their defaults in the cfg (the Colors tab): the 'none changed' check skipped ({before2.Changed} of {before2.Colours} changed)");
+            me.CustomCoat = "20C040";
+            me.Coat = CoatColor.Custom;
+            for (int i = 0; i < 4; i++) { PreviewStage.Picture(paper, withCart: false); yield return null; }
+            float after = PreviewStage.TestDominantHue(false, out int greenPixels, out string topAfter);
+            Check(greenPixels > 100 && after >= 80f && after <= 170f, $"a custom green coat: the picture leans green ({after:0}°, {greenPixels} coloured pixels; most drawn: {topAfter})");
+            var g = paper.ColorsRig.TestMountGroup();
+            Check(g.Colours > Colors.PaletteMaxColours && g.Method == SpriteColorMethod.Lut, $"{g.Colours} colours of its own: the colour cube ({g.Method})");
+            Check(g.Pairs == g.Colours && g.Changed >= g.Colours - 8, $"every one of its colours is mapped ({g.Pairs} pairs), the coat's all changed ({g.Changed}; its 3 Dark colours may not)");
+            me.Coat = CoatColor.Game;
+            me.Skin = "";
+            yield return Frames(2);
+
+            // the dragon: Muzzle is its belly (skin.cfg [Colors]), and only that
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            a.Tuning.Set(Owner, "Skin", "dragon");
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "dragon" && !a.I.LooksRig.Building, 20f);
+            if (!waited)
+            {
+                Fail("the dragon was never worn");
+                a.Remove();
+                yield break;
+            }
+            a.Tuning.Set(Owner, "MuzzleColorize", "00FF00");
+            a.Tuning.Set(Owner, "MuzzleColorizeAmount", 1f);
+            yield return Frames(3);
+            var d = a.I.ColorsRig.TestMountGroup();
+            Looks.Loaded look = a.I.LooksRig.WornOwnColours;
+            int belly = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m.Count : -1;
+            bool onlyBelly = d.Changed == belly && belly > 0;
+            foreach (Color32 c in d.ChangedSources) onlyBelly &= look.ColoursByRegion["Muzzle"].Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
+            Check(d.Method == SpriteColorMethod.Palette && d.Colours <= Colors.PaletteMaxColours, $"the dragon's {d.Colours} colours: the exact swap ({d.Method})");
+            Check(onlyBelly, $"Muzzle changes the dragon's belly colours only ({d.Changed} changed of {d.Pairs}; the belly has {belly})");
+            a.Remove();
+            yield return Frames(2);
         }
 
         // A built-in skin on a spawned donkey: drawn (its overlay shows, the donkey's own body kept from rendering),
@@ -1217,7 +1501,7 @@ namespace GK2DonkeyAPI
             try
             {
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-kind", "kind-test",
-                    "# a test pack\n[Skin]\nformat = 1\nid = kind-test\nname = Kind Test\nmount = test-beast\n\n[Mount]\nid = test-beast\nname = Test Beast\ncart = false\nfoals = false\n\n[Mount.Tuning]\nRiderOffsetPx = 3\n\n[Mount.Tuning.Cart]\nSeatAdjustPx = 7\n");
+                    "# a test pack\n[Skin]\nformat = 1\nid = kind-test\nname = Kind Test\nmount = test-beast\n\n[Mount]\nid = test-beast\nname = Test Beast\ncart = false\nfoals = false\nfoal_scale = 0.4\n\n[Mount.Tuning]\nRiderOffsetPx = 3\n\n[Mount.Tuning.Cart]\nSeatAdjustPx = 7\n\n[Colors]\nDark = 221A20\n");
             }
             catch (Exception e)
             {
@@ -1228,6 +1512,7 @@ namespace GK2DonkeyAPI
             Check(n == 1, $"one pack found ({n})");
             MountKindInfo k = Mounts.Kinds.Find("test-beast");
             Check(k != null && k.FromPack && !k.Cart && System.Linq.Enumerable.Contains(k.Skins, "kind-test"), "the pack declared the kind: listed, no cart, with its skin");
+            Check(k != null && Math.Abs(k.FoalScale - 0.4f) < 0.001f, $"the pack's foal_scale is the kind's ({k?.FoalScale})");
             MountSkinInfo s = Mounts.Looks.Find("kind-test");
             Check(s != null && s.Mount == "test-beast", "the skin names the kind");
             Vector3 near = Spot(home, 4f) ?? home;
@@ -1262,14 +1547,19 @@ namespace GK2DonkeyAPI
             if (def != null && kd != null)
             {
                 (kd.TuningRide ?? (kd.TuningRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))["LegAdjustYPx"] = 2;
+                kd.FoalScale = 0.45f; // the Mounts tab's "Babies' size" slider does this
                 string saveErr = Looks.SaveCfg(def);
                 Check(saveErr == null, "saved to the pack's skin.cfg" + (saveErr != null ? " (" + saveErr + ")" : ""));
                 string text = System.IO.File.ReadAllText(System.IO.Path.Combine(tempRoot, Looks.PackDirName, "kind-test", "skin.cfg"));
                 Check(text.Contains("# a test pack") && text.Contains("name = Kind Test") && text.Contains("[Mount.Tuning.Ride]") && text.Contains("LegAdjustYPx = 2") && text.Contains("RiderOffsetPx = 3"), "the file keeps its own lines and has the new value");
+                Check(text.Contains("foal_scale = 0.45") && !text.Contains("foal_scale = 0.4\n"), "the file has the new foal_scale once");
+                Check(text.Contains("[Colors]") && text.Contains("Dark = 221A20"), "the file keeps its [Colors] section (the Mounts tab's auto-save must never drop a skin's colour regions)");
                 kd.TuningRide.Remove("LegAdjustYPx");
+                kd.FoalScale = 0.6f;
                 string loadErr = Looks.ReloadCfg(def);
                 Kinds.KindDef again = Kinds.Find("test-beast");
                 Check(loadErr == null && again == kd && kd.TuningRide != null && kd.TuningRide.TryGetValue("LegAdjustYPx", out object back) && Convert.ToInt32(back) == 2, "reloaded: the same kind object has the file's value again" + (loadErr != null ? " (" + loadErr + ")" : ""));
+                Check(Math.Abs(kd.FoalScale - 0.45f) < 0.001f && Math.Abs((Mounts.Kinds.Find("test-beast")?.FoalScale ?? 0f) - 0.45f) < 0.001f, $"reloaded: the file's foal_scale is on the kind and listed ({kd.FoalScale})");
                 yield return Frames(3);
                 Check(a != null && a.Tuning.IsSet("LegAdjustYPx") && a.Tuning.Get<int>("LegAdjustYPx") == 2, "the wearer has the reloaded value");
             }
@@ -1508,6 +1798,9 @@ namespace GK2DonkeyAPI
             }
             yield return Settle(10f);
             int tex0 = Live.Textures, loaded0 = Looks.LoadedCount, inst0 = Mount.All.Count;
+            // a skin one of them already wears (the settings' paper donkey in the snail after the colours window was
+            // open, 2026-10-18) loads nothing new: the test's two skins count only when they aren't loaded yet
+            int newSkins = (Looks.IsLoaded("rat") ? 0 : 1) + (Looks.IsLoaded("snail") ? 0 : 1);
             for (int cycle = 1; cycle <= 2; cycle++)
             {
                 var made = new List<MountHandle>();
@@ -1522,7 +1815,7 @@ namespace GK2DonkeyAPI
                     }
                 }
                 yield return Seconds(4f);
-                Check(Looks.LoadedCount == loaded0 + 2, $"cycle {cycle}: two skins loaded for {made.Count} donkeys ({Looks.LoadedCount - loaded0})");
+                Check(Looks.LoadedCount == loaded0 + newSkins, $"cycle {cycle}: {newSkins} skin(s) loaded for {made.Count} donkeys ({Looks.LoadedCount - loaded0} new; {2 - newSkins} of the two were loaded already)");
                 foreach (MountHandle h in made)
                 {
                     if (h.Exists) h.Remove();

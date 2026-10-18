@@ -188,7 +188,7 @@ One set for both styles, since it's the same donkey. The investigation and how i
 | Key | Default | Meaning |
 |---|---|---|
 | `Enabled` | true | Master switch for everything below. |
-| `SpriteMethod` | Palette | The donkey's sprites: `Palette`, the game's exact colour swap (every region alone), or `Lut`, the game's 32-step colour cube (a fallback). The cart is always done with the cube. |
+| `SpriteMethod` | Palette | The mount's sprites: `Palette`, the game's exact colour swap (every region alone), or `Lut`, the game's 32-step colour cube (a fallback). A skin with more than 48 colours of its own (the snail, the worm) always uses the cube, whatever this says. The cart is always done with the cube. |
 | `GlowColor` | empty | Colour of the lamp's glow, hex `RRGGBB`. Empty = the game's. |
 | `LitGlassTint` | empty | Tint of the lit lantern glass, hex. Empty = the game's. |
 | `CharacterLightColor` | empty | The character light's colour, hex. Empty = the same as `Cart.LanternLightColor`. |

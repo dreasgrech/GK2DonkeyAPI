@@ -59,6 +59,34 @@ For players:
   its sparks and a trail of flames that burn out behind it; mods can add other effects), "Effect shown" (never, at
   night, always), and whether it leaves the trail, goes round the cart too, shows in fights and on the baby donkeys.
   Kept with the save. Never indoors. (First build 2026-10-17 19:36: the Effect list had no "None" entry because an empty id can't be a dropdown choice, so a pick never stuck and the cfg stayed empty; the id is `none` now and a cfg holding "" takes the row's default.)
+- **The colours window stays put.** "Choose colours" now shows the picture in a slot of fixed size, the rows in two
+  columns by section (your mount on the left, the cart on the right) with a heading each, and the custom colour and
+  lightness rows always in place, greyed until the preset is Custom. Nothing moves when a value changes (before,
+  those rows came and went and the whole stack shifted under the cursor), and a window taller than the screen is
+  scaled down whole instead of running off the top. The picture no longer keeps the previous mount's lantern where
+  it hung (the preview copy is undressed before it is dressed again), so the mount sits centred.
+- **Your colours on every mount.** Coat colour, harness colour and the custom colours with their lightness now
+  recolour any mount the same way they recolour the donkey: a dragon's scales, the rat's fur, the worm's skin.
+  Each built-in creature says which of its colours are its outlines, its second tone (the dragon's belly, the
+  rat's tail and ears, the snail's shell) and its eye, so those follow the matching settings and the rest is the
+  coat. A creature without a harness ignores the harness rows. Before, the colour rows did nothing on any mount
+  but the donkey, nor on the Zebra, Ghost, Ember, Golden and Shadow skins; now a custom coat recolours those too
+  (a zebra's stripes included), so a 0.9.1 player who had a custom coat under Ember sees that coat. (docs/mount-colours.md)
+- **The settings picture changes mount in one step.** Picking another mount or skin re-frames the picture at once,
+  on what the new mount draws over two seconds of its walk (a hopping skull included); before, the new mount was
+  drawn inside the old one's frame until the once-a-second edge check caught it, then framed on one frame the hop
+  overshot, so the picture changed size two or three times in the first second (the video of 2026-10-18 21-07). The
+  picture's texture is resized in place, so the displays never go blank between refreshes.
+- **A mount asleep far away is still that mount.** Its kind (what its babies' size, its name in messages and its
+  effect follow) came from the skin drawn on it, and a mount asleep out of sight has nothing drawn, so it counted
+  as a donkey: Gerry's babies stayed donkey-sized (0.6) until he was called and woke (seen 2026-10-18 indoors, four
+  big skulls). The kind now follows the mount's skin setting whether or not it is drawn; the self-test "game
+  creature" checks a sleeping Gerry.
+- **A side file this version can't read is kept, not lost.** If a save's `<save>.gk2donkeyapi.dat` is of a format
+  this version doesn't read (a newer one, carried over by Steam Cloud from another machine), it is set aside as
+  `<save>.gk2donkeyapi.format<N>.dat` and the log says so; before, the next save deleted or overwrote it, and a
+  parked cart's load with it. Updating from 0.9.1: every setting, the custom colours and the kept donkeys and carts
+  carry over (docs/compatibility.md).
 
 For mod authors:
 
@@ -117,8 +145,28 @@ Development:
   changed events"; "hitch and unhitch" checks the hitch gap on both facings and across leaving and taking the cart;
   "kept-with-save text" keeps the skin id and leaves the mount's own values out; "settings: a moved section keeps a
   player's values" covers several old copies, `MovedKey` and the orphan cleanup; the pack tests announce the warning
-  they cause. The eight looks scenarios are in docs/self-tests.md now. docs/gerry-mount.md: Gerry's sprites (73
+  they cause; "mount kind from a pack" carries `foal_scale` through the pack, the save and the reload, and "game
+  creature" checks the seat on the skull's own picture and the babies' size per mount (Gerry 0.33, donkey 0.6).
+  The eight looks scenarios are in docs/self-tests.md now. docs/gerry-mount.md: Gerry's sprites (73
   frames, 96 canvas, a hopping skull) and three ways to make him a mount.
+- Colours per look (docs/mount-colours.md): a skin's colours are collected as its sheet is built and sorted by
+  region from its `[Colors]` section (loader, SkinsScan with a PNG reader of its own); the colour engine maps the
+  worn look's colours per sprite group and uses the colour cube over 48 colours; the lightness anchor is per look
+  and a companion re-applies its look when the skin's sheet is whole; self-test "colours: the player's regions on
+  a mount in its own colours" (the settings picture read back). The `[Colors]` lists of the five picture skins.
+- **Compatibility with released versions** (docs/compatibility.md): the four stores a player owns and the rule per
+  store (page keys and enum names permanent, sections free to move, `MovedKey` for moved keys; API cfg names
+  permanent; every released side-file format stays readable). `tests/fixtures/released/0.9.1/`: the player files as
+  the public release wrote them (reconstructed from commit 7ac9a6c), with every value off its default; later versions
+  are captured at release (checklist 5, steps 3b and 3c). The self-test "upgrade: a released version's player files
+  are all read" runs Saddle Up's cfg through the live page's own carry-over (`MountSettingsPage.Upgrade`: every old
+  line lands on a row and reads as its type), checks every old API key is still bound, reads the side file through
+  the real reader, and the set-aside of an unreadable one. The release checklist's "nothing shipped" bullet is
+  replaced by this check. Open: changed defaults never reach existing players (BepInEx writes every value); the
+  stamp-and-table mechanism is described, decision pending. The live run with the 0.9.1 file (2026-10-18) found the
+  last row's old line still in the cfg: BepInEx saves inside every Bind, before the page drops the old copy. A page
+  now holds the mod's save-on-set while it binds and writes the file once at Publish (`FinishBinding`; one write on
+  a first start instead of one per row, as the API's own cfg already did), and logs how many old lines it left out.
 - Looks.cs: the skin rig (docs/skins-design.md step 1): overlays under bdy/hed, the hide re-asserted per frame, the apply
   in Camera.onPreCull, attach/detach at the view's lifecycle points, refcounted pictures; the self-test "skin: on, off,
   removed"; the built-in skins under src/GK2DonkeyAPI/assets/skins (tools/creature_sprites.py writes them).

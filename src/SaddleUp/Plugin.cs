@@ -76,11 +76,12 @@ namespace SaddleUp
             p.Toggle("Behaviour", "CartStaysParked", me.CartStaysParked, "Calling your mount leaves the cart parked", "Ride key while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you.", v => me.CartStaysParked = v);
             p.Toggle("Behaviour", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets. You carry them to the morgue yourself, or cart them. Off: the game's own delivery.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
 
-            // The donkey's own colours: they colour the donkey (and skins drawn in its colours); another mount has its own.
+            // The mount's colours: the same rows for every mount (docs/mount-colours.md). Coat is the body (the donkey's
+            // coat, a dragon's scales, the worm's skin); Harness its tack, on the mounts whose look has any.
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your mount and cart change. Done keeps them, Cancel puts them back.");
-            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", me.Coat, "Coat colour", "The donkey's coat, and skins drawn in its colours; a mount with its own colours ignores it.", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", me.Coat, "Coat colour", "The mount's body: the donkey's coat, a dragon's scales, the worm's skin.", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
             p.Color("Donkey", "CustomCoat", "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
-            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness colour", "The donkey's harness.", v => me.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness colour", "The mount's tack (the donkey's harness), on the mounts whose look has any; the others ignore it.", v => me.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
             p.Color("Donkey", "CustomHarness", "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
 
             p.Preview("Cart", me, "Your cart");

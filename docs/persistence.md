@@ -39,7 +39,9 @@ keeping their donkeys" and "Identity" below; this section is what was chosen and
 
 **Not yet released, so no compatibility is kept.**
 - The side file moved to **format 2**. The format 1 file from the first build is ignored once ("has format 1"), and
-  the next save writes format 2.
+  the next save writes format 2. Since the public 0.9.1 (format 2) every released format must stay readable, and a
+  file of a format this version doesn't read is set aside as `<save>.gk2donkeyapi.format<N>.dat` instead of being
+  left for the next save to delete (`docs/compatibility.md`, 2.3).
 - `MountHandle.Id`, `Persist` and `Key` changed meaning or form.
 
 ### The decisions, with the data behind each

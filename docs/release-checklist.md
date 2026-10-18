@@ -6,8 +6,10 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 - Every warning in the game's log is fixed (`BepInEx\LogOutput.log` of the last session: no `[Warning` or `[Error`
   lines from our plugins).
-- No pre-release migration code is left in (nothing has shipped, so there is nothing to migrate from). Removed
-  2026-10-13: the `.gk2mounts.dat` side-file reader and the cargo-layout version-1 reader.
+- Nothing a player has on disk from a released version is lost: `docs/compatibility.md` (the four stores and the
+  rules per store). The self-test "upgrade: a released version's player files are all read" is green against every
+  folder in `tests/fixtures/released/`, and any `MovedKey` a released layout needs is still in place. (Pre-release
+  migration code was removed 2026-10-13; compatibility code is for released data only.)
 - `Plugin.Version` is the mod's one version (the plugin's and `Mounts.ApiVersion`, which reads it); bump it with every
   API change. Saddle Up has its own version and asks for the API twice (`NeedsApi` and the `BepInDependency` minimum in
   `src/SaddleUp/Plugin.cs`, kept equal),
@@ -88,6 +90,13 @@ Rehearse the first start on a clean config, with the game closed:
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
+3b. **Capture the released files** for `tests/fixtures/released/<version>/` (docs/compatibility.md section 4): copy
+   the two cfgs BepInEx just wrote (then set every value in the copies to something other than its default, so a
+   lost value shows), the save's `<save>.gk2donkeyapi.dat` with the parked loaded cart, and `src/GK2DonkeyAPI/defaults.cfg`.
+3c. **The upgrade rehearsal**: put the previous release's two cfgs back (a player's: the ones moved aside in step 1
+   are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
+   loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
+   log's "Settings: ... carried over" lines and no warning; quit.
 4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`,
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.

@@ -42,6 +42,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         internal readonly List<Row> Rows = new List<Row>();
+        internal static readonly List<MountSettingsPage> All = new List<MountSettingsPage>(); // every page made this session (the upgrade self-test)
         private readonly List<string> sections = new List<string>();
         internal MountCompanion PreviewOf;
         internal Action RefreshMenu; // the Mods menu re-reads the rows' visibility (set by FrameworkLink)
@@ -109,11 +110,13 @@ namespace GK2DonkeyAPI.Api
 
         // Every section in the file that may hold a copy of (cfgSection, key): the same plain name under another
         // number, and the place MovedKey named, under any number. (section, key) pairs.
-        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key)
+        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key) => OldPlaces(cfgSection, key, fileSections);
+
+        private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key, Dictionary<string, Dictionary<string, string>> file)
         {
             string plain = PlainName(cfgSection);
             movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out (string Section, string Key) alias);
-            foreach (string s in fileSections.Keys)
+            foreach (string s in file.Keys)
             {
                 if (s == cfgSection) continue;
                 string p = PlainName(s);
@@ -132,11 +135,18 @@ namespace GK2DonkeyAPI.Api
             if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
             if (fileSections.Count == 0) return null;
             if (fileSections.TryGetValue(cfgSection, out Dictionary<string, string> own) && own.ContainsKey(key)) return null;
+            return BestOldValue(cfgSection, key, fileSections, out from, out fromKey);
+        }
+
+        private string BestOldValue(string cfgSection, string key, Dictionary<string, Dictionary<string, string>> file, out string from, out string fromKey)
+        {
+            from = null;
+            fromKey = null;
             string best = null;
             int bestKeys = -1, bestNumber = -1;
-            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key))
+            foreach ((string Section, string Key) place in OldPlaces(cfgSection, key, file))
             {
-                Dictionary<string, string> s = fileSections[place.Section];
+                Dictionary<string, string> s = file[place.Section];
                 if (!s.TryGetValue(place.Key, out string raw)) continue;
                 int number = SectionNumber(place.Section);
                 if (s.Count > bestKeys || (s.Count == bestKeys && number > bestNumber))
@@ -151,6 +161,51 @@ namespace GK2DonkeyAPI.Api
             return best;
         }
 
+        // Where each row's value would come from in a cfg file of another version (ReadSections of it): the file's own
+        // line for the row, else the best old place (a renumbered section, a MovedKey), else nothing (the row is new;
+        // its default applies). And the file's lines no row claims: a player's value this page would lose. The upgrade
+        // self-test runs it over the released files in tests/fixtures/released (docs/compatibility.md); nothing is bound
+        // or written.
+        internal sealed class UpgradeClaim
+        {
+            internal Row Row;
+            internal string Section, Key, Raw; // null: the file has no value for the row
+            internal bool Moved => Raw != null && Section != Row.Entry.Definition.Section;
+        }
+
+        internal List<UpgradeClaim> Upgrade(Dictionary<string, Dictionary<string, string>> file, out List<(string Section, string Key, string Raw)> unclaimed)
+        {
+            var claims = new List<UpgradeClaim>();
+            var claimed = new HashSet<string>(StringComparer.Ordinal);
+            foreach (Row r in Rows)
+            {
+                if (r.Entry == null) continue;
+                string sec = r.Entry.Definition.Section, key = r.Entry.Definition.Key;
+                var c = new UpgradeClaim { Row = r };
+                if (file.TryGetValue(sec, out Dictionary<string, string> own) && own.TryGetValue(key, out string raw))
+                {
+                    c.Section = sec;
+                    c.Key = key;
+                    c.Raw = raw;
+                }
+                else
+                {
+                    c.Raw = BestOldValue(sec, key, file, out c.Section, out c.Key);
+                }
+                if (c.Raw != null) claimed.Add(c.Section + "\n" + c.Key);
+                claims.Add(c);
+            }
+            unclaimed = new List<(string, string, string)>();
+            foreach (KeyValuePair<string, Dictionary<string, string>> s in file)
+            {
+                foreach (KeyValuePair<string, string> kv in s.Value)
+                {
+                    if (!claimed.Contains(s.Key + "\n" + kv.Key)) unclaimed.Add((s.Key, kv.Key, kv.Value));
+                }
+            }
+            return claims;
+        }
+
         // Every old copy of (cfgSection, key) out of BepInEx's orphans (the entries it read from the file and nothing
         // bound), so the next save drops those lines. The orphans are BepInEx's own (ConfigFile.OrphanedEntries, not
         // public); without them the file merely keeps the old lines.
@@ -162,7 +217,8 @@ namespace GK2DonkeyAPI.Api
                 if (!fileSections[place.Section].ContainsKey(place.Key)) continue;
                 System.Collections.Generic.Dictionary<ConfigDefinition, string> orphans = OrphansOf(Config);
                 if (orphans == null) return;
-                orphans.Remove(new ConfigDefinition(place.Section, place.Key));
+                if (orphans.Remove(new ConfigDefinition(place.Section, place.Key))) droppedOldCopies++;
+                else dropsFailed++;
             }
         }
 
@@ -251,6 +307,26 @@ namespace GK2DonkeyAPI.Api
             Description = description;
             StatusValue = status ?? (() => Mounts.StatusText);
             KeyActions.Track(ownerId);
+            All.Add(this);
+            // One write of the cfg at Publish instead of one per row: BepInEx saves inside every Bind by default,
+            // which also wrote the file before Bind below could drop an old copy of a moved setting, so the last row's
+            // old line stayed in the file (seen 2026-10-18 with a 0.9.1 cfg: "[5. Sound] Volume" next to "[7. Sound]").
+            saveOnSet = config.SaveOnConfigSet;
+            config.SaveOnConfigSet = false;
+        }
+
+        private readonly bool saveOnSet; // the mod's own setting, put back at Publish
+        private int droppedOldCopies, dropsFailed;
+
+        // After the last row: the mod's save-on-set back as it was, and the one save that writes every value and
+        // leaves out the old copies dropped while binding. Publish calls it; a page never published keeps its
+        // values in memory only, as "Add every row before Publish" says.
+        internal void FinishBinding()
+        {
+            if (Config.SaveOnConfigSet != saveOnSet) Config.SaveOnConfigSet = saveOnSet;
+            if (saveOnSet || droppedOldCopies > 0) Config.Save();
+            if (droppedOldCopies > 0) Plugin.Log.LogInfo($"Settings: {Title}: {droppedOldCopies} old line(s) of moved settings left out of the file.");
+            if (dropsFailed > 0) Plugin.Log.LogWarning($"Settings: {Title}: {dropsFailed} old line(s) of moved settings could not be dropped from BepInEx's orphans; they stay in the file (harmless) and this is worth a look.");
         }
 
         internal string Version
@@ -535,6 +611,7 @@ namespace GK2DonkeyAPI.Api
             }
             published = true;
             AddKeyHelp();
+            FinishBinding();
             LookPreview.Watch(this);
             if (FrameworkLink.TryRegister(this))
             {

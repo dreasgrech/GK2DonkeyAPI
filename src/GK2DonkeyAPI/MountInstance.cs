@@ -66,7 +66,7 @@ namespace GK2DonkeyAPI
                 CargoRig = new Cargo.Rig(this);
                 ChestRig = new CartChest.Rig(this);
                 LanternRig = new Lantern.Rig(this);
-                ColorsRig = new Colors.Rig();
+                ColorsRig = new Colors.Rig(this);
                 LooksRig = new Looks.Rig(this);
                 EffectsRig = new Effects.Rig(this);
             }

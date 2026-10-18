@@ -69,6 +69,7 @@ namespace GK2DonkeyAPI
         private static UnityEngine.ResourceManagement.AsyncOperations.AsyncOperationHandle<GameObject> loading;
         private const int SettleFrames = 8;
         private static Mount.Instance shownPaper;
+        private static string framedLook = ""; // the skin the pictures were last framed for (LooksRig.Wearing)
         private static float ppu = 50f;
         private static readonly List<Renderer> donkeyRenderers = new List<Renderer>(); // its body and head sprites
         private static readonly List<Renderer> allRenderers = new List<Renderer>();
@@ -130,6 +131,22 @@ namespace GK2DonkeyAPI
                 }
                 if (dressedAs != paper)
                 {
+                    // The previous paper donkey's rigs come off the copy first: they put back what they changed on it
+                    // (the lantern's split mesh above all: attached on top of it, the next LampHang saw a mesh it
+                    // didn't know and gave up with a warning, 2026-10-18, the colours self-test dressing the stage
+                    // before Saddle Up's page did).
+                    if (dressedAs != null)
+                    {
+                        using (Mount.Bind(dressedAs))
+                        {
+                            dressedAs.ColorsRig.Detach();
+                            dressedAs.LanternRig.Detach();
+                            dressedAs.LooksRig.Detach();
+                        }
+                        // the copy's own body and head stay in donkeyRenderers (Build put them there; cleared, the donkey-
+                        // alone picture had every renderer off and nothing to frame, 2026-10-18); the previous skin's
+                        // overlays are destroyed by its Detach and drop out as nulls below
+                    }
                     dressedAs = paper;
                     // Bound, so the first build reads the paper donkey's look: attached unbound, the picture showed the
                     // game's own colours until a setting changed (the video of 2026-10-02 20-57).
@@ -176,6 +193,18 @@ namespace GK2DonkeyAPI
                 if (newFrame)
                 {
                     Pose(paper);
+                    // Another skin worn (the Mount or Skin row changed; a sheet that finished building): framed again
+                    // before this frame's picture, on the new pictures' own size, not a second later by the edge check
+                    // with the new mount drawn inside the old one's frame.
+                    string look = paper.LooksRig.Wearing;
+                    if (look != framedLook)
+                    {
+                        framedLook = look;
+                        foreach (View each in views)
+                        {
+                            each.Reframe = true;
+                        }
+                    }
                 }
                 if (Time.frameCount != v.LastRenderFrame)
                 {
@@ -446,6 +475,8 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The picture's texture at this size: the same object resized (released, resized, created again), so the
+        // displays showing it keep showing it; a new one destroyed under them went blank until their next refresh.
         private static void NewTexture(View v, int w, int h)
         {
             if (v.Rt != null && v.Rt.width == w && v.Rt.height == h)
@@ -456,9 +487,13 @@ namespace GK2DonkeyAPI
             if (v.Rt != null)
             {
                 v.Rt.Release();
-                UnityEngine.Object.Destroy(v.Rt);
+                v.Rt.width = w;
+                v.Rt.height = h;
             }
-            v.Rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point, name = "GK2DonkeyAPI preview (" + v.Name + ")" };
+            else
+            {
+                v.Rt = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point, name = "GK2DonkeyAPI preview (" + v.Name + ")" };
+            }
             v.Rt.Create();
             v.Cam.targetTexture = v.Rt;
         }
@@ -484,6 +519,40 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The self-tests' view of a picture: the hue its coloured pixels lean to (degrees; the mean of the hue vectors
+        // of pixels with alpha and some saturation) and how many such pixels there are. -1 with no picture.
+        internal static float TestDominantHue(bool withCart, out int coloured, out string topColours)
+        {
+            coloured = 0;
+            topColours = "";
+            View v = withCart ? cartView : donkeyView;
+            if (failed || v.Rt == null) return -1f;
+            Color32[] px = ReadBack(v);
+            double x = 0, y = 0;
+            var counts = new Dictionary<int, int>();
+            foreach (Color32 c in px)
+            {
+                if (c.a <= 8) continue;
+                int key = (c.r << 16) | (c.g << 8) | c.b;
+                counts[key] = counts.TryGetValue(key, out int n) ? n + 1 : 1;
+                Color.RGBToHSV(c, out float h, out float s, out _);
+                if (s < 0.25f) continue;
+                coloured++;
+                x += Math.Cos(h * 2 * Math.PI);
+                y += Math.Sin(h * 2 * Math.PI);
+            }
+            // the five most drawn colours, as read back: the channel order is checked here (a readback with red and
+            // blue swapped would turn the worm's pink into violet)
+            var top = new List<KeyValuePair<int, int>>(counts);
+            top.Sort((a, b) => b.Value.CompareTo(a.Value));
+            var sb = new System.Text.StringBuilder();
+            for (int i = 0; i < Math.Min(5, top.Count); i++) sb.Append(i > 0 ? " " : "").Append(top[i].Key.ToString("X6")).Append('x').Append(top[i].Value);
+            topColours = sb.ToString();
+            if (coloured == 0) return -1f;
+            float deg = (float)(Math.Atan2(y, x) * 180 / Math.PI);
+            return deg < 0 ? deg + 360f : deg;
+        }
+
         // Is anything drawn on the picture's outermost pixels? Then it was cut off.
         private static bool TouchesEdge(View v)
         {
@@ -500,22 +569,45 @@ namespace GK2DonkeyAPI
             return false;
         }
 
-        // Onto what was drawn: the camera moved and narrowed onto the non-empty pixels, a margin round.
+        // Onto what is drawn over a whole walk cycle: the animator is stepped by hand through CycleSeconds of its
+        // walk, the picture taken at each step, and the camera moved and narrowed onto the union of the non-empty
+        // pixels, a margin round. One frame's pixels were not enough: a mount that hops (Gerry) or chatters reached
+        // the edge a moment later, the edge check reframed it, and the picture changed size two or three times in the
+        // first second after a mount change (the video of 2026-10-18 21-07).
+        private const float CycleSeconds = 2f, CycleStep = 0.1f;
+
         private static void Tighten(View v)
         {
-            Color32[] px = ReadBack(v);
             int w0 = v.Rt.width, h0 = v.Rt.height;
             int minX = w0, minY = h0, maxX = -1, maxY = -1;
-            for (int y = 0; y < h0; y++)
+            int steps = Mathf.Max(1, Mathf.RoundToInt(CycleSeconds / CycleStep));
+            for (int step = 0; step < steps; step++)
             {
-                for (int x = 0; x < w0; x++)
+                if (step > 0)
                 {
-                    if (px[y * w0 + x].a > 8)
+                    if (animator != null) animator.Update(CycleStep);
+                    if (dressedAs != null)
                     {
-                        if (x < minX) minX = x;
-                        if (x > maxX) maxX = x;
-                        if (y < minY) minY = y;
-                        if (y > maxY) maxY = y;
+                        using (Mount.Bind(dressedAs))
+                        {
+                            dressedAs.LooksRig.Tick();
+                            dressedAs.LooksRig.ApplySafe();
+                        }
+                    }
+                    v.Cam.Render();
+                }
+                Color32[] px = ReadBack(v);
+                for (int y = 0; y < h0; y++)
+                {
+                    for (int x = 0; x < w0; x++)
+                    {
+                        if (px[y * w0 + x].a > 8)
+                        {
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                            if (y < minY) minY = y;
+                            if (y > maxY) maxY = y;
+                        }
                     }
                 }
             }
@@ -536,7 +628,7 @@ namespace GK2DonkeyAPI
             NewTexture(v, w, h);
             v.Cam.orthographicSize = h * unitsPerPixel / 2f;
             v.Cam.aspect = (float)w / h;
-            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn, {w} x {h} pixels (from {w0} x {h0}).");
+            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk, {w} x {h} pixels (from {w0} x {h0}).");
         }
 
         // ------------------------------------------------------------------ the log

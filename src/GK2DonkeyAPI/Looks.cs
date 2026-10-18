@@ -149,7 +149,11 @@ namespace GK2DonkeyAPI
         {
             internal string Id, Name, Author, Version, Owner;
             internal SkinBase Base = Donkey;
-            internal bool OwnColours = true;   // false: drawn in the base's palette colours (Colors recolours it)
+            internal bool OwnColours = true;   // false: drawn in the base's palette colours (Colors recolours it with the base's own region map)
+            // [Colors] (docs/mount-colours.md): the skin's own colours by mount region (Dark, Muzzle, Eye, Harness; every
+            // colour not named is Coat), hex upper case. The colours themselves are collected from the pictures as the
+            // sheet is built (Loaded.Put); this only says which of them aren't Coat.
+            internal Dictionary<string, HashSet<string>> ColorRegions;
             internal bool Over;               // true: drawn over the base, which stays visible
             internal string KindId = Kinds.DonkeyId;   // the mount kind this skin is a look of (docs/mounts-design.md)
             internal Kinds.KindDef DeclaredKind;       // a pack's [Mount] section: declared when the skin registers
@@ -401,6 +405,33 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A [Colors] line: "<Region> = hex hex ..." (spaces or commas), the region one of the mount regions but Coat
+        // (Coat is everything not named). A bad region or colour, or a colour named twice, is a format error: a pack
+        // that says the wrong thing is refused, like a wrong canvas.
+        private static void ColorRegionLine(SkinDef d, string region, string value, string where)
+        {
+            string key = null;
+            foreach (string r in Colors.MountRegionKeys)
+            {
+                if (r.Equals(region, StringComparison.OrdinalIgnoreCase)) key = r;
+            }
+            if (key == null) throw new FormatException($"{where}: [Colors] {region} is not a mount region ({string.Join(", ", Colors.MountRegionKeys)})");
+            if (key == "Coat") throw new FormatException($"{where}: [Colors] Coat is every colour not named under another region; don't list it");
+            if (d.ColorRegions == null) d.ColorRegions = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+            if (!d.ColorRegions.TryGetValue(key, out HashSet<string> set)) d.ColorRegions[key] = set = new HashSet<string>(StringComparer.Ordinal);
+            foreach (string tok in value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string hex = tok.TrimStart('#').ToUpperInvariant();
+                if (hex.Length != 6 || !int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _))
+                    throw new FormatException($"{where}: [Colors] {key}: '{tok}' is not a colour (RRGGBB)");
+                foreach (var other in d.ColorRegions)
+                {
+                    if (other.Key != key && other.Value.Contains(hex)) throw new FormatException($"{where}: [Colors] {hex} is under {other.Key} and {key}; one region per colour");
+                }
+                set.Add(hex);
+            }
+        }
+
         // skin.cfg: "key = value" lines, "#" comments, a section line ignored. bytes(file) reads a file of the pack;
         // fileNames lists its files (the PNGs are the frames, unless the cfg names a sheet).
         internal static SkinDef FromCfg(string text, string dirName, string owner, string where, Func<string, byte[]> bytes, IEnumerable<string> fileNames)
@@ -423,8 +454,12 @@ namespace GK2DonkeyAPI
                 if (line.Length == 0 || line[0] == '#') continue;
                 if (line[0] == '[')
                 {
+                    // a comment after the section name is dropped ("[Colors]  # ..." was read as a section called
+                    // "colors] # ..." and ignored, 2026-10-18)
+                    int c = line.IndexOf('#');
+                    if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart") unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors") unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -440,6 +475,7 @@ namespace GK2DonkeyAPI
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.ride": (ktRide ?? (ktRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.cart": (ktCart ?? (ktCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "colors": ColorRegionLine(d, key, value, where); continue;
                     case "skin": break;
                     default: continue;
                 }
@@ -951,6 +987,12 @@ namespace GK2DonkeyAPI
             // sheet sprite: where a rider sits on a skin that says "seat = picture" (Rig.TrySeatTop).
             private readonly Dictionary<string, int> seatTopByKey = new Dictionary<string, int>(StringComparer.Ordinal);
             internal readonly Dictionary<Sprite, int> SeatTopBySprite = new Dictionary<Sprite, int>();
+            // Every distinct colour the pictures draw (RGB of any pixel with alpha above zero: the shader swaps by RGB
+            // and never looks at alpha), collected as the cells are put, sorted at Finish so two wearers build the
+            // same shared textures; and by mount region (Def.ColorRegions; the rest Coat). docs/mount-colours.md.
+            private readonly HashSet<int> colourSet = new HashSet<int>();
+            internal readonly List<Color32> Colours = new List<Color32>();
+            internal readonly Dictionary<string, List<Color32>> ColoursByRegion = new Dictionary<string, List<Color32>>(StringComparer.Ordinal);
 
             // the sheet: one texture, a cell per key with a one-pixel gutter
             internal Texture2D Sheet;
@@ -999,6 +1041,10 @@ namespace GK2DonkeyAPI
                 var cell = new RectInt(1 + (i % cols) * (cellW + 1), 1 + (i / cols) * (cellH + 1), cellW, cellH);
                 Sheet.SetPixels32(cell.x, cell.y, cellW, cellH, px.P);
                 cells.Add((key, cell));
+                foreach (Color32 c in px.P)
+                {
+                    if (c.a != 0) colourSet.Add((c.r << 16) | (c.g << 8) | c.b);
+                }
                 if (!key.StartsWith(FrontKey, StringComparison.Ordinal))
                 {
                     // the top of what is drawn at the pivot column (five columns wide), for the rider's seat
@@ -1031,9 +1077,44 @@ namespace GK2DonkeyAPI
                     }
                     cells.Clear();
                 }
+                SortColours();
                 Ready = true;
                 ToBuild = null;
                 Produce = null;
+                LoadedReady?.Invoke(Def.Id);
+            }
+
+            // The collected colours in a fixed order, and each under its region: the ones Def.ColorRegions names
+            // where it says, every other one Coat. A colour named that no picture has is said once (the author's
+            // list is stale, or a hex is off by one): it maps nothing and changes nothing.
+            private void SortColours()
+            {
+                Colours.Clear();
+                ColoursByRegion.Clear();
+                var packed = new List<int>(colourSet);
+                packed.Sort();
+                foreach (string r in Colors.MountRegionKeys) ColoursByRegion[r] = new List<Color32>();
+                var missing = new List<string>();
+                var named = new Dictionary<int, string>();
+                if (Def.ColorRegions != null)
+                {
+                    foreach (var kv in Def.ColorRegions)
+                    {
+                        foreach (string hex in kv.Value)
+                        {
+                            int v = int.Parse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
+                            if (colourSet.Contains(v)) named[v] = kv.Key;
+                            else missing.Add(kv.Key + " " + hex);
+                        }
+                    }
+                }
+                foreach (int v in packed)
+                {
+                    var c = new Color32((byte)(v >> 16), (byte)(v >> 8), (byte)v, 255);
+                    Colours.Add(c);
+                    ColoursByRegion[named.TryGetValue(v, out string region) ? region : "Coat"].Add(c);
+                }
+                if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{Def.Id}' [Colors] names {missing.Count} colour(s) its pictures don't have ({string.Join(", ", missing)}); they map nothing.");
             }
 
             internal string SizeNote => Sheet != null ? $"one sheet {Sheet.width}x{Sheet.height}, {Sheet.width * Sheet.height * 4 / 1024} KB" : "the mod's own sprites";
@@ -1055,6 +1136,19 @@ namespace GK2DonkeyAPI
         }
 
         private static readonly Dictionary<string, Loaded> loaded = new Dictionary<string, Loaded>(StringComparer.OrdinalIgnoreCase);
+
+        // A skin's sheet became whole (its colours are known): the companions wearing it set their custom colours'
+        // lightness against it again (MountCompanion; the anchor is the look's own art, docs/mount-colours.md 2.4).
+        internal static event Action<string> LoadedReady;
+
+        internal static bool IsLoaded(string id) => !string.IsNullOrEmpty(id) && loaded.ContainsKey(id);
+
+        // The whole, loaded sheet of a skin drawn in its own colours, or null (not loaded, still building, or a skin
+        // in the donkey's palette colours).
+        internal static Loaded LoadedOwnColours(string id)
+        {
+            return !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready && l.Def.OwnColours ? l : null;
+        }
         internal static int LoadedCount => loaded.Count;
 
         // A hold on a skin's pictures: loaded on the first, shared after. A sheet is filled a few frames a tick
@@ -1314,9 +1408,33 @@ namespace GK2DonkeyAPI
             private bool wasRidden;
             private MountStyle riddenStyle;
 
-            // The kind this instance is now: its worn skin's (the donkey's while it wears none).
-            internal Kinds.KindDef KindNow => skin != null ? skin.Def.Kind : Kinds.Donkey;
-            internal SkinDef DefNow => skin?.Def;
+            // The kind this instance is now: its skin's (the donkey's while it has none). The skin it wears when it
+            // has a view, else the one its "Skin" key names (WantedDef): an instance asleep far from the keeper, with
+            // no view to draw on, is still a Gerry. Seen 2026-10-18: the parent asleep outside counted as a donkey, so
+            // the companion kept its babies at 0.6 until the parent was called and woke.
+            internal Kinds.KindDef KindNow => (skin != null ? skin.Def : WantedDef)?.Kind ?? Kinds.Donkey;
+            internal SkinDef DefNow => skin != null ? skin.Def : WantedDef;
+
+            // The skin this instance is set to wear, by its "Skin" key, whether or not it has a view: null for the
+            // donkey's own look, a skin that isn't installed or drawn on another base, or a no-foals skin on a foal
+            // (the same rules as Tick, which logs them; this doesn't).
+            internal SkinDef WantedDef
+            {
+                get
+                {
+                    if (owner == null) return null;
+                    string want;
+                    using (Mount.Bind(owner))
+                    {
+                        want = (Skin.Value ?? "").Trim();
+                    }
+                    if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
+                    SkinDef d = Find(want);
+                    if (d == null || d.Base != viewBase) return null;
+                    if (owner.ViewScale != 1f && !d.Kind.Foals) return null;
+                    return d;
+                }
+            }
             private GameObject root;
             private readonly Slot[] slots;
             private int slotCount;
@@ -1411,6 +1529,7 @@ namespace GK2DonkeyAPI
                         skin = pending;
                         pending = null;
                         if (was != null) Looks.Release(was);
+                        owner?.ColorsRig.MarkDirty(); // the colours' source lists are the worn look's (Colors.Rig.Rebuild)
                     }
                     else if (dirty)
                     {
@@ -1466,6 +1585,7 @@ namespace GK2DonkeyAPI
                 Loaded prev = skin;
                 skin = next;
                 if (prev != null) Looks.Release(prev);
+                owner?.ColorsRig.MarkDirty();
             }
 
             private static readonly HashSet<string> missingIdLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1660,6 +1780,9 @@ namespace GK2DonkeyAPI
             internal void RetuneNow() => tunedKind = null; // the kind's or skin's values changed in place: ApplyTuning re-merges on the next tick
             internal string Wearing => skin?.Def.Id ?? "";
             internal bool Building => pending != null;
+            // The worn look whose own colours the colour regions map (null: the donkey's own look, or a skin drawn
+            // in the donkey's palette colours, which take the donkey's map).
+            internal Loaded WornOwnColours => skin != null && skin.Ready && skin.Def.OwnColours ? skin : null;
 
             // "0301_bdy_walk_left_03(Clone)" -> "0301_": the game's skin preset id, the prefix of every donkey frame.
             private string GamePrefix(string spriteName)

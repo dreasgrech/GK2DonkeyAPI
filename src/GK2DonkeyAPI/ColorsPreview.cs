@@ -28,8 +28,22 @@ namespace GK2DonkeyAPI
 
         // How light a region's own art is on average (HSV value, 0..1): a custom colour's own lightness is set against
         // it (MountCompanion), since Colorize keeps each pixel's brightness (Black would stay a mid grey).
-        internal static float ArtLightness(string regionKey)
+        // For a mount region on a skin drawn in its own colours (skinId, loaded and whole), the average of that
+        // look's colours in the region, so a picked colour comes out as light on the worm as on the donkey; the
+        // donkey's otherwise (and for a region the look has no colours in, where nothing maps anyway).
+        internal static float ArtLightness(string regionKey, string skinId = null)
         {
+            Looks.Loaded look = Looks.LoadedOwnColours(skinId);
+            if (look != null && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> cols) && cols.Count > 0)
+            {
+                float s = 0f;
+                foreach (Color32 c in cols)
+                {
+                    Color.RGBToHSV(c, out _, out _, out float v);
+                    s += v;
+                }
+                return s / cols.Count;
+            }
             foreach (RegionDef d in Regions)
             {
                 if (d.Key != regionKey)

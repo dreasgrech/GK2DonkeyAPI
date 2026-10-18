@@ -608,11 +608,14 @@ keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/
 
 What the player rides as a creature type, against a skin, which is how it is drawn ([mounts-design.md](mounts-design.md)).
 A kind (`Mounts.Kinds`, `MountKindDef`) owns the rider's seat for it (values for existing tuning keys: `Tuning` for both
-styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`), a default
+styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`, their size
+against the grown mount in `FoalScale`, 0.2 to 1, 0.6 by default; a running foal is remade when its mount's value
+changes), a default
 effect (`Effect` / `EffectWhen`, shown when an instance's own `Effect` key is `MountEffects.KindId`, "mount"), and its
 **abilities**. A skin names its kind (`MountSkinDef.Mount`, a pack's `mount =`; the donkey by default), so the red and
 the blue dragon are two skins of the dragon kind, and a zebra is a skin of the donkey kind. An instance's kind is its
-skin's (`MountHandle.Kind`): the player picks a skin, the kind follows, and nothing new is saved.
+skin's (`MountHandle.Kind`): the player picks a skin, the kind follows, and nothing new is saved. The kind follows the
+instance's `Skin` key whether or not the instance has a view (asleep far from the keeper, it is still that mount).
 
 ```csharp
 foreach (MountKindInfo k in Mounts.Kinds.Kinds) Log(k.Name + ": " + string.Join(", ", k.Skins));
@@ -631,7 +634,7 @@ for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged se
 system and is re-applied only when the skin, the kind or the style changes.
 
 A **pack declares a kind without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `cart`, `foals`,
-`effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its values); the first
+`foal_scale`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its values); the first
 declaration of an id wins and later skins join it. The built-in creatures declare theirs this way.
 
 An **ability** (`MountAbility`, abstract: override what you need) is code the API calls for every instance of the
@@ -833,7 +836,7 @@ History:
   `MountEffectPlacement`, `IMountEffectSource`, `MountEffectInfo`, `MountEffectWhen`; the instance keys `Effect` and
   `EffectWhen`, `MountCompanion.Effect` / `EffectWhen`, `Mounts.EffectSettings`; Hellfire built in. Mount kinds
   ([above](#mount-kinds-0300)): `Mounts.Kinds` (`Kinds`, `Find`, `Register`, `Unregister`, `KindsChanged`), `MountKindDef`,
-  `MountKindInfo`, `MountAbility`, `MountHandle.Kind`, `MountSkinDef.Mount` (and `Foals` nullable), `MountSkinInfo.Mount`,
+  `MountKindInfo` (with `FoalScale`, the babies' size per mount), `MountAbility`, `MountHandle.Kind`, `MountSkinDef.Mount`, `MountSkinInfo.Mount`,
   `MountEffects.KindId`, `MountSettingsPage.MountRows`; a pack's `[Mount]` section; the built-in creatures as kinds.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.

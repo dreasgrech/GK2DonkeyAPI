@@ -68,7 +68,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private const int SideFileFormat = 2;
+        // The side file's format. Every format a public release wrote must stay readable (docs/compatibility.md): a
+        // bump comes with a reader for the old one, never with "nothing restored". A file of a format this version
+        // doesn't read is set aside (SetAside), never overwritten or deleted by the next save.
+        internal const int SideFileFormat = 2;
 
         // How far from where its cart stood an item may lie to be taken back onto it (the lend drops at the cart).
         private const float ReclaimRadius = 3f;
@@ -344,6 +347,27 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogInfo($"Persistence: {kept.Count} donkey(s)/cart(s) with {items} cargo item(s) kept with {slot.slotName}{dormantNote} ({path}).");
         }
 
+        // A side file of a format this version can't read, moved to "<slot>.gk2donkeyapi.format<N>.dat" next to it, so
+        // the next save (which deletes or replaces the side file) never touches it. A file already there under that
+        // name is replaced: the one set aside now is the newer. The new path, or null when the move failed.
+        internal static string SetAside(string path, string format)
+        {
+            try
+            {
+                var tag = new StringBuilder();
+                foreach (char c in format ?? "") if (char.IsLetterOrDigit(c)) tag.Append(c);
+                string aside = Path.ChangeExtension(path, null) + ".format" + (tag.Length > 0 ? tag.ToString() : "unknown") + ".dat";
+                if (File.Exists(aside)) File.Delete(aside);
+                File.Move(path, aside);
+                return aside;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Persistence: {path} could not be set aside: {e.Message}");
+                return null;
+            }
+        }
+
         internal static void DeleteSideFile(SaveSlotData slot)
         {
             if (slot == null || string.IsNullOrEmpty(slot.slotName))
@@ -494,8 +518,12 @@ namespace GK2DonkeyAPI
             header.TryGetValue("day", out string day);
             if (format != SideFileFormat.ToString(CultureInfo.InvariantCulture))
             {
-                Plugin.Log.LogWarning($"Persistence: {path} has format {format}, this version reads {SideFileFormat}; nothing restored.");
-                PersistenceNote = $"Loaded {slot.slotName}: side file of another format, ignored.";
+                // Not ours to read, and not ours to lose: the next save would delete or overwrite it (WriteSideFile),
+                // and with it every parked cart's load. Set aside under its format's name instead.
+                string aside = SetAside(path, format);
+                Plugin.Log.LogWarning($"Persistence: {path} has format {format ?? "(none)"}, this version reads {SideFileFormat}; nothing restored. " +
+                    (aside != null ? $"The file is kept as {Path.GetFileName(aside)}: a version that reads that format brings the donkeys and their load back." : "The file could not be set aside; the next save overwrites it."));
+                PersistenceNote = $"Loaded {slot.slotName}: side file of another format, ignored" + (aside != null ? " and kept aside." : ".");
                 return restored;
             }
             if (saved != (slot.saveDateTime ?? "") || day != slot.day.ToString(CultureInfo.InvariantCulture))

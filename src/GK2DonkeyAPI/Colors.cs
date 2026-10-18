@@ -119,6 +119,28 @@ namespace GK2DonkeyAPI
             R("Glass", "Lamp glass", "Lantern", (Group.Lantern, "3d455a 687eae 283042")),
         };
 
+        // The mount's regions, one vocabulary for every mount (docs/mount-colours.md): the donkey's own look maps its
+        // atlas colours into them (Regions above); a skin drawn in its own colours maps every colour of its pictures
+        // to Coat unless its [Colors] names it under another one. A skin never adds a region.
+        internal static readonly string[] MountRegionKeys = { "Coat", "Dark", "Muzzle", "Eye", "Harness" };
+
+        // The swap palette's size limit for a look: up to this many colours the exact swap (the keeper's own palette
+        // is 32 wide; the donkey 41, the dragons 21, the rat 17); over it the colour cube, one lookup for any number
+        // (the snail 300, the worm 720: a 720-wide swap is 720 texture samples per pixel).
+        internal const int PaletteMaxColours = 48;
+
+        private static Dictionary<string, RegionDef> regionByKey;
+
+        private static RegionDef RegionOf(string key)
+        {
+            if (regionByKey == null)
+            {
+                regionByKey = new Dictionary<string, RegionDef>(StringComparer.Ordinal);
+                foreach (RegionDef d in Regions) regionByKey[d.Key] = d;
+            }
+            return regionByKey.TryGetValue(key, out RegionDef r) ? r : null;
+        }
+
         // Colours a group's art has that belong to no region (left as they are): a magenta marker in the wheel texture.
         private static readonly Dictionary<Group, string[]> Unassigned = new Dictionary<Group, string[]>
         {
@@ -508,6 +530,13 @@ namespace GK2DonkeyAPI
         // One per instance (Mount.Instance.Colors).
         internal sealed partial class Rig
         {
+            private readonly Mount.Instance owner; // whose look's colours the mount regions map (null: the donkey's)
+
+            internal Rig(Mount.Instance owner = null)
+            {
+                this.owner = owner;
+            }
+
             private readonly List<SpriteTarget> sprites = new List<SpriteTarget>();
             private readonly List<MeshTarget> meshes = new List<MeshTarget>();
             private readonly Texture2D[] palettes = new Texture2D[GroupCount];
@@ -527,7 +556,11 @@ namespace GK2DonkeyAPI
                 nextSpriteCheck = 0f;
                 nextVerify = 0f;
             }
-            private SpriteColorMethod appliedMethod;
+            // The shader path per sprite group: the player's SpriteMethod, except the mount's sprites when the worn
+            // look has more colours than the swap palette should hold (PaletteMaxColours): the cube then. Per group,
+            // so the cart's wheel sprites draw the same whatever mount pulls the cart.
+            private readonly SpriteColorMethod[] groupMethod = new SpriteColorMethod[GroupCount];
+            private int lookColourCount; // the worn look's colours in the mount's sprite group (0: the donkey's own lists)
             public string Note { get; private set; } = "not attached";
 
             private static readonly int IdPalette = Shader.PropertyToID("_Palette");
@@ -683,7 +716,7 @@ namespace GK2DonkeyAPI
                     foreach (SpriteTarget t in sprites)
                     {
                         if (t.Mine == null || t.R == null || !t.R) continue;
-                        string kw = appliedMethod == SpriteColorMethod.Palette ? KwPalette : KwLut;
+                        string kw = groupMethod[(int)t.G] == SpriteColorMethod.Palette ? KwPalette : KwLut;
                         if (t.R.sharedMaterial != t.Mine || !t.Mine.IsKeywordEnabled(kw))
                         {
                             if (!t.Warned)
@@ -770,6 +803,22 @@ namespace GK2DonkeyAPI
             }
 
             private float nextSlowLog;
+            private List<(Color32 Src, Color32 Dst)> mountPairs; // the mount sprite group's last mapping (the self-tests)
+
+            // The self-tests' view of the mount's sprite group: the worn look's colour count (0: the donkey's own
+            // lists), the shader path, the pairs built, how many of them change a colour, and those sources.
+            internal (int Colours, SpriteColorMethod Method, int Pairs, int Changed, List<Color32> ChangedSources) TestMountGroup()
+            {
+                var changed = new List<Color32>();
+                int pairs = 0;
+                if (mountPairs != null)
+                {
+                    pairs = mountPairs.Count;
+                    foreach (var p in mountPairs) if (!Same(p.Src, p.Dst)) changed.Add(p.Src);
+                }
+                return (lookColourCount, groupMethod[(int)Group.DonkeySprites], pairs, changed.Count, changed);
+            }
+
             private readonly Color32[][] lastDst = new Color32[GroupCount][];
             private readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
 
@@ -786,21 +835,43 @@ namespace GK2DonkeyAPI
                 for (int gi = 0; gi < GroupCount; gi++)
                 {
                     Group g = (Group)gi;
-                    // source colour -> mapped, for every colour the group's art has
+                    // source colour -> mapped, for every colour the group's art has: the mount's sprites take the
+                    // worn look's own colours by region when it has them (a skin in its own colours), else the
+                    // donkey's lists (its own look, a skin in the donkey's palette colours)
                     var pairs = new List<(Color32 Src, Color32 Dst)>();
                     bool any = false;
-                    foreach (RegionDef d in Regions)
+                    Looks.Loaded look = g == Group.DonkeySprites ? owner?.LooksRig?.WornOwnColours : null;
+                    if (g == Group.DonkeySprites) lookColourCount = look?.Colours.Count ?? 0;
+                    if (look != null)
                     {
-                        RegionMap map = maps[d];
-                        foreach (var part in d.Parts)
+                        foreach (string region in MountRegionKeys)
                         {
-                            if (part.G != g) continue;
-                            foreach (string hex in part.Colors)
+                            RegionDef d = RegionOf(region);
+                            if (d == null || !look.ColoursByRegion.TryGetValue(region, out List<Color32> cols)) continue;
+                            RegionMap map = maps[d];
+                            foreach (Color32 src in cols)
                             {
-                                TryHex(hex, out Color32 src);
                                 Color32 dst = on ? map.Apply(src) : src;
                                 pairs.Add((src, dst));
                                 any |= !Same(src, dst);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        foreach (RegionDef d in Regions)
+                        {
+                            RegionMap map = maps[d];
+                            foreach (var part in d.Parts)
+                            {
+                                if (part.G != g) continue;
+                                foreach (string hex in part.Colors)
+                                {
+                                    TryHex(hex, out Color32 src);
+                                    Color32 dst = on ? map.Apply(src) : src;
+                                    pairs.Add((src, dst));
+                                    any |= !Same(src, dst);
+                                }
                             }
                         }
                     }
@@ -812,6 +883,7 @@ namespace GK2DonkeyAPI
                             pairs.Add((src, src));
                         }
                     }
+                    if (g == Group.DonkeySprites) mountPairs = pairs;
                     groupActive[gi] = on && any;
                     if (!groupActive[gi])
                     {
@@ -952,7 +1024,10 @@ namespace GK2DonkeyAPI
 
             private void ApplyAll()
             {
-                appliedMethod = SpriteMethod.Value;
+                for (int gi = 0; gi < GroupCount; gi++)
+                {
+                    groupMethod[gi] = (Group)gi == Group.DonkeySprites && lookColourCount > PaletteMaxColours ? SpriteColorMethod.Lut : SpriteMethod.Value;
+                }
                 foreach (SpriteTarget t in sprites)
                 {
                     if (t.R == null || !t.R) continue;
@@ -1048,7 +1123,7 @@ namespace GK2DonkeyAPI
             {
                 Material m = t.Mine;
                 int gi = (int)t.G;
-                return appliedMethod == SpriteColorMethod.Palette
+                return groupMethod[gi] == SpriteColorMethod.Palette
                     ? m.IsKeywordEnabled(KwPalette) && !m.IsKeywordEnabled(KwLut) && m.GetTexture(IdPalette) == palettes[gi]
                     : m.IsKeywordEnabled(KwLut) && !m.IsKeywordEnabled(KwPalette) && m.GetTexture(IdLut) == luts[gi];
             }
@@ -1057,7 +1132,7 @@ namespace GK2DonkeyAPI
             {
                 Material m = t.Mine;
                 int gi = (int)t.G;
-                if (appliedMethod == SpriteColorMethod.Palette)
+                if (groupMethod[gi] == SpriteColorMethod.Palette)
                 {
                     m.DisableKeyword(KwLut);
                     m.EnableKeyword(KwPalette);

@@ -19,6 +19,11 @@ code, then rebuild (the build embeds the manifest), run the scans below and upda
 | `DefaultsScan` | GK2 Donkey API | The shipped mod defaults (`src/GK2DonkeyAPI/defaults.cfg`) hold no colours, so every player starts with the game's own art. Fails on any `[Colors*]` value or a lamp light other than the game's `FF9600`. | `dotnet run -c Release` |
 | `SkinsScan` | GK2 Donkey API | The built-in skins (`src/GK2DonkeyAPI/assets/skins/<id>/`): every `skin.cfg` parses as the loader reads it (format, id = folder, name, mount, known keys only, no skin `foals` flag), every one of the donkey base's 44 frame keys has a PNG at the canvas size (front-layer PNGs too), a skin's `[Tuning]` holds only the picture keys (`Looks.SkinTuningKeys`), a mount's `[Mount.Tuning*]` keys exist in `StyleSettings`, and a mount declared by several skins is declared the same way in each. The key lists are read from `Looks.cs` and `Plugin.cs`. | `dotnet run -c Release` |
 
+`fixtures/released/<version>/` holds the player-owned files as each public release wrote them (`dreas.gk2.saddleup.cfg`,
+`dreas.gk2.donkeyapi.cfg`, a `*.gk2donkeyapi.dat` side file, that release's `defaults.cfg`); the in-game self-test
+"upgrade: a released version's player files are all read" runs over every folder (`docs/compatibility.md`). 0.9.1 is
+reconstructed from the sources at commit 7ac9a6c; later folders are captured at release (`docs/release-checklist.md`, 5).
+
 The tests of the four small mods (Global Storage, Built Count, Move Building, Owned Count) are in the GK2QOLMods
 repo, where those mods live.
 

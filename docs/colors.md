@@ -119,8 +119,9 @@ holds two shaft colours of the same region. The donkey through the cube would bl
   - `Overlay` with `OverlayAmount`;
   - `Swaps` (`SRC=DST;...`, exact replacements that win over everything else).
 
-**Colour maps.** A region's settings are a function of the colour. For every colour of the art (the lists are
-embedded in `Colors.cs`), the mod computes what it becomes, then builds per group:
+**Colour maps.** A region's settings are a function of the colour. For every colour of the art (the donkey's and
+the cart's lists are embedded in `Colors.cs`; a skin's colours are collected from its pictures and sorted by its
+`[Colors]` section, docs/mount-colours.md), the mod computes what it becomes, then builds per group:
 - **Sprites:** an N×2 palette (point filter, clamp, RGBA32). With `SpriteMethod = Lut`, a LUT instead.
 - **Meshes:** a 1024×32 LUT. It's identity everywhere, point-sampled, and every known colour's own cell holds its
   exact mapped value.

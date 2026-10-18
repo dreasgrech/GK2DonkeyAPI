@@ -40,8 +40,8 @@ id = my-rat         # the same as the folder name
 name = My Rat       # what the settings show
 author = me
 version = 1.0
-kind = own          # own: your colours as drawn. palette: drawn in the donkey's exact colours, so the player's
-                    #      coat and harness colours recolour it
+kind = own          # own: your colours as drawn; the player's coat and harness colours recolour them by region
+                    #      ([Colors] below). palette: drawn in the donkey's exact colours, which take the donkey's regions
 layer = replace     # replace: instead of the donkey. over: on top of the donkey (a saddle, a hat)
 canvas = 96 96      # every picture is this size (see below)
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
@@ -68,6 +68,7 @@ id = dragon
 name = Dragon
 cart = true           # may it pull the cart
 foals = true          # may the baby donkeys be it
+foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33); it lives on the mount, not the skin
 effect = none         # an effect it comes with (hellfire, or one a mod added); players pick "As the mount" to see it
 effect_when = Always  # Never, Night or Always
 
@@ -97,6 +98,23 @@ RiderOffsetPx = -2    # and two towards the rear
 
 They apply to the donkey wearing the skin only, both riding and with the cart, and come off with the skin; a value
 another mod has set on that donkey wins, and the log says so. Nothing of it is saved.
+
+**Colours.** The player's colour settings mean the same on every mount (docs/mount-colours.md): Coat is the body,
+Harness the tack, and Dark, Muzzle and Eye the outlines, a second body tone and the eye. A skin drawn in its own
+colours is all Coat until its `[Colors]` section says which of its colours are something else, by hex (the
+colours themselves are read from the pictures; the section only sorts them):
+
+```
+[Colors]
+Dark = 1C060C 2E0C14 280810   # outlines, horns, spikes
+Muzzle = A86A28 703E1A DAA042 # the belly
+Eye = FAD640 F4CE76
+```
+
+Coat is never listed (it is everything not named), a colour goes under one region only, and a colour no picture
+has is said once in the log and maps nothing. A skin with up to 48 colours is recoloured by the game's exact
+colour swap; one with more (shaded art) goes through the game's colour cube, which takes any number. A skin with
+`kind = palette` keeps the donkey's regions, since it is drawn in the donkey's colours.
 
 ## A skin out of the game's own characters (`source = game`)
 

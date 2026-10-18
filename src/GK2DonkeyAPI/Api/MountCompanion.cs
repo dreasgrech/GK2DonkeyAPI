@@ -136,6 +136,11 @@ namespace GK2DonkeyAPI.Api
             OwnerId = ownerId;
             Mounts.GameReady += OnGameReady;
             Mounts.InstanceRemoved += OnRemoved;
+            Looks.LoadedReady += id =>
+            {
+                // the skin's own colours are known now: the custom colours' lightness anchors to them
+                if (!string.IsNullOrEmpty(skin) && string.Equals(id, skin.Trim(), StringComparison.OrdinalIgnoreCase)) ApplyLook();
+            };
             Mounts.Hitched += OnHitched;
             Mounts.Unhitched += OnUnhitched;
             if (Mounts.IsGameReady)
@@ -671,8 +676,8 @@ namespace GK2DonkeyAPI.Api
             {
                 return;
             }
-            var coatKeys = Look(CoatPreset(coat, customCoat, "coat"));
-            var harnessKeys = Look(HarnessPreset(harness, customHarness, "harness"));
+            var coatKeys = Look(CoatPreset(coat, customCoat, "coat", skin));
+            var harnessKeys = Look(HarnessPreset(harness, customHarness, "harness", skin));
             var skinKeys = new Dictionary<string, object>();
             if (!string.IsNullOrWhiteSpace(skin) && !skin.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) skinKeys["Skin"] = skin.Trim();
             var noSkin = new Dictionary<string, object>();
@@ -800,7 +805,7 @@ namespace GK2DonkeyAPI.Api
 
         // ------------------------------------------------------------------ the presets (the API's, so every player mod looks the same)
 
-        private static Dictionary<string, object> CoatPreset(CoatColor c, string custom, string what)
+        private static Dictionary<string, object> CoatPreset(CoatColor c, string custom, string what, string skinId)
         {
             switch (c)
             {
@@ -810,12 +815,12 @@ namespace GK2DonkeyAPI.Api
                 case CoatColor.Black: return new Dictionary<string, object> { ["CoatBrightness"] = 0.35f, ["CoatSaturation"] = 0.2f };
                 case CoatColor.Custom:
                     string hex = Hex(custom, what);
-                    return hex == null ? null : new Dictionary<string, object> { ["CoatColorize"] = hex, ["CoatBrightness"] = Lightness(hex, "Coat") };
+                    return hex == null ? null : new Dictionary<string, object> { ["CoatColorize"] = hex, ["CoatBrightness"] = Lightness(hex, "Coat", skinId) };
                 default: return null;
             }
         }
 
-        private static Dictionary<string, object> HarnessPreset(HarnessColor c, string custom, string what)
+        private static Dictionary<string, object> HarnessPreset(HarnessColor c, string custom, string what, string skinId)
         {
             switch (c)
             {
@@ -825,7 +830,7 @@ namespace GK2DonkeyAPI.Api
                 case HarnessColor.Green: return new Dictionary<string, object> { ["HarnessColorize"] = "3F6E3A" };
                 case HarnessColor.Custom:
                     string hex = Hex(custom, what);
-                    return hex == null ? null : new Dictionary<string, object> { ["HarnessColorize"] = hex, ["HarnessBrightness"] = Lightness(hex, "Harness") };
+                    return hex == null ? null : new Dictionary<string, object> { ["HarnessColorize"] = hex, ["HarnessBrightness"] = Lightness(hex, "Harness", skinId) };
                 default: return null;
             }
         }
@@ -917,11 +922,14 @@ namespace GK2DonkeyAPI.Api
 
         // Colorize keeps each pixel's own brightness, so a custom colour also sets the brightness: how light the colour
         // is against how light the region's art is (Black comes out dark, Snow light).
-        private static float Lightness(string hex, string region)
+        // For a mount region the anchor is the worn look's own art when that skin is loaded (docs/mount-colours.md
+        // 2.4); a skin still building anchors to the donkey's, and ApplyLook runs again when its sheet is whole
+        // (Looks.LoadedReady, subscribed in the constructor).
+        private static float Lightness(string hex, string region, string skinId = null)
         {
             ColorUtility.TryParseHtmlString("#" + hex, out Color c);
             Color.RGBToHSV(c, out _, out _, out float v);
-            float art = Mathf.Max(0.05f, Colors.ArtLightness(region));
+            float art = Mathf.Max(0.05f, Colors.ArtLightness(region, skinId));
             return Mathf.Clamp(v / art, 0.15f, 3f);
         }
 
