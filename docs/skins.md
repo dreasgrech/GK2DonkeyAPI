@@ -1,6 +1,6 @@
 # Making a skin pack for GK2 Donkey API
 
-A skin draws the donkey as something else: a giant rat, a snail, a zebra-striped donkey. Anyone can make one: a
+A skin draws the donkey as something else: a giant rat, a snail, a hellfire donkey with horns and a devil's tail. Anyone can make one: a
 folder of pictures and one small text file, no code. This page says how. (How the system works inside the mod:
 [skins-design.md](skins-design.md).)
 

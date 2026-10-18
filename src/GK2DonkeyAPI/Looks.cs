@@ -907,15 +907,34 @@ namespace GK2DonkeyAPI
             return list;
         }
 
-        // For a mount's Skin dropdown: its skins by name (the donkey's own art first for the donkey).
+        // The skin a mount comes as, shown as "Default" in its Skin row (the user, 2026-10-18: every mount's default
+        // skin is called Default): the donkey's own art for the donkey; for another mount the skin whose id is the
+        // mount's (dragon, rat, snail, worm, gerry), else the first that declares the mount, else its first by name.
+        internal static string DefaultSkinOf(Kinds.KindDef k)
+        {
+            if (k == Kinds.Donkey) return MountLooks.DonkeyId;
+            List<SkinDef> skins = Kinds.SkinsOf(k);
+            foreach (SkinDef s in skins) if (s.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
+            foreach (SkinDef s in skins) if (s.DeclaredKind != null && s.DeclaredKind.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
+            skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
+            return skins.Count > 0 ? skins[0].Id : MountLooks.DonkeyId;
+        }
+
+        internal const string DefaultLabel = "Default";
+
+        // For a mount's Skin dropdown: "Default" first (DefaultSkinOf), then its other skins by name.
         internal static IReadOnlyList<(string Id, string Label)> SkinChoicesOf(string kindId)
         {
             Kinds.KindDef k = Kinds.Find(kindId) ?? Kinds.Donkey;
             var list = new List<(string Id, string Label)>();
-            if (k == Kinds.Donkey) list.Add((MountLooks.DonkeyId, "The game's own"));
+            string def = DefaultSkinOf(k);
+            list.Add((def, DefaultLabel));
             var skins = Kinds.SkinsOf(k);
             skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
-            foreach (SkinDef s in skins) list.Add((s.Id, string.IsNullOrEmpty(s.Name) ? s.Id : s.Name));
+            foreach (SkinDef s in skins)
+            {
+                if (!s.Id.Equals(def, StringComparison.OrdinalIgnoreCase)) list.Add((s.Id, string.IsNullOrEmpty(s.Name) ? s.Id : s.Name));
+            }
             return list;
         }
 
@@ -932,8 +951,12 @@ namespace GK2DonkeyAPI
             SkinDef d = string.IsNullOrEmpty(skinId) || skinId.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(skinId);
             Kinds.KindDef k = KindOf(d);
             var names = new List<string>();
-            if (k == Kinds.Donkey) names.Add("the game's own");
-            foreach (SkinDef s in Kinds.SkinsOf(k)) names.Add(string.IsNullOrEmpty(s.Name) ? s.Id : s.Name);
+            string def = DefaultSkinOf(k);
+            names.Add(DefaultLabel);
+            foreach (SkinDef s in Kinds.SkinsOf(k))
+            {
+                if (!s.Id.Equals(def, StringComparison.OrdinalIgnoreCase)) names.Add(string.IsNullOrEmpty(s.Name) ? s.Id : s.Name);
+            }
             string note = d == null && !string.IsNullOrEmpty(skinId) && !skinId.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? " (the skin '" + skinId + "' isn't installed: drawn as the donkey)" : "";
             return k.Label + (names.Count > 0 ? " - skins: " + string.Join(", ", names) : "") + note;
         }

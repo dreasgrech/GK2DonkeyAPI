@@ -19,11 +19,11 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
   channel). The cart's meshes always use the cube.
 - **The donkey's five regions are the donkey's atlas colours.** A skin drawn in its own colours (every built-in
   creature, every pack with `kind = own`) has none of those colours in its pictures, so nothing matches and nothing
-  changes. The recipe skins (zebra, ghost, ember, golden, shadow) are drawn from the donkey's frames but registered
-  as own-colour looks (`LooksRecipes.cs`, `OwnColours = true`), so the coat rows did nothing on them either; under
-  the scheme below their collected colours are all Coat, and a custom coat recolours a zebra's stripes and
-  overrides Ember's own tint, which is the rule applied: the player's colour wins on every look. The cart's regions
-  work for every mount because the cart is the same cart.
+  changes. The recipe skins of 2026-10-17 (zebra, ghost, ember, golden, shadow) were recolours and patterns: the
+  colour settings do that now, so they are gone (2026-10-18), as is Blue Dragon. The one recipe left, Hellfire
+  (`LooksHellfire.cs`), changes the drawing (horns, a devil's tail, glowing eyes, lava cracks) and declares its own
+  colours by region in code (the lava as Muzzle, the bone and outline as Dark, the glow as Eye; the ash coat is
+  Coat). The cart's regions work for every mount because the cart is the same cart.
 - **A skin's pictures share one material path with the donkey's.** The overlay copies the body part's
   `sharedMaterial` (Colors' per-instance copy, with the palette or cube and the keyword), so whatever pairs the
   engine builds reach the skin's sprites already. The sheet texture is shared by every wearer; the material is per
@@ -37,7 +37,7 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
   | Look | Distinct opaque colours | Kind of art |
   |---|---|---|
   | Donkey (the game's atlas) | 41 in five regions | palette art |
-  | Dragon, Blue Dragon | 21, 20 | palette art (our tool quantised them) |
+  | Dragon | 21 | palette art (our tool quantised it) |
   | Giant Rat | 17 | palette art |
   | Gerry (the game's skull frames) | a few dozen | palette art |
   | Giant Snail | 300 | shaded art |
@@ -84,7 +84,7 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   since it is drawn in the donkey's colours.
 - **The game-source skin (Gerry):** the same as any skin; its colours are the game's skull colours, collected from
   the frames at build.
-- **The recipe skins** (zebra, ghost, ember, golden, shadow) are own-colour looks too: all Coat. A pack with
+- **A recipe skin** (Hellfire) is an own-colour look too: all Coat but the regions it declares in code. A pack with
   `kind = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
 
 ### 2.3 Which shader path
@@ -108,7 +108,24 @@ empty region maps nothing; the row's description says so ("on the mounts whose l
 it"). A "(none on this mount)" note after the value is a later step: a `Choice` row has no dynamic suffix, and in
 the Mods menu the framework draws the row, so it would go through `MenuLabels`.
 
-### 2.6 What the built-in creatures declare
+### 2.6 The look is kept per mount
+
+What the colour rows set belongs to the mount they were set on (the user, 2026-10-18: "we're not saving these
+values per skin/per mount"). Per mount, not per skin: the dragon is green whichever of its skins is worn, which is
+the definition (the skin is the drawing, the mount the creature), and it keeps one set per mount rather than per
+skin. The cart's colours go with the mount too, since they are set in the same window for that mount.
+
+- `MountSettingsPage.PerMount(rows)` builds a mod's look rows once per registered mount: the donkey's rows keep
+  their keys (`Coat`, `CustomCoat`...: a cfg from 0.9.1 keeps its values untouched), the others get the mount's id
+  (`Coat_dragon`, `CustomCoatLightness_dragon`). The chosen mount's set shows (`Row.Shown`); a row's own condition
+  (the custom colour with its preset) is kept apart as `Row.Enabled`, which the look bar greys rather than hides.
+- `MountCompanion.LookOf(mountId)` is one mount's `MountLook`; `Coat`, `Harness`, `Paint`... on the companion are
+  the current mount's (`MountId`, the mount of its skin). A value set on another mount's look waits until that
+  mount is chosen.
+- A mount registered after the page was built has no rows (the same limit as the Skin rows); its look stays the
+  game's colours.
+
+### 2.7 What the built-in creatures declare
 
 Generated once by `tools/creature_sprites.py` (it quantised the art and knows the palette) and kept in each
 `skin.cfg`, then tuned by eye:

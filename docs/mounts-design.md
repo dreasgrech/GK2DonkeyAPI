@@ -19,8 +19,8 @@ since a mount can have several skins; think about performance.*
 | **Mount kind** (`MountKindDef`, `Mounts.Kinds`) | *What the player rides*: a creature type. | Identity; the rider's seat and legs for it (values for existing tuning keys, per style); where its cart sits (`HitchGapPx`, cart style); rules (may it pull the cart, may it have foals); defaults (an effect); **abilities** (code hooks); later its sounds. | donkey, giant rat, giant snail, giant worm, dragon |
 | **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a complete set of pictures for one kind's frame keys, made any way (a recolour recipe, a folder of PNGs, a sheet, own art, code sprites). | The pictures (behind and in front of the rider), the canvas, where the pictures sit (`offset`, `offset_cart`); and only when its drawing differs from the mount's other skins, the picture-dependent keys of the mount's tuning (its own `[Tuning]`: seat, torso, legs, hitch gap). | the red dragon, the blue dragon (kind dragon); zebra, ghost, ember, golden, shadow (kind donkey); rat; snail; worm |
 
-**In one sentence: a mount has skins.** The Donkey is a mount; the game's own donkey, Zebra, Ghost, Ember, Golden
-and Shadow are its skins. The Dragon is a mount; Red Dragon and Blue Dragon are its skins. The Giant Rat, Giant Snail
+**In one sentence: a mount has skins.** The Donkey is a mount; the game's own donkey (Default) and Hellfire are its
+skins. The Dragon is a mount with one skin today (Default); a second would be another drawing of it. The Giant Rat, Giant Snail
 and Giant Worm are mounts with one skin each. **The mount is the creature, the skin is the drawing**: a mount's values
 (seat, hitch gap, cart, foals, effect, abilities, speed) are shared by all its skins; a skin's values (pictures,
 offsets) are that look's only, and a value lives on the mount unless it exists only because of this skin's picture.
@@ -34,10 +34,10 @@ any skin would be invisible, so a kind is only offered to players through its sk
 
 **The player picks a skin; the mount follows.** The instance's kind is derived from its skin, so nothing new is
 saved (the `Skin` key already is). The settings page shows the relationship as two dropdowns: **Mount**
-(Donkey, Dragon, Giant Rat, ...) and, under it, **Skin** with that mount's skins only (Donkey: The game's own, Ember,
-Ghost, ...; Dragon: Blue Dragon, Red Dragon). A dropdown's choices are fixed once built, so there is one Skin row per
+(Donkey, Dragon, Giant Rat, ...) and, under it, **Skin** with that mount's skins only (Donkey: Default, Hellfire;
+every mount's default skin is listed as "Default" first). A dropdown's choices are fixed once built, so there is one Skin row per
 mount, shown for the chosen mount (cfg `Mount`, `Skin_<id>`); what is saved on the donkey is still the one skin id; the panel's Mounts tab says "Tuning: Dragon (skin: Red
-Dragon)" with *The mount: Dragon (shared by Red Dragon, Blue Dragon)* and *This skin: Red Dragon* as its two groups. `MountHandle.Kind` and `MountSkinInfo.Mount` say which kind that is. A skin that names a
+Dragon)" with *The mount: Dragon (shared by its skins)* and *This skin: Red Dragon* as its two groups. `MountHandle.Kind` and `MountSkinInfo.Mount` say which kind that is. A skin that names a
 kind nobody registered falls back to the donkey kind, said once in the log (the pictures still show).
 
 ## 2. Where a value comes from (per instance, per key)
@@ -141,8 +141,8 @@ legs, the idle shuffle, sounds volume), which is most of "mount-specific values"
 ## 6. The menus
 
 **The tuning panel (F11), Mounts tab** (built 22:55): one creature at a time, the one you ride by default (a cycler
-picks any other; "Follow my ride" returns). Two groups, named for what they are: *The mount: Dragon (shared by Red
-Dragon, Blue Dragon)* with cart / foals / the effect it comes with and the rider's seat rows for the current style
+picks any other; "Follow my ride" returns). Two groups, named for what they are: *The mount: Dragon (shared by its
+skins)* with cart / foals / the effect it comes with and the rider's seat rows for the current style
 (the same keys and ranges as the Riding tab, drawn plain with your own value when not set, yellow when set for the
 creature, right-click = not set, a style switch button, copy-to-the-other-style, clear); and *This skin: Red
 Dragon* with the pictures' offsets riding and with the cart, and the foals. A line under the header says whether you

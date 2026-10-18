@@ -76,25 +76,30 @@ namespace SaddleUp
             p.Toggle("Behaviour", "CartStaysParked", me.CartStaysParked, "Calling your mount leaves the cart parked", "Ride key while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you.", v => me.CartStaysParked = v);
             p.Toggle("Behaviour", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets. You carry them to the morgue yourself, or cart them. Off: the game's own delivery.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
 
-            // The mount's colours: the same rows for every mount (docs/mount-colours.md). Coat is the body (the donkey's
+            // The mount's colours: the same rows for every mount (docs/mount-colours.md), kept per mount (PerMount: the
+            // donkey's rows keep their keys, the dragon's are Coat_dragon and so on). Coat is the body (the donkey's
             // coat, a dragon's scales, the worm's skin); Harness its tack, on the mounts whose look has any.
             p.LookButton("Donkey", "Choose colours", "Closes this and opens the colours over the game, so you see your mount and cart change. Done keeps them, Cancel puts them back.");
-            ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat", me.Coat, "Coat colour", "The mount's body: the donkey's coat, a dragon's scales, the worm's skin.", v => me.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
-            p.Color("Donkey", "CustomCoat", "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => me.CustomCoat = v, () => coat.Value == CoatColor.Custom);
-            ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness", me.Harness, "Harness colour", "The mount's tack (the donkey's harness), on the mounts whose look has any; the others ignore it.", v => me.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
-            p.Color("Donkey", "CustomHarness", "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => me.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
-
             p.Preview("Cart", me, "Your cart");
-            ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint", me.Paint, "Paint", "", v => me.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
-            p.Color("Cart", "CustomPaint", "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => me.CustomPaint = v, () => paint.Value == CartPaint.Custom);
-            ConfigEntry<WheelColor> wheels = p.Choice("Cart", "Wheels", me.Wheels, "Wheel colour", "The wood of the wheels.", v => me.Wheels = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Black", "Custom" }, look: true);
-            p.Color("Cart", "CustomWheels", "Custom wheel colour", "Used when the wheel colour is Custom.", PaletteColor.Mustard, v => me.CustomWheels = v, () => wheels.Value == WheelColor.Custom);
-            ConfigEntry<HubColor> hubs = p.Choice("Cart", "Hubs", me.Hubs, "Wheel hub colour", "The iron in the middle of the wheels.", v => me.Hubs = v, new[] { "Game default", "Black", "Brass", "Silver", "Custom" }, look: true);
-            p.Color("Cart", "CustomHubs", "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => me.CustomHubs = v, () => hubs.Value == HubColor.Custom);
+            p.PerMount((mountId, sfx, shown) =>
+            {
+                MountLook look = me.LookOf(mountId);
+                ConfigEntry<CoatColor> coat = p.Choice("Donkey", "Coat" + sfx, look.Coat, "Coat colour", "The mount's body: the donkey's coat, a dragon's scales, the worm's skin. Kept per mount.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+                p.Color("Donkey", "CustomCoat" + sfx, "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coat.Value == CoatColor.Custom);
+                ConfigEntry<HarnessColor> harness = p.Choice("Donkey", "Harness" + sfx, look.Harness, "Harness colour", "The mount's tack (the donkey's harness), on the mounts whose look has any; the others ignore it. Kept per mount.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+                p.Color("Donkey", "CustomHarness" + sfx, "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => look.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
+
+                ConfigEntry<CartPaint> paint = p.Choice("Cart", "Paint" + sfx, look.Paint, "Paint", "The cart's paint with this mount.", v => look.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
+                p.Color("Cart", "CustomPaint" + sfx, "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => look.CustomPaint = v, () => paint.Value == CartPaint.Custom);
+                ConfigEntry<WheelColor> wheels = p.Choice("Cart", "Wheels" + sfx, look.Wheels, "Wheel colour", "The wood of the wheels.", v => look.Wheels = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Black", "Custom" }, look: true);
+                p.Color("Cart", "CustomWheels" + sfx, "Custom wheel colour", "Used when the wheel colour is Custom.", PaletteColor.Mustard, v => look.CustomWheels = v, () => wheels.Value == WheelColor.Custom);
+                ConfigEntry<HubColor> hubs = p.Choice("Cart", "Hubs" + sfx, look.Hubs, "Wheel hub colour", "The iron in the middle of the wheels.", v => look.Hubs = v, new[] { "Game default", "Black", "Brass", "Silver", "Custom" }, look: true);
+                p.Color("Cart", "CustomHubs" + sfx, "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => look.CustomHubs = v, () => hubs.Value == HubColor.Custom);
+                ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor" + sfx, look.LanternLight, "Lantern light", "", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
+                p.Color("Cart", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
+            });
             p.Toggle("Cart", "Lantern", me.Lantern, "Lantern", "The lantern on its pole.", v => me.Lantern = v);
             p.Toggle("Cart", "LanternByDay", me.LanternByDay, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => me.LanternByDay = v);
-            ConfigEntry<LanternColor> light = p.Choice("Cart", "LanternColor", me.LanternLight, "Lantern light", "", v => me.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
-            p.Color("Cart", "CustomLantern", "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => me.CustomLantern = v, () => light.Value == LanternColor.Custom);
 
             p.Toggle("Sound", "Bell", me.BellOnSetOff, "Bell sound when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
             p.Toggle("Sound", "Brays", me.Brays, "Bray sounds", "Now and then, and when you get on.", v => me.Brays = v);

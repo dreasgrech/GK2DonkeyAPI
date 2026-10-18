@@ -35,7 +35,9 @@ namespace GK2DonkeyAPI.Api
             internal int Min, Max, Step;
             internal Func<int, string> Format;
             internal Func<string> InfoValue;
-            internal Func<bool> Visible;
+            internal Func<bool> Visible;     // shown at all (Shown and Enabled together, for the menus)
+            internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
+            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the look bar greys the row when false
             internal bool IsLook;           // shown in the look bar (LookButton)
             internal Action OnClick;         // Kind.Button
             internal bool WithCart;          // Kind.Preview: the donkey with its cart, or alone
@@ -348,7 +350,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
-            // A mount (Donkey, Giant Rat, Dragon) has skins (the game's donkey, Zebra; Red Dragon, Blue Dragon): a Mount
+            // A mount (Donkey, Giant Rat, Dragon) has skins (the donkey: Default, Hellfire): a Mount
             // dropdown, then a Skin dropdown with that mount's skins. A dropdown's choices are fixed once built, so there
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
@@ -374,14 +376,23 @@ namespace GK2DonkeyAPI.Api
             mountE = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
                 "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row.",
                 v => Apply(), look: true);
+            mountRow = mountE;
             foreach (MountKindInfo k in Mounts.Kinds.Kinds)
             {
                 string id = k.Id;
                 string first = Looks.FirstSkinOf(id);
-                ConfigEntry<string> row = List(section, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
-                    $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins.",
-                    v => Apply(), look: true, visible: () => string.Equals(mountE?.Value, id, StringComparison.OrdinalIgnoreCase));
-                skinRows[id] = row;
+                pendingShown = () => string.Equals(mountE?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
+                try
+                {
+                    ConfigEntry<string> row = List(section, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
+                        $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins.",
+                        v => Apply(), look: true);
+                    skinRows[id] = row;
+                }
+                finally
+                {
+                    pendingShown = null;
+                }
             }
             Apply();
         }
@@ -552,7 +563,10 @@ namespace GK2DonkeyAPI.Api
                 }
             }
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
-            lightness = Steps(section, key + "Lightness", 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
+            // the lightness key: "CustomCoatLightness", and with a per-mount suffix "CustomCoatLightness_dragon"
+            int suffix = key.IndexOf('_');
+            string lightnessKey = suffix < 0 ? key + "Lightness" : key.Substring(0, suffix) + "Lightness" + key.Substring(suffix);
+            lightness = Steps(section, lightnessKey, 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
             Combine();
         }
 
@@ -628,7 +642,48 @@ namespace GK2DonkeyAPI.Api
             {
                 throw new InvalidOperationException("Add every row before Publish.");
             }
+            if (pendingShown != null)
+            {
+                Func<bool> shown = pendingShown, own = r.Visible;
+                r.Shown = shown;
+                r.Enabled = own;
+                r.Visible = own == null ? shown : () => shown() && own();
+            }
             Rows.Add(r);
+        }
+
+        private Func<bool> pendingShown; // set while PerMount (or MountRows) builds one mount's rows
+        private ConfigEntry<string> mountRow; // MountRows' Mount row: which mount is chosen
+
+        // Rows kept per mount (the colour rows: a dragon's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
+        // called once per registered mount with the mount's id, the suffix for the cfg keys ("" for the donkey, so a cfg
+        // from before keeps its values under the same keys; "_dragon" for the dragon) and whether that mount is the one
+        // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
+        // on them (a custom colour with its preset) stays its own (Row.Enabled: the look bar greys, never hides).
+        // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
+        public void PerMount(Action<string, string, Func<bool>> rows)
+        {
+            if (rows == null) throw new ArgumentNullException(nameof(rows));
+            if (mountRow == null)
+            {
+                rows(MountKinds.DonkeyId, "", null);
+                return;
+            }
+            foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+            {
+                string id = k.Id;
+                bool donkey = id.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
+                Func<bool> shown = () => string.Equals(mountRow?.Value ?? MountKinds.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
+                pendingShown = shown;
+                try
+                {
+                    rows(id, donkey ? "" : "_" + id, shown);
+                }
+                finally
+                {
+                    pendingShown = null;
+                }
+            }
         }
 
         internal const string KeyHelp = "While setting a key, Backspace clears it and Esc cancels.";

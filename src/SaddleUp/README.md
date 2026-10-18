@@ -42,7 +42,7 @@ All of these apply at once:
 | 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Mount | Donkey | What you ride: the donkey, or another mount (Dragon, Giant Rat, Giant Snail, Giant Worm are built in; skin packs and other mods add more). Its picture is at the top of the section. |
-| | Skin | The game's own | How that mount is drawn, one of its skins: the donkey's Zebra, Ghost, Ember, Golden, Shadow; the dragon's Red Dragon, Blue Dragon; ... Each mount remembers its last skin. |
+| | Skin | The game's own | How that mount is drawn, one of its skins: the donkey's Default and Hellfire; every other mount's Default; ... Each mount remembers its last skin. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |

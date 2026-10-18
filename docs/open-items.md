@@ -5,6 +5,17 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **Hellfire** (built 2026-10-19 00:40): Mount = Donkey, Skin = Hellfire: the first wear builds 44 frames from the
+  donkey's own (the log's "frames found for the recipes" line), then horns where the ears were, the devil's tail
+  swaying with the walk, glowing eyes, lava cracks that stay put on the flank, an ash coat; graze, turn, chew and the
+  ear and lip idles have it too; the head sprite's horns sit on the body's (no double horns while standing); a custom
+  coat tints the ash and leaves the cracks (Muzzle) alone. Tests tab: "recipe: built from the donkey's frames" PASS.
+  Judge: the tail's spade at game size, the horns' size, whether the standing frame's horns and the head sprite's
+  line up.
+- **Colours per mount** (built 2026-10-19 00:10): in the colours window set the donkey's coat to Custom Chestnut,
+  switch Mount to Dragon: the coat rows show the dragon's own (Game default), set Custom Moss; back to Donkey:
+  Chestnut again; the dragon in the world is green, the donkey brown; after a restart both are as left (cfg keys
+  `Coat` and `Coat_dragon`). Skin rows say "Default" first for every mount.
 - **The colours window** (built 2026-10-18 23:15): Esc → Settings → Saddle Up → Choose colours: the picture centred
   in its slot with the lantern on the cart; two columns with the section headings; picking Custom on a preset makes
   the greyed colour and lightness rows live without anything moving; the bar fits under the top of the screen at

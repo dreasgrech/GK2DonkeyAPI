@@ -25,6 +25,10 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
 
 ### 2.1 Saddle Up's cfg (every `MountSettingsPage`)
 
+- **Per-mount rows keep the donkey's keys.** `PerMount` gives the donkey's row set no suffix, so `Coat`, `CustomCoat`,
+  `Paint`... are the 0.9.1 keys with the 0.9.1 values; the other mounts' sets are new keys (`Coat_dragon`). Nothing
+  to carry over.
+
 - **A key's name and type are permanent.** Labels, descriptions and the choice labels shown to the player can change
   freely; the cfg key (`Coat`), its type and an enum's member names (`CoatColor.Custom`) cannot. A renamed enum member
   would make `SetSerializedValue` fail and the page would apply the default: the player's choice gone. The upgrade

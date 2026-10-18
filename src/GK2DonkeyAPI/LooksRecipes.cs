@@ -68,140 +68,19 @@ namespace GK2DonkeyAPI
 
         private static void RegisterRecipes()
         {
-            Recipe("zebra", "Zebra", Zebra);
-            Recipe("ghost", "Ghost", Ghost);
-            Recipe("ember", "Ember", Ember);
-            Recipe("golden", "Golden", Golden);
-            Recipe("shadow", "Shadow", Shadow);
+            // The earlier five (zebra, ghost, ember, golden, shadow) were recolours and patterns, which the colour
+            // settings cover now; gone 2026-10-18. Hellfire (LooksHellfire.cs) changes the drawing itself.
+            Recipe("hellfire", "Hellfire", Hellfire, HellfireRegions());
         }
 
-        private static void Recipe(string id, string name, Func<SkinFrame, Color32[]> pixels)
+        private static void Recipe(string id, string name, Func<SkinFrame, Color32[]> pixels, Dictionary<string, HashSet<string>> colorRegions = null)
         {
             Register(new SkinDef
             {
                 Id = id, Name = name, Author = "dreas", Version = "1.0", Owner = Plugin.Guid, BuiltIn = true, OwnColours = true,
-                Recipe = pixels, Report = "a recipe: drawn from the donkey's own frames when first worn",
+                Recipe = pixels, ColorRegions = colorRegions, Report = "a recipe: drawn from the donkey's own frames when first worn",
             });
         }
-
-        private static Color32 C(int r, int g, int b) => new Color32((byte)r, (byte)g, (byte)b, 255);
-
-        private static Color32[] Zebra(SkinFrame f)
-        {
-            var o = new Color32[f.P.Length];
-            for (int i = 0; i < o.Length; i++)
-            {
-                Color32 c = f.P[i];
-                if (c.a == 0) continue;
-                int x = i % f.W, y = i / f.W;
-                float L = SkinFrame.Lum(c);
-                if (L < 0.17f || f.Rim(x, y))
-                {
-                    o[i] = new Color32(18, 18, 20, c.a);
-                    continue;
-                }
-                int yy = y + f.Bob;
-                bool stripe = (((x + Mathf.FloorToInt(yy / 2f)) / 3) & 1) == 0;
-                Color32 v = stripe ? SkinFrame.Ramp(L * 2.2f, (0f, C(150, 150, 145)), (1f, C(245, 245, 238))) : SkinFrame.Ramp(L * 2f, (0f, C(14, 14, 16)), (1f, C(52, 52, 56)));
-                v.a = c.a;
-                o[i] = v;
-            }
-            return o;
-        }
-
-        private static Color32[] Ghost(SkinFrame f)
-        {
-            var o = new Color32[f.P.Length];
-            for (int i = 0; i < o.Length; i++)
-            {
-                Color32 c = f.P[i];
-                if (c.a == 0) continue;
-                int x = i % f.W, y = i / f.W;
-                if (f.Rim(x, y))
-                {
-                    o[i] = new Color32(190, 245, 255, 235);
-                    continue;
-                }
-                Color32 v = SkinFrame.Ramp(SkinFrame.Lum(c) * 1.8f, (0f, C(40, 90, 120)), (0.5f, C(120, 200, 225)), (1f, C(225, 250, 255)));
-                v.a = (byte)(c.a * 0.62f);
-                o[i] = v;
-            }
-            return o;
-        }
-
-        private static Color32[] Ember(SkinFrame f)
-        {
-            var o = new Color32[f.P.Length];
-            for (int i = 0; i < o.Length; i++)
-            {
-                Color32 c = f.P[i];
-                if (c.a == 0) continue;
-                int x = i % f.W, y = i / f.W;
-                if (f.Rim(x, y))
-                {
-                    o[i] = C(255, 150, 40);
-                    continue;
-                }
-                int yy = y + f.Bob;
-                if (f.Inner(x, y) && SkinFrame.Noise(x, Mathf.FloorToInt(yy / 2f), 1) > 0.45f)
-                {
-                    o[i] = C(210, 60, 15);
-                    continue;
-                }
-                if (SkinFrame.Noise(Mathf.FloorToInt(x / 2f), Mathf.FloorToInt(yy / 3f), 2) > 0.88f)
-                {
-                    o[i] = C(255, 110, 20);
-                    continue;
-                }
-                Color32 v = SkinFrame.Ramp(SkinFrame.Lum(c) * 1.7f, (0f, C(12, 8, 8)), (1f, C(70, 42, 36)));
-                v.a = c.a;
-                o[i] = v;
-            }
-            return o;
-        }
-
-        private static Color32[] Golden(SkinFrame f)
-        {
-            var o = new Color32[f.P.Length];
-            for (int i = 0; i < o.Length; i++)
-            {
-                Color32 c = f.P[i];
-                if (c.a == 0) continue;
-                int x = i % f.W, y = i / f.W;
-                if (f.Rim(x, y))
-                {
-                    o[i] = new Color32(70, 40, 8, c.a);
-                    continue;
-                }
-                Color32 v = SkinFrame.Ramp(SkinFrame.Lum(c) * 2f, (0f, C(90, 52, 10)), (0.35f, C(190, 130, 30)), (0.7f, C(250, 210, 90)), (1f, C(255, 250, 210)));
-                if (SkinFrame.Noise(x, y + f.Bob, 3) > 0.985f) v = C(255, 255, 240);
-                v.a = c.a;
-                o[i] = v;
-            }
-            return o;
-        }
-
-        private static Color32[] Shadow(SkinFrame f)
-        {
-            var o = new Color32[f.P.Length];
-            for (int i = 0; i < o.Length; i++)
-            {
-                Color32 c = f.P[i];
-                if (c.a == 0) continue;
-                int x = i % f.W, y = i / f.W;
-                if (f.Rim(x, y))
-                {
-                    o[i] = C(150, 80, 230);
-                    continue;
-                }
-                Color32 v = SkinFrame.Ramp(SkinFrame.Lum(c) * 1.6f, (0f, C(6, 4, 10)), (1f, C(40, 28, 58)));
-                v.a = c.a;
-                o[i] = v;
-            }
-            return o;
-        }
-
-        // ------------------------------------------------------------------ the donkey's frames
 
         // The base's own sprites by frame key, found once from its atlases (the sprites loaded while any view of it
         // exists), the originals rather than the skin changer's "(Clone)" copies.

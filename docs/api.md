@@ -613,7 +613,7 @@ against the grown mount in `FoalScale`, 0.2 to 1, 0.6 by default; a running foal
 changes), a default
 effect (`Effect` / `EffectWhen`, shown when an instance's own `Effect` key is `MountEffects.KindId`, "mount"), and its
 **abilities**. A skin names its kind (`MountSkinDef.Mount`, a pack's `mount =`; the donkey by default), so the red and
-the blue dragon are two skins of the dragon kind, and a zebra is a skin of the donkey kind. An instance's kind is its
+a hypothetical blue dragon would be two skins of the dragon kind, and Hellfire is a skin of the donkey kind. An instance's kind is its
 skin's (`MountHandle.Kind`): the player picks a skin, the kind follows, and nothing new is saved. The kind follows the
 instance's `Skin` key whether or not the instance has a view (asleep far from the keeper, it is still that mount).
 
@@ -645,6 +645,12 @@ ability that throws is switched off on that instance with one warning. Keys, set
 your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker beast burns while ridden, through the
 instance's `Effect` key).
 
+A mod's **look rows are kept per mount** with `page.PerMount((mountId, suffix, shown) => { ... })`: the body runs
+once per registered mount and builds the rows with the suffix on their cfg keys (`""` for the donkey, `"_dragon"`
+for the dragon) against `companion.LookOf(mountId)` (a `MountLook`: `Coat`, `CustomCoat`, `Harness`, `Paint`,
+`Wheels`, `Hubs`, `LanternLight` and their custom colours); the chosen mount's rows are the ones shown. The
+companion's own `Coat`, `Harness`... read and write the current mount's look (`MountId`).
+
 A settings page gets the rows in three calls: `page.MountRows("Mount", companion)` adds a **Mount** dropdown (every
 mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
 dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>`; `page.FoalRows("Mount",
@@ -667,7 +673,7 @@ recoloured by the colour settings when drawn in the donkey's palette colours.
 foreach (MountSkinInfo s in Mounts.Looks.Skins) Log(s.Id + ": " + s.Name);   // "donkey" first, then the rest
 handle.Tuning.Set(Guid, "Skin", "rat");                                        // this donkey wears the rat
 handle.Tuning.Set(Guid, "Skin", MountLooks.DonkeyId);                          // the game's own look ("" does the same)
-companion.Skin = "zebra"; companion.FoalsWearSkin = false;                     // the player's donkey, foals left plain
+companion.Skin = "hellfire"; companion.FoalsWearSkin = false;                     // the player's donkey, foals left plain
 ```
 
 Where skins come from, in order of how little they need:
@@ -830,7 +836,7 @@ History:
   `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`, kept with the save; "donkey"
   or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`, `FrameKeys`, `MountSkinInfo`, `Register` with
   an `IMountSkinSource` of sprites, `RegisterRecipe`, `RegisterFolder`, `RegisterEmbedded`, `Unregister`, `SkinsChanged`);
-  `MountSettingsPage.List`, and `Toggle` takes `visible`; the built-in skins rat, snail and worm, the recipes zebra,
+  `MountSettingsPage.List`, and `Toggle` takes `visible`; the built-in skins rat, snail and worm, the recipe hellfire (zebra,
   ghost, ember, golden and shadow. Effects ([above](#effects-0300)): `Mounts.Effects` (`Effects`, `Find`, `Register`,
   `Unregister`, `GameParticles`, `EffectsChanged`), `MountEffectDef`, `MountEffectPart`, `MountEffectEmitter`,
   `MountEffectPlacement`, `IMountEffectSource`, `MountEffectInfo`, `MountEffectWhen`; the instance keys `Effect` and
@@ -838,6 +844,7 @@ History:
   ([above](#mount-kinds-0300)): `Mounts.Kinds` (`Kinds`, `Find`, `Register`, `Unregister`, `KindsChanged`), `MountKindDef`,
   `MountKindInfo` (with `FoalScale`, the babies' size per mount), `MountAbility`, `MountHandle.Kind`, `MountSkinDef.Mount`, `MountSkinInfo.Mount`,
   `MountEffects.KindId`, `MountSettingsPage.MountRows`; a pack's `[Mount]` section; the built-in creatures as kinds.
+  Per-mount looks: `MountSettingsPage.PerMount`, `MountCompanion.LookOf`, `MountCompanion.MountId`, `MountLook`.
 - 0.25.0: `Mounts.Unhitch` works on a standing donkey without a view (another scene, asleep); `MountCompanion.Use(Ride)` leaves a parked cart where it is and brings the donkey alone (`MountCompanion.CartStaysParked`, on; off is the old way: both come and the cart is left by the keeper).
 - 0.24.0: the chest in the API: `Mounts.ChestLoaded` / `ChestUnloaded` with a `ChestInfo` (the cart, id, GUID, item count), and `MountHandle.Chest`.
 - 0.21.0: rider motion while walking: the tuning keys `BobScale`, `BobLagFrames`, `HandsSteady`, `HandsSwayPx`, `HeadLagFrames`, `HeadSettle` ([rider-motion.md](rider-motion.md)). With the defaults the rider bobs a little more and a step late, his hands stay steadier and follow the strides, and his head settles after his body; 1 / 0 / 0 / 0 / 0 gives the old rigid rider. Fix: foals cross bridges. Where the navmesh lies under a deck, a step check compared it with the deck beside it as a 0.49 wall; big steps are now judged with both points from one source ([foals.md](foals.md), "The bridge by the house"). Fix: the ridden donkey (Ride style) stands on the walkable surface under its body instead of the keeper's height plus a ground difference, which carried his body's hover over a slope ([slopes.md](slopes.md)).

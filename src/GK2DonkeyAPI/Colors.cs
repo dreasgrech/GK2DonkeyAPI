@@ -129,6 +129,23 @@ namespace GK2DonkeyAPI
         // (the snail 300, the worm 720: a 720-wide swap is 720 texture samples per pixel).
         internal const int PaletteMaxColours = 48;
 
+        // The donkey's own colours of a mount region, packed RGB (for the recipes: the coat to darken, the outline to keep).
+        internal static HashSet<int> RegionSourceColours(string key)
+        {
+            var set = new HashSet<int>();
+            RegionDef d = RegionOf(key);
+            if (d == null) return set;
+            foreach (var part in d.Parts)
+            {
+                if (part.G != Group.DonkeySprites) continue;
+                foreach (string hex in part.Colors)
+                {
+                    if (TryHex(hex, out Color32 c)) set.Add((c.r << 16) | (c.g << 8) | c.b);
+                }
+            }
+            return set;
+        }
+
         private static Dictionary<string, RegionDef> regionByKey;
 
         private static RegionDef RegionOf(string key)

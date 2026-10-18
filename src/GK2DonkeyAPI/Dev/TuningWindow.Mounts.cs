@@ -68,12 +68,12 @@ namespace GK2DonkeyAPI
             {
                 GUILayout.Label($"Note: {editing.Describe()} is being edited on the Instances tab. This tab never changes that one donkey: it changes the mount and skin, and a value that donkey has of its own (magenta there) still wins on it.", small);
             }
-            GUILayout.Label("A mount (Donkey, Giant Rat, Dragon) has skins (the game's donkey, Zebra; Red Dragon, Blue Dragon). The mount's rows are shared by all its skins; the skin's rows are that look's only. They belong to the mount and skin, not to you: every donkey that is them uses these values, in every save and for every player who has the file. Your own settings on the other tabs are untouched; a value set here replaces yours only while a donkey is this mount. Yellow = set here; right-click a row = not set (yours applies).", small);
+            GUILayout.Label("A mount (Donkey, Giant Rat, Dragon) has skins (the donkey: Default, Hellfire). The mount's rows are shared by all its skins; the skin's rows are that look's only. They belong to the mount and skin, not to you: every donkey that is them uses these values, in every save and for every player who has the file. Your own settings on the other tabs are untouched; a value set here replaces yours only while a donkey is this mount. Yellow = set here; right-click a row = not set (yours applies).", small);
 
             if (kind == Kinds.Donkey)
             {
                 Header("The mount: Donkey (the game's own)");
-                GUILayout.Label("The donkey mount has no values of its own: the Riding tab is where it is tuned. Its skins (Zebra, Ghost, ...) can still move their pictures below.", small);
+                GUILayout.Label("The donkey mount has no values of its own: the Riding tab is where it is tuned. Its skins (Hellfire, ...) can still move their pictures below.", small);
             }
             else
             {

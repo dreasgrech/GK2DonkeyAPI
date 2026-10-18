@@ -32,8 +32,6 @@ RULES = {
     # Coat = the red scales and the wing; Muzzle = the golden belly; Dark = outlines, horns and back spikes (bone);
     # Eye = the yellow eye.
     "dragon": lambda hx, n, h, s, v: "Dark" if v < 0.2 or (s < 0.5 and v < 0.9 and 25 <= h <= 45) else "Eye" if h >= 40 and v > 0.9 else "Muzzle" if 20 <= h <= 45 else "Coat",
-    # The blue dragon: Coat = the blue scales and wing; Muzzle = the golden belly; Dark = outlines, horns, spikes; Eye = yellow.
-    "dragon-blue": lambda hx, n, h, s, v: "Dark" if v < 0.2 or (s < 0.5 and v < 0.9 and 25 <= h <= 45) else "Eye" if 35 <= h <= 60 and v > 0.9 else "Muzzle" if 20 <= h <= 45 else "Coat",
     # Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = outlines; Eye = the red eye.
     "rat": lambda hx, n, h, s, v: "Dark" if v < 0.15 else "Eye" if s > 0.6 and h > 340 or h < 15 and s > 0.6 else "Muzzle" if s >= 0.3 and (h >= 330 or h <= 20) else "Coat",
     # Coat = the green body; Muzzle = the brown shell; Dark = the outline.

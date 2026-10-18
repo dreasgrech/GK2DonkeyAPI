@@ -241,7 +241,7 @@ rows set the player's donkey. Full story: [skins-design.md](skins-design.md); pa
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `dragon-blue`, `zebra`; shown as "Mount" in Saddle Up, labelled by the skin's mount kind, docs/mounts-design.md, `ghost`, `ember`, `golden`, `shadow`, any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
+| `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`; shown as "Mount" in Saddle Up, labelled by the skin's mount kind, docs/mounts-design.md, `ghost`, `ember`, `golden`, `shadow`, any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
 ### `[Effects]`: particle effects on the donkey
 

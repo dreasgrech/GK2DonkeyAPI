@@ -16,16 +16,19 @@ For players:
   (our own art). Donkey settings: "Skin", a list to pick from (the donkey, the built-in skins, every pack installed;
   in the Mods menu, the game's Settings window and the colours bar), and "Babies are the same mount and skin". The skin is
   kept with the save. Skins from other mods come later.
-- **Five more built-in skins, made from the donkey's own frames:** Zebra, Ghost, Ember, Golden and Shadow. They are
-  drawn the first time a donkey wears them, a few frames at a time, and the donkey keeps its look until the whole set
-  is ready.
+- **Hellfire, a skin of the donkey that changes the drawing, not the colours:** horns where the ears were, a long
+  devil's tail with a spade where the tail was, eyes that glow, lava cracks across an ash coat. Drawn from the
+  donkey's own frames the first time it is worn, a few frames at a time, so every clip has it and nothing of
+  the game's art ships. The earlier five recolour-and-pattern skins (Zebra, Ghost, Ember, Golden, Shadow)
+  are gone: the colour settings do that now. Blue Dragon is gone the same way: a blue dragon is the red one
+  with a custom coat.
 - **Skin packs.** A skin from anyone, no code needed: a folder `gk2skins\<id>\` with a `skin.cfg` and a PNG per donkey
   frame, dropped into `BepInEx\plugins` (or into any mod's folder there). The log says what it found: pictures that
   match no frame, frames still to draw. A pack that goes missing leaves the donkey as the game draws it, and the choice
   is kept for when it comes back (the list shows it as "not installed"). How to make one: docs/skins.md. A pack can be
   one sheet PNG instead of a file per frame.
 - **Mounts and skins.** A mount (Donkey, Giant Rat, Giant Snail, Giant Worm, Dragon) has skins (the donkey: the game's
-  own, Zebra, Ghost, Ember, Golden, Shadow; the dragon: Red Dragon, Blue Dragon). A "Mount" section of its own right
+  own and Hellfire; the dragon: its own look). A "Mount" section of its own right
   after Keys (its picture, a Mount dropdown, then a Skin dropdown with that mount's skins, the foals toggle) and an
   "Effect" section after it, before Behaviour (cfg keys Mount, Skin_<mount>, FoalsWearSkin, Effect...). Your
   Behaviour, Donkey, Cart and Sound settings stay as they were, though their sections moved down in the cfg (the old
@@ -59,6 +62,10 @@ For players:
   its sparks and a trail of flames that burn out behind it; mods can add other effects), "Effect shown" (never, at
   night, always), and whether it leaves the trail, goes round the cart too, shows in fights and on the baby donkeys.
   Kept with the save. Never indoors. (First build 2026-10-17 19:36: the Effect list had no "None" entry because an empty id can't be a dropdown choice, so a pick never stuck and the cfg stayed empty; the id is `none` now and a cfg holding "" takes the row's default.)
+- **Your colours are kept per mount.** The coat, harness, paint, wheel, hub and lantern-light choices belong to the
+  mount you set them on: a green dragon and a brown donkey, each as you left it, and the cart's paint with each.
+  Switching the mount brings its own colours back. The donkey's values from before are its own unchanged; every
+  other mount starts with the game's colours. Every mount's default skin is listed as "Default".
 - **The colours window stays put.** "Choose colours" now shows the picture in a slot of fixed size, the rows in two
   columns by section (your mount on the left, the cart on the right) with a heading each, and the custom colour and
   lightness rows always in place, greyed until the preset is Custom. Nothing moves when a value changes (before,
@@ -70,8 +77,7 @@ For players:
   Each built-in creature says which of its colours are its outlines, its second tone (the dragon's belly, the
   rat's tail and ears, the snail's shell) and its eye, so those follow the matching settings and the rest is the
   coat. A creature without a harness ignores the harness rows. Before, the colour rows did nothing on any mount
-  but the donkey, nor on the Zebra, Ghost, Ember, Golden and Shadow skins; now a custom coat recolours those too
-  (a zebra's stripes included), so a 0.9.1 player who had a custom coat under Ember sees that coat. (docs/mount-colours.md)
+  but the donkey. (docs/mount-colours.md)
 - **The settings picture changes mount in one step.** Picking another mount or skin re-frames the picture at once,
   on what the new mount draws over two seconds of its walk (a hopping skull included); before, the new mount was
   drawn inside the old one's frame until the once-a-second edge check caught it, then framed on one frame the hop
@@ -149,6 +155,15 @@ Development:
   creature" checks the seat on the skull's own picture and the babies' size per mount (Gerry 0.33, donkey 0.6).
   The eight looks scenarios are in docs/self-tests.md now. docs/gerry-mount.md: Gerry's sprites (73
   frames, 96 canvas, a hopping skull) and three ways to make him a mount.
+- Hellfire is `LooksHellfire.cs` (a recipe over the donkey's frames in top-down canvas coordinates; its pieces placed
+  from the eye, the rump, the ear and the torso's box; prototyped in Python over exported frames first). The five
+  recolour recipes, Blue Dragon and their tests are gone; `Colors.RegionSourceColours` gives a recipe the donkey's
+  coat and outline colours; a code recipe can declare colour regions (`SkinDef.ColorRegions`).
+- `MountSettingsPage.PerMount(rows)`: a row set per registered mount (the donkey's keys plain, the others suffixed
+  `_<mount>`), the chosen mount's shown (`Row.Shown`), a row's own condition apart (`Row.Enabled`: the look bar
+  greys instead of hiding); `MountCompanion.LookOf(mount)`, `MountId` and the `MountLook` type; the companion's
+  `Coat`, `Harness`... are the current mount's. The self-test "settings: the Mount, Skin, babies and effect rows"
+  covers it. `Looks.DefaultSkinOf`: a mount's default skin, labelled "Default".
 - Colours per look (docs/mount-colours.md): a skin's colours are collected as its sheet is built and sorted by
   region from its `[Colors]` section (loader, SkinsScan with a PNG reader of its own); the colour engine maps the
   worn look's colours per sprite group and uses the colour cube over 48 colours; the lightness anchor is per look

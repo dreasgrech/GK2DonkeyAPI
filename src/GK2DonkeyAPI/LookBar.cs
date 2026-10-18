@@ -150,6 +150,9 @@ namespace GK2DonkeyAPI
 
             // The look rows by section, in page order; the sections dealt into two columns, left first, until the left
             // holds at least half the rows (Saddle Up: Mount, Effect and Donkey left, Cart right).
+            // The look rows by section (a section's rows gathered wherever they are in the page: the per-mount sets
+            // interleave the Donkey and Cart sections), the sections in first-use order; total counts one row per
+            // per-mount set, the room they take.
             var sections = new List<(string Name, List<MountSettingsPage.Row> Rows)>();
             int total = 0;
             foreach (MountSettingsPage.Row r in page.Rows)
@@ -162,12 +165,14 @@ namespace GK2DonkeyAPI
                 {
                     before[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 }
-                if (sections.Count == 0 || sections[sections.Count - 1].Name != r.ShownSection)
+                int at = sections.FindIndex(s => s.Name == r.ShownSection);
+                if (at < 0)
                 {
                     sections.Add((r.ShownSection, new List<MountSettingsPage.Row>()));
+                    at = sections.Count - 1;
                 }
-                sections[sections.Count - 1].Rows.Add(r);
-                total++;
+                sections[at].Rows.Add(r);
+                if (r.Shown == null || r.Shown()) total++;
             }
             var columns = new GameObject("GK2DonkeyAPI look bar columns", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
             columns.transform.SetParent(bar.transform, false);
@@ -183,14 +188,16 @@ namespace GK2DonkeyAPI
             for (int s = 0; s < sections.Count; s++)
             {
                 Transform column = right == null || (inLeft < (total + 1) / 2 && s < sections.Count - 1) ? left : right;
-                if (column == left) inLeft += sections[s].Rows.Count;
+                if (column == left) inLeft += sections[s].Rows.FindAll(r => r.Shown == null || r.Shown()).Count;
                 SettingsRows.MakeHeading(templateRow, column, page, sections[s].Name);
                 foreach (MountSettingsPage.Row r in sections[s].Rows)
                 {
                     GameObject go = SettingsRows.MakeRow(templateRow, column, r, page, out Action refresh);
                     go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
-                    // a row shown only with a preset (the custom colour, its lightness): in place always, greyed when not
-                    CanvasGroup group = r.Visible != null ? go.AddComponent<CanvasGroup>() : null;
+                    // a row of a per-mount set is shown or not by Refresh (the chosen mount's: one of the set at a
+                    // time, so the slot keeps its height); a row with a condition of its own (the custom colour with
+                    // its preset) stays in place greyed when it is off
+                    CanvasGroup group = r.Enabled != null || (r.Shown == null && r.Visible != null) ? go.AddComponent<CanvasGroup>() : null;
                     rows.Add((r, go, refresh, group));
                 }
             }
@@ -271,8 +278,13 @@ namespace GK2DonkeyAPI
             }
             foreach (var (row, go, refresh, group) in rows)
             {
-                bool on = row.Visible == null || row.Visible();
                 refresh?.Invoke();
+                if (row.Shown != null)
+                {
+                    go.SetActive(row.Shown()); // one of the per-mount set at a time: the slot keeps its height
+                }
+                Func<bool> enabled = row.Enabled ?? (row.Shown == null ? row.Visible : null);
+                bool on = enabled == null || enabled();
                 if (group != null)
                 {
                     group.alpha = on ? 1f : 0.4f;

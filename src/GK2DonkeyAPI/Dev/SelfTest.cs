@@ -1252,6 +1252,30 @@ namespace GK2DonkeyAPI
                 }
                 ConfigEntry<string> effect = Row<string>("Effect");
                 Check(effect != null && effect.Value == MountEffects.KindId, $"Effect defaults to As the mount (\"{effect?.Value}\")");
+
+                // the look per mount (PerMount, MountLook): a row set per mount, the donkey's keys plain, the others
+                // suffixed; the chosen mount's set is the one shown; a mount's look is kept while another is chosen
+                int sets = 0;
+                page.PerMount((id, sfx, shown) =>
+                {
+                    sets++;
+                    MountLook look = me.LookOf(id);
+                    ConfigEntry<CoatColor> coatRow = page.Choice("Donkey", "Coat" + sfx, look.Coat, "Coat colour", "", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+                    page.Color("Donkey", "CustomCoat" + sfx, "Custom coat colour", "", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coatRow.Value == CoatColor.Custom);
+                });
+                ConfigEntry<CoatColor> coatDonkey = Row<CoatColor>("Coat"), coatDragon = Row<CoatColor>("Coat_dragon");
+                ConfigEntry<int> lightDragon = Row<int>("CustomCoatLightness_dragon");
+                Check(sets == Mounts.Kinds.Kinds.Count && coatDonkey != null && coatDragon != null && lightDragon != null, $"one row set per mount ({sets}): the donkey's keys plain, the dragon's suffixed (CustomCoatLightness_dragon too)");
+                MountSettingsPage.Row rowDragon = page.Rows.Find(r => r.Entry == coatDragon), rowCustomDragon = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "CustomCoat_dragon");
+                Check(rowDragon != null && rowDragon.Shown != null && rowDragon.Enabled == null && rowCustomDragon != null && rowCustomDragon.Shown != null && rowCustomDragon.Enabled != null, "a per-mount row knows which mount shows it; the custom colour row keeps its own condition apart (Enabled)");
+                Check(rowDragon != null && !rowDragon.Shown() && !rowDragon.Visible(), "with the donkey chosen the dragon's Coat row isn't shown");
+                coatDragon.Value = CoatColor.Custom;
+                Check(me.LookOf("dragon").Coat == CoatColor.Custom && me.Coat == CoatColor.Game, $"the dragon's coat set to Custom while the donkey is chosen: kept on the dragon's look, the current (donkey's) coat still {me.Coat}");
+                Check(rowCustomDragon != null && rowCustomDragon.Enabled() && !rowCustomDragon.Visible(), "its custom colour row is enabled by its preset but not shown (the dragon isn't chosen)");
+                mount.Value = "dragon";
+                Check(me.MountId == "dragon" && me.Coat == CoatColor.Custom, $"Mount = dragon: the current look is the dragon's ({me.MountId}: {me.Coat})");
+                Check(rowDragon.Shown() && rowDragon.Visible() && rowCustomDragon.Visible(), "the dragon's rows are the shown ones now");
+                coatDragon.Value = CoatColor.Game;
                 mount.Value = MountKinds.DonkeyId;
             }
             finally
@@ -1728,9 +1752,9 @@ namespace GK2DonkeyAPI
         // there; cleared, they are freed.
         private static IEnumerator SkinRecipe()
         {
-            if (Looks.Find("zebra") == null)
+            if (Looks.Find("hellfire") == null)
             {
-                Warn("no built-in recipe 'zebra': skipped");
+                Warn("no built-in recipe 'hellfire': skipped");
                 yield break;
             }
             Vector3 near = Spot(home, 4f) ?? home;
@@ -1738,13 +1762,20 @@ namespace GK2DonkeyAPI
             int tex0 = Live.Textures;
             MountHandle a = Spawn(near, true);
             yield return Until(() => a != null && a.IsReady, 6f);
-            a?.Tuning.Set(Owner, "Skin", "zebra");
+            a?.Tuning.Set(Owner, "Skin", "hellfire");
             yield return Frames(2);
             bool buildingSeen = a != null && a.I.TestSkinBuilding() && !a.I.TestSkinShowing();
             yield return Until(() => a != null && a.I.TestSkinShowing(), 10f);
-            Check(waited, "the zebra shows once built");
+            Check(waited, "Hellfire shows once built");
             Check(buildingSeen, "while it was being built, the donkey's own look stayed (no half-built skin)");
             Check(Live.Textures == tex0 + 1, $"the 44 frames built from the donkey's own onto one sheet ({tex0} -> {Live.Textures})");
+            // the drawing changed, not just the colours: the lava cracks (Muzzle), the horns and the outline (Dark) and
+            // the eyes' glow (Eye) are in the pictures as the recipe's own colours; the donkey's eye white is gone
+            Looks.Loaded look = a?.I.LooksRig.WornOwnColours;
+            int lava = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m.Count : -1;
+            int glow = look != null && look.ColoursByRegion.TryGetValue("Eye", out List<Color32> e) ? e.Count : -1;
+            bool white = look != null && look.Colours.Exists(c => c.r == 255 && c.g == 255 && c.b == 255);
+            Check(lava >= 3 && glow >= 2 && !white, $"the pictures hold the cracks ({lava} lava colours), the eyes' glow ({glow}) and no eye white: the drawing changed");
             a?.Remove();
             yield return Frames(2);
             Check(Live.Textures == tex0, $"removed: the pictures freed ({tex0} -> {Live.Textures})");

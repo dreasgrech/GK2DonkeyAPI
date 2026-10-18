@@ -117,6 +117,7 @@ class GK2DonkeyAPI.Api.MountCompanion
   property bool Lantern { get; set; }
   property bool LanternByDay { get; set; }
   property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
+  property string MountId { get; }
   property string Name { get; set; }
   property string OwnerId { get; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
@@ -124,6 +125,7 @@ class GK2DonkeyAPI.Api.MountCompanion
   property string Skin { get; set; }
   property float SoundVolume { get; set; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
+  method GK2DonkeyAPI.Api.MountLook LookOf(string mountId)
   method void RingBell()
   method void SendAway()
   method static System.String[] SpeedLabelsFor(GK2DonkeyAPI.Api.MountStyle style)
@@ -265,6 +267,20 @@ class GK2DonkeyAPI.Api.MountKinds
   method GK2DonkeyAPI.Api.MountKindInfo Find(string id)
   method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountKindDef def)
   method bool Unregister(string ownerId, string id)
+class GK2DonkeyAPI.Api.MountLook
+  property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
+  property string CustomCoat { get; set; }
+  property string CustomHarness { get; set; }
+  property string CustomHubs { get; set; }
+  property string CustomLantern { get; set; }
+  property string CustomPaint { get; set; }
+  property string CustomWheels { get; set; }
+  property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
+  property GK2DonkeyAPI.Api.HubColor Hubs { get; set; }
+  property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
+  property string MountId { get; }
+  property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
+  property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
 class GK2DonkeyAPI.Api.MountLooks
   field static const string DonkeyId = donkey
   property System.Collections.Generic.IReadOnlyList<string> FrameKeys { get; }
@@ -357,6 +373,7 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method void LookButton(string section, string label, string description)
   method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void MovedKey(string section, string key, string oldSection, string oldKey = null)
+  method void PerMount(System.Action<string, string, System.Func<bool>> rows)
   method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your mount, bool cart = True)
   method void Publish()
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)

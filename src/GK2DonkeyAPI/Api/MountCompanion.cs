@@ -15,6 +15,42 @@ namespace GK2DonkeyAPI.Api
     public enum WheelColor { Game, DarkWood, Red, Green, Blue, Black, Custom }
     public enum HubColor { Game, Black, Brass, Silver, Custom }
 
+    // The look of one mount, as the colour rows set it (MountCompanion.LookOf; docs/mount-colours.md 2.7): the mount's
+    // coat and harness, and the cart's paint, wheels, hubs and lantern light as they are with that mount. Setting a
+    // value applies it at once when this is the current mount's look; otherwise it waits for the mount to be chosen.
+    public sealed class MountLook
+    {
+        private readonly MountCompanion owner;
+        public string MountId { get; }
+
+        internal MountLook(MountCompanion owner, string mountId)
+        {
+            this.owner = owner;
+            MountId = mountId;
+        }
+
+        private CoatColor coat;
+        private HarnessColor harness;
+        private CartPaint paint;
+        private LanternColor lanternColor;
+        private string customCoat, customHarness, customPaint, customLantern, customWheels, customHubs;
+        private WheelColor wheels;
+        private HubColor hubs;
+
+        public CoatColor Coat { get => coat; set { coat = value; owner.LookChanged(this); } }
+        public HarnessColor Harness { get => harness; set { harness = value; owner.LookChanged(this); } }
+        public CartPaint Paint { get => paint; set { paint = value; owner.LookChanged(this); } }
+        public LanternColor LanternLight { get => lanternColor; set { lanternColor = value; owner.LookChanged(this); } }
+        public string CustomCoat { get => customCoat; set { customCoat = value; owner.LookChanged(this); } }
+        public string CustomHarness { get => customHarness; set { customHarness = value; owner.LookChanged(this); } }
+        public string CustomPaint { get => customPaint; set { customPaint = value; owner.LookChanged(this); } }
+        public WheelColor Wheels { get => wheels; set { wheels = value; owner.LookChanged(this); } }
+        public HubColor Hubs { get => hubs; set { hubs = value; owner.LookChanged(this); } }
+        public string CustomWheels { get => customWheels; set { customWheels = value; owner.LookChanged(this); } }
+        public string CustomHubs { get => customHubs; set { customHubs = value; owner.LookChanged(this); } }
+        public string CustomLantern { get => customLantern; set { customLantern = value; owner.LookChanged(this); } }
+    }
+
     // A mod's own donkey for the keeper, with its cart and up to MaxFoals foals: everything a player mod needs, so the mod
     // itself only maps its keys and settings onto this (Saddle Up is the example). One per owner (Mounts.Companion).
     //
@@ -156,13 +192,39 @@ namespace GK2DonkeyAPI.Api
         private string name;
         private MountSpeed rideSpeed, cartSpeed;
         private float volume = 1f;
-        private CoatColor coat;
-        private HarnessColor harness;
-        private CartPaint paint;
-        private LanternColor lanternColor;
-        private string customCoat, customHarness, customPaint, customLantern, customWheels, customHubs;
-        private WheelColor wheels;
-        private HubColor hubs;
+        // The look (the colour rows) per mount: the dragon stays green when the donkey is brown (docs/mount-colours.md;
+        // the user, 2026-10-18). Coat, Harness... below are the current mount's (MountId): what a page's rows set is
+        // the look of the mount they were built for (MountSettingsPage.PerMount).
+        private readonly Dictionary<string, MountLook> looks = new Dictionary<string, MountLook>(StringComparer.OrdinalIgnoreCase);
+
+        // The look of a mount by id (made empty, the game's own colours, the first time it is asked for).
+        public MountLook LookOf(string mountId)
+        {
+            string id = string.IsNullOrWhiteSpace(mountId) ? MountKinds.DonkeyId : mountId.Trim();
+            if (!looks.TryGetValue(id, out MountLook l))
+            {
+                looks[id] = l = new MountLook(this, id);
+            }
+            return l;
+        }
+
+        // The mount the companion's skin is a look of (the donkey without a skin, or with one that isn't installed).
+        public string MountId
+        {
+            get
+            {
+                string s = (skin ?? "").Trim();
+                if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountKinds.DonkeyId;
+                return Mounts.Looks.Find(s)?.Mount ?? MountKinds.DonkeyId;
+            }
+        }
+
+        private MountLook Current => LookOf(MountId);
+
+        internal void LookChanged(MountLook l)
+        {
+            if (string.Equals(l.MountId, MountId, StringComparison.OrdinalIgnoreCase)) ApplyLook();
+        }
         private string skin = "";
         private bool foalsWearSkin = true;
         private string effect = "";
@@ -206,24 +268,25 @@ namespace GK2DonkeyAPI.Api
         // The lamp is lit by day too (the game's cart lamp is); off: it goes dark by day like the hand lantern.
         public bool LanternByDay { get => lanternByDay; set { lanternByDay = value; ApplyRide(); } }
 
-        public CoatColor Coat { get => coat; set { coat = value; ApplyLook(); } }
-        public HarnessColor Harness { get => harness; set { harness = value; ApplyLook(); } }
-        public CartPaint Paint { get => paint; set { paint = value; ApplyLook(); } }
-        public LanternColor LanternLight { get => lanternColor; set { lanternColor = value; ApplyLook(); } }
+        // The current mount's look (LookOf(MountId)); a page's rows set each mount's own (MountSettingsPage.PerMount).
+        public CoatColor Coat { get => Current.Coat; set => Current.Coat = value; }
+        public HarnessColor Harness { get => Current.Harness; set => Current.Harness = value; }
+        public CartPaint Paint { get => Current.Paint; set => Current.Paint = value; }
+        public LanternColor LanternLight { get => Current.LanternLight; set => Current.LanternLight = value; }
 
         // The colours used with Custom, hex RRGGBB (a leading # is fine). Empty: the game's look. Invalid: the game's look,
         // logged once.
-        public string CustomCoat { get => customCoat; set { customCoat = value; ApplyLook(); } }
-        public string CustomHarness { get => customHarness; set { customHarness = value; ApplyLook(); } }
-        public string CustomPaint { get => customPaint; set { customPaint = value; ApplyLook(); } }
+        public string CustomCoat { get => Current.CustomCoat; set => Current.CustomCoat = value; }
+        public string CustomHarness { get => Current.CustomHarness; set => Current.CustomHarness = value; }
+        public string CustomPaint { get => Current.CustomPaint; set => Current.CustomPaint = value; }
 
         // The cart's wheels (their wood) and their hubs (the iron fittings), each on its own; "Game" leaves the game's art.
         // The paint no longer touches the wheels (0.19.0).
-        public WheelColor Wheels { get => wheels; set { wheels = value; ApplyLook(); } }
-        public HubColor Hubs { get => hubs; set { hubs = value; ApplyLook(); } }
-        public string CustomWheels { get => customWheels; set { customWheels = value; ApplyLook(); } }
-        public string CustomHubs { get => customHubs; set { customHubs = value; ApplyLook(); } }
-        public string CustomLantern { get => customLantern; set { customLantern = value; ApplyLook(); } }
+        public WheelColor Wheels { get => Current.Wheels; set => Current.Wheels = value; }
+        public HubColor Hubs { get => Current.Hubs; set => Current.Hubs = value; }
+        public string CustomWheels { get => Current.CustomWheels; set => Current.CustomWheels = value; }
+        public string CustomHubs { get => Current.CustomHubs; set => Current.CustomHubs = value; }
+        public string CustomLantern { get => Current.CustomLantern; set => Current.CustomLantern = value; }
 
         // The skin the donkey wears, by id (Mounts.Looks.Skins lists them; "donkey", "" or an unknown id: the donkey as the
         // game draws it, and an unknown id is kept, so the skin returns with its pack). Foals wear it too unless
@@ -676,8 +739,9 @@ namespace GK2DonkeyAPI.Api
             {
                 return;
             }
-            var coatKeys = Look(CoatPreset(coat, customCoat, "coat", skin));
-            var harnessKeys = Look(HarnessPreset(harness, customHarness, "harness", skin));
+            MountLook l = Current;
+            var coatKeys = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skin));
+            var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));
             var skinKeys = new Dictionary<string, object>();
             if (!string.IsNullOrWhiteSpace(skin) && !skin.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) skinKeys["Skin"] = skin.Trim();
             var noSkin = new Dictionary<string, object>();
@@ -694,10 +758,10 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(LookKeys, skinKeys);
                 paper.LooksRig.MarkDirty();
             }
-            var paperPaint = Look(PaintPreset(paint, customPaint, "cart paint"));
-            var paperLantern = Look(LanternPreset(lanternColor, customLantern, "lantern"));
-            var wheelKeys = Look(WheelPreset(wheels, customWheels, "wheels"));
-            var hubKeys = Look(HubPreset(hubs, customHubs, "wheel hubs"));
+            var paperPaint = Look(PaintPreset(l.Paint, l.CustomPaint, "cart paint"));
+            var paperLantern = Look(LanternPreset(l.LanternLight, l.CustomLantern, "lantern"));
+            var wheelKeys = Look(WheelPreset(l.Wheels, l.CustomWheels, "wheels"));
+            var hubKeys = Look(HubPreset(l.Hubs, l.CustomHubs, "wheel hubs"));
             if (paper != null)
             {
                 OnPaper(PaintKeys, paperPaint);
@@ -706,8 +770,8 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(HubKeys, hubKeys);
                 paper.ColorsRig.MarkDirty();
             }
-            var paintKeys = Look(PaintPreset(paint, customPaint, "cart paint"));
-            var lanternKeys = Look(LanternPreset(lanternColor, customLantern, "lantern"));
+            var paintKeys = Look(PaintPreset(l.Paint, l.CustomPaint, "cart paint"));
+            var lanternKeys = Look(LanternPreset(l.LanternLight, l.CustomLantern, "lantern"));
             var dressed = new List<MountHandle>(foalHandles) { Donkey };
             foreach (MountHandle h in dressed)
             {
