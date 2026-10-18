@@ -664,8 +664,12 @@ namespace GK2DonkeyAPI
         // The file rewritten with the live values: the [Skin] section's own lines kept (foals, mount, offset and
         // offset_cart replaced), [Tuning] and, where the file declares the mount, [Mount] and its tuning sections
         // written anew from the kind. Returns null, or why not.
-        internal static string SaveCfg(SkinDef d)
+        internal static string SaveCfg(SkinDef d) => SaveCfg(d, out _);
+
+        // changed: false when the file already held exactly this text (nothing written).
+        internal static string SaveCfg(SkinDef d, out bool changed)
         {
+            changed = false;
             string path = CfgPathFor(d);
             if (path == null) return "no file to write (a code skin, or the sources aren't on this machine)";
             try
@@ -704,6 +708,7 @@ namespace GK2DonkeyAPI
                 var sb = new StringBuilder();
                 foreach (string h in head) sb.Append(h).Append('\n');
                 sb.Append("[Skin]\n");
+                while (skinLines.Count > 0 && skinLines[skinLines.Count - 1].Trim().Length == 0) skinLines.RemoveAt(skinLines.Count - 1); // no blank lines piling up per save
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
                 Kinds.KindDef k = d.Kind;
                 sb.Append("mount = ").Append(d.KindId).Append('\n');
@@ -734,7 +739,10 @@ namespace GK2DonkeyAPI
                     WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide);
                     WriteSection(sb, "[Mount.Tuning.Cart]", k.TuningCart);
                 }
-                File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
+                string text = sb.ToString();
+                if (File.Exists(path) && File.ReadAllText(path) == text) return null; // the same already: no write, no undo step
+                File.WriteAllText(path, text, new UTF8Encoding(false));
+                changed = true;
                 Plugin.Log.LogInfo($"Looks: skin '{d.Id}' written to {path}.");
                 return null;
             }

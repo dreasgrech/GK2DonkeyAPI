@@ -90,6 +90,7 @@ namespace GK2DonkeyAPI
         public static void Draw()
         {
             CargoLayout.SaveIfDue(now: !Mount.IsMounted);
+            MountsSaveIfDue(); // the Mounts tab's values into the skin's file a moment after the last change, whatever tab shows
             if (!Showing())
             {
                 return;

@@ -136,9 +136,12 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 23. "This skin: Red Dragon": drag "Pictures down/up (riding)" to -3: the dragon's pictures move, the rider doesn't;
     right-click: 0. "With the cart: the same offsets" Off → two more rows for the cart.
 24. Keeping these values: the text names the repo file `src/GK2DonkeyAPI/assets/skins/dragon/skin.cfg` "and the
-    mount's rows to the file(s) that declare the mount: dragon, dragon-blue" (the sources are on this machine). Save (twice): "Saved."; open the file
-    in an editor: [Mount.Tuning.Ride] with your values, the [Skin] lines untouched. Change a number in the file,
-    "Reload from the file": the pictures reload for a moment, then the file's value is on the rider.
+    mount's rows to the file(s) that declare the mount: dragon, dragon-blue" (the sources are on this machine), and
+    says the values are saved by themselves a moment after each change, with the last save's time. Drag a row, wait a
+    second: "Last saved hh:mm:ss to dragon, dragon-blue"; open the file in an editor: [Mount.Tuning.Ride] with your
+    value, the [Skin] lines untouched, no blank lines piling up. "Undo the last change (1)": the file is as before and
+    the rider shows the old value. Change a number in the file, "Reload from the file": the pictures reload for a
+    moment, then the file's value is on the rider.
 25. Pick Blue Dragon in Saddle Up and ride it: the mount's values (seat) are the same; the skin's offsets are not
     (they were Red's).
 

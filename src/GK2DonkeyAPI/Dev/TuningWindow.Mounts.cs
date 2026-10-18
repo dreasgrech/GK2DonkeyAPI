@@ -15,8 +15,6 @@ namespace GK2DonkeyAPI
     {
         private static string mountsSkinId;           // the mount being tuned (a skin id, "" = the donkey)
         private static bool mountsFollowRide = true;  // follow what is ridden until the user picks one
-        private static bool mountsSaveConfirm;
-        private static float mountsSaveConfirmUntil;
         private static string mountsNote = "";
         private static float mountsNoteUntil;
 
@@ -392,32 +390,17 @@ namespace GK2DonkeyAPI
             }
             else
             {
-                GUILayout.Label("Saves the skin's rows to " + path + (kindFiles.Count > 0 ? " and the mount's rows to the file(s) that declare the mount: " + string.Join(", ", kindFiles.ConvertAll(s => s.Id)) : kind != Kinds.Donkey && !kind.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments inside the rewritten sections ([Tuning], [Mount...]) and on the rewritten keys are not kept. A rebuild ships a built-in's file.", small);
+                // Saved by itself, like the Cargo tab's layout: a moment after the last change, into the skin's file
+                // (the mount's rows into every file that declares the mount). Nothing to remember to press.
+                GUILayout.Label("Saved by itself a moment after each change: the skin's rows to " + path + (kindFiles.Count > 0 ? " and the mount's rows to the file(s) that declare the mount: " + string.Join(", ", kindFiles.ConvertAll(s => s.Id)) : kind != Kinds.Donkey && !kind.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments inside the rewritten sections ([Tuning], [Mount...]) and on the rewritten keys are not kept. A rebuild ships a built-in's file." + (mountsLastSaved != null ? " Last saved " + mountsLastSaved + "." : ""), small);
                 GUILayout.BeginHorizontal();
-                bool confirming = mountsSaveConfirm && Time.unscaledTime < mountsSaveConfirmUntil;
-                if (GUILayout.Button(Tip(confirming ? "Click again to save" : "Save to the skin's file", "Writes the values above into skin.cfg (the mount's rows into every file that declares the mount); asks once more first."), Wd(LabelW)))
+                GUI.enabled = mountsUndo.Count > 0;
+                if (GUILayout.Button(Tip($"Undo the last change{(mountsUndo.Count > 0 ? " (" + mountsUndo.Count + ")" : "")}", "Puts the file back as it was before the last saved change and reads it again; again: the one before."), Wd(LabelW)))
                 {
-                    if (!confirming)
-                    {
-                        mountsSaveConfirm = true;
-                        mountsSaveConfirmUntil = Time.unscaledTime + 4f;
-                    }
-                    else
-                    {
-                        mountsSaveConfirm = false;
-                        var errors = new List<string>();
-                        string e = Looks.SaveCfg(skin);
-                        if (e != null) errors.Add(skin.Id + ": " + e);
-                        foreach (Looks.SkinDef s in kindFiles)
-                        {
-                            if (s == skin) continue;
-                            e = Looks.SaveCfg(s);
-                            if (e != null) errors.Add(s.Id + ": " + e);
-                        }
-                        Note(errors.Count == 0 ? "Saved." : "Not saved: " + string.Join("; ", errors));
-                    }
+                    MountsUndo();
                 }
-                if (GUILayout.Button(Tip("Reload from the file", "Reads skin.cfg again and throws away unsaved changes here."), Wd(SliderW)))
+                GUI.enabled = true;
+                if (GUILayout.Button(Tip("Reload from the file", "Reads skin.cfg again (a change you made outside the game, say)."), Wd(SliderW)))
                 {
                     string e = Looks.ReloadCfg(skin);
                     Note(e == null ? "Reloaded: the pictures load again (a moment), then the file's values show." : "Not reloaded: " + e);
@@ -425,6 +408,76 @@ namespace GK2DonkeyAPI
                 GUILayout.EndHorizontal();
             }
             if (Time.unscaledTime < mountsNoteUntil) GUILayout.Label(mountsNote, small);
+        }
+
+        // ---- saving by itself
+
+        private static int mountsSeenVersion = -1;     // Kinds.Version last seen: a change bumps it (Kinds.Touch)
+        private static bool mountsDirty;
+        private static float mountsLastChange;
+        private static string mountsLastSaved;         // "11:42:07 to gerry" for the label
+        private static readonly List<(Looks.SkinDef Skin, string Path, string Text)> mountsUndo = new List<(Looks.SkinDef, string, string)>();
+
+        // Called every frame the panel draws (TuningWindow.Draw): a change on the Mounts tab (Kinds.Touch bumps
+        // Kinds.Version) is written 0.75 s after the last one, to the picked skin's file and the mount's declaring files,
+        // when the text would differ from what is there. The file's previous text goes on the undo list first.
+        private static void MountsSaveIfDue()
+        {
+            if (Kinds.Version != mountsSeenVersion)
+            {
+                if (mountsSeenVersion >= 0) { mountsDirty = true; mountsLastChange = Time.unscaledTime; }
+                mountsSeenVersion = Kinds.Version;
+            }
+            if (!mountsDirty || Time.unscaledTime - mountsLastChange < 0.75f) return;
+            mountsDirty = false;
+            Looks.SkinDef skin = string.IsNullOrEmpty(mountsSkinId) ? null : Looks.Find(mountsSkinId);
+            if (skin == null) return;
+            var files = new List<Looks.SkinDef> { skin };
+            Kinds.KindDef kind = skin.Kind;
+            if (kind != Kinds.Donkey && kind.FromPack)
+            {
+                foreach (Looks.SkinDef s in Kinds.SkinsOf(kind))
+                {
+                    string p = Looks.CfgPathFor(s);
+                    if (s != skin && p != null && System.IO.File.Exists(p) && System.IO.File.ReadAllText(p).IndexOf("[Mount]", StringComparison.OrdinalIgnoreCase) >= 0) files.Add(s);
+                }
+            }
+            var written = new List<string>();
+            var errors = new List<string>();
+            foreach (Looks.SkinDef s in files)
+            {
+                string path = Looks.CfgPathFor(s);
+                if (path == null) continue;
+                string before = System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : null;
+                string e = Looks.SaveCfg(s, out bool changed);
+                if (e != null) { errors.Add(s.Id + ": " + e); continue; }
+                if (!changed) continue;
+                mountsUndo.Add((s, path, before));
+                if (mountsUndo.Count > 50) mountsUndo.RemoveAt(0);
+                written.Add(s.Id);
+            }
+            if (errors.Count > 0) Note("Not saved: " + string.Join("; ", errors));
+            if (written.Count > 0) mountsLastSaved = DateTime.Now.ToString("HH:mm:ss") + " to " + string.Join(", ", written);
+        }
+
+        private static void MountsUndo()
+        {
+            if (mountsUndo.Count == 0) return;
+            (Looks.SkinDef Skin, string Path, string Text) last = mountsUndo[mountsUndo.Count - 1];
+            mountsUndo.RemoveAt(mountsUndo.Count - 1);
+            try
+            {
+                if (last.Text == null) System.IO.File.Delete(last.Path);
+                else System.IO.File.WriteAllText(last.Path, last.Text, new System.Text.UTF8Encoding(false));
+                string e = Looks.ReloadCfg(last.Skin);
+                mountsSeenVersion = Kinds.Version; // the reload is not a change to save again
+                mountsDirty = false;
+                Note(e == null ? "Undone: the file is as before that change, and read again." : "Undone in the file, but not reloaded: " + e);
+            }
+            catch (Exception e)
+            {
+                Note("Couldn't undo: " + e.Message);
+            }
         }
 
         private static void Note(string text)

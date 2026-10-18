@@ -40,7 +40,9 @@ For players:
   say `seat = picture` (the rider's seat is the picture's own top, per frame) and a game-creature skin `lift` (how
   much of the creature's jump is kept). The Mounts tab says when the player's AutoSeat (off by default) makes the
   torso rows moot, and lets a mount set the torso height players actually use; the Instances tab's "Log drawing"
-  writes every renderer around a mount into the log.
+  writes every renderer around a mount into the log. The Mounts tab saves by itself, like the Cargo tab: a moment
+  after the last change the values are in the skin's file (and the mount's declaring files), with the time shown,
+  "Undo the last change" to put a file back, and no Save button to forget.
 - **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
   "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
   ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the
