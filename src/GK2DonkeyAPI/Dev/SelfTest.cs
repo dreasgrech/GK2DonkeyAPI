@@ -1513,6 +1513,102 @@ namespace GK2DonkeyAPI
         // a gold one named nothing, on every body frame): the donkey under it keeps its regions (a custom coat still
         // changes all the donkey's coat colours), the red follows Harness, the gold is kept as drawn, and it stays on
         // the exact swap (the donkey's colours plus the named one).
+        // What the world draws of one renderer: it alone, through its own material and property block (the colour
+        // swap as the game applies it), photographed by a camera of its own at the game camera's angle into a small
+        // texture; the pixels back, with a count per colour class. The renderer is moved to a spare layer for the
+        // one render and put back. Null when there is no game camera.
+        internal sealed class DrawnAlone
+        {
+            internal int Pixels, Red, Blue, Green, Gold, Other;
+            internal string Top; // the most drawn colours
+        }
+
+        // swapOff: the same render through a copy of the material with both colour-swap keywords off (the picture as
+        // drawn, lit): what differs from the normal render is the swap's doing.
+        // with: a second renderer drawn in the same picture (the body part under an overlay: the real sorting decides
+        // which shows). The lighting is the scene's (dark at night), so judge colours against another render of the
+        // same thing, never against the colour in the picture.
+        private static DrawnAlone RenderAlone(SpriteRenderer r, bool swapOff = false, SpriteRenderer with = null)
+        {
+            Camera main = Camera.main;
+            if (r == null || !r || main == null) return null;
+            const int Layer = 31, Size = 160;
+            int oldLayer = r.gameObject.layer, oldWithLayer = with != null && with ? with.gameObject.layer : 0;
+            Material oldMaterial = r.sharedMaterial, plain = null;
+            GameObject go = null;
+            RenderTexture rt = null;
+            Texture2D tex = null;
+            RenderTexture prev = RenderTexture.active;
+            try
+            {
+                r.gameObject.layer = Layer;
+                if (with != null && with) with.gameObject.layer = Layer;
+                if (swapOff && oldMaterial != null)
+                {
+                    plain = new Material(oldMaterial) { name = "GK2DonkeyAPI selftest plain" };
+                    plain.DisableKeyword("USE_PALETTE_COLOR_REPLACE");
+                    plain.DisableKeyword("USE_LUT_COLOR_REPLACE");
+                    r.sharedMaterial = plain;
+                }
+                go = new GameObject("GK2DonkeyAPI selftest readback camera");
+                var cam = go.AddComponent<Camera>();
+                cam.CopyFrom(main);
+                cam.enabled = false;
+                cam.clearFlags = CameraClearFlags.SolidColor;
+                cam.backgroundColor = new Color(0f, 0f, 0f, 0f);
+                cam.cullingMask = 1 << Layer;
+                cam.orthographic = true;
+                cam.orthographicSize = 1.2f;
+                cam.transform.rotation = main.transform.rotation;
+                cam.transform.position = r.bounds.center - main.transform.forward * 8f;
+                rt = new RenderTexture(Size, Size, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point };
+                rt.Create();
+                cam.targetTexture = rt;
+                cam.Render();
+                RenderTexture.active = rt;
+                tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
+                tex.ReadPixels(new Rect(0, 0, Size, Size), 0, 0, false);
+                Color32[] px = tex.GetPixels32();
+                var d = new DrawnAlone();
+                var count = new Dictionary<int, int>();
+                foreach (Color32 c in px)
+                {
+                    if (c.a < 32) continue;
+                    d.Pixels++;
+                    int key = c.r << 16 | c.g << 8 | c.b; // the exact colour
+                    count[key] = count.TryGetValue(key, out int n) ? n + 1 : 1;
+                    if (c.b > c.r + 40 && c.b > c.g + 40) d.Blue++;
+                    else if (c.g > c.r + 40 && c.g > c.b + 40) d.Green++;
+                    else if (c.r > 120 && c.g < 90 && c.b < 100) d.Red++;
+                    else if (c.r > 130 && c.g > 90 && c.b < 110 && c.r > c.b + 60) d.Gold++;
+                    else d.Other++;
+                }
+                var top = new List<KeyValuePair<int, int>>(count);
+                top.Sort((x, y) => y.Value.CompareTo(x.Value));
+                var sb = new StringBuilder();
+                for (int i = 0; i < Math.Min(6, top.Count); i++)
+                {
+                    sb.Append(i > 0 ? ", " : "").Append($"{top[i].Key:X6} x{top[i].Value}");
+                }
+                d.Top = sb.ToString();
+                return d;
+            }
+            finally
+            {
+                RenderTexture.active = prev;
+                r.gameObject.layer = oldLayer;
+                if (with != null && with) with.gameObject.layer = oldWithLayer;
+                if (plain != null)
+                {
+                    r.sharedMaterial = oldMaterial;
+                    UnityEngine.Object.Destroy(plain);
+                }
+                if (tex != null) UnityEngine.Object.Destroy(tex);
+                if (rt != null) { rt.Release(); UnityEngine.Object.Destroy(rt); }
+                if (go != null) UnityEngine.Object.Destroy(go);
+            }
+        }
+
         private static IEnumerator SkinOverColours()
         {
             string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-over");
@@ -1574,6 +1670,54 @@ namespace GK2DonkeyAPI
                 Check(coatAll > 0 && coatChanged == coatAll, $"a custom coat still changes the donkey under it ({coatChanged} of its {coatAll} coat colours)");
                 Check(Has(red), "the skin's red, named Harness, follows the harness");
                 Check(!Has(gold), "the skin's gold, named nothing, is kept as drawn");
+
+                // what the world draws of the overlay (its real material, the swap applied by the shader): the 80 red
+                // pixels blue (the harness colorize), the 20 gold ones gold, no red left. A wrong palette, a missing
+                // keyword or a sprite that isn't drawn shows here and nowhere else (the Royal Parade plate of
+                // 2026-10-19: the Mods picture right, the world without its red).
+                SpriteRenderer ov = a.I.LooksRig.TestOverlay();
+                Check(ov != null && ov.enabled && ov.sprite != null, $"the overlay renderer is on with a picture ({ov?.sprite?.name ?? "none"})");
+                DrawnAlone drawn = ov != null ? RenderAlone(ov) : null;
+                if (drawn == null) Warn("no game camera: the readback of the drawn overlay skipped");
+                else
+                {
+                    Info($"drawn alone: {drawn.Pixels} pixels: blue {drawn.Blue}, gold {drawn.Gold}, red {drawn.Red}, green {drawn.Green}, other {drawn.Other}; most: {drawn.Top}; material {ov.sharedMaterial?.name} [{string.Join(" ", ov.sharedMaterial?.shaderKeywords ?? new string[0])}]");
+                    // the same without the swap (the picture as drawn, lit by the scene: dark at night), so the swap's
+                    // own doing is what differs between the two: the red pixels swapped, the gold ones left alone
+                    DrawnAlone plain = RenderAlone(ov, swapOff: true);
+                    if (plain != null) Info($"drawn alone with the swap off: {plain.Pixels} pixels: blue {plain.Blue}, gold {plain.Gold}, red {plain.Red}, green {plain.Green}, other {plain.Other}; most: {plain.Top}");
+                    // the 10x10 picture drawn at the camera's density: about 1.8 x 1.8 screen pixels each
+                    Check(drawn.Pixels >= 100 && drawn.Pixels <= 260, $"the world draws the whole overlay (100 picture pixels, {drawn.Pixels} drawn)");
+                    Check(drawn.Blue >= 60 && drawn.Red == 0, $"the red pixels come out blue, the harness colour ({drawn.Blue} blue, {drawn.Red} red)");
+                    Check(plain != null && plain.Blue == 0 && plain.Pixels == drawn.Pixels, $"with the swap off nothing is blue and the same pixels are drawn ({plain?.Blue} blue, {plain?.Pixels} pixels)");
+                    // the gold pixels: the same colours with the swap on and off (the swap leaves an unnamed colour
+                    // alone), judged on the drawn colour list, whatever the light
+                    string goldOn = drawn.Top, goldOff = plain?.Top ?? "";
+                    string[] offColours = goldOff.Split(',');
+                    int kept = 0;
+                    foreach (string c in offColours)
+                    {
+                        string hex = c.Trim().Split(' ')[0];
+                        if (hex.Length == 6 && goldOn.Contains(hex)) kept++;
+                    }
+                    int nonBlue = drawn.Pixels - drawn.Blue; // gold by day, dark brown by night: the class varies, the count doesn't
+                    Check(kept >= 1 && nonBlue >= 14 && nonBlue <= 60, $"the gold pixels come out as without the swap: an unnamed colour of an over skin is drawn as it is ({kept} of the swap-off colours drawn the same, {nonBlue} non-blue pixels)");
+                    // over the body: the overlay sits inside the body's silhouette (its square is on the torso), so
+                    // it shows only when it sorts above the part (the same order = coplanar = the depth test's pick)
+                    DrawnAlone both = RenderAlone(ov, with: a.I.LooksRig.TestPart());
+                    if (both != null) Info($"drawn with the body: {both.Pixels} pixels: blue {both.Blue}; most: {both.Top}; overlay order {ov.sortingOrder}, part order {a.I.LooksRig.TestPart()?.sortingOrder}");
+                    Check(both != null && both.Blue >= 60, $"the overlay shows over the body ({both?.Blue} blue pixels with the body drawn too)");
+                }
+                // the player's own mount, when it wears a skin now: what the world draws of it, for the log
+                foreach (MountHandle h in Mounts.InstancesOf("dreas.gk2.saddleup"))
+                {
+                    Looks.Rig own = h?.I?.LooksRig;
+                    SpriteRenderer ownOv = own?.TestOverlay();
+                    if (ownOv == null || !ownOv.enabled || ownOv.sprite == null) continue;
+                    DrawnAlone od = RenderAlone(ownOv);
+                    if (od != null) Info($"the player's mount wears '{own.Wearing}' ({ownOv.sprite.name}): drawn alone {od.Pixels} pixels: red {od.Red}, gold {od.Gold}, blue {od.Blue}, green {od.Green}, other {od.Other}; most: {od.Top}");
+                    break;
+                }
             }
             a?.Remove();
             yield return Frames(2);

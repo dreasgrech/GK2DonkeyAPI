@@ -156,6 +156,43 @@ A round:
 
 So a round is: draw, Ctrl+S, look at the game (or the GIFs). Nothing else to press.
 
+**Generated, no drawing (2026-10-19 18:10, the user: "automate as much as possible, I'm not a sprite designer"):**
+`royal\make_royal.py` makes the whole skin from the donkey's own frames and writes the pack's `sheet.png` straight
+into the game (`--no-pack` leaves the game alone), plus `royal.aseprite` for a by-hand touch, `preview.png` (all
+frames, 4x), `zoom.png` (six frames, 8x, the grid) and **`strips\<animation>.png`, every animation as a strip of
+its frames over the donkey: look at every strip before the game does.** The cloth is one shape measured on the
+standing frame (its width the back from the collar strap to the hip plus `FRONT`, its depth per column the back to
+`HEM_ABOVE` rows above the belly, smoothed) and in every frame it hangs from the **hip**, the rump's end at back
+level, the one point that stays put while the head, neck and legs move: the same width back from the hip, each
+column's top on that frame's own back line, held down to the back's level where the neck starts to climb (the
+first hip-anchored cut let the front columns follow the neck up, so in the game the cloth's front corner stood
+above the back and sank in a graze: seen in the Mods picture frames of the user's second video, 18:03). So it
+rides the walk's bob and the graze's dip without changing size or sliding (the first cut measured the collar and
+belly per frame and jumped in the graze clip, seen in the user's first video). The same frames, composited, go to
+the asset probe's `test\skins\royal-parade\` and `skins-preview.html` (tools/skin_preview_html.py), the page that
+plays every skin's clips next to the plain donkey. A frame with a shorter back (the turn clips) gets it cut shorter. Then a dark outline, a gold border, light
+red under the back, dark red above a gold hem row, a fringe, the fleur in the middle of the red, the crown at the
+Hellfire horn bases. The first draft (a rectangle hanging under the belly) was seen in game as one yellow plate: the
+user's Custom Mustard harness recolours the cloth's reds (the pack's `[Colors]`), which then match the gold trim.
+Changing the cut is editing the numbers at the top of the script and running it; the checker runs on the result;
+the game reloads the pack by itself (the tick above) or on "Reload from the file".
+
+**The canvas, found wrong 2026-10-19 18:30 (the root of every placement fault seen that day):** the 44 `.raw` frames
+in `harness_frames\` put every frame's top-left corner at (25, 21). The game stands every frame on one ground row,
+with the feet at y 66 and the x shifting with the pose: the asset probe's `donkey-frames\*.png` are that placement.
+The two agreed on no frame: 2 px off standing, up to 8 in the walk, up to 17 and sideways in the graze. So a cloth cut
+on the raw canvas lifted off the back in the walk, climbed in the graze and the crown drifted, in the game and in the
+review page (which composites over the probe's frames), while every strip made on the raw canvas looked right.
+`contact.load(k)` reads the probe's PNGs now; `load_raw(k)` and `raw_to_game_shift(k)` exist only to move things
+measured on the old canvas (the Hellfire horn bases: `horn_bases_raw.json` -> `horn_bases.json`; the Hellfire review
+frames `hellfire-96\`). `check_skin.py` reads the probe's frames too. **Rule: everything drawn for a pack is measured
+and drawn on the probe's frames, never on `harness_frames\*.raw`.**
+
+**What the previews cannot show:** they composite the pack's pixels in Python; the game draws the overlay through
+its own material and colour-swap shader. Royal Parade showed in the world without its red (the Mods picture had it),
+and no preview could have caught that. The self-test "colours: a skin over the donkey keeps the donkey's regions"
+now reads the drawn overlay back from a camera (docs/self-tests.md) and logs the same for the player's worn skin.
+
 The checker reports: frames drawn, every colour with its region (`kept` = as drawn), colours the donkey itself has,
 half-transparent pixels, lone pixels, more than 48 colours to swap, and frames where the donkey is drawn the same
 but the skin differs (a frame missed in an edit).

@@ -1952,7 +1952,11 @@ namespace GK2DonkeyAPI
                 if (ov.enabled != show) ov.enabled = show;
                 if (show)
                 {
-                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder);
+                    // A skin drawn over the body (layer = over) sorts one above the part: at the same order the two
+                    // sprites are coplanar and the depth test decides, so the overlay showed only outside the body's
+                    // silhouette in some frames and whole in others (Royal Parade, 2026-10-19). A replacing skin's
+                    // part isn't drawn at all, so its order is the part's own.
+                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (skin.Def.Over ? 1 : 0));
                 }
                 // the front layer: the same picture rules, sorted above the keeper while he rides (as the leg overlay,
                 // RiderLeg: his layer, one above his body; the legs are +1, this is +2), else just above the part
@@ -1967,7 +1971,7 @@ namespace GK2DonkeyAPI
                     {
                         SpriteRenderer keeper = owner?.KeeperBody;
                         if (keeper != null && keeper) Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2);
-                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 1);
+                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2); // above the body overlay too
                     }
                 }
                 bool hide = show && !skin.Def.Over;
@@ -2062,6 +2066,11 @@ namespace GK2DonkeyAPI
             // layer drawn.
             internal bool TestShowing() => slots[0].Overlay != null && slots[0].Overlay && slots[0].Overlay.enabled && slots[0].Overlay.sprite != null && slots[0].Hid;
             internal bool TestFrontShowing() => slots[0].Front != null && slots[0].Front && slots[0].Front.enabled && slots[0].Front.sprite != null;
+
+            // The body's overlay renderer and the body part itself, for the self-tests' readback of what the world
+            // draws (the real materials, the real sorting).
+            internal SpriteRenderer TestOverlay() => slots != null && slots.Length > 0 && slots[0].Overlay != null && slots[0].Overlay ? slots[0].Overlay : null;
+            internal SpriteRenderer TestPart() => slots != null && slots.Length > 0 && slots[0].Part != null && slots[0].Part ? slots[0].Part : null;
         }
     }
 }

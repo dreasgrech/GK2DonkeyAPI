@@ -43,6 +43,33 @@ Development:
 - `tools/page-carryover.py`: an offline dry run of the page's carry-over, reading the rows and `MovedKey` aliases
   out of Saddle Up's Plugin.cs and checking an older cfg key by key (the fixtures by default, any cfg as an
   argument). Run it before the in-game upgrade self-test whenever the page's sections or keys move.
+- Royal Parade (the test over-skin, outside the repo): its generator makes the cloth from the donkey's frames and
+  writes the pack into the game itself, no drawing step (docs/sprite-tools.md "Generated, no drawing"). The cloth is
+  one shape measured on the standing frame, hung from the hip in every frame with each column on that frame's back
+  line, so it rides the walk's bob and the graze's dip without changing size (the first cut, measured per frame,
+  jumped in the graze clip). The generator writes a frame strip per animation (`strips\`) to look at before the game.
+  Then the root of every placement fault: the generator's donkey frames (`harness_frames\*.raw`) had every frame's
+  top-left corner at one spot, while the game stands each frame on one ground row, 2 to 17 px apart per frame; the
+  generator, the checker and the crown anchors now use the asset probe's frames, the game's own placement
+  (docs/sprite-tools.md "The canvas, found wrong").
+- `tools/skin_preview_html.py` rebuilt as the skin review page (the user: "we will use it a lot"): every skin the
+  API knows from its real sources (the game's donkey frames, the built-in skins in the repo, the packs in the game,
+  recipes drawn to pictures such as Hellfire), grouped by mount with the mount's own look first, an over skin shown
+  composited over the donkey, the old test folders collapsed at the end; a sticky bar with the clip, a frame
+  scrubber and step buttons (arrows, space), a frame-strip view (every frame of the clip side by side), scale, facing,
+  night, rider. Output: `BepInEx\GK2-asset-probe\skins-preview.html` (local only: the game's art).
+- Self-test "colours: a skin over the donkey keeps the donkey's regions" now reads back what the world draws: the
+  overlay renderer through its real material and shader, photographed into a texture, with the swap on, with it
+  off (the same picture lit by the scene, dark at night: colours are judged against that render, never against the
+  picture's own values) and together with the body part. Royal Parade was seen in the world without its red while
+  the Mods picture had it; this check tells the two paths apart. The player's own mount's worn skin is read back
+  the same way, for the log.
+- **Fixed: a skin drawn over the body (`layer = over`) sorted at the body part's own order**, so the two coplanar
+  sprites left the depth test to decide and the overlay showed only outside the body's silhouette in some frames
+  (the gold hem below the belly and the border above the back, the red cloth gone: the user's video of 2026-10-19
+  17:08). Found by the readback above (the overlay drawn alone was whole; with the body it was not). The over
+  overlay now sorts one above the part, the front layer two above when no keeper rides. Not in any public release:
+  the skins are switched off for players until the next update.
 
 ## 0.10.0 (GK2 Donkey API 0.30.0), 2026-10-19
 

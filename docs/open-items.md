@@ -5,13 +5,22 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
-- **Royal Parade** (pack `gk2skins\royal-parade`, first export 2026-10-19 02:52; API deployed 02:52): the first skin
-  worn over the donkey. Saddle Up settings: Donkey, Skin, Royal Parade. A red caparison with a gold hem, fringe and
-  fleur behind the collar, a crown between the ears, in every clip (the draft from royal.aseprite; to be corrected by
-  eye there). Look for: the donkey still drawn under it, the rider sitting on the cloth, the crown not doubled while
-  standing (the head sprite carries one too), a custom coat still recolouring the donkey and a custom harness colour
-  the cloth's red (the gold stays gold). Tests tab: "colours: a skin over the donkey keeps the donkey's regions"
-  PASS. Then the loop: edit in Aseprite, GK2 Export skin, "Reload from the file" (docs/sprite-tools.md).
+- **Royal Parade** (pack `gk2skins\royal-parade`; regenerated 2026-10-19 19:00 by `make_royal.py`, which makes the
+  whole skin and writes the pack itself, no Aseprite step): the first skin worn over the donkey. **Two faults seen
+  by the user in the world (video 17:08, the first draft):** the cloth jumped in the graze clip (it was measured per
+  frame from the collar and belly; now one shape hung from the hip, each column on the frame's back line: every
+  animation strip in `royal\strips\` looked at, still), and **the cloth's red was not drawn in the world** while the
+  Mods picture showed it: **found by the readback and fixed 2026-10-19 20:30**: the over overlay sorted at the body
+  part's own order, coplanar with it, so the depth test decided and only the parts outside the body's silhouette
+  showed (the hem below the belly, the border above the back); it sorts one above the part now. (The readback's
+  first "gold came out dark" was the night light, not a fault: colours are judged against a swap-off render now.)
+  The readback passed by day (18:00). **Then the root cause of the cloth lifting, climbing and the crown drifting
+  (18:30):** the generator's frames were top-left aligned, not the game's placement (2 to 17 px off per frame;
+  docs/sprite-tools.md "The canvas, found wrong"); regenerated on the probe's frames 18:30, the strips and the
+  review page (which composites over the probe's frames) steady. **To see, by day:** Harness = Red, Skin = Royal
+  Parade, the cloth on the back in walk, graze and turn, the crown on the head and not doubled while standing, the
+  rider on the cloth, a custom coat still recolouring the donkey under it. To change the cut: the numbers at the top of `make_royal.py` (`HEM_ABOVE`, `REAR`, `FRONT`,
+  `GAP`, `SAG`, the colours), run it, look at the strips, "Reload from the file" (or the auto-reload tick).
 - **Skin pack auto-reload** (built 2026-10-19 03:00, deployed): Mounts tab, the skin's rows, tick "Reload by itself
   when the pack's files change"; double-click `C:\ClaudeCodeTemp\GK2-aseprite\royal\Watch Royal Parade.cmd`; move the
   crown in Aseprite and Ctrl+S: the watcher window says "export done" and "CHECK", the donkey in the game changes a
