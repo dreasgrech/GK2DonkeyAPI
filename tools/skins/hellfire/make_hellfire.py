@@ -12,7 +12,7 @@ So the pack holds nothing of the game's art, and the recipe code (LooksHellfire.
     python tools/skins/hellfire/make_hellfire.py --no-assets # out\\ only
 
 Review: out\\strips\\<animation>.png (every frame over the donkey), out\\preview.png, and the skins preview page
-(tools/skin_preview_html.py). The checker: python tools/skins/check_skin.py tools/skins/hellfire/out/pack
+(tools/skins/skin_preview_html.py). The checker: python tools/skins/check_skin.py tools/skins/hellfire/out/pack
 """
 import colorsys, math, os, shutil, sys
 from PIL import Image, ImageDraw

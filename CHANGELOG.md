@@ -34,6 +34,53 @@ For mod authors:
   The pack checker and the review page honour it; a self-test wears a pack that erases the ears. The step towards
   every skin being a pack (Hellfire next: the user, "for the concept of a mount skin we should do this drawing-over
   thing").
+- **A built-in's reload and undo on the Mounts tab never took** (the user, 2026-10-20: "I changed torso down to
+  -4 and pressed undo and it stayed yellow"; the note said "Not reloaded: Value cannot be null. Parameter name:
+  path1"): the reload stamps the pack's folder for the auto-reload watch, and an embedded built-in has no folder,
+  so it threw before the file was read and the kind kept the panel's value. The stamp is 0 for a built-in or a
+  code skin now; the Gerry self-test reloads a built-in from the repo's cfg; the Undo and Reload buttons log
+  their outcome, so a failure is in the log and not only in a five-second note. Undo is one step per gesture now:
+  saves within four seconds of each other on the same file share the earlier restore point (a slider dragged in
+  two moves with a pause took two presses).
+- **The mount definitions brought to one shape** (the user: "take a look at the mounts and how we're defining
+  them so that we have the same parity"; the investigation is `docs/mounts-foundation-audit.md`). Every built-in
+  `skin.cfg` is in one layout now, written by `tools/skins/canonical_cfg.py` and refused otherwise by
+  `tests/SkinsScan` and the release scans: `[Skin]`, `[Game]` for a game creature, the colour sections, and the
+  `[Mount]` block last with id, name, author, version, cart and foals always (foal_scale, effect, effect_when when
+  not the default), every tuning key in one section. Gerry's dead `SeatAdjustPx = 10` is gone (its one value, -16,
+  in `[Mount.Tuning]`); the dragon and the worm say `cart` and `foals`; every mount has an author and a version.
+  The loader: a `[Mount]` without a name takes its id (sentences and the dev spawn row use the mount's label, so a
+  nameless mount never says "donkey" or throws); a built-in skin's mount is built in (`MountKindInfo.IsBuiltIn`);
+  author and version survive a reload and count for "the same declaration"; unknown `[Mount]` keys, a bad
+  `foal_scale` and a bad `effect_when` are named in the skin's report like every other section's. The Mounts tab's
+  Save keeps the comments inside the mount sections (above a key, on its line, before and after the keys) and
+  writes the block in the file's order. SkinsScan checks every `[Skin]` value the loader reads by name (layer, kind,
+  seat, source, erase, the canvas range), the section order, `[Base.*]` regions and knobs, the `[Mount]` key list and
+  values (foal_scale 0.2-1 and not the default, effect a built-in id with its effect_when, `Off`/`Night`/`Always`),
+  a key set in both `[Mount.Tuning]` and a style section, an empty tuning section, a `[Mount.Tuning]` without
+  `[Mount]`; probed with a wrong cfg (11 findings). Self-tests: Gerry's one seat value and its built-in mount with
+  author and version; the pack round trip keeps four comments in the mount sections and the author; an ability that
+  throws is off after its first tick while the kind's other goes on. Docs: `effect_when` takes `Off`, not "Never";
+  `pivot` and the `[Mount]` author/version documented; the donkey's own block written out next to the five; the
+  Mount list and "Default" rule; the stale "Saddle Up's Donkey rows", recipe and blue-dragon lines in api.md,
+  reference.md, mount-colours.md, mounts-design.md and skins-design.md marked or fixed. The skin tooling is all
+  under `tools/skins/` now (`creatures/make_creatures.py`, `gerry/`, `skin_colors.py`, `skin_preview_html.py`,
+  `pngcolors.py`). Open: a mount's seat with the player's AutoSeat off (audit 3.1): `docs/seat-investigation.md`
+  has the three seat paths, what every built-in gets under the shipped defaults (the snail's `SeatOffset` works for
+  a default player and is lost with AutoSeat on; a mount's `SeatAdjustPx` does nothing for a default player unless
+  the skin says `seat = picture`), the options and the compat constraint; a readout self-test ("seat: the rider's
+  height on every built-in mount, AutoSeat off and on") logs the seat in pixels for each of the eight looks in both
+  modes; docs/reference.md's seat defaults corrected to the shipped values (`SeatOffset` 0.22 both styles,
+  `RiderOffsetPx` -6 / -8). Measured in game 2026-10-20: every look sits at 6.6 px with AutoSeat off and 11.5 px
+  with it on (the player's two modes disagree by 5 px on the plain donkey), the snail at 3.0 px off and 11.5 on
+  (its seat lost in auto mode), Gerry at 25.5 px in both (the picture seat). The seat code is unchanged; the user
+  decides. The whole "Skins and effects" group passed in game the same day (16 scenarios, the three warnings the
+  tests announce themselves).
+- **The creature generator on the same pipeline** (the user: "so now all the skins are on the same level?"):
+  `tools/creature_sprites.py` writes the rat, snail, worm and dragon straight into `assets/skins/<name>/` (one name
+  as the argument redraws one; the probe's `test\skins\` output and the Blue Dragon entry are gone); all 85 + 3 x 44
+  pictures came out byte-identical. Every built-in skin now comes from a generator in the repo writing into its
+  `assets/skins/<id>/` folder; Gerry alone has no pictures of its own.
 - **Skin leftovers cleared** (the user: "check dirs to see if there's anything obsolete ... so we keep parity"):
   `tools/skin_recipes.py` (the retired recolour recipes' prototype) and `horn_bases_raw.json` are gone from the
   repo; `contact.py` lost `load_raw` / `raw_to_game_shift` and `hellfire_proto.py` reads the probe's frames, so no

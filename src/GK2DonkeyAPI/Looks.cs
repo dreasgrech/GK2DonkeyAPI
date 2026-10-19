@@ -264,6 +264,7 @@ namespace GK2DonkeyAPI
             if (d.DeclaredKind != null)
             {
                 d.DeclaredKind.Owner = d.Owner;
+                d.DeclaredKind.BuiltIn = d.BuiltIn;
                 Kinds.KindDef declared = Kinds.Declare(d.DeclaredKind, "skin '" + d.Id + "'");
                 if (string.IsNullOrEmpty(d.KindId) || d.KindId.Equals(Kinds.DonkeyId, StringComparison.OrdinalIgnoreCase)) d.KindId = declared.Id;
             }
@@ -561,15 +562,31 @@ namespace GK2DonkeyAPI
             if (d.Tuning != null) d.Report += d.Tuning.Count + " tuning key(s); ";
             if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
             {
+                // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
+                // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
                 var k = new Kinds.KindDef { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart };
-                if (mount.TryGetValue("name", out string mn)) k.Name = mn;
+                k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
                 if (mount.TryGetValue("author", out string ma)) k.Author = ma;
                 if (mount.TryGetValue("version", out string mv)) k.Version = mv;
                 if (mount.TryGetValue("cart", out string mc)) k.Cart = !mc.Equals("false", StringComparison.OrdinalIgnoreCase);
                 if (mount.TryGetValue("foals", out string mf)) k.Foals = !mf.Equals("false", StringComparison.OrdinalIgnoreCase);
-                if (mount.TryGetValue("foal_scale", out string ms) && float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
+                if (mount.TryGetValue("foal_scale", out string ms))
+                {
+                    if (float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
+                    else d.Report += "[Mount] foal_scale = " + ms + " is not a number (0.2 to 1), the babies stay 0.6; ";
+                }
                 if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
-                if (mount.TryGetValue("effect_when", out string mw) && Enum.TryParse(mw.Trim(), true, out MountEffectWhen when)) k.EffectWhen = when;
+                if (mount.TryGetValue("effect_when", out string mw))
+                {
+                    if (Enum.TryParse(mw.Trim(), true, out MountEffectWhen when)) k.EffectWhen = when;
+                    else d.Report += "[Mount] effect_when = " + mw + " is not Off, Night or Always, taken as Always; ";
+                }
+                var mountUnknown = new List<string>();
+                foreach (string mk in mount.Keys)
+                {
+                    if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
+                }
+                if (mountUnknown.Count > 0) d.Report += "[Mount] unknown keys ignored: " + string.Join(", ", mountUnknown) + "; ";
                 d.DeclaredKind = k;
                 d.Report += "declares the mount '" + k.Id + "'; ";
             }
@@ -737,10 +754,46 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        // The file rewritten with the live values: the [Skin] section's own lines kept (foals, mount, offset and
+        // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
+        internal static readonly string[] MountKeys = { "id", "name", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when" };
+
+        // The file rewritten with the live values: the [Skin] section's own lines kept (mount, offset and
         // offset_cart replaced), [Tuning] and, where the file declares the mount, [Mount] and its tuning sections
-        // written anew from the kind. Returns null, or why not.
+        // written anew from the kind, with the comments those sections held kept in place (a comment above a key
+        // stays above it, one at the end of its line stays on it; the rest of a section's comments come first).
+        // Returns null, or why not.
         internal static string SaveCfg(SkinDef d) => SaveCfg(d, out _);
+
+        // The comments of one rewritten section (the mount block and its tuning sections), placed by the one rule the
+        // canonical layout uses (tools/skins/canonical_cfg.py): a comment belongs to what follows it. Lines above the
+        // header stay above it (Lead), lines above a key stay above that key (Above), a remark at the end of a key's
+        // line stays on it (Inline), lines after the last key of the file's last section stay there (Trail).
+        private sealed class SectionNotes
+        {
+            internal readonly List<string> Lead = new List<string>();
+            internal readonly Dictionary<string, List<string>> Above = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+            internal readonly Dictionary<string, string> Inline = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            internal readonly List<string> Trail = new List<string>();
+
+            // A key line of the section, with the comment lines that stood above it.
+            internal void KeyLine(string line, List<string> above)
+            {
+                int eq = line.IndexOf('=');
+                if (eq <= 0) return;
+                string key = line.Substring(0, eq).Trim();
+                int hash = line.IndexOf('#', eq);
+                if (hash > 0) Inline[key] = line.Substring(hash).Trim();
+                if (above.Count > 0) Above[key] = new List<string>(above);
+            }
+
+            internal void Key(StringBuilder sb, string key, string value)
+            {
+                if (Above.TryGetValue(key, out List<string> above)) foreach (string l in above) sb.Append(l).Append('\n');
+                sb.Append(key).Append(" = ").Append(value);
+                if (Inline.TryGetValue(key, out string note)) sb.Append("  ").Append(note);
+                sb.Append('\n');
+            }
+        }
 
         // changed: false when the file already held exactly this text (nothing written).
         internal static string SaveCfg(SkinDef d, out bool changed)
@@ -750,72 +803,150 @@ namespace GK2DonkeyAPI
             if (path == null) return "no file to write (a code skin, or the sources aren't on this machine)";
             try
             {
-                var head = new List<string>();
-                var skinLines = new List<string>();
-                var otherSections = new List<(string Header, List<string> Lines)>(); // [Game] and anything else: kept as written
+                // Read with the canonical layout's rule: blank lines are dropped, a comment belongs to what follows it
+                // (the next header, or the next key); the file's own line ending is kept.
+                var head = new List<string>();                                   // before the first section
+                var skinLines = new List<string>();                              // [Skin]'s own lines (mount, offset, offset_cart replaced)
+                var tuningAbove = new List<string>();                            // comments above [Tuning] (its keys are regenerated)
+                var otherSections = new List<(string Header, List<string> Above, List<string> Lines)>(); // [Game], [Colors], [Base.*], anything else: as written
+                var notes = new Dictionary<string, SectionNotes>(StringComparer.OrdinalIgnoreCase);     // [Mount] and its tuning sections
+                var pending = new List<string>();                                // comment lines waiting for the next header or key
                 bool declaresMount = false;
                 string section = null;
-                if (File.Exists(path))
+                string nl = "\n";
+                string existing = File.Exists(path) ? File.ReadAllText(path) : null;
+                if (existing != null)
                 {
-                    foreach (string raw in File.ReadAllLines(path))
+                    if (existing.Contains("\r\n")) nl = "\r\n";
+                    foreach (string raw in existing.Split('\n'))
                     {
-                        string line = raw.Trim();
-                        if (line.StartsWith("["))
+                        string kept = raw.TrimEnd('\r').TrimEnd();
+                        string line = kept.Trim();
+                        if (line.Length == 0) continue;
+                        if (line.StartsWith("#"))
                         {
-                            section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                            if (section == "mount") declaresMount = true;
-                            if (section != "skin" && section != "tuning" && !section.StartsWith("mount", StringComparison.Ordinal)) otherSections.Add((raw.Trim(), new List<string>()));
+                            if (section == null) head.Add(kept); else pending.Add(kept);
                             continue;
                         }
-                        if (section == null) head.Add(raw);
-                        else if (section == "skin")
+                        if (line.StartsWith("["))
+                        {
+                            string header = line.Split('#')[0].Trim();
+                            section = header.Trim('[', ']', ' ').ToLowerInvariant();
+                            if (section == "mount") declaresMount = true;
+                            if (section.StartsWith("mount", StringComparison.Ordinal))
+                            {
+                                var n = new SectionNotes();
+                                n.Lead.AddRange(pending);
+                                notes[section] = n;
+                            }
+                            else if (section == "tuning") tuningAbove.AddRange(pending);
+                            else if (section == "skin") head.AddRange(pending);
+                            else otherSections.Add((header, new List<string>(pending), new List<string>()));
+                            pending.Clear();
+                            continue;
+                        }
+                        // a key line
+                        if (section == "skin")
                         {
                             int eq = line.IndexOf('=');
                             string key = eq > 0 ? line.Substring(0, eq).Trim().ToLowerInvariant() : "";
+                            skinLines.AddRange(pending);
+                            pending.Clear();
                             if (key == "mount" || key == "offset" || key == "offset_cart") continue;
-                            skinLines.Add(raw);
+                            skinLines.Add(kept);
                         }
-                        else if (section != "tuning" && !section.StartsWith("mount", StringComparison.Ordinal) && otherSections.Count > 0)
+                        else if (section != null && section.StartsWith("mount", StringComparison.Ordinal))
                         {
-                            otherSections[otherSections.Count - 1].Lines.Add(raw);
+                            notes[section].KeyLine(line, pending);
+                            pending.Clear();
+                        }
+                        else if (section == "tuning")
+                        {
+                            pending.Clear(); // the keys are written from the live values
+                        }
+                        else if (otherSections.Count > 0)
+                        {
+                            otherSections[otherSections.Count - 1].Lines.AddRange(pending);
+                            pending.Clear();
+                            otherSections[otherSections.Count - 1].Lines.Add(kept);
                         }
                     }
+                    // the file's last comments stay in its last section
+                    if (section != null && section.StartsWith("mount", StringComparison.Ordinal)) notes[section].Trail.AddRange(pending);
+                    else if (section == "skin") skinLines.AddRange(pending);
+                    else if (section != null && section != "tuning" && otherSections.Count > 0) otherSections[otherSections.Count - 1].Lines.AddRange(pending);
                 }
+                SectionNotes NotesOf(string name)
+                {
+                    return notes.TryGetValue(name, out SectionNotes n) ? n : new SectionNotes();
+                }
+                // Written in the canonical order: [Skin], [Game], [Tuning], the colour sections and the rest as they
+                // came, the mount block last.
                 var sb = new StringBuilder();
                 foreach (string h in head) sb.Append(h).Append('\n');
                 sb.Append("[Skin]\n");
-                while (skinLines.Count > 0 && skinLines[skinLines.Count - 1].Trim().Length == 0) skinLines.RemoveAt(skinLines.Count - 1); // no blank lines piling up per save
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
                 Kinds.KindDef k = d.Kind;
-                sb.Append("mount = ").Append(d.KindId).Append('\n');
                 if (d.OffsetRide != Vector2.zero || d.OffsetCart != Vector2.zero)
                 {
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
                     if (d.OffsetCart != d.OffsetRide) sb.Append("offset_cart = ").Append(Num(d.OffsetCart.x)).Append(' ').Append(Num(d.OffsetCart.y)).Append('\n');
                 }
-                if (d.Tuning != null && d.Tuning.Count > 0)
+                sb.Append("mount = ").Append(d.KindId).Append('\n');
+                void WriteTuning()
                 {
-                    sb.Append("\n[Tuning]\n");
+                    if (d.Tuning == null || d.Tuning.Count == 0) return;
+                    sb.Append('\n');
+                    foreach (string l in tuningAbove) sb.Append(l).Append('\n');
+                    sb.Append("[Tuning]\n");
                     foreach (var kv in d.Tuning) sb.Append(kv.Key).Append(" = ").Append(kv.Value).Append('\n');
                 }
-                foreach ((string Header, List<string> Lines) other in otherSections)
+                bool tuningWritten = false;
+                foreach ((string Header, List<string> Above, List<string> Lines) other in otherSections)
                 {
-                    sb.Append('\n').Append(other.Header).Append('\n');
+                    bool game = other.Header.Trim('[', ']', ' ').Equals("game", StringComparison.OrdinalIgnoreCase);
+                    if (!game && !tuningWritten)
+                    {
+                        WriteTuning();
+                        tuningWritten = true;
+                    }
+                    sb.Append('\n');
+                    foreach (string l in other.Above) sb.Append(l).Append('\n');
+                    sb.Append(other.Header).Append('\n');
                     foreach (string l in other.Lines) sb.Append(l).Append('\n');
+                    if (game && !tuningWritten)
+                    {
+                        WriteTuning();
+                        tuningWritten = true;
+                    }
                 }
+                if (!tuningWritten) WriteTuning();
                 if (declaresMount && k != Kinds.Donkey)
                 {
-                    sb.Append("\n[Mount]\nid = ").Append(k.Id).Append("\nname = ").Append(k.Label).Append('\n');
-                    if (!string.IsNullOrEmpty(k.Author)) sb.Append("author = ").Append(k.Author).Append('\n');
-                    if (!string.IsNullOrEmpty(k.Version)) sb.Append("version = ").Append(k.Version).Append('\n');
-                    sb.Append("cart = ").Append(k.Cart ? "true" : "false").Append("\nfoals = ").Append(k.Foals ? "true" : "false").Append('\n');
-                    if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) sb.Append("foal_scale = ").Append(Num(k.FoalScale)).Append('\n');
-                    if (!string.IsNullOrEmpty(k.Effect)) sb.Append("effect = ").Append(k.Effect).Append("\neffect_when = ").Append(k.EffectWhen).Append('\n');
-                    WriteSection(sb, "[Mount.Tuning]", k.Tuning);
-                    WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide);
-                    WriteSection(sb, "[Mount.Tuning.Cart]", k.TuningCart);
+                    // the canonical block (docs/mounts-foundation-audit.md §4): id, name, author, version, cart, foals
+                    // always; foal_scale, effect and effect_when when not the default; its comments where they were
+                    SectionNotes mn = NotesOf("mount");
+                    sb.Append('\n');
+                    foreach (string l in mn.Lead) sb.Append(l).Append('\n');
+                    sb.Append("[Mount]\n");
+                    mn.Key(sb, "id", k.Id);
+                    mn.Key(sb, "name", k.Label);
+                    mn.Key(sb, "author", k.Author ?? "");
+                    mn.Key(sb, "version", k.Version ?? "");
+                    mn.Key(sb, "cart", k.Cart ? "true" : "false");
+                    mn.Key(sb, "foals", k.Foals ? "true" : "false");
+                    if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
+                    if (!string.IsNullOrEmpty(k.Effect))
+                    {
+                        mn.Key(sb, "effect", k.Effect);
+                        mn.Key(sb, "effect_when", k.EffectWhen.ToString());
+                    }
+                    foreach (string l in mn.Trail) sb.Append(l).Append('\n');
+                    WriteSection(sb, "[Mount.Tuning]", k.Tuning, NotesOf("mount.tuning"));
+                    WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide, NotesOf("mount.tuning.ride"));
+                    WriteSection(sb, "[Mount.Tuning.Cart]", k.TuningCart, NotesOf("mount.tuning.cart"));
                 }
-                string text = sb.ToString();
+                string text = nl == "\n" ? sb.ToString() : sb.ToString().Replace("\n", nl);
                 if (File.Exists(path) && File.ReadAllText(path) == text) return null; // the same already: no write, no undo step
                 File.WriteAllText(path, text, new UTF8Encoding(false));
                 changed = true;
@@ -828,11 +959,19 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void WriteSection(StringBuilder sb, string name, Dictionary<string, object> values)
+        private static void WriteSection(StringBuilder sb, string name, Dictionary<string, object> values, SectionNotes notes = null)
         {
             if (values == null || values.Count == 0) return;
-            sb.Append('\n').Append(name).Append('\n');
-            foreach (var kv in values) sb.Append(kv.Key).Append(" = ").Append(kv.Value is float f ? Num(f) : kv.Value).Append('\n');
+            sb.Append('\n');
+            if (notes != null) foreach (string l in notes.Lead) sb.Append(l).Append('\n');
+            sb.Append(name).Append('\n');
+            foreach (var kv in values)
+            {
+                string v = kv.Value is float f ? Num(f) : kv.Value?.ToString() ?? "";
+                if (notes != null) notes.Key(sb, kv.Key, v);
+                else sb.Append(kv.Key).Append(" = ").Append(v).Append('\n');
+            }
+            if (notes != null) foreach (string l in notes.Trail) sb.Append(l).Append('\n');
         }
 
         private static string Num(float v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
@@ -923,6 +1062,7 @@ namespace GK2DonkeyAPI
         internal static long PackStamp(SkinDef d)
         {
             long newest = 0;
+            if (string.IsNullOrEmpty(d.Source) || d.FileNames == null) return 0; // a built-in (embedded) or a code skin: no folder to watch (2026-10-20: a built-in's reload threw "path1 cannot be null" here)
             void See(string path)
             {
                 try

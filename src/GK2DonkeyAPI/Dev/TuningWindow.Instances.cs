@@ -391,7 +391,7 @@ namespace GK2DonkeyAPI
                 spawnKindId = spawnKind.Id;
                 foalScale = spawnKind.FoalScale; // the mount's own babies' size, until changed below
             }
-            string noun = spawnKind.Name.ToLowerInvariant();
+            string noun = spawnKind.Label.ToLowerInvariant();
             string Noun1 = char.ToUpperInvariant(noun[0]) + noun.Substring(1);
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip(Noun1, $"Spawns a new {noun} without a cart in front of the keeper, facing his way, wearing the skin above. It is kept with saves in a side file; the game's save is untouched.")))

@@ -72,10 +72,10 @@ namespace GK2DonkeyAPI
             if (defs.TryGetValue(d.Id, out KindDef have))
             {
                 if (have.FromPack && have.Owner == d.Owner && Same(have, d)) return have;
-                Plugin.Log.LogInfo($"Kinds: {where} declares mount '{d.Id}', which {(have.FromPack ? "another pack" : have.Owner)} already defines; the skin joins that one.");
+                Plugin.Log.LogInfo($"Kinds: {where} declares mount '{d.Id}', which {(have.FromPack ? (have.Owner == d.Owner ? "another skin" : "another pack") : have.Owner)} already defines; the skin joins that one.");
                 return have;
             }
-            d.FromPack = true;
+            d.FromPack = true; // BuiltIn is the declaring skin's (set by Looks.Register): a built-in skin's mount is built in
             d.Abilities = Array.Empty<MountAbility>();
             defs[d.Id] = d;
             Changed();
@@ -86,6 +86,7 @@ namespace GK2DonkeyAPI
         private static bool Same(KindDef a, KindDef b)
         {
             return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
+                && a.Author == b.Author && a.Version == b.Version
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
         }
 
@@ -133,6 +134,8 @@ namespace GK2DonkeyAPI
         internal static void Redeclare(KindDef into, KindDef from)
         {
             into.Name = from.Name ?? into.Name;
+            into.Author = from.Author;
+            into.Version = from.Version;
             into.Cart = from.Cart;
             into.Foals = from.Foals;
             into.FoalScale = from.FoalScale;

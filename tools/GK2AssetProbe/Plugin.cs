@@ -173,7 +173,7 @@ namespace GK2AssetProbe
         {
             GUILayout.Label("Film the donkey and its rider", head);
             if (GUILayout.Button(Capture.Recording ? "Recording..." : "Record 4 seconds")) Capture.Start(this);
-            GUILayout.Label("Ride or stand the way you want it filmed. The window hides while recording; the pictures go to captures\\, and tools/skin_preview_html.py plays them.", note);
+            GUILayout.Label("Ride or stand the way you want it filmed. The window hides while recording; the pictures go to captures\\, and tools/skins/skin_preview_html.py plays them.", note);
             if (Capture.Last.Length > 0) GUILayout.Label("Last: captures\\" + Capture.Last, note);
             GUILayout.Space(6f);
             GUILayout.Label("The rider alone", head);

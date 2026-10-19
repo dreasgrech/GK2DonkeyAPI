@@ -156,6 +156,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
+            new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every built-in mount, AutoSeat off and on (a readout)", Body = SeatReadout },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
             new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
@@ -1341,6 +1342,67 @@ namespace GK2DonkeyAPI
         // A game-creature skin (LooksGame.cs): Gerry's 0901_ frames are found in memory or through a sprite atlas,
         // every base key gets a picture (the mapped ones drawn, the head keys empty on purpose), scaled onto the 128
         // canvas, and a donkey wears it as the Gerry mount.
+        // The seat as the game applies it (docs/seat-investigation.md): every built-in skin ridden with the player's
+        // AutoSeat off (the default for everyone) and on, the seat read back in art pixels with the keys that made
+        // it (the instance's SeatOffset / SeatAdjustPx and who set them). A readout, not a judgement: it fails only
+        // when a mount can't be ridden. The player's AutoSeat value is put back at the end.
+        private static IEnumerator SeatReadout()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
+                yield break;
+            }
+            StyleSettings ride = Plugin.For(MountStyle.Ride);
+            bool autoWas = ride.AutoSeat.Entry.Value;
+            const float px = 0.02f * 1.6667f; // Mount.PxWorldY: one art pixel along the seat's axis
+            var lines = new List<string>();
+            string[] skins = { "", "hellfire", "royal-parade", "rat", "snail", "worm", "dragon", "gerry" };
+            foreach (bool auto in new[] { false, true })
+            {
+                ride.AutoSeat.Entry.Value = auto;
+                foreach (string id in skins)
+                {
+                    Vector3 near = Spot(home, 4f) ?? home;
+                    MountHandle a = Spawn(near, true);
+                    if (a == null)
+                    {
+                        Fail("could not spawn");
+                        continue;
+                    }
+                    if (id.Length > 0) a.Tuning.Set(Owner, "Skin", id);
+                    yield return Until(() => a.IsReady && (id.Length == 0 || a.I.TestSkinWearing() == id), 30f);
+                    if (!waited)
+                    {
+                        Fail($"'{id}' never became whole");
+                        a.Remove();
+                        continue;
+                    }
+                    yield return Frames(3);
+                    MountResult r = a.Ride(showMessage: false);
+                    if (!r.Ok)
+                    {
+                        Fail($"'{(id.Length == 0 ? "donkey" : id)}' can't be ridden: {r.Reason}");
+                        a.Remove();
+                        continue;
+                    }
+                    yield return Until(() => Mounts.IsMounted, 5f);
+                    yield return Frames(8); // the seat settles (the picture seat, the auto seat, the bob)
+                    float seat = a.I.TestSeatApplied;
+                    string who(string key) => a.Tuning.IsSet(key) ? $"{key} = {a.Tuning.Get<object>(key)} ({(a.Tuning.SetBy(key) == Looks.TuningOwner ? "the mount" : a.Tuning.SetBy(key))})" : $"{key} = the player's {(key == "SeatOffset" ? ride.SeatOffset.Entry.Value.ToString("0.00") : ride.SeatAdjustPx.Entry.Value.ToString())}";
+                    bool picture = a.I.LooksRig.TrySeatTop(out _);
+                    lines.Add($"AutoSeat {(auto ? "on " : "off")} | {(id.Length == 0 ? "donkey" : id),-13} kind {a.Kind,-7} | seat {seat / px,6:0.0} px ({seat:0.000}) | {(picture ? "seat = picture; " : "")}{who("SeatOffset")}; {who("SeatAdjustPx")}");
+                    Mounts.Dismount("self-test");
+                    yield return Until(() => !Mounts.IsMounted, 5f);
+                    a.Remove();
+                    yield return Frames(2);
+                }
+            }
+            ride.AutoSeat.Entry.Value = autoWas;
+            foreach (string l in lines) Info(l);
+            Check(lines.Count == skins.Length * 2, $"{lines.Count} of {skins.Length * 2} rides read out (the lines above: docs/seat-investigation.md)");
+        }
+
         private static IEnumerator GameCreature()
         {
             if (!Plugin.MountsOn)
@@ -1380,7 +1442,7 @@ namespace GK2DonkeyAPI
             Check(rest > 9 * 100, $"the rest picture is drawn and scaled 3x ({rest} opaque pixels; Gerry's skull is about 200 pixels, so 1800 or more)");
             Check(walk > 0 && turn > 0, $"the walk ({walk}) and the somersault ({turn}) pictures are drawn");
             Check(head == 0, $"the head key is empty on purpose, so nothing of the donkey's head shows ({head})");
-            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner, "the Gerry mount's seat value is on the wearer");
+            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner && a.Tuning.Get<int>("SeatAdjustPx") == -16, $"the Gerry mount's one seat value ([Mount.Tuning] SeatAdjustPx = -16, both styles) is on the wearer ({(a.Tuning.IsSet("SeatAdjustPx") ? a.Tuning.Get<int>("SeatAdjustPx").ToString() : "not set")})");
             // seat = picture: the rider's seat is the skull picture's top at the pivot column, above the ground and
             // within the picture (160 px canvas: under 3.2 units) whatever the player's AutoSeat / SeatOffset
             bool seatOnPicture = a.I.LooksRig.TrySeatTop(out Vector3 seatTop);
@@ -1389,6 +1451,17 @@ namespace GK2DonkeyAPI
             // the babies' size lives on the mount: Gerry's 0.33 (its skin.cfg), the donkey's 0.6
             MountKindInfo gk = Mounts.Kinds.Find("gerry");
             Check(gk != null && Math.Abs(gk.FoalScale - 0.33f) < 0.001f, $"the Gerry mount's babies are 0.33x ({gk?.FoalScale})");
+            Check(gk != null && gk.IsBuiltIn && gk.FromPack && gk.Author == "dreas" && gk.Version == "1.0", $"a built-in skin's mount is built in, from its pack, with the file's author and version ({gk?.Author} {gk?.Version})");
+            // a built-in's "Reload from the file" (the Mounts tab, the undo) reads the repo's cfg where the sources are
+            // (2026-10-20: it threw on the pack folder a built-in doesn't have, so the panel's undo never took)
+            Looks.SkinDef gd = Looks.Find("gerry");
+            if (gd != null && Looks.CfgPathFor(gd) != null)
+            {
+                string rl = Looks.ReloadCfg(gd);
+                Kinds.KindDef gkd = Kinds.Find("gerry");
+                Check(rl == null && gkd != null && gkd.Tuning != null && gkd.Tuning.TryGetValue("SeatAdjustPx", out object sv) && Convert.ToInt32(sv) == -16, "a built-in reloads from the repo's cfg and its mount keeps the file's values" + (rl != null ? " (" + rl + ")" : ""));
+            }
+            else Info("no sources on this machine: the built-in reload is not checked");
             MountKindInfo dk = Mounts.Kinds.Find(MountKinds.DonkeyId);
             Check(dk != null && Math.Abs(dk.FoalScale - 0.6f) < 0.001f, $"the donkey's babies are 0.6x ({dk?.FoalScale})");
             a.Remove();
@@ -2071,7 +2144,7 @@ namespace GK2DonkeyAPI
             try
             {
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-kind", "kind-test",
-                    "# a test pack\n[Skin]\nformat = 1\nid = kind-test\nname = Kind Test\nmount = test-beast\n\n[Mount]\nid = test-beast\nname = Test Beast\ncart = false\nfoals = false\nfoal_scale = 0.4\n\n[Mount.Tuning]\nRiderOffsetPx = 3\n\n[Mount.Tuning.Cart]\nSeatAdjustPx = 7\n\n[Colors]\nDark = 221A20\n");
+                    "# a test pack\n[Skin]\nformat = 1\nid = kind-test\nname = Kind Test\nmount = test-beast\n\n[Colors]\nDark = 221A20\n\n# keep: the mount block's comment\n[Mount]\nid = test-beast\nname = Test Beast\nauthor = the self-test\nversion = 0.1\ncart = false\nfoals = false  # keep: no babies\nfoal_scale = 0.4\n\n# keep: both styles\n[Mount.Tuning]\nRiderOffsetPx = 3\n\n[Mount.Tuning.Cart]\n# keep: above the cart key\nSeatAdjustPx = 7\n");
             }
             catch (Exception e)
             {
@@ -2083,6 +2156,7 @@ namespace GK2DonkeyAPI
             MountKindInfo k = Mounts.Kinds.Find("test-beast");
             Check(k != null && k.FromPack && !k.Cart && System.Linq.Enumerable.Contains(k.Skins, "kind-test"), "the pack declared the kind: listed, no cart, with its skin");
             Check(k != null && Math.Abs(k.FoalScale - 0.4f) < 0.001f, $"the pack's foal_scale is the kind's ({k?.FoalScale})");
+            Check(k != null && !k.IsBuiltIn && k.Author == "the self-test" && k.Version == "0.1", $"a loose pack's mount is not built in and carries the file's author and version ({k?.Author} {k?.Version})");
             MountSkinInfo s = Mounts.Looks.Find("kind-test");
             Check(s != null && s.Mount == "test-beast", "the skin names the kind");
             Vector3 near = Spot(home, 4f) ?? home;
@@ -2124,12 +2198,23 @@ namespace GK2DonkeyAPI
                 Check(text.Contains("# a test pack") && text.Contains("name = Kind Test") && text.Contains("[Mount.Tuning.Ride]") && text.Contains("LegAdjustYPx = 2") && text.Contains("RiderOffsetPx = 3"), "the file keeps its own lines and has the new value");
                 Check(text.Contains("foal_scale = 0.45") && !text.Contains("foal_scale = 0.4\n"), "the file has the new foal_scale once");
                 Check(text.Contains("[Colors]") && text.Contains("Dark = 221A20"), "the file keeps its [Colors] section (the Mounts tab's auto-save must never drop a skin's colour regions)");
+                // the comments of the rewritten mount sections stay where they were (docs/mounts-foundation-audit.md 3.4)
+                int kept = 0;
+                string lf = text.Replace("\r\n", "\n");
+                foreach (string s2 in new[] { "# keep: the mount block's comment\n[Mount]", "foals = false  # keep: no babies", "# keep: both styles\n[Mount.Tuning]", "# keep: above the cart key\nSeatAdjustPx = 7" }) if (lf.Contains(s2)) kept++;
+                Check(kept == 4, $"the four comments in the mount sections are kept in place ({kept} of 4)");
+                Check(text.Contains("author = the self-test") && text.Contains("version = 0.1") && text.IndexOf("[Colors]") < text.IndexOf("[Mount]"), "the saved block carries author and version and stays after [Colors]");
                 kd.TuningRide.Remove("LegAdjustYPx");
                 kd.FoalScale = 0.6f;
+                kd.Author = "nobody";
                 string loadErr = Looks.ReloadCfg(def);
                 Kinds.KindDef again = Kinds.Find("test-beast");
                 Check(loadErr == null && again == kd && kd.TuningRide != null && kd.TuningRide.TryGetValue("LegAdjustYPx", out object back) && Convert.ToInt32(back) == 2, "reloaded: the same kind object has the file's value again" + (loadErr != null ? " (" + loadErr + ")" : ""));
                 Check(Math.Abs(kd.FoalScale - 0.45f) < 0.001f && Math.Abs((Mounts.Kinds.Find("test-beast")?.FoalScale ?? 0f) - 0.45f) < 0.001f, $"reloaded: the file's foal_scale is on the kind and listed ({kd.FoalScale})");
+                Check(kd.Author == "the self-test", $"reloaded: the file's author is back on the kind ({kd.Author})");
+                // idempotence: a second save of an unchanged kind writes nothing (no comment or blank-line drift)
+                string againErr = Looks.SaveCfg(def, out bool changedAgain);
+                Check(againErr == null && !changedAgain, "saved again with nothing changed: the file is left as it is" + (againErr != null ? " (" + againErr + ")" : changedAgain ? " (it was rewritten: the save drifts)" : ""));
                 yield return Frames(3);
                 Check(a != null && a.Tuning.IsSet("LegAdjustYPx") && a.Tuning.Get<int>("LegAdjustYPx") == 2, "the wearer has the reloaded value");
             }
@@ -2158,6 +2243,17 @@ namespace GK2DonkeyAPI
             public override void Tick(MountHandle mount, float dt) => Ticks++;
         }
 
+        // An ability that throws on its first tick: the API switches it off for that instance with one warning and
+        // the kind's other abilities go on (docs/mounts-design.md §4).
+        private sealed class ThrowingAbility : MountAbility
+        {
+            internal int Ticks, DetachedCount;
+            public override string Id => "throws";
+            public override bool TicksWhileStanding => true;
+            public override void Tick(MountHandle mount, float dt) { Ticks++; throw new InvalidOperationException("the self-test's ability throws on purpose"); }
+            public override void Detached(MountHandle mount) => DetachedCount++;
+        }
+
         // A kind registered in code with an ability: Attached once when a donkey wearing one of its skins is ready,
         // ticking while it stands, Mounted on the ride and Dismounted after, Detached when it is removed; the kind
         // withdrawn with the handle.
@@ -2170,11 +2266,12 @@ namespace GK2DonkeyAPI
             }
             const string owner = Owner + ".kind";
             var ability = new CountingAbility();
+            var thrower = new ThrowingAbility();
             IDisposable reg;
             string tempRoot;
             try
             {
-                reg = Mounts.Kinds.Register(owner, new MountKindDef { Id = "test-able", Name = "Test Able", Abilities = { ability }, TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 4f }, TuningCart = new Dictionary<string, object> { ["CargoBedDepth"] = -0.31f } }); // a float for an int key: converted
+                reg = Mounts.Kinds.Register(owner, new MountKindDef { Id = "test-able", Name = "Test Able", Abilities = { ability, thrower }, TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 4f }, TuningCart = new Dictionary<string, object> { ["CargoBedDepth"] = -0.31f } }); // a float for an int key: converted
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-able", "able-test", "[Skin]\nformat = 1\nid = able-test\nname = Able Test\nmount = test-able\n");
             }
             catch (Exception e)
@@ -2183,6 +2280,7 @@ namespace GK2DonkeyAPI
                 yield break;
             }
             Looks.RegisterFolder(tempRoot, owner);
+            Info("the next \"ability 'throws' of 'test-able' threw\" warning is this test's own: it checks that a throwing ability is switched off");
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             a?.Tuning.Set(Owner, "Skin", "able-test");
@@ -2190,6 +2288,7 @@ namespace GK2DonkeyAPI
             Check(waited, "a donkey wearing the skin is of the kind");
             yield return Frames(5);
             Check(ability.AttachedCount == 1 && ability.Ticks > 0, $"attached once, ticking while standing ({ability.AttachedCount}, {ability.Ticks} ticks)");
+            Check(thrower.Ticks == 1 && ability.Ticks > 1, $"an ability that throws is off for this one after its first tick, the other goes on ({thrower.Ticks} tick of the thrower, {ability.Ticks} of the other)");
             Check(a != null && a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.Get<int>("SeatAdjustPx") == 4, "the kind's riding tuning is on it (a float given, the key's int taken)");
             MountResult ride = a != null ? a.Ride(showMessage: false) : MountResult.Refused("not spawned");
             Check(ride.Ok, $"ridden{(ride.Ok ? "" : " (" + ride.Reason + ")")}");
@@ -2231,6 +2330,7 @@ namespace GK2DonkeyAPI
             a?.Remove();
             yield return Frames(3);
             Check(ability.DetachedCount == 1, $"Detached once on removal ({ability.DetachedCount})");
+            Check(thrower.DetachedCount == 0, $"the switched-off ability gets no more calls, not even Detached ({thrower.DetachedCount})");
             Looks.Unregister("able-test", owner);
             reg.Dispose();
             Check(Mounts.Kinds.Find("test-able") == null, "the kind is withdrawn with its handle");

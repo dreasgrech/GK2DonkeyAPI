@@ -348,7 +348,7 @@ the view, before that view is ever drawn.
 - **Worm:** he sits on the rear hump with the worm's front rising before his hands; reads well.
 - **The plain donkey never showed through** in any capture.
 
-**The rat** (tools/creature_sprites.py): four short legs in a walk cycle (diagonal pairs together, the feet lifting
+**The rat** (tools/skins/creatures/make_creatures.py): four short legs in a walk cycle (diagonal pairs together, the feet lifting
 on the forward swing, far legs dark behind the body), a pointed snout, ear, eye, whiskers and a swaying tail; the
 back on the seat line, so the rider sits without tuning.
 

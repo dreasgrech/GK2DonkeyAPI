@@ -80,8 +80,8 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   ```
 
   A colour named that the pictures don't have is a warning (and a SkinsScan failure for the built-ins); a colour
-  in two regions is an error. Everything not named is Coat. A recipe skin (`kind = palette`) keeps the donkey's map,
-  since it is drawn in the donkey's colours.
+  in two regions is an error. Everything not named is Coat. A pack with `kind = palette` keeps the donkey's map,
+  since it is drawn in the donkey's colours (a recipe is an own-colour look, see below).
 - **The game-source skin (Gerry):** the same as any skin; its colours are the game's skull colours, collected from
   the frames at build.
 - **A recipe skin** (a mod's, through the API; Hellfire was one until 2026-10-19) is an own-colour look too: all Coat but the regions it declares in code. A pack with
@@ -133,7 +133,7 @@ skin. The cart's colours go with the mount too, since they are set in the same w
 
 ### 2.7 What the built-in creatures declare
 
-Generated once by `tools/creature_sprites.py` (it quantised the art and knows the palette) and kept in each
+Generated once by `tools/skins/creatures/make_creatures.py` (it quantised the art and knows the palette) and kept in each
 `skin.cfg`, then tuned by eye:
 
 - **Dragons:** Dark = the two darkest outline colours; Muzzle = the membrane colours; the rest Coat. A player's Coat
@@ -159,8 +159,8 @@ Everything in section 4 but the row note: `Looks.Loaded` collects a skin's colou
 them by region from `[Colors]` (`SkinDef.ColorRegions`, parsed and validated in `FromCfg`); `Colors.Rig` takes the
 worn look's lists for the mount's sprite group, re-maps when the worn skin changes, and picks the cube per group
 over `PaletteMaxColours` (48); `ArtLightness` anchors to the look; a companion re-applies its look when its skin's
-sheet becomes whole (`Looks.LoadedReady`); the five picture skins carry generated `[Colors]` lists
-(`tools`-free: the job's `skin_colors.py` rules, read off the enlarged standing frames); SkinsScan validates the
+sheet becomes whole (`Looks.LoadedReady`); the creature skins carry generated `[Colors]` lists
+(`tools/skins/skin_colors.py`: rules read off the enlarged standing frames), Hellfire and Royal Parade hand-written ones; SkinsScan validates the
 lists against the PNGs with a PNG reader of its own; the self-test "colours: the player's regions on a mount in
 its own colours" renders the worm on the settings picture, reads the pixels back (pink before, green after a custom
 coat), checks the cube path and that the dragon's Muzzle changes its belly colours only. Saddle Up's Coat and
@@ -173,7 +173,7 @@ Harness descriptions say what they do on every mount.
 | A look's colour set collected at build, per-region map, `[Colors]` parsing and validation | `Looks.cs` (`Loaded`, `FromCfg`), `LooksGame.cs` | medium |
 | Engine takes the worn look's map for the sprite group instead of the embedded donkey lists; rebuilds on a skin change; cube above the threshold | `Colors.cs` (`Regions`, the pairs loop, `ApplyMethod`), `ColorsPreview.cs` (`ArtLightness`) | medium |
 | "(none on this mount)" on an empty region's row | `MountSettingsPage`, `MountCompanion` | small |
-| Built-in `[Colors]` lists | `tools/creature_sprites.py`, the six `skin.cfg` | small |
+| Built-in `[Colors]` lists | `tools/skins/creatures/make_creatures.py`, the six `skin.cfg` | small |
 | Checks: SkinsScan validates `[Colors]` against the PNGs; a self-test wears the worm, shifts its Coat hue and samples a sheet colour through the pairs; the dragon's Muzzle moves the membrane only | `tests/SkinsScan`, `Dev/SelfTest.cs` | medium |
 | Docs: `docs/skins.md` (`[Colors]`), `docs/colors.md`, `docs/api.md`, `docs/reference.md` | | small |
 

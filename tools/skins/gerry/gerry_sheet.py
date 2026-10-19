@@ -1,7 +1,7 @@
 """Contact sheets of the frames gerry_probe.py exported (docs/gerry-mount.md): one row per animation at 2x with the
 cell outlined (gerry_sheet.png), and the walk cycles, the somersault and the heads at 8x (gerry_zoom.png).
 
-    python tools/gerry_sheet.py <folder with the exported PNGs>
+    python tools/skins/gerry/gerry_sheet.py <folder with the exported PNGs>
 
 The sheets land next to the frames. They are the game's art: keep them out of the repository.
 """

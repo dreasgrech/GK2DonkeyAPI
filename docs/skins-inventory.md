@@ -2,7 +2,7 @@
 
 Every skin the API knows, what it is made of, where its source and its tooling are, and what is read from outside
 the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo). The review page
-(`tools/skin_preview_html.py` -> `BepInEx\GK2-asset-probe\skins-preview.html`) shows them all, grouped like this.
+(`tools/skins/skin_preview_html.py` -> `BepInEx\GK2-asset-probe\skins-preview.html`) shows them all, grouped like this.
 
 ## The three kinds of skin
 
@@ -63,15 +63,16 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - **Pictures and cfg**: `src/GK2DonkeyAPI/assets/skins/<dragon|rat|snail|worm>/` (44 PNGs each; the dragon also a
   `front\` layer of 41 pictures drawn above the rider), embedded into the DLL by the csproj
   (`GK2DonkeyAPI.skins.<id>.<file>`). Each `skin.cfg` declares the mount (`[Mount]`, its tuning) and its `[Colors]`.
-- **Generator**: `tools/creature_sprites.py` (our own art, drawn by code: a crawl cycle for the walk, idle frames for
-  the rest; writes to the probe's `test\skins\` and, with a second argument, to `assets\skins\`). Colours per region:
-  `tools/skin_colors.py` (writes each `[Colors]` section; run after the art changes, then `tests/SkinsScan`).
+- **Generator**: `tools/skins/creatures/make_creatures.py` (our own art, drawn by code: a crawl cycle for the walk, idle frames for
+  the rest; writes straight into `assets\skins\<name>\` like every other generator since 2026-10-19 23:45, one
+  creature with its name as the argument; the probe's `test\skins\` output is gone). Colours per region:
+  `tools/skins/skin_colors.py` (writes each `[Colors]` section; run after the art changes, then `tests/SkinsScan`).
 - Docs: `docs/mount-looks-design.md` (the creatures), `docs/mount-colours.md`, `docs/mounts-design.md` (kinds).
 
 ### Gerry (its own mount, game creature)
 - **Cfg only**: `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` (`source = game`, `[Game] prefix = 0901_`, the seat
   from the picture). The frames are the game's talking skull, read back and scaled at run time: `LooksGame.cs`.
-- **Tools**: `tools/gerry_probe.py`, `tools/gerry_sheet.py` (the exported frames, contact sheets). Docs:
+- **Tools**: `tools/skins/gerry/gerry_probe.py`, `tools/skins/gerry/gerry_sheet.py` (the exported frames, contact sheets). Docs:
   `docs/gerry-mount.md`.
 
 ### Sepia and Checker (example mod, source only)
@@ -90,13 +91,16 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | Tool | Does |
 |---|---|
 | `tools/GK2AssetProbe` (dev plugin, Shift+F7) | exports the donkey's frames to `donkey-frames\`, the rider, films to `captures\`; its `test\skins\` tester |
-| `tools/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
+| `tools/skins/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
 | `tools/skins/check_skin.py` | checks a pack folder (frames, colours vs the donkey's, lone pixels); run by the watcher |
+| `tools/skins/canonical_cfg.py` | rewrites every built-in `skin.cfg` into the one layout (`--check` in the release scans) |
+| `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_colors.py` | the four drawn creatures into their folders; their `[Colors]` sections from the pixels |
+| `tools/skins/gerry/gerry_probe.py`, `gerry_sheet.py` | Gerry's game frames exported and laid out for measuring |
 | `tools/skins/watch_skin.py`, `tools/skins/scripts/*.lua` | the by-hand loop: Aseprite -> export -> check -> previews; the two menu scripts (also installed in `%APPDATA%\Aseprite\scripts\`) |
 | `tools/skins/ase_write.py` | writes an `.aseprite` file (layers, frames, tags) from Python |
 | `tools/skins/gamedir.py` | the game folder from `Directory.Build.props`, the frames and packs folders in it |
-| `tools/pngcolors.py` | a plain PNG reader and colour counter |
-| `tests/SkinsScan` | every built-in skin: its cfg, pictures, `[Colors]` against its pixels (in the release scans) |
+| `tools/skins/pngcolors.py` | a plain PNG reader and colour counter |
+| `tests/SkinsScan` | every built-in skin: its cfg key by key and value by value, the layout, pictures, `[Colors]` against its pixels, the `[Mount]` block (in the release scans) |
 | Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change", "Export the loaded skins as built" (`LooksExport.cs`) |
 | Self-tests (`src/GK2DonkeyAPI/Dev/SelfTest.cs`, "Skins and effects") | packs, recipes, over skins with the world readback, auto-reload, kinds |
 

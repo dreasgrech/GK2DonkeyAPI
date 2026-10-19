@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace GK2DonkeySkins
 {
-    // Example mod: two skins for the donkey registered from code (docs/skins-design.md, docs/api.md "Looks").
+    // Example mod: two skins for the donkey registered from code (docs/skins-design.md, docs/api.md "Skins").
     //   - "sepia": a recipe, a rule over the donkey's own frames (the API builds it from the game's art when first worn);
     //   - "checker": pictures drawn by code (IMountSkinSource), a placeholder that shows how a source works.
     // A skin pack needs none of this: a gk2skins/<id>/ folder with skin.cfg and PNGs anywhere under BepInEx/plugins is
@@ -28,7 +28,9 @@ namespace GK2DonkeySkins
             }
             registered.Add(Mounts.Looks.RegisterRecipe(Guid, "sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
             // A mount kind of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
-            // sits the rider two pixels higher, and carries one ability: it burns (the built-in Hellfire) while ridden.
+            // sits the rider two pixels higher (SeatAdjustPx: with the player's AutoSeat on or a skin that says
+            // seat = picture; with AutoSeat off, the default, the seat is the player's SeatOffset: docs/reference.md),
+            // and carries one ability: it burns (the built-in Hellfire) while ridden.
             registered.Add(Mounts.Kinds.Register(Guid, new MountKindDef
             {
                 Id = "checker-beast",
@@ -48,7 +50,7 @@ namespace GK2DonkeySkins
                 Mount = "checker-beast",
                 Source = new CheckerSource(),
             }));
-            Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, burns while ridden); pick them in Saddle Up's Donkey settings.");
+            Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, burns while ridden); pick them in Saddle Up's Mount section.");
         }
 
         private void OnDestroy()

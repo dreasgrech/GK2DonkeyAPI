@@ -32,6 +32,29 @@ if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else P
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
 var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase" };
+// The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
+var mountKeys = StringsIn(looksCs, "MountKeys");
+if (mountKeys.Count < 9) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (9 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
+var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
+var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
+var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
+var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Effects.cs"));
+var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+if (!effectIds.Contains("hellfire")) Fail($"Effects.cs: the built-in effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"Effects.cs: {effectIds.Count} built-in effect id(s), hellfire among them");
+var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Game", "Colors", "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" };
+
+// The section headers of a cfg in file order, for the canonical layout: [Skin] first, [Game] right after it, the
+// colour sections before the mount block, the mount block last.
+static List<string> SectionOrder(string path)
+{
+    var order = new List<string>();
+    foreach (var raw in File.ReadLines(path))
+    {
+        var line = raw.Trim();
+        if (line.StartsWith("[")) order.Add(line.Split('#')[0].Trim().TrimStart('[').TrimEnd(']').Trim());
+    }
+    return order;
+}
 
 static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
 {
@@ -158,12 +181,46 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
     if (mount.Length == 0) Bad("mount missing (a built-in names its mount)");
     if (skin.TryGetValue("base", out var b) && b != "donkey") Bad($"base = {b}: the donkey is the only base");
     foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
+    // the values the loader reads by name (anything else silently means the default in the game)
+    if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");
+    if (skin.TryGetValue("kind", out var kindv) && kindv != "own" && kindv != "palette") Bad($"[Skin] kind = {kindv}: own or palette");
+    if (skin.TryGetValue("seat", out var seat) && seat != "picture") Bad($"[Skin] seat = {seat}: picture is the only value");
+    if (skin.TryGetValue("source", out var srcv) && srcv != "pictures" && srcv != "game") Bad($"[Skin] source = {srcv}: pictures or game");
+    if (skin.TryGetValue("erase", out var erase))
+    {
+        if (erase != "none" && !Regex.IsMatch(erase, "^[0-9A-Fa-f]{6}$")) Bad($"[Skin] erase = {erase}: RRGGBB or none");
+        if (!skin.TryGetValue("layer", out var l2) || l2 != "over") Bad("[Skin] erase is for layer = over only");
+    }
     int cw = 96, ch = 96;
     if (skin.TryGetValue("canvas", out var canvas))
     {
         var parts = canvas.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || !int.TryParse(parts[0], out cw) || !int.TryParse(parts[1], out ch)) Bad($"canvas = {canvas}: two numbers expected");
+        else if (cw < 8 || cw > 512 || ch < 8 || ch > 512) Bad($"canvas = {canvas}: 8 to 512");
     }
+    // the sections and their order (the canonical layout, tools/skins/canonical_cfg.py)
+    var order = SectionOrder(cfgPath);
+    foreach (var sec in order)
+    {
+        if (!knownSections.Contains(sec) && !sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}]: not a section the loader knows");
+        if (sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase))
+        {
+            string region = sec.Substring(5);
+            if (!mountRegions.Contains(region)) Bad($"[{sec}]: not a mount region ({string.Join(", ", mountRegions)})");
+            foreach (var kv in cfg[sec]) if (!baseKnobs.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a colour knob ({string.Join(", ", baseKnobs)})");
+        }
+    }
+    if (order.Count == 0 || !order[0].Equals("Skin", StringComparison.OrdinalIgnoreCase)) Bad("[Skin] must be the first section");
+    int gameAt = order.FindIndex(s => s.Equals("Game", StringComparison.OrdinalIgnoreCase));
+    if (gameAt > 1) Bad("[Game] stands right after [Skin]");
+    int firstMount = order.FindIndex(s => s.StartsWith("Mount", StringComparison.OrdinalIgnoreCase));
+    if (firstMount >= 0)
+    {
+        if (!order[firstMount].Equals("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[firstMount]}] before [Mount]: the mount block starts with [Mount]");
+        for (int i = firstMount; i < order.Count; i++) if (!order[i].StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[i]}] after the mount block: the mount block comes last");
+    }
+    else if (order.Any(s => s.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase))) Bad("[Mount.Tuning] without a [Mount] section (ignored in the game)");
+    if (order.GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) Bad("a section appears twice");
     bool sheet = skin.ContainsKey("sheet");
     bool game = skin.TryGetValue("source", out var src) && src.Equals("game", StringComparison.OrdinalIgnoreCase);
     if (game)
@@ -251,14 +308,39 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
     {
         string mid = m.GetValueOrDefault("id") ?? "";
         if (mid != mount) Bad($"[Mount] id = {mid} but the skin's mount = {mount}");
-        if (string.IsNullOrWhiteSpace(m.GetValueOrDefault("name"))) Bad("[Mount] name missing");
+        if (mid == "donkey") Bad("[Mount] id = donkey: the donkey is the game's own mount, a skin of it declares no [Mount]");
+        foreach (var k in m.Keys) if (!mountKeys.Contains(k)) Bad($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
+        foreach (var req in mountRequired) if (string.IsNullOrWhiteSpace(m.GetValueOrDefault(req))) Bad($"[Mount] {req} missing (the canonical block always carries it)");
         foreach (var flag in new[] { "cart", "foals" })
         {
             if (m.TryGetValue(flag, out var v) && v != "true" && v != "false") Bad($"[Mount] {flag} = {v}: true or false");
         }
+        if (m.TryGetValue("foal_scale", out var fsv))
+        {
+            if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) Bad($"[Mount] foal_scale = {fsv}: 0.2 to 1");
+            else if (Math.Abs(fs - 0.6) < 0.001) Bad("[Mount] foal_scale = 0.6 is the default: leave it out");
+        }
+        if (m.TryGetValue("effect", out var ef))
+        {
+            if (ef == "none" || ef.Length == 0) Bad("[Mount] effect = none is the default: leave it out");
+            else if (!effectIds.Contains(ef)) Bad($"[Mount] effect = {ef}: not a built-in effect ({string.Join(", ", effectIds)})");
+            if (!m.ContainsKey("effect_when")) Bad("[Mount] effect without effect_when (Off, Night or Always)");
+        }
+        if (m.TryGetValue("effect_when", out var ew))
+        {
+            if (!effectWhen.Contains(ew)) Bad($"[Mount] effect_when = {ew}: Off, Night or Always (Never is the menu's word, not a value)");
+            if (!m.ContainsKey("effect")) Bad("[Mount] effect_when without an effect");
+        }
+        // every tuning key in one place: a style section always wins over [Mount.Tuning], so a key in both is dead there
+        if (cfg.TryGetValue("Mount.Tuning", out var both))
+        {
+            foreach (var sec in new[] { "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
+                if (cfg.TryGetValue(sec, out var st)) foreach (var key in both.Keys) if (st.ContainsKey(key)) Bad($"{key} set in [Mount.Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
+        }
         foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
         {
             if (!cfg.TryGetValue(sec, out var t)) continue;
+            if (t.Count == 0) Bad($"[{sec}] is empty: leave it out");
             foreach (var kv in t)
             {
                 if (!tuningKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a tuning key of [Ride]/[Cart] (docs/reference.md)");

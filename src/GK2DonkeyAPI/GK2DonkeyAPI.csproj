@@ -27,7 +27,7 @@
     <EmbeddedResource Include="assets\lantern-vertices.bin" LogicalName="GK2DonkeyAPI.lantern-vertices.bin" />
     <EmbeddedResource Include="assets\lantern-indices.bin" LogicalName="GK2DonkeyAPI.lantern-indices.bin" />
     <!-- The built-in skins (docs/skins-design.md): assets\skins\<id>\skin.cfg and a PNG per donkey frame, drawn by
-         tools/creature_sprites.py (our own art). Looks.RegisterEmbedded reads them by this name pattern. -->
+         tools/skins/creatures/make_creatures.py (our own art). Looks.RegisterEmbedded reads them by this name pattern. -->
     <EmbeddedResource Include="assets\skins\**\*" LogicalName="GK2DonkeyAPI.skins.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

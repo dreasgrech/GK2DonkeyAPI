@@ -639,9 +639,11 @@ for the style, then for both; the player's cfg. A value of another numeric type 
 for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged set goes on the wearer as overrides owned by the skin
 system and is re-applied only when the skin, the kind or the style changes.
 
-A **pack declares a kind without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `cart`, `foals`,
-`foal_scale`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its values); the first
-declaration of an id wins and later skins join it. The built-in creatures declare theirs this way.
+A **pack declares a kind without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `author`, `version`,
+`cart`, `foals`, `foal_scale`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
+values, each key in one of the three); the first declaration of an id wins and later skins join it. The built-in
+creatures (rat, snail, worm, dragon, Gerry) declare theirs this way, all in one layout (docs/skins.md "Worked
+examples"); `MountKindInfo.IsBuiltIn` is true for them.
 
 An **ability** (`MountAbility`, abstract: override what you need) is code the API calls for every instance of the
 kind that has a handle: `Attached` / `Detached` when the instance becomes / stops being the kind, `Mounted(style)` /
@@ -754,7 +756,7 @@ indoors.
 ```csharp
 handle.Tuning.Set(Guid, "Effect", "hellfire");                   // this donkey burns
 handle.Tuning.Set(Guid, "EffectWhen", MountEffectWhen.Night);     // only at night
-companion.Effect = "hellfire";                                     // the player's donkey (Saddle Up's Donkey rows)
+companion.Effect = "hellfire";                                     // the player's donkey (Saddle Up's Effect section)
 Mounts.EffectSettings.Set(Guid, "EffectWithCart", true);           // the ring round the cart too, for every donkey
 ```
 
@@ -783,7 +785,7 @@ foreach (MountEffectInfo e in Mounts.Effects.Effects) Log(e.Id);   // "hellfire"
 The API spawns, follows and scales the emitters (smaller on foals), rebuilds them when the cart is hitched or
 unhitched, relights a source whose game particles weren't in memory yet, and removes everything with the view or the
 donkey; nothing is attached to the game's pooled parts. A settings page offers the list with `page.List(...)` as for
-skins (Saddle Up: Donkey, "Effect").
+skins (Saddle Up: the Effect section, `EffectRows`).
 
 ## Gating on the game's progress
 
@@ -858,8 +860,8 @@ History:
   `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`, kept with the save; "donkey"
   or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`, `FrameKeys`, `MountSkinInfo`, `Register` with
   an `IMountSkinSource` of sprites, `RegisterRecipe`, `RegisterFolder`, `RegisterEmbedded`, `Unregister`, `SkinsChanged`);
-  `MountSettingsPage.List`, and `Toggle` takes `visible`; the built-in skins rat, snail and worm, the recipe hellfire (zebra,
-  ghost, ember, golden and shadow. Effects ([above](#effects-0300)): `Mounts.Effects` (`Effects`, `Find`, `Register`,
+  `MountSettingsPage.List`, and `Toggle` takes `visible`; the built-in skins rat, snail and worm and the recipe hellfire (the
+  recolour recipes zebra, ghost, ember, golden and shadow were retired on 2026-10-19 and Hellfire became a pack). Effects ([above](#effects-0300)): `Mounts.Effects` (`Effects`, `Find`, `Register`,
   `Unregister`, `GameParticles`, `EffectsChanged`), `MountEffectDef`, `MountEffectPart`, `MountEffectEmitter`,
   `MountEffectPlacement`, `IMountEffectSource`, `MountEffectInfo`, `MountEffectWhen`; the instance keys `Effect` and
   `EffectWhen`, `MountCompanion.Effect` / `EffectWhen`, `Mounts.EffectSettings`; Hellfire built in. Mount kinds

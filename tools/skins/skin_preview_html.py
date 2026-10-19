@@ -15,12 +15,12 @@ the player's colours: the page shows the art as drawn). The captures of the prob
 
 LOCAL ONLY: the frames are the game's art (and ours); the page embeds them and stays on this machine.
 
-    python tools/skin_preview_html.py <probe folder> <out.html> [--recipe id=folder ...]
+    python tools/skins/skin_preview_html.py <probe folder> <out.html> [--recipe id=folder ...]
 """
 import base64, io, json, os, re, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(HERE)
+REPO = os.path.dirname(os.path.dirname(HERE))  # tools/skins -> the repo
 ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] + [f"bdy_ear_left_{i:02d}" for i in range(1, 6)]
          + [f"bdy_graze_left_{i:02d}" for i in range(1, 6)] + [f"bdy_chew_left_{i:02d}" for i in range(1, 4)]
          + [f"bdy_lips_left_{i:02d}" for i in range(1, 14)] + [f"bdy_turn_left_{i:02d}" for i in range(1, 7)]

@@ -1,10 +1,19 @@
 # The skinning system: design (2026-10-17)
 
+Status 2026-10-20: this is the design as written on 2026-10-17; the system has moved on and docs/skins.md (the pack
+format), docs/mounts-design.md (mounts) and docs/mounts-foundation-audit.md (the definitions as they stand) are
+current. Out of date below: the recipes zebra/ghost/ember/golden/shadow and the blue dragon (gone 2026-10-19;
+Hellfire is a pack); `ISkinSource` with textures (it is `IMountSkinSource` with sprites); the resource names
+(`GK2DonkeyAPI.skins.<id>\<file>`, in the API's DLL, not Saddle Up's); "one section" in skin.cfg (there are
+`[Skin]`, `[Tuning]`, `[Game]`, `[Colors]`, `[Base.*]`, `[Mount]` and its tuning sections); a skin `foals` flag (none);
+packs scanned under `gk2skins\` of the plugins root and one folder down, not `plugins/**`; a missing skin shows
+"<id> (not installed)"; the self-test group is "Skins and effects"; per-skin offsets are built (§12).
+
 Status (2026-10-17 evening): **all six steps built (API 0.30.0 / Saddle Up 0.10.0)**; step 6 is the particle effects
 system with Hellfire as its first effect (`Mounts.Effects`, Effects.cs, api.md "Effects"), not a skin attachment. The
 loader now packs every skin onto **one sheet texture** (§7), a skin names its **base** (§12, the donkey is the only
 record), picture packs may ship **one sheet PNG**, and code sources give **sprites** (`IMountSkinSource.TryGetFrame`
-returns a `Sprite`). A red dragon as own art (128 canvas, the wing above the rider) joined the built-in skins at 19:50 (tools/creature_sprites.py). Hand tests of steps 3 to 6 are open. Earlier status: **steps 1 to 5 built (2026-10-17, API 0.30.0): the rig, the built-in picture skins, the companion property, skin packs on disk with the validation report, withdrawing a skin, three self-tests, the List settings row (ids stored, labels shown, the list read once per session) and `Mounts.Looks`; docs/skins.md for pack authors; the five recipes (zebra, ghost, ember, golden, shadow) built from the atlas at runtime with the whole switch. The game's own look has the id "donkey" in the row and the cfg (an empty dropdown choice was a risk with the framework), and "" means the same everywhere. Step 1 passed its in-game test (hitch, unhitch, a door, foals, no pool leftovers, no warnings).** One change from the text below: the built-in skins (rat, snail, worm, later the recipes) ship inside the **API** DLL (`assets/skins`), not Saddle Up's, so the API is self-contained and Saddle Up stays a settings shell. This is the full specification of how skins are defined, loaded, drawn, chosen, saved,
+returns a `Sprite`). A red dragon as own art (128 canvas, the wing above the rider) joined the built-in skins at 19:50 (tools/skins/creatures/make_creatures.py). Hand tests of steps 3 to 6 are open. Earlier status: **steps 1 to 5 built (2026-10-17, API 0.30.0): the rig, the built-in picture skins, the companion property, skin packs on disk with the validation report, withdrawing a skin, three self-tests, the List settings row (ids stored, labels shown, the list read once per session) and `Mounts.Looks`; docs/skins.md for pack authors; the five recipes (zebra, ghost, ember, golden, shadow) built from the atlas at runtime with the whole switch. The game's own look has the id "donkey" in the row and the cfg (an empty dropdown choice was a risk with the framework), and "" means the same everywhere. Step 1 passed its in-game test (hitch, unhitch, a door, foals, no pool leftovers, no warnings).** One change from the text below: the built-in skins (rat, snail, worm, later the recipes) ship inside the **API** DLL (`assets/skins`), not Saddle Up's, so the API is self-contained and Saddle Up stays a settings shell. This is the full specification of how skins are defined, loaded, drawn, chosen, saved,
 exposed to other mods and tested. It follows the investigation in [external-assets.md](external-assets.md) (what the
 game allows) and the rounds in [mount-looks-design.md](mount-looks-design.md) (what the player gets, the decisions).
 Everything here was designed against the code as it is; the file and line references are from 2026-10-17.

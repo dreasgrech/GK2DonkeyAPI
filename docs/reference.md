@@ -102,11 +102,11 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
 | `CenterOffset` | 0.48 | 0 | Above 0: keep the donkey centred under the rider (its sprite's sideways offset is measured and cancelled every frame). 0: leave it where the game draws it, half a body to the side. A toggle in the panel. |
-| `RiderOffsetPx` | -4 | 0 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
+| `RiderOffsetPx` | -6 | -8 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
 | `TorsoOffsetPx` | -3 | 0 | Upper body only along the donkey; the legs stay put. |
 | `AutoSeat` | false | false | Torso height computed from the sprites (hip on the donkey's back line). Off: `SeatOffset`. |
-| `SeatAdjustPx` | -6 | 0 | With `AutoSeat`: fine adjustment in art pixels (positive = higher). |
-| `SeatOffset` | 0.32 | 0 | Without `AutoSeat`: torso height in world units (0 = standing on the ground). |
+| `SeatAdjustPx` | -6 | 0 | With `AutoSeat` (or a skin that says `seat = picture`): fine adjustment in art pixels (positive = higher). Without AutoSeat the seat is `SeatOffset` alone, so a mount that sets this key moves nothing for a default player (docs/seat-investigation.md). |
+| `SeatOffset` | 0.22 | 0.22 | Without `AutoSeat`: torso height in world units (0 = standing on the ground; 0.0333 per art pixel). The one seat key a mount can set that reaches every player today (the snail does). |
 | `Bob` | true | false | Rider moves up and down with the donkey's back through its walk cycle (the back moves 1 px either way). |
 | `BobScale` / `BobLagFrames` | 1.5 / 1 | 1 / 0 | With `Bob`: the rider bobs this many times the back's movement, this many walk frames behind it (his weight follows the step). 1 / 0 = exactly with the back, as before 0.21.0 ([rider-motion.md](rider-motion.md)). |
 | `HandsSteady` / `HandsSwayPx` | 0.5 / 0.5 | 0 / 0 | While walking: the share of the body's bob the hands (the arm layer) don't follow, and how far (art px) they move forward and back with each stride. |
@@ -236,17 +236,17 @@ crossroads".
 
 ### `[Look]`: skins
 
-Per instance (a look key: an instance with its own look reads only its override or this default). Saddle Up's Donkey
-rows set the player's donkey. Full story: [skins-design.md](skins-design.md); packs: [skins.md](skins.md).
+Per instance (a look key: an instance with its own look reads only its override or this default). Saddle Up's Mount
+section sets the player's mount and skin. Full story: [skins-design.md](skins-design.md); packs: [skins.md](skins.md).
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`; shown as "Mount" in Saddle Up, labelled by the skin's mount kind, docs/mounts-design.md, `ghost`, `ember`, `golden`, `shadow`, any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
+| `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`, `royal-parade`; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
 ### `[Effects]`: particle effects on the donkey
 
 `Effect` and `EffectWhen` are per instance (look keys); the rest is everyone's. Never shown indoors. Saddle Up's
-Donkey rows set them. Full story: [api.md](api.md) "Effects".
+Effect section sets them. Full story: [api.md](api.md) "Effects".
 
 | Key | Default | Meaning |
 |---|---|---|

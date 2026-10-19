@@ -329,6 +329,7 @@ namespace GK2DonkeyAPI
             private Transform seatRoot;
             private Vector3 seatRest;
             private float seatApplied;
+            internal float TestSeatApplied => seatApplied; // the self-tests' seat readout (docs/seat-investigation.md)
             private Transform weaponRoot;   // the keeper's Weapon Container, held at rest under the lifted seat root
             private Vector3 weaponRest;
             private bool weaponLogged;

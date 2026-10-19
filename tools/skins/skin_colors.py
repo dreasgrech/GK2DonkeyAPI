@@ -1,11 +1,12 @@
 """Writes a [Colors] section into each built-in creature skin.cfg (docs/mount-colours.md 2.6): which of the skin's own
 colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules per skin were read off the enlarged
 standing frames; the hex lists come from the PNGs, so they are exact. Re-runnable (replaces the section): run it
-after the art changes, then tests/SkinsScan. Pillow needed: python -I tools/skin_colors.py"""
-import colorsys, io, os, re
+after the art changes, then tests/SkinsScan. Pillow needed: python -I tools/skins/skin_colors.py"""
+import colorsys, io, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
-REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # tools/ -> the repo
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins -> the repo
 SKINS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
 
 
@@ -62,7 +63,12 @@ def write_section(skin, regions):
         if hexes:
             lines.append("%s = %s" % (region, " ".join(hexes)))
     t += "\n".join(lines) + "\n"
+    # then the one layout every built-in keeps (the colour sections before the mount block, the file's line ends):
+    # tools/skins/canonical_cfg.py's rule, so a run of this script never moves a section
+    import canonical_cfg
     io.open(p, "w", encoding="utf-8", newline="").write(t.replace("\n", nl))
+    text = canonical_cfg.canonical(p)  # read back first: opening for writing empties the file
+    io.open(p, "w", encoding="utf-8", newline="").write(text)
 
 
 for skin in sorted(RULES):

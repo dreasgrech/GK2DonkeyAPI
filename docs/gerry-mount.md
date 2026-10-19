@@ -30,8 +30,8 @@ So Gerry is a small skull, about 15 pixels wide and 17 tall at rest (the donkey'
 in warm bone colours with dark sockets. He has no legs; walking is hopping with the jaw chattering. He faces three
 ways (the donkey only faces left, flipped for right).
 
-To look at the frames: `tools/gerry_probe.py <bundle folder> <out folder>` exports one PNG per frame (trimmed to
-the drawn pixels, as the atlas packs them) and prints the list above; `tools/gerry_sheet.py <out folder>` draws two
+To look at the frames: `tools/skins/gerry/gerry_probe.py <bundle folder> <out folder>` exports one PNG per frame (trimmed to
+the drawn pixels, as the atlas packs them) and prints the list above; `tools/skins/gerry/gerry_sheet.py <out folder>` draws two
 contact sheets next to them (`gerry_sheet.png`, every animation at 2x; `gerry_zoom.png`, the walks, the somersault
 and the heads at 8x). Both need `pip install UnityPy` / Pillow. The exports are the game's art: for looking at, not
 for the repository.
@@ -55,7 +55,7 @@ his pixels would be three times the size of everything else's, which pixel art s
 because it is a day's work less than the others and shows at once whether the hop reads as a mount; the rider sits
 on top of the cranium.
 
-**B. Own art, Gerry as reference (consistent, more work).** Draw a big skull in `tools/creature_sprites.py` like the
+**B. Own art, Gerry as reference (consistent, more work).** Draw a big skull in `tools/skins/creatures/make_creatures.py` like the
 rat, snail, worm and dragon: Gerry's palette and features (the sockets, the nose hole, the teeth, the cracks, the
 hinge), the hop as the walk cycle with the jaw as a separate layer (the `hed` part: the donkey's head part is free
 for it, so the jaw can animate on its own keys and the rider's near-wing trick isn't needed), the somersault as the

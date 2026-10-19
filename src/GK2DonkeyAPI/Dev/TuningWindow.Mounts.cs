@@ -404,6 +404,7 @@ namespace GK2DonkeyAPI
                 {
                     string e = Looks.ReloadCfg(skin);
                     Note(e == null ? "Reloaded: the pictures load again (a moment), then the file's values show." : "Not reloaded: " + e);
+                    if (e != null) Plugin.Log.LogWarning($"Mounts tab: '{skin.Id}' not reloaded from its file: {e}");
                 }
                 GUILayout.EndHorizontal();
                 if (!string.IsNullOrEmpty(skin.Source))
@@ -412,7 +413,7 @@ namespace GK2DonkeyAPI
                         "Debug.SkinPackAutoReload: a pack in use is read again a second or two after its skin.cfg or a picture is saved (an editor's export, say). Pictures added after the game started need a restart, as for the button.");
                 }
             }
-            // the skins as the game built them, for the review page (tools/skin_preview_html.py reads game-skins\ first)
+            // the skins as the game built them, for the review page (tools/skins/skin_preview_html.py reads game-skins\ first)
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip("Export the loaded skins as built", "Writes every skin worn since the start (its pictures as the game draws them, after the erase compose) and the donkey's own frames to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame. The review page shows those and counts where its own composite would differ. Wear a skin once to have it loaded."), Wd(LabelW)))
             {
@@ -429,6 +430,7 @@ namespace GK2DonkeyAPI
         private static float mountsLastChange;
         private static string mountsLastSaved;         // "11:42:07 to gerry" for the label
         private static readonly List<(Looks.SkinDef Skin, string Path, string Text)> mountsUndo = new List<(Looks.SkinDef, string, string)>();
+        private static float mountsUndoAt = -100f; // when the last undo step was taken (saves close together share one)
 
         // Called every frame the panel draws (TuningWindow.Draw): a change on the Mounts tab (Kinds.Touch bumps
         // Kinds.Version) is written 0.75 s after the last one, to the picked skin's file and the mount's declaring files,
@@ -464,8 +466,15 @@ namespace GK2DonkeyAPI
                 string e = Looks.SaveCfg(s, out bool changed);
                 if (e != null) { errors.Add(s.Id + ": " + e); continue; }
                 if (!changed) continue;
-                mountsUndo.Add((s, path, before));
-                if (mountsUndo.Count > 50) mountsUndo.RemoveAt(0);
+                // one undo step per gesture: a save within a few seconds of the last one on the same file keeps the
+                // earlier restore point (a slider dragged in two moves with a pause between was two steps, 2026-10-20)
+                bool sameGesture = mountsUndo.Count > 0 && mountsUndo[mountsUndo.Count - 1].Path == path && Time.unscaledTime - mountsUndoAt < 4f;
+                if (!sameGesture)
+                {
+                    mountsUndo.Add((s, path, before));
+                    if (mountsUndo.Count > 50) mountsUndo.RemoveAt(0);
+                }
+                mountsUndoAt = Time.unscaledTime;
                 written.Add(s.Id);
             }
             if (errors.Count > 0) Note("Not saved: " + string.Join("; ", errors));
@@ -485,10 +494,13 @@ namespace GK2DonkeyAPI
                 mountsSeenVersion = Kinds.Version; // the reload is not a change to save again
                 mountsDirty = false;
                 Note(e == null ? "Undone: the file is as before that change, and read again." : "Undone in the file, but not reloaded: " + e);
+                if (e == null) Plugin.Log.LogInfo($"Mounts tab: undo: '{last.Skin.Id}' put back as before the last save and read again ({mountsUndo.Count} more to undo).");
+                else Plugin.Log.LogWarning($"Mounts tab: undo: '{last.Skin.Id}' put back in the file, but not read again: {e}");
             }
             catch (Exception e)
             {
                 Note("Couldn't undo: " + e.Message);
+                Plugin.Log.LogWarning($"Mounts tab: undo of '{last.Skin.Id}' failed: {e.Message}");
             }
         }
 

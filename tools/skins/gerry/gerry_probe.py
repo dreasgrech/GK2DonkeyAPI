@@ -4,7 +4,7 @@ PNG (trimmed to the drawn pixels, as the atlas packs them). The exports are the 
 repository.
 
     pip install UnityPy
-    python tools/gerry_probe.py "<game>\\GraveyardKeeper2_Data\\StreamingAssets\\aa\\StandaloneWindows64" <out folder>
+    python tools/skins/gerry/gerry_probe.py "<game>\\GraveyardKeeper2_Data\\StreamingAssets\\aa\\StandaloneWindows64" <out folder>
 
 The game's bundles carry no Unity version string, so UnityPy needs the fallback set (the game is Unity 6000.3.9f1).
 Another preset: change PREFIX (the donkey is 0301_, Gerry 0901_) and, if its frames are in another bundle, find it

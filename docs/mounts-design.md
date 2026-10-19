@@ -1,5 +1,16 @@
 # Mount kinds: design (2026-10-17 evening)
 
+Status 2026-10-20 (the foundation audit, docs/mounts-foundation-audit.md): the five built-in mounts are declared in
+one layout (`[Mount]` with id, name, author, version, cart, foals always, the block last in the file, every tuning key
+in one section; `tools/skins/canonical_cfg.py`, enforced by `tests/SkinsScan`); a built-in skin's mount reports
+`IsBuiltIn`; a mount's `Name` defaults to its id and `Label` is what sentences use; `author` and `version` survive a
+reload; the Mounts tab's Save keeps the comments of the mount sections; `effect_when` takes `Off`, `Night`, `Always`
+("Never" is only the menu's word). Corrections to the text below: a skin has no `foals =` key (§3: the kind's
+`Foals` and the player's FoalsWearSkin decide); a withdrawn skin leaves its kind listed (§8, as the Status says);
+Gerry (a game-creature skin) declares its mount like the four drawn creatures; the recipes and the blue dragon of
+the §1 table are gone, Royal Parade and Hellfire are the donkey's two skins. Open: a mount's seat with the player's
+AutoSeat off (audit 3.1, under investigation).
+
 Status: **built 2026-10-17 evening** (API 0.30.0 / Saddle Up 0.10.0, the same release as skins and effects): Kinds.cs,
 Api/MountKinds.cs, the kind on `Looks.SkinDef`, `[Mount]` sections, the merged tuning per style, the cart rule at the three
 refusal points, "As the mount" effects, abilities on the skin rig, `MountSettingsPage.MountRows` (Saddle Up uses it),
@@ -82,8 +93,8 @@ sections. The override mechanism is per key, so the rig re-applies the merged se
 - `Cart` (true): false refuses the cart style for a creature of this kind: `Mounts.TryMount(Cart)`, `Hitch`,
   `MountCompanion.Use(Cart)` say "A giant snail can't pull the cart." A cart already hitched when the skin changes to
   such a kind stays hitched (data), and the next cart use is refused; nothing is destroyed.
-- `Foals` (true): false means no foal is drawn as this kind (the foals stay donkeys, as `FoalsWearSkin` off). A skin's
-  `foals =` (absent: the kind's) refines it.
+- `Foals` (true): false means no foal is drawn as this kind (the foals stay donkeys, as `FoalsWearSkin` off). The
+  player's FoalsWearSkin is the only other say; a skin has no foals key of its own (removed 2026-10-18).
 - `Effect` / `EffectWhen`: the effect a creature of this kind shows when its own `Effect` key says "the mount's"
   (`MountEffects.KindId = "mount"`, a list entry "As the mount"); the explicit picks (none, hellfire, ...) win.
 
@@ -134,8 +145,8 @@ legs, the idle shuffle, sounds volume), which is most of "mount-specific values"
   SeatAdjustPx = 2
   ```
   Owned by the pack's owner; a later pack naming the same id with its own `[Mount]` is told the kind exists and its
-  skin joins it. The built-in creatures (rat, snail, worm, dragon) declare their kinds exactly this way, so the pack
-  path is exercised by the shipped skins every start.
+  skin joins it. The built-in creatures (rat, snail, worm, dragon, Gerry) declare their kinds exactly this way, in
+  one layout (docs/skins.md "Worked examples"), so the pack path is exercised by the shipped skins every start.
 - **The donkey kind** is registered by the API (no tuning, no abilities): the base the game gives us.
 
 ## 6. The menus
@@ -191,7 +202,8 @@ the ids and keys (`npc_donkey`, `FoalCount`, the API's names: 0.9.x is public, t
 
 - Self-test "mount kind from a pack": a temp pack with `[Mount] cart = false` and `[Mount.Tuning.Cart]`: the kind is
   registered and listed; a donkey wearing the skin reports the kind; `Hitch` is refused with the kind's name; the
-  kind's tuning is on the wearer and owned by the skin owner; withdrawn, the kind goes with its last skin's owner.
+  kind's tuning is on the wearer and owned by the skin owner; the skin withdrawn, the kind stays listed until its
+  owner withdraws it; the file round trip keeps the comments of the mount sections and the author and version.
 - Self-test "ability hooks": a test ability on a code-registered kind counts Attached, Tick, Detached on a spawned
   instance wearing its skin; a throw switches it off with one warning.
 - The existing skin, pack, leak, recipe and effect scenarios unchanged.

@@ -145,14 +145,17 @@ other mounts too"). Hellfire and Royal Parade are the two worked examples; a thi
    `strips\<animation>.png` (every animation as a frame strip over the base: look at every strip), `preview.png`,
    and `pack\sheet.png` (the cells, for the checker's sheet mode and Aseprite).
 2. **The pack itself goes to `src/GK2DonkeyAPI/assets/skins/<id>/`**: `skin.cfg` (by hand, commented, kept by the
-   generator: `layer = over` for a skin drawn over the base, `erase` when it takes parts off, `[Base.<Region>]` to
-   recolour the base under it, `[Colors]` for the regions the player's colours reach) and **a PNG per frame key**
+   generator, in the one layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base,
+   `erase` when it takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the
+   player's colours reach, `mount =` naming the mount and, for a creature of its own, the `[Mount]` block last with
+   id, name, author, version, cart, foals and its tuning, every key in one section) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`), only our pixels, nothing of the game's art. The DLL build
    embeds the folder (`GK2DonkeyAPI.csproj`, `assets\skins\**`); no file is copied into the game.
 3. **Check before the game**: `python tools/skins/check_skin.py src/GK2DonkeyAPI/assets/skins/<id>` (frames
-   present, canvas size, colours per region, erase marks) and the headless scan `dotnet run --project
-   tests/SkinsScan -c Release` (every built-in cfg parses as the game parses it). Then the review page
-   (`python tools/skin_preview_html.py <probe folder> <probe folder>/skins-preview.html`): every frame over the
+   present, canvas size, colours per region, erase marks), `python tools/skins/canonical_cfg.py --check` (the
+   layout) and the headless scan `dotnet run --project tests/SkinsScan -c Release` (every key and value the loader
+   reads, the pictures, the `[Colors]` lists against the pixels, the `[Mount]` block and its rules). Then the review page
+   (`python tools/skins/skin_preview_html.py <probe folder> <probe folder>/skins-preview.html`): every frame over the
    base through the same composite the game makes, grouped by mount.
 4. **Build and deploy** with the game closed (`dotnet build src/GK2DonkeyAPI/GK2DonkeyAPI.csproj`); the self-tests
    (F11, Tests tab) cover the over-skin drawing with a readback; wear it, walk, turn, graze; then "Export the
@@ -163,7 +166,9 @@ other mounts too"). Hellfire and Royal Parade are the two worked examples; a thi
    frames back per key.
 
 Other mounts: a skin **replacing** the donkey with its own creature (rat, snail, worm, dragon) is the same folder
-and pack format with `[Mount]` sections (`tools/creature_sprites.py` draws those). A skin drawn **over** one of
+and pack format with `[Mount]` sections; `tools/skins/creatures/make_creatures.py` draws all four into their folders the same way
+(`python tools/skins/creatures/make_creatures.py [name]`), so every one of the seven built-ins comes from a generator in the repo
+writing into `assets/skins/<id>/` (Gerry alone has no pictures: its cfg points at the game's own frames). A skin drawn **over** one of
 our own creatures needs that creature as a base (`base = rat` ...): the loader has one base today, the donkey
 (`SkinBase`), so that is the next piece of machinery when the first such skin is wanted.
 
@@ -206,7 +211,7 @@ first hip-anchored cut let the front columns follow the neck up, so in the game 
 above the back and sank in a graze: seen in the Mods picture frames of the user's second video, 18:03). So it
 rides the walk's bob and the graze's dip without changing size or sliding (the first cut measured the collar and
 belly per frame and jumped in the graze clip, seen in the user's first video). The same frames, composited, go to
-the asset probe's `test\skins\royal-parade\` and `skins-preview.html` (tools/skin_preview_html.py), the page that
+the asset probe's `test\skins\royal-parade\` and `skins-preview.html` (tools/skins/skin_preview_html.py), the page that
 plays every skin's clips next to the plain donkey. A frame with a shorter back (the turn clips) gets it cut shorter. Then a dark outline, a gold border, light
 red under the back, dark red above a gold hem row, a fringe, the fleur in the middle of the red, the crown at the
 Hellfire horn bases. The first draft (a rectangle hanging under the belly) was seen in game as one yellow plate: the

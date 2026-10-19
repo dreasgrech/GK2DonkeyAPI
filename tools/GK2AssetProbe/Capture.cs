@@ -8,7 +8,7 @@ namespace GK2AssetProbe
 {
     // Records the donkey as the game draws it, rider, lighting and effects included: a few seconds of the screen around
     // it, read at the end of each frame (after every camera and the GUI), saved as PNGs in captures\<time>\. The probe's
-    // window is hidden while it records. tools/skin_preview_html.py plays the captures next to the skin previews, so a
+    // window is hidden while it records. tools/skins/skin_preview_html.py plays the captures next to the skin previews, so a
     // look can be judged with the keeper seated (2026-10-17: does the rider's leg clash with the dragon's wing?).
     // The crop is fixed in size for the whole recording and centred on the donkey every frame, so the donkey stays still
     // in the picture and only its own motion shows.
@@ -66,11 +66,11 @@ namespace GK2AssetProbe
                 Recording = false;
             }
             Last = Path.GetFileName(dir);
-            Probe.Info($"capture done: {saved} pictures in captures\\{Last} (tools/skin_preview_html.py plays them)");
+            Probe.Info($"capture done: {saved} pictures in captures\\{Last} (tools/skins/skin_preview_html.py plays them)");
             Probe.Status = $"Captured {saved} pictures: captures\\{Last}.";
         }
 
-        // The rider alone, for the preview page (tools/skin_preview_html.py lays him over every skin): a 96x96 picture in
+        // The rider alone, for the preview page (tools/skins/skin_preview_html.py lays him over every skin): a 96x96 picture in
         // the donkey frames' own pixels, centred on the donkey's frame centre, so it lines up with every skin. Rendered
         // twice through a copy of the world camera: as the game draws it, and with the keeper's pieces hidden for that
         // one render; the pixels that differ are the rider, lit as in game. Both renders happen in this one call (no

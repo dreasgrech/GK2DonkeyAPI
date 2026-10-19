@@ -1,12 +1,16 @@
-"""Mounts drawn from nothing (docs/mount-looks-design.md): a giant worm and a giant snail, as picture skins for the
-asset probe's tester (BepInEx\\GK2-asset-probe\\test\\skins\\<name>\\). Our own art, made by code: no game pixels.
+"""Mounts drawn from nothing (docs/mount-looks-design.md): a giant worm, a giant snail, a giant rat and a dragon, as
+the built-in skins src/GK2DonkeyAPI/assets/skins/<name>/ (the one pipeline, docs/sprite-tools.md "Making a skin": a
+PNG per frame, skin.cfg kept as written by hand once it exists). Our own art, made by code: no game pixels.
 
 Every donkey frame name gets a picture (96x96, facing left, the donkey's pivot in the middle), so the creature covers
 every clip: the 8 walk frames are one crawl cycle; standing, ear, lips, chew, turn and graze are idle frames (graze puts
 the head down). The donkey's head layer gets empty pictures, so "Instead of it" hides the donkey completely.
 Fitted to the donkey's measures so the rider sits right without tuning: the back (the seat) at row 41 around columns
 47-63, the ground at row 64, the front (where the cart's shafts and the harness are) around column 33.
-Args: the probe folder (BepInEx\\GK2-asset-probe), and optionally the repo's assets\\skins folder for the shipped copies."""
+    python tools/skins/creatures/make_creatures.py                 # every creature into the repo's assets\\skins\\<name>\\
+    python tools/skins/creatures/make_creatures.py rat             # one creature
+    python tools/skins/creatures/make_creatures.py rat <folder>    # into another folder (a test pack, never the game's plugins)
+Then tools/skins/skin_colors.py when the art's colours changed, and tests/SkinsScan."""
 import math, os, struct, sys, zlib
 
 W = H = 96          # the canvas (set per creature below)
@@ -720,33 +724,36 @@ def frames_for(fn):
 # name, drawing function, title, canvas (96: the donkey's; 128: the picture's centre stays the donkey's centre, so a
 # creature drawn in the donkey's coordinates sits 16 px in from each edge)
 # name, drawing function, title, canvas, the mount kind (id, name) the skin is a look of (docs/mounts-design.md)
+# (the Blue Dragon, dragon_blue above, was dropped from the shipped set 2026-10-19: the player's colours do that)
 CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm")), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail")),
              ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat")),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon")), ("dragon-blue", dragon_blue, "Blue Dragon", 128, ("dragon", "Dragon")))
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon")))
 
-probe = sys.argv[1]
-assets = sys.argv[2] if len(sys.argv) > 2 else None   # the repo's src/GK2DonkeyAPI/assets/skins: the shipped copies
-only = sys.argv[3] if len(sys.argv) > 3 else None     # one creature's name, to redraw just that one
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins/creatures -> the repo
+only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
+assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
+if only and only not in {c[0] for c in CREATURES}:
+    sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
 for name, fn, title, size, (kind, kind_name) in CREATURES:
     if only and name != only:
         continue
     W = H = size
     OX = OY = (size - 96) // 2
     fr = frames_for(fn)
-    outs = [os.path.join(probe, "test", "skins", name)]
-    if assets:
-        outs.append(os.path.join(assets, name))
+    outs = [os.path.join(assets, name)]
     for d in outs:
         os.makedirs(d, exist_ok=True)
         if any(k.startswith("front/") for k in fr):
             os.makedirs(os.path.join(d, "front"), exist_ok=True)
         for key, px in fr.items():
             write(os.path.join(d, key.replace("/", os.sep) + ".png"), px)
-        if assets and d.startswith(assets) and not os.path.isfile(os.path.join(d, "skin.cfg")):
-            # written once: the tuning panel's Mounts tab saves the creature's values into this file afterwards
-            open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\n").write(
-                "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/creature_sprites.py: our own art.\n"
+        if not os.path.isfile(os.path.join(d, "skin.cfg")):
+            # written once, in the canonical layout (tools/skins/canonical_cfg.py; tools/skins/skin_colors.py adds [Colors]);
+            # the tuning panel's Mounts tab saves the creature's values into this file afterwards
+            open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\r\n").write(
+                "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
                 "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
                 "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nmount = " + kind + "\n"
-                "\n[Mount]\nid = " + kind + "\nname = " + kind_name + "\n")
+                "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
+                "[Mount]\nid = " + kind + "\nname = " + kind_name + "\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
     print(name, len(fr), "pictures ->", ", ".join(outs))

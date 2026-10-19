@@ -9,7 +9,7 @@ namespace GK2DonkeyAPI
     // A dev export of the skins as the game built them (docs/sprite-tools.md, the review page): every loaded skin's
     // pictures read back from the texture the game draws from (the sheet after the erase compose, a mod's own sprites),
     // one PNG per frame key, and the donkey's own frames as the game places them on the canvas. The review page
-    // (tools/skin_preview_html.py) shows these in place of its own composite and counts where the two differ, so the
+    // (tools/skins/skin_preview_html.py) shows these in place of its own composite and counts where the two differ, so the
     // page and the game can't drift apart unnoticed. The player's colours are the shader's and are not in these files.
     internal static partial class Looks
     {

@@ -28,7 +28,7 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
   saved) and `offset` / `offset_cart` (the pictures moved in art px, riding vs hitched).
 - **Base record** (`SkinBase`): the donkey's keys, parts, canvas, pivot, ppu, sprite prefix, atlas, back line, in one
   place; a second creature view would be a second record.
-- **Built-in skins:** own art by `tools/creature_sprites.py`: Giant Rat, Giant Snail (with saddle), Giant Worm,
+- **Built-in skins:** own art by `tools/skins/creatures/make_creatures.py`: Giant Rat, Giant Snail (with saddle), Giant Worm,
   **Red Dragon and Blue Dragon** (128 canvas, second-pass anatomy, wing split across the two layers); recipes Zebra,
   Ghost, Ember, Golden, Shadow. Dev previews: `BepInEx\GK2-asset-probe\skins-preview.html` (every clip, rider overlay,
   front layer, one pixel scale).
@@ -63,7 +63,7 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
   `[Tuning]` key and a front picture); no leaks over spawn/remove; recipe built whole; Hellfire lit/follows/out/gone;
   mount kind from a pack; mount kind from code (ability hooks); plus the old ones untouched.
 - `[perf]` parts `Looks`, `LooksBuild`, `Effects`, `Abilities` (time and bytes).
-- `tools/GK2AssetProbe` (Shift+F7) stays dev-only; `tools/creature_sprites.py`, `tools/skin_preview_html.py`.
+- `tools/GK2AssetProbe` (Shift+F7) stays dev-only; `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_preview_html.py`.
 
 ## 2. In-game test, step by step (2026-10-17 23:20 build: API 0.30.0 / Saddle Up 0.10.0, example mod deployed)
 
@@ -166,7 +166,7 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 1. **Fix what the test turns up**, then tune the creatures' values with the mechanism that's now there: the rat's
    `offset_cart`, each creature's `[Mount.Tuning]` seat if the rider sits off (two lines in its skin.cfg, no code).
 2. **Dragon look:** anything still off in game (wing vs rider, walk, graze); a third pass is cheap in
-   `tools/creature_sprites.py`.
+   `tools/skins/creatures/make_creatures.py`.
 3. **Release 0.10.0:** CHANGELOG Unreleased → version and date; `tools/build-dist.sh`; `tools/release-scans.sh`;
    `tools/make-release-zip.py`; the first-run rehearsal with the probe and the sample pack moved aside; then your
    commit, tags and upload (the 0.9.1 steps are still yours too).
