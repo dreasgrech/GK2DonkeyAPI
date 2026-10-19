@@ -5,10 +5,6 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
-- **Mods menu with a newer GK2 Mod Framework** (fix built 2026-10-19, deployed): update the framework from Nexus
-  (0.1.19 or newer; the report was 0.1.20), start the game: Mods menu, Saddle Up shows Active (not "Faulted"), its
-  settings are there, a choice row (an enum, e.g. the coat preset) can be changed; the log has no
-  "AmbiguousMatchException" and no "registering ... failed" line.
 - **Royal Parade** (pack `gk2skins\royal-parade`, first export 2026-10-19 02:52; API deployed 02:52): the first skin
   worn over the donkey. Saddle Up settings: Donkey, Skin, Royal Parade. A red caparison with a gold hem, fringe and
   fleur behind the collar, a crown between the ears, in every clip (the draft from royal.aseprite; to be corrected by

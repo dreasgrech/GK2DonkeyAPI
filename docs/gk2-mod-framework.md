@@ -152,7 +152,9 @@ is loaded:
   `(section, key, value, ...)` overload. `tests/FrameworkScan` check 5 now fails any by-name lookup on a
   framework type. The four QOL mods make no such lookup. Reproduced in game the same day with framework 0.1.23
   (a build with only the old line back): "[dreas.gk2.saddleup] OnRegister failed: AmbiguousMatchException" from
-  `PageMod.AddChoice` -> `Type.GetMethod(String)`, status=Faulted; the fix redeployed after.
+  `PageMod.AddChoice` -> `Type.GetMethod(String)`, status=Faulted; the fix redeployed after. **Seen working in
+  game** (2026-10-19 13:22, framework 0.1.23): Saddle Up status=Compatible with its settings, a choice row changed,
+  and Built Count, Global Storage, Move Building, Owned Count, Tech Search and the API Compatible too; 0 warnings.
 
 This goes **against the framework's own advice**. PUBLIC_API and OPTIONAL_INTEGRATION warn that referencing it
 directly "can still require" the DLL. That's a deliberate choice: we checked it against the loader code of BepInEx
