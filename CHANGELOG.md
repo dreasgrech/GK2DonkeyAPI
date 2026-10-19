@@ -43,7 +43,17 @@ Development:
 - `tools/page-carryover.py`: an offline dry run of the page's carry-over, reading the rows and `MovedKey` aliases
   out of Saddle Up's Plugin.cs and checking an older cfg key by key (the fixtures by default, any cfg as an
   argument). Run it before the in-game upgrade self-test whenever the page's sections or keys move.
-- Royal Parade (the test over-skin, outside the repo): its generator makes the cloth from the donkey's frames and
+- The skin tooling is in the repo now (it lived in `C:\ClaudeCodeTemp\GK2-aseprite`, which a commit never saw):
+  `tools/skins/` (the pack checker, the watcher, the two Aseprite menu scripts, the .aseprite writer, `gamedir.py`
+  for the game folder from Directory.Build.props), `tools/skins/royal-parade/` (the generator and its measurements,
+  outputs in a git-ignored `out\`) and `packs/royal-parade/` (the pack's source: `skin.cfg` and the generated
+  `sheet.png`, copied into the game by the generator). Only the game's frames stay outside, read from the asset
+  probe's folder. Verified: the generator run from the repo writes a sheet identical to the game's, the measurement
+  scripts reproduce their data files. Hellfire's reviewed Python prototype (the 14 rounds of 2026-10-18/19, the
+  rules that `LooksHellfire.cs` carries in C#) is kept as `tools/skins/hellfire/hellfire_proto.py`.
+  `docs/skins-inventory.md`: every skin, what it is made of, where its source, its tooling and its game-side files
+  live, and what stays outside the repo.
+- Royal Parade (the test over-skin): its generator makes the cloth from the donkey's frames and
   writes the pack into the game itself, no drawing step (docs/sprite-tools.md "Generated, no drawing"). The cloth is
   one shape measured on the standing frame, hung from the hip in every frame with each column on that frame's back
   line, so it rides the walk's bob and the graze's dip without changing size (the first cut, measured per frame,
