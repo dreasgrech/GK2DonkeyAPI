@@ -1707,6 +1707,37 @@ namespace GK2DonkeyAPI
                     DrawnAlone both = RenderAlone(ov, with: a.I.LooksRig.TestPart());
                     if (both != null) Info($"drawn with the body: {both.Pixels} pixels: blue {both.Blue}; most: {both.Top}; overlay order {ov.sortingOrder}, part order {a.I.LooksRig.TestPart()?.sortingOrder}");
                     Check(both != null && both.Blue >= 60, $"the overlay shows over the body ({both?.Blue} blue pixels with the body drawn too)");
+
+                    // while the donkey walks: the user saw the cloth flicker in and out of the body when moving, never
+                    // idle (2026-10-19). Each frame: is the overlay's order still one above the part's (a stale copy
+                    // would say so), and does it win the depth test with the body drawn, with its lift (OverLift)
+                    // and with the lift taken away for the same render (the fault's own picture)
+                    SpriteRenderer part = a.I.LooksRig.TestPart();
+                    Material pm = part?.sharedMaterial;
+                    Info($"material queue {pm?.renderQueue} (shader {pm?.shader?.name} queue {pm?.shader?.renderQueue}), part layer {part?.sortingLayerName} order {part?.sortingOrder}, overlay order {ov.sortingOrder}, overlay local z {ov.transform.localPosition.z:0.####} (lift {Looks.Rig.OverLift})");
+                    a.MoveTo(near + new Vector3(4f, 0f, 0f));
+                    int walked = 0, stale = 0, renders = 0, lost = 0, lostNoLift = 0, moving = 0;
+                    Vector3 lastPos = a.Position;
+                    for (int i = 0; i < 48 && part != null && part; i++)
+                    {
+                        yield return null;
+                        walked++;
+                        if (a.Position != lastPos) moving++;
+                        lastPos = a.Position;
+                        if (ov.sortingOrder != part.sortingOrder + 1) stale++;
+                        if (i % 3 != 0) continue;
+                        renders++;
+                        DrawnAlone lifted = RenderAlone(ov, with: part);
+                        if (lifted != null && lifted.Blue < 40) lost++;
+                        Vector3 lp = ov.transform.localPosition;
+                        ov.transform.localPosition = new Vector3(lp.x, lp.y, 0f);
+                        DrawnAlone flat = RenderAlone(ov, with: part);
+                        ov.transform.localPosition = lp;
+                        if (flat != null && flat.Blue < 40) lostNoLift++;
+                    }
+                    Info($"walking {walked} frames ({moving} with the position changing): the overlay's order stale on {stale}; of {renders} renders with the body it lost the depth test {lost} times with the lift and {lostNoLift} times without");
+                    Check(stale == 0, $"the overlay's sorting order follows the part's every frame while walking ({stale} stale of {walked})");
+                    Check(renders > 0 && lost == 0, $"the overlay never flickers into the body while walking ({lost} of {renders} renders lost with the lift; {lostNoLift} without it)");
                 }
                 // the player's own mount, when it wears a skin now: what the world draws of it, for the log
                 foreach (MountHandle h in Mounts.InstancesOf("dreas.gk2.saddleup"))

@@ -188,6 +188,14 @@ measured on the old canvas (the Hellfire horn bases: `horn_bases_raw.json` -> `h
 frames `hellfire-96\`). `check_skin.py` reads the probe's frames too. **Rule: everything drawn for a pack is measured
 and drawn on the probe's frames, never on `harness_frames\*.raw`.**
 
+**The crown (2026-10-19 18:45, the user: "a bit more forward on his head"):** anchored on the eye where the frame
+has one (`anchors.json`, measured on the game's canvas): its centre `CROWN_BEHIND_EYE` columns behind the eye, its
+bottom row `CROWN_ABOVE_EYE` rows above it (2 and 3 after the user's "closer to the eye, barely on his head": the crown's
+last two rows overlap the head's top, so it sits); the eye is the one landmark of the head no ear flick
+moves (resting it on the outline under its own columns put it on a forward-leaning ear). Frames without a found eye
+(graze 3-5, lips 4-5, turn 4-6): a head facing the camera keeps it between the ears two rows down, else it rests on
+the forehead's outline under its three front columns, `CROWN_FORWARD` columns ahead of the ear bases.
+
 **What the previews cannot show:** they composite the pack's pixels in Python; the game draws the overlay through
 its own material and colour-swap shader. Royal Parade showed in the world without its red (the Mods picture had it),
 and no preview could have caught that. The self-test "colours: a skin over the donkey keeps the donkey's regions"

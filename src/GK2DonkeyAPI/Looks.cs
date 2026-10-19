@@ -1952,11 +1952,13 @@ namespace GK2DonkeyAPI
                 if (ov.enabled != show) ov.enabled = show;
                 if (show)
                 {
-                    // A skin drawn over the body (layer = over) sorts one above the part: at the same order the two
-                    // sprites are coplanar and the depth test decides, so the overlay showed only outside the body's
-                    // silhouette in some frames and whole in others (Royal Parade, 2026-10-19). A replacing skin's
-                    // part isn't drawn at all, so its order is the part's own.
-                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (skin.Def.Over ? 1 : 0));
+                    // A skin drawn over the body (layer = over) sorts one above the part and sits OverLift towards
+                    // the camera: the two sprites are coplanar, and when the game draws them by distance (the sprite
+                    // material's queue, not the sorting order) a tie in the depth test flickered the overlay in and
+                    // out of the body while the donkey moved (Royal Parade, 2026-10-19; steady while idle, the tie
+                    // breaking the same way every frame). A replacing skin's part isn't drawn at all.
+                    bool over = skin.Def.Over;
+                    Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f);
                 }
                 // the front layer: the same picture rules, sorted above the keeper while he rides (as the leg overlay,
                 // RiderLeg: his layer, one above his body; the legs are +1, this is +2), else just above the part
@@ -1987,9 +1989,15 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // How far an over skin's overlay sits in front of the body part, in world units along the sprite's own
+            // facing (its local -z, towards the camera): enough to win the depth test over the coplanar part, a fifth
+            // of an art pixel, too little to see. The self-tests zero it for a comparison render.
+            internal static float OverLift = 0.004f;
+
             // An overlay takes the part's material, block, flip, colour and the frame's trim offset (plus the skin's own
-            // offset), and the sorting it is given. Nothing is written that is already so.
-            private void Follow(SpriteRenderer ov, SpriteRenderer part, Sprite game, int layer, int order)
+            // offset), and the sorting it is given; lift: how far in front of the part (OverLift). Nothing is written
+            // that is already so.
+            private void Follow(SpriteRenderer ov, SpriteRenderer part, Sprite game, int layer, int order, float lift = 0f)
             {
                 if (ov.sharedMaterial != part.sharedMaterial) ov.sharedMaterial = part.sharedMaterial;
                 if (part.HasPropertyBlock())
@@ -2008,7 +2016,7 @@ namespace GK2DonkeyAPI
                 Vector2 off = game.textureRectOffset;
                 float ppu = game.pixelsPerUnit;
                 Vector2 own = owner != null && owner.HasCart ? skin.Def.OffsetCart : skin.Def.OffsetRide;
-                var local = new Vector3((off.x - Mathf.Floor(off.x) - own.x) / ppu * (part.flipX ? -1f : 1f), (off.y - Mathf.Floor(off.y) + own.y) / ppu, 0f);
+                var local = new Vector3((off.x - Mathf.Floor(off.x) - own.x) / ppu * (part.flipX ? -1f : 1f), (off.y - Mathf.Floor(off.y) + own.y) / ppu, -lift);
                 if (ov.transform.localPosition != local) ov.transform.localPosition = local;
             }
 
