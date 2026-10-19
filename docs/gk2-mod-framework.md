@@ -143,6 +143,16 @@ is loaded:
   added to `Plugin`) made it fail as it should;
 - we build against `lib/GK2.Framework/GK2.Framework.dll`, a pinned 0.1.16 copy (MIT, with its LICENSE), and never
   ship it.
+- **newer framework versions** (a player's report, 2026-10-19: Saddle Up 0.9.1 "Faulted", "OnRegister failed:
+  AmbiguousMatchException", framework 0.1.20): 0.1.19 added a second overload of each `Add...` setting (one that
+  adopts an existing `ConfigEntry`). Calls the compiler binds keep working (they name the exact signature), but
+  `GetMethod("AddEnum")` by name threw. The enum rows now go through our own generic helper (`PageMod.AddEnumOf<T>`),
+  whose call is bound at compile time. Checked against 0.1.16, 0.1.19 and 0.1.23 (built from the framework's
+  public source): every one of the 25 framework references of GK2DonkeyAPI.dll resolves, `AddEnum` to the
+  `(section, key, value, ...)` overload. `tests/FrameworkScan` check 5 now fails any by-name lookup on a
+  framework type. The four QOL mods make no such lookup. Reproduced in game the same day with framework 0.1.23
+  (a build with only the old line back): "[dreas.gk2.saddleup] OnRegister failed: AmbiguousMatchException" from
+  `PageMod.AddChoice` -> `Type.GetMethod(String)`, status=Faulted; the fix redeployed after.
 
 This goes **against the framework's own advice**. PUBLIC_API and OPTIONAL_INTEGRATION warn that referencing it
 directly "can still require" the DLL. That's a deliberate choice: we checked it against the loader code of BepInEx
