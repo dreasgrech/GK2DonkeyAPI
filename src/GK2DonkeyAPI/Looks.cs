@@ -108,6 +108,14 @@ namespace GK2DonkeyAPI
                 "The skin the donkey wears, by id (empty: the donkey as the game draws it). Set per donkey by the mods that own them (Saddle Up's Donkey settings); this is the value for donkeys without one of their own.");
             Tuned.MarkLook(Skin);
             Tuning = new MountTuning(Section, new ITuned[] { Skin });
+            Camera.onPreCull += OnPreCull;
+        }
+
+        // The built-in skins (the embedded creatures, Gerry, Hellfire's recipe) and the skin packs under plugins\. Called
+        // after the dev keys bind, and only with the mounts switched on (Plugin.MountsOn: off for players in this
+        // version, so nothing but the donkey is ever offered to them).
+        internal static void RegisterBuiltIns()
+        {
             RegisterEmbedded(typeof(Looks).Assembly, "GK2DonkeyAPI.skins.", Plugin.Guid, builtIn: true);
             RegisterRecipes();
             try
@@ -119,7 +127,6 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning("Looks: looking for skin packs failed: " + e.Message);
             }
-            Camera.onPreCull += OnPreCull;
         }
 
         internal static void Unbind()
@@ -191,6 +198,7 @@ namespace GK2DonkeyAPI
             internal bool BuiltIn;
             internal string Report = "";      // what the loader found (one block, logged once)
             internal string Source;           // a pack's folder, for the report
+            internal long DiskStamp;          // a pack's files' newest write time as read (PackStamp): what the watch compares against
             internal string DirName;          // the skin directory's name (the id by default)
             internal Func<string, byte[]> ReadFile;    // the pack's files by name, for a reload
             internal List<string> FileNames;           // the pack's picture names, for a reload
@@ -373,6 +381,7 @@ namespace GK2DonkeyAPI
             }
             SkinDef def = FromCfg(cfgText, Path.GetFileName(skinDir), owner, "pack " + skinDir, Bytes, names);
             def.Source = skinDir;
+            def.DiskStamp = PackStamp(def);
             Register(def);
             return def;
         }
@@ -809,6 +818,7 @@ namespace GK2DonkeyAPI
                 SkinDef fresh = FromCfg(File.ReadAllText(path, Encoding.UTF8), d.DirName ?? d.Id, d.Owner, "reload " + path, d.ReadFile, d.FileNames);
                 fresh.BuiltIn = d.BuiltIn;
                 fresh.Source = d.Source;
+                fresh.DiskStamp = PackStamp(fresh);
                 if (fresh.DeclaredKind != null)
                 {
                     Kinds.KindDef have = Kinds.Find(fresh.DeclaredKind.Id);
@@ -855,8 +865,10 @@ namespace GK2DonkeyAPI
                 long stamp = PackStamp(d);
                 if (!packSeen.TryGetValue(d.Id, out long seen))
                 {
-                    packSeen[d.Id] = stamp;
-                    continue;
+                    // the baseline is the files as read, not as they are at the first check: a change made before the
+                    // switch went on is a change too (the self-test turned the switch on after saving; 2026-10-19)
+                    seen = d.DiskStamp;
+                    packSeen[d.Id] = seen;
                 }
                 if (stamp == seen)
                 {
@@ -1650,7 +1662,12 @@ namespace GK2DonkeyAPI
                     SkinDef d = Find(want);
                     if (d == null)
                     {
-                        if (missingIdLogged.Add(want)) Plugin.Log.LogWarning($"Looks: no skin '{want}' is installed; the donkey is drawn as the game draws it (the choice is kept).");
+                        if (missingIdLogged.Add(want))
+                        {
+                            // with the mounts off (this version's players) a set skin is expected to be missing: no warning
+                            if (Plugin.MountsOn) Plugin.Log.LogWarning($"Looks: no skin '{want}' is installed; the donkey is drawn as the game draws it (the choice is kept).");
+                            else Plugin.Log.LogInfo($"Looks: the skin '{want}' is set, but the skins are off in this version (Debug.MountsPreview); the donkey is drawn as the game draws it (the choice is kept).");
+                        }
                     }
                     else if (d.Base != viewBase)
                     {

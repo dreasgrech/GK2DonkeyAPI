@@ -438,6 +438,11 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> SkinPackAutoReload;
+        internal static ConfigEntry<bool> MountsPreview;
+        // What Debug.MountsPreview said at start (the built-ins register once, so a change takes the next start): the
+        // mounts other than the donkey, the skins and the effects are on. Off for players in this version
+        // (Mounts.MountsEnabled; the next update switches them on).
+        internal static bool MountsOn { get; private set; }
         internal static ConfigEntry<bool> CargoSeatOnShapes;
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
         internal static ConfigEntry<bool> TuningWindowEnabled;
@@ -623,6 +628,25 @@ namespace GK2DonkeyAPI
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = dbg.Bind("Debug", "TuningKeys", false,
                 "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
+            // The mounts other than the donkey, the skins and the effects are in this DLL but off for players in this
+            // version (the next update switches them on; CHANGELOG "switched on in the next update"). A dev key, so a
+            // player's cfg can't flip it: locked, it answers false. Nothing of it is registered when off, so every list
+            // (the Mount and Skin rows, the colours per mount) holds the donkey alone and a mod's registrations are
+            // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind / Effects.Bind because
+            // the key binds after them.
+            MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
+                "Dev: switches on what the next update brings players: the mounts other than the donkey (the dragon, the giant rat, the giant snail, the giant worm, Gerry), the skins (Hellfire, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
+            MountsOn = MountsPreview.Value;
+            if (MountsOn)
+            {
+                Looks.RegisterBuiltIns();
+                Effects.RegisterBuiltIn();
+                Log.LogInfo("Mounts, skins and effects: on (Debug.MountsPreview; players have them off in this version).");
+            }
+            else
+            {
+                Log.LogInfo("Mounts, skins and effects: off in this version, the donkey is the only mount offered (they come in the next update" + (DevTools.Unlocked ? "; Debug.MountsPreview switches them on here" : "") + ").");
+            }
 
             if (DevTools.Unlocked)
             {

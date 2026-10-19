@@ -32,7 +32,10 @@ A fix can't pass because the case happened not to show.
 4. **Progress and results:** the panel stays up during the run (only the frame-time scenario hides it, its own cost
    would be in the measurement): a bar and "k of N scenarios done", and every scenario's row says `running, 12 s`,
    then `PASS 9 (14 s)`, `WARN 1, 3 passed`, or `FAIL 1, 8 passed`. In `BepInEx\LogOutput.log`: `[test] PASS`,
-   `FAIL`, `WARN` and `INFO` lines and a summary, `[test] done: N passed, M failed, K warning(s)`. The tab ends with
+   `FAIL`, `WARN`, `INFO` and `SKIP` lines and a summary, `[test] done: N passed, M failed, K warning(s)` (and `, S
+   scenario(s) skipped` when some can't run in this setup: the tab shows `SKIP (not in this setup)`, not a warning;
+   with `Debug.MountsPreview` off, the state players have, the scenarios that need the built-in mounts and skins skip
+   and "mounts off" runs instead). The tab ends with
    the failures and warnings of the last run.
 
 **Safety:**
@@ -101,6 +104,7 @@ and its cart parts match whether it has a cart. That covers reused views taken b
 | Fight: a sword attack from the saddle | armour on, the view's sword equipped (no item), `ForceEnterState<AttackSwordDefaultPlayerState>` | the attack state does not end the ride, ends by itself, the ride is still on |
 | Fight: build mode dismounts | `SetControlTakenType(ByBuilding, false)` while riding | the ride ends with "control taken ByBuilding"; control given back; ridden again |
 
+| Mounts off: only the donkey offered, registrations kept out | with `Debug.MountsPreview` off (what players have in 0.10.0) | the Mount list holds the donkey, the donkey's Skin list Default, the Effect list two entries; nothing built in is registered; a skin, a mount and an effect registered through the API each return a handle and register nothing, a folder reports 0, disposing changes nothing; `Mounts.MountsEnabled` false. SKIP with the key on |
 | Skin: on, off, removed | a spawned donkey given the rat skin, then cleared, then removed while wearing it | the overlay shows and the donkey's own body is kept from rendering; its pictures load on one sheet (one texture more) and are freed when cleared; removed while wearing it, nothing is left |
 | Skin pack: a folder read, validated, worn, withdrawn | a temp `gk2skins\pack-test` folder with a skin.cfg, 44 PNGs, a front picture and a `[Tuning]` key, registered, worn, withdrawn by its owner | the report names the pack and its unknown keys; worn: drawn, the front picture above the rider, the `[Tuning]` key set on the wearer and owned by the skin; another owner's withdrawal is refused; withdrawn: the donkey shows again and the choice is kept (the warning it logs is announced) |
 | Colours: the player's regions on a mount in its own colours | the worm on the test companion's paper donkey, the settings picture rendered and read back before and after a custom green coat; then the dragon on a spawned donkey with a Muzzle colour | the picture leans pink, then green; the worm's 720 colours are all mapped through the colour cube; the dragon's 21 go through the exact swap and Muzzle changes its three belly colours only (its skin.cfg [Colors]) |
@@ -158,3 +162,5 @@ change to the packer, the layout file format or the panel's cargo editors ([carg
 | 2026-10-10, run 6 | **269 passed, 0 failed, 0 warnings** | the fixed morgue scenario, with the new check that the keeper's hands are as they were (1 test body taken out of them). The morgue door itself is the hand test. |
 | 2026-10-14, 18:37 | 331 passed, 2 failed, 0 warnings | the full run after the hitch event order fix (`MountInstance.Hitch`: `Hitched` before the old cart's `InstanceRemoved`; its new order check passed). The two FAILs were the cargo test's isolate checks on the standing test cart, written 2026-10-10 against a rule of the same commit (isolation holds on the ridden cart only); rewritten to the rule. The run's `[Warning]`/`[Error]` log lines are the scenarios' own inputs (the ids test's made-up owner GUIDs, the chest broken on purpose and the chest kill switch, a corpse drop point that does not exist). |
 | 2026-10-14, 18:46 | **332 passed, 0 failed, 0 warnings** | the rerun with the rewritten isolate checks (one check fewer, one more: 332). The same deliberate `[Warning]`/`[Error]` lines as the run before. |
+| 2026-10-19, 14:40 (mounts off, `Debug.MountsPreview` off: the players' state, over the 0.9.1 cfgs restored to the dev ones) | 425 passed, 1 failed, 0 warnings, 9 skipped | "mounts off" and "upgrade" green; the nine skin scenarios SKIP; the one failure was the pack auto-reload's baseline (fixed) |
+| 2026-10-19, 15:10 (mounts on) | **490 passed, 0 failed, 0 warnings**, 1 skipped ("mounts off") | after three test fixes (settings rows left the dragon chosen; Hellfire already worn by the player's donkey; the worm's hue at night, 285°: the preview is blue-lit at night, an open item) |

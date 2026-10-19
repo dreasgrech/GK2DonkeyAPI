@@ -335,6 +335,31 @@ namespace GK2DonkeyAPI.Api
         // a skin is a look of one kind.
         public static MountKinds Kinds { get; } = new MountKinds();
 
+        // Whether the mounts other than the donkey, the skins and the effects are switched on in this build. They are
+        // in the DLL since 0.30.0 but off for players in Saddle Up 0.10.0 (the next update switches them on): off,
+        // Kinds lists the donkey alone, Looks and Effects list nothing, and a registration (Looks.Register,
+        // Kinds.Register, Effects.Register and the rest) is kept out: nothing thrown, a handle that does nothing, one
+        // log line per owner. A mod that adds a mount can register in Awake as usual and check this to tell its player.
+        public static bool MountsEnabled => Plugin.MountsOn;
+
+        private static readonly HashSet<string> keptOutLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        // A registration refused by the switch above: said once per owner and kind of thing.
+        internal static IDisposable KeptOut(string ownerId, string what, string id)
+        {
+            if (keptOutLogged.Add(ownerId + "|" + what))
+            {
+                Plugin.Log.LogInfo($"{what} '{id}' from {ownerId}: kept out of this version (mounts, skins and effects come in the next update; Mounts.MountsEnabled is false).");
+            }
+            return NoHandle.Instance;
+        }
+
+        private sealed class NoHandle : IDisposable
+        {
+            internal static readonly NoHandle Instance = new NoHandle();
+            public void Dispose() { }
+        }
+
         // How effects show, everyone's values, overridable like tuning: EffectTrail, EffectWithCart, EffectInFights,
         // EffectOnFoals (bool), EffectNightBelow (float); and the defaults Effect (string) and EffectWhen
         // (MountEffectWhen) for donkeys without their own.

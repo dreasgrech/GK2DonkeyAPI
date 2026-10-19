@@ -318,6 +318,7 @@ static class GK2DonkeyAPI.Api.Mounts
   property static bool IsMounted { get; }
   property static GK2DonkeyAPI.Api.MountKinds Kinds { get; }
   property static GK2DonkeyAPI.Api.MountLooks Looks { get; }
+  property static bool MountsEnabled { get; }
   property static string Owner { get; }
   property static GK2DonkeyAPI.Api.MountHandle Riding { get; }
   property static GK2DonkeyAPI.Api.MountTuning Shuffle { get; }

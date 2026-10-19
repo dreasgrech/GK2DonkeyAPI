@@ -41,12 +41,12 @@ All of these apply at once:
 |---|---|---|---|
 | 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
-| | Mount | Donkey | What you ride: the donkey, or another mount (Dragon, Giant Rat, Giant Snail, Giant Worm are built in; skin packs and other mods add more). Its picture is at the top of the section. |
-| | Skin | The game's own | How that mount is drawn, one of its skins: the donkey's Default and Hellfire; every other mount's Default; ... Each mount remembers its last skin. |
+| | Mount | Donkey | What you ride. In this version: the donkey only; the other mounts (Dragon, Giant Rat, Giant Snail, Giant Worm, Gerry) are built and switched off until the next update, and a row under the Skin row says so. Its picture is at the top of the section. |
+| | Skin | Default | How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire, skin packs) come in the next update. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |
-| 3. Effect | Effect | As the mount | A particle effect on your mount: what the mount comes with, None, or Hellfire (the game's lamp fire in a ring, with sparks); mods can add more. |
+| 3. Effect | Effect | As the mount | A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
 | | Effect shown | Always | Never, At night, Always. |
 | | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | How the effect behaves. |
 | 4. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |

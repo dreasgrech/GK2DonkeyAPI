@@ -12,10 +12,47 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Only the donkey, for now.** This version's settings have a Mount row and a Skin row, and both hold one
+  choice: the donkey, drawn as the game draws it. The other mounts (a dragon, a giant rat, a giant snail, a giant
+  worm, Gerry the skull), the skins (Hellfire, skin packs) and the particle effects are built and in this download,
+  but switched off until the next update, which switches them on; the settings say so in two "Coming in the next
+  update" rows. Nothing you have changes: your donkey, cart, colours and saves carry over as before.
 - **Fixed: with GK2 Mod Framework 0.1.19 or newer, Saddle Up's page in the Mods menu was "Faulted"** ("OnRegister
   failed: AmbiguousMatchException", reported 2026-10-19). The newer framework added a second `AddEnum`, and the page
   looked it up by name. It now calls the one it means directly; checked against framework 0.1.16, 0.1.19 and 0.1.23.
   The mod itself kept working; only its settings page in the Mods menu was missing.
+- **A Mount section and an Effect section.** Right after Keys: your mount's picture, its Name, the Mount and Skin
+  rows (the donkey alone in this version, see above), then the babies rows ("Babies", "Babies come indoors",
+  "Babies are the same mount and skin"); after it an Effect section ("Effect": None or As the mount, with the rows
+  for when and how it shows; nothing to show in this version). Your Behaviour, Donkey, Cart and Sound settings stay
+  as they were, though their sections moved down in the cfg (the old copies are cleaned out of the file on the first
+  save); the Name and the babies rows live in the Mount section now (your values move with them).
+- **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
+  "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
+  ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the
+  babies rows live in the Mount section now (your values move with them); the Donkey section keeps the donkey's own
+  coat and harness colours. The keeper's refusals name the mount ("This dragon already pulls a cart", "That is a
+  cart without a mount", "Your mount is nowhere to be found"). The F11 panel's Mounts tab says "mount" instead of
+  "creature". The game's delivery donkey is still a donkey.
+- **The colours window stays put.** "Choose colours" now shows the picture in a slot of fixed size, the rows in two
+  columns by section (your mount on the left, the cart on the right) with a heading each, and the custom colour and
+  lightness rows always in place, greyed until the preset is Custom. Nothing moves when a value changes (before,
+  those rows came and went and the whole stack shifted under the cursor), and a window taller than the screen is
+  scaled down whole instead of running off the top. The picture no longer keeps the previous mount's lantern where
+  it hung (the preview copy is undressed before it is dressed again), so the mount sits centred.
+- **A side file this version can't read is kept, not lost.** If a save's `<save>.gk2donkeyapi.dat` is of a format
+  this version doesn't read (a newer one, carried over by Steam Cloud from another machine), it is set aside as
+  `<save>.gk2donkeyapi.format<N>.dat` and the log says so; before, the next save deleted or overwrote it, and a
+  parked cart's load with it. Updating from 0.9.1: every setting, the custom colours and the kept donkeys and carts
+  carry over (docs/compatibility.md).
+
+Built in this version, switched on in the next update (players don't see any of it yet; the Development notes
+say how it is switched off):
+
+- **Mounts and skins.** A mount (Donkey, Giant Rat, Giant Snail, Giant Worm, Dragon) has skins (the donkey: the game's
+  own and Hellfire; the dragon: its own look): the Mount row lists every mount, the Skin row that mount's skins (cfg
+  keys Mount, Skin_<mount>, FoalsWearSkin, Effect...). A mount carries its own seat for the rider and its rules (a mount
+  can refuse the cart), and mods can give one abilities. The "Effect" row gains "As the mount".
 - **Skins.** Your donkey can be drawn as something else: the giant rat, the giant snail, the giant worm and a red and a blue dragon (their wings raised above the rider) are built in
   (our own art). Donkey settings: "Skin", a list to pick from (the donkey, the built-in skins, every pack installed;
   in the Mods menu, the game's Settings window and the colours bar), and "Babies are the same mount and skin". The skin is
@@ -31,13 +68,6 @@ For players:
   match no frame, frames still to draw. A pack that goes missing leaves the donkey as the game draws it, and the choice
   is kept for when it comes back (the list shows it as "not installed"). How to make one: docs/skins.md. A pack can be
   one sheet PNG instead of a file per frame.
-- **Mounts and skins.** A mount (Donkey, Giant Rat, Giant Snail, Giant Worm, Dragon) has skins (the donkey: the game's
-  own and Hellfire; the dragon: its own look). A "Mount" section of its own right
-  after Keys (its picture, a Mount dropdown, then a Skin dropdown with that mount's skins, the foals toggle) and an
-  "Effect" section after it, before Behaviour (cfg keys Mount, Skin_<mount>, FoalsWearSkin, Effect...). Your
-  Behaviour, Donkey, Cart and Sound settings stay as they were, though their sections moved down in the cfg (the old
-  copies are cleaned out of the file on the first save). A mount carries its own seat for the rider
-  and its rules (a mount can refuse the cart), and mods can give one abilities. The "Effect" row gains "As the mount".
 - **Gerry.** The game's talking skull as a mount (Mount: Gerry): his own frames out of the game, three times his
   size, hopping along with the jaw chattering, a somersault for an idle; cart and babies allowed. A skin pack can do
   the same with any character of the game (`source = game`, docs/skins.md): no pictures to draw, just the
@@ -50,13 +80,6 @@ For players:
   writes every renderer around a mount into the log. The Mounts tab saves by itself, like the Cargo tab: a moment
   after the last change the values are in the skin's file (and the mount's declaring files), with the time shown,
   "Undo the last change" to put a file back, and no Save button to forget.
-- **Mount, not donkey.** Saddle Up's settings say "mount" wherever yours may not be a donkey ("Ride your mount",
-  "Send your mount away", "Keep your mount with the save", "Mount and cart sounds") and "babies" for the young
-  ("Babies", "Babies come indoors", "Babies are the same mount and skin", "Babies have it too"); the Name and the
-  babies rows live in the Mount section now (your values move with them); the Donkey section keeps the donkey's own
-  coat and harness colours. The keeper's refusals name the mount ("This dragon already pulls a cart", "That is a
-  cart without a mount", "Your mount is nowhere to be found"). The F11 panel's Mounts tab says "mount" instead of
-  "creature". The game's delivery donkey is still a donkey.
 - **The cart sits behind a longer mount.** A mount file can set `HitchGapPx` (the whole cart, shafts included, that
   many art pixels further behind than behind the donkey); the dragons set 24, so their body isn't drawn inside the
   cart. A cart left standing stays where it was drawn, and a mount taking a cart stands its gap ahead of it. The F11
@@ -70,12 +93,6 @@ For players:
   mount you set them on: a green dragon and a brown donkey, each as you left it, and the cart's paint with each.
   Switching the mount brings its own colours back. The donkey's values from before are its own unchanged; every
   other mount starts with the game's colours. Every mount's default skin is listed as "Default".
-- **The colours window stays put.** "Choose colours" now shows the picture in a slot of fixed size, the rows in two
-  columns by section (your mount on the left, the cart on the right) with a heading each, and the custom colour and
-  lightness rows always in place, greyed until the preset is Custom. Nothing moves when a value changes (before,
-  those rows came and went and the whole stack shifted under the cursor), and a window taller than the screen is
-  scaled down whole instead of running off the top. The picture no longer keeps the previous mount's lantern where
-  it hung (the preview copy is undressed before it is dressed again), so the mount sits centred.
 - **Your colours on every mount.** Coat colour, harness colour and the custom colours with their lightness now
   recolour any mount the same way they recolour the donkey: a dragon's scales, the rat's fur, the worm's skin.
   Each built-in creature says which of its colours are its outlines, its second tone (the dragon's belly, the
@@ -92,14 +109,15 @@ For players:
   as a donkey: Gerry's babies stayed donkey-sized (0.6) until he was called and woke (seen 2026-10-18 indoors, four
   big skulls). The kind now follows the mount's skin setting whether or not it is drawn; the self-test "game
   creature" checks a sleeping Gerry.
-- **A side file this version can't read is kept, not lost.** If a save's `<save>.gk2donkeyapi.dat` is of a format
-  this version doesn't read (a newer one, carried over by Steam Cloud from another machine), it is set aside as
-  `<save>.gk2donkeyapi.format<N>.dat` and the log says so; before, the next save deleted or overwrote it, and a
-  parked cart's load with it. Updating from 0.9.1: every setting, the custom colours and the kept donkeys and carts
-  carry over (docs/compatibility.md).
 
 For mod authors:
 
+- **The mounts, skins and effects API is in this build but switched off** (`Mounts.MountsEnabled`, false in Saddle
+  Up 0.10.0's download): `Mounts.Kinds.Kinds` lists the donkey alone, `Mounts.Looks.Skins` and `Mounts.Effects.Effects`
+  are empty, and `Register`, `RegisterRecipe`, `RegisterFolder` and `RegisterEmbedded` on them return a handle that
+  does nothing (0 for the counts) with one log line per owner, nothing thrown. Register in Awake as usual and check
+  `MountsEnabled` to tell your player; the next update switches it all on with no change on your side. The rest of
+  0.30.0 below describes the API as it works then.
 - **A skin worn over the donkey keeps the donkey's colours** (`layer = over` in its own colours): before, the
   worn skin's colours replaced the donkey's whole colour map, so the donkey under a saddle cloth lost the player's
   coat and harness colours. Now the donkey's regions stay, the colours the skin's `[Colors]` names join them, and
@@ -150,6 +168,25 @@ For mod authors:
 
 Development:
 
+- Self-test fixes from the first full run with the mounts on after the gate (2026-10-19): "settings: the Mount, Skin,
+  babies and effect rows" left the dragon chosen before its per-mount checks that assume the donkey (a test bug since
+  it was written); "recipe: built from the donkey's frames" can't watch the build when a donkey of the world already
+  wears Hellfire (said as INFO now); "colours: the player's regions" reads the as-drawn hue only by day (at night the
+  preview is blue-lit: an open item). The pack auto-reload compared against the files at its first check rather than
+  as read, so a change made before the switch went on was missed: fixed, the scenario is green.
+- `tests/fixtures/released/0.9.1/dreas.gk2.saddleup.cfg` gained the six `Custom*` palette keys (CustomCoat = Plum ...)
+  that 0.9.1 wrote and the reconstruction had left out, so the upgrade self-test covers the custom colours too. The
+  0.9.1 files were run live through the 0.10.0 build on 2026-10-19 (release-checklist.md section 5): 0 lost of 485 values.
+- **How the mounts are switched off for players**: the dev key `Debug.MountsPreview` (off by default; a player's
+  cfg has no [Debug] keys, so it answers false there). Off, `Looks.RegisterBuiltIns` and `Effects.RegisterBuiltIn`
+  don't run (nothing but the donkey kind exists, so every list and the colours per mount hold the donkey alone) and
+  the public API keeps registrations out (`Mounts.KeptOut`: a handle to nothing, one info line per owner); a skin
+  that is set but missing is an info line, not a warning, while off. On, everything as before. The F11 panel's Debug
+  tab has the switch (a change takes the next start) and the log's first lines say which state the game is in.
+  Self-tests: a `SKIP` state (counted apart from warnings; the panel shows it), the scenario "mounts off: only the
+  donkey offered, registrations kept out", and the eleven scenarios that need the built-ins skip while off (run the
+  suite with the key on for them). The flip for the next release is one change: the key's default to true, or the
+  key gone and the two `RegisterBuiltIns` calls unconditional.
 - `tests/FrameworkScan` check 5: no GK2.Framework member looked up by name (a newer framework's overload makes such
   a lookup throw); it fails on the 0.9.1 DLL and passes on the fix.
 - **Skin packs reload by themselves while drawing** (dev only, `Debug.SkinPackAutoReload`, off by default; a switch

@@ -606,6 +606,11 @@ keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/
 
 ## Mount kinds (0.30.0)
 
+> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
+> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
+> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
+> with the dev key `Debug.MountsPreview` on.
+
 What the player rides as a creature type, against a skin, which is how it is drawn ([mounts-design.md](mounts-design.md)).
 A kind (`Mounts.Kinds`, `MountKindDef`) owns the rider's seat for it (values for existing tuning keys: `Tuning` for both
 styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`, their size
@@ -662,6 +667,11 @@ effects registered before the page is built appear with no change to yours; late
 registration, a pack's declaration or a withdrawal.
 
 ## Skins (0.30.0)
+
+> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
+> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
+> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
+> with the dev key `Debug.MountsPreview` on.
 
 A skin draws the donkey as something else. `Mounts.Looks` lists them and takes new ones; a donkey wears one through its
 tuning key `Skin` (also `MountCompanion.Skin` for a player mod's donkey, with `FoalsWearSkin`). The pictures are a PNG
@@ -724,6 +734,11 @@ description, apply, look: true)`, with `choices` returning `(id, label)` pairs; 
 every menu alike, and a stored id that isn't in the list is shown as "not installed" and left alone.
 
 ## Effects (0.30.0)
+
+> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
+> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
+> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
+> with the dev key `Debug.MountsPreview` on.
 
 A particle effect on a donkey: the built-in **Hellfire** (the game's own lamp fire on a ring round the donkey, its
 sparks, a trail of flames left behind) and the effects mods register with `Mounts.Effects`. A donkey shows one

@@ -75,6 +75,7 @@ namespace GK2DonkeyAPI.Api
             {
                 if (a == null || string.IsNullOrEmpty(a.Id)) throw new ArgumentException($"Mount kind '{def.Id}': every ability needs an Id.", nameof(def));
             }
+            if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
             GK2DonkeyAPI.Kinds.Register(d);
             return new Handle(d.Id, ownerId);
         }

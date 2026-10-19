@@ -374,7 +374,9 @@ namespace GK2DonkeyAPI.Api
                 me.Skin = value;
             }
             mountE = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
-                "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row.",
+                Mounts.MountsEnabled
+                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row."
+                    : "What you ride. The donkey, in this version; other mounts (the dragon, the giant rat, ...) come in the next update.",
                 v => Apply(), look: true);
             mountRow = mountE;
             foreach (MountKindInfo k in Mounts.Kinds.Kinds)
@@ -385,7 +387,9 @@ namespace GK2DonkeyAPI.Api
                 try
                 {
                     ConfigEntry<string> row = List(section, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
-                        $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins.",
+                        Mounts.MountsEnabled
+                            ? $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins."
+                            : $"How the {k.Name.ToLowerInvariant()} is drawn. As the game draws it, in this version; skins (Hellfire, skin packs) come in the next update.",
                         v => Apply(), look: true);
                     skinRows[id] = row;
                 }
@@ -417,7 +421,9 @@ namespace GK2DonkeyAPI.Api
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
             ConfigEntry<string> effect = List(section, "Effect", MountEffects.KindId, GK2DonkeyAPI.Effects.EffectChoices, "Effect",
-                "A particle effect on your mount: As the mount (what the creature comes with, if anything), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors.",
+                Mounts.MountsEnabled
+                    ? "A particle effect on your mount: As the mount (what the creature comes with, if anything), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors."
+                    : "A particle effect on your mount. None in this version (the donkey comes with none); Hellfire and effects from mods come in the next update.",
                 v => me.Effect = v, look: true);
             Func<bool> on = () => !MountEffects.IsNone(effect.Value);
             Choice(section, "EffectWhen", me.EffectWhen, "Effect shown", "", v => me.EffectWhen = v, new[] { "Never", "At night", "Always" }, look: true, visible: on);

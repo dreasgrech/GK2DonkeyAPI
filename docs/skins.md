@@ -186,6 +186,10 @@ prefix).
 
 ## Trying it
 
+**In Saddle Up 0.10.0's download the skin packs are switched off**, with every mount and skin: they come in the next
+update, and the log says so at start ("Mounts, skins and effects: off in this version"). On a machine with the
+sources, the dev key `Debug.MountsPreview` switches them on; the rest of this section is for that state.
+
 Start the game and look at `BepInEx\LogOutput.log` for your skin's line: it says how many pictures it found, any
 name that matches no frame (a typo), and how many frames are still to draw. Then pick it in Saddle Up's settings
 (Donkey, Skin) and call your donkey. The pictures are read again every time the game starts, so you can edit them

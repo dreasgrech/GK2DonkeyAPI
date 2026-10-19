@@ -50,7 +50,6 @@ namespace GK2DonkeyAPI
             OnFoals = cfg.Bind(Section, "EffectOnFoals", Defaults.Get(Section, "EffectOnFoals", false), "Foals show it too (smaller), when their parent's mod puts it on them.");
             NightBelow = cfg.Bind(Section, "EffectNightBelow", Defaults.Get(Section, "EffectNightBelow", 0.35f), new ConfigDescription("\"At night\" means the game's sun value is below this (0 deep night, 1 full day).", new AcceptableValueRange<float>(0f, 1f)));
             Tuning = new MountTuning(Section, new ITuned[] { Effect, When, Trail, WithCart, InFights, OnFoals, NightBelow });
-            RegisterBuiltIn();
         }
 
         internal static void Unbind()
@@ -180,7 +179,8 @@ namespace GK2DonkeyAPI
 
         // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind.
         // Defined through the public API exactly as a mod would (docs/api.md "Effects"): nothing here a mod can't do.
-        private static void RegisterBuiltIn()
+        // Called from Plugin after the dev keys bind, only with the mounts switched on (the API keeps it out otherwise).
+        internal static void RegisterBuiltIn()
         {
             MountEffects api = Mounts.Effects;
             var d = new MountEffectDef { Id = "hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" };
@@ -322,7 +322,7 @@ namespace GK2DonkeyAPI
             return go;
         }
 
-        private static bool Night()
+        internal static bool Night()
         {
             try
             {
@@ -413,7 +413,8 @@ namespace GK2DonkeyAPI
                     EffectDef d = Find(want);
                     if (want.Length > 0 && d == null && missingLogged.Add(want))
                     {
-                        Plugin.Log.LogWarning($"Effects: no effect '{want}' is registered; the donkey shows none (the choice is kept).");
+                        if (Plugin.MountsOn) Plugin.Log.LogWarning($"Effects: no effect '{want}' is registered; the donkey shows none (the choice is kept).");
+                        else Plugin.Log.LogInfo($"Effects: the effect '{want}' is set, but the effects are off in this version (Debug.MountsPreview); the donkey shows none (the choice is kept)."); // expected while off: no warning
                     }
                     if (d != effect)
                     {

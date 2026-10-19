@@ -28,6 +28,12 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   `GK2-*-facts.txt` files are written by panel buttons only.
 - The first start writes the cfg once (`Plugin.Load` switches `SaveOnConfigSet` off while binding), not once per
   key.
+- **The mounts, skins and effects are switched off for players** (0.10.0; CHANGELOG "Only the donkey, for now"):
+  the dev key `Debug.MountsPreview` is off by default and absent from a player's cfg, so the download offers the
+  donkey alone. The self-test "mounts off: only the donkey offered, registrations kept out" is green with the key
+  off, and the full suite with it on (the skin scenarios skip while off). The next release that switches them on
+  flips the key's default (or removes it) and moves the CHANGELOG's "Built in this version, switched on in the next
+  update" block up into "For players".
 
 ## 2. The offline checks (no game launch)
 
@@ -97,7 +103,8 @@ Rehearse the first start on a clean config, with the game closed:
    are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
    loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
    log's "Settings: ... carried over" lines and no warning; quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`,
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`, `Mounts, skins and effects: off
+   in this version` (and in the Mods menu the Mount row holds Donkey alone, with the two "Coming in the next update" rows),
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).
@@ -130,6 +137,22 @@ aside, Steam Cloud off): no donkey after loading; H, G (cart 2), two items, H le
 H left it again, on foot E loaded a log onto the standing cart and took one off (the zone path of the fix); the Mods
 page's picture built; 369 lines, no warning, error or exception; layout from embedded; fresh cfgs without `[Debug]`.
 Nothing saved; every save file verified identical; everything restored and the dev builds redeployed.
+Run 2026-10-19 14:15, the 0.10.0 dev build (mounts switched off) over the **0.9.1 player files** (the fixture's two
+cfgs staged in BepInEx\config with KeepWithSaves on, the user's own side file): the Mods menu showed every 0.9.1 value
+(R/T keys, Bella, plum custom coat, red harness, blue paint, black wheels, brass hubs, green light, 3 babies, 4 slots,
+every toggle off, volume 120) and the colours bar the same; 5 of 5 kept donkeys and carts restored; R brought the
+donkey and the cart unhitched (CartStaysParked off in 0.9.1's file: as documented); 674 log lines, 0 warnings, the
+seven "carried over" lines and "31 old line(s) left out"; the rewritten cfgs hold all 35 Saddle Up and 450 API
+values of the 0.9.1 files (a key-by-key comparison, 0 lost; copies in `backup-dev-2026-10-19\after-upgrade-0.9.1`);
+every save file byte-identical. The fixture gained the six `Custom*` palette keys 0.9.1 wrote (they were missing).
+Final readiness check 2026-10-19 15:30: the fixture's key set compared with the 0.9.1 source itself (every `p.X(section,
+key)` call of Saddle Up's Plugin.cs at 7ac9a6c: 33 keys plus the two speed rows, all in the fixture; the API's 118 literal
+`Bind` keys: all but the 16 [Debug] ones in the fixture, as a player's file has them; the computed families, 14 colour
+regions x 10, Ride and Cart 123 each, Shuffle 30, all present); the side file's reader unchanged since 0.9.1 and its writer
+only leaves a skin's own tuning out; no debug marker in shipped code (TEMPORARY, FIXME, HACK, Console, Debug.Log: none;
+0 TODOs); CecilScan (693 manifest entries identical, 67 classes sorted), DefaultsScan, SkinsScan, FrameworkScan and
+ApiSurface green on this build. Before the rehearsal, out of `plugins\`: GK2DonkeySkins (the example mod), gk2skins\
+(worm-pack, royal-parade), GK2AssetProbe, GK2PerfRunner, GK2ShowcaseDirector, and the dev marker.
 
 ## 6. Versions, changelog and hand-off
 

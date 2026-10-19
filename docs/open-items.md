@@ -285,6 +285,11 @@ closed):
 
 ## Undecided
 
+- **The settings picture at night is blue-lit** (found 2026-10-19 by the colours self-test: the worm's outline 36141C
+  read back as 1E0A1C, red and green halved, blue kept). PreviewStage.cs says its own point light makes it "lit the
+  same in the main menu and at night"; the scene's ambient or sun reaches it anyway. Decide: keep (the picture
+  follows the game's light, like the look bar over the game) or shield the stage (its own ambient, or an unlit
+  material). Probe first: read the picture's pixels by day and at night at the same spot.
 - **Changed defaults never reach existing players** (docs/compatibility.md section 3): BepInEx writes every key
   with its value, so a player who never touched a key keeps the old default when the mod's default moves. The
   mechanism on the table: a version stamp in the cfg plus the released defaults per version

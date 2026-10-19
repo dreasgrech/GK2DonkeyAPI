@@ -38,7 +38,9 @@ namespace SaddleUp
             Mounts.Behaviour.Set(Guid, "DismountIndoors", true); // always outside only (the API can allow it; Saddle Up doesn't offer it)
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
-                "Your own mount and cart: ride it (H), drive the cart (G), haul with it. A donkey, or any mount a skin pack or another mod adds (dragons, a giant rat...). Built on GK2 Donkey API.");
+                Mounts.MountsEnabled
+                    ? "Your own mount and cart: ride it (H), drive the cart (G), haul with it. A donkey, or any mount a skin pack or another mod adds (dragons, a giant rat...). Built on GK2 Donkey API."
+                    : "Your own donkey and cart: ride it (H), drive the cart (G), haul with it. Other mounts, skins and effects come in the next update. Built on GK2 Donkey API.");
             p.Status("Keys");
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Your mount comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
@@ -58,7 +60,19 @@ namespace SaddleUp
             p.Preview("Mount", me, "Your mount", cart: false);
             p.Text("Mount", "Name", me.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
             p.MountRows("Mount", me);
+            if (!Mounts.MountsEnabled)
+            {
+                // This version ships the mounts, skins and effects switched off (Mounts.MountsEnabled; the next update
+                // switches them on): the rows above hold the donkey alone, and these say why.
+                p.Info("Mount", "Other mounts and skins", () => "Coming in the next update",
+                    "A dragon, a giant rat, a giant snail, a giant worm, the Hellfire skin and skin packs are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
+            }
             p.FoalRows("Mount", me);
+            if (!Mounts.MountsEnabled)
+            {
+                p.Info("Effect", "Particle effects", () => "Coming in the next update",
+                    "Hellfire (the game's lamp fire in a ring round your mount, with sparks and a trail) and effects from mods are built and switched off in this version; the next update switches them on.");
+            }
             p.EffectRows("Effect", me);
 
             // The companion's own values are the defaults: written once, in the API (MountCompanion).
