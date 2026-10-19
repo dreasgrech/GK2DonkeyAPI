@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Fixed: with GK2 Mod Framework 0.1.19 or newer, Saddle Up's page in the Mods menu was "Faulted"** ("OnRegister
+  failed: AmbiguousMatchException", reported 2026-10-19). The newer framework added a second `AddEnum`, and the page
+  looked it up by name. It now calls the one it means directly; checked against framework 0.1.16, 0.1.19 and 0.1.23.
+  The mod itself kept working; only its settings page in the Mods menu was missing.
 - **Skins.** Your donkey can be drawn as something else: the giant rat, the giant snail, the giant worm and a red and a blue dragon (their wings raised above the rider) are built in
   (our own art). Donkey settings: "Skin", a list to pick from (the donkey, the built-in skins, every pack installed;
   in the Mods menu, the game's Settings window and the colours bar), and "Babies are the same mount and skin". The skin is
@@ -96,6 +100,11 @@ For players:
 
 For mod authors:
 
+- **A skin worn over the donkey keeps the donkey's colours** (`layer = over` in its own colours): before, the
+  worn skin's colours replaced the donkey's whole colour map, so the donkey under a saddle cloth lost the player's
+  coat and harness colours. Now the donkey's regions stay, the colours the skin's `[Colors]` names join them, and
+  the colours it doesn't name are kept as drawn (not Coat). A named colour the donkey also has is the donkey's, said
+  once in the log. docs/skins.md, docs/mount-colours.md.
 - **A skin is the drawing, a mount the creature** (docs/mounts-design.md §1): a skin's `[Tuning]` / `MountSkinDef.Tuning`
   takes only the picture-dependent keys (seat, torso, legs, hitch gap, depth, centring) and refuses the rest with one
   log line; the per-skin foals flag is gone (`skin.cfg foals`, `MountSkinDef.Foals`, `MountSkinInfo.Foals`, the
@@ -141,6 +150,18 @@ For mod authors:
 
 Development:
 
+- `tests/FrameworkScan` check 5: no GK2.Framework member looked up by name (a newer framework's overload makes such
+  a lookup throw); it fails on the 0.9.1 DLL and passes on the fix.
+- **Skin packs reload by themselves while drawing** (dev only, `Debug.SkinPackAutoReload`, off by default; a switch
+  under the Mounts tab's "Reload from the file"): a pack in use is read again a second or two after its files change
+  on disk. With the watcher (`watch_skin.py`, every save in Aseprite exported, checked and previewed as GIFs), a
+  round is draw, save, look. Self-test "skin pack: read again by itself when its files change (dev switch)".
+- **Sprite tools** (docs/sprite-tools.md): after Hellfire took 14 rounds of frames, skins move to a draw-and-look
+  loop in Aseprite, built from source for our own use. Two Aseprite scripts, "GK2 Export skin" (every visible layer
+  but the donkey reference into the pack's sheet.png, an optional check run after) and "GK2 Part to all frames" (a
+  part redrawn once, sent to the other frames at each frame's own place), and a draft generator for the Royal Parade
+  skin (a caparison and a crown; the crown placed from the reviewed Hellfire horn positions). Self-test "colours: a
+  skin over the donkey keeps the donkey's regions".
 - The F11 panel's Instances tab spawns any mount with any of its skins ("Mount and skin" cycler above the buttons;
   "with its cart" and the family button greyed with the reason when the mount refuses the cart or has no babies; the
   babies wear the parent's skin; rows name the mount and skin). Its wording says mount, not donkey.

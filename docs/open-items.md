@@ -5,6 +5,18 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **Royal Parade** (pack `gk2skins\royal-parade`, first export 2026-10-19 02:52; API deployed 02:52): the first skin
+  worn over the donkey. Saddle Up settings: Donkey, Skin, Royal Parade. A red caparison with a gold hem, fringe and
+  fleur behind the collar, a crown between the ears, in every clip (the draft from royal.aseprite; to be corrected by
+  eye there). Look for: the donkey still drawn under it, the rider sitting on the cloth, the crown not doubled while
+  standing (the head sprite carries one too), a custom coat still recolouring the donkey and a custom harness colour
+  the cloth's red (the gold stays gold). Tests tab: "colours: a skin over the donkey keeps the donkey's regions"
+  PASS. Then the loop: edit in Aseprite, GK2 Export skin, "Reload from the file" (docs/sprite-tools.md).
+- **Skin pack auto-reload** (built 2026-10-19 03:00, deployed): Mounts tab, the skin's rows, tick "Reload by itself
+  when the pack's files change"; double-click `C:\ClaudeCodeTemp\GK2-aseprite\royal\Watch Royal Parade.cmd`; move the
+  crown in Aseprite and Ctrl+S: the watcher window says "export done" and "CHECK", the donkey in the game changes a
+  second or two later, the log says "pack 'royal-parade' changed on disk: read again". Tests tab: "skin pack: read
+  again by itself when its files change (dev switch)" PASS.
 - **Hellfire** (built 2026-10-19 00:40): Mount = Donkey, Skin = Hellfire: the first wear builds 44 frames from the
   donkey's own (the log's "frames found for the recipes" line), then horns where the ears were, the devil's tail
   swaying with the walk, glowing eyes, lava cracks that stay put on the flank, an ash coat; graze, turn, chew and the
@@ -383,6 +395,11 @@ closed):
   confirms the arrow from the drawn bow (y 4.60 = 4.38 + 0.22), the reversed walk and the back view, no warnings.
   Committed. **Left to decide:** the shipped `BackSeatExtraPx` (the user rode with 0 in Ride, the default is 5), and
   whether the cart ever comes along into a fight (parked: it stays outside).
+- **Sprite tools** (investigated 2026-10-19, docs/sprite-tools.md): after 14 Hellfire rounds, move shape work from
+  recipes to painted overlay packs (`layer = over`, reload in game). To decide: the editor (Aseprite ~$20 or free
+  Pixelorama), whether to build an "erase here" colour for overlays (the tail removal), and whether Hellfire moves
+  to overlay plus a small recipe.
+
 ## Deferred
 
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after

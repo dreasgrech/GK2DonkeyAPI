@@ -116,6 +116,13 @@ has is said once in the log and maps nothing. A skin with up to 48 colours is re
 colour swap; one with more (shaded art) goes through the game's colour cube, which takes any number. A skin with
 `kind = palette` keeps the donkey's regions, since it is drawn in the donkey's colours.
 
+**A skin worn over the donkey** (`layer = over`: a saddle cloth, a hat) is not the donkey's body, so its colours
+work the other way round: the donkey under it keeps all its own regions (a player's coat and harness colours still
+reach the donkey), the colours `[Colors]` names join those regions (a caparison's reds under `Harness` follow the
+player's harness colour), and every colour not named is **kept as drawn** (the gold trim stays gold). Draw it in
+colours the donkey doesn't have: a named colour the donkey also has follows the donkey's region, and the log says
+so once.
+
 ## A skin out of the game's own characters (`source = game`)
 
 A skin with no pictures of its own: another character's frames, read out of the game's character atlas at run

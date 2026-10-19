@@ -30,11 +30,12 @@ namespace GK2DonkeyAPI
         // it (MountCompanion), since Colorize keeps each pixel's brightness (Black would stay a mid grey).
         // For a mount region on a skin drawn in its own colours (skinId, loaded and whole), the average of that
         // look's colours in the region, so a picked colour comes out as light on the worm as on the donkey; the
-        // donkey's otherwise (and for a region the look has no colours in, where nothing maps anyway).
+        // donkey's otherwise (and for a region the look has no colours in, where nothing maps anyway; and for a skin
+        // worn over the donkey, whose regions are still mostly the donkey's own colours).
         internal static float ArtLightness(string regionKey, string skinId = null)
         {
             Looks.Loaded look = Looks.LoadedOwnColours(skinId);
-            if (look != null && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> cols) && cols.Count > 0)
+            if (look != null && !look.Def.Over && look.ColoursByRegion.TryGetValue(regionKey, out List<Color32> cols) && cols.Count > 0)
             {
                 float s = 0f;
                 foreach (Color32 c in cols)

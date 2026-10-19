@@ -190,12 +190,21 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // AddEnum<T> needs the enum type at compile time; the row only has it at run time.
+            // AddEnum<T> needs the enum type at compile time; the row only has it at run time. So our own generic
+            // helper is made for the type, and its call is bound by the compiler to the (section, key, value, ...)
+            // overload. Looking AddEnum up by name broke when framework 0.1.19 added a second overload (it adopts an
+            // existing ConfigEntry): AmbiguousMatchException, the page "Faulted" in the Mods menu (a player's report,
+            // 2026-10-19; Saddle Up 0.9.1).
             private static void AddChoice(Gk2Settings s, MountSettingsPage.Row r, int order)
             {
-                Type t = r.Entry.SettingType;
-                var m = typeof(Gk2Settings).GetMethod(nameof(Gk2Settings.AddEnum)).MakeGenericMethod(t);
-                m.Invoke(s, new object[] { r.Section, r.Entry.Definition.Key, r.Entry.DefaultValue, r.Label, r.Description, order });
+                var m = typeof(PageMod).GetMethod(nameof(AddEnumOf), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)
+                    .MakeGenericMethod(r.Entry.SettingType);
+                m.Invoke(null, new object[] { s, r, order });
+            }
+
+            private static void AddEnumOf<T>(Gk2Settings s, MountSettingsPage.Row r, int order) where T : struct, Enum
+            {
+                s.AddEnum(r.Section, r.Entry.Definition.Key, (T)r.Entry.DefaultValue, r.Label, r.Description, order);
             }
         }
     }

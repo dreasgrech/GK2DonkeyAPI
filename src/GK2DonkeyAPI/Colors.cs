@@ -578,6 +578,7 @@ namespace GK2DonkeyAPI
             // so the cart's wheel sprites draw the same whatever mount pulls the cart.
             private readonly SpriteColorMethod[] groupMethod = new SpriteColorMethod[GroupCount];
             private int lookColourCount; // the worn look's colours in the mount's sprite group (0: the donkey's own lists)
+            private static readonly HashSet<string> OverSharedWarned = new HashSet<string>(StringComparer.Ordinal); // skins already told (Rebuild)
             public string Note { get; private set; } = "not attached";
 
             private static readonly int IdPalette = Shader.PropertyToID("_Palette");
@@ -854,12 +855,15 @@ namespace GK2DonkeyAPI
                     Group g = (Group)gi;
                     // source colour -> mapped, for every colour the group's art has: the mount's sprites take the
                     // worn look's own colours by region when it has them (a skin in its own colours), else the
-                    // donkey's lists (its own look, a skin in the donkey's palette colours)
+                    // donkey's lists (its own look, a skin in the donkey's palette colours); a skin in its own colours
+                    // worn over the donkey (layer = over) takes both: the donkey under it keeps its regions, the skin's
+                    // named colours join them (its unnamed ones are kept as drawn)
                     var pairs = new List<(Color32 Src, Color32 Dst)>();
                     bool any = false;
                     Looks.Loaded look = g == Group.DonkeySprites ? owner?.LooksRig?.WornOwnColours : null;
+                    bool over = look != null && look.Def.Over;
                     if (g == Group.DonkeySprites) lookColourCount = look?.Colours.Count ?? 0;
-                    if (look != null)
+                    if (look != null && !over)
                     {
                         foreach (string region in MountRegionKeys)
                         {
@@ -890,6 +894,36 @@ namespace GK2DonkeyAPI
                                     any |= !Same(src, dst);
                                 }
                             }
+                        }
+                        if (over)
+                        {
+                            // the skin's named colours after the donkey's; one the donkey has already is the donkey's
+                            // (an exact swap holds one target per colour), said once per skin
+                            var have = new HashSet<int>();
+                            foreach (var p in pairs) have.Add(p.Src.r << 16 | p.Src.g << 8 | p.Src.b);
+                            var shared = new List<string>();
+                            foreach (string region in MountRegionKeys)
+                            {
+                                RegionDef d = RegionOf(region);
+                                if (d == null || !look.ColoursByRegion.TryGetValue(region, out List<Color32> cols)) continue;
+                                RegionMap map = maps[d];
+                                foreach (Color32 src in cols)
+                                {
+                                    if (!have.Add(src.r << 16 | src.g << 8 | src.b))
+                                    {
+                                        shared.Add($"{src.r:X2}{src.g:X2}{src.b:X2}");
+                                        continue;
+                                    }
+                                    Color32 dst = on ? map.Apply(src) : src;
+                                    pairs.Add((src, dst));
+                                    any |= !Same(src, dst);
+                                }
+                            }
+                            if (shared.Count > 0 && OverSharedWarned.Add(look.Def.Id))
+                            {
+                                Plugin.Log.LogWarning($"Colors: skin '{look.Def.Id}' (worn over the donkey) names {shared.Count} colour(s) the donkey itself has ({string.Join(", ", shared)}); they follow the donkey's regions. Draw them a shade apart.");
+                            }
+                            lookColourCount = pairs.Count;
                         }
                     }
                     if (Unassigned.TryGetValue(g, out string[] extra))

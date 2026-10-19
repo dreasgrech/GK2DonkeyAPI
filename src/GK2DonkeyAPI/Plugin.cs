@@ -437,6 +437,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> TuningKeys;
         internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> CargoTabTint;
+        internal static ConfigEntry<bool> SkinPackAutoReload;
         internal static ConfigEntry<bool> CargoSeatOnShapes;
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
         internal static ConfigEntry<bool> TuningWindowEnabled;
@@ -616,6 +617,8 @@ namespace GK2DonkeyAPI
             CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();
             CargoTabTint = dbg.Bind("Debug", "CargoTabTint", true,
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
+            SkinPackAutoReload = dbg.Bind("Debug", "SkinPackAutoReload", false,
+                "A skin pack in use is read again by itself when its files change on disk (skin.cfg or a picture; checked once a second, after the files have stood still for a second), as the Mounts tab's \"Reload from the file\" does. For drawing a skin: save in the editor, look in the game (docs/sprite-tools.md). Off: only the button reloads.");
             SelfTestSpot = dbg.Bind("Debug", "SelfTestSpot", "",
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = dbg.Bind("Debug", "TuningKeys", false,

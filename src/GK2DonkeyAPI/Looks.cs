@@ -830,6 +830,74 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // Dev (Debug.SkinPackAutoReload, docs/sprite-tools.md): a pack in use whose files changed on disk is read again,
+        // as the panel's "Reload from the file" does. Once a second, the loaded packs only (the skins being worn); a
+        // change is acted on when the files have stood still for a check (an editor's export is not read half written).
+        // The pictures it knows are the ones found at the start, as for the button.
+        private static float nextPackCheck;
+        private static readonly Dictionary<string, long> packSeen = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+        private static readonly Dictionary<string, long> packPending = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
+
+        internal static void TickPackWatch()
+        {
+            if (Plugin.SkinPackAutoReload == null || !Plugin.SkinPackAutoReload.Value || Time.unscaledTime < nextPackCheck)
+            {
+                return;
+            }
+            nextPackCheck = Time.unscaledTime + 1f;
+            foreach (Loaded l in new List<Loaded>(loaded.Values))
+            {
+                SkinDef d = l.Def;
+                if (string.IsNullOrEmpty(d.Source) || d.ReadFile == null || d.FileNames == null)
+                {
+                    continue; // a built-in or a code skin: nothing on disk to watch
+                }
+                long stamp = PackStamp(d);
+                if (!packSeen.TryGetValue(d.Id, out long seen))
+                {
+                    packSeen[d.Id] = stamp;
+                    continue;
+                }
+                if (stamp == seen)
+                {
+                    packPending.Remove(d.Id);
+                    continue;
+                }
+                if (!packPending.TryGetValue(d.Id, out long pending) || pending != stamp)
+                {
+                    packPending[d.Id] = stamp; // changed: once more unchanged, then read
+                    continue;
+                }
+                packPending.Remove(d.Id);
+                packSeen[d.Id] = stamp;
+                string e = ReloadCfg(d);
+                if (e == null) Plugin.Log.LogInfo($"Looks: pack '{d.Id}' changed on disk: read again (Debug.SkinPackAutoReload).");
+                else Plugin.Log.LogWarning($"Looks: pack '{d.Id}' changed on disk but could not be read again: {e}");
+            }
+        }
+
+        // The newest write time over the pack's skin.cfg and the pictures it had at the start (0 for one that's gone).
+        internal static long PackStamp(SkinDef d)
+        {
+            long newest = 0;
+            void See(string path)
+            {
+                try
+                {
+                    if (File.Exists(path)) newest = Math.Max(newest, File.GetLastWriteTimeUtc(path).Ticks);
+                }
+                catch (IOException)
+                {
+                }
+                catch (UnauthorizedAccessException)
+                {
+                }
+            }
+            See(Path.Combine(d.Source, "skin.cfg"));
+            foreach (string name in d.FileNames) See(Path.Combine(d.Source, name.Replace('/', Path.DirectorySeparatorChar)));
+            return newest;
+        }
+
         // ------------------------------------------------------------------ kinds: the cart rule, the settings list
 
         // The kind an instance is about to be ridden as: its Skin key's (wanted, even while that skin still builds).
@@ -1108,8 +1176,9 @@ namespace GK2DonkeyAPI
             }
 
             // The collected colours in a fixed order, and each under its region: the ones Def.ColorRegions names
-            // where it says, every other one Coat. A colour named that no picture has is said once (the author's
-            // list is stale, or a hex is off by one): it maps nothing and changes nothing.
+            // where it says, every other one Coat; on a skin worn over the donkey (layer = over) every other one under
+            // no region: kept as drawn (the cloth's gold is not the donkey's coat). A colour named that no picture
+            // has is said once (the author's list is stale, or a hex is off by one): it maps nothing and changes nothing.
             private void SortColours()
             {
                 Colours.Clear();
@@ -1135,7 +1204,8 @@ namespace GK2DonkeyAPI
                 {
                     var c = new Color32((byte)(v >> 16), (byte)(v >> 8), (byte)v, 255);
                     Colours.Add(c);
-                    ColoursByRegion[named.TryGetValue(v, out string region) ? region : "Coat"].Add(c);
+                    string region = named.TryGetValue(v, out string r) ? r : Def.Over ? null : "Coat";
+                    if (region != null) ColoursByRegion[region].Add(c);
                 }
                 if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{Def.Id}' [Colors] names {missing.Count} colour(s) its pictures don't have ({string.Join(", ", missing)}); they map nothing.");
             }

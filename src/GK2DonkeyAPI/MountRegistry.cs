@@ -397,6 +397,7 @@ namespace GK2DonkeyAPI
                 MenuLabels.Tick();
                 PreviewStage.Tick();
                 LookBar.Tick();
+                Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
             }
         }
 

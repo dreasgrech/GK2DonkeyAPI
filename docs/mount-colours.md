@@ -86,6 +86,12 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   the frames at build.
 - **A recipe skin** (Hellfire) is an own-colour look too: all Coat but the regions it declares in code. A pack with
   `kind = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
+- **A skin worn over the donkey** (`layer = over`, own colours; built 2026-10-19 for Royal Parade): the donkey's
+  map stays (the donkey is still drawn under it), the skin's named colours are added after it (`Colors.Rebuild`;
+  one the donkey has already stays the donkey's, logged once), and its unnamed colours belong to no region: kept as
+  drawn (`Looks.SortColours`). The swap count is the donkey's colours plus the named ones, so it stays on the exact
+  swap; `ArtLightness` keeps the donkey's averages. Self-test "colours: a skin over the donkey keeps the donkey's
+  regions".
 
 ### 2.3 Which shader path
 

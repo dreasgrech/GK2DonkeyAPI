@@ -406,6 +406,11 @@ namespace GK2DonkeyAPI
                     Note(e == null ? "Reloaded: the pictures load again (a moment), then the file's values show." : "Not reloaded: " + e);
                 }
                 GUILayout.EndHorizontal();
+                if (!string.IsNullOrEmpty(skin.Source))
+                {
+                    Toggle("Reload by itself when the pack's files change", Plugin.SkinPackAutoReload, null,
+                        "Debug.SkinPackAutoReload: a pack in use is read again a second or two after its skin.cfg or a picture is saved (an editor's export, say). Pictures added after the game started need a restart, as for the button.");
+                }
             }
             if (Time.unscaledTime < mountsNoteUntil) GUILayout.Label(mountsNote, small);
         }

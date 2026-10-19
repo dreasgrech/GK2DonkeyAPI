@@ -155,6 +155,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
+            new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
+            new Scenario { Group = GroupLooks, Name = "skin pack: read again by itself when its files change (dev switch)", Body = SkinPackAutoReload },
         };
 
         // The groups in the order they first appear in the catalog (after Catalog: static fields initialise in order).
@@ -1469,6 +1471,151 @@ namespace GK2DonkeyAPI
             Check(onlyBelly, $"Muzzle changes the dragon's belly colours only ({d.Changed} changed of {d.Pairs}; the belly has {belly})");
             a.Remove();
             yield return Frames(2);
+        }
+
+        // A skin worn over the donkey (layer = over) in its own colours, from a temp pack (a red block named Harness and
+        // a gold one named nothing, on every body frame): the donkey under it keeps its regions (a custom coat still
+        // changes all the donkey's coat colours), the red follows Harness, the gold is kept as drawn, and it stays on
+        // the exact swap (the donkey's colours plus the named one).
+        private static IEnumerator SkinOverColours()
+        {
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-over");
+            string packDir = System.IO.Path.Combine(tempRoot, Looks.PackDirName, "over-test");
+            const string owner = Owner + ".over";
+            var red = new Color32(196, 30, 56, 255);
+            var gold = new Color32(226, 168, 48, 255);
+            try
+            {
+                if (System.IO.Directory.Exists(tempRoot)) System.IO.Directory.Delete(tempRoot, true);
+                System.IO.Directory.CreateDirectory(packDir);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(packDir, "skin.cfg"), "[Skin]\nformat = 1\nid = over-test\nname = Over Test\nkind = own\nlayer = over\n[Colors]\nHarness = C41E38\n");
+                var px = new Color32[96 * 96];
+                for (int y = 40; y < 50; y++)
+                {
+                    for (int x = 50; x < 60; x++) px[y * 96 + x] = x < 58 ? red : gold;
+                }
+                var tex = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+                tex.SetPixels32(px);
+                tex.Apply();
+                System.IO.File.WriteAllBytes(System.IO.Path.Combine(packDir, "bdy.png"), tex.EncodeToPNG());
+                UnityEngine.Object.Destroy(tex);
+            }
+            catch (Exception e)
+            {
+                Warn("the temp pack could not be written: " + e.Message);
+                yield break;
+            }
+            Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the over pack is found");
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            a?.Tuning.Set(Owner, "Skin", "over-test");
+            yield return Until(() => a != null && a.IsReady && a.I.LooksRig.Wearing == "over-test" && !a.I.LooksRig.Building, 10f);
+            if (!waited)
+            {
+                Fail("the over skin was never worn");
+            }
+            else
+            {
+                a.Tuning.Set(Owner, "CoatColorize", "00FF00");
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 1f);
+                a.Tuning.Set(Owner, "HarnessColorize", "0000FF");
+                a.Tuning.Set(Owner, "HarnessColorizeAmount", 1f);
+                yield return Frames(3);
+                var d = a.I.ColorsRig.TestMountGroup();
+                bool Has(Color32 c) => d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
+                MountColorRegion coat = null;
+                foreach (MountColorRegion r in Colors.RegionList) if (r.Key == "Coat") coat = r;
+                int coatChanged = 0, coatAll = coat?.SourceColors.Count ?? 0;
+                if (coat != null)
+                {
+                    foreach (string hex in coat.SourceColors)
+                    {
+                        Colors.TryHex(hex, out Color32 c);
+                        if (Has(c)) coatChanged++;
+                    }
+                }
+                Check(d.Method == SpriteColorMethod.Palette && d.Colours <= Colors.PaletteMaxColours, $"the donkey's colours and the skin's named one: {d.Colours}, the exact swap ({d.Method})");
+                Check(coatAll > 0 && coatChanged == coatAll, $"a custom coat still changes the donkey under it ({coatChanged} of its {coatAll} coat colours)");
+                Check(Has(red), "the skin's red, named Harness, follows the harness");
+                Check(!Has(gold), "the skin's gold, named nothing, is kept as drawn");
+            }
+            a?.Remove();
+            yield return Frames(2);
+            Looks.Unregister("over-test", owner);
+            yield return Frames(2);
+            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+        }
+
+        // Debug.SkinPackAutoReload: a worn pack (a temp folder, one red picture for every body frame) whose picture is
+        // saved again in blue is read again by itself within a few seconds, and the donkey wears the blue one; with the
+        // switch off, the same save changes nothing. The switch is put back as it was.
+        private static IEnumerator SkinPackAutoReload()
+        {
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-watch");
+            string packDir = System.IO.Path.Combine(tempRoot, Looks.PackDirName, "watch-test");
+            string picture = System.IO.Path.Combine(packDir, "bdy.png");
+            const string owner = Owner + ".watch";
+            var red = new Color32(200, 40, 40, 255);
+            var blue = new Color32(40, 60, 200, 255);
+            void Save(Color32 c, int secondsLater)
+            {
+                var px = new Color32[96 * 96];
+                for (int y = 30; y < 60; y++)
+                {
+                    for (int x = 30; x < 70; x++) px[y * 96 + x] = c;
+                }
+                var tex = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+                tex.SetPixels32(px);
+                tex.Apply();
+                System.IO.File.WriteAllBytes(picture, tex.EncodeToPNG());
+                UnityEngine.Object.Destroy(tex);
+                // a later stamp whatever the file system's clock resolution
+                System.IO.File.SetLastWriteTimeUtc(picture, DateTime.UtcNow.AddSeconds(secondsLater));
+            }
+            bool Wears(Color32 c)
+            {
+                Looks.Loaded l = Looks.LoadedOwnColours("watch-test");
+                return l != null && l.Colours.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
+            }
+            try
+            {
+                if (System.IO.Directory.Exists(tempRoot)) System.IO.Directory.Delete(tempRoot, true);
+                System.IO.Directory.CreateDirectory(packDir);
+                System.IO.File.WriteAllText(System.IO.Path.Combine(packDir, "skin.cfg"), "[Skin]\nformat = 1\nid = watch-test\nname = Watch Test\nkind = own\n");
+                Save(red, 0);
+            }
+            catch (Exception e)
+            {
+                Warn("the temp pack could not be written: " + e.Message);
+                yield break;
+            }
+            bool was = Plugin.SkinPackAutoReload.Value;
+            Plugin.SkinPackAutoReload.Value = false;
+            Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the pack is found");
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            a?.Tuning.Set(Owner, "Skin", "watch-test");
+            yield return Until(() => a != null && a.IsReady && Wears(red) && !a.I.LooksRig.Building, 10f);
+            if (!waited)
+            {
+                Fail("the red pack was never worn");
+            }
+            else
+            {
+                Save(blue, 5);
+                yield return Until(() => Wears(blue), 4f);
+                Check(!waited && Wears(red), "the switch off: a save changes nothing (still red after 4 s)");
+                Plugin.SkinPackAutoReload.Value = true;
+                Save(blue, 10); // a stamp after the one the watch takes as seen when switched on
+                yield return Until(() => Wears(blue) && !a.I.LooksRig.Building, 8f);
+                Check(waited, "the switch on: the blue picture is read again by itself and worn");
+            }
+            Plugin.SkinPackAutoReload.Value = was;
+            a?.Remove();
+            yield return Frames(2);
+            Looks.Unregister("watch-test", owner);
+            yield return Frames(2);
+            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
         }
 
         // A built-in skin on a spawned donkey: drawn (its overlay shows, the donkey's own body kept from rendering),

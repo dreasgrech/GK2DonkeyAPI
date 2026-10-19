@@ -109,6 +109,29 @@ static int Check(ModuleDefinition mod, string ns)
             && (string)a.ConstructorArguments[0].Value == "ru.superman4eg.gk2.framework"
             && Convert.ToInt32(a.ConstructorArguments[1].Value) == 2),
         "soft BepInDependency on ru.superman4eg.gk2.framework");
+
+    // 5. no framework member looked up by name: a later framework version may add an overload, and the lookup then
+    // throws (typeof(Gk2Settings).GetMethod("AddEnum") was AmbiguousMatchException with framework 0.1.19, the page
+    // "Faulted" in the Mods menu; a player's report, 2026-10-19). Calls the compiler binds keep their exact signature.
+    string[] byName = { "GetMethod", "GetMethods", "GetProperty", "GetField", "GetMember", "GetEvent" };
+    int lookups = 0;
+    foreach (var t in mod.GetTypes())
+    {
+        foreach (var m in t.Methods.Where(m => m.HasBody))
+        {
+            TypeReference? lastToken = null;
+            foreach (var i in m.Body.Instructions)
+            {
+                if (i.OpCode == OpCodes.Ldtoken && i.Operand is TypeReference tok) lastToken = tok;
+                if (i.Operand is MethodReference r && r.DeclaringType.FullName == "System.Type" && byName.Contains(r.Name) && lastToken != null && Fw(lastToken))
+                {
+                    lookups++;
+                    Result(false, $"{t.FullName}.{m.Name} looks up a member of {lastToken.FullName} by name ({r.Name})");
+                }
+            }
+        }
+    }
+    Result(lookups == 0, "no GK2.Framework member is looked up by name (reflection on its types)");
     return fails;
 }
 
