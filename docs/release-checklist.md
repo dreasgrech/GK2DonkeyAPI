@@ -153,6 +153,15 @@ only leaves a skin's own tuning out; no debug marker in shipped code (TEMPORARY,
 0 TODOs); CecilScan (693 manifest entries identical, 67 classes sorted), DefaultsScan, SkinsScan, FrameworkScan and
 ApiSurface green on this build. Before the rehearsal, out of `plugins\`: GK2DonkeySkins (the example mod), gk2skins\
 (worm-pack, royal-parade), GK2AssetProbe, GK2PerfRunner, GK2ShowcaseDirector, and the dev marker.
+Run 2026-10-19 15:45 with the release zip itself (`release/GK2-Saddle-Up-0.10.0.zip`, commit ab208b9) extracted into
+the game folder, the dev marker, the dev DLLs and the dev-only plugins aside, over the 0.9.1 player cfgs (the fixture,
+KeepWithSaves on) and the user's side file: the Mods menu with every 0.9.1 value, Mount = Donkey and Skin = Default
+alone, the two "Coming in the next update" rows, Saddle Up and the API Compatible on framework 0.1.23; 5 of 5 kept
+donkeys and carts restored; R, E to hitch, two items, R leaves the cart, E brings the same cart with both; the colours
+bar; F11 nothing. 538 log lines, 0 warnings, no `Dev tools unlocked`, "Mounts, skins and effects: off in this version",
+layout from embedded, the seven carry-over lines; the rewritten cfgs hold all 35 + 450 values of the 0.9.1 files, no
+[Debug] section, no scratch cfg; every save file byte-identical. Nothing saved; everything restored, the dev builds
+redeployed.
 
 ## 6. Versions, changelog and hand-off
 

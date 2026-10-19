@@ -10,6 +10,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+(nothing yet)
+
+## 0.10.0 (GK2 Donkey API 0.30.0), 2026-10-19
+
 For players:
 
 - **Only the donkey, for now.** This version's settings have a Mount row and a Skin row, and both hold one
