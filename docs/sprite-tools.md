@@ -21,8 +21,8 @@ So the fix is to put the art where you can see what you change, and keep code on
   `bdy.png` / `bdy_walk_left.png` fill all the undrawn body or walk frames.
 - **`layer = over`**: pictures drawn **on top of** the donkey (a saddle, a hat). Horns, a devil tail, cracks and
   glowing eyes are additions, so they fit here, and an overlay has no game pixels in it, so it can be shipped.
-- **Templates**: the 44 game frames exported at full size (`C:\ClaudeCodeTemp\GK2-donkey-frames\`, or the asset
-  probe's "Export every frame"). Paint on a layer over them; export only your layer.
+- **Templates**: the 44 game frames exported at full size by the asset probe's "Export frames"
+  (`BepInEx\GK2-asset-probe\donkey-frames\`). Paint on a layer over them; export only your layer.
 - **Reload in game** (dev panel, the skin's rows, "Reload from the file", `Dev/TuningWindow.Mounts.cs:403`): reads
   `skin.cfg` and **the pictures again from disk** (checked in code: the pack's reader opens each file fresh). The
   list of file names is taken when the game starts (packs are scanned only then, `Looks.cs:345`; the "reload
@@ -69,9 +69,10 @@ copy under your profile would not show).
 refused ("Save operation is not supported in trial version"; tried from the command line, where a
 `--sheet` export writes the JSON data but not the PNG), and the `--script` option is missing. So the trial is for
 judging the editing, not for making a pack. A starting file for that, built by script without Aseprite's help:
-`C:\ClaudeCodeTemp\GK2-aseprite\hellfire.aseprite` (96x96, 44 frames in pack order; layers "donkey (game)" and
-"Hellfire v14" locked, "draw here" open; tags static, walk, ear, graze, chew, lips, turn, head; built from the
-harness frames by `C:\ClaudeCodeTemp\GK2-aseprite\make_ase.py`). Aseprite read it back with the right layers and tags.
+a `hellfire.aseprite` (96x96, 44 frames in pack order; layers "donkey (game)" and "Hellfire v14" locked, "draw
+here" open; tags static, walk, ear, graze, chew, lips, turn, head; built from the harness frames by a `make_ase.py`,
+both retired 2026-10-19 23:30 with the old canvas: `tools/skins/ase_write.py` writes such a file from any generator,
+Royal Parade's `out\royal.aseprite` is the live example). Aseprite read it back with the right layers and tags.
 
 **Built from source (2026-10-19):** the EULA allows compiling for your own use (EULA 2(g); not to be passed on). Built with VS 2022
 Build Tools at `C:\Users\User\Documents\GitHub\aseprite\build\bin\aseprite.exe`: the full version, with saving, export, the command line
@@ -130,7 +131,6 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | The donkey's 44 frames as the game places them | `BepInEx\GK2-asset-probe\donkey-frames\` (the asset probe writes them) |
 | Royal Parade: the generator, its measurements, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `contact.py`, `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
 | Royal Parade: the pack | `src/GK2DonkeyAPI/assets/skins/royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), a built-in like Hellfire since 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`) |
-| The old frames (top-left aligned, see "The canvas, found wrong") | `C:\ClaudeCodeTemp\GK2-aseprite\harness_frames\*.raw`, read only by `contact.load_raw` |
 
 ### Making a skin: the one pipeline (2026-10-19 23:00)
 
@@ -220,10 +220,11 @@ with the feet at y 66 and the x shifting with the pose: the asset probe's `donke
 The two agreed on no frame: 2 px off standing, up to 8 in the walk, up to 17 and sideways in the graze. So a cloth cut
 on the raw canvas lifted off the back in the walk, climbed in the graze and the crown drifted, in the game and in the
 review page (which composites over the probe's frames), while every strip made on the raw canvas looked right.
-`contact.load(k)` reads the probe's PNGs now; `load_raw(k)` and `raw_to_game_shift(k)` exist only to move things
-measured on the old canvas (the Hellfire horn bases: `horn_bases_raw.json` -> `horn_bases.json`; the Hellfire review
-frames `hellfire-96\`). `check_skin.py` reads the probe's frames too. **Rule: everything drawn for a pack is measured
-and drawn on the probe's frames, never on `harness_frames\*.raw`.**
+`contact.load(k)` reads the probe's PNGs now; `check_skin.py` and `hellfire_proto.py` too. The raw frames and the two
+helpers that moved old measurements off them (`load_raw`, `raw_to_game_shift`, `horn_bases_raw.json`) are gone since
+2026-10-19 23:30: `horn_bases.py` measures the Hellfire horn bases from the Hellfire pack's own bone pixels on the
+game's canvas (44 of 44 frames the same as the moved v14 positions), so no tool reads anything but the probe's
+frames. **Rule: everything drawn for a pack is measured and drawn on the probe's frames.**
 
 **The crown (2026-10-19 18:45, the user: "a bit more forward on his head"):** anchored on the eye where the frame
 has one (`anchors.json`, measured on the game's canvas): its centre `CROWN_BEHIND_EYE` columns behind the eye, its

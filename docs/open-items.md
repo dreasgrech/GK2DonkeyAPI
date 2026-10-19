@@ -23,7 +23,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   rider on the cloth, a custom coat still recolouring the donkey under it. To change the cut: the numbers at the top of `make_royal.py` (`HEM_ABOVE`, `REAR`, `FRONT`,
   `GAP`, `SAG`, the colours), run it, look at the strips, "Reload from the file" (or the auto-reload tick).
 - **Skin pack auto-reload** (built 2026-10-19 03:00, deployed): Mounts tab, the skin's rows, tick "Reload by itself
-  when the pack's files change"; double-click `C:\ClaudeCodeTemp\GK2-aseprite\royal\Watch Royal Parade.cmd`; move the
+  when the pack's files change"; double-click `tools\skins\royal-parade\Watch Royal Parade.cmd`; move the
   crown in Aseprite and Ctrl+S: the watcher window says "export done" and "CHECK", the donkey in the game changes a
   second or two later, the log says "pack 'royal-parade' changed on disk: read again". Tests tab: "skin pack: read
   again by itself when its files change (dev switch)" PASS.
@@ -35,7 +35,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   Judge: the tail's spade at game size, the horns' size, whether the standing frame's horns and the head sprite's
   line up. Rebuilt and deployed 2026-10-19 with every fix of the frame-by-frame rounds (no old tail, rump curve to the
   thigh, horns on the eye in every frame, red eyes in turn 4-6, graze 2 whole); the game's code gives the same pixels
-  as the reviewed frames (C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-frames-v14, drawn from the game's code). Look
+  as the reviewed frames (the v14 round; those review folders were retired 2026-10-19 23:30, `hellfire-96\` keeps the code's output). Look
   for: the pixel at the rump's edge gone, horns steady in the idles.
 - **Colours per mount** (built 2026-10-19 00:10): in the colours window set the donkey's coat to Custom Chestnut,
   switch Mount to Dragon: the coat rows show the dragon's own (Game default), set Custom Moss; back to Donkey:

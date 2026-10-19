@@ -260,7 +260,7 @@ per frame), drawn with the overlay method. The two kinds of skin then sit side b
   base colours, a pattern, a glow on the outline.
 
 **The first prototypes** (Python on the 15 frames exported so far, a preview only, never shipped:
-`tools/skin_recipes.py`, its output in `BepInEx\GK2-asset-probe\test\skins\` on the dev machine):
+`tools/skin_recipes.py`, its output in `BepInEx\GK2-asset-probe\test\skins\` on the dev machine; both retired 2026-10-19):
 
 | Recipe | The idea |
 |---|---|

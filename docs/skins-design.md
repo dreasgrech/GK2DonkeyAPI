@@ -146,7 +146,7 @@ sprites of its own loaders (folder, embedded, recipe), which it counts and frees
 ### 4.4 Recipe skins (built in; no art shipped)
 
 A recipe is a rule applied to the donkey's own frames at runtime: the zebra, ghost, ember, zombie, golden, shadow and
-dragon prototypes (tools/skin_recipes.py). In the API a recipe is an `ISkinSource` that:
+dragon prototypes (tools/skin_recipes.py, retired 2026-10-19). In the API a recipe is an `ISkinSource` that:
 1. reads the donkey's frame pixels once per key through the existing read-back path (`ColorsPreview.Extract`:
    `Graphics.Blit` to a RenderTexture, `ReadPixels`; cached per sprite);
 2. runs a pixel function `(SkinFrame frame) → Color32[]` with helpers the prototypes needed: luminance, the outline

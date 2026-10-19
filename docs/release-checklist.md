@@ -151,8 +151,9 @@ key)` call of Saddle Up's Plugin.cs at 7ac9a6c: 33 keys plus the two speed rows,
 regions x 10, Ride and Cart 123 each, Shuffle 30, all present); the side file's reader unchanged since 0.9.1 and its writer
 only leaves a skin's own tuning out; no debug marker in shipped code (TEMPORARY, FIXME, HACK, Console, Debug.Log: none;
 0 TODOs); CecilScan (693 manifest entries identical, 67 classes sorted), DefaultsScan, SkinsScan, FrameworkScan and
-ApiSurface green on this build. Before the rehearsal, out of `plugins\`: GK2DonkeySkins (the example mod), gk2skins\
-(worm-pack, royal-parade), GK2AssetProbe, GK2PerfRunner, GK2ShowcaseDirector, and the dev marker.
+ApiSurface green on this build. Before the rehearsal, out of `plugins\`: GK2DonkeySkins (the example mod) and gk2skins\
+(worm-pack, royal-parade) if they were put back for a test (gone since 2026-10-19 23:30; Royal Parade is built in),
+GK2AssetProbe, GK2PerfRunner, GK2ShowcaseDirector, and the dev marker.
 Run 2026-10-19 15:45 with the release zip itself (`release/GK2-Saddle-Up-0.10.0.zip`, commit ab208b9) extracted into
 the game folder, the dev marker, the dev DLLs and the dev-only plugins aside, over the 0.9.1 player cfgs (the fixture,
 KeepWithSaves on) and the user's side file: the Mods menu with every 0.9.1 value, Mount = Donkey and Skin = Default

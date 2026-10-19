@@ -8,7 +8,7 @@ Sources, in this order (the first that holds a skin id wins):
   3. the packs in the game: <probe>\\..\\plugins\\gk2skins\\<id>\\ (skin.cfg + pictures, or one sheet of cells);
   4. recipes, drawn from the donkey's frames by the game's code and saved as pictures: --recipe <id>=<folder>
      (Hellfire: C:\\ClaudeCodeTemp\\GK2-donkey-frames\\hellfire-96 when it exists, the frames the game's code drew,
-     saved from the raw harness_frames\\*.out);
+     the code version's output on the game's canvas, kept until Hellfire is confirmed in game);
   5. the leftover test folders <probe>\\test\\skins\\<name>\\ without a skin.cfg: "Experiments", collapsed at the end.
 A skin drawn over the donkey (layer = over) is composited over the donkey's frame here, as the game draws it (without
 the player's colours: the page shows the art as drawn). The captures of the probe's Capture tab go on top as before.

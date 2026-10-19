@@ -1,5 +1,5 @@
 """A plain PNG reader (8-bit RGBA, no libraries): rd(path) -> (w, h, rows). Run on files to count their colours.
-Used by skin_recipes.py."""
+Counted the donkey's atlas colours for tools/skins/royal-parade/measure.py (and the retired skin_recipes.py)."""
 import sys,zlib,struct,collections
 def rd(p):
     d=open(p,'rb').read(); i=8; idat=b''

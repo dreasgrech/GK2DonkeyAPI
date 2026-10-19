@@ -24,9 +24,9 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Nothing of ours. The 44 frames as the game places them, for the tools: `BepInEx\GK2-asset-probe\donkey-frames\`
   (written by the asset probe, `tools/GK2AssetProbe`, "Export frames"); this is **the canvas** every pack picture is
   measured and drawn on (`docs/sprite-tools.md`, "The canvas, found wrong").
-- Outside the repo, game art, never committed: that folder; `C:\ClaudeCodeTemp\GK2-donkey-frames\` (the raw export,
-  `0301_*.png`); `C:\ClaudeCodeTemp\GK2-aseprite\harness_frames\*.raw` (top-left aligned, only for moving old
-  measurements).
+- Outside the repo, game art, never committed: that folder, the only copy any tool reads (the raw export
+  `C:\ClaudeCodeTemp\GK2-donkey-frames\0301_*.png` and the top-left-aligned `GK2-aseprite\harness_frames\*.raw`
+  were retired 2026-10-19 23:30).
 
 ### Hellfire (donkey, pack drawn over the donkey; a recipe in code until 2026-10-19 evening)
 - **Pack**: `src/GK2DonkeyAPI/assets/skins/hellfire/` (`skin.cfg` + a PNG per frame), embedded in the DLL like the
@@ -51,7 +51,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   Hellfire (before: `packs/royal-parade/` as one sheet, copied into the game's `gk2skins\` by the generator).
 - **Generator**: `tools/skins/royal-parade/make_royal.py` (the saddle cloth cut from the standing frame and hung from
   the hip in every frame, the crown on the eye), with `contact.py` (the frame loader), `measure.py` -> `anchors.json`,
-  `horn_bases.py` (`horn_bases_raw.json` -> `horn_bases.json`, the crown's fallback anchors from Hellfire's horns),
+  `horn_bases.py` -> `horn_bases.json` (the crown's fallback anchors, measured from the Hellfire pack's horns),
   `zoom.py`, `view.py`, `Watch Royal Parade.cmd`. Outputs in `out\` (git-ignored): `royal.aseprite` (a by-hand copy),
   `preview.png`, `zoom.png`, `strips\<animation>.png` (look at every strip before the game), `pack\sheet.png`.
 - **In the game**: nothing on disk; the pictures come with the DLL (a build + deploy after every generator run).
@@ -74,20 +74,16 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - **Tools**: `tools/gerry_probe.py`, `tools/gerry_sheet.py` (the exported frames, contact sheets). Docs:
   `docs/gerry-mount.md`.
 
-### Worm (from a pack) (worm mount, loose pack, test)
-- `BepInEx\plugins\gk2skins\worm-pack\`: the worm's 44 pictures copied as a loose pack with `mount = worm`, to test
-  the folder loader and a pack joining a built-in mount. No source of its own in the repo (the pictures are the
-  built-in worm's). Checklist: taken out of `plugins\` before a release rehearsal.
-
-### Sepia and Checker (example mod)
+### Sepia and Checker (example mod, source only)
 - `examples/GK2DonkeySkins/Plugin.cs`: "sepia", a recipe registered from code; "checker", pictures drawn by code
-  (`IMountSkinSource`) as the look of a mount kind of its own, `checker-beast`. Deployed as
-  `BepInEx\plugins\GK2DonkeySkins\GK2DonkeySkins.dll` on the dev machine (taken out before a release rehearsal).
+  (`IMountSkinSource`) as the look of a mount kind of its own, `checker-beast`. Built and deployed only when the
+  example is being tested (`-p:Deploy=true`); not in the game folder otherwise (taken out 2026-10-19 23:30, with
+  the loose `gk2skins\worm-pack\` that tested the folder loader).
 
-### Retired experiments (not known to the API)
-- `BepInEx\GK2-asset-probe\test\skins\{ember, ghost, golden, shadow, zebra, dragon-blue, dragon_high, zombie}`: the
-  five recolour recipes replaced by the colour settings, the blue dragon replaced by a custom coat, two experiments.
-  `tools/skin_recipes.py` made the recolours. The review page shows them collapsed at the end.
+### Retired (gone 2026-10-19 23:30)
+- The probe's `test\skins\` folders (the five recolour recipes, the blue dragon, two experiments, the creature and
+  Royal Parade composites of the old generators) and `tools/skin_recipes.py` that made the recolours. The review
+  page's "Experiments" section shows nothing until a folder appears there again.
 
 ## The tools around all of them
 
@@ -105,5 +101,6 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | Self-tests (`src/GK2DonkeyAPI/Dev/SelfTest.cs`, "Skins and effects") | packs, recipes, over skins with the world readback, auto-reload, kinds |
 
 Outside the repo and never committed, because it is the game's art: the asset probe's `donkey-frames\`, the
-captures, `C:\ClaudeCodeTemp\GK2-donkey-frames\` and `C:\ClaudeCodeTemp\GK2-aseprite\harness_frames\`. Aseprite
+captures, and `C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-96\` (the code version's frames, the compare page's old
+side, until Hellfire is confirmed in game). Aseprite
 itself: `C:\Users\User\Documents\GitHub\aseprite\build\bin\aseprite.exe` (built from source, personal use).

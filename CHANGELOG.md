@@ -34,6 +34,13 @@ For mod authors:
   The pack checker and the review page honour it; a self-test wears a pack that erases the ears. The step towards
   every skin being a pack (Hellfire next: the user, "for the concept of a mount skin we should do this drawing-over
   thing").
+- **Skin leftovers cleared** (the user: "check dirs to see if there's anything obsolete ... so we keep parity"):
+  `tools/skin_recipes.py` (the retired recolour recipes' prototype) and `horn_bases_raw.json` are gone from the
+  repo; `contact.py` lost `load_raw` / `raw_to_game_shift` and `hellfire_proto.py` reads the probe's frames, so no
+  tool reads the old top-left-aligned canvas any more (`horn_bases.py` measures the Hellfire horn bases from the
+  Hellfire pack's own bone pixels: 44 of 44 frames the same as the moved v14 positions). Off the dev machine: the
+  probe's `test\skins\` experiments, the example mod and the `worm-pack` test pack in the game's plugins, the
+  Hellfire review rounds, the raw frame exports, the starter `.aseprite`. `pngcolors.py`'s note names its real user.
 - **One pipeline for every skin** (the user: "we need to make them the same since they will both be included",
   "once we set up this pipeline we can keep following it to create more skins for other mounts too"): Royal Parade
   is a built-in pack like Hellfire now, `src/GK2DonkeyAPI/assets/skins/royal-parade/` with `skin.cfg` by hand and

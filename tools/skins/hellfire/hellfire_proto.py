@@ -5,10 +5,12 @@ being rolled again per frame. Output: a before/after sheet at 5x and a walk GIF.
 (C:\\ClaudeCodeTemp\\GK2-donkey-frames, read by path: the game's art stays out of the repo).
 The shipping code is src/GK2DonkeyAPI/LooksHellfire.cs, this prototype's rules in C#; this file is kept as the
 reviewed original (14 rounds with the user, 2026-10-18/19). Run: python tools/skins/hellfire/hellfire_proto.py"""
-import colorsys, math, os
+import colorsys, math, os, sys
 from PIL import Image, ImageDraw
 
-SRC = r"C:\ClaudeCodeTemp\GK2-donkey-frames"
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from gamedir import donkey_frames
+SRC = donkey_frames()  # the donkey's frames as the game places them (the asset probe's export; the game's art stays out of the repo)
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")  # the sheet and the GIF (git-ignored)
 PAD = 14
 
@@ -29,7 +31,7 @@ CRACKS = [
 
 
 def load(name):
-    im = Image.open(os.path.join(SRC, name + ".png")).convert("RGBA")
+    im = Image.open(os.path.join(SRC, (name[5:] if name.startswith("0301_") else name) + ".png")).convert("RGBA")
     c = Image.new("RGBA", (im.width + 2 * PAD, im.height + 2 * PAD), (0, 0, 0, 0))
     c.alpha_composite(im, (PAD, PAD))
     return c
