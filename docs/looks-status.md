@@ -70,15 +70,17 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
 Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the log comes out on "check log".
 
 **A. Start and menus (5 min)**
-1. Start the game. Main menu → Mods → GK2 Saddle Up. Sections: Keys ("Ride your mount", "Drive the cart", "Ring the
-   bell", "Send your mount away"), **Mount** (its picture, Name, Mount dropdown, Skin dropdown, Babies, Babies come
-   indoors, Babies are the same mount and skin), **Effect** (Effect, Effect shown while it isn't None, the four
-   toggles), Behaviour, Donkey (Choose colours, coat, harness: the donkey's own), Cart, Sound, in that order. Your
-   name and babies rows moved from Donkey to Mount with their values (the log says "[3. Donkey] Name is [2. Mount]
-   Name now" and the like). Your Behaviour, Donkey, Cart and
-   Sound values are as before (the sections are numbered 1 to 7 in that order in the cfg; the log has one "Settings:
-   ... carried over" line per section whose number changed on this first start, and the cfg holds each section once
-   after it).
+1. Start the game. Main menu → Mods → GK2 Saddle Up. Sections (0.11): Keys ("Ride your mount", "Drive the cart",
+   "Ring the bell", "Send your mount away"), **Mount** (its picture with the cart, Name, Mount dropdown, Skin dropdown,
+   Babies, Babies come indoors, Babies are the same mount and skin, Keep your mount with the save), **Colours**
+   (Choose colours, the picture, "Mount colours": coat, harness; "Cart colours": paint, wheels, wheel hubs, lantern light,
+   each with its custom colour and lightness), **Effect** (Effect, Effect shown while it isn't None, the four
+   toggles), Behaviour (two speeds, Say why mounting is refused, Shuffles while standing), Cart (Cart capacity, the
+   zombies, chest and two corpse toggles, Calling your mount leaves the cart parked, Lantern, Lantern lit by day),
+   Sound, in that order. Rows that moved keep their values (the log says "[4. Behaviour] CartSlots is [6. Cart]
+   CartSlots now" and the like, once per moved key; one "Settings: ... carried over" line per section whose number
+   changed), the sections are numbered 1 to 7 in that order in the cfg, which holds each section once after this
+   start and no Donkey section.
 2. Mount lists: Donkey, Checker Beast (example), Dragon, Giant Rat, Giant Snail, Giant Worm. The Skin row shows the
    chosen mount's skins only: Donkey → The game's own, Ember, Ghost, Golden, Sepia (example), Shadow, Zebra; Dragon →
    Blue Dragon, Red Dragon; Giant Worm → Giant Worm, Worm (from a pack); the rat, snail and beast one each.

@@ -8,7 +8,7 @@ With this on, the baby donkeys come through doors with the keeper, follow him in
     `MountHandle.Tuning`);
   - `MountHandle.IsWithKeeper`;
   - `MountCompanion.FoalsComeIndoors` (off).
-- **Saddle Up:** "Baby donkeys come indoors", under "Baby donkeys" in the Donkey section, in both menus (on since 2026-10-16; the API's `FoalsComeIndoors` stays off for other mods).
+- **Saddle Up:** "Babies come indoors", under "Babies" in the Mount section (the Donkey section until 0.10.0), in both menus (on since 2026-10-16; the API's `FoalsComeIndoors` stays off for other mods).
 
 ## How the game's doors work (investigated against 1.008)
 

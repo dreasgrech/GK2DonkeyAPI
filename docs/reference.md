@@ -219,8 +219,8 @@ Each region has its own section, `[Colors.Coat]` and so on, with 10 keys named r
 
 ### `[Corpses]`: the game's delivery donkey leaves its bodies at the crossroads
 
-Off in the core; Saddle Up's "Donkey leaves corpses at the crossroads" sets the switch (a session override, like its
-other Behaviour toggles). Full story: [corpse-delivery.md](corpse-delivery.md). Panel rows: General tab, "Corpses at the
+Off in the core; Saddle Up's "Donkey leaves corpses at the crossroads" (Cart section) sets the switch (a session
+override, like its other switches). Full story: [corpse-delivery.md](corpse-delivery.md). Panel rows: General tab, "Corpses at the
 crossroads".
 
 | Key | Default | Meaning |
@@ -325,7 +325,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.30.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.31.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

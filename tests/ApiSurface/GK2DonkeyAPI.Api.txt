@@ -368,6 +368,7 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void EffectRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void FoalRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
+  method void Heading(string section, string label, string description = )
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null, System.Action pressed = null)
   method BepInEx.Configuration.ConfigEntry<string> List(string section, string key, string value, System.Func<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, string>>> choices, string label, string description, System.Action<string> apply = null, bool look = False, System.Func<bool> visible = null)

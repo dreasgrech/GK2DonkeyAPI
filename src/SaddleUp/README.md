@@ -4,7 +4,7 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.10.0, for GK2 Donkey API 0.30.0 or newer, and Steam game build 25910882 (game
+`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.11.0, for GK2 Donkey API 0.31.0 or newer, and Steam game build 25910882 (game
 1.010).
 
 ## Playing
@@ -46,42 +46,44 @@ All of these apply at once:
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |
-| 3. Effect | Effect | As the mount | A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
-| | Effect shown | Always | Never, At night, Always. |
-| | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | How the effect behaves. |
-| 4. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
-| | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
-| | Say why mounting is refused | on | The keeper's thought bubble. |
-| | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies. |
-| | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
-| | Cart capacity | 6 items | How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded. |
-| | Carry the corpse into the morgue | on | Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse. Off: it stays on the cart. |
-| | Shuffles while standing | on | Left without its cart, your mount takes a few slow steps now and then. |
 | | Keep your mount with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
-| | Calling your mount leaves the cart parked | on | H while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |
-| | Donkey leaves corpses at the crossroads | **off** | The game's own delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears: it walks out from behind its tree, the bodies drop beside it with a notification, and it walks back and vanishes. You carry them to the morgue, or cart them. Bodies on the ground count toward the morgue's capacity, and one left out of sight for about 75 minutes of play turns into a grave mound (the game's rules; the API's cfg can switch the rot off, change the spots and the text). Off: the game's own delivery, nothing of it hooked. |
-| 5. Donkey | Coat colour | Game default | The donkey's coat (and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. A mount with its own colours ignores it. |
-| | Harness colour | Game default | The donkey's harness: Black, Red, Blue, Green, or Custom. |
-| 6. Cart | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
+| 3. Colours | Choose colours | | A button: closes the menu and opens the colour rows over the game (below). The picture of your mount and cart is under it, then the rows under two headings, "Mount colours" and "Cart colours". Kept per mount. |
+| | Coat colour | Game default | The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. A mount with its own colours ignores it. |
+| | Harness colour | Game default | The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
+| | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
 | | Wheel colour | Game default | The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
 | | Wheel hub colour | Game default | The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |
+| | Lantern light | Warm (game default) | White, Green, Blue, or Custom. |
+| 4. Effect | Effect | As the mount | A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
+| | Effect shown | Always | Never, At night, Always. |
+| | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | How the effect behaves. |
+| 5. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
+| | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
+| | Say why mounting is refused | on | The keeper's thought bubble. |
+| | Shuffles while standing | on | Left without its cart, your mount takes a few slow steps now and then. |
+| 6. Cart | Cart capacity | 6 items | How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded. |
+| | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies. |
+| | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
+| | Carry the corpse into the morgue | on | Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse. Off: it stays on the cart. |
+| | Donkey leaves corpses at the crossroads | **off** | The game's own delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears: it walks out from behind its tree, the bodies drop beside it with a notification, and it walks back and vanishes. You carry them to the morgue, or cart them. Bodies on the ground count toward the morgue's capacity, and one left out of sight for about 75 minutes of play turns into a grave mound (the game's rules; the API's cfg can switch the rot off, change the spots and the text). Off: the game's own delivery, nothing of it hooked. |
+| | Calling your mount leaves the cart parked | on | H while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |
 | | Lantern | on | The lantern on its pole. |
 | | Lantern lit by day | on | Off: it goes dark by day, like your hand lantern. |
-| | Lantern light | Warm (game default) | White, Green, Blue, or Custom. |
 | 7. Sound | Bell sound when setting off | off | When the cart sets off with a load after standing. |
 | | Bray sounds | on | Now and then, and when you get on. |
 | | Mount and cart sounds | 100% | 0 to 150%, on top of the game's SFX volume. |
 
 **Choosing colours:**
 - **A picture** of your mount and cart in the chosen colours, walking on the spot: at the top of the Mount
-  section (the mount alone) and of the Cart section (with its cart), and above the Mods window too when the screen
+  section and under the Choose colours button in the Colours section, and above the Mods window too when the screen
   has room for it (1440p and up). Above the Settings window without the Mods menu. It needs no mount in
   the game.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
   Mustard, Gold) and its lightness. The picture shows the result.
-- **Choose colours** (in Donkey) closes the menu and opens the colour rows at the bottom of the screen, over the game.
-  You see your real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
+- **Choose colours** (in Colours) closes the menu and opens the colour rows at the bottom of the screen, over the game:
+  your mount's colours on the left, the cart's on the right, the Mount, Skin and Effect rows with them. You see your
+  real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
   Only in a game. Everything
 else (the seat, the cargo on the cart, the lantern's place, the sounds themselves) is tuned and fixed; mod authors
 can change it in GK2 Donkey API's dev panel.

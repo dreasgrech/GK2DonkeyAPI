@@ -148,27 +148,35 @@ namespace GK2DonkeyAPI
             pictureImage.raycastTarget = false;
             picture.SetActive(false);
 
-            // The look rows by section, in page order; the sections dealt into two columns, left first, until the left
-            // holds at least half the rows (Saddle Up: Mount, Effect and Donkey left, Cart right).
-            // The look rows by section (a section's rows gathered wherever they are in the page: the per-mount sets
-            // interleave the Donkey and Cart sections), the sections in first-use order; total counts one row per
-            // per-mount set, the room they take.
+            // The look rows in groups, in page order: a group is a section, or a heading inside one
+            // (MountSettingsPage.Heading) with the look rows after it in that section (Saddle Up: Mount; "Mount colours"
+            // and "Cart colours" in Colours; Effect). A group's rows are gathered wherever they are in the page (the
+            // per-mount sets interleave); total counts one row per per-mount set, the room they take. The groups are
+            // dealt into two columns in order, each to the left while that leaves the left closer to half the rows.
             var sections = new List<(string Name, List<MountSettingsPage.Row> Rows)>();
             int total = 0;
+            string heading = null, headingSection = null;
             foreach (MountSettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook)
                 {
                     continue;
                 }
+                if (r.Kind == MountSettingsPage.Kind.Note)
+                {
+                    heading = r.Label;
+                    headingSection = r.ShownSection;
+                    continue;
+                }
                 if (r.Entry != null)
                 {
                     before[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 }
-                int at = sections.FindIndex(s => s.Name == r.ShownSection);
+                string name = heading != null && r.ShownSection == headingSection ? heading : r.ShownSection;
+                int at = sections.FindIndex(s => s.Name == name);
                 if (at < 0)
                 {
-                    sections.Add((r.ShownSection, new List<MountSettingsPage.Row>()));
+                    sections.Add((name, new List<MountSettingsPage.Row>()));
                     at = sections.Count - 1;
                 }
                 sections[at].Rows.Add(r);
@@ -184,11 +192,16 @@ namespace GK2DonkeyAPI
             var cf = columns.GetComponent<ContentSizeFitter>();
             cf.horizontalFit = cf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             Transform left = Column(columns.transform, "left"), right = sections.Count > 1 ? Column(columns.transform, "right") : null;
-            int inLeft = 0;
+            int inLeft = 0, half = (total + 1) / 2;
+            bool rightStarted = false;
             for (int s = 0; s < sections.Count; s++)
             {
-                Transform column = right == null || (inLeft < (total + 1) / 2 && s < sections.Count - 1) ? left : right;
-                if (column == left) inLeft += sections[s].Rows.FindAll(r => r.Shown == null || r.Shown()).Count;
+                int shown = sections[s].Rows.FindAll(r => r.Shown == null || r.Shown()).Count;
+                // left while that leaves the left column closer to half than it is (the last group goes right whenever
+                // there is a right column; once a group went right the rest follow, so the page order holds)
+                bool toLeft = right == null || (!rightStarted && s < sections.Count - 1 && Math.Abs(inLeft + shown - half) <= Math.Abs(inLeft - half));
+                Transform column = toLeft ? left : right;
+                if (toLeft) inLeft += shown; else rightStarted = true;
                 SettingsRows.MakeHeading(templateRow, column, page, sections[s].Name);
                 foreach (MountSettingsPage.Row r in sections[s].Rows)
                 {
@@ -219,7 +232,7 @@ namespace GK2DonkeyAPI
             Refresh();
             bar.SetActive(true);
             FitToScreen();
-            Plugin.Log.LogInfo($"Settings: the look bar of {page.Title} is open ({rows.Count} rows in {sections.Count} section(s), {(right != null ? "two columns" : "one column")}{(bar.transform.localScale.x < 1f ? $", scaled to {bar.transform.localScale.x:0.##} to fit the screen" : "")}).");
+            Plugin.Log.LogInfo($"Settings: the look bar of {page.Title} is open ({rows.Count} rows in {sections.Count} group(s), {(right != null ? "two columns" : "one column")}{(bar.transform.localScale.x < 1f ? $", scaled to {bar.transform.localScale.x:0.##} to fit the screen" : "")}).");
         }
 
         private static Transform Column(Transform parent, string name)

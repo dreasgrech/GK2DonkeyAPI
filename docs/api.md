@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.30.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.31.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -16,7 +16,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ```csharp
 [BepInPlugin("you.gk2.mymod", "My Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.30.0")]          // hard: your mod needs the core, at least this version
+[BepInDependency("dreas.gk2.donkeyapi", "0.31.0")]          // hard: your mod needs the core, at least this version
 public class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -500,6 +500,7 @@ Where they apply:
 | `Choice` / `Steps` with `look: true` | as above | also in the look bar |
 | `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
 | `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
+| `Heading(section, label, description = "")` | nothing | a heading inside a section: a line with the label and no value, before the rows it names (Saddle Up: "Mount colours" and "Cart colours" in Colours). In the look bar the look rows after it, in its section, stand under this heading in a group of their own instead of under the section's name. Not a picture row's label: a `Preview` row is found on screen by its label, so no other row may share it (the page throws) |
 
 - **In the Mods menu:** your mod lists `dreas.gk2.donkeyapi` as its dependency, and GK2 Donkey API has its own entry
   in the list (no settings). While the API is off or unconfirmed for the game build, the menu marks your mod
@@ -571,7 +572,7 @@ core; a mod switches it on for its player. How the game delivers and what the fe
   system (what the game does itself when the pallets are full); a body left out of sight for about 75 minutes of
   play turns into a grave mound as the game has it (`CorpsesNeverRot` switches that off). The on-the-spot unload is
   timed with the game's own saved delayed WGO events; loaded without the mod they resolve as the game's own.
-- Saddle Up: the Behaviour toggle "Donkey leaves corpses at the crossroads" (off) sets `CorpsesAtCrossroads`; the
+- Saddle Up: the Cart toggle "Donkey leaves corpses at the crossroads" (off) sets `CorpsesAtCrossroads`; the
   finer keys are the API's cfg and the panel's "Corpses at the crossroads" rows.
 
 ## A corpse into the morgue (0.27.0)
@@ -597,7 +598,7 @@ keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/
 - **Instances only.** The old summon hands its whole load back at every door anyway. A parked cart raises no cargo
   event for this (as `Park` raises none).
 - **On the way out** nothing new: getting back on with the body in hand loads it onto the cart, as always.
-- Saddle Up: the Behaviour toggle "Carry the corpse into the morgue" (on).
+- Saddle Up: the Cart toggle "Carry the corpse into the morgue" (on).
 - Tested in game 2026-10-10: the door signal decided on the dismount frame, while the screen was still black; the
   morgue's inside is at about (-72.5, 0, -388.7) in `RuinedTemple`, lit with the `dungeons` preset.
 - Every door while riding writes `Mount: a door while riding: to <point> in <scene> (preset <p>); N item(s) on the
@@ -847,6 +848,10 @@ History:
 - 0.29.1: no API change (the public surface is as in 0.29.0). Performance: the Mods-menu donkey picture and its
   labelled lists no longer look the window up while playing (2-3 ms frames four times a second), and a cart left
   standing and hitched again is no longer kept in memory ([performance.md](performance.md)).
+- 0.31.0: `MountSettingsPage.Heading` (a heading row inside a section; a group of its own in the look bar, which now
+  deals its groups to the column that leaves the left closest to half the rows). `Color` carries a `MovedKey` alias of
+  its colour key over to its `<key>Lightness` key. Saddle Up 0.11.0 regrouped its page with it (Keys, Mount, Colours,
+  Effect, Behaviour, Cart, Sound).
 - 0.30.0: skins ([skins-design.md](skins-design.md)): `MountCompanion.Skin` (a skin id, "" the donkey) and
   `FoalsWearSkin`; the instance tuning key `Skin` (`handle.Tuning.Set(owner, "Skin", id)`, kept with the save; "donkey"
   or "" is the game's own look); `Mounts.Looks` (`Skins`, `Find`, `Report`, `FrameKeys`, `MountSkinInfo`, `Register` with

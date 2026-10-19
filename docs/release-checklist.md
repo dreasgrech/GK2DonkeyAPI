@@ -162,6 +162,16 @@ bar; F11 nothing. 538 log lines, 0 warnings, no `Dev tools unlocked`, "Mounts, s
 layout from embedded, the seven carry-over lines; the rewritten cfgs hold all 35 + 450 values of the 0.9.1 files, no
 [Debug] section, no scratch cfg; every save file byte-identical. Nothing saved; everything restored, the dev builds
 redeployed.
+Step 3b was skipped at the 0.10.0 release; `tests/fixtures/released/0.10.0/` was made on 2026-10-19 16:30 from the
+cfgs that rehearsal run wrote (kept in `BepInEx\rehearsal-aside-2026-10-19\after-rehearsal`), the keys new in 0.10.0
+then set off their defaults, plus a real side file of the 0.30.0 build. Next release: capture at step 3b itself.
+Run 2026-10-19 17:20, the 0.11 page regroup (Saddle Up 0.11.0 / API 0.31.0, dev build, mounts on) over the user's own
+0.10.0-dev cfg: the seven sections in the new order with every value, 134 "is [...] now" lines (every colour key of six
+mount sets, KeepWithSaves, the cart's six rows), Effect and Behaviour renumbered, 143 old lines left out, the rewritten
+cfg equal to its backup key by key (164 keys, 0 lost, 0 changed; `backup-dev-2026-10-19-regroup`); self-tests 498/498
+with the upgrade scenario green over the 0.9.1 and the 0.10.0 fixtures; no warning but the tests' own. Found and fixed
+in that run: a heading with a picture row's label got a picture of its own (the headings are "Mount colours" and
+"Cart colours" now; the page refuses such a row).
 
 ## 6. Versions, changelog and hand-off
 

@@ -447,8 +447,9 @@ namespace GK2DonkeyAPI
             bool note = r != null && r.Kind == MountSettingsPage.Kind.Note;
             if (r == null || note)
             {
-                // A section heading, or a note: the label only, everything else of the row hidden.
-                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, note ? r.Description : heading);
+                // A section heading, or a note: the label only, everything else of the row hidden. A note shows its
+                // text (the description); a heading inside a section (MountSettingsPage.Heading) has none and shows its label.
+                TextMeshProUGUI label = SetLabel(b.Go, b.Switch, note ? (string.IsNullOrEmpty(r.Description) ? r.Label : r.Description) : heading);
                 b.Fields = new[] { "" };
                 b.Switch.Initialize(_ => { }, b.Fields, 0);
                 b.Switch.IsInteractable = false;

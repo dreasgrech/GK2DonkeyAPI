@@ -275,7 +275,9 @@ closed):
     at least two rows on each side of a cut. Expected with the defaults: 3 pages (Keys + first 4 of Behaviour |
     Behaviour (more) + Donkey | Cart + Sound); more with Custom colours on, fewer again when they're off. Checked
     only in an offline copy of the planner. With "Baby donkeys come indoors" (0.18.0), page 2 has 8 rows (10 with
-    Custom colours), so still 3 pages.
+    Custom colours), so still 3 pages. The 0.11 regroup (Keys, Mount, Colours, Effect, Behaviour, Cart, Sound; the
+    Colours section's two heading rows count as rows) changes the cut points: look at the pages again without the
+    framework, nothing was re-planned.
 11. **Speed labels fit** the game's narrow value field ("Fastest (x2.5 walking speed)"); if they're cut off,
     shorten them for that window only.
 12. **The dependency check** (2026-10-14, `docs/dependency-check.md` §"Testing it"): the three tampered-manifest

@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI.Api
             internal Func<bool> Visible;     // shown at all (Shown and Enabled together, for the menus)
             internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
             internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the look bar greys the row when false
-            internal bool IsLook;           // shown in the look bar (LookButton)
+            internal bool IsLook;           // shown in the look bar (LookButton); a Note with it is a heading there (Heading)
             internal Action OnClick;         // Kind.Button
             internal bool WithCart;          // Kind.Preview: the donkey with its cart, or alone
         }
@@ -569,11 +569,22 @@ namespace GK2DonkeyAPI.Api
                 }
             }
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
-            // the lightness key: "CustomCoatLightness", and with a per-mount suffix "CustomCoatLightness_dragon"
-            int suffix = key.IndexOf('_');
-            string lightnessKey = suffix < 0 ? key + "Lightness" : key.Substring(0, suffix) + "Lightness" + key.Substring(suffix);
+            string lightnessKey = LightnessKey(key);
+            // a colour key moved here from another section (MovedKey before this call) brings its lightness key along
+            if (movedKeys.TryGetValue(section + "\n" + key, out (string Section, string Key) from))
+            {
+                MovedKey(section, lightnessKey, from.Section, LightnessKey(from.Key));
+            }
             lightness = Steps(section, lightnessKey, 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
             Combine();
+        }
+
+        // The lightness key of a Color row's key: "CustomCoatLightness", and with a per-mount suffix
+        // "CustomCoatLightness_dragon".
+        internal static string LightnessKey(string key)
+        {
+            int suffix = key.IndexOf('_');
+            return suffix < 0 ? key + "Lightness" : key.Substring(0, suffix) + "Lightness" + key.Substring(suffix);
         }
 
         // The read-only "Status" row: the page's status (Mounts.StatusText unless the page was given its own).
@@ -586,6 +597,16 @@ namespace GK2DonkeyAPI.Api
         public void Info(string section, string label, Func<string> value, string description = "")
         {
             Add(new Row { Kind = Kind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
+        }
+
+        // A heading inside a section: a line with the label and no value, before the rows it names ("Mount colours",
+        // "Cart colours" in a Colours section). In the look bar the look rows after it, in its section, stand under
+        // this heading in a column of their own instead of under the section's name (LookBar; Saddle Up: the mount's
+        // colours left, the cart's right). Not a picture row's label (Add).
+        public void Heading(string section, string label, string description = "")
+        {
+            if (string.IsNullOrEmpty(label)) throw new ArgumentException("label is needed.");
+            Add(new Row { Kind = Kind.Note, Section = Sec(section), ShownSection = section, Label = label, Description = description, IsLook = true });
         }
 
         // A picture of the companion's donkey and cart in their current colours, walking on the spot: a row of the page,
@@ -647,6 +668,12 @@ namespace GK2DonkeyAPI.Api
             if (published)
             {
                 throw new InvalidOperationException("Add every row before Publish.");
+            }
+            // A picture row is found on screen by its label (LookPreview.FindRows), so no other row may share it: a
+            // heading "Your mount" next to a picture "Your mount" got a picture of its own (seen 2026-10-19).
+            if (!string.IsNullOrEmpty(r.Label) && Rows.Exists(o => (o.Kind == Kind.Preview || r.Kind == Kind.Preview) && o.Label == r.Label))
+            {
+                throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
             }
             if (pendingShown != null)
             {

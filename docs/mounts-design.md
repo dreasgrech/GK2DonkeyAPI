@@ -152,11 +152,13 @@ rows into every file that declares the mount), asks once more, and "Reload" read
 kinds say so and keep their changes for the session. The creature generator no longer overwrites an existing
 skin.cfg, so saved values survive a redraw.
 
-Saddle Up has a **Mount** section (its picture, Name, the Mount dropdown, the Skin dropdown, the three baby rows)
-right after Keys (what you ride comes first), then an **Effect** section, then Behaviour, Donkey (the donkey's own
-colours), Cart, Sound. Moving the sections renumbered them in the cfg, and Name and the baby rows moved from Donkey
-to Mount; the page carries a player's values over both ways (docs/api.md, "Sections keep your order"; `MovedKey`),
-so nothing resets on the update. Three calls add the rows every player mod wants: `MountRows(section, companion)`
+Saddle Up has a **Mount** section (its picture, Name, the Mount dropdown, the Skin dropdown, the three baby rows,
+Keep with the save) right after Keys (what you ride comes first), then **Colours** (every colour of the mount and
+the cart under two headings), an **Effect** section, then Behaviour, Cart, Sound (0.11; 0.10 had Mount, Effect,
+Behaviour, Donkey, Cart, Sound). Moving the sections renumbered them in the cfg, and the rows that moved (Name and the
+baby rows from Donkey to Mount in 0.10; the colours, the cart's rows and Keep with the save in 0.11) name their old
+place with `MovedKey`; the page carries a player's values over both ways (docs/api.md, "Sections keep your order"),
+so nothing resets on an update. Three calls add the rows every player mod wants: `MountRows(section, companion)`
 (the Mount dropdown, a Skin dropdown per mount), `FoalRows` (babies: how many, indoors, the same mount and skin),
 `EffectRows` (the effect list with "As the mount" / none / every effect, when it shows, the four effect toggles).
 Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears in the Mods

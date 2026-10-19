@@ -13,7 +13,7 @@ second copy of anything.
 
 | Store | Where | What's in it | Who writes it |
 |---|---|---|---|
-| Saddle Up's cfg | `BepInEx\config\dreas.gk2.saddleup.cfg` | keys, name, mount and skin, babies, effect, behaviour, the donkey's and cart's colour choices (`Coat = Custom` ...), lantern, sounds | BepInEx, every bound key with its value, sections numbered by their place on the page (`[5. Donkey]`) |
+| Saddle Up's cfg | `BepInEx\config\dreas.gk2.saddleup.cfg` | keys, name, mount and skin, babies, the colour choices of the mount and the cart (`Coat = Custom` ...), effect, behaviour, the cart's rows, lantern, sounds | BepInEx, every bound key with its value, sections numbered by their place on the page (`[3. Colours]`; `[5. Donkey]` in 0.10.0, `[3. Donkey]` in 0.9.1) |
 | The API's cfg | `BepInEx\config\dreas.gk2.donkeyapi.cfg` | every tuning value, `[Colors]` and `[Colors.<Region>]` (the 24 custom colours a player mixed), `[Shuffle]`, `[Corpses]`, `[Look]`, `[Effects]`, `[Safety]` | BepInEx, every bound key with its value, sections unnumbered |
 | The side file | `<save>.gk2donkeyapi.dat` next to each save (Steam Cloud carries it) | the player's donkey, foals and carts: scene, position, facing, size, name, the cargo on each cart (item GUIDs), a chest aboard, per-instance settings and each mod's data lines | `Mount.WriteSideFile` after every save, format 2 (`docs/persistence.md`) |
 | The game's save | the game's own | nothing of ours: a save loads without the mod | the game |
@@ -39,8 +39,12 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
   since a save inside a Bind would write the old line before the drop). Seen in game 2026-10-18 with the user's own
   cfg (Donkey 3 → 5) and with the 0.9.1 fixture (29 values carried, 25 old lines left out, no warning, 21:00).
 - **A key may move to another section or name**, with a `MovedKey(section, key, oldSection, oldKey)` call before the
-  row (Saddle Up: Name, Foals and FoalsIndoors went from Donkey to Mount). The call stays as long as a released
-  version wrote the old place.
+  row (Saddle Up 0.10.0: Name, Foals and FoalsIndoors went from Donkey to Mount; 0.11.0: KeepWithSaves from Behaviour
+  to Mount, every colour key from Donkey and Cart to Colours, with the per-mount suffixes, the cart's six rows from
+  Behaviour to Cart; a `Color` row's `<key>Lightness` follows its colour key's alias by itself). The call stays as
+  long as a released version wrote the old place. `tools/page-carryover.py` is the offline check: it reads the rows
+  and the aliases out of Plugin.cs and tries every key of an older cfg against them; the upgrade self-test is the
+  same check through the live page.
 - **A key may be dropped** only when its value has nowhere to go; the self-test lists the drop and the allow-list
   in the test names it on purpose.
 - **A default may change**, but it reaches new players only: BepInEx writes every key with its value, so an existing
@@ -101,9 +105,11 @@ changelog line that says it reaches new installs only.
 ## 4. The checks
 
 - **`tests/fixtures/released/<version>/`**: the player files as that release wrote them. `0.9.1` is reconstructed
-  (from the sources at 7ac9a6c and the live cfg on this machine, each file's header says so); from 0.10.0 on they are
-  captured at release (checklist 5): the two cfgs after the first run and a side file with a parked loaded cart.
-  Every value in a cfg fixture differs from its default, so a lost value shows.
+  (from the sources at 7ac9a6c and the live cfg on this machine, each file's header says so); `0.10.0` is the cfgs the
+  release zip's rehearsal run wrote over the 0.9.1 fixture (the keys new in 0.10.0 then set off their defaults) and a
+  real side file of the 0.30.0 build; from here on they are captured at release (checklist 3b): the two cfgs after
+  the first run and a side file with a parked loaded cart. Every value in a cfg fixture differs from its default, so
+  a lost value shows.
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, Saddle Up's cfg through the live page's own carry-over (`MountSettingsPage.Upgrade`:
   each old line lands on a row and reads as its type), the API's cfg key by key against what this build binds, the
@@ -115,9 +121,11 @@ changelog line that says it reaches new installs only.
 - **The live run** of the page carry-over (the self-test is a dry run: `Upgrade` never binds or writes): with the game
   closed, move `BepInEx\config\dreas.gk2.saddleup.cfg` aside and copy the oldest fixture's in its place; start to
   the main menu only (the fixture rebinds Ride to R and Cart to T and turns "Keep with the save" off: don't load a
-  save); Mods → GK2 Saddle Up shows Name Bella, Mount Donkey, Coat Custom, Harness Red, Cart capacity 4, Lantern
-  light Green, Volume 120, Send away F6; quit; the log has the "carried over" lines and no warning; the cfg has
-  `[2. Mount] Name = Bella` and no `[3. Donkey]`; put the real cfg back.
+  save); Mods → GK2 Saddle Up shows Name Bella, Mount Donkey, Keep with the save off, Coat Custom (plum), Harness
+  Red, Paint Blue, Lantern light Green, Cart capacity 4, Lantern off, Volume 120, Send away F6; quit; the log has the
+  "carried over" lines and no warning; the cfg has `[2. Mount] Name = Bella`, `[3. Colours] Coat = Custom`,
+  `[6. Cart] CartSlots = 4` and no Donkey section; put the real cfg back. The same with the 0.10.0 fixture's cfg
+  (keys R/T too, Effect None, Effect shown At night).
 
 ## 5. When you change something
 

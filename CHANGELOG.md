@@ -10,7 +10,39 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-(nothing yet)
+For players:
+
+- **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one kind of thing.
+  Keys. Mount: its picture (with the cart now), Name, Mount, Skin, the babies rows, and "Keep your mount with the
+  save" (was in Behaviour). Colours, new: "Choose colours", the picture, then every colour under two headings, "Mount
+  colours" (coat and harness, the old Donkey section) and "Cart colours" (paint, wheels, wheel hubs, lantern light,
+  from Cart). Effect. Behaviour: the two speeds, "Say why mounting is refused", "Shuffles while standing". Cart: "Cart
+  capacity", "Zombies ride on the cart", "A storage chest rides on the cart", "Carry the corpse into the morgue",
+  "Donkey leaves corpses at the crossroads" and "Calling your mount leaves the cart parked" (all were in Behaviour),
+  then "Lantern" and "Lantern lit by day". Sound. The Donkey section is gone. Every value carries over: a moved row
+  reads its old place on the first start (the log says which) and the old lines are cleaned out of the cfg.
+- **The colours window** puts the rows under the same two headings, "Mount colours" in the left column and "Cart
+  colours" in the right, with Mount and Skin above the first and Effect below the second.
+
+For mod authors:
+
+- GK2 Donkey API 0.31.0: `MountSettingsPage.Heading(section, label, description = "")`, a heading row inside a
+  section (a line with no value); in the look bar the look rows after it in that section stand under it in a group
+  of their own. A `Color` row whose colour key has a `MovedKey` carries the alias to its `<key>Lightness` key by
+  itself, so one `MovedKey` per colour is enough. The look bar deals its groups to the column that leaves the left
+  closest to half the rows (before: to the left until the left held half, which with one big section put nearly
+  everything there). A row may not share a picture row's (`Preview`) label: the picture is found on screen by it,
+  and a heading with the same label got a picture of its own; the page refuses the row with a clear message.
+
+Development:
+
+- `tests/fixtures/released/0.10.0/`: the player files as 0.10.0 wrote them, captured from the release zip's
+  rehearsal run (checklist step 3b had been skipped at the release): the two cfgs with the keys new in 0.10.0 set off
+  their defaults, 0.30.0's `defaults.cfg`, a real format-2 side file. The upgrade self-test runs over 0.9.1 and
+  0.10.0 now.
+- `tools/page-carryover.py`: an offline dry run of the page's carry-over, reading the rows and `MovedKey` aliases
+  out of Saddle Up's Plugin.cs and checking an older cfg key by key (the fixtures by default, any cfg as an
+  argument). Run it before the in-game upgrade self-test whenever the page's sections or keys move.
 
 ## 0.10.0 (GK2 Donkey API 0.30.0), 2026-10-19
 

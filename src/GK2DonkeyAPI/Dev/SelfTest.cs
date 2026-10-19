@@ -1030,6 +1030,12 @@ namespace GK2DonkeyAPI
                 Check(MountSettingsPage.PlainName("12. Sound") == "Sound" && MountSettingsPage.PlainName("General") == "General" && MountSettingsPage.PlainName("A. B") == "A. B", "plain section names");
                 Check(MountSettingsPage.SectionNumber("12. Sound") == 12 && MountSettingsPage.SectionNumber("General") == -1, "section numbers");
                 Check(MountSettingsPage.OrphansOf(cfg) != null, "BepInEx's orphan dictionary is reachable");
+                // a picture row is found on screen by its label, so no other row may share it (a heading "Your mount"
+                // next to the picture "Your mount" got a picture of its own, 2026-10-19)
+                page.Preview("Mount", Mounts.Companion("dreas.gk2.selftest.moved"), "Picture");
+                bool refused = false;
+                try { page.Heading("Mount", "Picture"); } catch (ArgumentException) { refused = true; }
+                Check(refused && !page.Rows.Exists(r => r.Kind == MountSettingsPage.Kind.Note && r.Label == "Picture"), "a row with a picture row's label is refused");
                 cfg.Save();
                 Dictionary<string, Dictionary<string, string>> after = MountSettingsPage.ReadSections(path);
                 Check(after.TryGetValue("3. Behaviour", out Dictionary<string, string> b3) && b3.ContainsKey("CartSlots") && !after.ContainsKey("2. Behaviour"), "saved: CartSlots is under 3. Behaviour only, the 2. Behaviour copy is gone");
