@@ -9,7 +9,7 @@ the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo).
 | Kind | What ships | How the pictures come to be |
 |---|---|---|
 | **Recipe** | code in the API | built in the game from the donkey's own frames when first worn; no picture stored anywhere |
-| **Pack** | `skin.cfg` + pictures (a PNG per frame, or one sheet of cells) | drawn or generated beforehand; a built-in pack is embedded in the DLL, a loose one sits in `BepInEx\plugins\gk2skins\<id>\` |
+| **Pack** | `skin.cfg` + pictures (a PNG per frame, or one sheet of cells) | drawn or generated beforehand; a built-in pack is embedded in the DLL, a loose one sits in `BepInEx\plugins\gk2skins\<id>\`. **Every skin we ship is a built-in pack made the same way** (`docs/sprite-tools.md` "Making a skin: the one pipeline") |
 | **Game creature** (`source = game`) | `skin.cfg` only | the game's own frames of another character, read back and scaled at run time |
 
 The machinery for all three: `src/GK2DonkeyAPI/Looks.cs` (packs, sheets, sources, the overlay drawing, colours by
@@ -28,25 +28,35 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   `0301_*.png`); `C:\ClaudeCodeTemp\GK2-aseprite\harness_frames\*.raw` (top-left aligned, only for moving old
   measurements).
 
-### Hellfire (donkey, recipe)
-- **Ships as code**: `src/GK2DonkeyAPI/LooksHellfire.cs` (horns at the ear roots, the devil's tail at the rump,
-  glowing eyes, lava cracks in the torso's own coordinates, the ash coat), registered by `LooksRecipes.cs`.
-- **Prototype** (the reviewed original, 14 rounds): `tools/skins/hellfire/hellfire_proto.py`; its sheet and walk GIF
-  in `out\` (git-ignored). Reads the raw frames from `C:\ClaudeCodeTemp\GK2-donkey-frames` by path.
-- **Review frames** for the page: `C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-96\` (the prototype's output moved
-  onto the game's canvas; game-derived, outside the repo).
-- Docs: `docs/sprite-tools.md` (why Hellfire took 14 rounds and what replaced the method), `docs/looks-status.md`.
+### Hellfire (donkey, pack drawn over the donkey; a recipe in code until 2026-10-19 evening)
+- **Pack**: `src/GK2DonkeyAPI/assets/skins/hellfire/` (`skin.cfg` + a PNG per frame), embedded in the DLL like the
+  creatures. The pictures hold only our pixels (horns, the devil's tail, the rump fill, the cracks, the glowing
+  eyes) and erase marks (magenta) where the ears and the tail come off; the ash coat is the cfg's `[Base.Coat]`
+  recolour. Nothing of the game's art.
+- **Generator**: `tools/skins/hellfire/make_hellfire.py`: runs the reviewed prototype (`hellfire_proto.py`, the 14
+  rounds, same folder) over the donkey's frames on the game's canvas and keeps the difference as the pack.
+  Outputs in `out\` (git-ignored): `pack\` (the same pack plus a sheet for the checker), `strips\`, `preview.png`.
+- The recipe code (`LooksHellfire.cs`) is gone; recipes stay for mods through `Mounts.Looks.RegisterRecipe`.
+- **Old against new, pixel by pixel**: `tools/skins/hellfire/compare_hellfire.py` -> `out\compare.html`: every frame the
+  code drew (the prototype's output on the game's canvas, `C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-96\`) next to the
+  pack over the donkey, with the prototype's coat (identical: 44 of 44 since the tail's phase matched, 2026-10-19 21:00;
+  since 22:45 the only difference is intended: the 326 mane pixels the pack draws between the horns so the tuft there
+  is the same in every frame, where the code left the donkey's own, open in some frames and filled in others) and
+  with the game's coat rule (only coat shades differ), and a difference picture with the count.
+- Docs: `docs/sprite-tools.md`, `docs/skins.md` ("Erasing from the donkey", "Recolouring the donkey under the skin").
 
-### Royal Parade (donkey, pack, drawn over the donkey)
-- **Pack source**: `packs/royal-parade/` (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...` so the cloth's
-  reds follow the harness colour; `sheet.png` generated).
+### Royal Parade (donkey, pack drawn over the donkey; a built-in since 2026-10-19 23:00)
+- **Pack**: `src/GK2DonkeyAPI/assets/skins/royal-parade/` (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...`
+  so the cloth's reds follow the harness colour; a PNG per frame generated), embedded in the DLL exactly like
+  Hellfire (before: `packs/royal-parade/` as one sheet, copied into the game's `gk2skins\` by the generator).
 - **Generator**: `tools/skins/royal-parade/make_royal.py` (the saddle cloth cut from the standing frame and hung from
   the hip in every frame, the crown on the eye), with `contact.py` (the frame loader), `measure.py` -> `anchors.json`,
   `horn_bases.py` (`horn_bases_raw.json` -> `horn_bases.json`, the crown's fallback anchors from Hellfire's horns),
   `zoom.py`, `view.py`, `Watch Royal Parade.cmd`. Outputs in `out\` (git-ignored): `royal.aseprite` (a by-hand copy),
-  `preview.png`, `zoom.png`, `strips\<animation>.png` (look at every strip before the game).
-- **In the game**: `BepInEx\plugins\gk2skins\royal-parade\` (`skin.cfg` + `sheet.png`, copied there by the
-  generator; the game reads packs at start, or "Reload from the file" / the auto-reload tick in the dev panel).
+  `preview.png`, `zoom.png`, `strips\<animation>.png` (look at every strip before the game), `pack\sheet.png`.
+- **In the game**: nothing on disk; the pictures come with the DLL (a build + deploy after every generator run).
+  The old loose copy in `gk2skins\royal-parade\` was removed 2026-10-19 23:00 (a second skin with the same id is
+  refused at start).
 - Docs: `docs/sprite-tools.md` ("Generated, no drawing", "The canvas, found wrong", "The crown"), `docs/open-items.md`.
 
 ### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts, built-in packs)
@@ -84,14 +94,14 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | Tool | Does |
 |---|---|
 | `tools/GK2AssetProbe` (dev plugin, Shift+F7) | exports the donkey's frames to `donkey-frames\`, the rider, films to `captures\`; its `test\skins\` tester |
-| `tools/skin_preview_html.py` | the review page, every skin by mount, frame strips |
+| `tools/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
 | `tools/skins/check_skin.py` | checks a pack folder (frames, colours vs the donkey's, lone pixels); run by the watcher |
 | `tools/skins/watch_skin.py`, `tools/skins/scripts/*.lua` | the by-hand loop: Aseprite -> export -> check -> previews; the two menu scripts (also installed in `%APPDATA%\Aseprite\scripts\`) |
 | `tools/skins/ase_write.py` | writes an `.aseprite` file (layers, frames, tags) from Python |
 | `tools/skins/gamedir.py` | the game folder from `Directory.Build.props`, the frames and packs folders in it |
 | `tools/pngcolors.py` | a plain PNG reader and colour counter |
 | `tests/SkinsScan` | every built-in skin: its cfg, pictures, `[Colors]` against its pixels (in the release scans) |
-| Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change" |
+| Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change", "Export the loaded skins as built" (`LooksExport.cs`) |
 | Self-tests (`src/GK2DonkeyAPI/Dev/SelfTest.cs`, "Skins and effects") | packs, recipes, over skins with the world readback, auto-reload, kinds |
 
 Outside the repo and never committed, because it is the game's art: the asset probe's `donkey-frames\`, the

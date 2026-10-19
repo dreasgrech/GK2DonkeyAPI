@@ -698,6 +698,8 @@ Where skins come from, in order of how little they need:
 - **From code:** `Mounts.Looks.Register(owner, new MountSkinDef { Id, Name, Source = yourSource })` with an
   `IMountSkinSource` giving a `Sprite` per frame key, from any texture of yours (your own sheet, say: 50 pixels per
   unit, the pivot where the donkey's anchor is). The sprites stay yours; the API only points its overlays at them.
+  A code-registered skin drawn over the donkey (`Over`) has no erase colour and no `[Base.<Region>]` recolour yet
+  (those are the pack format's, [skins.md](skins.md); docs/open-items.md): ask when a mod needs them.
 - **A recipe:** `Mounts.Looks.RegisterRecipe(owner, id, name, frame => pixels)`: a rule over the donkey's own frames
   (`MountSkinFrame`: the pixels on the canvas, the outline and bob helpers), built when first worn, a few frames a
   tick, and worn once complete. Nothing of the game's art is shipped.

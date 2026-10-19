@@ -20,8 +20,8 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
 - **The donkey's five regions are the donkey's atlas colours.** A skin drawn in its own colours (every built-in
   creature, every pack with `kind = own`) has none of those colours in its pictures, so nothing matches and nothing
   changes. The recipe skins of 2026-10-17 (zebra, ghost, ember, golden, shadow) were recolours and patterns: the
-  colour settings do that now, so they are gone (2026-10-18), as is Blue Dragon. The one recipe left, Hellfire
-  (`LooksHellfire.cs`), changes the drawing (horns, a devil's tail, glowing eyes, lava cracks) and declares its own
+  colour settings do that now, so they are gone (2026-10-18), as is Blue Dragon. Hellfire, the one recipe left then
+  (`LooksHellfire.cs`; a pack drawn over the donkey since 2026-10-19 evening, docs/skins.md), changes the drawing (horns, a devil's tail, glowing eyes, lava cracks) and declares its own
   colours by region in code (the lava as Muzzle, the bone and outline as Dark, the glow as Eye; the ash coat is
   Coat). The cart's regions work for every mount because the cart is the same cart.
 - **A skin's pictures share one material path with the donkey's.** The overlay copies the body part's
@@ -84,7 +84,7 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   since it is drawn in the donkey's colours.
 - **The game-source skin (Gerry):** the same as any skin; its colours are the game's skull colours, collected from
   the frames at build.
-- **A recipe skin** (Hellfire) is an own-colour look too: all Coat but the regions it declares in code. A pack with
+- **A recipe skin** (a mod's, through the API; Hellfire was one until 2026-10-19) is an own-colour look too: all Coat but the regions it declares in code. A pack with
   `kind = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
 - **A skin worn over the donkey** (`layer = over`, own colours; built 2026-10-19 for Royal Parade): the donkey's
   map stays (the donkey is still drawn under it), the skin's named colours are added after it (`Colors.Rebuild`;

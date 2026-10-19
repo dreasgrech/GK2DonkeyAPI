@@ -158,6 +158,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
+            new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
             new Scenario { Group = GroupLooks, Name = "skin pack: read again by itself when its files change (dev switch)", Body = SkinPackAutoReload },
         };
 
@@ -1521,6 +1522,16 @@ namespace GK2DonkeyAPI
         {
             internal int Pixels, Red, Blue, Green, Gold, Other;
             internal string Top; // the most drawn colours
+            internal Dictionary<int, int> Count; // every drawn colour (RGB packed) and its pixel count
+
+            // Pixels of this render whose colour the other render has nowhere: what was added, whatever the light
+            // (the scene's lighting falls on both renders alike, so a class like "red" would fail at night).
+            internal int AddedAgainst(DrawnAlone other)
+            {
+                int n = 0;
+                foreach (var kv in Count) if (other == null || !other.Count.ContainsKey(kv.Key)) n += kv.Value;
+                return n;
+            }
         }
 
         // swapOff: the same render through a copy of the material with both colour-swap keywords off (the picture as
@@ -1583,6 +1594,7 @@ namespace GK2DonkeyAPI
                     else if (c.r > 130 && c.g > 90 && c.b < 110 && c.r > c.b + 60) d.Gold++;
                     else d.Other++;
                 }
+                d.Count = count;
                 var top = new List<KeyValuePair<int, int>>(count);
                 top.Sort((x, y) => y.Value.CompareTo(x.Value));
                 var sb = new StringBuilder();
@@ -1607,6 +1619,39 @@ namespace GK2DonkeyAPI
                 if (rt != null) { rt.Release(); UnityEngine.Object.Destroy(rt); }
                 if (go != null) UnityEngine.Object.Destroy(go);
             }
+        }
+
+        // A test donkey walking for a probe: MoveTo and ComeToKeeper place it (no walk), so this moves it a little every
+        // frame and asks its animator for the walk (the stage's recipe: State 1, walk_speed 1) for as many frames as
+        // given, running perFrame after each; then idle again. walkFrames counts the frames a walk picture showed.
+        private static IEnumerator WalkFor(MountHandle a, SpriteRenderer part, int frames, Action perFrame, Action<int> walkFrames)
+        {
+            Animator anim = part != null && part ? part.GetComponentInParent<Animator>() : null;
+            int seen = 0;
+            for (int i = 0; i < frames && a != null && a.Exists; i++)
+            {
+                if (anim != null)
+                {
+                    foreach (AnimatorControllerParameter p in anim.parameters)
+                    {
+                        if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) anim.SetInteger("State", 1);
+                        else if (p.name == "walk_speed" && p.type == AnimatorControllerParameterType.Float) anim.SetFloat("walk_speed", 1f);
+                    }
+                }
+                a.MoveTo(a.Position + new Vector3(-0.03f, 0f, 0f), facingRight: false); // a few pixels a frame, the way it faces
+                yield return null;
+                if (part != null && part && part.sprite != null && part.sprite.name.Contains("walk")) seen++;
+                perFrame?.Invoke();
+            }
+            if (anim != null)
+            {
+                foreach (AnimatorControllerParameter p in anim.parameters)
+                {
+                    if (p.name == "State" && p.type == AnimatorControllerParameterType.Int) anim.SetInteger("State", 0);
+                }
+                anim.SetTrigger(AnimationComponentBase.RESET_TO_IDLE_TRIGGER);
+            }
+            walkFrames?.Invoke(seen);
         }
 
         private static IEnumerator SkinOverColours()
@@ -1715,17 +1760,17 @@ namespace GK2DonkeyAPI
                     SpriteRenderer part = a.I.LooksRig.TestPart();
                     Material pm = part?.sharedMaterial;
                     Info($"material queue {pm?.renderQueue} (shader {pm?.shader?.name} queue {pm?.shader?.renderQueue}), part layer {part?.sortingLayerName} order {part?.sortingOrder}, overlay order {ov.sortingOrder}, overlay local z {ov.transform.localPosition.z:0.####} (lift {Looks.Rig.OverLift})");
-                    a.MoveTo(near + new Vector3(4f, 0f, 0f));
-                    int walked = 0, stale = 0, renders = 0, lost = 0, lostNoLift = 0, moving = 0;
+                    // the donkey moved a little every frame with its walk playing (WalkFor: MoveTo and ComeToKeeper only
+                    // place it; a plain destination left it standing and the probe sampled nothing, 2026-10-19)
+                    int walked = 0, stale = 0, renders = 0, lost = 0, lostNoLift = 0, moving = 0, walkPics = 0;
                     Vector3 lastPos = a.Position;
-                    for (int i = 0; i < 48 && part != null && part; i++)
+                    yield return WalkFor(a, part, 48, () =>
                     {
-                        yield return null;
                         walked++;
                         if (a.Position != lastPos) moving++;
                         lastPos = a.Position;
                         if (ov.sortingOrder != part.sortingOrder + 1) stale++;
-                        if (i % 3 != 0) continue;
+                        if (walked % 3 != 1) return;
                         renders++;
                         DrawnAlone lifted = RenderAlone(ov, with: part);
                         if (lifted != null && lifted.Blue < 40) lost++;
@@ -1734,10 +1779,11 @@ namespace GK2DonkeyAPI
                         DrawnAlone flat = RenderAlone(ov, with: part);
                         ov.transform.localPosition = lp;
                         if (flat != null && flat.Blue < 40) lostNoLift++;
-                    }
-                    Info($"walking {walked} frames ({moving} with the position changing): the overlay's order stale on {stale}; of {renders} renders with the body it lost the depth test {lost} times with the lift and {lostNoLift} times without");
-                    Check(stale == 0, $"the overlay's sorting order follows the part's every frame while walking ({stale} stale of {walked})");
-                    Check(renders > 0 && lost == 0, $"the overlay never flickers into the body while walking ({lost} of {renders} renders lost with the lift; {lostNoLift} without it)");
+                    }, n => walkPics = n);
+                    Info($"walking {walked} frames ({moving} with the position changing, {walkPics} showing a walk picture): the overlay's order stale on {stale}; of {renders} renders with the body it lost the depth test {lost} times with the lift and {lostNoLift} times without");
+                    Check(moving >= walked - 2, $"the test donkey moves for the probe ({moving} of {walked} frames)");
+                    Check(stale == 0, $"the overlay's sorting order follows the part's every frame while moving ({stale} stale of {walked})");
+                    Check(renders > 0 && lost == 0, $"the overlay never flickers into the body while moving ({lost} of {renders} renders lost with the lift; {lostNoLift} without it)");
                 }
                 // the player's own mount, when it wears a skin now: what the world draws of it, for the log
                 foreach (MountHandle h in Mounts.InstancesOf("dreas.gk2.saddleup"))
@@ -1760,6 +1806,105 @@ namespace GK2DonkeyAPI
         // Debug.SkinPackAutoReload: a worn pack (a temp folder, one red picture for every body frame) whose picture is
         // saved again in blue is read again by itself within a few seconds, and the donkey wears the blue one; with the
         // switch off, the same save changes nothing. The switch is put back as it was.
+        // An over pack's erase colour (FF00FF by default): a picture with it is built whole, the donkey's own frame with
+        // those pixels cleared and the picture's other pixels on top, and drawn in the body's place; a picture without
+        // it stays a plain overlay. The pack: the standing frame with a magenta block over the ears and a red block on
+        // the back; the walk frames with the red block only.
+        private static IEnumerator SkinOverErase()
+        {
+            string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-erase");
+            string packDir = System.IO.Path.Combine(tempRoot, Looks.PackDirName, "erase-test");
+            const string owner = Owner + ".erase";
+            var red = new Color32(196, 30, 56, 255);
+            var magenta = new Color32(255, 0, 255, 255);
+            try
+            {
+                if (System.IO.Directory.Exists(tempRoot)) System.IO.Directory.Delete(tempRoot, true);
+                System.IO.Directory.CreateDirectory(packDir);
+                // and the skin's own recolour of the donkey's coat under it ([Base.Coat]): blue, so it shows in the readback
+                System.IO.File.WriteAllText(System.IO.Path.Combine(packDir, "skin.cfg"), "[Skin]\nformat = 1\nid = erase-test\nname = Erase Test\nkind = own\nlayer = over\n[Base.Coat]\nColorize = 0000FF\nColorizeAmount = 1\n");
+                Color32[] Picture(bool ears)
+                {
+                    var px = new Color32[96 * 96];
+                    for (int y = 40; y < 46; y++) for (int x = 55; x < 61; x++) px[y * 96 + x] = red;        // on the back
+                    if (ears) for (int y = 60; y < 76; y++) for (int x = 35; x < 47; x++) px[y * 96 + x] = magenta;  // the ears (rows from the bottom)
+                    return px;
+                }
+                foreach ((string key, bool ears) in new[] { ("bdy_static_left", true), ("bdy_walk_left_01", false), ("bdy_walk_left_02", false) })
+                {
+                    var tex = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+                    tex.SetPixels32(Picture(ears));
+                    tex.Apply();
+                    System.IO.File.WriteAllBytes(System.IO.Path.Combine(packDir, key + ".png"), tex.EncodeToPNG());
+                    UnityEngine.Object.Destroy(tex);
+                }
+            }
+            catch (Exception e)
+            {
+                Warn("the temp pack could not be written: " + e.Message);
+                yield break;
+            }
+            Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the erase pack is found");
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            a?.Tuning.Set(Owner, "Skin", "erase-test");
+            yield return Until(() => a != null && a.IsReady && a.I.LooksRig.Wearing == "erase-test" && !a.I.LooksRig.Building, 10f);
+            if (!waited)
+            {
+                Fail("the erase skin was never worn");
+            }
+            else
+            {
+                yield return Frames(3);
+                Looks.Loaded l = Looks.LoadedOwnColours("erase-test");
+                Check(l != null && l.WholeKeys.Count == 1 && l.WholeKeys.Contains("bdy_static_left") && l.Erased == 16 * 12, $"one picture built whole, the standing one, {l?.Erased} pixels erased (16x12)");
+                SpriteRenderer ov = a.I.LooksRig.TestOverlay(), part = a.I.LooksRig.TestPart();
+                // the standing frame comes round between the idle clips: wait for it, the whole-frame checks need it
+                yield return Until(() => ov != null && ov.sprite != null && ov.sprite.name.EndsWith("bdy_static_left", StringComparison.Ordinal), 8f);
+                Info($"the donkey shows {ov?.sprite?.name ?? "nothing"}; the body part hidden: {a.I.LooksRig.TestShowing()}");
+                if (!waited) Fail("the standing frame never showed within 8 s: the whole-frame checks couldn't run");
+                else
+                {
+                    Check(a.I.LooksRig.TestShowing(), "on the standing frame the body part is hidden: the whole picture takes its place");
+                    // what is drawn: the whole picture alone, against the donkey's own part alone (made visible for the render)
+                    DrawnAlone whole = RenderAlone(ov);
+                    bool was = part.forceRenderingOff;
+                    part.forceRenderingOff = false;
+                    DrawnAlone plain = RenderAlone(part);
+                    part.forceRenderingOff = was;
+                    Info($"drawn alone: the whole picture {whole?.Pixels} pixels ({whole?.Red} red), the donkey's own part {plain?.Pixels}");
+                    Check(whole != null && plain != null && whole.Pixels < plain.Pixels - 100 && whole.Pixels > plain.Pixels / 2, $"the whole picture is the donkey with the ears gone ({whole?.Pixels} pixels against the part's {plain?.Pixels}: fewer, not another thing)");
+                    // the red block: pixels in colours the donkey's own render has nowhere (judged against that render,
+                    // under the same light: at night red comes out purple and a colour class would miss it)
+                    int added = whole != null ? whole.AddedAgainst(plain) : 0;
+                    Check(added >= 20, $"the red block is drawn on it ({added} pixels in colours the donkey's own part has nowhere; {whole?.Red} read as red)");
+                    // the skin's [Base.Coat] recolour: the donkey's coat under the skin comes out blue, with the player's
+                    // coat setting at its default
+                    var grp = a.I.ColorsRig.TestMountGroup();
+                    MountColorRegion coat = null;
+                    foreach (MountColorRegion r in Colors.RegionList) if (r.Key == "Coat") coat = r;
+                    int coatChanged = 0;
+                    if (coat != null) foreach (string hex in coat.SourceColors) { Colors.TryHex(hex, out Color32 c); if (grp.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) coatChanged++; }
+                    Check(coat != null && coatChanged == coat.SourceColors.Count, $"the skin's [Base.Coat] recolours every coat colour under it ({coatChanged} of {coat?.SourceColors.Count})");
+                    Check(whole != null && whole.Blue >= 150, $"the whole picture's coat is drawn blue ({whole?.Blue} blue pixels)");
+                }
+                // a walk frame stays a plain overlay: the part shows under it (the donkey walked by WalkFor)
+                int plainSeen = 0, wholeSeen = 0, walkPics = 0;
+                yield return WalkFor(a, part, 40, () =>
+                {
+                    if (ov == null || ov.sprite == null || !ov.sprite.name.Contains("walk")) return;
+                    if (!a.I.LooksRig.TestShowing() && !l.Whole.Contains(ov.sprite)) plainSeen++; else wholeSeen++;
+                }, n => walkPics = n);
+                if (walkPics > 0) Check(plainSeen > 0 && wholeSeen == 0, $"a picture without the erase colour is a plain overlay, the body part drawn under it ({plainSeen} walk frames plain, {wholeSeen} whole)");
+                else Fail("no walk picture showed in 40 frames of walking: the overlay check couldn't run");
+            }
+            a?.Remove();
+            yield return Frames(2);
+            Looks.Unregister("erase-test", owner);
+            yield return Frames(2);
+            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+        }
+
         private static IEnumerator SkinPackAutoReload()
         {
             string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-watch");
@@ -2154,52 +2299,52 @@ namespace GK2DonkeyAPI
             try { System.IO.Directory.Delete(tempRoot, true); } catch { }
         }
 
-        // A recipe skin: nothing shows until every frame is built (the donkey's own look stays), then all 44 pictures are
-        // there; cleared, they are freed.
+        // A recipe skin (a mod's, through the public API: no built-in recipe is left since Hellfire became a pack,
+        // 2026-10-19): nothing shows until every frame is built (the donkey's own look stays), then all 44 pictures are
+        // there in the recipe's own colours; cleared, they are freed.
         private static IEnumerator SkinRecipe()
         {
             if (!Plugin.MountsOn)
             {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in recipe");
+                Skip("the mounts are off (Debug.MountsPreview): the API keeps registrations out");
                 yield break;
             }
-            if (Looks.Find("hellfire") == null)
+            const string owner = Owner + ".recipe";
+            var rim = new Color32(40, 24, 12, 255);
+            var fill = new Color32(200, 40, 40, 255);
+            IDisposable handle = Mounts.Looks.RegisterRecipe(owner, "recipe-test", "Recipe Test", frame =>
             {
-                Warn("no built-in recipe 'hellfire': skipped");
-                yield break;
-            }
+                Color32[] src = frame.Pixels;
+                var dst = new Color32[src.Length];
+                for (int i = 0; i < src.Length; i++)
+                {
+                    if (src[i].a == 0) continue;
+                    dst[i] = frame.Rim(i % frame.Width, i / frame.Width) ? rim : fill;
+                }
+                return dst;
+            }, author: "test", version: "1");
+            Check(handle != null && Looks.Find("recipe-test") != null, "a recipe registered through the API is listed");
             Vector3 near = Spot(home, 4f) ?? home;
             yield return Seconds(0.5f);
             int tex0 = Live.Textures;
-            // worn already by a donkey of the world (the player's own with Skin = hellfire): its sheet is built and
-            // shared, so there is no build to watch and no texture to count; those two checks can't run then
-            bool preloaded = Looks.IsLoaded("hellfire");
             MountHandle a = Spawn(near, true);
             yield return Until(() => a != null && a.IsReady, 6f);
-            a?.Tuning.Set(Owner, "Skin", "hellfire");
+            a?.Tuning.Set(Owner, "Skin", "recipe-test");
             yield return Frames(2);
             bool buildingSeen = a != null && a.I.TestSkinBuilding() && !a.I.TestSkinShowing();
             yield return Until(() => a != null && a.I.TestSkinShowing(), 10f);
-            Check(waited, "Hellfire shows once built");
-            if (preloaded)
-            {
-                Info("Hellfire was loaded already (a donkey of the world wears it): the build-phase and one-sheet checks can't run; clear the player's skin to see them");
-            }
-            else
-            {
-                Check(buildingSeen, "while it was being built, the donkey's own look stayed (no half-built skin)");
-                Check(Live.Textures == tex0 + 1, $"the 44 frames built from the donkey's own onto one sheet ({tex0} -> {Live.Textures})");
-            }
-            // the drawing changed, not just the colours: the lava cracks (Muzzle), the horns and the outline (Dark) and
-            // the eyes' glow (Eye) are in the pictures as the recipe's own colours; the donkey's eye white is gone
+            Check(waited, "the recipe shows once built");
+            Check(buildingSeen, "while it was being built, the donkey's own look stayed (no half-built skin)");
+            Check(Live.Textures == tex0 + 1, $"the 44 frames built from the donkey's own onto one sheet ({tex0} -> {Live.Textures})");
+            // the drawing is the recipe's: two colours of its own, the donkey's eye white gone
             Looks.Loaded look = a?.I.LooksRig.WornOwnColours;
-            int lava = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m.Count : -1;
-            int glow = look != null && look.ColoursByRegion.TryGetValue("Eye", out List<Color32> e) ? e.Count : -1;
             bool white = look != null && look.Colours.Exists(c => c.r == 255 && c.g == 255 && c.b == 255);
-            Check(lava >= 3 && glow >= 2 && !white, $"the pictures hold the cracks ({lava} lava colours), the eyes' glow ({glow}) and no eye white: the drawing changed");
+            Check(look != null && look.Colours.Count == 2 && !white, $"the pictures hold the recipe's two colours and no eye white ({look?.Colours.Count} colours)");
             a?.Remove();
             yield return Frames(2);
             Check(Live.Textures == tex0, $"removed: the pictures freed ({tex0} -> {Live.Textures})");
+            handle?.Dispose();
+            Check(Looks.Find("recipe-test") == null, "withdrawn: the recipe is gone from the list");
         }
 
         // The built-in effect: lit on a spawned donkey (the game's lamp fire copied, its emitters on the ring), follows it,

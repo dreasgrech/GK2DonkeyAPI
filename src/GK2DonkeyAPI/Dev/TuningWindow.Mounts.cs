@@ -412,6 +412,13 @@ namespace GK2DonkeyAPI
                         "Debug.SkinPackAutoReload: a pack in use is read again a second or two after its skin.cfg or a picture is saved (an editor's export, say). Pictures added after the game started need a restart, as for the button.");
                 }
             }
+            // the skins as the game built them, for the review page (tools/skin_preview_html.py reads game-skins\ first)
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Tip("Export the loaded skins as built", "Writes every skin worn since the start (its pictures as the game draws them, after the erase compose) and the donkey's own frames to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame. The review page shows those and counts where its own composite would differ. Wear a skin once to have it loaded."), Wd(LabelW)))
+            {
+                Note(Looks.ExportBuilt(System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "GK2-asset-probe", Looks.ExportDirName)));
+            }
+            GUILayout.EndHorizontal();
             if (Time.unscaledTime < mountsNoteUntil) GUILayout.Label(mountsNote, small);
         }
 

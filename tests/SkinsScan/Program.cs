@@ -31,7 +31,7 @@ if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys rea
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase" };
 
 static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
 {

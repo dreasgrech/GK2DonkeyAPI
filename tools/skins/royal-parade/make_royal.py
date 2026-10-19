@@ -1,11 +1,13 @@
 # The Royal Parade skin, generated (docs/sprite-tools.md): a saddle cloth (red, gold trim and fringe, a fleur on the flank) and a crown
-# between the ears at the Hellfire horn bases (the positions reviewed for Hellfire v14). Writes the pack's sheet
-# straight into the game (no Aseprite needed), royal.aseprite for anyone who wants to touch a frame by hand,
-# preview.png (every frame at 4x), zoom.png (six frames at 8x) and strips/<animation>.png (every animation as a
-# frame strip at 4x: LOOK AT EVERY STRIP before the game does).
+# between the ears at the Hellfire horn bases (the positions reviewed for Hellfire v14). A built-in skin, the same
+# pipeline as Hellfire (docs/sprite-tools.md "Making a skin"): writes a PNG per frame into
+# src/GK2DonkeyAPI/assets/skins/royal-parade/ (skin.cfg there is by hand; the DLL build embeds the folder), plus
+# royal.aseprite for anyone who wants to touch a frame by hand, preview.png (every frame at 4x), zoom.png (six
+# frames at 8x) and strips/<animation>.png (every animation as a frame strip at 4x: LOOK AT EVERY STRIP before the
+# game does).
 #
-#   python tools/skins/royal-parade/make_royal.py            # the pack source, the game's pack, out\ (previews, strips, .aseprite)
-#   python tools/skins/royal-parade/make_royal.py --no-pack  # the same without touching the game
+#   python tools/skins/royal-parade/make_royal.py              # the built-in pack's pictures + out\ (previews, strips, .aseprite)
+#   python tools/skins/royal-parade/make_royal.py --no-assets  # out\ only (the pictures into out\pack)
 #
 # How the cloth is placed (per frame, from the donkey's pixels). The cloth is one fixed shape measured on the
 # standing frame: its width is a fraction of the back (collar to hip) and its height per column is the standing
@@ -14,20 +16,18 @@
 # each column's top on that frame's own back line, so the cloth rides the back through a walk's bob and a graze's
 # dip without changing size or sliding along the body. A frame whose back is shorter (the turn clips, the body
 # foreshortened) gets the cloth cut to a fraction of that back instead.
-import json, os, shutil, sys
+import json, os, sys
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(HERE))
 from contact import ORDER, load
-from gamedir import packs_dir
 import ase_write
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 OUTDIR = os.path.join(HERE, "out")                      # generated: the .aseprite, the previews, the strips (git-ignored)
 OUT = os.path.join(OUTDIR, "royal.aseprite")
-PACK_SRC = os.path.join(REPO, "packs", "royal-parade")   # the pack's source in the repo: skin.cfg (by hand) and sheet.png (generated here)
-PACK = os.path.join(packs_dir(), "royal-parade")         # the pack the game loads
+ASSETS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins", "royal-parade")  # the built-in pack: skin.cfg by hand, PNGs from here
 HORNS = json.load(open(os.path.join(HERE, "horn_bases.json")))
 ANCHORS = json.load(open(os.path.join(HERE, "anchors.json")))
 HEM_ABOVE = 2     # the hem this many rows above the standing frame's belly line: the belly and the legs show
@@ -263,7 +263,13 @@ def build():
 
 
 def write_pack(frames, folder):
-    """The pack's sheet: the skin's layers only (no donkey), 8 columns of 96x96 cells in ORDER, as the Aseprite export writes it."""
+    """The pack's pictures: the skin's layers only (no donkey), one PNG per frame key in ORDER, into the built-in
+    skin's folder (the same layout as Hellfire's and every other built-in: skin.cfg stays as written by hand, the
+    PNGs are replaced). Also out\\pack\\sheet.png, the same cells 8 per row, for the checker's sheet mode."""
+    os.makedirs(folder, exist_ok=True)
+    for f in os.listdir(folder):
+        if f.endswith(".png") and f.startswith(("bdy_", "hed_")):
+            os.remove(os.path.join(folder, f))
     C = 8
     rows = (len(frames) + C - 1) // C
     sheet = Image.new("RGBA", (C * 96, rows * 96), (0, 0, 0, 0))
@@ -271,10 +277,11 @@ def write_pack(frames, folder):
         f = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
         f.alpha_composite(cels[1])
         f.alpha_composite(cels[2])
+        f.save(os.path.join(folder, ORDER[n] + ".png"))
         sheet.alpha_composite(f, ((n % C) * 96, (n // C) * 96))
-    os.makedirs(folder, exist_ok=True)
-    sheet.save(os.path.join(folder, "sheet.png"))
-    return sheet.size
+    os.makedirs(os.path.join(OUTDIR, "pack"), exist_ok=True)
+    sheet.save(os.path.join(OUTDIR, "pack", "sheet.png"))
+    return len(frames)
 
 
 def composite(cels):
@@ -317,10 +324,9 @@ if __name__ == "__main__":
     zoom([(k, composite(fr[ORDER.index(k)])) for k in picks], os.path.join(OUTDIR, "zoom.png"), S=8, box=(24, 20, 84, 70))
     print("strips:", ", ".join(strips(fr)))
     print("wrote", OUT, "preview.png zoom.png")
-    # the pack: the sheet into the repo's pack source and, unless --no-pack, the source (skin.cfg + sheet) into the game
-    print("pack sheet", write_pack(fr, PACK_SRC), "->", PACK_SRC)
-    if "--no-pack" not in sys.argv:
-        os.makedirs(PACK, exist_ok=True)
-        for name in ("skin.cfg", "sheet.png"):
-            shutil.copy2(os.path.join(PACK_SRC, name), os.path.join(PACK, name))
-        print("pack copied ->", PACK)
+    # the pack: a PNG per frame into the built-in skin's folder (embedded into the DLL by the next build; the game
+    # shows the new pictures after a build + deploy with the game closed)
+    if "--no-assets" not in sys.argv:
+        print("pack:", write_pack(fr, ASSETS), "pictures ->", ASSETS)
+    else:
+        print("pack:", write_pack(fr, os.path.join(OUTDIR, "pack")), "pictures -> out\\pack (--no-assets)")

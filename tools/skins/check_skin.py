@@ -1,5 +1,5 @@
-# Checks an exported skin pack (sheet.png + skin.cfg) before it is looked at in game. Says what is wrong in plain
-# words; never changes anything. Usage: python check_skin.py <pack folder>
+# Checks a skin pack (skin.cfg + a PNG per frame, or one sheet.png of cells) before it is looked at in game. Says
+# what is wrong in plain words; never changes anything. Usage: python check_skin.py <pack folder>
 # Run by "GK2 Export skin" after each export (the "check =" line of the .gk2export.txt next to the .aseprite file).
 import os, sys
 from PIL import Image
@@ -34,11 +34,30 @@ def main(pack):
     c = cfg(os.path.join(pack, "skin.cfg"))
     cw, ch = (int(v) for v in c.get(("Skin", "canvas"), "96 96").split())
     over = c.get(("Skin", "layer"), "replace").lower() == "over"
-    sheet = Image.open(os.path.join(pack, c.get(("Skin", "sheet"), "sheet.png"))).convert("RGBA")
-    cols = int(c.get(("Skin", "columns"), str(sheet.width // cw)))
-    if sheet.width % cw or sheet.height % ch:
-        warn.append(f"the sheet is {sheet.width}x{sheet.height}, not whole {cw}x{ch} cells")
-    cells = [sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch)) for i in range(len(ORDER))]
+    sheet_file = os.path.join(pack, c.get(("Skin", "sheet"), "sheet.png"))
+    if ("Skin", "sheet") in c or os.path.exists(sheet_file):
+        # one sheet of cells (an Aseprite export)
+        sheet = Image.open(sheet_file).convert("RGBA")
+        cols = int(c.get(("Skin", "columns"), str(sheet.width // cw)))
+        if sheet.width % cw or sheet.height % ch:
+            warn.append(f"the sheet is {sheet.width}x{sheet.height}, not whole {cw}x{ch} cells")
+        cells = [sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch)) for i in range(len(ORDER))]
+    else:
+        # a PNG per frame key (the built-in packs, a generator's output)
+        cells, missing = [], []
+        for k in ORDER:
+            p = os.path.join(pack, k + ".png")
+            if os.path.exists(p):
+                im = Image.open(p).convert("RGBA")
+                if im.size != (cw, ch):
+                    warn.append(f"{k}.png is {im.width}x{im.height}, not the {cw}x{ch} canvas")
+                    im = im.crop((0, 0, cw, ch))
+                cells.append(im)
+            else:
+                missing.append(k)
+                cells.append(Image.new("RGBA", (cw, ch), (0, 0, 0, 0)))
+        if missing:
+            warn.append(f"no picture for {len(missing)} frame(s): {' '.join(missing)} (the {c.get(('Skin', 'base'), 'donkey')} shows there)")
 
     named = {}
     for (sec, k), v in c.items():
@@ -51,9 +70,14 @@ def main(pack):
         b = im.tobytes()
         donkey_cols |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
 
+    # the erase colour of an over skin (docs/skins.md): a pixel of it clears the donkey there and is never drawn
+    e = c.get(("Skin", "erase"), "FF00FF" if over else "none").strip()
+    erase = None if e.lower() == "none" else tuple(int(e[i:i + 2], 16) for i in (0, 2, 4))
+    erased, erased_frames = 0, []
+
     used, partial, empty, strays = {}, 0, [], []
     for k, im in zip(ORDER, cells):
-        px = im.load(); n = 0
+        px = im.load(); n = 0; ne = 0
         for y in range(ch):
             for x in range(cw):
                 p = px[x, y]
@@ -62,12 +86,22 @@ def main(pack):
                 n += 1
                 if p[3] != 255:
                     partial += 1
+                if erase is not None and p[:3] == erase:
+                    ne += 1
+                    continue
                 used.setdefault(p[:3], set()).add(k)
                 if not any(0 <= x + dx < cw and 0 <= y + dy < ch and px[x + dx, y + dy][3] > 0
                            for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy):
                     strays.append(f"{k} ({x},{y})")
         if n == 0:
             empty.append(k)
+        if ne:
+            erased += ne
+            erased_frames.append(k)
+    if erased and not over:
+        warn.append(f"{erased} pixel(s) of the erase colour {e} in a replace skin: only a skin over the donkey erases; they are drawn as that colour")
+    elif erased:
+        info.append(f"erase colour {e}: {erased} pixel(s) in {len(erased_frames)} frame(s) clear the donkey there; those frames are built whole in the game")
 
     hexes = {f"{r:02X}{g:02X}{b:02X}": (r, g, b) for (r, g, b) in used}
     clash = [h for h, rgb in hexes.items() if rgb in donkey_cols]

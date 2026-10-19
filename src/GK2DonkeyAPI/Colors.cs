@@ -439,6 +439,48 @@ namespace GK2DonkeyAPI
             return string.Join(";", parts);
         }
 
+        // A mount region's key as written in a skin.cfg section ("coat", "Eye"), or null.
+        internal static string RegionKeyOf(string name)
+        {
+            foreach (string k in MountRegionKeys) if (k.Equals(name, StringComparison.OrdinalIgnoreCase)) return k;
+            return null;
+        }
+
+        // A region's recolour as plain values: what a skin worn over the donkey declares for the donkey's own regions
+        // under it (skin.cfg [Base.Coat] and the like, docs/skins.md "Recolouring the donkey under the skin"), applied
+        // before the player's settings. The same knobs as the player's, minus the exact swaps.
+        internal sealed class RegionTweak
+        {
+            public float Hue, Saturation = 1f, Brightness = 1f, Contrast = 1f, ColorizeAmount = 1f, OverlayAmount = 0.5f;
+            public string Colorize = "", Tint = "", Overlay = "";
+
+            public bool IsIdentity =>
+                Mathf.Abs(Hue) < 0.01f && Mathf.Abs(Saturation - 1f) < 0.001f && Mathf.Abs(Brightness - 1f) < 0.001f
+                && Mathf.Abs(Contrast - 1f) < 0.001f && (!TryHex(Colorize, out _) || ColorizeAmount <= 0f)
+                && !TryHex(Tint, out _) && (!TryHex(Overlay, out _) || OverlayAmount <= 0f);
+
+            // A line of the section: the key (Hue, Saturation, Brightness, Contrast, Colorize, ColorizeAmount, Tint,
+            // Overlay, OverlayAmount) and its value; false for a key or value it doesn't take.
+            public bool Set(string key, string value)
+            {
+                bool Num(out float f) => float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f);
+                float v;
+                switch (key.ToLowerInvariant())
+                {
+                    case "hue": if (!Num(out v)) return false; Hue = Mathf.Clamp(v, -180f, 180f); return true;
+                    case "saturation": if (!Num(out v)) return false; Saturation = Mathf.Clamp(v, 0f, 3f); return true;
+                    case "brightness": if (!Num(out v)) return false; Brightness = Mathf.Clamp(v, 0f, 3f); return true;
+                    case "contrast": if (!Num(out v)) return false; Contrast = Mathf.Clamp(v, 0f, 3f); return true;
+                    case "colorizeamount": if (!Num(out v)) return false; ColorizeAmount = Mathf.Clamp01(v); return true;
+                    case "overlayamount": if (!Num(out v)) return false; OverlayAmount = Mathf.Clamp01(v); return true;
+                    case "colorize": if (!TryHex(value, out _)) return false; Colorize = value; return true;
+                    case "tint": if (!TryHex(value, out _)) return false; Tint = value; return true;
+                    case "overlay": if (!TryHex(value, out _)) return false; Overlay = value; return true;
+                    default: return false;
+                }
+            }
+        }
+
         // A region's colour function: swaps win; else hue, saturation, brightness, contrast, colorize, tint, overlay.
         private sealed class RegionMap
         {
@@ -448,6 +490,22 @@ namespace GK2DonkeyAPI
             public float CzH, CzS;
             public Color Tint, Overlay;
             public Dictionary<string, string> Swaps;
+
+            // A skin's own recolour of a region under it (RegionTweak): no exact swaps.
+            public RegionMap(RegionTweak t)
+            {
+                Identity = t.IsIdentity;
+                Hue = t.Hue; Sat = t.Saturation; Val = t.Brightness; Contrast = t.Contrast;
+                HasColorize = TryHex(t.Colorize, out Color32 cz) && t.ColorizeAmount > 0f;
+                ColorizeAmount = t.ColorizeAmount;
+                if (HasColorize) Color.RGBToHSV(cz, out CzH, out CzS, out _);
+                HasTint = TryHex(t.Tint, out Color32 tn);
+                Tint = tn;
+                HasOverlay = TryHex(t.Overlay, out Color32 ov) && t.OverlayAmount > 0f;
+                Overlay = ov;
+                OverlayAmount = t.OverlayAmount;
+                Swaps = new Dictionary<string, string>();
+            }
 
             public RegionMap(RegionSettings s)
             {
@@ -883,13 +941,18 @@ namespace GK2DonkeyAPI
                         foreach (RegionDef d in Regions)
                         {
                             RegionMap map = maps[d];
+                            // a skin over the donkey may recolour the donkey's region under it (skin.cfg [Base.<Region>]):
+                            // the skin's map first, the player's on top of it; the skin's holds even with the player's
+                            // colours switched off, since it is the skin's own look
+                            RegionMap under = over && look.Def.BaseRegions != null && look.Def.BaseRegions.TryGetValue(d.Key, out RegionTweak tweak) && !tweak.IsIdentity ? new RegionMap(tweak) : null;
                             foreach (var part in d.Parts)
                             {
                                 if (part.G != g) continue;
                                 foreach (string hex in part.Colors)
                                 {
                                     TryHex(hex, out Color32 src);
-                                    Color32 dst = on ? map.Apply(src) : src;
+                                    Color32 pre = under != null ? under.Apply(src) : src;
+                                    Color32 dst = on ? map.Apply(pre) : pre;
                                     pairs.Add((src, dst));
                                     any |= !Same(src, dst);
                                 }

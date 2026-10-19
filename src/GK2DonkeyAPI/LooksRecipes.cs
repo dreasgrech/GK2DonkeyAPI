@@ -68,18 +68,11 @@ namespace GK2DonkeyAPI
 
         private static void RegisterRecipes()
         {
-            // The earlier five (zebra, ghost, ember, golden, shadow) were recolours and patterns, which the colour
-            // settings cover now; gone 2026-10-18. Hellfire (LooksHellfire.cs) changes the drawing itself.
-            Recipe("hellfire", "Hellfire", Hellfire, HellfireRegions());
-        }
-
-        private static void Recipe(string id, string name, Func<SkinFrame, Color32[]> pixels, Dictionary<string, HashSet<string>> colorRegions = null)
-        {
-            Register(new SkinDef
-            {
-                Id = id, Name = name, Author = "dreas", Version = "1.0", Owner = Plugin.Guid, BuiltIn = true, OwnColours = true,
-                Recipe = pixels, ColorRegions = colorRegions, Report = "a recipe: drawn from the donkey's own frames when first worn",
-            });
+            // No built-in recipe is left: the earlier five (zebra, ghost, ember, golden, shadow) were recolours and
+            // patterns, which the colour settings cover (gone 2026-10-18); Hellfire changed the drawing itself and was
+            // code (LooksHellfire.cs) until 2026-10-19, when it became a pack drawn over the donkey (assets/skins/hellfire,
+            // made by tools/skins/hellfire/make_hellfire.py from the same prototype), the erase colour and the [Base.Coat]
+            // recolour doing what only code could before. Recipes stay for mods (Mounts.Looks.RegisterRecipe).
         }
 
         // The base's own sprites by frame key, found once from its atlases (the sprites loaded while any view of it

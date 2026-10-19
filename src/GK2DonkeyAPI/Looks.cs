@@ -162,6 +162,15 @@ namespace GK2DonkeyAPI
             // sheet is built (Loaded.Put); this only says which of them aren't Coat.
             internal Dictionary<string, HashSet<string>> ColorRegions;
             internal bool Over;               // true: drawn over the base, which stays visible
+            // A skin over the base may erase from it: every pixel of this colour in a picture makes the base transparent
+            // there (the ears gone under horns, the tail gone under another). Such a frame is built whole at load (the
+            // base's own frame with the holes, the picture's other pixels on top) and drawn in the base's place; a frame
+            // without it stays a plain overlay. FF00FF by default for layer = over; "erase = none" switches it off.
+            internal Color32? Erase;
+            // A skin over the base may recolour the base's own regions under it: skin.cfg [Base.Coat], [Base.Eye] ...
+            // with the player's knobs (Brightness, Saturation, Colorize ...), applied before the player's settings
+            // (Colors.Rebuild). An ash coat under Hellfire's horns, without a pixel of the game's art in the pack.
+            internal Dictionary<string, Colors.RegionTweak> BaseRegions;
             internal string KindId = Kinds.DonkeyId;   // the mount kind this skin is a look of (docs/mounts-design.md)
             internal Kinds.KindDef DeclaredKind;       // a pack's [Mount] section: declared when the skin registers
             private Kinds.KindDef kind;
@@ -450,7 +459,7 @@ namespace GK2DonkeyAPI
             var unknown = new List<string>();
             int format = 1;
             string baseId = Donkey.Id, sheet = null, frontSheet = null, frames = null;
-            bool pivotGiven = false;
+            bool pivotGiven = false, eraseGiven = false;
             string section = "skin";
             var mount = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
@@ -468,7 +477,7 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors") unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -476,6 +485,16 @@ namespace GK2DonkeyAPI
                 string key = line.Substring(0, eq).Trim(), value = line.Substring(eq + 1).Trim();
                 int hash = value.IndexOf('#');
                 if (hash >= 0) value = value.Substring(0, hash).Trim();
+                if (section.StartsWith("base.", StringComparison.Ordinal))
+                {
+                    // [Base.Coat] Brightness = 0.5 ...: the base's region under an over skin, recoloured by the skin
+                    string region = Colors.RegionKeyOf(section.Substring(5));
+                    if (region == null) { d.Report += $"[{section}]: no such region of the {d.Base.Id} ({string.Join(", ", Colors.MountRegionKeys)}); ignored; "; continue; }
+                    if (d.BaseRegions == null) d.BaseRegions = new Dictionary<string, Colors.RegionTweak>(StringComparer.Ordinal);
+                    if (!d.BaseRegions.TryGetValue(region, out Colors.RegionTweak tweak)) d.BaseRegions[region] = tweak = new Colors.RegionTweak();
+                    if (!tweak.Set(key, value)) d.Report += $"[{section}] {key} = {value}: not a recolour knob or value, ignored; ";
+                    continue;
+                }
                 switch (section)
                 {
                     case "tuning": (d.Tuning ?? (d.Tuning = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
@@ -498,6 +517,12 @@ namespace GK2DonkeyAPI
                     case "base": baseId = value; break;
                     case "kind": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); break;
                     case "layer": d.Over = value.Equals("over", StringComparison.OrdinalIgnoreCase); break;
+                    case "erase":
+                        eraseGiven = true;
+                        if (value.Equals("none", StringComparison.OrdinalIgnoreCase)) d.Erase = null;
+                        else if (Colors.TryHex(value, out Color32 ec)) d.Erase = ec;
+                        else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
+                        break;
                     case "mount": d.KindId = value; break;
                     case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); break;
                     case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; break;
@@ -524,6 +549,12 @@ namespace GK2DonkeyAPI
             {
                 d.PivotX = d.CanvasW / 2f;
                 d.PivotY = d.CanvasH / 2f;
+            }
+            if (d.Over && !eraseGiven) d.Erase = new Color32(255, 0, 255, 255);
+            if (!d.Over && d.Erase != null)
+            {
+                d.Report += "erase is for layer = over only, ignored; ";
+                d.Erase = null;
             }
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
@@ -1086,6 +1117,11 @@ namespace GK2DonkeyAPI
             internal Queue<string> ToBuild;     // the keys still to produce
             internal Func<string, Pixels> Produce;
             internal int Bad, NotInSheet;
+            // The frames an over skin built whole (its erase colour cleared the base there): drawn in the base's place
+            // instead of over it (Rig.ApplyPart hides the part for them). By key while building, by sprite after.
+            internal readonly HashSet<string> WholeKeys = new HashSet<string>(StringComparer.Ordinal);
+            internal readonly HashSet<Sprite> Whole = new HashSet<Sprite>();
+            internal int Erased;                // pixels the erase colour cleared, over every frame (the loaded line)
             // The picture's top at the pivot column per key (a row from the bottom; -1: nothing drawn there) and per
             // sheet sprite: where a rider sits on a skin that says "seat = picture" (Rig.TrySeatTop).
             private readonly Dictionary<string, int> seatTopByKey = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -1177,6 +1213,7 @@ namespace GK2DonkeyAPI
                         sp.name = "gk2skin " + Def.Id + " " + key;
                         Frames[key] = sp;
                         if (seatTopByKey.TryGetValue(key, out int top)) SeatTopBySprite[sp] = top;
+                        if (WholeKeys.Contains(key)) Whole.Add(sp);
                     }
                     cells.Clear();
                 }
@@ -1329,6 +1366,7 @@ namespace GK2DonkeyAPI
                     };
                     building.Add(l);
                 }
+                if (d.Over && d.Erase != null && l.Produce != null) WrapErase(l, gamePrefix);
             }
             catch (Exception e)
             {
@@ -1403,6 +1441,66 @@ namespace GK2DonkeyAPI
             internal string Why;
         }
 
+        // ------------------------------------------------------------------ the erase colour of an over skin
+
+        // Every picture of an over skin passes here as it is produced: one with pixels of the skin's erase colour is
+        // built whole, the base's own frame (read from the atlas as a recipe reads it) with those pixels transparent
+        // and the picture's other pixels on top, and the key is noted (Loaded.WholeKeys: drawn in the base's place).
+        // A picture without the colour is left as it is, a plain overlay. The erase pixels themselves are never
+        // drawn: a frame whose base can't be read (not in memory, another canvas) gets them cleared, with a line.
+        private static void WrapErase(Loaded l, string gamePrefix)
+        {
+            Func<string, Pixels> inner = l.Produce;
+            Color32 erase = l.Def.Erase.Value;
+            bool said = false;
+            l.Produce = key =>
+            {
+                Pixels px = inner(key);
+                if (px.P == null) return px;
+                int n = 0;
+                for (int i = 0; i < px.P.Length; i++)
+                {
+                    Color32 c = px.P[i];
+                    if (c.a != 0 && c.r == erase.r && c.g == erase.g && c.b == erase.b) n++;
+                }
+                if (n == 0) return px;
+                SkinFrame f = null;
+                string why = null;
+                if (key.StartsWith(FrontKey, StringComparison.Ordinal)) why = "the front layer can't erase";
+                else
+                {
+                    SkinBase b = l.Def.Base;
+                    FindGameFrames(b, gamePrefix);
+                    if (!gameFrames.TryGetValue(key, out Sprite s) || s == null) why = "the base's frame is not in memory";
+                    else
+                    {
+                        f = ReadFrame(key, s, b);
+                        if (f == null) why = "the base's frame could not be read";
+                        else if (f.W != px.W || f.H != px.H) { why = $"the base's canvas is {f.W}x{f.H}, the picture {px.W}x{px.H}"; f = null; }
+                    }
+                }
+                var outp = new Pixels { W = px.W, H = px.H, P = f != null ? (Color32[])f.P.Clone() : new Color32[px.P.Length] };
+                for (int i = 0; i < px.P.Length; i++)
+                {
+                    Color32 c = px.P[i];
+                    if (c.a == 0) { if (f == null) outp.P[i] = default; continue; }
+                    if (c.r == erase.r && c.g == erase.g && c.b == erase.b) outp.P[i] = default;  // the hole
+                    else outp.P[i] = c;                                                          // the skin's pixel over the base's
+                }
+                if (f != null)
+                {
+                    l.WholeKeys.Add(key);
+                    l.Erased += n;
+                }
+                else if (!said)
+                {
+                    said = true;
+                    Plugin.Log.LogWarning($"Looks: skin '{l.Def.Id}', picture {key}: its erase colour can't clear the {l.Def.Base.Id} ({why}); those pixels are left out. Said once.");
+                }
+                return outp;
+            };
+        }
+
         private static void Release(Loaded l)
         {
             if (l == null || --l.Refs > 0) return;
@@ -1464,7 +1562,7 @@ namespace GK2DonkeyAPI
                     {
                         building.RemoveAt(k);
                         l.Finish();
-                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (the " + l.Def.Base.Id + " shows there)" : "")} ({l.SizeNote}).");
+                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (the " + l.Def.Base.Id + " shows there)" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}).");
                     }
                 }
             }
@@ -1976,7 +2074,7 @@ namespace GK2DonkeyAPI
                         else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2); // above the body overlay too
                     }
                 }
-                bool hide = show && !skin.Def.Over;
+                bool hide = show && (!skin.Def.Over || skin.Whole.Contains(mine)); // a whole frame (the erase colour) takes the part's place
                 if (hide)
                 {
                     if (!part.forceRenderingOff) part.forceRenderingOff = true;
