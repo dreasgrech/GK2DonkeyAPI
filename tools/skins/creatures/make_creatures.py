@@ -725,16 +725,19 @@ def frames_for(fn):
 # creature drawn in the donkey's coordinates sits 16 px in from each edge)
 # name, drawing function, title, canvas, the mount kind (id, name) the skin is a look of (docs/mounts-design.md)
 # (the Blue Dragon, dragon_blue above, was dropped from the shipped set 2026-10-19: the player's colours do that)
-CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm")), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail")),
-             ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat")),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon")))
+# name, drawing function, title, canvas, the mount kind (id, name), the seat row: the canvas row (from the top) the
+# rider's hip sits on for every player (docs/seat-investigation.md: 46 is the donkey's own seat on the 96 canvas, so a
+# creature drawn to the donkey's measures says 46; the 128 canvas adds 16; the snail sits 3 px lower on its shell)
+CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 46), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 48),
+             ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 46),
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 62))
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins/creatures -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
 assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
-for name, fn, title, size, (kind, kind_name) in CREATURES:
+for name, fn, title, size, (kind, kind_name), seat_row in CREATURES:
     if only and name != only:
         continue
     W = H = size
@@ -753,7 +756,8 @@ for name, fn, title, size, (kind, kind_name) in CREATURES:
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\r\n").write(
                 "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
                 "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
-                "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nmount = " + kind + "\n"
+                "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
+                + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + kind + "\n"
                 "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
                 "[Mount]\nid = " + kind + "\nname = " + kind_name + "\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
     print(name, len(fr), "pictures ->", ", ".join(outs))

@@ -34,6 +34,17 @@ For mod authors:
   The pack checker and the review page honour it; a self-test wears a pack that erases the ears. The step towards
   every skin being a pack (Hellfire next: the user, "for the concept of a mount skin we should do this drawing-over
   thing").
+- **A mount's seat is its skin's row now** (API 0.32.0; the user: "ok let's go for it since it's part of the
+  foundation for more mounts"; docs/seat-investigation.md §8). A skin may say `seat = <row>`, the canvas row (from
+  the top) the rider's hip sits on; `MountSkinDef.SeatRow` for code skins. The rider sits there in every frame for
+  every player, whatever their AutoSeat setting (the picture path Gerry uses, generalised, with the walk bob), and
+  the mount's `SeatAdjustPx` nudges from it, so one declaration gives every player the same seat; before, a mount's
+  `SeatOffset` reached only AutoSeat-off players and its `SeatAdjustPx` only AutoSeat-on ones. The rat and the worm
+  say 46 (the donkey's own seat on the 96 canvas, measured in game: the first guess of 49 sat 3 px low, with
+  both modes already equal), the snail 48 (3 px lower, its `SeatOffset` gone; 49 sat one pixel low in the second run), the dragon 62 (the 128 canvas); the creature generator writes the row; the scan refuses a row outside the
+  canvas and a mount that sets `SeatOffset`; the example mod's checker says 46. The game's own donkey art declares
+  no row: a default player's seat is untouched (the readout self-test asserts 6.6 px). The Mounts tab says when a
+  skin declares its row.
 - **A built-in's reload and undo on the Mounts tab never took** (the user, 2026-10-20: "I changed torso down to
   -4 and pressed undo and it stayed yellow"; the note said "Not reloaded: Value cannot be null. Parameter name:
   path1"): the reload stamps the pack's folder for the auto-reload watch, and an embedded built-in has no folder,

@@ -1357,6 +1357,7 @@ namespace GK2DonkeyAPI
             bool autoWas = ride.AutoSeat.Entry.Value;
             const float px = 0.02f * 1.6667f; // Mount.PxWorldY: one art pixel along the seat's axis
             var lines = new List<string>();
+            var seats = new Dictionary<string, float>(StringComparer.Ordinal); // "<id>|off" / "<id>|on" -> the seat in px
             string[] skins = { "", "hellfire", "royal-parade", "rat", "snail", "worm", "dragon", "gerry" };
             foreach (bool auto in new[] { false, true })
             {
@@ -1389,9 +1390,10 @@ namespace GK2DonkeyAPI
                     yield return Until(() => Mounts.IsMounted, 5f);
                     yield return Frames(8); // the seat settles (the picture seat, the auto seat, the bob)
                     float seat = a.I.TestSeatApplied;
+                    seats[(id.Length == 0 ? "donkey" : id) + (auto ? "|on" : "|off")] = seat / px;
                     string who(string key) => a.Tuning.IsSet(key) ? $"{key} = {a.Tuning.Get<object>(key)} ({(a.Tuning.SetBy(key) == Looks.TuningOwner ? "the mount" : a.Tuning.SetBy(key))})" : $"{key} = the player's {(key == "SeatOffset" ? ride.SeatOffset.Entry.Value.ToString("0.00") : ride.SeatAdjustPx.Entry.Value.ToString())}";
-                    bool picture = a.I.LooksRig.TrySeatTop(out _);
-                    lines.Add($"AutoSeat {(auto ? "on " : "off")} | {(id.Length == 0 ? "donkey" : id),-13} kind {a.Kind,-7} | seat {seat / px,6:0.0} px ({seat:0.000}) | {(picture ? "seat = picture; " : "")}{who("SeatOffset")}; {who("SeatAdjustPx")}");
+                    string seatDecl = a.I.LooksRig.TrySeatTop(out _, out bool fixedRow) ? (fixedRow ? $"seat = {Looks.Find(id)?.SeatRow}; " : "seat = picture; ") : "";
+                    lines.Add($"AutoSeat {(auto ? "on " : "off")} | {(id.Length == 0 ? "donkey" : id),-13} kind {a.Kind,-7} | seat {seat / px,6:0.0} px ({seat:0.000}) | {seatDecl}{who("SeatOffset")}; {who("SeatAdjustPx")}");
                     Mounts.Dismount("self-test");
                     yield return Until(() => !Mounts.IsMounted, 5f);
                     a.Remove();
@@ -1401,6 +1403,15 @@ namespace GK2DonkeyAPI
             ride.AutoSeat.Entry.Value = autoWas;
             foreach (string l in lines) Info(l);
             Check(lines.Count == skins.Length * 2, $"{lines.Count} of {skins.Length * 2} rides read out (the lines above: docs/seat-investigation.md)");
+            // the seat row (docs/seat-investigation.md, option A, built 2026-10-20): a skin that declares one seats the
+            // rider the same whatever the player's AutoSeat; the game's own donkey art declares none and keeps the
+            // player's two seats exactly as they were (6.6 px off, the compatibility rule)
+            float At(string k) => seats.TryGetValue(k, out float v) ? v : float.NaN;
+            Check(Math.Abs(At("donkey|off") - 6.6f) < 0.3f, $"the plain donkey's manual seat is untouched: {At("donkey|off"):0.0} px (6.6)");
+            foreach (string id in new[] { "rat", "worm", "dragon" })
+                Check(Math.Abs(At(id + "|off") - 6.6f) < 0.8f && Math.Abs(At(id + "|on") - At(id + "|off")) < 0.3f, $"{id}: seat = 46 (62 on the 128 canvas) seats the rider where the donkey's seat was, in both modes ({At(id + "|off"):0.0} / {At(id + "|on"):0.0} px)");
+            Check(Math.Abs(At("snail|off") - 3.5f) < 0.8f && Math.Abs(At("snail|on") - At("snail|off")) < 0.3f, $"snail: seat = 48 seats the rider 3 px lower in both modes ({At("snail|off"):0.0} / {At("snail|on"):0.0} px)");
+            Check(Math.Abs(At("gerry|on") - At("gerry|off")) < 0.3f, $"gerry: the picture seat is the same in both modes ({At("gerry|off"):0.0} / {At("gerry|on"):0.0} px)");
         }
 
         private static IEnumerator GameCreature()

@@ -2964,11 +2964,13 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 float? seat;
-                if (LooksRig.TrySeatTop(out Vector3 pictureTop))
+                if (LooksRig.TrySeatTop(out Vector3 pictureTop, out bool fixedRow))
                 {
                     // A skin that says "seat = picture" (Gerry): the rider sits on its own picture, this frame's top at
-                    // the pivot column, whatever the player's seat settings; SeatAdjustPx still adjusts.
+                    // the pivot column; or "seat = <row>": a fixed row of its canvas, plus the walk bob as the manual
+                    // seat has it. Both whatever the player's seat settings; SeatAdjustPx still adjusts.
                     seat = SeatOn(pictureTop);
+                    if (seat.HasValue && fixedRow) seat = seat.Value + RiderBobPx(0) * PxWorldY;
                 }
                 else if (S.AutoSeat.Value)
                 {

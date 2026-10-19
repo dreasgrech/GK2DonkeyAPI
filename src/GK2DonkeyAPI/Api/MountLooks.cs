@@ -200,6 +200,10 @@ namespace GK2DonkeyAPI.Api
         // (a creature that should stand closer to the shafts). Null: the same as riding.
         public Vector2 Offset;
         public Vector2? CartOffset;
+        // The canvas row (from the top) the rider's hip sits on, every frame and for every player whatever their
+        // AutoSeat setting; the mount's SeatAdjustPx nudges from it. -1: the base's seat (the player's own keys).
+        // A pack says the same with "seat = <row>" (docs/skins.md, docs/seat-investigation.md).
+        public int SeatRow = -1;
         // The skin's own values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, TorsoOffsetPx, ...),
         // typed as the key is: set on the wearer as overrides owned by the skin while it is worn (a key another mod has
         // set on that donkey is left to it), cleared when it comes off, never saved. Null: none.
@@ -217,7 +221,7 @@ namespace GK2DonkeyAPI.Api
                 Id = Id, Name = string.IsNullOrEmpty(Name) ? Id : Name, Author = Author, Version = Version, Owner = owner,
                 OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
                 KindId = string.IsNullOrWhiteSpace(Mount) ? MountKinds.DonkeyId : Mount.Trim(),
-                OffsetRide = Offset, OffsetCart = CartOffset ?? Offset,
+                OffsetRide = Offset, OffsetCart = CartOffset ?? Offset, SeatRow = SeatRow,
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
                 Report = "from code" + (Tuning != null && Tuning.Count > 0 ? ", " + Tuning.Count + " tuning key(s)" : ""),
             };

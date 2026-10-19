@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.31.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.32.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -852,6 +852,8 @@ History:
 - 0.29.1: no API change (the public surface is as in 0.29.0). Performance: the Mods-menu donkey picture and its
   labelled lists no longer look the window up while playing (2-3 ms frames four times a second), and a cart left
   standing and hitched again is no longer kept in memory ([performance.md](performance.md)).
+- 0.32.0: `MountSkinDef.SeatRow` (the canvas row the rider's hip sits on, for every player whatever their AutoSeat;
+  a pack's `seat = <row>`; docs/seat-investigation.md). Mounts tab: a built-in's Reload and Undo work, and log.
 - 0.31.0: `MountSettingsPage.Heading` (a heading row inside a section; a group of its own in the look bar, which now
   deals its groups to the column that leaves the left closest to half the rows). `Color` carries a `MovedKey` alias of
   its colour key over to its `<key>Lightness` key. Saddle Up 0.11.0 regrouped its page with it (Keys, Mount, Colours,

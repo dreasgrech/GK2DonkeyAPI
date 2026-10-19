@@ -129,7 +129,27 @@ the same seat to every player, and it reuses a path that exists and is tested (G
 construction for the first two), so A changes nothing for them unless they declare a row; the snail and the
 example mod are the two that need it, and Gerry already has it.
 
-## 7. What was done in this round
+## 8. Built: option A (2026-10-20, API 0.32.0)
+
+The user: *"ok let's go for it since it's part of the foundation for more mounts."* A skin may say `seat = <row>`
+(the canvas row, from the top, the rider's hip sits on) next to the existing `seat = picture`; `MountSkinDef.SeatRow`
+for code skins. The rig gives the seat tick that row's world point every frame (`TrySeatTop`, the picture path
+generalised), the tick adds the walk bob to a fixed row as the manual seat does, and the mount's `SeatAdjustPx`
+nudges from it, so the seat is the same for every player whatever their AutoSeat. Calibration from §3: the auto
+path's back line is canvas row 38 and seats the hip 17.5 px up, which predicted row 49 for the shipped 6.6 px;
+the first in-game run put row 49 at 3.5 px (the row path counts its pixel edges differently from the auto path's
+"+2"), so the calibration is **row 46 = the donkey's seat**: the four drawn creatures say 46 (rat, worm), 48 (the
+snail, 3 px lower, replacing its `SeatOffset = 0.1`) and 62 (the dragon's 128 canvas adds 16). That first run
+already proved the point: every creature sat at the same height in both modes (3.5 / 3.5, -0.5 / -0.5). The
+second run passed the rat, worm and dragon at 46 and put the snail at 49 one pixel low (2.5 px), so it says 48. The generator writes the row into a new creature's
+cfg and knows it per creature; the scan refuses a row outside the canvas and a mount that still sets `SeatOffset`;
+the example mod's checker declares 46. The game's own donkey art declares no row, so a default player's seat is
+untouched: the readout self-test asserts the plain donkey at 6.6 px off, the creatures within 0.3 px of each other
+in both modes, the snail 3 px lower. **Proved in game (the third readout run, 2026-10-20 night, log clean):** the
+plain donkey 6.6 px off / 11.5 on as before; rat, worm and dragon 6.5 / 6.5 px; the snail 3.5 / 3.5 px; Gerry
+25.5 / 25.5 px. The second column of §3's table equals the third for every mount that declares a row.
+
+## 7. What was done in this round (before §8)
 
 - The readout self-test and `Mount.Instance.TestSeatApplied` (dev only).
 - docs/reference.md's seat defaults corrected to the shipped values.

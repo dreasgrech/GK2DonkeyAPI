@@ -147,7 +147,8 @@ other mounts too"). Hellfire and Royal Parade are the two worked examples; a thi
 2. **The pack itself goes to `src/GK2DonkeyAPI/assets/skins/<id>/`**: `skin.cfg` (by hand, commented, kept by the
    generator, in the one layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base,
    `erase` when it takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the
-   player's colours reach, `mount =` naming the mount and, for a creature of its own, the `[Mount]` block last with
+   player's colours reach, `seat = <row>` for the canvas row the rider's hip sits on (the generator knows it: 46 on
+   the 96 canvas is the donkey's own seat), `mount =` naming the mount and, for a creature of its own, the `[Mount]` block last with
    id, name, author, version, cart, foals and its tuning, every key in one section) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`), only our pixels, nothing of the game's art. The DLL build
    embeds the folder (`GK2DonkeyAPI.csproj`, `assets\skins\**`); no file is copied into the game.

@@ -232,7 +232,8 @@ namespace GK2DonkeyAPI
             internal GameSource Game;                         // another game character's frames, mapped and scaled (LooksGame.cs)
             // skin.cfg "seat = picture": the rider sits on this skin's own picture (its top at the pivot column, per
             // frame, so he rides a hop), whatever the player's seat settings; else the base's back line / the seat height.
-            internal bool SeatFromPicture;
+            internal bool SeatFromPicture;        // seat = picture: the rider sits on this frame's picture top (Gerry)
+            internal int SeatRow = -1;             // seat = <row>: the canvas row (from the top) the rider's hip sits on, every frame, whatever the player's AutoSeat (docs/seat-investigation.md option A)
 
             internal bool OwnsSheet => Sprites == null;
         }
@@ -534,7 +535,11 @@ namespace GK2DonkeyAPI
                     case "columns": int.TryParse(value, out d.SheetColumns); break;
                     case "frames": frames = value; break;
                     case "source": source = value.ToLowerInvariant(); break;
-                    case "seat": d.SeatFromPicture = value.Equals("picture", StringComparison.OrdinalIgnoreCase); break;
+                    case "seat":
+                        if (value.Equals("picture", StringComparison.OrdinalIgnoreCase)) d.SeatFromPicture = true;
+                        else if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int seatRow)) d.SeatRow = seatRow;
+                        else d.Report += "seat = " + value + " is neither picture nor a row number, ignored; ";
+                        break;
                     default: unknown.Add(key); break;
                 }
             }
@@ -2168,14 +2173,32 @@ namespace GK2DonkeyAPI
             // Where the rider sits on a skin that says "seat = picture": the top of the body picture at the pivot
             // column, this frame, in the world (the overlay's transform carries the trim and the skin's offset, and the
             // view's scale and stretch). False when the skin doesn't say so, isn't shown, or draws nothing there.
-            internal bool TrySeatTop(out Vector3 world)
+            // The skin's own seat, if it declares one: seat = picture (this frame's picture top at the pivot column,
+            // Gerry) or seat = <row> (a fixed canvas row, from the top: the rider's hip sits on it in every frame, so
+            // the mount's seat is the same for every player whatever their AutoSeat; docs/seat-investigation.md).
+            // fixedRow says which, so the caller adds the walk bob to a fixed row as the manual seat does.
+            internal bool TrySeatTop(out Vector3 world) => TrySeatTop(out world, out _);
+
+            internal bool TrySeatTop(out Vector3 world, out bool fixedRow)
             {
                 world = default;
-                if (skin == null || !skin.Def.SeatFromPicture || slots == null || slots.Length == 0) return false;
+                fixedRow = false;
+                if (skin == null || slots == null || slots.Length == 0) return false;
+                SkinDef def = skin.Def;
+                if (!def.SeatFromPicture && def.SeatRow < 0) return false;
                 SpriteRenderer ov = slots[0].Overlay;
                 if (ov == null || !ov || !ov.enabled || ov.sprite == null) return false;
-                if (!skin.SeatTopBySprite.TryGetValue(ov.sprite, out int top) || top < 0) return false;
-                world = ov.transform.TransformPoint(new Vector3(0f, (top + 1 - skin.Def.PivotY) / skin.Def.Base.PixelsPerUnit, 0f));
+                int top;
+                if (def.SeatFromPicture)
+                {
+                    if (!skin.SeatTopBySprite.TryGetValue(ov.sprite, out top) || top < 0) return false;
+                }
+                else
+                {
+                    top = Mathf.Clamp(def.CanvasH - 1 - def.SeatRow, 0, def.CanvasH - 1); // the row counted from the bottom, as the picture top is
+                    fixedRow = true;
+                }
+                world = ov.transform.TransformPoint(new Vector3(0f, (top + 1 - def.PivotY) / def.Base.PixelsPerUnit, 0f));
                 return true;
             }
 

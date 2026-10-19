@@ -396,6 +396,7 @@ class GK2DonkeyAPI.Api.MountSkinDef
   field bool PaletteColours
   field float PivotX
   field float PivotY
+  field int SeatRow
   field GK2DonkeyAPI.Api.IMountSkinSource Source
   field System.Collections.Generic.Dictionary<string, object> Tuning
   field string Version

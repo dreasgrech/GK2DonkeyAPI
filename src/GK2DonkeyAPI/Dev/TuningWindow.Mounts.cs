@@ -146,6 +146,7 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             GUILayout.Label("Each style has its own values; the other style's rows show after a style switch.", small);
             if (skin != null && skin.SeatFromPicture) GUILayout.Label("This skin says seat = picture: the rider sits on its own picture, this frame's top, and 'Torso down / up' adjusts from there. The torso height row is ignored on it.", small);
+            else if (skin != null && skin.SeatRow >= 0) GUILayout.Label($"This skin says seat = {skin.SeatRow}: the rider's hip sits on row {skin.SeatRow} of its picture for every player, whatever their AutoSeat, and 'Torso down / up' adjusts from there. The torso height row is ignored on it.", small);
             else if (!Plugin.For(ride ? MountStyle.Ride : MountStyle.Cart).AutoSeat.Entry.Value) GUILayout.Label("Your Riding tab has AutoSeat off (the default for everyone): the seat is the torso height, and 'Torso down / up' does nothing. Set the mount's torso height here, or give its skin seat = picture.", small);
             if (Mount.IsMounted && GUILayout.Button(Tip(ride ? "Go to cart" : "Go to riding", "Dismounts and mounts again in the other style, in place, as on the Riding tab."), Wd(SliderW)))
             {

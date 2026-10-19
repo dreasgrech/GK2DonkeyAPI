@@ -8,8 +8,8 @@ reload; the Mounts tab's Save keeps the comments of the mount sections; `effect_
 ("Never" is only the menu's word). Corrections to the text below: a skin has no `foals =` key (§3: the kind's
 `Foals` and the player's FoalsWearSkin decide); a withdrawn skin leaves its kind listed (§8, as the Status says);
 Gerry (a game-creature skin) declares its mount like the four drawn creatures; the recipes and the blue dragon of
-the §1 table are gone, Royal Parade and Hellfire are the donkey's two skins. Open: a mount's seat with the player's
-AutoSeat off (audit 3.1, under investigation).
+the §1 table are gone, Royal Parade and Hellfire are the donkey's two skins. A mount's seat is its skin's `seat = <row>` since API 0.32.0 (the same for every player whatever their
+AutoSeat; docs/seat-investigation.md §8), the mount's `SeatAdjustPx` nudging from it.
 
 Status: **built 2026-10-17 evening** (API 0.30.0 / Saddle Up 0.10.0, the same release as skins and effects): Kinds.cs,
 Api/MountKinds.cs, the kind on `Looks.SkinDef`, `[Mount]` sections, the merged tuning per style, the cart rule at the three

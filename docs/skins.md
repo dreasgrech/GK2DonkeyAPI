@@ -47,6 +47,9 @@ layer = replace     # replace: instead of the donkey. over: on top of the donkey
                     # horns); FF00FF unless set, "none" switches it off (see "A skin worn over the donkey")
 canvas = 96 96      # every picture is this size (see below)
 # pivot = 48 48     # where the base's pivot is on the canvas (default: its middle; a bigger canvas keeps the donkey centred)
+# seat = 46         # the canvas row (from the top) the rider's hip sits on, every frame, for EVERY player (their AutoSeat
+                    # setting stops mattering on this skin); 46 is where the donkey's own seat is on the 96 canvas. Or
+                    # "picture" for this frame's picture top (Gerry). Without it the seat is the player's own (docs/seat-investigation.md)
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
 mount = donkey      # the mount this skin is a look of: donkey, or a mount declared below or by another pack or mod
                     # (the baby donkeys wear the skin when the mount has foals and the player keeps that on)
@@ -195,7 +198,8 @@ mount = gerry
 canvas = 160 160      # room for the scaled frames (a 29-pixel hop at 3x is 87 above the ground row)
 source = game
 seat = picture        # the rider sits on this skin's own picture (its top at the pivot column, per frame), whatever
-                      # the player's seat settings; without it the seat is the player's (AutoSeat off: a fixed height)
+                      # the player's seat settings; "seat = <row>" is the same with a fixed row of the canvas (the four
+                      # drawn creatures say 46, 48 or 62); without it the seat is the player's (AutoSeat off: a fixed height)
 
 [Game]
 prefix = 0901_        # the character's preset prefix on its sprites (the donkey's is 0301_)

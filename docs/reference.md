@@ -105,8 +105,8 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | `RiderOffsetPx` | -6 | -8 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
 | `TorsoOffsetPx` | -3 | 0 | Upper body only along the donkey; the legs stay put. |
 | `AutoSeat` | false | false | Torso height computed from the sprites (hip on the donkey's back line). Off: `SeatOffset`. |
-| `SeatAdjustPx` | -6 | 0 | With `AutoSeat` (or a skin that says `seat = picture`): fine adjustment in art pixels (positive = higher). Without AutoSeat the seat is `SeatOffset` alone, so a mount that sets this key moves nothing for a default player (docs/seat-investigation.md). |
-| `SeatOffset` | 0.22 | 0.22 | Without `AutoSeat`: torso height in world units (0 = standing on the ground; 0.0333 per art pixel). The one seat key a mount can set that reaches every player today (the snail does). |
+| `SeatAdjustPx` | -6 | 0 | Fine adjustment in art pixels (positive = higher) on top of the seat: with `AutoSeat`, or on a skin that declares its seat (`seat = <row>` or `seat = picture`, every built-in creature does). A mount's own `SeatAdjustPx` nudges from its skin's row for every player. Without AutoSeat on the plain donkey the seat is `SeatOffset` alone (docs/seat-investigation.md). |
+| `SeatOffset` | 0.22 | 0.22 | Without `AutoSeat`, on a skin without a seat row: torso height in world units (0 = standing on the ground; 0.0333 per art pixel). A player's key; a mount declares its seat as its skin's row instead. |
 | `Bob` | true | false | Rider moves up and down with the donkey's back through its walk cycle (the back moves 1 px either way). |
 | `BobScale` / `BobLagFrames` | 1.5 / 1 | 1 / 0 | With `Bob`: the rider bobs this many times the back's movement, this many walk frames behind it (his weight follows the step). 1 / 0 = exactly with the back, as before 0.21.0 ([rider-motion.md](rider-motion.md)). |
 | `HandsSteady` / `HandsSwayPx` | 0.5 / 0.5 | 0 / 0 | While walking: the share of the body's bob the hands (the arm layer) don't follow, and how far (art px) they move forward and back with each stride. |
@@ -325,7 +325,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.31.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.32.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

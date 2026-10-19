@@ -28,9 +28,9 @@ namespace GK2DonkeySkins
             }
             registered.Add(Mounts.Looks.RegisterRecipe(Guid, "sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
             // A mount kind of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
-            // sits the rider two pixels higher (SeatAdjustPx: with the player's AutoSeat on or a skin that says
-            // seat = picture; with AutoSeat off, the default, the seat is the player's SeatOffset: docs/reference.md),
-            // and carries one ability: it burns (the built-in Hellfire) while ridden.
+            // sits the rider two pixels higher than its skin's seat row (SeatAdjustPx nudges from the row the skin
+            // declares, for every player; docs/seat-investigation.md), and carries one ability: it burns (the built-in
+            // Hellfire) while ridden.
             registered.Add(Mounts.Kinds.Register(Guid, new MountKindDef
             {
                 Id = "checker-beast",
@@ -48,6 +48,7 @@ namespace GK2DonkeySkins
                 Author = "dreas",
                 Version = "0.1",
                 Mount = "checker-beast",
+                SeatRow = 46,               // the rider's hip on row 46 of the 96 canvas (the donkey's own seat), for every player
                 Source = new CheckerSource(),
             }));
             Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, burns while ridden); pick them in Saddle Up's Mount section.");
