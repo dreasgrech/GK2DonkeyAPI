@@ -1616,6 +1616,17 @@ namespace GK2DonkeyAPI
                     Check(!float.IsNaN(hipRow) && Math.Abs(hipRow - 68f) < 2.5f, $"the rider's hip is on the declared row ({hipRow:0.0} vs 68)");
                     SpriteRenderer partNow = a.I.LooksRig.TestPart();
                     if (partNow != null) Info($"depths in the body part's space (local z, negative = towards the camera): the keeper {partNow.transform.InverseTransformPoint(keeper.transform.position).z:0.000}, the front picture {partNow.transform.InverseTransformPoint(front.transform.position).z:0.000}, the body overlay {partNow.transform.InverseTransformPoint(ov.transform.position).z:0.000}");
+                    // the nearest of his sprites decides the lift (Looks.Rig.FrontLift): each drawn one, in the same space
+                    SpriteRenderer[] his = a.I.KeeperRenderers;
+                    if (partNow != null && his != null)
+                    {
+                        var depths = new List<string>();
+                        foreach (SpriteRenderer sr in his)
+                        {
+                            if (sr != null && sr && sr.enabled && sr.sprite != null) depths.Add($"{sr.name} {partNow.transform.InverseTransformPoint(sr.transform.position).z:0.000}");
+                        }
+                        Info($"the keeper's drawn sprites in the body part's space: {string.Join(", ", depths)}; the nearest {a.I.KeeperNearestDepth(partNow.transform):0.000}, the front picture {partNow.transform.InverseTransformPoint(front.transform.position).z:0.000} (lift {Looks.Rig.FrontLift} past the nearest)");
+                    }
                     DrawnAlone frontAlone = RenderAlone(front, at: at), bodyAlone = RenderAlone(ov, at: at), keeperAlone = RenderAlone(keeper, at: at);
                     DrawnAlone frontWith = RenderAlone(front, with: keeper, at: at), bodyWith = RenderAlone(ov, with: keeper, at: at);
                     (int Overlap, int KeeperInFront) body = bodyAlone?.Overlap(keeperAlone, bodyWith) ?? (0, 0);
@@ -1626,6 +1637,37 @@ namespace GK2DonkeyAPI
                     else Check(body.KeeperInFront > body.Overlap / 2, $"the rider is drawn over the body under him ({body.KeeperInFront} of {body.Overlap} overlapping pixels show him)");
                     if (wing.Overlap < 10) Info($"the wing and the rider overlap in {wing.Overlap} px: the folded wing's curtain hangs behind him by design (the references), so the order is judged on the body alone");
                     else Check(wing.KeeperInFront < wing.Overlap / 2, $"the front layer is drawn over the rider ({wing.Overlap - wing.KeeperInFront} of {wing.Overlap} overlapping pixels show the wing)");
+                    // while he moves (the user saw the wing flicker with his shirt, 2026-10-20: a fifth of a pixel of
+                    // lift tied in the depth buffer): the keeper is moved a little every frame, the wing read back with
+                    // him, every other frame at the shipped lift and the others at the old fifth of a pixel; the pixels
+                    // of their overlap that show him are lost to the tie
+                    float shipped = Looks.Rig.FrontLift;
+                    int moves = 0, lostShipped = 0, lostOld = 0, overlapShipped = 0, overlapOld = 0;
+                    try
+                    {
+                        for (int i = 0; i < 40; i++)
+                        {
+                            Vector3 k = Keeper();
+                            PutKeeper(k + new Vector3(-0.03f, 0f, 0f), -1f);
+                            bool old = i % 2 == 1;
+                            Looks.Rig.FrontLift = old ? 0.004f : shipped;
+                            yield return null;
+                            if (Keeper() != k) moves++;
+                            if (keeper.sprite == null || !front.enabled) continue;
+                            Vector3 here = ov.bounds.center;
+                            DrawnAlone fa = RenderAlone(front, at: here), ka = RenderAlone(keeper, at: here), fw = RenderAlone(front, with: keeper, at: here);
+                            (int Overlap, int KeeperInFront) o = fa?.Overlap(ka, fw) ?? (0, 0);
+                            if (old) { overlapOld += o.Overlap; lostOld += o.KeeperInFront; }
+                            else { overlapShipped += o.Overlap; lostShipped += o.KeeperInFront; }
+                        }
+                    }
+                    finally
+                    {
+                        Looks.Rig.FrontLift = shipped;
+                    }
+                    Info($"moving {moves} of 40 frames: the rider showed through the wing in {lostShipped} of {overlapShipped} overlapping pixels at the shipped lift ({shipped}), in {lostOld} of {overlapOld} at a lift of 0.004");
+                    Check(moves >= 30, $"the keeper moved for the probe ({moves} of 40 frames)");
+                    Check(overlapShipped > 0 && lostShipped == 0, $"the wing never lets the rider through while he moves ({lostShipped} of {overlapShipped} overlapping pixels at the shipped lift; {lostOld} of {overlapOld} at the old fifth of a pixel)");
                 }
                 else Fail("no front overlay, body overlay or keeper body to read back");
                 Mounts.Dismount("self-test");

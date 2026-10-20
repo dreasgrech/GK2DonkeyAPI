@@ -2401,9 +2401,12 @@ namespace GK2DonkeyAPI
                         {
                             // the game draws sprites by distance, and the keeper's plane sits in front of the mount's
                             // (Depth): the order alone left the wing behind him (the front-layer readback, 2026-10-20),
-                            // so the front picture is lifted past his plane, plus the lift that beats a coplanar tie
-                            float keeperDepth = part.transform.InverseTransformPoint(keeper.transform.position).z; // local -z = towards the camera
-                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, OverLift + Mathf.Max(0f, -keeperDepth));
+                            // so the front picture is lifted past the nearest of his sprites, by FrontLift: a fifth of
+                            // a pixel (OverLift) tied in the depth buffer and his shirt flickered through the wing while
+                            // he moved (the same day)
+                            float keeperDepth = owner.KeeperNearestDepth(part.transform); // local -z = towards the camera
+                            if (float.IsNaN(keeperDepth)) keeperDepth = part.transform.InverseTransformPoint(keeper.transform.position).z;
+                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth));
                         }
                         else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift); // above the body overlay too
                     }
@@ -2425,6 +2428,12 @@ namespace GK2DonkeyAPI
             // facing (its local -z, towards the camera): enough to win the depth test over the coplanar part, a fifth
             // of an art pixel, too little to see. The self-tests zero it for a comparison render.
             internal static float OverLift = 0.004f;
+
+            // How far a skin's front layer sits in front of the nearest of the rider's sprites, world units along the
+            // part's facing: 2.5 art pixels, well past the depth buffer's step at the camera's distance (OverLift's fifth
+            // of a pixel tied there: the dragon's wing flickered with the rider's shirt while he moved, 2026-10-20);
+            // along the view axis, so nothing moves on screen. The front-layer self-test compares both.
+            internal static float FrontLift = 0.05f;
 
             // An overlay takes the part's material, block, flip, colour and the frame's trim offset (plus the skin's own
             // offset), and the sorting it is given; lift: how far in front of the part (OverLift). Nothing is written

@@ -83,8 +83,11 @@ For mod authors:
   (rat and worm 52, the snail 55, the dragon 68; the donkey's own seat is row 52 on the 96 canvas; the scaffold, the
   review tools and the example say 52), so the riding look is exactly as calibrated and the cart look matches it. The
   dragon's near wing (the front layer) was drawn behind the rider in the world: it was sorted above him but not lifted
-  past his sprite's plane, and the game draws by distance; the front picture is now lifted past the keeper's plane
-  (measured each frame from his position in the body part's space). The cart readout's rule was wrong, not the gaps:
+  past his sprite's plane, and the game draws by distance; the front picture is now lifted past the nearest of the
+  keeper's sprites (measured each frame in the body part's space) by `Looks.Rig.FrontLift`, 0.05 world units (2.5
+  art pixels; the first lift was a fifth of a pixel, which tied in the depth buffer and flickered his shirt through
+  the wing while he moved, seen 2026-10-20; the front-layer test now moves him 40 frames and counts the pixels lost
+  at the shipped lift and at the old one). The cart readout's rule was wrong, not the gaps:
   the rat's and the dragon's declared gaps (judged by eye) leave their carts about 10 px further from the body than
   the donkey's, and the snail, worm and Gerry stand further still without any gap (narrower bodies), so the rule
   asserted is "no cart closer to its body than the donkey's"; the three declare no gap and their cfgs say why

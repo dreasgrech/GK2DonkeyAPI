@@ -147,9 +147,31 @@ namespace GK2DonkeyAPI
             private Transform bodySprite; // the donkey's "bdy" sprite; its offset from the root is what centering cancels
             private SpriteRenderer donkeyBodyRenderer;
             private SpriteRenderer keeperBodyRenderer;
+            private SpriteRenderer[] keeperRenderers; // every sprite of his (body, head, hands, clothes), for the front layer's lift
             // The keeper's body renderer while he rides this instance (what the leg overlay and a skin's front layer sort
             // above), or null.
             internal SpriteRenderer KeeperBody => mounted ? keeperBodyRenderer : null;
+            internal SpriteRenderer[] KeeperRenderers => mounted ? keeperRenderers : null;
+
+            // How far the nearest of the keeper's drawn sprites sits towards the camera in 'space' (local z, negative =
+            // towards it), or his body's; NaN when he isn't riding. A skin's front layer is lifted past it (Looks.cs).
+            internal float KeeperNearestDepth(Transform space)
+            {
+                SpriteRenderer body = KeeperBody;
+                if (body == null || !body || space == null) return float.NaN;
+                float nearest = space.InverseTransformPoint(body.transform.position).z;
+                SpriteRenderer[] all = KeeperRenderers;
+                if (all != null)
+                {
+                    foreach (SpriteRenderer sr in all)
+                    {
+                        if (sr == null || !sr || !sr.enabled || sr.sprite == null) continue;
+                        float z = space.InverseTransformPoint(sr.transform.position).z;
+                        if (z < nearest) nearest = z;
+                    }
+                }
+                return nearest;
+            }
             private bool seatPending;
             private float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
             private float lastGoodGroundDelta;
@@ -1307,6 +1329,7 @@ namespace GK2DonkeyAPI
             {
                 riderAttached = true;
                 keeperBodyRenderer = FindKeeperBody(pc);
+                keeperRenderers = FindKeeperRenderers(pc);
                 HookKeeperLateUpdate(pc);
 
                 {
@@ -2106,6 +2129,20 @@ namespace GK2DonkeyAPI
 
             // The keeper's body sprite layer ("bdy" under the Animator transform): its material carries the outfit
             // palette, its trimmed rect tells where the feet are.
+            // Every sprite renderer under the keeper's animator (his body, head, hands and clothes), or null.
+            private static SpriteRenderer[] FindKeeperRenderers(PlayerController pc)
+            {
+                try
+                {
+                    Animator animator = pc.View?.PlayerAnimation?.Animator;
+                    return animator != null ? animator.GetComponentsInChildren<SpriteRenderer>(includeInactive: true) : null;
+                }
+                catch
+                {
+                    return null;
+                }
+            }
+
             private static SpriteRenderer FindKeeperBody(PlayerController pc)
             {
                 try
