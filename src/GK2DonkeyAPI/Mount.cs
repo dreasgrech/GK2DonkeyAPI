@@ -1383,6 +1383,34 @@ namespace GK2DonkeyAPI
             }
             internal SpriteRenderer TestBodyRenderer => donkeyBodyRenderer;
 
+            // The rider's hip as a row of the worn skin's canvas (the seat row's own units: TrySeatTop in reverse), or
+            // NaN: what the review pictures draw against (tools/skins/review.py puts the rider's hip on the seat row).
+            internal float TestHipCanvasRow()
+            {
+                SpriteRenderer ov = LooksRig?.TestOverlay();
+                Looks.SkinDef def = LooksRig?.WornDef;
+                if (keeperBodyRenderer == null || keeperBodyRenderer.sprite == null || ov == null || def == null) return float.NaN;
+                Sprite k = keeperBodyRenderer.sprite;
+                float hipLocalY = (k.textureRectOffset.y + 2f + 7f - k.pivot.y) / 50f;
+                Vector3 hip = keeperBodyRenderer.transform.TransformPoint(new Vector3(0f, hipLocalY, 0f));
+                float localY = ov.transform.InverseTransformPoint(hip).y;
+                return def.CanvasH - def.PivotY - localY * def.Base.PixelsPerUnit;
+            }
+
+            // Every cart part's shift from its prefab rest along `dir`, in art pixels (the hitch gap moves them all alike:
+            // a part shifted otherwise is a part moved twice or not at all).
+            internal List<(string Name, float ShiftPx)> TestCartPartShifts(Vector3 dir)
+            {
+                var outList = new List<(string, float)>();
+                foreach (CartPart p in cartParts)
+                {
+                    if (p.T == null || !p.T || p.T.parent == null) continue;
+                    Vector3 shift = p.T.parent.TransformVector(p.T.localPosition - p.Rest);
+                    outList.Add((p.T.name, Vector3.Dot(shift, dir) / PxWorld));
+                }
+                return outList;
+            }
+
             // The way from this mount's spot to its cart in the world, from the live transforms (the prefab's own
             // geometry: the cart body's rest centre against the root), so it follows a turn (facing flips the view's
             // scale, and the cart swaps sides with it); zero without a live cart body, and the facing rule applies.

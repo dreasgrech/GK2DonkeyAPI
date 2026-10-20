@@ -1484,6 +1484,13 @@ namespace GK2DonkeyAPI
                 if (!haveRear || cartBody == null) { Fail($"{name}: no body edge or cart body to measure ({haveRear}, {cartBody != null})"); a.Remove(); continue; }
                 float gapPx = Vector3.Dot(Near(cartBody.bounds, dir) - rear, dir) / pxX;
                 clearance[name] = gapPx;
+                // the cart is rigid: every part shifted by the hitch gap alike (a wheel a wheel's width out of place would show here)
+                List<(string Name, float ShiftPx)> shifts = a.I.TestCartPartShifts(dir);
+                float lo = float.MaxValue, hi = float.MinValue;
+                var parts = new System.Text.StringBuilder();
+                foreach ((string n, float s) in shifts) { lo = Math.Min(lo, s); hi = Math.Max(hi, s); parts.Append(parts.Length > 0 ? ", " : "").Append(n).Append(' ').Append(s.ToString("0.0")); }
+                Info($"{name}: cart parts shifted along the hitch direction (px): {parts}");
+                Check(shifts.Count > 0 && hi - lo < 1f, $"{name}: the cart's parts moved as one ({lo:0.0} to {hi:0.0} px)");
                 // the seat with the cart hitched (the cart style)
                 MountResult r = a.Ride(showMessage: false);
                 float seatPx = float.NaN;
@@ -1604,6 +1611,9 @@ namespace GK2DonkeyAPI
                 if (front != null && ov != null && keeper != null)
                 {
                     Vector3 at = ov.bounds.center;
+                    float hipRow = a.I.TestHipCanvasRow();
+                    Info($"the rider's hip sits on canvas row {hipRow:0.0} of the dragon's 128 (declared seat = 68; the review strips draw him there)");
+                    Check(!float.IsNaN(hipRow) && Math.Abs(hipRow - 68f) < 2.5f, $"the rider's hip is on the declared row ({hipRow:0.0} vs 68)");
                     SpriteRenderer partNow = a.I.LooksRig.TestPart();
                     if (partNow != null) Info($"depths in the body part's space (local z, negative = towards the camera): the keeper {partNow.transform.InverseTransformPoint(keeper.transform.position).z:0.000}, the front picture {partNow.transform.InverseTransformPoint(front.transform.position).z:0.000}, the body overlay {partNow.transform.InverseTransformPoint(ov.transform.position).z:0.000}");
                     DrawnAlone frontAlone = RenderAlone(front, at: at), bodyAlone = RenderAlone(ov, at: at), keeperAlone = RenderAlone(keeper, at: at);
@@ -1614,7 +1624,7 @@ namespace GK2DonkeyAPI
                     Check(frontAlone != null && frontAlone.Pixels > 50, $"the front picture draws ({frontAlone?.Pixels} pixels)");
                     if (body.Overlap < 30) Warn($"the rider and the body overlap in {body.Overlap} px only: nothing to judge the order on");
                     else Check(body.KeeperInFront > body.Overlap / 2, $"the rider is drawn over the body under him ({body.KeeperInFront} of {body.Overlap} overlapping pixels show him)");
-                    if (wing.Overlap < 10) Warn($"the wing and the rider overlap in {wing.Overlap} px only: nothing to judge the order on");
+                    if (wing.Overlap < 10) Info($"the wing and the rider overlap in {wing.Overlap} px: the folded wing's curtain hangs behind him by design (the references), so the order is judged on the body alone");
                     else Check(wing.KeeperInFront < wing.Overlap / 2, $"the front layer is drawn over the rider ({wing.Overlap - wing.KeeperInFront} of {wing.Overlap} overlapping pixels show the wing)");
                 }
                 else Fail("no front overlay, body overlay or keeper body to read back");

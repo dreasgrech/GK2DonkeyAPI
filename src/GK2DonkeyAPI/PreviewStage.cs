@@ -396,6 +396,12 @@ namespace GK2DonkeyAPI
                 if (Array.IndexOf(CartPartNames, t.name) >= 0)
                 {
                     t.gameObject.SetActive(true);
+                    // a mesh child named like its part (the far wheel's is donkey_cart_wheel_f too) moves with its parent:
+                    // shifting it as well would put it a hitch gap out (Mount.CollectCartParts skips them the same way)
+                    bool nested = false;
+                    for (Transform up = t.parent; up != null && up != copy.transform; up = up.parent)
+                        if (Array.IndexOf(CartPartNames, up.name) >= 0) { nested = true; break; }
+                    if (nested) continue;
                     cartParts++;
                     cartRest[t] = t.localPosition; // the prefab's rest: the hitch gap is added on top (Pose)
                     if (t.name == "donkey_cart_empty_sway")

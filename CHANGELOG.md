@@ -94,6 +94,24 @@ For mod authors:
   now guards Gerry's 25.5. Fourth run: all green but the "pictures loaded and freed" scenario, which assumed nobody
   wears the rat: the player's own mount was the rat, whose one sheet is shared; it now picks a built-in creature
   nobody wears.)
+- **The dragon's wings are folded** (the user, 2026-10-20, after riding it: the raised near wing, drawn in front
+  of him, hid the rider), drawn as the user's reference sheets draw a resting dragon: the wrist is a tall peak above
+  the back with the thumb claw hooking towards the head, the fingers run down from the peak as red lines, and the
+  membrane hangs between them like a curtain to the ground behind the hindquarters, scalloped along its hem, wine
+  against the body's red and outlined. Both wings root at the shoulder, where wings attach and where the rider
+  sits: the peak stands above and behind his head, the curtain sweeps back over the flank to the hip. The near wing
+  is split by his hip row: above it the curtain is behind him (his body in view), below it it is the front layer
+  over his legs. The far wing is the same fold four pixels back and five up (the perspective), drawn behind the
+  body, which hides all but its peak and the top of its curtain behind the near one's. (The user's corrections on
+  the way: a curtain at the tail, one too high, a far wing of its own shape, and one "back on his ass" when the root
+  sat at the mid-back.) (Eight drafts went before it: flat folds and fans along the flank read as a plank, a
+  line, a blanket, a flag, a hand fan; the reference read at pixel size was what was missing; the dragon is compared
+  with the reference crop at one scale before each hand-over now.) The front-layer readback takes a curtain that
+  hangs behind the rider (the order is judged on the body). Two readouts joined the self-tests after that look: the rider's hip as a row of
+  the worn skin's canvas (asserted on the dragon's declared 68, which the review strips draw him on) and every cart
+  part's shift along the hitch direction (a rigid cart: the far wheel seen beside the near one in the Mods picture
+  is to be judged with it). The settings picture no longer moves a cart part's mesh child a second time (the far
+  wheel's child is named like its part; the world's cart skipped them already).
 - **After the first in-game run of the new tests** (2026-10-20): three probes were wrong, the game was right. The
   cart readout asked a cart part's transform for its renderer (the mesh is a child, as the mount code reads it); the
   front-layer readback counted every drawn pixel, so "the body with the rider" could never be smaller than "the body

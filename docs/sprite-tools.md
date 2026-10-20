@@ -180,7 +180,15 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
 5. **Look**: the review page (`python -I tools/skins/skin_preview_html.py <probe folder> <probe
    folder>/skins-preview.html`), every frame through the same composite the game makes, grouped by mount, the front
    layer in front of the rider, the rider on the seat row with the skin's offset, the seat line, the card's facts
-   (seat, hitch gap, babies, colour regions).
+   (seat, hitch gap, babies, colour regions). **Before anyone else looks** (the dragon's wings, 2026-10-20: twelve
+   drafts, every one judged "done" by the person who drew it and sent back by the user): render the standing and a
+   walk frame at 1x and at the page's 3x, with and without the rider, next to the reference crop at the same scale,
+   and answer these in writing, not "it reads": where does the part attach to the body, and is that where it
+   attaches on the reference; do the two sides of a pair share one root and shape, offset only by perspective; what
+   is the silhouette's signature (a wing: the peak above the shoulder with the claw hooking forward) and is it
+   there; is the colour apart from the body's; is anything on the wrong part of the body (a wing on the rump, a
+   fold on the tail); with the rider, what exactly is covered and what is in view; and name every difference from
+   the reference that is left. A draft that only confirms what was intended is not a check.
 6. **Build and deploy** with the game closed (`dotnet build src/GK2DonkeyAPI/GK2DonkeyAPI.csproj`); the self-tests
    (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then "Export the
    loaded skins as built" (F11, Mounts tab: every skin loaded at that moment) and rebuild the page: it shows the game's

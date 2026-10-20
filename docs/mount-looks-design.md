@@ -392,8 +392,14 @@ nothing of the donkey is assumed by the loader or the rig, sheet packs, and spri
 
 **Red Dragon** (`tools/skins/creatures/make_creatures.py`, `assets/skins/dragon/`): the one mount on a bigger canvas
 (128: the donkey's frame sits centred, so its pivot and ground row are the donkey's), drawn with a **front layer**
-(`front\`: the near wing, drawn in front of the rider, so he sits between the wings; the self-test "front layer"
-reads it back over him), `seat = 62` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
+(`front\`: the near wing, drawn in front of the rider; the self-test "front layer" reads it back over him). The
+near wing was raised at first, its outer fan in front of him: ridden, it hid him (the user, 2026-10-20), so it is
+**folded** now, as the user's reference sheets draw a resting dragon (a tall wrist peak above the back with the claw
+hooking forward, the fingers running down from it, the membrane hanging like a curtain to the ground behind the
+hindquarters, scalloped, in a colour of its own with an outline): both wings rooted at the shoulder, the peak above
+and behind the rider's head, the curtain sweeping back over the flank; the near wing split at his hip row, behind
+him above it and in the front layer over his legs below it; the far wing the same fold a few pixels back and up
+behind the body (its peak and the top of its curtain show behind the near one's), `seat = 62` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
 that far further back, or the body is drawn inside it), colours Coat = scales and wing, Muzzle = the golden belly,
 Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
 babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
