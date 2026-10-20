@@ -719,8 +719,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             belly = ny > 0.38 and 28 < x < 74 and y > 47
             if belly:
                 col = _tone(DBELLY, light + 0.15)
-                if y % 3 == 0:
-                    col = DBELLY[max(0, DBELLY.index(col) - 1)]                 # the plates' seams
+                if y % 4 == 0:
+                    col = DBELLY[max(0, DBELLY.index(col) - 1)]                 # the plates' seams (every 3 rows read as planks)
             else:
                 col = _tone(DRG, light)
             put(x, y, col)

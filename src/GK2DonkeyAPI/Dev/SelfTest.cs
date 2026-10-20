@@ -1917,7 +1917,8 @@ namespace GK2DonkeyAPI
             me.Skin = "";
             yield return Frames(2);
 
-            // the dragon: Muzzle is its belly (skin.cfg [Colors]), and only that
+            // the rat: Muzzle is its pink tail, ears and nose (skin.cfg [Colors]), and only that (the dragon's belly was
+            // this test's region until it joined its Coat: a gold belly under a green coat read as wood, 2026-10-20)
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null)
@@ -1925,11 +1926,11 @@ namespace GK2DonkeyAPI
                 Fail("could not spawn");
                 yield break;
             }
-            a.Tuning.Set(Owner, "Skin", "dragon");
-            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "dragon" && !a.I.LooksRig.Building, 20f);
+            a.Tuning.Set(Owner, "Skin", "rat");
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "rat" && !a.I.LooksRig.Building, 20f);
             if (!waited)
             {
-                Fail("the dragon was never worn");
+                Fail("the rat was never worn");
                 a.Remove();
                 yield break;
             }
@@ -1938,11 +1939,11 @@ namespace GK2DonkeyAPI
             yield return Frames(3);
             var d = a.I.ColorsRig.TestMountGroup();
             Looks.Loaded look = a.I.LooksRig.WornOwnColours;
-            int belly = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m.Count : -1;
-            bool onlyBelly = d.Changed == belly && belly > 0;
-            foreach (Color32 c in d.ChangedSources) onlyBelly &= look.ColoursByRegion["Muzzle"].Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
-            Check(d.Method == SpriteColorMethod.Palette && d.Colours <= Colors.PaletteMaxColours, $"the dragon's {d.Colours} colours: the exact swap ({d.Method})");
-            Check(onlyBelly, $"Muzzle changes the dragon's belly colours only ({d.Changed} changed of {d.Pairs}; the belly has {belly})");
+            int pink = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m.Count : -1;
+            bool onlyPink = d.Changed == pink && pink > 0;
+            foreach (Color32 c in d.ChangedSources) onlyPink &= look.ColoursByRegion["Muzzle"].Exists(x => x.r == c.r && x.g == c.g && x.b == c.b);
+            Check(d.Method == SpriteColorMethod.Palette && d.Colours <= Colors.PaletteMaxColours, $"the rat's {d.Colours} colours: the exact swap ({d.Method})");
+            Check(onlyPink, $"Muzzle changes the rat's pink colours only ({d.Changed} changed of {d.Pairs}; the pink parts have {pink})");
             a.Remove();
             yield return Frames(2);
         }

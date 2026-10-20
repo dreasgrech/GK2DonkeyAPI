@@ -1,29 +1,83 @@
 {
   "_": "The colour regions of each drawn creature (docs/mount-colours.md 2.6), as rules over a colour's hue (degrees), saturation and value (0..1): the first region whose rule matches wins, in the order written; a colour no rule matches is Coat. tools/skins/skin_colors.py applies them to the pictures (front/ included) and writes each skin's [Colors]. Edit here, never in the script.",
   "dragon": {
-    "_": "Coat = the red scales and the wing; Muzzle = the golden belly; Dark = outlines, horns and back spikes (bone); Eye = the yellow eye.",
-    "Dark": [{"v_max": 0.2}, {"s_max": 0.5, "v_max": 0.9, "h_min": 25, "h_max": 45}],
-    "Eye": [{"h_min": 40, "v_min": 0.9}],
-    "Muzzle": [{"h_min": 20, "h_max": 45}]
+    "_": "Coat = the red scales, the wing and the belly (a lighter tone of the coat, so a player's Coat turns all three; the belly was Muzzle, stayed gold under a green coat and read as wood, the user 2026-10-20); Dark = outlines, horns and back spikes (bone); Eye = the yellow eye.",
+    "Dark": [
+      {
+        "v_max": 0.2
+      },
+      {
+        "s_max": 0.5,
+        "v_max": 0.9,
+        "h_min": 25,
+        "h_max": 45
+      }
+    ],
+    "Eye": [
+      {
+        "h_min": 40,
+        "v_min": 0.9
+      }
+    ]
   },
   "rat": {
     "_": "Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = outlines; Eye = the red eye.",
-    "Dark": [{"v_max": 0.15}],
-    "Eye": [{"s_min": 0.6, "h_min": 340}, {"s_min": 0.6, "h_max": 15}],
-    "Muzzle": [{"s_min": 0.3, "h_min": 330}, {"s_min": 0.3, "h_max": 20}]
+    "Dark": [
+      {
+        "v_max": 0.15
+      }
+    ],
+    "Eye": [
+      {
+        "s_min": 0.6,
+        "h_min": 340
+      },
+      {
+        "s_min": 0.6,
+        "h_max": 15
+      }
+    ],
+    "Muzzle": [
+      {
+        "s_min": 0.3,
+        "h_min": 330
+      },
+      {
+        "s_min": 0.3,
+        "h_max": 20
+      }
+    ]
   },
   "snail": {
     "_": "Coat = the green body; Muzzle = the brown shell; Dark = the outline.",
-    "Dark": [{"v_max": 0.16}],
-    "Muzzle": [{"h_min": 8, "h_max": 36, "s_min": 0.45}]
+    "Dark": [
+      {
+        "v_max": 0.16
+      }
+    ],
+    "Muzzle": [
+      {
+        "h_min": 8,
+        "h_max": 36,
+        "s_min": 0.45
+      }
+    ]
   },
   "worm": {
     "_": "Coat = the pink skin; Dark = the outline.",
-    "Dark": [{"v_max": 0.25}]
+    "Dark": [
+      {
+        "v_max": 0.25
+      }
+    ]
   },
   "gerry": {
     "_": "The game's skull, read at run time: its colours come from the in-game export (BepInEx/GK2-asset-probe/game-skins/gerry, the Mounts tab's Export button); Dark = the sockets and cracks, the bone is Coat.",
     "source": "game-export",
-    "Dark": [{"v_max": 0.35}]
+    "Dark": [
+      {
+        "v_max": 0.35
+      }
+    ]
   }
 }

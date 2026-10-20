@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The dragon's belly follows the Coat colour.** It was its Muzzle region, so a green coat left a gold belly (the
+  user, 2026-10-20: it read as wood); the belly is Coat now, a lighter tone of it, and its plate seams are every
+  four rows instead of three. The dragon has no Muzzle row any more (it greys on the page).
 - **The cart no longer sinks into a hill behind the mount.** Its ground is sampled under the cart body, up to a
   unit and more behind the mount's root, and at the edge of a raised path that sample lands on the level below:
   0.77 lower by the Inquisition Base rocks under the dragon's cart (the user's video, 2026-10-20), within the

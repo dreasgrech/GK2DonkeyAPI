@@ -131,7 +131,7 @@ colours themselves are read from the pictures; the section only sorts them):
 ```
 [Colors]
 Dark = 1C060C 2E0C14 280810   # outlines, horns, spikes
-Muzzle = A86A28 703E1A DAA042 # the belly
+Muzzle = A86A28 703E1A DAA042 # a second body tone (the snail's shell, the rat's pink)
 Eye = FAD640 F4CE76
 ```
 

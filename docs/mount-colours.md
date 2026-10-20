@@ -138,8 +138,10 @@ layer), by rules that are data in `tools/skins/creatures/colors.json` (a block p
 saturation and value thresholds; the first match wins; everything else is Coat). Re-run after the art changes, then
 `tests/SkinsScan` (which checks every listed colour against the pixels):
 
-- **Red Dragon:** Coat = the red scales and the wing; Muzzle = the golden belly; Dark = the outlines, the horns and the
-  back spikes (bone); Eye = the yellow eye. A player's Coat turns the scales and the wing, Muzzle the belly.
+- **Red Dragon:** Coat = the red scales, the wing and the golden belly (the belly is a lighter tone of the coat: a
+  player's Coat turns all three, the belly keeping its lightness; it was Muzzle, and a gold belly under a green
+  coat read as wood, the user 2026-10-20); Dark = the outlines, the horns and the back spikes (bone); Eye = the
+  yellow eye. No Muzzle: that row greys for the dragon.
 - **Giant Rat:** Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = the outline; Eye = the red eye.
 - **Giant Snail:** Coat = the green body; Muzzle = the brown shell; Dark = the outline (300 colours: the cube path).
 - **Giant Worm:** Coat = the pink skin; Dark = the outline (720 colours: the cube path).
@@ -170,7 +172,7 @@ sheet becomes whole (`Looks.LoadedReady`); the creature skins carry generated `[
 (`tools/skins/skin_colors.py`: rules read off the enlarged standing frames), Hellfire and Royal Parade hand-written ones; SkinsScan validates the
 lists against the PNGs with a PNG reader of its own; the self-test "colours: the player's regions on a mount in
 its own colours" renders the worm on the settings picture, reads the pixels back (pink before, green after a custom
-coat), checks the cube path and that the dragon's Muzzle changes its belly colours only. Saddle Up's Coat and
+coat), checks the cube path and that the rat's Muzzle changes its pink colours only. Saddle Up's Coat and
 Harness descriptions say what they do on every mount.
 
 ## 4. Where the work is
