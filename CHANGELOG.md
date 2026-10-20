@@ -103,8 +103,9 @@ For mod authors:
   membrane hangs between them like a curtain to the ground behind the hindquarters, scalloped along its hem, wine
   against the body's red and outlined. Both wings root at the shoulder, where wings attach and where the rider
   sits: the peak stands above the shoulder and behind his head, the curtain hangs from it back over the flank, its
-  hem on the ground behind the hindquarters only and rising forward along the belly line, the near hind leg in
-  front of the curtain, nothing of the wing forward of the peak. The whole near wing is the front layer, over the
+  hem on the ground behind the hindquarters only and rising forward along the belly line, both hind legs under
+  the curtain (it reaches the ground over them; drawn in front, the near foot read as part of the wing), nothing
+  of the wing forward of the peak. The whole near wing is the front layer, over the
   rider wherever the two overlap: he sits inside the fold with the top of his head, part of his face and the
   reins arm out of it. (Tried on the way and rejected: a cut that kept his chest in view by drawing the membrane
   behind him there, and a one-layer wing shaped around him, which grew a lobe under his seat that stood out

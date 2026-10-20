@@ -543,7 +543,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
         # above the shoulder with the thumb claw hooking forward, the fingers run down and back from it, the membrane
         # hangs between them like a curtain from the peak back over the flank, its hem on the ground only behind the
         # hindquarters and rising forward along the belly line; nothing of the wing lies forward of the peak. The near
-        # hind leg stands in front of the curtain. The whole near wing is the front layer, over the rider wherever
+        # hind leg is under the curtain, which reaches the ground over it (drawn in front, its foot read as part of
+        # the wing: the user, 2026-10-20). The whole near wing is the front layer, over the rider wherever
         # the two overlap (the user, 2026-10-20: the wing is nearer the camera than he is, no part of him may show
         # in front of it): he sits inside the fold with his face, the top of his head and the reins arm out of it,
         # chest and everything below under the membrane. (Tried and rejected the same day: a cut that kept his
@@ -557,9 +558,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             return (x + ox, y + bob + oy)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
         peak = _rot(at(52.0, 26.0), sh, ang)
-        hem = [at(85.0, 58.0), at(79.0, 64.0), at(71.0, 62.0), at(62.0, 60.0), at(52.0, 58.0)]   # the curtain's hem
+        hem = [at(85.0, 58.0), at(79.0, 66.5), at(62.0, 66.5), at(59.0, 63.0), at(52.0, 58.0)]   # the curtain's hem: on the ground over the hind legs
         ring = [peak, at(64.0, 30.0), at(78.0, 43.0)] + hem + [at(47.0, 55.0), sh]
-        tips = [at(76.0, 45.0), at(79.0, 64.0), at(69.0, 62.5), at(59.0, 60.5), at(52.0, 58.0)]
+        tips = [at(76.0, 45.0), at(79.0, 66.0), at(65.0, 66.0), at(59.0, 62.5), at(52.0, 58.0)]
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
 
         def layer(x, y):
@@ -569,7 +570,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
         for a, b in zip(tips[1:-1], tips[2:]):
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             half = math.dist(a, b) / 2
-            depth = half * 0.55                                                   # the finger tips stand a little out of the hem
+            depth = half * 0.2                                                    # shallow: the finger tips stand a little out of the hem, the feet stay under it
             k = (half * half - depth * depth) / (2 * depth)
             scal.append((mx, my + k, math.dist((mx, my + k), a)))
 
@@ -588,7 +589,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                 X, Y = x + 0.5, y + 0.5
                 if not inside(X, Y):
                     continue
-                if any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
+                if Y < GROUND + bob and any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):   # no scallop at the ground: the feet stay under the hem
                     continue
                 df = min(_seg(X, Y, *a, *b) for a, b in fingers)
                 down = (Y - peak[1]) / max(1.0, max(ys) - peak[1])
@@ -641,10 +642,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
         a, lift = gait(0.0 if far else 0.5)
         hx, hy = 66 + dx, 54 + bob
         fx, fy = 66 + dx - 4.0 * a, GROUND - lift
-        hind = px if far else fpx                                             # the near hind leg stands in front of the folded wing's curtain
-        limb((hx, hy), (hx - 2, 59 + bob), 5, ramp, hind)
-        limb((hx - 2, 59 + bob), (fx, fy), 3, ramp, hind)
-        foot(fx, fy, ramp, hind)
+        if far:                                                               # the near hind leg is under the folded wing's curtain: not drawn
+            limb((hx, hy), (hx - 2, 59 + bob), 5, ramp)
+            limb((hx - 2, 59 + bob), (fx, fy), 3, ramp)
+            foot(fx, fy, ramp)
 
     legs(far=True)
 
