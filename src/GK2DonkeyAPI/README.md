@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.33.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+Version 0.34.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
 (re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
 game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
@@ -206,8 +206,7 @@ effects") are written and not yet run in game.
 | Built in | What |
 |---|---|
 | Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`) |
-| Giant Rat, Giant Snail, Giant Worm, Dragon (its skin: Red Dragon) | mounts of their own, our own art (`tools/skins/creatures/`) |
-| Gerry | the game's skull, its frames read at run time (`assets/skins/gerry/skin.cfg`) |
+| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry | not in the API since 2026-10-20: they are Saddle Up's packs (`src/SaddleUp/assets/skins/`; our own art from `tools/skins/creatures/`, Gerry's frames read from the game), registered through the API like any mod's (`docs/mounts-as-mods.md`) |
 
 ## Not built
 
@@ -220,7 +219,7 @@ effects") are written and not yet run in game.
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`, each in its own folder
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
-3. Start the game once; the log says `GK2 Donkey API 0.33.0 loaded; nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.34.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

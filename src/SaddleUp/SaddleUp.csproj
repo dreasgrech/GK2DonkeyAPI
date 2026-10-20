@@ -1,7 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- The playable mount built on the GK2 Donkey API. Ships in one zip
-       with GK2DonkeyAPI.dll, which it needs (hard dependency). -->
+       with GK2DonkeyAPI.dll, which it needs (hard dependency). Its five mounts (the Red Dragon, the Giant Rat, the
+       Giant Snail, the Giant Worm, Gerry) are skin packs in assets\skins\<id>\ (skin.cfg and a PNG per frame, front\
+       for the dragon's near wing; Gerry's a cfg alone), embedded here and registered with the API at start
+       (Plugin.cs): the API is the backend, the player mod ships the content, the way any mod ships a mount
+       (docs/mounts-as-mods.md). -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2SaddleUp</AssemblyName>
@@ -13,6 +17,20 @@
          folder into the shipped DLL. -->
     <DebugType Condition="'$(ForDist)' == 'true'">none</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The packs, by the name pattern Mounts.Looks.RegisterEmbedded reads: <prefix><skin dir>\<file>. -->
+    <EmbeddedResource Include="assets\skins\**\*" LogicalName="GK2SaddleUp.skins.%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The packs' source folder, so the API's Mounts tab (F11) can write a skin's tuned values back into its skin.cfg on
+       this machine (the same as the API's own GK2DonkeyAPISourceDir). Left out of a release build. -->
+  <ItemGroup Condition="'$(ForDist)' != 'true'">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GK2SkinsSourceDir</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)\assets\skins</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\GK2DonkeyAPI\GK2DonkeyAPI.csproj" Private="false" />

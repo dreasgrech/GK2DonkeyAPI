@@ -90,7 +90,8 @@ memory or through a loaded sprite atlas asked by name, mapped by the `[Game]` li
 pixels with the feet on the donkey's ground row (`SkinBase.GroundRow`, 28) and the centre on the pivot, into the
 skin's sheet like any other picture. Self-test "game creature: Gerry's frames found, scaled and worn".
 
-**As it stands (2026-10-20, after the parity plan):** `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` in the canonical
+**As it stands (2026-10-20, after the parity plan):** `src/SaddleUp/assets/skins/gerry/skin.cfg` (Saddle Up's
+since the evening, docs/mounts-as-mods.md; `src/GK2DonkeyAPI/assets/skins/gerry/` before) in the canonical
 layout: Gerry at 3x on a **160** canvas (a 29-pixel hop at 3x is 87 above the ground row; 128 cut it), `lift = 0.25`
 (a quarter of his own hop under a rider), walk 1..8 spread over his 15, the somersault as the turn idle, the speak
 frames as lips and chew, the head keys empty; **`seat = picture`** (the rider sits on the skull's own top, per frame:

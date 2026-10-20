@@ -4,13 +4,14 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 | Mod | Version | For | What it is |
 |---|---|---|---|
-| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.11.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. |
-| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.33.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
+| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.11.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Five more mounts come with it (the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry the skull), switched off until the next update. |
+| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.34.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
-What you ride and how it is drawn (built in; the mounts other than the donkey, the skins and the effects are switched
-off for players until the next update, [`docs/skins.md`](docs/skins.md)):
+What you ride and how it is drawn (the donkey and its two skins in the API, the five mounts as Saddle Up's own
+packs; the mounts other than the donkey, the skins and the effects are switched off for players until the next
+update, [`docs/skins.md`](docs/skins.md)):
 
 | Mount | Skins | Notes |
 |---|---|---|
@@ -19,14 +20,14 @@ off for players until the next update, [`docs/skins.md`](docs/skins.md)):
 | Gerry (the game's talking skull) | the game's own frames, read at run time | cart, babies his own size; the keeper calls him a skull |
 
 Skin packs from anyone (a folder with a `skin.cfg` and a PNG per frame) join the list; a pack can declare a mount of
-its own.
+its own, and a mod can ship packs in its DLL the way Saddle Up ships its five ([`docs/mounts-as-mods.md`](docs/mounts-as-mods.md)).
 
 ## Installing (players)
 
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
    `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
-3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.33.0 loaded` and `GK2 Saddle Up 0.11.0
+3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.34.0 loaded` and `GK2 Saddle Up 0.11.0
    loaded`.
 4. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
    the game's **Mods** menu. Without it, everything works the same and the settings are in
@@ -51,7 +52,7 @@ a second mod keeping its own donkeys with the save.
 | Where | What |
 |---|---|
 | `src/GK2DonkeyAPI` | The API mod. Its README lists every feature; the settings and internals are in [`docs/reference.md`](docs/reference.md). |
-| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). |
+| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its five mounts are skin packs in `assets/skins/<id>/`, embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
 | `examples/` | `GK2DonkeyTechGate` (the cart and the lamp's light need techs) and `GK2DonkeyHerd` (a second mod with its own kept donkeys). Not shipped. |
 | `tools/` | `GK2DonkeyProbe` (the investigation plugin and its archived reports), `GK2DonkeyAPIProbe` (every API call on F-keys), `colors` (the shader and texture tools behind the colours), `GK2PerfRunner` (scripted profiling, [`docs/performance-hog.md`](docs/performance-hog.md)), `GK2AssetProbe` (art from outside the game, [`docs/external-assets.md`](docs/external-assets.md)). Not shipped. |
 | `tests/` | Checks run without the game: the public API snapshot, the game members the API uses, the optional framework link, and the game-update diff ([`tests/README.md`](tests/README.md)). |

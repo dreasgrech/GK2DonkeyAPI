@@ -826,7 +826,7 @@ CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None),
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
-assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
+assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "SaddleUp", "assets", "skins")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
 for name, fn, title, size, (kind, kind_name), seat_row, hitch_gap in CREATURES:

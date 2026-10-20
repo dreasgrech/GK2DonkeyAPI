@@ -7,13 +7,14 @@ only when set (MOUNT_ORDER). Run it after editing a cfg by hand, then tests/Skin
 rules); --check runs in tools/release-scans.sh and refuses a built-in that is not byte for byte in this layout.
 tools/skins/new_skin.py writes a new skin's cfg in this layout from the start.
 
-    python -I tools/skins/canonical_cfg.py            # rewrites src/GK2DonkeyAPI/assets/skins/*/skin.cfg
+    python -I tools/skins/canonical_cfg.py            # rewrites every src/*/assets/skins/*/skin.cfg (skinroots.py)
     python -I tools/skins/canonical_cfg.py --check    # says which files differ from their canonical text, writes nothing
 """
 import io, os, sys
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SKINS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import skinroots
+REPO = skinroots.REPO
 SKIN_ORDER = ["format", "id", "name", "author", "version", "base", "kind", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
 MOUNT_ORDER = ["id", "name", "noun", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
@@ -143,10 +144,9 @@ def canonical(path):
 def main(argv):
     check = "--check" in argv
     diff = 0
-    for skin in sorted(os.listdir(SKINS)):
-        path = os.path.join(SKINS, skin, "skin.cfg")
-        if not os.path.isfile(path):
-            continue
+    for folder in skinroots.skin_dirs():
+        skin = os.path.basename(folder)
+        path = os.path.join(folder, "skin.cfg")
         text = canonical(path)
         current = io.open(path, encoding="utf-8", newline="").read()
         if current == text:

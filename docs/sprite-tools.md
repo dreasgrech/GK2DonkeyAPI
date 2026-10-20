@@ -140,7 +140,9 @@ other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatu
 are the worked examples; the next skin or mount is **scaffold, generate or draw, check, look, build, export**:
 
 1. **Scaffold**: `python -I tools/skins/new_skin.py <id> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
-   [--over]` makes `src/GK2DonkeyAPI/assets/skins/<id>/skin.cfg` in the canonical layout (`seat = <row>`, a
+   [--over] [--mod <project>]` makes `src/<project>/assets/skins/<id>/skin.cfg` in the canonical layout (the project
+   is `SaddleUp` for a mount of its own, `GK2DonkeyAPI` for a skin of the donkey, or a mount mod of its own that
+   embeds and registers its packs as Saddle Up does; docs/mounts-as-mods.md) (`seat = <row>`, a
    `[Colors]` stub, the `[Mount]` block when the skin is a creature of its own, the sound keys commented),
    `tools/skins/<id>/make_<id>.py` (a generator stub drawing a placeholder in every frame through the shared review
    module), the `.gk2export.txt` sidecar for Aseprite, runs the stub and the scan. Nothing else to set up.
@@ -157,7 +159,7 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    into `front\`), runs the checker and writes previews with the front layer and the rider (the round below). A
    hand-drawn skin's sidecar names the built-in's folder; a generated skin's (Royal Parade) names its `out\pack`, so
    the generator stays the source and carries the fix (its next run would overwrite the folder anyway).
-3. **The pack** is `src/GK2DonkeyAPI/assets/skins/<id>/`: `skin.cfg` (by hand, commented, kept by the generator, in
+3. **The pack** is `src/<project>/assets/skins/<id>/` (`tools/skins/skinroots.py` knows every such root): `skin.cfg` (by hand, commented, kept by the generator, in
    the layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base, `erase` when it
    takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the player's colours
    reach (written from the pixels by `tools/skins/skin_colors.py`, whose rules are data in
@@ -167,9 +169,9 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    `RiderOffsetPx`), `mount =` and, for a creature of its own, the `[Mount]` block last with id, name, author,
    version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key** (`bdy_static_left.png` ...
    `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our pixels, nothing of the
-   game's art. The DLL build embeds the folder (`GK2DonkeyAPI.csproj`, `assets\skins\**`); no file is copied into
-   the game.
-4. **Check before the game**: `python -I tools/skins/check_skin.py src/GK2DonkeyAPI/assets/skins/<id>` (frames and
+   game's art. The DLL build embeds the folder (the project's csproj, `assets\skins\**`: the API's for the
+   donkey's skins, `SaddleUp.csproj` for the five mounts); no file is copied into the game.
+4. **Check before the game**: `python -I tools/skins/check_skin.py src/<project>/assets/skins/<id>` (frames and
    the front layer present and the canvas size, every colour with its region, the erase marks, lone pixels judged
    over what the game draws under them, half-transparent pixels; an exit code for the scans, the warnings for the
    eye), `python -I tools/skins/canonical_cfg.py --check` (the layout) and the headless scan `dotnet run --project

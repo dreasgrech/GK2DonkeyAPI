@@ -150,8 +150,9 @@ legs, the idle shuffle, sounds volume), which is most of "mount-specific values"
   BrayVolume = 0           # for one); never a picture key (the seat, the legs, the hitch gap are the skin's [Tuning])
   ```
   Owned by the pack's owner; a later pack naming the same id with its own `[Mount]` is told the kind exists and its
-  skin joins it. The built-in creatures (rat, snail, worm, dragon, Gerry) declare their kinds exactly this way, in
-  one layout (docs/skins.md "Worked examples"), so the pack path is exercised by the shipped skins every start.
+  skin joins it. The five mounts (rat, snail, worm, dragon, Gerry; Saddle Up's packs since 2026-10-20) declare
+  their kinds exactly this way, in one layout (docs/skins.md "Worked examples"), so the pack path is exercised by
+  the shipped skins every start.
 - **The donkey kind** is registered by the API (no tuning, no abilities): the base the game gives us.
 
 ## 6. The menus

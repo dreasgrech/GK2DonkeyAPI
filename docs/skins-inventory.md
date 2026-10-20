@@ -59,18 +59,19 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   refused at start).
 - Docs: `docs/sprite-tools.md` ("Generated, no drawing", "The canvas, found wrong", "The crown"), `docs/open-items.md`.
 
-### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts, built-in packs)
-- **Pictures and cfg**: `src/GK2DonkeyAPI/assets/skins/<dragon|rat|snail|worm>/` (44 PNGs each; the dragon also a
-  `front\` layer of 41 pictures drawn above the rider), embedded into the DLL by the csproj
-  (`GK2DonkeyAPI.skins.<id>.<file>`). Each `skin.cfg` declares the mount (`[Mount]`, its tuning) and its `[Colors]`.
+### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts; Saddle Up's packs since 2026-10-20)
+- **Pictures and cfg**: `src/SaddleUp/assets/skins/<dragon|rat|snail|worm>/` (44 PNGs each; the dragon also a
+  `front\` layer of 41 pictures drawn above the rider), embedded into Saddle Up's DLL by its csproj
+  (`GK2SaddleUp.skins.<id>.<file>`) and registered through `Mounts.Looks.RegisterEmbedded` in its Awake
+  (docs/mounts-as-mods.md). Each `skin.cfg` declares the mount (`[Mount]`, its tuning) and its `[Colors]`.
 - **Generator**: `tools/skins/creatures/make_creatures.py` (our own art, drawn by code: a crawl cycle for the walk, idle frames for
   the rest; writes straight into `assets\skins\<name>\` like every other generator since 2026-10-19 23:45, one
   creature with its name as the argument; the probe's `test\skins\` output is gone). Colours per region:
   `tools/skins/skin_colors.py` (writes each `[Colors]` section; run after the art changes, then `tests/SkinsScan`).
 - Docs: `docs/mount-looks-design.md` (the creatures), `docs/mount-colours.md`, `docs/mounts-design.md` (kinds).
 
-### Gerry (its own mount, game creature)
-- **Cfg only**: `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` (`source = game`, `[Game] prefix = 0901_`, the seat
+### Gerry (its own mount, game creature; Saddle Up's pack since 2026-10-20)
+- **Cfg only**: `src/SaddleUp/assets/skins/gerry/skin.cfg` (`source = game`, `[Game] prefix = 0901_`, the seat
   from the picture). The frames are the game's talking skull, read back and scaled at run time: `LooksGame.cs`.
 - **Tools**: `tools/skins/gerry/gerry_probe.py`, `tools/skins/gerry/gerry_sheet.py` (the exported frames, contact sheets). Docs:
   `docs/gerry-mount.md`.
@@ -95,7 +96,8 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | `tools/skins/check_skin.py` | checks a pack folder (frames and the front layer, colours per region, lone pixels over what the game draws beneath, the layout; exit code = errors only); run by the watcher and the release scans on every built-in |
 | `tools/skins/new_skin.py` | scaffolds a new skin: the built-in's `skin.cfg` in the canonical layout, a generator stub, the Aseprite sidecar; runs the scan |
 | `tools/skins/review.py` | the review pictures every generator writes the same way (strips with the front layer and the rider on the seat row, preview, pack sheet) |
-| `tools/skins/canonical_cfg.py` | rewrites every built-in `skin.cfg` into the one layout: `[Skin]`, `[Game]`, the skin's `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (its geometry), the colours, the `[Mount]` block (`--check` in the release scans) |
+| `tools/skins/skinroots.py` | where the skins are: every `src/<project>/assets/skins/<id>/` (the API's two donkey skins, Saddle Up's five mounts; a mount mod of its own would be a third root); every tool and scan below walks them through it |
+| `tools/skins/canonical_cfg.py` | rewrites every shipped `skin.cfg` into the one layout: `[Skin]`, `[Game]`, the skin's `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (its geometry), the colours, the `[Mount]` block (`--check` in the release scans) |
 | `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_colors.py`, `tools/skins/creatures/colors.json` | the four drawn creatures into their folders (strips per creature in `out\<name>\`); their `[Colors]` sections from the pixels (`front\` included, Gerry's from the game's export) by the rules in the json (a block per skin) |
 | `tools/skins/gerry/gerry_probe.py`, `gerry_sheet.py` | a game character's frames exported (the bundle found by content, the prefix an argument) and laid out for measuring |
 | `tools/skins/watch_skin.py`, `tools/skins/scripts/*.lua` | the by-hand loop: Aseprite -> export -> the sheet split into the built-in's per-frame PNGs (`front\` too) -> check -> previews with the front layer and the rider; the two menu scripts (also installed in `%APPDATA%\Aseprite\scripts\`) |

@@ -2,9 +2,13 @@
 skin.cfg in the canonical layout, a generator folder with a stub that draws a placeholder for every frame, and the
 Aseprite sidecar, then the scan. Everything else is drawing.
 
-    python -I tools/skins/new_skin.py <id> [--mount <mount id> [--name "Giant Thing"]] [--canvas 96] [--seat 52] [--over]
+    python -I tools/skins/new_skin.py <id> [--mount <mount id> [--name "Giant Thing"]] [--canvas 96] [--seat 52] [--over] [--mod <project>]
 
   <id>        the skin's id and folder name (letters, digits, dashes): giant-crab
+  --mod       the project under src/ whose assets/skins gets the pack (default: SaddleUp for a mount of its own,
+              GK2DonkeyAPI for a skin of the donkey; docs/mounts-as-mods.md). A mount mod of its own: a project whose
+              csproj embeds assets\\skins\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
+              lines to copy), then --mod <its folder>
   --mount     a creature of its own: the [Mount] block is written (id = the mount id; the skin is its Default when the ids
               match); without it the skin is a skin of the donkey (mount = donkey)
   --over      drawn OVER the donkey (a cloth, a hat): layer = over with the erase colour, no [Mount]
@@ -14,8 +18,9 @@ Aseprite sidecar, then the scan. Everything else is drawing.
 import os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-REPO = os.path.dirname(os.path.dirname(HERE))
-ASSETS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
+sys.path.insert(0, HERE)
+import skinroots
+REPO = skinroots.REPO
 
 
 def arg(name, default=None):
@@ -25,7 +30,7 @@ def arg(name, default=None):
     return default
 
 
-VALUED = {"--mount", "--name", "--canvas", "--seat"}  # the flags that take a value; --over stands alone
+VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod"}  # the flags that take a value; --over stands alone
 
 
 def main():
@@ -53,7 +58,13 @@ def main():
     canvas = int(arg("--canvas", "96"))
     seat = int(arg("--seat", str(52 + (canvas - 96) // 2)))
     name = arg("--name") or sid.replace("-", " ").title()
-    folder = os.path.join(ASSETS, sid)
+    project = arg("--mod") or (skinroots.MOUNTS_PROJECT if mount else skinroots.API_PROJECT)
+    if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
+        print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/skins/** and registers them as src/SaddleUp does)"); return 2
+    if skinroots.find(sid):
+        print("a skin with that id exists already:", skinroots.find(sid)); return 2
+    assets_root = skinroots.root_of(project)
+    folder = os.path.join(assets_root, sid)
     gen_dir = os.path.join(HERE, sid)
     if os.path.exists(folder) or os.path.exists(gen_dir):
         print("exists already:", folder if os.path.exists(folder) else gen_dir); return 2
@@ -90,7 +101,7 @@ def main():
     # the generator stub: a placeholder block per frame on the canvas, through the shared review pictures
     stub = f'''"""{name}: the generator (docs/sprite-tools.md "Making a skin"). Draws every frame of the skin on the {canvas}x{canvas}
 canvas (the donkey's frame sits centred; its back at row 41, feet on row 64 of the 96 canvas), writes a PNG per frame
-into src/GK2DonkeyAPI/assets/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
+into src/{project}/assets/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
 
     python -I tools/skins/{sid}/{gen}            # the built-in's pictures + out\\\\
     python -I tools/skins/{sid}/{gen} --no-assets  # out\\\\ only
@@ -103,7 +114,7 @@ import review
 from gamedir import donkey_frames, game_dir  # donkey_frames: the base's pictures an over skin is drawn on
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-ASSETS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins", "{sid}")
+ASSETS = os.path.join(REPO, "src", "{project}", "assets", "skins", "{sid}")
 OUT = os.path.join(HERE, "out")
 CANVAS = {canvas}
 OFF = (CANVAS - 96) // 2

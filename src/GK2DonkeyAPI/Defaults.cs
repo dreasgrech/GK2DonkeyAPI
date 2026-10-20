@@ -52,6 +52,23 @@ namespace GK2DonkeyAPI
             return null;
         }
 
+        // A folder a dev build of a DLL recorded as assembly metadata (the API's GK2DonkeyAPISourceDir, a mod's
+        // GK2SkinsSourceDir for its embedded skin packs), when it exists on this machine; else null.
+        internal static string SourceDirOf(Assembly asm, string key)
+        {
+            try
+            {
+                foreach (AssemblyMetadataAttribute a in asm.GetCustomAttributes<AssemblyMetadataAttribute>())
+                {
+                    if (a.Key == key) return !string.IsNullOrEmpty(a.Value) && Directory.Exists(a.Value) ? a.Value : null;
+                }
+            }
+            catch
+            {
+            }
+            return null;
+        }
+
         // A file in the mod's source folder, or null when this machine does not have the sources.
         public static string RepoFile(string name)
         {

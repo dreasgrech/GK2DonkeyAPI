@@ -12,7 +12,9 @@ namespace GK2DonkeyAPI.Api
     //   copies of the game's own rows (SettingsRows.cs). Keys and text there show read-only; they're set in the cfg.
     // Each row binds a BepInEx entry in the mod's own cfg, runs its apply action now and on every change (from the menu,
     // the Settings window or the cfg), and shows under its section. Call Publish once, after the rows, from the mod's
-    // Awake.
+    // Awake; the page reaches the menus the frame after (Show), when every plugin's Awake has run, so a mount or skin
+    // another mod registered in its Awake is in the lists whatever order BepInEx loaded the plugins in (it orders by
+    // dependencies only, and a mount mod can't ask to load before the mod that owns the page; docs/mounts-as-mods.md 4).
     // Sections keep the order they're first used in: the cfg section is numbered ("1. Keys", "2. Behaviour"), because
     // the framework's Mods menu sorts sections by name and has no other way to order them. The game's Settings window
     // shows the plain names.
@@ -344,62 +346,100 @@ namespace GK2DonkeyAPI.Api
         // The rows every player mod wants for choosing its mount, in one call (docs/mounts-design.md §6), meant for a
         // section of their own ("Mount"): a Mount dropdown (every mount), a Skin dropdown with that mount's skins, and
         // whether the foals are the same mount and skin. Cfg keys: Mount, Skin_<mount id>, FoalsWearSkin in the section
-        // given. The effect rows are EffectRows. Mounts and skins registered before the page is built appear here with
-        // no change to yours; later ones after a restart.
+        // given. The effect rows are EffectRows. Mounts and skins registered before the page is shown (the frame after
+        // Publish: every plugin's Awake has run by then, CatchUp) appear here with no change to yours; later ones after
+        // a restart.
         public void MountRows(string section, MountCompanion companion)
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
-            MountCompanion me = companion;
+            if (mountRow != null) throw new InvalidOperationException("MountRows is called once per page.");
+            mountCompanion = companion;
+            mountSection = section;
             // A mount (Donkey, Giant Rat, Dragon) has skins (the donkey: Default, Hellfire): a Mount
             // dropdown, then a Skin dropdown with that mount's skins. A dropdown's choices are fixed once built, so there
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
-            ConfigEntry<string> mountE = null;
-            var skinRows = new Dictionary<string, ConfigEntry<string>>(StringComparer.OrdinalIgnoreCase);
-            void Apply()
-            {
-                if (mountE == null) return;
-                string kind = mountE.Value ?? MountKinds.DonkeyId;
-                skinRows.TryGetValue(kind, out ConfigEntry<string> row);
-                string value = row?.Value;
-                // The donkey's own art is no skin of another mount: a cfg holding it for one (written while that
-                // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
-                bool donkeyKind = kind.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
-                if (string.IsNullOrEmpty(value) || (!donkeyKind && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(kind);
-                if (row != null && row.Value != value)
-                {
-                    row.Value = value; // SettingChanged runs Apply again with the healed value
-                    return;
-                }
-                me.Skin = value;
-            }
-            mountE = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
+            mountRow = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
                 Mounts.MountsEnabled
-                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... built in, or from a skin pack you installed or another mod). Each mount has its own skins: the next row."
+                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: the next row."
                     : "What you ride. The donkey, in this version; other mounts (the dragon, the giant rat, ...) come in the next update.",
-                v => Apply(), look: true);
-            mountRow = mountE;
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+                v => ApplyMountRows(), look: true);
+            foreach (MountKindInfo k in Mounts.Kinds.Kinds) AddSkinRow(k);
+            ApplyMountRows();
+        }
+
+        private MountCompanion mountCompanion;
+        private string mountSection;
+        private readonly Dictionary<string, ConfigEntry<string>> skinRows = new Dictionary<string, ConfigEntry<string>>(StringComparer.OrdinalIgnoreCase); // the Skin row per mount id
+        private readonly List<Action<string, string, Func<bool>>> perMountBuilders = new List<Action<string, string, Func<bool>>>(); // PerMount's callers, for the mounts that come later
+
+        private void AddSkinRow(MountKindInfo k)
+        {
+            string id = k.Id;
+            if (skinRows.ContainsKey(id)) return;
+            string first = Looks.FirstSkinOf(id);
+            pendingShown = () => string.Equals(mountRow?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
+            try
             {
-                string id = k.Id;
-                string first = Looks.FirstSkinOf(id);
-                pendingShown = () => string.Equals(mountE?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
-                try
+                skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
+                    Mounts.MountsEnabled
+                        ? $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins."
+                        : $"How the {k.Name.ToLowerInvariant()} is drawn. As the game draws it, in this version; skins (Hellfire, skin packs) come in the next update.",
+                    v => ApplyMountRows(), look: true);
+            }
+            finally
+            {
+                pendingShown = null;
+            }
+        }
+
+        private void ApplyMountRows()
+        {
+            if (mountRow == null) return;
+            string kind = mountRow.Value ?? MountKinds.DonkeyId;
+            skinRows.TryGetValue(kind, out ConfigEntry<string> row);
+            string value = row?.Value;
+            // The donkey's own art is no skin of another mount: a cfg holding it for one (written while that
+            // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
+            bool donkeyKind = kind.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(value) || (!donkeyKind && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(kind);
+            if (row != null && row.Value != value)
+            {
+                row.Value = value; // SettingChanged runs Apply again with the healed value
+                return;
+            }
+            mountCompanion.Skin = value;
+        }
+
+        // The rows of the mounts registered after MountRows and PerMount were called: a mod whose Awake ran after the
+        // page's mod's (BepInEx orders plugins by their dependencies only; docs/mounts-as-mods.md 4). Run once before
+        // the page is shown (Show, the frame after Publish, when every Awake has run); a mount still without a skin is
+        // left for the next start (the Mount list leaves it out too). Returns how many mounts got their rows.
+        internal int CatchUp()
+        {
+            if (mountRow == null || shown) return 0;
+            int added = 0;
+            catchingUp = true;
+            try
+            {
+                foreach (MountKindInfo k in Mounts.Kinds.Kinds)
                 {
-                    ConfigEntry<string> row = List(section, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
-                        Mounts.MountsEnabled
-                            ? $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins."
-                            : $"How the {k.Name.ToLowerInvariant()} is drawn. As the game draws it, in this version; skins (Hellfire, skin packs) come in the next update.",
-                        v => Apply(), look: true);
-                    skinRows[id] = row;
-                }
-                finally
-                {
-                    pendingShown = null;
+                    if (skinRows.ContainsKey(k.Id) || k.Skins.Count == 0) continue;
+                    AddSkinRow(k);
+                    foreach (Action<string, string, Func<bool>> rows in perMountBuilders) RunPerMount(rows, k.Id);
+                    added++;
                 }
             }
-            Apply();
+            finally
+            {
+                catchingUp = false;
+            }
+            return added;
         }
+
+        internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
+        internal bool HasMountRow => mountRow != null;
+        internal bool Shown => shown;
 
         // The rows for the mount's babies (foals), for the same section as MountRows: how many, whether they come
         // indoors, whether they are the same mount and skin. Cfg keys: Foals, FoalsIndoors, FoalsWearSkin in the section
@@ -463,7 +503,8 @@ namespace GK2DonkeyAPI.Api
         // One of a list of ids read when the row is first shown (the skins installed, say): choices gives (id, label)
         // pairs; the id is what the cfg holds, from every menu alike. A stored id that isn't in the list is shown as
         // "<id> (not installed)" and left alone, so it returns with what provides it. The list is read once per
-        // session: anything registered after the row is shown appears after a restart. look: in the look bar too.
+        // session, when the page is shown (the frame after Publish): anything registered after that appears after a
+        // restart. look: in the look bar too.
         public ConfigEntry<string> List(string section, string key, string value, Func<IReadOnlyList<(string Id, string Label)>> choices, string label, string description, Action<string> apply = null, bool look = false, Func<bool> visible = null)
         {
             if (choices == null) throw new ArgumentNullException(nameof(choices));
@@ -643,7 +684,9 @@ namespace GK2DonkeyAPI.Api
             Add(new Row { Kind = Kind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => LookBar.Open(this) });
         }
 
-        // Shows the rows: in the framework's Mods menu when it's installed, else in the game's Settings window.
+        // The mod is done adding rows. The page is shown the frame after (Show): in the framework's Mods menu when it's
+        // installed, else in the game's Settings window. The frame between is what lets every plugin's Awake run first
+        // (the header's note): the mounts registered meanwhile get their rows (CatchUp) and every list is read then.
         public void Publish()
         {
             if (published)
@@ -651,6 +694,20 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             published = true;
+            Plugin.NextFrame(Show);
+        }
+
+        private bool shown, catchingUp;
+
+        private void Show()
+        {
+            if (shown)
+            {
+                return;
+            }
+            int late = CatchUp();
+            if (late > 0) Plugin.Log.LogInfo($"Settings: {Title}: {late} mount(s) registered after the page was built (a mod loaded after {OwnerId}) got their rows before the page was shown.");
+            shown = true;
             AddKeyHelp();
             FinishBinding();
             LookPreview.Watch(this);
@@ -665,7 +722,7 @@ namespace GK2DonkeyAPI.Api
 
         private void Add(Row r)
         {
-            if (published)
+            if (shown || (published && !catchingUp))
             {
                 throw new InvalidOperationException("Add every row before Publish.");
             }
@@ -732,20 +789,22 @@ namespace GK2DonkeyAPI.Api
                 rows(MountKinds.DonkeyId, "", null);
                 return;
             }
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+            perMountBuilders.Add(rows); // a mount registered after this call gets its rows at CatchUp
+            foreach (MountKindInfo k in Mounts.Kinds.Kinds) RunPerMount(rows, k.Id);
+        }
+
+        private void RunPerMount(Action<string, string, Func<bool>> rows, string id)
+        {
+            bool donkey = id.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
+            Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountKinds.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
+            pendingShown = isShown;
+            try
             {
-                string id = k.Id;
-                bool donkey = id.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
-                Func<bool> shown = () => string.Equals(mountRow?.Value ?? MountKinds.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
-                pendingShown = shown;
-                try
-                {
-                    rows(id, donkey ? "" : "_" + id, shown);
-                }
-                finally
-                {
-                    pendingShown = null;
-                }
+                rows(id, donkey ? "" : "_" + id, isShown);
+            }
+            finally
+            {
+                pendingShown = null;
             }
         }
 

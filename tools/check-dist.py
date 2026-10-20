@@ -10,7 +10,7 @@ import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
-NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable)"}
+NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its five mounts are embedded packs"}
 
 props = open(os.path.join(REPO, "Directory.Build.props"), encoding="utf-8").read()
 GAME = re.search(r"<GameDir[^>]*>([^<]+)</GameDir>", props).group(1).strip()
@@ -32,7 +32,7 @@ for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
     for hit in re.findall(rb"(?:[A-Za-z]\x00:\x00\\\x00(?:[A-Za-z0-9_. ()-]\x00){1,80}\\\x00(?:[^\x00]\x00){0,120})", b):
         findings.append("path (utf-16): " + hit.decode("utf-16le", "ignore")[:120])
     if "Documents\\GitHub".encode("utf-16le") in b:
-        findings.append("the source folder (GK2DonkeyAPISourceDir) is baked in: not a -p:ForDist=true build")
+        findings.append("the source folder (GK2DonkeyAPISourceDir / GK2SkinsSourceDir) is baked in: not a -p:ForDist=true build")
     note = None
     if name in NO_MANIFEST:
         # No manifest by design: then the DLL must reference neither game assembly (a reference would be an unchecked dependency).

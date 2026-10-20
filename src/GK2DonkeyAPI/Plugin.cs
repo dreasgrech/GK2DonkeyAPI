@@ -362,7 +362,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.33.0";
+        public const string Version = "0.34.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -372,6 +372,15 @@ namespace GK2DonkeyAPI
         // Set when the application starts closing (Application.quitting runs before the plugin's OnDestroy).
         internal static bool Quitting;
         internal static Plugin Instance;
+
+        // Runs once, at the top of the next LateUpdate: a settings page's hand-over to the menus (MountSettingsPage.Publish),
+        // which has to wait until every plugin's Awake has run (they all run in the chainloader's loop, before any frame).
+        private static readonly System.Collections.Generic.Queue<Action> nextFrame = new System.Collections.Generic.Queue<Action>();
+
+        internal static void NextFrame(Action action)
+        {
+            if (action != null) nextFrame.Enqueue(action);
+        }
 
         // [General]: behaviour
         internal static ConfigEntry<bool> Enabled;
@@ -635,7 +644,7 @@ namespace GK2DonkeyAPI
             // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind / Effects.Bind because
             // the key binds after them.
             MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
-                "Dev: switches on what the next update brings players: the mounts other than the donkey (the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
+                "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's five: the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull; and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
             MountsOn = MountsPreview.Value;
             if (MountsOn)
             {
@@ -709,6 +718,19 @@ namespace GK2DonkeyAPI
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {
+            // The deferred actions first, whatever state the API is in (a page reaches the menus on a stopped API too).
+            while (nextFrame.Count > 0)
+            {
+                Action a = nextFrame.Dequeue();
+                try
+                {
+                    a();
+                }
+                catch (Exception e)
+                {
+                    Log.LogWarning("A deferred action threw (a settings page may be missing from the menus): " + e);
+                }
+            }
             // Unity's layout pass runs before every OnGUI and makes garbage even when nothing is drawn: off while the
             // panel isn't showing (set here, before this frame's OnGUI, so the events of one frame agree).
             bool gui = harmony != null && Enabled.Value && (TuningWindow.Showing());

@@ -70,8 +70,8 @@ installed game, or a Saddle Up DLL that references a game assembly (it carries n
 property change doesn't invalidate the compile), and the check then fails on the PDB path (seen 2026-10-13).
 
 `make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
-`BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod),
-read back and compared with `dist/`; this zip is
+`BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod;
+Saddle Up's five mounts are packs inside its DLL), read back and compared with `dist/`; this zip is
 the Nexus upload (extracts into the game folder). `release/` is not kept in git.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build

@@ -11,8 +11,8 @@ import colorsys, io, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins -> the repo
-SKINS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
+import skinroots
+REPO = skinroots.REPO
 
 
 RULES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "creatures", "colors.json")
@@ -25,7 +25,9 @@ def export_dir(skin):
 
 
 def colours(skin, source=None):
-    d = export_dir(skin) if source == "game-export" else os.path.join(SKINS, skin)
+    d = export_dir(skin) if source == "game-export" else skinroots.find(skin)
+    if d is None:
+        return None
     if not os.path.isdir(d):
         return None
     cols = {}
@@ -75,7 +77,7 @@ RULES = load_rules()
 
 
 def write_section(skin, regions):
-    p = os.path.join(SKINS, skin, "skin.cfg")
+    p = os.path.join(skinroots.find(skin), "skin.cfg")
     raw = io.open(p, encoding="utf-8", newline="").read()
     nl = "\r\n" if "\r\n" in raw else "\n"
     t = raw.replace("\r\n", "\n")

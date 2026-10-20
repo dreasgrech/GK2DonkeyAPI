@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.33.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.34.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -694,7 +694,10 @@ Where skins come from, in order of how little they need:
   `BepInEx/plugins`. The API finds them at start. `Mounts.Looks.RegisterFolder(owner, folder)` reads packs under a
   folder of your own.
 - **Embedded in your DLL:** the same files as `EmbeddedResource` with logical names `<prefix><skin dir>\<file>`, then
-  `Mounts.Looks.RegisterEmbedded(owner, assembly, "<prefix>")`.
+  `Mounts.Looks.RegisterEmbedded(owner, assembly, "<prefix>")`. The worked example is Saddle Up itself (its five
+  mounts: the csproj's embed line, one call in its Awake, nothing else; docs/mounts-as-mods.md).
+  A dev build may record the packs' source folder as the assembly metadata `GK2SkinsSourceDir`; the F11 Mounts
+  tab then writes a skin's tuned values back into its skin.cfg.
 - **A sheet instead of 44 files:** the same pack with one PNG (`sheet = sheet.png` in `skin.cfg`, cells of the
   canvas size in reading order, the frames in `Mounts.Looks.FrameKeys` order or as `frames = ...` lists them).
 - **From code:** `Mounts.Looks.Register(owner, new MountSkinDef { Id, Name, Source = yourSource })` with an
@@ -866,6 +869,12 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.34.0: no change to the public surface. `MountSettingsPage.Publish` shows the page the frame after it is called
+  (every plugin's Awake has run by then): `MountRows` and `PerMount` make their rows for the mounts registered
+  meanwhile too, so a mount from a mod loaded after yours is in your Mount list, has its Skin row and its colour
+  rows (docs/mounts-as-mods.md 4; before, it waited for a restart that never helped, BepInEx's order being fixed).
+  A set skin or effect that isn't installed logs an Info, not a warning. The five mounts left the API for
+  Saddle Up, which ships them as embedded packs through `RegisterEmbedded` (the API's own skins are the donkey's two).
 - 0.33.0: `MountSkinDef.Effect` / `EffectWhen` (the effect a skin comes with, shown under "As the mount or skin";
   `null` = the mount's; the effect ring scales by the worn skin's drawn width); `MountSkinDef.TuningRide` / `TuningCart`
   (a skin's per-style geometry, `null` = none: the skin owns its drawing's geometry, docs/mounts-parity-matrix.md 9.1);

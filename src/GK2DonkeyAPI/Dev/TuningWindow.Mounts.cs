@@ -514,7 +514,7 @@ namespace GK2DonkeyAPI
         {
             string name = string.IsNullOrEmpty(skin.Name) ? skin.Id : skin.Name;
             Header("This skin: " + name + "  (" + skin.Id + ")");
-            GUILayout.Label($"{(skin.BuiltIn ? "Built in" : skin.Source != null ? "A pack: " + skin.Source : "From code by " + skin.Owner)}; {skin.CanvasW}x{skin.CanvasH}{(skin.Tuning != null && skin.Tuning.Count > 0 ? $"; its own [Tuning]: {string.Join(", ", skin.Tuning.Keys)} (the rows below)" : "")}.", small);
+            GUILayout.Label($"{(skin.BuiltIn ? "Built in" : skin.Source != null ? "A pack: " + skin.Source : skin.SourceAssembly != null ? "Embedded in " + skin.SourceAssembly.GetName().Name + ".dll" : "From code by " + skin.Owner)}; {skin.CanvasW}x{skin.CanvasH}{(skin.Tuning != null && skin.Tuning.Count > 0 ? $"; its own [Tuning]: {string.Join(", ", skin.Tuning.Keys)} (the rows below)" : "")}.", small);
             Vector2 ov = skin.OffsetRide;
             Vector2 oc = skin.OffsetCart;
             bool same = ov == oc;
@@ -576,7 +576,7 @@ namespace GK2DonkeyAPI
             }
             if (path == null)
             {
-                GUILayout.Label(skin.BuiltIn ? "Built in, and the mod's sources aren't on this machine: changes last this session." : "A code skin: its values live in its mod; changes last this session.", small);
+                GUILayout.Label(skin.BuiltIn || skin.SourceAssembly != null ? "Embedded in a DLL whose sources aren't on this machine (a release build): changes last this session." : "A code skin: its values live in its mod; changes last this session.", small);
             }
             else
             {

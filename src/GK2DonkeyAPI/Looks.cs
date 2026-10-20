@@ -111,9 +111,11 @@ namespace GK2DonkeyAPI
             Camera.onPreCull += OnPreCull;
         }
 
-        // The built-in skins (the embedded creatures, Gerry, Hellfire's recipe) and the skin packs under plugins\. Called
-        // after the dev keys bind, and only with the mounts switched on (Plugin.MountsOn: off for players in this
-        // version, so nothing but the donkey is ever offered to them).
+        // The built-in skins (the donkey's two: Hellfire and Royal Parade, embedded) and the skin packs under plugins\.
+        // The five mounts (the dragon, the rat, the snail, the worm, Gerry) are Saddle Up's packs since 2026-10-20
+        // (docs/mounts-as-mods.md: the player mod ships them, this API is the backend) and come through RegisterEmbedded
+        // like any mod's. Called after the dev keys bind, and only with the mounts switched on (Plugin.MountsOn: off
+        // for players in this version, so nothing but the donkey is ever offered to them).
         internal static void RegisterBuiltIns()
         {
             RegisterEmbedded(typeof(Looks).Assembly, "GK2DonkeyAPI.skins.", Plugin.Guid, builtIn: true);
@@ -207,6 +209,7 @@ namespace GK2DonkeyAPI
             internal bool BuiltIn;
             internal string Report = "";      // what the loader found (one block, logged once)
             internal string Source;           // a pack's folder, for the report
+            internal Assembly SourceAssembly; // an embedded skin's DLL (a mod's, or the API's own for a built-in): its GK2SkinsSourceDir says where its files are on this machine
             internal long DiskStamp;          // a pack's files' newest write time as read (PackStamp): what the watch compares against
             internal string DirName;          // the skin directory's name (the id by default)
             internal Func<string, byte[]> ReadFile;    // the pack's files by name, for a reload
@@ -335,6 +338,7 @@ namespace GK2DonkeyAPI
                     string cfgText = Encoding.UTF8.GetString(Bytes("skin.cfg"));
                     SkinDef def = FromCfg(cfgText, kv.Key, owner, "embedded " + asm.GetName().Name + " " + kv.Key, Bytes, pics.Keys);
                     def.BuiltIn = builtIn;
+                    def.SourceAssembly = asm;
                     Register(def);
                     n++;
                 }
@@ -771,14 +775,17 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ the skin's file: for the tuning panel
 
-        // The skin.cfg a skin's values are kept in: a pack's own file, or a built-in's in the repo's assets on the machine
-        // that has the sources; null when there is none to write (a code skin, a built-in elsewhere).
+        // The skin.cfg a skin's values are kept in: a pack's own file, or an embedded skin's in its mod's sources on the
+        // machine that has them (the DLL's GK2SkinsSourceDir metadata, written by a dev build: the API's own
+        // assets\skins, Saddle Up's for its five mounts; docs/mounts-as-mods.md); null when there is none to write (a code skin, an
+        // embedded skin of a release build).
         internal static string CfgPathFor(SkinDef d)
         {
             if (d == null) return null;
             if (!string.IsNullOrEmpty(d.Source)) return Path.Combine(d.Source, "skin.cfg");
             if (d.BuiltIn) return Defaults.RepoPath(Path.Combine("assets", "skins", d.DirName ?? d.Id, "skin.cfg"));
-            return null;
+            string dir = d.SourceAssembly != null ? Defaults.SourceDirOf(d.SourceAssembly, "GK2SkinsSourceDir") : null;
+            return dir != null ? Path.Combine(dir, d.DirName ?? d.Id, "skin.cfg") : null;
         }
 
         // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
@@ -2035,8 +2042,10 @@ namespace GK2DonkeyAPI
                     {
                         if (missingIdLogged.Add(want))
                         {
-                            // with the mounts off (this version's players) a set skin is expected to be missing: no warning
-                            if (Plugin.MountsOn) Plugin.Log.LogWarning($"Looks: no skin '{want}' is installed; the donkey is drawn as the game draws it (the choice is kept).");
+                            // Not a fault of anything here: the mod or pack that had the skin is gone (mounts come from mods of
+                            // their own, docs/mounts-as-mods.md), or a cfg names one that was never there. An Info either way:
+                            // a warning is for something to fix, and a player who removed a mod has nothing to fix.
+                            if (Plugin.MountsOn) Plugin.Log.LogInfo($"Looks: no skin '{want}' is installed (its mod or pack isn't loaded); the donkey is drawn as the game draws it (the choice is kept and comes back with it).");
                             else Plugin.Log.LogInfo($"Looks: the skin '{want}' is set, but the skins are off in this version (Debug.MountsPreview); the donkey is drawn as the game draws it (the choice is kept).");
                         }
                     }

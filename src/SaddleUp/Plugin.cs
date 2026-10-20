@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using BepInEx;
 using BepInEx.Configuration;
 using GK2DonkeyAPI.Api;
@@ -10,9 +11,12 @@ namespace SaddleUp
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
     // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
-    // the example of how little a player mod needs.
+    // the example of how little a player mod needs. Its five mounts (the Red Dragon, the Giant Rat, the Giant Snail,
+    // the Giant Worm, Gerry) are skin packs embedded in this DLL (the csproj's assets\skins\**) and handed to the API
+    // in Awake: the API is the backend, this mod ships the content, exactly as anyone else's mod ships a mount
+    // (docs/mounts-as-mods.md: a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart).
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.31.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.34.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -20,10 +24,14 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.11.0";
 
-        // The API this mod is written against: 0.31 has the page's Heading (0.30 the skins, MountCompanion.Skin; 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22
-        // CargoZombies). Checked before anything of the API is used, so an older API gets a clear message instead of a
-        // missing-method error. Keep it the same as the BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 31, 0);
+        // The API this mod is written against: 0.34 shows a mount registered in any plugin's Awake and takes a mod's
+        // embedded packs through the Mounts tab's save (0.31 the page's Heading; 0.30 the skins, MountCompanion.Skin;
+        // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
+        // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
+        // BepInDependency minimum above.
+        private static readonly Version NeedsApi = new Version(0, 34, 0);
+
+        private const string SkinsPrefix = "GK2SaddleUp.skins."; // the embedded packs' resource names (the csproj)
 
         private void Awake()
         {
@@ -32,6 +40,11 @@ namespace SaddleUp
                 Logger.LogError($"GK2 Donkey API {Mounts.ApiVersion} is too old (this mod needs {NeedsApi} or newer). Update GK2 Donkey API. The mount is off.");
                 return;
             }
+            // The five mounts: registered before the page is built, so their rows are made with it (any other mod's
+            // mounts are caught up the frame after Publish). With the mounts off for players (Mounts.MountsEnabled,
+            // this version) the API keeps them out and says so, and the donkey stays the only mount.
+            int mounts = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
+            if (mounts > 0) Logger.LogInfo($"GK2 Saddle Up: {mounts} mount skin(s) registered (the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry).");
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
@@ -69,7 +82,7 @@ namespace SaddleUp
                 // This version ships the mounts, skins and effects switched off (Mounts.MountsEnabled; the next update
                 // switches them on): the rows above hold the donkey alone, and these say why.
                 p.Info("Mount", "Other mounts and skins", () => "Coming in the next update",
-                    "A dragon, a giant rat, a giant snail, a giant worm, the Hellfire skin and skin packs are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
+                    "A dragon, a giant rat, a giant snail, a giant worm, Gerry, the Hellfire skin, skin packs and the mounts from other mods are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
             }
             p.FoalRows("Mount", me);
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After loading, your mount and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);

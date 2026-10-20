@@ -425,7 +425,8 @@ namespace GK2DonkeyAPI
                     EffectDef d = Find(want);
                     if (want.Length > 0 && d == null && missingLogged.Add(want))
                     {
-                        if (Plugin.MountsOn) Plugin.Log.LogWarning($"Effects: no effect '{want}' is registered; the donkey shows none (the choice is kept).");
+                        // an Info, as a missing skin: the mod that had the effect is gone, nothing here to fix
+                        if (Plugin.MountsOn) Plugin.Log.LogInfo($"Effects: no effect '{want}' is registered (its mod isn't loaded); the donkey shows none (the choice is kept and comes back with it).");
                         else Plugin.Log.LogInfo($"Effects: the effect '{want}' is set, but the effects are off in this version (Debug.MountsPreview); the donkey shows none (the choice is kept)."); // expected while off: no warning
                     }
                     if (d != effect)

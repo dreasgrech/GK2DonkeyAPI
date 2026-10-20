@@ -12,6 +12,12 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The five mounts are Saddle Up's.** The Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm and Gerry
+  moved out of GK2 Donkey API into GK2 Saddle Up (five skin packs in its DLL, registered with the API at start,
+  the same way anyone else's mod ships a mount; the user, 2026-10-20: the API is the backend, mounts and skins
+  come from mods built on it). Nothing changes for you: the same download, the same Mount row, still switched
+  off until the next update. The API keeps the donkey's two skins, Hellfire and Royal Parade. A mount from any
+  mod now shows in Saddle Up's settings whatever order the mods loaded in (below, for mod authors).
 - **The dragon's belly has its own colour**: the Second tone row (below). A green coat had left a gold belly that
   no row could reach (the user, 2026-10-20: it read as wood); for an afternoon the belly followed the Coat, now it
   is a tone of its own again, set apart from the scales. Its plate seams are every four rows instead of three.
@@ -57,6 +63,20 @@ For players:
 
 For mod authors:
 
+- **A mount or skin registered in any plugin's Awake reaches a settings page** (API 0.34.0, docs/mounts-as-mods.md
+  4). `MountSettingsPage.Publish` now shows the page the frame after it is called, when every plugin's Awake has
+  run: the Mount and Skin rows and the per-mount colour rows (`MountRows`, `PerMount`) are made for the mounts
+  registered meanwhile too (BepInEx orders plugins by their dependencies only, and a mount mod can't ask to load
+  before the mod that owns the page). Before, a mount from a mod loaded after Saddle Up had no rows for the whole
+  session and no restart changed it. Self-tested: a pack declaring a mount after the rows were built gets its
+  Skin row and coat row at the catch-up; every page shown this session has a Skin row for every mount.
+- **A set skin or effect that isn't installed is an Info line, not a warning** ("its mod or pack isn't loaded;
+  the choice is kept and comes back with it"): a player who removed a mount mod has nothing to fix.
+- **Shipping a mount in a mod**: Saddle Up is the worked example (docs/mounts-as-mods.md): its five mounts are
+  packs embedded by one csproj line and registered by one `Mounts.Looks.RegisterEmbedded` call in Awake, no other
+  code; a loose `gk2skins\<id>\` folder under `plugins\` needs no code at all. A dev build may record the packs'
+  source folder as the DLL's `GK2SkinsSourceDir` assembly metadata, and the F11 Mounts tab then writes a skin's
+  tuned values back into its skin.cfg as it does for the API's own.
 - **Skin packs: an erase colour for skins drawn over the donkey** (docs/skins.md "Erasing from the donkey"). A
   pixel of `erase = FF00FF` (magenta by default for `layer = over`; `none` switches it off) makes the donkey
   transparent there, so an over pack can take the ears off under horns or the tail off under another. Such a picture
@@ -330,6 +350,18 @@ For mod authors:
 
 Development:
 
+- **Mounts as separate mods, investigated and done** (docs/mounts-as-mods.md): the runtime needed nothing (every
+  mount is a pack the API already loads from a folder or another mod's DLL; no shipped code names a mount); what
+  stood in the way is fixed above (the load order, the Info line) and here: the five mount folders moved from
+  `src/GK2DonkeyAPI/assets/skins/` to `src/SaddleUp/assets/skins/` (Saddle Up's csproj embeds them, its Awake
+  registers them: the content in the player mod, the backend in the API; a third project was tried first the
+  same evening and folded back in, the user: "have them be in Saddle Up with the backend all working in the
+  api"); the tools and scans walk every `src/*/assets/skins` through `tools/skins/skinroots.py`
+  (`canonical_cfg.py`, `skin_colors.py`, `new_skin.py` with `--mod <project>`, the review page,
+  `make_creatures.py`'s default, `tests/SkinsScan`, the `check_skin` loop in `release-scans.sh`). The sixteen
+  self-tests that name the five mounts keep their subjects; the readout and Coat scenarios say "every shipped
+  mount"; the Gerry test expects its mount from a pack, not built into the API; the temp packs' sample picture
+  comes from Royal Parade now. Saddle Up needs API 0.34.0.
 - `tests/fixtures/released/0.10.0/`: the player files as 0.10.0 wrote them, captured from the release zip's
   rehearsal run (checklist step 3b had been skipped at the release): the two cfgs with the keys new in 0.10.0 set off
   their defaults, 0.30.0's `defaults.cfg`, a real format-2 side file. The upgrade self-test runs over 0.9.1 and

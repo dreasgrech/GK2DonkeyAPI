@@ -4,8 +4,9 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.11.0, for GK2 Donkey API 0.31.0 or newer, and Steam game build 25910882 (game
-1.010).
+`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.11.0, for GK2 Donkey API 0.34.0 or newer, and Steam game build 25910882 (game
+1.010). Five more mounts come inside it (a dragon, a giant rat, a giant snail, a giant worm, Gerry: skin packs in
+`assets/skins/`, registered with the API at start the way any mod ships a mount), switched off until the next update.
 
 ## Playing
 
@@ -41,7 +42,7 @@ All of these apply at once:
 |---|---|---|---|
 | 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
-| | Mount | Donkey | What you ride. In this version: the donkey only; the other mounts (Dragon, Giant Rat, Giant Snail, Giant Worm, Gerry) are built and switched off until the next update, and a row under the Skin row says so. Its picture is at the top of the section. |
+| | Mount | Donkey | What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row under the Skin row says so. Its picture is at the top of the section. |
 | | Skin | Default | How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire with its ring of fire, Royal Parade, skin packs from anyone) come in the next update. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |

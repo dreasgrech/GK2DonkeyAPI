@@ -350,14 +350,15 @@ def main(argv):
                   "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness"})
     seen.add("donkey")
     # 2. the built-in skins
-    builtin = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
-    if os.path.isdir(builtin):
-        for d in sorted(os.listdir(builtin)):
-            p = os.path.join(builtin, d)
-            if os.path.isfile(os.path.join(p, "skin.cfg")):
-                cfg = read_cfg(os.path.join(p, "skin.cfg"))
-                frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-                add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "built in", p)
+    # (every src/*/assets/skins: the API's own and Saddle Up's, skinroots.py)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import skinroots
+    for p in skinroots.skin_dirs():
+        d = os.path.basename(p)
+        project = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(p))))
+        cfg = read_cfg(os.path.join(p, "skin.cfg"))
+        frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
+        add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "built in" if project == skinroots.API_PROJECT else "the " + project + " mod", p)
     # 3. the packs in the game
     packs = os.path.normpath(os.path.join(probe, "..", "plugins", "gk2skins"))
     if os.path.isdir(packs):

@@ -1,4 +1,5 @@
-// The built-in skins (src/GK2DonkeyAPI/assets/skins/<id>/, embedded into the DLL): every skin.cfg must parse the way
+// The skins this repo ships (every src/*/assets/skins/<id>/: the API's own and Saddle Up's five mounts, each embedded into
+// its DLL; docs/mounts-as-mods.md): every skin.cfg must parse the way
 // Looks.cs reads it, every picture the donkey base needs must be there at the canvas size, a mount declared by
 // several skins must be declared the same way, a skin's [Tuning] may only hold the picture keys (a skin is the
 // drawing, the mount the creature: docs/mounts-design.md §1), and a mount's tuning keys must exist. The frame keys
@@ -7,7 +8,8 @@
 using System.Text.RegularExpressions;
 
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
-var skinsDir = Path.Combine(repo, "src", "GK2DonkeyAPI", "assets", "skins");
+var skinDirs = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "skins")).Where(Directory.Exists)
+    .SelectMany(Directory.GetDirectories).OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
 var looksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Looks.cs"));
 var pluginCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Plugin.cs"));
 int fails = 0, passes = 0;
@@ -176,7 +178,7 @@ static string SectionText(Dictionary<string, Dictionary<string, string>> cfg, st
 
 var mountDecl = new Dictionary<string, (string Skin, string Text)>(StringComparer.OrdinalIgnoreCase);
 int skins = 0, pictures = 0;
-foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringComparer.OrdinalIgnoreCase))
+foreach (var dir in skinDirs)
 {
     string id = Path.GetFileName(dir);
     string cfgPath = Path.Combine(dir, "skin.cfg");
@@ -460,6 +462,6 @@ foreach (var dir in Directory.GetDirectories(skinsDir).OrderBy(d => d, StringCom
     else if (mount != "donkey") Bad($"names the mount '{mount}' but declares no [Mount] section (a built-in declares its own)");
     if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
-Console.WriteLine($"INFO {skins} built-in skins, {mountDecl.Count} mounts declared ({string.Join(", ", mountDecl.Keys.OrderBy(k => k))}), {pictures} pictures");
+Console.WriteLine($"INFO {skins} shipped skins (the API's and Saddle Up's), {mountDecl.Count} mounts declared ({string.Join(", ", mountDecl.Keys.OrderBy(k => k))}), {pictures} pictures");
 Console.WriteLine(fails == 0 ? $"ALL PASS ({passes})" : $"FAILURES: {fails}");
 return fails;
