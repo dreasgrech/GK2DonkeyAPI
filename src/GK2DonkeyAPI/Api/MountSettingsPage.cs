@@ -695,7 +695,8 @@ namespace GK2DonkeyAPI.Api
         // on them (a custom colour with its preset) stays its own (Row.Enabled: the look bar greys, never hides).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
-        // (a Harness row on the worm). The row stays and keeps its value; the look bar shows it greyed.
+        // (a Harness row on the worm). The row stays and keeps its value; the look bar shows it greyed, the Mods menu
+        // (which knows only visibility) leaves it out for that mount.
         public void EnableWhen(string section, string key, Func<bool> enabled)
         {
             if (enabled == null) throw new ArgumentNullException(nameof(enabled));

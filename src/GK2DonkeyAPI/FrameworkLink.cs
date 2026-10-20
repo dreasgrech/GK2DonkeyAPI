@@ -181,11 +181,16 @@ namespace GK2DonkeyAPI
                             }, order);
                             break;
                     }
-                    if (r.Visible != null)
+                    // The Mods menu knows only visibility, so a row the look bar greys (EnableWhen: a colour region none of
+                    // the mount's skins has) is left out of the menu for that mount; it stays in the cfg with its value
+                    // (the dragon's Second tone rows showed in the menu and did nothing, the user 2026-10-20).
+                    Func<bool> visible = r.Visible, enabled = r.Enabled;
+                    Func<bool> inMenu = enabled == null ? visible : visible == null ? enabled : () => visible() && enabled();
+                    if (inMenu != null)
                     {
                         string key = r.Entry != null ? r.Entry.Definition.Key
                             : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : r.Kind == MountSettingsPage.Kind.Preview ? "Preview" : "Button") + order;
-                        s.SetVisibilityCondition(r.Section, key, r.Visible);
+                        s.SetVisibilityCondition(r.Section, key, inMenu);
                     }
                 }
             }

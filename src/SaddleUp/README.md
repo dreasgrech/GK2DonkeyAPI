@@ -50,6 +50,7 @@ All of these apply at once:
 | 3. Colours | Choose colours | | A button: closes the menu and opens the colour rows over the game (below). The picture of your mount and cart is under it, then the rows under two headings, "Mount colours" and "Cart colours". Kept per mount. |
 | | Coat colour | Game default | The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
 | | Harness colour | Game default | The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
+| | Second tone | Game default | The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava. Pale, Rose, Brown, Green, Blue, Dark, or Custom. Not shown for a mount without one (the worm); greyed in the colours window over the game. |
 | | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
 | | Wheel colour | Game default | The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
 | | Wheel hub colour | Game default | The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |

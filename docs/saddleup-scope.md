@@ -59,6 +59,7 @@ Kept short: everything a player would look for, nothing that can break the pictu
 | | Thought bubbles | on | Text only. |
 | **Donkey** | Coat | Grey (the game's) | A list of presets: Grey, Brown, Dark, Cream, Black, maybe one silly one. Each preset is a tested set of colour values. |
 | | Harness colour | the game's | A short preset list. |
+| | Second tone | the game's | The muzzle, a rat's pink parts, a snail's shell: a short preset list (2026-10-20). |
 | | Shuffles when standing | on | On/off only. |
 | | Calling the donkey leaves the cart parked | on | On/off only (2026-10-09): off brings the cart along and leaves it by the keeper, the old way. |
 | | Donkey leaves corpses at the crossroads | **off** | On/off only (2026-10-10): the game's delivery donkey leaves its bodies by the nun for the keeper to haul (`Mounts.Corpses`, [corpse-delivery.md](corpse-delivery.md)). The finer keys stay in the API's cfg. |

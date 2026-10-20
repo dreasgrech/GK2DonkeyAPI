@@ -1547,16 +1547,39 @@ namespace GK2DonkeyAPI
                 ProgressBar(total > 0 ? (float)done / total : 0f);
                 GUILayout.Label($"{done} of {total} scenario(s) done after {Mathf.FloorToInt(Time.unscaledTime - SelfTest.RunStarted)} s; so far {SelfTest.PassCount} passed, {SelfTest.FailCount} failed, {SelfTest.WarnCount} warning(s).", small);
             }
+            // Every group starts folded (60 scenarios made the tab a long scroll, the user 2026-10-20): the header
+            // carries the group's count and its last results and the Run group button; a click on the name unfolds it.
             foreach (string g in SelfTest.Groups)
             {
                 GUILayout.Box(GUIContent.none, rule, ExpandW);
+                int count = 0, passed = 0, failed = 0, warned = 0, running = 0;
+                foreach (SelfTest.Scenario s in SelfTest.Catalog)
+                {
+                    if (s.Group != g) continue;
+                    count++;
+                    if (s.State == SelfTest.RunState.Running) running++;
+                    else if (s.State == SelfTest.RunState.Done)
+                    {
+                        if (s.Fail > 0) failed++;
+                        else if (s.Warn > 0) warned++;
+                        else passed++;
+                    }
+                }
+                bool open = testGroupOpen.TryGetValue(g, out bool o) && o;
+                string summary = passed + failed + warned + running == 0 ? $"{count} scenarios"
+                    : $"{count} scenarios: {passed} passed" + (failed > 0 ? $", {failed} FAILED" : "") + (warned > 0 ? $", {warned} with warnings" : "") + (running > 0 ? ", running" : "");
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(g, header, ExpandW);
+                if (GUILayout.Button((open ? "\u25BE " : "\u25B8 ") + g, header, ExpandW))
+                {
+                    testGroupOpen[g] = !open;
+                }
+                GUILayout.Label(summary, failed > 0 ? bad : small, Wd(W * 0.34f));
                 if (!SelfTest.Running && GUILayout.Button(Tip("Run group", "Runs only this group's scenarios, with the same start and finish as a full run. Nothing is saved."), Wd(90f)))
                 {
                     SelfTest.RequestStartGroup(g);
                 }
                 GUILayout.EndHorizontal();
+                if (!open) continue;
                 foreach (SelfTest.Scenario s in SelfTest.Catalog)
                 {
                     if (s.Group != g)
@@ -1592,6 +1615,8 @@ namespace GK2DonkeyAPI
         }
 
         // One scenario's state for its row: not run, running (with its time so far), or its tally, coloured.
+        private static readonly Dictionary<string, bool> testGroupOpen = new Dictionary<string, bool>(); // the Tests tab: which groups are unfolded
+
         private static string ScenarioState(SelfTest.Scenario s, out GUIStyle style)
         {
             switch (s.State)

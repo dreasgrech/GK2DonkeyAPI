@@ -412,7 +412,7 @@ under his seat that stood out like a thumb when nobody rode and moved the peak t
 draws either; the method and the recipe for the next mount: docs/front-layer.md.) The far wing is
 the same fold a few pixels back and up behind the body (its peak and the
 top of its curtain show behind the near one's), `seat = 68` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
-that far further back, or the body is drawn inside it), colours Coat = scales, wing and the golden belly (the belly a lighter tone of the coat, so a player's Coat turns it too),
+that far further back, or the body is drawn inside it), colours Coat = scales and wing, Muzzle = the golden belly (the page's Second tone row: its own colour, apart from the scales),
 Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
 babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
 

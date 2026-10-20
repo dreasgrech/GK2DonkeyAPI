@@ -12,9 +12,20 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
-- **The dragon's belly follows the Coat colour.** It was its Muzzle region, so a green coat left a gold belly (the
-  user, 2026-10-20: it read as wood); the belly is Coat now, a lighter tone of it, and its plate seams are every
-  four rows instead of three. The dragon has no Muzzle row any more (it greys on the page).
+- **The dragon's belly has its own colour**: the Second tone row (below). A green coat had left a gold belly that
+  no row could reach (the user, 2026-10-20: it read as wood); for an afternoon the belly followed the Coat, now it
+  is a tone of its own again, set apart from the scales. Its plate seams are every four rows instead of three.
+- **A "Second tone" colour row** under the mount colours: the donkey's muzzle, the rat's tail, ears and nose, the
+  snail's shell, the dragon's belly, Hellfire's lava (the API's Muzzle region), with Pale, Rose, Brown, Green, Blue, Dark and Custom
+  (each preset measured to move every one of those parts by a clear step: a pink on the rat's pink and a brown
+  on the snail's shell showed nothing at first); it greys on a mount whose look
+  has no such part (the worm, the dragon). Every drawn part of every skin a player may want to colour is now on
+  the page: Coat is the body, Harness the tack, Second tone the rest of the skin; bone, horns, outlines and eyes
+  stay as drawn (the user, 2026-10-20). A colour row for a part the chosen mount has no such part of (Harness and
+  Second tone on the worm) is left out of the Mods menu for that mount instead of sitting there doing
+  nothing (the menu knows only visibility; the colours window over the game still greys it).
+- **The Tests tab folds its groups**: each group's header carries its count, its last results and the Run group
+  button, and a click on the name unfolds the scenarios (60 scenarios made the tab a long scroll).
 - **The settings picture's cart moves to the new mount's hitch gap at once** when the Mount row changes. It slid
   into place up to a second later (the user's video, 2026-10-20): the picture's paper mount never counted its
   tuning re-merges, so the picture only picked the gap up on its once-a-second fallback. The preview self-test
@@ -104,7 +115,8 @@ For mod authors:
   at the shipped lift and at the old one). A scenario watches the settings picture after a mount switch frame by
   frame (when the worn skin flips, when the stage applies the new hitch gap, when the picture is reframed) and
   fails if the gap lags the skin by more than two frames: the user saw the cart take many frames to settle
-  (2026-10-20). The cart readout's rule was wrong, not the gaps:
+  (2026-10-20). Another wears every built-in creature with the Coat colorized and checks that every Coat colour
+  changed and no colour of another region did (the audit of every skin's regions is in docs/mount-colours.md). The cart readout's rule was wrong, not the gaps:
   the rat's and the dragon's declared gaps (judged by eye) leave their carts about 10 px further from the body than
   the donkey's, and the snail, worm and Gerry stand further still without any gap (narrower bodies), so the rule
   asserted is "no cart closer to its body than the donkey's"; the three declare no gap and their cfgs say why

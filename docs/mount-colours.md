@@ -1,7 +1,7 @@
 # Colours on every mount: one scheme, no special donkey (design, 2026-10-18)
 
 The user's rule for this: **keep things standard and common between the mounts.** The colour settings a player has
-(Coat colour, Harness colour, custom colours with lightness, and the API's region settings) must mean the same thing
+(Coat colour, Harness colour, Second tone, custom colours with lightness, and the API's region settings) must mean the same thing
 on the donkey, the dragon, the worm and Gerry, with the donkey being one look among others, not the model the rest
 are bolted onto.
 
@@ -138,18 +138,34 @@ layer), by rules that are data in `tools/skins/creatures/colors.json` (a block p
 saturation and value thresholds; the first match wins; everything else is Coat). Re-run after the art changes, then
 `tests/SkinsScan` (which checks every listed colour against the pixels):
 
-- **Red Dragon:** Coat = the red scales, the wing and the golden belly (the belly is a lighter tone of the coat: a
-  player's Coat turns all three, the belly keeping its lightness; it was Muzzle, and a gold belly under a green
-  coat read as wood, the user 2026-10-20); Dark = the outlines, the horns and the back spikes (bone); Eye = the
-  yellow eye. No Muzzle: that row greys for the dragon.
+- **Red Dragon:** Coat = the red scales and the wing; Muzzle = the golden belly, the page's Second tone row (it
+  spent an afternoon as Coat, 2026-10-20: a gold belly under a green coat read as wood and no row reached it; with
+  the Second tone row the belly is a colour of its own again, tweakable apart from the scales); Dark = the
+  outlines, the horns and the back spikes (bone); Eye = the yellow eye.
 - **Giant Rat:** Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = the outline; Eye = the red eye.
 - **Giant Snail:** Coat = the green body; Muzzle = the brown shell; Dark = the outline (300 colours: the cube path).
 - **Giant Worm:** Coat = the pink skin; Dark = the outline (720 colours: the cube path).
+
+  Audited 2026-10-20 (every standing frame classed by its cfg, the share of the drawn pixels per region): the
+  dragon Coat 60, Muzzle 10 (the belly), Dark 29 (its outline is Dark), Eye under 1; the rat Coat 79, Dark 13, Muzzle 7; the snail Muzzle
+  41 (the shell), Coat 38, Dark 19; the worm Coat 84, Dark 15; Royal Parade Harness 61, the rest kept (the gold
+  trim and the blue, unnamed on an over skin, are drawn as they are); Hellfire's own colours all named. So a
+  player's Coat turns the body of every creature; the rat's pink parts, the snail's shell and the dragon's belly
+  are the Second tone row's; bone, horns and outlines stay. The self-test "colours: the Coat row reaches every body colour of every built-in
+  creature, and no other" proves it in the game on all four (first run 2026-10-20: rat 10 of 10 Coat colours
+  changed, snail 127 of 127, worm 717 of 717, dragon 10 of 10, none of another region).
+
+  The Second tone presets (`MuzzleColor`) were chosen by measuring each one on every second-tone part (the
+  colorize keeps a pixel's value and takes the preset's hue and saturation, so a preset of a part's own hue does
+  nothing to it: the first Pink moved the rat's pink by 7 to 10 of 255 and the first Brown the snail's shell by
+  5 to 18). Pale, Rose, Brown, Green, Blue and Dark each move the donkey's muzzle, the rat's pink, the snail's
+  shell and Hellfire's lava by at least 22, most by 40 and more. The worm has no second tone: its rows are
+  left out of the menu and greyed in the colours window.
 - **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
   (`BepInEx\GK2-asset-probe\game-skins\gerry\`) when one exists; without the export the cfg carries no `[Colors]`
   and everything is Coat.
 - **Hellfire, Royal Parade** (over the donkey): Hellfire's written once by its generator (`make_hellfire.py`, `--cfg`
-  rewrites it; the cracks and the glow as Muzzle and Eye), Royal Parade's by hand in its cfg (the cloth's reds as Harness); a donkey colour drawn by an over skin is kept as the donkey's (its own
+  rewrites it; the cracks and the glow as Muzzle and Eye, so the page's Second tone row recolours Hellfire's lava), Royal Parade's by hand in its cfg (the cloth's reds as Harness); a donkey colour drawn by an over skin is kept as the donkey's (its own
   settings and the skin's `[Base.*]` reach it), which is how Hellfire's tuft and rump fill continue the body.
 
 ## 3. What is not in this

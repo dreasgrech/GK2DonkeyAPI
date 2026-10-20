@@ -1,7 +1,7 @@
 {
   "_": "The colour regions of each drawn creature (docs/mount-colours.md 2.6), as rules over a colour's hue (degrees), saturation and value (0..1): the first region whose rule matches wins, in the order written; a colour no rule matches is Coat. tools/skins/skin_colors.py applies them to the pictures (front/ included) and writes each skin's [Colors]. Edit here, never in the script.",
   "dragon": {
-    "_": "Coat = the red scales, the wing and the belly (a lighter tone of the coat, so a player's Coat turns all three; the belly was Muzzle, stayed gold under a green coat and read as wood, the user 2026-10-20); Dark = outlines, horns and back spikes (bone); Eye = the yellow eye.",
+    "_": "Coat = the red scales and the wing; Muzzle = the golden belly (its own row on the page, Second tone: the user wants to tweak it apart from the scales, 2026-10-20); Dark = outlines, horns and back spikes (bone); Eye = the yellow eye. Dark first (the bone's low-saturation golds), then Eye (the yellow and its highlight, which the belly's hue range would also take), then Muzzle.",
     "Dark": [
       {
         "v_max": 0.2
@@ -17,6 +17,12 @@
       {
         "h_min": 40,
         "v_min": 0.9
+      }
+    ],
+    "Muzzle": [
+      {
+        "h_min": 20,
+        "h_max": 45
       }
     ]
   },

@@ -161,6 +161,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "effect: the skin's own effect under 'As the mount or skin', and the ring's size by the drawn width", Body = SkinEffect },
             new Scenario { Group = GroupLooks, Name = "front layer: the dragon's near wing stays in front of the rider (a readback)", Body = FrontLayer },
             new Scenario { Group = GroupLooks, Name = "preview: the cart sits at the new mount's hitch gap as soon as the mount is switched", Body = PreviewGap },
+            new Scenario { Group = GroupLooks, Name = "colours: the Coat row reaches every body colour of every built-in creature, and no other", Body = CoatEveryBuiltIn },
+            new Scenario { Group = GroupLooks, Name = "colours: the Second tone row reaches the rat's pink parts, the snail's shell and the dragon's belly, and is left out elsewhere", Body = SecondTone },
             new Scenario { Group = GroupLooks, Name = "over skins: Hellfire and Royal Parade worn, recoloured and walking; the snail's own rider offset (a readback)", Body = OverBuiltIns },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -1581,6 +1583,104 @@ namespace GK2DonkeyAPI
             yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "rat" && a.I.EffectsRig.Lit && a.I.EffectsRig.TestRingRadiusX > 1.2f, 20f);
             float ratRing = a.I.EffectsRig.TestRingRadiusX;
             Check(waited && Math.Abs(ratRing - 0.8f * 85f / 46f) < 0.2f, $"the ring on the rat reaches {ratRing:0.00} along the body (0.8 x 85/46 = 1.48: the rat is 85 px wide to the donkey's 46)");
+            a.Remove();
+            yield return Frames(2);
+        }
+
+        // The page's Second tone row (the API's Muzzle region; the user, 2026-10-20: every part of every skin reachable
+        // from the page): a companion's preset lands as the Muzzle keys on its paper mount and on its donkey wearing the
+        // rat, where every Muzzle colour changes and no other; the row is left out on a mount whose skins have no such
+        // region (the worm) and live on the rat, the snail, the dragon (its belly) and the donkey.
+        private static IEnumerator SecondTone()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in creatures");
+                yield break;
+            }
+            Check(MountSettingsPage.MountHasRegion("rat", "Muzzle") && MountSettingsPage.MountHasRegion("snail", "Muzzle") && MountSettingsPage.MountHasRegion("dragon", "Muzzle") && MountSettingsPage.MountHasRegion(MountKinds.DonkeyId, "Muzzle"), "the rat, the snail, the dragon and the donkey have a second tone: the row is live for them");
+            Check(!MountSettingsPage.MountHasRegion("worm", "Muzzle"), "the worm has none: the row is left out for it");
+            const string owner = Owner + ".secondtone";
+            MountCompanion me = Mounts.Companion(owner);
+            me.Skin = "rat";
+            me.Muzzle = MuzzleColor.Custom;
+            me.CustomMuzzle = "00FF00";
+            Mount.Instance paper = me.Paper;
+            yield return Frames(2);
+            Check(paper != null && paper.Overrides.ContainsKey("MuzzleColorize") && paper.OverrideOwners.TryGetValue("MuzzleColorize", out string by) && by == me.OwnerId, "the companion's second tone lands on its paper mount as MuzzleColorize, owned by the companion");
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            a.Tuning.Set(Owner, "Skin", "rat");
+            yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == "rat" && !a.I.LooksRig.Building, 20f);
+            if (!waited) { Fail("the rat was never worn"); a.Remove(); yield break; }
+            a.Tuning.Set(Owner, "MuzzleColorize", "00FF00");
+            a.Tuning.Set(Owner, "MuzzleColorizeAmount", 1f);
+            yield return Frames(3);
+            var d = a.I.ColorsRig.TestMountGroup();
+            Looks.Loaded look = a.I.LooksRig.WornOwnColours;
+            List<Color32> pinks = look != null && look.ColoursByRegion.TryGetValue("Muzzle", out List<Color32> m) ? m : new List<Color32>();
+            int fromPink = 0, fromOthers = 0;
+            foreach (Color32 c in d.ChangedSources) { if (pinks.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) fromPink++; else fromOthers++; }
+            Info($"the rat with a green second tone: {d.Changed} of {d.Colours} colours changed ({fromPink} of its {pinks.Count} Muzzle colours, {fromOthers} of other regions)");
+            Check(pinks.Count > 0 && fromPink == pinks.Count && fromOthers == 0, $"the second tone reaches every pink colour of the rat and nothing else ({fromPink} of {pinks.Count}; {fromOthers} others)");
+            me.Muzzle = MuzzleColor.Game;
+            a.Remove();
+            yield return Frames(2);
+        }
+
+        // The player's Coat on every built-in creature (the user, 2026-10-20, after the dragon's belly ignored it): each
+        // worn on a test donkey, Coat colorized magenta, the mount group's changed colours read back: every colour of
+        // the skin's Coat region changed (two may not: a grey keeps its hue) and nothing of another region. The exact
+        // group's pairs say which colour changed, on the exact swap and on the cube path alike (the snail's 300 and
+        // the worm's 720 are all paired, the first run showed, 2026-10-20).
+        private static IEnumerator CoatEveryBuiltIn()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in creatures");
+                yield break;
+            }
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            foreach (string skin in new[] { "rat", "snail", "worm", "dragon" })
+            {
+                if (Looks.Find(skin) == null)
+                {
+                    Warn($"the built-in {skin} isn't registered: skipped");
+                    continue;
+                }
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);
+                a.Tuning.Set(Owner, "Skin", skin);
+                yield return Until(() => a.IsReady && a.I.LooksRig.Wearing == skin && !a.I.LooksRig.Building, 20f);
+                if (!waited)
+                {
+                    Fail($"the {skin} was never worn");
+                    continue;
+                }
+                a.Tuning.Set(Owner, "CoatColorize", "FF00FF");
+                a.Tuning.Set(Owner, "CoatColorizeAmount", 1f);
+                yield return Frames(3);
+                var d = a.I.ColorsRig.TestMountGroup();
+                Looks.Loaded look = a.I.LooksRig.WornOwnColours;
+                List<Color32> cs = look != null && look.ColoursByRegion.TryGetValue("Coat", out List<Color32> found) ? found : null;
+                int coat = cs?.Count ?? -1;
+                int others = 0;
+                if (look != null) foreach (var kv in look.ColoursByRegion) if (kv.Key != "Coat") others += kv.Value.Count;
+                int fromCoat = 0, fromOthers = 0;
+                foreach (Color32 c in d.ChangedSources)
+                {
+                    if (cs != null && cs.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) fromCoat++;
+                    else fromOthers++;
+                }
+                Info($"{skin}: {d.Colours} colours ({d.Method}), Coat {coat}, the other regions {others}; Coat = magenta changed {d.Changed} ({fromCoat} Coat colours, {fromOthers} of other regions)");
+                Check(coat > 0, $"{skin}: its Coat region has colours ({coat})");
+                Check(d.Pairs == d.Colours, $"{skin}: every colour is paired on the {d.Method} path ({d.Pairs} of {d.Colours})");
+                Check(fromCoat >= coat - 2, $"{skin}: the Coat row reaches every body colour ({fromCoat} of {coat} changed)");
+                Check(fromOthers == 0, $"{skin}: the Coat row changes no colour of another region ({fromOthers} did)");
+            }
+            a.Tuning.Set(Owner, "CoatColorizeAmount", 0f);
             a.Remove();
             yield return Frames(2);
         }

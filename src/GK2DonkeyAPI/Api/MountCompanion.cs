@@ -10,6 +10,11 @@ namespace GK2DonkeyAPI.Api
     // Look presets (MountCompanion): Game is the game's own art, Custom uses the matching Custom* hex colour.
     public enum CoatColor { Game, Brown, Dark, Cream, Black, Custom }
     public enum HarnessColor { Game, Black, Red, Blue, Green, Custom }
+    // The second body tone (the API's Muzzle region): the donkey's muzzle, the rat's tail, ears and nose, the snail's
+    // shell, Hellfire's lava. A mount whose look has no such region ignores it (MountSettingsPage.MountHasRegion greys
+    // the row). The presets are chosen to differ from every part's own hue (a rose on the rat's pink and a brown on
+    // the snail's shell were invisible at first, the user 2026-10-20): each moves every part by a clear step.
+    public enum MuzzleColor { Game, Pale, Rose, Brown, Green, Blue, Dark, Custom }
     public enum CartPaint { Game, DarkWood, Red, Green, Blue, Custom }
     public enum LanternColor { Game, White, Green, Blue, Custom }
     public enum WheelColor { Game, DarkWood, Red, Green, Blue, Black, Custom }
@@ -31,6 +36,8 @@ namespace GK2DonkeyAPI.Api
 
         private CoatColor coat;
         private HarnessColor harness;
+        private MuzzleColor muzzle;
+        private string customMuzzle;
         private CartPaint paint;
         private LanternColor lanternColor;
         private string customCoat, customHarness, customPaint, customLantern, customWheels, customHubs;
@@ -39,6 +46,8 @@ namespace GK2DonkeyAPI.Api
 
         public CoatColor Coat { get => coat; set { coat = value; owner.LookChanged(this); } }
         public HarnessColor Harness { get => harness; set { harness = value; owner.LookChanged(this); } }
+        public MuzzleColor Muzzle { get => muzzle; set { muzzle = value; owner.LookChanged(this); } }
+        public string CustomMuzzle { get => customMuzzle; set { customMuzzle = value; owner.LookChanged(this); } }
         public CartPaint Paint { get => paint; set { paint = value; owner.LookChanged(this); } }
         public LanternColor LanternLight { get => lanternColor; set { lanternColor = value; owner.LookChanged(this); } }
         public string CustomCoat { get => customCoat; set { customCoat = value; owner.LookChanged(this); } }
@@ -271,6 +280,7 @@ namespace GK2DonkeyAPI.Api
         // The current mount's look (LookOf(MountId)); a page's rows set each mount's own (MountSettingsPage.PerMount).
         public CoatColor Coat { get => Current.Coat; set => Current.Coat = value; }
         public HarnessColor Harness { get => Current.Harness; set => Current.Harness = value; }
+        public MuzzleColor Muzzle { get => Current.Muzzle; set => Current.Muzzle = value; }
         public CartPaint Paint { get => Current.Paint; set => Current.Paint = value; }
         public LanternColor LanternLight { get => Current.LanternLight; set => Current.LanternLight = value; }
 
@@ -278,6 +288,7 @@ namespace GK2DonkeyAPI.Api
         // logged once.
         public string CustomCoat { get => Current.CustomCoat; set => Current.CustomCoat = value; }
         public string CustomHarness { get => Current.CustomHarness; set => Current.CustomHarness = value; }
+        public string CustomMuzzle { get => Current.CustomMuzzle; set => Current.CustomMuzzle = value; }
         public string CustomPaint { get => Current.CustomPaint; set => Current.CustomPaint = value; }
 
         // The cart's wheels (their wood) and their hubs (the iron fittings), each on its own; "Game" leaves the game's art.
@@ -744,6 +755,7 @@ namespace GK2DonkeyAPI.Api
             MountLook l = Current;
             var coatKeys = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skin));
             var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));
+            var muzzleKeys = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", skin));
             var skinKeys = new Dictionary<string, object>();
             if (!string.IsNullOrWhiteSpace(skin) && !skin.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) skinKeys["Skin"] = skin.Trim();
             var noSkin = new Dictionary<string, object>();
@@ -757,6 +769,7 @@ namespace GK2DonkeyAPI.Api
             {
                 OnPaper(CoatKeys, coatKeys);
                 OnPaper(HarnessKeys, harnessKeys);
+                OnPaper(MuzzleKeys, muzzleKeys);
                 OnPaper(LookKeys, skinKeys);
                 paper.LooksRig.MarkDirty();
             }
@@ -781,6 +794,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     Instance(h, CoatKeys, coatKeys);
                     Instance(h, HarnessKeys, harnessKeys);
+                    Instance(h, MuzzleKeys, muzzleKeys);
                     Instance(h, LookKeys, h == Donkey || foalsWearSkin ? skinKeys : noSkin);
                     Instance(h, EffectKeys, effectKeys);
                 }
@@ -820,6 +834,7 @@ namespace GK2DonkeyAPI.Api
         // Every key a part may set: cleared (if this owner set it) when the preset doesn't use it.
         private static readonly string[] CoatKeys = { "CoatColorize", "CoatColorizeAmount", "CoatBrightness", "CoatSaturation" };
         private static readonly string[] HarnessKeys = { "HarnessColorize", "HarnessColorizeAmount", "HarnessBrightness", "HarnessSaturation" };
+        private static readonly string[] MuzzleKeys = { "MuzzleColorize", "MuzzleColorizeAmount", "MuzzleBrightness", "MuzzleSaturation" };
         private static readonly string[] PaintKeys =
         {
             "CartBodyColorize", "CartBodyColorizeAmount", "CartBodyBrightness",
@@ -897,6 +912,23 @@ namespace GK2DonkeyAPI.Api
                 case HarnessColor.Custom:
                     string hex = Hex(custom, what);
                     return hex == null ? null : new Dictionary<string, object> { ["HarnessColorize"] = hex, ["HarnessBrightness"] = Lightness(hex, "Harness", skinId) };
+                default: return null;
+            }
+        }
+
+        private static Dictionary<string, object> MuzzlePreset(MuzzleColor c, string custom, string what, string skinId)
+        {
+            switch (c)
+            {
+                case MuzzleColor.Pale: return new Dictionary<string, object> { ["MuzzleColorize"] = "E8DCC0", ["MuzzleColorizeAmount"] = 1f, ["MuzzleBrightness"] = 1.25f };
+                case MuzzleColor.Rose: return new Dictionary<string, object> { ["MuzzleColorize"] = "F0508C", ["MuzzleColorizeAmount"] = 1f, ["MuzzleBrightness"] = 1.3f };
+                case MuzzleColor.Brown: return new Dictionary<string, object> { ["MuzzleColorize"] = "6E3A1E", ["MuzzleColorizeAmount"] = 1f, ["MuzzleBrightness"] = 0.75f };
+                case MuzzleColor.Green: return new Dictionary<string, object> { ["MuzzleColorize"] = "4E8C3C", ["MuzzleColorizeAmount"] = 1f };
+                case MuzzleColor.Blue: return new Dictionary<string, object> { ["MuzzleColorize"] = "3C6EB4", ["MuzzleColorizeAmount"] = 1f };
+                case MuzzleColor.Dark: return new Dictionary<string, object> { ["MuzzleBrightness"] = 0.45f, ["MuzzleSaturation"] = 0.6f };
+                case MuzzleColor.Custom:
+                    string hex = Hex(custom, what);
+                    return hex == null ? null : new Dictionary<string, object> { ["MuzzleColorize"] = hex, ["MuzzleBrightness"] = Lightness(hex, "Muzzle", skinId) };
                 default: return null;
             }
         }

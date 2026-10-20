@@ -474,8 +474,8 @@ p.Publish();
 | `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
 | `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
 | *(every setting)* | Starts at the default a mod's settings should use: pass the property as the row's default (`p.Toggle(..., me.BellOnSetOff, ...)`), so it's written once, in the API. |
-| `Coat`, `Harness`, `Paint`, `Wheels`, `Hubs`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `CartPaint`, `WheelColor`, `HubColor`, `LanternColor`); `Game` is the game's art. The paint is the cart body and shafts; the wheels' wood and their hubs have their own (0.19.0). |
-| `CustomCoat`, `CustomHarness`, `CustomPaint`, `CustomWheels`, `CustomHubs`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. Empty or invalid means the game's look; an invalid one is logged once. |
+| `Coat`, `Harness`, `Muzzle`, `Paint`, `Wheels`, `Hubs`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `MuzzleColor`: the second body tone, the donkey's muzzle, the rat's pink parts, the snail's shell, ignored by a mount whose look has no Muzzle region; `CartPaint`, `WheelColor`, `HubColor`, `LanternColor`); `Game` is the game's art. The paint is the cart body and shafts; the wheels' wood and their hubs have their own (0.19.0). |
+| `CustomCoat`, `CustomHarness`, `CustomMuzzle`, `CustomPaint`, `CustomWheels`, `CustomHubs`, `CustomLantern` | Hex `RRGGBB`, used with `Custom`. Empty or invalid means the game's look; an invalid one is logged once. |
 
 Where they apply:
 - **The looks, the name and the foal** are this companion's own donkey, cart and foal only (instance overrides): other
@@ -859,8 +859,13 @@ History:
 - 0.33.0: `MountKindDef.Noun`, `MountKindInfo.Noun` / `EffectWhen` / `Tuning*` (its `Skins` Default first); `MountSpawn.Mount`
   (a mount by name, its Default skin); `SpawnFoal`'s size defaults to the parent mount's; `MountSkinDef.Regions` / `Erase` /
   `BaseRegions` / `SeatFromPicture` (a code skin says what a pack says); `MountSkinInfo.Regions`;
-  `MountSettingsPage.EnableWhen` and `MountHasRegion` (grey a colour row for a region a mount never has); the
+  `MountSettingsPage.EnableWhen` and `MountHasRegion` (a colour row for a region a mount never has: greyed in the
+  look bar, left out of the Mods menu for that mount); the
   cart rule at `Mounts.Spawn(WithCart)` and a hitched mount that becomes a no-cart kind leaves its cart standing.
+- 0.33.0: `MountLook.Muzzle` / `CustomMuzzle` and `MountCompanion.Muzzle` / `CustomMuzzle` (`MuzzleColor`: Game, Pale, Rose,
+  Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
+  donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
+  and its foals; Saddle Up's "Second tone" row.
 - 0.33.0: `MountSkinDef.Effect` / `EffectWhen` (the effect a skin comes with, shown under "As the mount or skin";
   `null` = the mount's; the effect ring scales by the worn skin's drawn width); `MountSkinDef.TuningRide` / `TuningCart`
   (a skin's per-style geometry, `null` = none: the skin owns its drawing's geometry, docs/mounts-parity-matrix.md 9.1);
