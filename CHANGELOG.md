@@ -99,9 +99,14 @@ For mod authors:
   the back with the thumb claw hooking towards the head, the fingers run down from the peak as red lines, and the
   membrane hangs between them like a curtain to the ground behind the hindquarters, scalloped along its hem, wine
   against the body's red and outlined. Both wings root at the shoulder, where wings attach and where the rider
-  sits: the peak stands above and behind his head, the curtain sweeps back over the flank to the hip. The near wing
-  is split by his hip row: above it the curtain is behind him (his body in view), below it it is the front layer
-  over his legs. The far wing is the same fold four pixels back and five up (the perspective), drawn behind the
+  sits: the peak stands above the shoulder and behind his head, the curtain hangs from it back over the flank, its
+  hem on the ground behind the hindquarters only and rising forward along the belly line, the near hind leg in
+  front of the curtain, nothing of the wing forward of the peak. The whole near wing is the front layer, over the
+  rider wherever the two overlap: he sits inside the fold with the top of his head, part of his face and the
+  reins arm out of it. (Tried on the way and rejected: a cut that kept his chest in view by drawing the membrane
+  behind him there, and a one-layer wing shaped around him, which grew a lobe under his seat that stood out
+  like a thumb when nobody rode.)
+  The far wing is the same fold four pixels back and five up (the perspective), drawn behind the
   body, which hides all but its peak and the top of its curtain behind the near one's. (The user's corrections on
   the way: a curtain at the tail, one too high, a far wing of its own shape, and one "back on his ass" when the root
   sat at the mid-back.) (Eight drafts went before it: flat folds and fans along the flank read as a plank, a

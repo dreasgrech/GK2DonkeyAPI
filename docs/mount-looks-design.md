@@ -396,10 +396,19 @@ nothing of the donkey is assumed by the loader or the rig, sheet packs, and spri
 near wing was raised at first, its outer fan in front of him: ridden, it hid him (the user, 2026-10-20), so it is
 **folded** now, as the user's reference sheets draw a resting dragon (a tall wrist peak above the back with the claw
 hooking forward, the fingers running down from it, the membrane hanging like a curtain to the ground behind the
-hindquarters, scalloped, in a colour of its own with an outline): both wings rooted at the shoulder, the peak above
-and behind the rider's head, the curtain sweeping back over the flank; the near wing split at his hip row, behind
-him above it and in the front layer over his legs below it; the far wing the same fold a few pixels back and up
-behind the body (its peak and the top of its curtain show behind the near one's), `seat = 62` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
+hindquarters, scalloped, in a colour of its own with an outline): both wings rooted at the shoulder, the peak
+above it and behind the rider's head, the curtain hanging from the peak back over the flank, its hem on the
+ground behind the hindquarters only and rising forward along the belly line (the belly shows under it; the near
+hind leg stands in front of the curtain, drawn in the front layer too); nothing of the wing lies forward of the
+peak. The whole near wing is the front layer, over the rider wherever the two overlap (the user, 2026-10-20: the
+wing is nearer the camera than he is, so no part of him may show in front of it): he sits inside the fold with
+the top of his head, part of his face and the reins arm out of it, chest and everything below under the
+membrane. (Tried and rejected the same day: a cut that drew the membrane behind him above his waist to keep his
+chest in view, which showed him in front of the wing; and a one-layer wing shaped around him, which grew a lobe
+under his seat that stood out like a thumb when nobody rode and moved the peak to the mid-back; no reference
+draws either.) The far wing is
+the same fold a few pixels back and up behind the body (its peak and the
+top of its curtain show behind the near one's), `seat = 68` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
 that far further back, or the body is drawn inside it), colours Coat = scales and wing, Muzzle = the golden belly,
 Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
 babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
