@@ -645,13 +645,19 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
 
     legs(far=True)
 
-    # ---- the tail: thick at the hips, tapering to a spade, trailing low and swaying
+    # ---- the tail: thick at the hips, tapering steadily, trailing low to the ground and swaying, a flat spade at the
+    # end (the references: a long tail lying low behind the dragon with spines along its top; ours is as long as the
+    # 128 canvas allows, the drawing's last column being 111). The spines sit on the tail's DRAWN top edge, found per
+    # column after the fill: placed from the curve's radius they floated a row above it and read as notches with a
+    # hole under each (the user's blue box, 2026-10-20). A near-even thickness with a kink up into the spade read as a
+    # sausage (the same day).
     sway = (1.5 * math.sin(2 * math.pi * phase) if walking else idle)
-    tpts = [(70, 50 + bob), (83, 50 + bob + sway * 0.3), (95, 56 + sway * 0.7), (104, 61 + sway), (110, 57 + sway * 1.2)]
+    tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
     tail = catmull(tpts, 160)
+    tail_top = {}
     for i, (x, y) in enumerate(tail):
         u = i / (len(tail) - 1)
-        r = 6.2 * (1 - u) ** 0.8 + 1.0
+        r = 6.0 * (1 - u) ** 1.4 + 1.0
         for yy in range(int(y - r - 1), int(y + r + 2)):
             for xx in range(int(x - r - 1), int(x + r + 2)):
                 d = math.hypot(xx + 0.5 - x, yy + 0.5 - y)
@@ -661,13 +667,19 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                         put(xx, yy, DBELLY[1] if int(xx) % 4 else DBELLY[0])     # the plates under the tail
                     else:
                         put(xx, yy, DRG[4] if up > 0.5 else DRG[3] if up > -0.05 else DRG[2])
-        if i % 14 == 7 and u < 0.8:                                             # a spine on top of the tail
-            for k in range(2 if u > 0.4 else 3):
-                put(x, y - r - k, DHORN[1 if k else 0])
+                    if xx not in tail_top or yy < tail_top[xx]:
+                        tail_top[xx] = yy
+    for xx in range(74, 103, 4):                                                 # the spines along the tail's top, as the ridge's
+        if xx in tail_top and xx + 1 in tail_top:
+            h = 3 if xx < 86 else 2
+            top = min(tail_top[xx], tail_top[xx + 1])
+            for k in range(h):
+                put(xx, top - 1 - k, DHORN[1 if k < h - 1 else 2])
+                put(xx + 1, top - 1 - k, DHORN[0])
     tx, ty = tail[-1]
-    for k in range(6):                                                           # the spade: an arrowhead, wider than the tip
-        for ox in range(-k // 2 - 1, k // 2 + 2):
-            put(tx + 1 + k * 0.7, ty - 4 + k * 1.3 + ox, DRG[2] if abs(ox) >= k // 2 + 1 else DRG[3])
+    for k, half in enumerate((2, 2, 1, 1, 1, 0, 0, 0)):                         # the tip: a spike, the tail tapering on to a point (a diamond
+        for oy in range(-half, half + 1):                                        # spade read as a hanging lantern: the user, 2026-10-20)
+            put(tx + 1 + k * 0.7, ty - 1 + oy, DRG[2] if abs(oy) >= half else DRG[3])
 
     # ---- the body, neck and head as one shape: a deep chest, a dipped back on the seat line, big haunches, a thick
     # neck arching up (down when grazing), a big skull with a long jaw

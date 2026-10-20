@@ -117,7 +117,13 @@ For mod authors:
   bobbing, swaying peak the whole wing jiggled, the user's video 2026-10-20: now every point of the wing takes
   the body's bob and nothing sways), nothing of the wing forward of the peak. The whole
   method, the game's placing of the layer, the rider's measures on the canvas and the recipe for the next mount
-  are in docs/front-layer.md. The whole near wing is the front layer, over the
+  are in docs/front-layer.md. The tail is redrawn as the references trail it: tapering steadily from the hips to
+  the ground, lying low with its tip on the feet's row, tapering on into a spike that ends two columns in from
+  the canvas edge (the old tail kept one thickness to a kink up into an arrowhead that was widest at its far end
+  and ran past the edge: a sausage with a cut-off tip; a diamond spade in between read as a hanging lantern), and
+  its spines seated on the drawn top edge, two columns wide
+  like the ridge's (placed from the curve's radius they floated a row above the edge and read as notches with a
+  hole under each). The whole near wing is the front layer, over the
   rider wherever the two overlap: he sits inside the fold with the top of his head, part of his face and the
   reins arm out of it. (Tried on the way and rejected: a cut that kept his chest in view by drawing the membrane
   behind him there, and a one-layer wing shaped around him, which grew a lobe under his seat that stood out
