@@ -398,10 +398,10 @@ near wing was raised at first, its outer fan in front of him: ridden, it hid him
 hooking forward, the fingers running down from it, the membrane hanging like a curtain to the ground behind the
 hindquarters, scalloped, in a colour of its own with an outline): both wings rooted at the shoulder, the peak
 above it and behind the rider's head, the curtain hanging from the peak back over the flank, its hem on the
-ground behind the hindquarters only and rising forward along the belly line (the belly shows under it; both hind
-legs are under the curtain, which reaches the ground over them with no scallop at the ground line: the near one
-drawn in front, its foot read as part of the wing, the user 2026-10-20; the generator's leak scan finds no leg
-pixel below the hem in any frame); nothing of the wing lies forward of the
+belly line (the big idle reference hangs the curtain to the ground; the red walk frames and every blue frame
+tuck the wing against the flank, and a mount that walks does too: the belly band and both hind legs in view
+under it, nothing on the ground, the whole wing one piece with the body, no sway and no pinned hem, after a
+ground-reaching version jiggled in the world, the user's video 2026-10-20); nothing of the wing lies forward of the
 peak. The whole near wing is the front layer, over the rider wherever the two overlap (the user, 2026-10-20: the
 wing is nearer the camera than he is, so no part of him may show in front of it): he sits inside the fold with
 the top of his head, part of his face and the reins arm out of it, chest and everything below under the

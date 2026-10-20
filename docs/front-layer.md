@@ -81,15 +81,21 @@ rises above row 31 between columns 50 and 65 takes his head. The dragon's wing p
 shoulder where the references put the wrist: it covers his chest, shoulders and the back of his head, and leaves
 the hair, the face's front and the arm.
 
-## 5. The ground under it
+## 5. One piece with the body, and off the ground
 
-A near side that hangs to the ground (the wing's curtain) must end **on the feet's row** and not below it: the
-dragon's hem at 2.5 px under the feet looked sunk into the ground (the user, 2026-10-20). The generator keeps the
-hem's ground points at `GROUND + 1` without the walk bob (the feet don't bob either), draws no scallops on the ground
-stretch, and does not draw the near hind leg at all (it is under the curtain; drawn in front of it, its foot read as
-part of the wing). The far hind leg is drawn and stays under the hem in every walk frame. A scan proves it: for every
-frame, body pixels in leg colours below the hem zone that no front pixel covers (0 in all 41 frames), and the front
-picture's last row against the forefeet's last row (equal in all 41).
+The near side **moves with the body as one piece**: every point of it takes the walk bob, none sways on its own.
+The dragon's wing once had a peak that bobbed and swayed a pixel over a hem pinned to the ground row: the
+membrane and its finger lines were re-rasterised between the two every frame and the whole wing jiggled in the
+world (the user's video, 2026-10-20). The measure that catches it before the game: per walk frame, the front
+picture's first and last rows and the peak's column against the body's top row; the differences must be the same
+in every frame.
+
+And a mount that walks keeps its near side **off the ground**. The references draw the curtain to the ground only
+in the big resting pose; the red walk frames and every blue frame tuck the wing against the flank with its lower
+edge at the belly line and the legs in view below it. A hem on the ground had to swallow the hind legs (one not
+drawn, the other under it), had to be kept out of the bob, and sat in the drawn ground by a pixel or two whatever
+row it took. The tucked wing needs none of that: both hind legs drawn, the belly band under the hem, the hem on
+row 60 at the hip and rising to 52 at the rump.
 
 ## 6. The tools and the tests
 
@@ -149,8 +155,10 @@ checklist and the measurements replaced the hoping:
   and arm out. A lowered-peak variant (whole head out, the claw on his beard) was rendered and not taken.
 - Then the world: the wing behind him (no lift), the wing flickering with his shirt (a fifth of a pixel of lift),
   the near hind foot read as part of the wing (the leg drawn in front), the hem sunk into the ground (the hem 2.5 px
-  under the feet): the lift past the nearest of his sprites by 2.5 px, the leg under the curtain, the hem on the
-  feet's row, each proven by a readback or a frame scan.
+  under the feet), then the whole wing jiggling (a bobbing, swaying peak over a hem pinned to the ground). The
+  lift past the nearest of his sprites by 2.5 px fixed the first two; the last three went away together when the
+  wing was read again from the walking references and tucked against the flank, one piece with the body, its hem
+  at the belly line above the legs (section 5).
 
 Related: docs/skins.md (the pack format), docs/mount-looks-design.md (the dragon), docs/sprite-tools.md (the
 pipeline and the hand-over checklist), docs/seat-investigation.md (the seat row), docs/self-tests.md.

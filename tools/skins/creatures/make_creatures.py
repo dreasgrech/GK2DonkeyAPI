@@ -538,41 +538,33 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
     # The far wing is a shorter peak above the shoulder, its membrane a wedge behind the neck, all of it behind the
     # body. The membrane is wine against the body's red, outlined, the finger bones red lines.
     def folded_wing(flap, far):
-        ang = flap * math.pi / 180 * 0.3                                         # the peak sways a little
-        # one fold for both wings, THE REFERENCE'S SILHOUETTE (the user's sheets, 2026-10-20): the wrist is a tall peak
-        # above the shoulder with the thumb claw hooking forward, the fingers run down and back from it, the membrane
-        # hangs between them like a curtain from the peak back over the flank, its hem on the ground only behind the
-        # hindquarters and rising forward along the belly line; nothing of the wing lies forward of the peak. The near
-        # hind leg is under the curtain, which reaches the ground over it (drawn in front, its foot read as part of
-        # the wing: the user, 2026-10-20). The whole near wing is the front layer, over the rider wherever
-        # the two overlap (the user, 2026-10-20: the wing is nearer the camera than he is, no part of him may show
-        # in front of it): he sits inside the fold with his face, the top of his head and the reins arm out of it,
-        # chest and everything below under the membrane. (Tried and rejected the same day: a cut that kept his
-        # chest in view by drawing the membrane behind him there, and a one-layer wing shaped around him, which
-        # grew a lobe under his seat that stood out like a thumb when nobody rode.) The far wing is the same shape
-        # a few pixels back and up (the perspective), drawn before the body, which hides all but its peak and the
-        # top of its curtain.
+        # one fold for both wings, TUCKED, as the references draw a dragon that walks (the red walk frames, every blue
+        # frame; the curtain to the ground is the big idle pose only): the wrist is a peak above the shoulder with the
+        # thumb claw hooking forward, the fingers run down and back from it, the membrane lies against the flank from
+        # the peak back to the hip, its lower edge along the belly line, the belly band and the legs in view under it;
+        # nothing of the wing forward of the peak, nothing on the ground. The whole wing moves with the body as one
+        # piece: no sway and no pinned hem (a peak that bobbed and swayed over a hem pinned to the ground re-drew the
+        # membrane every frame and jiggled; the user's video, 2026-10-20). The whole near wing is the front layer,
+        # over the rider wherever the two overlap: he sits inside the fold with his face, the top of his head and the
+        # reins arm out of it. The far wing is the same shape a few pixels back and up (the perspective), drawn before
+        # the body, which hides all but its peak and the top of its membrane.
         ox, oy = (4.0, -5.0) if far else (0.0, 0.0)
 
         def at(x, y):
             return (x + ox, y + bob + oy)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
-        peak = _rot(at(52.0, 26.0), sh, ang)
-        hem = [at(85.0, 58.0), at(79.0, 65.0 - bob), at(62.0, 65.0 - bob), at(59.0, 63.0), at(52.0, 58.0)]   # the curtain's hem: its last row the feet's (GROUND, which doesn't bob), over the hind legs
-        ring = [peak, at(64.0, 30.0), at(78.0, 43.0)] + hem + [at(47.0, 55.0), sh]
-        tips = [at(76.0, 45.0), at(79.0, 64.5 - bob), at(65.0, 64.5 - bob), at(59.0, 62.5), at(52.0, 58.0)]
+        peak = at(52.0, 26.0)
+        hem = [at(82.0, 52.0), at(76.0, 57.0), at(66.0, 60.5), at(56.0, 60.5), at(48.0, 58.0)]   # the lower edge along the belly line
+        ring = [peak, at(64.0, 30.0), at(78.0, 43.0)] + hem + [at(47.0, 54.0), sh]
+        tips = [at(76.0, 45.0), at(80.0, 53.0), at(71.0, 59.5), at(61.0, 61.0), at(51.0, 59.5)]
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
-
-        def layer(x, y):
-            return px if far else fpx                                             # the near wing: all of it in front of the rider
-        # the hem's scallops between the finger tips: arcs bulging up into the membrane
+        dst = px if far else fpx
+        # the lower edge's scallops between the finger tips: shallow arcs bulging up into the membrane
         scal = []
         for a, b in zip(tips[1:-1], tips[2:]):
-            if max(a[1], b[1]) >= GROUND + oy:                                        # the stretch on the ground stays solid: the feet under it (the bob is in neither)
-                continue
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             half = math.dist(a, b) / 2
-            depth = half * 0.2                                                    # shallow: the finger tips stand a little out of the hem, the feet stay under it
+            depth = half * 0.3
             k = (half * half - depth * depth) / (2 * depth)
             scal.append((mx, my + k, math.dist((mx, my + k), a)))
 
@@ -591,7 +583,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                 X, Y = x + 0.5, y + 0.5
                 if not inside(X, Y):
                     continue
-                if Y < GROUND + oy and any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):    # no scallop at the ground: the feet stay under the hem
+                if any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
                     continue
                 df = min(_seg(X, Y, *a, *b) for a, b in fingers)
                 down = (Y - peak[1]) / max(1.0, max(ys) - peak[1])
@@ -599,15 +591,15 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                 cells[(x, y)] = light
         for (x, y), light in cells.items():
             border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-            put(x, y, DOUT[1] if border else _tone(DWING, light), layer(x, y))
-        for (ax, ay), (bx, by) in fingers:                                       # the finger bones: red lines down the curtain
+            put(x, y, DOUT[1] if border else _tone(DWING, light), dst)
+        for (ax, ay), (bx, by) in fingers:                                       # the finger bones: red lines down the membrane
             n = int(math.dist((ax, ay), (bx, by)) * 2) + 1
             for i in range(n + 1):
                 x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
                 if (int(round(x)), int(round(y))) in cells:
-                    put(x, y, DRG[2], layer(x, y))
+                    put(x, y, DRG[2], dst)
         for k in range(5):                                                        # the thumb claw: a hook from the peak towards the head
-            put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], layer(peak[0], peak[1]))
+            put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], dst)
 
     flap = (8.0 * math.sin(2 * math.pi * phase) if walking else 3.0 * idle)
     folded_wing(flap * 0.8, far=True)
@@ -644,10 +636,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
         a, lift = gait(0.0 if far else 0.5)
         hx, hy = 66 + dx, 54 + bob
         fx, fy = 66 + dx - 4.0 * a, GROUND - lift
-        if far:                                                               # the near hind leg is under the folded wing's curtain: not drawn
-            limb((hx, hy), (hx - 2, 59 + bob), 5, ramp)
-            limb((hx - 2, 59 + bob), (fx, fy), 3, ramp)
-            foot(fx, fy, ramp)
+        limb((hx, hy), (hx - 2, 59 + bob), 5, ramp)                          # both hind legs: the tucked wing ends at the belly line above them
+        limb((hx - 2, 59 + bob), (fx, fy), 3, ramp)
+        foot(fx, fy, ramp)
 
     legs(far=True)
 
