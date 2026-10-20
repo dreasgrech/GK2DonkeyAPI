@@ -1375,6 +1375,14 @@ namespace GK2DonkeyAPI
             private float hitchGapApplied = float.NaN;
             internal float HitchGapWorld => float.IsNaN(hitchGapApplied) ? 0f : hitchGapApplied;
 
+            // The self-tests' readouts: a cart part's renderer by name, and the donkey body renderer under the skin.
+            internal Renderer TestCartPartRenderer(string name)
+            {
+                CartPart p = cartParts.Find(c => c.T != null && c.T && c.T.name == name);
+                return p != null ? p.T.GetComponentInChildren<Renderer>(false) : null; // the mesh is a child named like its part
+            }
+            internal SpriteRenderer TestBodyRenderer => donkeyBodyRenderer;
+
             // The way from this mount's spot to its cart in the world, from the live transforms (the prefab's own
             // geometry: the cart body's rest centre against the root), so it follows a turn (facing flips the view's
             // scale, and the cart swaps sides with it); zero without a live cart body, and the facing rule applies.
@@ -2795,7 +2803,11 @@ namespace GK2DonkeyAPI
             // The seat height that puts the keeper's hip (7 px above his feet) on a point in the world (the donkey's
             // back line, or a skin's own picture top), compared along screen-up, plus the pixel adjustment. Null
             // without the keeper's sprite.
-            private float? SeatOn(Vector3 backWorld)
+            // playerAdjust: whether the player's own SeatAdjustPx counts. A skin that declares its seat (a row or the
+            // picture) seats every player the same, so only an override of the key (the skin's own [Tuning], a mod's)
+            // nudges from it; the player's cfg value, whose mod default differs by style (-6 riding, 0 with the cart),
+            // would put the rider 6 px higher with the cart than riding (the cart readout, 2026-10-20).
+            private float? SeatOn(Vector3 backWorld, bool playerAdjust = true)
             {
                 if (keeperBodyRenderer == null || keeperBodyRenderer.sprite == null)
                 {
@@ -2812,7 +2824,11 @@ namespace GK2DonkeyAPI
                 {
                     up = Vector3.up;
                 }
-                return Vector3.Dot(backWorld - hipWorld, up) / up.y + S.SeatAdjustPx.Value * PxWorldY;
+                // an override on this instance (the skin's own [Tuning], set by Looks; a mod's per-instance value) or a
+                // mod's global one counts; the player's cfg value does not on a declared seat
+                bool overridden = OverrideOwners.ContainsKey("SeatAdjustPx") || S.SeatAdjustPx.HasOverride;
+                float adjust = playerAdjust || overridden ? S.SeatAdjustPx.Value : 0f;
+                return Vector3.Dot(backWorld - hipWorld, up) / up.y + adjust * PxWorldY;
             }
 
             // Height of the donkey's back above its ground line at the saddle, per body frame, measured from the atlas
@@ -2939,7 +2955,11 @@ namespace GK2DonkeyAPI
                     }
                     if (RiderLeg.IsAttached)
                     {
-                        RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer, riderFacingX > 0f);
+                        // the legs hang from the skin's declared seat where there is one (a row or the picture top), as the torso does
+                        Vector3? legSeat = LooksRig != null && LooksRig.TrySeatTop(out Vector3 legTop, out bool legFixedRow)
+                            ? (Vector3?)(legTop + (legFixedRow ? Vector3.up * (RiderBobPx(0) * PxWorldY) : Vector3.zero))
+                            : null;
+                        RiderLeg.Update(donkeyBodyRenderer, keeperBodyRenderer, riderFacingX > 0f, legSeat);
                     }
                     if (!seatPending)
                     {
@@ -2968,8 +2988,9 @@ namespace GK2DonkeyAPI
                 {
                     // A skin that says "seat = picture" (Gerry): the rider sits on its own picture, this frame's top at
                     // the pivot column; or "seat = <row>": a fixed row of its canvas, plus the walk bob as the manual
-                    // seat has it. Both whatever the player's seat settings; SeatAdjustPx still adjusts.
-                    seat = SeatOn(pictureTop);
+                    // seat has it. Both whatever the player's seat settings: only the skin's (or a mod's) SeatAdjustPx
+                    // nudges from them, never the player's own (SeatOn).
+                    seat = SeatOn(pictureTop, playerAdjust: false);
                     if (seat.HasValue && fixedRow) seat = seat.Value + RiderBobPx(0) * PxWorldY;
                 }
                 else if (S.AutoSeat.Value)

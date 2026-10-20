@@ -362,7 +362,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.32.0";
+        public const string Version = "0.33.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -635,7 +635,7 @@ namespace GK2DonkeyAPI
             // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind / Effects.Bind because
             // the key binds after them.
             MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
-                "Dev: switches on what the next update brings players: the mounts other than the donkey (the dragon, the giant rat, the giant snail, the giant worm, Gerry), the skins (Hellfire, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
+                "Dev: switches on what the next update brings players: the mounts other than the donkey (the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
             MountsOn = MountsPreview.Value;
             if (MountsOn)
             {

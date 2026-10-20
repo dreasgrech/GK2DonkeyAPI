@@ -76,7 +76,7 @@ namespace GK2DonkeyAPI
 
             // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "dragon",
             // "giant rat"); a free cart has no mount, so "mount".
-            internal string Noun => HasDonkey ? (LooksRig?.KindNow?.Label ?? "donkey").ToLowerInvariant() : "mount";
+            internal string Noun => HasDonkey ? (LooksRig?.KindNow?.NounText ?? "donkey") : "mount";
 
             // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.saddleup#1.
             internal string FullId => FullIdOf(OwnerId, Id);

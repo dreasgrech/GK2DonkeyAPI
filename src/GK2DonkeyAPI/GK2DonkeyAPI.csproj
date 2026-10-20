@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2DonkeyAPI</AssemblyName>
-    <Version>0.32.0</Version>
+    <Version>0.33.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
     <GenerateDependencyFile>false</GenerateDependencyFile>
@@ -26,8 +26,9 @@
          game's bundle; the mesh is not readable at runtime). LampHang.cs splits it into pole and hanging lamp. -->
     <EmbeddedResource Include="assets\lantern-vertices.bin" LogicalName="GK2DonkeyAPI.lantern-vertices.bin" />
     <EmbeddedResource Include="assets\lantern-indices.bin" LogicalName="GK2DonkeyAPI.lantern-indices.bin" />
-    <!-- The built-in skins (docs/skins-design.md): assets\skins\<id>\skin.cfg and a PNG per donkey frame, drawn by
-         tools/skins/creatures/make_creatures.py (our own art). Looks.RegisterEmbedded reads them by this name pattern. -->
+    <!-- The built-in skins (docs/skins.md): assets\skins\<id>\skin.cfg and a PNG per frame (front\ for the layer drawn in
+         front of the rider), each written by its generator under tools/skins/ (docs/sprite-tools.md "Making a skin");
+         Gerry's is a cfg alone (source = game). Looks.RegisterEmbedded reads them by this name pattern. -->
     <EmbeddedResource Include="assets\skins\**\*" LogicalName="GK2DonkeyAPI.skins.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 

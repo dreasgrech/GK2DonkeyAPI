@@ -668,20 +668,29 @@ namespace GK2DonkeyAPI
             Toggle("Donkey follows the ground height at its own position (slopes)", s.SnapToGround, null);
 
             Header("Rider position");
-            IntSlider("Move whole rider along the donkey: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
+            IntSlider("Move whole rider along the mount: tail (-) / head (+)", s.RiderOffsetPx, -16, 16, null);
 
             Header("Rider torso");
-            IntSlider("Move torso only along the donkey: tail (-) / head (+)", s.TorsoOffsetPx, -16, 16, Mount.RefreshSeat);
-            Toggle("Torso height automatic (hip on the donkey's back)", s.AutoSeat, Mount.RefreshSeat);
-            if (s.AutoSeat.Value)
+            IntSlider("Move torso only along the mount: tail (-) / head (+)", s.TorsoOffsetPx, -16, 16, Mount.RefreshSeat);
+            Mount.Instance riddenNow = Mount.Ridden;
+            bool seatBySkin = riddenNow != null && riddenNow.LooksRig != null && riddenNow.LooksRig.TrySeatTop(out _);
+            if (seatBySkin)
             {
-                IntSlider("Move torso down (-) / up (+), pixels", s.SeatAdjustPx, -16, 16, Mount.RefreshSeat);
+                GUILayout.Label("The ridden skin declares its seat (a row of its picture, or the picture's top): the automatic seat, the torso height and your own pixel nudge do nothing on it; the skin's own nudge does (the Mounts tab tunes the skin itself).", small);
             }
             else
             {
-                FloatSlider("Torso height (0 = standing on the ground)", s.SeatOffset, -1f, 1f, 2, Mount.RefreshSeat);
+                Toggle("Torso height automatic (hip on the mount's back)", s.AutoSeat, Mount.RefreshSeat);
+                if (s.AutoSeat.Value)
+                {
+                    IntSlider("Move torso down (-) / up (+), pixels", s.SeatAdjustPx, -16, 16, Mount.RefreshSeat);
+                }
+                else
+                {
+                    FloatSlider("Torso height (0 = standing on the ground)", s.SeatOffset, -1f, 1f, 2, Mount.RefreshSeat);
+                }
             }
-            Toggle("Torso bobs with the donkey's walk", s.Bob, Mount.RefreshSeat);
+            Toggle("Torso bobs with the mount's walk", s.Bob, Mount.RefreshSeat);
             if (s.Bob.Value)
             {
                 FloatSlider("Bob amount (x the donkey's back, which moves 1 px)", s.BobScale, 0f, 3f, 2, Mount.RefreshSeat);

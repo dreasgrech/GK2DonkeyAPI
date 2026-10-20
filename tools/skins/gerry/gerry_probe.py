@@ -17,14 +17,32 @@ import UnityPy
 
 UnityPy.config.FALLBACK_UNITY_VERSION = "6000.3.9f1"
 
-PREFIX = "0901_"
-ATLAS_BUNDLE = "8f5cc77be26057b5c166ea2465c7902f.bundle"  # the Characters atlas (donkey, Gerry, ...)
+PREFIX = sys.argv[3] if len(sys.argv) > 3 else "0901_"  # the character's preset prefix on its sprites (Gerry: 0901_)
+MARK = "bdy_walk_left_01"                                   # the sprite every character has: the bundle holding <prefix>MARK is the atlas
+
+
+def find_bundle(folder):
+    """The addressables bundle that holds the character's sprites, by content (the bundle names change with the game)."""
+    import glob
+    for path in sorted(glob.glob(os.path.join(folder, "**", "*.bundle"), recursive=True), key=os.path.getsize, reverse=True):
+        try:
+            env = UnityPy.load(path)
+            for obj in env.objects:
+                if obj.type.name == "Sprite" and obj.read().m_Name == PREFIX + MARK:
+                    return path
+        except Exception:
+            continue
+    return None
 
 
 def main():
     folder, out = sys.argv[1], sys.argv[2]
     os.makedirs(out, exist_ok=True)
-    env = UnityPy.load(os.path.join(folder, ATLAS_BUNDLE))
+    bundle = find_bundle(folder)
+    if bundle is None:
+        print(f"no bundle under {folder} holds a sprite named {PREFIX}{MARK}"); return
+    print("atlas:", bundle)
+    env = UnityPy.load(bundle)
     sprites = []
     for obj in env.objects:
         if obj.type.name != "Sprite":
@@ -45,6 +63,7 @@ def main():
     print("parts:", parts)
     print("animations:", anims)
     print("exported to", out)
+    # usage: python tools/skins/gerry/gerry_probe.py <game folder> <out folder> [<prefix>]
 
 
 if __name__ == "__main__":

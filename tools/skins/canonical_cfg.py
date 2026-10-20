@@ -1,8 +1,11 @@
 """Rewrites every built-in skin.cfg into the canonical layout (docs/mounts-foundation-audit.md section 4) without
-changing a value: [Skin] keys in one order, then [Game], the colour sections, and the [Mount] block last with its
-tuning sections, each section's comment above it, CRLF line ends. The [Mount] block always carries id, name, author,
-version, cart and foals; foal_scale, effect and effect_when only when they are not the default. Run it after editing
-a cfg by hand, then tests/SkinsScan (which refuses a built-in that is not in this layout).
+changing a value: [Skin] keys in one order (SKIN_ORDER), then [Game], the skin's own geometry ([Tuning],
+[Tuning.Ride], [Tuning.Cart]), the colour sections ([Colors], [Base.*]), and the [Mount] block last ([Mount], then
+[Mount.Tuning], [Mount.Tuning.Ride], [Mount.Tuning.Cart]), each section's comment above it, CRLF line ends. The
+[Mount] block always carries id, name, author, version, cart and foals; noun, foal_scale, effect and effect_when
+only when set (MOUNT_ORDER). Run it after editing a cfg by hand, then tests/SkinsScan (the section order and the key
+rules); --check runs in tools/release-scans.sh and refuses a built-in that is not byte for byte in this layout.
+tools/skins/new_skin.py writes a new skin's cfg in this layout from the start.
 
     python -I tools/skins/canonical_cfg.py            # rewrites src/GK2DonkeyAPI/assets/skins/*/skin.cfg
     python -I tools/skins/canonical_cfg.py --check    # says which files differ from their canonical text, writes nothing
@@ -12,8 +15,8 @@ import io, os, sys
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 SKINS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
 SKIN_ORDER = ["format", "id", "name", "author", "version", "base", "kind", "layer", "erase", "canvas", "pivot", "source", "seat",
-              "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
-MOUNT_ORDER = ["id", "name", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
+              "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
+MOUNT_ORDER = ["id", "name", "noun", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
 TUNING_SECTIONS = ["mount.tuning", "mount.tuning.ride", "mount.tuning.cart"]
 MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."
@@ -100,12 +103,13 @@ def canonical(path):
         out.extend(secs["game"]["above"])
         out.append("[Game]")
         out.extend(secs["game"]["lines"])
-    # [Tuning] (a skin's own picture keys), as written
-    if "tuning" in secs:
-        out.append("")
-        out.extend(secs["tuning"]["above"])
-        out.append("[Tuning]")
-        out.extend(secs["tuning"]["lines"])
+    # the skin's own geometry ([Tuning], then per style), as written
+    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]")):
+        if name in secs and any("=" in l for l in secs[name]["lines"]):  # an empty section is left out (the scan refuses one)
+            out.append("")
+            out.extend(secs[name]["above"])
+            out.append(header)
+            out.extend(secs[name]["lines"])
     # the colour sections, as written, in file order
     for name in order:
         if name == "colors" or name.startswith("base."):
@@ -127,7 +131,9 @@ def canonical(path):
                 out.extend(secs[name]["above"])
                 out.append(secs[name]["header"])
                 out.extend(secs[name]["lines"])
-    known = {"", "skin", "game", "tuning", "colors", "mount"} | set(TUNING_SECTIONS)
+    if "mount" not in secs and any(name in secs for name in TUNING_SECTIONS):
+        raise SystemExit(f"{path}: a [Mount.Tuning] section without a [Mount] section (the game ignores it; add the block or take the section out)")
+    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "colors", "mount"} | set(TUNING_SECTIONS)
     for name in order:
         if name not in known and not name.startswith("base."):
             raise SystemExit(f"{path}: section [{name}] is not one the loader knows")

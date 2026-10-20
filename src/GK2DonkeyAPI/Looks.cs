@@ -215,6 +215,9 @@ namespace GK2DonkeyAPI
             // LegAdjustYPx, ...) set on the wearer as overrides owned by the skin while it is worn, never saved.
             internal Dictionary<string, string> Tuning;        // a pack's: the cfg text per key
             internal Dictionary<string, object> TuningValues;  // a code skin's: typed values
+            // The skin's per-style values ([Tuning.Ride] / [Tuning.Cart]: a pack's text, a code skin's typed values), on
+            // top of [Tuning] for that style. The skin owns its drawing's geometry (docs/mounts-parity-matrix.md 9.1).
+            internal Dictionary<string, object> TuningRide, TuningCart;
             // The pictures moved on the view, in art pixels (x towards the head, y up), riding and with the cart hitched
             // (a creature that should sit closer to the shafts, say).
             internal Vector2 OffsetRide, OffsetCart;
@@ -234,6 +237,10 @@ namespace GK2DonkeyAPI
             // frame, so he rides a hop), whatever the player's seat settings; else the base's back line / the seat height.
             internal bool SeatFromPicture;        // seat = picture: the rider sits on this frame's picture top (Gerry)
             internal int SeatRow = -1;             // seat = <row>: the canvas row (from the top) the rider's hip sits on, every frame, whatever the player's AutoSeat (docs/seat-investigation.md option A)
+            // The effect this skin comes with (effect = / effect_when =): shown when the player's Effect row says "As the
+            // mount" (the skin's first, else its mount's; docs/mounts-parity-matrix.md 9.5). Null: the mount's.
+            internal string Effect;
+            internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
 
             internal bool OwnsSheet => Sprites == null;
         }
@@ -428,7 +435,7 @@ namespace GK2DonkeyAPI
         // A [Colors] line: "<Region> = hex hex ..." (spaces or commas), the region one of the mount regions but Coat
         // (Coat is everything not named). A bad region or colour, or a colour named twice, is a format error: a pack
         // that says the wrong thing is refused, like a wrong canvas.
-        private static void ColorRegionLine(SkinDef d, string region, string value, string where)
+        internal static void ColorRegionLine(SkinDef d, string region, string value, string where)
         {
             string key = null;
             foreach (string r in Colors.MountRegionKeys)
@@ -479,7 +486,7 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -500,6 +507,8 @@ namespace GK2DonkeyAPI
                 switch (section)
                 {
                     case "tuning": (d.Tuning ?? (d.Tuning = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "tuning.ride": (d.TuningRide ?? (d.TuningRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "tuning.cart": (d.TuningCart ?? (d.TuningCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
@@ -526,6 +535,11 @@ namespace GK2DonkeyAPI
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
                     case "mount": d.KindId = value; break;
+                    case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); break;
+                    case "effect_when":
+                        if (Enum.TryParse(value.Trim(), true, out MountEffectWhen skinWhen)) d.EffectWhen = skinWhen;
+                        else d.Report += "effect_when = " + value + " is not Off, Night or Always, taken as Always; ";
+                        break;
                     case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); break;
                     case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; break;
                     case "offset": PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y); if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; break;
@@ -562,15 +576,23 @@ namespace GK2DonkeyAPI
                 d.Report += "erase is for layer = over only, ignored; ";
                 d.Erase = null;
             }
+            if (!d.Over && d.BaseRegions != null)
+            {
+                d.Report += "[Base.*] is for layer = over only (a recolour of the donkey under the skin), ignored; ";
+                d.BaseRegions = null;
+            }
+            if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (kind = own); a palette skin takes the donkey's regions, ignored; ";
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
-            if (d.Tuning != null) d.Report += d.Tuning.Count + " tuning key(s); ";
+            int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
+            if (tuningKeys > 0) d.Report += tuningKeys + " tuning key(s)" + (d.TuningRide != null || d.TuningCart != null ? " (some per style)" : "") + "; ";
             if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
             {
                 // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
                 // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
                 var k = new Kinds.KindDef { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart };
                 k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
+                if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
                 if (mount.TryGetValue("author", out string ma)) k.Author = ma;
                 if (mount.TryGetValue("version", out string mv)) k.Version = mv;
                 if (mount.TryGetValue("cart", out string mc)) k.Cart = !mc.Equals("false", StringComparison.OrdinalIgnoreCase);
@@ -760,7 +782,7 @@ namespace GK2DonkeyAPI
         }
 
         // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
-        internal static readonly string[] MountKeys = { "id", "name", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when" };
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when" };
 
         // The file rewritten with the live values: the [Skin] section's own lines kept (mount, offset and
         // offset_cart replaced), [Tuning] and, where the file declares the mount, [Mount] and its tuning sections
@@ -812,10 +834,12 @@ namespace GK2DonkeyAPI
                 // (the next header, or the next key); the file's own line ending is kept.
                 var head = new List<string>();                                   // before the first section
                 var skinLines = new List<string>();                              // [Skin]'s own lines (mount, offset, offset_cart replaced)
-                var tuningAbove = new List<string>();                            // comments above [Tuning] (its keys are regenerated)
                 var otherSections = new List<(string Header, List<string> Above, List<string> Lines)>(); // [Game], [Colors], [Base.*], anything else: as written
-                var notes = new Dictionary<string, SectionNotes>(StringComparer.OrdinalIgnoreCase);     // [Mount] and its tuning sections
+                var notes = new Dictionary<string, SectionNotes>(StringComparer.OrdinalIgnoreCase);     // the rewritten sections: [Tuning*] and [Mount*]
                 var pending = new List<string>();                                // comment lines waiting for the next header or key
+                string seatNote = null;                                          // the remark on the [Skin] seat line (the key is regenerated)
+                string effectNote = null;                                        // the same for the effect line
+                bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec.StartsWith("mount", StringComparison.Ordinal));
                 bool declaresMount = false;
                 string section = null;
                 string nl = "\n";
@@ -838,13 +862,12 @@ namespace GK2DonkeyAPI
                             string header = line.Split('#')[0].Trim();
                             section = header.Trim('[', ']', ' ').ToLowerInvariant();
                             if (section == "mount") declaresMount = true;
-                            if (section.StartsWith("mount", StringComparison.Ordinal))
+                            if (Rewritten(section))
                             {
                                 var n = new SectionNotes();
                                 n.Lead.AddRange(pending);
                                 notes[section] = n;
                             }
-                            else if (section == "tuning") tuningAbove.AddRange(pending);
                             else if (section == "skin") head.AddRange(pending);
                             else otherSections.Add((header, new List<string>(pending), new List<string>()));
                             pending.Clear();
@@ -857,17 +880,25 @@ namespace GK2DonkeyAPI
                             string key = eq > 0 ? line.Substring(0, eq).Trim().ToLowerInvariant() : "";
                             skinLines.AddRange(pending);
                             pending.Clear();
+                            if (key == "seat")
+                            {
+                                int hash = line.IndexOf('#');
+                                seatNote = hash > 0 ? line.Substring(hash).Trim() : null;
+                                continue;
+                            }
+                            if (key == "effect" || key == "effect_when")
+                            {
+                                int hash = line.IndexOf('#');
+                                if (key == "effect") effectNote = hash > 0 ? line.Substring(hash).Trim() : null;
+                                continue;
+                            }
                             if (key == "mount" || key == "offset" || key == "offset_cart") continue;
                             skinLines.Add(kept);
                         }
-                        else if (section != null && section.StartsWith("mount", StringComparison.Ordinal))
+                        else if (Rewritten(section))
                         {
                             notes[section].KeyLine(line, pending);
                             pending.Clear();
-                        }
-                        else if (section == "tuning")
-                        {
-                            pending.Clear(); // the keys are written from the live values
                         }
                         else if (otherSections.Count > 0)
                         {
@@ -877,7 +908,7 @@ namespace GK2DonkeyAPI
                         }
                     }
                     // the file's last comments stay in its last section
-                    if (section != null && section.StartsWith("mount", StringComparison.Ordinal)) notes[section].Trail.AddRange(pending);
+                    if (Rewritten(section)) notes[section].Trail.AddRange(pending);
                     else if (section == "skin") skinLines.AddRange(pending);
                     else if (section != null && section != "tuning" && otherSections.Count > 0) otherSections[otherSections.Count - 1].Lines.AddRange(pending);
                 }
@@ -892,6 +923,18 @@ namespace GK2DonkeyAPI
                 sb.Append("[Skin]\n");
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
                 Kinds.KindDef k = d.Kind;
+                if (d.SeatFromPicture || d.SeatRow >= 0)
+                {
+                    sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    if (seatNote != null) sb.Append("  ").Append(seatNote);
+                    sb.Append('\n');
+                }
+                if (!string.IsNullOrEmpty(d.Effect))
+                {
+                    sb.Append("effect = ").Append(d.Effect);
+                    if (effectNote != null) sb.Append("  ").Append(effectNote);
+                    sb.Append('\n').Append("effect_when = ").Append(d.EffectWhen.ToString()).Append('\n');
+                }
                 if (d.OffsetRide != Vector2.zero || d.OffsetCart != Vector2.zero)
                 {
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
@@ -900,11 +943,10 @@ namespace GK2DonkeyAPI
                 sb.Append("mount = ").Append(d.KindId).Append('\n');
                 void WriteTuning()
                 {
-                    if (d.Tuning == null || d.Tuning.Count == 0) return;
-                    sb.Append('\n');
-                    foreach (string l in tuningAbove) sb.Append(l).Append('\n');
-                    sb.Append("[Tuning]\n");
-                    foreach (var kv in d.Tuning) sb.Append(kv.Key).Append(" = ").Append(kv.Value).Append('\n');
+                    // the skin's own geometry: [Tuning], then [Tuning.Ride], [Tuning.Cart], each with its comments
+                    WriteSection(sb, "[Tuning]", AsObjects(d.Tuning), NotesOf("tuning"));
+                    WriteSection(sb, "[Tuning.Ride]", d.TuningRide, NotesOf("tuning.ride"));
+                    WriteSection(sb, "[Tuning.Cart]", d.TuningCart, NotesOf("tuning.cart"));
                 }
                 bool tuningWritten = false;
                 foreach ((string Header, List<string> Above, List<string> Lines) other in otherSections)
@@ -936,6 +978,7 @@ namespace GK2DonkeyAPI
                     sb.Append("[Mount]\n");
                     mn.Key(sb, "id", k.Id);
                     mn.Key(sb, "name", k.Label);
+                    if (!string.IsNullOrEmpty(k.Noun)) mn.Key(sb, "noun", k.Noun);
                     mn.Key(sb, "author", k.Author ?? "");
                     mn.Key(sb, "version", k.Version ?? "");
                     mn.Key(sb, "cart", k.Cart ? "true" : "false");
@@ -962,6 +1005,14 @@ namespace GK2DonkeyAPI
             {
                 return e.Message;
             }
+        }
+
+        private static Dictionary<string, object> AsObjects(Dictionary<string, string> text)
+        {
+            if (text == null) return null;
+            var d = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            foreach (var kv in text) d[kv.Key] = kv.Value;
+            return d;
         }
 
         private static void WriteSection(StringBuilder sb, string name, Dictionary<string, object> values, SectionNotes notes = null)
@@ -1107,7 +1158,7 @@ namespace GK2DonkeyAPI
         {
             if (i == null) return null;
             Kinds.KindDef k = KindWanted(i);
-            return k.Cart ? null : $"A {k.Label.ToLowerInvariant()} can't pull the cart.";
+            return k.Cart ? null : $"A {k.NounText} can't pull the cart.";
         }
 
         // The tuning keys a skin's [Tuning] may set: the ones that exist because of how the pictures are drawn (where
@@ -1119,15 +1170,20 @@ namespace GK2DonkeyAPI
         };
 
         // The value a creature's layers give key on instance i for style, in the order Rig.ApplyTuning merges them
-        // (another owner's override first, then the skin's [Tuning], the kind's per-style tuning, the kind's both-styles
-        // tuning), or null when none sets it: for a reader that needs a style the instance isn't in yet (the hitch
-        // wants the cart style's gap while the mount is still ridden plain).
+        // (another owner's override first, then the skin's [Tuning.Ride]/[Tuning.Cart] for the style, the skin's
+        // [Tuning], the kind's per-style tuning, the kind's both-styles tuning), or null when none sets it: for a reader
+        // that needs a style the instance isn't in yet (the hitch wants the cart style's gap while the mount is still
+        // ridden plain). Keep in step with Rig.ApplyTuning: the geometry is the WORN drawing's (the pictures on screen),
+        // the kind is the wanted skin's (the creature's facts), so a hitch while a sheet still builds uses the gap of the
+        // pictures the cart is drawn against.
         internal static object LayeredValue(Mount.Instance i, MountStyle style, string key)
         {
             if (i == null) return null;
             if (i.OverrideOwners.TryGetValue(key, out string by) && by != TuningOwner && i.Overrides.TryGetValue(key, out object o)) return o;
-            SkinDef d = i.LooksRig?.DefNow;
-            Kinds.KindDef k = d != null ? d.Kind : Kinds.Donkey;
+            SkinDef d = i.LooksRig?.WornDef;
+            Kinds.KindDef k = i.LooksRig?.KindNow ?? Kinds.Donkey;
+            Dictionary<string, object> skinStyle = d == null ? null : style == MountStyle.Cart ? d.TuningCart : d.TuningRide;
+            if (skinStyle != null && skinStyle.TryGetValue(key, out object skinStyled)) return skinStyled;
             if (d != null && d.TuningValues != null && d.TuningValues.TryGetValue(key, out object typed)) return typed;
             if (d != null && d.Tuning != null && d.Tuning.TryGetValue(key, out string text)) return text;
             Dictionary<string, object> perStyle = style == MountStyle.Cart ? k.TuningCart : k.TuningRide;
@@ -1159,7 +1215,11 @@ namespace GK2DonkeyAPI
         internal static IReadOnlyList<(string Id, string Label)> KindChoices()
         {
             var list = new List<(string, string)>();
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds) list.Add((k.Id, k.Name));
+            foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+            {
+                if (k.Skins.Count == 0) continue; // a kind with no skin would be invisible: not offered (docs/mounts-design.md §1)
+                list.Add((k.Id, k.Name));
+            }
             return list;
         }
 
@@ -1271,10 +1331,40 @@ namespace GK2DonkeyAPI
             // sheet sprite: where a rider sits on a skin that says "seat = picture" (Rig.TrySeatTop).
             private readonly Dictionary<string, int> seatTopByKey = new Dictionary<string, int>(StringComparer.Ordinal);
             internal readonly Dictionary<Sprite, int> SeatTopBySprite = new Dictionary<Sprite, int>();
+            // The opaque columns of each cell (min, max; the body's edges on the canvas) and the standing frame's drawn
+            // width in px: the cart readout measures the body's rear edge with the first, the effect ring scales by the
+            // second (docs/mounts-parity-matrix.md 9.3; the donkey's standing frame is 46 px wide).
+            internal readonly Dictionary<string, (int Min, int Max)> ColumnsByKey = new Dictionary<string, (int, int)>(StringComparer.Ordinal);
+            internal int StandWidthPx;
             // Every distinct colour the pictures draw (RGB of any pixel with alpha above zero: the shader swaps by RGB
             // and never looks at alpha), collected as the cells are put, sorted at Finish so two wearers build the
             // same shared textures; and by mount region (Def.ColorRegions; the rest Coat). docs/mount-colours.md.
             private readonly HashSet<int> colourSet = new HashSet<int>();
+            private static readonly HashSet<string> unreadableSaid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            // A code skin's sprite: its colours join the look's (the player's regions reach them) when the texture can
+            // be read; said once per skin when it can't (most mods' textures aren't readable).
+            private Dictionary<Texture2D, Color32[]> pixelCache; // one copy per texture while the sheet builds (an atlas shared by 44 sprites is read once)
+            internal void CollectSpriteColours(Sprite s, string skinId)
+            {
+                Texture2D t = s.texture;
+                if (t == null) return;
+                if (!t.isReadable)
+                {
+                    if (unreadableSaid.Add(skinId)) Plugin.Log.LogInfo($"Looks: skin '{skinId}': its sprites' texture isn't readable, so the player's colours can't reach its colours (make the texture readable, or use a pack).");
+                    return;
+                }
+                Rect r = s.textureRect;
+                if (pixelCache == null) pixelCache = new Dictionary<Texture2D, Color32[]>();
+                if (!pixelCache.TryGetValue(t, out Color32[] px)) pixelCache[t] = px = t.GetPixels32();
+                int w = t.width;
+                for (int y = (int)r.yMin; y < (int)r.yMax; y++)
+                    for (int x = (int)r.xMin; x < (int)r.xMax; x++)
+                    {
+                        Color32 c = px[y * w + x];
+                        if (c.a != 0) colourSet.Add((c.r << 16) | (c.g << 8) | c.b);
+                    }
+            }
             internal readonly List<Color32> Colours = new List<Color32>();
             internal readonly Dictionary<string, List<Color32>> ColoursByRegion = new Dictionary<string, List<Color32>>(StringComparer.Ordinal);
 
@@ -1341,6 +1431,19 @@ namespace GK2DonkeyAPI
                         }
                     }
                     seatTopByKey[key] = top;
+                    int minX = cellW, maxX = -1;
+                    for (int y = 0; y < cellH; y++)
+                    {
+                        int row = y * cellW;
+                        for (int x = 0; x < cellW; x++)
+                        {
+                            if (px.P[row + x].a == 0) continue;
+                            if (x < minX) minX = x;
+                            if (x > maxX) maxX = x;
+                        }
+                    }
+                    ColumnsByKey[key] = (minX, maxX);
+                    if (key == "bdy_static_left" && maxX >= minX) StandWidthPx = maxX - minX + 1;
                 }
                 return true;
             }
@@ -1348,6 +1451,7 @@ namespace GK2DonkeyAPI
             // The sheet uploaded once, its sprites made: the skin is wearable.
             internal void Finish()
             {
+                pixelCache = null; // the colours are collected; the copies go
                 if (Sheet != null)
                 {
                     Sheet.Apply(false, true);
@@ -1465,6 +1569,7 @@ namespace GK2DonkeyAPI
                                 {
                                     l.Frames[p + key] = s;
                                     n++;
+                                    if (d.OwnColours && p.Length == 0) l.CollectSpriteColours(s, d.Id); // the player's colours reach a readable sprite's colours
                                 }
                             }
                             catch (Exception e)
@@ -1760,8 +1865,29 @@ namespace GK2DonkeyAPI
             // has a view, else the one its "Skin" key names (WantedDef): an instance asleep far from the keeper, with
             // no view to draw on, is still a Gerry. Seen 2026-10-18: the parent asleep outside counted as a donkey, so
             // the companion kept its babies at 0.6 until the parent was called and woke.
-            internal Kinds.KindDef KindNow => (skin != null ? skin.Def : WantedDef)?.Kind ?? Kinds.Donkey;
-            internal SkinDef DefNow => skin != null ? skin.Def : WantedDef;
+            // Creature facts (the kind: cart, babies, effect, abilities) follow the WANTED skin at once (a sheet still
+            // building, or no view at all); the drawing's geometry (the tuning merge) follows the WORN skin, so a rider
+            // on the old picture never takes the new picture's numbers (docs/mounts-parity-matrix.md 2.10).
+            internal Kinds.KindDef KindNow => (pending?.Def ?? WantedDef ?? skin?.Def)?.Kind ?? Kinds.Donkey;
+            internal SkinDef DefNow => pending?.Def ?? WantedDef ?? skin?.Def;
+            internal SkinDef WornDef => skin?.Def;
+
+            // A column of the worn body picture (0 = the canvas's left edge, art facing left) as a world point on the
+            // ground row of the body overlay, mirrored with the part: the cart readout measures the body's rear edge.
+            internal bool TryBodyColumnWorld(int column, out Vector3 world)
+            {
+                world = default;
+                if (skin == null || slots == null || slots.Length == 0) return false;
+                SpriteRenderer ov = slots[0].Overlay;
+                if (ov == null || !ov || !ov.enabled || ov.sprite == null) return false;
+                SkinDef def = skin.Def;
+                float sign = ov.flipX ? -1f : 1f;
+                world = ov.transform.TransformPoint(new Vector3((column + 0.5f - def.PivotX) / def.Base.PixelsPerUnit * sign, 0f, 0f));
+                return true;
+            }
+
+            // The opaque columns of the worn skin's picture for key (the body's edges), or null.
+            internal (int Min, int Max)? BodyColumns(string key) => skin != null && skin.ColumnsByKey.TryGetValue(key, out (int Min, int Max) c) && c.Max >= c.Min ? c : ((int, int)?)null;
 
             // The skin this instance is set to wear, by its "Skin" key, whether or not it has a view: null for the
             // donkey's own look, a skin that isn't installed or drawn on another base, or a no-foals skin on a foal
@@ -1864,11 +1990,13 @@ namespace GK2DonkeyAPI
             {
                 if (root == null || failed) return;
                 AdvanceBuilds();
-                ApplyTuning();   // the skin's, the kind's and the style's values, re-applied only when one of them changes
+                Kinds.KindDef kindNow = KindNow; // the wanted skin's mount, read once per tick
+                ApplyTuning(kindNow);   // the skin's, the kind's and the style's values, re-applied only when one of them changes
                 using (Perf.Measure(Perf.S.Abilities))
                 {
                     TickAbilities();
                 }
+                if (DropCartIfRefused(kindNow)) return; // an unhitch rebuilt the view (Restyle: this rig is detached): nothing of this tick may run after it
                 if (pending != null)
                 {
                     if (pending.Ready)
@@ -1946,10 +2074,11 @@ namespace GK2DonkeyAPI
             // The kind's tuning (both styles, then this style's) and the skin's own on top, onto the wearer as overrides
             // owned by the skin system (a key another mod overrides is left to it, said once per skin and key); the
             // previous set cleared first. Re-done only when the skin, the kind or the style changes. Nothing of it is saved.
-            private void ApplyTuning()
+            internal int TuneStamp { get; private set; }     // counts the re-merges (a reader caching a layered value)
+            private void ApplyTuning(Kinds.KindDef k)
             {
-                SkinDef d = skin?.Def;
-                Kinds.KindDef k = d != null ? d.Kind : Kinds.Donkey;
+                SkinDef d = skin?.Def;                      // the worn drawing: its geometry
+                // k: the wanted skin's mount (KindNow): the creature's facts
                 MountStyle style = owner != null ? owner.CurrentStyle : MountStyle.Ride;
                 if (d == tunedFor && k == tunedKind && style == tunedStyle) return;
                 if (owner != null && owner.Handle == null && !owner.IsRidden) return; // the settings picture's paper donkey: no rider to seat
@@ -1957,6 +2086,7 @@ namespace GK2DonkeyAPI
                 tunedFor = d;
                 tunedKind = k;
                 tunedStyle = style;
+                TuneStamp++;
                 if (owner == null) return;
                 var merged = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 void Take(Dictionary<string, object> from)
@@ -1976,6 +2106,8 @@ namespace GK2DonkeyAPI
                     }
                     if (d.Tuning != null) foreach (var kv in d.Tuning) TakeSkin(kv.Key, kv.Value);
                     if (d.TuningValues != null) foreach (var kv in d.TuningValues) TakeSkin(kv.Key, kv.Value);
+                    Dictionary<string, object> skinStyle = style == MountStyle.Cart ? d.TuningCart : d.TuningRide;
+                    if (skinStyle != null) foreach (var kv in skinStyle) TakeSkin(kv.Key, kv.Value); // this style's, over [Tuning]
                 }
                 var tuning = new InstanceTuning(owner);
                 bool any = tunedKeysWereCleared; // nothing left to set: the clear alone is the change to refresh
@@ -2131,11 +2263,43 @@ namespace GK2DonkeyAPI
 
             internal void MarkDirty() => dirty = true;
             internal void RetuneNow() => tunedKind = null; // the kind's or skin's values changed in place: ApplyTuning re-merges on the next tick
+
+            // The cart rule while hitched (docs/mounts-design.md §3, the user's decision of 2026-10-20): a mount with a
+            // view whose (wanted) kind can't pull the cart leaves it standing where it is. Done once per kind; a refused
+            // unhitch (ridden over water, say) is tried again once a second and said once, not every tick.
+            private Kinds.KindDef cartCheckedFor, cartRefusalSaid;
+            private float cartRetryAt;
+            private bool DropCartIfRefused(Kinds.KindDef k)
+            {
+                if (owner == null || !owner.HasCart || owner.Handle == null) return false;
+                if (k.Cart || k == cartCheckedFor) return false;
+                if (Time.unscaledTime < cartRetryAt) return false;
+                MountHandle left = Mounts.Unhitch(owner.Handle);
+                if (left != null)
+                {
+                    cartCheckedFor = k;
+                    cartRefusalSaid = null;
+                    Plugin.Log.LogInfo($"Looks: {owner.Describe()} became a {k.NounText}, which can't pull the cart: the cart is left standing where it was.");
+                    return true;
+                }
+                cartRetryAt = Time.unscaledTime + 1f;
+                if (cartRefusalSaid != k)
+                {
+                    cartRefusalSaid = k;
+                    Plugin.Log.LogInfo($"Looks: {owner.Describe()} became a {k.NounText}, which can't pull the cart, but the cart can't be left here (tried again every second; it stays hitched as data until it can).");
+                }
+                return false;
+            }
             internal string Wearing => skin?.Def.Id ?? "";
             internal bool Building => pending != null;
             // The worn look whose own colours the colour regions map (null: the donkey's own look, or a skin drawn
             // in the donkey's palette colours, which take the donkey's map).
             internal Loaded WornOwnColours => skin != null && skin.Ready && skin.Def.OwnColours ? skin : null;
+            // The effect ring's size against the donkey's: the worn skin's standing frame width over the donkey's 46 px
+            // (the rat 85 wide gets a ring almost twice the donkey's; an over skin or a code-sprite skin keeps 1.0;
+            // docs/mounts-parity-matrix.md 9.3).
+            internal const float DonkeyStandWidthPx = 46f;
+            internal float EffectScale => skin != null && skin.Ready && !skin.Def.Over && skin.StandWidthPx > 0 ? Mathf.Max(0.5f, skin.StandWidthPx / DonkeyStandWidthPx) : 1f;
 
             // "0301_bdy_walk_left_03(Clone)" -> "0301_": the game's skin preset id, the prefix of every donkey frame.
             private string GamePrefix(string spriteName)
@@ -2233,8 +2397,15 @@ namespace GK2DonkeyAPI
                     if (showFront)
                     {
                         SpriteRenderer keeper = owner?.KeeperBody;
-                        if (keeper != null && keeper) Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2);
-                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2); // above the body overlay too
+                        if (keeper != null && keeper)
+                        {
+                            // the game draws sprites by distance, and the keeper's plane sits in front of the mount's
+                            // (Depth): the order alone left the wing behind him (the front-layer readback, 2026-10-20),
+                            // so the front picture is lifted past his plane, plus the lift that beats a coplanar tie
+                            float keeperDepth = part.transform.InverseTransformPoint(keeper.transform.position).z; // local -z = towards the camera
+                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, OverLift + Mathf.Max(0f, -keeperDepth));
+                        }
+                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift); // above the body overlay too
                     }
                 }
                 bool hide = show && (!skin.Def.Over || skin.Whole.Contains(mine)); // a whole frame (the erase colour) takes the part's place
@@ -2334,6 +2505,7 @@ namespace GK2DonkeyAPI
             // For the self-tests: a skin picture drawn on the body and the view's own body kept from rendering; the front
             // layer drawn.
             internal bool TestShowing() => slots[0].Overlay != null && slots[0].Overlay && slots[0].Overlay.enabled && slots[0].Overlay.sprite != null && slots[0].Hid;
+            internal SpriteRenderer TestFront() => slots != null && slots.Length > 0 ? slots[0].Front : null;
             internal bool TestFrontShowing() => slots[0].Front != null && slots[0].Front && slots[0].Front.enabled && slots[0].Front.sprite != null;
 
             // The body's overlay renderer and the body part itself, for the self-tests' readback of what the world

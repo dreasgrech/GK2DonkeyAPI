@@ -37,6 +37,10 @@ The rules the code implies, written down once:
 
 ## 2. The seven definitions side by side
 
+*A snapshot of 2026-10-20, before the parity work: superseded. Every file is in the canonical layout now (section 4,
+`tools/skins/canonical_cfg.py`), the drawing's keys sit on the skin, every mount declares its facts the same way;
+docs/mounts-parity-matrix.md section 11 says what was done with each finding.*
+
 | | dragon | gerry | rat | snail | worm | hellfire | royal-parade |
 |---|---|---|---|---|---|---|---|
 | `[Skin]` layer / canvas | replace / 128 | replace / 160, `source = game`, `seat = picture` | replace / 96 | replace / 96 | replace / 96 | over / 96, `erase` | over / 96 |

@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.32.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+Version 0.33.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
 (re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
 game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
@@ -188,10 +188,31 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 | **Self-tests:** about 4 minutes of scripted in-game checks (levels, view reuse, persistence text, hitching, leaks, frame time). | tested |
 | **Probes and dumps:** the game donkey's script, carry facts, held-item facts, a real delivery on demand, any big item dropped in front. | tested |
 
+### 14. Mounts, skins and effects
+
+One rig (the donkey's, `MountWgoId`); another mount is a skin that replaces the drawing and declares the creature
+([`docs/skins.md`](../../docs/skins.md), [`docs/mounts-design.md`](../../docs/mounts-design.md)). Switched off for
+players in this version (`Debug.MountsPreview`). Built; the skins, mounts, effects and colours were seen in game as
+they were first built (docs/mount-looks-design.md); the parity work's new self-tests (docs/self-tests.md, "Skins and
+effects") are written and not yet run in game.
+
+| Feature | Reached by | Status |
+|---|---|---|
+| **Skins:** a pack (`skin.cfg` + a PNG per frame, or a sheet; over the donkey with an erase colour and a recolour of the base, or replacing it on its own canvas with a front layer), a code skin, a recipe, or another character of the game (`source = game`); the skin owns its drawing's geometry (`seat = <row>` or `picture`, the pixel keys per style). | cfg, API (`Mounts.Looks`), packs | built; the seat rows seen in game, the per-style keys self-tested (run pending) |
+| **Mounts:** a skin's `[Mount]` block declares the creature (cart, babies and their size, noun, effect, sounds, abilities through the API); the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Kinds`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
+| **Effects:** particle effects from the game's own systems or a mod's prefab (`Mounts.Effects`; Hellfire = lamp flames and sparks in a ring, a trail); a skin may come with one; the ring fits the creature's drawn width. | cfg, API | built; Hellfire seen in game, the skin's own effect and the ring's size self-tested (run pending) |
+| **Colours on every mount:** a skin names which of its colours are Dark, Muzzle, Eye or Harness (`[Colors]`), the rest is Coat; the player's five colour rows reach them; a row for a region the mount lacks is greyed. | cfg, API | built; the regions self-tested with a readback, the greyed row not yet seen in game |
+
+| Built in | What |
+|---|---|
+| Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`) |
+| Giant Rat, Giant Snail, Giant Worm, Dragon (its skin: Red Dragon) | mounts of their own, our own art (`tools/skins/creatures/`) |
+| Gerry | the game's skull, its frames read at run time (`assets/skins/gerry/skin.cfg`) |
+
 ## Not built
 
 - Standing donkeys make no sounds (only the ridden one does).
-- Only the donkey is tested as the mount (`MountWgoId`).
+- A skin drawn over one of our own creatures (the loader has one base, the donkey).
 - No co-op.
 
 ## Install
@@ -199,7 +220,7 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`, each in its own folder
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
-3. Start the game once; the log says `GK2 Donkey API 0.32.0 loaded; nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.33.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

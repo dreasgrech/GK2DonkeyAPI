@@ -42,13 +42,13 @@ All of these apply at once:
 | 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Mount | Donkey | What you ride. In this version: the donkey only; the other mounts (Dragon, Giant Rat, Giant Snail, Giant Worm, Gerry) are built and switched off until the next update, and a row under the Skin row says so. Its picture is at the top of the section. |
-| | Skin | Default | How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire, skin packs) come in the next update. |
+| | Skin | Default | How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire with its ring of fire, Royal Parade, skin packs from anyone) come in the next update. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |
 | | Keep your mount with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | 3. Colours | Choose colours | | A button: closes the menu and opens the colour rows over the game (below). The picture of your mount and cart is under it, then the rows under two headings, "Mount colours" and "Cart colours". Kept per mount. |
-| | Coat colour | Game default | The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. A mount with its own colours ignores it. |
+| | Coat colour | Game default | The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
 | | Harness colour | Game default | The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
 | | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
 | | Wheel colour | Game default | The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |

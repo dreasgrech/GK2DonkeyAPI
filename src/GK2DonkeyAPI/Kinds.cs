@@ -16,6 +16,8 @@ namespace GK2DonkeyAPI
         internal sealed class KindDef
         {
             internal string Id, Name, Author, Version, Owner;
+            internal string Noun;                      // the word a sentence uses ("a skull can't pull the cart"); null: the name in lower case
+            internal string NounText => (Noun ?? Label).ToLowerInvariant(); // the word every sentence and label uses
             internal bool BuiltIn, FromPack;
             internal bool Cart = true;                 // may pull the cart
             internal bool Foals = true;                // foals may be drawn as it
@@ -86,7 +88,7 @@ namespace GK2DonkeyAPI
         private static bool Same(KindDef a, KindDef b)
         {
             return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
-                && a.Author == b.Author && a.Version == b.Version
+                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
         }
 
@@ -134,6 +136,7 @@ namespace GK2DonkeyAPI
         internal static void Redeclare(KindDef into, KindDef from)
         {
             into.Name = from.Name ?? into.Name;
+            into.Noun = from.Noun;
             into.Author = from.Author;
             into.Version = from.Version;
             into.Cart = from.Cart;

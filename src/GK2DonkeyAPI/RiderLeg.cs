@@ -23,6 +23,9 @@ namespace GK2DonkeyAPI
         private const float Px = 1f / PixelsPerUnit;
 
         private static SpriteRenderer renderer;
+        private static float lastLocalY = float.NaN;
+        // The self-tests: the leg overlay's local y on the donkey body (NaN before the first update).
+        internal static float TestLocalY => lastLocalY;
         private static Sprite currentSource;
         private static bool loggedSlice;
         private static readonly Dictionary<Sprite, Sprite> sliceCache = new Dictionary<Sprite, Sprite>();
@@ -75,7 +78,9 @@ namespace GK2DonkeyAPI
         // Every frame: pick the slice for the keeper's current body frame and place its top edge on the donkey's
         // back line (24 px above the donkey's ground; the frames have a 2 px transparent border, pivot at the frame
         // centre). Horizontally the slice keeps the offset it has in the keeper's frame.
-        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody, bool facingRight)
+        // seatTop: the point the rider's hip sits on when the worn skin declares its seat (a row of its picture, or
+        // the picture top; docs/mounts-parity-matrix.md 2.1): the legs hang from it instead of the donkey's back line.
+        public static void Update(SpriteRenderer donkeyBody, SpriteRenderer keeperBody, bool facingRight, Vector3? seatTop = null)
         {
             if (!IsAttached || donkeyBody == null || donkeyBody.sprite == null || keeperBody == null || keeperBody.sprite == null)
             {
@@ -124,7 +129,11 @@ namespace GK2DonkeyAPI
             Vector3 local = donkeyBody.transform.InverseTransformPoint(anchor);
             float groundPx = d.textureRectOffset.y + 2f;
             float topYPx = groundPx + Mount.BackHeightPx(d) + Mount.S.LegAdjustYPx.Value;
-            renderer.transform.localPosition = new Vector3(local.x, (topYPx - d.pivot.y) * Px, -0.01f);
+            float localY = seatTop.HasValue
+                ? donkeyBody.transform.InverseTransformPoint(seatTop.Value).y + Mount.S.LegAdjustYPx.Value * Px
+                : (topYPx - d.pivot.y) * Px;
+            renderer.transform.localPosition = new Vector3(local.x, localY, -0.01f);
+            lastLocalY = localY;
         }
 
         public static void Detach()

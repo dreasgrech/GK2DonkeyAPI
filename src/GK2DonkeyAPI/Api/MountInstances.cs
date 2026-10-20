@@ -408,6 +408,8 @@ namespace GK2DonkeyAPI.Api
 
         // False: a cart on its own (WithCart must be true).
         public bool Donkey = true;
+        // A mount by name instead of a skin: its Default skin is worn (the skin whose id is the mount's). Skin wins when both are given.
+        public string Mount;
 
         public bool WithCart;
 

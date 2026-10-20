@@ -132,46 +132,66 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | Royal Parade: the generator, its measurements, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `contact.py`, `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
 | Royal Parade: the pack | `src/GK2DonkeyAPI/assets/skins/royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), a built-in like Hellfire since 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`) |
 
-### Making a skin: the one pipeline (2026-10-19 23:00)
+### Making a skin: the one pipeline (2026-10-19 23:00; the tools finished 2026-10-20, the plan's M6)
 
 Every skin we ship is a **built-in pack** and goes the same way (the user: "we need to make them the same since
 they will both be included", "once we set up this pipeline we can keep following it to create more skins for
-other mounts too"). Hellfire and Royal Parade are the two worked examples; a third skin copies either.
+other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatures and Gerry (a game character)
+are the worked examples; the next skin or mount is **scaffold, generate or draw, check, look, build, export**:
 
-1. **A folder per skin under `tools/skins/<id>/`** with `make_<id>.py`, the generator: it reads the base's frames as
-   the game places them (`gamedir.donkey_frames()`, the asset probe's export; never the raw harness frames) and
-   draws or computes the skin's pixels per frame on that canvas. Measurements it needs (anchors, horn bases) are
-   data files next to it, each with the script that measured them. Outputs for the eye go to `out\` (git-ignored):
-   `strips\<animation>.png` (every animation as a frame strip over the base: look at every strip), `preview.png`,
-   and `pack\sheet.png` (the cells, for the checker's sheet mode and Aseprite).
-2. **The pack itself goes to `src/GK2DonkeyAPI/assets/skins/<id>/`**: `skin.cfg` (by hand, commented, kept by the
-   generator, in the one layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base,
-   `erase` when it takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the
-   player's colours reach, `seat = <row>` for the canvas row the rider's hip sits on (the generator knows it: 46 on
-   the 96 canvas is the donkey's own seat), `mount =` naming the mount and, for a creature of its own, the `[Mount]` block last with
-   id, name, author, version, cart, foals and its tuning, every key in one section) and **a PNG per frame key**
-   (`bdy_static_left.png` ... `hed_static_down_03.png`), only our pixels, nothing of the game's art. The DLL build
-   embeds the folder (`GK2DonkeyAPI.csproj`, `assets\skins\**`); no file is copied into the game.
-3. **Check before the game**: `python tools/skins/check_skin.py src/GK2DonkeyAPI/assets/skins/<id>` (frames
-   present, canvas size, colours per region, erase marks), `python tools/skins/canonical_cfg.py --check` (the
-   layout) and the headless scan `dotnet run --project tests/SkinsScan -c Release` (every key and value the loader
-   reads, the pictures, the `[Colors]` lists against the pixels, the `[Mount]` block and its rules). Then the review page
-   (`python tools/skins/skin_preview_html.py <probe folder> <probe folder>/skins-preview.html`): every frame over the
-   base through the same composite the game makes, grouped by mount.
-4. **Build and deploy** with the game closed (`dotnet build src/GK2DonkeyAPI/GK2DonkeyAPI.csproj`); the self-tests
-   (F11, Tests tab) cover the over-skin drawing with a readback; wear it, walk, turn, graze; then "Export the
-   loaded skins as built" (F11, Mounts tab) and rebuild the page: it shows the game's own export and counts where
-   its composite would differ (0 = the page shows what the game shows).
-5. By-hand touch-ups: `watch_skin.py` and the Aseprite scripts export a sheet into any folder named in the
-   `.gk2export.txt` sidecar; point it at the skin's `out\pack\` and let the generator carry the fix, or write the
-   frames back per key.
+1. **Scaffold**: `python -I tools/skins/new_skin.py <id> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
+   [--over]` makes `src/GK2DonkeyAPI/assets/skins/<id>/skin.cfg` in the canonical layout (`seat = <row>`, a
+   `[Colors]` stub, the `[Mount]` block when the skin is a creature of its own, the sound keys commented),
+   `tools/skins/<id>/make_<id>.py` (a generator stub drawing a placeholder in every frame through the shared review
+   module), the `.gk2export.txt` sidecar for Aseprite, runs the stub and the scan. Nothing else to set up.
+2. **Generate or draw.** The generator (`tools/skins/<id>/make_<id>.py`) reads the base's frames as the game places
+   them (`gamedir.donkey_frames()`, the asset probe's export; never the raw harness frames) and draws or computes the
+   skin's pixels per frame on that canvas; measurements it needs (anchors, horn bases) are data files next to it,
+   each with the script that measured them. Every generator writes its pictures for the eye through
+   `tools/skins/review.py` (`write_all`): `out\strips\<animation>.png` (every animation as a strip, the front layer
+   composited, the rider on the seat row: **look at every strip before the game does**), `out\preview.png` (all 44
+   frames) and `out\pack\sheet.png` (the cells, for Aseprite). The four creatures share one generator
+   (`tools/skins/creatures/make_creatures.py [name]`, `out\<name>\`), Hellfire and Royal Parade have their own.
+   Drawing by hand instead: open the `.aseprite` (or make one with `ase_write.py`), save, and `watch_skin.py` exports
+   the sheet and **splits it into the per-frame PNGs** of the folder the `.gk2export.txt` sidecar names (`front.png`
+   into `front\`), runs the checker and writes previews with the front layer and the rider (the round below). A
+   hand-drawn skin's sidecar names the built-in's folder; a generated skin's (Royal Parade) names its `out\pack`, so
+   the generator stays the source and carries the fix (its next run would overwrite the folder anyway).
+3. **The pack** is `src/GK2DonkeyAPI/assets/skins/<id>/`: `skin.cfg` (by hand, commented, kept by the generator, in
+   the layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base, `erase` when it
+   takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the player's colours
+   reach (written from the pixels by `tools/skins/skin_colors.py`, whose rules are data in
+   `tools/skins/creatures/colors.json`: a block per skin, hue, saturation and value thresholds per region, Gerry's from
+   the game's export), `seat = <row>` for the canvas row the rider's hip sits on (52 on the 96 canvas is the donkey's
+   own seat; `+16` on 128), the skin's own geometry in `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (`HitchGapPx`,
+   `RiderOffsetPx`), `mount =` and, for a creature of its own, the `[Mount]` block last with id, name, author,
+   version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key** (`bdy_static_left.png` ...
+   `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our pixels, nothing of the
+   game's art. The DLL build embeds the folder (`GK2DonkeyAPI.csproj`, `assets\skins\**`); no file is copied into
+   the game.
+4. **Check before the game**: `python -I tools/skins/check_skin.py src/GK2DonkeyAPI/assets/skins/<id>` (frames and
+   the front layer present and the canvas size, every colour with its region, the erase marks, lone pixels judged
+   over what the game draws under them, half-transparent pixels; an exit code for the scans, the warnings for the
+   eye), `python -I tools/skins/canonical_cfg.py --check` (the layout) and the headless scan `dotnet run --project
+   tests/SkinsScan -c Release` (every key and value the loader reads, the pictures, the seat row on the body, the
+   `[Colors]` lists against the pixels, the `[Mount]` block and its rules); `tools/release-scans.sh` runs all three
+   on every built-in (the checker reads the asset probe's `donkey-frames\` export under an over skin, so that export
+   must exist on the machine running the scans).
+5. **Look**: the review page (`python -I tools/skins/skin_preview_html.py <probe folder> <probe
+   folder>/skins-preview.html`), every frame through the same composite the game makes, grouped by mount, the front
+   layer in front of the rider, the rider on the seat row with the skin's offset, the seat line, the card's facts
+   (seat, hitch gap, babies, colour regions).
+6. **Build and deploy** with the game closed (`dotnet build src/GK2DonkeyAPI/GK2DonkeyAPI.csproj`); the self-tests
+   (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then "Export the
+   loaded skins as built" (F11, Mounts tab: every skin loaded at that moment) and rebuild the page: it shows the game's
+   own export and counts where its composite would differ (0 = the page shows what the game shows).
 
-Other mounts: a skin **replacing** the donkey with its own creature (rat, snail, worm, dragon) is the same folder
-and pack format with `[Mount]` sections; `tools/skins/creatures/make_creatures.py` draws all four into their folders the same way
-(`python tools/skins/creatures/make_creatures.py [name]`), so every one of the seven built-ins comes from a generator in the repo
-writing into `assets/skins/<id>/` (Gerry alone has no pictures: its cfg points at the game's own frames). A skin drawn **over** one of
-our own creatures needs that creature as a base (`base = rat` ...): the loader has one base today, the donkey
-(`SkinBase`), so that is the next piece of machinery when the first such skin is wanted.
+Another game character as a mount (Gerry) is the by-hand path: `tools/skins/gerry/gerry_probe.py <game folder> <out>
+[<prefix>]` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the character's sprites,
+`gerry_sheet.py <frames> [<prefix>]` lays them out for measuring, and the skin is a `skin.cfg` alone (`source = game`,
+`[Game]` with the prefix, scale, lift and the frame map; docs/gerry-mount.md). A skin drawn **over** one of our own
+creatures needs that creature as a base (`base = rat` ...): the loader has one base today, the donkey (`SkinBase`),
+so that is the next piece of machinery when the first such skin is wanted.
 
 A round:
 
@@ -212,7 +232,7 @@ first hip-anchored cut let the front columns follow the neck up, so in the game 
 above the back and sank in a graze: seen in the Mods picture frames of the user's second video, 18:03). So it
 rides the walk's bob and the graze's dip without changing size or sliding (the first cut measured the collar and
 belly per frame and jumped in the graze clip, seen in the user's first video). The same frames, composited, go to
-the asset probe's `test\skins\royal-parade\` and `skins-preview.html` (tools/skins/skin_preview_html.py), the page that
+`skins-preview.html` (tools/skins/skin_preview_html.py), the page that
 plays every skin's clips next to the plain donkey. A frame with a shorter back (the turn clips) gets it cut shorter. Then a dark outline, a gold border, light
 red under the back, dark red above a gold hem row, a fringe, the fleur in the middle of the red, the crown at the
 Hellfire horn bases. The first draft (a rectangle hanging under the belly) was seen in game as one yellow plate: the
@@ -256,7 +276,7 @@ overlap and the "inner edges" crossed. Checked on a zoom of all 44 heads rendere
 difference from the code's frames.
 
 **The page shows the game's own pictures (2026-10-19 evening):** F11, Mounts tab, "Export the loaded skins as built" writes
-every skin worn since the start as the game draws it (the sheet after the erase compose) and the donkey's frames as the game
+every skin loaded at that moment (worn by someone; a skin taken off is unloaded) as the game draws it (the sheet after the erase compose) and the donkey's frames as the game
 reads them to `BepInEx\GK2-asset-probe\game-skins\`; the page prefers that, says "as the game built it" on the card and
 counts the pixels where its own composite would differ (0 expected). The "all 44 frames" view lists every picture, named.
 
@@ -265,9 +285,14 @@ its own material and colour-swap shader. Royal Parade showed in the world withou
 and no preview could have caught that. The self-test "colours: a skin over the donkey keeps the donkey's regions"
 now reads the drawn overlay back from a camera (docs/self-tests.md) and logs the same for the player's worn skin.
 
-The checker reports: frames drawn, every colour with its region (`kept` = as drawn), colours the donkey itself has,
-half-transparent pixels, lone pixels, more than 48 colours to swap, and frames where the donkey is drawn the same
-but the skin differs (a frame missed in an edit).
+The checker reports: frames drawn (the front layer counted), every colour with its region (`kept` = a donkey colour
+in an over skin, which follows the donkey's colour settings and the skin's `[Base.*]` as the donkey's pixels do: the
+Hellfire tuft and rump fill are drawn that way on purpose, so it is said, not warned; the same colour named in
+`[Colors]` is warned, one colour cannot be in two regions), half-transparent pixels, lone pixels (judged over what
+the game draws under the picture: the donkey under an over skin, the body under a front picture, so a one-pixel lava
+crack on the coat is not one), more than 48 colours (said: the game's colour cube recolours shaded art, docs/skins.md),
+and frames where the donkey is drawn the same but the skin differs (a frame missed in an edit). Only the errors
+(a missing picture, a wrong size, a bad front key, `source = game` without a prefix) fail the scans.
 
 Tested 2026-10-19: the export equals the layers exactly (44 frames, 0 pixel differences); "Part to all frames" on
 the walk tag kept each frame's crown bottom where it was (the bob kept) and left the other tags alone; the checker

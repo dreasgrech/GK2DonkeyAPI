@@ -399,7 +399,25 @@ namespace GK2DonkeyAPI
             internal readonly List<string> Lines = new List<string>();
             internal string FullId => FullIdOf(Owner, Id);
             internal string ParentFull => ParentOwner != null ? FullIdOf(ParentOwner, ParentId) : null;
-            internal string Kind => !Donkey ? "free cart" : Cart ? "donkey with cart" : !Rideable && Scale < 1f ? "foal" : "donkey";
+            // The record's mount, from its saved Skin key: "dragon with cart", "skull", "foal"; a plain one is a donkey.
+            internal string Kind
+            {
+                get
+                {
+                    if (!Donkey) return "free cart";
+                    string noun = "donkey";
+                    foreach (string[] s in Sets)
+                    {
+                        if (s.Length >= 3 && s[0] == "Skin" && !string.IsNullOrEmpty(s[2]))   // a set is [key, owner, value]
+                        {
+                            Kinds.KindDef k = Looks.Find(s[2])?.Kind;
+                            if (k != null && k != Kinds.Donkey) noun = k.NounText;
+                            break;
+                        }
+                    }
+                    return Cart ? noun + " with cart" : !Rideable && Scale < 1f ? "foal" : noun;
+                }
+            }
         }
 
         // The side file's text read back: the header's fields, the owners' counters ('next'), and every record.

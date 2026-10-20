@@ -15,7 +15,7 @@ namespace GK2DonkeyAPI
     {
         internal const string ExportDirName = "game-skins";
 
-        // Writes <folder>\<skin id>\<key>.png for every loaded skin (worn by someone since the start) and
+        // Writes <folder>\<skin id>\<key>.png for every loaded skin (worn by someone at this moment) and
         // <folder>\donkey\<key>.png for the base's frames; returns what was written, or the error.
         internal static string ExportBuilt(string folder)
         {

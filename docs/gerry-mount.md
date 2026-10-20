@@ -69,7 +69,8 @@ unchanged; only the pictures change.
 
 Foals are the same skin scaled by the view (0.6): with B, baby skulls come free, ~27 px wide; with A, 0.6 of a ×3
 blow-up is ×1.8, closer to Gerry's own size. A mount file says `foals = true`. Their sounds are the donkey's for now
-(skin sounds are phase 2).
+(skin sounds are phase 2). *As built: a mount says its babies' size (`foal_scale`, Gerry 0.33 = his own size), and a
+baby spawned without a size is its parent mount's; plain baby donkeys stay 0.6 whatever the parent (the plan's M4).*
 
 ## 5. What else Gerry could do (abilities, phase 2)
 
@@ -87,9 +88,26 @@ candidate mount the same way, which is the open, scalable path the skin system w
 **Built 2026-10-18 (A):** `source = game` skins (`LooksGame.cs`, docs/skins.md): the character's frames found in
 memory or through a loaded sprite atlas asked by name, mapped by the `[Game]` lines and the rules, scaled by whole
 pixels with the feet on the donkey's ground row (`SkinBase.GroundRow`, 28) and the centre on the pivot, into the
-skin's sheet like any other picture. `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg`: Gerry at 3x on a 128 canvas
-(the hop fits), walk 1..8 spread over his 15, the somersault as the turn idle, the speak frames as lips and chew,
-the head keys empty; the Gerry mount with cart and babies and the seat lifted 10 px (a first guess: the Mounts tab
-tunes it). Self-test "game creature: Gerry's frames found, scaled and worn". Not yet seen in game: whether the
-sprites are reachable before Gerry has been on screen (the atlas path), and how the 3x pixels look next to the
-world. Then B or not.
+skin's sheet like any other picture. Self-test "game creature: Gerry's frames found, scaled and worn".
+
+**As it stands (2026-10-20, after the parity plan):** `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` in the canonical
+layout: Gerry at 3x on a **160** canvas (a 29-pixel hop at 3x is 87 above the ground row; 128 cut it), `lift = 0.25`
+(a quarter of his own hop under a rider), walk 1..8 spread over his 15, the somersault as the turn idle, the speak
+frames as lips and chew, the head keys empty; **`seat = picture`** (the rider sits on the skull's own top, per frame:
+the seat readout reads 25.5 px in both AutoSeat modes) with the skin's own `[Tuning] SeatAdjustPx = -16` (the skin
+owns its drawing's geometry; the mount file's "seat lifted 10 px" is gone); the Gerry mount (`[Mount]`) with cart
+and babies, **`foal_scale = 0.33`** (baby skulls his own size), **`noun = skull`** ("a skull can't pull the cart"),
+and `[Mount.Tuning] LipsVolume = 0` (a skull does not smack lips; the bray and the hoofsteps stay). **Seen in game**
+on 2026-10-18 (the first run: the skin failed to register at first, the babies were huge and the hop too big; the
+fixes above came from it) and in the seat readout of 2026-10-20 (25.5 px in both AutoSeat modes, the Gerry scenario
+green). Not recorded as settled from that first run: a clipping at the top of the canvas and a dark square behind
+the ridden skull (the Instances tab's "Log drawing" probe was added for them); whether the 3x pixels read next to the
+world is the user's judgement (B, own art, stays open and is not planned). His `[Colors]` (Dark =
+the sockets) is written by `tools/skins/skin_colors.py` from the game's export (`BepInEx\GK2-asset-probe\game-skins\
+gerry\`, the Mounts tab's "Export the loaded skins as built") when one exists; until then every colour is Coat.
+
+**Another game character, by hand** (docs/sprite-tools.md "Making a skin"): `python -I tools/skins/gerry/gerry_probe.py
+<game folder> <out> <prefix>` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the
+sprites; `gerry_sheet.py <out> <prefix>` lays them out to measure the hop and the sizes; copy Gerry's cfg, set the
+prefix, scale, lift, the frame map, the seat and the `[Mount]` block; `python -I tools/skins/canonical_cfg.py`, the
+scan, build, look. No pictures of our own, nothing of the game's art in the repo.

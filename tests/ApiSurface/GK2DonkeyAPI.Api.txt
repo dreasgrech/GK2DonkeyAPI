@@ -240,6 +240,7 @@ class GK2DonkeyAPI.Api.MountKindDef
   field float FoalScale
   field string Id
   field string Name
+  field string Noun
   field System.Collections.Generic.Dictionary<string, object> Tuning
   field System.Collections.Generic.Dictionary<string, object> TuningCart
   field System.Collections.Generic.Dictionary<string, object> TuningRide
@@ -250,14 +251,19 @@ class GK2DonkeyAPI.Api.MountKindInfo
   property string Author { get; }
   property bool Cart { get; }
   property string Effect { get; }
+  property GK2DonkeyAPI.Api.MountEffectWhen EffectWhen { get; }
   property bool Foals { get; }
   property float FoalScale { get; }
   property bool FromPack { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }
   property string Name { get; }
+  property string Noun { get; }
   property string Owner { get; }
   property System.Collections.Generic.IReadOnlyList<string> Skins { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> Tuning { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> TuningCart { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> TuningRide { get; }
   property string Version { get; }
   method string ToString()
 class GK2DonkeyAPI.Api.MountKinds
@@ -356,7 +362,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle Spawn(string ownerId, GK2DonkeyAPI.Api.MountSpawn spec)
   method static GK2DonkeyAPI.Api.MountHandle SpawnCart(string ownerId, UnityEngine.Vector3 position, bool facingRight = True)
   method static GK2DonkeyAPI.Api.MountHandle SpawnDonkey(string ownerId, UnityEngine.Vector3 position, bool withCart = False, bool facingRight = True)
-  method static GK2DonkeyAPI.Api.MountHandle SpawnFoal(string ownerId, GK2DonkeyAPI.Api.MountHandle parent, float scale = 0.6, int id = 0, string key = null, System.Nullable<bool> persist = null)
+  method static GK2DonkeyAPI.Api.MountHandle SpawnFoal(string ownerId, GK2DonkeyAPI.Api.MountHandle parent, float scale = 0, int id = 0, string key = null, System.Nullable<bool> persist = null)
   method static string StartCorpseDelivery()
   method static GK2DonkeyAPI.Api.MountResult SwitchStyle(GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
   method static GK2DonkeyAPI.Api.MountResult TryMount(string ownerId, GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
@@ -367,12 +373,14 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void EffectRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
+  method void EnableWhen(string section, string key, System.Func<bool> enabled)
   method void FoalRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void Heading(string section, string label, string description = )
   method void Info(string section, string label, System.Func<string> value, string description = )
   method BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut> Key(string section, string key, BepInEx.Configuration.KeyboardShortcut value, string label, string description, System.Action<BepInEx.Configuration.KeyboardShortcut> apply = null, System.Action pressed = null)
   method BepInEx.Configuration.ConfigEntry<string> List(string section, string key, string value, System.Func<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, string>>> choices, string label, string description, System.Action<string> apply = null, bool look = False, System.Func<bool> visible = null)
   method void LookButton(string section, string label, string description)
+  method static bool MountHasRegion(string mountId, string region)
   method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void MovedKey(string section, string key, string oldSection, string oldKey = null)
   method void PerMount(System.Action<string, string, System.Func<bool>> rows)
@@ -384,9 +392,13 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null, System.Func<bool> visible = null)
 class GK2DonkeyAPI.Api.MountSkinDef
   field string Author
+  field System.Collections.Generic.Dictionary<string, System.Collections.Generic.Dictionary<string, string>> BaseRegions
   field int CanvasHeight
   field int CanvasWidth
   field System.Nullable<UnityEngine.Vector2> CartOffset
+  field string Effect
+  field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
+  field System.Nullable<UnityEngine.Color32> Erase
   field GK2DonkeyAPI.Api.IMountSkinSource FrontSource
   field string Id
   field string Mount
@@ -396,9 +408,13 @@ class GK2DonkeyAPI.Api.MountSkinDef
   field bool PaletteColours
   field float PivotX
   field float PivotY
+  field System.Collections.Generic.Dictionary<string, System.String[]> Regions
+  field bool SeatFromPicture
   field int SeatRow
   field GK2DonkeyAPI.Api.IMountSkinSource Source
   field System.Collections.Generic.Dictionary<string, object> Tuning
+  field System.Collections.Generic.Dictionary<string, object> TuningCart
+  field System.Collections.Generic.Dictionary<string, object> TuningRide
   field string Version
   method void .ctor()
 class GK2DonkeyAPI.Api.MountSkinFrame
@@ -417,6 +433,10 @@ class GK2DonkeyAPI.Api.MountSkinInfo
   property string Author { get; }
   property int CanvasHeight { get; }
   property int CanvasWidth { get; }
+  property string Effect { get; }
+  property GK2DonkeyAPI.Api.MountEffectWhen EffectWhen { get; }
+  property bool FromGame { get; }
+  property bool HasFrontLayer { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }
   property bool IsRecipe { get; }
@@ -425,6 +445,9 @@ class GK2DonkeyAPI.Api.MountSkinInfo
   property bool Over { get; }
   property bool OwnColours { get; }
   property string Owner { get; }
+  property System.Collections.Generic.IReadOnlyList<string> Regions { get; }
+  property bool SeatFromPicture { get; }
+  property int SeatRow { get; }
   property string Source { get; }
   property string Version { get; }
   method string ToString()
@@ -433,6 +456,7 @@ class GK2DonkeyAPI.Api.MountSpawn
   field bool FacingRight
   field int Id
   field string Key
+  field string Mount
   field GK2DonkeyAPI.Api.MountHandle Parent
   field bool Persist
   field UnityEngine.Vector3 Position

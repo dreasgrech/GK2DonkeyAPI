@@ -6,7 +6,8 @@ from PIL import Image
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from gamedir import donkey_frames
-FRAMES = donkey_frames()  # the donkey's 44 frames as the game places them (docs/sprite-tools.md)
+FRAMES = donkey_frames()  # the donkey's 44 frames as the game places them (docs/sprite-tools.md); read only for an over skin
+RESULT = {"errors": 0}
 ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] + [f"bdy_ear_left_{i:02d}" for i in range(1, 6)]
          + [f"bdy_graze_left_{i:02d}" for i in range(1, 6)] + [f"bdy_chew_left_{i:02d}" for i in range(1, 4)]
          + [f"bdy_lips_left_{i:02d}" for i in range(1, 14)] + [f"bdy_turn_left_{i:02d}" for i in range(1, 7)]
@@ -22,7 +23,7 @@ def cfg(path):
     for line in open(path, encoding="utf-8"):
         line = line.split("#", 1)[0].strip()
         if line.startswith("["):
-            sec = line.strip("[]")
+            sec = ".".join(p.capitalize() for p in line.strip("[]").strip().split("."))  # the loader reads [skin] as [Skin]
         elif "=" in line:
             k, v = (x.strip() for x in line.split("=", 1))
             out[(sec, k.lower())] = v
@@ -34,16 +35,33 @@ def main(pack):
     c = cfg(os.path.join(pack, "skin.cfg"))
     cw, ch = (int(v) for v in c.get(("Skin", "canvas"), "96 96").split())
     over = c.get(("Skin", "layer"), "replace").lower() == "over"
+    front_keys = []  # the keys of the front/ pictures appended to `cells`, in their order
+    # the layout every built-in keeps (tools/skins/canonical_cfg.py): said here, refused by the release scan
+    try:
+        import canonical_cfg
+        if canonical_cfg.canonical(os.path.join(pack, "skin.cfg")) != open(os.path.join(pack, "skin.cfg"), encoding="utf-8", newline="").read():
+            warn.append("skin.cfg is not in the canonical layout (python -I tools/skins/canonical_cfg.py rewrites a built-in)")
+    except (Exception, SystemExit) as e:  # canonical_cfg refuses an unknown key or section with SystemExit
+        warn.append("skin.cfg could not be laid out: " + str(e))
+    if c.get(("Skin", "source"), "pictures").lower() == "game":
+        prefix = c.get(("Game", "prefix"), "")
+        if not prefix:
+            warn.append("source = game without [Game] prefix")
+            RESULT["errors"] += 1
+        print("CHECK: " + ("all good" if not warn else f"{len(warn)} thing(s) to look at"))
+        for w in warn: print("  ! " + w)
+        print(f"  - no pictures of its own: the game's {prefix or '?'} frames are read at run time (the in-game export shows them; the scan checks the [Game] map)")
+        return
     sheet_file = os.path.join(pack, c.get(("Skin", "sheet"), "sheet.png"))
     if ("Skin", "sheet") in c or os.path.exists(sheet_file):
         # one sheet of cells (an Aseprite export)
         sheet = Image.open(sheet_file).convert("RGBA")
-        cols = int(c.get(("Skin", "columns"), str(sheet.width // cw)))
+        cols = max(1, int(c.get(("Skin", "columns"), str(sheet.width // cw))))
         if sheet.width % cw or sheet.height % ch:
             warn.append(f"the sheet is {sheet.width}x{sheet.height}, not whole {cw}x{ch} cells")
         cells = [sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch)) for i in range(len(ORDER))]
     else:
-        # a PNG per frame key (the built-in packs, a generator's output)
+        # a PNG per frame key (the built-in packs, a generator's output); the front layer's pictures join the checks
         cells, missing = [], []
         for k in ORDER:
             p = os.path.join(pack, k + ".png")
@@ -51,6 +69,7 @@ def main(pack):
                 im = Image.open(p).convert("RGBA")
                 if im.size != (cw, ch):
                     warn.append(f"{k}.png is {im.width}x{im.height}, not the {cw}x{ch} canvas")
+                    RESULT["errors"] += 1
                     im = im.crop((0, 0, cw, ch))
                 cells.append(im)
             else:
@@ -58,6 +77,28 @@ def main(pack):
                 cells.append(Image.new("RGBA", (cw, ch), (0, 0, 0, 0)))
         if missing:
             warn.append(f"no picture for {len(missing)} frame(s): {' '.join(missing)} (the {c.get(('Skin', 'base'), 'donkey')} shows there)")
+            if len(missing) == len(ORDER):
+                RESULT["errors"] += 1
+        front_dir = os.path.join(pack, "front")
+        if os.path.isdir(front_dir):
+            fronts = 0
+            for f in sorted(os.listdir(front_dir)):
+                if not f.endswith(".png"):
+                    continue
+                k = f[:-4]
+                if k not in ORDER:
+                    warn.append(f"front/{f}: not a frame key")
+                    RESULT["errors"] += 1
+                    continue
+                im = Image.open(os.path.join(front_dir, f)).convert("RGBA")
+                if im.size != (cw, ch):
+                    warn.append(f"front/{f} is {im.width}x{im.height}, not the {cw}x{ch} canvas")
+                    RESULT["errors"] += 1
+                    im = im.crop((0, 0, cw, ch))
+                cells.append(im)  # its colours and strays are checked with the body's
+                front_keys.append("front/" + k)
+                fronts += 1
+            info.append(f"front layer: {fronts} picture(s) drawn in front of the rider")
 
     named = {}
     for (sec, k), v in c.items():
@@ -65,19 +106,38 @@ def main(pack):
             for hx in v.split():
                 named[hx.upper()] = k.capitalize()
     donkey_cols = set()
-    dk = {k: donkey(k) for k in ORDER}
+    dk = {k: donkey(k) for k in ORDER} if over else {}  # the donkey is under an over skin only; a replace skin never meets its colours
     for im in dk.values():
         b = im.tobytes()
         donkey_cols |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
 
-    # the erase colour of an over skin (docs/skins.md): a pixel of it clears the donkey there and is never drawn
+    # the erase colour of an over skin (docs/skins.md): a pixel of it clears the donkey there and is never drawn; a
+    # replace skin has none, so the magenta a drawing left behind is counted as the mistake it is (the scan refuses it)
     e = c.get(("Skin", "erase"), "FF00FF" if over else "none").strip()
+    if not over and e.lower() == "none":
+        e = "FF00FF"
     erase = None if e.lower() == "none" else tuple(int(e[i:i + 2], 16) for i in (0, 2, 4))
-    erased, erased_frames = 0, []
+    erased, erased_frames, erased_front = 0, [], 0
 
     used, partial, empty, strays = {}, 0, [], []
-    for k, im in zip(ORDER, cells):
+    body_cells = dict(zip(ORDER, cells))
+
+    def placed(im):
+        # a picture centred on the canvas (the donkey's 96 under a bigger canvas), as the game places it
+        if im.size == (cw, ch):
+            return im
+        f = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+        f.alpha_composite(im, ((cw - im.width) // 2, (ch - im.height) // 2))
+        return f
+
+    for k, im in zip(ORDER + front_keys, cells):
         px = im.load(); n = 0; ne = 0
+        # what the game draws under this picture: the donkey under an over skin, the body under a front picture. A
+        # lone pixel on top of them is not a stray (a lava crack on the coat is one pixel wide; Hellfire walk 2)
+        base_key = k[6:] if k.startswith("front/") else k
+        under = [placed(dk[base_key]).load()] if base_key in dk else []
+        if k.startswith("front/"):
+            under.append(body_cells[base_key].load())
         for y in range(ch):
             for x in range(cw):
                 p = px[x, y]
@@ -90,26 +150,37 @@ def main(pack):
                     ne += 1
                     continue
                 used.setdefault(p[:3], set()).add(k)
-                if not any(0 <= x + dx < cw and 0 <= y + dy < ch and px[x + dx, y + dy][3] > 0
+                if not any(0 <= x + dx < cw and 0 <= y + dy < ch and (px[x + dx, y + dy][3] > 0 or any(u[x + dx, y + dy][3] > 0 for u in under))
                            for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy):
                     strays.append(f"{k} ({x},{y})")
         if n == 0:
             empty.append(k)
-        if ne:
+        if ne and k.startswith("front/"):
+            erased_front += ne
+        elif ne:
             erased += ne
             erased_frames.append(k)
+    if erased_front:
+        warn.append(f"{erased_front} pixel(s) of the erase colour {e} in front/ pictures: the front layer can't erase (the game leaves them out and says so)")
     if erased and not over:
-        warn.append(f"{erased} pixel(s) of the erase colour {e} in a replace skin: only a skin over the donkey erases; they are drawn as that colour")
+        warn.append(f"{erased} pixel(s) of the erase colour {e} in a replace skin: only a skin over the donkey erases; they would be drawn as magenta (the scan refuses them)")
+        RESULT["errors"] += 1
     elif erased:
         info.append(f"erase colour {e}: {erased} pixel(s) in {len(erased_frames)} frame(s) clear the donkey there; those frames are built whole in the game")
 
     hexes = {f"{r:02X}{g:02X}{b:02X}": (r, g, b) for (r, g, b) in used}
-    clash = [h for h, rgb in hexes.items() if rgb in donkey_cols]
+    clash = [h for h, rgb in hexes.items() if rgb in donkey_cols]  # over skins only (dk is empty for a replace skin)
     unnamed = [h for h in hexes if h not in named]
     missing = [h for h in named if h not in hexes]
-    if clash:
-        warn.append(f"{len(clash)} colour(s) the donkey itself has: {', '.join(sorted(clash))}"
-                    + (" (on a skin over the donkey they take the donkey's colour settings; draw them a shade apart)" if over else ""))
+    # a donkey colour drawn by an over skin follows the donkey's colour settings and the skin's [Base.*], as the
+    # donkey's own pixels do: that is how a tuft or a fill continues the body (Hellfire's tuft, rump fill and tail),
+    # so it is said, not warned about. The same colour named in [Colors] is a fight (one colour, two regions).
+    fight = sorted(h for h in clash if h in named)
+    kept = sorted(h for h in clash if h not in named)
+    if fight:
+        warn.append(f"{len(fight)} colour(s) named in [Colors] the donkey itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
+    if kept:
+        info.append(f"{len(kept)} colour(s) of the donkey's own, kept: {', '.join(kept)} (they follow the donkey's colour settings and the skin's [Base.*], as the donkey's pixels do)")
     if missing:
         warn.append(f"[Colors] names {len(missing)} colour(s) no picture has: {', '.join(sorted(missing))}")
     if partial:
@@ -118,12 +189,12 @@ def main(pack):
         warn.append(f"{len(strays)} lone pixel(s) (nothing around them): {', '.join(strays[:8])}{' ...' if len(strays) > 8 else ''}")
     total = len(donkey_cols) + len([h for h in named if h in hexes]) if over else len(hexes)
     if total > 48:
-        warn.append(f"{total} colours to swap: over 48, so the colour cube instead of the exact swap")
+        info.append(f"{total} colours to swap: over 48, so the game's colour cube recolours it instead of the exact swap (shaded art; docs/skins.md)")
 
-    # frames where the donkey is drawn the same but the skin differs: likely one of them was missed
+    # frames where the donkey is drawn the same but the skin differs: likely one of them was missed (over skins only)
     groups = {}
     for k in ORDER:
-        groups.setdefault(dk[k].tobytes(), []).append(k)
+        if k in dk and over: groups.setdefault(dk[k].tobytes(), []).append(k)
     for ks in groups.values():
         if len(ks) > 1:
             first = cells[ORDER.index(ks[0])].tobytes()
@@ -143,3 +214,4 @@ def main(pack):
 
 if __name__ == "__main__":
     main(sys.argv[1])
+    sys.exit(1 if RESULT["errors"] else 0)  # the release scans gate on the errors; the warnings are for the eye

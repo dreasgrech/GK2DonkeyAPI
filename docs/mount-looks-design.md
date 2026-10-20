@@ -111,6 +111,10 @@ Sounds that go with a look: a rat's squeak instead of the bray, fire crackling w
 
 ### Hellfire
 
+Since 2026-10-20 the Hellfire **skin** comes with this effect (`effect = hellfire` in its cfg): a player who picks the
+skin and leaves the Effect row at its default ("As the mount or skin") sees the horns and the fire together, as the
+look was designed; the Effect row still overrides it. The ring scales by the worn skin's drawn width.
+
 **What the player sees.** The game's own lamp fire, tall flames and a few sparks, in a ring round the donkey,
 moving with it. While the donkey walks, small flames are left behind and burn out in about 2 s (proposal 2a).
 
@@ -383,3 +387,32 @@ system, and Hellfire is registered through the public `MountEffectDef` exactly a
 
 Skins got the same treatment the same evening (skins-design.md status): one sheet texture per skin, a base record so
 nothing of the donkey is assumed by the loader or the rig, sheet packs, and sprite sources for code.
+
+## The dragon, Gerry and Royal Parade (built 2026-10-18 to 21)
+
+**Red Dragon** (`tools/skins/creatures/make_creatures.py`, `assets/skins/dragon/`): the one mount on a bigger canvas
+(128: the donkey's frame sits centred, so its pivot and ground row are the donkey's), drawn with a **front layer**
+(`front\`: the near wing, drawn in front of the rider, so he sits between the wings; the self-test "front layer"
+reads it back over him), `seat = 62` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
+that far further back, or the body is drawn inside it), colours Coat = scales and wing, Muzzle = the golden belly,
+Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
+babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
+
+**Gerry** (`assets/skins/gerry/skin.cfg`, docs/gerry-mount.md): the game's talking skull as a mount with no pictures
+of our own (`source = game`: his `0901_` frames read out of the character atlas at run time, 3x on a 160 canvas, the
+hop kept at a quarter under a rider), `seat = picture` (the rider on the skull's own top, per frame), `noun = skull`,
+babies 0.33 (his own size), lips silenced. The first mount that is another character of the game: any preset prefix
+goes the same way.
+
+**Royal Parade** (`tools/skins/royal-parade/make_royal.py`, `assets/skins/royal-parade/`): the plain **over** pack
+and the worked example of drawing on the donkey without touching it: a saddle cloth cut from the standing frame and
+hung from the hip in every frame (so it rides the walk's bob and the graze's dip), a crown at the Hellfire horn
+bases, the cloth's reds named `Harness` so the player's harness colour recolours them, the gold kept as drawn. A
+built-in since 2026-10-19 (before: a sheet pack copied into the game's `gk2skins\`); the first skin that went
+through Aseprite and the watcher by hand (docs/sprite-tools.md).
+
+**Hellfire as a pack** (2026-10-19): the recipe code is gone; the pack holds only the prototype's own pixels (horns,
+tail, cracks, the glow) with the erase colour where the ears and tail come off and `[Base.Coat]` for the ash coat
+(a recolour rule, so the player's coat colour still works), and since 2026-10-20 it comes with its fire
+(`effect = hellfire`). Every built-in skin is now a pack of the one format, made by a generator in the repo
+(docs/skins.md "Worked examples", docs/sprite-tools.md "Making a skin: the one pipeline").

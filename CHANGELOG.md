@@ -23,6 +23,12 @@ For players:
   reads its old place on the first start (the log says which) and the old lines are cleaned out of the cfg.
 - **The colours window** puts the rows under the same two headings, "Mount colours" in the left column and "Cart
   colours" in the right, with Mount and Skin above the first and Effect below the second.
+- **What the next update brings, corrected** (the 0.10.0 notes below previewed it; still switched off in this
+  version): one dragon, red (a blue one is the red one with a custom coat); Hellfire is a skin pack like any other,
+  built in (nothing drawn at run time) and comes with its ring of fire; **Royal Parade** is a third donkey skin (a
+  saddle cloth and a crown; the cloth's reds follow your harness colour); Gerry is "a skull" in the keeper's words
+  and his babies are his own size; the giant snail and the giant worm are silent; a colour row for a part your mount
+  hasn't got is greyed.
 
 For mod authors:
 
@@ -34,6 +40,120 @@ For mod authors:
   The pack checker and the review page honour it; a self-test wears a pack that erases the ears. The step towards
   every skin being a pack (Hellfire next: the user, "for the concept of a mount skin we should do this drawing-over
   thing").
+- **The skin tools, one pipeline** (the plan's M6; docs/sprite-tools.md "Making a skin: the one pipeline"):
+  `tools/skins/new_skin.py` scaffolds a skin or a mount (the cfg in the canonical layout, a generator stub, the
+  Aseprite sidecar, the scan); every generator writes its strips, preview and sheet through one module
+  (`tools/skins/review.py`: the front layer composited, the rider on the seat row), so the four creatures have strips
+  too; the colour rules of `skin_colors.py` are data (`tools/skins/creatures/colors.json`), the front layer counts and
+  Gerry's `[Colors]` comes from the game's export; the Aseprite watcher splits the exported sheet into the built-in's
+  per-frame PNGs; the checker knows the front layer and `source = game`, reads the donkey only under an over skin,
+  judges lone pixels over what the game draws beneath (Hellfire's one-pixel lava crack), says a kept donkey colour
+  and the colour cube instead of warning, and returns an exit code, so it runs in the release scans on every
+  built-in; the scan reads pixels (the seat row must be drawn at the pivot column of the standing frame, the erase
+  colour is refused in a replace skin, a sheet is a whole number of cells, the `[Game]` map's targets are frame
+  names); the review page draws the front layer in front of the rider, the rider on the seat row with the skin's
+  offset and the seat line, and the card's facts (seat, hitch gap, babies, colour regions); the Gerry scripts take
+  the prefix and find the bundle by content; the creature generator wrote into `tools/src/...` since its move (fixed).
+  Wording: the Riding tab says "mount"; the `Debug.MountsPreview` description, the csproj's skins comment and the
+  export button's tooltip say what is there now.
+- **After the review of the parity work** (three independent reads of the diff, 2026-10-20): the side file's record
+  label read the owner column instead of the key, so every kept mount was labelled "donkey" in the log (the data was
+  right); the Gerry self-test still expected "gerry" as the noun; a refused unhitch of a mount that became a no-cart
+  kind was tried again every tick with two log lines each (now once a second, said once, and run after the rig's own
+  work); the layered value a hitch reads took the wanted skin's geometry while the drawing applied the worn one (both
+  worn now); a mount without babies of its own gave its `foal_scale` to plain baby donkeys (0.6 now); spawning a
+  mount by name that has no skin spawned a donkey (refused); the noun reaches every refusal and log sentence; a code
+  skin's sprite colours copied its texture once per sprite (once per texture); the settings picture read the hitch
+  gap from the layers every frame (when they change); a page's grey condition composes with a row's own, and Saddle
+  Up greys the custom harness row with the harness row. Tools: the checker counts magenta in a replace skin (it
+  never did), survives a cfg the canonical writer refuses, says that a front picture can't erase; the canonical
+  writer refuses `[Mount.Tuning]` without `[Mount]` (it dropped it) and leaves an empty `[Tuning]` out; the colours
+  writer no longer eats the comment of the section after `[Colors]`; the shared review module clears erase holes at
+  the right place on a bigger canvas, lays the sheet out by frame order, and puts the rider where the skin's own
+  `RiderOffsetPx` / `SeatAdjustPx` put him (the page too, and it re-places him when the scale changes); the watcher
+  splits by the sidecar's columns and removes a front picture whose cell is empty; the scan says which PNG it cannot
+  read instead of aborting, wants RGBA, and checks the order among the three skin tuning sections; `make_hellfire.py
+  --cfg` keeps the effect keys; a fresh creature cfg is canonical; Royal Parade's generator writes its strips through
+  the shared module (its Aseprite sidecar keeps naming its `out\pack`: the generator is its source); `new_skin.py`
+  takes its flags in any order and refuses `--over` with `--mount`.
+- **After the second run** (2026-10-20): two findings in the game, both fixed. The cart-style seat sat 6 px higher
+  than the ride seat on every drawn creature: a declared seat row still added the player's own `SeatAdjustPx`, whose
+  mod default is -6 riding and 0 with the cart. A declared seat now ignores the player's own value (only the skin's
+  own `[Tuning] SeatAdjustPx` or a mod's override nudges from it, in full), and the built-in rows moved by those 6
+  (rat and worm 52, the snail 55, the dragon 68; the donkey's own seat is row 52 on the 96 canvas; the scaffold, the
+  review tools and the example say 52), so the riding look is exactly as calibrated and the cart look matches it. The
+  dragon's near wing (the front layer) was drawn behind the rider in the world: it was sorted above him but not lifted
+  past his sprite's plane, and the game draws by distance; the front picture is now lifted past the keeper's plane
+  (measured each frame from his position in the body part's space). The cart readout's rule was wrong, not the gaps:
+  the rat's and the dragon's declared gaps (judged by eye) leave their carts about 10 px further from the body than
+  the donkey's, and the snail, worm and Gerry stand further still without any gap (narrower bodies), so the rule
+  asserted is "no cart closer to its body than the donkey's"; the three declare no gap and their cfgs say why
+  (docs/seat-investigation.md 9, with the measured table). The Riding tab no longer offers the player's nudge on a
+  declared seat. (Third run: Gerry sat at 41.5 px instead of 25.5: a skin's own nudge is an override on the instance,
+  which the global override flag did not see; the seat reads the instance's override owners too, and the readout
+  now guards Gerry's 25.5. Fourth run: all green but the "pictures loaded and freed" scenario, which assumed nobody
+  wears the rat: the player's own mount was the rat, whose one sheet is shared; it now picks a built-in creature
+  nobody wears.)
+- **After the first in-game run of the new tests** (2026-10-20): three probes were wrong, the game was right. The
+  cart readout asked a cart part's transform for its renderer (the mesh is a child, as the mount code reads it); the
+  front-layer readback counted every drawn pixel, so "the body with the rider" could never be smaller than "the body
+  alone" (it now compares the overlap pixel by pixel at one camera spot: whose colour shows); the over-colours test
+  classed the scene-lit gold as "red" at dusk (it now checks that the lit red colour is gone, whatever class the
+  light gives the gold).
+- **The tests nobody had** (the plan's M5, docs/mounts-parity-matrix.md §6): the dragon's front layer read back
+  in front of the rider (where they overlap, the pair shows the keeper's colour over the body overlay and the wing's over the keeper); Hellfire and Royal Parade
+  on the built-ins themselves (whole frames with the erase marks, the ash coat, the cloth's reds under the harness
+  colour, both walking); the snail's own rider offset on its wearer; the cart-style seat and the hitch gap of every
+  mount (M2's readout).
+- **The code that only knew the donkey** (the plan's M4, docs/mounts-parity-matrix.md §2): the rider's leg overlay
+  (NearLeg) hangs from the skin's declared seat as the torso does, not from the donkey's back line; a baby spawned
+  without a size is its parent mount's own (`SpawnFoal`'s default), and plain baby donkeys are 0.6 whatever the
+  parent is; `Mounts.Spawn` with a cart as a no-cart mount is refused, and a hitched mount that becomes one leaves
+  its cart standing where it is (the user's decision; before, the cart stayed hitched as data); `[Base.*]` on a
+  replace skin and `[Colors]` on a palette skin are named in the skin's report instead of ignored silently; a mount
+  may say `noun = ` ("a skull can't pull the cart"; Gerry says skull) and the save file's and the dormant list's
+  labels say the mount instead of "donkey"; a mount with no skin is not offered; `MountSpawn.Mount` spawns a mount
+  by name in its Default skin. The API records say more: `MountSkinInfo.Regions` (the colour regions the player's
+  colours reach), `MountKindInfo.EffectWhen`, `Noun` and its tuning, `Skins` with the Default first; a code skin
+  can declare its colour regions, an erase colour, a base recolour and the picture seat (`MountSkinDef.Regions`,
+  `Erase`, `BaseRegions`, `SeatFromPicture`), and a readable sprite's colours join the look (an unreadable one is
+  said once). `MountSettingsPage.EnableWhen` and `MountHasRegion` grey a colour row for a region a mount never has.
+  Sounds, phase one: every sound key is documented as a mount's to set; the snail and the worm are silent (bray,
+  hoofsteps, lip smack off), Gerry's lip smack is off; the scan reads every bound key (the helper-bound ones were
+  invisible to it). Self-tests: the two cart-rule doors, the noun, the silent snail and skull, the baby's default
+  size, the leg overlay on the snail's seat row, the snail's regions.
+- **A skin comes with its effect; the ring fits the creature** (the plan's M3; the user's decision 9.5 (a)): a
+  skin may say `effect = ` / `effect_when = ` (`MountSkinDef.Effect` / `EffectWhen` for code), shown when the
+  player's Effect row says "As the mount or skin" (its default; the entry was "As the mount"): the skin's first,
+  else the mount's. Hellfire says `effect = hellfire`, so a player who picks the skin sees the horns and the fire
+  together without opening the Effect section. The effect ring's radius scales by the worn skin's standing-frame
+  width over the donkey's 46 px (the rat's 85: almost twice the ring; an over skin or a code-sprite skin keeps
+  1.0), measured at the sheet build. The Mounts tab has the skin's effect row; the scan and the layout know the
+  two keys; `make_hellfire.py` writes the built-in's cfg once (`--cfg` rewrites it), so a regeneration keeps the
+  hand-written lines. Self-test: Hellfire lit under the default row, Royal Parade not, the rat's ring 1.48.
+- **The Mounts tab tunes the skin** (the plan's M2): a "The rider's seat on this skin" row (the picture row, the
+  picture top, or none; right-click = none) and the rider, leg and cart pixel rows per style under "Rider on this
+  skin" (a value already in `[Tuning]` is changed there, a new one goes into the style's section; right-click = not
+  set), saved by the same auto-save into the skin's file; the mount's group keeps the speed, NearLeg and its
+  other keys. The Riding tab shows the pixel nudge alone while riding a skin that declares its seat, and says why.
+  The settings picture places the cart at the mount's hitch gap (the dragon's and rat's cart stood at the
+  donkey's distance) and shows no cart for a mount that cannot pull one. Creature facts (the mount's cart rule,
+  babies, effect, abilities) follow the wanted skin at once while the drawing's geometry follows the worn one, so
+  a rider on the old picture never takes the new picture's numbers. A "cart readout" self-test measures, for every
+  built-in mount with a cart, the distance from the body's rear edge to the cart body and the cart-style seat,
+  and asserts the rat's and dragon's declared gaps; the snail's, worm's and Gerry's gaps are declared from its
+  numbers next.
+- **The skin owns its drawing's geometry** (API 0.33.0; the user's decision of 2026-10-20, docs/mounts-parity-matrix.md
+  9.1): a skin's `[Tuning]` has `[Tuning.Ride]` and `[Tuning.Cart]` beside it for one style, merged after it and
+  before nothing (the merge order is in docs/mounts-design.md §2; `Looks.LayeredValue` reads the same order for the
+  hitch); `MountSkinDef.TuningRide` / `TuningCart` for code skins. The three pixel values that sat on mounts moved
+  to their skins: the snail's `RiderOffsetPx` into `[Tuning.Ride]`, Gerry's `SeatAdjustPx` into `[Tuning]`, the rat's
+  and the dragon's `HitchGapPx` into `[Tuning.Cart]`; the creature generator writes a creature's gap; the scan
+  refuses a picture key under `[Mount.Tuning*]`, a key in `[Tuning]` and a style section, `SeatOffset` on a skin
+  with a seat row, an empty section, and places the sections after `[Game]`. The Mounts tab's Save writes the three
+  sections with their comments and regenerates the `seat` line with its remark. `MountSkinInfo` says the seat row,
+  the picture seat, a front layer and a game source. Self-tests: Gerry's value comes from its skin and the mount
+  holds no pixel key after a reload; a temp pack's `[Tuning.Ride]` value is the riding value on the wearer.
 - **A mount's seat is its skin's row now** (API 0.32.0; the user: "ok let's go for it since it's part of the
   foundation for more mounts"; docs/seat-investigation.md §8). A skin may say `seat = <row>`, the canvas row (from
   the top) the rider's hip sits on; `MountSkinDef.SeatRow` for code skins. The rider sits there in every frame for
@@ -41,7 +161,7 @@ For mod authors:
   the mount's `SeatAdjustPx` nudges from it, so one declaration gives every player the same seat; before, a mount's
   `SeatOffset` reached only AutoSeat-off players and its `SeatAdjustPx` only AutoSeat-on ones. The rat and the worm
   say 46 (the donkey's own seat on the 96 canvas, measured in game: the first guess of 49 sat 3 px low, with
-  both modes already equal), the snail 48 (3 px lower, its `SeatOffset` gone; 49 sat one pixel low in the second run), the dragon 62 (the 128 canvas); the creature generator writes the row; the scan refuses a row outside the
+  both modes already equal), the snail 49 (3 px lower, its `SeatOffset` gone; a stray `SeatAdjustPx = -7` from a panel test, committed by accident, hid one pixel in the second run and is gone), the dragon 62 (the 128 canvas); the creature generator writes the row; the scan refuses a row outside the
   canvas and a mount that sets `SeatOffset`; the example mod's checker says 46. The game's own donkey art declares
   no row: a default player's seat is untouched (the readout self-test asserts 6.6 px). The Mounts tab says when a
   skin declares its row.

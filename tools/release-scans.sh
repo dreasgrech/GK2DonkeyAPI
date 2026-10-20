@@ -33,6 +33,9 @@ for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$REPO" "canonical skin.cfg layout" python -I tools/skins/canonical_cfg.py --check
+for d in "$REPO"/src/GK2DonkeyAPI/assets/skins/*/; do
+  run "$REPO" "check_skin $(basename "$d")" python -I tools/skins/check_skin.py "$d"
+done
 run "$T/PackerScan" "PackerScan" dotnet run -c Release
 run "$T/PackerScan" "PackerScan --shapes" dotnet run -c Release -- --shapes
 run "$T/PackerScan" "PackerScan --real --thorough" dotnet run -c Release -- --real --thorough

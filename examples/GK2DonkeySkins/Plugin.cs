@@ -48,7 +48,7 @@ namespace GK2DonkeySkins
                 Author = "dreas",
                 Version = "0.1",
                 Mount = "checker-beast",
-                SeatRow = 46,               // the rider's hip on row 46 of the 96 canvas (the donkey's own seat), for every player
+                SeatRow = 52,               // the rider's hip on row 52 of the 96 canvas (the donkey's own seat), for every player
                 Source = new CheckerSource(),
             }));
             Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, burns while ridden); pick them in Saddle Up's Mount section.");

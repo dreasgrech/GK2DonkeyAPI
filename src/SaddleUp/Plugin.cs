@@ -92,7 +92,10 @@ namespace SaddleUp
                 ConfigEntry<CoatColor> coat = p.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "The mount's body: the donkey's coat, a dragon's scales, the worm's skin. Kept per mount.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
                 p.Color("Colours", "CustomCoat" + sfx, "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coat.Value == CoatColor.Custom);
                 ConfigEntry<HarnessColor> harness = p.Choice("Colours", "Harness" + sfx, look.Harness, "Harness colour", "The mount's tack (the donkey's harness), on the mounts whose look has any; the others ignore it. Kept per mount.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+                // a mount whose skins have no tack (the worm): the harness rows grey, the value is kept
+                p.EnableWhen("Colours", "Harness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
                 p.Color("Colours", "CustomHarness" + sfx, "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => look.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
+                p.EnableWhen("Colours", "CustomHarness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
             });
             p.Heading("Colours", "Cart colours");
             p.PerMount((mountId, sfx, shown) =>

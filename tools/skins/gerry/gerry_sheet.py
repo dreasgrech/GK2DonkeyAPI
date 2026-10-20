@@ -10,7 +10,7 @@ import sys
 
 from PIL import Image, ImageDraw
 
-PREFIX = "0901_"
+PREFIX = sys.argv[2] if len(sys.argv) > 2 else "0901_"  # the character's preset prefix (usage: gerry_sheet.py <frames folder> [<prefix>])
 
 
 def rows_of(src):

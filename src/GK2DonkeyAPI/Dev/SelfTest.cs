@@ -157,6 +157,10 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every built-in mount, AutoSeat off and on (a readout)", Body = SeatReadout },
+            new Scenario { Group = GroupLooks, Name = "cart: the hitch gap and the cart-style seat on every built-in mount (a readout)", Body = CartReadout },
+            new Scenario { Group = GroupLooks, Name = "effect: the skin's own effect under 'As the mount or skin', and the ring's size by the drawn width", Body = SkinEffect },
+            new Scenario { Group = GroupLooks, Name = "front layer: the dragon's near wing stays in front of the rider (a readback)", Body = FrontLayer },
+            new Scenario { Group = GroupLooks, Name = "over skins: Hellfire and Royal Parade worn, recoloured and walking; the snail's own rider offset (a readback)", Body = OverBuiltIns },
             new Scenario { Group = GroupLooks, Name = "colours: the player's regions on a mount in its own colours", Body = SkinColours },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
             new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
@@ -1391,6 +1395,21 @@ namespace GK2DonkeyAPI
                     yield return Frames(8); // the seat settles (the picture seat, the auto seat, the bob)
                     float seat = a.I.TestSeatApplied;
                     seats[(id.Length == 0 ? "donkey" : id) + (auto ? "|on" : "|off")] = seat / px;
+                    if (id == "snail" && !auto)
+                    {
+                        Check(a.Tuning.IsSet("BrayVolume") && a.Tuning.SetBy("BrayVolume") == Looks.TuningOwner && Math.Abs(a.Tuning.Get<float>("BrayVolume")) < 0.001f, "the snail is silent by its mount ([Mount.Tuning] BrayVolume = 0)");
+                        MountSkinInfo snailInfo = Mounts.Looks.Find("snail");
+                        var snailRegions = snailInfo != null ? new List<string>(snailInfo.Regions) : new List<string>(); Check(snailInfo != null && snailRegions.Contains("Muzzle") && !snailRegions.Contains("Harness") && !MountSettingsPage.MountHasRegion("snail", "Harness"), "the snail's regions are Coat, Dark and Muzzle: a Harness row greys for it");
+                        // the legs (NearLeg on) hang from the skin's seat row, not the donkey's back line
+                        a.Tuning.Set(Owner, "NearLeg", true);
+                        yield return Frames(6);
+                        float legY = RiderLeg.TestLocalY;
+                        bool seatOk = a.I.LooksRig.TrySeatTop(out Vector3 seatTop, out _);
+                        SpriteRenderer body = a.I.TestBodyRenderer;
+                        float want = seatOk && body != null ? body.transform.InverseTransformPoint(seatTop).y + ride.LegAdjustYPx.Entry.Value * 0.02f : float.NaN;
+                        Check(!float.IsNaN(legY) && !float.IsNaN(want) && Math.Abs(legY - want) < 0.02f * 1.5f, $"the leg overlay hangs from the snail's seat row ({legY:0.000} vs {want:0.000}, within 1.5 px)");
+                        a.Tuning.Clear("NearLeg");
+                    }
                     string who(string key) => a.Tuning.IsSet(key) ? $"{key} = {a.Tuning.Get<object>(key)} ({(a.Tuning.SetBy(key) == Looks.TuningOwner ? "the mount" : a.Tuning.SetBy(key))})" : $"{key} = the player's {(key == "SeatOffset" ? ride.SeatOffset.Entry.Value.ToString("0.00") : ride.SeatAdjustPx.Entry.Value.ToString())}";
                     string seatDecl = a.I.LooksRig.TrySeatTop(out _, out bool fixedRow) ? (fixedRow ? $"seat = {Looks.Find(id)?.SeatRow}; " : "seat = picture; ") : "";
                     lines.Add($"AutoSeat {(auto ? "on " : "off")} | {(id.Length == 0 ? "donkey" : id),-13} kind {a.Kind,-7} | seat {seat / px,6:0.0} px ({seat:0.000}) | {seatDecl}{who("SeatOffset")}; {who("SeatAdjustPx")}");
@@ -1409,9 +1428,283 @@ namespace GK2DonkeyAPI
             float At(string k) => seats.TryGetValue(k, out float v) ? v : float.NaN;
             Check(Math.Abs(At("donkey|off") - 6.6f) < 0.3f, $"the plain donkey's manual seat is untouched: {At("donkey|off"):0.0} px (6.6)");
             foreach (string id in new[] { "rat", "worm", "dragon" })
-                Check(Math.Abs(At(id + "|off") - 6.6f) < 0.8f && Math.Abs(At(id + "|on") - At(id + "|off")) < 0.3f, $"{id}: seat = 46 (62 on the 128 canvas) seats the rider where the donkey's seat was, in both modes ({At(id + "|off"):0.0} / {At(id + "|on"):0.0} px)");
-            Check(Math.Abs(At("snail|off") - 3.5f) < 0.8f && Math.Abs(At("snail|on") - At("snail|off")) < 0.3f, $"snail: seat = 48 seats the rider 3 px lower in both modes ({At("snail|off"):0.0} / {At("snail|on"):0.0} px)");
+                Check(Math.Abs(At(id + "|off") - 6.6f) < 0.8f && Math.Abs(At(id + "|on") - At(id + "|off")) < 0.3f, $"{id}: seat = 52 (68 on the 128 canvas) seats the rider where the donkey's seat was, in both modes ({At(id + "|off"):0.0} / {At(id + "|on"):0.0} px)");
+            Check(Math.Abs(At("snail|off") - 3.5f) < 0.8f && Math.Abs(At("snail|on") - At("snail|off")) < 0.3f, $"snail: seat = 55 seats the rider 3 px lower in both modes ({At("snail|off"):0.0} / {At("snail|on"):0.0} px)");
             Check(Math.Abs(At("gerry|on") - At("gerry|off")) < 0.3f, $"gerry: the picture seat is the same in both modes ({At("gerry|off"):0.0} / {At("gerry|on"):0.0} px)");
+            // the skin's own SeatAdjustPx = -16 (an override on the instance, owned by Looks) counts on a declared seat;
+            // 25.5 px is the recorded value (docs/seat-investigation.md 8); 41.5 would mean the nudge was dropped
+            Check(Math.Abs(At("gerry|off") - 25.5f) < 0.8f, $"gerry: the skin's own SeatAdjustPx = -16 nudges the picture seat ({At("gerry|off"):0.0} px, 25.5 recorded)");
+        }
+
+        // The cart on every built-in mount (docs/mounts-parity-matrix.md 1.2, 6.2): the gap between the body's rear edge
+        // and the cart body, and the seat in the cart style, read back in art px. The rat's and the dragon's declared
+        // gaps must put the cart as far from their body as the donkey's cart is from the donkey's; the snail, worm and
+        // Gerry are read out, and their gaps declared from these numbers (M2b of the plan).
+        private static IEnumerator CartReadout()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
+                yield break;
+            }
+            const float pxX = 0.02f;            // Mount.PxWorld: one art pixel along the ground
+            const float pxY = 0.02f * 1.6667f;  // Mount.PxWorldY: one art pixel along the seat's axis
+            var clearance = new Dictionary<string, float>(StringComparer.Ordinal);
+            var seatsCart = new Dictionary<string, float>(StringComparer.Ordinal);
+            var lines = new List<string>();
+            string[] skins = { "", "rat", "snail", "worm", "dragon", "gerry" };
+            foreach (string id in skins)
+            {
+                string name = id.Length == 0 ? "donkey" : id;
+                Vector3 near = Spot(home, 5f) ?? home;
+                MountHandle a = Spawn(near, true, withCart: true);
+                if (a == null) { Fail($"{name}: could not spawn with a cart"); continue; }
+                if (id.Length > 0) a.Tuning.Set(Owner, "Skin", id);
+                yield return Until(() => a.IsReady && a.HasCart && (id.Length == 0 || a.I.TestSkinWearing() == id), 30f);
+                if (!waited) { Fail($"{name}: never ready with its cart"); a.Remove(); continue; }
+                yield return Frames(6);
+                Vector3 dir = a.I.HitchDirWorld;
+                if (dir == Vector3.zero) { Fail($"{name}: no hitch direction (no live cart body)"); a.Remove(); continue; }
+                // the body's rear edge: a skin's rearmost opaque column of the standing frame; the donkey's own sprite bounds
+                Vector3 rear = default;
+                bool haveRear;
+                if (id.Length > 0)
+                {
+                    (int Min, int Max)? cols = a.I.LooksRig.BodyColumns("bdy_static_left");
+                    haveRear = cols.HasValue && a.I.LooksRig.TryBodyColumnWorld(cols.Value.Max, out rear);
+                    if (!haveRear) rear = default;
+                }
+                else
+                {
+                    SpriteRenderer body = a.I.TestBodyRenderer;
+                    haveRear = body != null && body.sprite != null;
+                    rear = haveRear ? Far(body.bounds, dir) : default;
+                }
+                Renderer cartBody = a.I.TestCartPartRenderer("donkey_cart_empty_sway") ?? a.I.TestCartPartRenderer("donkey_cart_bars");
+                if (!haveRear || cartBody == null) { Fail($"{name}: no body edge or cart body to measure ({haveRear}, {cartBody != null})"); a.Remove(); continue; }
+                float gapPx = Vector3.Dot(Near(cartBody.bounds, dir) - rear, dir) / pxX;
+                clearance[name] = gapPx;
+                // the seat with the cart hitched (the cart style)
+                MountResult r = a.Ride(showMessage: false);
+                float seatPx = float.NaN;
+                if (r.Ok)
+                {
+                    yield return Until(() => Mounts.IsMounted, 5f);
+                    yield return Frames(8);
+                    seatPx = a.I.TestSeatApplied / pxY;
+                    Mounts.Dismount("self-test");
+                    yield return Until(() => !Mounts.IsMounted, 5f);
+                }
+                seatsCart[name] = seatPx;
+                lines.Add($"{name,-7} kind {a.Kind,-7} | hitch gap {a.I.HitchGapWorld / pxX,5:0.0} px | shaft tips past the body's rear {gapPx,6:0.0} px | cart-style seat {(float.IsNaN(seatPx) ? "not ridden: " + r.Reason : seatPx.ToString("0.0") + " px")}");
+                a.Remove();
+                yield return Frames(2);
+            }
+            foreach (string l in lines) Info(l);
+            Check(lines.Count == skins.Length, $"{lines.Count} of {skins.Length} mounts read out with a cart (the lines above: docs/mounts-parity-matrix.md 1.2)");
+            // The measure is the cart mesh's front edge (the shaft tips) past the body's rear edge, negative = the shafts
+            // reach along the body, as they do on the donkey (-30 px). The rule (docs/seat-investigation.md 9): no mount's
+            // cart stands closer to its body than the donkey's; the declared gaps (rat 9, dragon 24, judged by eye) put
+            // theirs about 10 px further, the snail, worm and Gerry are narrower and stand further without a gap.
+            if (clearance.TryGetValue("donkey", out float donkeyGap))
+            {
+                foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
+                    Check(clearance.TryGetValue(id, out float g) && g >= donkeyGap - 2f, $"{id}: the cart stands no closer to its body than the donkey's ({(clearance.TryGetValue(id, out float gg) ? gg.ToString("0.0") : "?")} vs {donkeyGap:0.0} px)");
+            }
+            // the cart-style seat: a declared row seats the rider the same as riding (the player's SeatAdjustPx, whose
+            // default differs by style, does not count on a declared seat), so the creatures sit at the donkey's 6.6 px
+            // with the cart too, the snail 3 px lower
+            if (seatsCart.TryGetValue("donkey", out float donkeySeat) && !float.IsNaN(donkeySeat))
+            {
+                foreach (string id in new[] { "rat", "worm", "dragon" })
+                    Check(seatsCart.TryGetValue(id, out float sp) && Math.Abs(sp - donkeySeat) < 0.8f, $"{id}: the cart-style seat is the donkey's ({(seatsCart.TryGetValue(id, out float s2) ? s2.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
+                Check(seatsCart.TryGetValue("snail", out float ss) && Math.Abs(ss - (donkeySeat - 3f)) < 0.8f, $"snail: the cart-style seat is 3 px lower than the donkey's ({(seatsCart.TryGetValue("snail", out float s3) ? s3.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
+                Check(seatsCart.TryGetValue("gerry", out float sg) && Math.Abs(sg - 25.5f) < 0.8f, $"gerry: the cart-style seat is the picture seat with the skin's -16 ({(seatsCart.TryGetValue("gerry", out float s4) ? s4.ToString("0.0") : "?")} px, 25.5 recorded)");
+            }
+        }
+
+        // The near and far points of a renderer's bounds along a ground direction (the box's corners projected).
+        private static Vector3 Near(Bounds b, Vector3 dir)
+        {
+            Vector3 best = b.center; float bestDot = float.MaxValue;
+            foreach (Vector3 c in Corners(b)) { float d = Vector3.Dot(c, dir); if (d < bestDot) { bestDot = d; best = c; } }
+            return best;
+        }
+        private static Vector3 Far(Bounds b, Vector3 dir)
+        {
+            Vector3 best = b.center; float bestDot = float.MinValue;
+            foreach (Vector3 c in Corners(b)) { float d = Vector3.Dot(c, dir); if (d > bestDot) { bestDot = d; best = c; } }
+            return best;
+        }
+        private static IEnumerable<Vector3> Corners(Bounds b)
+        {
+            Vector3 mn = b.min, mx = b.max;
+            yield return new Vector3(mn.x, mn.y, mn.z); yield return new Vector3(mx.x, mn.y, mn.z);
+            yield return new Vector3(mn.x, mn.y, mx.z); yield return new Vector3(mx.x, mn.y, mx.z);
+            yield return new Vector3(mn.x, mx.y, mn.z); yield return new Vector3(mx.x, mx.y, mn.z);
+            yield return new Vector3(mn.x, mx.y, mx.z); yield return new Vector3(mx.x, mx.y, mx.z);
+        }
+
+        // A skin that comes with an effect (Hellfire: effect = hellfire) lights it when the wearer's Effect row says "As
+        // the mount or skin" (Saddle Up's default); a skin without one shows the mount's (the donkey has none); and the
+        // ring is the worn skin's drawn width against the donkey's (the rat: 85 of 46 px).
+        private static IEnumerator SkinEffect()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
+                yield break;
+            }
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            a.Tuning.Set(Owner, "Effect", MountEffects.KindId);
+            a.Tuning.Set(Owner, "EffectWhen", MountEffectWhen.Always);
+            a.Tuning.Set(Owner, "Skin", "hellfire");
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "hellfire" && a.I.EffectsRig.Lit, 20f);
+            Check(waited, "Hellfire worn with Effect = As the mount or skin: its fire is lit");
+            float donkeyRing = a.I.EffectsRig.TestRingRadiusX;
+            Check(donkeyRing > 0.6f && donkeyRing < 1.0f, $"the ring on the donkey-shaped Hellfire reaches {donkeyRing:0.00} along the body (0.8: an over skin keeps the donkey's size)");
+            a.Tuning.Set(Owner, "Skin", "royal-parade");
+            yield return Until(() => a.I.TestSkinWearing() == "royal-parade" && !a.I.EffectsRig.Lit, 20f);
+            Check(waited, "Royal Parade worn (no effect of its own, the donkey mount has none): the fire is out");
+            a.Tuning.Set(Owner, "Effect", "hellfire");
+            a.Tuning.Set(Owner, "Skin", "rat");
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "rat" && a.I.EffectsRig.Lit && a.I.EffectsRig.TestRingRadiusX > 1.2f, 20f);
+            float ratRing = a.I.EffectsRig.TestRingRadiusX;
+            Check(waited && Math.Abs(ratRing - 0.8f * 85f / 46f) < 0.2f, $"the ring on the rat reaches {ratRing:0.00} along the body (0.8 x 85/46 = 1.48: the rat is 85 px wide to the donkey's 46)");
+            a.Remove();
+            yield return Frames(2);
+        }
+
+        // The front layer on the built-in that has one (docs/mounts-parity-matrix.md 6.1): the dragon's near wing,
+        // drawn in front of the rider. Read back through the game's own camera at one spot: the body overlay, the
+        // front picture and the keeper's body each alone, then each with the keeper; where two overlap, the pair's
+        // pixels show whose colour is in front: the keeper's over the body, the wing's over the keeper.
+        private static IEnumerator FrontLayer()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in dragon");
+                yield break;
+            }
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            a.Tuning.Set(Owner, "Skin", "dragon");
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "dragon" && a.I.LooksRig.TestFrontShowing(), 30f);
+            Check(waited, "the dragon is worn and its front layer shows");
+            MountResult r = a.Ride(showMessage: false);
+            Check(r.Ok, "ridden: " + (r.Ok ? "ok" : r.Reason));
+            if (r.Ok)
+            {
+                yield return Until(() => Mounts.IsMounted && a.I.KeeperBody != null && a.I.KeeperBody.sprite != null, 6f);
+                yield return Frames(8);
+                SpriteRenderer front = a.I.LooksRig.TestFront(), ov = a.I.LooksRig.TestOverlay(), keeper = a.I.KeeperBody;
+                if (front != null && ov != null && keeper != null)
+                {
+                    Vector3 at = ov.bounds.center;
+                    SpriteRenderer partNow = a.I.LooksRig.TestPart();
+                    if (partNow != null) Info($"depths in the body part's space (local z, negative = towards the camera): the keeper {partNow.transform.InverseTransformPoint(keeper.transform.position).z:0.000}, the front picture {partNow.transform.InverseTransformPoint(front.transform.position).z:0.000}, the body overlay {partNow.transform.InverseTransformPoint(ov.transform.position).z:0.000}");
+                    DrawnAlone frontAlone = RenderAlone(front, at: at), bodyAlone = RenderAlone(ov, at: at), keeperAlone = RenderAlone(keeper, at: at);
+                    DrawnAlone frontWith = RenderAlone(front, with: keeper, at: at), bodyWith = RenderAlone(ov, with: keeper, at: at);
+                    (int Overlap, int KeeperInFront) body = bodyAlone?.Overlap(keeperAlone, bodyWith) ?? (0, 0);
+                    (int Overlap, int KeeperInFront) wing = frontAlone?.Overlap(keeperAlone, frontWith) ?? (0, 0);
+                    Info($"front layer alone {frontAlone?.Pixels} px, the body {bodyAlone?.Pixels}, the keeper {keeperAlone?.Pixels}; body/keeper overlap {body.Overlap} px, the keeper's colour there {body.KeeperInFront}; wing/keeper overlap {wing.Overlap} px, the keeper's colour there {wing.KeeperInFront}");
+                    Check(frontAlone != null && frontAlone.Pixels > 50, $"the front picture draws ({frontAlone?.Pixels} pixels)");
+                    if (body.Overlap < 30) Warn($"the rider and the body overlap in {body.Overlap} px only: nothing to judge the order on");
+                    else Check(body.KeeperInFront > body.Overlap / 2, $"the rider is drawn over the body under him ({body.KeeperInFront} of {body.Overlap} overlapping pixels show him)");
+                    if (wing.Overlap < 10) Warn($"the wing and the rider overlap in {wing.Overlap} px only: nothing to judge the order on");
+                    else Check(wing.KeeperInFront < wing.Overlap / 2, $"the front layer is drawn over the rider ({wing.Overlap - wing.KeeperInFront} of {wing.Overlap} overlapping pixels show the wing)");
+                }
+                else Fail("no front overlay, body overlay or keeper body to read back");
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+            }
+            a.Remove();
+            yield return Frames(2);
+        }
+
+        // The two over skins we ship, on the built-ins themselves (6.4: the over-skin scenarios run on temp packs):
+        // Hellfire built whole with its erase marks and the ash coat under it, kept while walking; Royal Parade's
+        // reds under the harness colour and its cloth drawn in the walk; the snail's own rider offset on its wearer.
+        private static IEnumerator OverBuiltIns()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
+                yield break;
+            }
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle a = Spawn(near, true);
+            if (a == null) { Fail("could not spawn"); yield break; }
+            // Hellfire
+            a.Tuning.Set(Owner, "Skin", "hellfire");
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "hellfire" && !a.I.LooksRig.Building, 30f);
+            Check(waited, "Hellfire is worn and whole");
+            Looks.Loaded hf = Looks.LoadedOwnColours("hellfire");
+            Check(hf != null && hf.WholeKeys.Count == 44 && hf.Erased > 2000, $"every Hellfire frame is built whole over the donkey with its erase marks ({hf?.WholeKeys.Count} whole, {hf?.Erased} pixels erased)");
+            yield return Frames(3);
+            {
+                var grp = a.I.ColorsRig.TestMountGroup();
+                MountColorRegion coat = null;
+                foreach (MountColorRegion rg in Colors.RegionList) if (rg.Key == "Coat") coat = rg;
+                int coatChanged = 0;
+                if (coat != null) foreach (string hex in coat.SourceColors) { Colors.TryHex(hex, out Color32 c); if (grp.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) coatChanged++; }
+                Check(coat != null && coatChanged == coat.SourceColors.Count, $"Hellfire's [Base.Coat] recolours every coat colour under it (the ash coat: {coatChanged} of {coat?.SourceColors.Count})");
+            }
+            SpriteRenderer part = a.I.LooksRig.TestPart(), ov = a.I.LooksRig.TestOverlay();
+            int wholeWalk = 0, plainWalk = 0, walkPics = 0;
+            yield return WalkFor(a, part, 40, () =>
+            {
+                if (ov == null || ov.sprite == null || !ov.sprite.name.Contains("walk")) return;
+                if (a.I.LooksRig.TestShowing() || hf.Whole.Contains(ov.sprite)) wholeWalk++; else plainWalk++;
+            }, n => walkPics = n);
+            if (walkPics > 0) Check(wholeWalk > 0 && plainWalk == 0, $"walking: every Hellfire walk frame is the whole picture (the horns and the devil's tail on the body, the ears gone): {wholeWalk} whole, {plainWalk} plain");
+            else Fail("no walk picture showed in 40 frames of walking");
+            // Royal Parade
+            a.Tuning.Set(Owner, "Skin", "royal-parade");
+            yield return Until(() => a.I.TestSkinWearing() == "royal-parade" && !a.I.LooksRig.Building, 30f);
+            Check(waited, "Royal Parade is worn");
+            Looks.SkinDef rp = Looks.Find("royal-parade");
+            Check(rp != null && rp.ColorRegions != null && rp.ColorRegions.TryGetValue("Harness", out HashSet<string> reds) && reds.Count == 4, "Royal Parade names its four reds under Harness");
+            a.Tuning.Set(Owner, "HarnessColorize", "0000FF");
+            a.Tuning.Set(Owner, "HarnessColorizeAmount", 1f);
+            yield return Frames(3);
+            {
+                var d = a.I.ColorsRig.TestMountGroup();
+                int redsChanged = 0;
+                if (rp?.ColorRegions != null && rp.ColorRegions.TryGetValue("Harness", out HashSet<string> rr))
+                    foreach (string hex in rr) { Colors.TryHex(hex, out Color32 c); if (d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) redsChanged++; }
+                Check(redsChanged == 4, $"the player's harness colour reaches the cloth's four reds ({redsChanged} of 4)");
+            }
+            a.Tuning.Clear("HarnessColorize");
+            a.Tuning.Clear("HarnessColorizeAmount");
+            ov = a.I.LooksRig.TestOverlay();
+            int clothDrawn = 0, clothEmpty = 0; walkPics = 0;
+            yield return WalkFor(a, part, 40, () =>
+            {
+                if (ov == null || ov.sprite == null || !ov.sprite.name.Contains("walk")) return;
+                DrawnAlone cloth = RenderAlone(ov);
+                if (cloth != null && cloth.Pixels > 30) clothDrawn++; else clothEmpty++;
+            }, n => walkPics = n);
+            if (walkPics > 0) Check(clothDrawn > 0 && clothEmpty == 0, $"walking: the cloth and crown are drawn in every walk frame ({clothDrawn} drawn, {clothEmpty} empty)");
+            else Fail("no walk picture showed in 40 frames of walking");
+            // the snail: its own rider offset, from its skin, on the wearer while ridden
+            a.Tuning.Set(Owner, "Skin", "snail");
+            yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "snail" && !a.I.LooksRig.Building, 30f);
+            MountResult r = a.Ride(showMessage: false);
+            if (r.Ok)
+            {
+                yield return Until(() => Mounts.IsMounted, 5f);
+                yield return Frames(4);
+                Check(a.Tuning.IsSet("RiderOffsetPx") && a.Tuning.SetBy("RiderOffsetPx") == Looks.TuningOwner && a.Tuning.Get<int>("RiderOffsetPx") == -6, $"the snail's [Tuning.Ride] RiderOffsetPx = -6 is on its wearer while ridden ({(a.Tuning.IsSet("RiderOffsetPx") ? a.Tuning.Get<int>("RiderOffsetPx").ToString() : "not set")})");
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+            }
+            else Fail("the snail can't be ridden: " + r.Reason);
+            a.Remove();
+            yield return Frames(2);
         }
 
         private static IEnumerator GameCreature()
@@ -1453,7 +1746,7 @@ namespace GK2DonkeyAPI
             Check(rest > 9 * 100, $"the rest picture is drawn and scaled 3x ({rest} opaque pixels; Gerry's skull is about 200 pixels, so 1800 or more)");
             Check(walk > 0 && turn > 0, $"the walk ({walk}) and the somersault ({turn}) pictures are drawn");
             Check(head == 0, $"the head key is empty on purpose, so nothing of the donkey's head shows ({head})");
-            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner && a.Tuning.Get<int>("SeatAdjustPx") == -16, $"the Gerry mount's one seat value ([Mount.Tuning] SeatAdjustPx = -16, both styles) is on the wearer ({(a.Tuning.IsSet("SeatAdjustPx") ? a.Tuning.Get<int>("SeatAdjustPx").ToString() : "not set")})");
+            Check(a.Tuning.IsSet("SeatAdjustPx") && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner && a.Tuning.Get<int>("SeatAdjustPx") == -16, $"the Gerry skin's one seat value ([Tuning] SeatAdjustPx = -16, both styles: the skin owns its geometry) is on the wearer ({(a.Tuning.IsSet("SeatAdjustPx") ? a.Tuning.Get<int>("SeatAdjustPx").ToString() : "not set")})");
             // seat = picture: the rider's seat is the skull picture's top at the pivot column, above the ground and
             // within the picture (160 px canvas: under 3.2 units) whatever the player's AutoSeat / SeatOffset
             bool seatOnPicture = a.I.LooksRig.TrySeatTop(out Vector3 seatTop);
@@ -1463,6 +1756,13 @@ namespace GK2DonkeyAPI
             MountKindInfo gk = Mounts.Kinds.Find("gerry");
             Check(gk != null && Math.Abs(gk.FoalScale - 0.33f) < 0.001f, $"the Gerry mount's babies are 0.33x ({gk?.FoalScale})");
             Check(gk != null && gk.IsBuiltIn && gk.FromPack && gk.Author == "dreas" && gk.Version == "1.0", $"a built-in skin's mount is built in, from its pack, with the file's author and version ({gk?.Author} {gk?.Version})");
+            Check(gk != null && gk.Noun == "skull" && a.I.Noun == "skull", $"the mount's noun is the file's ('{gk?.Noun}'; the sentence word '{a.I.Noun}')");
+            Check(a.Tuning.IsSet("LipsVolume") && a.Tuning.SetBy("LipsVolume") == Looks.TuningOwner && Math.Abs(a.Tuning.Get<float>("LipsVolume")) < 0.001f, "the skull's lip smack is off by its mount ([Mount.Tuning] LipsVolume = 0)");
+            // the babies: a baby spawned without a size is the parent mount's own (0.33)
+            MountHandle baby = Mounts.SpawnFoal(Owner, a);
+            yield return Until(() => baby != null && baby.IsReady, 6f);
+            Check(baby != null && Math.Abs(baby.I.ViewScale - 0.33f) < 0.03f, $"a baby spawned without a size is the mount's 0.33 ({baby?.I.ViewScale:0.00})");
+            baby?.Remove();
             // a built-in's "Reload from the file" (the Mounts tab, the undo) reads the repo's cfg where the sources are
             // (2026-10-20: it threw on the pack folder a built-in doesn't have, so the panel's undo never took)
             Looks.SkinDef gd = Looks.Find("gerry");
@@ -1470,7 +1770,8 @@ namespace GK2DonkeyAPI
             {
                 string rl = Looks.ReloadCfg(gd);
                 Kinds.KindDef gkd = Kinds.Find("gerry");
-                Check(rl == null && gkd != null && gkd.Tuning != null && gkd.Tuning.TryGetValue("SeatAdjustPx", out object sv) && Convert.ToInt32(sv) == -16, "a built-in reloads from the repo's cfg and its mount keeps the file's values" + (rl != null ? " (" + rl + ")" : ""));
+                Looks.SkinDef gdAgain = Looks.Find("gerry");
+                Check(rl == null && gkd != null && gdAgain != null && gdAgain.Tuning != null && gdAgain.Tuning.TryGetValue("SeatAdjustPx", out string sv) && sv.Trim() == "-16" && (gkd.Tuning == null || !gkd.Tuning.ContainsKey("SeatAdjustPx")), "a built-in reloads from the repo's cfg: the seat value is the skin's [Tuning], the mount holds no pixel key" + (rl != null ? " (" + rl + ")" : ""));
             }
             else Info("no sources on this machine: the built-in reload is not checked");
             MountKindInfo dk = Mounts.Kinds.Find(MountKinds.DonkeyId);
@@ -1501,7 +1802,7 @@ namespace GK2DonkeyAPI
             }
             else
             {
-                Check(s.Kind == "gerry" && s.I.Noun == "gerry", $"asleep without a view it is still the Gerry mount ({s.Kind}, \"{s.I.Noun}\")");
+                Check(s.Kind == "gerry" && s.I.Noun == "skull", $"asleep without a view it is still the Gerry mount ({s.Kind}, \"{s.I.Noun}\")");
                 s.Tuning.Set(Owner, "Skin", "");
                 Check(s.Kind == MountKinds.DonkeyId, $"the key cleared: a donkey again ({s.Kind})");
             }
@@ -1607,6 +1908,25 @@ namespace GK2DonkeyAPI
             internal int Pixels, Red, Blue, Green, Gold, Other;
             internal string Top; // the most drawn colours
             internal Dictionary<int, int> Count; // every drawn colour (RGB packed) and its pixel count
+            internal Color32[] Px; // the render itself (Size x Size), for a pixel-by-pixel comparison of renders made at one spot
+            internal int TopKey => Count == null || Count.Count == 0 ? -1 : new List<KeyValuePair<int, int>>(Count).Find(kv => kv.Value == MaxCount()).Key;
+            private int MaxCount() { int m = 0; foreach (var kv in Count) if (kv.Value > m) m = kv.Value; return m; }
+
+            // Where this render and `other` both draw (the overlap), how many of those pixels the pair `together` shows
+            // in other's colour: which of the two is in front, whatever the light (all three renders are lit alike).
+            internal (int Overlap, int OtherInFront) Overlap(DrawnAlone other, DrawnAlone together)
+            {
+                int overlap = 0, front = 0;
+                if (Px == null || other?.Px == null || together?.Px == null || Px.Length != other.Px.Length || Px.Length != together.Px.Length) return (0, 0);
+                for (int i = 0; i < Px.Length; i++)
+                {
+                    if (Px[i].a < 32 || other.Px[i].a < 32) continue;
+                    overlap++;
+                    Color32 o = other.Px[i], t = together.Px[i];
+                    if (Math.Abs(o.r - t.r) <= 8 && Math.Abs(o.g - t.g) <= 8 && Math.Abs(o.b - t.b) <= 8) front++;
+                }
+                return (overlap, front);
+            }
 
             // Pixels of this render whose colour the other render has nowhere: what was added, whatever the light
             // (the scene's lighting falls on both renders alike, so a class like "red" would fail at night).
@@ -1623,7 +1943,7 @@ namespace GK2DonkeyAPI
         // with: a second renderer drawn in the same picture (the body part under an overlay: the real sorting decides
         // which shows). The lighting is the scene's (dark at night), so judge colours against another render of the
         // same thing, never against the colour in the picture.
-        private static DrawnAlone RenderAlone(SpriteRenderer r, bool swapOff = false, SpriteRenderer with = null)
+        private static DrawnAlone RenderAlone(SpriteRenderer r, bool swapOff = false, SpriteRenderer with = null, Vector3? at = null)
         {
             Camera main = Camera.main;
             if (r == null || !r || main == null) return null;
@@ -1655,7 +1975,7 @@ namespace GK2DonkeyAPI
                 cam.orthographic = true;
                 cam.orthographicSize = 1.2f;
                 cam.transform.rotation = main.transform.rotation;
-                cam.transform.position = r.bounds.center - main.transform.forward * 8f;
+                cam.transform.position = (at ?? r.bounds.center) - main.transform.forward * 8f; // `at`: one spot for renders to be compared pixel by pixel
                 rt = new RenderTexture(Size, Size, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point };
                 rt.Create();
                 cam.targetTexture = rt;
@@ -1664,7 +1984,7 @@ namespace GK2DonkeyAPI
                 tex = new Texture2D(Size, Size, TextureFormat.RGBA32, false);
                 tex.ReadPixels(new Rect(0, 0, Size, Size), 0, 0, false);
                 Color32[] px = tex.GetPixels32();
-                var d = new DrawnAlone();
+                var d = new DrawnAlone { Px = px };
                 var count = new Dictionary<int, int>();
                 foreach (Color32 c in px)
                 {
@@ -1817,7 +2137,11 @@ namespace GK2DonkeyAPI
                     if (plain != null) Info($"drawn alone with the swap off: {plain.Pixels} pixels: blue {plain.Blue}, gold {plain.Gold}, red {plain.Red}, green {plain.Green}, other {plain.Other}; most: {plain.Top}");
                     // the 10x10 picture drawn at the camera's density: about 1.8 x 1.8 screen pixels each
                     Check(drawn.Pixels >= 100 && drawn.Pixels <= 260, $"the world draws the whole overlay (100 picture pixels, {drawn.Pixels} drawn)");
-                    Check(drawn.Blue >= 60 && drawn.Red == 0, $"the red pixels come out blue, the harness colour ({drawn.Blue} blue, {drawn.Red} red)");
+                    // the red, lit by the scene, is the swap-off render's most drawn colour; with the swap on none of it
+                    // is left (the gold's class varies with the light: at dusk it reads as "red", so the class is no judge)
+                    int litRed = plain?.TopKey ?? -1;
+                    bool redLeft = litRed >= 0 && drawn.Count.ContainsKey(litRed);
+                    Check(drawn.Blue >= 60 && (plain == null ? drawn.Red == 0 : !redLeft), $"the red pixels come out blue, the harness colour ({drawn.Blue} blue; the lit red {(litRed >= 0 ? litRed.ToString("X6") : "?")} {(redLeft ? "still drawn" : "gone")})");
                     Check(plain != null && plain.Blue == 0 && plain.Pixels == drawn.Pixels, $"with the swap off nothing is blue and the same pixels are drawn ({plain?.Blue} blue, {plain?.Pixels} pixels)");
                     // the gold pixels: the same colours with the swap on and off (the swap leaves an unnamed colour
                     // alone), judged on the drawn colour list, whatever the light
@@ -2105,24 +2429,29 @@ namespace GK2DonkeyAPI
                 Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
                 yield break;
             }
-            if (Looks.Find("rat") == null)
+            // a built-in nobody wears at the moment: a skin's sheet is one texture shared by its wearers (refcounted), so
+            // the counts below only move for a skin that is not loaded yet (the player's own mount may be the rat)
+            string id = null;
+            foreach (string s in new[] { "rat", "worm", "snail", "dragon" })
+                if (Looks.Find(s) != null && !Looks.IsLoaded(s)) { id = s; break; }
+            if (id == null)
             {
-                Warn("no built-in skin 'rat': skipped");
+                Warn("every built-in creature skin is worn by someone already (the counts can't be read): skipped");
                 yield break;
             }
             Vector3 near = Spot(home, 4f) ?? home;
             yield return Seconds(0.5f);
             int tex0 = Live.Textures, loaded0 = Looks.LoadedCount;
             MountHandle a = Spawn(near, true);
-            a?.Tuning.Set(Owner, "Skin", "rat");
+            a?.Tuning.Set(Owner, "Skin", id);
             yield return Until(() => a != null && a.IsReady && a.I.TestSkinShowing(), 8f);
-            Check(waited, "the rat skin shows (an overlay drawn, the donkey's own body kept from rendering)");
+            Check(waited, $"the {id} skin shows (an overlay drawn, the donkey's own body kept from rendering)");
             Check(Looks.LoadedCount == loaded0 + 1 && Live.Textures == tex0 + 1, $"its pictures are loaded on one sheet ({tex0} -> {Live.Textures} textures)");
             a?.Tuning.Set(Owner, "Skin", "");
             yield return Frames(3);
             Check(a != null && !a.I.TestSkinShowing(), "cleared: the donkey's own body renders again");
             Check(Looks.LoadedCount == loaded0 && Live.Textures == tex0, $"cleared: its pictures freed ({Live.Textures} textures)");
-            a?.Tuning.Set(Owner, "Skin", "rat");
+            a?.Tuning.Set(Owner, "Skin", id);
             yield return Until(() => a != null && a.I.TestSkinShowing(), 4f);
             a?.Remove();
             yield return Frames(2);
@@ -2189,6 +2518,28 @@ namespace GK2DonkeyAPI
             yield return Until(() => cart != null && cart.IsReady, 6f);
             MountResult hitch = a != null && cart != null ? Mounts.Hitch(a, cart) : MountResult.Refused("not spawned");
             Check(!hitch.Ok && hitch.Reason.IndexOf("test beast", StringComparison.OrdinalIgnoreCase) >= 0, "the hitch is refused by the kind: " + hitch.Reason);
+            // the cart rule's two other doors (docs/mounts-parity-matrix.md 2.7): a spawn with a cart as a no-cart mount is
+            // refused; a hitched donkey that becomes one leaves its cart standing
+            MountHandle withCart = Mounts.Spawn(Owner, new MountSpawn { Position = near + new Vector3(0f, 0f, 2f), WithCart = true, Skin = "kind-test" });
+            Check(withCart == null, "a spawn with a cart wearing a no-cart mount's skin is refused");
+            withCart?.Remove();
+            MountHandle b = Spawn(near + new Vector3(-2.5f, 0f, 0f), true);
+            MountHandle cart2 = Mounts.SpawnCart(Owner, near + new Vector3(-2.5f, 0f, 2.5f));
+            yield return Until(() => b != null && cart2 != null && b.IsReady && cart2.IsReady, 6f);
+            MountResult hitch2 = b != null && cart2 != null ? Mounts.Hitch(b, cart2) : MountResult.Refused("not spawned");
+            if (hitch2.Ok)
+            {
+                yield return Until(() => b.HasCart && b.IsReady, 6f);
+                b.Tuning.Set(Owner, "Skin", "kind-test");
+                yield return Until(() => !b.HasCart, 8f);
+                Check(waited, "a hitched donkey that becomes a no-cart mount leaves its cart standing");
+                int freeCarts = 0;
+                foreach (MountHandle h in Mounts.Instances) if (h.Exists && !h.HasDonkey && h.Owner == Owner) freeCarts++;
+                Check(freeCarts >= 1, $"the cart stands free where it was ({freeCarts} free cart(s) of the test's)");
+            }
+            else Warn("could not hitch a second donkey for the live cart rule: " + hitch2.Reason);
+            b?.Remove();
+            cart2?.Remove();
             // a mount without foals: a foal given the skin stays a donkey
             MountHandle foal = Mounts.SpawnFoal(Owner, a, 0.6f);
             foal?.Tuning.Set(Owner, "Skin", "kind-test");
@@ -2370,7 +2721,7 @@ namespace GK2DonkeyAPI
                         return ms.ToArray();
                     }
                 }
-                System.IO.File.WriteAllText(System.IO.Path.Combine(packDir, "skin.cfg"), "[Skin]\nformat = 1\nid = pack-test\nname = Pack Test\nkind = own\nflavour = spicy\n[Tuning]\nSeatAdjustPx = 9\n");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(packDir, "skin.cfg"), "[Skin]\nformat = 1\nid = pack-test\nname = Pack Test\nkind = own\nflavour = spicy\n[Tuning]\nSeatAdjustPx = 9\n[Tuning.Ride]\nRiderOffsetPx = 3\n[Tuning.Cart]\nRiderOffsetPx = -9\n");
                 System.IO.File.WriteAllBytes(System.IO.Path.Combine(packDir, "bdy_static_left.png"), Res("GK2DonkeyAPI.skins.rat\\bdy_static_left.png"));
                 System.IO.File.WriteAllBytes(System.IO.Path.Combine(packDir, "bdy_wlak_left_01.png"), Res("GK2DonkeyAPI.skins.rat\\bdy_walk_left_01.png"));
                 System.IO.Directory.CreateDirectory(System.IO.Path.Combine(packDir, "front"));
@@ -2398,6 +2749,7 @@ namespace GK2DonkeyAPI
             Check(a != null && a.I.TestSkinShowing(), "its standing frame is drawn from the pack (the only one it has)");
             Check(a != null && a.I.TestSkinFrontShowing(), "its front picture (front/bdy.png, every body frame) is drawn above");
             Check(a != null && a.Tuning.Get<int>("SeatAdjustPx") == 9 && a.Tuning.SetBy("SeatAdjustPx") == Looks.TuningOwner, "its [Tuning] key is set on the wearer, owned by the skin");
+            Check(a != null && a.Tuning.IsSet("RiderOffsetPx") && a.Tuning.Get<int>("RiderOffsetPx") == 3 && a.Tuning.SetBy("RiderOffsetPx") == Looks.TuningOwner, $"its [Tuning.Ride] key is the riding value on the standing wearer ({(a != null && a.Tuning.IsSet("RiderOffsetPx") ? a.Tuning.Get<int>("RiderOffsetPx").ToString() : "not set")}; the cart's -9 waits for a hitch)");
             Check(!Looks.Unregister("pack-test", Owner), "a withdrawal by another owner is refused");
             Info("the next \"no skin 'pack-test' is installed\" warning is this test's own: it withdraws the skin from under the wearer");
             Check(Looks.Unregister("pack-test", owner), "the owner withdraws it");

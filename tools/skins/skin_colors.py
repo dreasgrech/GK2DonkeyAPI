@@ -1,8 +1,13 @@
 """Writes a [Colors] section into each built-in creature skin.cfg (docs/mount-colours.md 2.6): which of the skin's own
-colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules per skin were read off the enlarged
-standing frames; the hex lists come from the PNGs, so they are exact. Re-runnable (replaces the section): run it
-after the art changes, then tests/SkinsScan. Pillow needed: python -I tools/skins/skin_colors.py"""
-import colorsys, io, os, re, sys
+colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules are DATA, tools/skins/creatures/colors.json
+(per skin, per region, in order: a colour's hue, saturation and value against thresholds; the first match wins; the
+rest is Coat), so a new creature adds a block there, never code here. The hex lists come from the PNGs (front/ too),
+so they are exact; a skin with "source": "game-export" (Gerry) reads the in-game export folder instead. Re-runnable
+(replaces the section, then the canonical layout): run it after the art changes, then tests/SkinsScan.
+
+    python -I tools/skins/skin_colors.py [skin ...]
+"""
+import colorsys, io, json, os, re, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from PIL import Image
 
@@ -10,13 +15,26 @@ REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 SKINS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
 
 
-def colours(skin):
-    d = os.path.join(SKINS, skin)
+RULES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "creatures", "colors.json")
+
+
+def export_dir(skin):
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from gamedir import game_dir
+    return os.path.join(game_dir(), "BepInEx", "GK2-asset-probe", "game-skins", skin)
+
+
+def colours(skin, source=None):
+    d = export_dir(skin) if source == "game-export" else os.path.join(SKINS, skin)
+    if not os.path.isdir(d):
+        return None
     cols = {}
-    for f in sorted(os.listdir(d)):
-        if not f.endswith(".png"):
-            continue
-        im = Image.open(os.path.join(d, f)).convert("RGBA")
+    files = [os.path.join(d, f) for f in sorted(os.listdir(d)) if f.endswith(".png")]
+    front = os.path.join(d, "front")
+    if os.path.isdir(front):
+        files += [os.path.join(front, f) for f in sorted(os.listdir(front)) if f.endswith(".png")]
+    for path in files:
+        im = Image.open(path).convert("RGBA")
         data = im.get_flattened_data() if hasattr(im, "get_flattened_data") else im.getdata()
         for r, g, b, a in data:
             if a:
@@ -28,18 +46,32 @@ def colours(skin):
     return out
 
 
-# region of a colour by (hex, count, hue in degrees, saturation, value)
-RULES = {
-    # Coat = the red scales and the wing; Muzzle = the golden belly; Dark = outlines, horns and back spikes (bone);
-    # Eye = the yellow eye.
-    "dragon": lambda hx, n, h, s, v: "Dark" if v < 0.2 or (s < 0.5 and v < 0.9 and 25 <= h <= 45) else "Eye" if h >= 40 and v > 0.9 else "Muzzle" if 20 <= h <= 45 else "Coat",
-    # Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = outlines; Eye = the red eye.
-    "rat": lambda hx, n, h, s, v: "Dark" if v < 0.15 else "Eye" if s > 0.6 and h > 340 or h < 15 and s > 0.6 else "Muzzle" if s >= 0.3 and (h >= 330 or h <= 20) else "Coat",
-    # Coat = the green body; Muzzle = the brown shell; Dark = the outline.
-    "snail": lambda hx, n, h, s, v: "Dark" if v < 0.16 else "Muzzle" if 8 <= h <= 36 and s >= 0.45 else "Coat",
-    # Coat = the pink skin; Dark = the outline.
-    "worm": lambda hx, n, h, s, v: "Dark" if v < 0.25 else "Coat",
-}
+# region of a colour by (hue in degrees, saturation, value), from colors.json: {skin: {region: [ {h_min, h_max, s_min, s_max,
+# v_min, v_max}, ... ]}}; the regions in the order written, the first matching rule wins, else Coat
+def load_rules():
+    with open(RULES_FILE, encoding="utf-8") as f:
+        data = json.load(f)
+    return {k: v for k, v in data.items() if not k.startswith("_")}
+
+
+def region_of(rules, h, s, v):
+    for region, conds in rules.items():
+        if region.startswith("_") or region == "source":
+            continue
+        for c in conds:
+            ok = True
+            for key, val in c.items():
+                if key not in ("h_min", "h_max", "s_min", "s_max", "v_min", "v_max"):
+                    raise SystemExit(f"colors.json: '{key}' is not a rule key (h_min, h_max, s_min, s_max, v_min, v_max)")
+                x = {"h": h, "s": s, "v": v}[key[0]]
+                if key.endswith("_min") and x < val: ok = False
+                if key.endswith("_max") and x > val: ok = False
+            if ok:
+                return region
+    return "Coat"
+
+
+RULES = load_rules()
 
 
 def write_section(skin, regions):
@@ -47,14 +79,23 @@ def write_section(skin, regions):
     raw = io.open(p, encoding="utf-8", newline="").read()
     nl = "\r\n" if "\r\n" in raw else "\n"
     t = raw.replace("\r\n", "\n")
-    # every earlier section out (a run of them too: each match eats the newline the next one starts with, so loop),
-    # its comment line and its lines up to the next section or the end with it
-    pattern = r"\n(?:# The skin's colours by mount region[^\n]*\n)?\[Colors\][^\n]*\n(?:[^\[]*)"
+    # every earlier [Colors] section out: the comment lines right above its header, the header, and its key lines up
+    # to the next comment or section header (so the comment above the section that follows stays with that section)
+    lines = t.split("\n")
     while True:
-        t2 = re.sub(pattern, "\n", t)
-        if t2 == t:
+        at = next((i for i, l in enumerate(lines) if l.strip().lower().startswith("[colors]")), None)
+        if at is None:
             break
-        t = t2
+        start = at
+        while start > 0 and lines[start - 1].startswith("#"):
+            start -= 1
+        while start > 0 and lines[start - 1].strip() == "":
+            start -= 1
+        end = at + 1
+        while end < len(lines) and not lines[end].startswith("[") and not lines[end].startswith("#"):
+            end += 1
+        del lines[start:end]
+    t = "\n".join(lines)
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = t.rstrip("\n") + "\n"
     lines = ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is Coat.", "[Colors]"]
@@ -72,10 +113,16 @@ def write_section(skin, regions):
 
 
 for skin in sorted(RULES):
-    cols = sorted(colours(skin), key=lambda c: -c[1])
+    if len(sys.argv) > 1 and skin not in sys.argv[1:]:
+        continue
+    got = colours(skin, RULES[skin].get("source"))
+    if got is None:
+        print(skin + ": no pictures to read" + (" (export the loaded skins from the Mounts tab first)" if RULES[skin].get("source") == "game-export" else "") + "; left as it is")
+        continue
+    cols = sorted(got, key=lambda c: -c[1])
     regions = {}
     for hx, n, h, s, v in cols:
-        regions.setdefault(RULES[skin](hx, n, h, s, v), []).append(hx)
+        regions.setdefault(region_of(RULES[skin], h, s, v), []).append(hx)
     print(skin + ":", ", ".join("%s %d" % (k, len(v)) for k, v in sorted(regions.items())))
     for k in ("Dark", "Muzzle", "Eye", "Harness"):
         if k in regions and len(regions[k]) <= 12:

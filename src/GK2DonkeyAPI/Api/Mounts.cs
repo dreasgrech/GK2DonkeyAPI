@@ -433,6 +433,34 @@ namespace GK2DonkeyAPI.Api
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: the parent is gone.");
                 return null;
             }
+            // a mount by name: its Default skin (the skin whose id is the mount's, else the first declaring it)
+            string skinId = spec.Skin;
+            if (string.IsNullOrEmpty(skinId) && !string.IsNullOrEmpty(spec.Mount))
+            {
+                GK2DonkeyAPI.Kinds.KindDef kindByName = GK2DonkeyAPI.Kinds.Find(spec.Mount);
+                if (kindByName == null)
+                {
+                    Plugin.Log.LogInfo($"API: {ownerId} could not spawn: no mount '{spec.Mount}'.");
+                    return null;
+                }
+                skinId = kindByName == GK2DonkeyAPI.Kinds.Donkey ? null : GK2DonkeyAPI.Looks.DefaultSkinOf(kindByName);
+                if (skinId == MountLooks.DonkeyId)
+                {
+                    // a kind with no skin has no drawing: not offered to players (Looks.KindChoices), not spawned by name
+                    Plugin.Log.LogInfo($"API: {ownerId} could not spawn: the mount '{spec.Mount}' has no skin.");
+                    return null;
+                }
+            }
+            // the cart rule (docs/mounts-design.md §3): a mount that can't pull the cart is not spawned with one
+            if (spec.WithCart && spec.Donkey && !string.IsNullOrEmpty(skinId))
+            {
+                GK2DonkeyAPI.Looks.SkinDef sd = GK2DonkeyAPI.Looks.Find(skinId);
+                if (sd != null && !sd.Kind.Cart)
+                {
+                    Plugin.Log.LogInfo($"API: {ownerId} could not spawn with a cart: a {sd.Kind.NounText} can't pull the cart.");
+                    return null;
+                }
+            }
             Mount.Instance i = Mount.Spawn(new Mount.SpawnArgs
             {
                 Owner = ownerId,
@@ -454,9 +482,9 @@ namespace GK2DonkeyAPI.Api
                 Plugin.Log.LogInfo($"API: {ownerId} could not spawn: {why}");
                 return null;
             }
-            if (!string.IsNullOrEmpty(spec.Skin) && spec.Donkey)
+            if (!string.IsNullOrEmpty(skinId) && spec.Donkey)
             {
-                i.Handle.Tuning.Set(ownerId, "Skin", spec.Skin); // the skin, and with it the mount it is a look of
+                i.Handle.Tuning.Set(ownerId, "Skin", skinId); // the skin, and with it the mount it is a look of
             }
             return i.Handle;
         }
@@ -465,8 +493,9 @@ namespace GK2DonkeyAPI.Api
         // own idle shuffle switched on and made for a foal (smaller, quicker steps, a wider area around the parent; its
         // own settings, owned by ownerId, changeable through MountHandle.Tuning). It trots after the parent when the
         // parent moves, and goes when the parent is removed. Null when refused (see Mounts.Spawn).
-        // id, key: as MountSpawn. persist: kept with the save; null: as its parent is.
-        public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0.6f, int id = 0, string key = null, bool? persist = null)
+        // id, key: as MountSpawn. persist: kept with the save; null: as its parent is. scale: the baby's size as a fraction
+        // of the grown one; 0 (the default) is the parent's mount's own (MountKindDef.FoalScale: the donkey's 0.6, Gerry's 0.33).
+        public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0f, int id = 0, string key = null, bool? persist = null)
         {
             if (parent == null)
             {
@@ -476,6 +505,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return null;
             }
+            if (scale <= 0f) scale = Kinds.Find(parent.Kind)?.FoalScale ?? 0.6f;
             Mount.Instance p = parent.I;
             Vector3 at = p.BodyPoint() + new Vector3(UnityEngine.Random.Range(-1.2f, 1.2f), 0f, UnityEngine.Random.Range(-0.5f, 0.5f));
             MountHandle foal = Spawn(ownerId, new MountSpawn

@@ -18,19 +18,25 @@ namespace GK2DonkeyAPI
         private static string mountsNote = "";
         private static float mountsNoteUntil;
 
-        // The seat, leg and cart keys a mount may set (reference.md [Ride] / [Cart]), with the ranges the Riding tab
-        // uses. CartOnly: the key means nothing while riding plain, so its row shows for the cart style only.
-        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MountKeys =
+        // The seat, leg and cart keys a SKIN sets for its drawing (reference.md [Ride] / [Cart]; the skin owns its
+        // geometry, docs/mounts-parity-matrix.md 9.1), with the ranges the Riding tab uses. CartOnly: the key means
+        // nothing while riding plain, so its row shows for the cart style only.
+        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] SkinKeys =
         {
             ("RiderOffsetPx", "Whole rider along the mount: tail (-) / head (+)", "Art pixels. The same key as the Riding tab's; this value replaces yours while the mount is this one.", -16, 16, true, false),
             ("TorsoOffsetPx", "Torso only along the mount: tail (-) / head (+)", "Art pixels; the legs stay put.", -16, 16, true, false),
-            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels on top of the seat: the skin's own picture top (seat = picture), the automatic seat (AutoSeat on), else nothing: the torso height row below is the seat then.", -16, 16, true, false),
+            ("SeatAdjustPx", "Torso down (-) / up (+)", "Art pixels on top of the seat: the skin's seat row or picture top (declared above), else the player's automatic seat (AutoSeat on), else nothing: the torso height row is the seat then.", -16, 16, true, false),
             ("SeatOffset", "Torso height (AutoSeat off)", "World units above the ground, the seat most players have (AutoSeat is off by default): what the mount's seat should be for its drawing. Ignored on a skin with seat = picture.", 0f, 1.5f, false, false),
             ("LegAdjustXPx", "Legs along the mount: head (-) / tail (+)", "Art pixels, relative to the torso.", -8, 8, true, false),
             ("LegAdjustYPx", "Legs down (-) / up (+)", "Art pixels, relative to the back line.", -8, 8, true, false),
             ("LegHeightPx", "Rows of the body frame that are legs", "How many bottom rows of the keeper's frame are cut as legs (feet to belt).", 0, 30, true, false),
             ("BackSeatExtraPx", "Seen from behind (armour): seat lifted by", "Art pixels on top of the seat when the rider faces up in armour.", 0, 12, true, false),
             ("HitchGapPx", "Cart further behind (+) / closer (-)", "Art pixels. The whole cart, shafts included, sits this much further behind the mount than behind the donkey, so a longer body isn't drawn inside the cart. The cart stays where it was drawn when it is left and taken again.", -32, 64, true, true),
+        };
+
+        // The creature's own keys a mount sets (speed; its sounds are listed by OtherKindKeys).
+        private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MountKeys =
+        {
             ("SpeedMultiplier", "Speed (x normal walking)", "How fast this mount goes.", 0.5f, 4f, false, false),
         };
 
@@ -62,8 +68,8 @@ namespace GK2DonkeyAPI
             }
             GUILayout.Label(ridingIt
                 ? "You ride this mount and skin now: every change shows on it at once."
-                : r != null ? $"You ride a {MountLabel(Looks.Find(r.LooksRig.Wearing), r.LooksRig.KindNow)}; ride this one to see these changes live (Saddle Up: Donkey, Skin)."
-                : "Nothing is ridden: pick this skin in Saddle Up (Donkey, Skin) and ride it to see the changes live.", small);
+                : r != null ? $"You ride a {MountLabel(Looks.Find(r.LooksRig.Wearing), r.LooksRig.KindNow)}; ride this one to see these changes live (Saddle Up: Mount, Skin)."
+                : "Nothing is ridden: pick this skin in Saddle Up (Mount, Skin) and ride it to see the changes live.", small);
             if (EditingNow)
             {
                 GUILayout.Label($"Note: {editing.Describe()} is being edited on the Instances tab. This tab never changes that one donkey: it changes the mount and skin, and a value that donkey has of its own (magenta there) still wins on it.", small);
@@ -81,7 +87,7 @@ namespace GK2DonkeyAPI
             }
             if (skin != null)
             {
-                DrawSkinRows(skin, kind);
+                DrawSkinRows(skin, kind, ride);
             }
             DrawMountSaving(skin, kind);
         }
@@ -155,6 +161,7 @@ namespace GK2DonkeyAPI
             GUILayout.EndHorizontal();
             Dictionary<string, object> mine = ride ? kind.TuningRide : kind.TuningCart;
             Dictionary<string, object> both = kind.Tuning;
+            GUILayout.Label("The rider's seat, legs and the cart's place are the skin's rows below (the skin owns its drawing's geometry); the mount keeps what the creature is.", small);
             foreach (var k in MountKeys)
             {
                 if (k.CartOnly && ride) continue;
@@ -296,6 +303,7 @@ namespace GK2DonkeyAPI
         {
             var shown = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "NearLeg" };
             foreach (var k in MountKeys) shown.Add(k.Key);
+            // a pixel key still on a mount (an older pack): listed here, since the scan refuses it for a built-in
             var parts = new List<string>();
             void Add(Dictionary<string, object> d, string where)
             {
@@ -321,11 +329,192 @@ namespace GK2DonkeyAPI
 
         // ---- the skin's rows
 
-        private static void DrawSkinRows(Looks.SkinDef skin, Kinds.KindDef kind)
+        private static void DrawSkinRows(Looks.SkinDef skin, Kinds.KindDef kind, bool ride)
+        {
+            DrawSkinOffsets(skin, kind);
+            DrawSkinSeat(skin, kind);
+            DrawSkinEffect(skin, kind);
+            DrawSkinTuning(skin, kind, ride);
+        }
+
+        // The effect the skin comes with (effect = / effect_when =): shown under "As the mount or skin" before the mount's own.
+        private static void DrawSkinEffect(Looks.SkinDef skin, Kinds.KindDef kind)
+        {
+            IReadOnlyList<MountEffectInfo> effects = Mounts.Effects.Effects;
+            var ids = new List<string> { "" };
+            var labels = new List<string> { "none (the mount's, if any)" };
+            foreach (MountEffectInfo e in effects) { ids.Add(e.Id); labels.Add(e.Name); }
+            int idx = Math.Max(0, ids.IndexOf(skin.Effect ?? ""));
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(Tip("This skin comes with the effect", "Shown on a wearer whose own Effect row is 'As the mount or skin' (Saddle Up's default): the skin's effect first, else the mount's. Hellfire says hellfire."), idx > 0 ? changed : label, Wd(LabelW));
+            if (GUILayout.Button("<", Wd(22f))) { idx = (idx - 1 + ids.Count) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; Kinds.Touch(kind); }
+            GUILayout.Label(labels[idx], label, Wd(SliderW - 44f));
+            if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; Kinds.Touch(kind); }
+            GUILayout.EndHorizontal();
+            if (idx > 0)
+            {
+                MountEffectWhen[] whens = { MountEffectWhen.Off, MountEffectWhen.Night, MountEffectWhen.Always };
+                string[] whenNames = { "Never", "At night", "Always" };
+                int w = Math.Max(0, Array.IndexOf(whens, skin.EffectWhen));
+                GUILayout.BeginHorizontal();
+                GUILayout.Label("Shown", label, Wd(LabelW));
+                if (GUILayout.Button("<", Wd(22f))) { w = (w - 1 + whens.Length) % whens.Length; skin.EffectWhen = whens[w]; Kinds.Touch(kind); }
+                GUILayout.Label(whenNames[w], label, Wd(SliderW - 44f));
+                if (GUILayout.Button(">", Wd(22f))) { w = (w + 1) % whens.Length; skin.EffectWhen = whens[w]; Kinds.Touch(kind); }
+                GUILayout.EndHorizontal();
+            }
+        }
+
+        // Where the rider sits on this skin: a row of its picture (every player, whatever their AutoSeat), this
+        // frame's picture top (Gerry), or none (the player's own seat keys).
+        private static void DrawSkinSeat(Looks.SkinDef skin, Kinds.KindDef kind)
+        {
+            Header("The rider's seat on this skin  (seat = <row> | picture)");
+            GUILayout.BeginHorizontal();
+            bool declared = skin.SeatFromPicture || skin.SeatRow >= 0;
+            GUILayout.Label(Tip("Seat: the picture row the rider's hip sits on", "The canvas row from the top (0 = the top edge). The donkey's own seat is row 52 of the 96 canvas. Declared, the rider sits there for every player and their AutoSeat / torso height do nothing on this skin; SeatAdjustPx nudges from it. Right-click: none (the player's own seat)."), declared ? changed : label, Wd(LabelW));
+            if (skin.SeatFromPicture)
+            {
+                GUILayout.Label("picture: this frame's own top at the pivot column", label, Wd(SliderW - 84f));
+            }
+            else
+            {
+                float shownRow = skin.SeatRow >= 0 ? skin.SeatRow : skin.CanvasH / 2f;
+                float v = GUILayout.HorizontalSlider(shownRow, 0f, skin.CanvasH - 1, Wd(SliderW - 84f));
+                Rect r = GUILayoutUtility.GetLastRect();
+                bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
+                if (unset)
+                {
+                    Event.current.Use();
+                    if (skin.SeatRow >= 0) { skin.SeatRow = -1; Kinds.Touch(kind); }
+                }
+                else
+                {
+                    int row = Mathf.RoundToInt(v);
+                    if (v != Mathf.Clamp(shownRow, 0f, skin.CanvasH - 1) && (skin.SeatRow < 0 || row != skin.SeatRow)) { skin.SeatRow = row; Kinds.Touch(kind); }
+                }
+            }
+            GUILayout.Label(skin.SeatFromPicture ? "picture" : skin.SeatRow >= 0 ? skin.SeatRow.ToString() : "none", label, Wd(50f));
+            if (GUILayout.Button(Tip(skin.SeatFromPicture ? "Use a row" : "Use the picture", skin.SeatFromPicture ? "A fixed row of the canvas instead of this frame's picture top." : "This frame's own picture top at the pivot column (a game creature that hops)."), Wd(100f)))
+            {
+                if (skin.SeatFromPicture) { skin.SeatFromPicture = false; skin.SeatRow = skin.CanvasH / 2; }
+                else { skin.SeatFromPicture = true; skin.SeatRow = -1; }
+                Kinds.Touch(kind);
+            }
+            GUILayout.EndHorizontal();
+            if (!declared) GUILayout.Label("No seat declared: the rider's height is the player's own (AutoSeat, torso height), which differs from player to player. A shipped skin declares its row.", small);
+        }
+
+        // The skin's own geometry per style ([Tuning] both styles, [Tuning.Ride] / [Tuning.Cart] one): the same rows the
+        // Riding tab has, plain with the player's value when not set, yellow when the skin sets them; right-click = not set.
+        private static void DrawSkinTuning(Looks.SkinDef skin, Kinds.KindDef kind, bool ride)
+        {
+            bool seatDeclared = skin.SeatFromPicture || skin.SeatRow >= 0;
+            Header("Rider on this skin: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "[Tuning.Ride]" : "[Tuning.Cart]") + " over [Tuning])");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("A value already in [Tuning] (both styles) is changed there; a new one goes into this style's section. The other style's rows show after a style switch.", small);
+            if (Mount.IsMounted && GUILayout.Button(Tip(ride ? "Go to cart" : "Go to riding", "Dismounts and mounts again in the other style, in place, as on the Riding tab."), Wd(SliderW)))
+            {
+                Mounts.SwitchStyle(ride ? MountStyle.Cart : MountStyle.Ride);
+            }
+            GUILayout.EndHorizontal();
+            foreach (var k in SkinKeys)
+            {
+                if (k.CartOnly && ride) continue;
+                if (seatDeclared && k.Key == "SeatOffset") continue; // dead on a skin with a seat: the row is the seat
+                SkinValueRow(skin, kind, ride, k.Key, k.Label, k.Tip, k.Min, k.Max, k.Int);
+            }
+            var other = new List<string>();
+            void More(Dictionary<string, object> d2, string where)
+            {
+                if (d2 == null) return;
+                foreach (var kv in d2) if (Array.FindIndex(SkinKeys, k => k.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)) < 0) other.Add($"{kv.Key} = {kv.Value} ({where})");
+            }
+            if (skin.Tuning != null) foreach (var kv in skin.Tuning) if (Array.FindIndex(SkinKeys, k => k.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase)) < 0) other.Add($"{kv.Key} = {kv.Value} (both styles)");
+            More(skin.TuningRide, "riding");
+            More(skin.TuningCart, "cart");
+            if (other.Count > 0) GUILayout.Label("Also in this skin's file (not a row of this panel; the game refuses a key outside Looks.SkinTuningKeys): " + string.Join("; ", other) + ".", small);
+        }
+
+        // What a skin row shows: the style's value, else the both-styles value, else the player's own (plain, not set).
+        private static bool SkinHas(Looks.SkinDef skin, bool ride, string key, out object value)
+        {
+            Dictionary<string, object> mine = ride ? skin.TuningRide : skin.TuningCart;
+            if (mine != null && mine.TryGetValue(key, out value)) return true;
+            if (skin.TuningValues != null && skin.TuningValues.TryGetValue(key, out value)) return true;
+            if (skin.Tuning != null && skin.Tuning.TryGetValue(key, out string text)) { value = text; return true; }
+            value = null;
+            return false;
+        }
+
+        // A value already in [Tuning] (both styles) is changed there; else it goes into this style's section.
+        private static void SkinSet(Looks.SkinDef skin, Kinds.KindDef kind, bool ride, string key, object value)
+        {
+            Dictionary<string, object> mine = ride ? skin.TuningRide : skin.TuningCart;
+            bool inStyle = mine != null && mine.ContainsKey(key);
+            if (!inStyle && skin.Tuning != null && skin.Tuning.ContainsKey(key))
+            {
+                skin.Tuning[key] = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            else
+            {
+                if (mine == null)
+                {
+                    mine = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+                    if (ride) skin.TuningRide = mine; else skin.TuningCart = mine;
+                }
+                mine[key] = Convert.ToString(value, System.Globalization.CultureInfo.InvariantCulture);
+            }
+            Kinds.Touch(kind);
+        }
+
+        // Right-click: the style's own value goes first (the shared [Tuning] value shows again); a second right-click
+        // takes the shared one out too.
+        private static void SkinUnset(Looks.SkinDef skin, Kinds.KindDef kind, bool ride, string key)
+        {
+            Dictionary<string, object> mine = ride ? skin.TuningRide : skin.TuningCart;
+            if (mine != null && mine.Remove(key)) { Kinds.Touch(kind); return; }
+            skin.Tuning?.Remove(key);
+            skin.TuningValues?.Remove(key);
+            Kinds.Touch(kind);
+        }
+
+        private static void SkinValueRow(Looks.SkinDef skin, Kinds.KindDef kind, bool ride, string key, string name, string tip, float min, float max, bool isInt)
+        {
+            bool set = SkinHas(skin, ride, key, out object raw);
+            float value = set ? Convert.ToSingle(raw, System.Globalization.CultureInfo.InvariantCulture) : PlayerValue(ride, key);
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(Tip(name, tip + (set ? "" : " Not set for the skin: your own value is shown. Drag to set it.")), set ? changed : label, Wd(LabelW));
+            float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW - 84f));
+            Rect r = GUILayoutUtility.GetLastRect();
+            bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
+            GUILayout.Label(isInt ? Mathf.RoundToInt(value).ToString() : value.ToString("0.00"), label, Wd(50f));
+            GUILayout.EndHorizontal();
+            if (unset)
+            {
+                Event.current.Use();
+                if (set) SkinUnset(skin, kind, ride, key);
+                return;
+            }
+            bool touched = v != Mathf.Clamp(value, min, max);
+            if (!touched) return;
+            if (isInt)
+            {
+                int iv = Mathf.RoundToInt(v);
+                if (!set || iv != Mathf.RoundToInt(value)) SkinSet(skin, kind, ride, key, iv);
+            }
+            else
+            {
+                v = (float)Math.Round(v, 2);
+                if (!set || Mathf.Abs(v - value) > 0.0001f) SkinSet(skin, kind, ride, key, v);
+            }
+        }
+
+        private static void DrawSkinOffsets(Looks.SkinDef skin, Kinds.KindDef kind)
         {
             string name = string.IsNullOrEmpty(skin.Name) ? skin.Id : skin.Name;
             Header("This skin: " + name + "  (" + skin.Id + ")");
-            GUILayout.Label($"{(skin.BuiltIn ? "Built in" : skin.Source != null ? "A pack: " + skin.Source : "From code by " + skin.Owner)}; {skin.CanvasW}x{skin.CanvasH}{(skin.Tuning != null && skin.Tuning.Count > 0 ? $"; its own [Tuning]: {string.Join(", ", skin.Tuning.Keys)} (edit in the file)" : "")}.", small);
+            GUILayout.Label($"{(skin.BuiltIn ? "Built in" : skin.Source != null ? "A pack: " + skin.Source : "From code by " + skin.Owner)}; {skin.CanvasW}x{skin.CanvasH}{(skin.Tuning != null && skin.Tuning.Count > 0 ? $"; its own [Tuning]: {string.Join(", ", skin.Tuning.Keys)} (the rows below)" : "")}.", small);
             Vector2 ov = skin.OffsetRide;
             Vector2 oc = skin.OffsetCart;
             bool same = ov == oc;
@@ -393,7 +582,7 @@ namespace GK2DonkeyAPI
             {
                 // Saved by itself, like the Cargo tab's layout: a moment after the last change, into the skin's file
                 // (the mount's rows into every file that declares the mount). Nothing to remember to press.
-                GUILayout.Label("Saved by itself a moment after each change: the skin's rows to " + path + (kindFiles.Count > 0 ? " and the mount's rows to the file(s) that declare the mount: " + string.Join(", ", kindFiles.ConvertAll(s => s.Id)) : kind != Kinds.Donkey && !kind.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments inside the rewritten sections ([Tuning], [Mount...]) and on the rewritten keys are not kept. A rebuild ships a built-in's file." + (mountsLastSaved != null ? " Last saved " + mountsLastSaved + "." : ""), small);
+                GUILayout.Label("Saved by itself a moment after each change: the skin's rows to " + path + (kindFiles.Count > 0 ? " and the mount's rows to the file(s) that declare the mount: " + string.Join(", ", kindFiles.ConvertAll(s => s.Id)) : kind != Kinds.Donkey && !kind.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments in the rewritten sections ([Tuning...], [Mount...]) stay above their header or key, and a remark at the end of a key's line stays on it. A rebuild ships a built-in's file." + (mountsLastSaved != null ? " Last saved " + mountsLastSaved + "." : ""), small);
                 GUILayout.BeginHorizontal();
                 GUI.enabled = mountsUndo.Count > 0;
                 if (GUILayout.Button(Tip($"Undo the last change{(mountsUndo.Count > 0 ? " (" + mountsUndo.Count + ")" : "")}", "Puts the file back as it was before the last saved change and reads it again; again: the one before."), Wd(LabelW)))
@@ -416,7 +605,7 @@ namespace GK2DonkeyAPI
             }
             // the skins as the game built them, for the review page (tools/skins/skin_preview_html.py reads game-skins\ first)
             GUILayout.BeginHorizontal();
-            if (GUILayout.Button(Tip("Export the loaded skins as built", "Writes every skin worn since the start (its pictures as the game draws them, after the erase compose) and the donkey's own frames to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame. The review page shows those and counts where its own composite would differ. Wear a skin once to have it loaded."), Wd(LabelW)))
+            if (GUILayout.Button(Tip("Export the loaded skins as built", "Writes every skin loaded now (worn by someone at this moment; a skin taken off is unloaded) (its pictures as the game draws them, after the erase compose) and the donkey's own frames to BepInEx/GK2-asset-probe/game-skins/, one PNG per frame. The review page shows those and counts where its own composite would differ. Wear a skin once to have it loaded."), Wd(LabelW)))
             {
                 Note(Looks.ExportBuilt(System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "GK2-asset-probe", Looks.ExportDirName)));
             }

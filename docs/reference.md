@@ -73,7 +73,8 @@ Ride / Cart.
    kept with the save when the donkey is. A donkey with its **own look** (`Instance.OwnLook`, set by the companion)
    reads no colour from 2 to 4: its colours are its owner's presets on top of the game's art.
 2. **Another mod, this session only:** `Mounts.Tuning(...).Set` and `Mounts.Behaviour.Set`. Cyan, locked rows; never
-   saved.
+   saved. The worn skin's geometry (`seat`, `[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`) and its mount's creature
+   values sit here too, owned by the skin system (docs/mounts-design.md §2), orange and locked; never saved.
 3. **Your settings:** `BepInEx\config\dreas.gk2.donkeyapi.cfg`, written the moment a row changes.
 4. **Mod defaults:** `defaults.cfg`, built into the DLL. **No colours**: the button leaves them out and
    `tests/DefaultsScan` fails if one gets in, so every player starts with the game's own art. (Found 2026-10-02: a
@@ -105,7 +106,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | `RiderOffsetPx` | -6 | -8 | Whole rider along the donkey, in art pixels: positive towards the head, negative towards the rear. |
 | `TorsoOffsetPx` | -3 | 0 | Upper body only along the donkey; the legs stay put. |
 | `AutoSeat` | false | false | Torso height computed from the sprites (hip on the donkey's back line). Off: `SeatOffset`. |
-| `SeatAdjustPx` | -6 | 0 | Fine adjustment in art pixels (positive = higher) on top of the seat: with `AutoSeat`, or on a skin that declares its seat (`seat = <row>` or `seat = picture`, every built-in creature does). A mount's own `SeatAdjustPx` nudges from its skin's row for every player. Without AutoSeat on the plain donkey the seat is `SeatOffset` alone (docs/seat-investigation.md). |
+| `SeatAdjustPx` | -6 | 0 | Fine adjustment in art pixels (positive = higher) on top of the automatic seat (`AutoSeat`). On a skin that declares its seat (`seat = <row>` or `seat = picture`, every built-in creature does) the player's own value does not count (its defaults differ by style, and the row is for every player): only a skin's own `SeatAdjustPx` (its `[Tuning]`, Gerry's -16) or a mod's override nudges from the row. Without AutoSeat on the plain donkey the seat is `SeatOffset` alone (docs/seat-investigation.md). |
 | `SeatOffset` | 0.22 | 0.22 | Without `AutoSeat`, on a skin without a seat row: torso height in world units (0 = standing on the ground; 0.0333 per art pixel). A player's key; a mount declares its seat as its skin's row instead. |
 | `Bob` | true | false | Rider moves up and down with the donkey's back through its walk cycle (the back moves 1 px either way). |
 | `BobScale` / `BobLagFrames` | 1.5 / 1 | 1 / 0 | With `Bob`: the rider bobs this many times the back's movement, this many walk frames behind it (his weight follows the step). 1 / 0 = exactly with the back, as before 0.21.0 ([rider-motion.md](rider-motion.md)). |
@@ -243,6 +244,11 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 |---|---|---|
 | `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`, `royal-parade`; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
+**A mount's sounds.** Every sound key above (`BraySoundId`, `GrazeSoundId`, `MountSoundId`, `DismountSoundId`,
+`HitchSoundId`, `UnhitchSoundId`, the volumes, pitch and timing) is a creature fact a mount may set in its
+`[Mount.Tuning]` (docs/skins.md): the snail and the worm silence the bray, the hoofsteps and the lip smack
+(`BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`), Gerry the lip smack. Other creature voices come later.
+
 ### `[Effects]`: particle effects on the donkey
 
 `Effect` and `EffectWhen` are per instance (look keys); the rest is everyone's. Never shown indoors. Saddle Up's
@@ -250,7 +256,7 @@ Effect section sets them. Full story: [api.md](api.md) "Effects".
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Effect` | none | The effect by id: `mount` (the mount kind's own, if any), `hellfire` is built in (the game's lamp fire on a ring round the donkey, its sparks, a flame trail); mods add more. `none` or empty: none. |
+| `Effect` | none | The effect by id: `mount` ("As the mount or skin": the worn skin's own if it has one, else the mount kind's, if any), `hellfire` is built in (the game's lamp fire on a ring round the donkey, its sparks, a flame trail); mods add more. `none` or empty: none. |
 | `EffectWhen` | Always | `Off`, `Night` (the sun value below `EffectNightBelow`) or `Always`. |
 | `EffectTrail` | true | An effect with a trail leaves it behind while the donkey walks (flames that burn out). |
 | `EffectWithCart` | false | With the cart hitched, one wider ring round the donkey and the cart (off: round the donkey only). |
@@ -325,7 +331,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.32.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.33.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

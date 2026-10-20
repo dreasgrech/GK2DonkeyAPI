@@ -10,6 +10,7 @@ So the pack holds nothing of the game's art, and the recipe code (LooksHellfire.
     python tools/skins/hellfire/make_hellfire.py            # src/GK2DonkeyAPI/assets/skins/hellfire/ (the built-in pack:
                                                              # skin.cfg + a PNG per frame) and out\\ (strips, preview, a sheet)
     python tools/skins/hellfire/make_hellfire.py --no-assets # out\\ only
+    python tools/skins/hellfire/make_hellfire.py --cfg       # rewrite the built-in's skin.cfg too (it is by hand otherwise)
 
 Review: out\\strips\\<animation>.png (every frame over the donkey), out\\preview.png, and the skins preview page
 (tools/skins/skin_preview_html.py). The checker: python tools/skins/check_skin.py tools/skins/hellfire/out/pack
@@ -145,7 +146,9 @@ def skin_cfg():
         "# reviewed prototype: the pictures hold only our pixels and the erase marks (magenta) that take the ears and the\n"
         "# tail off the donkey; the ash coat is the [Base.Coat] recolour below. Our own art; nothing of the game's.\n"
         "[Skin]\nformat = 1\nid = hellfire\nname = Hellfire\nauthor = dreas\nversion = 2.0\nbase = donkey\nkind = own\n"
-        "layer = over\nerase = FF00FF\ncanvas = 96 96\nmount = donkey\n\n"
+        "layer = over\nerase = FF00FF\ncanvas = 96 96\n"
+        "effect = hellfire  # the skin comes with its fire: shown under \"As the mount or skin\", the Effect row's default\n"
+        "effect_when = Always\nmount = donkey\n\n"
         "# The cracks follow the player's muzzle colour, the horns and the tail's dark its dark parts, the glow its eye\n"
         "# colour, as the recipe had it; everything else is kept as drawn.\n"
         f"[Colors]\nMuzzle = {hexes(lava)}\nDark = {hexes(dark)}\nEye = {hexes(eye)}\n\n"
@@ -176,43 +179,24 @@ def main(argv):
                 os.remove(os.path.join(t, f))
         for key, im in frames.items():
             im.save(os.path.join(t, key + ".png"))
-        with open(os.path.join(t, "skin.cfg"), "w", encoding="utf-8", newline="\r\n") as f:  # CRLF, as the repo has it
-            f.write(cfg)
+        # the cfg is by hand once it exists (the pipeline rule: the generator makes the pictures and keeps the cfg;
+        # --cfg rewrites it from the recipe's colour lists); out\pack always gets the generated one
+        cfg_path = os.path.join(t, "skin.cfg")
+        if t != ASSETS or "--cfg" in argv or not os.path.exists(cfg_path):
+            with open(cfg_path, "w", encoding="utf-8", newline="\r\n") as f:  # CRLF, as the repo has it
+                f.write(cfg)
     # a sheet of the pack cells too, for the checker's sheet mode
     C = 8
     sheet = Image.new("RGBA", (C * 96, 6 * 96), (0, 0, 0, 0))
     for n, key in enumerate(ORDER):
         sheet.alpha_composite(frames[key], ((n % C) * 96, (n // C) * 96))
     sheet.save(os.path.join(pack_dir, "sheet.png"))
-    # the review pictures: the pack over the donkey (the ash coat shown as the prototype drew it, so the look reads)
-    def shown(key):
-        f = originals[key].copy()
-        o, p = f.load(), frames[key].load()
-        for y in range(96):
-            for x in range(96):
-                c = p[x, y]
-                if not c[3]:
-                    continue
-                o[x, y] = (0, 0, 0, 0) if c[:3] == ERASE[:3] else c
-        return f
-    strips_dir = os.path.join(OUT, "strips")
-    os.makedirs(strips_dir, exist_ok=True)
-    S, box = 4, (18, 14, 84, 70)
-    W, H = (box[2] - box[0]) * S, (box[3] - box[1]) * S
-    groups = {}
-    for n, k in enumerate(ORDER):
-        groups.setdefault(k.split("_")[1], []).append(k)
-    for g, items in groups.items():
-        strip = Image.new("RGBA", (W * len(items), H + 16), (46, 46, 50, 255))
-        d = ImageDraw.Draw(strip)
-        for i, k in enumerate(items):
-            strip.alpha_composite(shown(k).crop(box).resize((W, H), Image.NEAREST), (i * W, 16))
-            d.text((i * W + 3, 2), k.replace("bdy_", "").replace("_left", ""), fill=(255, 255, 0, 255))
-        strip.save(os.path.join(strips_dir, g + ".png"))
-    prev = Image.new("RGBA", (C * 96 * S, 6 * 96 * S), (46, 46, 50, 255))
-    for n, k in enumerate(ORDER):
-        prev.alpha_composite(shown(k).resize((96 * S, 96 * S), Image.NEAREST), ((n % C) * 96 * S, (n // C) * 96 * S))
-    prev.save(os.path.join(OUT, "preview.png"))
+    # the review pictures (tools/skins/review.py, the same for every generator): the pack over the donkey with the
+    # erase marks cleared, the rider on the donkey's seat row; out\strips\, out\preview.png, out\pack\sheet.png
+    import review
+    from gamedir import game_dir
+    rider = review.load_rider(os.path.join(game_dir(), "BepInEx", "GK2-asset-probe"))
+    strips_dir = review.write_all(OUT, frames, base=originals, erase=ERASE[:3], rider=rider, seat_row=review.DONKEY_SEAT_ROW)
     print(f"{len(ORDER)} frames: {total_erased} erase pixels, {total_drawn} drawn pixels; [Base.Coat] {coat_rule()}")
     print("pack ->", ", ".join(targets), "| strips ->", strips_dir)
     return 0

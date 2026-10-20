@@ -66,7 +66,7 @@ namespace GK2DonkeyAPI.Api
             if (def == null) throw new ArgumentNullException(nameof(def));
             var d = new GK2DonkeyAPI.Kinds.KindDef
             {
-                Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Author = def.Author, Version = def.Version, Owner = ownerId,
+                Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
                 Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
@@ -115,6 +115,8 @@ namespace GK2DonkeyAPI.Api
     {
         public string Id;
         public string Name;
+        // The word the game's sentences use for one ("a skull can't pull the cart"); null: the name in lower case.
+        public string Noun;
         public string Author;
         public string Version;
         // May pull the cart (false: the cart style, Hitch and MountCompanion.Use(Cart) are refused for this kind).
@@ -191,11 +193,25 @@ namespace GK2DonkeyAPI.Api
             Foals = d.Foals;
             FoalScale = d.FoalScale;
             Effect = d.Effect ?? "";
+            EffectWhen = d.EffectWhen;
+            Noun = (d.Noun ?? d.Label).ToLowerInvariant();
             Abilities = d.Abilities.Length;
+            Tuning = CopyOf(d.Tuning);
+            TuningRide = CopyOf(d.TuningRide);
+            TuningCart = CopyOf(d.TuningCart);
+            // the Default skin first (the skin whose id is the mount's; the donkey's own art for the donkey), then the rest
             var skins = new List<string>();
-            if (d == GK2DonkeyAPI.Kinds.Donkey) skins.Add(MountLooks.DonkeyId);
-            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Kinds.SkinsOf(d)) skins.Add(s.Id);
+            string first = GK2DonkeyAPI.Looks.DefaultSkinOf(d);
+            bool hasDefault = d == GK2DonkeyAPI.Kinds.Donkey;
+            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Kinds.SkinsOf(d)) if (s.Id == first) hasDefault = true;
+            if (hasDefault) skins.Add(first);
+            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Kinds.SkinsOf(d)) if (s.Id != first) skins.Add(s.Id);
             Skins = skins;
+        }
+
+        private static IReadOnlyDictionary<string, object> CopyOf(Dictionary<string, object> d)
+        {
+            return d == null || d.Count == 0 ? null : new Dictionary<string, object>(d, StringComparer.OrdinalIgnoreCase);
         }
 
         public string Id { get; }
@@ -210,8 +226,15 @@ namespace GK2DonkeyAPI.Api
         // A baby's size as a fraction of the grown one.
         public float FoalScale { get; }
         public string Effect { get; }
+        public MountEffectWhen EffectWhen { get; }
+        // The word the game's sentences use for one ("skull", "giant rat").
+        public string Noun { get; }
         public int Abilities { get; }
-        // The ids of its skins (the donkey kind's first is "donkey", the game's own art).
+        // Its values for existing tuning keys (creature facts: speed, sounds), both styles and per style; null when none.
+        public IReadOnlyDictionary<string, object> Tuning { get; }
+        public IReadOnlyDictionary<string, object> TuningRide { get; }
+        public IReadOnlyDictionary<string, object> TuningCart { get; }
+        // The ids of its skins, its Default first ("donkey", the game's own art, for the donkey kind).
         public IReadOnlyList<string> Skins { get; }
 
         public override string ToString() => Name + " (" + Id + ")";

@@ -131,17 +131,24 @@ skin. The cart's colours go with the mount too, since they are set in the same w
 - A mount registered after the page was built has no rows (the same limit as the Skin rows); its look stays the
   game's colours.
 
-### 2.7 What the built-in creatures declare
+### 2.7 What the built-in creatures declare (as of 2026-10-20)
 
-Generated once by `tools/skins/creatures/make_creatures.py` (it quantised the art and knows the palette) and kept in each
-`skin.cfg`, then tuned by eye:
+Written into each `skin.cfg` by `tools/skins/skin_colors.py` from the pictures themselves (the body and the `front\`
+layer), by rules that are data in `tools/skins/creatures/colors.json` (a block per skin: per region, in order, hue,
+saturation and value thresholds; the first match wins; everything else is Coat). Re-run after the art changes, then
+`tests/SkinsScan` (which checks every listed colour against the pixels):
 
-- **Dragons:** Dark = the two darkest outline colours; Muzzle = the membrane colours; the rest Coat. A player's Coat
-  turns the scales, Muzzle the wings.
-- **Rat:** Dark = outlines; Muzzle = the tail and ears if the quantised art separates them; Eye = the eye colour.
-- **Snail, worm:** everything Coat on the first pass (shaded art; a hand-picked Dark list of the darkest shades is
-  cheap to add later).
-- **Gerry:** everything Coat (bone); Dark = the eye sockets' black if it is its own colour.
+- **Red Dragon:** Coat = the red scales and the wing; Muzzle = the golden belly; Dark = the outlines, the horns and the
+  back spikes (bone); Eye = the yellow eye. A player's Coat turns the scales and the wing, Muzzle the belly.
+- **Giant Rat:** Coat = the grey fur; Muzzle = the pink tail, ears and nose; Dark = the outline; Eye = the red eye.
+- **Giant Snail:** Coat = the green body; Muzzle = the brown shell; Dark = the outline (300 colours: the cube path).
+- **Giant Worm:** Coat = the pink skin; Dark = the outline (720 colours: the cube path).
+- **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
+  (`BepInEx\GK2-asset-probe\game-skins\gerry\`) when one exists; without the export the cfg carries no `[Colors]`
+  and everything is Coat.
+- **Hellfire, Royal Parade** (over the donkey): Hellfire's written once by its generator (`make_hellfire.py`, `--cfg`
+  rewrites it; the cracks and the glow as Muzzle and Eye), Royal Parade's by hand in its cfg (the cloth's reds as Harness); a donkey colour drawn by an over skin is kept as the donkey's (its own
+  settings and the skin's `[Base.*]` reach it), which is how Hellfire's tuft and rump fill continue the body.
 
 ## 3. What is not in this
 
@@ -173,7 +180,7 @@ Harness descriptions say what they do on every mount.
 | A look's colour set collected at build, per-region map, `[Colors]` parsing and validation | `Looks.cs` (`Loaded`, `FromCfg`), `LooksGame.cs` | medium |
 | Engine takes the worn look's map for the sprite group instead of the embedded donkey lists; rebuilds on a skin change; cube above the threshold | `Colors.cs` (`Regions`, the pairs loop, `ApplyMethod`), `ColorsPreview.cs` (`ArtLightness`) | medium |
 | "(none on this mount)" on an empty region's row | `MountSettingsPage`, `MountCompanion` | small |
-| Built-in `[Colors]` lists | `tools/skins/creatures/make_creatures.py`, the six `skin.cfg` | small |
+| Built-in `[Colors]` lists | `tools/skins/skin_colors.py` with `tools/skins/creatures/colors.json`, the seven `skin.cfg` | small |
 | Checks: SkinsScan validates `[Colors]` against the PNGs; a self-test wears the worm, shifts its Coat hue and samples a sheet colour through the pairs; the dragon's Muzzle moves the membrane only | `tests/SkinsScan`, `Dev/SelfTest.cs` | medium |
 | Docs: `docs/skins.md` (`[Colors]`), `docs/colors.md`, `docs/api.md`, `docs/reference.md` | | small |
 

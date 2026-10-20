@@ -422,7 +422,7 @@ namespace GK2DonkeyAPI.Api
             MountCompanion me = companion;
             ConfigEntry<string> effect = List(section, "Effect", MountEffects.KindId, GK2DonkeyAPI.Effects.EffectChoices, "Effect",
                 Mounts.MountsEnabled
-                    ? "A particle effect on your mount: As the mount (what the creature comes with, if anything), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors."
+                    ? "A particle effect on your mount: As the mount or skin (what the skin comes with, else what the creature comes with, if anything: Hellfire burns by itself), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors."
                     : "A particle effect on your mount. None in this version (the donkey comes with none); Hellfire and effects from mods come in the next update.",
                 v => me.Effect = v, look: true);
             Func<bool> on = () => !MountEffects.IsNone(effect.Value);
@@ -694,6 +694,35 @@ namespace GK2DonkeyAPI.Api
         // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
         // on them (a custom colour with its preset) stays its own (Row.Enabled: the look bar greys, never hides).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
+        // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
+        // (a Harness row on the worm). The row stays and keeps its value; the look bar shows it greyed.
+        public void EnableWhen(string section, string key, Func<bool> enabled)
+        {
+            if (enabled == null) throw new ArgumentNullException(nameof(enabled));
+            string cfgSection = Sec(section);
+            foreach (Row r in Rows)
+            {
+                if (r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key)
+                {
+                    Func<bool> own = r.Enabled; // a row's own condition (a custom colour row: its preset is Custom) stays
+                    r.Enabled = own == null ? enabled : () => own() && enabled();
+                }
+            }
+        }
+
+        // Whether any skin of the mount has the colour region (Coat, Dark, Muzzle, Eye, Harness), so a page can grey
+        // the rows of a region the player's colour would never reach.
+        public static bool MountHasRegion(string mountId, string region)
+        {
+            if (string.IsNullOrEmpty(mountId) || mountId.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase)) return true;
+            foreach (MountSkinInfo s in Mounts.Looks.Skins)
+            {
+                if (!string.Equals(s.Mount, mountId, StringComparison.OrdinalIgnoreCase)) continue;
+                foreach (string r in s.Regions) if (string.Equals(r, region, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
         public void PerMount(Action<string, string, Func<bool>> rows)
         {
             if (rows == null) throw new ArgumentNullException(nameof(rows));

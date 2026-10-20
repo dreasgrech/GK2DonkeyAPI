@@ -197,7 +197,7 @@ namespace GK2DonkeyAPI
         // The effects to pick from in a settings list: the mount's own, none, then every registered effect.
         internal static IReadOnlyList<(string Id, string Label)> EffectChoices()
         {
-            var list = new List<(string, string)> { (MountEffects.KindId, "As the mount"), (MountEffects.NoneId, "None") };
+            var list = new List<(string, string)> { (MountEffects.KindId, "As the mount or skin"), (MountEffects.NoneId, "None") };
             foreach (MountEffectInfo e in Mounts.Effects.Effects) list.Add((e.Id, e.Name));
             return list;
         }
@@ -355,6 +355,7 @@ namespace GK2DonkeyAPI
             private readonly List<TrailPiece> trail = new List<TrailPiece>();
             private const int TrailMax = 40;
             private float builtScale = -1f;
+            private float builtWidth = -1f;
             private int builtTemplates;
             private string lit;
             private bool builtWithCart, dirty = true, failed;
@@ -398,9 +399,20 @@ namespace GK2DonkeyAPI
                     when = When.Value;
                     if (want.Equals(MountEffects.KindId, StringComparison.OrdinalIgnoreCase))
                     {
-                        Kinds.KindDef k = owner.LooksRig.KindNow; // "the mount's": the kind's effect and when, none if it has none
-                        want = k.Effect ?? "";
-                        if (want.Length > 0) when = k.EffectWhen;
+                        // "As the mount": the wanted skin's own effect first (Hellfire comes with its fire), else the
+                        // mount's; none if neither has one (docs/mounts-parity-matrix.md 9.5)
+                        Looks.SkinDef sd = owner.LooksRig.DefNow;
+                        Kinds.KindDef k = owner.LooksRig.KindNow;
+                        if (sd != null && !string.IsNullOrEmpty(sd.Effect))
+                        {
+                            want = sd.Effect;
+                            when = sd.EffectWhen;
+                        }
+                        else
+                        {
+                            want = k.Effect ?? "";
+                            if (want.Length > 0) when = k.EffectWhen;
+                        }
                     }
                     onFoals = OnFoals.Value;
                     inFights = InFights.Value;
@@ -440,9 +452,10 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 float scale = owner.ViewScale < 1f ? owner.ViewScale : 1f;
-                if (holder == null || !Mathf.Approximately(scale, builtScale) || withCart != builtWithCart || effect.TemplateCount != builtTemplates)
+                float width = owner.LooksRig.EffectScale; // the ring's size against the donkey's: the worn skin's drawn width
+                if (holder == null || !Mathf.Approximately(scale, builtScale) || !Mathf.Approximately(width, builtWidth) || withCart != builtWithCart || effect.TemplateCount != builtTemplates)
                 {
-                    Build(scale, withCart);
+                    Build(scale, withCart, width);
                     if (lit != effect.Id)
                     {
                         lit = effect.Id; // once per effect per instance, so the log says what burns where
@@ -490,11 +503,12 @@ namespace GK2DonkeyAPI
                 return withCart ? (body + owner.CartPoint()) * 0.5f : body;
             }
 
-            private void Build(float scale, bool withCart)
+            private void Build(float scale, bool withCart, float width = 1f)
             {
                 Clear();
                 holder = new GameObject(HolderName);
                 builtScale = scale;
+                builtWidth = width;
                 builtWithCart = withCart;
                 builtTemplates = effect.TemplateCount;
                 foreach (EffectDef.Part p in effect.Parts)
@@ -505,7 +519,7 @@ namespace GK2DonkeyAPI
                         switch (e.Placement)
                         {
                             case MountEffectPlacement.Ring:
-                                float radius = e.Radius * (withCart ? 1.6f : 1f) * scale;
+                                float radius = e.Radius * (withCart ? 1.6f : 1f) * scale * width;
                                 for (int i = 0; i < Mathf.Max(1, e.Count); i++)
                                 {
                                     float a = i * Mathf.PI * 2f / Mathf.Max(1, e.Count) + e.Angle * Mathf.Deg2Rad;
@@ -638,6 +652,16 @@ namespace GK2DonkeyAPI
             }
 
             internal int TestEmitters => emitters.Count;
+            // The ring's reach along the body (the self-tests): the farthest emitter from the holder's centre along x.
+            internal float TestRingRadiusX
+            {
+                get
+                {
+                    float best = 0f;
+                    foreach (GameObject g in emitters) if (g != null && g) best = Mathf.Max(best, Mathf.Abs(g.transform.localPosition.x));
+                    return best;
+                }
+            }
             // For the self-tests: where this rig's ring is (null: none), and how much of this rig is in the world (its
             // ring and its trail pieces), so another donkey's fire doesn't count.
             internal Vector3? TestRingPosition => holder != null ? holder.transform.position : (Vector3?)null;

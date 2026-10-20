@@ -208,6 +208,24 @@ namespace GK2DonkeyAPI.Api
         // typed as the key is: set on the wearer as overrides owned by the skin while it is worn (a key another mod has
         // set on that donkey is left to it), cleared when it comes off, never saved. Null: none.
         public Dictionary<string, object> Tuning;
+        // The same for one style only, on top of Tuning: riding, and with the cart hitched (a pack's [Tuning.Ride] /
+        // [Tuning.Cart]). The skin owns its drawing's geometry: the seat row and these keys; the mount keeps what the
+        // creature is (docs/mounts-design.md).
+        public Dictionary<string, object> TuningRide, TuningCart;
+        // The effect this skin comes with, shown when the player's Effect row says "As the mount" (the skin's first,
+        // else its mount's). Null: the mount's. A pack says the same with effect = / effect_when =.
+        public string Effect;
+        public MountEffectWhen EffectWhen = MountEffectWhen.Always;
+        // The rider sits on this frame's picture top instead of a row (a game creature that hops: Gerry).
+        public bool SeatFromPicture;
+        // Which of the skin's own colours are Dark, Muzzle, Eye or Harness (hex RRGGBB per region; everything not
+        // named is Coat), as a pack's [Colors]; the player's colours then reach them. Null: all Coat.
+        public Dictionary<string, string[]> Regions;
+        // Over skins only: the colour whose pixels make the donkey transparent there (a pack's erase =); null: none.
+        public Color32? Erase;
+        // Over skins only: the donkey's regions recoloured under the skin (a pack's [Base.<Region>]: knob -> value text,
+        // the knobs Hue, Saturation, Brightness, Contrast, Colorize, ColorizeAmount, Tint, Overlay, OverlayAmount).
+        public Dictionary<string, Dictionary<string, string>> BaseRegions;
         // The pictures, by frame key.
         public IMountSkinSource Source;
         // The front layer, optional: pictures drawn in front of the rider (the near wing, a saddle's near side), by the
@@ -216,15 +234,41 @@ namespace GK2DonkeyAPI.Api
 
         internal Looks.SkinDef ToDef(string owner)
         {
-            return new Looks.SkinDef
+            var d = new Looks.SkinDef
             {
                 Id = Id, Name = string.IsNullOrEmpty(Name) ? Id : Name, Author = Author, Version = Version, Owner = owner,
                 OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
                 KindId = string.IsNullOrWhiteSpace(Mount) ? MountKinds.DonkeyId : Mount.Trim(),
                 OffsetRide = Offset, OffsetCart = CartOffset ?? Offset, SeatRow = SeatRow,
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
-                Report = "from code" + (Tuning != null && Tuning.Count > 0 ? ", " + Tuning.Count + " tuning key(s)" : ""),
+                TuningRide = TuningRide != null && TuningRide.Count > 0 ? new Dictionary<string, object>(TuningRide, StringComparer.OrdinalIgnoreCase) : null,
+                TuningCart = TuningCart != null && TuningCart.Count > 0 ? new Dictionary<string, object>(TuningCart, StringComparer.OrdinalIgnoreCase) : null,
+                Effect = string.IsNullOrWhiteSpace(Effect) || MountEffects.IsNone(Effect) ? null : Effect.Trim(), EffectWhen = EffectWhen,
+                SeatFromPicture = SeatFromPicture, Erase = Over ? Erase : null,
+                Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : ""),
             };
+            if (Regions != null && PaletteColours) d.Report += "Regions on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
+            else if (Regions != null)
+            {
+                foreach (var kv in Regions)
+                {
+                    if (kv.Value == null || kv.Value.Length == 0) continue;
+                    Looks.ColorRegionLine(d, kv.Key, string.Join(" ", kv.Value), "skin '" + Id + "' (code)");
+                }
+            }
+            if (BaseRegions != null && Over)
+            {
+                foreach (var kv in BaseRegions)
+                {
+                    string region = Colors.RegionKeyOf(kv.Key);
+                    if (region == null) { d.Report += "[Base." + kv.Key + "]: no such region; ignored; "; continue; }
+                    if (d.BaseRegions == null) d.BaseRegions = new Dictionary<string, Colors.RegionTweak>(StringComparer.Ordinal);
+                    if (!d.BaseRegions.TryGetValue(region, out Colors.RegionTweak tweak)) d.BaseRegions[region] = tweak = new Colors.RegionTweak();
+                    foreach (var knob in kv.Value ?? new Dictionary<string, string>()) if (!tweak.Set(knob.Key, knob.Value)) d.Report += "[Base." + kv.Key + "] " + knob.Key + ": not a recolour knob or value, ignored; ";
+                }
+            }
+            else if (BaseRegions != null) d.Report += "BaseRegions is for an Over skin, ignored; ";
+            return d;
         }
     }
 
@@ -279,7 +323,10 @@ namespace GK2DonkeyAPI.Api
             Owner = "";
             IsBuiltIn = true;
             OwnColours = false;
+            Mount = MountLooks.DonkeyId;
             CanvasWidth = CanvasHeight = 96;
+            SeatRow = -1;
+            Regions = new List<string>(Colors.MountRegionKeys);
         }
 
         internal MountSkinInfo(Looks.SkinDef d)
@@ -297,6 +344,20 @@ namespace GK2DonkeyAPI.Api
             CanvasHeight = d.CanvasH;
             Source = d.Source;
             IsRecipe = d.Recipe != null;
+            SeatRow = d.SeatRow;
+            SeatFromPicture = d.SeatFromPicture;
+            Effect = d.Effect;
+            EffectWhen = d.EffectWhen;
+            FromGame = d.Game != null;
+            var regions = new List<string>();
+            if (!d.OwnColours) regions.AddRange(Colors.MountRegionKeys);
+            else
+            {
+                regions.Add("Coat");
+                if (d.ColorRegions != null) foreach (string r in d.ColorRegions.Keys) if (!regions.Contains(r)) regions.Add(r);
+            }
+            Regions = regions;
+            HasFrontLayer = d.FrontSprites != null || d.LoadFrontSheetPng != null || (d.FileNames != null && d.FileNames.Exists(f => f.StartsWith(Looks.FrontKey, StringComparison.Ordinal)));
         }
 
         public string Id { get; }
@@ -308,7 +369,8 @@ namespace GK2DonkeyAPI.Api
         public bool IsBuiltIn { get; }
         // Drawn from the donkey's own frames at runtime.
         public bool IsRecipe { get; }
-        // Drawn in its own colours (the coat and harness colours don't apply), or in the donkey's palette colours.
+        // Drawn in its own colours (the player's colours reach its Regions: Coat and what its [Colors] names), or in the
+        // donkey's palette colours (the donkey's regions apply as they are).
         public bool OwnColours { get; }
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over { get; }
@@ -318,6 +380,21 @@ namespace GK2DonkeyAPI.Api
         public int CanvasHeight { get; }
         // A pack's folder on disk, or null.
         public string Source { get; }
+        // Where the rider sits on this skin (docs/seat-investigation.md): the canvas row (from the top) its hip is
+        // on, or -1 when the skin declares none (the player's own seat keys apply); SeatFromPicture: on this
+        // frame's picture top instead (Gerry).
+        public int SeatRow { get; }
+        public bool SeatFromPicture { get; }
+        // The effect the skin comes with (shown under "As the mount": the skin's first, else its mount's), or null.
+        public string Effect { get; }
+        public MountEffectWhen EffectWhen { get; }
+        // Pictures drawn in front of the rider (a near wing).
+        public bool HasFrontLayer { get; }
+        // The colour regions the player's colours reach on this skin (Coat always on a skin in its own colours, then
+        // what its [Colors] names; every region on the donkey's palette).
+        public IReadOnlyList<string> Regions { get; }
+        // Its frames are another game character's, read at run time (source = game).
+        public bool FromGame { get; }
 
         public override string ToString() => Name + " (" + Id + ")";
     }

@@ -116,6 +116,7 @@ namespace GK2DonkeyAPI
             {
                 return null;
             }
+            if (withCart && !Looks.KindWanted(paper).Cart) withCart = false; // a mount that can't pull the cart: the picture without it
             View v = withCart ? cartView : donkeyView;
             if (ask)
             {
@@ -291,7 +292,35 @@ namespace GK2DonkeyAPI
                 paper.LooksRig.Tick();
                 paper.LooksRig.ApplySafe(); // the stage's cameras are rendered by hand: not covered by the per-frame apply
             }
+            // The mount's hitch gap (the skin's [Tuning.Cart] HitchGapPx, docs/mounts-parity-matrix.md 2.2): the whole
+            // cart sits that much further behind the body in the picture, as Mount.ApplyHitchGap moves it in the world.
+            // The animator writes the sway parts' positions every frame, so a non-zero gap is put back after it every
+            // frame; the value itself is read from the layers only when the rig re-merged them (or once a second).
+            if (paper.LooksRig.TuneStamp != gapStamp || ++gapFrames >= 60)
+            {
+                gapStamp = paper.LooksRig.TuneStamp;
+                gapFrames = 0;
+                gapWanted = Looks.HitchGapWorldFor(paper);
+            }
+            float gap = gapWanted;
+            if (Mathf.Abs(gap) > 0.0005f || Mathf.Abs(gapApplied) > 0.0005f)
+            {
+                gapApplied = gap;
+                foreach (KeyValuePair<Transform, Vector3> kv in cartRest)
+                {
+                    Transform t = kv.Key;
+                    if (t == null || !t || t.parent == null) continue;
+                    t.localPosition = kv.Value + (Mathf.Abs(gap) < 0.0005f ? Vector3.zero : t.parent.InverseTransformVector(cartDir * gap));
+                }
+            }
         }
+
+        private static readonly Dictionary<Transform, Vector3> cartRest = new Dictionary<Transform, Vector3>();
+        private static Vector3 cartDir = Vector3.right;
+        private static float gapApplied;
+        private static float gapWanted;                  // the layers' gap, read when the rig re-merged them (TuneStamp) or once a second
+                                                         // (static like cartRest/cartDir: the stage poses one paper at a time)
+        private static int gapStamp = -1, gapFrames;
 
         private static void Fail(string why)
         {
@@ -359,12 +388,22 @@ namespace GK2DonkeyAPI
             donkeyRenderers.Clear();
             SpriteRenderer body = null;
             int cartParts = 0;
+            cartRest.Clear();
+            cartDir = Vector3.right;
+            gapApplied = 0f;
             foreach (Transform t in copy.GetComponentsInChildren<Transform>(true))
             {
                 if (Array.IndexOf(CartPartNames, t.name) >= 0)
                 {
                     t.gameObject.SetActive(true);
                     cartParts++;
+                    cartRest[t] = t.localPosition; // the prefab's rest: the hitch gap is added on top (Pose)
+                    if (t.name == "donkey_cart_empty_sway")
+                    {
+                        Vector3 w = t.position - copy.transform.position;
+                        w.y = 0f;
+                        if (w.sqrMagnitude > 0.0001f) cartDir = w.normalized;
+                    }
                 }
                 else if (t.name == "donkey_cart_body_sway")
                 {

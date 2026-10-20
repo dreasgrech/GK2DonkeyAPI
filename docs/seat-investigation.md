@@ -134,14 +134,17 @@ example mod are the two that need it, and Gerry already has it.
 The user: *"ok let's go for it since it's part of the foundation for more mounts."* A skin may say `seat = <row>`
 (the canvas row, from the top, the rider's hip sits on) next to the existing `seat = picture`; `MountSkinDef.SeatRow`
 for code skins. The rig gives the seat tick that row's world point every frame (`TrySeatTop`, the picture path
-generalised), the tick adds the walk bob to a fixed row as the manual seat does, and the mount's `SeatAdjustPx`
-nudges from it, so the seat is the same for every player whatever their AutoSeat. Calibration from §3: the auto
+generalised), the tick adds the walk bob to a fixed row as the manual seat does, and the skin's own `SeatAdjustPx`
+(its `[Tuning]`; Gerry's -16) nudges from it, so the seat is the same for every player whatever their AutoSeat
+(since the cart readout of 2026-10-20 the player's own `SeatAdjustPx` does not count on a declared seat at all, §9,
+and the rows below are 6 higher in number: 52 / 55 / 68). Calibration from §3: the auto
 path's back line is canvas row 38 and seats the hip 17.5 px up, which predicted row 49 for the shipped 6.6 px;
 the first in-game run put row 49 at 3.5 px (the row path counts its pixel edges differently from the auto path's
-"+2"), so the calibration is **row 46 = the donkey's seat**: the four drawn creatures say 46 (rat, worm), 48 (the
+"+2"), so the calibration is **row 46 = the donkey's seat**: the four drawn creatures say 46 (rat, worm), 49 (the
 snail, 3 px lower, replacing its `SeatOffset = 0.1`) and 62 (the dragon's 128 canvas adds 16). That first run
 already proved the point: every creature sat at the same height in both modes (3.5 / 3.5, -0.5 / -0.5). The
-second run passed the rat, worm and dragon at 46 and put the snail at 49 one pixel low (2.5 px), so it says 48. The generator writes the row into a new creature's
+second run passed the rat, worm and dragon at 46 and read the snail at 49 as 2.5 px: a stray `SeatAdjustPx = -7`
+left in its cfg by a panel test (committed by accident) took the pixel; the key is gone and the snail says 49. The generator writes the row into a new creature's
 cfg and knows it per creature; the scan refuses a row outside the canvas and a mount that still sets `SeatOffset`;
 the example mod's checker declares 46. The game's own donkey art declares no row, so a default player's seat is
 untouched: the readout self-test asserts the plain donkey at 6.6 px off, the creatures within 0.3 px of each other
@@ -154,3 +157,32 @@ plain donkey 6.6 px off / 11.5 on as before; rat, worm and dragon 6.5 / 6.5 px; 
 - The readout self-test and `Mount.Instance.TestSeatApplied` (dev only).
 - docs/reference.md's seat defaults corrected to the shipped values.
 - Nothing else: the seat code, the cfgs' seat values and the example are as they were.
+
+## 9. The cart style (2026-10-20)
+
+The seat readout rides plain. The cart readout self-test (the plan's M2) rides every built-in with the cart hitched and
+logs the cart-style seat next to the hitch gap. Its first run (2026-10-20, the rows still 46 / 49 / 62):
+
+| Mount | declared `HitchGapPx` | the cart's shaft tips past the body's rear edge | cart-style seat | ride seat (§8) |
+|---|---|---|---|---|
+| donkey | 0 | -30.2 px | 6.6 px | 6.6 |
+| rat | 9 | -19.4 px | 12.5 px | 6.5 |
+| snail | 0 | -14.5 px | 9.5 px | 3.5 |
+| worm | 0 | -16.4 px | 12.5 px | 6.5 |
+| dragon | 24 | -21.4 px | 12.5 px | 6.5 |
+| gerry | 0 | -5.5 px | 25.5 px | 25.5 |
+
+Two things it found. **The cart-style seat sat 6 px higher than the ride seat on every drawn creature**: a declared
+row still added the player's own `SeatAdjustPx`, whose mod default is -6 riding and 0 with the cart (the donkey's two
+seat paths were calibrated with them), and the rows had been calibrated riding. Gerry was the same in both styles
+because his skin's own `SeatAdjustPx = -16` overrides the player's in both. So the rule is now: **on a declared seat
+the player's own `SeatAdjustPx` does not count; an override of the key (the skin's `[Tuning]`, a mod's) does, in
+full** (`Mount.SeatOn(playerAdjust: false)`, `Tuned.HasOverride`). The four rows moved by the 6 px the riding default
+had supplied, so the riding look is as calibrated: rat and worm 52, the snail 55, the dragon 68 (the donkey's own
+seat is row 52 on the 96 canvas); the cart readout asserts the cart-style seat equals the donkey's for the three and
+is 3 px lower for the snail. **The declared hitch gaps do not equalise the clearance**, and need not: the measure is
+where the cart mesh's front edge (the shaft tips) sits relative to the body's rear edge. The donkey's shafts reach 30
+px along its body; the rat's and the dragon's gaps (judged by eye) leave theirs about 10 px further back; the snail,
+the worm and Gerry are narrower, so without any gap their carts already stand further from the body than the
+donkey's. The rule asserted: no mount's cart stands closer to its body than the donkey's (within 2 px). The three
+declare no gap, and their cfg headers say why (matrix 1.2, closed).

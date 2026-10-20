@@ -292,33 +292,27 @@ def composite(cels):
 
 
 def strips(frames):
-    """Every animation as a strip of its frames over the donkey, 4x, the frame's name on top: strips/<animation>.png."""
-    from PIL import ImageDraw
-    S, box = 4, (24, 20, 84, 70)
-    W, H = (box[2] - box[0]) * S, (box[3] - box[1]) * S
-    out = os.path.join(OUTDIR, "strips")
-    os.makedirs(out, exist_ok=True)
-    groups = {}
-    for n, k in enumerate(ORDER):
-        groups.setdefault(k.split("_")[1], []).append((n, k))
-    for g, items in groups.items():
-        strip = Image.new("RGBA", (W * len(items), H + 16), (46, 46, 50, 255))
-        d = ImageDraw.Draw(strip)
-        for i, (n, k) in enumerate(items):
-            strip.alpha_composite(composite(frames[n]).crop(box).resize((W, H), Image.NEAREST), (i * W, 16))
-            d.text((i * W + 3, 2), k.replace("bdy_", "").replace("_left", ""), fill=(255, 255, 0, 255))
-        strip.save(os.path.join(out, g + ".png"))
-    return sorted(groups)
+    """The review pictures through the shared module (tools/skins/review.py, the same for every generator): the pack
+    over the donkey, the rider on the donkey's seat row; strips\\<animation>.png, preview.png, pack\\sheet.png."""
+    import review
+    from gamedir import game_dir
+    pack = {}
+    base = {}
+    for n, cels in enumerate(frames):
+        f = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+        f.alpha_composite(cels[1])
+        f.alpha_composite(cels[2])
+        pack[ORDER[n]] = f
+        base[ORDER[n]] = cels[0]
+    rider = review.load_rider(os.path.join(game_dir(), "BepInEx", "GK2-asset-probe"))
+    review.write_all(OUTDIR, pack, base=base, rider=rider, seat_row=review.DONKEY_SEAT_ROW)
+    return sorted(os.listdir(os.path.join(OUTDIR, "strips")))
 
 
 if __name__ == "__main__":
     fr = build()
     S, C = 4, 8
-    sheet = Image.new("RGBA", (C * 96 * S, 6 * 96 * S), (46, 46, 50, 255))
-    for n, cels in enumerate(fr):
-        sheet.alpha_composite(composite(cels).resize((96 * S, 96 * S), Image.NEAREST), ((n % C) * 96 * S, (n // C) * 96 * S))
     os.makedirs(OUTDIR, exist_ok=True)
-    sheet.save(os.path.join(OUTDIR, "preview.png"))
     from zoom import zoom
     picks = ["bdy_static_left", "bdy_walk_left_03", "bdy_walk_left_07", "bdy_graze_left_03", "bdy_turn_left_03", "bdy_turn_left_06"]
     zoom([(k, composite(fr[ORDER.index(k)])) for k in picks], os.path.join(OUTDIR, "zoom.png"), S=8, box=(24, 20, 84, 70))

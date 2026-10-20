@@ -11,7 +11,11 @@ Sources, in this order (the first that holds a skin id wins):
      the code version's output on the game's canvas, kept until Hellfire is confirmed in game);
   5. the leftover test folders <probe>\\test\\skins\\<name>\\ without a skin.cfg: "Experiments", collapsed at the end.
 A skin drawn over the donkey (layer = over) is composited over the donkey's frame here, as the game draws it (without
-the player's colours: the page shows the art as drawn). The captures of the probe's Capture tab go on top as before.
+the player's colours: the page shows the art as drawn). The front layer (the front folder) is drawn in front of the rider, in
+the animated view and in the strips; "Rider" puts the probe's rider on the skin's seat row (seat = <row>, the donkey's
+52, a picture seat's top row) shifted by its RiderOffsetPx, with the seat row drawn as a line. A card says the seat,
+the hitch gap, the babies' size and the colour regions the player's colours reach. A skin with source = game (Gerry)
+shows the game's export when there is one. The captures of the probe's Capture tab go on top as before.
 
 LOCAL ONLY: the frames are the game's art (and ours); the page embeds them and stays on this machine.
 
@@ -25,7 +29,8 @@ ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] +
          + [f"bdy_graze_left_{i:02d}" for i in range(1, 6)] + [f"bdy_chew_left_{i:02d}" for i in range(1, 4)]
          + [f"bdy_lips_left_{i:02d}" for i in range(1, 14)] + [f"bdy_turn_left_{i:02d}" for i in range(1, 7)]
          + ["hed_static_down", "hed_static_down_02", "hed_static_down_03"])
-MOUNT_NAMES = {"donkey": "Donkey", "gerry": "Gerry"}  # the rest come from the [Mount] section of the skin that declares them
+MOUNT_NAMES = {"donkey": "Donkey"}  # every other mount's name comes from the [Mount] section of the skin that declares it
+RIDER_HIP_ABOVE_FEET = 7  # the keeper's hip is 7 px above his feet (Mount.SeatOn, tools/skins/review.py)
 
 
 def read_cfg(path):
@@ -186,6 +191,24 @@ def apply_base_regions(frames, cfg, regions):
     return out, True
 
 
+def top_row(png):
+    """The first row with an opaque pixel of a PNG (bytes), or None."""
+    if png is None:
+        return None
+    from PIL import Image
+    im = Image.open(io.BytesIO(png)).convert("RGBA")
+    px = im.load()
+    return next((y for y in range(im.height) if any(px[x, y][3] for x in range(im.width))), None)
+
+
+def bottom_row(png):
+    """The last row with an opaque pixel of a PNG (bytes), or None."""
+    from PIL import Image
+    im = Image.open(io.BytesIO(png)).convert("RGBA")
+    px = im.load()
+    return next((y for y in range(im.height - 1, -1, -1) if any(px[x, y][3] for x in range(im.width))), None)
+
+
 def pixel_diff(a, b):
     """How many pixels differ between two PNGs (bytes), transparent counting as one colour; all of a when b is missing."""
     from PIL import Image
@@ -260,7 +283,8 @@ def main(argv):
             mount_names[cfg.get(("Mount", "id"), mount).lower()] = cfg[("Mount", "name")]
         note = ""
         if cfg and cfg.get(("Skin", "source"), "").lower() == "game":
-            note = "no pictures of its own: the game's " + cfg.get(("Game", "prefix"), "") + " frames, read back and scaled at run time; not shown here"
+            note = "no pictures of its own: the game's " + cfg.get(("Game", "prefix"), "") + " frames, read back and scaled at run time" + (
+                "; shown from the game's export" if os.path.isdir(os.path.join(export_dir, sid)) else "; export the loaded skins from the Mounts tab to see them here")
         shown = frames
         if layer == "over" and frames:
             e = (cfg.get(("Skin", "erase"), "FF00FF") if cfg else "FF00FF").strip()
@@ -291,14 +315,39 @@ def main(argv):
             shown, recoloured = apply_base_regions(shown, cfg, regions)
             if recoloured:
                 note = (note + "; " if note else "") + "the skin's own recolour of the donkey ([Base.*]) applied as the game's rule does"
-        missing = [k for k in ORDER if k not in frames] if frames else ORDER
+        missing = [k for k in ORDER if k not in shown]
+        # the skin's facts for the card: its seat row (a picture seat: the standing frame's top row), the rider's own
+        # offset, the hitch gap, the mount's babies and the colour regions the player's colours reach
+        seat = None
+        seat_text = cfg.get(("Skin", "seat"), "").strip().lower() if cfg else ""
+        if seat_text.isdigit():
+            seat = int(seat_text)
+        elif seat_text == "picture":
+            seat = top_row(shown.get("bdy_static_left"))
+        elif layer == "over" or not cfg or mount == "donkey":
+            seat = 52 + (max(cw, ch) - 96) // 2  # the donkey's own seat (docs/seat-investigation.md)
+        rider_dx = int(float((cfg or {}).get(("Tuning.Ride", "rideroffsetpx"), (cfg or {}).get(("Tuning", "rideroffsetpx"), "0"))))
+        seat_adj = int(float((cfg or {}).get(("Tuning.Ride", "seatadjustpx"), (cfg or {}).get(("Tuning", "seatadjustpx"), "0"))))  # positive = higher
+        hitch = (cfg or {}).get(("Tuning.Cart", "hitchgappx"), (cfg or {}).get(("Tuning", "hitchgappx"), ""))
+        colour_regions = sorted({k.capitalize() for (sec, k) in (cfg or {}) if sec == "Colors"})
+        if cfg and layer != "over":
+            colour_regions = ["Coat"] + [r for r in colour_regions if r != "Coat"]  # every colour not named is Coat
+        elif cfg and colour_regions:
+            colour_regions = ["the donkey's five"] + colour_regions  # an over skin: the donkey's regions under it, its own on top
+        babies = (cfg or {}).get(("Mount", "foal_scale"), "0.6" if ("Mount", "id") in (cfg or {}) else "")
+        facts = []
+        if seat is not None: facts.append(f"seat row {seat}" + (" (the picture's top)" if seat_text == "picture" else "") + (f", rider {rider_dx:+d} px" if rider_dx else "") + (f", seat nudge {seat_adj:+d} px" if seat_adj else ""))
+        if hitch: facts.append(f"hitch gap {hitch} px")
+        if babies: facts.append(f"babies {babies}")
+        if colour_regions: facts.append("colours: " + ", ".join(colour_regions))
         skins.append({"id": sid, "name": name, "mount": mount, "source": source, "layer": layer, "canvas": max(cw, ch),
                       "frames": {k: data_url(v) for k, v in shown.items()}, "note": note, "missing": len(missing), "folder": folder,
-                      "game": os.path.isdir(game_dir), "diverge": diverge})
+                      "game": os.path.isdir(game_dir), "diverge": diverge, "seat": seat, "rider_dx": rider_dx, "seat_adj": seat_adj, "facts": " · ".join(facts)})
 
     # 1. the plain donkey
     skins.append({"id": "donkey", "name": "The game's own", "mount": "donkey", "source": "the game", "layer": "replace", "canvas": 96,
-                  "frames": {k: data_url(v) for k, v in donkey.items()}, "note": "the donkey as the game draws it: the reference", "missing": 0, "folder": donkey_dir})
+                  "frames": {k: data_url(v) for k, v in donkey.items()}, "note": "the donkey as the game draws it: the reference", "missing": 0, "folder": donkey_dir,
+                  "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness"})
     seen.add("donkey")
     # 2. the built-in skins
     builtin = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
@@ -367,13 +416,18 @@ def main(argv):
                 captures.append({"name": name, "frames": ["captures/" + name + "/" + f for f in files]})
     rider_png = os.path.join(probe, "rider.png")
     rider = data_url(open(rider_png, "rb").read()) if os.path.isfile(rider_png) else ""
+    rider_hip = 51
+    if rider:
+        feet = bottom_row(open(rider_png, "rb").read())
+        if feet is not None:
+            rider_hip = feet - RIDER_HIP_ABOVE_FEET
 
     if export_note:
         same = "the same as the probe's" if donkey_diverge == 0 else str(donkey_diverge) + " px differ from the probe's donkey-frames"
         export_note += "; the donkey's frames: " + same
     page = HTML.replace("__GROUPS__", json.dumps(groups)).replace("__CLIPS__", json.dumps(clips)).replace("__SPEED__", json.dumps(speed)) \
                .replace("__CAPS__", json.dumps(captures)).replace("__RIDER__", json.dumps(rider)).replace("__ORDER__", json.dumps(ORDER)) \
-               .replace("__EXPORT__", json.dumps(export_note))
+               .replace("__EXPORT__", json.dumps(export_note)).replace("__RIDER_HIP__", json.dumps(rider_hip))
     open(out_path, "w", encoding="utf-8").write(page)
     print("ok", out_path, f"{len(page) // 1024} KB" + (f" | game export: {export_note}" if export_note else " | no game export yet (Mounts tab: Export the loaded skins as built)"))
     for g in groups:
@@ -412,9 +466,11 @@ section.mount > h2 .toggle { float:right; font-size:13px; }
 .stage { background:var(--day); border-radius:6px; position:relative; overflow:hidden; width:var(--stage); height:var(--stage); }
 .stage img { position:absolute; image-rendering:pixelated; left:50%; top:50%; transform:translate(-50%, -50%); }
 .stage.flip img { transform:translate(-50%, -50%) scaleX(-1); }
-.stage .rider { pointer-events:none; display:none; }
+.rider { pointer-events:none; display:none; }
+.seat { position:absolute; left:0; right:0; height:1px; background:rgba(255,220,80,.7); display:none; pointer-events:none; }
 .stage .empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:13px; }
-body.with-rider .stage .rider { display:block; }
+body.with-rider .rider { display:block; }
+body.with-rider .seat { display:block; }
 body.night .stage { background:var(--night); }
 body.night .stage img { filter:brightness(.55) saturate(.8) hue-rotate(10deg); }
 .strip { display:none; background:var(--day); border-radius:6px; overflow-x:auto; white-space:nowrap; padding:4px; }
@@ -451,12 +507,12 @@ body.all .strip .cell { margin-bottom:4px; }
   <button id="rider">Rider: off</button>
 </header>
 <nav id="nav"></nav>
-<p class="note">Every skin the API knows, by mount: the mount's own look first, then by name. Local only: the frames are the game's art and ours. The page shows the art as drawn (no player colours); night is a rough tint, not the game's lighting. A frame a skin has no picture for shows the donkey's own (faded in the strips). Frame strips: every frame of the clip side by side; all 44 frames: the whole skin, every picture named. Keys: space pauses, the arrows step.</p>
+<p class="note">Every skin the API knows, by mount: the mount's own look first, then by name. Local only: the frames are the game's art and ours. The page shows the art as drawn (no player colours); night is a rough tint, not the game's lighting. A frame a skin has no picture for shows the donkey's own (faded in the strips). Frame strips: every frame of the clip side by side; all 44 frames: the whole skin, every picture named. Rider: the probe's rider with his hip on the skin's seat row (the yellow line), shifted by the skin's RiderOffsetPx; a front layer is drawn in front of him. Keys: space pauses, the arrows step.</p>
 <p class="note" id="export"></p>
 <section id="caps"></section>
 <div id="mounts"></div>
 <script>
-const GROUPS = __GROUPS__, CLIPS = __CLIPS__, SPEED = __SPEED__, RIDER = __RIDER__, ORDER = __ORDER__, CAPS = __CAPS__, EXPORT = __EXPORT__;
+const GROUPS = __GROUPS__, CLIPS = __CLIPS__, SPEED = __SPEED__, RIDER = __RIDER__, ORDER = __ORDER__, CAPS = __CAPS__, EXPORT = __EXPORT__, RIDER_HIP = __RIDER_HIP__;
 document.getElementById('export').textContent = EXPORT ? 'The game\'s own export is in use where a skin has one (' + EXPORT + '). A card says whether the page\'s composite matched it.' : 'No export from the game yet: the pictures are the page\'s own composite. In game: F11, Mounts tab, "Export the loaded skins as built", then rebuild this page.';
 const DONKEY = GROUPS[0].skins.find(s => s.id === 'donkey');
 const $ = id => document.getElementById(id);
@@ -472,7 +528,10 @@ function applyScale() {
     const n = (x.skin.canvas || 96) * scale;
     x.im.style.width = x.im.style.height = n + 'px'; x.fr.style.width = x.fr.style.height = n + 'px';
     x.rd.style.width = x.rd.style.height = (96 * scale) + 'px';
-    x.strip.querySelectorAll('img').forEach(i => { i.style.width = i.style.height = n + 'px'; });
+    x.strip.querySelectorAll('img:not(.rider)').forEach(i => { i.style.width = i.style.height = n + 'px'; });
+    x.strip.querySelectorAll('img.rider').forEach(i => { i.style.width = i.style.height = (96 * scale) + 'px'; i.style.transform = riderPlace(x.skin, false); });
+    x.rd.style.transform = riderPlace(x.skin, $('facing').value === 'right');  // the offsets are in scaled pixels
+    if (x.skin.seat != null) x.sl.style.top = seatTop(x.skin);
   });
 }
 const nav = $('nav'), mountsEl = $('mounts');
@@ -489,21 +548,33 @@ GROUPS.forEach(g => {
     const h3 = document.createElement('h3'); h3.textContent = s.name; card.appendChild(h3);
     const meta = document.createElement('p'); meta.className = 'meta';
     const noteHtml = s.note ? '<br>' + s.note.replace(/as the game built it: the page's own composite matches, 0 px differ/, '<span class="game">as the game built it; the page\'s own composite matches (0 px differ)</span>').replace(/(as the game built it: the page's own composite DIFFERS in \d+ px, look)/, '<span class="diverge">$1</span>') : '';
-    meta.innerHTML = '<code>' + s.id + '</code> &middot; ' + s.source + ' &middot; ' + s.layer + ' &middot; ' + s.canvas + ' px' + (s.missing ? ' &middot; <b>' + s.missing + ' frames missing</b>' : '') + (s.game ? '' : ' &middot; <i>not exported by the game yet</i>') + noteHtml;
+    meta.innerHTML = '<code>' + s.id + '</code> &middot; ' + s.source + ' &middot; ' + s.layer + ' &middot; ' + s.canvas + ' px' + (s.missing ? ' &middot; <b>' + s.missing + ' frames missing</b>' : '') + (s.game ? '' : ' &middot; <i>not exported by the game yet</i>') + (s.facts ? '<br>' + s.facts : '') + noteHtml;
     card.appendChild(meta);
     const st = document.createElement('div'); st.className = 'stage';
     if (!hasFrames(s)) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'no pictures to show'; st.appendChild(e); }
     const im = document.createElement('img'); im.alt = s.name; if (!hasFrames(s)) im.style.display = 'none'; st.appendChild(im);
     const rd = document.createElement('img'); rd.className = 'rider'; rd.alt = ''; if (RIDER) rd.src = RIDER; st.appendChild(rd);
     const fr = document.createElement('img'); fr.className = 'front'; fr.alt = ''; st.appendChild(fr);
+    const sl = document.createElement('div'); sl.className = 'seat'; if (s.seat == null) sl.style.display = 'none'; st.appendChild(sl);
     card.appendChild(st);
     const strip = document.createElement('div'); strip.className = 'strip'; card.appendChild(strip);
     cards.appendChild(card);
-    stages.push({ skin: s, im, fr, st, rd, strip });
+    stages.push({ skin: s, im, fr, st, rd, sl, strip });
   });
   mountsEl.appendChild(sec);
 });
+// the rider's hip (row RIDER_HIP of his 96 picture) on the skin's seat row; RiderOffsetPx > 0 moves him towards the
+// head, and the picture faces left; mirrored (facing right) the shift and the picture flip together
+function riderPlace(s, flip) {
+  if (s.seat == null) return '';
+  const C = s.canvas || 96;
+  const dy = (s.seat - (s.seat_adj || 0) - C / 2 - (RIDER_HIP - 48)) * scale;  // SeatAdjustPx: positive = higher
+  const dx = (flip ? 1 : -1) * (s.rider_dx || 0) * scale;
+  return 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px))' + (flip ? ' scaleX(-1)' : '');
+}
+function seatTop(s) { const C = s.canvas || 96; return 'calc(50% + ' + ((s.seat - C / 2) * scale) + 'px)'; }
 function frameOf(s, key) { return hasFrames(s) ? (s.frames[key] || DONKEY.frames[key] || '') : ''; }
+function frontOf(s, key) { return s.frames['front/' + key] || ''; }
 function hasOwn(s, key) { return !!s.frames[key]; }
 function buildStrips() {
   const keys = $('view').value === 'all' ? ORDER : CLIPS[$('clip').value];
@@ -512,6 +583,8 @@ function buildStrips() {
     keys.forEach((key, i) => {
       const cell = document.createElement('div'); cell.className = 'cell' + (hasOwn(x.skin, key) ? '' : ' fallback');
       const im = document.createElement('img'); im.src = frameOf(x.skin, key); im.alt = key; cell.appendChild(im);
+      if (RIDER && x.skin.seat != null && !key.startsWith('hed_')) { const rd = document.createElement('img'); rd.className = 'rider'; rd.src = RIDER; rd.alt = ''; rd.style.transform = riderPlace(x.skin, false); cell.appendChild(rd); }
+      const f = frontOf(x.skin, key); if (f) { const fr = document.createElement('img'); fr.className = 'front'; fr.src = f; fr.alt = ''; cell.appendChild(fr); }
       const lb = document.createElement('span'); lb.textContent = (i + 1) + ' ' + key.replace(/^bdy_|_left/g, ''); cell.appendChild(lb);
       x.strip.appendChild(cell);
     });
@@ -524,9 +597,11 @@ function show() {
   const flip = $('facing').value === 'right';
   stages.forEach(x => {
     x.im.src = frameOf(x.skin, key);
-    const f = x.skin.frames['front/' + key] || x.skin.frames['front/' + key.replace(/_[0-9]+$/, '')] || x.skin.frames['front/' + key.split('_')[0]];
+    const f = frontOf(x.skin, key);
     x.fr.style.display = f ? 'block' : 'none'; if (f) x.fr.src = f;
     x.st.classList.toggle('flip', flip);
+    x.rd.style.transform = riderPlace(x.skin, flip);
+    x.rd.style.visibility = (x.skin.seat != null && !key.startsWith('hed_')) ? 'visible' : 'hidden';
   });
   $('scrub').max = keys.length - 1; $('scrub').value = frame % keys.length;
   $('frameinfo').textContent = $('clip').value + ' ' + (frame % keys.length + 1) + ' / ' + keys.length + '  ' + key;

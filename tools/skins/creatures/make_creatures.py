@@ -12,6 +12,9 @@ Fitted to the donkey's measures so the rider sits right without tuning: the back
     python tools/skins/creatures/make_creatures.py rat <folder>    # into another folder (a test pack, never the game's plugins)
 Then tools/skins/skin_colors.py when the art's colours changed, and tests/SkinsScan."""
 import math, os, struct, sys, zlib
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import review  # the strips, preview and sheet every generator writes the same way (tools/skins/review.py)
+from gamedir import game_dir
 
 W = H = 96          # the canvas (set per creature below)
 OX = OY = 0         # where the donkey's 96x96 frame sits in the canvas
@@ -728,16 +731,18 @@ def frames_for(fn):
 # name, drawing function, title, canvas, the mount kind (id, name), the seat row: the canvas row (from the top) the
 # rider's hip sits on for every player (docs/seat-investigation.md: 46 is the donkey's own seat on the 96 canvas, so a
 # creature drawn to the donkey's measures says 46; the 128 canvas adds 16; the snail sits 3 px lower on its shell)
-CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 46), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 48),
-             ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 46),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 62))
+# ... and the hitch gap: how many px further behind the body the whole cart sits with the cart hitched ([Tuning.Cart]
+# HitchGapPx; the donkey's is 0; None = not measured yet: the "cart readout" self-test says what it is)
+CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 55, None),
+             ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 52, 9),
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68, 24))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
 
-REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins/creatures -> the repo
+REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
 assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins")
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
-for name, fn, title, size, (kind, kind_name), seat_row in CREATURES:
+for name, fn, title, size, (kind, kind_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
     W = H = size
@@ -758,6 +763,16 @@ for name, fn, title, size, (kind, kind_name), seat_row in CREATURES:
                 "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
                 "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
                 + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + kind + "\n"
-                "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
+                + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
+                + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
                 "[Mount]\nid = " + kind + "\nname = " + kind_name + "\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
-    print(name, len(fr), "pictures ->", ", ".join(outs))
+            import canonical_cfg  # byte for byte the layout the scans expect
+            text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
+            open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)
+    # the review pictures: out\<name>\strips\, preview.png, pack\sheet.png (the front layer composited, the rider on the seat row)
+    pil = {k: review.from_flat(px, W, H) for k, px in fr.items() if not k.startswith("front/")}
+    front = {k: review.from_flat(px, W, H) for k, px in fr.items() if k.startswith("front/")}
+    rider = review.load_rider(os.path.join(game_dir(), "BepInEx", "GK2-asset-probe"))
+    rider_dx, seat_adj = review.rider_tuning(os.path.join(outs[0], "skin.cfg"))  # the skin's own RiderOffsetPx / SeatAdjustPx (the snail's -6)
+    strips = review.write_all(os.path.join(os.path.dirname(os.path.abspath(__file__)), "out", name), pil, front=front or None, rider=rider, seat_row=seat_row, rider_dx=rider_dx, seat_adj=seat_adj)
+    print(name, len(fr), "pictures ->", ", ".join(outs), "| strips ->", strips)

@@ -92,11 +92,13 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 |---|---|
 | `tools/GK2AssetProbe` (dev plugin, Shift+F7) | exports the donkey's frames to `donkey-frames\`, the rider, films to `captures\`; its `test\skins\` tester |
 | `tools/skins/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
-| `tools/skins/check_skin.py` | checks a pack folder (frames, colours vs the donkey's, lone pixels); run by the watcher |
-| `tools/skins/canonical_cfg.py` | rewrites every built-in `skin.cfg` into the one layout (`--check` in the release scans) |
-| `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_colors.py` | the four drawn creatures into their folders; their `[Colors]` sections from the pixels |
-| `tools/skins/gerry/gerry_probe.py`, `gerry_sheet.py` | Gerry's game frames exported and laid out for measuring |
-| `tools/skins/watch_skin.py`, `tools/skins/scripts/*.lua` | the by-hand loop: Aseprite -> export -> check -> previews; the two menu scripts (also installed in `%APPDATA%\Aseprite\scripts\`) |
+| `tools/skins/check_skin.py` | checks a pack folder (frames and the front layer, colours per region, lone pixels over what the game draws beneath, the layout; exit code = errors only); run by the watcher and the release scans on every built-in |
+| `tools/skins/new_skin.py` | scaffolds a new skin: the built-in's `skin.cfg` in the canonical layout, a generator stub, the Aseprite sidecar; runs the scan |
+| `tools/skins/review.py` | the review pictures every generator writes the same way (strips with the front layer and the rider on the seat row, preview, pack sheet) |
+| `tools/skins/canonical_cfg.py` | rewrites every built-in `skin.cfg` into the one layout: `[Skin]`, `[Game]`, the skin's `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (its geometry), the colours, the `[Mount]` block (`--check` in the release scans) |
+| `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_colors.py`, `tools/skins/creatures/colors.json` | the four drawn creatures into their folders (strips per creature in `out\<name>\`); their `[Colors]` sections from the pixels (`front\` included, Gerry's from the game's export) by the rules in the json (a block per skin) |
+| `tools/skins/gerry/gerry_probe.py`, `gerry_sheet.py` | a game character's frames exported (the bundle found by content, the prefix an argument) and laid out for measuring |
+| `tools/skins/watch_skin.py`, `tools/skins/scripts/*.lua` | the by-hand loop: Aseprite -> export -> the sheet split into the built-in's per-frame PNGs (`front\` too) -> check -> previews with the front layer and the rider; the two menu scripts (also installed in `%APPDATA%\Aseprite\scripts\`) |
 | `tools/skins/ase_write.py` | writes an `.aseprite` file (layers, frames, tags) from Python |
 | `tools/skins/gamedir.py` | the game folder from `Directory.Build.props`, the frames and packs folders in it |
 | `tools/skins/pngcolors.py` | a plain PNG reader and colour counter |

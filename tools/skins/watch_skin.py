@@ -39,20 +39,77 @@ def export(path, side):
     return r.returncode == 0 and "sheet.png:" in text, text
 
 
+def split_sheet(pack, cfg, columns=None):
+    """The exported sheet.png (and front.png) into the per-frame PNGs the built-ins use (bdy_*.png, front/bdy_*.png) in
+    the pack, keys in ORDER, `columns` cells per row (the sidecar's, as the export laid them out; else the cfg's, else
+    8); the sheets are removed unless the cfg says 'sheet =' (a sheet pack). A front picture whose cell is empty now
+    is removed (a part erased in Aseprite goes from the pack too)."""
+    cw, ch = (int(v) for v in cfg.get(("Skin", "canvas"), "96 96").split())
+    cols = int(columns or cfg.get(("Skin", "columns"), "8"))
+    if ("Skin", "sheet") in cfg:
+        return 0
+    n = 0
+    for sheet_name, prefix in (("sheet.png", ""), ("front.png", "front/")):
+        p = os.path.join(pack, sheet_name)
+        if not os.path.isfile(p):
+            continue
+        sheet = Image.open(p).convert("RGBA")
+        for i, k in enumerate(ORDER):
+            cell = sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch))
+            target = os.path.join(pack, prefix.replace("/", os.sep), k + ".png")
+            if prefix and not cell.getbbox():
+                if os.path.isfile(target):
+                    os.remove(target)  # an empty front cell: no front picture for that frame any more
+                continue
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            cell.save(target)
+            n += 1
+        os.remove(p)
+    return n
+
+
+def load_frames(pack, cfg):
+    """The pack's pictures as {key: image}: the per-frame PNGs, else the cells of its sheet."""
+    cw, ch = (int(v) for v in cfg.get(("Skin", "canvas"), "96 96").split())
+    out, front = {}, {}
+    sheet_path = os.path.join(pack, cfg.get(("Skin", "sheet"), "sheet.png"))
+    if ("Skin", "sheet") in cfg and os.path.isfile(sheet_path):
+        sheet = Image.open(sheet_path).convert("RGBA")
+        cols = int(cfg.get(("Skin", "columns"), str(sheet.width // cw)))
+        for i, k in enumerate(ORDER):
+            out[k] = sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch))
+        return out, front
+    for k in ORDER:
+        p = os.path.join(pack, k + ".png")
+        if os.path.isfile(p):
+            out[k] = Image.open(p).convert("RGBA")
+        pf = os.path.join(pack, "front", k + ".png")
+        if os.path.isfile(pf):
+            front["front/" + k] = Image.open(pf).convert("RGBA")
+    return out, front
+
+
 def previews(path, pack):
+    import review
     c = read_cfg(os.path.join(pack, "skin.cfg"))
     cw, ch = (int(v) for v in c.get(("Skin", "canvas"), "96 96").split())
     over = c.get(("Skin", "layer"), "replace").lower() == "over"
-    sheet = Image.open(os.path.join(pack, c.get(("Skin", "sheet"), "sheet.png"))).convert("RGBA")
-    cols = int(c.get(("Skin", "columns"), str(sheet.width // cw)))
+    own, front = load_frames(pack, c)
+    e = c.get(("Skin", "erase"), "FF00FF" if over else "none").strip()
+    erase = None if e.lower() == "none" else tuple(int(e[i:i + 2], 16) for i in (0, 2, 4))
+    base = {k: donkey(k) for k in ORDER} if over else None
+    seat = c.get(("Skin", "seat"), "")
+    seat_row = int(seat) if seat.isdigit() else (review.DONKEY_SEAT_ROW + (max(cw, ch) - 96) // 2 if over else None)
+    rider_dx, seat_adj = review.rider_tuning(os.path.join(pack, "skin.cfg"))
+    from gamedir import game_dir
+    rider = review.load_rider(os.path.join(game_dir(), "BepInEx", "GK2-asset-probe"))
     frames = []
-    for i, k in enumerate(ORDER):
-        cell = sheet.crop(((i % cols) * cw, (i // cols) * ch, (i % cols) * cw + cw, (i // cols) * ch + ch))
-        f = Image.new("RGBA", (cw, ch), BG)
-        if over:
-            d = donkey(k)
-            f.alpha_composite(d, ((cw - d.width) // 2, (ch - d.height) // 2))
-        f.alpha_composite(cell)
+    for k in ORDER:
+        if k not in own and not over:
+            frames.append(Image.new("RGBA", (cw, ch), BG))
+            continue
+        f = Image.new("RGBA", (cw, ch), BG)  # an over skin's missing frame shows the donkey, as the game does
+        f.alpha_composite(review.composite(k, own, base, erase, front or None, rider, seat_row, rider_dx, seat_adj))
         frames.append(f)
     out = os.path.join(os.path.dirname(path), "preview")
     os.makedirs(out, exist_ok=True)
@@ -80,6 +137,10 @@ def once(path):
     stamp = datetime.datetime.now().strftime("%H:%M:%S")
     ok, text = export(path, side)
     print(f"[{stamp}] export {'done' if ok else 'FAILED'}")
+    if ok:
+        # the built-ins' format: a PNG per frame (the game reads a sheet only with 'sheet =' in the cfg)
+        n = split_sheet(side["pack"], read_cfg(os.path.join(side["pack"], "skin.cfg")), side.get("columns"))
+        if n: print(f"   {n} pictures written per frame into {side['pack']} (the sheet split, as the built-ins are kept)")
     for line in text.splitlines():
         if line.strip() and not line.startswith("In game:"):
             print("   " + line)

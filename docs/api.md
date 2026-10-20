@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.32.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.33.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -316,7 +316,7 @@ s), `ShuffleMaxAngle` (35°), `ShuffleTurnChance` (0.25), `ShuffleKeeperDistance
 
 ```csharp
 MountHandle mother = Mounts.SpawnDonkey("you.gk2.mymod", at);
-MountHandle foal = Mounts.SpawnFoal("you.gk2.mymod", mother);        // size 0.6, not rideable, shuffles and follows
+MountHandle foal = Mounts.SpawnFoal("you.gk2.mymod", mother);        // the mother's mount's size (a donkey: 0.6), not rideable, shuffles and follows
 MountHandle big = Mounts.Spawn("you.gk2.mymod", new MountSpawn { Position = at2, Scale = 1.4f, Rideable = false });
 ```
 
@@ -468,7 +468,7 @@ p.Publish();
 | `Donkey`, `Cart`, `Foals` | The handles (`Cart` while it stands on its own; hitched, it's part of `Donkey`; `Foals` a slot per foal, null when that one isn't there). Found again after a load by the keys `"donkey"`, `"cart"`, `"foal"`, `"foal2"` ... `"foal5"`. A cart the donkey hitches in the world that this companion did not summon is not `Cart`: it keeps its own look while pulled and stays a cart of its own when left again (the companion's own cart waits where it was parked). |
 | `KeepWithSaves` | Kept with the save (on). |
 | `CartStaysParked` | `Use(Ride)` while the donkey stands hitched to its cart somewhere: the cart is left where it was parked, with its load and chest, and the donkey alone comes. Off: both come and the cart is left standing by the keeper. On (0.25.0). |
-| `FoalCount` | 0 to `MaxFoals` (5) foals (size 0.6, not rideable) that stay with the donkey. |
+| `FoalCount` | 0 to `MaxFoals` (5) foals (the mount's own size: a donkey's 0.6, not rideable) that stay with the donkey. |
 | `FoalsComeIndoors` | The foals come through doors with the keeper, follow him inside and come back out with him (`ShuffleFollowKeeperIndoors` on each foal). Off. |
 | `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
 | `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
@@ -628,14 +628,14 @@ foreach (MountKindInfo k in Mounts.Kinds.Kinds) Log(k.Name + ": " + string.Join(
 IDisposable reg = Mounts.Kinds.Register(Guid, new MountKindDef
 {
     Id = "checker-beast", Name = "Checker Beast", Cart = false,
-    TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },
+    TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },   // the API takes a picture key on a kind; a pack puts it on the skin (the scan refuses it under [Mount.Tuning*])
     Abilities = { new BurnsWhenRidden(Guid) },
 });
 Mounts.Looks.Register(Guid, new MountSkinDef { Id = "checker", Name = "Checker", Mount = "checker-beast", Source = src });
 ```
 
-Where a value comes from, per instance and key: an override another mod set on it; the skin's own `Tuning`; the kind's
-for the style, then for both; the player's cfg. A value of another numeric type than the key's is converted (`4f`
+Where a value comes from, per instance and key: an override another mod set on it; the skin's own `TuningRide` /
+`TuningCart` for the style, then its `Tuning` (both styles); the kind's for the style, then for both; the player's cfg. A value of another numeric type than the key's is converted (`4f`
 for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged set goes on the wearer as overrides owned by the skin
 system and is re-applied only when the skin, the kind or the style changes.
 
@@ -663,7 +663,7 @@ A settings page gets the rows in three calls: `page.MountRows("Mount", companion
 mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
 dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>`; `page.FoalRows("Mount",
 companion)` adds the babies rows (how many, come indoors, the same mount and skin) on `Foals`, `FoalsIndoors`,
-`FoalsWearSkin`; `page.EffectRows("Effect", companion)` adds the effect list ("As the mount", none, every effect),
+`FoalsWearSkin`; `page.EffectRows("Effect", companion)` adds the effect list ("As the mount or skin", none, every effect),
 when it shows and how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`.
 The labels say "mount" and "babies", never "donkey": the mount may be a dragon. Mounts, skins and
 effects registered before the page is built appear with no change to yours; later ones after a restart. `KindsChanged` fires on a
@@ -700,8 +700,11 @@ Where skins come from, in order of how little they need:
 - **From code:** `Mounts.Looks.Register(owner, new MountSkinDef { Id, Name, Source = yourSource })` with an
   `IMountSkinSource` giving a `Sprite` per frame key, from any texture of yours (your own sheet, say: 50 pixels per
   unit, the pivot where the donkey's anchor is). The sprites stay yours; the API only points its overlays at them.
-  A code-registered skin drawn over the donkey (`Over`) has no erase colour and no `[Base.<Region>]` recolour yet
-  (those are the pack format's, [skins.md](skins.md); docs/open-items.md): ask when a mod needs them.
+  A code skin says what a pack says (0.33.0): `Over` with `Erase` (the colour that clears the donkey, `null` = none),
+  `BaseRegions` (the `[Base.<Region>]` recolour of the donkey under it), `Regions` (which of its colours are Dark,
+  Muzzle, Eye or Harness; the rest Coat), `SeatRow` / `SeatFromPicture`, `Tuning` / `TuningRide` / `TuningCart`,
+  `Effect` / `EffectWhen`, `FrontSource`; a readable sprite's colours join the look (an unreadable texture is said
+  once in the log, and the player's colours leave it alone).
 - **A recipe:** `Mounts.Looks.RegisterRecipe(owner, id, name, frame => pixels)`: a rule over the donkey's own frames
   (`MountSkinFrame`: the pixels on the canvas, the outline and bob helpers), built when first worn, a few frames a
   tick, and worn once complete. Nothing of the game's art is shipped.
@@ -719,7 +722,8 @@ otherwise.
 
 A skin is the drawing, the mount the creature (docs/mounts-design.md §1). So a skin can move the rider and the cart
 to fit its pictures, when they differ from the mount's other skins: `MountSkinDef.Tuning` (a pack's `[Tuning]`
-section) holds the picture-dependent tuning keys only (`SeatAdjustPx`, `SeatOffset`, `RiderOffsetPx`,
+section; `TuningRide` / `TuningCart`, a pack's `[Tuning.Ride]` / `[Tuning.Cart]`, for one style, winning over it)
+holds the picture-dependent tuning keys only (`SeatAdjustPx`, `SeatOffset`, `RiderOffsetPx`,
 `TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`, `HitchGapPx`, `Depth`,
 `CenterOffset`; any other key is refused, said once in the log: speed, the cart, foals, the effect and abilities are
 the mount's), which the API sets on the wearer as overrides owned by the skin (`SetBy` = `dreas.gk2.donkeyapi.skin`)
@@ -852,6 +856,20 @@ History:
 - 0.29.1: no API change (the public surface is as in 0.29.0). Performance: the Mods-menu donkey picture and its
   labelled lists no longer look the window up while playing (2-3 ms frames four times a second), and a cart left
   standing and hitched again is no longer kept in memory ([performance.md](performance.md)).
+- 0.33.0: `MountKindDef.Noun`, `MountKindInfo.Noun` / `EffectWhen` / `Tuning*` (its `Skins` Default first); `MountSpawn.Mount`
+  (a mount by name, its Default skin); `SpawnFoal`'s size defaults to the parent mount's; `MountSkinDef.Regions` / `Erase` /
+  `BaseRegions` / `SeatFromPicture` (a code skin says what a pack says); `MountSkinInfo.Regions`;
+  `MountSettingsPage.EnableWhen` and `MountHasRegion` (grey a colour row for a region a mount never has); the
+  cart rule at `Mounts.Spawn(WithCart)` and a hitched mount that becomes a no-cart kind leaves its cart standing.
+- 0.33.0: `MountSkinDef.Effect` / `EffectWhen` (the effect a skin comes with, shown under "As the mount or skin";
+  `null` = the mount's; the effect ring scales by the worn skin's drawn width); `MountSkinDef.TuningRide` / `TuningCart`
+  (a skin's per-style geometry, `null` = none: the skin owns its drawing's geometry, docs/mounts-parity-matrix.md 9.1);
+  `MountSkinInfo.SeatRow` (-1 = none), `SeatFromPicture`, `HasFrontLayer`, `FromGame`, `Effect` / `EffectWhen`,
+  `Regions`; `MountKindDef.Noun` (`null` = the name, lower case). A declared seat (`SeatRow`, `SeatFromPicture`) no
+  longer adds the player's own `SeatAdjustPx` (its defaults differ by style; the cart seat sat 6 px high): only an
+  override of the key, the skin's `Tuning` or a mod's, nudges from it; the built-in rows moved by 6 (52 / 55 / 68)
+  so the riding look is unchanged. Defaults of the new
+  def fields are "as before": a def that sets none of them behaves exactly as under 0.32.0.
 - 0.32.0: `MountSkinDef.SeatRow` (the canvas row the rider's hip sits on, for every player whatever their AutoSeat;
   a pack's `seat = <row>`; docs/seat-investigation.md). Mounts tab: a built-in's Reload and Undo work, and log.
 - 0.31.0: `MountSettingsPage.Heading` (a heading row inside a section; a group of its own in the look bar, which now

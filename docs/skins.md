@@ -47,8 +47,11 @@ layer = replace     # replace: instead of the donkey. over: on top of the donkey
                     # horns); FF00FF unless set, "none" switches it off (see "A skin worn over the donkey")
 canvas = 96 96      # every picture is this size (see below)
 # pivot = 48 48     # where the base's pivot is on the canvas (default: its middle; a bigger canvas keeps the donkey centred)
-# seat = 46         # the canvas row (from the top) the rider's hip sits on, every frame, for EVERY player (their AutoSeat
-                    # setting stops mattering on this skin); 46 is where the donkey's own seat is on the 96 canvas. Or
+# effect = hellfire # the effect this skin comes with: shown when the player's Effect row says "As the mount or skin"
+# effect_when = Always  # (its default), the skin's first, else its mount's. Off, Night or Always. Hellfire burns by itself.
+# seat = 52         # the canvas row (from the top) the rider's hip sits on, every frame, for EVERY player (their AutoSeat
+                    # and SeatAdjustPx stop mattering on this skin; only the skin's own [Tuning] SeatAdjustPx nudges from
+                    # it); 52 is where the donkey's own seat is on the 96 canvas. Or
                     # "picture" for this frame's picture top (Gerry). Without it the seat is the player's own (docs/seat-investigation.md)
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
 mount = donkey      # the mount this skin is a look of: donkey, or a mount declared below or by another pack or mod
@@ -77,14 +80,16 @@ version = 1.0
 cart = true           # may it pull the cart
 foals = true          # may the baby donkeys be it
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33); it lives on the mount, not the skin
-effect = none         # an effect it comes with (hellfire, or one a mod added); players pick "As the mount" to see it
+effect = none         # an effect it comes with (hellfire, or one a mod added); players see it under "As the mount or skin" (a skin's own effect = wins)
 effect_when = Always  # Off, Night or Always (the menu says "Never" for Off)
 
-[Mount.Tuning]        # the rider on this mount, both styles (the keys of docs/reference.md [Ride] and [Cart])
-SeatAdjustPx = 2
+noun = dragon         # the word the game's sentences use ("a dragon can't pull the cart"); default: the name in lower case
+
+[Mount.Tuning]        # what the creature is, both styles: speed, its sounds (docs/reference.md); the rider's seat and
+BrayVolume = 0        # the cart's place are the SKIN's rows ([Tuning], [Tuning.Ride], [Tuning.Cart] above)
+HoofVolume = 0
 [Mount.Tuning.Ride]   # riding only
 [Mount.Tuning.Cart]   # with the cart only
-HitchGapPx = 24       # a longer body: the whole cart sits 24 art pixels further behind, so the body isn't inside it
 ```
 
 The settings show a **Mount** list (Donkey, Dragon, Giant Rat, ...) and under it a **Skin** row with that mount's
@@ -96,21 +101,27 @@ or `effect_when` is named too and the default stands.
 
 Two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up): `offset = 0 0` while
 riding and `offset_cart = 0 0` with the cart hitched (a skin that should stand closer to the shafts). And a
-`[Tuning]` section moves the rider and the cart to fit these pictures, when they differ from the mount's other skins,
-with the same keys and values as the mod's cfg (docs/reference.md `[Ride]` and `[Cart]`). A skin is the drawing, so
-only the picture-dependent keys are taken: `SeatAdjustPx`, `SeatOffset`, `RiderOffsetPx`, `TorsoOffsetPx`,
-`LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`, `HitchGapPx`, `Depth`, `CenterOffset`. Anything
-about the creature itself (speed, the cart, foals, the effect, abilities) belongs in the `[Mount]` sections below and
-is refused here, said once in the log.
+`[Tuning]` section moves the rider and the cart to fit these pictures, with the same keys and values as the mod's
+cfg (docs/reference.md `[Ride]` and `[Cart]`); `[Tuning.Ride]` and `[Tuning.Cart]` do the same for one style only,
+on top of it. **The skin owns its drawing's geometry**: the seat row and these keys live here, on the skin, and the
+`[Mount]` block below keeps only what the creature is. Only the picture-dependent keys are taken: `SeatAdjustPx`,
+`SeatOffset`, `RiderOffsetPx`, `TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`,
+`HitchGapPx`, `Depth`, `CenterOffset`. Anything about the creature itself (speed, the cart, foals, the effect,
+abilities, its sounds) belongs in the `[Mount]` sections and is refused here, said once in the log; a built-in with
+a picture key under `[Mount.Tuning]` fails the scan.
 
 ```
 [Tuning]
-SeatAdjustPx = 4      # the rider four pixels higher on these pictures
-RiderOffsetPx = -2    # and two towards the rear
+SeatAdjustPx = 4      # the rider four pixels higher on these pictures, riding and with the cart
+[Tuning.Ride]
+RiderOffsetPx = -2    # riding only: two towards the rear
+[Tuning.Cart]
+HitchGapPx = 9        # with the cart only: the whole cart nine pixels further behind the longer body
 ```
 
-They apply to the donkey wearing the skin only, both riding and with the cart, and come off with the skin; a value
-another mod has set on that donkey wins, and the log says so. Nothing of it is saved.
+They apply to the donkey wearing the skin only and come off with the skin; a key in a style section wins over the
+same key in `[Tuning]` for that style; a value another mod has set on that donkey wins, and the log says so.
+Nothing of it is saved. The Mounts tab (F11) edits these rows live and writes them back into this file.
 
 **Colours.** The player's colour settings mean the same on every mount (docs/mount-colours.md): Coat is the body,
 Harness the tack, and Dark, Muzzle and Eye the outlines, a second body tone and the eye. A skin drawn in its own
@@ -172,14 +183,18 @@ Every built-in skin is a pack of exactly this format, kept as the example of one
 | **Hellfire** | a skin drawn **over** the donkey that also takes things off it: the erase colour under horns and a devil's tail, `[Base.Coat]` for the ash coat, `[Colors]` so the cracks and the glow follow the player's muzzle and eye colours | `src/GK2DonkeyAPI/assets/skins/hellfire/` (generated by `tools/skins/hellfire/make_hellfire.py`) |
 | **Royal Parade** | a plain **over** pack: a saddle cloth and a crown, the cloth's reds named `Harness` so the player's harness colour recolours them, the gold kept as drawn | `src/GK2DonkeyAPI/assets/skins/royal-parade/` (generated by `tools/skins/royal-parade/make_royal.py`) |
 | **Giant Rat, Giant Snail, Giant Worm, Red Dragon** | a skin that **replaces** the donkey and declares its own **mount** (`[Mount]`, its tuning, the rider's seat); the dragon's `front\` layer drawn above the rider | `src/GK2DonkeyAPI/assets/skins/<id>/` (drawn by `tools/skins/creatures/make_creatures.py`) |
-| **Gerry** | a mount out of the game's own character frames (`source = game`), no pictures of its own | `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` |
+| **Gerry** | a mount out of the game's own character frames (`source = game`), no pictures of its own; `noun = skull`, babies 0.33, `seat = picture` | `src/GK2DonkeyAPI/assets/skins/gerry/skin.cfg` |
+| **The donkey** | the one mount that is not a file (the game's own art, no `SkinDef`): what every donkey skin's `mount = donkey` names | none: its facts are in the code (`Kinds.Donkey`) |
 | **Sepia, Checker** | the same from code: a recipe and a picture source registered through the API | `examples/GK2DonkeySkins/` |
 
-Each `skin.cfg` is commented and in one layout (`tools/skins/canonical_cfg.py` rewrites a built-in into it,
-`tests/SkinsScan` refuses one that isn't): `[Skin]`, then `[Game]` for a game creature, the colour sections, and the
-`[Mount]` block last with its tuning sections, every key in one place. The donkey itself, the one mount that is not
-a file, would read `[Mount] id = donkey, name = Donkey, author = the game, version = 1.0, cart = true, foals = true`
-with no tuning and no effect; a donkey skin never declares it. The generators show how the pictures were measured
+Each `skin.cfg` is commented and in one layout (`tools/skins/canonical_cfg.py` rewrites a built-in into it; its
+`--check` in the release scans refuses one that isn't, and `tests/SkinsScan` checks the section order and the key rules): `[Skin]`, then `[Game]` for a game creature, the skin's own geometry
+(`[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`: the seat and the pixel keys this drawing needs), the colour sections,
+and the `[Mount]` block last with its tuning sections (the creature's facts: its sounds, for one), every key in one
+place. The donkey itself, the one mount that is not a file, would read `[Mount] id = donkey, name = Donkey, author =
+the game, version = 1.0, cart = true, foals = true` with no tuning and no effect; a donkey skin never declares it. A
+mount's sounds are set or silenced under `[Mount.Tuning]` with the ordinary sound keys (docs/reference.md): the snail
+and the worm say `BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`; Gerry `LipsVolume = 0`. The generators show how the pictures were measured
 on the donkey's frames (docs/sprite-tools.md). The review page (`tools/skins/skin_preview_html.py`) plays them all
 side by side.
 
@@ -199,7 +214,7 @@ canvas = 160 160      # room for the scaled frames (a 29-pixel hop at 3x is 87 a
 source = game
 seat = picture        # the rider sits on this skin's own picture (its top at the pivot column, per frame), whatever
                       # the player's seat settings; "seat = <row>" is the same with a fixed row of the canvas (the four
-                      # drawn creatures say 46, 48 or 62); without it the seat is the player's (AutoSeat off: a fixed height)
+                      # drawn creatures say 52, 55 or 68); without it the seat is the player's (AutoSeat off: a fixed height)
 
 [Game]
 prefix = 0901_        # the character's preset prefix on its sprites (the donkey's is 0301_)
