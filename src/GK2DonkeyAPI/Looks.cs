@@ -2081,13 +2081,17 @@ namespace GK2DonkeyAPI
                 // k: the wanted skin's mount (KindNow): the creature's facts
                 MountStyle style = owner != null ? owner.CurrentStyle : MountStyle.Ride;
                 if (d == tunedFor && k == tunedKind && style == tunedStyle) return;
-                if (owner != null && owner.Handle == null && !owner.IsRidden) return; // the settings picture's paper donkey: no rider to seat
-                ClearTuning(refresh: false); // one refresh for the whole re-merge, below
+                // The settings picture's paper donkey gets no overrides (no rider to seat), but its stamp still counts
+                // the re-merges: the stage reads the layered hitch gap on the stamp, and when the paper returned before
+                // it the gap came a second late, on the stage's fallback timer (the cart sliding into place after a
+                // mount switch; the user's video and the preview self-test, 2026-10-20).
+                bool paper = owner != null && owner.Handle == null && !owner.IsRidden;
+                if (!paper) ClearTuning(refresh: false); // one refresh for the whole re-merge, below
                 tunedFor = d;
                 tunedKind = k;
                 tunedStyle = style;
                 TuneStamp++;
-                if (owner == null) return;
+                if (owner == null || paper) return;
                 var merged = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 void Take(Dictionary<string, object> from)
                 {

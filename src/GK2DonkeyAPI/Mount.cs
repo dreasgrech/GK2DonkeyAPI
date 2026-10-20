@@ -165,7 +165,7 @@ namespace GK2DonkeyAPI
                 {
                     foreach (SpriteRenderer sr in all)
                     {
-                        if (sr == null || !sr || !sr.enabled || sr.sprite == null) continue;
+                        if (sr == null || !sr || !sr.enabled || sr.sprite == null || !sr.gameObject.activeInHierarchy) continue;
                         float z = space.InverseTransformPoint(sr.transform.position).z;
                         if (z < nearest) nearest = z;
                     }

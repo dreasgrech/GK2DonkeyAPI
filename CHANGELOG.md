@@ -15,6 +15,10 @@ For players:
 - **The dragon's belly follows the Coat colour.** It was its Muzzle region, so a green coat left a gold belly (the
   user, 2026-10-20: it read as wood); the belly is Coat now, a lighter tone of it, and its plate seams are every
   four rows instead of three. The dragon has no Muzzle row any more (it greys on the page).
+- **The settings picture's cart moves to the new mount's hitch gap at once** when the Mount row changes. It slid
+  into place up to a second later (the user's video, 2026-10-20): the picture's paper mount never counted its
+  tuning re-merges, so the picture only picked the gap up on its once-a-second fallback. The preview self-test
+  measured it (the gap 54 frames after the skin) and now guards it.
 - **The cart no longer sinks into a hill behind the mount.** Its ground is sampled under the cart body, up to a
   unit and more behind the mount's root, and at the edge of a raised path that sample lands on the level below:
   0.77 lower by the Inquisition Base rocks under the dragon's cart (the user's video, 2026-10-20), within the
@@ -97,7 +101,10 @@ For mod authors:
   keeper's sprites (measured each frame in the body part's space) by `Looks.Rig.FrontLift`, 0.05 world units (2.5
   art pixels; the first lift was a fifth of a pixel, which tied in the depth buffer and flickered his shirt through
   the wing while he moved, seen 2026-10-20; the front-layer test now moves him 40 frames and counts the pixels lost
-  at the shipped lift and at the old one). The cart readout's rule was wrong, not the gaps:
+  at the shipped lift and at the old one). A scenario watches the settings picture after a mount switch frame by
+  frame (when the worn skin flips, when the stage applies the new hitch gap, when the picture is reframed) and
+  fails if the gap lags the skin by more than two frames: the user saw the cart take many frames to settle
+  (2026-10-20). The cart readout's rule was wrong, not the gaps:
   the rat's and the dragon's declared gaps (judged by eye) leave their carts about 10 px further from the body than
   the donkey's, and the snail, worm and Gerry stand further still without any gap (narrower bodies), so the rule
   asserted is "no cart closer to its body than the donkey's"; the three declare no gap and their cfgs say why

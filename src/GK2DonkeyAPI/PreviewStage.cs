@@ -243,6 +243,7 @@ namespace GK2DonkeyAPI
                 if (v.Reframe)
                 {
                     v.Reframe = false;
+                    TestReframes++;
                     Frame(v);
                     v.Cam.Render();
                     Tighten(v);
@@ -321,6 +322,8 @@ namespace GK2DonkeyAPI
         private static float gapWanted;                  // the layers' gap, read when the rig re-merged them (TuneStamp) or once a second
                                                          // (static like cartRest/cartDir: the stage poses one paper at a time)
         private static int gapStamp = -1, gapFrames;
+        internal static float TestGapApplied => gapApplied;   // the self-tests: the hitch gap on the stage's cart parts now
+        internal static int TestReframes;                     // the self-tests: how often a picture was framed again
 
         private static void Fail(string why)
         {
