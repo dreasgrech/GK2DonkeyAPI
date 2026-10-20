@@ -255,7 +255,8 @@ prefix).
 - **In front of the rider.** Anything that should be drawn over the keeper (the near wing, the near side of a
   saddle) goes in a `front\` subfolder with the same file names; those pictures are drawn in front of the rider
   (above the creature when nobody rides). The same shortcuts apply (`front\bdy.png` for every body frame); a sheet
-  pack gives `sheet_front = front.png` with the same cells.
+  pack gives `sheet_front = front.png` with the same cells. What to put in it, how the game places it and the
+  recipe that came out of the dragon's wing: docs/front-layer.md.
 - **Templates to paint over:** the dev tools export every donkey frame at full size (the asset probe's "Export every
   frame", `BepInEx\GK2-asset-probe\donkey-frames\`). The game's pictures belong to the game: paint your own over them,
   don't ship them.

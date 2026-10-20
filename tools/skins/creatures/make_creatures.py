@@ -558,9 +558,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             return (x + ox, y + bob + oy)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
         peak = _rot(at(52.0, 26.0), sh, ang)
-        hem = [at(85.0, 58.0), at(79.0, 66.5), at(62.0, 66.5), at(59.0, 63.0), at(52.0, 58.0)]   # the curtain's hem: on the ground over the hind legs
+        hem = [at(85.0, 58.0), at(79.0, 65.0 - bob), at(62.0, 65.0 - bob), at(59.0, 63.0), at(52.0, 58.0)]   # the curtain's hem: its last row the feet's (GROUND, which doesn't bob), over the hind legs
         ring = [peak, at(64.0, 30.0), at(78.0, 43.0)] + hem + [at(47.0, 55.0), sh]
-        tips = [at(76.0, 45.0), at(79.0, 66.0), at(65.0, 66.0), at(59.0, 62.5), at(52.0, 58.0)]
+        tips = [at(76.0, 45.0), at(79.0, 64.5 - bob), at(65.0, 64.5 - bob), at(59.0, 62.5), at(52.0, 58.0)]
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
 
         def layer(x, y):
@@ -568,6 +568,8 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
         # the hem's scallops between the finger tips: arcs bulging up into the membrane
         scal = []
         for a, b in zip(tips[1:-1], tips[2:]):
+            if max(a[1], b[1]) >= GROUND + oy:                                        # the stretch on the ground stays solid: the feet under it (the bob is in neither)
+                continue
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
             half = math.dist(a, b) / 2
             depth = half * 0.2                                                    # shallow: the finger tips stand a little out of the hem, the feet stay under it
@@ -589,7 +591,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                 X, Y = x + 0.5, y + 0.5
                 if not inside(X, Y):
                     continue
-                if Y < GROUND + bob and any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):   # no scallop at the ground: the feet stay under the hem
+                if Y < GROUND + oy and any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):    # no scallop at the ground: the feet stay under the hem
                     continue
                 df = min(_seg(X, Y, *a, *b) for a, b in fingers)
                 down = (Y - peak[1]) / max(1.0, max(ys) - peak[1])

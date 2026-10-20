@@ -408,7 +408,7 @@ the top of his head, part of his face and the reins arm out of it, chest and eve
 membrane. (Tried and rejected the same day: a cut that drew the membrane behind him above his waist to keep his
 chest in view, which showed him in front of the wing; and a one-layer wing shaped around him, which grew a lobe
 under his seat that stood out like a thumb when nobody rode and moved the peak to the mid-back; no reference
-draws either.) The far wing is
+draws either; the method and the recipe for the next mount: docs/front-layer.md.) The far wing is
 the same fold a few pixels back and up behind the body (its peak and the
 top of its curtain show behind the near one's), `seat = 68` (the back on the 128 canvas), `[Tuning.Cart] HitchGapPx = 24` (the whole cart
 that far further back, or the body is drawn inside it), colours Coat = scales and wing, Muzzle = the golden belly,

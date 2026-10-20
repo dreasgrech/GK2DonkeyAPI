@@ -1764,13 +1764,21 @@ namespace GK2DonkeyAPI
             // Both heights come from the same source (navigation mesh for both, or the ground raycast for both), as the
             // donkey/keeper delta does, so a height mismatch between the two sources can never move the cart on flat
             // ground. A difference steeper than any walkable slope (over CartSlopeLimit) is treated as a bad sample and
-            // the previous target is kept. The applied shift then moves towards the target at CartShiftRate, so a
-            // one-frame outlier cannot make the cart jump; a real slope is still followed within a fraction of a second.
-            // Every rejected sample and every jump of the target is written to the log (at most twice a second) with
-            // both samples and their sources, so a flicker can be traced to its cause.
+            // the previous target is kept. So is a target that jumps by more than CartJumpLimit from one frame to the
+            // next without the cart having changed sides: walking moves the sample by at most 0.12 a frame, which on
+            // any walkable surface changes the ground by less than that, so a jump means the sample crossed a ledge
+            // onto another level (the dragon's cart, 1.3 units behind its root, sank 0.77 into the hill by the
+            // Inquisition Base rocks: the ground under it was that much lower, within the slope limit, and the jump
+            // was only logged; the user's video, 2026-10-20). The held target is kept until the sample agrees with it
+            // again, which happens by itself once the mount has walked down (or up) the same step. The applied shift
+            // then moves towards the target at CartShiftRate, so a one-frame outlier cannot make the cart jump; a
+            // real slope is still followed within a fraction of a second. Every rejected sample and every held jump
+            // is written to the log (at most twice a second) with both samples and their sources, so a flicker can
+            // be traced to its cause.
             private const float CartRiseWindow = 0.6f;
             private const float CartSlopeLimit = 1.2f;  // world units of height difference between the two samples
             private const float CartShiftRate = 3f;     // world units per second
+            private const float CartJumpLimit = 0.15f;  // a target change per frame beyond this, without a side change, is a ledge
             private float cartShiftTarget, cartShiftApplied;
             private float nextCartAnomalyLog;
             private int cartAnomalies;
@@ -1838,9 +1846,10 @@ namespace GK2DonkeyAPI
                     else
                     {
                         target = Mathf.Clamp(g - lastCartRefGround, -cap, cap);
-                        if (!sideChange && Mathf.Abs(target - cartShiftTarget) > 0.15f)
+                        if (!sideChange && Mathf.Abs(target - cartShiftTarget) > CartJumpLimit)
                         {
-                            why = "target jumped";
+                            why = "target jumped (a ledge under the cart), kept";
+                            target = cartShiftTarget;
                         }
                     }
                 }

@@ -12,6 +12,13 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The cart no longer sinks into a hill behind the mount.** Its ground is sampled under the cart body, up to a
+  unit and more behind the mount's root, and at the edge of a raised path that sample lands on the level below:
+  0.77 lower by the Inquisition Base rocks under the dragon's cart (the user's video, 2026-10-20), within the
+  slope limit, so the cart followed it down into the drawn ground. A target that jumps by more than 0.15 between
+  two frames without the cart having swapped sides is a ledge, not a slope (walking moves the sample 0.12 a
+  frame at most): it is held off and logged, and the cart keeps the mount's level until the sample agrees again,
+  which it does once the mount has walked the step itself. Before, the jump was logged and applied.
 - **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one kind of thing.
   Keys. Mount: its picture (with the cart now), Name, Mount, Skin, the babies rows, and "Keep your mount with the
   save" (was in Behaviour). Colours, new: "Choose colours", the picture, then every colour under two headings, "Mount
@@ -104,8 +111,11 @@ For mod authors:
   against the body's red and outlined. Both wings root at the shoulder, where wings attach and where the rider
   sits: the peak stands above the shoulder and behind his head, the curtain hangs from it back over the flank, its
   hem on the ground behind the hindquarters only and rising forward along the belly line, both hind legs under
-  the curtain (it reaches the ground over them; drawn in front, the near foot read as part of the wing), nothing
-  of the wing forward of the peak. The whole near wing is the front layer, over the
+  the curtain (its hem ends on the feet's own row, solid along the ground, the walk bob kept out of it; a hem
+  2.5 px lower looked sunk into the ground, and the near leg drawn in front of it read as part of the wing; a
+  scan over all 41 frames finds no leg pixel under the hem), nothing of the wing forward of the peak. The whole
+  method, the game's placing of the layer, the rider's measures on the canvas and the recipe for the next mount
+  are in docs/front-layer.md. The whole near wing is the front layer, over the
   rider wherever the two overlap: he sits inside the fold with the top of his head, part of his face and the
   reins arm out of it. (Tried on the way and rejected: a cut that kept his chest in view by drawing the membrane
   behind him there, and a one-layer wing shaped around him, which grew a lobe under his seat that stood out
