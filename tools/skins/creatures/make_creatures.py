@@ -554,9 +554,12 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             return (x + ox, y + bob + oy)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
         peak = at(52.0, 26.0)
-        hem = [at(82.0, 52.0), at(76.0, 57.0), at(66.0, 60.5), at(56.0, 60.5), at(48.0, 58.0)]   # the lower edge along the belly line
-        ring = [peak, at(64.0, 30.0), at(78.0, 43.0)] + hem + [at(47.0, 54.0), sh]
-        tips = [at(76.0, 45.0), at(80.0, 53.0), at(71.0, 59.5), at(61.0, 61.0), at(51.0, 59.5)]
+        # the wing tip points back along the tail (the blue references: a long wedge from the wrist to past the hips,
+        # the user's mark 2026-10-20: over the rump and the first third of the tail, never near the ground)
+        tip = at(99.0, 51.0)
+        hem = [at(93.0, 56.0), at(84.0, 58.5), at(74.0, 59.5), at(64.0, 60.5), at(55.0, 60.5), at(48.0, 58.0)]   # the lower edge along the belly line
+        ring = [peak, at(66.0, 29.0), at(84.0, 38.0), tip] + hem + [at(47.0, 54.0), sh]
+        tips = [at(84.0, 39.0), tip, at(88.0, 58.0), at(78.0, 59.5), at(68.0, 60.5), at(59.0, 61.0), at(51.0, 59.5)]
         fingers = [(peak, t) for t in tips] + [(peak, sh)]                      # the last: the membrane's leading edge down to the shoulder
         dst = px if far else fpx
         # the lower edge's scallops between the finger tips: shallow arcs bulging up into the membrane

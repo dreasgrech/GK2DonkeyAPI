@@ -400,7 +400,8 @@ hindquarters, scalloped, in a colour of its own with an outline): both wings roo
 above it and behind the rider's head, the curtain hanging from the peak back over the flank, its hem on the
 belly line (the big idle reference hangs the curtain to the ground; the red walk frames and every blue frame
 tuck the wing against the flank, and a mount that walks does too: the belly band and both hind legs in view
-under it, nothing on the ground, the whole wing one piece with the body, no sway and no pinned hem, after a
+under it, its tip pointing back along the tail over the rump (the blue references' long wedge from the wrist to
+past the hips; the user's mark), nothing on the ground, the whole wing one piece with the body, no sway and no pinned hem, after a
 ground-reaching version jiggled in the world, the user's video 2026-10-20); nothing of the wing lies forward of the
 peak. The whole near wing is the front layer, over the rider wherever the two overlap (the user, 2026-10-20: the
 wing is nearer the camera than he is, so no part of him may show in front of it): he sits inside the fold with

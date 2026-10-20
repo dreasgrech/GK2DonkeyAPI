@@ -95,7 +95,9 @@ in the big resting pose; the red walk frames and every blue frame tuck the wing 
 edge at the belly line and the legs in view below it. A hem on the ground had to swallow the hind legs (one not
 drawn, the other under it), had to be kept out of the bob, and sat in the drawn ground by a pixel or two whatever
 row it took. The tucked wing needs none of that: both hind legs drawn, the belly band under the hem, the hem on
-row 60 at the hip and rising to 52 at the rump.
+row 60 at the hip, and the wing tip pointing back along the tail to column 99 over the rump (the blue
+references' long wedge from the wrist to past the hips; the user's mark, 2026-10-20: the wing had looked too
+small for the dragon, and growing it backwards keeps it off the ground).
 
 ## 6. The tools and the tests
 

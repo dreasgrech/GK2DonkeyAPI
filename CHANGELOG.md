@@ -110,7 +110,8 @@ For mod authors:
   membrane hangs between them like a curtain to the ground behind the hindquarters, scalloped along its hem, wine
   against the body's red and outlined. Both wings root at the shoulder, where wings attach and where the rider
   sits: the peak stands above the shoulder and behind his head, the curtain hangs from it back over the flank, its
-  lower edge along the belly line with the belly band and both hind legs in view under it, nothing on the ground
+  lower edge along the belly line with the belly band and both hind legs in view under it, its tip pointing back
+  along the tail over the rump (the blue references' long wedge; the user's mark), nothing on the ground
   (the references tuck the wing so when the dragon walks; a curtain to the ground, the big idle pose's, had to
   swallow the hind legs and sat in the drawn ground, and once its hem was pinned to the ground row under a
   bobbing, swaying peak the whole wing jiggled, the user's video 2026-10-20: now every point of the wing takes
