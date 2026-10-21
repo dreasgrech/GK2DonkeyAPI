@@ -14,47 +14,60 @@ and text from code; what it takes from the game is what keeps the look native: t
 button (copied, as before), the font asset read off one of the game's labels. Pictures of the mod's own embed in
 the DLL like the skins do, drawn at integer scales with point filtering so they stay pixel art.
 
-## The layout (canvas units; the canvas is 1280x720 at every resolution)
+## The layout, third cut (canvas units; the canvas is 1280x720 at every resolution)
 
-A window of 1200x660, centred, scaled down only when the canvas is smaller than that (never at 1080p and up). Laid
-out by hand with anchored rectangles, no nested auto-sizing: the first panel's five fitter levels were the reason its
-size could only be known after a frame.
+The second cut (tabs under a tall stage) squashed the rows into a slit and left the stats a single line (the user,
+2026-10-21: "a lot of empty space ... the customisation squashed"). Decided the same day, direction D: **the journal
+and a colours window**. A window of 1060x600, centred, scaled down only on a smaller canvas; laid out by hand.
 
 ```
-+-- Mounts --------------------------------------------------- 6 mounts --+
-| [list 300 wide]        | [portrait] Name                                 |
-|  [icon] Donkey         |            description, two or three lines     |
-|  [icon] Dragon  <----- |-------------------------------------------------|
-|  [icon] Gerry          |                                                 |
-|  [icon] Giant Rat      |          the mount and its cart, up to 3x       |
-|  [icon] Giant Snail    |          on a dark stage (180 to 300 tall)      |
-|  [icon] Giant Worm     |                                                 |
-|   (scrolls)            |-------------------------------------------------|
-|                        | Pulls the cart . Has babies . Speed 1.75x . ... |
-|                        | [ Skin ] [ Colours ] [ Effect ]                 |
-|                        |  the chosen tab's rows, one or two columns,     |
-|                        |  scrolling when they need more room             |
-|                                                       [ Done ] [ Cancel ]|
-+-------------------------------------------------------------------------+
++-- Mounts ------------------------------------------------------ 6 mounts --+
+| [list 260]        | [icon] Gerry                                           |
+|  Donkey           |        description, two or three lines                |
+|  Dragon           |--------------------------------------------------------|
+|  Gerry  <----     | [ stage 440x236, up to 3x ]   | Stats                  |
+|  Giant Rat        |                               |  Speed    2x walking   |
+|  Giant Snail      |                               |  Cart     pulls it     |
+|  Giant Worm       |                               |  Babies   0.33x its sz |
+|   (scrolls)       |                               |  Skins    1            |
+|                   |--------------------------------------------------------|
+|                   |   Skin                 |   Effect                      |
+|                   |    Skin  < Default >   |    Effect       < As the ... >|
+|                   |                        |    Effect shown < Always >    |
+|                          [ Colours and effect... ]  [ Done ]  [ Cancel ]   |
++---------------------------------------------------------------------------+
+
++-- Colours and effect: Gerry ------------------------------------------------+
+|   Mount colours                     |   Cart colours                        |
+|    Coat colour       < ... >        |    Paint            < ... >           |
+|    Custom coat       < ... >        |    Wheel colour     < ... >           |
+|    Harness colour    < ... >        |    Wheel hub colour < ... >           |
+|    Second tone       < ... >        |    Lantern light    < ... >           |
+|   Effect                            |                                       |
+|    The effect leaves a trail < On > |                                       |
+|    ... (the four toggles)           |                                       |
+|                                                        [ Done ]  [ Cancel ] |
++-----------------------------------------------------------------------------+
 ```
 
-- **The list**: one card per mount (a copied dialog button with a 40 px icon on its left and the name), the chosen
-  one bright, the others dimmed, in a scroll view. The icon is the mount's portrait: a PNG the pack names, else
-  the Default skin's standing picture (`bdy_static_left`: a pack's own PNG decoded once, a code skin's sprite, a
-  game-source skin's game sprite by name, the donkey's own game sprite), drawn through a RawImage's `uvRect` so no
-  texture is copied or read back.
-- **The header**: the same portrait at 72 px, the name large, the description wrapped by the text component (the
-  first panel wrapped by hand at 58 characters because it reused label rows).
-- **The stage**: a dark backdrop with a thin outline; the live picture (PreviewStage) up to 3x inside it. The stage
-  takes the room the tab's rows don't need: 300 tall over the Skin tab, down to 180 over a full Colours tab.
-- **The stats line**: what the mount does, in one wrapped line with separators; a mount's own `[Mount.Stats]` and
-  its abilities on a second line.
-- **The tabs**: Skin, Colours, Effect; a third-party page's other look sections get a tab each, named by the
-  section. A tab holds the page's rows for the chosen mount as copied game rows (SettingsRows), the Colours tab in
-  two columns under its two headings. A row shown only with a preset (a custom colour) is left out until the preset
-  is chosen, not greyed; a row greyed by a rule (a region the mount's skin lacks, a key the mount pins) stays greyed.
-  The tab is remembered while the game runs.
-- **Done and Cancel** bottom right; Cancel puts back every look value as it was when the panel opened, as before.
+- **The list**: a flat row per mount (a dark face, the icon at the left, the name; the chosen one in the game's red,
+  hover brightens), in a scroll view with a thin scrollbar. The icon is the mount's portrait: a PNG the pack names,
+  else the Default skin's standing picture (MountIcons: a pack's own PNG decoded once and cropped, a code skin's
+  sprite, a game-source skin's game sprite by name, the donkey's own game sprite) through a RawImage's `uvRect`.
+- **The header**: the same portrait at 64 px, the name large, the description wrapped by the text component.
+- **The stage**: 440x236, a dark box with a faint edge; the live picture (PreviewStage) up to 3x inside it. One
+  size on every mount: nothing moves.
+- **The stats card** beside it: Speed (the mount's own pin, else the Ride setting in effect), Cart, Babies, Skins
+  (the user's pick; a mount's `[Mount.Stats]` lines and its abilities are read into `Entry.Extra` for a later line).
+- **The look rows** under them: the Mount section's rows (the Skin) and the Effect section's choices (Effect, Effect
+  shown) as copied game rows in two groups, placed where they draw (MeasureRow). A row shown only with a preset is
+  left out until the preset is chosen; a row greyed by a rule stays greyed.
+- **The colours window** ("Colours and effect..."): 800x560 over the journal, which waits hidden; every other look
+  section (the colours under their two headings) in two full columns, the Effect section's toggles under "Effect";
+  Done keeps, Cancel puts back what these rows held when it opened. The journal's own Cancel still covers everything.
+- **Done and Cancel** bottom right, the panel's own buttons (the copied dialog button drew off its rectangle until
+  its hover animation; a game row does too, which is why rows are measured).
+- A dev switch, `Debug.MountsPanelFakeEntries`, pads the list with made-up entries to see it scroll.
 
 ## What stays from the first panel
 

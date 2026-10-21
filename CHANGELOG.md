@@ -37,6 +37,11 @@ For players:
   `colours = own|palette` (was `kind =`; not public yet, the seven cfgs and the tools follow). Cargo's item
   kinds and the dependency manifest's member kinds are other things and keep their word. A pre-1.0 breaking
   change for mods on the API (docs/api-design.md); Saddle Up and the example rebuilt on it.
+- **The Mounts panel, third cut: the journal and a colours window** (2026-10-21; the user: the second cut had a lot of
+  empty space and squashed the customisation). The stage sits beside a stats card (Speed, Cart, Babies, Skins) at
+  one size on every mount; under them the Skin and Effect rows; the colours and the effect's four toggles have a
+  window of their own ("Colours and effect...") with both colour columns at full height and their own Done and
+  Cancel. The list is flat journal rows (the chosen one in red, hover brightens) with a scrollbar; the tabs are gone.
 - **The Mounts panel, second design** (2026-10-21, docs/mounts-panel-design.md; the user: a game's mount journal,
   not a wall of rows): a window of a fixed size that fits 1080p without shrinking; a card list on the left that
   scrolls with the wheel, each card with the mount's icon (its portrait, else its standing picture, made for
