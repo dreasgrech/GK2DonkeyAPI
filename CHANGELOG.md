@@ -20,6 +20,13 @@ For players:
   set-aside-lines scenario passed. The second run, the full set: 697 passed, 0 failed, 0 warnings, 1 skipped;
   the panel's fit measured the same a frame later (the nested layout settles in one pass). The mount-pin
   refusal warning said itself twice (keyed on the skin, before and after one was worn): once per mount and key.
+- **The Mounts panel, second design** (2026-10-21, docs/mounts-panel-design.md; the user: a game's mount journal,
+  not a wall of rows): a window of a fixed size that fits 1080p without shrinking; a card list on the left that
+  scrolls with the wheel, each card with the mount's icon (its portrait, else its standing picture, made for
+  every mount automatically); the chosen mount's portrait, name and description at the top right; its picture
+  with the cart up to 3x on a dark stage; one line of what it does; and its rows under tabs (Skin, Colours,
+  Effect), so only one tab's rows are on screen; a custom colour's rows appear when the preset is Custom instead
+  of sitting there greyed. Done and Cancel as before. Later: colour swatches, a search box, a Call button.
 - **Binding a key no longer presses it.** Setting the Mounts panel key in the Mods menu opened the panel on the
   spot, and the ride and cart keys had the same flaw (binding G hitched): the key you pressed to set the binding
   counted as a press of it. A key just bound now waits until it has been let go.

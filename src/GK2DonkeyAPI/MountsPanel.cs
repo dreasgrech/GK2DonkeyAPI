@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text;
 using GK2DonkeyAPI.Api;
 using LazyBearTechnology;
 using TMPro;
@@ -8,41 +9,54 @@ using UnityEngine.UI;
 
 namespace GK2DonkeyAPI
 {
-    // The Mounts panel (MountSettingsPage.PanelButton / OpenPanel; docs/mounts-foundation-2.md 3, the user's decision of
-    // 2026-10-20: the panel IS the mount list): every mount a player can ride on the left, the chosen one drawn on the
-    // right with its description, what it does (the cart, babies, speed, its effect), its own stat lines and its
-    // abilities, and under them the page's look rows for that mount: its Skin, the effect and the colours. Done keeps
-    // what was chosen, Cancel puts back what was set when the panel opened. Only in a game.
+    // The Mounts panel (MountSettingsPage.PanelButton / OpenPanel; docs/mounts-panel-design.md): a journal of the mounts
+    // a player can ride. A card list on the left (an icon and the name each, scrolling), the chosen mount on the right:
+    // its portrait, name and description, the live picture of it with its cart on a dark stage, a line of what it does,
+    // and under tabs (Skin, Colours, Effect) the page's look rows for it as the game's own rows. Done keeps what was
+    // chosen, Cancel puts back what was set when the panel opened. Only in a game.
     //
-    // It grew out of the look bar (2026-10-18 to 20: the look rows at the bottom of the screen); the Mods menu and the
-    // game's Settings window no longer hold the look rows (the Mount and Skin rows, the colours, the effect), only the
-    // button that opens this, so the settings page stops growing with every mount a player installs (22 cfg keys per
-    // mount stay in the cfg, where they cost nothing). Built from the game's own parts, copied out of its Settings
-    // window: a "< value >" row per setting (SettingsRows), its dialog button for the list and for Done and Cancel. Its
-    // own canvas sorts above the HUD. If a part can't be found or copied, the panel doesn't open and the log says so.
-    //
-    // Nothing in it ever moves while a value changes: the picture sits in a slot of fixed size, a row shown only with
-    // a preset ("Custom") stays in place greyed; choosing another mount rebuilds the right side (only the chosen
-    // mount's rows exist, so thirty installed mounts cost thirty list entries, not thirty sets of rows); a panel larger
-    // than the screen allows is scaled down as a whole, never cut; a list longer than a page is paged.
+    // The first panel (2026-10-20) was built out of nested auto-sizing layout groups and was shrunk to fit at 1080p; this
+    // one is a window of a fixed size (1200x660 on the game's 1280x720 canvas) laid out by hand, scaled only on a
+    // smaller canvas. The game's parts it uses: the window frame sprite, its dialog button (copied for the cards, the
+    // tabs, Done and Cancel), its font (read off one of its labels), and its "< value >" rows (SettingsRows) for the
+    // tabs' content. If a part can't be found, the panel doesn't open and the log says so.
     internal static class MountsPanel
     {
-        private static GameObject panel, picture, pictureSlot, listColumn, rightColumn, infoArea, rowsArea;
-        private static RawImage pictureImage;
-        private static Texture2D pictureTex;
-        private static float nextPicture;
+        private const float W = 1000f, H = 600f, Pad = 20f, Gap = 8f;
+        private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, StatsH = 32f, TabsH = 30f, ButtonsH = 40f, TabW = 110f, CardH = 46f;
+        private const float StageMin = 170f, StageMax = 270f, PictureScale = 3f;
+        private const float IconPx = 36f, HeaderIconPx = 64f;
+        private const float EdgeGap = 24f; // the least room left at the screen's edges before the window is scaled down
+
+        private static GameObject panel;
         private static MountSettingsPage page;
         private static GameObject templateRow;
         private static UIDialogWindowButton dialogTemplate;
+        private static Sprite buttonSprite;      // the game's dialog button face, for the panel's own cards and tabs
+        private static Color buttonTextColor = Color.white;
+        private static TMP_FontAsset font;
+        private static Material fontMaterial;
+        private static Color fontColor = Color.white;
+        private static float fontSize = 18f;
+        private static float rowH = 33f;
+        private static Rect rowVisual = new Rect(0f, 0f, 400f, 33f); // where a copied game row really draws, relative to its rectangle's top left: x and y its offsets (negative: outside), its drawn width and height
+
+        private static RectTransform listContent, rightArea, stage, tabsBar, contentRoot;
+        private static ScrollRect listScroll, contentScroll;
+        private static RawImage headerIcon, picture;
+        private static TextMeshProUGUI titleCount, headerName, headerDesc, statsText, statsText2;
+        private static Texture2D pictureTex;
+        private static float nextPicture;
+        private static bool pictureOff;
+
+        private static readonly List<(string Id, CanvasGroup Group)> cards = new List<(string, CanvasGroup)>();
+        private static readonly List<(string Name, GameObject Go, CanvasGroup Group)> tabButtons = new List<(string, GameObject, CanvasGroup)>();
         private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
-        private static readonly List<(string Id, CanvasGroup Group)> listMarks = new List<(string, CanvasGroup)>();
+        private static readonly List<(string Name, List<(string Group, List<MountSettingsPage.Row> Rows)> Groups)> tabs = new List<(string, List<(string, List<MountSettingsPage.Row>)>)>();
         private static List<Entry> entries = new List<Entry>();
-        private static string builtFor; // the mount the right side was built for
-        private static int listPage;
-        private const int ListPageSize = 10;
-        private const float PictureSlotW = 480f, PictureSlotH = 220f, PictureScale = 2f; // the slot in canvas units; pictures up to 2x
-        private const float EdgeGap = 24f; // the least room left at the screen's edges
-        private const int WrapAt = 58;     // a description is wrapped into lines of about this many characters
+        private static string builtFor;        // the mount the right side was built for
+        private static string tab;             // the tab shown, remembered while the game runs
+        private static string contentSignature; // which rows the tab's content was built with (a preset shows a row: rebuilt)
         private static readonly Dictionary<ConfigEntryBaseKey, object> before = new Dictionary<ConfigEntryBaseKey, object>();
 
         // ConfigEntryBase as a key without a BepInEx using here.
@@ -60,7 +74,8 @@ namespace GK2DonkeyAPI
         internal sealed class Entry
         {
             internal string Id, Label, Description;
-            internal readonly List<string> Lines = new List<string>(); // what it does, its stats, its abilities
+            internal readonly List<string> Lines = new List<string>();  // what it does: the cart, babies, speed, what it comes with, its skins
+            internal readonly List<string> Extra = new List<string>();  // its own stats and abilities
             internal bool HasPortrait;
         }
 
@@ -87,11 +102,11 @@ namespace GK2DonkeyAPI
                 int skins = (k == Kinds.Donkey ? 1 : 0);
                 foreach (Looks.SkinDef sd in Kinds.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
                 if (skins > 1) e.Lines.Add(skins + " skins");
-                if (k.Stats != null) foreach (var st in k.Stats) e.Lines.Add(string.IsNullOrEmpty(st.Value) ? st.Key : st.Key + ": " + st.Value);
+                if (k.Stats != null) foreach (var st in k.Stats) e.Extra.Add(string.IsNullOrEmpty(st.Value) ? st.Key : st.Key + ": " + st.Value);
                 foreach (MountAbility a in k.Abilities)
                 {
                     string name = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
-                    e.Lines.Add(string.IsNullOrEmpty(a.Description) ? name : name + ": " + a.Description);
+                    e.Extra.Add(string.IsNullOrEmpty(a.Description) ? name : name + ": " + a.Description);
                 }
                 list.Add(e);
             }
@@ -173,6 +188,8 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // ---- building ----
+
         private static void Build(UIGameSettingsWindow settings)
         {
             UISwitchButton template = settings.GetComponentInChildren<UISwitchButton>(true);
@@ -183,42 +200,38 @@ namespace GK2DonkeyAPI
             }
             Transform content = SettingsRows.ContentOf(template.transform);
             templateRow = SettingsRows.RowGameObject(template.transform, content);
-            // The window's frame (the path the framework reads too); else a plain dark panel.
             Image frame = settings.transform.Find("GenericWIndowLayout/Frame")?.GetComponent<Image>();
 
-            panel = new GameObject("GK2DonkeyAPI mounts panel", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            panel = new GameObject("GK2DonkeyAPI mounts panel", typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image));
             panel.transform.SetParent(settings.transform.parent, false);
             var canvas = panel.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = 30000;
             var bg = panel.GetComponent<Image>();
             bg.color = new Color(0.11f, 0.12f, 0.15f, 0.97f);
+            var prt = (RectTransform)panel.transform;
+            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
+            prt.pivot = new Vector2(0.5f, 0.5f);
+            prt.anchoredPosition = Vector2.zero;
+            prt.sizeDelta = new Vector2(W, H);
             if (frame != null && frame.sprite != null)
             {
-                var border = new GameObject("GK2DonkeyAPI mounts panel frame", typeof(RectTransform), typeof(Image), typeof(LayoutElement));
-                border.transform.SetParent(panel.transform, false);
-                border.GetComponent<LayoutElement>().ignoreLayout = true;
-                var bi = border.GetComponent<Image>();
+                Image bi = Node("frame", panel.transform, typeof(Image)).GetComponent<Image>();
                 bi.sprite = frame.sprite;
                 bi.type = Image.Type.Sliced;
                 bi.raycastTarget = false;
-                var brt = (RectTransform)border.transform;
-                brt.anchorMin = Vector2.zero;
-                brt.anchorMax = Vector2.one;
-                brt.offsetMin = brt.offsetMax = Vector2.zero;
+                Stretch((RectTransform)bi.transform);
             }
-            var layout = panel.GetComponent<VerticalLayoutGroup>();
-            layout.padding = new RectOffset(24, 24, 16, 16);
-            layout.spacing = 8f;
-            layout.childAlignment = TextAnchor.UpperCenter;
-            layout.childControlWidth = layout.childControlHeight = false;
-            layout.childForceExpandWidth = layout.childForceExpandHeight = false;
-            var fit = panel.GetComponent<ContentSizeFitter>();
-            fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var rt = (RectTransform)panel.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
+            ReadFont();
+            buttonSprite = null;
+            foreach (Image img in dialogTemplate.GetComponentsInChildren<Image>(true))
+            {
+                if (img.sprite != null) { buttonSprite = img.sprite; break; }
+            }
+            TextMeshProUGUI bt = dialogTemplate.GetComponentInChildren<TextMeshProUGUI>(true);
+            if (bt != null) buttonTextColor = bt.color;
+            rowH = Mathf.Max(24f, ((RectTransform)templateRow.transform).rect.height);
+            MeasureRow();
 
             // What was set when the panel opened, for Cancel: every look row of the page (the mount, every mount's
             // skin and colours, the effect), not only the chosen mount's, so Cancel after choosing another mount puts
@@ -229,54 +242,51 @@ namespace GK2DonkeyAPI
                 if (r.IsLook && r.Entry != null) before[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
             }
 
-            SettingsRows.MakeHeading(templateRow, panel.transform, page, "Mounts");
-            var columns = new GameObject("GK2DonkeyAPI mounts panel columns", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
-            columns.transform.SetParent(panel.transform, false);
-            var ch = columns.GetComponent<HorizontalLayoutGroup>();
-            ch.spacing = 32f;
-            ch.childAlignment = TextAnchor.UpperCenter;
-            ch.childControlWidth = ch.childControlHeight = false;
-            ch.childForceExpandWidth = ch.childForceExpandHeight = false;
-            var cf = columns.GetComponent<ContentSizeFitter>();
-            cf.horizontalFit = cf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            listColumn = Column(columns.transform, "list").gameObject;
-            rightColumn = Column(columns.transform, "right").gameObject;
+            // the title line
+            Text(panel.transform, "title", "Mounts", 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, 400f, TitleH);
+            titleCount = Text(panel.transform, "count", "", 0.9f, TextAlignmentOptions.Right, false, W - Pad - 300f, Pad + 2f, 300f, TitleH);
 
-            // the right side: the picture in a slot of fixed size, then the words, then the rows
-            pictureSlot = new GameObject("GK2DonkeyAPI mounts panel picture slot", typeof(RectTransform), typeof(LayoutElement));
-            pictureSlot.transform.SetParent(rightColumn.transform, false);
-            var slotLe = pictureSlot.GetComponent<LayoutElement>();
-            slotLe.preferredWidth = PictureSlotW;
-            slotLe.preferredHeight = PictureSlotH;
-            ((RectTransform)pictureSlot.transform).sizeDelta = new Vector2(PictureSlotW, PictureSlotH);
-            picture = new GameObject("GK2DonkeyAPI mounts panel picture", typeof(RectTransform), typeof(RawImage));
-            picture.transform.SetParent(pictureSlot.transform, false);
-            var prt = (RectTransform)picture.transform;
-            prt.anchorMin = prt.anchorMax = new Vector2(0.5f, 0.5f);
-            prt.pivot = new Vector2(0.5f, 0.5f);
-            pictureImage = picture.GetComponent<RawImage>();
-            pictureImage.raycastTarget = false;
-            picture.SetActive(false);
-            infoArea = Column(rightColumn.transform, "info").gameObject;
-            rowsArea = new GameObject("GK2DonkeyAPI mounts panel rows", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
-            rowsArea.transform.SetParent(rightColumn.transform, false);
-            var rh = rowsArea.GetComponent<HorizontalLayoutGroup>();
-            rh.spacing = 32f;
-            rh.childAlignment = TextAnchor.UpperCenter;
-            rh.childControlWidth = rh.childControlHeight = false;
-            rh.childForceExpandWidth = rh.childForceExpandHeight = false;
-            var rf = rowsArea.GetComponent<ContentSizeFitter>();
-            rf.horizontalFit = rf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            // the list, scrolling
+            float listTop = Pad + TitleH + Gap;
+            float listH = H - listTop - Gap - ButtonsH - Pad;
+            listScroll = ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 6f);
 
-            var buttons = new GameObject("GK2DonkeyAPI mounts panel buttons", typeof(RectTransform), typeof(HorizontalLayoutGroup), typeof(ContentSizeFitter));
-            buttons.transform.SetParent(panel.transform, false);
-            var hl = buttons.GetComponent<HorizontalLayoutGroup>();
-            hl.spacing = 16f;
-            hl.childControlWidth = hl.childControlHeight = false;
-            var bf = buttons.GetComponent<ContentSizeFitter>();
-            bf.horizontalFit = bf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            Button(dialogTemplate, buttons.transform, "Done", () => Close(keep: true));
-            Button(dialogTemplate, buttons.transform, "Cancel", () => Close(keep: false));
+            // the right side
+            float x0 = Pad + ListW + 2f * Gap, rw = W - Pad - x0;
+            rightArea = Rect(Node("right", panel.transform), x0, listTop, rw, H - listTop - Gap - ButtonsH - Pad);
+            headerIcon = Node("portrait", rightArea, typeof(RawImage)).GetComponent<RawImage>();
+            headerIcon.raycastTarget = false;
+            Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
+            headerIcon.gameObject.SetActive(false);
+            headerName = Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f);
+            headerDesc = Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
+            headerDesc.overflowMode = TextOverflowModes.Ellipsis;
+
+            stage = Rect(Node("stage", rightArea, typeof(Image), typeof(Outline)), 0f, HeaderH + Gap, rw, StageMax);
+            var stageImage = stage.GetComponent<Image>();
+            stageImage.color = new Color(0f, 0f, 0f, 0.35f);
+            stageImage.raycastTarget = false;
+            var outline = stage.GetComponent<Outline>();
+            outline.effectColor = new Color(1f, 1f, 1f, 0.12f);
+            outline.effectDistance = new Vector2(1f, -1f);
+            picture = Node("picture", stage, typeof(RawImage)).GetComponent<RawImage>();
+            picture.raycastTarget = false;
+            var pic = (RectTransform)picture.transform;
+            pic.anchorMin = pic.anchorMax = new Vector2(0.5f, 0.5f);
+            pic.pivot = new Vector2(0.5f, 0.5f);
+            picture.gameObject.SetActive(false);
+
+            statsText = Text(rightArea, "stats", "", 0.85f, TextAlignmentOptions.Center, true, 0f, 0f, rw, StatsH);
+            statsText2 = Text(rightArea, "stats 2", "", 0.8f, TextAlignmentOptions.Center, true, 0f, 0f, rw, StatsH);
+            statsText2.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.8f);
+            tabsBar = Rect(Node("tabs", rightArea), 0f, 0f, rw, TabsH);
+            contentScroll = ScrollView(rightArea, "content", 0f, 0f, rw, 100f, out contentRoot, 2f, manual: true);
+
+            // Done and Cancel, bottom right
+            GameObject cancel = Button(dialogTemplate, panel.transform, "Cancel", () => Close(keep: false));
+            BottomRight((RectTransform)cancel.transform, Pad);
+            GameObject done = Button(dialogTemplate, panel.transform, "Done", () => Close(keep: true));
+            BottomRight((RectTransform)done.transform, Pad + Mathf.Max(140f, ((RectTransform)cancel.transform).rect.width + 16f));
 
             entries = Entries();
             pictureOff = false;
@@ -284,47 +294,53 @@ namespace GK2DonkeyAPI
             Mounts.Kinds.KindsChanged -= OnRegistryChanged;
             Mounts.Looks.SkinsChanged += OnRegistryChanged;
             Mounts.Kinds.KindsChanged += OnRegistryChanged;
-            string chosen = page.MountChosen ?? MountKinds.DonkeyId;
-            int at = entries.FindIndex(e => e.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
-            listPage = at < 0 ? 0 : at / ListPageSize;
             BuildList();
             BuildRight();
             panel.SetActive(true);
             FitToScreen();
-            Plugin.Log.LogInfo($"Settings: the Mounts panel of {page.Title} is open ({entries.Count} mount(s), {rows.Count} rows for {chosen}{(panel.transform.localScale.x < 1f ? $", scaled to {panel.transform.localScale.x:0.##} to fit the screen" : "")}).");
+            Plugin.Log.LogInfo($"Settings: the Mounts panel of {page.Title} is open ({entries.Count} mount(s), {rows.Count} rows on the {tab} tab for {builtFor}{(panel.transform.localScale.x < 1f ? $", scaled to {panel.transform.localScale.x:0.##} to fit the screen" : "")}).");
         }
 
-        // The list: one button per mount of the current page of the list, the chosen one full, the others dimmed;
-        // Up and Down when the list is longer than a page.
+        // The list: a card per mount (its icon and name), the chosen one bright, the others dimmed; scrolled to the chosen one.
         private static void BuildList()
         {
-            foreach (Transform c in listColumn.transform) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); } // off before the deferred Destroy: the layout measures the new ones alone
-            listMarks.Clear();
-            int pages = Math.Max(1, (entries.Count + ListPageSize - 1) / ListPageSize);
-            listPage = Mathf.Clamp(listPage, 0, pages - 1);
-            if (pages > 1) Button(dialogTemplate, listColumn.transform, listPage > 0 ? "Up" : "", () => { if (listPage > 0) { listPage--; Plugin.NextFrame(Repage); } }); // a frame later: the clicked button is among the ones rebuilt
-            for (int i = listPage * ListPageSize; i < Math.Min(entries.Count, (listPage + 1) * ListPageSize); i++)
+            foreach (Transform c in listContent) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            cards.Clear();
+            string chosen = page?.MountChosen ?? MountKinds.DonkeyId;
+            int at = -1;
+            for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
                 string id = e.Id;
-                GameObject go = Button(dialogTemplate, listColumn.transform, e.Label, () => Select(id));
-                listMarks.Add((id, go.GetComponent<CanvasGroup>() ?? go.AddComponent<CanvasGroup>())); // the copied button may carry one
+                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 16f, CardH, () => Select(id), textLeft: IconPx + 14f);
+                var le = go.AddComponent<LayoutElement>();
+                le.preferredWidth = ListW - 16f;
+                le.preferredHeight = CardH;
+                le.minHeight = CardH;
+                MountIcons.Icon icon = MountIcons.Of(Kinds.Find(id));
+                if (icon.Any)
+                {
+                    RawImage img = Node("icon", go.transform, typeof(RawImage)).GetComponent<RawImage>();
+                    img.raycastTarget = false;
+                    Show(img, icon, IconPx);
+                    var irt = (RectTransform)img.transform;
+                    irt.anchorMin = irt.anchorMax = new Vector2(0f, 0.5f);
+                    irt.pivot = new Vector2(0f, 0.5f);
+                    irt.anchoredPosition = new Vector2(8f + (IconPx - irt.sizeDelta.x) / 2f, 0f);
+                }
+                cards.Add((id, go.GetComponent<CanvasGroup>()));
+                if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = i;
             }
-            if (pages > 1) Button(dialogTemplate, listColumn.transform, listPage < pages - 1 ? "Down" : "", () => { if (listPage < pages - 1) { listPage++; Plugin.NextFrame(Repage); } });
+            titleCount.text = entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
             MarkList();
-        }
-
-        private static void Repage()
-        {
-            if (panel == null || listColumn == null) return;
-            BuildList();
-            FitToScreen();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
+            if (at >= 0 && entries.Count > 1) listScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(at / (float)(entries.Count - 1));
         }
 
         private static void MarkList()
         {
             string chosen = page?.MountChosen ?? MountKinds.DonkeyId;
-            foreach ((string id, CanvasGroup g) in listMarks)
+            foreach ((string id, CanvasGroup g) in cards)
             {
                 if (g != null) g.alpha = id.Equals(chosen, StringComparison.OrdinalIgnoreCase) ? 1f : 0.55f;
             }
@@ -338,43 +354,46 @@ namespace GK2DonkeyAPI
             page.SelectMount(id);
             BuildRight();
             MarkList();
-            FitToScreen();
         }
 
+        // The right side for the chosen mount: the header, the stats lines, the tabs (the page's look sections that have
+        // rows for this mount), then the tab's content.
         private static void BuildRight()
         {
-            foreach (Transform c in infoArea.transform) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
-            foreach (Transform c in rowsArea.transform) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
-            rows.Clear();
             string chosen = page.MountChosen ?? MountKinds.DonkeyId;
             builtFor = chosen;
             Entry e = entries.Find(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
+            Kinds.KindDef k = Kinds.Find(chosen);
+            MountIcons.Icon icon = MountIcons.Of(k);
+            headerIcon.gameObject.SetActive(icon.Any);
+            if (icon.Any) Show(headerIcon, icon, HeaderIconPx);
+            float textX = icon.Any ? HeaderIconPx + 12f : 0f;
+            Rect(headerName.gameObject, textX, 0f, rightArea.rect.width - textX, 32f);
+            Rect(headerDesc.gameObject, textX, 32f, rightArea.rect.width - textX, HeaderH - 32f);
             if (e != null)
             {
-                SettingsRows.MakeHeading(templateRow, infoArea.transform, page, e.Label);
-                Texture2D portrait = null;
-                try { portrait = Looks.PortraitOfKind(Kinds.Find(chosen)); } catch (Exception ex) { Plugin.Log.LogWarning($"Settings: the portrait of {chosen} could not be read: {ex.Message}"); }
-                if (portrait != null) Portrait(portrait);
-                foreach (string line in Wrap(e.Description)) Line(line);
-                foreach (string line in e.Lines) foreach (string part in Wrap(line)) Line(part);
+                headerName.text = e.Label;
+                headerDesc.text = e.Description;
+                statsText.text = string.Join("   ·   ", e.Lines);
+                statsText2.text = string.Join("   ·   ", e.Extra);
             }
             else
             {
                 // the chosen mount is not in the list: its mod or pack is gone, or its every skin is set aside (a game-source
                 // skin whose frames the game lacks); the choice is kept, the donkey comes instead, and the panel says so
-                Kinds.KindDef k = Kinds.Find(chosen);
                 string why = null;
                 if (k != null) foreach (Looks.SkinDef sd in Kinds.SkinsOf(k)) if (sd.Unavailable != null) { why = sd.Unavailable; break; }
-                SettingsRows.MakeHeading(templateRow, infoArea.transform, page, k?.Label ?? chosen);
-                string said = k == null ? "Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
+                headerName.text = k?.Label ?? chosen;
+                headerDesc.text = k == null ? "Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
                     : why != null ? "Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead."
                     : "It has no skin to wear. Your choice is kept; the donkey comes instead.";
-                foreach (string line in Wrap(said)) Line(line);
+                statsText.text = "";
+                statsText2.text = "";
             }
-            // the page's look rows that show for this mount, in groups as on the page (a section, or a heading inside
-            // one with the rows after it), dealt into two columns by their counts
-            var sections = new List<(string Name, List<MountSettingsPage.Row> Rows)>();
-            int total = 0;
+            statsText2.gameObject.SetActive(statsText2.text.Length > 0);
+
+            // the tabs: a look section of the page with rows for this mount; inside a tab, the groups under its look headings
+            tabs.Clear();
             string heading = null, headingSection = null;
             foreach (MountSettingsPage.Row r in page.Rows)
             {
@@ -387,92 +406,317 @@ namespace GK2DonkeyAPI
                 }
                 if (r.Shown != null && !r.Shown()) continue; // another mount's row
                 if (page.IsMountRow(r)) continue; // the list is the picker
-                string name = heading != null && r.ShownSection == headingSection ? heading : r.ShownSection;
-                int at = sections.FindIndex(s => s.Name == name);
-                if (at < 0)
+                string tabName = TabName(r.ShownSection);
+                string group = heading != null && r.ShownSection == headingSection ? heading : null;
+                int ti = tabs.FindIndex(t => t.Name == tabName);
+                if (ti < 0)
                 {
-                    sections.Add((name, new List<MountSettingsPage.Row>()));
-                    at = sections.Count - 1;
+                    tabs.Add((tabName, new List<(string, List<MountSettingsPage.Row>)>()));
+                    ti = tabs.Count - 1;
                 }
-                sections[at].Rows.Add(r);
-                total++;
-            }
-            Transform left = Column(rowsArea.transform, "rows left"), right = sections.Count > 1 ? Column(rowsArea.transform, "rows right") : null;
-            int inLeft = 0, half = (total + 1) / 2;
-            bool rightStarted = false;
-            for (int s = 0; s < sections.Count; s++)
-            {
-                int shown = sections[s].Rows.Count;
-                bool toLeft = right == null || (!rightStarted && s < sections.Count - 1 && Math.Abs(inLeft + shown - half) <= Math.Abs(inLeft - half));
-                Transform column = toLeft ? left : right;
-                if (toLeft) inLeft += shown; else rightStarted = true;
-                SettingsRows.MakeHeading(templateRow, column, page, sections[s].Name);
-                foreach (MountSettingsPage.Row r in sections[s].Rows)
+                int gi = tabs[ti].Groups.FindIndex(g => g.Group == group);
+                if (gi < 0)
                 {
-                    GameObject go = SettingsRows.MakeRow(templateRow, column, r, page, out Action refresh);
-                    go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
-                    CanvasGroup group = r.Enabled != null || (r.Shown == null && r.Visible != null) ? go.AddComponent<CanvasGroup>() : null;
-                    rows.Add((r, go, refresh, group));
+                    tabs[ti].Groups.Add((group, new List<MountSettingsPage.Row>()));
+                    gi = tabs[ti].Groups.Count - 1;
                 }
+                tabs[ti].Groups[gi].Rows.Add(r);
             }
-            if (right != null && right.childCount == 0)
+            if (tab == null || !tabs.Exists(t => t.Name == tab)) tab = tabs.Count > 0 ? tabs[0].Name : null;
+            foreach (Transform c in tabsBar) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            tabButtons.Clear();
+            float tx = 0f;
+            foreach (var t in tabs)
             {
-                UnityEngine.Object.Destroy(right.gameObject);
+                string name = t.Name;
+                GameObject go = OwnButton(tabsBar, "tab " + name, name, TabW, TabsH, () => ShowTab(name));
+                Rect(go, tx, 0f, TabW, TabsH);
+                tx += TabW + 8f;
+                tabButtons.Add((name, go, go.GetComponent<CanvasGroup>()));
             }
+            BuildTab();
+        }
+
+        private static string TabName(string section)
+        {
+            if (string.Equals(section, "Mount", StringComparison.OrdinalIgnoreCase)) return "Skin";
+            return section ?? "Look";
+        }
+
+        private static void ShowTab(string name)
+        {
+            if (tab == name) return;
+            tab = name;
+            BuildTab();
+        }
+
+        // The tab's content: its groups as columns (two side by side, more stacked), each a heading and the rows shown now;
+        // a row shown only with a preset (a custom colour) is left out until the preset is chosen. The stage takes the
+        // room the rows don't need; the rows scroll when they need more than is left.
+        private static void BuildTab()
+        {
+            foreach (var (name, go, group) in tabButtons)
+            {
+                if (group != null) group.alpha = name == tab ? 1f : 0.55f;
+            }
+            foreach (Transform c in contentRoot) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
+            rows.Clear();
+            var sig = new StringBuilder(tab ?? "");
+            float needed = 0f;
+            int ti = tabs.FindIndex(t => t.Name == tab);
+            if (ti >= 0)
+            {
+                // the groups as columns (two side by side, more in further rows), centred in the tab area; each row and
+                // heading placed where its drawing (not its rectangle) lands: rowVisual says where that is
+                var groups = tabs[ti].Groups;
+                int perRow = groups.Count > 1 ? 2 : 1;
+                float colW = rowVisual.width, colGap = 16f, step = rowVisual.height + 4f;
+                float areaW = rightArea.rect.width;
+                float y = 4f;
+                for (int g0 = 0; g0 < groups.Count; g0 += perRow)
+                {
+                    int cols = Math.Min(perRow, groups.Count - g0);
+                    float totalW = cols * colW + (cols - 1) * colGap;
+                    float x0 = Math.Max(0f, (areaW - totalW) / 2f);
+                    float rowTop = y, tallest = 0f;
+                    for (int ci = 0; ci < cols; ci++)
+                    {
+                        var group = groups[g0 + ci];
+                        float cx = x0 + ci * (colW + colGap), cy = rowTop;
+                        if (group.Group != null)
+                        {
+                            GameObject h = SettingsRows.MakeHeading(templateRow, contentRoot, page, group.Group);
+                            Place(h, cx - rowVisual.x, cy - rowVisual.y);
+                            cy += step;
+                        }
+                        foreach (MountSettingsPage.Row r in group.Rows)
+                        {
+                            bool visible = r.Visible == null || r.Visible();
+                            sig.Append(visible ? '1' : '0');
+                            if (!visible) continue; // shown only with a preset: not now
+                            GameObject go = SettingsRows.MakeRow(templateRow, contentRoot, r, page, out Action refresh);
+                            go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
+                            Place(go, cx - rowVisual.x, cy - rowVisual.y);
+                            CanvasGroup grp = r.Enabled != null ? go.AddComponent<CanvasGroup>() : null;
+                            rows.Add((r, go, refresh, grp));
+                            cy += step;
+                        }
+                        tallest = Math.Max(tallest, cy - rowTop);
+                    }
+                    y = rowTop + tallest + 8f;
+                }
+                needed = y;
+            }
+            contentSignature = sig.ToString();
+            contentRoot.sizeDelta = new Vector2(0f, needed);
+            Layout(needed);
             Refresh();
         }
 
-        private static void Line(string text)
+        // The right side's vertical layout for a tab whose rows need `needed` units: the stage takes what is left between
+        // its bounds, the content scrolls when that is not enough.
+        private static void Layout(float needed)
         {
-            GameObject go = SettingsRows.MakeHeading(templateRow, infoArea.transform, page, text);
-            foreach (TextMeshProUGUI t in go.GetComponentsInChildren<TextMeshProUGUI>(true))
+            float rw = rightArea.rect.width;
+            float below = Gap + StatsH + (statsText2.gameObject.activeSelf ? StatsH * 0.7f : 0f) + 4f + TabsH + 6f;
+            float avail = rightArea.rect.height - (HeaderH + Gap) - below;
+            float stageH = Mathf.Clamp(avail - needed - 4f, StageMin, StageMax);
+            float contentH = Mathf.Max(60f, avail - stageH);
+            float y = HeaderH + Gap;
+            Rect(stage.gameObject, 0f, y, rw, stageH);
+            y += stageH + Gap;
+            Rect(statsText.gameObject, 0f, y, rw, StatsH);
+            y += StatsH;
+            if (statsText2.gameObject.activeSelf)
             {
-                t.enableAutoSizing = false; // the size set here stays (an auto-size pass would undo it)
-                t.fontSize *= 0.85f; // a line of words, a size under the headings
-                t.fontStyle = FontStyles.Normal;
-                t.textWrappingMode = TextWrappingModes.NoWrap; // Wrap() made the lines; a second wrap inside a fixed-height row would overlap the next
-                t.overflowMode = TextOverflowModes.Overflow;
+                Rect(statsText2.gameObject, 0f, y, rw, StatsH * 0.7f);
+                y += StatsH * 0.7f;
             }
+            y += 4f;
+            Rect(tabsBar.gameObject, 0f, y, rw, TabsH);
+            y += TabsH + 6f;
+            Rect(contentScroll.gameObject, 0f, y, rw, contentH);
+            contentScroll.verticalNormalizedPosition = 1f;
         }
 
-        // The mount's portrait (a pack's PNG, or a code kind's texture) under its name: pixel art shown whole, 2x when
-        // small, never past 96 px a side.
-        private static void Portrait(Texture2D tex)
-        {
-            var go = new GameObject("GK2DonkeyAPI mounts panel portrait", typeof(RectTransform), typeof(RawImage));
-            go.transform.SetParent(infoArea.transform, false);
-            RawImage img = go.GetComponent<RawImage>();
-            img.texture = tex;
-            img.raycastTarget = false;
-            float scale = Mathf.Max(tex.width, tex.height) <= 48 ? 2f : Mathf.Min(1f, 96f / Mathf.Max(1, Mathf.Max(tex.width, tex.height)));
-            ((RectTransform)go.transform).sizeDelta = new Vector2(Mathf.Round(tex.width * scale), Mathf.Round(tex.height * scale));
-        }
+        // ---- the pieces ----
 
-        // Words wrapped into lines of about WrapAt characters (a copied label row doesn't wrap by itself).
-        private static IEnumerable<string> Wrap(string text)
+        private static void ReadFont()
         {
-            if (string.IsNullOrEmpty(text)) yield break;
-            var line = new System.Text.StringBuilder();
-            foreach (string word in text.Split(' '))
+            GameObject probe = SettingsRows.MakeHeading(templateRow, panel.transform, page, "probe");
+            TextMeshProUGUI t = null;
+            foreach (TextMeshProUGUI c in probe.GetComponentsInChildren<TextMeshProUGUI>(true))
             {
-                if (line.Length > 0 && line.Length + 1 + word.Length > WrapAt)
+                if (t == null || c.gameObject.activeInHierarchy) t = c;
+            }
+            if (t != null)
+            {
+                font = t.font;
+                fontMaterial = t.fontSharedMaterial;
+                fontColor = t.color;
+                fontSize = t.fontSize > 0f ? t.fontSize : fontSize;
+            }
+            probe.SetActive(false);
+            UnityEngine.Object.Destroy(probe);
+        }
+
+        private static GameObject Node(string name, Transform parent, params Type[] components)
+        {
+            var types = new Type[components.Length + 1];
+            types[0] = typeof(RectTransform);
+            Array.Copy(components, 0, types, 1, components.Length);
+            var go = new GameObject("GK2DonkeyAPI mounts panel " + name, types);
+            go.transform.SetParent(parent, false);
+            return go;
+        }
+
+        // A rectangle placed from the top left of its parent.
+        private static RectTransform Rect(GameObject go, float x, float y, float w, float h)
+        {
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.anchoredPosition = new Vector2(x, -y);
+            rt.sizeDelta = new Vector2(w, h);
+            return rt;
+        }
+
+        // A copied row or heading put at x, y from the top left of its parent, its size kept.
+        private static void Place(GameObject go, float x, float y)
+        {
+            var rt = (RectTransform)go.transform;
+            Vector2 size = rt.rect.size;
+            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
+            rt.pivot = new Vector2(0f, 1f);
+            rt.sizeDelta = size;
+            rt.anchoredPosition = new Vector2(x, -y);
+            var le = go.GetComponent<LayoutElement>();
+            if (le != null) le.ignoreLayout = true;
+        }
+
+        // Where the game's own row draws, relative to its rectangle's top left: its parts hang outside the rectangle (the
+        // label to the left, the value box to the right), so a row is placed by where it draws, not by its rectangle.
+        private static void MeasureRow()
+        {
+            try
+            {
+                var root = (RectTransform)templateRow.transform;
+                var corners = new Vector3[4];
+                float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
+                foreach (RectTransform r in templateRow.GetComponentsInChildren<RectTransform>(true))
                 {
-                    yield return line.ToString();
-                    line.Clear();
+                    if (!ActiveUnder(r.transform, root)) continue;
+                    if (r.rect.width <= 0f || r.rect.height <= 0f) continue;
+                    r.GetWorldCorners(corners);
+                    foreach (Vector3 c in corners)
+                    {
+                        Vector3 l = root.InverseTransformPoint(c);
+                        minX = Math.Min(minX, l.x); maxX = Math.Max(maxX, l.x);
+                        minY = Math.Min(minY, l.y); maxY = Math.Max(maxY, l.y);
+                    }
                 }
-                if (line.Length > 0) line.Append(' ');
-                line.Append(word);
+                if (maxX <= minX || maxY <= minY) return;
+                root.GetWorldCorners(corners);
+                Vector3 topLeft = root.InverseTransformPoint(corners[1]);
+                rowVisual = new Rect(minX - topLeft.x, topLeft.y - maxY, maxX - minX, maxY - minY); // y down: a drawn part above the rectangle gives a negative y
+                rowH = rowVisual.height;
+                Plugin.Log.LogInfo($"Settings: a game row draws {rowVisual.width:0}x{rowVisual.height:0} at {rowVisual.x:0},{rowVisual.y:0} from its rectangle's top left ({root.rect.width:0}x{root.rect.height:0}).");
             }
-            if (line.Length > 0) yield return line.ToString();
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("Settings: the game row could not be measured (" + e.Message + "); the panel places rows by their rectangle.");
+            }
+        }
+
+        private static bool ActiveUnder(Transform t, Transform root)
+        {
+            for (Transform p = t; p != null && p != root; p = p.parent)
+            {
+                if (!p.gameObject.activeSelf) return false;
+            }
+            return true;
+        }
+
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+        }
+
+        private static void BottomRight(RectTransform rt, float fromRight)
+        {
+            rt.anchorMin = rt.anchorMax = new Vector2(1f, 0f);
+            rt.pivot = new Vector2(1f, 0f);
+            rt.anchoredPosition = new Vector2(-fromRight, Pad);
+            var le = rt.GetComponent<LayoutElement>();
+            if (le != null) le.ignoreLayout = true;
+        }
+
+        private static TextMeshProUGUI Text(Transform parent, string name, string text, float sizeMul, TextAlignmentOptions align, bool wrap, float x, float y, float w, float h)
+        {
+            var t = Node(name, parent, typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
+            if (font != null) t.font = font;
+            if (fontMaterial != null) t.fontSharedMaterial = fontMaterial;
+            t.color = fontColor;
+            t.fontSize = fontSize * sizeMul;
+            t.enableAutoSizing = false;
+            t.alignment = align;
+            t.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            t.overflowMode = TextOverflowModes.Overflow;
+            t.raycastTarget = false;
+            t.richText = false;
+            t.text = text;
+            Rect(t.gameObject, x, y, w, h);
+            return t;
+        }
+
+        // A scroll view: the wheel scrolls; a vertical layout of children inside (or rows of columns when horizontalColumns).
+        private static ScrollRect ScrollView(Transform parent, string name, float x, float y, float w, float h, out RectTransform content, float spacing, bool manual = false)
+        {
+            GameObject go = Node(name, parent, typeof(ScrollRect), typeof(RectMask2D));
+            Rect(go, x, y, w, h);
+            var sr = go.GetComponent<ScrollRect>();
+            GameObject viewport = Node(name + " viewport", go.transform, typeof(RectMask2D));
+            Stretch((RectTransform)viewport.transform);
+            GameObject c = manual ? Node(name + " content", viewport.transform) : Node(name + " content", viewport.transform, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
+            var crt = (RectTransform)c.transform;
+            crt.anchorMin = new Vector2(0f, 1f);
+            crt.anchorMax = new Vector2(1f, 1f);
+            crt.pivot = new Vector2(0.5f, 1f);
+            crt.offsetMin = new Vector2(0f, 0f);
+            crt.offsetMax = new Vector2(0f, 0f);
+            if (!manual)
+            {
+                var vl = c.GetComponent<VerticalLayoutGroup>();
+                vl.spacing = spacing;
+                vl.padding = new RectOffset(4, 4, 2, 2);
+                vl.childAlignment = TextAnchor.UpperLeft;
+                vl.childControlWidth = true;
+                vl.childControlHeight = true;
+                vl.childForceExpandWidth = false;
+                vl.childForceExpandHeight = false;
+                var cf = c.GetComponent<ContentSizeFitter>();
+                cf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+                cf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            }
+            sr.content = crt;
+            sr.viewport = (RectTransform)viewport.transform;
+            sr.horizontal = false;
+            sr.vertical = true;
+            sr.movementType = ScrollRect.MovementType.Clamped;
+            sr.scrollSensitivity = 30f;
+            sr.inertia = false;
+            content = crt;
+            return sr;
         }
 
         private static Transform Column(Transform parent, string name)
         {
-            var col = new GameObject("GK2DonkeyAPI mounts panel " + name, typeof(RectTransform), typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-            col.transform.SetParent(parent, false);
+            var col = Node(name, parent, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
             var vl = col.GetComponent<VerticalLayoutGroup>();
             vl.spacing = 4f;
-            vl.childAlignment = TextAnchor.UpperCenter;
+            vl.childAlignment = TextAnchor.UpperLeft;
             vl.childControlWidth = vl.childControlHeight = false;
             vl.childForceExpandWidth = vl.childForceExpandHeight = false;
             var f = col.GetComponent<ContentSizeFitter>();
@@ -480,51 +724,44 @@ namespace GK2DonkeyAPI
             return col.transform;
         }
 
-        // The whole panel scaled down when it would reach past the screen (the game's canvas), in width or height,
-        // never cut.
-        private static bool refitQueued, pictureOff;
-
-        private static void FitToScreen()
+        // An icon shown whole inside a square of px canvas units, pixel art at a whole-number scale when it fits one.
+        private static void Show(RawImage img, MountIcons.Icon icon, float px)
         {
-            FitNow();
-            if (refitQueued) return;
-            refitQueued = true;
-            Plugin.NextFrame(() =>
+            img.texture = icon.Texture;
+            img.uvRect = icon.Uv;
+            float k = Mathf.Min(px / Mathf.Max(1, icon.W), px / Mathf.Max(1, icon.H));
+            if (k >= 1f) k = Mathf.Floor(k);
+            ((RectTransform)img.transform).sizeDelta = new Vector2(Mathf.Round(icon.W * k), Mathf.Round(icon.H * k));
+        }
+
+        // A button of the panel's own, drawn with the game's dialog button face (sliced to any size) and its font: the
+        // cards and the tabs. A CanvasGroup on it dims it (the chosen card, the shown tab stay bright).
+        private static GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f)
+        {
+            GameObject go = Node(name, parent, typeof(Image), typeof(UnityEngine.UI.Button), typeof(CanvasGroup));
+            Rect(go, 0f, 0f, w, h);
+            var img = go.GetComponent<Image>();
+            if (buttonSprite != null)
             {
-                refitQueued = false;
-                if (panel != null && panel.activeSelf) FitNow(); // the nested fitters have had a layout pass of their own by now
-            });
-        }
-
-        // The self-test's view of the panel ("settings: the Mounts panel opens...").
-        internal static int TestRows => rows.Count;
-        internal static int TestEntries => entries.Count;
-        internal static string TestBuiltFor => builtFor;
-        internal static void TestSelect(string id) => Select(id);
-        internal static void TestClose(bool keep) => Close(keep);
-        internal static (float W, float H, float Scale, float RoomW, float RoomH) TestMeasure()
-        {
-            if (panel == null) return default;
-            var rt = (RectTransform)panel.transform;
-            var canvasRt = panel.transform.parent as RectTransform;
-            return (rt.rect.width, rt.rect.height, panel.transform.localScale.x, canvasRt != null ? canvasRt.rect.width - 2f * EdgeGap : 0f, canvasRt != null ? canvasRt.rect.height - 2f * EdgeGap : 0f);
-        }
-
-        private static void FitNow()
-        {
-            if (panel == null) return;
-            var rt = (RectTransform)panel.transform;
-            rt.RefreshContentFitter();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
-            var canvasRt = panel.transform.parent as RectTransform;
-            if (canvasRt == null) return;
-            float roomH = canvasRt.rect.height - 2f * EdgeGap, roomW = canvasRt.rect.width - 2f * EdgeGap;
-            float scale = 1f;
-            if (rt.rect.height > roomH && rt.rect.height > 0f) scale = Mathf.Min(scale, roomH / rt.rect.height);
-            if (rt.rect.width > roomW && rt.rect.width > 0f) scale = Mathf.Min(scale, roomW / rt.rect.width);
-            scale = Mathf.Max(0.5f, scale);
-            panel.transform.localScale = new Vector3(scale, scale, 1f);
-            Plugin.Log.LogInfo($"Settings: the Mounts panel measures {rt.rect.width:0}x{rt.rect.height:0} (room {roomW:0}x{roomH:0}): scale {scale:0.##}."); // measure: the second line (a frame later) must match the first, else the nested layout settles late
+                img.sprite = buttonSprite;
+                img.type = buttonSprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
+            }
+            else
+            {
+                img.color = new Color(0.45f, 0.12f, 0.12f, 1f);
+            }
+            var b = go.GetComponent<UnityEngine.UI.Button>();
+            b.targetGraphic = img;
+            ColorBlock cb = b.colors;
+            cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
+            cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            b.colors = cb;
+            b.onClick.AddListener(() => onClick());
+            TextMeshProUGUI t = Text(go.transform, "label", text, 1f, textLeft > 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center, false, textLeft, 0f, w - textLeft - 6f, h);
+            t.color = buttonTextColor;
+            t.overflowMode = TextOverflowModes.Ellipsis;
+            t.fontStyle = FontStyles.Bold;
+            return go;
         }
 
         private static GameObject Button(UIDialogWindowButton template, Transform parent, string text, Action onClick)
@@ -539,6 +776,10 @@ namespace GK2DonkeyAPI
             {
                 t.text = text;
             }
+            foreach (Image img in go.GetComponentsInChildren<Image>(true))
+            {
+                if (img.sprite != null && img.sprite.border != Vector4.zero && img.type == Image.Type.Simple) img.type = Image.Type.Sliced; // stretched to a card's size without stretching its art
+            }
             LazyButton b = go.GetComponentInChildren<LazyButton>(true);
             b.onClick.RemoveAllListeners();
             b.onClick.AddListener(() => onClick());
@@ -546,8 +787,33 @@ namespace GK2DonkeyAPI
             return go;
         }
 
-        // After a change: every row's value (one row's change can show another), and the rows that go with a preset
-        // greyed or live; the layout never moves.
+        // The window scaled down as a whole when the canvas is smaller than it (never cut), centred.
+        private static void FitToScreen()
+        {
+            if (panel == null) return;
+            var canvasRt = panel.transform.parent as RectTransform;
+            if (canvasRt == null) return;
+            float roomH = canvasRt.rect.height - 2f * EdgeGap, roomW = canvasRt.rect.width - 2f * EdgeGap;
+            float scale = Mathf.Min(1f, roomW / W, roomH / H);
+            scale = Mathf.Max(0.5f, scale);
+            panel.transform.localScale = new Vector3(scale, scale, 1f);
+        }
+
+        // The self-test's view of the panel ("settings: the Mounts panel opens...").
+        internal static int TestRows => rows.Count;
+        internal static int TestEntries => entries.Count;
+        internal static string TestBuiltFor => builtFor;
+        internal static void TestSelect(string id) => Select(id);
+        internal static void TestClose(bool keep) => Close(keep);
+        internal static (float W, float H, float Scale, float RoomW, float RoomH) TestMeasure()
+        {
+            if (panel == null) return default;
+            var canvasRt = panel.transform.parent as RectTransform;
+            return (W, H, panel.transform.localScale.x, canvasRt != null ? canvasRt.rect.width - 2f * EdgeGap : 0f, canvasRt != null ? canvasRt.rect.height - 2f * EdgeGap : 0f);
+        }
+
+        // After a change: every row's value (one row's change can show another), the rows a rule greys; the tab's
+        // content built again when a preset shows or hides a row; the right side built again when the mount changed.
         internal static void Refresh()
         {
             if (panel == null)
@@ -559,16 +825,22 @@ namespace GK2DonkeyAPI
             {
                 BuildRight(); // the mount changed under the panel (the cfg, a key): the right side follows
                 MarkList();
-                FitToScreen();
+                return;
+            }
+            var sig = new StringBuilder(tab ?? "");
+            int ti = tabs.FindIndex(t => t.Name == tab);
+            if (ti >= 0) foreach (var g in tabs[ti].Groups) foreach (MountSettingsPage.Row r in g.Rows) sig.Append(r.Visible == null || r.Visible() ? '1' : '0');
+            if (sig.ToString() != contentSignature)
+            {
+                BuildTab(); // a preset chosen or left: its rows come or go
                 return;
             }
             foreach (var (row, go, refresh, group) in rows)
             {
                 refresh?.Invoke();
-                Func<bool> enabled = row.Enabled ?? (row.Shown == null ? row.Visible : null);
-                bool on = enabled == null || enabled();
                 if (group != null)
                 {
+                    bool on = row.Enabled == null || row.Enabled();
                     group.alpha = on ? 1f : 0.4f;
                     group.interactable = on;
                     group.blocksRaycasts = on;
@@ -619,20 +891,20 @@ namespace GK2DonkeyAPI
                 }
                 if (pic != null)
                 {
-                    // as large as the slot allows, up to PictureScale, centred in it: the slot's size never changes
-                    pictureImage.texture = pic;
+                    // as large as the stage allows, up to PictureScale, centred in it
+                    picture.texture = pic;
                     Vector2 art = PreviewStage.ArtSize(pic);
-                    float k = Mathf.Min(PictureScale, PictureSlotW / Mathf.Max(1f, art.x), PictureSlotH / Mathf.Max(1f, art.y));
+                    float k = Mathf.Min(PictureScale, (stage.rect.width - 16f) / Mathf.Max(1f, art.x), (stage.rect.height - 16f) / Mathf.Max(1f, art.y)); // the stage renders at 3x detail: a fraction of that is a smooth downscale
                     ((RectTransform)picture.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
                 }
-                picture.SetActive(pic != null);
+                picture.gameObject.SetActive(pic != null);
             }
             catch (Exception e)
             {
                 Plugin.Log.LogInfo("Settings: the Mounts panel's picture is off (" + e.Message + ").");
                 if (picture != null)
                 {
-                    picture.SetActive(false);
+                    picture.gameObject.SetActive(false);
                 }
                 pictureOff = true; // the picture alone: the panel keeps following the mount
             }
@@ -655,7 +927,6 @@ namespace GK2DonkeyAPI
                     entries = Entries();
                     BuildList();
                     BuildRight();
-                    FitToScreen();
                 }
                 catch (Exception e)
                 {
@@ -692,8 +963,11 @@ namespace GK2DonkeyAPI
             }
             before.Clear();
             rows.Clear();
-            listMarks.Clear();
+            cards.Clear();
+            tabButtons.Clear();
+            tabs.Clear();
             builtFor = null;
+            contentSignature = null;
             if (panel != null)
             {
                 UnityEngine.Object.Destroy(panel);
@@ -705,10 +979,14 @@ namespace GK2DonkeyAPI
                 pictureTex = null;
             }
             picture = null;
-            pictureSlot = null;
-            listColumn = rightColumn = infoArea = rowsArea = null;
+            headerIcon = null;
+            listContent = rightArea = stage = tabsBar = contentRoot = null;
+            listScroll = contentScroll = null;
+            titleCount = headerName = headerDesc = statsText = statsText2 = null;
             templateRow = null;
             dialogTemplate = null;
+            font = null;
+            fontMaterial = null;
             nextPicture = 0f;
             page = null;
         }

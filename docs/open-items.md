@@ -315,6 +315,12 @@ closed):
   "named game frame(s) are there" line, not "set aside" (an unannounced warning that would fail four scenarios).
   **A stale loose copy** of a Saddle Up pack under `BepInEx\plugins` (rat, snail, worm, dragon, gerry from when
   the API shipped them) would log "replaces the one from" at start: delete it.
+- **The second Mounts panel, by eye** (built 2026-10-21, docs/mounts-panel-design.md): the cards' icons (every
+  mount should have one: the donkey's and Gerry's from the game's sprites, the packs' from their standing
+  picture, Hellfire's the donkey's); the card text next to the icon, not under it; the picture at 3x inside the
+  stage; the stats line readable; the three tabs; the Colours tab in two columns with the custom rows appearing
+  on Custom; scrolling the list and a long tab with the wheel; the fonts the game's own; the frame; Done and
+  Cancel bottom right. The log line says the tab and the row count; no "scaled to" at 1080p.
 - **The Mounts panel key with the Mods menu open** (pass 3): `OutOfTheWay` closes the Settings window and the pause
   menu; the framework's Mods menu is toggled off only on the button path (FrameworkLink), so a key press while the
   Mods menu shows leaves it open under the panel. The key is none by default. Fix when the framework offers an

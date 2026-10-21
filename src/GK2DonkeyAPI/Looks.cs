@@ -836,7 +836,7 @@ namespace GK2DonkeyAPI
         }
 
         // A PNG's pixels (bottom row first), or null with the reason.
-        private static Color32[] DecodePng(byte[] png, out int w, out int h, out string why)
+        internal static Color32[] DecodePng(byte[] png, out int w, out int h, out string why)
         {
             w = h = 0;
             why = null;
@@ -888,6 +888,7 @@ namespace GK2DonkeyAPI
         // A skin withdrawn, replaced or reloaded: its portrait (and its mount's stand-in) read again next time.
         internal static void ForgetPortraits(string id)
         {
+            MountIcons.Forget(id); // its decoded standing picture too
             foreach (string key in new List<string>(portraits.Keys))
             {
                 if (!key.StartsWith(id + "|", StringComparison.OrdinalIgnoreCase) && !key.StartsWith(id + "(mount)|", StringComparison.OrdinalIgnoreCase)) continue;
