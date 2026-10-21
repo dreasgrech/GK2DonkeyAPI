@@ -41,7 +41,7 @@ namespace GK2DonkeyAPI.Api
             internal Func<string> InfoValue;
             internal Func<bool> Visible;     // shown at all (Shown and Enabled together, for the menus)
             internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
-            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel greys the row when false
+            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel leaves the row out while false (a custom colour shows with its preset), the Settings window greys it
             internal bool IsLook;           // the Mounts panel's, not the menus' (InMenu); a Note with it is a heading there (Heading)
             internal Action OnClick;         // RowKind.Button
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
@@ -442,6 +442,7 @@ namespace GK2DonkeyAPI.Api
 
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
         internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
+        internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.Use(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
         internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
 
         // Whether a row is the menus' (the Mods menu, the game's Settings window, the menu labels) or the Mounts panel's:
@@ -723,7 +724,7 @@ namespace GK2DonkeyAPI.Api
 
         // A button that closes the menu and opens the Mounts panel over the game: every mount listed, the chosen one
         // drawn with its description, what it does and its abilities, and the page's look rows for it (its Skin, the
-        // effect, the colours), with Done (keep) and Cancel (put back). Only in a game; in the main menu it says so.
+        // effect, the colours), with Done (Escape too; both keep what was chosen). Only in a game; in the main menu it says so.
         public void PanelButton(string section, string label, string description)
         {
             Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => MountsPanel.Open(this, toggle: false) });
@@ -810,7 +811,7 @@ namespace GK2DonkeyAPI.Api
         // called once per registered mount with the mount's id, the suffix for the cfg keys ("" for the donkey, so a cfg
         // from before keeps its values under the same keys; "_dragon" for the dragon) and whether that mount is the one
         // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
-        // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel greys, never hides).
+        // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel leaves such a row out until it holds, the menus hide it).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
         // (a Harness row on the worm). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu

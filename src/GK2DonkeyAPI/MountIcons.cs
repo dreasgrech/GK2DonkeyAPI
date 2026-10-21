@@ -126,7 +126,7 @@ namespace GK2DonkeyAPI
         // by this mod; a copy on a renderer is taken when nothing else carries the name).
         private static Icon FromGameSprite(string name)
         {
-            if (!gameSprites.TryGetValue(name, out Sprite found) || found == null || !found)
+            if (!gameSprites.TryGetValue(name, out Sprite found) || (found != null && !found)) // never looked, or a found one destroyed since; a miss is remembered (no rescan per card)
             {
                 found = null;
                 foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())

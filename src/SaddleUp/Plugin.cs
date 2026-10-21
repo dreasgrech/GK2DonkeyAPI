@@ -116,8 +116,8 @@ namespace SaddleUp
             // Coat_dragon and so on; docs/mount-colours.md). Coat is the body (the donkey's coat, a dragon's scales,
             // the worm's skin); Harness its tack, on the mounts whose look has any. A Color row's lightness key moves
             // with its colour key (Color registers it).
-            p.Preview("Colours", me, "Your mount and cart");
-            p.Info("Colours", "Colour rows", () => "In the Mounts panel", "The coat, harness, second tone and the cart's colours are chosen in the Mounts panel (the Mount section's Mounts button, or its key), per mount.");
+            // no picture or pointer line here (2026-10-21): every row of the section is the Mounts panel's, the menus leave the
+            // section out; the rows below still make "3. Colours" in the cfg, so players' files keep their section
             p.Heading("Colours", "Mount colours");
             p.PerMount((mountId, sfx, shown) =>
             {
@@ -167,11 +167,6 @@ namespace SaddleUp
             {
                 p.Info("Effect", "Particle effects", () => "Coming in the next update",
                     "Hellfire (the game's lamp fire in a ring round your mount, with sparks and a trail) and effects from mods are built and switched off in this version; the next update switches them on.");
-            }
-            else
-            {
-                // every row of the section is the Mounts panel's: the menus show this line in its place
-                p.Info("Effect", "Effect rows", () => "In the Mounts panel", "The effect, when it shows and its four toggles are chosen in the Mounts panel (the Mount section's Mounts button, or its key), per mount.");
             }
             p.EffectRows("Effect", me);
 

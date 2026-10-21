@@ -209,6 +209,7 @@ namespace GK2DonkeyAPI
             }
             // The panel stays up during the run (its Tests tab shows each scenario's progress); only the frame-time
             // scenario hides it, its own cost would be in the measurement.
+            autoReloadAtStart = Plugin.SkinPackAutoReload != null && Plugin.SkinPackAutoReload.Value;
             bool lodOn = Lod.On, idleOff = Lod.IdleSwitchesOff;
             int perFrame = Lod.SpawnsPerFrame;
             // A test load left on the cart from the panel (TestLoads.Put, e.g. the review's Load it) holds every cart at
@@ -678,8 +679,11 @@ namespace GK2DonkeyAPI
             });
         }
 
+        private static bool autoReloadAtStart;
+
         private static IEnumerator CleanUp()
         {
+            LeftBehind();
             if (Mounts.IsMounted)
             {
                 Mounts.Dismount("self-test");
@@ -694,6 +698,37 @@ namespace GK2DonkeyAPI
             }
             PutKeeper(home, homeFacing);
             yield return Seconds(1f);
+        }
+
+        // The safety net: a scenario that threw ends without its own cleanup; whatever it left under a test owner goes here.
+        private static void LeftBehind()
+        {
+            var left = new List<string>();
+            try
+            {
+                foreach (Looks.SkinDef d in new List<Looks.SkinDef>(Looks.All))
+                {
+                    if (d.Owner != null && d.Owner.StartsWith(Owner, StringComparison.Ordinal) && Looks.Unregister(d.Id, d.Owner)) left.Add("skin " + d.Id);
+                }
+                foreach (Catalog.Entry k in new List<Catalog.Entry>(Catalog.All))
+                {
+                    if (k.Owner != null && k.Owner.StartsWith(Owner, StringComparison.Ordinal) && Catalog.Unregister(k.Id, k.Owner)) left.Add("mount " + k.Id);
+                }
+                if (Plugin.SkinPackAutoReload != null && Plugin.SkinPackAutoReload.Value != autoReloadAtStart)
+                {
+                    Plugin.SkinPackAutoReload.Value = autoReloadAtStart;
+                    left.Add("the pack-watch switch");
+                }
+                foreach (string dir in System.IO.Directory.GetDirectories(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest*"))
+                {
+                    try { System.IO.Directory.Delete(dir, true); left.Add("folder " + System.IO.Path.GetFileName(dir)); } catch { }
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("[test] the cleanup between scenarios failed: " + e.Message);
+            }
+            if (left.Count > 0) Info("left behind by the last scenario, put back: " + string.Join(", ", left));
         }
 
         private static bool IsActive(MountHandle h) => h.Exists && h.I.tier == Mount.Tier.Active;
@@ -3581,9 +3616,17 @@ namespace GK2DonkeyAPI
                     var m2 = MountsPanel.TestMeasure();
                     Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
                 }
-                MountsPanel.TestClose(keep: false);
+                MountsPanel.TestOpenColours();
                 yield return Frames(2);
-                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase), $"Cancel: closed, and the mount is {was} again");
+                Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours, the effect)");
+                MountsPanel.TestCloseColours(keep: true);
+                yield return Frames(2);
+                Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");
+                MountsPanel.TestSelect(was); // back to the first mount (no Cancel since 2026-10-21: Done and Escape keep what was chosen)
+                yield return Frames(2);
+                MountsPanel.TestClose(keep: true);
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase), $"picked back and closed: the mount is {was} again");
                 MountsPanel.Open(page, toggle: true);
                 yield return Frames(2);
                 Check(MountsPanel.IsOpen, "the key opens it");

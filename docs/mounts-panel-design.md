@@ -65,9 +65,39 @@ and a colours window**. A window of 1060x600, centred, scaled down only on a sma
 - **The colours window** ("Colours and effect..."): 800x560 over the journal, which waits hidden; every other look
   section (the colours under their two headings) in two full columns, the Effect section's toggles under "Effect";
   Done keeps, Cancel puts back what these rows held when it opened. The journal's own Cancel still covers everything.
-- **Done and Cancel** bottom right, the panel's own buttons (the copied dialog button drew off its rectangle until
-  its hover animation; a game row does too, which is why rows are measured).
+- **Done** bottom right, the panel's own button (the copied dialog button drew off its rectangle until its hover
+  animation; a game row does too, which is why rows are measured). No Cancel (the user, 2026-10-21): Done and Escape
+  keep what was chosen; Escape steps the colours window back to the journal and closes the journal, and the pause
+  menu the same press opened is closed again in the same frame.
 - A dev switch, `Debug.MountsPanelFakeEntries`, pads the list with made-up entries to see it scroll.
+
+## Escape and the way back
+
+Measured in the game's code (decompiled 2026-10-21): a modal game window takes the player's controls
+(`PlayerController.SetControlTakenType(ByUI, false)` in `MainGame.OnWindowOpened`); the pause menu is opened by
+`PlayerInputHandler.UpdateInput` on `GameKey.InGameMenu`, which `FreePlayerState` runs only while the controls are
+enabled; a key press is consumed with `LazyInput.ClearKeyDown`; the pause menu opens the Settings window with
+`onClosed` = reopen the pause menu. The window stack (`LazyWindowsStackController`) has no back step of its own.
+
+So the panel takes `ByUI` while open (re-asserted every tick, since the game gives it back when its last modal window
+closes; `ByUI` because the ride ends on any other taken control) and consumes Escape and Back. The way back is a stack:
+the game's own windows below, then the journal, then the colours window. The game window on top when the panel opens
+(`LazyWindowsStackController.ActiveWindow`: the Mods menu on a mod's page, the Settings window on a page, the pause
+menu) is not closed: it stays in the game's stack as it is, modal (the game stays paused), with its GameObject switched
+off so its own Escape handling does not run. Closing the panel switches it back on, same page and state, and its own
+Escape goes on from there. Closing and reopening would not do: GK2 Mod Framework's `ModsMenuWindow.Close` reopens the
+pause menu and forgets its return window, and its `Open` starts on the mod list. The panel ticks in `LateUpdate`, after
+every window's `Update`, so a window switched back on reads keys from the next frame, when that Escape is over.
+Escape steps back: out of the search box, the colours window to the journal, the journal to the window under it.
+Done does the same; Ride and Drive close the whole chain into the game.
+
+## Swatches
+
+In the colours window a custom-colour row (a `PaletteColor` choice, `MountSettingsPage.Color`) is drawn by the panel
+itself: the label where a game row's label sits, then the 24 named colours as 14 px squares in two rows of twelve,
+the chosen one framed in white, hover brightens, a click sets the row's value (the page's `Color` combines it with
+the lightness and applies the hex). The lightness row stays the game's steps row under it. The journal's rows and
+every other row are still the game's own.
 
 ## What stays from the first panel
 
@@ -75,7 +105,7 @@ Open/toggle (the key toggles, the button brings forward with the menus out of th
 registry (the self-tests read it), the `before` snapshot and Cancel, following the registry while open, the
 picture tick, the test hooks (`TestMeasure` reports the window's size and scale).
 
-## Later
+## Later (what is left)
 
 Colour swatches with a lightness slider instead of the custom-colour dropdowns (direction A's second half), a
 search box once the list passes eight mounts, a Call button that summons the chosen mount, gamepad navigation.

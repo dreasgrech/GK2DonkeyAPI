@@ -12,54 +12,19 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
-- **The first F11 run of the night** (2026-10-21): the sprite manifest check demanded a frame literally named
-  `bdy_static_left`, which Gerry maps to his walk frame as the rules allow, so Gerry was set aside at game-ready
-  and every Gerry scenario failed from that (three readouts, the game-creature scenario, the new heal check). The
-  manifest is the frames the `[Game]` map names; the build keeps its own rest-picture fallbacks. The heal scenario
-  runs after the Gerry scenarios now. Everything else in the group passed (25 of 29), the core group's new
-  set-aside-lines scenario passed. The second run, the full set: 697 passed, 0 failed, 0 warnings, 1 skipped;
-  the panel's fit measured the same a frame later (the nested layout settles in one pass). The mount-pin
-  refusal warning said itself twice (keyed on the skin, before and after one was worn): once per mount and key.
-- **The API ships no skin** (the user, 2026-10-21: the backend, not bloated with skins). Hellfire, Royal Parade and the
-  Hellfire effect moved from GK2 Donkey API to GK2 Saddle Up (`src/SaddleUp/assets/skins`, the effect registered in
-  Saddle Up's Awake through the public API, the same definition). Same ids, so a player's `Skin_donkey = hellfire`
-  still resolves; the owner is Saddle Up's GUID now. The self-tests borrow Royal Parade's pictures from Saddle Up's
-  DLL; the skins scan reads the shipped effect ids from Saddle Up; the generators write into Saddle Up's folder; a
-  new skin goes to Saddle Up by default (`new_skin.py`).
-- **docs/making-a-mount.md**: the one-page guide to a mod's own mount, both shapes (a pack embedded in a DLL with
-  one line in Awake; a mount in code with an ability), what the API does for it unasked, and the repo's own build
-  steps; linked from the READMEs, api.md, skins.md and mounts-as-mods.md.
-- **One word for one thing: a mount is a mount** (API 0.36.0; the user, 2026-10-21: the code said "kind"). Every
-  name that meant the mount says mount now: `MountDef`, `MountInfo`, `Mounts.Catalog` (`All`, `Find`, `Register`,
-  `MountsChanged`), `MountHandle.Mount`, `MountEffects.FromMount`; inside, the registry is `Catalog` with its
-  `Entry` per mount, and every `kind` in a name, a comment or a log line is `mount`. The settings rows' type
-  is `RowKind` (Toggle, Choice, Key...), so the word has one meaning left. In a skin.cfg the colour mode is
-  `colours = own|palette` (was `kind =`; not public yet, the seven cfgs and the tools follow). Cargo's item
-  kinds and the dependency manifest's member kinds are other things and keep their word. A pre-1.0 breaking
-  change for mods on the API (docs/api-design.md); Saddle Up and the example rebuilt on it.
-- **The Mounts panel, third cut: the journal and a colours window** (2026-10-21; the user: the second cut had a lot of
-  empty space and squashed the customisation). The stage sits beside a stats card (Speed, Cart, Babies, Skins) at
-  one size on every mount; under them the Skin and Effect rows; the colours and the effect's four toggles have a
-  window of their own ("Colours and effect...") with both colour columns at full height and their own Done and
-  Cancel. The list is flat journal rows (the chosen one in red, hover brightens) with a scrollbar; the tabs are gone.
-- **The Mounts panel, second design** (2026-10-21, docs/mounts-panel-design.md; the user: a game's mount journal,
-  not a wall of rows): a window of a fixed size that fits 1080p without shrinking; a card list on the left that
-  scrolls with the wheel, each card with the mount's icon (its portrait, else its standing picture, made for
-  every mount automatically); the chosen mount's portrait, name and description at the top right; its picture
-  with the cart up to 3x on a dark stage; one line of what it does; and its rows under tabs (Skin, Colours,
-  Effect), so only one tab's rows are on screen; a custom colour's rows appear when the preset is Custom instead
-  of sitting there greyed. Done and Cancel as before. Later: colour swatches, a search box, a Call button.
+- **The Mounts panel is a mount journal now.** The list of your mounts on the left with a picture of each; on the
+  right the chosen one walking with its cart, a card with its speed, whether it pulls the cart, its babies and how
+  many skins it has, and its Skin and Effect rows. "Colours and effect..." opens a second window with the mount's
+  picture and every colour row, a custom colour picked from 24 coloured squares. Ride and Drive the cart call the
+  mount straight from the panel; a search box appears when you have more than eight mounts; Escape steps back and
+  never opens the pause menu. Hellfire and Royal Parade now come with Saddle Up (nothing changes for you).
 - **Binding a key no longer presses it.** Setting the Mounts panel key in the Mods menu opened the panel on the
   spot, and the ride and cart keys had the same flaw (binding G hitched): the key you pressed to set the binding
   counted as a press of it. A key just bound now waits until it has been let go.
-- **The Mounts panel** (Saddle Up 0.12.0): a window of its own over the game, opened by the Mounts button in the
-  Mount section or a key of your choosing (Keys: Mounts panel, none by default): every mount you can ride listed
-  on the left, the chosen one drawn on the right with what it is and does (the cart, babies, speed, what it comes
-  with, its abilities), and under it that mount's skin, effect and colour rows. Done keeps your choices, Cancel
-  puts them all back. The Mount, Skin, effect (with its four toggles) and colour rows are no longer in the Mods menu or the Settings
-  window: they are chosen in the panel, and the settings page stays the same size however many mounts you install
-  (the user, 2026-10-20: a panel like a game's mount journal, so it scales). Your saved choices are the same cfg
-  entries as before. The "Choose colours" bar is gone into it.
+- **Where the panel lives** (Saddle Up 0.12.0): the Mounts button in the Mount section, or a key of your choosing
+  (Keys: Mounts panel, none by default). The Mount, Skin, effect and colour rows are no longer in the Mods menu or
+  the Settings window: they are chosen in the panel, so the settings page stays the same size however many mounts
+  you install. Your saved choices are the same cfg entries as before. The "Choose colours" bar is gone into it.
 - **A mount's legs match its speed.** The walk animation's rate per unit of speed was the donkey's constant on
   every mount; it is a value now (`WalkCycleSpeed`, 1.5 = the donkey's), so a mount with a longer stride, or a
   scurrying one, sets its own in its file.
@@ -109,7 +74,7 @@ For players:
   two frames without the cart having swapped sides is a ledge, not a slope (walking moves the sample 0.12 a
   frame at most): it is held off and logged, and the cart keeps the mount's level until the sample agrees again,
   which it does once the mount has walked the step itself. Before, the jump was logged and applied.
-- **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one mount of thing.
+- **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one kind of thing.
   Keys. Mount: its picture (with the cart now), Name, Mount, Skin, the babies rows, and "Keep your mount with the
   save" (was in Behaviour). Colours: the picture, then every colour under two headings (since 0.12 in the Mounts panel), "Mount
   colours" (coat and harness, the old Donkey section) and "Cart colours" (paint, wheels, wheel hubs, lantern light,
@@ -129,6 +94,23 @@ For players:
 
 For mod authors:
 
+- **The API ships no skin** (the user, 2026-10-21: the backend, not bloated with skins). Hellfire, Royal Parade and the
+  Hellfire effect moved from GK2 Donkey API to GK2 Saddle Up (`src/SaddleUp/assets/skins`, the effect registered in
+  Saddle Up's Awake through the public API, the same definition). Same ids, so a player's `Skin_donkey = hellfire`
+  still resolves; the owner is Saddle Up's GUID now. The self-tests borrow Royal Parade's pictures from Saddle Up's
+  DLL; the skins scan reads the shipped effect ids from Saddle Up; the generators write into Saddle Up's folder; a
+  new skin goes to Saddle Up by default (`new_skin.py`).
+- **docs/making-a-mount.md**: the one-page guide to a mod's own mount, both shapes (a pack embedded in a DLL with
+  one line in Awake; a mount in code with an ability), what the API does for it unasked, and the repo's own build
+  steps; linked from the READMEs, api.md, skins.md and mounts-as-mods.md.
+- **One word for one thing: a mount is a mount** (API 0.36.0; the user, 2026-10-21: the code said "kind"). Every
+  name that meant the mount says mount now: `MountDef`, `MountInfo`, `Mounts.Catalog` (`All`, `Find`, `Register`,
+  `MountsChanged`), `MountHandle.Mount`, `MountEffects.FromMount`; inside, the registry is `Catalog` with its
+  `Entry` per mount, and every `kind` in a name, a comment or a log line is `mount`. The settings rows' type
+  is `RowKind` (Toggle, Choice, Key...), so the word has one meaning left. In a skin.cfg the colour mode is
+  `colours = own|palette` (was `kind =`; not public yet, the seven cfgs and the tools follow). Cargo's item
+  kinds and the dependency manifest's member kinds are other things and keep their word. A pre-1.0 breaking
+  change for mods on the API (docs/api-design.md); Saddle Up and the example rebuilt on it.
 - **The Mounts panel is the API's**: `MountSettingsPage.PanelButton(section, label, description)` (`LookButton`
   is the same) and `OpenPanel()` for a key of your own. Rows marked `look: true` (the Mount and Skin rows, the
   colours, the effect) are no longer handed to the Mods menu, the game's Settings window or the menu labels: the
@@ -457,6 +439,55 @@ For mod authors:
 
 Development:
 
+- **The first F11 run of the night** (2026-10-21): the sprite manifest check demanded a frame literally named
+  `bdy_static_left`, which Gerry maps to his walk frame as the rules allow, so Gerry was set aside at game-ready
+  and every Gerry scenario failed from that (three readouts, the game-creature scenario, the new heal check). The
+  manifest is the frames the `[Game]` map names; the build keeps its own rest-picture fallbacks. The heal scenario
+  runs after the Gerry scenarios now. Everything else in the group passed (25 of 29), the core group's new
+  set-aside-lines scenario passed. The second run, the full set: 697 passed, 0 failed, 0 warnings, 1 skipped;
+  the panel's fit measured the same a frame later (the nested layout settles in one pass). The mount-pin
+  refusal warning said itself twice (keyed on the skin, before and after one was worn): once per mount and key.
+- **The self-tests clean up after a scenario that threw**: between scenarios the runner withdraws any skin or mount a
+  test owner left registered, puts the pack-watch switch back and deletes the temp pack folders, and says so in the
+  log (a passing scenario leaves nothing). Before, a throw in the mount-pack, skin-pack or auto-reload scenario left
+  its pack registered for the rest of the run.
+- **The Mounts panel, second design** (2026-10-21, docs/mounts-panel-design.md; the user: a game's mount journal,
+  not a wall of rows): a window of a fixed size that fits 1080p without shrinking; a card list on the left that
+  scrolls with the wheel, each card with the mount's icon (its portrait, else its standing picture, made for
+  every mount automatically); the chosen mount's portrait, name and description at the top right; its picture
+  with the cart up to 3x on a dark stage; one line of what it does; and its rows under tabs (Skin, Colours,
+  Effect), so only one tab's rows are on screen; a custom colour's rows appear when the preset is Custom instead
+  of sitting there greyed. Done and Cancel as before. Later: colour swatches, a search box, a Call button.
+- **The Colours and Effect sections leave the Mods menu**: their picture and their "In the Mounts panel" lines were all
+  that was left there, so the sections are gone from the menus (the cfg keeps them, as before). With the mounts
+  switched off the Effect section's "coming in the next update" line stays.
+- **Escape and the way back, done properly** (the user, 2026-10-21: opened while playing, Escape showed the pause
+  menu; pause, Mods, Saddle Up, Mounts, colours must step back through every one). Measured in the game's and the Mod
+  Framework's code first. The panel takes the player's controls while open, as the game's own windows do (the UI
+  flag: a ride goes on), so the game's keys (Escape's pause menu, movement, E, the inventory) don't act under it,
+  and it consumes Escape. The window it was opened from is not closed any more: it waits underneath exactly as it
+  was, switched off, and comes back when the panel closes. So Escape steps back one level at a time: the search box,
+  the colours window to the journal, the journal to the window under it (the Mods menu on Saddle Up's page, the
+  Settings window on its page, the pause menu) or to the game, and from there that window's own Escape carries on.
+  Done steps back the same way; Ride and Drive close everything and go into the game. Before, the panel closed the
+  Mods menu through the framework's toggle, which reopens the pause menu and forgets where it came from.
+- **A review of the journal's code** (one reader, the panel files whole): the list now scrolls to the chosen mount when
+  the panel opens (it was laid out while hidden); Escape in the search box leaves the box instead of closing the
+  journal; the pause menu is closed again a frame later too (the game's and the mod's Updates run in no fixed
+  order); the pictures sit at whole-number scales (the stage is point-filtered: a fraction shimmered); a missing icon
+  sprite is not searched for again per card; the scroll maths counts the filtered list; the Speed stat reads the
+  Default skin's pin first; stale Cancel comments gone. To probe in game: typing in the search box must not walk
+  the keeper or open the inventory (the game reads its own keys).
+- **The Mounts panel, third cut: the journal and a colours window** (2026-10-21; the user: the second cut had a lot of
+  empty space and squashed the customisation). The stage sits beside a stats card (Speed, Cart, Babies, Skins) at
+  one size on every mount; under them the Skin and Effect rows; the colours and the effect's four toggles have a
+  window of their own ("Colours and effect...") with the mount's picture at its top and both colour columns at full
+  height. The list is flat journal rows (the chosen one in red, hover brightens) with a scrollbar; the tabs are gone.
+  No Cancel buttons: Done keeps, and Escape steps back (the colours window to the journal, the journal closed) without
+  reaching the game's pause menu. In the colours window a custom colour is a row of the 24 named colours as squares
+  (the chosen one framed, a click picks) instead of a "< Chestnut >" dropdown; its lightness row stays. Ride and
+  Drive the cart buttons on the journal call the chosen mount as the keys do (the panel closes first). A search box
+  above the list once it holds more than eight mounts; the mods' keys wait while it has focus.
 - **A third review pass** (four readers: the second pass's own fixes, the panel and the registry read whole
   rather than as a diff, the tests and release data). Fixed: a skin with a `[Mount]` block is that mount's own
   skin whatever its `mount =` line says (before, renaming the block's id on a reload withdrew the new mount and

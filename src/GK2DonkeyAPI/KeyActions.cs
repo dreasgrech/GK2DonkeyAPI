@@ -56,6 +56,10 @@ namespace GK2DonkeyAPI
             {
                 return; // a key is being set in the game's Settings window
             }
+            if (MountsPanel.SearchFocused)
+            {
+                return; // typing in the Mounts panel's search box: H is a letter, not the ride key
+            }
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];

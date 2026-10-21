@@ -177,8 +177,7 @@ namespace GK2DonkeyAPI
                                 {
                                     return;
                                 }
-                                FrameworkApi.ToggleModsMenu(); // out of the way: the player wants to see the donkey
-                                button.OnClick?.Invoke();
+                                button.OnClick?.Invoke(); // the panel hides the Mods menu itself and brings it back as it was (not the framework's Toggle: that closes the menu for good)
                             }, order);
                             break;
                     }

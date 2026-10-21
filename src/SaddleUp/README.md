@@ -50,7 +50,6 @@ All of these apply at once:
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |
 | | Keep your mount with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
 | 3. Colours | (the picture) | | The picture of your mount and cart, and a line saying where the colour rows went: the rows below are in the Mounts panel (since 0.12; before, a "Choose colours" bar over the game), under two headings, "Mount colours" and "Cart colours". Kept per mount. |
-| | Colour rows | In the Mounts panel | A line in the menus saying where the colour rows went. |
 | | Coat colour | Game default | (in the Mounts panel) The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
 | | Harness colour | Game default | (in the Mounts panel) The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
 | | Second tone | Game default | (in the Mounts panel) The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava. Pale, Rose, Brown, Green, Blue, Dark, or Custom. Not shown for a mount without one (the worm); greyed in the Mounts panel. |
@@ -60,7 +59,6 @@ All of these apply at once:
 | | Lantern light | Warm (game default) | (in the Mounts panel) White, Green, Blue, or Custom. |
 | 4. Effect | Effect | As the mount or skin | (in the Mounts panel) A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
 | | Effect shown | Always | (in the Mounts panel, with the four effect toggles) Never, At night, Always. |
-| | Effect rows | In the Mounts panel | A line in the menus saying where the Effect rows went (shown once the mounts are switched on; until then the "Particle effects: coming in the next update" line). |
 | | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | (in the Mounts panel, under the Effect row) How the effect behaves. |
 | 5. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
 | | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |

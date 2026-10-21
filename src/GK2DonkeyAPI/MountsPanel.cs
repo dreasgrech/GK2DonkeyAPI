@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using GK2DonkeyAPI.Api;
+using BepInEx;
 using LazyBearTechnology;
 using TMPro;
 using UnityEngine;
@@ -15,8 +16,8 @@ namespace GK2DonkeyAPI
     // (speed, the cart, babies, skins); under them the rows that define its look at a glance, Skin and Effect, as the
     // game's own rows. A "Colours and effect..." button opens a second window of the same make with the colour rows
     // in two full columns and the effect's toggles (the user, 2026-10-21: the journal must not squash the
-    // customisation; the colours get a window of their own). Done keeps what was chosen, Cancel puts back what was set
-    // when the window opened. Only in a game.
+    // customisation; the colours get a window of their own). Done and Escape keep what was chosen (no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
+    // when the window opened). Only in a game.
     //
     // Built by hand at a fixed size (1060x600 on the game's 1280x720 canvas; scaled only on a smaller canvas), no
     // nested auto-sizing. From the game: the window frame sprite, its dialog button's face (sliced onto the panel's own
@@ -28,10 +29,13 @@ namespace GK2DonkeyAPI
         private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
         private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
         private const float StageW = 440f, StageH = 236f, PictureScale = 3f; // the stage is one size on every mount: nothing moves
-        private const float StatLineH = 30f;
+        private const float StatLineH = 30f, StatsCardH = 44f + 4f * StatLineH + 8f; // the card is as tall as its lines, not as the stage
         private const float IconPx = 36f, HeaderIconPx = 64f;
+        private const float SearchH = 26f;
+        private const int SearchFrom = 8; // a search box above the list once it has more mounts than this
+        private const float SwatchPx = 14f, SwatchGap = 2f, SwatchRowH = 2f * SwatchPx + SwatchGap + 6f, SwatchLabelW = 160f; // a custom colour's row: the 24 named colours as squares, two rows of twelve
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
-        private const float CW = 800f, CH = 560f; // the colours window
+        private const float CW = 800f, CH = 640f, CStageW = 400f, CStageH = 170f, CPictureScale = 2f; // the colours window and its picture
         private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
         private static readonly Color BoxColor = new Color(0f, 0f, 0f, 0.35f), EdgeColor = new Color(1f, 1f, 1f, 0.12f);
 
@@ -47,10 +51,12 @@ namespace GK2DonkeyAPI
         private static float fontSize = 18f;
         private static Rect rowVisual = new Rect(0f, 0f, 400f, 33f); // where a copied game row really draws, relative to its rectangle's top left: x and y its offsets (negative: outside), its drawn width and height
 
-        private static RectTransform listContent, rightArea, stage, contentRoot, coloursRoot;
+        private static RectTransform listContent, rightArea, stage, contentRoot, coloursRoot, coloursStage;
         private static ScrollRect listScroll, contentScroll, coloursScroll;
-        private static RawImage headerIcon, picture;
+        private static RawImage headerIcon, picture, coloursPicture;
         private static TextMeshProUGUI titleCount, headerName, headerDesc, coloursTitle;
+        private static TMP_InputField search;
+        private static string filter = "";
         private static readonly List<(TextMeshProUGUI Label, TextMeshProUGUI Value)> statLines = new List<(TextMeshProUGUI, TextMeshProUGUI)>();
         private static Texture2D pictureTex;
         private static float nextPicture;
@@ -90,6 +96,7 @@ namespace GK2DonkeyAPI
         }
 
         internal static bool IsOpen => panel != null && (panel.activeSelf || colours != null);
+        internal static bool SearchFocused => search != null && search.isFocused;
         internal static bool IsColoursOpen => colours != null;
 
         // Every mount a player can pick (Looks.MountChoices: the mounts with a skin, the donkey first), with its words.
@@ -106,7 +113,7 @@ namespace GK2DonkeyAPI
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
-                object speed = ValueOf(k, "SpeedMultiplier");
+                object speed = SkinValue(def, "SpeedMultiplier") ?? ValueOf(k, "SpeedMultiplier"); // the Default skin's pin wins over the mount's, as on the wearer (Looks.LayeredValue)
                 if (speed != null) e.Lines.Add("Speed: " + SpeedText(speed));
                 if (!string.IsNullOrEmpty(k.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(k.Effect)?.Name ?? k.Effect) + (k.EffectWhen == MountEffectWhen.Night ? " (at night)" : ""));
                 else if (def != null && !string.IsNullOrEmpty(def.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(def.Effect)?.Name ?? def.Effect));
@@ -132,6 +139,15 @@ namespace GK2DonkeyAPI
                 list.Add(new Entry { Id = "fake-" + i, Label = "Test mount " + i, Description = "A made-up entry (Debug.MountsPanelFakeEntries), to see the list scroll.", Fake = true });
             }
             return list;
+        }
+
+        private static object SkinValue(Looks.SkinDef d, string key)
+        {
+            if (d == null) return null;
+            if (d.TuningRide != null && d.TuningRide.TryGetValue(key, out object r)) return r;
+            if (d.TuningValues != null && d.TuningValues.TryGetValue(key, out object t)) return t;
+            if (d.Tuning != null && d.Tuning.TryGetValue(key, out string s)) return s;
+            return null;
         }
 
         private static object ValueOf(Catalog.Entry k, string key)
@@ -194,36 +210,22 @@ namespace GK2DonkeyAPI
                     }
                     else
                     {
-                        OutOfTheWay(settings); // the button again (the menus were over the panel): they go, the panel stays as it is
-                        FitToScreen(panel, W, H);
+                        FitToScreen(panel, W, H); // the button again: the panel stays as it is
                         if (colours != null) FitToScreen(colours, CW, CH);
                     }
                     return;
                 }
-                Close(keep: true);
+                Close(keep: true, back: false);
                 page = p;
-                OutOfTheWay(settings);
                 Build(settings);
+                HideUnder(); // the game window it was opened from (if any) waits underneath, as it is
+                TakeControls();
+                Plugin.Log.LogInfo($"Settings: the Mounts panel opened over {UnderText()}.");
             }
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Settings: the Mounts panel can't open (" + e.Message + "); the mount and its colours are still in the cfg.");
                 Close(keep: true);
-            }
-        }
-
-        // Out of the way: the Settings window (without reopening the pause menu) and the pause menu.
-        private static void OutOfTheWay(UIGameSettingsWindow settings)
-        {
-            if (LazyWindowsStackController.IsWindowOpened(settings))
-            {
-                settings.onClosed = null;
-                settings.CloseWithoutCallback();
-            }
-            UIGamePauseWindow pause = LazyUI.GetWindow<UIGamePauseWindow>();
-            if (pause != null && LazyWindowsStackController.IsWindowOpened(pause))
-            {
-                pause.Close();
             }
         }
 
@@ -251,8 +253,8 @@ namespace GK2DonkeyAPI
             if (bt != null) buttonTextColor = bt.color;
             MeasureRow();
 
-            // What was set when the panel opened, for Cancel: every look row of the page (the mount, every mount's
-            // skin and colours, the effect), not only the chosen mount's, so Cancel after choosing another mount puts
+            // What was set when the panel opened, for a put-back (the self-tests; no Cancel button since 2026-10-21): every look row of the page (the mount, every mount's
+            // skin and colours, the effect), not only the chosen mount's, so a put-back after choosing another mount puts
             // the first one back.
             before.Clear();
             foreach (MountSettingsPage.Row r in page.Rows)
@@ -264,15 +266,24 @@ namespace GK2DonkeyAPI
             Text(panel.transform, "title", "Mounts", 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, 400f, TitleH);
             titleCount = Text(panel.transform, "count", "", 0.9f, TextAlignmentOptions.Right, false, W - Pad - 300f, Pad + 2f, 300f, TitleH);
 
-            // the list, scrolling
+            // the list, scrolling; a search box above it once it is long
+            entries = Entries();
+            filter = "";
             float listTop = Pad + TitleH + Gap;
+            search = null;
+            if (entries.Count > SearchFrom)
+            {
+                search = SearchBox(panel.transform, Pad, listTop, ListW - 4f, SearchH);
+                listTop += SearchH + Gap;
+            }
             float listH = H - listTop - Gap - ButtonsH - Pad;
             listScroll = ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 4f);
             AddScrollbar(listScroll);
 
             // the right side: the header, the stage and the stats card beside it, the look rows under them
             float x0 = Pad + ListW + 2f * Gap, rw = W - Pad - x0;
-            rightArea = Rect(Node("right", panel.transform), x0, listTop, rw, H - listTop - Gap - ButtonsH - Pad);
+            float rightTop = Pad + TitleH + Gap;
+            rightArea = Rect(Node("right", panel.transform), x0, rightTop, rw, H - rightTop - Gap - ButtonsH - Pad);
             headerIcon = Node("portrait", rightArea, typeof(RawImage)).GetComponent<RawImage>();
             headerIcon.raycastTarget = false;
             Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
@@ -291,7 +302,7 @@ namespace GK2DonkeyAPI
             picture.gameObject.SetActive(false);
 
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
-            RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StageH);
+            RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
             Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.Left, false, 12f, 8f, statsW - 24f, 26f).fontStyle = FontStyles.Bold;
             statLines.Clear();
             for (int i = 0; i < 4; i++)
@@ -307,23 +318,25 @@ namespace GK2DonkeyAPI
             contentScroll = ScrollView(rightArea, "content", 0f, y, rw, Mathf.Max(60f, rightArea.rect.height - y), out contentRoot, 2f, manual: true);
             AddScrollbar(contentScroll);
 
-            // the buttons: Colours and effect..., Done, Cancel
-            GameObject cancel = OwnButton(panel.transform, "cancel", "Cancel", ButtonW, ButtonH, () => Close(keep: false));
-            Rect(cancel, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
+            // the buttons: Colours and effect..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
             GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
-            Rect(done, W - Pad - 2f * ButtonW - 16f, H - Pad - ButtonH, ButtonW, ButtonH);
+            Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
             GameObject customise = OwnButton(panel.transform, "colours", "Colours and effect...", 200f, ButtonH, OpenColours);
-            Rect(customise, W - Pad - 2f * ButtonW - 32f - 200f, H - Pad - ButtonH, 200f, ButtonH);
+            Rect(customise, W - Pad - ButtonW - 16f - 200f, H - Pad - ButtonH, 200f, ButtonH);
+            // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
+            GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
+            Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
+            GameObject drive = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
+            Rect(drive, Pad + ButtonW + 12f, H - Pad - ButtonH, 150f, ButtonH);
 
-            entries = Entries();
             pictureOff = false;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             Mounts.Looks.SkinsChanged += OnRegistryChanged;
             Mounts.Catalog.MountsChanged += OnRegistryChanged;
+            panel.SetActive(true); // before the list: a layout under an inactive root computes nothing, so the scroll to the chosen mount was lost
             BuildList();
             BuildRight();
-            panel.SetActive(true);
             FitToScreen(panel, W, H);
             Plugin.Log.LogInfo($"Settings: the Mounts panel of {page.Title} is open ({entries.Count} mount(s), {rows.Count} look rows for {builtFor}{(panel.transform.localScale.x < 1f ? $", scaled to {panel.transform.localScale.x:0.##} to fit the screen" : "")}).");
         }
@@ -361,10 +374,13 @@ namespace GK2DonkeyAPI
             foreach (Transform c in listContent) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
             cards.Clear();
             string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
-            int at = -1;
+            int at = -1; // the chosen card's place among the cards shown (the search filters)
+            int shown = 0;
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
+                if (filter.Length > 0 && (e.Label ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0 && (e.Id ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue; // the search box
+                shown++;
                 string id = e.Id;
                 bool fake = e.Fake;
                 GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 16f - ScrollbarW, CardH, () => { if (!fake) Select(id); }, textLeft: IconPx + 14f, flat: true);
@@ -389,12 +405,12 @@ namespace GK2DonkeyAPI
                     irt.anchoredPosition = new Vector2(8f + (IconPx - irt.sizeDelta.x) / 2f, 0f);
                 }
                 cards.Add((id, go.GetComponent<Image>(), go.GetComponentInChildren<TextMeshProUGUI>(true)));
-                if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = i;
+                if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = shown - 1;
             }
-            titleCount.text = entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
+            titleCount.text = filter.Length > 0 ? $"{shown} of {entries.Count} mounts" : entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
             MarkList();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
-            if (at >= 0 && entries.Count > 1) listScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(at / (float)(entries.Count - 1));
+            if (at >= 0 && shown > 1) listScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(at / (float)(shown - 1));
         }
 
         private static void MarkList()
@@ -479,15 +495,9 @@ namespace GK2DonkeyAPI
                 bool mountSection = string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase);
                 bool effectSection = string.Equals(r.ShownSection, "Effect", StringComparison.OrdinalIgnoreCase);
                 bool toggle = r.RowKind == MountSettingsPage.RowKind.Toggle;
-                var target = mountSection || (effectSection && !toggle) ? journalGroups : colourGroups;
                 string group = heading != null && r.ShownSection == headingSection ? heading : (mountSection ? "Skin" : r.ShownSection);
-                int gi = target.FindIndex(g => g.Group == group);
-                if (gi < 0)
-                {
-                    target.Add((group, new List<MountSettingsPage.Row>()));
-                    gi = target.Count - 1;
-                }
-                target[gi].Rows.Add(r);
+                if (mountSection || (effectSection && !toggle)) AddTo(journalGroups, group, r); // the journal: the Skin, the effect's choices
+                if (!mountSection) AddTo(colourGroups, group, r);                           // the colours window: every colour row, every effect row
             }
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, rightArea.rect.width - ScrollbarW, rows, out _);
             if (colours != null)
@@ -496,6 +506,17 @@ namespace GK2DonkeyAPI
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
             }
             Refresh();
+        }
+
+        private static void AddTo(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, string group, MountSettingsPage.Row r)
+        {
+            int gi = groups.FindIndex(g => g.Group == group);
+            if (gi < 0)
+            {
+                groups.Add((group, new List<MountSettingsPage.Row>()));
+                gi = groups.Count - 1;
+            }
+            groups[gi].Rows.Add(r);
         }
 
         // Rows in groups as columns (two side by side, more in further rows), centred in the area; each row and heading
@@ -521,7 +542,9 @@ namespace GK2DonkeyAPI
                 {
                     var group = groups[g0 + ci];
                     float cx = x0 + ci * (colW + colGap), cy = rowTop;
-                    if (group.Group != null)
+                    bool any = false;
+                    foreach (MountSettingsPage.Row r in group.Rows) if (r.Visible == null || r.Visible()) { any = true; break; }
+                    if (group.Group != null && any) // a heading only over rows that show (the effect's toggles hide while the effect is None)
                     {
                         GameObject h = SettingsRows.MakeHeading(templateRow, root, page, group.Group);
                         Place(h, cx - rowVisual.x, cy - rowVisual.y);
@@ -532,12 +555,23 @@ namespace GK2DonkeyAPI
                         bool visible = r.Visible == null || r.Visible();
                         sig.Append(visible ? '1' : '0');
                         if (!visible) continue; // shown only with a preset: not now
-                        GameObject go = SettingsRows.MakeRow(templateRow, root, r, page, out Action refresh);
-                        go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
-                        Place(go, cx - rowVisual.x, cy - rowVisual.y);
+                        GameObject go;
+                        Action refresh;
+                        if (IsPalette(r))
+                        {
+                            go = SwatchRow(root, r, out refresh); // the named colours as squares, where the game's "< Chestnut >" row would be
+                            Place(go, cx, cy);
+                            cy += SwatchRowH + 4f;
+                        }
+                        else
+                        {
+                            go = SettingsRows.MakeRow(templateRow, root, r, page, out refresh);
+                            go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
+                            Place(go, cx - rowVisual.x, cy - rowVisual.y);
+                            cy += step;
+                        }
                         CanvasGroup grp = r.Enabled != null ? go.AddComponent<CanvasGroup>() : null;
                         into.Add((r, go, refresh, grp));
-                        cy += step;
                     }
                     tallest = Math.Max(tallest, cy - rowTop);
                 }
@@ -547,6 +581,64 @@ namespace GK2DonkeyAPI
             root.sizeDelta = new Vector2(0f, needed);
             scroll.verticalNormalizedPosition = 1f;
             return sig.ToString();
+        }
+
+        private static bool IsPalette(MountSettingsPage.Row r) => r?.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
+
+        // A custom colour's row: the label where a game row's label sits, then the 24 named colours as squares in two
+        // rows of twelve; the chosen one framed; a click sets the row's value (the page applies it, the picture shows it).
+        private static GameObject SwatchRow(Transform parent, MountSettingsPage.Row r, out Action refresh)
+        {
+            var entry = (BepInEx.Configuration.ConfigEntry<PaletteColor>)r.Entry;
+            GameObject go = Node("swatches " + r.Entry.Definition.Key, parent);
+            Rect(go, 0f, 0f, rowVisual.width, SwatchRowH);
+            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Right, false, 0f, 0f, SwatchLabelW, SwatchRowH);
+            label.overflowMode = TextOverflowModes.Ellipsis;
+            var frames = new List<(PaletteColor Colour, GameObject Frame)>();
+            Array values = Enum.GetValues(typeof(PaletteColor));
+            int perRow = 12;
+            for (int i = 0; i < values.Length; i++)
+            {
+                var colour = (PaletteColor)values.GetValue(i);
+                float sx = SwatchLabelW + 8f + (i % perRow) * (SwatchPx + SwatchGap);
+                float sy = 3f + (i / perRow) * (SwatchPx + SwatchGap);
+                GameObject frame = Node("frame " + colour, go.transform, typeof(Image));
+                Rect(frame, sx - 2f, sy - 2f, SwatchPx + 4f, SwatchPx + 4f);
+                frame.GetComponent<Image>().color = Color.white;
+                frame.GetComponent<Image>().raycastTarget = false;
+                frame.SetActive(false);
+                GameObject sw = Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button));
+                Rect(sw, sx, sy, SwatchPx, SwatchPx);
+                var img = sw.GetComponent<Image>();
+                ColorUtility.TryParseHtmlString("#" + MountPalette.Hex(colour), out Color c);
+                img.color = c;
+                var b = sw.GetComponent<UnityEngine.UI.Button>();
+                b.targetGraphic = img;
+                ColorBlock cb = b.colors;
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1.3f, 1.3f, 1.3f, 1f);
+                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+                cb.selectedColor = Color.white;
+                cb.fadeDuration = 0.05f;
+                b.colors = cb;
+                PaletteColor pick = colour;
+                b.onClick.AddListener(() =>
+                {
+                    if (entry.Value != pick)
+                    {
+                        entry.Value = pick; // its SettingChanged applies it (the page's Color: colour and lightness combined)
+                        Refresh();
+                    }
+                });
+                frames.Add((colour, frame));
+            }
+            refresh = () =>
+            {
+                PaletteColor now = entry.Value;
+                foreach ((PaletteColor colour, GameObject frame) in frames) if (frame != null) frame.SetActive(colour == now);
+            };
+            refresh();
+            return go;
         }
 
         private static string Signature(List<(string Group, List<MountSettingsPage.Row> Rows)> groups)
@@ -560,7 +652,7 @@ namespace GK2DonkeyAPI
 
         // The colours and the effect's toggles for the chosen mount, in a window of their own over the journal (hidden
         // meanwhile): the colour rows in two full columns under their headings, the toggles under "Effect". Done keeps,
-        // Cancel puts back what these rows held when it opened; the journal's own Cancel still covers everything.
+        // Done or Escape goes back to the journal (no Cancel since 2026-10-21).
         private static void OpenColours()
         {
             if (panel == null || colours != null) return;
@@ -570,12 +662,18 @@ namespace GK2DonkeyAPI
                 colours = Window("colours window", settings, CW, CH, 30001);
                 coloursTitle = Text(colours.transform, "title", "Colours and effect: " + headerName.text, 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, CW - 2f * Pad, TitleH);
                 float top = Pad + TitleH + Gap;
+                coloursStage = Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
+                coloursPicture = Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();
+                coloursPicture.raycastTarget = false;
+                var cprt = (RectTransform)coloursPicture.transform;
+                cprt.anchorMin = cprt.anchorMax = new Vector2(0.5f, 0.5f);
+                cprt.pivot = new Vector2(0.5f, 0.5f);
+                coloursPicture.gameObject.SetActive(false);
+                top += CStageH + Gap;
                 coloursScroll = ScrollView(colours.transform, "colours content", Pad, top, CW - 2f * Pad, CH - top - Gap - ButtonsH - Pad, out coloursRoot, 2f, manual: true);
                 AddScrollbar(coloursScroll);
-                GameObject cancel = OwnButton(colours.transform, "colours cancel", "Cancel", ButtonW, ButtonH, () => CloseColours(keep: false));
-                Rect(cancel, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
                 GameObject done = OwnButton(colours.transform, "colours done", "Done", ButtonW, ButtonH, () => CloseColours(keep: true));
-                Rect(done, CW - Pad - 2f * ButtonW - 16f, CH - Pad - ButtonH, ButtonW, ButtonH);
+                Rect(done, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
                 coloursBefore.Clear();
                 foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
@@ -592,7 +690,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void CloseColours(bool keep)
+        private static void CloseColours(bool keep, bool reshow = true)
         {
             try
             {
@@ -618,11 +716,69 @@ namespace GK2DonkeyAPI
             coloursRoot = null;
             coloursScroll = null;
             coloursTitle = null;
-            if (panel != null)
+            coloursStage = null;
+            coloursPicture = null;
+            if (panel != null && reshow)
             {
                 panel.SetActive(true);
                 Refresh();
             }
+        }
+
+        // The panel closed (what was chosen kept) and the companion's mount called in the style, as the ride and cart keys do.
+        private static void Call(MountStyle style)
+        {
+            MountSettingsPage p = page;
+            Close(keep: true, back: false); // straight into the game: the windows under it closed, the mount comes
+            try
+            {
+                MountResult r = p?.UseMount(style) ?? default;
+                if (!r.Ok) Plugin.Log.LogInfo($"Settings: the Mounts panel's {(style == MountStyle.Cart ? "Drive" : "Ride")} button: {r.Reason}");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Settings: calling the mount from the panel failed: " + e.Message);
+            }
+        }
+
+        // A search box: typing filters the list by name; the mods' keys wait while it has focus (KeyActions).
+        private static TMP_InputField SearchBox(Transform parent, float x, float y, float w, float h)
+        {
+            GameObject go = Node("search", parent, typeof(Image), typeof(TMP_InputField));
+            Rect(go, x, y, w, h);
+            var bg = go.GetComponent<Image>();
+            bg.color = new Color(0f, 0f, 0f, 0.35f);
+            var edge = go.AddComponent<Outline>();
+            edge.effectColor = EdgeColor;
+            edge.effectDistance = new Vector2(1f, -1f);
+            GameObject area = Node("search text area", go.transform, typeof(RectMask2D));
+            var art = (RectTransform)area.transform;
+            art.anchorMin = Vector2.zero;
+            art.anchorMax = Vector2.one;
+            art.offsetMin = new Vector2(8f, 2f);
+            art.offsetMax = new Vector2(-8f, -2f);
+            TextMeshProUGUI text = Text(area.transform, "search text", "", 0.9f, TextAlignmentOptions.Left, false, 0f, 0f, w, h);
+            Stretch((RectTransform)text.transform);
+            text.richText = false;
+            TextMeshProUGUI hint = Text(area.transform, "search hint", "Search...", 0.9f, TextAlignmentOptions.Left, false, 0f, 0f, w, h);
+            Stretch((RectTransform)hint.transform);
+            hint.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.45f);
+            hint.fontStyle = FontStyles.Italic;
+            var field = go.GetComponent<TMP_InputField>();
+            field.targetGraphic = bg;
+            field.textViewport = art;
+            field.textComponent = text;
+            field.placeholder = hint;
+            field.characterLimit = 40;
+            field.richText = false;
+            field.caretColor = fontColor;
+            field.customCaretColor = true;
+            field.onValueChanged.AddListener(v =>
+            {
+                filter = v ?? "";
+                if (listContent != null) BuildList();
+            });
+            return field;
         }
 
         // ---- the pieces ----
@@ -891,6 +1047,9 @@ namespace GK2DonkeyAPI
             float roomH = canvasRt.rect.height - 2f * EdgeGap, roomW = canvasRt.rect.width - 2f * EdgeGap;
             float scale = Mathf.Max(0.5f, Mathf.Min(1f, roomW / w, roomH / h));
             window.transform.localScale = new Vector3(scale, scale, 1f);
+            // measure, never assume (the user, 2026-10-21): the canvas's units at this screen, its scaler's factor, the screen
+            Canvas root = canvasRt.GetComponentInParent<Canvas>();
+            Plugin.Log.LogInfo($"Settings: {window.name} {w:0}x{h:0} on a canvas of {canvasRt.rect.width:0}x{canvasRt.rect.height:0} units (scale factor {(root != null ? root.scaleFactor : 0f):0.##}, screen {Screen.width}x{Screen.height}): window scale {scale:0.##}.");
         }
 
         // The self-test's view of the panel ("settings: the Mounts panel opens...").
@@ -960,7 +1119,22 @@ namespace GK2DonkeyAPI
         {
             if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null)))
             {
-                Close(keep: true);
+                Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (RestoreUnder is skipped)
+                return;
+            }
+            if (search != null && search.isFocused) searchFocusFrame = Time.frameCount;
+            if (panel != null && controlsTaken) TakeControls(); // re-asserted: a game popup closing gives ByUI back
+            if (panel != null && UnityInput.Current.GetKeyDown(KeyCode.Escape))
+            {
+                // Escape steps back: out of the search box first (the field already put its text back), then the colours
+                // window to the journal, then the journal closed (keeping what was chosen). The game reads the same press
+                // and opens its pause menu: closed again now and a frame later (the order of the two Updates isn't fixed;
+                // the user, 2026-10-21: Escape must not fall through to the pause menu).
+                // consumed: nothing else of the game's reads this press (the controls are the panel's anyway)
+                try { LazyInput.ClearKeyDown(GameKey.InGameMenu); LazyInput.ClearKeyDown(GameKey.Back); } catch { }
+                if (search != null && searchFocusFrame >= Time.frameCount - 1) search.DeactivateInputField();
+                else if (colours != null) CloseColours(keep: true);
+                else Close(keep: true); // and back to where it was opened from
                 return;
             }
             if (panel == null || Time.unscaledTime < nextPicture)
@@ -982,7 +1156,7 @@ namespace GK2DonkeyAPI
                     return;
                 }
             }
-            if (pictureOff || !panel.activeSelf) return;
+            if (pictureOff) return;
             try
             {
                 Mount.Instance paper = LookPreview.PaperOf(page);
@@ -992,15 +1166,9 @@ namespace GK2DonkeyAPI
                     pictureTex = paper != null ? Colors.BuildPreview(paper, pictureTex) : null;
                     pic = pictureTex;
                 }
-                if (pic != null)
-                {
-                    // as large as the stage allows, up to PictureScale, centred in it
-                    picture.texture = pic;
-                    Vector2 art = PreviewStage.ArtSize(pic);
-                    float k = Mathf.Min(PictureScale, (stage.rect.width - 16f) / Mathf.Max(1f, art.x), (stage.rect.height - 16f) / Mathf.Max(1f, art.y)); // the stage renders at 3x detail: a fraction of that is a smooth downscale
-                    ((RectTransform)picture.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
-                }
-                picture.gameObject.SetActive(pic != null);
+                // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
+                if (panel.activeSelf) Fit(picture, stage, pic, PictureScale);
+                if (colours != null && coloursPicture != null) Fit(coloursPicture, coloursStage, pic, CPictureScale);
             }
             catch (Exception e)
             {
@@ -1011,6 +1179,113 @@ namespace GK2DonkeyAPI
                 }
                 pictureOff = true; // the picture alone: the panel keeps following the mount
             }
+        }
+
+        private static int searchFocusFrame = -10;
+
+        private static bool controlsTaken;
+
+        // The way back, a stack: the game's own windows below (the pause menu, the Mods menu on a mod's page, the Settings
+        // window on a page...), then the journal, then the colours window. The game window on top when the panel opens
+        // is not closed: it stays in the game's window stack as it is (modal: the game stays paused) with its GameObject
+        // switched off, so its own Escape handling doesn't run under the panel; the panel closing switches it back on,
+        // same page and state, and its own Escape goes on from there. Closing and reopening it would not do: the Mods
+        // menu's Close reopens the pause menu and forgets where it came from, and its Open starts on the mod list
+        // (GK2 Mod Framework's ModsMenuWindow, read 2026-10-21).
+        private static LazyWindow<LazyWidgetDataBase> under;
+
+        private static void HideUnder()
+        {
+            under = null;
+            try
+            {
+                if (LazyWindowsStackController.ActiveWindow is LazyWindow<LazyWidgetDataBase> top && top != null && top.gameObject.activeSelf)
+                {
+                    under = top;
+                    top.gameObject.SetActive(false);
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("Settings: the window under the Mounts panel could not be set aside (" + e.Message + ").");
+            }
+        }
+
+        // back: the window under it shown again as it was. Not back (Ride, Drive): every game window closed, into the game.
+        private static void RestoreUnder(bool back)
+        {
+            LazyWindow<LazyWidgetDataBase> w = under;
+            under = null;
+            if (w == null) return; // opened from the game: nothing to show again
+            try
+            {
+                w.gameObject.SetActive(true);
+                if (back)
+                {
+                    Plugin.Log.LogInfo($"Settings: the Mounts panel closed: back to {w.name}.");
+                    return;
+                }
+                // into the game: close the chain the game and the framework built (each Close may open the one before it)
+                for (int i = 0; i < 8 && LazyWindowsStackController.ActiveWindow is LazyWindow<LazyWidgetDataBase> top && top != null; i++)
+                {
+                    if (!top.gameObject.activeSelf) top.gameObject.SetActive(true);
+                    top.Close();
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Settings: the window under the Mounts panel could not be shown again (" + e.Message + ").");
+            }
+        }
+
+        private static string UnderText() => under != null ? under.name : "the game";
+
+        // The player's controls taken while the panel is open, as the game's own modal windows do (ByUI: the ride goes
+        // on, as with a chest or the inventory): the game's own key reader (PlayerInputHandler, the pause menu on Escape,
+        // E, I, movement) does not run under the panel. Re-asserted every tick: the game gives ByUI back when its last
+        // modal window closes, which a popup over the panel would do.
+        private static void TakeControls()
+        {
+            try
+            {
+                PlayerController pc = MainGame.PlayerController;
+                if (pc == null) return;
+                if (pc.IsControlEnabledByType(TakenControlType.ByUI)) pc.SetControlTakenType(TakenControlType.ByUI, isEnabled: false);
+                controlsTaken = true;
+            }
+            catch (Exception e)
+            {
+                if (!controlsTaken) Plugin.Log.LogInfo("Settings: the Mounts panel could not take the controls (" + e.Message + "); the game's keys work under it.");
+            }
+        }
+
+        private static void ReleaseControls()
+        {
+            if (!controlsTaken) return;
+            controlsTaken = false;
+            try
+            {
+                PlayerController pc = MainGame.PlayerController;
+                if (pc != null && !LazyWindowsStackController.HasAnyModalWindowOpened) pc.SetControlTakenType(TakenControlType.ByUI, isEnabled: true); // a game window open meanwhile keeps its own hold
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Settings: the Mounts panel could not give the controls back (" + e.Message + ").");
+            }
+        }
+
+        private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale)
+        {
+            if (img == null || box == null) return;
+            if (pic != null)
+            {
+                img.texture = pic;
+                Vector2 art = PreviewStage.ArtSize(pic);
+                float k = Mathf.Min(maxScale, (box.rect.width - 16f) / Mathf.Max(1f, art.x), (box.rect.height - 16f) / Mathf.Max(1f, art.y));
+                if (k >= 1f) k = Mathf.Floor(k); // the stage is point-filtered: a whole number of screen pixels per art pixel, no shimmer
+                ((RectTransform)img.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
+            }
+            img.gameObject.SetActive(pic != null);
         }
 
         // A skin or mount registered, reloaded or withdrawn while the panel is open (the Mounts tab, the pack watch): the
@@ -1039,11 +1314,13 @@ namespace GK2DonkeyAPI
             });
         }
 
-        private static void Close(bool keep)
+        private static void Close(bool keep, bool back = true)
         {
+            bool wasOpen = panel != null;
+            MountSettingsPage closing = page;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;
-            if (colours != null) CloseColours(keep: true); // its rows are the journal's snapshot's too
+            if (colours != null) CloseColours(keep: true, reshow: false); // its rows are the journal's snapshot's too; the journal goes next
             try
             {
                 if (!keep)
@@ -1087,6 +1364,8 @@ namespace GK2DonkeyAPI
             headerIcon = null;
             listContent = rightArea = stage = contentRoot = null;
             listScroll = contentScroll = null;
+            search = null;
+            filter = "";
             titleCount = headerName = headerDesc = null;
             templateRow = null;
             dialogTemplate = null;
@@ -1094,6 +1373,12 @@ namespace GK2DonkeyAPI
             fontMaterial = null;
             nextPicture = 0f;
             page = null;
+            if (wasOpen)
+            {
+                if (Mount.IsGameReady) RestoreUnder(back); // the game gone (a load, the main menu): its windows went with it
+                else under = null;
+                ReleaseControls(); // after: a game window shown again keeps its own hold on the controls
+            }
         }
     }
 }
