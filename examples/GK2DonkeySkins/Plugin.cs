@@ -29,8 +29,9 @@ namespace GK2DonkeySkins
             registered.Add(Mounts.Looks.RegisterRecipe(Guid, "sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
             // A mount kind of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
             // sits the rider two pixels higher than its skin's seat row (SeatAdjustPx nudges from the row the skin
-            // declares, for every player; docs/seat-investigation.md), and carries one ability: it burns (the built-in
-            // Hellfire) while ridden.
+            // declares, for every player; docs/seat-investigation.md), and carries one ability: it gallops (half again
+            // the speed) while ridden. (It burned while ridden before 0.35.0: the effect is the player's own choice, which
+            // an ability may not take; a mount that should burn declares effect = hellfire in its definition.)
             registered.Add(Mounts.Kinds.Register(Guid, new MountKindDef
             {
                 Id = "checker-beast",
@@ -39,7 +40,7 @@ namespace GK2DonkeySkins
                 Version = "0.1",
                 Cart = false,
                 TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2 }, // the key is an int (art pixels)
-                Abilities = { new BurnsWhenRidden(Guid) },
+                Abilities = { new GallopsWhenRidden() },
             }));
             registered.Add(Mounts.Looks.Register(Guid, new MountSkinDef
             {
@@ -51,7 +52,7 @@ namespace GK2DonkeySkins
                 SeatRow = 52,               // the rider's hip on row 52 of the 96 canvas (the donkey's own seat), for every player
                 Source = new CheckerSource(),
             }));
-            Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, burns while ridden); pick them in Saddle Up's Mount section.");
+            Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, gallops while ridden); pick them in Saddle Up's Mount section.");
         }
 
         private void OnDestroy()
@@ -87,33 +88,24 @@ namespace GK2DonkeySkins
             return dst;
         }
 
-        // An ability: the instance's own Effect key set to Hellfire while the keeper rides it and cleared after (an
-        // override owned by this mod, so a player's own pick on another donkey is untouched). The hooks run on the API's
-        // LateUpdate; nothing here allocates per frame.
-        private sealed class BurnsWhenRidden : MountAbility
+        // An ability: the instance's speed raised while the keeper rides it and cleared after. Its values are set under
+        // Owner (given by the API: "<this mod>.ability.checker-beast"), which the API clears by itself when the instance
+        // stops being this kind, so Detached needs nothing. A mount may set its speed (the player's Speed row greys on
+        // it, Saddle Up's TuningKey); it may not set the player's Effect, Skin or colours: such a Set is refused and
+        // said once in the log. The hooks run on the API's LateUpdate; nothing here allocates per frame.
+        private sealed class GallopsWhenRidden : MountAbility
         {
-            private readonly string owner;
-
-            internal BurnsWhenRidden(string owner)
-            {
-                this.owner = owner;
-            }
-
-            public override string Id => "burns-when-ridden";
+            public override string Id => "gallops-when-ridden";
 
             public override void Mounted(MountHandle mount, MountStyle style)
             {
-                mount.Tuning.Set(owner, "Effect", "hellfire");
-                mount.Tuning.Set(owner, "EffectWhen", MountEffectWhen.Always);
+                mount.Tuning.Set(Owner, "SpeedMultiplier", 1.5f * Mounts.Tuning(style).Get<float>("SpeedMultiplier")); // from the value in effect for everyone (the player's, or another mod's session value), never from an override of our own left behind on this mount
             }
 
             public override void Dismounted(MountHandle mount)
             {
-                if (mount.Tuning.SetBy("Effect") == owner) mount.Tuning.Clear("Effect");
-                if (mount.Tuning.SetBy("EffectWhen") == owner) mount.Tuning.Clear("EffectWhen");
+                mount.Tuning.Clear(Owner, "SpeedMultiplier");
             }
-
-            public override void Detached(MountHandle mount) => Dismounted(mount);
         }
 
         // A source: one picture per frame key, made on demand and kept by the mod. Here every frame is the same 96x96

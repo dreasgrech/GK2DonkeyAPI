@@ -40,7 +40,7 @@ namespace GK2DonkeyAPI
         }
 
         // What the picture is drawn from: the companion's donkey on paper (its look, no game needed).
-        internal static Mount.Instance PaperOf(MountSettingsPage p) => p?.PreviewOf?.Paper;
+        internal static Mount.Instance PaperOf(MountSettingsPage p) => p?.PreviewOf?.Paper ?? p?.MountPaper;
 
         private sealed class Shown
         {

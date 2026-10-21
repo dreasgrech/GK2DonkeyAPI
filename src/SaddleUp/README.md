@@ -4,7 +4,7 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.11.0, for GK2 Donkey API 0.34.0 or newer, and Steam game build 25910882 (game
+`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.12.0, for GK2 Donkey API 0.35.0 or newer, and Steam game build 25910882 (game
 1.010). Five more mounts come inside it (a dragon, a giant rat, a giant snail, a giant worm, Gerry: skin packs in
 `assets/skins/`, registered with the API at start the way any mod ships a mount), switched off until the next update.
 
@@ -40,25 +40,28 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Ride, Drive, Bell, Send away | H, G, B, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
+| 1. Keys | Ride, Drive, Bell, Send away, Mounts panel | H, G, B, none, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
-| | Mount | Donkey | What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row under the Skin row says so. Its picture is at the top of the section. |
-| | Skin | Default | How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire with its ring of fire, Royal Parade, skin packs from anyone) come in the next update. |
+| | Mounts | | A button: closes the menu and opens the **Mounts panel** over the game: every mount you can ride on the left, the chosen one drawn on the right with what it is and does, and its skin, effect and colour rows under it. Done keeps your choices, Cancel puts them back. The Mount, Skin, effect and colour rows below are chosen there, not in this menu (0.12). |
+| | Mount | Donkey | (in the Mounts panel) What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row in the section says so. Its picture is at the top of the section. |
+| | Skin | Default | (in the Mounts panel) How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire with its ring of fire, Royal Parade, skin packs from anyone) come in the next update. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |
 | | Keep your mount with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
-| 3. Colours | Choose colours | | A button: closes the menu and opens the colour rows over the game (below). The picture of your mount and cart is under it, then the rows under two headings, "Mount colours" and "Cart colours". Kept per mount. |
-| | Coat colour | Game default | The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
-| | Harness colour | Game default | The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
-| | Second tone | Game default | The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava. Pale, Rose, Brown, Green, Blue, Dark, or Custom. Not shown for a mount without one (the worm); greyed in the colours window over the game. |
-| | Paint | Game default | Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
-| | Wheel colour | Game default | The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
-| | Wheel hub colour | Game default | The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |
-| | Lantern light | Warm (game default) | White, Green, Blue, or Custom. |
-| 4. Effect | Effect | As the mount | A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
-| | Effect shown | Always | Never, At night, Always. |
-| | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | How the effect behaves. |
+| 3. Colours | (the picture) | | The picture of your mount and cart, and a line saying where the colour rows went: the rows below are in the Mounts panel (since 0.12; before, a "Choose colours" bar over the game), under two headings, "Mount colours" and "Cart colours". Kept per mount. |
+| | Colour rows | In the Mounts panel | A line in the menus saying where the colour rows went. |
+| | Coat colour | Game default | (in the Mounts panel) The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
+| | Harness colour | Game default | (in the Mounts panel) The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
+| | Second tone | Game default | (in the Mounts panel) The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava. Pale, Rose, Brown, Green, Blue, Dark, or Custom. Not shown for a mount without one (the worm); greyed in the Mounts panel. |
+| | Paint | Game default | (in the Mounts panel) Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
+| | Wheel colour | Game default | (in the Mounts panel) The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
+| | Wheel hub colour | Game default | (in the Mounts panel) The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |
+| | Lantern light | Warm (game default) | (in the Mounts panel) White, Green, Blue, or Custom. |
+| 4. Effect | Effect | As the mount or skin | (in the Mounts panel) A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
+| | Effect shown | Always | (in the Mounts panel, with the four effect toggles) Never, At night, Always. |
+| | Effect rows | In the Mounts panel | A line in the menus saying where the Effect rows went (shown once the mounts are switched on; until then the "Particle effects: coming in the next update" line). |
+| | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | (in the Mounts panel, under the Effect row) How the effect behaves. |
 | 5. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
 | | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
 | | Say why mounting is refused | on | The keeper's thought bubble. |
@@ -77,15 +80,16 @@ All of these apply at once:
 
 **Choosing colours:**
 - **A picture** of your mount and cart in the chosen colours, walking on the spot: at the top of the Mount
-  section and under the Choose colours button in the Colours section, and above the Mods window too when the screen
+  section and in the Colours section, and above the Mods window too when the screen
   has room for it (1440p and up). Above the Settings window without the Mods menu. It needs no mount in
   the game.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
   Mustard, Gold) and its lightness. The picture shows the result.
-- **Choose colours** (in Colours) closes the menu and opens the colour rows at the bottom of the screen, over the game:
-  your mount's colours on the left, the cart's on the right, the Mount, Skin and Effect rows with them. You see your
-  real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
+- **The Mounts panel** (the Mount section's Mounts button, or the Mounts panel key) closes the menu and opens over the
+  game: every mount you can ride listed on the left, the chosen one drawn on the right with what it is and does, and
+  under it its Skin, Effect and colour rows (your mount's colours and the cart's under their two headings). You see
+  your real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
   Only in a game. Everything
 else (the seat, the cargo on the cart, the lantern's place, the sounds themselves) is tuned and fixed; mod authors
 can change it in GK2 Donkey API's dev panel.

@@ -73,7 +73,7 @@ def main():
     gen = f"make_{sid.replace('-', '_')}.py"
     # the cfg, in the canonical layout (tools/skins/canonical_cfg.py: [Skin], the colours, the mount block last)
     lines = [f"# {name}: a {'skin drawn over the donkey' if over else 'mount of its own' if mount else 'skin of the donkey'} (docs/skins.md). Our own art, drawn by tools/skins/{sid}/{gen}.",
-             "[Skin]", "format = 1", f"id = {sid}", f"name = {name}", "author = dreas", "version = 0.1", "base = donkey", "kind = own",
+             "[Skin]", "format = 1", f"id = {sid}", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "kind = own",
              f"layer = {'over' if over else 'replace'}"]
     if over:
         lines.append("erase = FF00FF       # over only: pixels of this colour clear the donkey there (the ears under horns)")
@@ -85,7 +85,7 @@ def main():
               "Dark = 141E14        # the placeholder's outline: replace with the hexes your pictures use (tools/skins/skin_colors.py writes the section from a colors.json block)"]
     if mount:
         lines += ["", "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.",
-                  "[Mount]", f"id = {mount}", f"name = {name}", "author = dreas", "version = 0.1", "cart = true", "foals = true",
+                  "[Mount]", f"id = {mount}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).", "author = dreas", "version = 0.1", "cart = true", "foals = true",
                   "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6",
                   "", "# What the creature is: its sounds (docs/reference.md); the rider's seat and the cart are the skin's rows above.",
                   "# [Mount.Tuning]", "# BrayVolume = 0", "# HoofVolume = 0"]

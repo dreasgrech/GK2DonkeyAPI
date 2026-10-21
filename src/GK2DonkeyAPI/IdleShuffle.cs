@@ -844,7 +844,7 @@ namespace GK2DonkeyAPI
                 donkey.Data.SetStateToAnimator(want);
                 if (anim != null)
                 {
-                    walkSpeedApplied = want == AnimationState.Walk ? StandWalkSpeed : 1.5f;
+                    walkSpeedApplied = want == AnimationState.Walk ? StandWalkSpeed : S.WalkCycleSpeed.Value;
                     anim.SetWalkAnimationSpeedMultiplier(walkSpeedApplied);
                 }
             }

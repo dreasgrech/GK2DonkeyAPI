@@ -25,7 +25,7 @@ frozen the colours: Colors
 frozen the lantern: Lantern
 
 warned the sounds: MountSounds AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
-warned the look bar: LookBar
+warned the Mounts panel (the look bar's successor): MountsPanel
 warned the settings page in the game's Settings window: SettingsRows
 warned the Mods menu's donkey picture and its labelled lists: ModsWindow
 

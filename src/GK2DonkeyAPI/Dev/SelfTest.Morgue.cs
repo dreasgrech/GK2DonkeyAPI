@@ -60,6 +60,7 @@ namespace GK2DonkeyAPI
                 yield return Frames(1);
                 g1 = CorpseOnCart(null);
                 Check(g1 != null && Mount.MorgueHandover.HasCorpse(i), "the cart reports a corpse aboard");
+                Mounts.Behaviour.ClearAny("CorpseIntoMorgue"); // Saddle Up holds it: taken over for the test, given back in the finally
                 Mounts.Behaviour.Set(Owner, "CorpseIntoMorgue", false);
                 int n0 = Mount.MorgueHandover.HandOver(i, pd, "the test");
                 Check(n0 == 0 && i.CargoRig.Count == 1 && !pd.HasOverheadItem, "switched off: the body stays on the cart");
@@ -83,7 +84,7 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                Mounts.Behaviour.Clear("CorpseIntoMorgue");
+                Mounts.Behaviour.ClearAny("CorpseIntoMorgue");
                 if (owner != null) Mounts.Behaviour.Set(owner, "CorpseIntoMorgue", was);
                 // The test bodies away: out of the hands (anything held now that was not held before the test) and off
                 // the cart (they were never in the world).

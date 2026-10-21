@@ -109,6 +109,7 @@ namespace GK2DonkeyAPI
         {
             new Scenario { Group = GroupCore, Name = "the per-mod API (ids, keys, data, owner rules)", Body = ApiIdentity },
             new Scenario { Group = GroupCore, Name = "kept-with-save text, round trip", Body = RoundTrip },
+            new Scenario { Group = GroupCore, Name = "kept with save: a gone mod's lines set aside and written back, an ability's dropped", Body = AsideLines },
             new Scenario { Group = GroupCore, Name = "hitch and unhitch", Body = HitchUnhitch },
             new Scenario { Group = GroupCore, Name = "unhitch without a view (a parked cart stays)", Body = UnhitchWithoutView },
             new Scenario { Group = GroupCore, Name = "shared colour textures", Body = SharedColours },
@@ -149,15 +150,21 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skin: on, off, removed (pictures loaded and freed)", Body = SkinOnOff },
             new Scenario { Group = GroupLooks, Name = "skin pack: a folder read, validated, worn, withdrawn", Body = SkinPack },
             new Scenario { Group = GroupLooks, Name = "skins: no leaks over spawn and remove", Body = SkinLeaks },
+            new Scenario { Group = GroupLooks, Name = "skin: kept through a hitch, freed asleep far away, worn again awake", Body = SkinSleep },
             new Scenario { Group = GroupLooks, Name = "recipe: built from the donkey's frames, worn whole", Body = SkinRecipe },
             new Scenario { Group = GroupLooks, Name = "effect: hellfire lit, follows, out, gone with the donkey", Body = EffectOnOff },
             new Scenario { Group = GroupLooks, Name = "mount kind from a pack: declared, worn, no cart, its tuning, withdrawn", Body = KindPack },
             new Scenario { Group = GroupLooks, Name = "mount kind from code: the ability's hooks on spawn, ride, dismount, removal", Body = KindAbility },
+            new Scenario { Group = GroupLooks, Name = "tuning: a value belongs to the owner that set it; what a mount and an ability may pin", Body = TuningOwnership },
+            new Scenario { Group = GroupLooks, Name = "ids: the mount's own skin owns its declaration; the same skin id twice, the newer wins", Body = IdRules },
+            new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, Cancel, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "skins and kinds: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every shipped mount, AutoSeat off and on (a readout)", Body = SeatReadout },
             new Scenario { Group = GroupLooks, Name = "cart: the hitch gap and the cart-style seat on every shipped mount (a readout)", Body = CartReadout },
+            new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "effect: the skin's own effect under 'As the mount or skin', and the ring's size by the drawn width", Body = SkinEffect },
             new Scenario { Group = GroupLooks, Name = "front layer: the dragon's near wing stays in front of the rider (a readback)", Body = FrontLayer },
             new Scenario { Group = GroupLooks, Name = "preview: the cart sits at the new mount's hitch gap as soon as the mount is switched", Body = PreviewGap },
@@ -784,7 +791,7 @@ namespace GK2DonkeyAPI
             string v2 = "tab\there, new\nline, back\\slash"; // a tab, a line break and a backslash in one value
             parent.SetData(Owner, "tricky", v2);
             parent.Tuning.Set(Owner, "CoatColorize", "00FF80");
-            cartDonkey.Tuning.Set(Owner, "Skin", "dragon"); // a skin whose mount sets a cart-style value (HitchGapPx): the skin id is kept, the mount's value is not
+            cartDonkey.Tuning.Set(Owner, "Skin", "dragon"); // a skin whose own [Tuning.Cart] sets a cart-style value (HitchGapPx): the skin id is kept, the merged value is not
             if (Plugin.MountsOn) yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the dragon's cart-style values once the view is up
             yield return Frames(2);
             List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
@@ -817,7 +824,7 @@ namespace GK2DonkeyAPI
                 if (r.ParentFull != wantParent) bad.Add($"parent {r.ParentFull}");
                 foreach (var kv in i.Overrides)
                 {
-                    bool mountsOwn = i.OverrideOwners.TryGetValue(kv.Key, out string by) && by == Looks.TuningOwner;
+                    bool mountsOwn = i.OverrideOwners.TryGetValue(kv.Key, out string by) && (by == Looks.TuningOwner || Mount.IsAbilityOwner(by)); // the mount's merge and an ability's values: set again in play, never written
                     if (mountsOwn && r.Sets.Exists(x => x[0] == kv.Key)) bad.Add("the mount's own " + kv.Key + " written (it comes back with the skin)");
                     else if (!mountsOwn && !r.Sets.Exists(x => x[0] == kv.Key)) bad.Add("setting " + kv.Key);
                 }
@@ -908,7 +915,7 @@ namespace GK2DonkeyAPI
                 Check(Vector3.Distance(new Vector3(drawn.x, 0f, drawn.z), new Vector3(back.x, 0f, back.z)) < 0.05f, $"taken again: the cart is drawn where it stood ({back:F2})");
                 Check(Mathf.Abs(Along(d) - wide) < 0.03f, "and the gap is on it again");
             }
-            d.Tuning.Clear("HitchGapPx");
+            d.Tuning.Clear(Owner, "HitchGapPx");
             yield return Frames(3);
             Check(Mathf.Abs(Along(d) - plain) < 0.03f, $"gap cleared: the prefab's distance again ({Along(d):F2})");
         }
@@ -1272,6 +1279,24 @@ namespace GK2DonkeyAPI
                 Check(me.Skin == MountLooks.DonkeyId, $"back to the donkey: its own art again (\"{me.Skin}\")");
                 mount.Value = "dragon";
                 Check(me.Skin == "dragon", $"the dragon again: it remembered Red Dragon (\"{me.Skin}\")");
+                // the Mounts panel's data side (MountsPanel: the list and the words come from the registry, the choice
+                // goes through the page's Mount row)
+                page.SelectMount(MountKinds.DonkeyId);
+                Check(page.MountChosen == MountKinds.DonkeyId && me.Skin == MountLooks.DonkeyId, $"the panel's choice goes through the Mount row: the donkey (\"{me.Skin}\")");
+                page.SelectMount("dragon");
+                Check(page.MountChosen == "dragon" && me.Skin == "dragon", $"and the dragon, with the skin it remembered (\"{me.Skin}\")");
+                List<MountsPanel.Entry> entries = MountsPanel.Entries();
+                MountsPanel.Entry dragonEntry = entries.Find(e => e.Id == "dragon");
+                int withSkins = 0;
+                foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+                {
+                    // as KindChoices counts: a kind with a skin a player can pick (not set aside)
+                    bool pickable = k.Id == MountKinds.DonkeyId && k.Skins.Count > 0;
+                    foreach (string sid in k.Skins) if (Looks.Find(sid)?.Unavailable == null) pickable = true;
+                    if (pickable) withSkins++;
+                }
+                Check(entries.Count == withSkins && entries[0].Id == MountKinds.DonkeyId, $"the panel lists every mount with a skin, the donkey first ({entries.Count} of {withSkins} mounts)");
+                Check(dragonEntry != null && dragonEntry.Description.Length > 0 && dragonEntry.Lines.Exists(l => l.StartsWith("Pulls the cart")) && dragonEntry.Lines.Exists(l => l.StartsWith("Has babies")), $"the dragon's entry carries its description and what it does ({dragonEntry?.Lines.Count} lines)");
                 ConfigEntry<int> foals = Row<int>("Foals");
                 ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
                 Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null, "the three babies rows are bound");
@@ -1452,7 +1477,7 @@ namespace GK2DonkeyAPI
                         SpriteRenderer body = a.I.TestBodyRenderer;
                         float want = seatOk && body != null ? body.transform.InverseTransformPoint(seatTop).y + ride.LegAdjustYPx.Entry.Value * 0.02f : float.NaN;
                         Check(!float.IsNaN(legY) && !float.IsNaN(want) && Math.Abs(legY - want) < 0.02f * 1.5f, $"the leg overlay hangs from the snail's seat row ({legY:0.000} vs {want:0.000}, within 1.5 px)");
-                        a.Tuning.Clear("NearLeg");
+                        a.Tuning.Clear(Owner, "NearLeg");
                     }
                     string who(string key) => a.Tuning.IsSet(key) ? $"{key} = {a.Tuning.Get<object>(key)} ({(a.Tuning.SetBy(key) == Looks.TuningOwner ? "the mount" : a.Tuning.SetBy(key))})" : $"{key} = the player's {(key == "SeatOffset" ? ride.SeatOffset.Entry.Value.ToString("0.00") : ride.SeatAdjustPx.Entry.Value.ToString())}";
                     string seatDecl = a.I.LooksRig.TrySeatTop(out _, out bool fixedRow) ? (fixedRow ? $"seat = {Looks.Find(id)?.SeatRow}; " : "seat = picture; ") : "";
@@ -1936,8 +1961,8 @@ namespace GK2DonkeyAPI
                     foreach (string hex in rr) { Colors.TryHex(hex, out Color32 c); if (d.ChangedSources.Exists(x => x.r == c.r && x.g == c.g && x.b == c.b)) redsChanged++; }
                 Check(redsChanged == 4, $"the player's harness colour reaches the cloth's four reds ({redsChanged} of 4)");
             }
-            a.Tuning.Clear("HarnessColorize");
-            a.Tuning.Clear("HarnessColorizeAmount");
+            a.Tuning.Clear(Owner, "HarnessColorize");
+            a.Tuning.Clear(Owner, "HarnessColorizeAmount");
             ov = a.I.LooksRig.TestOverlay();
             int clothDrawn = 0, clothEmpty = 0; walkPics = 0;
             yield return WalkFor(a, part, 40, () =>
@@ -1990,7 +2015,7 @@ namespace GK2DonkeyAPI
             yield return Until(() => a.IsReady && a.I.TestSkinWearing() == "gerry" && Looks.TestCellOpaque("gerry", "bdy_static_left") >= 0, 30f);
             if (!waited)
             {
-                Fail($"the skin never became whole ({Looks.LastGameSourceNote})");
+                Fail($"the skin never became whole (the last game-source build: {Looks.LastGameSourceNote}; set aside: {Looks.Find("gerry")?.Unavailable ?? "no"})");
                 a.Remove();
                 yield break;
             }
@@ -2735,7 +2760,7 @@ namespace GK2DonkeyAPI
 
         // A pack's [Mount] section declares a kind (docs/mounts-design.md): listed with its skin, no cart, its tuning
         // (both styles' value on, the cart-only one off while standing) on the wearer owned by the skin system, the
-        // hitch refused with the kind's name; the skin withdrawn: the kind stays listed, its tuning is off the donkey.
+        // hitch refused with the kind's name; the skin withdrawn: the kind goes with it (no other skin declares it), its tuning is off the donkey.
         private static IEnumerator KindPack()
         {
             const string owner = Owner + ".kindpack";
@@ -2770,7 +2795,7 @@ namespace GK2DonkeyAPI
             a?.Tuning.Set(Owner, "RiderOffsetPx", 11);
             yield return Frames(3);
             Check(a != null && a.Tuning.Get<int>("RiderOffsetPx") == 11 && a.Tuning.SetBy("RiderOffsetPx") == Owner, "a mod's value set on the donkey wins over the creature's and stays");
-            a?.Tuning.Clear("RiderOffsetPx");
+            a?.Tuning.Clear(Owner, "RiderOffsetPx");
             yield return Frames(3);
             Check(a != null && a.Tuning.Get<int>("RiderOffsetPx") == 3 && a.Tuning.SetBy("RiderOffsetPx") == Looks.TuningOwner, "cleared: the creature's value is back on it");
             MountHandle cart = Mounts.SpawnCart(Owner, near + new Vector3(2.5f, 0f, 0f));
@@ -2841,9 +2866,9 @@ namespace GK2DonkeyAPI
             }
             Check(Looks.Unregister("kind-test", owner), "the owner withdraws the skin");
             yield return Frames(3);
-            Check(Mounts.Kinds.Find("test-beast") != null, "the kind stays listed after its skin is withdrawn");
+            Check(Mounts.Kinds.Find("test-beast") == null, "the mount goes with its declaring skin (no other skin declares it; the id rule, docs/mounts-foundation-2.md 6.1)");
             Check(a != null && a.Kind == MountKinds.DonkeyId && !a.Tuning.IsSet("RiderOffsetPx"), "withdrawn: the donkey is a donkey again, the kind's tuning off it");
-            Check(Mounts.Kinds.Unregister(owner, "test-beast"), "the pack's owner withdraws the kind");
+            Check(!Mounts.Kinds.Unregister(owner, "test-beast"), "nothing left for the owner to withdraw");
             a?.Remove();
             cart?.Remove();
             yield return Frames(2);
@@ -2955,6 +2980,257 @@ namespace GK2DonkeyAPI
             reg.Dispose();
             Check(Mounts.Kinds.Find("test-able") == null, "the kind is withdrawn with its handle");
             try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+        }
+
+        // A value on an instance belongs to the owner that set it (docs/mounts-foundation-2.md 2.1): another mod's Set
+        // and Clear are refused (TrySet says so) and the mount's own value is anyone's to replace; the session layer
+        // the same; a mount may pin its speed and sounds, never a behaviour switch; an ability's values are set under
+        // the owner the API gave it and are cleared when the kind leaves, whether the ability cleared them or not; a
+        // page row that names its tuning key is disabled while the companion's chosen mount pins that key.
+        private static IEnumerator TuningOwnership()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the API keeps a mount kind out");
+                yield break;
+            }
+            const string one = Owner + ".one", two = Owner + ".two", kindOwner = Owner + ".own";
+            Vector3 near = Spot(home, 4f) ?? home;
+            MountHandle m = Spawn(near, true);
+            if (m == null) { Fail("could not spawn"); yield break; }
+            m.Tuning.Set(one, "SpeedMultiplier", 1.7f);
+            Check(m.Tuning.SetBy("SpeedMultiplier") == one && Math.Abs(m.Tuning.Get<float>("SpeedMultiplier") - 1.7f) < 0.001f, "mod one sets the speed on its donkey");
+            float got = m.Tuning.Set(two, "SpeedMultiplier", 3f);
+            Check(m.Tuning.SetBy("SpeedMultiplier") == one && Math.Abs(got - 1.7f) < 0.001f, $"mod two's Set is refused: the value stays mod one's and Set returns it ({got})");
+            Check(!m.Tuning.TrySet(two, "SpeedMultiplier", 3f, out float applied) && Math.Abs(applied - 1.7f) < 0.001f, "TrySet says it was refused");
+            Check(!m.Tuning.Clear(two, "SpeedMultiplier") && m.Tuning.IsSet("SpeedMultiplier"), "mod two's Clear is refused");
+            Check(m.Tuning.Clear(one, "SpeedMultiplier") && !m.Tuning.IsSet("SpeedMultiplier"), "mod one's Clear clears it");
+            MountTuning ride = Mounts.Tuning(MountStyle.Ride);
+            string heldBy = ride.OverriddenBy("HeadSettle");
+            if (heldBy != null)
+            {
+                Warn($"HeadSettle is held by {heldBy} this session (the dev panel or a mod): the session-layer checks skipped");
+            }
+            else
+            {
+                ride.Set(one, "HeadSettle", 0.3f);
+                Check(!ride.TrySet(two, "HeadSettle", 0.9f, out float s2) && Math.Abs(s2 - 0.3f) < 0.001f && ride.OverriddenBy("HeadSettle") == one, "the session layer: another owner's Set is refused the same way");
+                Check(!ride.Clear(two, "HeadSettle") && ride.IsOverridden("HeadSettle"), "and its Clear");
+            }
+            Check(ride.Clear(one, "HeadSettle") && !ride.IsOverridden("HeadSettle"), "the owner's Clear clears it");
+
+            // a kind of its own: it pins a mount key and a sound key, tries a behaviour switch; its ability pins under its owner
+            var ability = new PinningAbility();
+            IDisposable reg = null;
+            string tempRoot = null;
+            try
+            {
+                reg = Mounts.Kinds.Register(kindOwner, new MountKindDef { Id = "own-beast", Name = "Own Beast", Abilities = { ability },
+                    Tuning = new Dictionary<string, object> { ["SpeedMultiplier"] = 2f, ["BrayVolume"] = 0.2f, ["IdleShuffle"] = false } });
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-own", "own-test", "[Skin]\nformat = 1\nid = own-test\nname = Own Test\nmount = own-beast\n");
+            }
+            catch (Exception e)
+            {
+                Warn("the kind or the temp pack could not be made: " + e.Message);
+                m.Remove();
+                yield break;
+            }
+            try
+            {
+            Looks.RegisterFolder(tempRoot, kindOwner);
+            Info("the next \"mount 'own-beast' wants to set IdleShuffle\" warning is this test's own: a mount may not pin a behaviour switch");
+            Check(ability.Owner == kindOwner + ".ability.own-beast", $"the ability's owner is given by the API ({ability.Owner})");
+            m.Tuning.Set(Owner, "Skin", "own-test");
+            yield return Until(() => m.IsReady && m.Kind == "own-beast" && m.Tuning.IsSet("SpeedMultiplier"), 8f);
+            Check(waited && m.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner && Math.Abs(m.Tuning.Get<float>("SpeedMultiplier") - 2f) < 0.001f, "the mount pins its speed (a mount key)");
+            Check(m.Tuning.IsSet("BrayVolume") && m.Tuning.SetBy("BrayVolume") == Looks.TuningOwner, "and its bray volume (a sound key)");
+            Check(!m.Tuning.IsSet("IdleShuffle"), "its IdleShuffle is refused: a behaviour switch is the player's");
+            m.Tuning.Set(one, "SpeedMultiplier", 2.5f);
+            Check(m.Tuning.SetBy("SpeedMultiplier") == one && Math.Abs(m.Tuning.Get<float>("SpeedMultiplier") - 2.5f) < 0.001f, "a mod's value replaces the mount's");
+            m.Tuning.Clear(one, "SpeedMultiplier");
+            yield return Frames(3);
+            Check(m.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner, "cleared: the mount's value is back");
+            m.Tuning.Set(one, "Effect", "hellfire"); // a mod's (the player's mod's) look choice, which the ability will try to take
+            MountResult rideRes = m.Ride(showMessage: false);
+            Check(rideRes.Ok, $"ridden{(rideRes.Ok ? "" : " (" + rideRes.Reason + ")")}");
+            if (rideRes.Ok)
+            {
+                yield return Until(() => Mounts.IsMounted && ability.MountedCount == 1, 5f);
+                Check(waited, $"Mounted once ({ability.MountedCount})");
+                yield return Frames(2);
+                Check(m.Tuning.SetBy("HandsSwayPx") == ability.Owner, "ridden: the ability pins a mount key under its own owner");
+                Check(m.Tuning.SetBy("Effect") == one && m.Tuning.Get<string>("Effect") == "hellfire", "the ability's Set of the Effect, which a mod holds, is refused");
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 5f);
+                Check(m.Tuning.IsSet("HandsSwayPx"), "dismounted: the ability left its value behind on purpose");
+            }
+            m.Tuning.Set(Owner, "Skin", "");
+            yield return Until(() => m.Kind == MountKinds.DonkeyId, 8f);
+            yield return Frames(3);
+            Check(waited && !m.Tuning.IsSet("HandsSwayPx"), "the kind gone: the ability's value is cleared by the API");
+            Check(m.Tuning.SetBy("Effect") == one, "the mod's own value is untouched by that");
+            m.Tuning.Clear(one, "Effect");
+
+            // a page row that names its tuning key: disabled while the chosen mount pins the key
+            string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-pin.cfg");
+            try
+            {
+                try { System.IO.File.Delete(path); } catch { }
+                var cfg = new ConfigFile(path, false) { SaveOnConfigSet = false };
+                MountCompanion me = Mounts.Companion(Owner + ".pin");
+                var page = new MountSettingsPage(Owner + ".pin", cfg, "Pin test", "test", "", null);
+                page.Toggle("Behaviour", "Fast", true, "Fast", "");
+                page.TuningKey("Behaviour", "Fast", "SpeedMultiplier", me);
+                MountSettingsPage.Row row = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "Fast");
+                me.Skin = "";
+                Check(row != null && row.Enabled != null && row.Enabled() && MountSettingsPage.PinnedBy(me, "SpeedMultiplier") == null, "on the donkey the speed row is live");
+                me.Skin = "own-test";
+                Check(row != null && row.Enabled != null && !row.Enabled() && MountSettingsPage.PinnedBy(me, "SpeedMultiplier") == "Own Beast", $"on a mount that pins the speed the row is disabled (pinned by \"{MountSettingsPage.PinnedBy(me, "SpeedMultiplier")}\")");
+                me.Skin = "";
+            }
+            finally
+            {
+                try { System.IO.File.Delete(path); } catch { }
+            }
+            m.Remove();
+            yield return Frames(3);
+            }
+            finally
+            {
+                // whatever happened above: nothing of this scenario stays (the kind, its pack, the donkey)
+                try { if (m != null && m.Exists) m.Remove(); } catch { }
+                Looks.Unregister("own-test", kindOwner);
+                reg?.Dispose();
+                try { if (tempRoot != null) System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // Ids and a mount's facts (docs/mounts-foundation-2.md 2.2, the decision 6.1): a pack that is not the mount's own
+        // skin may declare a mount first, but the skin whose id is the mount's re-declares it when it comes (its facts,
+        // its owner), and the first pack's skin joins; the same skin id from two places: the higher version wins (an
+        // older copy is refused, a newer one replaces), versions compared as numbers.
+        private static IEnumerator IdRules()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
+                yield break;
+            }
+            const string o1 = Owner + ".ids1", o2 = Owner + ".ids2";
+            string r1 = null, r2 = null, r3 = null;
+            try
+            {
+                r1 = WriteTempPack("gk2donkeyapi-selftest-ids1", "joiner-test", "[Skin]\nformat = 1\nid = joiner-test\nname = Joiner\nmount = idbeast\n\n[Mount]\nid = idbeast\nname = Joiner's Beast\nauthor = the self-test\nversion = 0.1\ncart = false\nfoals = true\n");
+                Looks.RegisterFolder(r1, o1);
+                MountKindInfo k = Mounts.Kinds.Find("idbeast");
+                Check(k != null && !k.Cart && k.Name == "Joiner's Beast", "a pack that is not the mount's own skin declares it first (cart off)");
+                r2 = WriteTempPack("gk2donkeyapi-selftest-ids2", "idbeast", "[Skin]\nformat = 1\nid = idbeast\nname = Id Beast\nversion = 1.0\nmount = idbeast\n\n[Mount]\nid = idbeast\nname = Id Beast\nauthor = the self-test\nversion = 1.0\ncart = true\nfoals = true\n");
+                Looks.RegisterFolder(r2, o2);
+                k = Mounts.Kinds.Find("idbeast");
+                Check(k != null && k.Cart && k.Name == "Id Beast" && k.Owner == o2, $"the mount's own skin re-declares it: cart on, its name, its owner ({k?.Name}, {k?.Owner})");
+                Check(Mounts.Looks.Find("joiner-test")?.Mount == "idbeast", "the first pack's skin still joins the mount");
+                Check(Kinds.Find("idbeast")?.DeclaredBy == "idbeast", "the kind knows its declaring skin");
+                r3 = WriteTempPack("gk2donkeyapi-selftest-ids3", "idbeast", "[Skin]\nformat = 1\nid = idbeast\nname = Id Beast Older\nversion = 0.9\nmount = idbeast\n");
+                Info("the next \"could not be registered\" warning is this test's own: an older copy of a registered skin is refused");
+                int n = Looks.RegisterFolder(r3, o1 + ".old");
+                Check(n == 0 && Mounts.Looks.Find("idbeast")?.Name == "Id Beast", $"an older copy (0.9) of a registered skin (1.0) is refused ({n} registered)");
+                System.IO.File.WriteAllText(System.IO.Path.Combine(r3, Looks.PackDirName, "idbeast", "skin.cfg"), "[Skin]\nformat = 1\nid = idbeast\nname = Id Beast Newer\nversion = 2.0\nmount = idbeast\n");
+                Info("the next \"replaces the one from\" warning is this test's own: a newer copy replaces the registered skin");
+                n = Looks.RegisterFolder(r3, o1 + ".old");
+                MountSkinInfo sk = Mounts.Looks.Find("idbeast");
+                Check(n == 1 && sk != null && sk.Name == "Id Beast Newer" && sk.Owner == o1 + ".old", $"a newer copy (2.0) replaces it (\"{sk?.Name}\", {sk?.Owner})");
+                Check(Looks.CompareVersions("1.10", "1.9") > 0 && Looks.CompareVersions("1.0", "1") == 0 && Looks.CompareVersions(null, "0.1") < 0, "versions compare as numbers (1.10 > 1.9; 1.0 = 1; none < 0.1)");
+            }
+            finally
+            {
+                foreach (string id in new[] { "joiner-test", "idbeast" })
+                {
+                    Looks.SkinDef d = Looks.Find(id);
+                    if (d != null) Looks.Unregister(id, d.Owner);
+                }
+                Kinds.KindDef kd = Kinds.Find("idbeast");
+                if (kd != null) Mounts.Kinds.Unregister(kd.Owner, "idbeast");
+                foreach (string r in new[] { r1, r2, r3 }) { try { if (r != null) System.IO.Directory.Delete(r, true); } catch { } }
+            }
+            yield break;
+        }
+
+        // The pack format the Mounts panel reads (docs/mounts-foundation-2.md 3, 4.5, 4.6): a skin's and a mount's
+        // description and portrait, [Mount.Stats] lines in order, an ability's name and description from code; a pack
+        // that needs a newer API is refused with the reason, a format that is not a number too; a [Game] line naming no
+        // frame key is reported, not dropped.
+        private static IEnumerator PackFormat()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
+                yield break;
+            }
+            const string owner = Owner + ".format";
+            string r1 = null, r2 = null, r3 = null, r4 = null;
+            IDisposable reg = null;
+            try
+            {
+                r1 = WriteTempPack("gk2donkeyapi-selftest-fmt1", "fmt-test",
+                    "[Skin]\nformat = 1\nneeds = 0.35\nid = fmt-test\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = fmt-beast\n\n[Mount]\nid = fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
+                int n = Looks.RegisterFolder(r1, owner);
+                MountSkinInfo sk = Mounts.Looks.Find("fmt-test");
+                MountKindInfo k = Mounts.Kinds.Find("fmt-beast");
+                Check(n == 1 && sk != null && sk.Description == "A test look." && sk.HasPortrait, $"the skin's description and portrait are read (\"{sk?.Description}\", portrait {sk?.HasPortrait})");
+                Check(k != null && k.Description == "A test creature." && k.HasPortrait, $"the mount's description and portrait are read (\"{k?.Description}\")");
+                Check(k != null && k.Stats.Count == 2 && k.Stats[0].Label == "Speed" && k.Stats[0].Value == "steady" && k.Stats[1].Label == "Diet", $"[Mount.Stats] lines in file order ({k?.Stats.Count})");
+                Texture2D portrait = Looks.PortraitOf(Looks.Find("fmt-test"));
+                Check(portrait != null && portrait.width == 96 && portrait.height == 96, $"the portrait PNG is read from the pack ({portrait?.width}x{portrait?.height})");
+                Check(Looks.PortraitOfKind(Kinds.Find("fmt-beast")) != null, "the mount's portrait too (from its declaring skin's pack)");
+                Check(sk != null && sk.Description != null && (Looks.Find("fmt-test")?.Report ?? "").IndexOf("unknown", StringComparison.OrdinalIgnoreCase) < 0, $"no key of it is unknown to the loader ({Looks.Find("fmt-test")?.Report})");
+
+                r2 = WriteTempPack("gk2donkeyapi-selftest-fmt2", "fmt-needs", "[Skin]\nformat = 1\nneeds = 99.0\nid = fmt-needs\nname = Needs\n");
+                Info("the next \"could not be registered\" warning is this test's own: a pack that needs a newer API is refused");
+                n = Looks.RegisterFolder(r2, owner);
+                Check(n == 0 && Mounts.Looks.Find("fmt-needs") == null, $"a pack that needs API 99.0 is refused ({n} registered)");
+                r3 = WriteTempPack("gk2donkeyapi-selftest-fmt3", "fmt-format", "[Skin]\nformat = x\nid = fmt-format\nname = Format X\n");
+                Info("the next \"could not be registered\" warning is this test's own: a format that is not a number is refused");
+                n = Looks.RegisterFolder(r3, owner);
+                Check(n == 0 && Mounts.Looks.Find("fmt-format") == null, $"format = x is refused ({n} registered)");
+                r4 = WriteTempPack("gk2donkeyapi-selftest-fmt4", "fmt-game", "[Skin]\nformat = 1\nid = fmt-game\nname = Game Typo\nsource = game\n\n[Game]\nprefix = 0901_\nscale = 3\nlfit = 0.25\nbdy_static_left = bdy_walk_left_01\n");
+                n = Looks.RegisterFolder(r4, owner);
+                string report = Looks.Find("fmt-game")?.Report ?? "";
+                Check(n == 1 && report.Contains("[Game] unknown keys ignored: lfit"), $"a [Game] line naming no frame key is reported ({report})");
+
+                var named = new NamedAbility();
+                reg = Mounts.Kinds.Register(owner + ".code", new MountKindDef { Id = "fmt-code", Name = "Code Beast", Description = "From code.", Abilities = { named }, Stats = { new MountStat { Label = "Mood", Value = "grim" } } });
+                MountKindInfo kc = Mounts.Kinds.Find("fmt-code");
+                Check(kc != null && kc.Description == "From code." && kc.Stats.Count == 1 && kc.Stats[0].Label == "Mood", "a code kind's description and stats");
+                Check(kc != null && kc.AbilityInfos.Count == 1 && kc.AbilityInfos[0].Name == "Glowing" && kc.AbilityInfos[0].Description == "It glows.", $"an ability's name and description reach the info ({(kc != null && kc.AbilityInfos.Count > 0 ? kc.AbilityInfos[0].Name : "none")})");
+            }
+            finally
+            {
+                foreach (string id in new[] { "fmt-test", "fmt-game" }) if (Looks.Find(id) != null) Looks.Unregister(id, owner);
+                Mounts.Kinds.Unregister(owner, "fmt-beast");
+                reg?.Dispose();
+                foreach (string r in new[] { r1, r2, r3, r4 }) { try { if (r != null) System.IO.Directory.Delete(r, true); } catch { } }
+            }
+            yield break;
+        }
+
+        private sealed class NamedAbility : MountAbility
+        {
+            public override string Id => "glow";
+            public override string Name => "Glowing";
+            public override string Description => "It glows.";
+        }
+
+        // Sets a mount key and tries a look key another mod holds while ridden; clears nothing on purpose (the API does).
+        private sealed class PinningAbility : MountAbility
+        {
+            internal int MountedCount;
+            public override string Id => "pins";
+            public override void Mounted(MountHandle mount, MountStyle style)
+            {
+                MountedCount++;
+                mount.Tuning.Set(Owner, "HandsSwayPx", 5f);
+                mount.Tuning.Set(Owner, "Effect", "");
+            }
         }
 
         // A skin pack on disk (a temp folder, two pictures taken from the built-in rat, one of them misnamed): registered
@@ -3125,7 +3401,7 @@ namespace GK2DonkeyAPI
             }
             yield return Settle(10f);
             int tex0 = Live.Textures, loaded0 = Looks.LoadedCount, inst0 = Mount.All.Count;
-            // a skin one of them already wears (the settings' paper donkey in the snail after the colours window was
+            // a skin one of them already wears (the settings' paper donkey in the snail after the Mounts panel was
             // open, 2026-10-18) loads nothing new: the test's two skins count only when they aren't loaded yet
             int newSkins = (Looks.IsLoaded("rat") ? 0 : 1) + (Looks.IsLoaded("snail") ? 0 : 1);
             for (int cycle = 1; cycle <= 2; cycle++)
@@ -3152,6 +3428,266 @@ namespace GK2DonkeyAPI
             yield return Settle(10f);
             Check(Mount.All.Count == inst0, $"instances back ({inst0} -> {Mount.All.Count})");
             Check(Looks.LoadedCount == loaded0 && Live.Textures == tex0, $"skins unloaded, textures back ({tex0} -> {Live.Textures}, loaded {loaded0} -> {Looks.LoadedCount})");
+        }
+
+        // A wearer's sheet stays through a view rebuild (an unhitch restyles: Detach, not Sleep; before 0.35.0's review the
+        // sheet was freed and built again there, a pop to the donkey), goes when its only wearer sleeps far away (the
+        // sleep tier: Sleep), and is built again when it wakes (docs/mounts-foundation-2.md 2.5).
+        private static IEnumerator SkinSleep()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
+                yield break;
+            }
+            string skin = null;
+            foreach (string id in new[] { "rat", "snail", "worm" }) if (Looks.Find(id) != null && !Looks.IsLoaded(id)) { skin = id; break; }
+            if (skin == null)
+            {
+                Warn("the rat, snail and worm are all worn already (or none is installed): no sheet of its own to watch; skipped");
+                yield break;
+            }
+            yield return Settle(10f);
+            Vector3? far = Spot(home, 50f) ?? Spot(home, 42f);
+            if (far == null)
+            {
+                Warn("no spot 42-50 away for the sleeping checks: skipped");
+                yield break;
+            }
+            int loaded0 = Looks.LoadedCount;
+            Vector3 near = home + new Vector3(4f, 0f, 0f);
+            MountHandle a = Spawn(near, true, withCart: true);
+            if (a == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            MountHandle left = null;
+            try
+            {
+                a.Tuning.Set(Owner, "Skin", skin);
+                yield return Until(() => a.IsReady && a.I.TestSkinShowing(), 10f);
+                if (!waited)
+                {
+                    Fail($"never wore {skin}");
+                    yield break;
+                }
+                Check(Looks.IsLoaded(skin), $"worn: its sheet loaded ({loaded0} -> {Looks.LoadedCount})");
+                string kindId = Looks.Find(skin).Kind.Id;
+                // 1. with its cart, its only wearer asleep far away (a cart is not parked: the view is destroyed): the sheet goes
+                for (int round = 1; round <= 2; round++)
+                {
+                    string how = round == 1 ? "with its cart (the view destroyed)" : "without a cart (the view parked)";
+                    MountResult mv = a.MoveTo(far.Value);
+                    if (!mv.Ok)
+                    {
+                        Warn($"could not move it far away ({mv.Reason}): the sleeping check {how} skipped");
+                        yield break;
+                    }
+                    yield return Until(() => a.I.tier == Mount.Tier.Asleep && !a.I.HasViewObject, 8f);
+                    if (!waited)
+                    {
+                        Warn($"not asleep without a view {Vector3.Distance(home, far.Value):F0} away (level {a.I.tier}): the sleeping check {how} skipped");
+                        yield break;
+                    }
+                    yield return Frames(2);
+                    Check(!Looks.IsLoaded(skin), $"asleep far away {how}, its only wearer: the sheet is freed ({Looks.LoadedCount} loaded)"); // the one sheet, not the count: other sleepers and wakers move the count
+                    Check(a.Kind == kindId, $"asleep it is still the mount ({a.Kind})");
+                    // back near the keeper: worn again
+                    mv = a.MoveTo(near);
+                    if (!mv.Ok)
+                    {
+                        Warn($"could not move it back ({mv.Reason}): the waking check skipped");
+                        yield break;
+                    }
+                    yield return Until(() => a.IsReady && a.I.TestSkinShowing(), 12f);
+                    Check(waited, $"awake again {how}: it wears {skin} again ({Looks.LoadedCount - loaded0} sheet loaded)");
+                    if (!waited) yield break;
+                    if (round == 1)
+                    {
+                        // 2. unhitched: the view is made again (a restyle); the sheet stays loaded through it
+                        left = Mounts.Unhitch(a);
+                        bool dropped = false;
+                        for (int f = 0; f < 150 && !(a.IsReady && a.I.TestSkinShowing()); f++)
+                        {
+                            if (!Looks.IsLoaded(skin)) dropped = true;
+                            yield return Frames(1);
+                        }
+                        Check(a.IsReady && a.I.TestSkinShowing(), "unhitched: it wears the skin on its new view");
+                        Check(!dropped, dropped ? "unhitched: the sheet was freed and built again (a pop to the donkey)" : "unhitched: the sheet never left (no rebuild, no pop)");
+                        if (left != null && left.Exists) left.Remove();
+                        left = null;
+                    }
+                }
+            }
+            finally
+            {
+                if (a.Exists) a.Remove();
+                if (left != null && left.Exists) left.Remove();
+            }
+            yield return Frames(3);
+            Check(!Looks.IsLoaded(skin), $"removed: the sheet freed ({Looks.LoadedCount} loaded)");
+        }
+
+        // The Mounts panel itself, over the game: it opens from a live page with a Mount row, fits the screen, lists the
+        // mounts and builds the chosen one's rows; a pick in the list moves the page's mount and the right side; Cancel
+        // puts the mount back; the key toggles it, the button only brings it forward (docs/mounts-foundation-2.md 3).
+        private static IEnumerator PanelSmoke()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the panel needs Saddle Up's mounts");
+                yield break;
+            }
+            MountSettingsPage page = null;
+            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && live.HasMountRow) { page = live; break; }
+            if (page == null)
+            {
+                Warn("no live settings page with a Mount row (Saddle Up not loaded?): skipped");
+                yield break;
+            }
+            string was = page.MountChosen ?? MountKinds.DonkeyId;
+            Info("if a \"the Mounts panel can't open\" warning follows, it is this test's finding: the Settings window could not be copied before it was ever opened this session");
+            try
+            {
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen, "the panel opens over the game from a page with a Mount row");
+                if (!MountsPanel.IsOpen) yield break;
+                var m = MountsPanel.TestMeasure();
+                Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
+                Check(MountsPanel.TestEntries >= 1 && MountsPanel.TestRows > 0 && string.Equals(MountsPanel.TestBuiltFor, was, StringComparison.OrdinalIgnoreCase), $"it lists {MountsPanel.TestEntries} mount(s) and built {MountsPanel.TestRows} rows for the chosen one ({was})");
+                string other = null;
+                foreach (MountsPanel.Entry e in MountsPanel.Entries()) if (!e.Id.Equals(was, StringComparison.OrdinalIgnoreCase)) { other = e.Id; break; }
+                if (other == null)
+                {
+                    Warn("one mount only: the pick check skipped");
+                }
+                else
+                {
+                    MountsPanel.TestSelect(other);
+                    yield return Frames(2);
+                    Check(string.Equals(page.MountChosen, other, StringComparison.OrdinalIgnoreCase) && string.Equals(MountsPanel.TestBuiltFor, other, StringComparison.OrdinalIgnoreCase) && MountsPanel.TestRows > 0, $"picking {other} in the list: the page's mount follows and the right side is built for it ({MountsPanel.TestRows} rows)");
+                    var m2 = MountsPanel.TestMeasure();
+                    Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
+                }
+                MountsPanel.TestClose(keep: false);
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountKinds.DonkeyId, was, StringComparison.OrdinalIgnoreCase), $"Cancel: closed, and the mount is {was} again");
+                MountsPanel.Open(page, toggle: true);
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen, "the key opens it");
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(1);
+                Check(MountsPanel.IsOpen, "the button while it is open leaves it open");
+                MountsPanel.Open(page, toggle: true);
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountKinds.DonkeyId, was, StringComparison.OrdinalIgnoreCase), "the key while it is open closes it, what was chosen stays");
+            }
+            finally
+            {
+                if (MountsPanel.IsOpen) MountsPanel.TestClose(keep: false);
+            }
+        }
+
+        // A game-source skin whose frames the game lacks: set aside the first time it is worn (not drawn as a blank sheet),
+        // the donkey comes instead in kind too (it pulls the cart), it is out of every list; checked again it stays aside;
+        // healed (its prefix pointing at frames the game has: Gerry's) it is offered again and the wearer draws it with no
+        // door and no setting change (docs/mounts-foundation-2.md 4.4).
+        private static IEnumerator AsideSkin()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): needs the skins");
+                yield break;
+            }
+            const string owner = Owner + ".aside";
+            string tempRoot = null;
+            MountHandle a = null;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-aside", "aside-test",
+                    "[Skin]\nformat = 1\nid = aside-test\nname = Aside Test\ndescription = A test look from frames the game lacks.\nsource = game\nmount = aside-beast\n\n[Game]\nprefix = zzznothing_\nscale = 1\nbdy_static_left = bdy_walk_left_01\n\n[Mount]\nid = aside-beast\nname = Aside Beast\ndescription = A test mount.\nauthor = the self-test\nversion = 0.1\ncart = false\nfoals = true\n");
+                Looks.RegisterFolder(tempRoot, owner);
+                Looks.SkinDef d = Looks.Find("aside-test");
+                Check(d != null && d.Unavailable == null, "registered: nothing is known against it yet (the frames are checked when worn)");
+                if (d == null) yield break;
+                a = Spawn(home + new Vector3(4f, 0f, 0f), true);
+                if (a == null)
+                {
+                    Fail("could not spawn");
+                    yield break;
+                }
+                a.Tuning.Set(Owner, "Skin", "aside-test");
+                yield return Until(() => d.Unavailable != null, 8f);
+                Check(waited, $"worn with no frames to read: set aside ({d.Unavailable})");
+                yield return Frames(3);
+                Check(!a.I.TestSkinShowing() && a.Kind == MountKinds.DonkeyId, $"the donkey comes instead, in kind too ({a.Kind})");
+                Check(Looks.WhyNotCartByKind(a.I) == null, "and it pulls the cart (the set-aside mount's no-cart rule is not applied)");
+                bool listed = false;
+                foreach ((string id, string label) in Looks.KindChoices()) if (id == "aside-beast") listed = true;
+                Check(!listed && !(Mounts.Looks.Find("aside-test")?.IsAvailable ?? true) && !MountsPanel.Entries().Exists(e => e.Id == "aside-beast"), "not offered: out of the mount list and the panel's, IsAvailable false");
+                Looks.TestResetRecheck(d.Id);
+                Check(!Looks.RecheckGameSource(d) && d.Unavailable != null, "checked again: still nothing, stays aside");
+                // healed: the skin now names a prefix the game has (Gerry's, in memory once the game-creature scenario ran)
+                d.Game.Prefix = "0901_";
+                Looks.TestResetRecheck(d.Id);
+                bool healed = Looks.RecheckGameSource(d);
+                if (!healed)
+                {
+                    Warn("Gerry's 0901_ frames are not loaded (run the game-creature scenario first): the heal check skipped");
+                }
+                else
+                {
+                    Check(d.Unavailable == null && (Mounts.Looks.Find("aside-test")?.IsAvailable ?? false), "the frames are there: offered again");
+                    yield return Until(() => a.I.TestSkinShowing(), 20f);
+                    Check(waited, "and the donkey wearing it draws the skin, with no door and no setting change");
+                }
+            }
+            finally
+            {
+                try { if (a != null && a.Exists) a.Remove(); } catch { }
+                Looks.Unregister("aside-test", owner);
+                try { if (tempRoot != null) System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // The side file's set lines by owner (docs/mounts-foundation-2.md 2.1): a mod that isn't loaded has its lines
+        // set aside (kept, not applied, written back as they were); an ability's lines are dropped (session-only); a
+        // loaded mod's line is applied under its owner; while a loaded mod holds the key the set-aside line is not
+        // written (it would overwrite the live value on the next load), and it is written again once the key is free.
+        private static IEnumerator AsideLines()
+        {
+            MountHandle a = Spawn(home + new Vector3(3f, 0f, 0f), true, persist: true, key: "aside lines");
+            if (a == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            try
+            {
+                yield return Frames(2);
+                const string gone = "some.gone.mod";
+                Mount.RestoreSetting(a.I, "SpeedMultiplier", gone, "2.5");
+                Check(!a.Tuning.IsSet("SpeedMultiplier") && a.I.AsideSets.Count == 1, "a line of a mod that isn't loaded is set aside, not applied");
+                Mount.RestoreSetting(a.I, "HandsSwayPx", Owner + ".ability.some-kind", "5");
+                Check(!a.Tuning.IsSet("HandsSwayPx") && a.I.AsideSets.Count == 1, "an ability's line is dropped (its values are set again in play)");
+                Mount.RestoreSetting(a.I, "CoatColorize", Owner, "FF00FF");
+                Check(a.Tuning.IsSet("CoatColorize") && a.Tuning.SetBy("CoatColorize") == Owner, "a loaded mod's line is applied under its owner");
+                string Text() => Mount.BuildSideText("selftest", "saved at test time", 42, Mount.KeptInstances(i => i == a.I, log: false), withDormant: false, out _);
+                string t1 = Text();
+                Check(t1.Contains(gone) && t1.Contains("SpeedMultiplier"), "saved: the gone mod's line is written back as it was");
+                a.Tuning.Set(Owner, "SpeedMultiplier", 1.2f);
+                string t2 = Text();
+                Check(!t2.Contains(gone) && t2.Contains("SpeedMultiplier"), "a loaded mod holds the key now: its line is written, the gone mod's is not (it would overwrite the live value on the next load)");
+                a.Tuning.Clear(Owner, "SpeedMultiplier");
+                string t3 = Text();
+                Check(t3.Contains(gone), "cleared: the gone mod's line is written again");
+            }
+            finally
+            {
+                if (a.Exists) a.Remove();
+            }
         }
 
         // New views are made at most Lod.SpawnsPerFrame a frame (50 in one frame made a 20 ms frame).

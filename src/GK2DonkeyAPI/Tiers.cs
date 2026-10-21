@@ -522,10 +522,11 @@ namespace GK2DonkeyAPI
                     && InventoryEmpty(v) && ViewPool.HasRoom(key);
                 if (!can)
                 {
+                    try { LooksRig.Sleep(); } catch (System.Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: letting go of the skin failed: {e.Message}"); } // asleep either way: its hold on the sheet goes (DestroyDonkey's ReleaseView keeps holds)
                     DestroyDonkey();
                     return;
                 }
-                ReleaseView(); // back to the prefab's state, as for the game's own pool
+                ReleaseView(sleep: true); // back to the prefab's state, as for the game's own pool; the skin's sheet let go of
                 donkey = null;
                 partsReady = false;
                 cartParts.Clear();

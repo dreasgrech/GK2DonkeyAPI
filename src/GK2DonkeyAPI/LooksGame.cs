@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using GK2DonkeyAPI.Api;
 using UnityEngine;
 using UnityEngine.U2D;
 using Object = UnityEngine.Object;
@@ -44,13 +45,15 @@ namespace GK2DonkeyAPI
             SkinDef d = l.Def;
             GameSource g = d.Game;
             SkinBase b = d.Base;
-            Dictionary<string, CreatureFrame> frames = FindCreatureFrames(g.Prefix, b.AtlasName, out string how);
+            Dictionary<string, CreatureFrame> frames = FindCreatureFrames(g.Prefix, b.AtlasName, NeededFrames(g), out string how);
             LastGameSourceFound = frames.Count;
             LastGameSourceNote = $"{frames.Count} '{g.Prefix}*' frames found ({how})";
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}': {LastGameSourceNote}; scaled {g.Scale:0}x onto {d.CanvasW}x{d.CanvasH}.");
             if (frames.Count == 0)
             {
-                Plugin.Log.LogWarning($"Looks: skin '{d.Id}': no '{g.Prefix}*' sprite is in memory and no sprite atlas hands them out; the {b.Id} shows. Is the prefix right (the character's preset number, like 0901_ for Gerry)?");
+                // nothing to draw: refused here, so Acquire finishes the sheet with nothing and the base shows (before
+                // 0.35.0 the sheet was built of 44 empty cells and the mount was invisible, docs/mounts-foundation-2.md 4.1)
+                throw new InvalidOperationException($"no '{g.Prefix}*' sprite is in memory and no sprite atlas hands them out; the {b.Id} shows. Is the prefix right (the character's preset number, like 0901_ for Gerry)?");
             }
             // every base key to a frame name, or null (an empty picture)
             var map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -102,7 +105,108 @@ namespace GK2DonkeyAPI
         // The creature's sprites by frame name (without the prefix), as a getter each (a sprite atlas hands out a copy
         // per call, destroyed after the read). First the sprites already in memory (the character has been on screen),
         // else every loaded sprite atlas asked by name.
-        private static Dictionary<string, CreatureFrame> FindCreatureFrames(string prefix, string atlasName, out string how)
+        // The frame names a skin's [Game] section asks for by name (its map's values but "none"): what the skin needs the
+        // game to have (its sprite manifest). Not the rest picture: a map may name it (Gerry: bdy_static_left =
+        // bdy_walk_left_01, the game has no 0901_bdy_static_left) and the build falls back on three rest names itself;
+        // demanding the name set every such skin aside at game-ready (the F11 run of 2026-10-21).
+        internal static List<string> NeededFrames(GameSource g)
+        {
+            var needed = new List<string>();
+            foreach (var kv in g.Map)
+            {
+                string v = kv.Value?.Trim();
+                if (string.IsNullOrEmpty(v) || v.Equals("none", StringComparison.OrdinalIgnoreCase) || needed.Contains(v)) continue;
+                needed.Add(v);
+            }
+            return needed;
+        }
+
+        // A set-aside game-source skin someone has chosen, checked again now and then (its character's atlas may come
+        // with a scene): offered again once every named frame is there. Every 10 seconds at most per skin.
+        private static readonly Dictionary<string, float> recheckAt = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase);
+
+        // Every set-aside game-source skin checked once a minute (one nobody wears has no rig tick to ask): offered again
+        // when its frames arrive with a scene, so a player can choose it without restarting.
+        private static float nextAsideSweep;
+
+        internal static void RecheckAsideSkins()
+        {
+            if (Time.unscaledTime < nextAsideSweep) return;
+            nextAsideSweep = Time.unscaledTime + 60f;
+            foreach (SkinDef d in new List<SkinDef>(defs.Values))
+            {
+                if (d.Game != null && d.Unavailable != null) RecheckGameSource(d);
+            }
+        }
+
+        internal static void TestResetRecheck(string id) => recheckAt.Remove(id); // the self-test: a recheck now, not in ten seconds
+
+        internal static bool RecheckGameSource(SkinDef d)
+        {
+            if (d == null || d.Game == null || d.Unavailable == null) return false;
+            if (recheckAt.TryGetValue(d.Id, out float at) && Time.unscaledTime < at) return false;
+            recheckAt[d.Id] = Time.unscaledTime + 10f;
+            try
+            {
+                List<string> needed = NeededFrames(d.Game);
+                Dictionary<string, CreatureFrame> frames = FindCreatureFrames(d.Game.Prefix, d.Base.AtlasName, needed, out string how);
+                if (frames.Count == 0) return false;
+                foreach (string n in needed) if (!frames.ContainsKey(n)) return false;
+                d.Unavailable = null;
+                Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its named game frames are there again ({frames.Count} '{d.Game.Prefix}*' frames, {how}); offered again.");
+                Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); // a wearer that gave up on it (drawn as the donkey) wears it on its next tick
+                Mounts.Looks.RaiseChanged();
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Looks: skin '{d.Id}': its game frames could not be checked again: {e.Message}");
+                return false;
+            }
+        }
+
+        // Every game-source skin checked once the game is up (the API's game-ready, from MountRegistry): the frames it
+        // names must be there (in memory or in a sprite atlas). A skin missing any is set aside (Unavailable: not
+        // offered, the donkey shows for whoever had it chosen) with one warning naming the frames, since a game update
+        // that renamed them is something to fix in the skin (docs/mounts-foundation-2.md 4.4, the sprite manifest).
+        internal static void VerifyGameSources()
+        {
+            bool changed = false;
+            foreach (SkinDef d in defs.Values)
+            {
+                if (d.Game == null) continue;
+                try
+                {
+                    List<string> needed = NeededFrames(d.Game);
+                    Dictionary<string, CreatureFrame> frames = FindCreatureFrames(d.Game.Prefix, d.Base.AtlasName, needed, out string how);
+                    var missing = new List<string>();
+                    foreach (string n in needed) if (!frames.ContainsKey(n)) missing.Add(n);
+                    string was = d.Unavailable;
+                    if (frames.Count == 0)
+                    {
+                        // nothing of the prefix is loaded yet (the character's atlas comes with its scene): not a verdict;
+                        // the first wear searches again, and a skin with no frames then shows the donkey (StartGameBuild)
+                        Plugin.Log.LogInfo($"Looks: skin '{d.Id}': no '{d.Game.Prefix}*' frame is loaded yet ({how}); checked again when it is worn.");
+                        continue;
+                    }
+                    d.Unavailable = missing.Count > 0 ? $"the game lacks the frames {string.Join(", ", missing)} of '{d.Game.Prefix}*'" : null;
+                    if (d.Unavailable != was) changed = true;
+                    if (d.Unavailable != null && was == null) Plugin.Log.LogWarning($"Looks: skin '{d.Id}' is set aside: {d.Unavailable} ({frames.Count} found, {how}). A game update may have renamed them: the skin's [Game] section needs the new names.");
+                    else if (d.Unavailable == null) Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its {needed.Count} named game frame(s) are there ({frames.Count} '{d.Game.Prefix}*' frames, {how}).");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Looks: skin '{d.Id}': its game frames could not be checked: {e.Message}");
+                }
+            }
+            if (changed) Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); // a wearer of a skin set aside now draws the donkey; one healed wears it again
+            Mounts.Looks.RaiseChanged(); // the lists may have lost a skin
+        }
+
+        // The creature's frames: the sprites already in memory first (the game's own, never destroyed), then every
+        // loaded sprite atlas for the needed names that memory lacks (a listing per atlas; its copies destroyed;
+        // before 0.35.0 a partial set in memory stopped the search, docs/mounts-foundation-2.md 4.2).
+        private static Dictionary<string, CreatureFrame> FindCreatureFrames(string prefix, string atlasName, List<string> needed, out string how)
         {
             var result = new Dictionary<string, CreatureFrame>(StringComparer.Ordinal);
             foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())
@@ -117,11 +221,14 @@ namespace GK2DonkeyAPI
                     result[name] = new CreatureFrame { Get = () => keep, Owned = false };
                 }
             }
-            if (result.Count > 0)
+            bool complete = result.Count > 0;
+            if (complete && needed != null) foreach (string n in needed) if (!result.ContainsKey(n)) complete = false;
+            if (complete)
             {
                 how = "sprites in memory";
                 return result;
             }
+            int inMemory = result.Count;
             int atlases = 0;
             foreach (SpriteAtlas atlas in Resources.FindObjectsOfTypeAll<SpriteAtlas>())
             {
@@ -137,12 +244,12 @@ namespace GK2DonkeyAPI
                         string name = CleanName(s.name.Substring(prefix.Length));
                         string spriteName = prefix + name;
                         SpriteAtlas from = atlas;
-                        result[name] = new CreatureFrame { Get = () => from.GetSprite(spriteName), Owned = true }; // a fresh copy per call, ours
+                        if (!result.ContainsKey(name)) result[name] = new CreatureFrame { Get = () => from.GetSprite(spriteName), Owned = true }; // a fresh copy per call, ours; memory's kept where it had one
                     }
-                    Object.Destroy(s); // GetSprites made a copy of each for this listing
+                    Object.DestroyImmediate(s); // GetSprites made a copy of each for this listing; gone now, not at the frame's end (a build in the same frame would take the copies for the game's own sprites)
                 }
             }
-            how = $"{atlases} sprite atlas(es) asked by name";
+            how = inMemory > 0 ? $"{inMemory} in memory, the rest from {atlases} sprite atlas(es)" : $"{atlases} sprite atlas(es) asked by name";
             return result;
         }
 
@@ -164,7 +271,7 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                if (fr.Owned) Object.Destroy(s);
+                if (fr.Owned) Object.DestroyImmediate(s); // our copy, never on a renderer
             }
         }
 

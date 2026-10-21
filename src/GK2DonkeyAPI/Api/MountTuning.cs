@@ -95,17 +95,33 @@ namespace GK2DonkeyAPI.Api
             return t;
         }
 
-        // Override a value for this session. Returns the value applied (clamped to the allowed range).
+        // Override a value for this session (everyone's value, under an instance's own). A value belongs to the
+        // owner that set it (docs/mounts-foundation-2.md 2.1): another owner's Set is refused, said once, and the value
+        // in effect is returned; TrySet says whether it was set.
         public T Set<T>(string ownerId, string key, T value)
+        {
+            TrySet(ownerId, key, value, out T applied);
+            return applied;
+        }
+
+        private static readonly HashSet<string> refusedLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        public bool TrySet<T>(string ownerId, string key, T value, out T applied)
         {
             if (string.IsNullOrEmpty(ownerId))
             {
                 throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
             }
             ITuned t = Find(key);
-            T applied = (T)t.SetOverride(value, ownerId);
+            if (t.HasOverride && !InstanceTuning.MayReplace(t.OverrideOwner, ownerId))
+            {
+                if (refusedLogged.Add(Section + "|" + t.Key + "|" + ownerId)) Plugin.Log.LogInfo($"Mount: {ownerId} wants to set {Section}.{t.Key}, which {t.OverrideOwner} has set for this session; left to it (a value belongs to the owner that set it).");
+                applied = Get<T>(key);
+                return false;
+            }
+            applied = (T)t.SetOverride(value, ownerId);
             Mount.OnTuningChanged(Style);
-            return applied;
+            return true;
         }
 
         public bool IsOverridden(string key) => Find(key).HasOverride;
@@ -113,11 +129,24 @@ namespace GK2DonkeyAPI.Api
         // Owner id of the override on this key, or null.
         public string OverriddenBy(string key) => Find(key).OverrideOwner;
 
-        // Back to the player's value for this key.
-        public void Clear(string key)
+        // Back to the player's value for this key: this owner's override cleared; another owner's stays, said once.
+        // Returns whether an override was cleared.
+        public bool Clear(string ownerId, string key)
         {
-            Find(key).ClearOverride();
+            if (string.IsNullOrEmpty(ownerId))
+            {
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
+            }
+            ITuned t = Find(key);
+            if (!t.HasOverride) return false;
+            if (!InstanceTuning.MayReplace(t.OverrideOwner, ownerId))
+            {
+                if (refusedLogged.Add(Section + "|" + t.Key + "|" + ownerId + "|clear")) Plugin.Log.LogInfo($"Mount: {ownerId} wants to clear {Section}.{t.Key}, which {t.OverrideOwner} has set for this session; left to it.");
+                return false;
+            }
+            t.ClearOverride();
             Mount.OnTuningChanged(Style);
+            return true;
         }
 
         // Every override of this style, from every mod.
@@ -127,6 +156,13 @@ namespace GK2DonkeyAPI.Api
             {
                 t.ClearOverride();
             }
+            Mount.OnTuningChanged(Style);
+        }
+
+        // The dev panel's and the self-tests' way past the owner rule: whoever set it, the key follows the player again.
+        internal void ClearAny(string key)
+        {
+            Find(key).ClearOverride();
             Mount.OnTuningChanged(Style);
         }
 

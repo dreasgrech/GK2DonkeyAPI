@@ -142,7 +142,7 @@ namespace GK2DonkeyAPI
             shown.Clear();
             foreach (ModRows mod in mods)
             {
-                var visible = mod.Sections.ConvertAll(sec => sec.Rows.FindAll(b => b.Row?.Visible == null || b.Row.Visible()));
+                var visible = mod.Sections.ConvertAll(sec => sec.Rows.FindAll(b => (b.Row?.Visible == null || b.Row.Visible()) && (b.Row?.Enabled == null || b.Row.Enabled()))); // a row the chosen mount pins (TuningKey) is left out here as in the Mods menu
                 int[] counts = visible.ConvertAll(v => v.Count).ToArray();
                 var plan = PlanPages(counts, rowsPerPage);
                 for (int i = 0; i < plan.Count; i++)
@@ -289,6 +289,10 @@ namespace GK2DonkeyAPI
                     {
                         continue; // the picture goes above this window (LookPreview)
                     }
+                    if (!page.InMenu(r))
+                    {
+                        continue; // the mount, its skins, colours and effect: the Mounts panel's (MountsPanel), opened by the page's button
+                    }
                     Section sec = mod.Sections.Find(x => x.Key == r.Section);
                     if (sec == null)
                     {
@@ -340,7 +344,7 @@ namespace GK2DonkeyAPI
         // The Settings window's own frame (for the picture above it), or the window.
         internal static RectTransform WindowFrame => window == null ? null : (window.transform.Find("GenericWIndowLayout") as RectTransform) ?? (RectTransform)window.transform;
 
-        // One row under any parent (the look bar's too), and how to bring its value up to date.
+        // One row under any parent (the Mounts panel's too), and how to bring its value up to date.
         internal static GameObject MakeRow(GameObject template, Transform parent, MountSettingsPage.Row r, MountSettingsPage page, out Action refresh)
         {
             Built b = Make(template, parent, r, page, null);
@@ -589,7 +593,7 @@ namespace GK2DonkeyAPI
             {
                 Show(current);
             }
-            LookBar.Refresh();
+            MountsPanel.Refresh();
         }
 
         // Its value up to date (the cfg, the Mods menu or another row may have changed it).

@@ -294,6 +294,52 @@ closed):
     starts (core stop with the mod-removed load and the force switch, features frozen, dev tools locked), and the
     plain start on the real manifest (nothing logged, "Compatible"). **Passed 2026-10-14**, all six starts; one
     finding (the chest left standing blocks its cart, under Undecided).
+- **The foundation build of 2026-10-20 night** (docs/mounts-foundation-2.md 8; API 0.35.0, Saddle Up 0.12.0):
+  the **Mounts panel** (Esc, Mods, Saddle Up, the Mount section's Mounts button; or set the Mounts panel key):
+  the six mounts listed, the chosen one drawn with its description and lines, its Skin, Effect and colour rows
+  under it; pick the dragon: the picture follows and the rows change; Done keeps, Cancel after switching puts
+  the first mount back; the Mods menu has no Mount, Skin, Effect (nor its toggles) or colour rows any more, and
+  the Colours and Effect sections each say where they went; the Mounts button while the panel is open brings it
+  forward with the menus closed, the key closes it; Gerry's portrait (if its pack names one) under its name; the
+  description lines one line each, not spilling past the rows column (else: Ellipsis, or a shorter WrapAt). The **F11 set**: the five new scenarios
+  (tuning ownership, ids, format, the sheet through a hitch and sleep, the settings rows' panel checks) and
+  everything under the new rules; the kind-pack scenario now expects the mount to go with its withdrawn skin.
+  A **mount's stride**: the dragon's legs at its speed look the same as before (nothing sets the key yet). A
+  **sleeping mount's sheet** freed: ride far from a standing dragon (past 35 units), the log says its sheet is
+  "unloaded (no donkey wears it)", and it wears the dragon again when you come back; unhitch a dragon next to
+  you: no flash of the plain donkey. The **pinned speed row**: a mount that sets SpeedMultiplier in its file leaves
+  the Speed rows out of the Mods menu for it (none of ours does; the self-test covers it). **Esc with the panel
+  open**: the pause menu opens under the centred panel (the look bar sat at the bottom); if it covers the pause
+  menu's buttons, close the panel on the pause menu opening. **Paging** (more than ten mounts: register temp
+  kinds from the F11 Mounts tab): Up and Down page without a log line. **Gerry at game-ready**: the log's
+  "named game frame(s) are there" line, not "set aside" (an unannounced warning that would fail four scenarios).
+  **A stale loose copy** of a Saddle Up pack under `BepInEx\plugins` (rat, snail, worm, dragon, gerry from when
+  the API shipped them) would log "replaces the one from" at start: delete it.
+- **The Mounts panel key with the Mods menu open** (pass 3): `OutOfTheWay` closes the Settings window and the pause
+  menu; the framework's Mods menu is toggled off only on the button path (FrameworkLink), so a key press while the
+  Mods menu shows leaves it open under the panel. The key is none by default. Fix when the framework offers an
+  "is the Mods menu showing" call (a blind toggle would open it).
+- **The Mounts panel key before the Settings window was ever opened** (pass 3, unverifiable from code): the panel
+  copies the game's Settings window (`LazyUI.GetWindow`); if that finds rather than creates, the key fails with
+  "the game's Settings window isn't there to copy from" until Settings is opened once. In game: fresh load, bind
+  the key, press it before touching Settings.
+- **The panel's fit-to-screen measure** (pass 3): seen 2026-10-21: both lines 864x810 at 0.83 in 1232x672, the same a
+  frame later, so the nested layout settles in one pass; nothing to change. The panel is scaled at 1080p (810 >
+  672 of room): the right column holds 28 rows for a mount; fewer rows a column, or a taller room, if it reads small.
+- **The panel's first row group is headed "Mount"** over a lone Skin row (the Skin row's section); "Skin" would
+  read better. Cosmetic; judge in game.
+- **A code mount against a loose pack's mount of the same id** (2026-10-20 night, pass 2): the version rule covers
+  skins; a code kind (`Mounts.Kinds.Register`) with the id of a pack-declared kind is refused (`Kinds.Register`
+  throws for another owner) and the re-declare path is `FromPack` only, so a code mod's Default skin that wins by
+  version cannot take the `[Mount]` declaration. Decide when it comes up: let a code kind replace a pack kind of
+  the same id when its Default skin outranks the pack's, or keep code kinds first come first served.
+- **`IsAbilityOwner` is a substring match** (`.ability.` anywhere in the owner): a plugin GUID containing it would
+  have its instance values neither saved nor restored. Far-fetched; a stricter shape (`<guid>.ability.<kind>` with
+  `<guid>` a loaded plugin) when an ability owner is ever logged for one.
+- **A reloaded embedded skin keeps its sources** (2026-10-20 night, docs/mounts-foundation-2.md 7): F11 Mounts
+  tab on the dragon, "Reload from the file" twice; the save path under the rows stays the repo's
+  `src/SaddleUp/assets/skins/dragon/skin.cfg` and a slider change still saves (before: "no file" after the
+  first reload).
 
 ## Undecided
 

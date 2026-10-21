@@ -18,9 +18,11 @@ namespace GK2DonkeyAPI.Api
     // Sections keep the order they're first used in: the cfg section is numbered ("1. Keys", "2. Behaviour"), because
     // the framework's Mods menu sorts sections by name and has no other way to order them. The game's Settings window
     // shows the plain names.
-    // Looks: Preview shows a picture of the mod's donkey in its current colours next to the settings (LookPreview.cs),
-    // and LookButton opens a bar of the look rows over the game, so the player sees the real donkey change (LookBar.cs).
-    // Both are extras: if anything about them fails, they don't show, and the settings work as before.
+    // Looks: Preview shows a picture of the mod's donkey in its current colours next to the settings (LookPreview.cs);
+    // the look rows (look: true; the Mount and Skin rows, the colours, the effect) are not in the menus at all: they
+    // live in the Mounts panel (MountsPanel.cs: the mounts listed, the chosen one drawn with its words and its rows),
+    // which PanelButton opens from the page and OpenPanel from a mod's key. Both are extras: if anything about them
+    // fails, they don't show, and the settings work through the cfg as before.
     public sealed class MountSettingsPage
     {
         internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note, List }
@@ -39,8 +41,8 @@ namespace GK2DonkeyAPI.Api
             internal Func<string> InfoValue;
             internal Func<bool> Visible;     // shown at all (Shown and Enabled together, for the menus)
             internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
-            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the look bar greys the row when false
-            internal bool IsLook;           // shown in the look bar (LookButton); a Note with it is a heading there (Heading)
+            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel greys the row when false
+            internal bool IsLook;           // the Mounts panel's, not the menus' (InMenu); a Note with it is a heading there (Heading)
             internal Action OnClick;         // Kind.Button
             internal bool WithCart;          // Kind.Preview: the donkey with its cart, or alone
         }
@@ -361,7 +363,7 @@ namespace GK2DonkeyAPI.Api
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
             mountRow = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
                 Mounts.MountsEnabled
-                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: the next row."
+                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: its Skin row in the Mounts panel."
                     : "What you ride. The donkey, in this version; other mounts (the dragon, the giant rat, ...) come in the next update.",
                 v => ApplyMountRows(), look: true);
             foreach (MountKindInfo k in Mounts.Kinds.Kinds) AddSkinRow(k);
@@ -434,10 +436,31 @@ namespace GK2DonkeyAPI.Api
             {
                 catchingUp = false;
             }
+            if (added > 0) ApplyMountRows(); // a cfg holding a late mount with its second skin: the companion wears that skin, not the default (the Skin row exists now)
             return added;
         }
 
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
+        internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
+        internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
+
+        // Whether a row is the menus' (the Mods menu, the game's Settings window, the menu labels) or the Mounts panel's:
+        // a look row is the panel's; a heading (Heading) is the panel's only when the rows after it in its section are
+        // look rows, so a mod's heading over plain rows stays in the menus.
+        internal bool InMenu(Row r)
+        {
+            if (!r.IsLook) return true;
+            if (r.Kind != Kind.Note) return false;
+            int at = Rows.IndexOf(r);
+            for (int i = at + 1; i < Rows.Count; i++)
+            {
+                Row n = Rows[i];
+                if (n.Section != r.Section) continue;
+                if (n.Kind == Kind.Note) break; // the next heading: nothing of this one's
+                return !n.IsLook;
+            }
+            return false; // a heading with nothing after it: not worth a menu line
+        }
         internal bool HasMountRow => mountRow != null;
         internal bool Shown => shown;
 
@@ -466,11 +489,33 @@ namespace GK2DonkeyAPI.Api
                     : "A particle effect on your mount. None in this version (the donkey comes with none); Hellfire and effects from mods come in the next update.",
                 v => me.Effect = v, look: true);
             Func<bool> on = () => !MountEffects.IsNone(effect.Value);
-            Choice(section, "EffectWhen", me.EffectWhen, "Effect shown", "", v => me.EffectWhen = v, new[] { "Never", "At night", "Always" }, look: true, visible: on);
-            Toggle(section, "EffectTrail", true, "The effect leaves a trail", "Hellfire: flames left behind while it walks, burning out.", v => Mounts.EffectSettings.Set(OwnerId, "EffectTrail", v), on);
-            Toggle(section, "EffectWithCart", false, "The effect goes round the cart too", "With the cart hitched, one wider ring round the mount and the cart.", v => Mounts.EffectSettings.Set(OwnerId, "EffectWithCart", v), on);
-            Toggle(section, "EffectInFights", true, "The effect shows in fights", "Off: it goes out while you fight in armour.", v => Mounts.EffectSettings.Set(OwnerId, "EffectInFights", v), on);
-            Toggle(section, "EffectOnFoals", false, "Babies have it too", "A smaller one round each of your mount's babies.", v => Mounts.EffectSettings.Set(OwnerId, "EffectOnFoals", v), on);
+            var when = Choice(section, "EffectWhen", me.EffectWhen, "Effect shown", "", v => me.EffectWhen = v, new[] { "Never", "At night", "Always" }, look: true, visible: on);
+            // the four toggles hang on the Effect row (shown while an effect is chosen): the panel's with it, not the menus'
+            var trail = Toggle(section, "EffectTrail", true, "The effect leaves a trail", "Hellfire: flames left behind while it walks, burning out.", v => Mounts.EffectSettings.Set(OwnerId, "EffectTrail", v), on);
+            var withCart = Toggle(section, "EffectWithCart", false, "The effect goes round the cart too", "With the cart hitched, one wider ring round the mount and the cart.", v => Mounts.EffectSettings.Set(OwnerId, "EffectWithCart", v), on);
+            var inFights = Toggle(section, "EffectInFights", true, "The effect shows in fights", "Off: it goes out while you fight in armour.", v => Mounts.EffectSettings.Set(OwnerId, "EffectInFights", v), on);
+            var onFoals = Toggle(section, "EffectOnFoals", false, "Babies have it too", "A smaller one round each of your mount's babies.", v => Mounts.EffectSettings.Set(OwnerId, "EffectOnFoals", v), on);
+            foreach (ConfigEntryBase e in new ConfigEntryBase[] { trail, withCart, inFights, onFoals }) MarkLook(e);
+            if (!Mounts.MountsEnabled)
+            {
+                // the gate (Debug.MountsPreview): no effect exists to pick, so the six rows stay bound (the cfg keeps its
+                // values) but show nowhere, neither the menus (look rows) nor the panel (Shown false); the page's own Info
+                // row says effects come in the next update
+                foreach (ConfigEntryBase e in new ConfigEntryBase[] { effect, when, trail, withCart, inFights, onFoals }) HideRow(e);
+            }
+        }
+
+        private void HideRow(ConfigEntryBase e)
+        {
+            Row r = Rows.Find(x => ReferenceEquals(x.Entry, e));
+            if (r != null) r.Shown = () => false;
+        }
+
+        // A row of ours made the panel's (look) after the fact.
+        private void MarkLook(ConfigEntryBase e)
+        {
+            Row r = Rows.Find(x => ReferenceEquals(x.Entry, e));
+            if (r != null) r.IsLook = true;
         }
 
         // On or off.
@@ -484,7 +529,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // One of an enum's values; labels (one per value, in order) are what players see, else the value names.
-        // look: also shown in the look bar (LookButton).
+        // look: the Mounts panel's row (PanelButton), not the menus'.
         public ConfigEntry<T> Choice<T>(string section, string key, T value, string label, string description, Action<T> apply = null, string[] labels = null, bool look = false, Func<bool> visible = null) where T : struct, Enum
         {
             string cfgSection = Sec(section);
@@ -504,7 +549,7 @@ namespace GK2DonkeyAPI.Api
         // pairs; the id is what the cfg holds, from every menu alike. A stored id that isn't in the list is shown as
         // "<id> (not installed)" and left alone, so it returns with what provides it. The list is read once per
         // session, when the page is shown (the frame after Publish): anything registered after that appears after a
-        // restart. look: in the look bar too.
+        // restart. look: the Mounts panel's row, not the menus'.
         public ConfigEntry<string> List(string section, string key, string value, Func<IReadOnlyList<(string Id, string Label)>> choices, string label, string description, Action<string> apply = null, bool look = false, Func<bool> visible = null)
         {
             if (choices == null) throw new ArgumentNullException(nameof(choices));
@@ -541,7 +586,7 @@ namespace GK2DonkeyAPI.Api
             if (now.Length > 0 && !ids.Contains(now))
             {
                 ids.Add(now);
-                labels.Add(now + " (not installed)");
+                labels.Add(now + (Looks.Find(now)?.Unavailable != null ? " (set aside)" : " (not installed)"));
             }
             if (ids.Count == 0)
             {
@@ -595,7 +640,7 @@ namespace GK2DonkeyAPI.Api
 
         // A colour a player picks by name (PaletteColor: Chestnut, Sand, Moss, Sky, ...) and makes lighter or darker
         // (the picture, Preview, shows the result; a swatch row did before it existed). Bound as <key> and <key>Lightness; apply gets the colour as hex RRGGBB. visible:
-        // shown only while it says so (e.g. only while its part's choice is Custom). In the look bar too.
+        // shown only while it says so (e.g. only while its part's choice is Custom). A look row: the Mounts panel's.
         public void Color(string section, string key, string label, string description, PaletteColor value, Action<string> apply, Func<bool> visible = null)
         {
             ConfigEntry<PaletteColor> colour = null;
@@ -641,8 +686,8 @@ namespace GK2DonkeyAPI.Api
         }
 
         // A heading inside a section: a line with the label and no value, before the rows it names ("Mount colours",
-        // "Cart colours" in a Colours section). In the look bar the look rows after it, in its section, stand under
-        // this heading in a column of their own instead of under the section's name (LookBar; Saddle Up: the mount's
+        // "Cart colours" in a Colours section). In the Mounts panel the look rows after it, in its section, stand under
+        // this heading in a column of their own instead of under the section's name (MountsPanel; Saddle Up: the mount's
         // colours left, the cart's right). Not a picture row's label (Add).
         public void Heading(string section, string label, string description = "")
         {
@@ -655,7 +700,7 @@ namespace GK2DonkeyAPI.Api
         // at the top of each section with look rows, so it's in view from each). Also above the Mods window, where it
         // stays in view whatever row is scrolled to, when there's room there (1440p and up, not 1080p).
         // label: the row's name; cart: the row's picture is the donkey with its cart, or the donkey alone (above the
-        // window it's always with the cart). Above the game's Settings window without the Mods menu; in the look bar
+        // window it's always with the cart). Above the game's Settings window without the Mods menu; the Mounts panel
         // too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so it shows
         // in the main menu and indoors.
         public void Preview(string section, MountCompanion companion, string label = "Your mount", bool cart = true)
@@ -676,12 +721,28 @@ namespace GK2DonkeyAPI.Api
         internal Row PreviewRowLabelled(string text) => Rows.Find(r => r.Kind == Kind.Preview && r.Label == text);
         internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
 
-        // A button that closes the menu and opens the look bar over the game: the look rows (Choice and Steps with look,
-        // and Color) at the bottom of the screen, the real donkey in view, with Done (keep) and Cancel (put back).
-        // Only in a game; in the main menu it says so.
-        public void LookButton(string section, string label, string description)
+        // A button that closes the menu and opens the Mounts panel over the game: every mount listed, the chosen one
+        // drawn with its description, what it does and its abilities, and the page's look rows for it (its Skin, the
+        // effect, the colours), with Done (keep) and Cancel (put back). Only in a game; in the main menu it says so.
+        public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { Kind = Kind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => LookBar.Open(this) });
+            Add(new Row { Kind = Kind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => MountsPanel.Open(this, toggle: false) });
+        }
+
+        // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.
+        public void LookButton(string section, string label, string description) => PanelButton(section, label, description);
+
+        // Opens the Mounts panel (a mod's own key, say). Only in a game.
+        public void OpenPanel() => MountsPanel.Open(this, toggle: true); // a key: pressed again while the panel is open, it closes (what was chosen stays)
+
+        // The mount the page's Mount row holds (MountRows), and choosing one: the row takes it, its apply heals the
+        // skin and sets the companion, and every per-mount row's condition follows (the panel's list calls this).
+        internal string MountChosen => mountRow?.Value;
+
+        internal void SelectMount(string mountId)
+        {
+            if (mountRow == null || string.IsNullOrEmpty(mountId)) return;
+            if (!string.Equals(mountRow.Value, mountId, StringComparison.OrdinalIgnoreCase)) mountRow.Value = mountId;
         }
 
         // The mod is done adding rows. The page is shown the frame after (Show): in the framework's Mods menu when it's
@@ -749,19 +810,44 @@ namespace GK2DonkeyAPI.Api
         // called once per registered mount with the mount's id, the suffix for the cfg keys ("" for the donkey, so a cfg
         // from before keeps its values under the same keys; "_dragon" for the dragon) and whether that mount is the one
         // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
-        // on them (a custom colour with its preset) stays its own (Row.Enabled: the look bar greys, never hides).
+        // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel greys, never hides).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
-        // (a Harness row on the worm). The row stays and keeps its value; the look bar shows it greyed, the Mods menu
+        // (a Harness row on the worm). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu
         // (which knows only visibility) leaves it out for that mount.
+        // The mount a companion's chosen skin is a look of pins this tuning key (its [Mount.Tuning] or a code kind's
+        // Tuning, either style): its label, else null. A player's row for such a key does nothing on that mount.
+        public static string PinnedBy(MountCompanion companion, string tuningKey)
+        {
+            if (companion == null || string.IsNullOrEmpty(tuningKey)) return null;
+            Looks.SkinDef d = Looks.Find(companion.Skin);
+            if (d == null || d.Unavailable != null) return null; // not installed, or set aside: the donkey comes instead, which pins nothing
+            Kinds.KindDef k = d.Kind;
+            if (k == null || k == Kinds.Donkey) return null;
+            if (!Looks.Rig.MountMayPin(tuningKey)) return null; // a key a mount may not pin is refused at the merge: the row stays live
+            bool Has(Dictionary<string, object> t) => t != null && t.ContainsKey(tuningKey);
+            return Has(k.Tuning) || Has(k.TuningRide) || Has(k.TuningCart) ? k.Label : null;
+        }
+
+        // Says which tuning key a row sets, so the row is left out of the Mods menu and the game's Settings window while the
+        // companion's chosen mount pins that key: a speed row does nothing on a mount that sets its own speed
+        // (docs/mounts-foundation-2.md 2.1). Call it after the row; the mod's own condition, if any, stays.
+        public void TuningKey(string section, string key, string tuningKey, MountCompanion companion)
+        {
+            if (companion == null) throw new ArgumentNullException(nameof(companion));
+            if (string.IsNullOrEmpty(tuningKey)) throw new ArgumentException("A tuning key is needed.", nameof(tuningKey));
+            EnableWhen(section, key, () => PinnedBy(companion, tuningKey) == null);
+        }
+
         public void EnableWhen(string section, string key, Func<bool> enabled)
         {
             if (enabled == null) throw new ArgumentNullException(nameof(enabled));
             string cfgSection = Sec(section);
             foreach (Row r in Rows)
             {
-                if (r.Entry != null && r.Entry.Definition.Section == cfgSection && r.Entry.Definition.Key == key)
+                if (r.Entry != null && r.Entry.Definition.Section == cfgSection && (r.Entry.Definition.Key == key || r.Entry.Definition.Key == LightnessKey(key)))
                 {
+                    // a Color row's lightness row (LightnessKey) goes with it: greyed together, never live on its own
                     Func<bool> own = r.Enabled; // a row's own condition (a custom colour row: its preset is Custom) stays
                     r.Enabled = own == null ? enabled : () => own() && enabled();
                 }

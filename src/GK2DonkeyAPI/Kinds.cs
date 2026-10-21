@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using GK2DonkeyAPI.Api;
+using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
@@ -17,6 +18,10 @@ namespace GK2DonkeyAPI
         {
             internal string Id, Name, Author, Version, Owner;
             internal string Noun;                      // the word a sentence uses ("a skull can't pull the cart"); null: the name in lower case
+            internal string Description;               // for the Mounts panel: a line or two about the creature
+            internal string Portrait;                  // a pack's: a PNG of the declaring skin's folder for the panel's list; null: the mount drawn
+            internal Texture2D PortraitTexture;        // a code kind's portrait, the mod's own texture
+            internal List<KeyValuePair<string, string>> Stats = new List<KeyValuePair<string, string>>(); // [Mount.Stats]: lines the panel shows as given
             internal string NounText => (Noun ?? Label).ToLowerInvariant(); // the word every sentence and label uses
             internal bool BuiltIn, FromPack;
             internal bool Cart = true;                 // may pull the cart
@@ -27,6 +32,9 @@ namespace GK2DonkeyAPI
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
             internal MountAbility[] Abilities = Array.Empty<MountAbility>();
+            internal string AbilityOwner;               // the owner the abilities' values are set under ("<owner>.ability.<id>"); cleared when the kind leaves an instance
+            internal string DeclaredBy;                 // a pack kind: the skin whose [Mount] block defined it (its Default when the ids match)
+            internal bool DeclaredByDefault => FromPack && DeclaredBy != null && DeclaredBy.Equals(Id, StringComparison.OrdinalIgnoreCase);
 
             internal string Label => string.IsNullOrEmpty(Name) ? Id : Name;
         }
@@ -67,18 +75,40 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogInfo($"Kinds: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}{(d.Effect != null ? ", effect " + d.Effect : "")}.");
         }
 
-        // A pack's [Mount] declaration: the first declaration of an id wins, a later one joins it (reported once).
-        internal static KindDef Declare(KindDef d, string where)
+        // A pack's [Mount] declaration. The mount's facts belong to its Default skin (the skin whose id is the mount's,
+        // docs/mounts-foundation-2.md 2.2): the first declaration defines the kind, and a Default that comes later
+        // re-declares it over a joiner's (a loose pack declaring 'dragon' before Saddle Up's dragon registers); any
+        // other later declaration joins, its own facts and tuning unused (said once). A code-registered kind is never
+        // re-declared by a pack.
+        internal static KindDef Declare(KindDef d, string where, string skinId = null)
         {
             CheckId(d.Id);
             if (defs.TryGetValue(d.Id, out KindDef have))
             {
-                if (have.FromPack && have.Owner == d.Owner && Same(have, d)) return have;
-                Plugin.Log.LogInfo($"Kinds: {where} declares mount '{d.Id}', which {(have.FromPack ? (have.Owner == d.Owner ? "another skin" : "another pack") : have.Owner)} already defines; the skin joins that one.");
+                if (have.FromPack && have.Owner == d.Owner && Same(have, d))
+                {
+                    if (have.DeclaredBy == null && skinId != null) have.DeclaredBy = skinId;
+                    return have;
+                }
+                bool isDefault = skinId != null && skinId.Equals(d.Id, StringComparison.OrdinalIgnoreCase);
+                // the mount's own skin re-declares over a joiner's declaration, and over the declaration of an earlier
+                // copy of itself that the version rule replaced (Looks.Register: the winner's facts, not the loser's)
+                if (have.FromPack && isDefault && (!have.DeclaredByDefault || have.Owner != d.Owner))
+                {
+                    Plugin.Log.LogInfo($"Kinds: {where} is mount '{d.Id}''s own skin: its [Mount] block defines the mount from now on, over {(have.DeclaredBy != null ? "skin '" + have.DeclaredBy + "'" : have.Owner)}'s declaration (which joins).");
+                    have.Owner = d.Owner;
+                    have.BuiltIn = d.BuiltIn;
+                    have.DeclaredBy = skinId;
+                    Redeclare(have, d);
+                    return have;
+                }
+                bool differs = !Same(have, d);
+                Plugin.Log.LogInfo($"Kinds: {where} declares mount '{d.Id}', which {(have.FromPack ? (have.Owner == d.Owner ? "another skin" : "another pack") : have.Owner)} already defines; the skin joins that one{(differs ? ", and its own [Mount] facts and tuning are not used (the mount's own skin's are)" : "")}.");
                 return have;
             }
             d.FromPack = true; // BuiltIn is the declaring skin's (set by Looks.Register): a built-in skin's mount is built in
             d.Abilities = Array.Empty<MountAbility>();
+            d.DeclaredBy = skinId;
             defs[d.Id] = d;
             Changed();
             Plugin.Log.LogInfo($"Kinds: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
@@ -88,8 +118,16 @@ namespace GK2DonkeyAPI
         private static bool Same(KindDef a, KindDef b)
         {
             return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
-                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun
+                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
+        }
+
+        private static bool SameStats(List<KeyValuePair<string, string>> a, List<KeyValuePair<string, string>> b)
+        {
+            int na = a?.Count ?? 0, nb = b?.Count ?? 0;
+            if (na != nb) return false;
+            for (int i = 0; i < na; i++) if (a[i].Key != b[i].Key || a[i].Value != b[i].Value) return false;
+            return true;
         }
 
         private static bool SameDict(Dictionary<string, object> a, Dictionary<string, object> b)
@@ -137,6 +175,9 @@ namespace GK2DonkeyAPI
         {
             into.Name = from.Name ?? into.Name;
             into.Noun = from.Noun;
+            into.Description = from.Description;
+            into.Portrait = from.Portrait;
+            into.Stats = from.Stats ?? new List<KeyValuePair<string, string>>();
             into.Author = from.Author;
             into.Version = from.Version;
             into.Cart = from.Cart;

@@ -379,6 +379,7 @@ namespace GK2DonkeyAPI
             {
                 Mounts.RaiseInstancesRestored(restored);
             }
+            Looks.VerifyGameSources(); // game-source skins: their frames checked now that the game is up (the sprite manifest)
             Mounts.RaiseGameReady();
         }
 
@@ -396,8 +397,10 @@ namespace GK2DonkeyAPI
                 LookPreview.Tick();
                 MenuLabels.Tick();
                 PreviewStage.Tick();
-                LookBar.Tick();
+                MountsPanel.Tick();
+                Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
+                Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)
             }
         }
 

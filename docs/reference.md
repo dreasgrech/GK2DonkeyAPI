@@ -67,7 +67,9 @@ Both sections hold the same keys; the values differ because the two looks differ
 section of the style you are currently mounted on. The table shows the values shipped at the time of writing,
 Ride / Cart.
 
-**Where a value comes from**, the first that has one wins (the panel's Sources tab shows each, live):
+**Where a value comes from**, the first that has one wins (the panel's Sources tab shows each, live). Since 0.35.0 a
+value belongs to the owner that set it: another mod's `Set` or `Clear` on it is refused and said once in the log;
+the mount's own values (the skin system's) are the one layer any mod may replace (docs/mounts-foundation-2.md 2.1):
 
 1. **The donkey's own values:** set on one donkey by a mod (Saddle Up's looks and name) or on the Instances tab;
    kept with the save when the donkey is. A donkey with its **own look** (`Instance.OwnLook`, set by the companion)
@@ -100,6 +102,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
 | `SpeedMultiplier` | 1.75 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). |
+| `WalkCycleSpeed` | 1.5 | 1.5 | How fast the walk animation plays for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate; a constant until 0.35.0). A mount with a longer stride sets less in its `[Mount.Tuning]`, a scurrying one more, so its legs match its speed. |
 | `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
 | `CenterOffset` | 0.48 | 0 | Above 0: keep the donkey centred under the rider (its sprite's sideways offset is measured and cancelled every frame). 0: leave it where the game draws it, half a body to the side. A toggle in the panel. |
@@ -237,7 +240,7 @@ crossroads".
 
 ### `[Look]`: skins
 
-Per instance (a look key: an instance with its own look reads only its override or this default). Saddle Up's Mount
+Per instance (a look key: an instance with its own look reads only its override or this default). Saddle Up's Mounts panel
 section sets the player's mount and skin. Full story: [skins-design.md](skins-design.md); packs: [skins.md](skins.md).
 
 | Key | Default | Meaning |
@@ -252,7 +255,7 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 ### `[Effects]`: particle effects on the donkey
 
 `Effect` and `EffectWhen` are per instance (look keys); the rest is everyone's. Never shown indoors. Saddle Up's
-Effect section sets them. Full story: [api.md](api.md) "Effects".
+Mounts panel sets them (the Effect rows). Full story: [api.md](api.md) "Effects".
 
 | Key | Default | Meaning |
 |---|---|---|
@@ -331,7 +334,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 ## In-game test list (with Saddle Up installed)
 
-1. **Log:** `GK2 Donkey API 0.34.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
+1. **Log:** `GK2 Donkey API 0.35.0 loaded; nothing happens until a mod uses it.`, then Saddle Up's line,
    with no errors.
 2. **H:** the donkey appears under you and you sit on it. Walk in all four directions: it faces left or right with
    you, the walk animation runs, and you're clearly faster. **H** again gets you off, at normal speed and height.

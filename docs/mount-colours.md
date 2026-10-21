@@ -124,7 +124,7 @@ skin. The cart's colours go with the mount too, since they are set in the same w
 - `MountSettingsPage.PerMount(rows)` builds a mod's look rows once per registered mount: the donkey's rows keep
   their keys (`Coat`, `CustomCoat`...: a cfg from 0.9.1 keeps its values untouched), the others get the mount's id
   (`Coat_dragon`, `CustomCoatLightness_dragon`). The chosen mount's set shows (`Row.Shown`); a row's own condition
-  (the custom colour with its preset) is kept apart as `Row.Enabled`, which the look bar greys rather than hides.
+  (the custom colour with its preset) is kept apart as `Row.Enabled`, which the Mounts panel greys rather than hides.
 - `MountCompanion.LookOf(mountId)` is one mount's `MountLook`; `Coat`, `Harness`, `Paint`... on the companion are
   the current mount's (`MountId`, the mount of its skin). A value set on another mount's look waits until that
   mount is chosen.
@@ -160,7 +160,7 @@ saturation and value thresholds; the first match wins; everything else is Coat).
   nothing to it: the first Pink moved the rat's pink by 7 to 10 of 255 and the first Brown the snail's shell by
   5 to 18). Pale, Rose, Brown, Green, Blue and Dark each move the donkey's muzzle, the rat's pink, the snail's
   shell and Hellfire's lava by at least 22, most by 40 and more. The worm has no second tone: its rows are
-  left out of the menu and greyed in the colours window.
+  left out of the menu and greyed in the Mounts panel.
 - **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
   (`BepInEx\GK2-asset-probe\game-skins\gerry\`) when one exists; without the export the cfg carries no `[Colors]`
   and everything is Coat.

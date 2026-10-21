@@ -716,7 +716,7 @@ namespace GK2DonkeyAPI.Api
                     }
                     else if (h.Tuning.IsSet("ShuffleFollowKeeperIndoors") && h.Tuning.SetBy("ShuffleFollowKeeperIndoors") == OwnerId)
                     {
-                        h.Tuning.Clear("ShuffleFollowKeeperIndoors");
+                        h.Tuning.Clear(OwnerId, "ShuffleFollowKeeperIndoors");
                     }
                 }
                 catch (Exception e)
@@ -737,7 +737,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 else if (t.IsOverridden(key) && t.OverriddenBy(key) == OwnerId)
                 {
-                    t.Clear(key);
+                    t.Clear(OwnerId, key);
                 }
             }
             catch (Exception e)
@@ -874,7 +874,7 @@ namespace GK2DonkeyAPI.Api
                     }
                     else if (h.Tuning.IsSet(key) && h.Tuning.SetBy(key) == OwnerId)
                     {
-                        h.Tuning.Clear(key);
+                        h.Tuning.Clear(OwnerId, key);
                     }
                 }
                 catch (Exception e)

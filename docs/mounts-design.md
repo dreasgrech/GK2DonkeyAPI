@@ -180,8 +180,12 @@ place with `MovedKey`; the page carries a player's values over both ways (docs/a
 so nothing resets on an update. Three calls add the rows every player mod wants: `MountRows(section, companion)`
 (the Mount dropdown, a Skin dropdown per mount), `FoalRows` (babies: how many, indoors, the same mount and skin),
 `EffectRows` (the effect list with "As the mount or skin" / none / every effect, when it shows, the four effect toggles).
-Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears in the Mods
-menu, the game's Settings window and the colours bar with no change to Saddle Up.
+Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears with no change
+to Saddle Up. **Since 0.35.0 (the user, 2026-10-20: a panel of its own, WoW-style) those rows are not in the Mods
+menu or the Settings window at all: they live in the Mounts panel** (`MountsPanel.cs`; `PanelButton`, `OpenPanel`),
+the mounts listed on the left, the chosen one drawn on the right with its description, what it does, its stat lines
+and abilities, and its skin, effect and colour rows under it. The page keeps keys, behaviour, cart and sound, and
+stops growing with the mounts installed; the cfg keys are the same as before.
 
 **The F11 panel's Instances tab** spawns any mount with any of its skins: a "Mount and skin" cycler (the list
 Saddle Up offers, by mount) above the buttons; "with its cart" is greyed when the mount refuses the cart, the family

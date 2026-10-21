@@ -31,10 +31,10 @@ def skin_dirs():
 
 
 def find(skin_id):
-    for p in skin_dirs():
-        if os.path.basename(p) == skin_id:
-            return p
-    return None
+    hits = [p for p in skin_dirs() if os.path.basename(p) == skin_id]
+    if len(hits) > 1:
+        raise SystemExit(f"the skin id {skin_id} is in more than one project: {', '.join(hits)} (one home per skin)")
+    return hits[0] if hits else None
 
 
 def root_of(project):

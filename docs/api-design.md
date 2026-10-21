@@ -190,6 +190,10 @@ alter the save, which is the reason Built Count never evaluates one.
   existing members bumps the major version.
   - **Before 1.0**, as semver allows for 0.x, a breaking change bumps the minor. It's also listed in the design doc.
   - 0.4.0 made one: `BuiltInKeyOwner` was removed, and `MountTuning.Style` became `MountStyle?`.
+  - 0.35.0 made one: `InstanceTuning.Clear(key)` and `MountTuning.Clear(key)` became `Clear(ownerId, key)` (an owner
+    clears its own value only; docs/mounts-foundation-2.md 2.1).
+  - 0.35.0 made one: `InstanceTuning.Clear(key)` and `MountTuning.Clear(key)` became `Clear(ownerId, key)` (an owner
+    clears its own value only; docs/mounts-foundation-2.md 2.1).
 - Authors declare `[BepInDependency("dreas.gk2.donkeyapi", "1.0.0")]`, or a soft dependency plus `Mounts.IsAvailable`
   if the mount is optional for them.
 - A new test (`tests/ApiSurface`) writes the public API with Mono.Cecil and compares it with a committed snapshot.

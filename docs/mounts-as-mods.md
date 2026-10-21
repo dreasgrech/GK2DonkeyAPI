@@ -104,7 +104,7 @@ their files (in practice alphabetical by folder and file name), and there is no 
 mod can only say "after the API".
 
 What a mount registered *after* Saddle Up's Awake gets today, from the code: the Mods menu's Mount dropdown lacks it
-for the whole session (filled at Publish); the game's own Settings window and the colours bar fill their lists
+for the whole session (filled at Publish); the game's own Settings window and the Mounts panel fill their lists
 lazily (SettingsRows.cs:481, MenuLabels.cs:52) and may offer it; picked there, `Apply` finds no `Skin_<id>` row and
 heals the skin to the mount's first (MountRows's `Apply`), so riding it works; but it has no colour rows of its own
 (its colours stay the game's) and no Skin row (a second skin of it can't be chosen). And "after a restart" never

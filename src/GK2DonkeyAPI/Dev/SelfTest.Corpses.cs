@@ -23,7 +23,7 @@ namespace GK2DonkeyAPI
             public Override(string key) { Key = key; Owner = Mounts.Corpses.OverriddenBy(key); Value = Owner == null ? null : Mounts.Corpses.Get<object>(key); }
             public void Restore()
             {
-                Mounts.Corpses.Clear(Key);
+                Mounts.Corpses.ClearAny(Key);
                 if (Owner != null) Mounts.Corpses.Set(Owner, Key, Value);
             }
         }
@@ -167,6 +167,7 @@ namespace GK2DonkeyAPI
             var pallet = HarmonyLib.AccessTools.DeclaredMethod(typeof(GK2.FlowCanvasNodes.Flow_TryToAddCorpseToPallet), "TryToAddCorpseToPallet");
             try
             {
+                Mounts.Corpses.ClearAny("CorpsesAtCrossroads"); // Saddle Up holds it: taken over, put back by before.Restore()
                 Mounts.Corpses.Set(Owner, "CorpsesAtCrossroads", true);
                 Corpses.Tick();
                 Check(Corpses.Applied && Mounts.CorpsesActive, "switched on: the patches are in" + (Corpses.ApplyError != null ? " (" + Corpses.ApplyError + ")" : ""));
@@ -192,6 +193,7 @@ namespace GK2DonkeyAPI
             UINotificator notificator = LazySingleton<UINotificator>.Instance;
             if (notificator == null) { Fail("no UINotificator"); yield break; }
             var before = new Override("CorpsesAtCrossroads");
+            Mounts.Corpses.ClearAny("CorpsesAtCrossroads");
             Mounts.Corpses.Set(Owner, "CorpsesAtCrossroads", true);
             Corpses.Tick();
             if (!Corpses.Applied) { Fail("could not switch the feature on"); before.Restore(); Corpses.Tick(); yield break; }
@@ -296,6 +298,7 @@ namespace GK2DonkeyAPI
             bool ok;
             try
             {
+                Mounts.Corpses.ClearAny("CorpsesNeverRot");
                 Mounts.Corpses.Set(Owner, "CorpsesNeverRot", true);
                 body = NewBody();
                 ok = Corpses.TryLeaveAtCrossroads(body);

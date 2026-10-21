@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // The settings' picture of the donkey with its cart (LookPreview, LookBar), drawn by the game itself: a copy of the
+    // The settings' picture of the donkey with its cart (LookPreview, MountsPanel), drawn by the game itself: a copy of the
     // donkey's look from the game's files (Assets/AddressableAssets/WGOs/<id>.prefab, the file the game draws the
     // donkey from) far below the world, wearing a paper donkey's colours and lantern (its Colors.Rig and Lantern.Rig
     // attached to the copy), photographed into a RenderTexture by a camera of its own at the game camera's angle.

@@ -15,11 +15,11 @@ import io, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import skinroots
 REPO = skinroots.REPO
-SKIN_ORDER = ["format", "id", "name", "author", "version", "base", "kind", "layer", "erase", "canvas", "pivot", "source", "seat",
+SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "kind", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
-MOUNT_ORDER = ["id", "name", "noun", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
+MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
-TUNING_SECTIONS = ["mount.tuning", "mount.tuning.ride", "mount.tuning.cart"]
+TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart"]  # [Mount.Stats] first: the panel's lines, then the tuning
 MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."
 
 
@@ -133,7 +133,7 @@ def canonical(path):
                 out.append(secs[name]["header"])
                 out.extend(secs[name]["lines"])
     if "mount" not in secs and any(name in secs for name in TUNING_SECTIONS):
-        raise SystemExit(f"{path}: a [Mount.Tuning] section without a [Mount] section (the game ignores it; add the block or take the section out)")
+        raise SystemExit(f"{path}: a [Mount.*] section without a [Mount] section (the game ignores it; add the block or take the section out)")
     known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "colors", "mount"} | set(TUNING_SECTIONS)
     for name in order:
         if name not in known and not name.startswith("base."):

@@ -17,6 +17,7 @@ namespace GK2DonkeyAPI
     {
         public readonly string Section;
         public readonly Tuned<float> SpeedMultiplier;
+        public readonly Tuned<float> WalkCycleSpeed;   // the walk clip's rate per unit of walking speed: the stride (the donkey's 1.5)
         public readonly Tuned<float> FocusSpeed;
         public readonly Tuned<float> Depth;
         public readonly Tuned<float> CenterOffset;
@@ -74,6 +75,8 @@ namespace GK2DonkeyAPI
             string who = section == "Cart" ? "in cart style" : "while riding";
             SpeedMultiplier = cfg.Bind(section, "SpeedMultiplier", Defaults.Get(section, "SpeedMultiplier", speed),
                 new ConfigDescription($"Walking speed {who}, as a multiple of normal (measured: exactly linear).", new AcceptableValueRange<float>(0.5f, 4f)));
+            WalkCycleSpeed = cfg.Bind(section, "WalkCycleSpeed", Defaults.Get(section, "WalkCycleSpeed", 1.5f),
+                new ConfigDescription($"How fast the walk animation plays {who} for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate, a constant until 0.35.0); a mount with a longer stride sets less in its [Mount.Tuning], a scurrying one more, so its legs match its speed (docs/mounts-foundation-2.md 2.4).", new AcceptableValueRange<float>(0.5f, 4f)));
             FocusSpeed = cfg.Bind(section, "FocusSpeed", Defaults.Get(section, "FocusSpeed", 0.5f),
                 new ConfigDescription($"Speed {who} in a fight's focus stance (right click held: aiming while moving), as a fraction of the speed above. The game halves the keeper's own walking speed there; 1 keeps the full speed.", new AcceptableValueRange<float>(0.25f, 1f)));
             Depth = cfg.Bind(section, "Depth", Defaults.Get(section, "Depth", depth),
@@ -325,7 +328,7 @@ namespace GK2DonkeyAPI
             {
                 var list = new System.Collections.Generic.List<ConfigEntryBase>
                 {
-                    SpeedMultiplier, FocusSpeed, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
+                    SpeedMultiplier, WalkCycleSpeed, FocusSpeed, Depth, CenterOffset, RiderOffsetPx, TorsoOffsetPx,
                     AutoSeat, SeatAdjustPx, SeatOffset, Bob, Pose, FreezePoseWhenIdle, PoseSpeed, PoseSpeedFollowsDonkey,
                     NearLeg, LegSource, LegHeightPx, LegAdjustXPx, LegAdjustYPx, BackSeatExtraPx, SnapToGround, CartFollowsGround, CartGroundMaxShift, CartSlope, CartPitchMaxDegrees,
                     CargoDrawCorpse, CargoSwaysWithCart, CargoSetDownBehindCart, CargoSetDownGap, CargoBedDepth, CargoSideGap, CargoOverhang, CargoNestle, CargoLayerShift,
@@ -362,7 +365,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.34.0";
+        public const string Version = "0.35.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.

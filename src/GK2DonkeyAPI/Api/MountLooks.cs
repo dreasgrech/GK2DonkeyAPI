@@ -22,7 +22,7 @@ namespace GK2DonkeyAPI.Api
     //     result covers every clip and nothing of the game's art is shipped. Built a few frames a tick when first worn.
     // Every registration returns a handle: dispose it to withdraw the skin (the donkeys wearing it show the game's own
     // look from their next frame and keep their choice). Register in Awake: a skin registered after Saddle Up's settings
-    // page is made works at once through the cfg and appears in its list after a restart.
+    // page is made works at once through the cfg and is in its list from the page's catch-up (MountSettingsPage.CatchUp).
     public sealed class MountLooks
     {
         internal MountLooks()
@@ -231,6 +231,10 @@ namespace GK2DonkeyAPI.Api
         // The front layer, optional: pictures drawn in front of the rider (the near wing, a saddle's near side), by the
         // same frame keys; a missing key draws nothing there.
         public IMountSkinSource FrontSource;
+        // For the Mounts panel: a line or two about the look, and a portrait for its list (your own texture, kept by
+        // you; null: the panel draws the mount wearing it).
+        public string Description;
+        public Texture2D Portrait;
 
         internal Looks.SkinDef ToDef(string owner)
         {
@@ -245,6 +249,7 @@ namespace GK2DonkeyAPI.Api
                 TuningCart = TuningCart != null && TuningCart.Count > 0 ? new Dictionary<string, object>(TuningCart, StringComparer.OrdinalIgnoreCase) : null,
                 Effect = string.IsNullOrWhiteSpace(Effect) || MountEffects.IsNone(Effect) ? null : Effect.Trim(), EffectWhen = EffectWhen,
                 SeatFromPicture = SeatFromPicture, Erase = Over ? Erase : null,
+                Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(), PortraitTexture = Portrait,
                 Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : ""),
             };
             if (Regions != null && PaletteColours) d.Report += "Regions on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
@@ -349,6 +354,10 @@ namespace GK2DonkeyAPI.Api
             Effect = d.Effect;
             EffectWhen = d.EffectWhen;
             FromGame = d.Game != null;
+            Description = d.Description ?? "";
+            HasPortrait = d.PortraitTexture != null || !string.IsNullOrEmpty(d.Portrait);
+            IsAvailable = d.Unavailable == null;
+            SetAsideWhy = d.Unavailable;
             var regions = new List<string>();
             if (!d.OwnColours) regions.AddRange(Colors.MountRegionKeys);
             else
@@ -361,9 +370,16 @@ namespace GK2DonkeyAPI.Api
         }
 
         public string Id { get; }
+        // False while the skin is set aside (a game-source skin whose frames the game lacks): not offered, the donkey
+        // comes for whoever has it chosen; SetAsideWhy says why, null when available.
+        public bool IsAvailable { get; }
+        public string SetAsideWhy { get; }
         public string Name { get; }
         public string Author { get; }
         public string Version { get; }
+        // For the Mounts panel: a line or two about the look; whether it brings a portrait.
+        public string Description { get; }
+        public bool HasPortrait { get; }
         // The plugin GUID that registered it (packs found by the API: the API's).
         public string Owner { get; }
         public bool IsBuiltIn { get; }

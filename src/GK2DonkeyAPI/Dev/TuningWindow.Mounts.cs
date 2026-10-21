@@ -38,6 +38,7 @@ namespace GK2DonkeyAPI
         private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MountKeys =
         {
             ("SpeedMultiplier", "Speed (x normal walking)", "How fast this mount goes.", 0.5f, 4f, false, false),
+            ("WalkCycleSpeed", "Stride (walk clip rate per unit of speed)", "How fast the walk animation plays for each unit of walking speed: the donkey's is 1.5. Less for a longer stride, more for a scurry, so the legs match the speed (docs/mounts-foundation-2.md 2.4).", 0.5f, 4f, false, false),
         };
 
         private static void DrawMounts()
@@ -566,13 +567,10 @@ namespace GK2DonkeyAPI
             }
             string path = Looks.CfgPathFor(skin);
             var kindFiles = new List<Looks.SkinDef>();
-            if (kind != Kinds.Donkey && kind.FromPack)
+            if (kind != Kinds.Donkey && kind.FromPack && kind.DeclaredBy != null && !kind.DeclaredBy.Equals(skin.Id, StringComparison.OrdinalIgnoreCase))
             {
-                foreach (Looks.SkinDef s in Kinds.SkinsOf(kind))
-                {
-                    string p = Looks.CfgPathFor(s);
-                    if (p != null && System.IO.File.Exists(p) && System.IO.File.ReadAllText(p).IndexOf("[Mount]", StringComparison.OrdinalIgnoreCase) >= 0) kindFiles.Add(s);
-                }
+                Looks.SkinDef declaring = Looks.Find(kind.DeclaredBy); // the mount's rows go into the declaring skin's file (MountsSaveIfDue)
+                if (declaring != null && Looks.CfgPathFor(declaring) != null) kindFiles.Add(declaring);
             }
             if (path == null)
             {
@@ -638,13 +636,12 @@ namespace GK2DonkeyAPI
             if (skin == null) return;
             var files = new List<Looks.SkinDef> { skin };
             Kinds.KindDef kind = skin.Kind;
-            if (kind != Kinds.Donkey && kind.FromPack)
+            if (kind != Kinds.Donkey && kind.FromPack && kind.DeclaredBy != null && !kind.DeclaredBy.Equals(skin.Id, StringComparison.OrdinalIgnoreCase))
             {
-                foreach (Looks.SkinDef s in Kinds.SkinsOf(kind))
-                {
-                    string p = Looks.CfgPathFor(s);
-                    if (s != skin && p != null && System.IO.File.Exists(p) && System.IO.File.ReadAllText(p).IndexOf("[Mount]", StringComparison.OrdinalIgnoreCase) >= 0) files.Add(s);
-                }
+                // the mount's rows live in the file of the skin that declares the mount (its Default); a joiner's own
+                // [Mount] block is not the mount's (docs/mounts-foundation-2.md 2.2)
+                Looks.SkinDef declaring = Looks.Find(kind.DeclaredBy);
+                if (declaring != null && Looks.CfgPathFor(declaring) != null) files.Add(declaring);
             }
             var written = new List<string>();
             var errors = new List<string>();

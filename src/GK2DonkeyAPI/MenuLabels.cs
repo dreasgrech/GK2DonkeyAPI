@@ -35,6 +35,7 @@ namespace GK2DonkeyAPI
         {
             foreach (MountSettingsPage.Row r in page.Rows)
             {
+                if (!page.InMenu(r)) continue; // not in the menu: the Mounts panel's
                 if (r.Entry != null)
                 {
                     ourRows.Add(r.Section + "." + r.Entry.Definition.Key);

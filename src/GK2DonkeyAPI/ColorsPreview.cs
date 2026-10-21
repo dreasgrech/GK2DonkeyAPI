@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // A picture of one donkey in its current colours, for the settings (LookPreview.cs, LookBar.cs).
+    // A picture of one donkey in its current colours, for the settings (LookPreview.cs, MountsPanel.cs).
     // - The base: the donkey's body and head in their own colours, from the game's own files: the look the game loads
     //   for the donkey, Assets/AddressableAssets/WGOs/<id>.prefab (WgoPartLoadManager), read through Addressables in
     //   the main menu, indoors, anywhere, with no donkey in the world. Its sprites' pixels are copied through a

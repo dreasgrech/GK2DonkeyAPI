@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.34.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.35.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -16,7 +16,7 @@ surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ```csharp
 [BepInPlugin("you.gk2.mymod", "My Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.31.0")]          // hard: your mod needs the core, at least this version
+[BepInDependency("dreas.gk2.donkeyapi", "0.35.0")]          // hard: your mod needs the core, at least this version
 public class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -121,20 +121,24 @@ behaviour switches, which apply to both styles, and `Mounts.Shuffle` how the idl
 
 ```csharp
 MountTuning cart = Mounts.Tuning(MountStyle.Cart);
-cart.Set("you.gk2.mymod", "SpeedMultiplier", 2.5f);   // returns the value applied, clamped to the allowed range
+cart.Set("you.gk2.mymod", "SpeedMultiplier", 2.5f);   // returns the value in effect: yours, clamped to the allowed range, or the holder's when another owner has the key (TrySet says which)
 cart.Set("you.gk2.mymod", "Pose", RiderPose.Walk);
 float now = cart.Get<float>("SpeedMultiplier");       // the value in effect
 Mounts.Behaviour.Set("you.gk2.mymod", "DismountIndoors", false);
 Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, every section
 ```
 
-- **Session only:** a `Set` overrides the player's value until `Clear(key)`, `Reset()`, `ClearTuning(owner)` or the
+- **Session only:** a `Set` overrides the player's value until `Clear(ownerId, key)`, `Reset()`, `ClearTuning(owner)` or the
   end of the session. It's never written to the player's cfg.
 - **Type-checked:** a wrong type throws `ArgumentException`, naming the expected type.
 - **Visible in the dev panel:** an overridden row is cyan and locked, and shows the value in effect.
 - **When it applies:** while mounted in that style, most values apply at once. Values the donkey is built with (the
   cart and lantern geometry measured at summon) apply from the next mount or style switch.
 - **Discovering keys:** `Keys`, `Has(key)`, `TypeOf(key)`, `IsOverridden(key)` and `OverriddenBy(key)`.
+- **A value belongs to the owner that set it** (0.35.0): `Set` by another owner is refused (the value in effect is
+  returned; `TrySet(owner, key, value, out applied)` says whether it was set; one Info line), `Clear(owner, key)`
+  clears only your own. The one value anyone may replace is the mount's own (set by the kind's merge under
+  `dreas.gk2.donkeyapi.skin`): a mod's value wins over the creature's and the creature's returns when cleared.
 
 **Behaviour** (`Mounts.Behaviour`, section "General"):
 - `HitchKey` (0.14.0, a `KeyCode`; `None` switches the key off)
@@ -163,6 +167,7 @@ While mounted the keeper always faces only left or right, like the donkey. That 
 |---|---|
 | Speed and seat | `SpeedMultiplier` (float 0.5–4), `Depth`, `CenterOffset`, `SeatOffset` (float); `RiderOffsetPx`, `TorsoOffsetPx`, `SeatAdjustPx` (int); `AutoSeat`, `Bob`, `SnapToGround` (bool) |
 | Rider motion | `BobScale`, `HandsSteady`, `HandsSwayPx` (float); `BobLagFrames`, `HeadLagFrames` (int); `HeadSettle` (float) |
+| Stride | `WalkCycleSpeed` (float, 1.5: the walk clip's rate per unit of walking speed; a mount key) |
 | Pose | `Pose` (`RiderPose`: Walk, Idle, FishingIdle, FocusedWalk); `FreezePoseWhenIdle`, `PoseSpeedFollowsDonkey` (bool); `PoseSpeed`, `IdleFidgetEverySeconds`, `IdleFidgetSpeed`, `IdleCrawlSpeed` (float) |
 | Legs | `NearLeg` (bool), `LegSource` (`LegSource`: Body, Drawn), `LegHeightPx`, `LegAdjustXPx`, `LegAdjustYPx` (int) |
 | Cart on slopes | `CartFollowsGround` (bool), `CartGroundMaxShift`, `CartPitchMaxDegrees` (float), `CartSlope` (`CartSlopeStyle`: HalfLift, ShaftsTilt, WholeCartPitch) |
@@ -224,8 +229,9 @@ the world. Each one has its own settings. The design and every choice behind it 
 ```csharp
 MountHandle donkey = Mounts.SpawnDonkey("you.gk2.mymod", pos, withCart: false, facingRight: true);
 MountHandle cart = Mounts.SpawnCart("you.gk2.mymod", pos2);
-donkey.Tuning.Set("you.gk2.mymod", "SpeedMultiplier", 2.5f);     // this donkey only
+donkey.Tuning.Set("you.gk2.mymod", "SpeedMultiplier", 2.5f);     // this donkey only (refused if another mod holds it)
 donkey.Tuning.Set("you.gk2.mymod", "CoatColorize", "C040FF");    // any key of Tuning, Behaviour or Colors
+donkey.Tuning.Clear("you.gk2.mymod", "SpeedMultiplier");         // your own value off again
 Mounts.Hitch(donkey, cart);                                       // cart, cargo and cart settings join the donkey
 MountHandle left = Mounts.Unhitch(donkey);                        // the cart stays standing, a free cart again
 ```
@@ -254,7 +260,7 @@ MountHandle left = Mounts.Unhitch(donkey);                        // the cart st
 | `SceneId`, `Position`, `FacingRight` | Where it stands. |
 | `Cargo` | What is on its cart, in load order (`CargoItem`: `Id`, `UniqueId`, `IsZombie`, `ZombieName`). |
 | `Chest` | The storage chest riding on its cart, or null (`ChestInfo`: `Cart`, `Id`, `UniqueId`, `Items`). While a chest rides, `Cargo` is empty. |
-| `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `Clear`, `Reset`, `IsSet`, `SetBy`, `Keys`). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour`, `Mounts.Shuffle` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
+| `Tuning` | Its own settings (`InstanceTuning`: `Get`, `Set`, `TrySet`, `Clear(owner, key)`, `Reset`, `IsSet`, `SetBy`, `Keys`; a value belongs to the owner that set it). Keys are those of `Mounts.Tuning(style)`, `Mounts.Behaviour`, `Mounts.Shuffle` and `Mounts.Colors`; a style key applies in whichever style it is in. This donkey's value wins over everyone's (cfg and session overrides). |
 | `Ride(showMessage)` | The keeper gets on and is put on the seat. The same checks and rules as `TryMount`. |
 | `MoveTo(position, facingRight)` | Moves a standing one. |
 | `IsReady` | Its view is loaded in the keeper's scene: `Ride` works. It takes a few frames after a spawn, `ComeToKeeper`, a hitch or an unhitch. |
@@ -497,10 +503,12 @@ Where they apply:
 | `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
 | `Info(section, label, value)` | nothing | read-only |
 | `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
-| `Choice` / `Steps` with `look: true` | as above | also in the look bar |
-| `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings, in the look bar too. No donkey needed: the art comes from the game's files, the colours from the companion |
-| `LookButton(section, label, description)` | nothing | a button: the menu closes and the look bar opens over the game |
-| `Heading(section, label, description = "")` | nothing | a heading inside a section: a line with the label and no value, before the rows it names (Saddle Up: "Mount colours" and "Cart colours" in Colours). In the look bar the look rows after it, in its section, stand under this heading in a group of their own instead of under the section's name. Not a picture row's label: a `Preview` row is found on screen by its label, so no other row may share it (the page throws) |
+| `Color` | as above | a look row: in the Mounts panel, not in the menus (0.35.0); its lightness row goes with it |
+| `Choice` / `Steps` with `look: true` | as above | in the Mounts panel, not in the menus (0.35.0) |
+| `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings (the Mounts panel draws its own). No donkey needed: the art comes from the game's files, the colours from the companion |
+| `PanelButton(section, label, description)` (`LookButton` is the same) | nothing | a button: the menu closes and the Mounts panel opens over the game (every mount listed, the chosen one drawn with its words, its look rows under it). `OpenPanel()` opens it from a key, and closes it when the key comes again while it is open; the button only brings it forward |
+| `TuningKey(section, key, tuningKey, companion)` | nothing | says which tuning key the row sets: the row is left out of the Mods menu and the game's Settings window while the companion's chosen mount pins that key (`PinnedBy(companion, key)` names the mount; only for a key a mount may pin; a set-aside skin pins nothing) |
+| `Heading(section, label, description = "")` | nothing | a heading inside a section: a line with the label and no value, before the rows it names (Saddle Up: "Mount colours" and "Cart colours" in Colours). In the Mounts panel the look rows after it, in its section, stand under this heading in a group of their own instead of under the section's name. Not a picture row's label: a `Preview` row is found on screen by its label, so no other row may share it (the page throws) |
 
 - **In the Mods menu:** your mod lists `dreas.gk2.donkeyapi` as its dependency, and GK2 Donkey API has its own entry
   in the list (no settings). While the API is off or unconfirmed for the game build, the menu marks your mod
@@ -533,10 +541,11 @@ Where they apply:
     game's angle, at 3 picture pixels per art pixel, so it shows in the main menu and indoors too. In the Mods menu it
     goes into its rows in the list, one per `Preview` call, and above the window too when it fits there (0.75
     canvas units per art pixel or more: 1440p and up, not 1080p). Above the Settings window without the framework,
-    and at the top of the look bar;
-  - **the look bar:** the look rows at the bottom of the screen over the game, with Done and Cancel. Cancel puts
-    back what was set when it opened. Only in a game.
-- **The picture and the bar are extras.** They're found and built defensively. If something about them fails
+    and the Mounts panel draws its own picture of the chosen mount;
+  - **the Mounts panel:** the mounts listed, the chosen one drawn with its description, what it does and its
+    abilities, and the page's look rows for it, with Done and Cancel. Cancel puts back what was set when it opened
+    (every mount's). Only in a game. The look rows are not in the Mods menu or the Settings window at all.
+- **The picture and the Mounts panel are extras.** They're found and built defensively. If something about them fails
   (after a game or framework update), they don't show and the log says so once; the settings work as before.
 - **`status`:** shown as a "Status" row. "Active" lets the Mods menu confirm the game build; anything else shows
   "Unknown build" there.
@@ -629,7 +638,7 @@ IDisposable reg = Mounts.Kinds.Register(Guid, new MountKindDef
 {
     Id = "checker-beast", Name = "Checker Beast", Cart = false,
     TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },   // the API takes a picture key on a kind; a pack puts it on the skin (the scan refuses it under [Mount.Tuning*])
-    Abilities = { new BurnsWhenRidden(Guid) },
+    Abilities = { new GallopsWhenRidden(Guid) },
 });
 Mounts.Looks.Register(Guid, new MountSkinDef { Id = "checker", Name = "Checker", Mount = "checker-beast", Source = src });
 ```
@@ -641,17 +650,21 @@ system and is re-applied only when the skin, the kind or the style changes.
 
 A **pack declares a kind without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `author`, `version`,
 `cart`, `foals`, `foal_scale`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
-values, each key in one of the three); the first declaration of an id wins and later skins join it. The built-in
-creatures (rat, snail, worm, dragon, Gerry) declare theirs this way, all in one layout (docs/skins.md "Worked
-examples"); `MountKindInfo.IsBuiltIn` is true for them.
+values, each key in one of the three); the mount's own skin (the one whose id is the mount's, its Default) owns
+the declaration: a joiner (`mount = <id>` with a `[Mount]` block of its own) declares only until the Default is
+registered, which re-declares over it, and a declaring skin is that mount's own skin whatever its `mount =` line
+says (0.35.0). Saddle Up's five mounts (rat, snail, worm, dragon, Gerry) declare theirs this way, all in one
+layout (docs/skins.md "Worked examples"); they are Saddle Up's packs, so `MountKindInfo.IsBuiltIn` is false for
+them (true only for the API's own).
 
 An **ability** (`MountAbility`, abstract: override what you need) is code the API calls for every instance of the
 kind that has a handle: `Attached` / `Detached` when the instance becomes / stops being the kind, `Mounted(style)` /
 `Dismounted` on the keeper getting on and off (a style switch is a Dismounted then a Mounted), `Tick(dt)` every
 frame while ridden (and while standing when `TicksWhileStanding`). One object per kind, shared by its instances; an
 ability that throws is switched off on that instance with one warning. Keys, settings rows, sounds and effects are
-your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker beast burns while ridden, through the
-instance's `Effect` key).
+your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker beast gallops while ridden: its
+`SpeedMultiplier` under the ability's own owner). An ability never sets a look key (the skin, the effect, the
+colours are the player's): such a Set is refused, held or free (0.35.0).
 
 A mod's **look rows are kept per mount** with `page.PerMount((mountId, suffix, shown) => { ... })`: the body runs
 once per registered mount and builds the rows with the suffix on their cfg keys (`""` for the donkey, `"_dragon"`
@@ -666,7 +679,7 @@ companion)` adds the babies rows (how many, come indoors, the same mount and ski
 `FoalsWearSkin`; `page.EffectRows("Effect", companion)` adds the effect list ("As the mount or skin", none, every effect),
 when it shows and how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`.
 The labels say "mount" and "babies", never "donkey": the mount may be a dragon. Mounts, skins and
-effects registered before the page is built appear with no change to yours; later ones after a restart. `KindsChanged` fires on a
+effects registered before the page is built appear with no change to yours; later ones at the catch-up (0.34.0: the page is shown a frame after Publish and adds a late mount's rows then). `KindsChanged` fires on a
 registration, a pack's declaration or a withdrawal.
 
 ## Skins (0.30.0)
@@ -739,7 +752,7 @@ Every registration returns an `IDisposable`: dispose it to withdraw the skin; `U
 Wearers show the game's own look from their next frame and keep their choice, so the skin returns with its provider.
 `Report(id)` says what the loader found (pictures, names that match no frame, frames still to draw);
 `SkinsChanged` fires after a registration or withdrawal. Register in `Awake`: a skin registered after Saddle Up's
-settings page is made works at once through the cfg and appears in its list after a restart.
+settings page is made works at once through the cfg and is in its list from the page's catch-up (0.34.0).
 
 A settings page can offer a pick list of ids: `page.List(section, key, MountLooks.DonkeyId, choices, label,
 description, apply, look: true)`, with `choices` returning `(id, label)` pairs; the id is what the cfg holds, from
@@ -869,6 +882,16 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.35.0: **a value belongs to the owner that set it**: `InstanceTuning.Set` and `MountTuning.Set` refuse another
+  owner's key (the mount's own stays replaceable), `TrySet` says so, `Clear(ownerId, key)` replaces `Clear(key)` on
+  both; `MountAbility.Owner` (given by the API, cleared when the kind leaves), `Name`, `Description`; what a kind
+  may pin is a rule (the ride and cart families but the lantern's, and the shuffle's); `MountSettingsPage.TuningKey`,
+  `PinnedBy`; the Mounts panel (`PanelButton`, `OpenPanel`; the look rows leave the menus); `MountSkinInfo.IsAvailable` and `SetAsideWhy` (a game-source skin whose frames the game lacks is set aside: not offered, the donkey comes for whoever has it chosen); an ability never sets a look key (skin, effect, colours), held or free; the format:
+  `MountSkinDef.Description` / `Portrait`, `MountKindDef.Description` / `Portrait` / `Stats` (`MountStat`),
+  `MountSkinInfo.Description` / `HasPortrait`, `MountKindInfo.Description` / `HasPortrait` / `Stats` /
+  `AbilityInfos` (`MountAbilityInfo`), a pack's `description`, `portrait`, `[Mount.Stats]`, `needs`; the tuning
+  key `WalkCycleSpeed` (the stride, the donkey's 1.5); a canvas is at most 256; a game-source skin's frames are
+  checked at game-ready and the skin set aside when they are gone (docs/mounts-foundation-2.md).
 - 0.34.0: no change to the public surface. `MountSettingsPage.Publish` shows the page the frame after it is called
   (every plugin's Awake has run by then): `MountRows` and `PerMount` make their rows for the mounts registered
   meanwhile too, so a mount from a mod loaded after yours is in your Mount list, has its Skin row and its colour

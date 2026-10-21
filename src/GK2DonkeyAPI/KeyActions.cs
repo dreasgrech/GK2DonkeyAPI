@@ -21,6 +21,8 @@ namespace GK2DonkeyAPI
             internal string Owner;
             internal ConfigEntry<KeyboardShortcut> Key;
             internal Action Pressed;
+            internal string Seen;        // the binding as last polled (KeyboardShortcut.Serialize)
+            internal bool WaitRelease;   // the binding just changed: the key that set it is still down, not a press of it
         }
 
         private static readonly List<Entry> entries = new List<Entry>();
@@ -32,7 +34,7 @@ namespace GK2DonkeyAPI
         internal static void Add(string owner, ConfigEntry<KeyboardShortcut> key, Action pressed)
         {
             Track(owner);
-            entries.Add(new Entry { Owner = owner, Key = key, Pressed = pressed });
+            entries.Add(new Entry { Owner = owner, Key = key, Pressed = pressed, Seen = key.Value.Serialize() });
         }
 
         internal static void Track(string owner)
@@ -57,6 +59,20 @@ namespace GK2DonkeyAPI
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
+                // The binding changed since the last poll (the Mods menu's key capture writes it on the key-down, the
+                // Settings window's too, or a cfg reload): the press that set it is not a press of it. Nothing fires until
+                // the new key has been let go (the user, 2026-10-21: binding the Mounts panel key opened the panel at once).
+                string now = e.Key.Value.Serialize();
+                if (!string.Equals(now, e.Seen, StringComparison.Ordinal))
+                {
+                    e.Seen = now;
+                    e.WaitRelease = e.Key.Value.MainKey != KeyCode.None;
+                }
+                if (e.WaitRelease)
+                {
+                    if (UnityInput.Current.GetKey(e.Key.Value.MainKey)) continue;
+                    e.WaitRelease = false;
+                }
                 if (!Pressed(e.Key.Value))
                 {
                     continue;

@@ -14,7 +14,7 @@ the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo).
 
 The machinery for all three: `src/GK2DonkeyAPI/Looks.cs` (packs, sheets, sources, the overlay drawing, colours by
 region), `LooksRecipes.cs` (recipes), `LooksGame.cs` (game creatures), `LookPreview.cs` / `PreviewStage.cs` (the
-pictures in the menus), `LookBar.cs` (the colours window), `Effects.cs` (particle effects), the public API in
+pictures in the menus), `MountsPanel.cs` (the Mounts panel: the list, the picture, the look rows), `Effects.cs` (particle effects), the public API in
 `src/GK2DonkeyAPI/Api/MountLooks.cs`, `MountKinds.cs`, `MountEffects.cs`. Design: `docs/skins-design.md`; the pack
 format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.md`.
 

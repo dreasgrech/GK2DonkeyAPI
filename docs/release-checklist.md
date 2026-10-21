@@ -140,7 +140,7 @@ Nothing saved; every save file verified identical; everything restored and the d
 Run 2026-10-19 14:15, the 0.10.0 dev build (mounts switched off) over the **0.9.1 player files** (the fixture's two
 cfgs staged in BepInEx\config with KeepWithSaves on, the user's own side file): the Mods menu showed every 0.9.1 value
 (R/T keys, Bella, plum custom coat, red harness, blue paint, black wheels, brass hubs, green light, 3 babies, 4 slots,
-every toggle off, volume 120) and the colours bar the same; 5 of 5 kept donkeys and carts restored; R brought the
+every toggle off, volume 120) and the Mounts panel the same; 5 of 5 kept donkeys and carts restored; R brought the
 donkey and the cart unhitched (CartStaysParked off in 0.9.1's file: as documented); 674 log lines, 0 warnings, the
 seven "carried over" lines and "31 old line(s) left out"; the rewritten cfgs hold all 35 Saddle Up and 450 API
 values of the 0.9.1 files (a key-by-key comparison, 0 lost; copies in `backup-dev-2026-10-19\after-upgrade-0.9.1`);

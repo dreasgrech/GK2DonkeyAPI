@@ -33,6 +33,7 @@ namespace GK2DonkeyAPI
             Colors,     // colour rigs
             Looks,      // skin rigs: the frame's pictures onto the overlays, before the cameras (Looks.cs)
             LooksBuild, //   decoding a skin's pictures when the first donkey wears it
+            LooksTick,  //   the skin rigs' tick: which skin, the tuning merge (MountInstance.Tick)
             Effects,    // particle effects on donkeys: the ring that follows, the trail (Effects.cs)
             Abilities,  // the kinds' abilities (MountAbility hooks, Looks.Rig.TickAbilities)
             Controls,   // the keeper's ride / hitch prompt (InstanceControls)

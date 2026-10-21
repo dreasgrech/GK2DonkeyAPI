@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.34.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+Version 0.35.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
 (re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
 game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
@@ -170,7 +170,7 @@ All through the game's own sound player, in its mixer groups, so the game's volu
 | Feature | Reached by | Status |
 |---|---|---|
 | **No save changes:** the ridden donkey is a temporary world object the game never saves; a save made while mounted loads without the mod as if on foot. | always | tested |
-| **Game-update check:** every game member the mod uses is compared with the installed game at start. All identical: runs. One gone, or the core's code changed: stops (`Safety.ForceRunOnChangedGameCode` runs it anyway, the chest off). Only a feature's code changed: that feature off (chest, corpses, colours, lantern) or warned (sounds, look bar, settings page), the rest runs ([`docs/dependency-check.md`](../../docs/dependency-check.md)). | cfg | tested |
+| **Game-update check:** every game member the mod uses is compared with the installed game at start. All identical: runs. One gone, or the core's code changed: stops (`Safety.ForceRunOnChangedGameCode` runs it anyway, the chest off). Only a feature's code changed: that feature off (chest, corpses, colours, lantern) or warned (sounds, Mounts panel, settings page), the rest runs ([`docs/dependency-check.md`](../../docs/dependency-check.md)). | cfg | tested |
 | **Master switch** (`General.Enabled`): off, no mod can mount; the kill switch if a mod built on this misbehaves. | cfg | tested |
 | **Crash cleanup:** a failure mid-ride hands the cargo back and restores the keeper. | always | tested |
 | **The real donkey NPC is never touched;** the mod only reads its prefab. | always | tested |
@@ -201,6 +201,8 @@ effects") are written and not yet run in game.
 | **Skins:** a pack (`skin.cfg` + a PNG per frame, or a sheet; over the donkey with an erase colour and a recolour of the base, or replacing it on its own canvas with a front layer), a code skin, a recipe, or another character of the game (`source = game`); the skin owns its drawing's geometry (`seat = <row>` or `picture`, the pixel keys per style). | cfg, API (`Mounts.Looks`), packs | built; the seat rows seen in game, the per-style keys self-tested (run pending) |
 | **Mounts:** a skin's `[Mount]` block declares the creature (cart, babies and their size, noun, effect, sounds, abilities through the API); the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Kinds`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
 | **Effects:** particle effects from the game's own systems or a mod's prefab (`Mounts.Effects`; Hellfire = lamp flames and sparks in a ring, a trail); a skin may come with one; the ring fits the creature's drawn width. | cfg, API | built; Hellfire seen in game, the skin's own effect and the ring's size self-tested (run pending) |
+| **The Mounts panel:** every mount a player can ride listed on the left, the chosen one drawn on the right with its description, what it does (the cart, babies, speed, its effect), its stat lines and its abilities, and that mount's skin, effect and colour rows under it; Done keeps, Cancel puts back. A page's look rows live here, not in the menus (`MountSettingsPage.PanelButton`, `OpenPanel`; docs/mounts-foundation-2.md 3). | API | built 2026-10-20 night; to see in game |
+| **Rules between mods:** a value on an instance belongs to the owner that set it; a mount may pin its speed, seat, sounds and the like, never the player's switches or look; the mount's own skin owns its declaration; the same skin id from two places, the newer wins (docs/mounts-foundation-2.md 2). | API | built 2026-10-20 night, self-tested; run pending |
 | **Colours on every mount:** a skin names which of its colours are Dark, Muzzle, Eye or Harness (`[Colors]`), the rest is Coat; the player's five colour rows reach them; a row for a region the mount lacks is greyed. | cfg, API | built; the regions self-tested with a readback, the greyed row not yet seen in game |
 
 | Built in | What |
@@ -219,7 +221,7 @@ effects") are written and not yet run in game.
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`, each in its own folder
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
-3. Start the game once; the log says `GK2 Donkey API 0.34.0 loaded; nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.35.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

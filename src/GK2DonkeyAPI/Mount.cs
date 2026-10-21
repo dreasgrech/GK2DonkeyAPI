@@ -1286,7 +1286,7 @@ namespace GK2DonkeyAPI
                         CollectCartParts();
                         LanternRig.Attach(donkey); // poses the pole's child nodes; the sway parents stay the animator's
                     }
-                    donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * (mounted ? pc.PhysicalBody.SpeedMultiplier : 1f));
+                    donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * (mounted ? pc.PhysicalBody.SpeedMultiplier : 1f));
                     bodySprite = null;
                     donkeyBodyRenderer = null;
                     foreach (SpriteRenderer sr in donkey.GetComponentsInChildren<SpriteRenderer>(includeInactive: true))
@@ -2244,7 +2244,7 @@ namespace GK2DonkeyAPI
                 pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
                 try
                 {
-                    donkey?.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * S.SpeedMultiplier.Value);
+                    donkey?.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * S.SpeedMultiplier.Value);
                 }
                 catch
                 {
@@ -2489,7 +2489,7 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
-                float want = 1.5f * pc.PhysicalBody.SpeedMultiplier;
+                float want = S.WalkCycleSpeed.Value * pc.PhysicalBody.SpeedMultiplier; // the stride: the mount's key, the donkey's 1.5
                 SSMState cur = pc.Ssm?.CurState;
                 bool focus = cur is AttackSwordFocusedPlayerState || cur is AttackBowFocusedPlayerState;
                 if (state == AnimationState.Walk && rb != null && SideView)

@@ -22,7 +22,9 @@ BepInEx\plugins\gk2skins\<your skin id>\
 - The `gk2skins` folder can sit straight under `BepInEx\plugins`, or inside any mod's own folder there. Several skins
   can share one `gk2skins` folder, one subfolder each.
 - The skin id is the folder's name (letters, digits, dots, dashes, underscores). `donkey` is taken: it's the game's
-  own look.
+  own look. **Prefix it with your name** (`anna.sea-horse`): ids are global, two authors' plain names would meet,
+  and the log notes an unprefixed id from another mod once. The same id from two places (a folder and a DLL): the
+  higher `version` wins, a tie goes to the DLL, and the log names the loser and its folder.
 - The pack is found when the game starts. Its pictures are read only when a donkey wears the skin, a few at a time,
   and put together on one sheet in memory; the skin shows once they are all in.
 - **One sheet instead of 44 files** works too: put `sheet = sheet.png` in `skin.cfg` and draw every frame as a cell of
@@ -36,10 +38,13 @@ BepInEx\plugins\gk2skins\<your skin id>\
 ```
 [Skin]
 format = 1          # keep 1
-id = my-rat         # the same as the folder name
+# needs = 0.35      # the GK2 Donkey API version the pack was written for: an older API refuses it with the reason
+id = me.my-rat      # the same as the folder name; your name in front, so no other author's id meets yours
 name = My Rat       # what the settings show
+description = A rat the size of a donkey, drawn by me.   # a line or two for the Mounts panel
+# portrait = portrait.png   # a PNG next to the frames: the Mounts panel shows it under the mount's name (2x when 48 px or less, at most 96 px a side)
 author = me
-version = 1.0
+version = 1.0       # the higher version wins when the same id comes from two places
 kind = own          # own: your colours as drawn; the player's coat and harness colours recolour them by region
                     #      ([Colors] below). palette: drawn in the donkey's exact colours, which take the donkey's regions
 layer = replace     # replace: instead of the donkey. over: on top of the donkey (a saddle, a hat)
@@ -66,8 +71,9 @@ Unknown keys are ignored and named in the log, so a newer pack still loads in an
 **A creature of its own.** A skin can be a look of a *mount kind* other than the donkey: the giant rat, the dragon,
 yours. The kind carries what is the creature's, not the picture's: the rider's seat for it (both styles, or riding
 and with the cart apart), whether it pulls the cart, whether baby donkeys can be it, an effect it comes with. Declare
-it in the same file; the first pack to declare an id defines it, later skins with `mount = <id>` join it (a second
-dragon colour, say):
+it in the same file; the mount's own skin (the one with the mount's id) owns the declaration, other skins with
+`mount = <id>` join it (a second dragon colour, say), and a joiner's own `[Mount]` block holds only until the
+mount's own skin is registered:
 
 ```
 mount = dragon
@@ -75,6 +81,8 @@ mount = dragon
 [Mount]
 id = dragon
 name = Dragon         # the creature's name: the Mount list, "a dragon can't ..." in the game's sentences
+description = A dragon of the keeper's own.   # for the Mounts panel; portrait = <png> shows under its name there
+# a skin with a [Mount] block is that mount's own skin: its mount = line is the block's id (anything else is corrected with a log line)
 author = me
 version = 1.0
 cart = true           # may it pull the cart
@@ -84,6 +92,9 @@ effect = none         # an effect it comes with (hellfire, or one a mod added); 
 effect_when = Always  # Off, Night or Always (the menu says "Never" for Off)
 
 noun = dragon         # the word the game's sentences use ("a dragon can't pull the cart"); default: the name in lower case
+
+[Mount.Stats]         # lines the Mounts panel shows as given, in this order (optional)
+Diet = keepers
 
 [Mount.Tuning]        # what the creature is, both styles: speed, its sounds (docs/reference.md); the rider's seat and
 BrayVolume = 0        # the cart's place are the SKIN's rows ([Tuning], [Tuning.Ride], [Tuning.Cart] above)
@@ -244,7 +255,8 @@ prefix).
   without any tuning. The mod draws at 50 pixels per unit and stretches upright pictures 1.667 times in height, as it
   does the game's own art, so draw as the game's frames are drawn.
 - **A bigger canvas is fine** (wings above the head, say): set `canvas = 128 128`; the picture's centre stays the
-  donkey's centre.
+  donkey's centre. The most is 256: a sheet is 44 cells of the canvas (88 with a front layer) in memory per worn
+  skin, 12 MB at 256.
 - **The head.** The game draws the head *inside* the body frames (the walk, graze and so on all carry the head);
   `hed_static_down*.png` is only the standing head, drawn over the standing body. So draw the head in every body
   frame, and give the standing head picture nothing but the head. A `hed_walk_*.png` is never shown.
@@ -270,7 +282,7 @@ from a mod loaded in any order is in Saddle Up's lists (API 0.34.0: the page is 
 
 Start the game and look at `BepInEx\LogOutput.log` for your skin's line: it says how many pictures it found, any
 name that matches no frame (a typo), and how many frames are still to draw. Then pick it in Saddle Up's settings
-(the Mount section: the Mount list, then its Skin row) and call your donkey. The pictures are read again every time the game starts, so you can edit them
+(the Mount section's Mounts button opens the Mounts panel: pick the mount on the left, then its Skin row under the picture) and call your donkey. The pictures are read again every time the game starts, so you can edit them
 between runs.
 
 ## Sharing it

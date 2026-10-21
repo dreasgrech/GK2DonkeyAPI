@@ -847,12 +847,12 @@ for name, fn, title, size, (kind, kind_name), seat_row, hitch_gap in CREATURES:
             # the tuning panel's Mounts tab saves the creature's values into this file afterwards
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\r\n").write(
                 "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
-                "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
+                "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\ndescription = " + title + ", our own art drawn by code (edit me).\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
                 "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
                 + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + kind + "\n"
                 + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
                 + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
-                "[Mount]\nid = " + kind + "\nname = " + kind_name + "\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
+                "[Mount]\nid = " + kind + "\nname = " + kind_name + "\ndescription = A " + kind_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
             import canonical_cfg  # byte for byte the layout the scans expect
             text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)

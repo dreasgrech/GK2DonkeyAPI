@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
@@ -11,7 +12,8 @@ namespace GK2DonkeyAPI.Api
     // an instance's kind is its skin's (MountHandle.Kind), so a player picks a skin and the kind follows.
     //
     // Three ways to make a kind: here (Register, with abilities), a pack's [Mount] section in skin.cfg (no code; the
-    // first declaration of an id wins and later skins join it), or none: a skin of the donkey kind.
+    // mount's own skin owns the declaration, a joiner's holds until the Default is registered), or none: a skin of
+    // the donkey kind.
     public sealed class MountKinds
     {
         public const string DonkeyId = MountLooks.DonkeyId;
@@ -70,10 +72,15 @@ namespace GK2DonkeyAPI.Api
                 Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
+                Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
             };
+            if (def.Stats != null) foreach (MountStat st in def.Stats) if (st != null && !string.IsNullOrWhiteSpace(st.Label)) d.Stats.Add(new KeyValuePair<string, string>(st.Label.Trim(), st.Value ?? ""));
+            d.AbilityOwner = ownerId + ".ability." + d.Id;
             foreach (MountAbility a in d.Abilities)
             {
                 if (a == null || string.IsNullOrEmpty(a.Id)) throw new ArgumentException($"Mount kind '{def.Id}': every ability needs an Id.", nameof(def));
+                if (a.Owner != null && a.Owner != d.AbilityOwner) throw new ArgumentException($"Mount kind '{def.Id}': the ability '{a.Id}' already belongs to another kind ({a.Owner}); one ability object per kind.", nameof(def));
+                a.Owner = d.AbilityOwner;
             }
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
             GK2DonkeyAPI.Kinds.Register(d);
@@ -111,6 +118,27 @@ namespace GK2DonkeyAPI.Api
         }
     }
 
+    // A line the Mounts panel shows under a mount, as given ("Speed" / "fast"; "Diet" / "keepers").
+    public sealed class MountStat
+    {
+        public string Label;
+        public string Value;
+    }
+
+    public sealed class MountAbilityInfo
+    {
+        internal MountAbilityInfo(MountAbility a)
+        {
+            Id = a.Id;
+            Name = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
+            Description = a.Description ?? "";
+        }
+
+        public string Id { get; }
+        public string Name { get; }
+        public string Description { get; }
+    }
+
     public sealed class MountKindDef
     {
         public string Id;
@@ -136,6 +164,11 @@ namespace GK2DonkeyAPI.Api
         public Dictionary<string, object> Tuning;
         public Dictionary<string, object> TuningRide;
         public Dictionary<string, object> TuningCart;
+        // For the Mounts panel (docs/mounts-foundation-2.md 3): a line or two about the creature; a portrait for the
+        // list (your own texture, kept by you; null: the panel draws the mount); lines shown as given ("Diet: keepers").
+        public string Description;
+        public Texture2D Portrait;
+        public List<MountStat> Stats = new List<MountStat>();
         // Code the API calls for every instance of this kind: see MountAbility.
         public List<MountAbility> Abilities = new List<MountAbility>();
     }
@@ -148,6 +181,17 @@ namespace GK2DonkeyAPI.Api
     public abstract class MountAbility
     {
         public abstract string Id { get; }
+
+        // The owner id an ability's Tuning.Set and Clear use ("<the kind's owner>.ability.<kind id>"), given by the API
+        // when the kind is registered: the API clears every value under it when the instance stops being this kind
+        // (Detached) or goes, so nothing of an ability outlives its mount. An ability may set the mount's keys (speed,
+        // sounds, the rider's motion, the pose, the cart's geometry), never the player's look (the skin, the effect, the
+        // colours) or behaviour switches: those belong to the player's mod (docs/mounts-foundation-2.md 2.1).
+        public string Owner { get; internal set; }
+
+        // What the Mounts panel shows for it: a name (the Id unless given) and a line about what it does.
+        public virtual string Name => Id;
+        public virtual string Description => "";
 
         // Tick runs only while the instance is ridden, unless this is true (then every frame it has a view): keep it
         // false unless the ability needs to act on a standing creature.
@@ -196,6 +240,14 @@ namespace GK2DonkeyAPI.Api
             EffectWhen = d.EffectWhen;
             Noun = (d.Noun ?? d.Label).ToLowerInvariant();
             Abilities = d.Abilities.Length;
+            Description = d.Description ?? "";
+            HasPortrait = d.PortraitTexture != null || !string.IsNullOrEmpty(d.Portrait);
+            var stats = new List<MountStat>();
+            if (d.Stats != null) foreach (var st in d.Stats) stats.Add(new MountStat { Label = st.Key, Value = st.Value });
+            Stats = stats;
+            var abilities = new List<MountAbilityInfo>();
+            foreach (MountAbility a in d.Abilities) abilities.Add(new MountAbilityInfo(a));
+            AbilityInfos = abilities;
             Tuning = CopyOf(d.Tuning);
             TuningRide = CopyOf(d.TuningRide);
             TuningCart = CopyOf(d.TuningCart);
@@ -230,6 +282,11 @@ namespace GK2DonkeyAPI.Api
         // The word the game's sentences use for one ("skull", "giant rat").
         public string Noun { get; }
         public int Abilities { get; }
+        // For the Mounts panel: the description, whether a portrait exists, the stat lines, the abilities by name.
+        public string Description { get; }
+        public bool HasPortrait { get; }
+        public IReadOnlyList<MountStat> Stats { get; }
+        public IReadOnlyList<MountAbilityInfo> AbilityInfos { get; }
         // Its values for existing tuning keys (creature facts: speed, sounds), both styles and per style; null when none.
         public IReadOnlyDictionary<string, object> Tuning { get; }
         public IReadOnlyDictionary<string, object> TuningRide { get; }

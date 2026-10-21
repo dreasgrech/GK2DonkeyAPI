@@ -134,6 +134,7 @@ namespace GK2DonkeyAPI
                 foreach (MountSettingsPage.Row r in page.Rows)
                 {
                     order++;
+                    if (!page.InMenu(r)) continue; // the look rows (the mount, its skins, colours, effect) live in the Mounts panel, not the menu (docs/mounts-foundation-2.md 3)
                     // The same Section/Key/type as the page's binds, so BepInEx hands back those entries: the menu
                     // edits the values the mod reads, and their SettingChanged handlers apply them.
                     switch (r.Kind)
@@ -181,7 +182,7 @@ namespace GK2DonkeyAPI
                             }, order);
                             break;
                     }
-                    // The Mods menu knows only visibility, so a row the look bar greys (EnableWhen: a colour region none of
+                    // The Mods menu knows only visibility, so a row the Mounts panel greys (EnableWhen: a colour region none of
                     // the mount's skins has) is left out of the menu for that mount; it stays in the cfg with its value
                     // (the dragon's Second tone rows showed in the menu and did nothing, the user 2026-10-20).
                     Func<bool> visible = r.Visible, enabled = r.Enabled;
@@ -189,7 +190,7 @@ namespace GK2DonkeyAPI
                     if (inMenu != null)
                     {
                         string key = r.Entry != null ? r.Entry.Definition.Key
-                            : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : r.Kind == MountSettingsPage.Kind.Preview ? "Preview" : "Button") + order;
+                            : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : r.Kind == MountSettingsPage.Kind.Preview ? "Preview" : r.Kind == MountSettingsPage.Kind.Note ? "Note" : "Button") + order;
                         s.SetVisibilityCondition(r.Section, key, inMenu);
                     }
                 }

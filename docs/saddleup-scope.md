@@ -127,7 +127,8 @@ The API does the work; Saddle Up only defines its settings and maps its keys (`s
   - named colours and a lightness row instead of hex (`MountPalette`);
   - a swatch row (removed once the picture showed the colours);
   - a picture of the donkey in its colours next to the settings (`LookPreview.cs`, `ColorsPreview.cs`);
-  - "Choose colours", a bar over the game with Done and Cancel (`LookBar.cs`).
+  - "Choose colours", a bar over the game with Done and Cancel (`LookBar.cs`); since 0.12 the **Mounts panel**
+    (`MountsPanel.cs`), which grew out of it: the mount list, the chosen one drawn with its words, its rows.
 
   The user asked for the picture knowing it can break with updates: it's built so that it can only fail by not
   showing.

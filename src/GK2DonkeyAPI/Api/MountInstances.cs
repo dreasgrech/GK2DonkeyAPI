@@ -472,29 +472,80 @@ namespace GK2DonkeyAPI.Api
         // Every key this instance overrides.
         public IReadOnlyList<string> Keys => new List<string>(i.Overrides.Keys);
 
-        // Returns the value applied (clamped).
-        public T Set<T>(string ownerId, string key, T value)
+        // A value belongs to the owner that set it (docs/mounts-foundation-2.md 2.1): the same owner replaces or clears
+        // it; anyone may replace the mount's own value (the kind's merge, owner Looks.TuningOwner: a mod's value wins
+        // over the creature's, and the creature's returns when the mod clears, docs/mounts-design.md 2); nobody else.
+        // A refused Set or Clear is said once in the log (Info: a mod conflict, nothing a player can fix) and leaves
+        // the value as it is. Before 0.35.0 the last writer won silently, and an ability could take the player's own
+        // Effect choice and lose it on dismount.
+        internal static bool MayReplace(string holder, string by) => holder == null || holder == by || holder == Looks.TuningOwner;
+
+        private static readonly HashSet<string> refusedLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        private bool Refused(string what, string key, string by, string holder)
+        {
+            if (refusedLogged.Add(i.Id + "|" + key + "|" + by + "|" + what))
+            {
+                Plugin.Log.LogInfo($"Mount: {by} wants to {what} {key} on {i.Describe()}, which {holder} has set; left to it (a value belongs to the owner that set it).");
+            }
+            return false;
+        }
+
+        // Sets the value when the key is free, this owner's or the mount's; applied is the value in effect after the
+        // call (clamped when set; the holder's when refused). Returns whether it was set.
+        public bool TrySet<T>(string ownerId, string key, T value, out T applied)
         {
             if (string.IsNullOrEmpty(ownerId))
             {
                 throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
             }
             ITuned t = Find(key);
+            if (t.IsLook && Mount.IsAbilityOwner(ownerId))
+            {
+                applied = Get<T>(key); // the skin, effect and colours are the player's (and the mod that spawned the mount): a mount's ability never sets them, held or free (MountAbility)
+                return Refused("set", t.Key, ownerId, "the player's settings page (a look key)");
+            }
+            if (i.OverrideOwners.TryGetValue(t.Key, out string holder) && !MayReplace(holder, ownerId))
+            {
+                applied = Get<T>(key);
+                return Refused("set", t.Key, ownerId, holder);
+            }
             object v = t.Clamp(value);
+            if (holder == ownerId && i.Overrides.TryGetValue(t.Key, out object had) && Equals(had, v))
+            {
+                applied = (T)v; // the same value by the same owner: nothing to re-merge or refresh (an ability setting it every tick)
+                return true;
+            }
             i.Overrides[t.Key] = v;
             i.OverrideOwners[t.Key] = ownerId;
             Changed();
-            return (T)v;
+            applied = (T)v;
+            return true;
         }
 
-        public void Clear(string key)
+        // Returns the value in effect after the call: the one applied (clamped), or the holder's when another owner
+        // has the key (TrySet says which).
+        public T Set<T>(string ownerId, string key, T value)
         {
-            ITuned t = Find(key);
-            if (i.Overrides.Remove(t.Key))
+            TrySet(ownerId, key, value, out T applied);
+            return applied;
+        }
+
+        // Clears this owner's value (or the mount's), so the key follows everyone's again; another owner's stays, said
+        // once. Returns whether a value was cleared.
+        public bool Clear(string ownerId, string key)
+        {
+            if (string.IsNullOrEmpty(ownerId))
             {
-                i.OverrideOwners.Remove(t.Key);
-                Changed();
+                throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
             }
+            ITuned t = Find(key);
+            if (!i.OverrideOwners.TryGetValue(t.Key, out string holder)) return false;
+            if (!MayReplace(holder, ownerId)) return Refused("clear", t.Key, ownerId, holder);
+            i.Overrides.Remove(t.Key);
+            i.OverrideOwners.Remove(t.Key);
+            Changed();
+            return true;
         }
 
         // Every override of this instance.

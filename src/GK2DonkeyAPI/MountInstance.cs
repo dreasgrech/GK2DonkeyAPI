@@ -55,6 +55,9 @@ namespace GK2DonkeyAPI
             // while this instance is bound (Mount.Current), and the mod that set each.
             internal readonly Dictionary<string, object> Overrides = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             internal readonly Dictionary<string, string> OverrideOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // Overrides read from the side file whose owner isn't loaded (a removed mod's, an ability's of a gone kind):
+            // not applied, written back as they were, so they return with the mod (key, owner, value as text).
+            internal readonly List<string[]> AsideSets = new List<string[]>();
 
             internal Instance(int id, string ownerId, bool ephemeral, bool hasDonkey, bool hasCart)
             {
@@ -179,7 +182,10 @@ namespace GK2DonkeyAPI
                 {
                     ColorsRig.Tick();
                 }
-                LooksRig.Tick(); // which skin; the drawing is per frame before the cameras (Looks.cs)
+                using (Perf.Measure(Perf.S.LooksTick))
+                {
+                    LooksRig.Tick(); // which skin; the drawing is per frame before the cameras (Looks.cs)
+                }
                 using (Perf.Measure(Perf.S.Effects))
                 {
                     EffectsRig.Tick();
@@ -376,7 +382,10 @@ namespace GK2DonkeyAPI
             // the parts, and the next donkey built from them (another instance, or the game's own delivery donkey) must
             // inherit nothing: no hidden renderer, no colour, no posed lantern or split lamp, no cargo holder, no moved
             // or switched-off cart part. The instance keeps its cargo list (the rig's mirror), settings and place.
-            internal void ReleaseView()
+            // sleep: the view goes because the instance sleeps far away (Tiers): its hold on the skin's sheet goes too,
+            // so a sheet nobody awake wears is freed. Otherwise (a removal, a restyle for a hitch, the game unloading
+            // the scene) the hold stays: the next view wears the sheet at once, no rebuild, no pop to the donkey.
+            internal void ReleaseView(bool sleep = false)
             {
                 // A view frozen far from the keeper (Tiers.cs: animators off, renderers forced off) goes back unfrozen:
                 // the tier change to asleep did that, but a removal, a send-away or the game unloading the scene did not,
@@ -392,7 +401,7 @@ namespace GK2DonkeyAPI
                     if (r != null && r) r.forceRenderingOff = false;
                 }
                 donkeyOnly.Clear();
-                try { LooksRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the skin failed: {e.Message}"); }
+                try { if (sleep) LooksRig.Sleep(); else LooksRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the skin failed: {e.Message}"); }
                 try { EffectsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the effect failed: {e.Message}"); }
                 try { ColorsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colours failed: {e.Message}"); }
                 try { LanternRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the lantern failed: {e.Message}"); }
@@ -582,7 +591,7 @@ namespace GK2DonkeyAPI
                 MountSounds.Moment(this, "mount");
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
                 pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
-                donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f * pc.PhysicalBody.SpeedMultiplier);
+                donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * pc.PhysicalBody.SpeedMultiplier);
                 if (!S.AutoSeat.Value)
                 {
                     ApplySeat(pc, S.SeatOffset.Value);
@@ -620,7 +629,7 @@ namespace GK2DonkeyAPI
                 if (donkey != null && donkey)
                 {
                     Position = donkey.Data.Position;
-                    donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(1.5f);
+                    donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value);
                     KeepOnGround(pc); // not left in the water where the ride drew it (SafeGround.cs)
                 }
                 RestoreSeat();
@@ -941,7 +950,7 @@ namespace GK2DonkeyAPI
                 {
                     if (!IsCartKey(kv.Key)) continue;
                     from.OverrideOwners.TryGetValue(kv.Key, out string o);
-                    if (o == Looks.TuningOwner) continue;
+                    if (o == Looks.TuningOwner || IsAbilityOwner(o)) continue; // the mount's merge and an ability's values are the donkey's kind's, not the cart's: set again when hitched
                     to.Overrides[kv.Key] = kv.Value;
                     if (o != null) to.OverrideOwners[kv.Key] = o;
                     from.Overrides.Remove(kv.Key);

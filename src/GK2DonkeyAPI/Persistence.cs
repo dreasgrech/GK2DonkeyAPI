@@ -276,7 +276,7 @@ namespace GK2DonkeyAPI
                 foreach (var kv in i.Overrides)
                 {
                     i.OverrideOwners.TryGetValue(kv.Key, out string by);
-                    if (by == Looks.TuningOwner) continue; // a skin's own tuning: set again by the skin when worn, never saved
+                    if (by == Looks.TuningOwner || IsAbilityOwner(by)) continue; // a skin's own tuning, and an ability's values: set again in play (Mounted), never saved (docs/mounts-foundation-2.md 2.1)
                     string value;
                     try
                     {
@@ -288,6 +288,11 @@ namespace GK2DonkeyAPI
                         continue;
                     }
                     Line(sb, "set", kv.Key, by ?? "", value);
+                }
+                foreach (string[] aside in i.AsideSets)
+                {
+                    if (i.OverrideOwners.TryGetValue(aside[0], out string live) && live != Looks.TuningOwner && !IsAbilityOwner(live)) continue; // another mod holds the key now (and is written above): the aside line would overwrite it on the next load; the mount's merge and an ability's value are never written, so the line stays
+                    Line(sb, "set", aside[0], aside[1], aside[2]); // an unloaded owner's, kept as read
                 }
                 foreach (var mod in i.Data)
                 {
@@ -410,7 +415,8 @@ namespace GK2DonkeyAPI
                     {
                         if (s.Length >= 3 && s[0] == "Skin" && !string.IsNullOrEmpty(s[2]))   // a set is [key, owner, value]
                         {
-                            Kinds.KindDef k = Looks.Find(s[2])?.Kind;
+                            Looks.SkinDef sd = Looks.Find(s[2]);
+                            Kinds.KindDef k = sd != null && sd.Unavailable == null ? sd.Kind : null; // set aside: it is a donkey in play
                             if (k != null && k != Kinds.Donkey) noun = k.NounText;
                             break;
                         }
@@ -758,9 +764,37 @@ namespace GK2DonkeyAPI
             return restored;
         }
 
-        private static void RestoreSetting(Instance i, string key, string by, string value)
+        private static readonly HashSet<string> asideLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        // An override's owner counts as loaded when it is a plugin's GUID, or derived from one ("<guid>.ability.<kind>",
+        // the panel's, the self-tests' sub-owners): a removed mod's values are set aside and written back unchanged
+        // (docs/mounts-foundation-2.md 2.1: before, they were applied under a GUID nothing would ever clear).
+        internal static bool OverrideOwnerLoaded(string by)
         {
-            if (by == Looks.TuningOwner) return; // a creature's value from an older side file: the creature sets it again, never a fixed value
+            if (string.IsNullOrEmpty(by) || OwnerPresent(by)) return true;
+            // the core's sub-owners (the panel, the self-tests) count; a plugin's GUID must match exactly, never by
+            // prefix: "dreas.gk2.donkeyapi.example.skins" extends the API's GUID and is a mod of its own that may be gone
+            foreach (string core in new[] { TuningWindow.PanelOwner, SelfTest.Owner })
+            {
+                if (by.StartsWith(core + ".", StringComparison.Ordinal)) return true;
+            }
+            int ab = by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal);
+            if (ab > 0) return OwnerPresent(by.Substring(0, ab)); // "<guid>.ability.<kind>": the kind's mod must be loaded (RestoreSetting drops ability lines before asking, by design: session-only values)
+            return false;
+        }
+
+        internal const string AbilityOwnerMark = ".ability."; // MountKinds.Register: an ability's owner is "<the kind's owner>.ability.<kind id>"
+        internal static bool IsAbilityOwner(string by) => by != null && by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal) > 0;
+
+        internal static void RestoreSetting(Instance i, string key, string by, string value) // internal for the self-test of the set-aside lines
+        {
+            if (by == Looks.TuningOwner || IsAbilityOwner(by)) return; // a creature's value, or an ability's, from an older side file: set again in play, never a fixed value
+            if (!OverrideOwnerLoaded(by))
+            {
+                i.AsideSets.Add(new[] { key, by, value });
+                if (asideLogged.Add(by)) Plugin.Log.LogInfo($"Persistence: {i.Describe()} has settings set by {by}, which isn't loaded ({key} and maybe more); kept as they are, not applied, back when it is.");
+                return;
+            }
             try
             {
                 ITuned t = new InstanceTuning(i).Find(key);

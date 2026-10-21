@@ -29,21 +29,27 @@ var colorsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Color
 var mountRegions = StringsIn(colorsCs, "MountRegionKeys");
 if (mountRegions.Count != 5) Fail($"Colors.cs MountRegionKeys: {mountRegions.Count} regions read (5 expected)"); else Pass("Colors.cs MountRegionKeys: 5 mount regions");
 var tuningKeys = new HashSet<string>(Regex.Matches(pluginCs, @"(?:cfg\.Bind\(section|\b[FBSIC]\(cfg, section),\s*""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase); // every bound key, the helper-bound ones (F/B/S) too
+// the shuffle's keys (IdleShuffle.cs) are a mount's to pin as well (Looks.Rig.MountMayPin); the lantern's are not (the cart's own)
+var shuffleCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "IdleShuffle.cs"));
+var shuffleKeys = new HashSet<string>(Regex.Matches(shuffleCs, @"""(Shuffle\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+if (shuffleKeys.Count < 20) Fail($"IdleShuffle.cs: only {shuffleKeys.Count} shuffle keys read"); else Pass($"IdleShuffle.cs: {shuffleKeys.Count} shuffle keys a mount may pin");
+int maxCanvas = int.TryParse(Regex.Match(looksCs, @"MaxCanvas\s*=\s*(\d+)").Groups[1].Value, out int mc) ? mc : 0;
+if (maxCanvas <= 0) Fail("Looks.cs MaxCanvas not found"); else Pass($"Looks.cs MaxCanvas: {maxCanvas}");
 if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys read (44 expected)"); else Pass("Looks.cs KnownKeys: 44 frame keys");
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "id", "name", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
 // The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountKeys = StringsIn(looksCs, "MountKeys");
-if (mountKeys.Count < 9) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (9 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Count < 12) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (12 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Effects.cs"));
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"Effects.cs: the built-in effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"Effects.cs: {effectIds.Count} built-in effect id(s), hellfire among them");
-var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Game", "Colors", "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" };
+var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" };
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
 
 // The section headers of a cfg in file order, for the canonical layout: [Skin] first, [Game] right after it, the
@@ -195,6 +201,13 @@ foreach (var dir in skinDirs)
     if (mount.Length == 0) Bad("mount missing (a built-in names its mount)");
     if (skin.TryGetValue("base", out var b) && b != "donkey") Bad($"base = {b}: the donkey is the only base");
     foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
+    if (skin.TryGetValue("portrait", out var portrait) && !File.Exists(Path.Combine(dir, portrait))) Bad($"[Skin] portrait = {portrait}: no such file in the pack");
+    if (!skin.ContainsKey("description")) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
+    if (cfg.TryGetValue("Mount", out var mountBlock))
+    {
+        if (mountBlock.TryGetValue("portrait", out var mportrait) && !File.Exists(Path.Combine(dir, mportrait))) Bad($"[Mount] portrait = {mportrait}: no such file in the pack");
+        if (!mountBlock.ContainsKey("description")) Bad("[Mount] has no description (the Mounts panel shows it)");
+    }
     // the values the loader reads by name (anything else silently means the default in the game)
     if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");
     if (skin.TryGetValue("kind", out var kindv) && kindv != "own" && kindv != "palette") Bad($"[Skin] kind = {kindv}: own or palette");
@@ -224,7 +237,7 @@ foreach (var dir in skinDirs)
     {
         var parts = canvas.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length != 2 || !int.TryParse(parts[0], out cw) || !int.TryParse(parts[1], out ch)) Bad($"canvas = {canvas}: two numbers expected");
-        else if (cw < 8 || cw > 512 || ch < 8 || ch > 512) Bad($"canvas = {canvas}: 8 to 512");
+        else if (cw < 8 || cw > maxCanvas || ch < 8 || ch > maxCanvas) Bad($"canvas = {canvas}: 8 to {maxCanvas} (Looks.MaxCanvas: the loader refuses more)");
     }
     if (seatRowGiven && (seatRow < 0 || seatRow >= ch)) Bad($"[Skin] seat = {seatRow}: a row of the {cw}x{ch} canvas (0 to {ch - 1}, from the top)");
     foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
@@ -268,7 +281,7 @@ foreach (var dir in skinDirs)
         if (!order[firstMount].Equals("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[firstMount]}] before [Mount]: the mount block starts with [Mount]");
         for (int i = firstMount; i < order.Count; i++) if (!order[i].StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[i]}] after the mount block: the mount block comes last");
     }
-    else if (order.Any(s => s.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase))) Bad("[Mount.Tuning] without a [Mount] section (ignored in the game)");
+    else if (order.Any(s => s.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase))) Bad("a [Mount.*] section without a [Mount] section (ignored in the game)");
     if (order.GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) Bad("a section appears twice");
     bool sheet = skin.ContainsKey("sheet");
     bool game = skin.TryGetValue("source", out var src) && src.Equals("game", StringComparison.OrdinalIgnoreCase);
@@ -289,7 +302,7 @@ foreach (var dir in skinDirs)
                     continue;
                 }
                 if (!knownKeys.Contains(k)) Bad($"[Game] {k}: not a frame key of the donkey base");
-                else if (!Regex.IsMatch(gameSec[k], @"^(bdy|hed)_\w+$")) Bad($"[Game] {k} = {gameSec[k]}: the game's frame names start with bdy_ or hed_ (the prefix is added)");
+                else if (!Regex.IsMatch(gameSec[k], @"^(bdy|hed)_\w+$") && !gameSec[k].Equals("none", StringComparison.OrdinalIgnoreCase)) Bad($"[Game] {k} = {gameSec[k]}: the game's frame names start with bdy_ or hed_ (the prefix is added), or none for a cell left empty");
             }
         }
         if (Directory.GetFiles(dir, "*.png").Length > 0) Bad("source = game but PNGs are in the folder (they would be ignored)");
@@ -407,6 +420,9 @@ foreach (var dir in skinDirs)
             }
         }
         if (ok) Pass($"{id}: [Colors] names {named} colour(s) under {colorsSec.Count} region(s)" + (inPictures != null ? $" of the pictures' {inPictures.Count}" : ""));
+        // which colour path the game takes for it (Colors.cs PaletteMaxColours = 48): the exact swap, or the colour cube,
+        // where two colours in one cell change together (anti-aliased edges and the front layer count too)
+        if (inPictures != null) Console.WriteLine($"INFO {id}: {inPictures.Count} colour(s) in the pictures: {(inPictures.Count > 48 ? "over 48, the colour cube (a few near-identical colours may change together; fewer colours = the exact swap)" : "the exact swap")}");
     }
     if (cfg.TryGetValue("Mount", out var m))
     {
@@ -448,7 +464,8 @@ foreach (var dir in skinDirs)
             foreach (var kv in t)
             {
                 if (skinTuningKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: a drawing's key; the skin's [Tuning] (or [Tuning.Ride] / [Tuning.Cart]) is its home, the mount keeps what the creature is (docs/mounts-parity-matrix.md 9.1)");
-                if (!tuningKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a tuning key of [Ride]/[Cart] (docs/reference.md)");
+                if (kv.Key.StartsWith("Lantern", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: the lantern's keys are the cart's own, a mount may not pin them (refused at the merge)");
+                else if (!tuningKeys.Contains(kv.Key) && !shuffleKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a tuning key of [Ride]/[Cart] or of the shuffle (docs/reference.md)");
                 else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) Bad($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
             }
         }

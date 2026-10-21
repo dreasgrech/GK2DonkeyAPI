@@ -35,6 +35,7 @@ namespace GK2DonkeyAPI
             Inventory Inv() => h.I.CargoRig.Inv;
             try
             {
+                Mounts.Behaviour.ClearAny("CartSlots"); // Saddle Up holds it: taken over for the test, given back in the finally
                 Mounts.Behaviour.Set(Owner, "CartSlots", 4);
                 Check(Inv().Data.InventorySize == 4, $"the override applies to the standing cart at once (4 slots; was {before})");
                 int added = 0;
@@ -135,7 +136,7 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                Mounts.Behaviour.Clear("CartSlots");
+                Mounts.Behaviour.ClearAny("CartSlots"); // the test takes the key over from Saddle Up and gives it back: the dev way past the owner rule
                 if (owner != null) Mounts.Behaviour.Set(owner, "CartSlots", was);
                 // The test items were never in the world: off whichever cart holds them.
                 foreach (MountHandle hh in new[] { h, left })
