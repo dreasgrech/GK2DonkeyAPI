@@ -44,13 +44,12 @@ For players:
   Royal Parade), shown in the Mounts panel.
 - **The five mounts are Saddle Up's.** The Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm and Gerry
   moved out of GK2 Donkey API into GK2 Saddle Up (five skin packs in its DLL, registered with the API at start,
-  the same way anyone else's mod ships a mount; the user, 2026-10-20: the API is the backend, mounts and skins
-  come from mods built on it). Nothing changes for you: the same download, the same Mount row, still switched
+  the same way anyone else's mod ships a mount). Nothing changes for you: the same download, still switched
   off until the next update. Since the same night the donkey's two skins, Hellfire and Royal Parade, and the Hellfire
   effect are Saddle Up's as well: the API ships the donkey alone, as the backend. A mount from any
   mod now shows in Saddle Up's settings whatever order the mods loaded in (below, for mod authors).
 - **The dragon's belly has its own colour**: the Second tone row (below). A green coat had left a gold belly that
-  no row could reach (the user, 2026-10-20: it read as wood); for an afternoon the belly followed the Coat, now it
+  no row could reach; for an afternoon the belly followed the Coat, now it
   is a tone of its own again, set apart from the scales. Its plate seams are every four rows instead of three.
 - **A "Second tone" colour row** under the mount colours: the donkey's muzzle, the rat's tail, ears and nose, the
   snail's shell, the dragon's belly, Hellfire's lava (the API's Muzzle region), with Pale, Rose, Brown, Green, Blue, Dark and Custom
@@ -58,18 +57,18 @@ For players:
   on the snail's shell showed nothing at first); it greys on a mount whose look
   has no such part (the worm). Every drawn part of every skin a player may want to colour is now on
   the page: Coat is the body, Harness the tack, Second tone the rest of the skin; bone, horns, outlines and eyes
-  stay as drawn (the user, 2026-10-20). A colour row for a part the chosen mount has no such part of (Harness and
+  stay as drawn. A colour row for a part the chosen mount has no such part of (Harness and
   Second tone on the worm) is greyed in the Mounts panel for that mount instead of sitting there doing
   nothing (since 0.12 the colour rows are the panel's, not the menus').
 - **The Tests tab folds its groups**: each group's header carries its count, its last results and the Run group
   button, and a click on the name unfolds the scenarios (60 scenarios made the tab a long scroll).
 - **The settings picture's cart moves to the new mount's hitch gap at once** when the Mount row changes. It slid
-  into place up to a second later (the user's video, 2026-10-20): the picture's paper mount never counted its
+  into place up to a second later: the picture's paper mount never counted its
   tuning re-merges, so the picture only picked the gap up on its once-a-second fallback. The preview self-test
   measured it (the gap 54 frames after the skin) and now guards it.
 - **The cart no longer sinks into a hill behind the mount.** Its ground is sampled under the cart body, up to a
   unit and more behind the mount's root, and at the edge of a raised path that sample lands on the level below:
-  0.77 lower by the Inquisition Base rocks under the dragon's cart (the user's video, 2026-10-20), within the
+  0.77 lower by the Inquisition Base rocks under the dragon's cart, within the
   slope limit, so the cart followed it down into the drawn ground. A target that jumps by more than 0.15 between
   two frames without the cart having swapped sides is a ledge, not a slope (walking moves the sample 0.12 a
   frame at most): it is held off and logged, and the cart keeps the mount's level until the sample agrees again,

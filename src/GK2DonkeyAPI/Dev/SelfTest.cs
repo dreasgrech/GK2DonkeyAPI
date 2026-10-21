@@ -1,3 +1,4 @@
+using LazyBearTechnology;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -159,7 +160,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "ids: the mount's own skin owns its declaration; the same skin id twice, the newer wins", Body = IdRules },
             new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
-            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, Cancel, the key", Body = PanelSmoke },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every shipped mount, AutoSeat off and on (a readout)", Body = SeatReadout },
@@ -3577,6 +3579,68 @@ namespace GK2DonkeyAPI
         // The Mounts panel itself, over the game: it opens from a live page with a Mount row, fits the screen, lists the
         // mounts and builds the chosen one's rows; a pick in the list moves the page's mount and the right side; Cancel
         // puts the mount back; the key toggles it, the button only brings it forward (docs/mounts-foundation-2.md 3).
+        // The way back (docs/mounts-panel-design.md "Escape and the way back"), walked by the step Escape takes: opened
+        // from the game it takes the controls and gives them back, nothing else opens; opened over the pause menu it
+        // hides the pause menu (still open, modal), the colours window steps back to the journal, the journal to the
+        // pause menu shown again as it was.
+        private static IEnumerator PanelWayBack()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the panel needs Saddle Up's mounts");
+                yield break;
+            }
+            MountSettingsPage page = null;
+            foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && live.HasMountRow) { page = live; break; }
+            if (page == null)
+            {
+                Warn("no live settings page with a Mount row (Saddle Up not loaded?): skipped");
+                yield break;
+            }
+            if (LazyWindowsStackController.ActiveWindow != null)
+            {
+                Warn($"a game window is open ({LazyWindowsStackController.ActiveWindow.name}): close it and run again; skipped");
+                yield break;
+            }
+            UIGamePauseWindow pause = LazyUI.GetWindow<UIGamePauseWindow>();
+            try
+            {
+                // 1. from the game
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen && MountsPanel.TestControlsTaken && !MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI), "opened from the game: the panel holds the controls (the game's keys don't act under it)");
+                MountsPanel.TestStepBack();
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI), "one step back: closed into the game, no window opened, the controls given back");
+                // 2. over the pause menu, through the colours window
+                if (pause == null)
+                {
+                    Warn("no pause menu to open: the second half skipped");
+                    yield break;
+                }
+                pause.Open(null);
+                yield return Frames(2);
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen && LazyWindowsStackController.IsWindowOpened(pause) && !pause.gameObject.activeSelf, "opened over the pause menu: it waits underneath, still open, switched off");
+                MountsPanel.TestOpenColours();
+                yield return Frames(2);
+                MountsPanel.TestStepBack();
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen && !MountsPanel.IsColoursOpen && !pause.gameObject.activeSelf, "a step back from the colours window: the journal, the pause menu still underneath");
+                MountsPanel.TestStepBack();
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && LazyWindowsStackController.IsWindowOpened(pause) && pause.gameObject.activeSelf && LazyWindowsStackController.ActiveWindow == pause, "a step back from the journal: the pause menu shown again, on top");
+            }
+            finally
+            {
+                if (MountsPanel.IsOpen) MountsPanel.TestClose(keep: true);
+                try { if (pause != null && LazyWindowsStackController.IsWindowOpened(pause)) { pause.gameObject.SetActive(true); pause.Close(); } } catch { }
+            }
+            yield return Frames(2);
+            Check(LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI), "cleaned up: no window, the controls free");
+        }
+
         private static IEnumerator PanelSmoke()
         {
             if (!Plugin.MountsOn)

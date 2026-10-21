@@ -71,6 +71,23 @@ and a colours window**. A window of 1060x600, centred, scaled down only on a sma
   menu the same press opened is closed again in the same frame.
 - A dev switch, `Debug.MountsPanelFakeEntries`, pads the list with made-up entries to see it scroll.
 
+## Resolutions (measured 2026-10-21)
+
+The game's UI canvas is not a fixed 1280x720: its scaler keeps a factor of 2, so the canvas is the screen in half
+pixels. The windows are laid out at their fixed size in those units and scaled down only when the canvas is smaller:
+
+| Screen | Canvas (units) | Window scale |
+|---|---|---|
+| 2560x1440 | 1280x720 | 1 |
+| 1360x768 | 680x384 | 0.56 |
+| 1280x800 | 640x400 | 0.56 |
+| 1280x960 | 640x480 | 0.56 |
+| 1280x1024 | 640x512 | 0.56 |
+| 1280x1440 | 640x720 | 0.56 |
+
+The user judged both windows at these sizes: they scale well. The floor is a scale of 0.5 (below it the window would
+be cut at the edges, not shrunk further); a canvas under 530x300 units (a screen under about 1060x600) would reach it.
+
 ## Escape and the way back
 
 Measured in the game's code (decompiled 2026-10-21): a modal game window takes the player's controls

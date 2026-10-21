@@ -1132,9 +1132,7 @@ namespace GK2DonkeyAPI
                 // the user, 2026-10-21: Escape must not fall through to the pause menu).
                 // consumed: nothing else of the game's reads this press (the controls are the panel's anyway)
                 try { LazyInput.ClearKeyDown(GameKey.InGameMenu); LazyInput.ClearKeyDown(GameKey.Back); } catch { }
-                if (search != null && searchFocusFrame >= Time.frameCount - 1) search.DeactivateInputField();
-                else if (colours != null) CloseColours(keep: true);
-                else Close(keep: true); // and back to where it was opened from
+                StepBack();
                 return;
             }
             if (panel == null || Time.unscaledTime < nextPicture)
@@ -1184,6 +1182,18 @@ namespace GK2DonkeyAPI
         private static int searchFocusFrame = -10;
 
         private static bool controlsTaken;
+
+        // One step back (Escape): out of the search box, else the colours window to the journal, else the journal closed
+        // and the window under it shown again. The self-test walks it too (it can't press a key).
+        private static void StepBack()
+        {
+            if (search != null && searchFocusFrame >= Time.frameCount - 1) search.DeactivateInputField();
+            else if (colours != null) CloseColours(keep: true);
+            else Close(keep: true); // and back to where it was opened from
+        }
+
+        internal static void TestStepBack() => StepBack();
+        internal static bool TestControlsTaken => controlsTaken;
 
         // The way back, a stack: the game's own windows below (the pause menu, the Mods menu on a mod's page, the Settings
         // window on a page...), then the journal, then the colours window. The game window on top when the panel opens
