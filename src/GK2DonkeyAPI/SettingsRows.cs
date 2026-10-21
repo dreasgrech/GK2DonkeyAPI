@@ -516,7 +516,8 @@ namespace GK2DonkeyAPI
                     break;
             }
             Built captured = b;
-            b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", null, null, loopNavigation: r.RowKind != MountSettingsPage.RowKind.Steps);
+            // the keys the game's own Settings rows step with on a gamepad (UIGameSettingsWindow: the shoulder keys and Left/Right)
+            b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", DecreaseKeys, IncreaseKeys, loopNavigation: r.RowKind != MountSettingsPage.RowKind.Steps);
             b.Switch.IsInteractable = b.Values != null || r.RowKind == MountSettingsPage.RowKind.Button || r.RowKind == MountSettingsPage.RowKind.Key;
             return b;
         }
@@ -798,6 +799,9 @@ namespace GK2DonkeyAPI
                 return;
             }
         }
+
+        private static readonly GameKey[] DecreaseKeys = { GameKey.DecSlider, GameKey.Left };
+        private static readonly GameKey[] IncreaseKeys = { GameKey.IncSlider, GameKey.Right };
 
         // 0: the game's own rows; 1..n: the mods' pages.
         private static void Show(int page)

@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Fixed: a loaded cart crept back behind a long mount.** With the dragon (or the rat) hitched, every item put on
+  the cart moved the whole cart one more hitch gap away; a loaded cart made again (through a door, switching from
+  riding to the cart) came back too far as well. The cart keeps its place now. The donkey has no gap, so it never
+  showed there.
 - **The Mounts panel is a mount journal now.** The list of your mounts on the left with a picture of each; on the
   right the chosen one walking with its cart, a card with its speed, whether it pulls the cart, its babies and how
   many skins it has, and its Skin and Effect rows. "Colours and effect..." opens a second window with the mount's
@@ -457,6 +461,12 @@ Development:
   with the cart up to 3x on a dark stage; one line of what it does; and its rows under tabs (Skin, Colours,
   Effect), so only one tab's rows are on screen; a custom colour's rows appear when the preset is Custom instead
   of sitting there greyed. Done and Cancel as before. Later: colour swatches, a search box, a Call button.
+- **The Mounts panel on a gamepad**, the game's way (its windows read first): the d-pad and stick move the focus
+  through the list, the rows and the buttons, Left and Right step a focused setting's value as in the game's
+  Settings window, Select presses, Back steps back like Escape. A focus frame like the game's marks what is focused;
+  the focused row is kept in view. The mod's rows in the game's own Settings window step with Left and Right on a
+  gamepad too now, as the game's rows do (they answered only the shoulder keys). The search box is mouse and
+  keyboard only.
 - **The Colours and Effect sections leave the Mods menu**: their picture and their "In the Mounts panel" lines were all
   that was left there, so the sections are gone from the menus (the cfg keeps them, as before). With the mounts
   switched off the Effect section's "coming in the next update" line stays.

@@ -104,7 +104,9 @@ namespace GK2DonkeyAPI
 
             // Cargo was added or removed: the prefab's own drawer may have swapped the empty and the loaded cart body, so
             // the list of lifted parts is rebuilt from the parts active now. Every part goes back to its prefab position
-            // first, so the current lift is not baked into the new base positions.
+            // first (Rest: not Base, which carries the hitch gap: reading that back as the new rest added the gap once more
+            // per item, the dragon's cart creeping back as it was loaded, found in game 2026-10-21), so neither the lift nor
+            // the gap is baked into the new base positions.
             internal void OnCargoChanged()
             {
                 if (donkey == null || !partsReady || activeStyle != MountStyle.Cart)
@@ -115,7 +117,7 @@ namespace GK2DonkeyAPI
                 {
                     if (p.T != null)
                     {
-                        p.T.localPosition = p.Base;
+                        p.T.localPosition = p.Rest;
                         if (p.T.name == Cargo.ContainerName)
                         {
                             p.T.localRotation = Quaternion.identity; // the sway rotation is re-applied next frame
@@ -128,6 +130,7 @@ namespace GK2DonkeyAPI
                 try
                 {
                     CollectCartParts();
+                    TestCargoRecollects++;
                 }
                 finally
                 {
@@ -136,6 +139,7 @@ namespace GK2DonkeyAPI
             }
 
             private bool logGeometry = true;
+            internal int TestCargoRecollects; // the self-test: how often a cargo change re-collected the cart parts
             private bool? lastArmour; // the keeper's armour view at the last tick (null: first tick of this ride)
             private float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
             private AnimationState lastMirrored = (AnimationState)(-1);

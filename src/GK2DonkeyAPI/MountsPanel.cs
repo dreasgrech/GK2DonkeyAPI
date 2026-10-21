@@ -252,6 +252,7 @@ namespace GK2DonkeyAPI
             TextMeshProUGUI bt = dialogTemplate.GetComponentInChildren<TextMeshProUGUI>(true);
             if (bt != null) buttonTextColor = bt.color;
             MeasureRow();
+            focusTemplate = templateRow.GetComponentInChildren<GamepadNavigationItem>(true)?.focusFrame; // the game row's own focus frame, for the panel's buttons
 
             // What was set when the panel opened, for a put-back (the self-tests; no Cancel button since 2026-10-21): every look row of the page (the mount, every mount's
             // skin and colours, the effect), not only the chosen mount's, so a put-back after choosing another mount puts
@@ -327,6 +328,12 @@ namespace GK2DonkeyAPI
             GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
             Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
             GameObject drive = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
+            foreach (GameObject bgo in new[] { done, customise, ride, drive }) NavGroup(bgo, 2);
+            var jnav = panel.GetComponent<GamepadNavigationController>();
+            Hand(jnav, 0, GUIDirection.Right, 1); Hand(jnav, 0, GUIDirection.Down, 2);  // the list -> the rows, the buttons
+            Hand(jnav, 1, GUIDirection.Left, 0); Hand(jnav, 1, GUIDirection.Down, 2);   // the rows -> the list, the buttons
+            Hand(jnav, 2, GUIDirection.Up, 1); Hand(jnav, 2, GUIDirection.Left, 0);     // the buttons -> the rows, the list
+            Hand(jnav, 1, GUIDirection.Up, 0);
             Rect(drive, Pad + ButtonW + 12f, H - Pad - ButtonH, 150f, ButtonH);
 
             pictureOff = false;
@@ -364,8 +371,23 @@ namespace GK2DonkeyAPI
                 bi.raycastTarget = false;
                 Stretch((RectTransform)bi.transform);
             }
+            var nav = go.AddComponent<GamepadNavigationController>(); // the game's gamepad navigation, as every game window has
+            nav.loopVerticalNavigation = true;
+            nav.restoreLastInGroup = true;
+            nav.navigationGroupSources = new List<GamepadNavigationController.NavigationGroupSource>();
             go.SetActive(false);
             return go;
+        }
+
+        private static void Hand(GamepadNavigationController nav, int from, GUIDirection dir, int to)
+        {
+            var src = nav.navigationGroupSources.Find(s => s.group == from);
+            if (src == null)
+            {
+                src = new GamepadNavigationController.NavigationGroupSource(from, new List<GamepadNavigationController.NavigationGroupTarget>());
+                nav.navigationGroupSources.Add(src);
+            }
+            src.groupTargets.Add(new GamepadNavigationController.NavigationGroupTarget(to, dir));
         }
 
         // The list: a row per mount (its icon and name), the chosen one in red; scrolled to the chosen one.
@@ -405,9 +427,12 @@ namespace GK2DonkeyAPI
                     irt.anchoredPosition = new Vector2(8f + (IconPx - irt.sizeDelta.x) / 2f, 0f);
                 }
                 cards.Add((id, go.GetComponent<Image>(), go.GetComponentInChildren<TextMeshProUGUI>(true)));
+                NavGroup(go, 0);
+                if (fake) { var fi = go.GetComponent<GamepadNavigationItem>(); if (fi != null) fi.Active = false; }
                 if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = shown - 1;
             }
             titleCount.text = filter.Length > 0 ? $"{shown} of {entries.Count} mounts" : entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
+            navDirty = true;
             MarkList();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
             if (at >= 0 && shown > 1) listScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(at / (float)(shown - 1));
@@ -580,6 +605,9 @@ namespace GK2DonkeyAPI
             needed = y;
             root.sizeDelta = new Vector2(0f, needed);
             scroll.verticalNormalizedPosition = 1f;
+            int navGroup = root == contentRoot ? 1 : 0;
+            foreach (GamepadNavigationItem ni in root.GetComponentsInChildren<GamepadNavigationItem>(true)) ni.group = navGroup;
+            navDirty = true;
             return sig.ToString();
         }
 
@@ -607,8 +635,17 @@ namespace GK2DonkeyAPI
                 frame.GetComponent<Image>().color = Color.white;
                 frame.GetComponent<Image>().raycastTarget = false;
                 frame.SetActive(false);
-                GameObject sw = Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button));
+                GameObject sw = Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
                 Rect(sw, sx, sy, SwatchPx, SwatchPx);
+                GameObject swFocus = Node("focus", sw.transform, typeof(Image), typeof(Outline));
+                Rect(swFocus, -3f, -3f, SwatchPx + 6f, SwatchPx + 6f);
+                swFocus.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+                swFocus.GetComponent<Image>().raycastTarget = false;
+                var swo = swFocus.GetComponent<Outline>();
+                swo.effectColor = new Color(1f, 0.85f, 0.3f, 1f);
+                swo.effectDistance = new Vector2(2f, -2f);
+                swFocus.SetActive(false);
+                sw.GetComponent<GamepadNavigationItem>().focusFrame = swFocus;
                 var img = sw.GetComponent<Image>();
                 ColorUtility.TryParseHtmlString("#" + MountPalette.Hex(colour), out Color c);
                 img.color = c;
@@ -631,6 +668,8 @@ namespace GK2DonkeyAPI
                     }
                 });
                 frames.Add((colour, frame));
+                UnityEngine.UI.Button swButton = b;
+                sw.GetComponent<GamepadNavigationItem>().SetCallbacks(null, null, () => swButton.onClick.Invoke());
             }
             refresh = () =>
             {
@@ -674,10 +713,14 @@ namespace GK2DonkeyAPI
                 AddScrollbar(coloursScroll);
                 GameObject done = OwnButton(colours.transform, "colours done", "Done", ButtonW, ButtonH, () => CloseColours(keep: true));
                 Rect(done, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
+                NavGroup(done, 1);
+                var cnav = colours.GetComponent<GamepadNavigationController>();
+                Hand(cnav, 0, GUIDirection.Down, 1); Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
                 coloursBefore.Clear();
                 foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
                 panel.SetActive(false); // the journal waits underneath
+                navDirty = true;
                 colours.SetActive(true);
                 FitToScreen(colours, CW, CH);
                 Refresh();
@@ -721,6 +764,7 @@ namespace GK2DonkeyAPI
             if (panel != null && reshow)
             {
                 panel.SetActive(true);
+                navDirty = true;
                 Refresh();
             }
         }
@@ -1012,7 +1056,126 @@ namespace GK2DonkeyAPI
             t.color = flat ? fontColor : buttonTextColor;
             t.overflowMode = TextOverflowModes.Ellipsis;
             t.fontStyle = flat ? FontStyles.Normal : FontStyles.Bold;
+            // the gamepad: an item whose select presses the button (as LazyButton.SetCallbacksIntoGamepadNavigationItem),
+            // framed while focused with the game row's own focus frame
+            var item = go.AddComponent<GamepadNavigationItem>();
+            UnityEngine.UI.Button pressed = b;
+            item.SetCallbacks(null, null, () => { if (pressed.interactable) pressed.onClick.Invoke(); });
+            item.focusFrame = FocusFrame(go.transform);
             return go;
+        }
+
+        private static GameObject focusTemplate;
+
+        // A focus frame over a button: a copy of the game row's own, else a bright outline.
+        private static GameObject FocusFrame(Transform parent)
+        {
+            GameObject f;
+            if (focusTemplate != null)
+            {
+                f = UnityEngine.Object.Instantiate(focusTemplate, parent, false);
+                f.name = "focus";
+                foreach (Graphic g in f.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
+            }
+            else
+            {
+                f = Node("focus", parent, typeof(Image), typeof(Outline));
+                f.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
+                f.GetComponent<Image>().raycastTarget = false;
+                var o = f.GetComponent<Outline>();
+                o.effectColor = new Color(1f, 0.85f, 0.3f, 1f);
+                o.effectDistance = new Vector2(2f, -2f);
+            }
+            var rt = (RectTransform)f.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = new Vector2(-2f, -2f);
+            rt.offsetMax = new Vector2(2f, 2f);
+            var le = f.GetComponent<LayoutElement>() ?? f.AddComponent<LayoutElement>();
+            le.ignoreLayout = true;
+            f.SetActive(false);
+            return f;
+        }
+
+        private static void NavGroup(GameObject go, int group)
+        {
+            var item = go.GetComponent<GamepadNavigationItem>();
+            if (item != null) item.group = group;
+        }
+
+        // ---- the gamepad, every frame (from Tick) ----
+        private static bool navDirty = true;
+
+        private static void TickGamepad()
+        {
+            GameObject window = colours != null ? colours : panel;
+            if (window == null) return;
+            var nav = window.GetComponent<GamepadNavigationController>();
+            if (nav == null) return;
+            if (!LazyInput.IsGamepadActive)
+            {
+                if (nav.IsEnabled) nav.Disable(); // the mouse: no focus frames, as the game's windows
+                return;
+            }
+            if (!nav.IsEnabled || navDirty)
+            {
+                GamepadNavigationItem was = nav.IsEnabled ? nav.FocusedItem : null;
+                nav.Enable();
+                nav.ReinitItems(focusOnFirstActive: false);
+                navDirty = false;
+                if (was != null && was && was.isActiveAndEnabled) nav.SetFocusedItem(was);
+                else FocusStart(nav, window);
+            }
+            GamepadNavigationItem focused = nav.FocusedItem;
+            bool onValueRow = focused != null && focused.GetComponentInParent<UISwitchButton>() != null; // a value row steps itself with Left/Right (UISwitchButton.Update)
+            if (Pressed(GameKey.Up) || Pressed(GameKey.DpadUp)) Move(nav, GUIDirection.Up);
+            else if (Pressed(GameKey.Down) || Pressed(GameKey.DpadDown)) Move(nav, GUIDirection.Down);
+            else if (!onValueRow && (Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft))) Move(nav, GUIDirection.Left);
+            else if (!onValueRow && (Pressed(GameKey.Right) || Pressed(GameKey.DpadRight))) Move(nav, GUIDirection.Right);
+            else if (!onValueRow && Pressed(GameKey.Select)) { LazyInput.ClearKeyDown(GameKey.Select); nav.SelectFocusedItem(); }
+        }
+
+        private static bool Pressed(GameKey k) => LazyInput.GetKeyDown(k);
+
+        private static void Move(GamepadNavigationController nav, GUIDirection dir)
+        {
+            foreach (GameKey k in new[] { GameKey.Up, GameKey.DpadUp, GameKey.Down, GameKey.DpadDown, GameKey.Left, GameKey.DpadLeft, GameKey.Right, GameKey.DpadRight }) LazyInput.ClearKeyDown(k);
+            nav.Navigate(dir);
+            KeepInView(nav.FocusedItem);
+        }
+
+        // The first focus: the chosen mount's row in the journal, the first row in the colours window.
+        private static void FocusStart(GamepadNavigationController nav, GameObject window)
+        {
+            GamepadNavigationItem start = null;
+            if (window == panel)
+            {
+                string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
+                foreach ((string id, Image face, TextMeshProUGUI label) in cards)
+                {
+                    if (face != null && id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) { start = face.GetComponent<GamepadNavigationItem>(); break; }
+                }
+            }
+            if (start != null) nav.SetFocusedItem(start); else nav.FocusOnFirstActive(0);
+            KeepInView(nav.FocusedItem);
+        }
+
+        // A focused item inside a scroll view scrolled into view.
+        private static void KeepInView(GamepadNavigationItem item)
+        {
+            if (item == null) return;
+            ScrollRect sr = item.GetComponentInParent<ScrollRect>();
+            if (sr == null || sr.content == null || sr.viewport == null) return;
+            var irt = (RectTransform)item.transform;
+            Vector3[] c = new Vector3[4];
+            irt.GetWorldCorners(c);
+            float top = sr.viewport.InverseTransformPoint(c[1]).y, bottom = sr.viewport.InverseTransformPoint(c[0]).y;
+            Rect view = sr.viewport.rect;
+            float shift = 0f;
+            if (top > view.yMax) shift = top - view.yMax + 4f;
+            else if (bottom < view.yMin) shift = bottom - view.yMin - 4f;
+            if (shift != 0f) sr.content.anchoredPosition -= new Vector2(0f, shift / Mathf.Max(0.0001f, sr.content.lossyScale.y / sr.viewport.lossyScale.y));
         }
 
         // A thin scrollbar at the right edge of a scroll view, shown while there is more than fits.
@@ -1124,7 +1287,8 @@ namespace GK2DonkeyAPI
             }
             if (search != null && search.isFocused) searchFocusFrame = Time.frameCount;
             if (panel != null && controlsTaken) TakeControls(); // re-asserted: a game popup closing gives ByUI back
-            if (panel != null && UnityInput.Current.GetKeyDown(KeyCode.Escape))
+            if (panel != null && controlsTaken) TickGamepad();
+            if (panel != null && (UnityInput.Current.GetKeyDown(KeyCode.Escape) || (LazyInput.IsGamepadActive && LazyInput.GetKeyDown(GameKey.Back)))) // the gamepad's Back is the game windows' close too
             {
                 // Escape steps back: out of the search box first (the field already put its text back), then the colours
                 // window to the journal, then the journal closed (keeping what was chosen). The game reads the same press

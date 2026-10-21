@@ -12,6 +12,63 @@ namespace GK2DonkeyAPI
     // setting that never goes below the load and follows once items come off.
     internal static partial class SelfTest
     {
+        // A cart with a hitch gap (a long mount: the dragon's 24 px) keeps its place as items go on it. Found in game
+        // 2026-10-21: each item moved the cart back by one more gap (a cargo change put the parts back to their gapped
+        // place, then read that as the prefab's rest and added the gap again).
+        private static IEnumerator CargoKeepsTheGap()
+        {
+            MountHandle h = Spawn(Spot(home, 4f) ?? home, true, withCart: true);
+            if (h == null)
+            {
+                Fail("could not spawn a donkey with a cart");
+                yield break;
+            }
+            string owner = Mounts.Behaviour.OverriddenBy("CartSlots");
+            object was = owner == null ? null : Mounts.Behaviour.Get<object>("CartSlots");
+            try
+            {
+                yield return Until(() => h.IsReady && h.I.CargoRig.Inv != null, 6f);
+                if (h.I.CargoRig.Inv == null)
+                {
+                    Fail("the test cart has no inventory");
+                    yield break;
+                }
+                Mounts.Behaviour.ClearAny("CartSlots");
+                Mounts.Behaviour.Set(Owner, "CartSlots", 4);
+                h.Tuning.Set(Owner, "HitchGapPx", 20);
+                yield return Frames(3);
+                float Along()
+                {
+                    Vector3? cart = h.I.TestCartBodyWorld();
+                    if (cart == null) return float.NaN;
+                    Vector3 v = cart.Value - h.I.BodyPoint();
+                    v.y = 0f;
+                    return v.magnitude;
+                }
+                float start = Along();
+                Check(!float.IsNaN(start) && Mathf.Abs(h.I.TestHitchGap() - 0.4f) < 0.001f, $"the cart stands with a 20 px gap ({start:F2} behind the body)");
+                float worst = 0f;
+                var seen = new List<string>();
+                int recollects = h.I.TestCargoRecollects;
+                for (int n = 1; n <= 4; n++)
+                {
+                    h.I.CargoRig.Inv.AddItemToInventory(new Item("wood"));
+                    yield return Frames(3);
+                    float now = Along();
+                    seen.Add(now.ToString("F2"));
+                    worst = Mathf.Max(worst, Mathf.Abs(now - start));
+                }
+                Check(h.I.TestCargoRecollects - recollects >= 4, $"each item re-collected the cart parts ({h.I.TestCargoRecollects - recollects} times: the path the creep came from)");
+                Check(worst < 0.03f, $"four items on, one at a time: the cart stays where it was ({start:F2} -> {string.Join(", ", seen)}; the gap is 0.40, a creep shows as 0.40 a step)");
+            }
+            finally
+            {
+                Mounts.Behaviour.ClearAny("CartSlots");
+                if (owner != null && was != null) Mounts.Behaviour.Set(owner, "CartSlots", was);
+                if (h.Exists) h.Remove();
+            }
+        }
+
         private static IEnumerator CargoLayers()
         {
             MountHandle h = Spawn(Spot(home, 4f) ?? home, true, withCart: true);

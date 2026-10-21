@@ -132,6 +132,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupChest, Name = "chest: the save as the game writes it", Body = ChestSaveImage },
             new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
             new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
+            new Scenario { Group = GroupCargo, Name = "cargo: a cart with a hitch gap keeps its place as items go on", Body = CargoKeepsTheGap },
             new Scenario { Group = GroupMorgue, Name = "morgue: the door rule", Body = MorgueDecisions },
             new Scenario { Group = GroupMorgue, Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
             new Scenario { Group = GroupCorpses, Name = "corpses: drop and stand points", Body = CorpsePoints },

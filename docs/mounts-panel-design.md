@@ -108,6 +108,25 @@ every window's `Update`, so a window switched back on reads keys from the next f
 Escape steps back: out of the search box, the colours window to the journal, the journal to the window under it.
 Done does the same; Ride and Drive close the whole chain into the game.
 
+## The gamepad (2026-10-21, the game's way)
+
+Read from the game: every window has a `GamepadNavigationController` on its root, enabled only while
+`LazyInput.IsGamepadActive`; its `LazyWindowInputController` maps Up/Down/Left/Right (and the d-pad) to `Navigate`,
+Select to `SelectFocusedItem`, Back to close, and consumes a key it used (`LazyInput.ClearKeyDown`). The Settings
+window leaves Left, Right and Select to its rows: a focused `UISwitchButton` steps itself in its `Update` with the
+keys it was initialised with (the Settings window gives `{DecSlider, Left}` and `{IncSlider, Right}`). A game button's
+`GamepadNavigationItem` selects through `SetCallbacks` and shows its `focusFrame` while focused; items are grouped,
+with hand-offs between groups (`navigationGroupSources`).
+
+The panel does the same: a controller on each window (vertical loop, remember the last item in a group); groups in
+the journal: the list (0), the look rows (1), the buttons (2), with Right from the list to the rows, Down to the
+buttons, Left and Up back; in the colours window: the rows and swatches (0), Done (1). Our own buttons carry an item
+that presses the button and a focus frame copied from the game row's own; a swatch has a small frame. Up/Down move;
+Left/Right move unless a value row is focused (it steps itself); Select presses unless a value row is focused; Back
+steps back like Escape. Items are re-collected whenever the list or the rows are rebuilt and when a window swaps; the
+first focus is the chosen mount's row; a focused item in a scroll view is scrolled into view. The search box is not
+a gamepad item (no on-screen keyboard). Our rows in the game's Settings window got the game's key arrays too.
+
 ## Swatches
 
 In the colours window a custom-colour row (a `PaletteColor` choice, `MountSettingsPage.Color`) is drawn by the panel
