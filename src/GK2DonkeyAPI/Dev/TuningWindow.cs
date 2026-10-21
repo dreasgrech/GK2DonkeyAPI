@@ -1553,7 +1553,7 @@ namespace GK2DonkeyAPI
             {
                 GUILayout.Box(GUIContent.none, rule, ExpandW);
                 int count = 0, passed = 0, failed = 0, warned = 0, running = 0;
-                foreach (SelfTest.Scenario s in SelfTest.Catalog)
+                foreach (SelfTest.Scenario s in SelfTest.Scenarios)
                 {
                     if (s.Group != g) continue;
                     count++;
@@ -1580,7 +1580,7 @@ namespace GK2DonkeyAPI
                 }
                 GUILayout.EndHorizontal();
                 if (!open) continue;
-                foreach (SelfTest.Scenario s in SelfTest.Catalog)
+                foreach (SelfTest.Scenario s in SelfTest.Scenarios)
                 {
                     if (s.Group != g)
                     {

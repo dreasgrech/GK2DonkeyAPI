@@ -27,12 +27,12 @@ namespace GK2DonkeySkins
                 return;
             }
             registered.Add(Mounts.Looks.RegisterRecipe(Guid, "sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
-            // A mount kind of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
+            // A mount of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
             // sits the rider two pixels higher than its skin's seat row (SeatAdjustPx nudges from the row the skin
             // declares, for every player; docs/seat-investigation.md), and carries one ability: it gallops (half again
             // the speed) while ridden. (It burned while ridden before 0.35.0: the effect is the player's own choice, which
             // an ability may not take; a mount that should burn declares effect = hellfire in its definition.)
-            registered.Add(Mounts.Kinds.Register(Guid, new MountKindDef
+            registered.Add(Mounts.Catalog.Register(Guid, new MountDef
             {
                 Id = "checker-beast",
                 Name = "Checker Beast",
@@ -90,7 +90,7 @@ namespace GK2DonkeySkins
 
         // An ability: the instance's speed raised while the keeper rides it and cleared after. Its values are set under
         // Owner (given by the API: "<this mod>.ability.checker-beast"), which the API clears by itself when the instance
-        // stops being this kind, so Detached needs nothing. A mount may set its speed (the player's Speed row greys on
+        // stops being this mount, so Detached needs nothing. A mount may set its speed (the player's Speed row greys on
         // it, Saddle Up's TuningKey); it may not set the player's Effect, Skin or colours: such a Set is refused and
         // said once in the log. The hooks run on the API's LateUpdate; nothing here allocates per frame.
         private sealed class GallopsWhenRidden : MountAbility

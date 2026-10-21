@@ -112,14 +112,12 @@ namespace GK2DonkeyAPI
             Camera.onPreCull += OnPreCull;
         }
 
-        // The built-in skins (the donkey's two: Hellfire and Royal Parade, embedded) and the skin packs under plugins\.
-        // The five mounts (the dragon, the rat, the snail, the worm, Gerry) are Saddle Up's packs since 2026-10-20
-        // (docs/mounts-as-mods.md: the player mod ships them, this API is the backend) and come through RegisterEmbedded
-        // like any mod's. Called after the dev keys bind, and only with the mounts switched on (Plugin.MountsOn: off
-        // for players in this version, so nothing but the donkey is ever offered to them).
+        // The API ships no skin of its own since 2026-10-21 (the user: the backend, the donkey alone; every skin and mount,
+        // Hellfire and Royal Parade included, is Saddle Up's and comes through RegisterEmbedded like any mod's). What
+        // is left here: the recipes (none shipped) and the loose skin packs under plugins\. Called after the dev keys
+        // bind, and only with the mounts switched on (Plugin.MountsOn: off for players in this version).
         internal static void RegisterBuiltIns()
         {
-            RegisterEmbedded(typeof(Looks).Assembly, "GK2DonkeyAPI.skins.", Plugin.Guid, builtIn: true);
             RegisterRecipes();
             try
             {
@@ -178,34 +176,34 @@ namespace GK2DonkeyAPI
             // with the player's knobs (Brightness, Saturation, Colorize ...), applied before the player's settings
             // (Colors.Rebuild). An ash coat under Hellfire's horns, without a pixel of the game's art in the pack.
             internal Dictionary<string, Colors.RegionTweak> BaseRegions;
-            internal string KindId = Kinds.DonkeyId;   // the mount kind this skin is a look of (docs/mounts-design.md)
-            internal Kinds.KindDef DeclaredKind;       // a pack's [Mount] section: declared when the skin registers
-            private Kinds.KindDef kind;
-            private int kindVersion;
-            private bool kindFallbackLogged;
+            internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md)
+            internal Catalog.Entry DeclaredMount;       // a pack's [Mount] section: declared when the skin registers
+            private Catalog.Entry mount;
+            private int mountVersion;
+            private bool mountFallbackLogged;
 
-            // The kind, resolved again whenever the kinds change (Kinds.Version); the donkey kind when the named one
+            // The mount, resolved again whenever the mounts change (Catalog.Version); the donkey mount when the named one
             // isn't registered (said once).
-            internal Kinds.KindDef Kind
+            internal Catalog.Entry Mount
             {
                 get
                 {
-                    if (kind == null || kindVersion != Kinds.Version)
+                    if (mount == null || mountVersion != Catalog.Version)
                     {
-                        kindVersion = Kinds.Version;
-                        kind = Kinds.Find(KindId);
-                        if (kind == null)
+                        mountVersion = Catalog.Version;
+                        mount = Catalog.Find(MountId);
+                        if (mount == null)
                         {
-                            kind = Kinds.Donkey;
-                            if (!kindFallbackLogged) Plugin.Log.LogInfo($"Looks: skin '{Id}' names the mount '{KindId}', which nobody registered; it is a donkey for now.");
-                            kindFallbackLogged = true;
+                            mount = Catalog.Donkey;
+                            if (!mountFallbackLogged) Plugin.Log.LogInfo($"Looks: skin '{Id}' names the mount '{MountId}', which nobody registered; it is a donkey for now.");
+                            mountFallbackLogged = true;
                         }
                         else
                         {
-                            kindFallbackLogged = false;
+                            mountFallbackLogged = false;
                         }
                     }
-                    return kind;
+                    return mount;
                 }
             }
 
@@ -288,24 +286,24 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Owner}) has no author prefix: a skin or mount id from another mod is '<author>.<name>' by convention (docs/skins.md), so two authors' names never meet.");
             }
-            if (old != null) ForgetPortraits(old.Id); // before its declaration moves or is cleared: a joiner kind's stand-in is reached through DeclaredBy
-            if (d.DeclaredKind != null)
+            if (old != null) ForgetPortraits(old.Id); // before its declaration moves or is cleared: a joiner mount's stand-in is reached through DeclaredBy
+            if (d.DeclaredMount != null)
             {
-                d.DeclaredKind.Owner = d.Owner;
-                d.DeclaredKind.BuiltIn = d.BuiltIn;
-                Kinds.KindDef declared = Kinds.Declare(d.DeclaredKind, "skin '" + d.Id + "'", d.Id);
-                if (!string.IsNullOrEmpty(d.KindId) && !d.KindId.Equals(Kinds.DonkeyId, StringComparison.OrdinalIgnoreCase) && !d.KindId.Equals(declared.Id, StringComparison.OrdinalIgnoreCase))
+                d.DeclaredMount.Owner = d.Owner;
+                d.DeclaredMount.BuiltIn = d.BuiltIn;
+                Catalog.Entry declared = Catalog.Declare(d.DeclaredMount, "skin '" + d.Id + "'", d.Id);
+                if (!string.IsNullOrEmpty(d.MountId) && !d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && !d.MountId.Equals(declared.Id, StringComparison.OrdinalIgnoreCase))
                 {
-                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}' says mount = {d.KindId} but its [Mount] block declares '{declared.Id}': a skin with a [Mount] block is that mount's own skin, so mount = {declared.Id} here.");
+                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}' says mount = {d.MountId} but its [Mount] block declares '{declared.Id}': a skin with a [Mount] block is that mount's own skin, so mount = {declared.Id} here.");
                 }
-                d.KindId = declared.Id; // the declared mount, whatever the mount = line says (a renamed [Mount] id moves the skin with it)
+                d.MountId = declared.Id; // the declared mount, whatever the mount = line says (a renamed [Mount] id moves the skin with it)
             }
             else if (old != null && old.Owner != d.Owner)
             {
-                // (a cross-owner replace by the version rule; a same-owner reload with the block removed is ReloadCfg's, which withdraws the kind)
-                // the replaced skin declared a mount and this one doesn't: the kind stays (its other skins wear it) but no
+                // (a cross-owner replace by the version rule; a same-owner reload with the block removed is ReloadCfg's, which withdraws the mount)
+                // the replaced skin declared a mount and this one doesn't: the mount stays (its other skins wear it) but no
                 // skin declares it now, so nothing reads a portrait or a re-declaration through a skin that has no block
-                foreach (Kinds.KindDef kd in Kinds.All)
+                foreach (Catalog.Entry kd in Catalog.All)
                 {
                     if (kd.FromPack && kd.DeclaredBy != null && kd.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)) kd.DeclaredBy = null;
                 }
@@ -479,12 +477,12 @@ namespace GK2DonkeyAPI
             if (d == null || d.Owner != owner) return false;
             defs.Remove(d.Id);
             ForgetPortraits(d.Id);
-            if (d.DeclaredKind != null)
+            if (d.DeclaredMount != null)
             {
                 // the mount its [Mount] block declared goes with it unless another skin of this owner declares it (as a
-                // reload withdraws a renamed one); a code kind (not FromPack) is its mod's handle's to withdraw
-                Kinds.KindDef live = Kinds.Find(d.DeclaredKind.Id);
-                if (live != null && live.FromPack && live.Owner == owner && !StillDeclared(live, d)) Kinds.Unregister(live.Id, owner);
+                // reload withdraws a renamed one); a code mount (not FromPack) is its mod's handle's to withdraw
+                Catalog.Entry live = Catalog.Find(d.DeclaredMount.Id);
+                if (live != null && live.FromPack && live.Owner == owner && !StillDeclared(live, d)) Catalog.Unregister(live.Id, owner);
             }
             Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false);
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' withdrawn by {owner}.");
@@ -613,7 +611,7 @@ namespace GK2DonkeyAPI
                     case "author": d.Author = value; break;
                     case "version": d.Version = value; break;
                     case "base": baseId = value; break;
-                    case "kind": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); break;
+                    case "colours": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); break;
                     case "layer": d.Over = value.Equals("over", StringComparison.OrdinalIgnoreCase); break;
                     case "erase":
                         eraseGiven = true;
@@ -621,7 +619,7 @@ namespace GK2DonkeyAPI
                         else if (Colors.TryHex(value, out Color32 ec)) d.Erase = ec;
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
-                    case "mount": d.KindId = value; break;
+                    case "mount": d.MountId = value; break;
                     case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); break;
                     case "effect_when":
                         if (Enum.TryParse(value.Trim(), true, out MountEffectWhen skinWhen)) d.EffectWhen = skinWhen;
@@ -668,7 +666,7 @@ namespace GK2DonkeyAPI
                 d.Report += "[Base.*] is for layer = over only (a recolour of the donkey under the skin), ignored; ";
                 d.BaseRegions = null;
             }
-            if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (kind = own); a palette skin takes the donkey's regions, ignored; ";
+            if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
             int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
@@ -677,7 +675,7 @@ namespace GK2DonkeyAPI
             {
                 // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
                 // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
-                var k = new Kinds.KindDef { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart };
+                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart };
                 k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
                 if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
                 if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
@@ -704,7 +702,7 @@ namespace GK2DonkeyAPI
                     if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
                 }
                 if (mountUnknown.Count > 0) d.Report += "[Mount] unknown keys ignored: " + string.Join(", ", mountUnknown) + "; ";
-                d.DeclaredKind = k;
+                d.DeclaredMount = k;
                 d.Report += "declares the mount '" + k.Id + "'; ";
             }
             else if (kt != null || ktRide != null || ktCart != null || stats.Count > 0)
@@ -896,8 +894,8 @@ namespace GK2DonkeyAPI
                 portraits.Remove(key);
             }
             portraitFailed.RemoveWhere(k => k.StartsWith(id + "|", StringComparison.OrdinalIgnoreCase) || k.StartsWith(id + "(mount)|", StringComparison.OrdinalIgnoreCase));
-            // a kind this skin declares under another id (a joiner's mount): its stand-in is cached under the kind's id
-            foreach (Kinds.KindDef kd in Kinds.All)
+            // a mount this skin declares under another id (a joiner's mount): its stand-in is cached under the mount's id
+            foreach (Catalog.Entry kd in Catalog.All)
             {
                 if (kd.DeclaredBy == null || kd.Id.Equals(id, StringComparison.OrdinalIgnoreCase) || !kd.DeclaredBy.Equals(id, StringComparison.OrdinalIgnoreCase)) continue;
                 ForgetPortraits(kd.Id + "(mount)");
@@ -929,9 +927,9 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // A mount's portrait: its own (a code kind's texture, or the PNG its declaring skin's pack holds), else its
+        // A mount's portrait: its own (a code mount's texture, or the PNG its declaring skin's pack holds), else its
         // Default skin's, else null (the panel draws the mount instead).
-        internal static Texture2D PortraitOfKind(Kinds.KindDef k)
+        internal static Texture2D PortraitOfMount(Catalog.Entry k)
         {
             if (k == null) return null;
             if (k.PortraitTexture != null) return k.PortraitTexture;
@@ -947,7 +945,7 @@ namespace GK2DonkeyAPI
 
         // The file rewritten with the live values: the [Skin] section's own lines kept (mount, offset and
         // offset_cart replaced), [Tuning] and, where the file declares the mount, [Mount] and its tuning sections
-        // written anew from the kind, with the comments those sections held kept in place (a comment above a key
+        // written anew from the mount, with the comments those sections held kept in place (a comment above a key
         // stays above it, one at the end of its line stays on it; the rest of a section's comments come first).
         // Returns null, or why not.
         internal static string SaveCfg(SkinDef d) => SaveCfg(d, out _);
@@ -1083,7 +1081,7 @@ namespace GK2DonkeyAPI
                 foreach (string h in head) sb.Append(h).Append('\n');
                 sb.Append("[Skin]\n");
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
-                Kinds.KindDef k = d.Kind;
+                Catalog.Entry k = d.Mount;
                 if (d.SeatFromPicture || d.SeatRow >= 0)
                 {
                     sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -1101,7 +1099,7 @@ namespace GK2DonkeyAPI
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
                     if (d.OffsetCart != d.OffsetRide) sb.Append("offset_cart = ").Append(Num(d.OffsetCart.x)).Append(' ').Append(Num(d.OffsetCart.y)).Append('\n');
                 }
-                sb.Append("mount = ").Append(d.DeclaredKind?.Id ?? d.KindId).Append('\n');
+                sb.Append("mount = ").Append(d.DeclaredMount?.Id ?? d.MountId).Append('\n');
                 void WriteTuning()
                 {
                     // the skin's own geometry: [Tuning], then [Tuning.Ride], [Tuning.Cart], each with its comments
@@ -1129,7 +1127,7 @@ namespace GK2DonkeyAPI
                     }
                 }
                 if (!tuningWritten) WriteTuning();
-                if (declaresMount && k != Kinds.Donkey)
+                if (declaresMount && k != Catalog.Donkey)
                 {
                     // the canonical block (docs/mounts-foundation-audit.md §4): id, name, author, version, cart, foals
                     // always; foal_scale, effect and effect_when when not the default; its comments where they were
@@ -1207,7 +1205,7 @@ namespace GK2DonkeyAPI
 
         private static string Num(float v) => v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
 
-        // The file read again and the skin registered anew (the same owner replaces); a kind it declares takes the
+        // The file read again and the skin registered anew (the same owner replaces); a mount it declares takes the
         // file's values in place. Returns null, or why not.
         internal static string ReloadCfg(SkinDef d)
         {
@@ -1221,34 +1219,34 @@ namespace GK2DonkeyAPI
                 fresh.Source = d.Source;
                 fresh.SourceAssembly = d.SourceAssembly; // an embedded skin keeps its DLL, so CfgPathFor still finds its sources after a reload
                 fresh.DiskStamp = PackStamp(fresh);
-                if (fresh.DeclaredKind != null)
+                if (fresh.DeclaredMount != null)
                 {
-                    Kinds.KindDef have = Kinds.Find(fresh.DeclaredKind.Id);
+                    Catalog.Entry have = Catalog.Find(fresh.DeclaredMount.Id);
                     // the mount's own skin (its declaring one) re-declares in place; a joiner's reload joins as at the start
                     if (have != null && have.FromPack && have.Owner == d.Owner && (have.DeclaredBy == null || have.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)))
                     {
-                        fresh.DeclaredKind.Owner = d.Owner;
-                        Kinds.Redeclare(have, fresh.DeclaredKind);
-                        fresh.DeclaredKind = have; // the live kind stays the def's (StillDeclared, DefaultSkinOf read it)
-                        fresh.KindId = have.Id;
+                        fresh.DeclaredMount.Owner = d.Owner;
+                        Catalog.Redeclare(have, fresh.DeclaredMount);
+                        fresh.DeclaredMount = have; // the live mount stays the def's (StillDeclared, DefaultSkinOf read it)
+                        fresh.MountId = have.Id;
                     }
                 }
                 ForgetPortraits(d.Id);
                 Register(fresh);
-                // the kind the old file declared, when the new one doesn't (renamed, or the block gone): withdrawn unless
-                // another skin of this owner declares it; its other skins fall back to the donkey kind, said by Unregister
-                Kinds.KindDef was = null;
-                foreach (Kinds.KindDef kd in Kinds.All)
+                // the mount the old file declared, when the new one doesn't (renamed, or the block gone): withdrawn unless
+                // another skin of this owner declares it; its other skins fall back to the donkey mount, said by Unregister
+                Catalog.Entry was = null;
+                foreach (Catalog.Entry kd in Catalog.All)
                 {
                     if (!kd.FromPack || kd.DeclaredBy == null || !kd.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (fresh.DeclaredKind != null && kd.Id.Equals(fresh.KindId ?? "", StringComparison.OrdinalIgnoreCase)) continue; // the kind the new file declares (a renamed mount's new one carries this skin's id too); a file that only names a mount it no longer declares keeps nothing alive
+                    if (fresh.DeclaredMount != null && kd.Id.Equals(fresh.MountId ?? "", StringComparison.OrdinalIgnoreCase)) continue; // the mount the new file declares (a renamed mount's new one carries this skin's id too); a file that only names a mount it no longer declares keeps nothing alive
                     was = kd;
                 }
-                if (was != null && was.FromPack && was.Owner == d.Owner && !(fresh.KindId ?? "").Equals(was.Id, StringComparison.OrdinalIgnoreCase) && !StillDeclared(was, fresh))
+                if (was != null && was.FromPack && was.Owner == d.Owner && !(fresh.MountId ?? "").Equals(was.Id, StringComparison.OrdinalIgnoreCase) && !StillDeclared(was, fresh))
                 {
-                    Kinds.Unregister(was.Id, d.Owner);
+                    Catalog.Unregister(was.Id, d.Owner);
                 }
-                Kinds.Touch();
+                Catalog.Touch();
                 return null;
             }
             catch (Exception e)
@@ -1257,12 +1255,12 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Whether any registered skin but the one reloading still declares the kind.
-        private static bool StillDeclared(Kinds.KindDef k, SkinDef except)
+        // Whether any registered skin but the one reloading still declares the mount.
+        private static bool StillDeclared(Catalog.Entry k, SkinDef except)
         {
             foreach (SkinDef s in defs.Values)
             {
-                if (s != except && s.DeclaredKind != null && s.DeclaredKind.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return true;
+                if (s != except && s.DeclaredMount != null && s.DeclaredMount.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
         }
@@ -1339,18 +1337,18 @@ namespace GK2DonkeyAPI
             return newest;
         }
 
-        // ------------------------------------------------------------------ kinds: the cart rule, the settings list
+        // ------------------------------------------------------------------ mounts: the cart rule, the settings list
 
-        // The kind an instance is about to be ridden as: its Skin key's (wanted, even while that skin still builds).
-        internal static Kinds.KindDef KindOf(SkinDef d) => d != null ? d.Kind : Kinds.Donkey;
+        // The mount an instance is about to be ridden as: its Skin key's (wanted, even while that skin still builds).
+        internal static Catalog.Entry MountOf(SkinDef d) => d != null ? d.Mount : Catalog.Donkey;
 
-        internal static Kinds.KindDef KindWanted(Mount.Instance i) => i?.LooksRig?.KindNow ?? Kinds.Donkey; // the rig's rules (a set-aside skin, another base, a no-foals skin on a foal: the donkey)
+        internal static Catalog.Entry MountWanted(Mount.Instance i) => i?.LooksRig?.MountNow ?? Catalog.Donkey; // the rig's rules (a set-aside skin, another base, a no-foals skin on a foal: the donkey)
 
-        // A kind that doesn't pull the cart: why not, else null (docs/mounts-design.md §3).
-        internal static string WhyNotCartByKind(Mount.Instance i)
+        // A mount that doesn't pull the cart: why not, else null (docs/mounts-design.md §3).
+        internal static string WhyNotCartByMount(Mount.Instance i)
         {
             if (i == null) return null;
-            Kinds.KindDef k = KindWanted(i);
+            Catalog.Entry k = MountWanted(i);
             return k.Cart ? null : $"A {k.NounText} can't pull the cart.";
         }
 
@@ -1364,17 +1362,17 @@ namespace GK2DonkeyAPI
 
         // The value a creature's layers give key on instance i for style, in the order Rig.ApplyTuning merges them
         // (another owner's override first, then the skin's [Tuning.Ride]/[Tuning.Cart] for the style, the skin's
-        // [Tuning], the kind's per-style tuning, the kind's both-styles tuning), or null when none sets it: for a reader
+        // [Tuning], the mount's per-style tuning, the mount's both-styles tuning), or null when none sets it: for a reader
         // that needs a style the instance isn't in yet (the hitch wants the cart style's gap while the mount is still
         // ridden plain). Keep in step with Rig.ApplyTuning: the geometry is the WORN drawing's (the pictures on screen),
-        // the kind is the wanted skin's (the creature's facts), so a hitch while a sheet still builds uses the gap of the
+        // the mount is the wanted skin's (the creature's facts), so a hitch while a sheet still builds uses the gap of the
         // pictures the cart is drawn against.
         internal static object LayeredValue(Mount.Instance i, MountStyle style, string key)
         {
             if (i == null) return null;
             if (i.OverrideOwners.TryGetValue(key, out string by) && by != TuningOwner && i.Overrides.TryGetValue(key, out object o)) return o;
             SkinDef d = i.LooksRig?.WornDef ?? i.LooksRig?.WantedDef; // asleep (no drawing worn): the wanted skin's geometry, as the next view will have it
-            Kinds.KindDef k = i.LooksRig?.KindNow ?? Kinds.Donkey;
+            Catalog.Entry k = i.LooksRig?.MountNow ?? Catalog.Donkey;
             Dictionary<string, object> skinStyle = d == null ? null : style == MountStyle.Cart ? d.TuningCart : d.TuningRide;
             if (skinStyle != null && skinStyle.TryGetValue(key, out object skinStyled)) return skinStyled;
             if (d != null && d.TuningValues != null && d.TuningValues.TryGetValue(key, out object typed)) return typed;
@@ -1405,13 +1403,13 @@ namespace GK2DonkeyAPI
         }
 
         // For a settings page's Mount dropdown: every mount, the donkey first, the rest by name.
-        internal static IReadOnlyList<(string Id, string Label)> KindChoices()
+        internal static IReadOnlyList<(string Id, string Label)> MountChoices()
         {
             var list = new List<(string, string)>();
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+            foreach (MountInfo k in Mounts.Catalog.All)
             {
-                if (k.Skins.Count == 0) continue; // a kind with no skin would be invisible: not offered (docs/mounts-design.md §1)
-                bool any = k.Id == Kinds.DonkeyId;
+                if (k.Skins.Count == 0) continue; // a mount with no skin would be invisible: not offered (docs/mounts-design.md §1)
+                bool any = k.Id == Catalog.DonkeyId;
                 foreach (string sid in k.Skins) if (Find(sid)?.Unavailable == null) any = true;
                 if (!any) continue; // every skin of it set aside (its game frames gone)
                 list.Add((k.Id, k.Name));
@@ -1422,12 +1420,12 @@ namespace GK2DonkeyAPI
         // The skin a mount comes as, shown as "Default" in its Skin row (the user, 2026-10-18: every mount's default
         // skin is called Default): the donkey's own art for the donkey; for another mount the skin whose id is the
         // mount's (dragon, rat, snail, worm, gerry), else the first that declares the mount, else its first by name.
-        internal static string DefaultSkinOf(Kinds.KindDef k)
+        internal static string DefaultSkinOf(Catalog.Entry k)
         {
-            if (k == Kinds.Donkey) return MountLooks.DonkeyId;
-            List<SkinDef> skins = Kinds.SkinsOf(k);
+            if (k == Catalog.Donkey) return MountLooks.DonkeyId;
+            List<SkinDef> skins = Catalog.SkinsOf(k);
             foreach (SkinDef s in skins) if (s.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
-            foreach (SkinDef s in skins) if (s.DeclaredKind != null && s.DeclaredKind.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
+            foreach (SkinDef s in skins) if (s.DeclaredMount != null && s.DeclaredMount.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
             skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
             return skins.Count > 0 ? skins[0].Id : MountLooks.DonkeyId;
         }
@@ -1435,13 +1433,13 @@ namespace GK2DonkeyAPI
         internal const string DefaultLabel = "Default";
 
         // For a mount's Skin dropdown: "Default" first (DefaultSkinOf), then its other skins by name.
-        internal static IReadOnlyList<(string Id, string Label)> SkinChoicesOf(string kindId)
+        internal static IReadOnlyList<(string Id, string Label)> SkinChoicesOf(string mountId)
         {
-            Kinds.KindDef k = Kinds.Find(kindId) ?? Kinds.Donkey;
+            Catalog.Entry k = Catalog.Find(mountId) ?? Catalog.Donkey;
             var list = new List<(string Id, string Label)>();
             string def = DefaultSkinOf(k);
-            if (k == Kinds.Donkey || Find(def)?.Unavailable == null) list.Add((def, DefaultLabel)); // set aside (its game frames gone): not offered
-            var skins = Kinds.SkinsOf(k);
+            if (k == Catalog.Donkey || Find(def)?.Unavailable == null) list.Add((def, DefaultLabel)); // set aside (its game frames gone): not offered
+            var skins = Catalog.SkinsOf(k);
             skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
             foreach (SkinDef s in skins)
             {
@@ -1452,9 +1450,9 @@ namespace GK2DonkeyAPI
         }
 
         // A mount's first skin id (the default of its Skin row): the donkey's own art, or the first by name.
-        internal static string FirstSkinOf(string kindId)
+        internal static string FirstSkinOf(string mountId)
         {
-            IReadOnlyList<(string Id, string Label)> c = SkinChoicesOf(kindId);
+            IReadOnlyList<(string Id, string Label)> c = SkinChoicesOf(mountId);
             return c.Count > 0 ? c[0].Id : MountLooks.DonkeyId;
         }
 
@@ -1462,11 +1460,11 @@ namespace GK2DonkeyAPI
         internal static string MountLineFor(string skinId)
         {
             SkinDef d = string.IsNullOrEmpty(skinId) || skinId.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(skinId);
-            Kinds.KindDef k = KindOf(d);
+            Catalog.Entry k = MountOf(d);
             var names = new List<string>();
             string def = DefaultSkinOf(k);
             names.Add(DefaultLabel);
-            foreach (SkinDef s in Kinds.SkinsOf(k))
+            foreach (SkinDef s in Catalog.SkinsOf(k))
             {
                 if (s.Unavailable == null && !s.Id.Equals(def, StringComparison.OrdinalIgnoreCase)) names.Add(string.IsNullOrEmpty(s.Name) ? s.Id : s.Name);
             }
@@ -1475,22 +1473,22 @@ namespace GK2DonkeyAPI
             return k.Label + (names.Count > 0 ? " - skins: " + string.Join(", ", names) : "") + note;
         }
 
-        // The skins to pick from: the donkey first, then every skin by kind and name, labelled by the kind when the
+        // The skins to pick from: the donkey first, then every skin by mount and name, labelled by the mount when the
         // skin's name doesn't say it (docs/mounts-design.md §6).
         internal static IReadOnlyList<(string Id, string Label)> SkinChoices()
         {
-            var list = new List<(string Id, string Label, string Sort)> { (MountLooks.DonkeyId, Kinds.Donkey.Label + ": the game's own", "") };
-            var perKind = new Dictionary<Kinds.KindDef, int>();
-            foreach (SkinDef s in All) if (s.Unavailable == null) perKind[s.Kind] = perKind.TryGetValue(s.Kind, out int n) ? n + 1 : 1;
+            var list = new List<(string Id, string Label, string Sort)> { (MountLooks.DonkeyId, Catalog.Donkey.Label + ": the game's own", "") };
+            var perMount = new Dictionary<Catalog.Entry, int>();
+            foreach (SkinDef s in All) if (s.Unavailable == null) perMount[s.Mount] = perMount.TryGetValue(s.Mount, out int n) ? n + 1 : 1;
             foreach (SkinDef s in All)
             {
                 if (s.Unavailable != null) continue; // set aside: not to pick
-                Kinds.KindDef k = s.Kind;
+                Catalog.Entry k = s.Mount;
                 string name = string.IsNullOrEmpty(s.Name) ? s.Id : s.Name;
                 bool says = name.IndexOf(k.Label, StringComparison.OrdinalIgnoreCase) >= 0;
-                bool only = k != Kinds.Donkey && perKind[k] == 1;
+                bool only = k != Catalog.Donkey && perMount[k] == 1;
                 string label = says || only ? name : k.Label + ": " + name;
-                list.Add((s.Id, label, (k == Kinds.Donkey ? "0" : "1" + k.Label) + "|" + name));
+                list.Add((s.Id, label, (k == Catalog.Donkey ? "0" : "1" + k.Label) + "|" + name));
             }
             list.Sort((a, b) => string.Compare(a.Sort, b.Sort, StringComparison.OrdinalIgnoreCase));
             var result = new List<(string, string)>(list.Count);
@@ -2063,23 +2061,23 @@ namespace GK2DonkeyAPI
             private readonly Mount.Instance owner;
             private readonly SkinBase viewBase = Donkey;   // what this view is: the skins it can wear name it
             private SkinDef tunedFor;                       // the skin whose tuning keys are set on the owner now
-            private Kinds.KindDef tunedKind;
+            private Catalog.Entry tunedMount;
             private MountStyle tunedStyle;
             private readonly List<string> tunedKeys = new List<string>();
-            // the kind's abilities on this instance (docs/mounts-design.md §4)
-            private Kinds.KindDef abilityKind;
+            // the mount's abilities on this instance (docs/mounts-design.md §4)
+            private Catalog.Entry abilityMount;
             private bool[] abilityOff;
             private bool wasRidden;
             private MountStyle riddenStyle;
 
-            // The kind this instance is now: its skin's (the donkey's while it has none). The skin it wears when it
+            // The mount this instance is now: its skin's (the donkey's while it has none). The skin it wears when it
             // has a view, else the one its "Skin" key names (WantedDef): an instance asleep far from the keeper, with
             // no view to draw on, is still a Gerry. Seen 2026-10-18: the parent asleep outside counted as a donkey, so
             // the companion kept its babies at 0.6 until the parent was called and woke.
-            // Creature facts (the kind: cart, babies, effect, abilities) follow the WANTED skin at once (a sheet still
+            // Creature facts (the mount: cart, babies, effect, abilities) follow the WANTED skin at once (a sheet still
             // building, or no view at all); the drawing's geometry (the tuning merge) follows the WORN skin, so a rider
             // on the old picture never takes the new picture's numbers (docs/mounts-parity-matrix.md 2.10).
-            internal Kinds.KindDef KindNow => (pending?.Def ?? WantedDef ?? skin?.Def)?.Kind ?? Kinds.Donkey;
+            internal Catalog.Entry MountNow => (pending?.Def ?? WantedDef ?? skin?.Def)?.Mount ?? Catalog.Donkey;
             internal SkinDef DefNow => pending?.Def ?? WantedDef ?? skin?.Def;
             internal SkinDef WornDef => skin?.Def;
 
@@ -2115,8 +2113,8 @@ namespace GK2DonkeyAPI
                     }
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
                     SkinDef d = Find(want);
-                    if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in kind too, not only in the drawing
-                    if (owner.ViewScale != 1f && !d.Kind.Foals) return null;
+                    if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
+                    if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
                     return d;
                 }
             }
@@ -2201,13 +2199,13 @@ namespace GK2DonkeyAPI
             {
                 if (root == null || failed) return;
                 AdvanceBuilds();
-                Kinds.KindDef kindNow = KindNow; // the wanted skin's mount, read once per tick
-                ApplyTuning(kindNow);   // the skin's, the kind's and the style's values, re-applied only when one of them changes
+                Catalog.Entry mountNow = MountNow; // the wanted skin's mount, read once per tick
+                ApplyTuning(mountNow);   // the skin's, the mount's and the style's values, re-applied only when one of them changes
                 using (Perf.Measure(Perf.S.Abilities))
                 {
                     TickAbilities();
                 }
-                if (DropCartIfRefused(kindNow)) return; // an unhitch rebuilt the view (Restyle: this rig is detached): nothing of this tick may run after it
+                if (DropCartIfRefused(mountNow)) return; // an unhitch rebuilt the view (Restyle: this rig is detached): nothing of this tick may run after it
                 if (pending != null)
                 {
                     if (pending.Ready)
@@ -2225,7 +2223,7 @@ namespace GK2DonkeyAPI
                         {
                             stillWant = (Skin.Value ?? "").Trim();
                         }
-                        if (ReferenceEquals(pending.Def, Find(stillWant))) return; // the same skin (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or kind change doesn't throw the half-built sheet away
+                        if (ReferenceEquals(pending.Def, Find(stillWant))) return; // the same skin (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
                         Looks.Release(pending); // the choice changed again before it was ready
                         pending = null;
                     }
@@ -2277,7 +2275,7 @@ namespace GK2DonkeyAPI
                     {
                         if (missingIdLogged.Add(want)) Plugin.Log.LogWarning($"Looks: skin '{want}' is drawn on a {d.Base.Id}, not a {viewBase.Id}; not worn.");
                     }
-                    else if (owner != null && owner.ViewScale != 1f && !d.Kind.Foals)
+                    else if (owner != null && owner.ViewScale != 1f && !d.Mount.Foals)
                     {
                         next = null; // the skin says no foals
                     }
@@ -2304,17 +2302,17 @@ namespace GK2DonkeyAPI
 
             private static readonly HashSet<string> missingIdLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-            // The kind's tuning (both styles, then this style's) and the skin's own on top, onto the wearer as overrides
+            // The mount's tuning (both styles, then this style's) and the skin's own on top, onto the wearer as overrides
             // owned by the skin system (a key another mod overrides is left to it, said once per skin and key); the
-            // previous set cleared first. Re-done only when the skin, the kind or the style changes. Nothing of it is saved.
+            // previous set cleared first. Re-done only when the skin, the mount or the style changes. Nothing of it is saved.
             internal int TuneStamp { get; private set; }     // counts the re-merges (a reader caching a layered value)
             internal bool OwnerIdle => owner != null && owner.tier == Mount.Tier.Idle; // the view frozen far off (Tiers): nothing to draw anew
-            private void ApplyTuning(Kinds.KindDef k)
+            private void ApplyTuning(Catalog.Entry k)
             {
                 SkinDef d = skin?.Def;                      // the worn drawing: its geometry
-                // k: the wanted skin's mount (KindNow): the creature's facts
+                // k: the wanted skin's mount (MountNow): the creature's facts
                 MountStyle style = owner != null ? owner.CurrentStyle : MountStyle.Ride;
-                if (d == tunedFor && k == tunedKind && style == tunedStyle) return;
+                if (d == tunedFor && k == tunedMount && style == tunedStyle) return;
                 // The settings picture's paper donkey gets no overrides (no rider to seat), but its stamp still counts
                 // the re-merges: the stage reads the layered hitch gap on the stamp, and when the paper returned before
                 // it the gap came a second late, on the stage's fallback timer (the cart sliding into place after a
@@ -2322,7 +2320,7 @@ namespace GK2DonkeyAPI
                 bool paper = owner != null && owner.Handle == null && !owner.IsRidden;
                 if (!paper) ClearTuning(refresh: false); // one refresh for the whole re-merge, below
                 tunedFor = d;
-                tunedKind = k;
+                tunedMount = k;
                 tunedStyle = style;
                 TuneStamp++;
                 if (owner == null || paper) return;
@@ -2331,25 +2329,25 @@ namespace GK2DonkeyAPI
                 // rider's motion and pose, the cart's geometry, the sounds) and the shuffle's values; never a look key (the
                 // skin, the effect, a colour), a behaviour switch (the player's rows: messages, the idle shuffle, the cart's
                 // slots and what rides on it) or the lantern's (the cart's own). Said once when refused.
-                var fromKind = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                void TakeKind(Dictionary<string, object> from)
+                var fromMount = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                void TakeMount(Dictionary<string, object> from)
                 {
                     if (from == null) return;
                     foreach (var kv in from)
                     {
                         merged[kv.Key] = kv.Value;
-                        fromKind.Add(kv.Key);
+                        fromMount.Add(kv.Key);
                     }
                 }
-                TakeKind(k.Tuning);
-                TakeKind(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
+                TakeMount(k.Tuning);
+                TakeMount(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
                 if (d != null)
                 {
                     // A skin is the drawing: its [Tuning] may move the rider and the cart to fit its pictures, never
                     // change what the mount is (speed, cart, foals, effect belong to the mount; docs/mounts-design.md §1).
                     void TakeSkin(string key, object value)
                     {
-                        if (SkinTuningKeys.Contains(key)) { merged[key] = value; fromKind.Remove(key); }
+                        if (SkinTuningKeys.Contains(key)) { merged[key] = value; fromMount.Remove(key); }
                         else if (tuningLogged.Add(d.Id + "/" + key)) Plugin.Log.LogWarning($"Looks: skin '{d.Id}' wants to set {key}: a skin may only move the rider and the cart to fit its pictures ({string.Join(", ", SkinTuningKeys)}); the mount '{k.Id}' sets the rest. Not applied.");
                     }
                     if (d.Tuning != null) foreach (var kv in d.Tuning) TakeSkin(kv.Key, kv.Value);
@@ -2376,7 +2374,7 @@ namespace GK2DonkeyAPI
                             if (tuningLogged.Add(id + "/" + t.Key)) Plugin.Log.LogWarning($"Looks: '{id}' wants to set {t.Key}, a look key (the skin, the effect, a colour): a creature can't choose those; not applied.");
                             continue;
                         }
-                        if (fromKind.Contains(kv.Key) && !MountMayPin(t.Key))
+                        if (fromMount.Contains(kv.Key) && !MountMayPin(t.Key))
                         {
                             if (tuningLogged.Add(k.Id + "/" + t.Key)) Plugin.Log.LogWarning($"Looks: mount '{k.Id}' wants to set {t.Key}: a mount may set its speed, seat, pose, sounds, cart geometry and shuffle, never the player's behaviour switches, the lantern or a look key; not applied."); // once per mount and key (keyed on the skin it said it twice: before and after a skin was worn, 2026-10-21)
                             continue;
@@ -2405,7 +2403,7 @@ namespace GK2DonkeyAPI
                 if (any) tuning.ChangedByLooks();
             }
 
-            // The keys a mount's [Mount.Tuning] (or a code kind's Tuning) may set on its instances: a ride or cart key that is
+            // The keys a mount's [Mount.Tuning] (or a code mount's Tuning) may set on its instances: a ride or cart key that is
             // not the lantern's, or a shuffle key. Not a behaviour key (Mounts.Behaviour: the player's switches), not a
             // colour, not a look key (filtered before this), not the lantern's (the cart's own).
             internal static bool MountMayPin(string key)
@@ -2415,23 +2413,23 @@ namespace GK2DonkeyAPI
                 return Mounts.Tuning(MountStyle.Ride).TryFind(key, out _) || Mounts.Tuning(MountStyle.Cart).TryFind(key, out _) || Mounts.Shuffle.TryFind(key, out _);
             }
 
-            // The kind's abilities: Attached/Detached when the kind changes, Mounted/Dismounted on the ridden edge (and a
+            // The mount's abilities: Attached/Detached when the mount changes, Mounted/Dismounted on the ridden edge (and a
             // style switch), Tick while ridden (or standing, when the ability asks). Only for instances with a handle.
             // An ability that throws is off on this instance for the session, said once.
             private void TickAbilities()
             {
                 MountHandle h = owner?.Handle;
                 if (h == null) return;
-                Kinds.KindDef k = KindNow;
-                if (k != abilityKind)
+                Catalog.Entry k = MountNow;
+                if (k != abilityMount)
                 {
-                    if (abilityKind != null)
+                    if (abilityMount != null)
                     {
                         if (wasRidden) CallAll(a => a.Dismounted(h), "Dismounted");
                         CallAll(a => a.Detached(h), "Detached");
-                        ForgetAbilityValues(abilityKind);
+                        ForgetAbilityValues(abilityMount);
                     }
-                    abilityKind = k;
+                    abilityMount = k;
                     abilityOff = k.Abilities.Length > 0 ? new bool[k.Abilities.Length] : null;
                     wasRidden = false;
                     ForgetAbilityValues(k); // nothing of an earlier life under this owner (an older side file) before Attached
@@ -2460,14 +2458,14 @@ namespace GK2DonkeyAPI
                     catch (Exception e)
                     {
                         abilityOff[i] = true;
-                        Plugin.Log.LogWarning($"Kinds: ability '{a.Id}' of '{k.Id}' threw on {owner.Describe()}; off for this one: {e.Message}");
+                        Plugin.Log.LogWarning($"Catalog: ability '{a.Id}' of '{k.Id}' threw on {owner.Describe()}; off for this one: {e.Message}");
                     }
                 }
             }
 
             private void CallAll(Action<MountAbility> call, string what)
             {
-                Kinds.KindDef k = abilityKind;
+                Catalog.Entry k = abilityMount;
                 if (k == null || abilityOff == null) return;
                 for (int i = 0; i < k.Abilities.Length; i++)
                 {
@@ -2479,30 +2477,30 @@ namespace GK2DonkeyAPI
                     catch (Exception e)
                     {
                         abilityOff[i] = true;
-                        Plugin.Log.LogWarning($"Kinds: ability '{k.Abilities[i].Id}' of '{k.Id}' threw in {what} on {owner.Describe()}; off for this one: {e.Message}");
+                        Plugin.Log.LogWarning($"Catalog: ability '{k.Abilities[i].Id}' of '{k.Id}' threw in {what} on {owner.Describe()}; off for this one: {e.Message}");
                     }
                 }
             }
 
-            // The instance goes, or its kind is about to be dropped with the skin: the abilities told.
+            // The instance goes, or its mount is about to be dropped with the skin: the abilities told.
             private void ReleaseAbilities()
             {
-                if (abilityKind == null) return;
+                if (abilityMount == null) return;
                 MountHandle h = owner?.Handle;
                 if (h != null)
                 {
                     if (wasRidden) CallAll(a => a.Dismounted(h), "Dismounted");
                     CallAll(a => a.Detached(h), "Detached");
                 }
-                ForgetAbilityValues(abilityKind);
-                abilityKind = null;
+                ForgetAbilityValues(abilityMount);
+                abilityMount = null;
                 abilityOff = null;
                 wasRidden = false;
             }
 
-            // Nothing of a kind's abilities outlives the kind on an instance: every value set under the abilities' owner
+            // Nothing of a mount's abilities outlives the mount on an instance: every value set under the abilities' owner
             // goes with it (an ability that forgot its Detached, or never got one: a save taken mid-ride).
-            private void ForgetAbilityValues(Kinds.KindDef k)
+            private void ForgetAbilityValues(Catalog.Entry k)
             {
                 if (k == null || owner == null || string.IsNullOrEmpty(k.AbilityOwner) || k.Abilities.Length == 0) return;
                 new InstanceTuning(owner).ClearOwner(k.AbilityOwner);
@@ -2515,7 +2513,7 @@ namespace GK2DonkeyAPI
             private void ClearTuning(bool refresh = true)
             {
                 tunedFor = null;
-                tunedKind = null;
+                tunedMount = null;
                 tunedKeys.Clear();
                 tunedKeysWereCleared = false;
                 if (owner == null || owner.OverrideOwners.Count == 0) return;
@@ -2536,14 +2534,14 @@ namespace GK2DonkeyAPI
             private static readonly HashSet<string> tuningLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             internal void MarkDirty() => dirty = true;
-            internal void RetuneNow() => tunedKind = null; // the kind's or skin's values changed in place: ApplyTuning re-merges on the next tick
+            internal void RetuneNow() => tunedMount = null; // the mount's or skin's values changed in place: ApplyTuning re-merges on the next tick
 
             // The cart rule while hitched (docs/mounts-design.md §3, the user's decision of 2026-10-20): a mount with a
-            // view whose (wanted) kind can't pull the cart leaves it standing where it is. Done once per kind; a refused
+            // view whose (wanted) mount can't pull the cart leaves it standing where it is. Done once per mount; a refused
             // unhitch (ridden over water, say) is tried again once a second and said once, not every tick.
-            private Kinds.KindDef cartCheckedFor, cartRefusalSaid;
+            private Catalog.Entry cartCheckedFor, cartRefusalSaid;
             private float cartRetryAt;
-            private bool DropCartIfRefused(Kinds.KindDef k)
+            private bool DropCartIfRefused(Catalog.Entry k)
             {
                 if (owner == null || !owner.HasCart || owner.Handle == null) return false;
                 if (k.Cart || k == cartCheckedFor) return false;
@@ -2774,7 +2772,7 @@ namespace GK2DonkeyAPI
             // The instance goes to sleep (its view released far from the keeper): its hold on the skin's pictures goes
             // with the view, so a sheet nobody awake wears is freed and a sheet still building is not held by a
             // sleeper (docs/mounts-foundation-2.md 2.5); the wanted skin is re-acquired by the first tick with a view
-            // again. The kind, the tuning and the abilities' state stay: an instance asleep is still its mount.
+            // again. The mount, the tuning and the abilities' state stay: an instance asleep is still its mount.
             internal void Sleep()
             {
                 Detach();

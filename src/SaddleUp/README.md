@@ -44,7 +44,7 @@ All of these apply at once:
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Mounts | | A button: closes the menu and opens the **Mounts panel** over the game: every mount you can ride on the left, the chosen one drawn on the right with what it is and does, and its skin, effect and colour rows under it. Done keeps your choices, Cancel puts them back. The Mount, Skin, effect and colour rows below are chosen there, not in this menu (0.12). |
 | | Mount | Donkey | (in the Mounts panel) What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row in the section says so. Its picture is at the top of the section. |
-| | Skin | Default | (in the Mounts panel) How that mount is drawn. In this version: the donkey as the game draws it; the skins (Hellfire with its ring of fire, Royal Parade, skin packs from anyone) come in the next update. |
+| | Skin | Default | (in the Mounts panel) How that mount is drawn. In this version: the donkey as the game draws it; the skins (Saddle Up's own Hellfire with its ring of fire and Royal Parade, skin packs from anyone) come in the next update. |
 | | Babies | none | Up to 5 little ones of your mount that stay with it and follow it around. |
 | | Babies come indoors | on | They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
 | | Babies are the same mount and skin | on | Off: they stay plain baby donkeys whatever yours is. |

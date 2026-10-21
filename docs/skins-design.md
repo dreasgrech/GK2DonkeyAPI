@@ -25,7 +25,7 @@ to be:
 - **scalable:** dozens of skins, many skinned donkeys and foals on screen, no per-frame cost to speak of, memory in
   proportion to the skins in use, not the skins installed;
 - **customisable:** players pick per donkey; skins carry their own options where that makes sense;
-- **extensible:** new skins without touching the API (folders), new kinds of skin (recipes, code), other mods
+- **extensible:** new skins without touching the API (folders), new mounts of skin (recipes, code), other mods
   registering skins, future layers (saddles, barding), future bases (another mount), and the same lifecycle for
   attachments like Hellfire.
 
@@ -50,7 +50,7 @@ files, Persistence.cs, the Api folder, the tests and the framework DLL. These fa
 | `Colors.Rig` is the model of a per-view feature: `Attach`/`AttachRoot`/`Tick`/`Detach`/`Release`/`MarkDirty`/`CheckNow`, a refcounted `SharedTextures` cache, per-instance choices as `Tuned<T>` overrides resolved while the instance is bound, `OwnLook` + `IsLook` | Colors.cs | The skin rig copies that shape exactly, so every place that already handles Colors handles skins the same way |
 | Per-instance overrides are saved in the side file as `set <key> <setBy> <value>` and restored through `InstanceTuning.Find` (Persistence.cs:273-287, 714-727); `Tuned<string>` exists | | The skin choice is a `Tuned<string>`: saved, restored, read by the settings picture's paper donkey, with no new persistence code |
 | `PreviewStage` renders a stripped prefab copy; rigs attach with `AttachRoot` and tick in `Pose`; the donkey-alone photo hides renderers not in `donkeyRenderers`; the copy's `hed` is disabled | PreviewStage.cs:112-260 | The skin rig needs `AttachRoot`, a tick in `Pose`, and its overlays counted as donkey renderers |
-| `MountSettingsPage.Choice<T>` is enum-only; the framework has `AddDropdown(section, key, value, string[] choices, name, description, order)` returning `ConfigEntry<string>`; the Settings window and the look bar already take any `Fields`/`Values` arrays | MountSettingsPage.cs:98, GK2.Framework.dll, SettingsRows.cs:479-486 | A new string-list row kind is possible everywhere; its list is fixed when the row is materialised |
+| `MountSettingsPage.Choice<T>` is enum-only; the framework has `AddDropdown(section, key, value, string[] choices, name, description, order)` returning `ConfigEntry<string>`; the Settings window and the look bar already take any `Fields`/`Values` arrays | MountSettingsPage.cs:98, GK2.Framework.dll, SettingsRows.cs:479-486 | A new string-list row mount is possible everywhere; its list is fixed when the row is materialised |
 | CecilScan: a class that uses game members must be sorted in game-code.txt; a listed class that uses none fails as stale; frozen needs a `Freezers` entry | GameCode.cs, tests/CecilScan | The skin rig uses Unity types and prefab names, probably no game member: its freeze is tied to `Colors.Frozen` (same borrowed parts) rather than a table line |
 | `DefaultsScan` refuses `Colors*` keys in defaults.cfg; `IsLook` keys stay out of "Make these the mod defaults" | tests/DefaultsScan, Tuned.cs:29 | The skin keys are `IsLook`, so players always start with the game's art |
 | `Live.TextureMade/Gone` feed the Leaks self-test (80 donkeys spawned and removed twice) | Perf.cs:342-357, SelfTest.cs:1240 | Every skin texture is counted, so leaks show in the existing test |
@@ -65,7 +65,7 @@ art and recoloured by Colors when it uses the donkey's palette colours; 44 donke
 ```
 Look (per instance)                 what a donkey wears: a list of layers (v1 UI: one)
  └─ Layer = a Skin + a role          replace (the animal) | over (saddle, barding, hat)
-      └─ Skin                        id, name, author, format, base, canvas, kind, flags, source
+      └─ Skin                        id, name, author, format, base, canvas, mount, flags, source
            └─ Source                 where the pictures come from: folder | embedded | code | recipe
                 └─ frames by key     "bdy_walk_left_03" -> Sprite
 ```
@@ -78,7 +78,7 @@ Look (per instance)                 what a donkey wears: a list of layers (v1 UI
 - **Resolution order** for a frame: exact key → clip (`bdy_walk_left`) → part (`bdy`) → none. "None" means the
   donkey's own picture shows for that frame, and it is logged once per skin and key, so a half-finished skin works and
   tells its author what is missing.
-- **Kind:** `palette` (drawn in the donkey's exact palette colours, so the Colors feature recolours it) or `own`
+- **Mount:** `palette` (drawn in the donkey's exact palette colours, so the Colors feature recolours it) or `own`
   (its own colours; Colors has nothing to match and leaves it).
 - **Flags:** `foals` (may be worn by foals), `layer` (replace | over).
 
@@ -107,7 +107,7 @@ name = Giant Rat        # shown in the settings
 author = dreas
 version = 1.0
 base = donkey           # the frame-key namespace (default donkey)
-kind = own              # palette | own (default own)
+colours = own              # palette | own (default own)
 layer = replace         # replace | over (default replace)
 canvas = 96 96          # picture size; every picture must be this size (default 96 96)
 pivot = 48 48           # the donkey's ground anchor in the picture, from the bottom left (default: the centre)
@@ -316,8 +316,8 @@ public sealed class MountLooks
     public event Action SkinsChanged;
 }
 
-public sealed class SkinDef { Id, Name, Author, Version, Base, Kind, Layer, Foals, Canvas, Pivot, ISkinSource Source }
-public sealed class SkinInfo { Id, Name, Author, Version, Kind, Layer, Foals, Canvas, Owner, IsBuiltIn }
+public sealed class SkinDef { Id, Name, Author, Version, Base, Mount, Layer, Foals, Canvas, Pivot, ISkinSource Source }
+public sealed class SkinInfo { Id, Name, Author, Version, Mount, Layer, Foals, Canvas, Owner, IsBuiltIn }
 public interface ISkinSource { IEnumerable<string> Keys { get; } bool TryGetFrame(string key, out Texture2D tex); }
 public sealed class SkinFrame { string Key; int Width, Height; Color32[] Pixels; int BackRow; ... }   // for recipes
 // Per instance: handle.Tuning.Set(owner, "Skin", id) and "FoalsWearSkin" (existing InstanceTuning)
@@ -332,7 +332,7 @@ withdraw; `Mounts.ClearTuning(owner)` clears skins that owner set on instances, 
 
 ## 9. The settings row
 
-A new row kind, **List**, binding a `ConfigEntry<string>`: **the id is the stored value from every UI**, the label is
+A new row mount, **List**, binding a `ConfigEntry<string>`: **the id is the stored value from every UI**, the label is
 only shown. The framework binds the same section and key (FrameworkLink.cs:137-138), so the Mods menu and the Settings
 window must write the same representation, or one key ends up holding labels from one menu and ids from the other.
 - **Mods menu:** `Gk2Settings.AddDropdown(section, key, value, string[] choices, name, description, order)` with the
@@ -386,7 +386,7 @@ skin code runs on any path that touches items, the cart, cargo or the save: a sk
 | A new recipe | `RegisterRecipe` with a pixel function; the helpers in `SkinFrame` |
 | Several layers (a saddle on a rat) | `Layer.Over` skins; the rig keeps a list; the UI gains rows later. **Built 2026-10-17 evening: the front layer** (`front/` pictures, `sheet_front`, `FrontSource`): a third overlay per part sorted on the keeper's layer two above his body while he rides (the leg overlay is +1), else one above the part; the dragon's near wing lives there, so the rider sits between the wings |
 | Another mount | `Looks.SkinBase` (built 2026-10-17 evening): the frame keys, the view's part names, canvas, pivot, pixels per unit, the game's sprite prefix and atlas, the back line; the donkey is the one record, `skin.cfg` `base = donkey`, and a skin whose base isn't the view's isn't worn. A second creature is a second record and nothing else changes (validation, the sheet, the recipes' read-back and the rig all read the base) |
-| Attachments (Hellfire, glowing eyes, a hat as an object) | built as the **effects system** (Effects.cs, `Mounts.Effects`, api.md "Effects"): an effect is parts of particle sources with emitters (ring, body, trail), its own `Show` rule, spawned on a holder that follows the body point, on the rig lifecycle (tick / detach / release); Hellfire is the first and is defined through the public API itself. Objects that aren't particles (a hat) would be a second source kind on the same def |
+| Attachments (Hellfire, glowing eyes, a hat as an object) | built as the **effects system** (Effects.cs, `Mounts.Effects`, api.md "Effects"): an effect is parts of particle sources with emitters (ring, body, trail), its own `Show` rule, spawned on a holder that follows the body point, on the rig lifecycle (tick / detach / release); Hellfire is the first and is defined through the public API itself. Objects that aren't particles (a hat) would be a second source mount on the same def |
 | Per-skin rider and cart offsets (built 2026-10-17 evening) | `skin.cfg` `[Tuning]` / `MountSkinDef.Tuning`: existing `MountTuning` keys applied as instance overrides owned by `Looks.TuningOwner` while worn (a key another mod set on that donkey is left to it), cleared on removal, skipped by the side file; `offset` / `offset_cart` move the overlay in art px (the rat closer to the shafts is `offset_cart`). No new seat code |
 | Skin sounds (phase 2) | `sounds/` in the folder, played through the game's mixer (`sfx_inworld`), mapped onto the donkey's sound events |
 | A skin picker with pictures | `PreviewStage` already renders the paper donkey; a per-skin thumbnail is the same render with the skin set |

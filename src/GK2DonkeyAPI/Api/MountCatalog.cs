@@ -4,48 +4,48 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Mount kinds (docs/mounts-design.md): what the player rides as a creature type (the donkey, the giant rat, the
+    // Mounts (docs/mounts-design.md): what the player rides as a creature type (the donkey, the giant rat, the
     // dragon, ...), against a skin, which is how it is drawn (the red and the blue dragon are two skins of the dragon
-    // kind). A kind owns the rider's seat for it (values for existing tuning keys, per style), whether it pulls the
+    // mount). A mount owns the rider's seat for it (values for existing tuning keys, per style), whether it pulls the
     // cart and has foals, a default effect, and its abilities (MountAbility: code the API calls at the instance's
-    // lifecycle points). A skin names its kind (MountSkinDef.Mount, a pack's `mount =`; the default is the donkey);
-    // an instance's kind is its skin's (MountHandle.Kind), so a player picks a skin and the kind follows.
+    // lifecycle points). A skin names its mount (MountSkinDef.Mount, a pack's `mount =`; the default is the donkey);
+    // an instance's mount is its skin's (MountHandle.Mount), so a player picks a skin and the mount follows.
     //
-    // Three ways to make a kind: here (Register, with abilities), a pack's [Mount] section in skin.cfg (no code; the
+    // Three ways to make a mount: here (Register, with abilities), a pack's [Mount] section in skin.cfg (no code; the
     // mount's own skin owns the declaration, a joiner's holds until the Default is registered), or none: a skin of
-    // the donkey kind.
-    public sealed class MountKinds
+    // the donkey mount.
+    public sealed class MountCatalog
     {
         public const string DonkeyId = MountLooks.DonkeyId;
 
-        internal MountKinds()
+        internal MountCatalog()
         {
         }
 
-        // Every kind: the donkey first, then the rest by name.
-        public IReadOnlyList<MountKindInfo> Kinds
+        // Every mount: the donkey first, then the rest by name.
+        public IReadOnlyList<MountInfo> All
         {
             get
             {
-                var list = new List<MountKindInfo>();
-                foreach (GK2DonkeyAPI.Kinds.KindDef d in GK2DonkeyAPI.Kinds.All) list.Add(new MountKindInfo(d));
+                var list = new List<MountInfo>();
+                foreach (GK2DonkeyAPI.Catalog.Entry d in GK2DonkeyAPI.Catalog.All) list.Add(new MountInfo(d));
                 list.Sort((a, b) => a.Id == DonkeyId ? -1 : b.Id == DonkeyId ? 1 : string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase));
                 return list;
             }
         }
 
-        public MountKindInfo Find(string id)
+        public MountInfo Find(string id)
         {
-            GK2DonkeyAPI.Kinds.KindDef d = GK2DonkeyAPI.Kinds.Find(id);
-            return d == null ? null : new MountKindInfo(d);
+            GK2DonkeyAPI.Catalog.Entry d = GK2DonkeyAPI.Catalog.Find(id);
+            return d == null ? null : new MountInfo(d);
         }
 
-        // Raised after a kind is registered, declared by a pack or withdrawn.
-        public event Action KindsChanged;
+        // Raised after a mount is registered, declared by a pack or withdrawn.
+        public event Action MountsChanged;
 
         internal void RaiseChanged()
         {
-            Action h = KindsChanged;
+            Action h = MountsChanged;
             if (h == null) return;
             foreach (Delegate d in h.GetInvocationList())
             {
@@ -55,18 +55,18 @@ namespace GK2DonkeyAPI.Api
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Kinds: a KindsChanged handler threw: " + e.Message);
+                    Plugin.Log.LogWarning("Catalog: a MountsChanged handler threw: " + e.Message);
                 }
             }
         }
 
-        // A kind of your own. The id must be new (or yours already: then it replaces, and every instance of it
-        // re-applies). Dispose to withdraw: its skins fall back to the donkey kind.
-        public IDisposable Register(string ownerId, MountKindDef def)
+        // A mount of your own. The id must be new (or yours already: then it replaces, and every instance of it
+        // re-applies). Dispose to withdraw: its skins fall back to the donkey mount.
+        public IDisposable Register(string ownerId, MountDef def)
         {
             if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("An owner id (your plugin GUID) is required.");
             if (def == null) throw new ArgumentNullException(nameof(def));
-            var d = new GK2DonkeyAPI.Kinds.KindDef
+            var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
                 Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
@@ -78,19 +78,19 @@ namespace GK2DonkeyAPI.Api
             d.AbilityOwner = ownerId + ".ability." + d.Id;
             foreach (MountAbility a in d.Abilities)
             {
-                if (a == null || string.IsNullOrEmpty(a.Id)) throw new ArgumentException($"Mount kind '{def.Id}': every ability needs an Id.", nameof(def));
-                if (a.Owner != null && a.Owner != d.AbilityOwner) throw new ArgumentException($"Mount kind '{def.Id}': the ability '{a.Id}' already belongs to another kind ({a.Owner}); one ability object per kind.", nameof(def));
+                if (a == null || string.IsNullOrEmpty(a.Id)) throw new ArgumentException($"Mount '{def.Id}': every ability needs an Id.", nameof(def));
+                if (a.Owner != null && a.Owner != d.AbilityOwner) throw new ArgumentException($"Mount '{def.Id}': the ability '{a.Id}' already belongs to another mount ({a.Owner}); one ability object per mount.", nameof(def));
                 a.Owner = d.AbilityOwner;
             }
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
-            GK2DonkeyAPI.Kinds.Register(d);
+            GK2DonkeyAPI.Catalog.Register(d);
             return new Handle(d.Id, ownerId);
         }
 
         public bool Unregister(string ownerId, string id)
         {
             if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("An owner id (your plugin GUID) is required.");
-            return GK2DonkeyAPI.Kinds.Unregister(id, ownerId);
+            return GK2DonkeyAPI.Catalog.Unregister(id, ownerId);
         }
 
         private static Dictionary<string, object> Copy(Dictionary<string, object> d)
@@ -113,7 +113,7 @@ namespace GK2DonkeyAPI.Api
             {
                 if (done) return;
                 done = true;
-                GK2DonkeyAPI.Kinds.Unregister(id, owner);
+                GK2DonkeyAPI.Catalog.Unregister(id, owner);
             }
         }
     }
@@ -139,7 +139,7 @@ namespace GK2DonkeyAPI.Api
         public string Description { get; }
     }
 
-    public sealed class MountKindDef
+    public sealed class MountDef
     {
         public string Id;
         public string Name;
@@ -147,19 +147,19 @@ namespace GK2DonkeyAPI.Api
         public string Noun;
         public string Author;
         public string Version;
-        // May pull the cart (false: the cart style, Hitch and MountCompanion.Use(Cart) are refused for this kind).
+        // May pull the cart (false: the cart style, Hitch and MountCompanion.Use(Cart) are refused for this mount).
         public bool Cart = true;
         // Foals (babies) may be drawn as it.
         public bool Foals = true;
         // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
         // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
         public float FoalScale = 0.6f;
-        // The effect an instance of this kind shows when its own Effect key is MountEffects.KindId ("mount"): an effect
+        // The effect an instance of this mount shows when its own Effect key is MountEffects.FromMount ("mount"): an effect
         // id, or null for none; and when.
         public string Effect;
         public MountEffectWhen EffectWhen = MountEffectWhen.Always;
         // Values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, SpeedMultiplier, ...), typed as the
-        // key is: set on every instance of this kind as overrides owned by the skin system while it is of this kind.
+        // key is: set on every instance of this mount as overrides owned by the skin system while it is of this mount.
         // Tuning: both styles; TuningRide / TuningCart: one style, over Tuning. A skin's own Tuning refines them.
         public Dictionary<string, object> Tuning;
         public Dictionary<string, object> TuningRide;
@@ -169,11 +169,11 @@ namespace GK2DonkeyAPI.Api
         public string Description;
         public Texture2D Portrait;
         public List<MountStat> Stats = new List<MountStat>();
-        // Code the API calls for every instance of this kind: see MountAbility.
+        // Code the API calls for every instance of this mount: see MountAbility.
         public List<MountAbility> Abilities = new List<MountAbility>();
     }
 
-    // Behaviour a mod attaches to a kind. One object per kind, shared by every instance of it: keep per-instance state
+    // Behaviour a mod attaches to a mount. One object per mount, shared by every instance of it: keep per-instance state
     // in a dictionary keyed by the handle, or in handle.SetData. The API calls the hooks for instances that have a
     // handle (not the settings picture's paper donkey, not a plain summon without one). An ability that throws is
     // switched off for the session on that instance, with one warning. Keys, settings rows, sounds and effects are the
@@ -182,8 +182,8 @@ namespace GK2DonkeyAPI.Api
     {
         public abstract string Id { get; }
 
-        // The owner id an ability's Tuning.Set and Clear use ("<the kind's owner>.ability.<kind id>"), given by the API
-        // when the kind is registered: the API clears every value under it when the instance stops being this kind
+        // The owner id an ability's Tuning.Set and Clear use ("<the mount's owner>.ability.<mount id>"), given by the API
+        // when the mount is registered: the API clears every value under it when the instance stops being this mount
         // (Detached) or goes, so nothing of an ability outlives its mount. An ability may set the mount's keys (speed,
         // sounds, the rider's motion, the pose, the cart's geometry), never the player's look (the skin, the effect, the
         // colours) or behaviour switches: those belong to the player's mod (docs/mounts-foundation-2.md 2.1).
@@ -197,12 +197,12 @@ namespace GK2DonkeyAPI.Api
         // false unless the ability needs to act on a standing creature.
         public virtual bool TicksWhileStanding => false;
 
-        // The instance became this kind (spawned, loaded, or its skin changed to one of this kind).
+        // The instance became this mount (spawned, loaded, or its skin changed to one of this mount).
         public virtual void Attached(MountHandle mount)
         {
         }
 
-        // It stopped being this kind (its skin changed), or it is removed.
+        // It stopped being this mount (its skin changed), or it is removed.
         public virtual void Detached(MountHandle mount)
         {
         }
@@ -222,9 +222,9 @@ namespace GK2DonkeyAPI.Api
         }
     }
 
-    public sealed class MountKindInfo
+    public sealed class MountInfo
     {
-        internal MountKindInfo(GK2DonkeyAPI.Kinds.KindDef d)
+        internal MountInfo(GK2DonkeyAPI.Catalog.Entry d)
         {
             Id = d.Id;
             Name = d.Label;
@@ -254,10 +254,10 @@ namespace GK2DonkeyAPI.Api
             // the Default skin first (the skin whose id is the mount's; the donkey's own art for the donkey), then the rest
             var skins = new List<string>();
             string first = GK2DonkeyAPI.Looks.DefaultSkinOf(d);
-            bool hasDefault = d == GK2DonkeyAPI.Kinds.Donkey;
-            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Kinds.SkinsOf(d)) if (s.Id == first) hasDefault = true;
+            bool hasDefault = d == GK2DonkeyAPI.Catalog.Donkey;
+            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Catalog.SkinsOf(d)) if (s.Id == first) hasDefault = true;
             if (hasDefault) skins.Add(first);
-            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Kinds.SkinsOf(d)) if (s.Id != first) skins.Add(s.Id);
+            foreach (GK2DonkeyAPI.Looks.SkinDef s in GK2DonkeyAPI.Catalog.SkinsOf(d)) if (s.Id != first) skins.Add(s.Id);
             Skins = skins;
         }
 
@@ -291,7 +291,7 @@ namespace GK2DonkeyAPI.Api
         public IReadOnlyDictionary<string, object> Tuning { get; }
         public IReadOnlyDictionary<string, object> TuningRide { get; }
         public IReadOnlyDictionary<string, object> TuningCart { get; }
-        // The ids of its skins, its Default first ("donkey", the game's own art, for the donkey kind).
+        // The ids of its skins, its Default first ("donkey", the game's own art, for the donkey mount).
         public IReadOnlyList<string> Skins { get; }
 
         public override string ToString() => Name + " (" + Id + ")";

@@ -15,7 +15,7 @@ import io, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import skinroots
 REPO = skinroots.REPO
-SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "kind", "layer", "erase", "canvas", "pivot", "source", "seat",
+SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
 MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}

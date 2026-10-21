@@ -137,39 +137,39 @@ namespace GK2DonkeyAPI
                     if (!page.InMenu(r)) continue; // the look rows (the mount, its skins, colours, effect) live in the Mounts panel, not the menu (docs/mounts-foundation-2.md 3)
                     // The same Section/Key/type as the page's binds, so BepInEx hands back those entries: the menu
                     // edits the values the mod reads, and their SettingChanged handlers apply them.
-                    switch (r.Kind)
+                    switch (r.RowKind)
                     {
-                        case MountSettingsPage.Kind.Toggle:
+                        case MountSettingsPage.RowKind.Toggle:
                             s.AddToggle(r.Section, r.Entry.Definition.Key, (bool)r.Entry.DefaultValue, r.Label, r.Description, order);
                             break;
-                        case MountSettingsPage.Kind.Choice:
+                        case MountSettingsPage.RowKind.Choice:
                             AddChoice(s, r, order);
                             break;
-                        case MountSettingsPage.Kind.List:
+                        case MountSettingsPage.RowKind.List:
                             // The ids as the choices (what the cfg holds); MenuLabels writes the labels over them.
                             MountSettingsPage.FillList(r);
                             s.AddDropdown(r.Section, r.Entry.Definition.Key, (string)r.Entry.DefaultValue, (string[])r.ChoiceValues, r.Label, r.Description, order);
                             break;
-                        case MountSettingsPage.Kind.Steps:
+                        case MountSettingsPage.RowKind.Steps:
                             s.AddIntSlider(r.Section, r.Entry.Definition.Key, (int)r.Entry.DefaultValue, r.Min, r.Max, r.Label, r.Description, r.Step, order);
                             break;
-                        case MountSettingsPage.Kind.Key:
+                        case MountSettingsPage.RowKind.Key:
                             s.AddKeybind(r.Section, r.Entry.Definition.Key, (KeyboardShortcut)r.Entry.DefaultValue, r.Label, r.Description, order);
                             break;
-                        case MountSettingsPage.Kind.Text:
+                        case MountSettingsPage.RowKind.Text:
                             s.AddText(r.Section, r.Entry.Definition.Key, (string)r.Entry.DefaultValue, r.Label, r.Description, order);
                             break;
-                        case MountSettingsPage.Kind.Info:
+                        case MountSettingsPage.RowKind.Info:
                             s.AddReadOnly(r.Section, "Info" + order, r.Label, r.Description, r.InfoValue, order);
                             break;
-                        case MountSettingsPage.Kind.Note:
+                        case MountSettingsPage.RowKind.Note:
                             s.AddReadOnly(r.Section, "Note" + order, r.Label, r.Description, () => "", order);
                             break;
-                        case MountSettingsPage.Kind.Preview:
+                        case MountSettingsPage.RowKind.Preview:
                             // Shown only when the picture has no room outside the list (LookPreview lays it over this row).
                             s.AddReadOnly(r.Section, "Preview" + order, r.Label, r.Description, () => "", order);
                             break;
-                        case MountSettingsPage.Kind.Button:
+                        case MountSettingsPage.RowKind.Button:
                             MountSettingsPage.Row button = r;
                             s.AddButton(r.Section, "Button" + order, r.Label, r.Description, () => Mounts.IsGameReady ? "Open" : "In a game", () =>
                             {
@@ -190,7 +190,7 @@ namespace GK2DonkeyAPI
                     if (inMenu != null)
                     {
                         string key = r.Entry != null ? r.Entry.Definition.Key
-                            : (r.Kind == MountSettingsPage.Kind.Info ? "Info" : r.Kind == MountSettingsPage.Kind.Preview ? "Preview" : r.Kind == MountSettingsPage.Kind.Note ? "Note" : "Button") + order;
+                            : (r.RowKind == MountSettingsPage.RowKind.Info ? "Info" : r.RowKind == MountSettingsPage.RowKind.Preview ? "Preview" : r.RowKind == MountSettingsPage.RowKind.Note ? "Note" : "Button") + order;
                         s.SetVisibilityCondition(r.Section, key, inMenu);
                     }
                 }

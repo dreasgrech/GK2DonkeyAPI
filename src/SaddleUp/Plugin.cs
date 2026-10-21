@@ -33,6 +33,22 @@ namespace SaddleUp
 
         private const string SkinsPrefix = "GK2SaddleUp.skins."; // the embedded packs' resource names (the csproj)
 
+        // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind. The
+        // API keeps it out with the mounts off (this version), as every registration.
+        private void RegisterHellfire()
+        {
+            MountEffects api = Mounts.Effects;
+            var d = new MountEffectDef { Id = "hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" };
+            var flame = new MountEffectPart { Source = api.GameParticles("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat") };
+            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 6, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
+            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Trail, Size = 1.2f, Height = 0.05f, Every = 0.5f, Burst = 0.4f });
+            var sparks = new MountEffectPart { Source = api.GameParticles("sparks_fx", "Assets/AddressableAssets/Materials/sparks_fx.mat") };
+            sparks.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 3, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
+            d.Parts.Add(flame);
+            d.Parts.Add(sparks);
+            api.Register(Guid, d);
+        }
+
         private void Awake()
         {
             if (Mounts.ApiVersion < NeedsApi)
@@ -43,8 +59,9 @@ namespace SaddleUp
             // The five mounts: registered before the page is built, so their rows are made with it (any other mod's
             // mounts are caught up the frame after Publish). With the mounts off for players (Mounts.MountsEnabled,
             // this version) the API keeps them out and says so, and the donkey stays the only mount.
-            int mounts = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
-            if (mounts > 0) Logger.LogInfo($"GK2 Saddle Up: {mounts} mount skin(s) registered (the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry).");
+            int skins = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
+            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} skin pack(s) registered (the five mounts: the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry; the donkey's Hellfire and Royal Parade).");
+            RegisterHellfire(); // the effect Hellfire comes with: Saddle Up's too, defined through the API as any mod's
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach

@@ -734,7 +734,7 @@ namespace GK2DonkeyAPI
             private string TryMount(PlayerController pc, GameScene scene, MountStyle style, bool showMessage)
             {
                 // The core's own checks first (safety); other mods' rules can only add refusals on top.
-                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) ?? Looks.WhyNotCartByKind(this) : null) ?? MountRules.WhyCannotMount(style);
+                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) ?? Looks.WhyNotCartByMount(this) : null) ?? MountRules.WhyCannotMount(style);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo("Mount refused: " + reason);
@@ -1152,7 +1152,7 @@ namespace GK2DonkeyAPI
                 try
                 {
                     string id = WgoId;
-                    if (TakeParkedView(scene, id)) // a released view of the same kind (Tiers.cs, ViewPool): no Wgo.Spawn
+                    if (TakeParkedView(scene, id)) // a released view of the same mount (Tiers.cs, ViewPool): no Wgo.Spawn
                     {
                         viewOrigin = "taken from the mod's view pool";
                         switchedOff = false;
@@ -1257,7 +1257,7 @@ namespace GK2DonkeyAPI
                             collider.enabled = false;
                         }
                     }
-                    // No navmesh cut of any kind (the prefab's two NavMeshCutSphereCustom are off already; measured 2026-10-03:
+                    // No navmesh cut of any mount (the prefab's two NavMeshCutSphereCustom are off already; measured 2026-10-03:
                     // "0 on"): a mod donkey never cuts the ground the keeper walks on. Put back by RestoreColliders.
                     foreach (CustomNavMeshCutBakeSourceBase cut in donkey.GetComponentsInChildren<CustomNavMeshCutBakeSourceBase>(includeInactive: true))
                     {

@@ -7,7 +7,7 @@ using BepInEx.Configuration;
 namespace GK2DonkeyAPI.Api
 {
     // A player mod's settings, defined once and shown where the player looks (Mounts.SettingsPage):
-    // - with GK2 Mod Framework installed: in its Mods menu (the mod's own entry, its sections, every kind of row);
+    // - with GK2 Mod Framework installed: in its Mods menu (the mod's own entry, its sections, every mount of row);
     // - without it: in the game's own Settings window, on pages of the mod's own after the game's settings, made of
     //   copies of the game's own rows (SettingsRows.cs). Keys and text there show read-only; they're set in the cfg.
     // Each row binds a BepInEx entry in the mod's own cfg, runs its apply action now and on every change (from the menu,
@@ -25,17 +25,17 @@ namespace GK2DonkeyAPI.Api
     // fails, they don't show, and the settings work through the cfg as before.
     public sealed class MountSettingsPage
     {
-        internal enum Kind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note, List }
+        internal enum RowKind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note, List }
 
         internal sealed class Row
         {
-            internal Kind Kind;
+            internal RowKind RowKind;
             internal ConfigEntryBase Entry;
             internal string Section, Label, Description;
             internal string ShownSection; // the plain name, without the number
             internal string[] ChoiceLabels;
             internal Array ChoiceValues;
-            internal Func<IReadOnlyList<(string Id, string Label)>> Choices; // Kind.List: read when the row is first shown
+            internal Func<IReadOnlyList<(string Id, string Label)>> Choices; // RowKind.List: read when the row is first shown
             internal int Min, Max, Step;
             internal Func<int, string> Format;
             internal Func<string> InfoValue;
@@ -43,8 +43,8 @@ namespace GK2DonkeyAPI.Api
             internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
             internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel greys the row when false
             internal bool IsLook;           // the Mounts panel's, not the menus' (InMenu); a Note with it is a heading there (Heading)
-            internal Action OnClick;         // Kind.Button
-            internal bool WithCart;          // Kind.Preview: the donkey with its cart, or alone
+            internal Action OnClick;         // RowKind.Button
+            internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
         }
 
         internal readonly List<Row> Rows = new List<Row>();
@@ -361,12 +361,12 @@ namespace GK2DonkeyAPI.Api
             // dropdown, then a Skin dropdown with that mount's skins. A dropdown's choices are fixed once built, so there
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
-            mountRow = List(section, "Mount", MountKinds.DonkeyId, Looks.KindChoices, "Mount",
+            mountRow = List(section, "Mount", MountCatalog.DonkeyId, Looks.MountChoices, "Mount",
                 Mounts.MountsEnabled
                     ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: its Skin row in the Mounts panel."
                     : "What you ride. The donkey, in this version; other mounts (the dragon, the giant rat, ...) come in the next update.",
                 v => ApplyMountRows(), look: true);
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds) AddSkinRow(k);
+            foreach (MountInfo k in Mounts.Catalog.All) AddSkinRow(k);
             ApplyMountRows();
         }
 
@@ -375,7 +375,7 @@ namespace GK2DonkeyAPI.Api
         private readonly Dictionary<string, ConfigEntry<string>> skinRows = new Dictionary<string, ConfigEntry<string>>(StringComparer.OrdinalIgnoreCase); // the Skin row per mount id
         private readonly List<Action<string, string, Func<bool>>> perMountBuilders = new List<Action<string, string, Func<bool>>>(); // PerMount's callers, for the mounts that come later
 
-        private void AddSkinRow(MountKindInfo k)
+        private void AddSkinRow(MountInfo k)
         {
             string id = k.Id;
             if (skinRows.ContainsKey(id)) return;
@@ -398,13 +398,13 @@ namespace GK2DonkeyAPI.Api
         private void ApplyMountRows()
         {
             if (mountRow == null) return;
-            string kind = mountRow.Value ?? MountKinds.DonkeyId;
-            skinRows.TryGetValue(kind, out ConfigEntry<string> row);
+            string mount = mountRow.Value ?? MountCatalog.DonkeyId;
+            skinRows.TryGetValue(mount, out ConfigEntry<string> row);
             string value = row?.Value;
             // The donkey's own art is no skin of another mount: a cfg holding it for one (written while that
             // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
-            bool donkeyKind = kind.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrEmpty(value) || (!donkeyKind && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(kind);
+            bool donkeyMount = mount.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(value) || (!donkeyMount && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(mount);
             if (row != null && row.Value != value)
             {
                 row.Value = value; // SettingChanged runs Apply again with the healed value
@@ -424,7 +424,7 @@ namespace GK2DonkeyAPI.Api
             catchingUp = true;
             try
             {
-                foreach (MountKindInfo k in Mounts.Kinds.Kinds)
+                foreach (MountInfo k in Mounts.Catalog.All)
                 {
                     if (skinRows.ContainsKey(k.Id) || k.Skins.Count == 0) continue;
                     AddSkinRow(k);
@@ -450,13 +450,13 @@ namespace GK2DonkeyAPI.Api
         internal bool InMenu(Row r)
         {
             if (!r.IsLook) return true;
-            if (r.Kind != Kind.Note) return false;
+            if (r.RowKind != RowKind.Note) return false;
             int at = Rows.IndexOf(r);
             for (int i = at + 1; i < Rows.Count; i++)
             {
                 Row n = Rows[i];
                 if (n.Section != r.Section) continue;
-                if (n.Kind == Kind.Note) break; // the next heading: nothing of this one's
+                if (n.RowKind == RowKind.Note) break; // the next heading: nothing of this one's
                 return !n.IsLook;
             }
             return false; // a heading with nothing after it: not worth a menu line
@@ -483,7 +483,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
-            ConfigEntry<string> effect = List(section, "Effect", MountEffects.KindId, GK2DonkeyAPI.Effects.EffectChoices, "Effect",
+            ConfigEntry<string> effect = List(section, "Effect", MountEffects.FromMount, GK2DonkeyAPI.Effects.EffectChoices, "Effect",
                 Mounts.MountsEnabled
                     ? "A particle effect on your mount: As the mount or skin (what the skin comes with, else what the creature comes with, if anything: Hellfire burns by itself), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors."
                     : "A particle effect on your mount. None in this version (the donkey comes with none); Hellfire and effects from mods come in the next update.",
@@ -523,7 +523,7 @@ namespace GK2DonkeyAPI.Api
         {
             string cfgSection = Sec(section);
             ConfigEntry<bool> e = Bind(cfgSection, key, value, description);
-            Add(new Row { Kind = Kind.Toggle, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
+            Add(new Row { RowKind = RowKind.Toggle, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
             Wire(e, apply);
             return e;
         }
@@ -540,7 +540,7 @@ namespace GK2DonkeyAPI.Api
             {
                 shown[i] = labels != null && i < labels.Length ? labels[i] : values.GetValue(i).ToString();
             }
-            Add(new Row { Kind = Kind.Choice, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, ChoiceLabels = shown, ChoiceValues = values, IsLook = look, Visible = visible });
+            Add(new Row { RowKind = RowKind.Choice, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, ChoiceLabels = shown, ChoiceValues = values, IsLook = look, Visible = visible });
             Wire(e, apply);
             return e;
         }
@@ -557,7 +557,7 @@ namespace GK2DonkeyAPI.Api
             ConfigEntry<string> e = Bind(cfgSection, key, value, description);
             // an empty id can't be a dropdown choice (FillList drops it): a cfg holding "" takes the row's default
             if (string.IsNullOrEmpty(e.Value) && !string.IsNullOrEmpty(value)) e.Value = value;
-            Add(new Row { Kind = Kind.List, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Choices = choices, IsLook = look, Visible = visible });
+            Add(new Row { RowKind = RowKind.List, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Choices = choices, IsLook = look, Visible = visible });
             Wire(e, apply);
             return e;
         }
@@ -566,7 +566,7 @@ namespace GK2DonkeyAPI.Api
         // Mods menu's dropdown, its labels and the Settings window agree for the session.
         internal static void FillList(Row r)
         {
-            if (r.Kind != Kind.List || r.ChoiceLabels != null) return;
+            if (r.RowKind != RowKind.List || r.ChoiceLabels != null) return;
             var ids = new List<string>();
             var labels = new List<string>();
             try
@@ -602,7 +602,7 @@ namespace GK2DonkeyAPI.Api
         {
             string cfgSection = Sec(section);
             ConfigEntry<int> e = Bind(cfgSection, key, value, new ConfigDescription(description, new AcceptableValueRange<int>(min, max)));
-            Add(new Row { Kind = Kind.Steps, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Min = min, Max = max, Step = Math.Max(1, step), Format = format, IsLook = look, Visible = visible });
+            Add(new Row { RowKind = RowKind.Steps, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Min = min, Max = max, Step = Math.Max(1, step), Format = format, IsLook = look, Visible = visible });
             Wire(e, apply);
             return e;
         }
@@ -617,7 +617,7 @@ namespace GK2DonkeyAPI.Api
         {
             string cfgSection = Sec(section);
             ConfigEntry<KeyboardShortcut> e = Bind(cfgSection, key, value, description);
-            Add(new Row { Kind = Kind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description });
+            Add(new Row { RowKind = RowKind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description });
             ClearIfBackspace(e);
             e.SettingChanged += (_, __) => ClearIfBackspace(e); // before apply: apply sees the cleared key
             Wire(e, apply);
@@ -633,7 +633,7 @@ namespace GK2DonkeyAPI.Api
         {
             string cfgSection = Sec(section);
             ConfigEntry<string> e = Bind(cfgSection, key, value, description);
-            Add(new Row { Kind = Kind.Text, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
+            Add(new Row { RowKind = RowKind.Text, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
             Wire(e, apply);
             return e;
         }
@@ -682,7 +682,7 @@ namespace GK2DonkeyAPI.Api
         // A read-only line, e.g. what the mod is doing.
         public void Info(string section, string label, Func<string> value, string description = "")
         {
-            Add(new Row { Kind = Kind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
+            Add(new Row { RowKind = RowKind.Info, Section = Sec(section), ShownSection = section, Label = label, Description = description, InfoValue = value });
         }
 
         // A heading inside a section: a line with the label and no value, before the rows it names ("Mount colours",
@@ -692,7 +692,7 @@ namespace GK2DonkeyAPI.Api
         public void Heading(string section, string label, string description = "")
         {
             if (string.IsNullOrEmpty(label)) throw new ArgumentException("label is needed.");
-            Add(new Row { Kind = Kind.Note, Section = Sec(section), ShownSection = section, Label = label, Description = description, IsLook = true });
+            Add(new Row { RowKind = RowKind.Note, Section = Sec(section), ShownSection = section, Label = label, Description = description, IsLook = true });
         }
 
         // A picture of the companion's donkey and cart in their current colours, walking on the spot: a row of the page,
@@ -708,7 +708,7 @@ namespace GK2DonkeyAPI.Api
             PreviewOf = companion;
             Add(new Row
             {
-                Kind = Kind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
+                RowKind = RowKind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
                 Visible = () => LookPreview.RowsShown, WithCart = cart,
             });
         }
@@ -716,9 +716,9 @@ namespace GK2DonkeyAPI.Api
         // The rows are found on screen by their labels (LookPreview), and the Mods menu sizes a row by its description
         // (only line breaks count as empty: the minimum height), so the picture's room is eight lines of one fully
         // transparent dot each (a zero-width space didn't count).
-        internal bool HasPreviewRows => Rows.Exists(r => r.Kind == Kind.Preview);
+        internal bool HasPreviewRows => Rows.Exists(r => r.RowKind == RowKind.Preview);
 
-        internal Row PreviewRowLabelled(string text) => Rows.Find(r => r.Kind == Kind.Preview && r.Label == text);
+        internal Row PreviewRowLabelled(string text) => Rows.Find(r => r.RowKind == RowKind.Preview && r.Label == text);
         internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
 
         // A button that closes the menu and opens the Mounts panel over the game: every mount listed, the chosen one
@@ -726,7 +726,7 @@ namespace GK2DonkeyAPI.Api
         // effect, the colours), with Done (keep) and Cancel (put back). Only in a game; in the main menu it says so.
         public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { Kind = Kind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => MountsPanel.Open(this, toggle: false) });
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => MountsPanel.Open(this, toggle: false) });
         }
 
         // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.
@@ -789,7 +789,7 @@ namespace GK2DonkeyAPI.Api
             }
             // A picture row is found on screen by its label (LookPreview.FindRows), so no other row may share it: a
             // heading "Your mount" next to a picture "Your mount" got a picture of its own (seen 2026-10-19).
-            if (!string.IsNullOrEmpty(r.Label) && Rows.Exists(o => (o.Kind == Kind.Preview || r.Kind == Kind.Preview) && o.Label == r.Label))
+            if (!string.IsNullOrEmpty(r.Label) && Rows.Exists(o => (o.RowKind == RowKind.Preview || r.RowKind == RowKind.Preview) && o.Label == r.Label))
             {
                 throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
             }
@@ -815,15 +815,15 @@ namespace GK2DonkeyAPI.Api
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
         // (a Harness row on the worm). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu
         // (which knows only visibility) leaves it out for that mount.
-        // The mount a companion's chosen skin is a look of pins this tuning key (its [Mount.Tuning] or a code kind's
+        // The mount a companion's chosen skin is a look of pins this tuning key (its [Mount.Tuning] or a code mount's
         // Tuning, either style): its label, else null. A player's row for such a key does nothing on that mount.
         public static string PinnedBy(MountCompanion companion, string tuningKey)
         {
             if (companion == null || string.IsNullOrEmpty(tuningKey)) return null;
             Looks.SkinDef d = Looks.Find(companion.Skin);
             if (d == null || d.Unavailable != null) return null; // not installed, or set aside: the donkey comes instead, which pins nothing
-            Kinds.KindDef k = d.Kind;
-            if (k == null || k == Kinds.Donkey) return null;
+            Catalog.Entry k = d.Mount;
+            if (k == null || k == Catalog.Donkey) return null;
             if (!Looks.Rig.MountMayPin(tuningKey)) return null; // a key a mount may not pin is refused at the merge: the row stays live
             bool Has(Dictionary<string, object> t) => t != null && t.ContainsKey(tuningKey);
             return Has(k.Tuning) || Has(k.TuningRide) || Has(k.TuningCart) ? k.Label : null;
@@ -858,7 +858,7 @@ namespace GK2DonkeyAPI.Api
         // the rows of a region the player's colour would never reach.
         public static bool MountHasRegion(string mountId, string region)
         {
-            if (string.IsNullOrEmpty(mountId) || mountId.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase)) return true;
+            if (string.IsNullOrEmpty(mountId) || mountId.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase)) return true;
             foreach (MountSkinInfo s in Mounts.Looks.Skins)
             {
                 if (!string.Equals(s.Mount, mountId, StringComparison.OrdinalIgnoreCase)) continue;
@@ -872,17 +872,17 @@ namespace GK2DonkeyAPI.Api
             if (rows == null) throw new ArgumentNullException(nameof(rows));
             if (mountRow == null)
             {
-                rows(MountKinds.DonkeyId, "", null);
+                rows(MountCatalog.DonkeyId, "", null);
                 return;
             }
             perMountBuilders.Add(rows); // a mount registered after this call gets its rows at CatchUp
-            foreach (MountKindInfo k in Mounts.Kinds.Kinds) RunPerMount(rows, k.Id);
+            foreach (MountInfo k in Mounts.Catalog.All) RunPerMount(rows, k.Id);
         }
 
         private void RunPerMount(Action<string, string, Func<bool>> rows, string id)
         {
-            bool donkey = id.Equals(MountKinds.DonkeyId, StringComparison.OrdinalIgnoreCase);
-            Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountKinds.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
+            bool donkey = id.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
+            Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
             pendingShown = isShown;
             try
             {
@@ -914,7 +914,7 @@ namespace GK2DonkeyAPI.Api
         // menu a row whose description is the sentence, in the game's Settings window the sentence across the row.
         private void AddKeyHelp()
         {
-            int first = Rows.FindIndex(r => r.Kind == Kind.Key);
+            int first = Rows.FindIndex(r => r.RowKind == RowKind.Key);
             if (first < 0)
             {
                 return;
@@ -922,7 +922,7 @@ namespace GK2DonkeyAPI.Api
             Row k = Rows[first];
             Rows.Insert(first, new Row
             {
-                Kind = Kind.Note, Section = k.Section, ShownSection = k.ShownSection, Label = "Setting a key",
+                RowKind = RowKind.Note, Section = k.Section, ShownSection = k.ShownSection, Label = "Setting a key",
                 Description = KeyHelp,
             });
         }

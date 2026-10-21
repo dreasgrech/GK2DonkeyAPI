@@ -22,9 +22,10 @@ namespace GK2DonkeyAPI
     // tabs' content. If a part can't be found, the panel doesn't open and the log says so.
     internal static class MountsPanel
     {
-        private const float W = 1000f, H = 600f, Pad = 20f, Gap = 8f;
-        private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, StatsH = 32f, TabsH = 30f, ButtonsH = 40f, TabW = 110f, CardH = 46f;
-        private const float StageMin = 170f, StageMax = 270f, PictureScale = 3f;
+        private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
+        private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, StatsH = 32f, TabsH = 30f, ButtonsH = 40f, TabW = 110f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
+        private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
+        private const float StageH = 226f, PictureScale = 3f; // the stage is one size on every tab and mount (the user, 2026-10-21: nothing moves on a tab switch)
         private const float IconPx = 36f, HeaderIconPx = 64f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before the window is scaled down
 
@@ -49,7 +50,7 @@ namespace GK2DonkeyAPI
         private static float nextPicture;
         private static bool pictureOff;
 
-        private static readonly List<(string Id, CanvasGroup Group)> cards = new List<(string, CanvasGroup)>();
+        private static readonly List<(string Id, Image Face, TextMeshProUGUI Label)> cards = new List<(string, Image, TextMeshProUGUI)>();
         private static readonly List<(string Name, GameObject Go, CanvasGroup Group)> tabButtons = new List<(string, GameObject, CanvasGroup)>();
         private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> rows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
         private static readonly List<(string Name, List<(string Group, List<MountSettingsPage.Row> Rows)> Groups)> tabs = new List<(string, List<(string, List<MountSettingsPage.Row>)>)>();
@@ -77,21 +78,22 @@ namespace GK2DonkeyAPI
             internal readonly List<string> Lines = new List<string>();  // what it does: the cart, babies, speed, what it comes with, its skins
             internal readonly List<string> Extra = new List<string>();  // its own stats and abilities
             internal bool HasPortrait;
+            internal bool Fake; // a made-up entry (Debug.MountsPanelFakeEntries): listed, not pickable
         }
 
         internal static bool IsOpen => panel != null && panel.activeSelf;
 
-        // Every mount a player can pick (Looks.KindChoices: the kinds with a skin, the donkey first), with its words.
+        // Every mount a player can pick (Looks.MountChoices: the mounts with a skin, the donkey first), with its words.
         internal static List<Entry> Entries()
         {
             var list = new List<Entry>();
-            foreach ((string id, string label) in Looks.KindChoices())
+            foreach ((string id, string label) in Looks.MountChoices())
             {
-                Kinds.KindDef k = Kinds.Find(id);
+                Catalog.Entry k = Catalog.Find(id);
                 if (k == null) continue;
                 var e = new Entry { Id = id, Label = label };
                 Looks.SkinDef def = Looks.Find(Looks.DefaultSkinOf(k));
-                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Kinds.Donkey ? "The game's own donkey, as it draws it." : "");
+                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The game's own donkey, as it draws it." : "");
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
@@ -99,8 +101,8 @@ namespace GK2DonkeyAPI
                 if (speed != null) e.Lines.Add("Speed: " + SpeedText(speed));
                 if (!string.IsNullOrEmpty(k.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(k.Effect)?.Name ?? k.Effect) + (k.EffectWhen == MountEffectWhen.Night ? " (at night)" : ""));
                 else if (def != null && !string.IsNullOrEmpty(def.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(def.Effect)?.Name ?? def.Effect));
-                int skins = (k == Kinds.Donkey ? 1 : 0);
-                foreach (Looks.SkinDef sd in Kinds.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
+                int skins = (k == Catalog.Donkey ? 1 : 0);
+                foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
                 if (skins > 1) e.Lines.Add(skins + " skins");
                 if (k.Stats != null) foreach (var st in k.Stats) e.Extra.Add(string.IsNullOrEmpty(st.Value) ? st.Key : st.Key + ": " + st.Value);
                 foreach (MountAbility a in k.Abilities)
@@ -110,10 +112,15 @@ namespace GK2DonkeyAPI
                 }
                 list.Add(e);
             }
+            int fakes = Plugin.PanelFakeEntries != null ? Mathf.Clamp(Plugin.PanelFakeEntries.Value, 0, 200) : 0;
+            for (int i = 1; i <= fakes; i++)
+            {
+                list.Add(new Entry { Id = "fake-" + i, Label = "Test mount " + i, Description = "A made-up entry (Debug.MountsPanelFakeEntries), to see the list scroll.", Fake = true });
+            }
             return list;
         }
 
-        private static object ValueOf(Kinds.KindDef k, string key)
+        private static object ValueOf(Catalog.Entry k, string key)
         {
             object v = null;
             if (k.Tuning != null && k.Tuning.TryGetValue(key, out object t)) v = t;
@@ -126,7 +133,7 @@ namespace GK2DonkeyAPI
             if (v is string s && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f)) v = f;
             try
             {
-                if (v is IConvertible && !(v is string)) v = Convert.ToSingle(v, System.Globalization.CultureInfo.InvariantCulture); // a code kind's int or double
+                if (v is IConvertible && !(v is string)) v = Convert.ToSingle(v, System.Globalization.CultureInfo.InvariantCulture); // a code mount's int or double
             }
             catch
             {
@@ -249,7 +256,8 @@ namespace GK2DonkeyAPI
             // the list, scrolling
             float listTop = Pad + TitleH + Gap;
             float listH = H - listTop - Gap - ButtonsH - Pad;
-            listScroll = ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 6f);
+            listScroll = ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 4f);
+            AddScrollbar(listScroll);
 
             // the right side
             float x0 = Pad + ListW + 2f * Gap, rw = W - Pad - x0;
@@ -262,7 +270,7 @@ namespace GK2DonkeyAPI
             headerDesc = Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
             headerDesc.overflowMode = TextOverflowModes.Ellipsis;
 
-            stage = Rect(Node("stage", rightArea, typeof(Image), typeof(Outline)), 0f, HeaderH + Gap, rw, StageMax);
+            stage = Rect(Node("stage", rightArea, typeof(Image), typeof(Outline)), 0f, HeaderH + Gap, rw, StageH);
             var stageImage = stage.GetComponent<Image>();
             stageImage.color = new Color(0f, 0f, 0f, 0.35f);
             stageImage.raycastTarget = false;
@@ -281,19 +289,21 @@ namespace GK2DonkeyAPI
             statsText2.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.8f);
             tabsBar = Rect(Node("tabs", rightArea), 0f, 0f, rw, TabsH);
             contentScroll = ScrollView(rightArea, "content", 0f, 0f, rw, 100f, out contentRoot, 2f, manual: true);
+            AddScrollbar(contentScroll);
+            Layout();
 
             // Done and Cancel, bottom right
-            GameObject cancel = Button(dialogTemplate, panel.transform, "Cancel", () => Close(keep: false));
-            BottomRight((RectTransform)cancel.transform, Pad);
-            GameObject done = Button(dialogTemplate, panel.transform, "Done", () => Close(keep: true));
-            BottomRight((RectTransform)done.transform, Pad + Mathf.Max(140f, ((RectTransform)cancel.transform).rect.width + 16f));
+            GameObject cancel = OwnButton(panel.transform, "cancel", "Cancel", ButtonW, ButtonH, () => Close(keep: false));
+            Rect(cancel, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
+            GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
+            Rect(done, W - Pad - 2f * ButtonW - 16f, H - Pad - ButtonH, ButtonW, ButtonH);
 
             entries = Entries();
             pictureOff = false;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
-            Mounts.Kinds.KindsChanged -= OnRegistryChanged;
+            Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             Mounts.Looks.SkinsChanged += OnRegistryChanged;
-            Mounts.Kinds.KindsChanged += OnRegistryChanged;
+            Mounts.Catalog.MountsChanged += OnRegistryChanged;
             BuildList();
             BuildRight();
             panel.SetActive(true);
@@ -306,18 +316,24 @@ namespace GK2DonkeyAPI
         {
             foreach (Transform c in listContent) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
             cards.Clear();
-            string chosen = page?.MountChosen ?? MountKinds.DonkeyId;
+            string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
             int at = -1;
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
                 string id = e.Id;
-                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 16f, CardH, () => Select(id), textLeft: IconPx + 14f);
+                bool fake = e.Fake;
+                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 16f - ScrollbarW, CardH, () => { if (!fake) Select(id); }, textLeft: IconPx + 14f, flat: true);
                 var le = go.AddComponent<LayoutElement>();
-                le.preferredWidth = ListW - 16f;
+                le.preferredWidth = ListW - 16f - ScrollbarW;
                 le.preferredHeight = CardH;
                 le.minHeight = CardH;
-                MountIcons.Icon icon = MountIcons.Of(Kinds.Find(id));
+                if (fake)
+                {
+                    go.GetComponent<UnityEngine.UI.Button>().interactable = false;
+                    go.GetComponent<CanvasGroup>().alpha = 0.5f;
+                }
+                MountIcons.Icon icon = MountIcons.Of(Catalog.Find(id));
                 if (icon.Any)
                 {
                     RawImage img = Node("icon", go.transform, typeof(RawImage)).GetComponent<RawImage>();
@@ -328,7 +344,7 @@ namespace GK2DonkeyAPI
                     irt.pivot = new Vector2(0f, 0.5f);
                     irt.anchoredPosition = new Vector2(8f + (IconPx - irt.sizeDelta.x) / 2f, 0f);
                 }
-                cards.Add((id, go.GetComponent<CanvasGroup>()));
+                cards.Add((id, go.GetComponent<Image>(), go.GetComponentInChildren<TextMeshProUGUI>(true)));
                 if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = i;
             }
             titleCount.text = entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
@@ -339,10 +355,16 @@ namespace GK2DonkeyAPI
 
         private static void MarkList()
         {
-            string chosen = page?.MountChosen ?? MountKinds.DonkeyId;
-            foreach ((string id, CanvasGroup g) in cards)
+            string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
+            foreach ((string id, Image face, TextMeshProUGUI label) in cards)
             {
-                if (g != null) g.alpha = id.Equals(chosen, StringComparison.OrdinalIgnoreCase) ? 1f : 0.55f;
+                bool on = id.Equals(chosen, StringComparison.OrdinalIgnoreCase);
+                if (face != null) face.color = on ? CardChosen : CardBase;
+                if (label != null)
+                {
+                    label.color = on ? buttonTextColor : fontColor;
+                    label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
+                }
             }
         }
 
@@ -360,10 +382,10 @@ namespace GK2DonkeyAPI
         // rows for this mount), then the tab's content.
         private static void BuildRight()
         {
-            string chosen = page.MountChosen ?? MountKinds.DonkeyId;
+            string chosen = page.MountChosen ?? MountCatalog.DonkeyId;
             builtFor = chosen;
             Entry e = entries.Find(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
-            Kinds.KindDef k = Kinds.Find(chosen);
+            Catalog.Entry k = Catalog.Find(chosen);
             MountIcons.Icon icon = MountIcons.Of(k);
             headerIcon.gameObject.SetActive(icon.Any);
             if (icon.Any) Show(headerIcon, icon, HeaderIconPx);
@@ -382,7 +404,7 @@ namespace GK2DonkeyAPI
                 // the chosen mount is not in the list: its mod or pack is gone, or its every skin is set aside (a game-source
                 // skin whose frames the game lacks); the choice is kept, the donkey comes instead, and the panel says so
                 string why = null;
-                if (k != null) foreach (Looks.SkinDef sd in Kinds.SkinsOf(k)) if (sd.Unavailable != null) { why = sd.Unavailable; break; }
+                if (k != null) foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable != null) { why = sd.Unavailable; break; }
                 headerName.text = k?.Label ?? chosen;
                 headerDesc.text = k == null ? "Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
                     : why != null ? "Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead."
@@ -390,7 +412,6 @@ namespace GK2DonkeyAPI
                 statsText.text = "";
                 statsText2.text = "";
             }
-            statsText2.gameObject.SetActive(statsText2.text.Length > 0);
 
             // the tabs: a look section of the page with rows for this mount; inside a tab, the groups under its look headings
             tabs.Clear();
@@ -398,7 +419,7 @@ namespace GK2DonkeyAPI
             foreach (MountSettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook) continue;
-                if (r.Kind == MountSettingsPage.Kind.Note)
+                if (r.RowKind == MountSettingsPage.RowKind.Note)
                 {
                     heading = r.Label;
                     headingSection = r.ShownSection;
@@ -469,9 +490,10 @@ namespace GK2DonkeyAPI
                 // the groups as columns (two side by side, more in further rows), centred in the tab area; each row and
                 // heading placed where its drawing (not its rectangle) lands: rowVisual says where that is
                 var groups = tabs[ti].Groups;
-                int perRow = groups.Count > 1 ? 2 : 1;
                 float colW = rowVisual.width, colGap = 16f, step = rowVisual.height + 4f;
-                float areaW = rightArea.rect.width;
+                float areaW = rightArea.rect.width - ScrollbarW;
+                if (2f * colW + colGap > areaW) colGap = Math.Max(4f, areaW - 2f * colW); // the two columns as close as the area needs
+                int perRow = groups.Count > 1 && 2f * colW + colGap <= areaW ? 2 : 1; // side by side only when both fit whole; else stacked
                 float y = 4f;
                 for (int g0 = 0; g0 < groups.Count; g0 += perRow)
                 {
@@ -509,34 +531,28 @@ namespace GK2DonkeyAPI
             }
             contentSignature = sig.ToString();
             contentRoot.sizeDelta = new Vector2(0f, needed);
-            Layout(needed);
+            contentScroll.verticalNormalizedPosition = 1f;
             Refresh();
         }
 
         // The right side's vertical layout for a tab whose rows need `needed` units: the stage takes what is left between
         // its bounds, the content scrolls when that is not enough.
-        private static void Layout(float needed)
+        // The right side's vertical layout, once: the stage, the two stats lines (the second kept even when empty, so
+        // the tabs sit in one place for every mount), the tabs, and the tab content with what is left (it scrolls).
+        private static void Layout()
         {
             float rw = rightArea.rect.width;
-            float below = Gap + StatsH + (statsText2.gameObject.activeSelf ? StatsH * 0.7f : 0f) + 4f + TabsH + 6f;
-            float avail = rightArea.rect.height - (HeaderH + Gap) - below;
-            float stageH = Mathf.Clamp(avail - needed - 4f, StageMin, StageMax);
-            float contentH = Mathf.Max(60f, avail - stageH);
             float y = HeaderH + Gap;
-            Rect(stage.gameObject, 0f, y, rw, stageH);
-            y += stageH + Gap;
+            Rect(stage.gameObject, 0f, y, rw, StageH);
+            y += StageH + Gap;
             Rect(statsText.gameObject, 0f, y, rw, StatsH);
             y += StatsH;
-            if (statsText2.gameObject.activeSelf)
-            {
-                Rect(statsText2.gameObject, 0f, y, rw, StatsH * 0.7f);
-                y += StatsH * 0.7f;
-            }
-            y += 4f;
+            Rect(statsText2.gameObject, 0f, y, rw, StatsH * 0.7f);
+            y += StatsH * 0.7f + 4f;
             Rect(tabsBar.gameObject, 0f, y, rw, TabsH);
             y += TabsH + 6f;
+            float contentH = Mathf.Max(60f, rightArea.rect.height - y);
             Rect(contentScroll.gameObject, 0f, y, rw, contentH);
-            contentScroll.verticalNormalizedPosition = 1f;
         }
 
         // ---- the pieces ----
@@ -736,32 +752,76 @@ namespace GK2DonkeyAPI
 
         // A button of the panel's own, drawn with the game's dialog button face (sliced to any size) and its font: the
         // cards and the tabs. A CanvasGroup on it dims it (the chosen card, the shown tab stay bright).
-        private static GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f)
+        private static GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f, bool flat = false)
         {
             GameObject go = Node(name, parent, typeof(Image), typeof(UnityEngine.UI.Button), typeof(CanvasGroup));
             Rect(go, 0f, 0f, w, h);
             var img = go.GetComponent<Image>();
-            if (buttonSprite != null)
-            {
-                img.sprite = buttonSprite;
-                img.type = buttonSprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
-            }
-            else
-            {
-                img.color = new Color(0.45f, 0.12f, 0.12f, 1f);
-            }
             var b = go.GetComponent<UnityEngine.UI.Button>();
             b.targetGraphic = img;
             ColorBlock cb = b.colors;
-            cb.highlightedColor = new Color(1.15f, 1.15f, 1.15f, 1f);
-            cb.pressedColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+            if (flat)
+            {
+                // a journal's row: a dark face with a faint edge; hover brightens it, the chosen one is coloured by MarkList
+                img.color = CardBase;
+                var edge = go.AddComponent<Outline>();
+                edge.effectColor = new Color(1f, 1f, 1f, 0.10f);
+                edge.effectDistance = new Vector2(1f, -1f);
+                cb.normalColor = Color.white;
+                cb.highlightedColor = new Color(1.5f, 1.5f, 1.5f, 1f);
+                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+                cb.selectedColor = Color.white;
+            }
+            else
+            {
+                // the game's dialog button face, sliced to the size; a touch dark at rest so the hover shows
+                if (buttonSprite != null)
+                {
+                    img.sprite = buttonSprite;
+                    img.type = buttonSprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
+                }
+                else
+                {
+                    img.color = new Color(0.45f, 0.12f, 0.12f, 1f);
+                }
+                cb.normalColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+                cb.highlightedColor = Color.white;
+                cb.pressedColor = new Color(0.65f, 0.65f, 0.65f, 1f);
+                cb.selectedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
+            }
+            cb.colorMultiplier = 1f;
+            cb.fadeDuration = 0.08f;
             b.colors = cb;
             b.onClick.AddListener(() => onClick());
             TextMeshProUGUI t = Text(go.transform, "label", text, 1f, textLeft > 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center, false, textLeft, 0f, w - textLeft - 6f, h);
-            t.color = buttonTextColor;
+            t.color = flat ? fontColor : buttonTextColor;
             t.overflowMode = TextOverflowModes.Ellipsis;
-            t.fontStyle = FontStyles.Bold;
+            t.fontStyle = flat ? FontStyles.Normal : FontStyles.Bold;
             return go;
+        }
+
+        // A thin scrollbar at the right edge of a scroll view, shown while there is more than fits.
+        private static void AddScrollbar(ScrollRect sr)
+        {
+            GameObject track = Node("scrollbar", sr.transform, typeof(Image), typeof(Scrollbar));
+            var trt = (RectTransform)track.transform;
+            trt.anchorMin = new Vector2(1f, 0f);
+            trt.anchorMax = new Vector2(1f, 1f);
+            trt.pivot = new Vector2(1f, 0.5f);
+            trt.anchoredPosition = new Vector2(0f, 0f);
+            trt.sizeDelta = new Vector2(ScrollbarW, -4f);
+            var ti = track.GetComponent<Image>();
+            ti.color = new Color(1f, 1f, 1f, 0.06f);
+            GameObject handle = Node("handle", track.transform, typeof(Image));
+            Stretch((RectTransform)handle.transform);
+            var hi = handle.GetComponent<Image>();
+            hi.color = new Color(1f, 1f, 1f, 0.28f);
+            var sb = track.GetComponent<Scrollbar>();
+            sb.handleRect = (RectTransform)handle.transform;
+            sb.targetGraphic = hi;
+            sb.direction = Scrollbar.Direction.BottomToTop;
+            sr.verticalScrollbar = sb;
+            sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
         }
 
         private static GameObject Button(UIDialogWindowButton template, Transform parent, string text, Action onClick)
@@ -820,7 +880,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            string chosen = page?.MountChosen ?? MountKinds.DonkeyId;
+            string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
             if (!chosen.Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase))
             {
                 BuildRight(); // the mount changed under the panel (the cfg, a key): the right side follows
@@ -865,7 +925,7 @@ namespace GK2DonkeyAPI
                 return;
             }
             nextPicture = Time.unscaledTime + 0.2f;
-            if (page != null && !(page.MountChosen ?? MountKinds.DonkeyId).Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase))
+            if (page != null && !(page.MountChosen ?? MountCatalog.DonkeyId).Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase))
             {
                 try
                 {
@@ -939,7 +999,7 @@ namespace GK2DonkeyAPI
         private static void Close(bool keep)
         {
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
-            Mounts.Kinds.KindsChanged -= OnRegistryChanged;
+            Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             try
             {
                 if (!keep)

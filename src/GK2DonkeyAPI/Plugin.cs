@@ -365,7 +365,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.35.0";
+        public const string Version = "0.36.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -451,6 +451,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> SkinPackAutoReload;
         internal static ConfigEntry<bool> MountsPreview;
+        internal static ConfigEntry<int> PanelFakeEntries; // dev: made-up entries padded onto the Mounts panel's list, to see it scroll
         // What Debug.MountsPreview said at start (the built-ins register once, so a change takes the next start): the
         // mounts other than the donkey, the skins and the effects are on. Off for players in this version
         // (Mounts.MountsEnabled; the next update switches them on).
@@ -596,7 +597,7 @@ namespace GK2DonkeyAPI
             Tuned.MarkLook(Cart.LanternLightColor);
             Tuned.MarkLook(Ride.LanternLightColor);
             // [Look]: the skin a donkey wears (Looks.cs); the built-in skins are registered here too.
-            Kinds.Bind(); // the donkey kind first: the skins name theirs
+            Catalog.Bind(); // the donkey mount first: the skins name theirs
             Looks.Bind(Config);
             // [Effects]: particle effects on donkeys (Effects.cs); Hellfire is registered here.
             Effects.Bind(Config);
@@ -648,11 +649,12 @@ namespace GK2DonkeyAPI
             // the key binds after them.
             MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
                 "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's five: the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull; and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
+            PanelFakeEntries = dbg.Bind("Debug", "MountsPanelFakeEntries", 0,
+                "Dev only: this many made-up entries padded onto the Mounts panel's list (\"Test mount 1\"...), to see it scroll with a long list; they can't be picked. 0 = none. The settings self-test counts them as a failure: 0 for a run.");
             MountsOn = MountsPreview.Value;
             if (MountsOn)
             {
-                Looks.RegisterBuiltIns();
-                Effects.RegisterBuiltIn();
+                Looks.RegisterBuiltIns(); // the loose packs; the Hellfire effect is Saddle Up's too (its Awake registers it through the API)
                 Log.LogInfo("Mounts, skins and effects: on (Debug.MountsPreview; players have them off in this version).");
             }
             else

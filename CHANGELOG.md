@@ -20,6 +20,23 @@ For players:
   set-aside-lines scenario passed. The second run, the full set: 697 passed, 0 failed, 0 warnings, 1 skipped;
   the panel's fit measured the same a frame later (the nested layout settles in one pass). The mount-pin
   refusal warning said itself twice (keyed on the skin, before and after one was worn): once per mount and key.
+- **The API ships no skin** (the user, 2026-10-21: the backend, not bloated with skins). Hellfire, Royal Parade and the
+  Hellfire effect moved from GK2 Donkey API to GK2 Saddle Up (`src/SaddleUp/assets/skins`, the effect registered in
+  Saddle Up's Awake through the public API, the same definition). Same ids, so a player's `Skin_donkey = hellfire`
+  still resolves; the owner is Saddle Up's GUID now. The self-tests borrow Royal Parade's pictures from Saddle Up's
+  DLL; the skins scan reads the shipped effect ids from Saddle Up; the generators write into Saddle Up's folder; a
+  new skin goes to Saddle Up by default (`new_skin.py`).
+- **docs/making-a-mount.md**: the one-page guide to a mod's own mount, both shapes (a pack embedded in a DLL with
+  one line in Awake; a mount in code with an ability), what the API does for it unasked, and the repo's own build
+  steps; linked from the READMEs, api.md, skins.md and mounts-as-mods.md.
+- **One word for one thing: a mount is a mount** (API 0.36.0; the user, 2026-10-21: the code said "kind"). Every
+  name that meant the mount says mount now: `MountDef`, `MountInfo`, `Mounts.Catalog` (`All`, `Find`, `Register`,
+  `MountsChanged`), `MountHandle.Mount`, `MountEffects.FromMount`; inside, the registry is `Catalog` with its
+  `Entry` per mount, and every `kind` in a name, a comment or a log line is `mount`. The settings rows' type
+  is `RowKind` (Toggle, Choice, Key...), so the word has one meaning left. In a skin.cfg the colour mode is
+  `colours = own|palette` (was `kind =`; not public yet, the seven cfgs and the tools follow). Cargo's item
+  kinds and the dependency manifest's member kinds are other things and keep their word. A pre-1.0 breaking
+  change for mods on the API (docs/api-design.md); Saddle Up and the example rebuilt on it.
 - **The Mounts panel, second design** (2026-10-21, docs/mounts-panel-design.md; the user: a game's mount journal,
   not a wall of rows): a window of a fixed size that fits 1080p without shrinking; a card list on the left that
   scrolls with the wheel, each card with the mount's icon (its portrait, else its standing picture, made for
@@ -59,7 +76,8 @@ For players:
   moved out of GK2 Donkey API into GK2 Saddle Up (five skin packs in its DLL, registered with the API at start,
   the same way anyone else's mod ships a mount; the user, 2026-10-20: the API is the backend, mounts and skins
   come from mods built on it). Nothing changes for you: the same download, the same Mount row, still switched
-  off until the next update. The API keeps the donkey's two skins, Hellfire and Royal Parade. A mount from any
+  off until the next update. Since the same night the donkey's two skins, Hellfire and Royal Parade, and the Hellfire
+  effect are Saddle Up's as well: the API ships the donkey alone, as the backend. A mount from any
   mod now shows in Saddle Up's settings whatever order the mods loaded in (below, for mod authors).
 - **The dragon's belly has its own colour**: the Second tone row (below). A green coat had left a gold belly that
   no row could reach (the user, 2026-10-20: it read as wood); for an afternoon the belly followed the Coat, now it
@@ -86,7 +104,7 @@ For players:
   two frames without the cart having swapped sides is a ledge, not a slope (walking moves the sample 0.12 a
   frame at most): it is held off and logged, and the cart keeps the mount's level until the sample agrees again,
   which it does once the mount has walked the step itself. Before, the jump was logged and applied.
-- **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one kind of thing.
+- **The settings page regrouped** (Saddle Up 0.11.0): seven sections in a new order, each holding one mount of thing.
   Keys. Mount: its picture (with the cart now), Name, Mount, Skin, the babies rows, and "Keep your mount with the
   save" (was in Behaviour). Colours: the picture, then every colour under two headings (since 0.12 in the Mounts panel), "Mount
   colours" (coat and harness, the old Donkey section) and "Cart colours" (paint, wheels, wheel hubs, lantern light,
@@ -120,13 +138,13 @@ For mod authors:
   so the donkey shows instead of an invisible mount).
 - **A value on an instance belongs to the owner that set it** (API 0.35.0, docs/mounts-foundation-2.md 2.1):
   `handle.Tuning.Set` by another owner is refused (the value in effect is returned, `TrySet` says so, one Info
-  line), `Clear` takes the owner (`Clear(ownerId, key)`) and clears only its own; the mount's own values (the kind's
+  line), `Clear` takes the owner (`Clear(ownerId, key)`) and clears only its own; the mount's own values (the mount's
   merge) stay anyone's to replace, and return when cleared. The session layer (`Mounts.Tuning(style).Set`,
-  `Behaviour.Set`...) follows the same rule. What a mount may pin through `[Mount.Tuning]` or a code kind's
+  `Behaviour.Set`...) follows the same rule. What a mount may pin through `[Mount.Tuning]` or a code mount's
   `Tuning` is now a rule: the ride and cart families (speed, seat, pose, rider motion, cart geometry, sounds) and
   the shuffle's values, never a behaviour switch, the lantern or a look key (refused, said once). An ability's
-  values are set under an owner the API gives it (`MountAbility.Owner`, "<the kind's owner>.ability.<kind id>")
-  and are cleared when the instance stops being that kind, whether the ability cleared them or not. A page row
+  values are set under an owner the API gives it (`MountAbility.Owner`, "<the mount's owner>.ability.<mount id>")
+  and are cleared when the instance stops being that mount, whether the ability cleared them or not. A page row
   can say which tuning key it sets (`MountSettingsPage.TuningKey`, `PinnedBy`): it is left out of the Mods menu
   and the game's Settings window while the companion's chosen mount pins that key. Overrides in the side file whose
   owner isn't loaded are set aside and written back, not applied. The example ability gallops instead of
@@ -136,14 +154,14 @@ For mod authors:
   joins); a later declaration that differs says its facts and tuning are not used; the same skin id from two
   places: the higher `version` wins, a tie goes to the DLL over a folder, the log names the loser; each
   `gk2skins` folder is an owner of its own, scanned in name order; an id from another mod without an author
-  prefix (`author.name`) is noted once; a reload whose `[Mount] id` changed withdraws the old kind; the Mounts
+  prefix (`author.name`) is noted once; a reload whose `[Mount] id` changed withdraws the old mount; the Mounts
   tab saves the mount's rows into the declaring skin's file only, and stamps the file so the auto-reload doesn't
   read it back.
 - **The pack format for the Mounts panel** (docs/mounts-foundation-2.md 3): `[Skin] description` and `portrait`
   (a PNG next to the frames), `[Mount] description` and `portrait`, a `[Mount.Stats]` section of lines shown as
   given, `MountAbility.Name` and `Description`; on the API `MountSkinDef.Description` / `Portrait`,
-  `MountKindDef.Description` / `Portrait` / `Stats` (`MountStat`), `MountSkinInfo.Description` / `HasPortrait`,
-  `MountKindInfo.Description` / `HasPortrait` / `Stats` / `AbilityInfos` (`MountAbilityInfo`). `[Skin] needs =
+  `MountDef.Description` / `Portrait` / `Stats` (`MountStat`), `MountSkinInfo.Description` / `HasPortrait`,
+  `MountInfo.Description` / `HasPortrait` / `Stats` / `AbilityInfos` (`MountAbilityInfo`). `[Skin] needs =
   <API version>`: an older API refuses the pack with the reason instead of drawing it with the keys it doesn't
   know left out; a `format` that is not a number is refused; a `[Game]` line that names no frame key is reported.
   The scan requires a description on every shipped skin and mount.
@@ -188,7 +206,7 @@ For mod authors:
 - **After the review of the parity work** (three independent reads of the diff, 2026-10-20): the side file's record
   label read the owner column instead of the key, so every kept mount was labelled "donkey" in the log (the data was
   right); the Gerry self-test still expected "gerry" as the noun; a refused unhitch of a mount that became a no-cart
-  kind was tried again every tick with two log lines each (now once a second, said once, and run after the rig's own
+  mount was tried again every tick with two log lines each (now once a second, said once, and run after the rig's own
   work); the layered value a hitch reads took the wanted skin's geometry while the drawing applied the worn one (both
   worn now); a mount without babies of its own gave its `foal_scale` to plain baby donkeys (0.6 now); spawning a
   mount by name that has no skin spawned a donkey (refused); the noun reaches every refusal and log sentence; a code
@@ -285,7 +303,7 @@ For mod authors:
   may say `noun = ` ("a skull can't pull the cart"; Gerry says skull) and the save file's and the dormant list's
   labels say the mount instead of "donkey"; a mount with no skin is not offered; `MountSpawn.Mount` spawns a mount
   by name in its Default skin. The API records say more: `MountSkinInfo.Regions` (the colour regions the player's
-  colours reach), `MountKindInfo.EffectWhen`, `Noun` and its tuning, `Skins` with the Default first; a code skin
+  colours reach), `MountInfo.EffectWhen`, `Noun` and its tuning, `Skins` with the Default first; a code skin
   can declare its colour regions, an erase colour, a base recolour and the picture seat (`MountSkinDef.Regions`,
   `Erase`, `BaseRegions`, `SeatFromPicture`), and a readable sprite's colours join the look (an unreadable one is
   said once). `MountSettingsPage.EnableWhen` and `MountHasRegion` grey a colour row for a region a mount never has.
@@ -339,7 +357,7 @@ For mod authors:
 - **A built-in's reload and undo on the Mounts tab never took** (the user, 2026-10-20: "I changed torso down to
   -4 and pressed undo and it stayed yellow"; the note said "Not reloaded: Value cannot be null. Parameter name:
   path1"): the reload stamps the pack's folder for the auto-reload watch, and an embedded built-in has no folder,
-  so it threw before the file was read and the kind kept the panel's value. The stamp is 0 for a built-in or a
+  so it threw before the file was read and the mount kept the panel's value. The stamp is 0 for a built-in or a
   code skin now; the Gerry self-test reloads a built-in from the repo's cfg; the Undo and Reload buttons log
   their outcome, so a failure is in the log and not only in a five-second note. Undo is one step per gesture now:
   saves within four seconds of each other on the same file share the earlier restore point (a slider dragged in
@@ -352,17 +370,17 @@ For mod authors:
   not the default), every tuning key in one section. Gerry's dead `SeatAdjustPx = 10` is gone (its one value, -16,
   in `[Mount.Tuning]`); the dragon and the worm say `cart` and `foals`; every mount has an author and a version.
   The loader: a `[Mount]` without a name takes its id (sentences and the dev spawn row use the mount's label, so a
-  nameless mount never says "donkey" or throws); a built-in skin's mount is built in (`MountKindInfo.IsBuiltIn`);
+  nameless mount never says "donkey" or throws); a built-in skin's mount is built in (`MountInfo.IsBuiltIn`);
   author and version survive a reload and count for "the same declaration"; unknown `[Mount]` keys, a bad
   `foal_scale` and a bad `effect_when` are named in the skin's report like every other section's. The Mounts tab's
   Save keeps the comments inside the mount sections (above a key, on its line, before and after the keys) and
-  writes the block in the file's order. SkinsScan checks every `[Skin]` value the loader reads by name (layer, kind,
+  writes the block in the file's order. SkinsScan checks every `[Skin]` value the loader reads by name (layer, mount,
   seat, source, erase, the canvas range), the section order, `[Base.*]` regions and knobs, the `[Mount]` key list and
   values (foal_scale 0.2-1 and not the default, effect a built-in id with its effect_when, `Off`/`Night`/`Always`),
   a key set in both `[Mount.Tuning]` and a style section, an empty tuning section, a `[Mount.Tuning]` without
   `[Mount]`; probed with a wrong cfg (11 findings). Self-tests: Gerry's one seat value and its built-in mount with
   author and version; the pack round trip keeps four comments in the mount sections and the author; an ability that
-  throws is off after its first tick while the kind's other goes on. Docs: `effect_when` takes `Off`, not "Never";
+  throws is off after its first tick while the mount's other goes on. Docs: `effect_when` takes `Off`, not "Never";
   `pivot` and the `[Mount]` author/version documented; the donkey's own block written out next to the five; the
   Mount list and "Default" rule; the stale "Saddle Up's Donkey rows", recipe and blue-dragon lines in api.md,
   reference.md, mount-colours.md, mounts-design.md and skins-design.md marked or fixed. The skin tooling is all
@@ -443,7 +461,7 @@ Development:
   offered again when the frames arrive; the ten-second recheck never ran on its own (the rig did not stay
   dirty); an ability could take a look key (skin, effect, colours) while it was free (refused now, held or
   free); a data-only unhitch of a sleeping carted mount used the cfg's hitch gap, not the skin's; a set-aside
-  skin still answered "can't pull the cart" and drew the paper without its cart; a colour or kind change while
+  skin still answered "can't pull the cart" and drew the paper without its cart; a colour or mount change while
   the same skin was building threw the half-built sheet away and started over; a skin registered late (or
   again) was never worn by an instance already wanting it; a free cart carried an ability's cart keys; the pack
   watch could reload a withdrawn or replaced skin held by a sleeper; set-aside skins sat in the dev lists and
@@ -470,18 +488,18 @@ Development:
   still-building shortcut compares the skin's definition, not its id, so a replaced or reloaded skin is switched
   to. Left for the release step: dist/README.md (rebuilt with the dist), the
   CHANGELOG's For players block still carries development asides to move under Development, `needs =` in the
-  shipped cfgs (none has it: decide), try/finally in the kind-pack, skin-pack and auto-reload scenarios.
+  shipped cfgs (none has it: decide), try/finally in the mount-pack, skin-pack and auto-reload scenarios.
 - **A second review pass** (four readers again, over the first pass's fixes, the end-to-end cycles, every other
   self-test scenario under the new rules, the docs and the panel against Unity). Fixed: the sheet was freed on
   every view rebuild, so an unhitch or a door rebuilt the skin over a dozen frames with the plain donkey showing
-  meanwhile (freed on the sleep tier only now); a set-aside skin still governed the instance's kind (its tuning,
-  babies' size, noun, abilities) while the donkey was drawn (the donkey comes instead, in kind too), and the
+  meanwhile (freed on the sleep tier only now); a set-aside skin still governed the instance's mount (its tuning,
+  babies' size, noun, abilities) while the donkey was drawn (the donkey comes instead, in mount too), and the
   "offered again" heal for it could never run (a set-aside skin someone has chosen is checked again every ten
-  seconds); a renamed mount's old kind was never withdrawn on reload (the new kind shadowed it in the loop); a
+  seconds); a renamed mount's old mount was never withdrawn on reload (the new mount shadowed it in the loop); a
   removed mod's set-aside value was dropped from the side file when the mount's merge or an ability held the key;
   a withdrawn skin left the mount it declared behind (withdrawn with it unless another skin declares it; the
-  kind-pack scenario says so now); a joiner's stand-in portrait was never forgotten; a winner without a `[Mount]`
-  block left the loser's kind pointing at it; the panel never drew a portrait (drawn under the mount's name now),
+  mount-pack scenario says so now); a joiner's stand-in portrait was never forgotten; a winner without a `[Mount]`
+  block left the loser's mount pointing at it; the panel never drew a portrait (drawn under the mount's name now),
   said "times the donkey's" for a speed that is times walking speed, left the right side empty for a set-aside
   mount (it says why now), rebuilt its list from inside the clicked paging button (a frame later now), measured
   its nested layout once (fitted again a frame later), could lose its dim marker to a CanvasGroup the copied
@@ -499,7 +517,7 @@ Development:
   version rule replaced a skin but left the mount's declaration with the loser (the winner's own skin re-declares);
   the sprite-atlas copies of a game-source check lived to the frame's end, where a build in the same frame could
   take them for the game's own (destroyed at once); the Mounts tab's save was read back by the auto-reload (the
-  watch is stamped too); a reload dropped the live kind off the def, so a renamed kind was never withdrawn from the
+  watch is stamped too); a reload dropped the live mount off the def, so a renamed mount was never withdrawn from the
   second reload on; the panel drew the page's Mount dropdown inside itself and its right side did not follow a
   choice made there or elsewhere (the list is the picker, the right side follows the chosen mount); old rows
   were measured by the layout before their deferred Destroy (off first); a row a mount pins stayed live in the
@@ -508,9 +526,9 @@ Development:
   rows is the panel's); the Mounts key reopened the panel instead of closing it; loose packs counted as first
   party for the prefix note; the portrait cache never forgot a skin; 1.0 and 1.0.0 were different versions; an
   unavailable Default was still offered; an aside line could overwrite another mod's live value on the next load;
-  one ability object in two kinds; and in the tests a ride's arrival unchecked, a scenario without a cleanup, a
+  one ability object in two mounts; and in the tests a ride's arrival unchecked, a scenario without a cleanup, a
   near-tautological count. Listed for later: the Mounts tab's save overwrites a joiner's own [Mount] block with
-  the live kind's facts (dev-only, no shipped joiner).
+  the live mount's facts (dev-only, no shipped joiner).
 - **The look bar became the Mounts panel** (`LookBar.cs` -> `MountsPanel.cs`); Idle rigs are skipped before the
   cameras; a `Set` of the same value by the same owner is a no-op; `Perf.S.LooksTick` measures the rigs' tick;
   the skins scan says which colour path each skin takes (the exact swap, or the cube over 48 colours: the snail

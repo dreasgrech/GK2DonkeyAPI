@@ -1,6 +1,6 @@
 """Where the skins live in this repo: every src/<project>/assets/skins/<id>/skin.cfg. Two projects hold them since
-2026-10-20 (docs/mounts-as-mods.md): the API's own (src/GK2DonkeyAPI: the donkey's Hellfire and Royal Parade) and
-Saddle Up's (src/SaddleUp: its five mounts, the dragon, the rat, the snail, the worm, Gerry); a mount mod of its own
+2026-10-21 (docs/mounts-as-mods.md): Saddle Up's (src/SaddleUp: the five mounts and the donkey's Hellfire and Royal
+Parade; the API ships no skin of its own since 2026-10-21); a mount mod of its own
 would be a third. Every tool and scan that walks the skins goes through this, so a mod's folder is one more root,
 never a path in a script.
 

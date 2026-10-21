@@ -813,9 +813,9 @@ def frames_for(fn):
 
 # name, drawing function, title, canvas (96: the donkey's; 128: the picture's centre stays the donkey's centre, so a
 # creature drawn in the donkey's coordinates sits 16 px in from each edge)
-# name, drawing function, title, canvas, the mount kind (id, name) the skin is a look of (docs/mounts-design.md)
+# name, drawing function, title, canvas, the mount (id, name) the skin is a look of (docs/mounts-design.md)
 # (the Blue Dragon, dragon_blue above, was dropped from the shipped set 2026-10-19: the player's colours do that)
-# name, drawing function, title, canvas, the mount kind (id, name), the seat row: the canvas row (from the top) the
+# name, drawing function, title, canvas, the mount (id, name), the seat row: the canvas row (from the top) the
 # rider's hip sits on for every player (docs/seat-investigation.md: 46 is the donkey's own seat on the 96 canvas, so a
 # creature drawn to the donkey's measures says 46; the 128 canvas adds 16; the snail sits 3 px lower on its shell)
 # ... and the hitch gap: how many px further behind the body the whole cart sits with the cart hitched ([Tuning.Cart]
@@ -829,7 +829,7 @@ only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to 
 assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "SaddleUp", "assets", "skins")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
-for name, fn, title, size, (kind, kind_name), seat_row, hitch_gap in CREATURES:
+for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
     W = H = size
@@ -848,11 +848,12 @@ for name, fn, title, size, (kind, kind_name), seat_row, hitch_gap in CREATURES:
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\r\n").write(
                 "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
                 "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\ndescription = " + title + ", our own art drawn by code (edit me).\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
-                "kind = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
-                + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + kind + "\n"
+                "colours = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
+                + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + mount + "\n"
                 + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
                 + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
-                "[Mount]\nid = " + kind + "\nname = " + kind_name + "\ndescription = A " + kind_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
+                "[Mount]
+id = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n")
             import canonical_cfg  # byte for byte the layout the scans expect
             text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)

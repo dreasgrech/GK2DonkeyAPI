@@ -18,8 +18,8 @@ namespace GK2DonkeyAPI.Api
         // The id for "no effect" in a settings list and the tuning key Effect ("" means the same; a dropdown can't hold an
         // empty id).
         public const string NoneId = "none";
-        // The id meaning "the mount kind's own effect" (MountKindDef.Effect / EffectWhen), the default of a settings list.
-        public const string KindId = "mount";
+        // The id meaning "the mount's own effect" (MountDef.Effect / EffectWhen), the default of a settings list.
+        public const string FromMount = "mount";
 
         internal MountEffects()
         {

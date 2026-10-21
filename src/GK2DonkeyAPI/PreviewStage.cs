@@ -116,7 +116,7 @@ namespace GK2DonkeyAPI
             {
                 return null;
             }
-            if (withCart && !Looks.KindWanted(paper).Cart) withCart = false; // a mount that can't pull the cart: the picture without it
+            if (withCart && !Looks.MountWanted(paper).Cart) withCart = false; // a mount that can't pull the cart: the picture without it
             View v = withCart ? cartView : donkeyView;
             if (ask)
             {

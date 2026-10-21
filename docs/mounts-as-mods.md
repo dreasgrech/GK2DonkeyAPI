@@ -1,5 +1,9 @@
 # Mounts and skins as separate mods (2026-10-20)
 
+**2026-10-21:** the donkey's two skins (Hellfire, Royal Parade) and the Hellfire effect moved to Saddle Up as well; the API ships no skin or effect of its own (the user: the backend, not bloated with skins). Paths below that say `src/GK2DonkeyAPI/assets/skins` are the state before the move.
+
+How a mod registers a mount of its own, in one page: [making-a-mount.md](making-a-mount.md).
+
 The user: *"are mounts also structured all the same or do they have fiddly code involved? ... my idea is we would be
 able to create separate mods containing mounts and skins to integrate with Saddle Up / Donkey API. So for example,
 we could release a Saddle Up Dragon mod which is downloaded separately, but once loaded as a mod, can be used in
@@ -32,13 +36,13 @@ Three ways in, all public since API 0.30.0 (`Api/MountLooks.cs:14-24`, docs/api.
 |---|---|---|---|
 | **A loose pack** | `BepInEx\plugins\<AnyFolder>\gk2skins\<id>\skin.cfg` + PNGs (or one sheet) | none, no DLL | the API's own scan at its Awake (`Looks.RegisterBuiltIns`, Looks.cs:117-130: `plugins\gk2skins\*` and `plugins\*\gk2skins\*`, one level down, `RegisterFolder` Looks.cs:352) |
 | **A DLL with the pack embedded** | one DLL; the same folder as `EmbeddedResource` | one line in Awake: `Mounts.Looks.RegisterEmbedded(Guid, Assembly, "MyMod.skins.")` (MountLooks.cs:134) | the mod itself, in its Awake; the loader is the one the built-ins use (`Looks.RegisterEmbedded`, Looks.cs:297: the csproj line `assets\skins\**\*` with `LogicalName="GK2DonkeyAPI.skins.%(RecursiveDir)%(Filename)%(Extension)"` is exactly what a mod would copy) |
-| **A DLL with code** | a DLL; pictures from code (`IMountSkinSource`) or a recipe; a mount with abilities (`MountAbility`) | `Mounts.Kinds.Register`, `Mounts.Looks.Register` (examples/GK2DonkeySkins/Plugin.cs) | the mod, in its Awake |
+| **A DLL with code** | a DLL; pictures from code (`IMountSkinSource`) or a recipe; a mount with abilities (`MountAbility`) | `Mounts.Catalog.Register`, `Mounts.Looks.Register` (examples/GK2DonkeySkins/Plugin.cs) | the mod, in its Awake |
 
-A mount declared by a pack and a mount registered from code are the same `KindDef` (`Kinds.Declare`, Kinds.cs:69-80:
+A mount declared by a pack and a mount registered from code are the same `Entry` (`Catalog.Declare`, Catalog.cs:69-80:
 first declaration wins, later skins with `mount = <id>` join it). A second dragon colour from a third mod is a pack
 with `mount = dragon` and no `[Mount]` block, and it lists under the dragon's Skin row by its name (Looks.cs:1242).
 
-**Proof already in the suite.** The self-test "mount kind from a pack" writes a loose `gk2skins\kind-test` folder
+**Proof already in the suite.** The self-test "mount from a pack" writes a loose `gk2skins\mount-test` folder
 with a `[Mount] cart = false` block, registers it through the folder scan, finds the mount listed, wears it, is refused
 the cart with the mount's name, withdraws it, and round-trips the file (SelfTest.cs ~2700-2780; the mount reports
 `IsBuiltIn` false and the file's author, line 2717). "skin pack: a folder read, validated, worn, withdrawn" does the
@@ -93,12 +97,12 @@ Info (the no-ignored-warnings rule: a warning a player can do nothing about is a
 
 **The finding.** Saddle Up builds its page in its Awake (src/SaddleUp/Plugin.cs:28-162, `Publish` at 162).
 `MountRows` (MountSettingsPage.cs:349-397) creates one `Skin_<mount>` row per mount by iterating
-`Mounts.Kinds.Kinds` *at that moment*, and `PerMount` (727-750) does the same for the colour rows; `Publish` hands the
+`Mounts.Catalog.All` *at that moment*, and `PerMount` (727-750) does the same for the colour rows; `Publish` hands the
 rows to the Mods menu at once (`FrameworkLink.TryRegister`, 657; `FrameworkApi.RegisterMod`, FrameworkLink.cs:47),
 and the menu's dropdowns are filled then (`FillList`, FrameworkLink.cs:149). The comment on `List` says it: "The list
 is read once per session: anything registered after the row is shown appears after a restart." For a loose pack
 that is never a problem: the API's scan runs in the API's Awake, which BepInEx runs before Saddle Up's (hard
-dependency). For a DLL that calls `RegisterEmbedded` or `Kinds.Register` **in its own Awake**, the order between it
+dependency). For a DLL that calls `RegisterEmbedded` or `Catalog.Register` **in its own Awake**, the order between it
 and Saddle Up is not ours to set: BepInEx orders plugins by their dependencies and otherwise by the order it found
 their files (in practice alphabetical by folder and file name), and there is no "load before X" attribute. A mount
 mod can only say "after the API".
@@ -112,12 +116,12 @@ fixes it, because the order is the same every start. The example mod proves noth
 GUID both sort before `GK2SaddleUp`.
 
 **The fix is ours, small, and belongs in the API** (not built; the user's call):
-- `MountRows` and `PerMount` subscribe to `Mounts.Kinds.KindsChanged` and add the rows of a mount that arrives after
+- `MountRows` and `PerMount` subscribe to `Mounts.Catalog.MountsChanged` and add the rows of a mount that arrives after
   the call, as long as the page is not yet published; and `Publish` moves from the end of Saddle Up's Awake to the
   API's `Start` (every plugin's Awake has run by then; Unity runs all Awakes before any Start), or the page's rows are
   handed to the menu from the first `Update`. Either way a mod's Awake registrations are in before any list is
   built, whatever the file order.
-- A self-test: register a kind and a skin from code *after* a page is built and published, and check the Mount row
+- A self-test: register a mount and a skin from code *after* a page is built and published, and check the Mount row
   offers it, the Skin row exists, the colour rows exist (today's "settings: the Mount, Skin, babies and effect rows"
   builds its rows after the registrations, so it cannot see this).
 - Until then the docs say what the MountLooks comment says: register in Awake, and a mod that must be first gives
@@ -151,7 +155,7 @@ already guards with `Looks.Find(id) == null` and skips or warns, so a creature t
 suite, it hollows it: the dragon's front layer, the cart readout's six lines, the Coat audit would run on nothing. If
 the creatures become separate mods, those tests follow them in one of two ways: the dev build deploys the mount
 mods next to the API (`-p:Deploy=true` as the example mod does) so the suite finds them, or the scenarios take their
-subjects from `Mounts.Kinds.Kinds` instead of a fixed list (the readouts already loop; the targeted ones, the dragon's
+subjects from `Mounts.Catalog.All` instead of a fixed list (the readouts already loop; the targeted ones, the dragon's
 wing and Gerry's frames, need the creature present). The first keeps every assert as it is.
 
 ## 7. If the creatures leave the API: what moves and what it costs
@@ -168,7 +172,7 @@ The API cannot carry a built-in `dragon` *and* a mod ship one: a second skin wit
   is the worked example of erase and `[Base.*]`; they are what a player with "only the API and Saddle Up" gets.
   Gerry is a cfg alone (no art) and could stay as the game-creature example; it is listed above because it is a mount.
 - **The tooling of section 5** (five scripts, two scans, the loop in `release-scans.sh`): a root per mod.
-- **The tests of section 6**: deploy the mods for the suite, or loop over the installed kinds.
+- **The tests of section 6**: deploy the mods for the suite, or loop over the installed mounts.
 - **The release**: `tools/build-dist.sh`, `check-dist.py`, `make-release-zip.py` build two DLLs (`FILES` in
   make-release-zip.py:21); each mount mod needs its own zip (`GK2-Saddle-Up-Dragon-<version>.zip`) and a Nexus page,
   with the API's minimum version in its README. `docs/release-checklist.md` gets the mount mods' steps.
@@ -180,14 +184,14 @@ The API cannot carry a built-in `dragon` *and* a mod ship one: a second skin wit
   player's cfg or side file holds `Skin = dragon` yet; the fixtures in `tests/fixtures/released/` are donkey-only.
   The decision costs nothing now and something after the next release.
 
-What does not change: `Looks.cs`, `Kinds.cs`, the merge of a skin's geometry with the mount's facts, the front
+What does not change: `Looks.cs`, `Catalog.cs`, the merge of a skin's geometry with the mount's facts, the front
 layer, the colours by region, the cart rule, the babies, the paper mount, Persistence. The runtime is the same code
 for a built-in and a mod; that was the point of the parity work.
 
 ## 8. The preconditions and the open questions
 
 1. **The gate.** `Debug.MountsPreview` off (every player today) keeps out every registration from any mod
-   (`Mounts.KeptOut` in `Register`, `RegisterFolder`, `RegisterEmbedded`, `Kinds.Register`, `Effects.Register`; the
+   (`Mounts.KeptOut` in `Register`, `RegisterFolder`, `RegisterEmbedded`, `Catalog.Register`, `Effects.Register`; the
    self-test "mounts off" proves it). A separate mount mod is inert for players until the release that flips the
    gate. The flip is already on the list (docs/release-checklist.md section 1, last item).
 2. **The load order** (section 4): fix before the first DLL mount ships, or ship the first as a loose pack (a).

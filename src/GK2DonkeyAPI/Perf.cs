@@ -35,7 +35,7 @@ namespace GK2DonkeyAPI
             LooksBuild, //   decoding a skin's pictures when the first donkey wears it
             LooksTick,  //   the skin rigs' tick: which skin, the tuning merge (MountInstance.Tick)
             Effects,    // particle effects on donkeys: the ring that follows, the trail (Effects.cs)
-            Abilities,  // the kinds' abilities (MountAbility hooks, Looks.Rig.TickAbilities)
+            Abilities,  // the mounts' abilities (MountAbility hooks, Looks.Rig.TickAbilities)
             Controls,   // the keeper's ride / hitch prompt (InstanceControls)
             Panel,      // the dev panel (OnGUI: every event of the frame), without its window's contents
             Window,     // the panel window's contents (IMGUI runs them after OnGUI returns, so they are not in Panel)

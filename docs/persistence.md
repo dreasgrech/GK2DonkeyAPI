@@ -437,7 +437,7 @@ needed from the game, and the game's save stays untouched.
   - Find each saved GUID among that scene's `droppedItems` and `queuedDrops`, remove the drop, and put the item on
     the cart.
   - An item the keeper picked up, or that is gone, is skipped and logged.
-  - Matching by GUID can't take a different drop of the same kind.
+  - Matching by GUID can't take a different drop of the same mount.
 - **Telling owners:** `InstanceSpawned` fires for each one. A new event, `InstancesRestored`, gives the owner its
   handles after a load so it can map its old ids to the new ones.
   - **A new optional `Key`** (a string the owner gives at spawn, saved with the instance) makes that mapping easy.

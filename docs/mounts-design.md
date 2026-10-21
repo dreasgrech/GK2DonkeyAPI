@@ -1,21 +1,21 @@
-# Mount kinds: design (2026-10-17 evening)
+# Mounts: design (2026-10-17 evening)
 
 Status 2026-10-20 (the foundation audit, docs/mounts-foundation-audit.md): the five built-in mounts are declared in
 one layout (`[Mount]` with id, name, author, version, cart, foals always, the block last in the file, every tuning key
 in one section; `tools/skins/canonical_cfg.py`, enforced by `tests/SkinsScan`); a built-in skin's mount reports
 `IsBuiltIn`; a mount's `Name` defaults to its id and `Label` is what sentences use; `author` and `version` survive a
 reload; the Mounts tab's Save keeps the comments of the mount sections; `effect_when` takes `Off`, `Night`, `Always`
-("Never" is only the menu's word). Corrections to the text below: a skin has no `foals =` key (§3: the kind's
-`Foals` and the player's FoalsWearSkin decide); a withdrawn skin leaves its kind listed (§8, as the Status says);
+("Never" is only the menu's word). Corrections to the text below: a skin has no `foals =` key (§3: the mount's
+`Foals` and the player's FoalsWearSkin decide); a withdrawn skin leaves its mount listed (§8, as the Status says);
 Gerry (a game-creature skin) declares its mount like the four drawn creatures; the recipes and the blue dragon of
 the §1 table are gone, Royal Parade and Hellfire are the donkey's two skins. A mount's seat is its skin's `seat = <row>` since API 0.32.0 (the same for every player whatever their
 AutoSeat; docs/seat-investigation.md §8), the skin's own `SeatAdjustPx` (its `[Tuning]`) nudging from it.
 
-Status: **built 2026-10-17 evening** (API 0.30.0 / Saddle Up 0.10.0, the same release as skins and effects): Kinds.cs,
-Api/MountKinds.cs, the kind on `Looks.SkinDef`, `[Mount]` sections, the merged tuning per style, the cart rule at the three
+Status: **built 2026-10-17 evening** (API 0.30.0 / Saddle Up 0.10.0, the same release as skins and effects): Catalog.cs,
+Api/MountCatalog.cs, the mount on `Looks.SkinDef`, `[Mount]` sections, the merged tuning per style, the cart rule at the three
 refusal points, "As the mount" effects, abilities on the skin rig, `MountSettingsPage.MountRows` (Saddle Up uses it),
 two self-tests, the example mod's `checker-beast`. Changes from the text below while building: `Unregister` is explicit
-(a kind with no skins stays listed, nothing refcounts kinds); a pack's declaration is first-wins (packs share one owner);
+(a mount with no skins stays listed, nothing refcounts mounts); a pack's declaration is first-wins (packs share one owner);
 abilities run only for instances with a handle (not the paper donkey, not a plain summon). Follows
 [skins-design.md](skins-design.md) (how a skin is drawn) and [mount-looks-design.md](mount-looks-design.md) (the
 player proposals). The user's brief: *make it as easy as possible to add more mounts with individual functionality,
@@ -27,8 +27,8 @@ since a mount can have several skins; think about performance.*
 | | What it is | Owns | Examples |
 |---|---|---|---|
 | **Base** (`Looks.SkinBase`, internal) | The game's view a mount is drawn on: its sprite parts, frame keys, canvas, pivot, pixels per unit, atlas. | Nothing a player sees. | the donkey (the only one) |
-| **Mount kind** (`MountKindDef`, `Mounts.Kinds`) | *What the player rides*: a creature type. | Identity (id, name, noun, author, version); rules (may it pull the cart, may it have foals, their size); defaults (an effect); its sounds and other creature facts as tuning values (never the picture keys: those are the skin's, per style); **abilities** (code hooks). | donkey, giant rat, giant snail, giant worm, dragon, gerry |
-| **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a complete set of pictures for one kind's frame keys, made any way (a recolour recipe, a folder of PNGs, a sheet, own art, code sprites). | The pictures (behind and in front of the rider), the canvas, where the pictures sit (`offset`, `offset_cart`); and only when its drawing differs from the mount's other skins, the picture-dependent keys of the mount's tuning (its own `[Tuning]`: seat, torso, legs, hitch gap). | Red Dragon (kind dragon); Hellfire, Royal Parade (kind donkey, over its art); rat; snail; worm; gerry (the game's frames) |
+| **Mount** (`MountDef`, `Mounts.Catalog`) | *What the player rides*: a creature type. | Identity (id, name, noun, author, version); rules (may it pull the cart, may it have foals, their size); defaults (an effect); its sounds and other creature facts as tuning values (never the picture keys: those are the skin's, per style); **abilities** (code hooks). | donkey, giant rat, giant snail, giant worm, dragon, gerry |
+| **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a complete set of pictures for one mount's frame keys, made any way (a recolour recipe, a folder of PNGs, a sheet, own art, code sprites). | The pictures (behind and in front of the rider), the canvas, where the pictures sit (`offset`, `offset_cart`); and only when its drawing differs from the mount's other skins, the picture-dependent keys of the mount's tuning (its own `[Tuning]`: seat, torso, legs, hitch gap). | Red Dragon (mount dragon); Hellfire, Royal Parade (mount donkey, over its art); rat; snail; worm; gerry (the game's frames) |
 
 **In one sentence: a mount has skins.** The Donkey is a mount; the game's own donkey (Default) and Hellfire are its
 skins. The Dragon is a mount with one skin today (Default); a second would be another drawing of it. The Giant Rat, Giant Snail
@@ -37,31 +37,31 @@ and Giant Worm are mounts with one skin each. **The mount is the creature, the s
 offsets) are that look's only, and a value lives on the mount unless it exists only because of this skin's picture.
 A skin cannot change what the mount is: its `[Tuning]` takes the picture-dependent keys (seat, torso, legs, hitch
 gap) and refuses the creature's (speed, cart, foals, effect; said once in the log). (In code the mount is
-`MountKindDef` / `Mounts.Kinds`, because `Mounts` is the API's root.)
+`MountDef` / `Mounts.Catalog`, because `Mounts` is the API's root.)
 
-A skin **names its kind** (`mount = dragon` in skin.cfg, `MountSkinDef.Mount`; the default is `donkey`). A kind has
-one or more skins; the game's own donkey art is the donkey kind's first skin (`MountLooks.DonkeyId`). A kind without
-any skin would be invisible, so a kind is only offered to players through its skins.
+A skin **names its mount** (`mount = dragon` in skin.cfg, `MountSkinDef.Mount`; the default is `donkey`). A mount has
+one or more skins; the game's own donkey art is the donkey mount's first skin (`MountLooks.DonkeyId`). A mount without
+any skin would be invisible, so a mount is only offered to players through its skins.
 
-**The player picks a skin; the mount follows.** The instance's kind is derived from its skin, so nothing new is
+**The player picks a skin; the mount follows.** The instance's mount is derived from its skin, so nothing new is
 saved (the `Skin` key already is). The settings page shows the relationship as two dropdowns: **Mount**
 (Donkey, Dragon, Giant Rat, ...) and, under it, **Skin** with that mount's skins only (Donkey: Default, Hellfire;
 every mount's default skin is listed as "Default" first). A dropdown's choices are fixed once built, so there is one Skin row per
 mount, shown for the chosen mount (cfg `Mount`, `Skin_<id>`); what is saved on the donkey is still the one skin id; the panel's Mounts tab says "Tuning: Dragon (skin: Red
-Dragon)" with *The mount: Dragon (shared by its skins)* and *This skin: Red Dragon* as its two groups. `MountHandle.Kind` and `MountSkinInfo.Mount` say which kind that is. A skin that names a
-kind nobody registered falls back to the donkey kind, said once in the log (the pictures still show).
+Dragon)" with *The mount: Dragon (shared by its skins)* and *This skin: Red Dragon* as its two groups. `MountHandle.Mount` and `MountSkinInfo.Mount` say which mount that is. A skin that names a
+mount nobody registered falls back to the donkey mount, said once in the log (the pictures still show).
 
 ## 2. Where a value comes from (per instance, per key)
 
 The first that has one wins. Everything below the first row is the existing machinery (reference.md "Where a value
 comes from"); the two new rows slot into the "instance override" level as one merged set owned by
-`Looks.TuningOwner`, recomputed only when the skin, the kind or the style changes.
+`Looks.TuningOwner`, recomputed only when the skin, the mount or the style changes.
 
 1. An override another mod set on this instance (`handle.Tuning.Set(owner, ...)`): left to it, logged once.
 2. **The skin's own geometry**: `[Tuning.Ride]` / `[Tuning.Cart]` (one style) over `[Tuning]` (both). Since
    2026-10-20 the skin owns its drawing's geometry (the seat row and the picture keys), and the scan refuses a
    picture key under the mount.
-3. **The kind's tuning**: `TuningRide` / `TuningCart` (one style) over `Tuning` (both): creature facts only
+3. **The mount's tuning**: `TuningRide` / `TuningCart` (one style) over `Tuning` (both): creature facts only
    (speed, sounds); the picture keys are the skin's.
 4. The player's cfg, then the mod defaults.
 
@@ -79,11 +79,11 @@ sections. The override mechanism is per key, so the rig re-applies the merged se
   gives that donkey its own value (the creature leaves the key to it, as to any owner); right-click gives it back and
   the creature's value returns at once (`RetuneNow`). The same for a mod's `Set` / `Clear`.
 - **The Mounts tab** changes the creature only: never a donkey's own value, never your cfg; a note says so while a
-  donkey is being edited. A change re-merges only the instances of that kind (`Kinds.Touch(kind)`).
+  donkey is being edited. A change re-merges only the instances of that mount (`Catalog.Touch(mount)`).
 - **The side file** never holds the creature's overrides (owner `Looks.TuningOwner`); a donkey's own and a mod's are
   kept as before. Owners read "the creature (Mounts tab)" and "this panel" wherever they are listed.
-- Self-test "mount kind from a pack" checks the precedence (a mod's value wins and stays, cleared it returns to the
-  mount's), a no-foals mount's foal, and the file round trip (save, reload, the wearer has the value); "mount kind
+- Self-test "mount from a pack" checks the precedence (a mod's value wins and stays, cleared it returns to the
+  mount's), a no-foals mount's foal, and the file round trip (save, reload, the wearer has the value); "mount
   from code" checks the hitch: the riding-only value is off the donkey by the next tick, the cart-style value never
   moves onto the free cart.
 - Packs of a user share one owner (`<api>.packs`), the built-ins are the API's own: a user's pack can't redeclare a
@@ -91,21 +91,21 @@ sections. The override mechanism is per key, so the rig re-applies the merged se
 - One refresh per re-merge (the clear and the apply are one change); the settings picture's paper donkey gets no
   mount tuning (no rider to seat).
 
-## 3. Rules and defaults on the kind
+## 3. Rules and defaults on the mount
 
-- `Cart` (true): false refuses the cart style for a creature of this kind: `Mounts.TryMount(Cart)`, `Hitch`,
+- `Cart` (true): false refuses the cart style for a creature of this mount: `Mounts.TryMount(Cart)`, `Hitch`,
   `MountCompanion.Use(Cart)` and `Mounts.Spawn(WithCart)` say "A giant snail can't pull the cart." A cart already
-  hitched when the skin changes to such a kind is **left standing where it is** (the user's decision of 2026-10-20): the
+  hitched when the skin changes to such a mount is **left standing where it is** (the user's decision of 2026-10-20): the
   rig unhitches it on the next tick when the mount has a view; a mount asleep far away keeps it as data until it
   wakes, then the same; nothing is destroyed.
-- `Foals` (true): false means no foal is drawn as this kind (the foals stay donkeys, as `FoalsWearSkin` off). The
+- `Foals` (true): false means no foal is drawn as this mount (the foals stay donkeys, as `FoalsWearSkin` off). The
   player's FoalsWearSkin is the only other say; a skin has no foals key of its own (removed 2026-10-18).
-- `Effect` / `EffectWhen`: the effect a creature of this kind shows when its own `Effect` key says "the mount's"
-  (`MountEffects.KindId = "mount"`, a list entry "As the mount or skin": the skin's `effect =` first, else the mount's); the explicit picks (none, hellfire, ...) win.
+- `Effect` / `EffectWhen`: the effect a creature of this mount shows when its own `Effect` key says "the mount's"
+  (`MountEffects.FromMount = "mount"`, a list entry "As the mount or skin": the skin's `effect =` first, else the mount's); the explicit picks (none, hellfire, ...) win.
 
-## 4. Abilities: code on a kind
+## 4. Abilities: code on a mount
 
-An ability is behaviour a mod attaches to a kind; the API calls it at the instance's lifecycle points. An abstract
+An ability is behaviour a mod attaches to a mount; the API calls it at the instance's lifecycle points. An abstract
 class with no-op virtuals, so an ability overrides what it needs:
 
 ```csharp
@@ -113,15 +113,15 @@ public abstract class MountAbility
 {
     public abstract string Id { get; }
     public virtual bool TicksWhileStanding => false;          // Tick only while ridden unless true (performance)
-    public virtual void Attached(MountHandle mount) { }       // the instance became this kind (spawn, load, a skin change)
-    public virtual void Detached(MountHandle mount) { }       // it stopped being this kind, or goes
+    public virtual void Attached(MountHandle mount) { }       // the instance became this mount (spawn, load, a skin change)
+    public virtual void Detached(MountHandle mount) { }       // it stopped being this mount, or goes
     public virtual void Mounted(MountHandle mount, MountStyle style) { }
     public virtual void Dismounted(MountHandle mount) { }
     public virtual void Tick(MountHandle mount, float dt) { } // every frame with a view: ridden, or standing when TicksWhileStanding
 }
 ```
 
-One ability object per kind, shared by every instance of it (state per instance goes in a dictionary keyed by the
+One ability object per mount, shared by every instance of it (state per instance goes in a dictionary keyed by the
 handle, or `handle.SetData`). An ability that throws is switched off for the session with one warning, as a skin that
 fails to draw is. Keys, settings rows and sounds are the mod's own (the settings page, `MountEffects`, the sounds
 API) called from the hooks; the API does not bind keys for abilities. The example mod carries one
@@ -129,16 +129,16 @@ API) called from the hooks; the API does not bind keys for abilities. The exampl
 `Mounts.Effects`), so the shape is proven.
 
 Why hooks and not a bigger set of built-in abilities: flight, fire, gallops are each a feature with their own game
-touchpoints and tests; the kind layer gives them a home and a lifecycle, not an implementation. What the kind does
+touchpoints and tests; the mount layer gives them a home and a lifecycle, not an implementation. What the mount does
 carry without code is everything the existing tuning keys express (speed through `SpeedMultiplier`, the seat, the
 legs, the idle shuffle, sounds volume), which is most of "mount-specific values" today.
 
 ## 5. Registration, three ways
 
-- **Code:** `Mounts.Kinds.Register(owner, new MountKindDef { Id, Name, Cart, Foals, Tuning, TuningRide, TuningCart,
+- **Code:** `Mounts.Catalog.Register(owner, new MountDef { Id, Name, Cart, Foals, Tuning, TuningRide, TuningCart,
   Effect, EffectWhen, Abilities })` → `IDisposable`. Same owner replaces (its instances re-apply), another owner is
-  refused. `Unregister`, `Find`, `Kinds`, `KindsChanged` as for skins and effects.
-- **A pack, no code:** a `[Mount]` section in `skin.cfg` *declares* the kind if nobody has registered it:
+  refused. `Unregister`, `Find`, `Mounts`, `MountsChanged` as for skins and effects.
+- **A pack, no code:** a `[Mount]` section in `skin.cfg` *declares* the mount if nobody has registered it:
   ```
   [Mount]
   id = snail
@@ -149,11 +149,11 @@ legs, the idle shuffle, sounds volume), which is most of "mount-specific values"
   [Mount.Tuning]           # the creature's facts as tuning values, both styles ([Mount.Tuning.Ride] / [Mount.Tuning.Cart]
   BrayVolume = 0           # for one); never a picture key (the seat, the legs, the hitch gap are the skin's [Tuning])
   ```
-  Owned by the pack's owner; a later pack naming the same id with its own `[Mount]` is told the kind exists and its
+  Owned by the pack's owner; a later pack naming the same id with its own `[Mount]` is told the mount exists and its
   skin joins it. The five mounts (rat, snail, worm, dragon, Gerry; Saddle Up's packs since 2026-10-20) declare
-  their kinds exactly this way, in one layout (docs/skins.md "Worked examples"), so the pack path is exercised by
+  their mounts exactly this way, in one layout (docs/skins.md "Worked examples"), so the pack path is exercised by
   the shipped skins every start.
-- **The donkey kind** is registered by the API (no tuning, no abilities): the base the game gives us.
+- **The donkey mount** is registered by the API (no tuning, no abilities): the base the game gives us.
 
 ## 6. The menus
 
@@ -168,7 +168,7 @@ geometry; the mount's group keeps the speed and its other keys). A line under th
 ride it ("every change shows on it at once") or what to ride to see them. *Keeping these values* says exactly which
 file "Save" writes (the skin's own `skin.cfg`; a built-in's in the repo on the machine with the sources; the mount's
 rows into every file that declares the mount), asks once more, and "Reload" reads the file back. Code-registered
-kinds say so and keep their changes for the session. The creature generator no longer overwrites an existing
+mounts say so and keep their changes for the session. The creature generator no longer overwrites an existing
 skin.cfg, so saved values survive a redraw.
 
 Saddle Up has a **Mount** section (its picture, Name, the Mount dropdown, the Skin dropdown, the three baby rows,
@@ -180,7 +180,7 @@ place with `MovedKey`; the page carries a player's values over both ways (docs/a
 so nothing resets on an update. Three calls add the rows every player mod wants: `MountRows(section, companion)`
 (the Mount dropdown, a Skin dropdown per mount), `FoalRows` (babies: how many, indoors, the same mount and skin),
 `EffectRows` (the effect list with "As the mount or skin" / none / every effect, when it shows, the four effect toggles).
-Saddle Up calls them instead of rows of its own, so a new kind, skin or effect from any mod appears with no change
+Saddle Up calls them instead of rows of its own, so a new mount, skin or effect from any mod appears with no change
 to Saddle Up. **Since 0.35.0 (the user, 2026-10-20: a panel of its own, WoW-style) those rows are not in the Mods
 menu or the Settings window at all: they live in the Mounts panel** (`MountsPanel.cs`; `PanelButton`, `OpenPanel`),
 the mounts listed on the left, the chosen one drawn on the right with its description, what it does, its stat lines
@@ -201,27 +201,27 @@ the ids and keys (`npc_donkey`, `FoalCount`, the API's names: 0.9.x is public, t
 
 ## 7. Performance
 
-- The kind is a reference on the skin, resolved when the skin is registered and again when kinds change (a version
+- The mount is a reference on the skin, resolved when the skin is registered and again when mounts change (a version
   counter, one compare per rig tick); no string lookups per frame.
-- The merged tuning set is applied on change only (skin, kind, style), never per frame; the override write path is
+- The merged tuning set is applied on change only (skin, mount, style), never per frame; the override write path is
   the existing one (`Overrides` dictionary) and the refresh is `ChangedByLooks` (seat, lantern, cargo views).
-- Abilities: the rig holds the kind's abilities as an array; the ridden instance ticks its array every frame, a
+- Abilities: the rig holds the mount's abilities as an array; the ridden instance ticks its array every frame, a
   standing one only those with `TicksWhileStanding`; no allocations in the loop (`Time.deltaTime`, the cached
   handle). `Perf.S.Abilities` measures them (time and bytes) like every other part.
 - The settings labels are built once per session (`FillList`), as before.
 
 ## 8. Tests
 
-- Self-test "mount kind from a pack": a temp pack with `[Mount] cart = false` and `[Mount.Tuning.Cart]`: the kind is
-  registered and listed; a donkey wearing the skin reports the kind; `Hitch` is refused with the kind's name; the
-  kind's tuning is on the wearer and owned by the skin owner; the skin withdrawn, the kind stays listed until its
+- Self-test "mount from a pack": a temp pack with `[Mount] cart = false` and `[Mount.Tuning.Cart]`: the mount is
+  registered and listed; a donkey wearing the skin reports the mount; `Hitch` is refused with the mount's name; the
+  mount's tuning is on the wearer and owned by the skin owner; the skin withdrawn, the mount stays listed until its
   owner withdraws it; the file round trip keeps the comments of the mount sections and the author and version.
-- Self-test "ability hooks": a test ability on a code-registered kind counts Attached, Tick, Detached on a spawned
+- Self-test "ability hooks": a test ability on a code-registered mount counts Attached, Tick, Detached on a spawned
   instance wearing its skin; a throw switches it off with one warning.
 - The existing skin, pack, leak, recipe and effect scenarios unchanged.
 - Hand test: the Mount list in the three menus; the dragon's seat per style; a snail with the cart key.
 
 ## 9. Not in this version
 
-Sounds per kind (the sounds API first), flight/fire/gallop abilities (each its own design), kinds on another base
-(a second `SkinBase` first), a picker with pictures per kind.
+Sounds per mount (the sounds API first), flight/fire/gallop abilities (each its own design), mounts on another base
+(a second `SkinBase` first), a picker with pictures per mount.

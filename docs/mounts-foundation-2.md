@@ -9,7 +9,7 @@ the code (the tuning layers and abilities; what is still the donkey's; game-sour
 format and the registration order), every claim with its file and line, the four sharpest checked a second time by
 hand. Nothing was changed while writing it but one line (section 7, a regression of the same evening). Line numbers
 are of 2026-10-20 night: `Looks.Rig.ApplyTuning` is at Looks.cs:2087-2166 now, `LayeredValue` 1186, `TickAbilities`
-2171, `KindNow` 1879. Tags as in docs/mounts-parity-matrix.md: **fix** (no decision needed), **decide** (two
+2171, `MountNow` 1879. Tags as in docs/mounts-parity-matrix.md: **fix** (no decision needed), **decide** (two
 defensible ways), **by design**.
 
 ## 1. In one paragraph
@@ -31,20 +31,20 @@ a name and description per ability, none of which exist yet.
 Facts:
 - `InstanceTuning.Set` (Api/MountInstances.cs:476-488) writes `Overrides[key]` and `OverrideOwners[key]` with no
   check on the previous owner and no log: owner B replaces owner A's value and takes the key. `Clear(key)` (490-498)
-  takes no owner: any caller removes any owner's value, a kind's included. The session layer (`MountTuning.Set`,
+  takes no owner: any caller removes any owner's value, a mount's included. The session layer (`MountTuning.Set`,
   Api/MountTuning.cs:99-109; `Tuned.SetOverride`, Tuned.cs:95-106) is the same. Only `ClearOwner` (512-528) is
   owner-scoped, and it runs by itself only for owners `KeyActions` tracks, when they unload (KeyActions.cs:114-127).
 - Callers check `SetBy` before clearing **by convention**: the companion (Api/MountCompanion.cs:717, 738, 875), the
   example ability (examples/GK2DonkeySkins/Plugin.cs:112-113). The API enforces nothing.
 - The skin whitelist (`SkinTuningKeys`, Looks.cs:1173-1177) and the look-key refusal (Looks.cs:2139-2142) exist only
-  in the kind's merge (`ApplyTuning`). `InstanceTuning.Set` applies neither, so an ability or any mod can set
+  in the mount's merge (`ApplyTuning`). `InstanceTuning.Set` applies neither, so an ability or any mod can set
   `Effect`, `Skin`, the colours, `SpeedMultiplier`, anything.
-- A kind's `[Mount.Tuning]` has no whitelist beyond the look keys (FromCfg stores it raw, Looks.cs:518-520, 597; the
-  merge filters `IsLook` only, 2139). A kind may pin speed, every sound key, the behaviour keys, the cart keys.
+- A mount's `[Mount.Tuning]` has no whitelist beyond the look keys (FromCfg stores it raw, Looks.cs:518-520, 597; the
+  merge filters `IsLook` only, 2139). A mount may pin speed, every sound key, the behaviour keys, the cart keys.
 - The instance layer is read before the session layer (`Tuned<T>.Value`, Tuned.cs:51-67: the instance override at
   56, the session override at 64). Saddle Up writes the player's speed, sounds, bell, lantern, cart and behaviour
   rows as **session** overrides (`ApplyRide`, MountCompanion.cs:677-696; the table in the tuning report), and its
-  Effect, Skin and colours as **instance** overrides under its GUID (MountCompanion.cs:849-885). So a kind's
+  Effect, Skin and colours as **instance** overrides under its GUID (MountCompanion.cs:849-885). So a mount's
   `[Mount.Tuning] SpeedMultiplier = 2` beats the player's Speed row, and the page shows nothing.
 - The Mods menu and the game's Settings window have no way to show a pinned row: nothing in MountSettingsPage.cs,
   SettingsRows.cs, LookBar.cs or FrameworkLink.cs reads `SetBy` or `IsSet`. The F11 panel does (orange for the
@@ -53,7 +53,7 @@ Facts:
   replacing the companion's (the player's pick) silently; on Dismounted it clears them because it now owns them, and
   the player's Effect is gone until the companion's `ApplyLook` runs again (on a property change, spawn, hitch,
   unhitch, load: MountCompanion.cs:159-639). A hitch while ridden re-applies the player's over the ability's.
-- Persistence saves every override but the kind's (`Looks.TuningOwner`, Persistence.cs:276-291) and restores them
+- Persistence saves every override but the mount's (`Looks.TuningOwner`, Persistence.cs:276-291) and restores them
   under their saved owner GUID with no check that the owner is loaded (761-775). A save taken mid-ride on a burning
   Checker Beast keeps `Effect = hellfire` under the skins mod's GUID; after a load the mount stands and burns, nothing
   clears it until the next ride ends, and if that mod is gone, nothing ever does.
@@ -62,8 +62,8 @@ Facts:
 
 What this needs, as one rule in the API, not three conventions: **a value on an instance belongs to the owner that
 set it**; `Set` by another owner is refused with a result and a log line (or, for the one case that wants it, an
-explicit `Take`); `Clear` takes the owner and clears only its own; when a kind leaves an instance (a skin change,
-`Detached`), the API clears the kind's abilities' owner too, not only `TuningOwner`; what a kind may pin is a list
+explicit `Take`); `Clear` takes the owner and clears only its own; when a mount leaves an instance (a skin change,
+`Detached`), the API clears the mount's abilities' owner too, not only `TuningOwner`; what a mount may pin is a list
 (the mount keys: speed, sounds, the rider-motion scale, the cart's hitch gap; never the player's behaviour switches),
 the same way the skin's is; the page can ask the API who pinned a key and grey the row with "the dragon sets this",
 the way the F11 panel does; a restored override whose owner is not loaded is set aside with the record's other lines
@@ -76,9 +76,9 @@ Facts:
   "registered", never "replaced" (289-294). **Every loose pack shares one owner** (`<api>.packs`, Looks.cs:125), so two
   loose folders with the same id replace each other silently, in the unsorted order `Directory.GetDirectories` returns
   (362, 370).
-- A mount's facts are the **first** `[Mount]` declaration's (Kinds.Declare, Kinds.cs:71-86): a later one with different
+- A mount's facts are the **first** `[Mount]` declaration's (Catalog.Declare, Catalog.cs:71-86): a later one with different
   facts "joins" with an Info line and its facts and `[Mount.Tuning]` are dropped unlisted. A code `Register` of an id
-  a pack declared throws for any other owner (Kinds.cs:63): no mod can take over a kind a loose pack declared.
+  a pack declared throws for any other owner (Catalog.cs:63): no mod can take over a mount a loose pack declared.
 - The loose-pack scan runs in the API's Awake (Plugin.cs:649-651), before every mod's Awake. So a loose
   `gk2skins\dragon\` takes the skin id before Saddle Up registers, and Saddle Up's dragon is refused with a warning;
   a loose pack with `[Mount] id = dragon, cart = false` declares the Dragon's facts, and Saddle Up's dragon joins it.
@@ -157,16 +157,16 @@ To build from, all in the API already:
   `UITutorialListWindow` (a list with content beside it), `UIAlchemyFolioWindow` (tabs), with `UICraftItemCell`,
   `UITutorialListItemWidget` and `UIFolioWindowTab` as the cells (61 `UI*Window` classes in the game's assembly;
   which parts copy cleanly is a probe in the game, the way the colours bar's rows were found, not a claim here).
-- **The list**: `Mounts.Kinds.Kinds` (donkey first, then by name), `MountKindInfo` with name, noun, author, version,
+- **The list**: `Mounts.Catalog.All` (donkey first, then by name), `MountInfo` with name, noun, author, version,
   cart, foals and their size, effect, the tuning dictionaries (speed is `Tuning["SpeedMultiplier"]` when set), its
   skins Default first; `Mounts.Looks.Find(id)` for a skin's regions, canvas, front layer, origin.
 - **The selection**: `MountCompanion.Skin`, `LookOf(mountId)` with every colour preset; the cfg keys stay.
 
 Missing, and the API change the panel needs (**fix**): a `description` (and a `portrait` or `icon` picture) on a
-skin and on a mount, in the pack (`[Skin]`, `[Mount]`) and on `MountSkinDef` / `MountKindDef`; a **name and a
-description per ability** (`MountAbility` has an `Id` and hooks only, Api/MountKinds.cs:148-179) and, if the panel is
+skin and on a mount, in the pack (`[Skin]`, `[Mount]`) and on `MountSkinDef` / `MountDef`; a **name and a
+description per ability** (`MountAbility` has an `Id` and hooks only, Api/MountCatalog.cs:148-179) and, if the panel is
 to show "stats", a small list of lines a mount declares (`[Mount.Stats]`, free text per line, or the known keys
-rendered: speed, cart, babies, effect); a `Mounts.MountsPanel(owner, companion)` or a page row kind that opens it.
+rendered: speed, cart, babies, effect); a `Mounts.MountsPanel(owner, companion)` or a page row mount that opens it.
 **Decide**: whether the panel is also where a player picks the mount (the WoW model: the panel is the mount list,
 the page keeps keys and behaviour) or only shows and colours it while the page keeps the Mount row. The user's
 proposal is the first; it is the one that removes the per-mount rows from the page.
@@ -181,23 +181,23 @@ proposal is the first; it is the one that removes the per-mount rows from the pa
 | 4.4 | Sprite prefixes, the atlas name and frame names are outside the dependency check. | src/Shared/DependencyManifest.cs:38; game-code.txt | **decide**: a sprite manifest for game-source skins (names checked at start, the skin set aside when they changed), or the run-time warning as today |
 | 4.5 | `format` that is not a number reads as 0 and is accepted; no key says which API a pack needs; a format 2 pack is refused whole. | Looks.cs:527, 564 | **fix**: a non-number refused; `needs = 0.34` honoured with "needs GK2 Donkey API x" when short |
 | 4.6 | Unknown `[Game]` keys become frame-map entries and are never reported. | Looks.cs:639 | **fix**: report like every other section |
-| 4.7 | A reload whose `[Mount] id` changed leaves the old kind registered; `Declare` on reload joins instead of re-declaring when the owner differs. | Looks.cs:1055-1066 | **fix** with 2.2 |
-| 4.8 | The panel's save writes the kind's rows into every file of that kind that holds `[Mount]`; it does not update `DiskStamp`, so auto-reload reads the save back and rebuilds the sheet. | Dev/TuningWindow.Mounts.cs:641-648; Looks.cs:1005-1007, 1098-1118 | **fix**: stamp after save; write the Default's file only (2.2's rule) |
+| 4.7 | A reload whose `[Mount] id` changed leaves the old mount registered; `Declare` on reload joins instead of re-declaring when the owner differs. | Looks.cs:1055-1066 | **fix** with 2.2 |
+| 4.8 | The panel's save writes the mount's rows into every file of that mount that holds `[Mount]`; it does not update `DiskStamp`, so auto-reload reads the save back and rebuilds the sheet. | Dev/TuningWindow.Mounts.cs:641-648; Looks.cs:1005-1007, 1098-1118 | **fix**: stamp after save; write the Default's file only (2.2's rule) |
 | 4.9 | Anti-aliased edges and front-layer colours count toward the 48-colour limit that switches a skin to the cube; on the cube, two colours in one cell share a target, and an over skin's unnamed colours (kept as drawn) shift by up to a cell (the identity cell holds the rounded value: Colors.cs:1107-1128, checked). | Looks.cs:1425-1428; Colors.cs:1143, 1096-1099 | **fix**: the scan says which path a skin takes and why; a pack author sees "173 colours: the cube" before the game does (the snail is on it today) |
 | 4.10 | The per-frame apply writes the property block every frame when the part has one, and runs for Idle views still in `attached`. | Looks.cs:2457-2462, 1835-1846 | **fix**: skip Idle rigs; compare before writing |
-| 4.11 | `KindNow` is evaluated twice per tick (a chain of null-coalescing reads, the kind cached per version): cheap, but one read and a pass would do. | Looks.cs:2000, 2175 | **by design** (noted) |
+| 4.11 | `MountNow` is evaluated twice per tick (a chain of null-coalescing reads, the mount cached per version): cheap, but one read and a pass would do. | Looks.cs:2000, 2175 | **by design** (noted) |
 | 4.12 | The panel writes overrides directly under `PanelOwner`; the cart-settings move drops the target's cart keys whatever their owner; `Pose` is dropped whoever set it. | Dev/TuningWindow.Instances.cs:95-108; MountInstance.cs:930-954, 577-581 | **fix** with 2.1 (the same owner rule) |
 | 4.13 | An ability that sets keys from `Tick` pays a full re-merge and a looks refresh every frame (`Changed()`). | Api/MountInstances.cs:530-547 | **fix**: a `Set` that changes nothing is a no-op; said in the ability docs |
 | 4.14 | `LooksRig.Tick` has no `Perf.Measure` of its own (its neighbours have one). | MountInstance.cs:182 | **fix** |
-| 4.15 | A loose pack's `[Mount.Tuning]` is ignored when it joins an existing kind, with no line saying so. | Kinds.cs:76-78 | **fix** with 2.2 |
+| 4.15 | A loose pack's `[Mount.Tuning]` is ignored when it joins an existing mount, with no line saying so. | Catalog.cs:76-78 | **fix** with 2.2 |
 
 ## 5. What is already right (so it stays)
 
 The merge order of a skin's geometry over a mount's facts (Looks.cs:2104-2123) and that geometry follows the worn
-drawing while facts follow the wanted skin (1879); the skin whitelist; the look-key refusal for kinds; the kind's
-effect as a declared default under "As the mount or skin"; one kind's abilities per instance with a clean
+drawing while facts follow the wanted skin (1879); the skin whitelist; the look-key refusal for mounts; the mount's
+effect as a declared default under "As the mount or skin"; one mount's abilities per instance with a clean
 Detached/Attached cycle on a skin change (2176-2187) and a throwing ability switched off with one warning; the cost
-of abilities scaling with instances in view, never with the number of kinds (2199-2213); the refcounted sheets; the
+of abilities scaling with instances in view, never with the number of mounts (2199-2213); the refcounted sheets; the
 cart rule and the babies' size per mount; the page's catch-up for late mounts (this evening).
 
 ## 6. Decisions, taken (the user, 2026-10-20 night)
@@ -230,8 +230,8 @@ twice, the save path stays.
 
 | Finding | Outcome |
 |---|---|
-| 2.1 ownership | **done**: `Set` refused for another owner's key (the mount's stays replaceable), `TrySet`, `Clear(owner, key)` on both layers; what a kind may pin is a rule (`Looks.Rig.MountMayPin`); `MountAbility.Owner` given by the API and cleared when the kind leaves; `TuningKey` / `PinnedBy` on the page, Saddle Up's speed, bray and bell rows use it; restored overrides of an unloaded owner set aside (`AsideSets`); the example ability gallops; self-test "tuning: a value belongs to the owner that set it" |
-| 2.2 ids | **done**: the Default re-declares over a joiner (`KindDef.DeclaredBy`), a differing joiner says so, the version rule (`Looks.Outranks`, `CompareVersions`), one owner per folder in name order, the prefix note for other mods' ids, a reload withdraws a renamed kind, the Mounts tab saves the declaring skin's file and stamps it; self-test "ids: ..." |
+| 2.1 ownership | **done**: `Set` refused for another owner's key (the mount's stays replaceable), `TrySet`, `Clear(owner, key)` on both layers; what a mount may pin is a rule (`Looks.Rig.MountMayPin`); `MountAbility.Owner` given by the API and cleared when the mount leaves; `TuningKey` / `PinnedBy` on the page, Saddle Up's speed, bray and bell rows use it; restored overrides of an unloaded owner set aside (`AsideSets`); the example ability gallops; self-test "tuning: a value belongs to the owner that set it" |
+| 2.2 ids | **done**: the Default re-declares over a joiner (`Entry.DeclaredBy`), a differing joiner says so, the version rule (`Looks.Outranks`, `CompareVersions`), one owner per folder in name order, the prefix note for other mods' ids, a reload withdraws a renamed mount, the Mounts tab saves the declaring skin's file and stamps it; self-test "ids: ..." |
 | 2.3 / 3 the panel | **done**: `MountsPanel.cs` (the look bar's successor): the list (paged by ten), the chosen mount drawn, its description, what it does, its stats and abilities, its rows rebuilt per choice, Done and Cancel over every mount's rows; `PanelButton`, `OpenPanel`, `LookButton` kept; the look rows leave the Mods menu, the Settings window and the menu labels; Saddle Up: a Mounts button in the Mount section and a MountsKey (none by default); the format: description, portrait, `[Mount.Stats]`, ability `Name` / `Description`, `needs`, format strictness, `[Game]` unknown keys; descriptions on the seven cfgs; self-tests "format: ..." and the panel checks in "settings: ..." |
 | 2.4 skeleton | **the leak closed**: `WalkCycleSpeed` (ride and cart, 1.5) at the five sites and the shuffle; the rest by design |
 | 2.5 sheets | **done**: `Rig.Sleep` releases the sheet on the sleep tier (pass 2: not on every view rebuild; an unhitch keeps it), builds advance from the registry's tick, canvas at most 256; the F11 memory line was not built: the log's "unloaded (no donkey wears it)" and the sleep scenario stand in |
@@ -248,7 +248,7 @@ twice, the save path stays.
 
 Reviewed the same night by four independent readers, three times (CHANGELOG, Development: what each pass
 found and what was fixed; the second pass read the first pass's fixes, the end-to-end cycles, every other
-scenario and the docs; the third read the panel and the registry whole, not as a diff); left for later: the Mounts tab's save writes the live kind's `[Mount]` facts into a
+scenario and the docs; the third read the panel and the registry whole, not as a diff); left for later: the Mounts tab's save writes the live mount's `[Mount]` facts into a
 joiner's own file (dev-only, no shipped joiner), and a code mount against a loose pack's mount of the same id
 (docs/open-items.md).
 

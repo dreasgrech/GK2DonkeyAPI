@@ -41,7 +41,7 @@ namespace GK2DonkeyAPI
     // cost 1 to 4 ms (the game's Wgo.Spawn, then the parts), every time a donkey woke while the keeper rode through a
     // herd. A released view is put back to the prefab's state (ReleaseView, as for the game's pool) and switched off with
     // SetActive(false), the game's own way of hiding a Wgo (Spawn leaves one inactive; its chunk culling switches them).
-    // Taken again by a donkey of the same scene, kind and size: its place and facing set, hidden for the frame its parts
+    // Taken again by a donkey of the same scene, mount and size: its place and facing set, hidden for the frame its parts
     // are prepared in, switched on. Only donkeys without a cart: a cart's view holds the cargo inventory in its data.
     internal static class ViewPool
     {
@@ -569,7 +569,7 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // TrySpawn: a parked view of this scene, kind and size instead of a new one, when there is one.
+            // TrySpawn: a parked view of this scene, mount and size instead of a new one, when there is one.
             private bool TakeParkedView(GameScene scene, string wgoId)
             {
                 if (mounted || !HasDonkey || HasCart || Ephemeral)

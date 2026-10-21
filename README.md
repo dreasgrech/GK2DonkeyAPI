@@ -11,7 +11,7 @@ Both are built and audited against Steam game build 25910882 (game 1.010).
 
 What you ride and how it is drawn (the donkey and its two skins in the API, the five mounts as Saddle Up's own
 packs; the mounts other than the donkey, the skins and the effects are switched off for players until the next
-update, [`docs/skins.md`](docs/skins.md)):
+update, [`docs/skins.md`](docs/skins.md); a mod shipping a mount of its own: [`docs/making-a-mount.md`](docs/making-a-mount.md)):
 
 | Mount | Skins | Notes |
 |---|---|---|
@@ -20,7 +20,7 @@ update, [`docs/skins.md`](docs/skins.md)):
 | Gerry (the game's talking skull) | the game's own frames, read at run time | cart, babies his own size; the keeper calls him a skull |
 
 Skin packs from anyone (a folder with a `skin.cfg` and a PNG per frame) join the list; a pack can declare a mount of
-its own, and a mod can ship packs in its DLL the way Saddle Up ships its five ([`docs/mounts-as-mods.md`](docs/mounts-as-mods.md)).
+its own, and a mod can ship packs in its DLL the way Saddle Up ships its seven (the API ships none) ([`docs/mounts-as-mods.md`](docs/mounts-as-mods.md)).
 
 ## Installing (players)
 

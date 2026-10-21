@@ -209,7 +209,7 @@ namespace GK2DonkeyAPI.Api
         // The look of a mount by id (made empty, the game's own colours, the first time it is asked for).
         public MountLook LookOf(string mountId)
         {
-            string id = string.IsNullOrWhiteSpace(mountId) ? MountKinds.DonkeyId : mountId.Trim();
+            string id = string.IsNullOrWhiteSpace(mountId) ? MountCatalog.DonkeyId : mountId.Trim();
             if (!looks.TryGetValue(id, out MountLook l))
             {
                 looks[id] = l = new MountLook(this, id);
@@ -223,8 +223,8 @@ namespace GK2DonkeyAPI.Api
             get
             {
                 string s = (skin ?? "").Trim();
-                if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountKinds.DonkeyId;
-                return Mounts.Looks.Find(s)?.Mount ?? MountKinds.DonkeyId;
+                if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountCatalog.DonkeyId;
+                return Mounts.Looks.Find(s)?.Mount ?? MountCatalog.DonkeyId;
             }
         }
 
@@ -539,11 +539,11 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             bool spawned = false;
-            // A baby's size is its mount's (MountKindDef.FoalScale: the donkey's 0.6, Gerry's 0.33): a baby of another
+            // A baby's size is its mount's (MountDef.FoalScale: the donkey's 0.6, Gerry's 0.33): a baby of another
             // size (the mount changed under it) is made again at the right one.
             // ... and only when the babies are the same mount and skin: plain baby donkeys are 0.6 (the row's promise)
-            MountKindInfo babyKind = Donkey != null && Donkey.Exists && foalsWearSkin ? Mounts.Kinds.Find(Donkey.Kind) : null;
-            float babySize = babyKind != null && babyKind.Foals ? babyKind.FoalScale : 0.6f; // a mount without babies of its own: plain donkeys
+            MountInfo babyMount = Donkey != null && Donkey.Exists && foalsWearSkin ? Mounts.Catalog.Find(Donkey.Mount) : null;
+            float babySize = babyMount != null && babyMount.Foals ? babyMount.FoalScale : 0.6f; // a mount without babies of its own: plain donkeys
             for (int i = 0; i < MaxFoals; i++)
             {
                 MountHandle f = foalHandles[i];
@@ -552,7 +552,7 @@ namespace GK2DonkeyAPI.Api
                 // seen 2026-10-18: a baby made again every second)
                 if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.015f && Donkey != null && Donkey.Exists)
                 {
-                    Plugin.Log.LogInfo($"Companion: {OwnerId}: baby {f.FullId} is {f.Scale:F2} of the grown one, the mount '{Donkey.Kind}' wants {babySize:F2}: made again at that size.");
+                    Plugin.Log.LogInfo($"Companion: {OwnerId}: baby {f.FullId} is {f.Scale:F2} of the grown one, the mount '{Donkey.Mount}' wants {babySize:F2}: made again at that size.");
                     f.Remove();
                     foalHandles[i] = null;
                     f = null;

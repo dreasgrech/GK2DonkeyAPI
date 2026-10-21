@@ -86,6 +86,13 @@ class GK2DonkeyAPI.Api.MountAbilityInfo
   property string Description { get; }
   property string Id { get; }
   property string Name { get; }
+class GK2DonkeyAPI.Api.MountCatalog
+  field static const string DonkeyId = donkey
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountInfo> All { get; }
+  event System.Action MountsChanged
+  method GK2DonkeyAPI.Api.MountInfo Find(string id)
+  method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountDef def)
+  method bool Unregister(string ownerId, string id)
 class GK2DonkeyAPI.Api.MountColorRegion
   field static readonly System.Collections.Generic.IReadOnlyList<string> SettingNames
   property string Area { get; }
@@ -140,6 +147,25 @@ class GK2DonkeyAPI.Api.MountCompanion
   method void SendAway()
   method static System.String[] SpeedLabelsFor(GK2DonkeyAPI.Api.MountStyle style)
   method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
+class GK2DonkeyAPI.Api.MountDef
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountAbility> Abilities
+  field string Author
+  field bool Cart
+  field string Description
+  field string Effect
+  field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
+  field bool Foals
+  field float FoalScale
+  field string Id
+  field string Name
+  field string Noun
+  field UnityEngine.Texture2D Portrait
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountStat> Stats
+  field System.Collections.Generic.Dictionary<string, object> Tuning
+  field System.Collections.Generic.Dictionary<string, object> TuningCart
+  field System.Collections.Generic.Dictionary<string, object> TuningRide
+  field string Version
+  method void .ctor()
 class GK2DonkeyAPI.Api.MountEffectDef
   field string Author
   field bool Foals
@@ -179,7 +205,7 @@ enum GK2DonkeyAPI.Api.MountEffectPlacement
   Body = 1
   Trail = 2
 class GK2DonkeyAPI.Api.MountEffects
-  field static const string KindId = mount
+  field static const string FromMount = mount
   field static const string NoneId = none
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountEffectInfo> Effects { get; }
   event System.Action EffectsChanged
@@ -217,7 +243,7 @@ class GK2DonkeyAPI.Api.MountHandle
   property bool IsStepping { get; }
   property bool IsWithKeeper { get; }
   property string Key { get; }
-  property string Kind { get; }
+  property string Mount { get; }
   property string Owner { get; }
   property GK2DonkeyAPI.Api.MountHandle Parent { get; }
   property bool Persist { get; }
@@ -240,26 +266,7 @@ class GK2DonkeyAPI.Api.MountHandle
   method GK2DonkeyAPI.Api.MountResult SetPersist(string ownerId, bool keep)
   method GK2DonkeyAPI.Api.MountResult TakeToHead(bool showMessage = True)
   method string ToString()
-class GK2DonkeyAPI.Api.MountKindDef
-  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountAbility> Abilities
-  field string Author
-  field bool Cart
-  field string Description
-  field string Effect
-  field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
-  field bool Foals
-  field float FoalScale
-  field string Id
-  field string Name
-  field string Noun
-  field UnityEngine.Texture2D Portrait
-  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountStat> Stats
-  field System.Collections.Generic.Dictionary<string, object> Tuning
-  field System.Collections.Generic.Dictionary<string, object> TuningCart
-  field System.Collections.Generic.Dictionary<string, object> TuningRide
-  field string Version
-  method void .ctor()
-class GK2DonkeyAPI.Api.MountKindInfo
+class GK2DonkeyAPI.Api.MountInfo
   property int Abilities { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountAbilityInfo> AbilityInfos { get; }
   property string Author { get; }
@@ -283,13 +290,6 @@ class GK2DonkeyAPI.Api.MountKindInfo
   property System.Collections.Generic.IReadOnlyDictionary<string, object> TuningRide { get; }
   property string Version { get; }
   method string ToString()
-class GK2DonkeyAPI.Api.MountKinds
-  field static const string DonkeyId = donkey
-  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountKindInfo> Kinds { get; }
-  event System.Action KindsChanged
-  method GK2DonkeyAPI.Api.MountKindInfo Find(string id)
-  method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountKindDef def)
-  method bool Unregister(string ownerId, string id)
 class GK2DonkeyAPI.Api.MountLook
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }
@@ -331,6 +331,7 @@ struct GK2DonkeyAPI.Api.MountResult
 static class GK2DonkeyAPI.Api.Mounts
   field static readonly System.Version ApiVersion
   property static GK2DonkeyAPI.Api.MountTuning Behaviour { get; }
+  property static GK2DonkeyAPI.Api.MountCatalog Catalog { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountColorRegion> ColorRegions { get; }
   property static GK2DonkeyAPI.Api.MountTuning Colors { get; }
   property static GK2DonkeyAPI.Api.MountTuning Corpses { get; }
@@ -341,7 +342,6 @@ static class GK2DonkeyAPI.Api.Mounts
   property static bool IsAvailable { get; }
   property static bool IsGameReady { get; }
   property static bool IsMounted { get; }
-  property static GK2DonkeyAPI.Api.MountKinds Kinds { get; }
   property static GK2DonkeyAPI.Api.MountLooks Looks { get; }
   property static bool MountsEnabled { get; }
   property static string Owner { get; }

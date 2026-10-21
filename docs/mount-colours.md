@@ -18,7 +18,7 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
   the keeper's own palette is 32 wide), or a 32³ colour cube (`USE_LUT_COLOR_REPLACE`, one lookup, 8 levels per
   channel). The cart's meshes always use the cube.
 - **The donkey's five regions are the donkey's atlas colours.** A skin drawn in its own colours (every built-in
-  creature, every pack with `kind = own`) has none of those colours in its pictures, so nothing matches and nothing
+  creature, every pack with `colours = own`) has none of those colours in its pictures, so nothing matches and nothing
   changes. The recipe skins of 2026-10-17 (zebra, ghost, ember, golden, shadow) were recolours and patterns: the
   colour settings do that now, so they are gone (2026-10-18), as is Blue Dragon. Hellfire, the one recipe left then
   (`LooksHellfire.cs`; a pack drawn over the donkey since 2026-10-19 evening, docs/skins.md), changes the drawing (horns, a devil's tail, glowing eyes, lava cracks) and declares its own
@@ -34,7 +34,7 @@ Measured 2026-10-18 (`Colors.cs`, `docs/colors.md`, the built-in skins' PNGs):
   that look's colours.
 - **How many colours a look has:**
 
-  | Look | Distinct opaque colours | Kind of art |
+  | Look | Distinct opaque colours | Mount of art |
   |---|---|---|
   | Donkey (the game's atlas) | 41 in five regions | palette art |
   | Dragon | 21 | palette art (our tool quantised it) |
@@ -80,12 +80,12 @@ The cart and lantern regions are untouched by this: they are the cart's, and eve
   ```
 
   A colour named that the pictures don't have is a warning (and a SkinsScan failure for the built-ins); a colour
-  in two regions is an error. Everything not named is Coat. A pack with `kind = palette` keeps the donkey's map,
+  in two regions is an error. Everything not named is Coat. A pack with `colours = palette` keeps the donkey's map,
   since it is drawn in the donkey's colours (a recipe is an own-colour look, see below).
 - **The game-source skin (Gerry):** the same as any skin; its colours are the game's skull colours, collected from
   the frames at build.
 - **A recipe skin** (a mod's, through the API; Hellfire was one until 2026-10-19) is an own-colour look too: all Coat but the regions it declares in code. A pack with
-  `kind = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
+  `colours = palette` is the one case that keeps the donkey's map, because its pictures are in the donkey's colours.
 - **A skin worn over the donkey** (`layer = over`, own colours; built 2026-10-19 for Royal Parade): the donkey's
   map stays (the donkey is still drawn under it), the skin's named colours are added after it (`Colors.Rebuild`;
   one the donkey has already stays the donkey's, logged once), and its unnamed colours belong to no region: kept as

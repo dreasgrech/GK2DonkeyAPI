@@ -34,7 +34,7 @@ Each one says why.
 - **Rigs:** it owns one of each per-donkey rig: cargo (`Cargo.Rig`), lantern (`Lantern.Rig`), hanging lamp
   (`LampHang.Rig`) and colours (`Colors.Rig`).
 - **Flags:** `HasDonkey` and `HasCart`. Donkey = donkey only; donkey with cart = both; free cart = cart only.
-- **Kinds:** registered instances (spawned through the API or the panel) stay in the world. The old summon (the
+- **Mounts:** registered instances (spawned through the API or the panel) stay in the world. The old summon (the
   showcase's H and G, `Mounts.TryMount`) is an ephemeral instance: made at mount, gone at dismount, with its cargo
   handed back as before.
 - **The bound instance:** the static classes (`Mount`, `Cargo`, `Lantern`, `LampHang`, `Colors`) are fronts that

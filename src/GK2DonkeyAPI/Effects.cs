@@ -177,27 +177,10 @@ namespace GK2DonkeyAPI
             return true;
         }
 
-        // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind.
-        // Defined through the public API exactly as a mod would (docs/api.md "Effects"): nothing here a mod can't do.
-        // Called from Plugin after the dev keys bind, only with the mounts switched on (the API keeps it out otherwise).
-        internal static void RegisterBuiltIn()
-        {
-            MountEffects api = Mounts.Effects;
-            var d = new MountEffectDef { Id = "hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" };
-            var flame = new MountEffectPart { Source = api.GameParticles("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat") };
-            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 6, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
-            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Trail, Size = 1.2f, Height = 0.05f, Every = 0.5f, Burst = 0.4f });
-            var sparks = new MountEffectPart { Source = api.GameParticles("sparks_fx", "Assets/AddressableAssets/Materials/sparks_fx.mat") };
-            sparks.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 3, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
-            d.Parts.Add(flame);
-            d.Parts.Add(sparks);
-            api.Register(Plugin.Guid, d);
-        }
-
         // The effects to pick from in a settings list: the mount's own, none, then every registered effect.
         internal static IReadOnlyList<(string Id, string Label)> EffectChoices()
         {
-            var list = new List<(string, string)> { (MountEffects.KindId, "As the mount or skin"), (MountEffects.NoneId, "None") };
+            var list = new List<(string, string)> { (MountEffects.FromMount, "As the mount or skin"), (MountEffects.NoneId, "None") };
             foreach (MountEffectInfo e in Mounts.Effects.Effects) list.Add((e.Id, e.Name));
             return list;
         }
@@ -397,12 +380,12 @@ namespace GK2DonkeyAPI
                 {
                     want = MountEffects.IsNone(Effect.Value) ? "" : Effect.Value.Trim();
                     when = When.Value;
-                    if (want.Equals(MountEffects.KindId, StringComparison.OrdinalIgnoreCase))
+                    if (want.Equals(MountEffects.FromMount, StringComparison.OrdinalIgnoreCase))
                     {
                         // "As the mount": the wanted skin's own effect first (Hellfire comes with its fire), else the
                         // mount's; none if neither has one (docs/mounts-parity-matrix.md 9.5)
                         Looks.SkinDef sd = owner.LooksRig.DefNow;
-                        Kinds.KindDef k = owner.LooksRig.KindNow;
+                        Catalog.Entry k = owner.LooksRig.MountNow;
                         if (sd != null && !string.IsNullOrEmpty(sd.Effect))
                         {
                             want = sd.Effect;

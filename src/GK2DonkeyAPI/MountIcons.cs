@@ -34,14 +34,14 @@ namespace GK2DonkeyAPI
         private static readonly HashSet<string> failedLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private const string RestKey = "bdy_static_left";
 
-        internal static Icon Of(Kinds.KindDef k)
+        internal static Icon Of(Catalog.Entry k)
         {
             if (k == null) return default;
             try
             {
-                Texture2D portrait = Looks.PortraitOfKind(k);
+                Texture2D portrait = Looks.PortraitOfMount(k);
                 if (portrait != null) return Whole(portrait);
-                if (k == Kinds.Donkey) return FromGameSprite(Looks.Donkey.GamePrefix + RestKey);
+                if (k == Catalog.Donkey) return FromGameSprite(Looks.Donkey.GamePrefix + RestKey);
                 Looks.SkinDef d = Looks.Find(Looks.DefaultSkinOf(k));
                 return d != null ? OfSkin(d) : default;
             }

@@ -13,7 +13,7 @@ namespace GK2DonkeyAPI
     // morgue: it is the one building a body is worked in (its pallets, the autopsy table, the crematorium); in a house
     // or the church a body in hand is of no use, and no other cargo comes inside either.
     //
-    // Knowing it was the morgue door, two ways, either one enough (CorpseIntoMorguePlaces lists both kinds):
+    // Knowing it was the morgue door, two ways, either one enough (CorpseIntoMorguePlaces lists both mounts):
     //   - the building area the keeper arrives in, as the game itself tracks it (PlayerData.CurrentWorldZoneData, set
     //     by PlayerPhysicalBody.UpdateWorldZone from a raycast every physics step; SetPosition clears the old area at
     //     once, so at the dismount it is null or not yet the new one: this waits for it);

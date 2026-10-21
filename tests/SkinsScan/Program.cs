@@ -39,16 +39,16 @@ if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys rea
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "kind", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
 // The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountKeys = StringsIn(looksCs, "MountKeys");
 if (mountKeys.Count < 12) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (12 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
-var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Effects.cs"));
+var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
-if (!effectIds.Contains("hellfire")) Fail($"Effects.cs: the built-in effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"Effects.cs: {effectIds.Count} built-in effect id(s), hellfire among them");
+if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
 var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" };
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
 
@@ -210,7 +210,7 @@ foreach (var dir in skinDirs)
     }
     // the values the loader reads by name (anything else silently means the default in the game)
     if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");
-    if (skin.TryGetValue("kind", out var kindv) && kindv != "own" && kindv != "palette") Bad($"[Skin] kind = {kindv}: own or palette");
+    if (skin.TryGetValue("colours", out var coloursv) && coloursv != "own" && coloursv != "palette") Bad($"[Skin] colours = {coloursv}: own or palette");
     if (skin.TryGetValue("seat", out var seat) && seat != "picture" && !int.TryParse(seat, out _)) Bad($"[Skin] seat = {seat}: picture, or the canvas row (from the top) the rider's hip sits on");
     int seatRow = -1;
     bool seatRowGiven = skin.TryGetValue("seat", out var seatRowText) && int.TryParse(seatRowText, out seatRow);

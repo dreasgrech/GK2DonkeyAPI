@@ -5,10 +5,10 @@ to the game folder as dev builds **GK2 Donkey API 0.30.0 / GK2 Saddle Up 0.10.0*
 nothing is in `dist/` yet. In-game verification so far: skin steps 1 and 2 by hand (2026-10-17 afternoon), and one
 self-test run at 19:36 (31/31: skins, pack, leaks, recipe, Hellfire). Everything since 19:36 is untested in game.
 
-Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mounts-design.md) (kinds, abilities),
+Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mounts-design.md) (mounts, abilities),
 [mount-looks-design.md](mount-looks-design.md) (the player proposals and decisions, Hellfire's build note),
 [external-assets.md](external-assets.md) (what the game allows). Author guides: [skins.md](skins.md) (packs),
-[api.md](api.md) sections "Mount kinds", "Skins", "Effects". Settings: [reference.md](reference.md) `[Look]`, `[Effects]`.
+[api.md](api.md) sections "Mounts", "Skins", "Effects". Settings: [reference.md](reference.md) `[Look]`, `[Effects]`.
 
 ## 1. What was built
 
@@ -34,17 +34,17 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
   front layer, one pixel scale).
 - **Saved:** the instance key `Skin` (also `MountCompanion.Skin`, `FoalsWearSkin`).
 
-### 1.2 Mount kinds (what you ride)
-- `Mounts.Kinds`: a kind = identity, the rider's seat for it (`Tuning`, `TuningRide`, `TuningCart`: values for the
-  existing keys), `Cart` (may pull the cart), `Foals`, a default `Effect`, **abilities**. A skin names its kind
-  (`mount =`); an instance's kind is its skin's (`MountHandle.Kind`); nothing new is saved.
+### 1.2 Mounts (what you ride)
+- `Mounts.Catalog`: a mount = identity, the rider's seat for it (`Tuning`, `TuningRide`, `TuningCart`: values for the
+  existing keys), `Cart` (may pull the cart), `Foals`, a default `Effect`, **abilities**. A skin names its mount
+  (`mount =`); an instance's mount is its skin's (`MountHandle.Mount`); nothing new is saved.
 - **Declared by packs** with `[Mount]` / `[Mount.Tuning*]` in skin.cfg (first declaration wins, later skins join);
-  the built-in creatures declare theirs this way. **Registered in code** with `MountKindDef` (+ abilities).
+  the built-in creatures declare theirs this way. **Registered in code** with `MountDef` (+ abilities).
 - **Abilities** (`MountAbility`): `Attached` / `Detached` / `Mounted(style)` / `Dismounted` / `Tick(dt)`; one object per
-  kind; a throw switches it off on that instance with one warning; only for instances with a handle.
-- **Rules:** `cart = false` refuses mounting the cart style, hitching, and the style switch, with the kind's name.
-- **Values:** per instance and key: another mod's override › the skin's `[Tuning]` › the kind's for the style › the
-  kind's for both › the player's cfg; merged once, re-applied only on a skin, kind or style change.
+  mount; a throw switches it off on that instance with one warning; only for instances with a handle.
+- **Rules:** `cart = false` refuses mounting the cart style, hitching, and the style switch, with the mount's name.
+- **Values:** per instance and key: another mod's override › the skin's `[Tuning]` › the mount's for the style › the
+  mount's for both › the player's cfg; merged once, re-applied only on a skin, mount or style change.
 - `MountSettingsPage.MountRows(section, companion)`: every look row in one call (Saddle Up uses it; cfg keys unchanged).
 - Example: `examples/GK2DonkeySkins` `checker-beast` (no cart, seat +2, burns with Hellfire while ridden).
 
@@ -54,14 +54,14 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
   body, or as a trail (count, radius, angle, size, height, offset, every, burst), `Foals`, an own `Show` rule.
 - **Hellfire** is defined through the public API: six lamp flames and three sparks on a ring at 1.5x, a flame trail
   (pooled pieces, nothing made or destroyed while walking). Ring round the donkey, or wider round donkey and cart.
-- Per instance (saved): `Effect` (an id, `none`, or `mount` = the kind's own) and `EffectWhen` (Never / Night /
+- Per instance (saved): `Effect` (an id, `none`, or `mount` = the mount's own) and `EffectWhen` (Never / Night /
   Always). Everyone's: trail, with cart, in fights, on foals, the night threshold (the `_SunLight` shader global; no
   game member). Never indoors. Logs "Effects: <donkey>: 'hellfire' lit (...)" once per donkey.
 
 ### 1.4 Dev tooling and tests
 - Self-tests, group "Skins and effects" (8): skin on/off/removed; pack read/validated/worn/withdrawn (with a
   `[Tuning]` key and a front picture); no leaks over spawn/remove; recipe built whole; Hellfire lit/follows/out/gone;
-  mount kind from a pack; mount kind from code (ability hooks); plus the old ones untouched.
+  mount from a pack; mount from code (ability hooks); plus the old ones untouched.
 - `[perf]` parts `Looks`, `LooksBuild`, `Effects`, `Abilities` (time and bytes).
 - `tools/GK2AssetProbe` (Shift+F7) stays dev-only; `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_preview_html.py`.
 
@@ -170,6 +170,6 @@ Expect about 40 minutes. Keep notes as "step, what you saw"; anything odd in the
 3. **Release 0.10.0:** CHANGELOG Unreleased → version and date; `tools/build-dist.sh`; `tools/release-scans.sh`;
    `tools/make-release-zip.py`; the first-run rehearsal with the probe and the sample pack moved aside; then your
    commit, tags and upload (the 0.9.1 steps are still yours too).
-4. **Phase 2 (after the release):** sounds per kind (a skin's/kind's sounds mapped onto the donkey's sound events);
+4. **Phase 2 (after the release):** sounds per mount (a skin's/mount's sounds mapped onto the donkey's sound events);
    real abilities (flight/glide, fire breath, a gallop) as separate features on the hooks; a picker with pictures per
-   kind; more over-layers UI (a saddle on a rat); a second base if a creature ever needs its own animation set.
+   mount; more over-layers UI (a saddle on a rat); a second base if a creature ever needs its own animation set.

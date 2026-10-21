@@ -5,7 +5,7 @@ The second investigation after docs/mounts-foundation-audit.md (the definitions)
 regarding parity where all mounts are built the same as much as possible. Once we are 100% on everything, we go
 into plan mode so that we finish all of them."* Two full read-throughs of the code, the tools, the tests and the
 docs, checked against each other. The result: **no code anywhere branches on a mount's or a skin's id**; every
-difference comes from a flag in a skin's file or from code that only knows the donkey. The second kind is what is
+difference comes from a flag in a skin's file or from code that only knows the donkey. The second mount is what is
 left, and it hits Gerry (160 px, the picture seat) and the dragon (128 px, the front layer) most.
 
 Tags: **fix** (no decision needed), **decide** (two defensible ways), **by design** (a difference the design
@@ -33,7 +33,7 @@ wants; written down so it stops looking like a gap). Line numbers are of 2026-10
 | 2.7 | **The cart rule has two holes**: `Mounts.Spawn(WithCart)` with a no-cart mount's skin is not refused, nor is a skin change on a hitched instance. | Api/Mounts.cs:415-460, MountRegistry.cs:777+ | **fix** |
 | 2.8 | **`[Base.*]` and `[Colors]` are ignored silently** on a replace or palette skin (erase is reported). | Colors.cs:921-947, Looks.cs:1435 | **fix**: a report line |
 | 2.9 | **Colour rows for regions a skin lacks**: the colours page builds the same rows for every mount, so the worm gets Harness and Eye rows that map nothing. Nothing tells a mod which regions a skin has. | Api/MountSettingsPage.cs:697-718 | **fix**: `MountSkinInfo.Regions`, rows greyed for a region the skin has none of |
-| 2.10 | **Mount tuning switches late while a skin builds**: the cart rule, effect, babies and abilities follow the wanted skin at once, the seat and hitch values follow when the sheet is whole. | Looks.cs:1951 vs 1763 | **fix**: one source (the wanted skin's kind) |
+| 2.10 | **Mount tuning switches late while a skin builds**: the cart rule, effect, babies and abilities follow the wanted skin at once, the seat and hitch values follow when the sheet is whole. | Looks.cs:1951 vs 1763 | **fix**: one source (the wanted skin's mount) |
 | 2.11 | The rider's bob, hand sway and head lag are the donkey's walk table on every mount; a pack cannot supply its own. | RiderMotion.cs:61-162 | **by design** for now (the creatures are drawn to the donkey's walk); noted |
 | 2.12 | The side file's record label and the dormant list always say "donkey". `Noun` says "a gerry". | Persistence.cs:402, TuningWindow.Instances.cs:469, MountInstance.cs:79 | **fix**: the mount's name; a `noun` key or "Gerry the skull" |
 | 2.13 | "As the mount" with the Hellfire skin shows no Hellfire effect: a skin cannot come with an effect, only a mount can, and Hellfire's mount is the donkey. | Effects.cs, Looks.cs | **decide**: a skin-level `effect =` (a Hellfire skin that burns by default) or leave it to the player's pick |
@@ -54,7 +54,7 @@ wants; written down so it stops looking like a gap). Line numbers are of 2026-10
 |---|---|---|
 | 4.1 | `MountSkinDef` (code) has no erase, `[Base.*]`, `[Colors]` regions, `seat = picture`, `source = game` or sheet; a code skin with its own sprites collects no colours, so the player's colours do nothing on it. A pack has all of these. | **decide**: packs are the full format and code skins are for generated or dynamic pictures (write it down), or add `Regions`, `Erase`, `BaseRegions`, `SeatFromPicture` to the def |
 | 4.2 | `RegisterRecipe` makes a donkey replace skin only (no mount, over, canvas, seat, front, tuning). No built-in uses a recipe. | **by design** (recipes are the legacy path), noted in api.md |
-| 4.3 | `MountSkinInfo` does not say the seat mode, the front layer, the game source or the colour regions; `MountSkinInfo.Donkey.Mount` is null; `MountKindInfo` lacks `EffectWhen` and the tuning; `MountKindInfo.Skins` is in registry order, not Default first; `MountSpawn` picks a mount only through a skin id. | **fix**: the info records say what the cfg says |
+| 4.3 | `MountSkinInfo` does not say the seat mode, the front layer, the game source or the colour regions; `MountSkinInfo.Donkey.Mount` is null; `MountInfo` lacks `EffectWhen` and the tuning; `MountInfo.Skins` is in registry order, not Default first; `MountSpawn` picks a mount only through a skin id. | **fix**: the info records say what the cfg says |
 | 4.4 | A code mount with no skins appears in the Mount list and its "Default" resolves to the donkey's own art. | **fix**: a mount with no skin is not offered |
 | 4.5 | `MountSkinInfo.OwnColours`' comment says coat and harness colours don't apply, which contradicts the region system. | **fix** (comment) |
 
@@ -139,7 +139,7 @@ the lips off, the keys are documented as a mount's; phase 2 (the game's other vo
 Nothing to decide for now.
 
 **9.5 A skin that comes with an effect (2.13).** Fact: Saddle Up's Effect row defaults to "As the mount"
-(`MountEffects.KindId`, Api/MountSettingsPage.cs:423), so a player who picks the Hellfire skin and never opens the
+(`MountEffects.FromMount`, Api/MountSettingsPage.cs:423), so a player who picks the Hellfire skin and never opens the
 Effect section sees horns without fire, which contradicts the look the skin was designed as (horns, tail and
 flames together). Narrowed to a real choice: **(a)** a skin-level `effect =` / `effect_when =` ("what this skin
 comes with"), resolved under "As the mount" as the skin's, else the mount's (Effects.cs:399 is the one place); or
@@ -193,7 +193,7 @@ Everything tagged **fix** needs no decision and goes into the plan as is.
 | 2.4 | **done** (M3): the ring scales by the drawn standing width (self-test: the rat 1.48); Gerry's by eye (open) |
 | 2.5 | **open**: the user's look first (shadow and grass bend on the dragon and Gerry) |
 | 2.6 | **phase 1 done** (M4): the sound keys are a mount's to set; the snail and the worm silent, Gerry's lips off; phase 2 (a sounds API) not planned |
-| 2.7 | **done** (M4): `Spawn(WithCart)` refused; a hitched mount that becomes a no-cart kind leaves the cart standing |
+| 2.7 | **done** (M4): `Spawn(WithCart)` refused; a hitched mount that becomes a no-cart mount leaves the cart standing |
 | 2.8 | **done** (M4): report lines, and the scan's rules |
 | 2.9 | **done** (M4): `MountSkinInfo.Regions`, `MountSettingsPage.EnableWhen` / `MountHasRegion`; Saddle Up greys the row |
 | 2.10 | **done** (M2): facts follow the wanted skin, geometry the worn drawing |

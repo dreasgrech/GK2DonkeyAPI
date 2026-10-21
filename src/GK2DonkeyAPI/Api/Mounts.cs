@@ -118,7 +118,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Success;
             }
-            string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByKind(Mount.Ridden) : null) ?? MountRules.WhyCannotMount(style);
+            string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(Mount.Ridden) : null) ?? MountRules.WhyCannotMount(style);
             if (reason != null)
             {
                 if (showMessage)
@@ -331,20 +331,20 @@ namespace GK2DonkeyAPI.Api
         // source. A donkey shows one through its tuning keys "Effect" and "EffectWhen", or MountCompanion.Effect.
         public static MountEffects Effects { get; } = new MountEffects();
 
-        // Mount kinds (docs/mounts-design.md): what is ridden as a creature type, with its seat, rules and abilities;
-        // a skin is a look of one kind.
-        public static MountKinds Kinds { get; } = new MountKinds();
+        // Mounts (docs/mounts-design.md): what is ridden as a creature type, with its seat, rules and abilities;
+        // a skin is a look of one mount.
+        public static MountCatalog Catalog { get; } = new MountCatalog();
 
         // Whether the mounts other than the donkey, the skins and the effects are switched on in this build. They are
         // in the DLL since 0.30.0 but off for players in Saddle Up 0.10.0 (the next update switches them on): off,
-        // Kinds lists the donkey alone, Looks and Effects list nothing, and a registration (Looks.Register,
-        // Kinds.Register, Effects.Register and the rest) is kept out: nothing thrown, a handle that does nothing, one
+        // Catalog lists the donkey alone, Looks and Effects list nothing, and a registration (Looks.Register,
+        // Catalog.Register, Effects.Register and the rest) is kept out: nothing thrown, a handle that does nothing, one
         // log line per owner. A mod that adds a mount can register in Awake as usual and check this to tell its player.
         public static bool MountsEnabled => Plugin.MountsOn;
 
         private static readonly HashSet<string> keptOutLogged = new HashSet<string>(StringComparer.Ordinal);
 
-        // A registration refused by the switch above: said once per owner and kind of thing.
+        // A registration refused by the switch above: said once per owner and sort of thing.
         internal static IDisposable KeptOut(string ownerId, string what, string id)
         {
             if (keptOutLogged.Add(ownerId + "|" + what))
@@ -437,16 +437,16 @@ namespace GK2DonkeyAPI.Api
             string skinId = spec.Skin;
             if (string.IsNullOrEmpty(skinId) && !string.IsNullOrEmpty(spec.Mount))
             {
-                GK2DonkeyAPI.Kinds.KindDef kindByName = GK2DonkeyAPI.Kinds.Find(spec.Mount);
-                if (kindByName == null)
+                GK2DonkeyAPI.Catalog.Entry mountByName = GK2DonkeyAPI.Catalog.Find(spec.Mount);
+                if (mountByName == null)
                 {
                     Plugin.Log.LogInfo($"API: {ownerId} could not spawn: no mount '{spec.Mount}'.");
                     return null;
                 }
-                skinId = kindByName == GK2DonkeyAPI.Kinds.Donkey ? null : GK2DonkeyAPI.Looks.DefaultSkinOf(kindByName);
+                skinId = mountByName == GK2DonkeyAPI.Catalog.Donkey ? null : GK2DonkeyAPI.Looks.DefaultSkinOf(mountByName);
                 if (skinId == MountLooks.DonkeyId)
                 {
-                    // a kind with no skin has no drawing: not offered to players (Looks.KindChoices), not spawned by name
+                    // a mount with no skin has no drawing: not offered to players (Looks.MountChoices), not spawned by name
                     Plugin.Log.LogInfo($"API: {ownerId} could not spawn: the mount '{spec.Mount}' has no skin.");
                     return null;
                 }
@@ -455,9 +455,9 @@ namespace GK2DonkeyAPI.Api
             if (spec.WithCart && spec.Donkey && !string.IsNullOrEmpty(skinId))
             {
                 GK2DonkeyAPI.Looks.SkinDef sd = GK2DonkeyAPI.Looks.Find(skinId);
-                if (sd != null && !sd.Kind.Cart)
+                if (sd != null && !sd.Mount.Cart)
                 {
-                    Plugin.Log.LogInfo($"API: {ownerId} could not spawn with a cart: a {sd.Kind.NounText} can't pull the cart.");
+                    Plugin.Log.LogInfo($"API: {ownerId} could not spawn with a cart: a {sd.Mount.NounText} can't pull the cart.");
                     return null;
                 }
             }
@@ -494,7 +494,7 @@ namespace GK2DonkeyAPI.Api
         // own settings, owned by ownerId, changeable through MountHandle.Tuning). It trots after the parent when the
         // parent moves, and goes when the parent is removed. Null when refused (see Mounts.Spawn).
         // id, key: as MountSpawn. persist: kept with the save; null: as its parent is. scale: the baby's size as a fraction
-        // of the grown one; 0 (the default) is the parent's mount's own (MountKindDef.FoalScale: the donkey's 0.6, Gerry's 0.33).
+        // of the grown one; 0 (the default) is the parent's mount's own (MountDef.FoalScale: the donkey's 0.6, Gerry's 0.33).
         public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0f, int id = 0, string key = null, bool? persist = null)
         {
             if (parent == null)
@@ -505,7 +505,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return null;
             }
-            if (scale <= 0f) scale = Kinds.Find(parent.Kind)?.FoalScale ?? 0.6f;
+            if (scale <= 0f) scale = Catalog.Find(parent.Mount)?.FoalScale ?? 0.6f;
             Mount.Instance p = parent.I;
             Vector3 at = p.BodyPoint() + new Vector3(UnityEngine.Random.Range(-1.2f, 1.2f), 0f, UnityEngine.Random.Range(-0.5f, 0.5f));
             MountHandle foal = Spawn(ownerId, new MountSpawn

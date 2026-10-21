@@ -1,7 +1,7 @@
 # The Royal Parade skin, generated (docs/sprite-tools.md): a saddle cloth (red, gold trim and fringe, a fleur on the flank) and a crown
 # between the ears at the Hellfire horn bases (the positions reviewed for Hellfire v14). A built-in skin, the same
 # pipeline as Hellfire (docs/sprite-tools.md "Making a skin"): writes a PNG per frame into
-# src/GK2DonkeyAPI/assets/skins/royal-parade/ (skin.cfg there is by hand; the DLL build embeds the folder), plus
+# src/SaddleUp/assets/skins/royal-parade/ (skin.cfg there is by hand; the DLL build embeds the folder), plus
 # royal.aseprite for anyone who wants to touch a frame by hand, preview.png (every frame at 4x), zoom.png (six
 # frames at 8x) and strips/<animation>.png (every animation as a frame strip at 4x: LOOK AT EVERY STRIP before the
 # game does).
@@ -27,7 +27,7 @@ import ase_write
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 OUTDIR = os.path.join(HERE, "out")                      # generated: the .aseprite, the previews, the strips (git-ignored)
 OUT = os.path.join(OUTDIR, "royal.aseprite")
-ASSETS = os.path.join(REPO, "src", "GK2DonkeyAPI", "assets", "skins", "royal-parade")  # the built-in pack: skin.cfg by hand, PNGs from here
+ASSETS = os.path.join(REPO, "src", "SaddleUp", "assets", "skins", "royal-parade")  # the built-in pack: skin.cfg by hand, PNGs from here
 HORNS = json.load(open(os.path.join(HERE, "horn_bases.json")))
 ANCHORS = json.load(open(os.path.join(HERE, "anchors.json")))
 HEM_ABOVE = 2     # the hem this many rows above the standing frame's belly line: the belly and the legs show

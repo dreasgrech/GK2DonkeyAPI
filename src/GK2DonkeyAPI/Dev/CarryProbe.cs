@@ -590,7 +590,7 @@ namespace GK2DonkeyAPI
                 string id = wgo?.Data?.id ?? cd.name;
                 if (id == "npc_donkey" || !seenIds.Add(id))
                 {
-                    continue; // one example per object kind; the donkey is dumped above
+                    continue; // one example per object mount; the donkey is dumped above
                 }
                 found++;
                 Transform root = wgo != null ? wgo.transform : cd.transform;
@@ -640,7 +640,7 @@ namespace GK2DonkeyAPI
                     }
                 }
             }
-            sb.AppendLine($"[piles] {found} inventory-driven drawer(s) (one per object kind) in the loaded scenes, {drops} with UpdateDropViewsFromInventory. Stand near the pallets or wood piles when dumping.");
+            sb.AppendLine($"[piles] {found} inventory-driven drawer(s) (one per object mount) in the loaded scenes, {drops} with UpdateDropViewsFromInventory. Stand near the pallets or wood piles when dumping.");
         }
 
         // A drawer target relative to its object's root: path, position, rotation, active state and the size and

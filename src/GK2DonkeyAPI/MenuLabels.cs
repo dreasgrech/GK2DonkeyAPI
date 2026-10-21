@@ -40,12 +40,12 @@ namespace GK2DonkeyAPI
                 {
                     ourRows.Add(r.Section + "." + r.Entry.Definition.Key);
                 }
-                if (r.Kind == MountSettingsPage.Kind.Choice && r.Entry != null && r.ChoiceLabels != null)
+                if (r.RowKind == MountSettingsPage.RowKind.Choice && r.Entry != null && r.ChoiceLabels != null)
                 {
                     string[] fixedLabels = r.ChoiceLabels;
                     labels[r.Section + "." + r.Entry.Definition.Key] = () => fixedLabels;
                 }
-                else if (r.Kind == MountSettingsPage.Kind.List && r.Entry != null)
+                else if (r.RowKind == MountSettingsPage.RowKind.List && r.Entry != null)
                 {
                     MountSettingsPage.Row row = r;
                     labels[r.Section + "." + r.Entry.Definition.Key] = () =>

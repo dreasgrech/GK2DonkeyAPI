@@ -285,7 +285,7 @@ namespace GK2DonkeyAPI
                 var mod = new ModRows { Page = page };
                 foreach (MountSettingsPage.Row r in page.Rows)
                 {
-                    if (r.Kind == MountSettingsPage.Kind.Preview)
+                    if (r.RowKind == MountSettingsPage.RowKind.Preview)
                     {
                         continue; // the picture goes above this window (LookPreview)
                     }
@@ -448,7 +448,7 @@ namespace GK2DonkeyAPI
             var b = new Built { Row = r };
             b.Go = Copy(template, content, Prefix + page.OwnerId + " " + (r?.Entry?.Definition.Key ?? r?.Label ?? heading));
             b.Switch = b.Go.GetComponentInChildren<UISwitchButton>(true);
-            bool note = r != null && r.Kind == MountSettingsPage.Kind.Note;
+            bool note = r != null && r.RowKind == MountSettingsPage.RowKind.Note;
             if (r == null || note)
             {
                 // A section heading, or a note: the label only, everything else of the row hidden. A note shows its
@@ -475,16 +475,16 @@ namespace GK2DonkeyAPI
                 return b;
             }
             SetLabel(b.Go, b.Switch, r.Label);
-            switch (r.Kind)
+            switch (r.RowKind)
             {
-                case MountSettingsPage.Kind.Toggle:
+                case MountSettingsPage.RowKind.Toggle:
                     b.Fields = new[] { "Off", "On" };
                     b.Values = new object[] { false, true };
                     break;
-                case MountSettingsPage.Kind.List:
+                case MountSettingsPage.RowKind.List:
                     MountSettingsPage.FillList(r);
-                    goto case MountSettingsPage.Kind.Choice;
-                case MountSettingsPage.Kind.Choice:
+                    goto case MountSettingsPage.RowKind.Choice;
+                case MountSettingsPage.RowKind.Choice:
                     b.Fields = r.ChoiceLabels;
                     b.Values = new object[r.ChoiceValues.Length];
                     for (int i = 0; i < b.Values.Length; i++)
@@ -492,7 +492,7 @@ namespace GK2DonkeyAPI
                         b.Values[i] = r.ChoiceValues.GetValue(i);
                     }
                     break;
-                case MountSettingsPage.Kind.Steps:
+                case MountSettingsPage.RowKind.Steps:
                     var f = new List<string>();
                     var v = new List<object>();
                     for (int n = r.Min; n <= r.Max; n += r.Step)
@@ -503,11 +503,11 @@ namespace GK2DonkeyAPI
                     b.Fields = f.ToArray();
                     b.Values = v.ToArray();
                     break;
-                case MountSettingsPage.Kind.Button:
+                case MountSettingsPage.RowKind.Button:
                     // Either arrow (or the gamepad's left/right) presses it.
                     b.Fields = new[] { "Open", "Open " };
                     break;
-                case MountSettingsPage.Kind.Key:
+                case MountSettingsPage.RowKind.Key:
                     // Either arrow starts the capture (Tick): two fields, so either arrow is a change.
                     b.Fields = KeyFields(KeyText(r));
                     break;
@@ -516,24 +516,24 @@ namespace GK2DonkeyAPI
                     break;
             }
             Built captured = b;
-            b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", null, null, loopNavigation: r.Kind != MountSettingsPage.Kind.Steps);
-            b.Switch.IsInteractable = b.Values != null || r.Kind == MountSettingsPage.Kind.Button || r.Kind == MountSettingsPage.Kind.Key;
+            b.Switch.Initialize(i => Changed(captured, i), b.Fields, IndexOf(b), "", null, null, loopNavigation: r.RowKind != MountSettingsPage.RowKind.Steps);
+            b.Switch.IsInteractable = b.Values != null || r.RowKind == MountSettingsPage.RowKind.Button || r.RowKind == MountSettingsPage.RowKind.Key;
             return b;
         }
 
         private static string ReadOnlyText(MountSettingsPage.Row r)
         {
             string s;
-            switch (r.Kind)
+            switch (r.RowKind)
             {
-                case MountSettingsPage.Kind.Info:
+                case MountSettingsPage.RowKind.Info:
                     s = r.InfoValue?.Invoke();
                     if (string.IsNullOrEmpty(s))
                     {
                         return "-";
                     }
                     break;
-                case MountSettingsPage.Kind.Key: return KeyText(r);
+                case MountSettingsPage.RowKind.Key: return KeyText(r);
                 default: s = r.Entry?.BoxedValue as string; break;
             }
             return string.IsNullOrEmpty(s) ? "(none; set in the cfg)" : s;
@@ -558,12 +558,12 @@ namespace GK2DonkeyAPI
 
         private static void Changed(Built b, int index)
         {
-            if (b.Row?.Kind == MountSettingsPage.Kind.Key)
+            if (b.Row?.RowKind == MountSettingsPage.RowKind.Key)
             {
                 StartCapture(b);
                 return;
             }
-            if (b.Row?.Kind == MountSettingsPage.Kind.Button)
+            if (b.Row?.RowKind == MountSettingsPage.RowKind.Button)
             {
                 b.Switch.UpdateField(0, fireCallback: false);
                 try
@@ -599,7 +599,7 @@ namespace GK2DonkeyAPI
         // Its value up to date (the cfg, the Mods menu or another row may have changed it).
         private static void Sync(Built b)
         {
-            if (b.Row == null || b.Row.Kind == MountSettingsPage.Kind.Button || b.Row.Kind == MountSettingsPage.Kind.Note)
+            if (b.Row == null || b.Row.RowKind == MountSettingsPage.RowKind.Button || b.Row.RowKind == MountSettingsPage.RowKind.Note)
             {
                 return;
             }
@@ -607,7 +607,7 @@ namespace GK2DonkeyAPI
             {
                 b.Switch.UpdateField(IndexOf(b), fireCallback: false);
             }
-            else if (b.Row.Kind == MountSettingsPage.Kind.Key)
+            else if (b.Row.RowKind == MountSettingsPage.RowKind.Key)
             {
                 b.Switch.ReinitLabels(KeyFields(capturing == b ? "Press a key (Esc cancels)" : KeyText(b.Row)));
                 b.Switch.UpdateField(0, fireCallback: false);

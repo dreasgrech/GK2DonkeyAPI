@@ -53,7 +53,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 - **The settings picture on a mount change** (built 2026-10-18 21:45): Mods → Saddle Up, change Mount from Giant
   Worm to Gerry to Giant Snail: each picture appears once at its final size, no shrinking or growing afterwards; the
   log has one "[preview] ... framed on what's drawn over 2 s of the walk" line per picture per change.
-- **Gerry's babies after the sleeping-kind fix** (built 2026-10-18 21:30): load the save, go indoors with the babies
+- **Gerry's babies after the sleeping-mount fix** (built 2026-10-18 21:30): load the save, go indoors with the babies
   before calling Gerry: they are a third of him from the start (one "made again at that size" line per baby at most
   once, right after the load, if the save still holds 0.6 ones). The self-test "game creature" has the sleeping
   check (a Gerry 42-50 away, asleep without a view, reports the Gerry mount).
@@ -222,7 +222,7 @@ In a game:
 9q. **Zombies on the cart, steps 2–6** (2026-10-05, [zombies-on-cart.md](zombies-on-cart.md) §6 and its test
     list). Watch the log for `linked to its copy`, `drawn lying`, `zombie box`, and never `LOST`, `no zombie behind
     it` or `stands in the world … instead` (that last one means a rescue ran: report it).
-    **Round 1 passed (2026-10-05, log):** no warning or error of any kind, game included.
+    **Round 1 passed (2026-10-05, log):** no warning or error of any mount, game included.
     - Both zombies (`zombie_name_14` head 1059 / `hed_lut_02`, `zombie_name_28` head 1055 / `hed_lut_04`) went on
       the cart and were drawn lying. Each relink kept `9 item(s) inside`: after pickups, doors (re-summon), loading
       on foot and the save.
@@ -303,7 +303,7 @@ closed):
   forward with the menus closed, the key closes it; Gerry's portrait (if its pack names one) under its name; the
   description lines one line each, not spilling past the rows column (else: Ellipsis, or a shorter WrapAt). The **F11 set**: the five new scenarios
   (tuning ownership, ids, format, the sheet through a hitch and sleep, the settings rows' panel checks) and
-  everything under the new rules; the kind-pack scenario now expects the mount to go with its withdrawn skin.
+  everything under the new rules; the mount-pack scenario now expects the mount to go with its withdrawn skin.
   A **mount's stride**: the dragon's legs at its speed look the same as before (nothing sets the key yet). A
   **sleeping mount's sheet** freed: ride far from a standing dragon (past 35 units), the log says its sheet is
   "unloaded (no donkey wears it)", and it wears the dragon again when you come back; unhitch a dragon next to
@@ -311,7 +311,7 @@ closed):
   the Speed rows out of the Mods menu for it (none of ours does; the self-test covers it). **Esc with the panel
   open**: the pause menu opens under the centred panel (the look bar sat at the bottom); if it covers the pause
   menu's buttons, close the panel on the pause menu opening. **Paging** (more than ten mounts: register temp
-  kinds from the F11 Mounts tab): Up and Down page without a log line. **Gerry at game-ready**: the log's
+  mounts from the F11 Mounts tab): Up and Down page without a log line. **Gerry at game-ready**: the log's
   "named game frame(s) are there" line, not "set aside" (an unannounced warning that would fail four scenarios).
   **A stale loose copy** of a Saddle Up pack under `BepInEx\plugins` (rat, snail, worm, dragon, gerry from when
   the API shipped them) would log "replaces the one from" at start: delete it.
@@ -335,12 +335,12 @@ closed):
 - **The panel's first row group is headed "Mount"** over a lone Skin row (the Skin row's section); "Skin" would
   read better. Cosmetic; judge in game.
 - **A code mount against a loose pack's mount of the same id** (2026-10-20 night, pass 2): the version rule covers
-  skins; a code kind (`Mounts.Kinds.Register`) with the id of a pack-declared kind is refused (`Kinds.Register`
+  skins; a code mount (`Mounts.Catalog.Register`) with the id of a pack-declared mount is refused (`Catalog.Register`
   throws for another owner) and the re-declare path is `FromPack` only, so a code mod's Default skin that wins by
-  version cannot take the `[Mount]` declaration. Decide when it comes up: let a code kind replace a pack kind of
-  the same id when its Default skin outranks the pack's, or keep code kinds first come first served.
+  version cannot take the `[Mount]` declaration. Decide when it comes up: let a code mount replace a pack mount of
+  the same id when its Default skin outranks the pack's, or keep code mounts first come first served.
 - **`IsAbilityOwner` is a substring match** (`.ability.` anywhere in the owner): a plugin GUID containing it would
-  have its instance values neither saved nor restored. Far-fetched; a stricter shape (`<guid>.ability.<kind>` with
+  have its instance values neither saved nor restored. Far-fetched; a stricter shape (`<guid>.ability.<mount>` with
   `<guid>` a loaded plugin) when an ability owner is ever logged for one.
 - **A reloaded embedded skin keeps its sources** (2026-10-20 night, docs/mounts-foundation-2.md 7): F11 Mounts
   tab on the dragon, "Reload from the file" twice; the save path under the rows stays the repo's

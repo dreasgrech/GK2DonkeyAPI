@@ -136,7 +136,7 @@ namespace GK2DonkeyAPI
 
         internal sealed class DormantRecord
         {
-            internal string Owner, Key, Scene, Kind, Parent;
+            internal string Owner, Key, Scene, Label, Parent;
             internal int Id, Cargo;
             internal Vector3 Position;
             internal string Why;
@@ -180,7 +180,7 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            Plugin.Log.LogInfo($"Persistence: forgot the dormant {d.FullId} {d.Kind}; it is gone with the next save.");
+            Plugin.Log.LogInfo($"Persistence: forgot the dormant {d.FullId} {d.Label}; it is gone with the next save.");
             foreach (DormantRecord c in dormant.ToArray())
             {
                 if (c.Parent == d.FullId)
@@ -405,7 +405,7 @@ namespace GK2DonkeyAPI
             internal string FullId => FullIdOf(Owner, Id);
             internal string ParentFull => ParentOwner != null ? FullIdOf(ParentOwner, ParentId) : null;
             // The record's mount, from its saved Skin key: "dragon with cart", "skull", "foal"; a plain one is a donkey.
-            internal string Kind
+            internal string Label
             {
                 get
                 {
@@ -416,8 +416,8 @@ namespace GK2DonkeyAPI
                         if (s.Length >= 3 && s[0] == "Skin" && !string.IsNullOrEmpty(s[2]))   // a set is [key, owner, value]
                         {
                             Looks.SkinDef sd = Looks.Find(s[2]);
-                            Kinds.KindDef k = sd != null && sd.Unavailable == null ? sd.Kind : null; // set aside: it is a donkey in play
-                            if (k != null && k != Kinds.Donkey) noun = k.NounText;
+                            Catalog.Entry k = sd != null && sd.Unavailable == null ? sd.Mount : null; // set aside: it is a donkey in play
+                            if (k != null && k != Catalog.Donkey) noun = k.NounText;
                             break;
                         }
                     }
@@ -614,7 +614,7 @@ namespace GK2DonkeyAPI
                     if (r.RemoveWithParent)
                     {
                         dropped.Add(r);
-                        Plugin.Log.LogInfo($"Persistence: {r.FullId} {r.Kind}: its parent {r.ParentFull} isn't kept; it went with it.");
+                        Plugin.Log.LogInfo($"Persistence: {r.FullId} {r.Label}: its parent {r.ParentFull} isn't kept; it went with it.");
                     }
                     else
                     {
@@ -638,7 +638,7 @@ namespace GK2DonkeyAPI
                     Id = r.Id,
                     Key = r.Key,
                     Scene = r.Scene,
-                    Kind = r.Kind,
+                    Label = r.Label,
                     Parent = r.ParentFull,
                     Position = r.Position,
                     Cargo = r.Cargo.Count,
@@ -648,7 +648,7 @@ namespace GK2DonkeyAPI
             }
             foreach (DormantRecord d in dormant)
             {
-                Plugin.Log.LogInfo($"Persistence: {d.FullId} {d.Kind} is dormant ({d.Why}); kept in the file, back when its mod is.");
+                Plugin.Log.LogInfo($"Persistence: {d.FullId} {d.Label} is dormant ({d.Why}); kept in the file, back when its mod is.");
             }
 
             // Parents before children (no chains: two passes).
@@ -669,7 +669,7 @@ namespace GK2DonkeyAPI
                     {
                         if (r.RemoveWithParent)
                         {
-                            Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Kind}: its parent {r.ParentFull} didn't come back; neither did it.");
+                            Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label}: its parent {r.ParentFull} didn't come back; neither did it.");
                             failed++;
                             continue;
                         }
@@ -696,7 +696,7 @@ namespace GK2DonkeyAPI
                     }, out string why);
                     if (i == null)
                     {
-                        Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Kind} ({r.Scene}) could not be spawned again: {why}");
+                        Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label} ({r.Scene}) could not be spawned again: {why}");
                         failed++;
                         continue;
                     }
@@ -766,7 +766,7 @@ namespace GK2DonkeyAPI
 
         private static readonly HashSet<string> asideLogged = new HashSet<string>(StringComparer.Ordinal);
 
-        // An override's owner counts as loaded when it is a plugin's GUID, or derived from one ("<guid>.ability.<kind>",
+        // An override's owner counts as loaded when it is a plugin's GUID, or derived from one ("<guid>.ability.<mount>",
         // the panel's, the self-tests' sub-owners): a removed mod's values are set aside and written back unchanged
         // (docs/mounts-foundation-2.md 2.1: before, they were applied under a GUID nothing would ever clear).
         internal static bool OverrideOwnerLoaded(string by)
@@ -779,11 +779,11 @@ namespace GK2DonkeyAPI
                 if (by.StartsWith(core + ".", StringComparison.Ordinal)) return true;
             }
             int ab = by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal);
-            if (ab > 0) return OwnerPresent(by.Substring(0, ab)); // "<guid>.ability.<kind>": the kind's mod must be loaded (RestoreSetting drops ability lines before asking, by design: session-only values)
+            if (ab > 0) return OwnerPresent(by.Substring(0, ab)); // "<guid>.ability.<mount>": the mount's mod must be loaded (RestoreSetting drops ability lines before asking, by design: session-only values)
             return false;
         }
 
-        internal const string AbilityOwnerMark = ".ability."; // MountKinds.Register: an ability's owner is "<the kind's owner>.ability.<kind id>"
+        internal const string AbilityOwnerMark = ".ability."; // MountCatalog.Register: an ability's owner is "<the mount's owner>.ability.<mount id>"
         internal static bool IsAbilityOwner(string by) => by != null && by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal) > 0;
 
         internal static void RestoreSetting(Instance i, string key, string by, string value) // internal for the self-test of the set-aside lines

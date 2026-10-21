@@ -55,7 +55,7 @@ namespace GK2DonkeyAPI
             // while this instance is bound (Mount.Current), and the mod that set each.
             internal readonly Dictionary<string, object> Overrides = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
             internal readonly Dictionary<string, string> OverrideOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            // Overrides read from the side file whose owner isn't loaded (a removed mod's, an ability's of a gone kind):
+            // Overrides read from the side file whose owner isn't loaded (a removed mod's, an ability's of a gone mount):
             // not applied, written back as they were, so they return with the mod (key, owner, value as text).
             internal readonly List<string[]> AsideSets = new List<string[]>();
 
@@ -75,16 +75,16 @@ namespace GK2DonkeyAPI
             }
 
             // "dragon with cart", "free cart", "foal", "donkey": the mount's name (Noun) where there is one.
-            internal string KindName => !HasDonkey ? "free cart" : HasCart ? Noun + " with cart" : !Rideable && ViewScale < 1f ? "foal" : Noun;
+            internal string MountName => !HasDonkey ? "free cart" : HasCart ? Noun + " with cart" : !Rideable && ViewScale < 1f ? "foal" : Noun;
 
             // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "dragon",
             // "giant rat"); a free cart has no mount, so "mount".
-            internal string Noun => HasDonkey ? (LooksRig?.KindNow?.NounText ?? "donkey") : "mount";
+            internal string Noun => HasDonkey ? (LooksRig?.MountNow?.NounText ?? "donkey") : "mount";
 
             // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.saddleup#1.
             internal string FullId => FullIdOf(OwnerId, Id);
 
-            internal string Describe() => $"{FullId} {KindName}";
+            internal string Describe() => $"{FullId} {MountName}";
 
             // ------------------------------------------------------------------ standing in the world
 
@@ -786,10 +786,10 @@ namespace GK2DonkeyAPI
                 {
                     return "This one can't pull a cart.";
                 }
-                string byKind = Looks.WhyNotCartByKind(this);
-                if (byKind != null)
+                string byMount = Looks.WhyNotCartByMount(this);
+                if (byMount != null)
                 {
-                    return byKind;
+                    return byMount;
                 }
                 if (cart == null || cart.HasDonkey || cart.IsRidden || !IsRegistered(cart))
                 {
@@ -934,7 +934,7 @@ namespace GK2DonkeyAPI
             }
 
             // The overrides that belong to the cart (IsCartKey) move from one instance to the other; the target's own
-            // cart overrides are replaced. A creature's own values (Looks.TuningOwner, a kind's cart-style tuning) never
+            // cart overrides are replaced. A creature's own values (Looks.TuningOwner, a mount's cart-style tuning) never
             // move: the creature sets them again on whichever instance wears it, and a free cart wears none.
             private static void MoveCartSettings(Instance from, Instance to)
             {
@@ -950,7 +950,7 @@ namespace GK2DonkeyAPI
                 {
                     if (!IsCartKey(kv.Key)) continue;
                     from.OverrideOwners.TryGetValue(kv.Key, out string o);
-                    if (o == Looks.TuningOwner || IsAbilityOwner(o)) continue; // the mount's merge and an ability's values are the donkey's kind's, not the cart's: set again when hitched
+                    if (o == Looks.TuningOwner || IsAbilityOwner(o)) continue; // the mount's merge and an ability's values are the donkey's mount's, not the cart's: set again when hitched
                     to.Overrides[kv.Key] = kv.Value;
                     if (o != null) to.OverrideOwners[kv.Key] = o;
                     from.Overrides.Remove(kv.Key);

@@ -12,9 +12,9 @@ namespace GK2DonkeyAPI.Api
     // A handle stays valid as an object after the instance is gone: Exists turns false and the actions refuse.
     public sealed class MountHandle
     {
-        internal readonly Mount.Instance I;
+        internal readonly GK2DonkeyAPI.Mount.Instance I;
 
-        internal MountHandle(Mount.Instance i)
+        internal MountHandle(GK2DonkeyAPI.Mount.Instance i)
         {
             I = i;
             Tuning = new InstanceTuning(i);
@@ -30,7 +30,7 @@ namespace GK2DonkeyAPI.Api
         // Its identity: owner#id, e.g. dreas.gk2.saddleup#1.
         public string FullId => I.FullId;
 
-        public bool Exists => Mount.IsRegistered(I);
+        public bool Exists => GK2DonkeyAPI.Mount.IsRegistered(I);
 
         public bool HasDonkey => I.HasDonkey;
 
@@ -65,8 +65,8 @@ namespace GK2DonkeyAPI.Api
 
         // The size of its view (1 = a full-size donkey; a foal is smaller). Set at spawn (MountSpawn.Scale).
         public float Scale => I.ViewScale;
-        // The mount kind this instance is now (its skin's; "donkey" while it wears none): Mounts.Kinds.
-        public string Kind => I.LooksRig.KindNow.Id;
+        // The mount this instance is now (its skin's; "donkey" while it wears none): Mounts.Catalog.
+        public string Mount => I.LooksRig.MountNow.Id;
 
         // False for a foal (MountSpawn.Rideable): no interact prompt, Ride and Hitch refused.
         public bool IsRideable => I.Rideable && I.HasDonkey;
@@ -100,7 +100,7 @@ namespace GK2DonkeyAPI.Api
                 return MountResult.Refused("The summon of TryMount is never kept.");
             }
             I.Persist = keep;
-            foreach (Mount.Instance c in I.Children())
+            foreach (GK2DonkeyAPI.Mount.Instance c in I.Children())
             {
                 if (c.OwnerId == I.OwnerId)
                 {
@@ -131,7 +131,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Success;
             }
-            if (Mount.KeyTaken(I.OwnerId, key))
+            if (GK2DonkeyAPI.Mount.KeyTaken(I.OwnerId, key))
             {
                 return MountResult.Refused($"{I.OwnerId} already has one with the key '{key}'.");
             }
@@ -215,7 +215,7 @@ namespace GK2DonkeyAPI.Api
             get
             {
                 var l = new List<MountHandle>();
-                foreach (Mount.Instance c in I.Children())
+                foreach (GK2DonkeyAPI.Mount.Instance c in I.Children())
                 {
                     if (c.Handle != null) l.Add(c.Handle);
                 }
@@ -231,12 +231,12 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Refused("It is gone.");
             }
-            if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
+            if (!GK2DonkeyAPI.Mount.Instance.IsInGame(out PlayerController pc, out _))
             {
                 return MountResult.Refused("Not in a game.");
             }
             string why;
-            using (Mount.Bind(I))
+            using (GK2DonkeyAPI.Mount.Bind(I))
             {
                 why = I.RideFromWorld(pc, showMessage);
             }
@@ -254,7 +254,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Refused("Not while it is ridden.");
             }
-            using (Mount.Bind(I))
+            using (GK2DonkeyAPI.Mount.Bind(I))
             {
                 I.MoveTo(position, facingRight.HasValue ? (facingRight.Value ? 1f : -1f) : (float?)null);
             }
@@ -287,12 +287,12 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Refused("Not while it is ridden.");
             }
-            if (!Mount.Instance.IsInGame(out PlayerController pc, out GameScene scene))
+            if (!GK2DonkeyAPI.Mount.Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
                 return MountResult.Refused("Not in a game.");
             }
             bool right = facingRight ?? pc.PlayerData.Direction.x >= 0f;
-            using (Mount.Bind(I))
+            using (GK2DonkeyAPI.Mount.Bind(I))
             {
                 if (forRide && I.HasDonkey && !Mounts.IsMounted)
                 {
@@ -345,7 +345,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (why == null)
             {
-                using (Mount.Bind(I))
+                using (GK2DonkeyAPI.Mount.Bind(I))
                 {
                     why = load ? I.CargoRig.LoadOneFromHead(pd, out _) : I.CargoRig.TakeOneToHead(pd, out _);
                 }
@@ -356,7 +356,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (showMessage)
             {
-                Mount.Say(why);
+                GK2DonkeyAPI.Mount.Say(why);
             }
             return MountResult.Refused(why);
         }
@@ -369,7 +369,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return 0;
             }
-            using (Mount.Bind(I))
+            using (GK2DonkeyAPI.Mount.Bind(I))
             {
                 return I.SetDownCargo();
             }
@@ -378,7 +378,7 @@ namespace GK2DonkeyAPI.Api
         // Gone for good, with anything on its cart (SetDownCargo first to keep it). A ridden one is dismounted first.
         public void Remove()
         {
-            Mount.Remove(I, "removed");
+            GK2DonkeyAPI.Mount.Remove(I, "removed");
         }
 
         public override string ToString() => $"MountHandle {I.Describe()}{(Exists ? "" : " (gone)")}";
@@ -441,9 +441,9 @@ namespace GK2DonkeyAPI.Api
     // when it is left standing or hitched.
     public sealed class InstanceTuning
     {
-        private readonly Mount.Instance i;
+        private readonly GK2DonkeyAPI.Mount.Instance i;
 
-        internal InstanceTuning(Mount.Instance i)
+        internal InstanceTuning(GK2DonkeyAPI.Mount.Instance i)
         {
             this.i = i;
         }
@@ -453,7 +453,7 @@ namespace GK2DonkeyAPI.Api
         {
             ITuned t = Find(key);
             object v;
-            using (Mount.Bind(i))
+            using (GK2DonkeyAPI.Mount.Bind(i))
             {
                 v = i.Overrides.TryGetValue(t.Key, out object o) ? o : t.Current;
             }
@@ -473,7 +473,7 @@ namespace GK2DonkeyAPI.Api
         public IReadOnlyList<string> Keys => new List<string>(i.Overrides.Keys);
 
         // A value belongs to the owner that set it (docs/mounts-foundation-2.md 2.1): the same owner replaces or clears
-        // it; anyone may replace the mount's own value (the kind's merge, owner Looks.TuningOwner: a mod's value wins
+        // it; anyone may replace the mount's own value (the mount's merge, owner Looks.TuningOwner: a mod's value wins
         // over the creature's, and the creature's returns when the mod clears, docs/mounts-design.md 2); nobody else.
         // A refused Set or Clear is said once in the log (Info: a mod conflict, nothing a player can fix) and leaves
         // the value as it is. Before 0.35.0 the last writer won silently, and an ability could take the player's own
@@ -500,7 +500,7 @@ namespace GK2DonkeyAPI.Api
                 throw new ArgumentException("An owner id (your plugin GUID) is required.", nameof(ownerId));
             }
             ITuned t = Find(key);
-            if (t.IsLook && Mount.IsAbilityOwner(ownerId))
+            if (t.IsLook && GK2DonkeyAPI.Mount.IsAbilityOwner(ownerId))
             {
                 applied = Get<T>(key); // the skin, effect and colours are the player's (and the mod that spawned the mount): a mount's ability never sets them, held or free (MountAbility)
                 return Refused("set", t.Key, ownerId, "the player's settings page (a look key)");
@@ -589,7 +589,7 @@ namespace GK2DonkeyAPI.Api
         internal void ChangedByLooks()
         {
             i.ColorsRig.MarkDirty();
-            using (Mount.Bind(i))
+            using (GK2DonkeyAPI.Mount.Bind(i))
             {
                 i.OnTuningChanged(i.CurrentStyle);
                 i.LanternRig.Refresh();

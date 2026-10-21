@@ -5,7 +5,7 @@ goes through the GK2 Donkey API. This file says what it includes, what players m
 The full list it picks from is the feature table in [`src/GK2DonkeyAPI/README.md`](../src/GK2DonkeyAPI/README.md).
 
 **The rule for options:** a player may change *what happens* (keys, on/off, how fast, which colours), never *how it's
-drawn or measured* (seat pixels, leg slices, cargo packing, sound ids, slope maths). The second kind is the dev
+drawn or measured* (seat pixels, leg slices, cargo packing, sound ids, slope maths). The second mount is the dev
 panel's, and a wrong value there breaks the picture.
 
 ## Decided (2026-10-02)

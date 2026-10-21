@@ -164,7 +164,7 @@ so a half-finished skin still works.
 | Look | Donkey, then every skin found | Donkey |
 
 - The coat and harness colours keep working for skins drawn in the donkey's palette colours.
-- A skin with its own colours ignores them; its folder says which kind it is.
+- A skin with its own colours ignores them; its folder says which mount it is.
 
 **Who wears it:** the player's donkey. The skin's text file can say whether foals wear it too: a foal-sized skin is
 the same pictures, since foals are the donkey scaled down. The cart is never skinned.
@@ -173,7 +173,7 @@ the same pictures, since foals are the donkey scaled down. The cart is never ski
 
 | File | What |
 |---|---|
-| `skin.cfg` | Name shown in the settings, author, version; `kind = palette` or `own colours`; foals yes/no; offsets (below). |
+| `skin.cfg` | Name shown in the settings, author, version; `colours = palette` or `own colours`; foals yes/no; offsets (below). |
 | `bdy_<clip>_<frame>.png` | One picture per body frame, 96×96, facing left, named like the probe's templates (`bdy_walk_left_03.png`). |
 | `bdy_<clip>.png`, `bdy.png` | Fallbacks: one picture for a whole clip, or for everything. |
 | `hed_<...>.png` | The same for the head layer. |
@@ -258,7 +258,7 @@ Examples: stripes, a ghostly see-through glow, charcoal with glowing lava cracks
   feature recolours at runtime today.
 
 **How they'd be built:** each recipe makes a texture from the donkey's atlas once (like Colors' palette work, cached
-per frame), drawn with the overlay method. The two kinds of skin then sit side by side:
+per frame), drawn with the overlay method. The two mounts of skin then sit side by side:
 - **picture skins:** an artist's folder;
 - **recipe skins:** built in, and maybe a few recipe settings in a skin's `skin.cfg`, so others can make their own:
   base colours, a pattern, a glow on the outline.

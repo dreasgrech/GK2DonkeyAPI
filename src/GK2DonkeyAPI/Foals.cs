@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI
             diagInWindow++;
             if (diagSkipped > 0)
             {
-                line += $" ({diagSkipped} more line(s) of this kind skipped before this)";
+                line += $" ({diagSkipped} more line(s) of this mount skipped before this)";
                 diagSkipped = 0;
             }
             Plugin.Log.LogInfo(line);

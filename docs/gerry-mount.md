@@ -82,7 +82,7 @@ baby spawned without a size is its parent mount's; plain baby donkeys stay 0.6 w
 ## 6. Recommendation, and what is built
 
 Build A as a built-in recipe-style source ("game creature" source: prefix + key map + scale), look at it in game,
-then decide on B. The source kind is generic: any character preset in the atlas (`09xx_`, `03xx_`) becomes a
+then decide on B. The source mount is generic: any character preset in the atlas (`09xx_`, `03xx_`) becomes a
 candidate mount the same way, which is the open, scalable path the skin system wants.
 
 **Built 2026-10-18 (A):** `source = game` skins (`LooksGame.cs`, docs/skins.md): the character's frames found in

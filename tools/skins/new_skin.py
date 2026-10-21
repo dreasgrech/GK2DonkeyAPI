@@ -5,8 +5,8 @@ Aseprite sidecar, then the scan. Everything else is drawing.
     python -I tools/skins/new_skin.py <id> [--mount <mount id> [--name "Giant Thing"]] [--canvas 96] [--seat 52] [--over] [--mod <project>]
 
   <id>        the skin's id and folder name (letters, digits, dashes): giant-crab
-  --mod       the project under src/ whose assets/skins gets the pack (default: SaddleUp for a mount of its own,
-              GK2DonkeyAPI for a skin of the donkey; docs/mounts-as-mods.md). A mount mod of its own: a project whose
+  --mod       the project under src/ whose assets/skins gets the pack (default: SaddleUp, which ships every
+              skin and mount; the API ships none; docs/mounts-as-mods.md). A mount mod of its own: a project whose
               csproj embeds assets\\skins\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
               lines to copy), then --mod <its folder>
   --mount     a creature of its own: the [Mount] block is written (id = the mount id; the skin is its Default when the ids
@@ -58,7 +58,7 @@ def main():
     canvas = int(arg("--canvas", "96"))
     seat = int(arg("--seat", str(52 + (canvas - 96) // 2)))
     name = arg("--name") or sid.replace("-", " ").title()
-    project = arg("--mod") or (skinroots.MOUNTS_PROJECT if mount else skinroots.API_PROJECT)
+    project = arg("--mod") or skinroots.MOUNTS_PROJECT  # every shipped skin is Saddle Up's; the API ships none
     if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
         print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/skins/** and registers them as src/SaddleUp does)"); return 2
     if skinroots.find(sid):
@@ -73,7 +73,7 @@ def main():
     gen = f"make_{sid.replace('-', '_')}.py"
     # the cfg, in the canonical layout (tools/skins/canonical_cfg.py: [Skin], the colours, the mount block last)
     lines = [f"# {name}: a {'skin drawn over the donkey' if over else 'mount of its own' if mount else 'skin of the donkey'} (docs/skins.md). Our own art, drawn by tools/skins/{sid}/{gen}.",
-             "[Skin]", "format = 1", f"id = {sid}", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "kind = own",
+             "[Skin]", "format = 1", f"id = {sid}", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "colours = own",
              f"layer = {'over' if over else 'replace'}"]
     if over:
         lines.append("erase = FF00FF       # over only: pixels of this colour clear the donkey there (the ears under horns)")

@@ -190,8 +190,8 @@ namespace GK2DonkeyAPI.Api
         public bool PaletteColours;
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over;
-        // The mount kind this skin is a look of (Mounts.Kinds; "donkey" by default: a differently drawn donkey).
-        public string Mount = MountKinds.DonkeyId;
+        // The mount this skin is a look of (Mounts.Catalog; "donkey" by default: a differently drawn donkey).
+        public string Mount = MountCatalog.DonkeyId;
         // For information (the sprites carry their own size and pivot): the pictures' size and where the donkey's
         // anchor sits in them, from the bottom left.
         public int CanvasWidth = 96, CanvasHeight = 96;
@@ -242,7 +242,7 @@ namespace GK2DonkeyAPI.Api
             {
                 Id = Id, Name = string.IsNullOrEmpty(Name) ? Id : Name, Author = Author, Version = Version, Owner = owner,
                 OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
-                KindId = string.IsNullOrWhiteSpace(Mount) ? MountKinds.DonkeyId : Mount.Trim(),
+                MountId = string.IsNullOrWhiteSpace(Mount) ? MountCatalog.DonkeyId : Mount.Trim(),
                 OffsetRide = Offset, OffsetCart = CartOffset ?? Offset, SeatRow = SeatRow,
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
                 TuningRide = TuningRide != null && TuningRide.Count > 0 ? new Dictionary<string, object>(TuningRide, StringComparer.OrdinalIgnoreCase) : null,
@@ -344,7 +344,7 @@ namespace GK2DonkeyAPI.Api
             IsBuiltIn = d.BuiltIn;
             OwnColours = d.OwnColours;
             Over = d.Over;
-            Mount = d.Kind.Id;
+            Mount = d.Mount.Id;
             CanvasWidth = d.CanvasW;
             CanvasHeight = d.CanvasH;
             Source = d.Source;
@@ -390,7 +390,7 @@ namespace GK2DonkeyAPI.Api
         public bool OwnColours { get; }
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over { get; }
-        // The mount kind this skin is a look of.
+        // The mount this skin is a look of.
         public string Mount { get; }
         public int CanvasWidth { get; }
         public int CanvasHeight { get; }
