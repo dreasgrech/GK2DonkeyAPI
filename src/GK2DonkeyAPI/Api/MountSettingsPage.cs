@@ -114,6 +114,36 @@ namespace GK2DonkeyAPI.Api
         }
 
         private readonly Dictionary<string, List<(string Section, string Key)>> movedKeys = new Dictionary<string, List<(string, string)>>(StringComparer.Ordinal);
+
+        // A setting the mod no longer has, on purpose (0.36.0; Saddle Up's Riding speed and Cart speed, now each mount's
+        // own): its line leaves the player's file (under any number of the section) at Publish, and the upgrade
+        // self-test counts it as retired, not as a value lost. Call it once per key, any time before Publish.
+        public void RetiredKey(string section, string key)
+        {
+            if (string.IsNullOrEmpty(section) || string.IsNullOrEmpty(key)) throw new ArgumentException("section and key are needed.");
+            retiredKeys.Add(PlainName(section) + "\n" + key);
+        }
+
+        private readonly HashSet<string> retiredKeys = new HashSet<string>(StringComparer.Ordinal);
+        internal bool IsRetired(string cfgSection, string key) => retiredKeys.Contains(PlainName(cfgSection) + "\n" + key);
+
+        // Every retired line of the file out of BepInEx's orphans, so the save at Publish leaves them out.
+        private void DropRetired()
+        {
+            if (retiredKeys.Count == 0) return;
+            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
+            foreach (KeyValuePair<string, Dictionary<string, string>> s in fileSections)
+            {
+                foreach (string key in s.Value.Keys)
+                {
+                    if (!IsRetired(s.Key, key)) continue;
+                    Dictionary<ConfigDefinition, string> orphans = OrphansOf(Config);
+                    if (orphans == null) return;
+                    if (orphans.Remove(new ConfigDefinition(s.Key, key))) retiredDropped++;
+                    else dropsFailed++;
+                }
+            }
+        }
         private Dictionary<string, Dictionary<string, string>> fileSections; // the cfg file's sections and their keys, raw
         private readonly HashSet<string> movedNoted = new HashSet<string>();
 
@@ -215,7 +245,7 @@ namespace GK2DonkeyAPI.Api
             {
                 foreach (KeyValuePair<string, string> kv in s.Value)
                 {
-                    if (!claimed.Contains(s.Key + "\n" + kv.Key)) unclaimed.Add((s.Key, kv.Key, kv.Value));
+                    if (!claimed.Contains(s.Key + "\n" + kv.Key) && !IsRetired(s.Key, kv.Key)) unclaimed.Add((s.Key, kv.Key, kv.Value)); // a retired line is left out on purpose
                 }
             }
             return claims;
@@ -331,7 +361,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         private readonly bool saveOnSet; // the mod's own setting, put back at Publish
-        private int droppedOldCopies, dropsFailed;
+        private int droppedOldCopies, dropsFailed, retiredDropped;
 
         // After the last row: the mod's save-on-set back as it was, and the one save that writes every value and
         // leaves out the old copies dropped while binding. Publish calls it; a page never published keeps its
@@ -339,7 +369,9 @@ namespace GK2DonkeyAPI.Api
         internal void FinishBinding()
         {
             if (Config.SaveOnConfigSet != saveOnSet) Config.SaveOnConfigSet = saveOnSet;
-            if (saveOnSet || droppedOldCopies > 0) Config.Save();
+            DropRetired();
+            if (saveOnSet || droppedOldCopies > 0 || retiredDropped > 0) Config.Save();
+            if (retiredDropped > 0) Plugin.Log.LogInfo($"Settings: {Title}: {retiredDropped} line(s) of settings it no longer has left out of the file.");
             if (droppedOldCopies > 0) Plugin.Log.LogInfo($"Settings: {Title}: {droppedOldCopies} old line(s) of moved settings left out of the file.");
             if (dropsFailed > 0) Plugin.Log.LogWarning($"Settings: {Title}: {dropsFailed} old line(s) of moved settings could not be dropped from BepInEx's orphans; they stay in the file (harmless) and this is worth a look.");
         }
@@ -451,7 +483,7 @@ namespace GK2DonkeyAPI.Api
 
         internal bool HasSkinRow(string mountId) => skinRows.ContainsKey(mountId);
         internal Mount.Instance MountPaper => mountCompanion?.Paper; // the panel's picture when the page has no Preview() row
-        internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.Use(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
+        internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.UseFromPanel(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
         internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
 
         // Whether a row is the menus' (the Mods menu, the game's Settings window, the menu labels) or the Mounts panel's:

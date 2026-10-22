@@ -585,7 +585,10 @@ namespace GK2DonkeyAPI
                     case "tuning.cart": (d.TuningCart ?? (d.TuningCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
-                    case "mount.stats": stats.Add(new KeyValuePair<string, string>(key, value)); continue;
+                    case "mount.stats":
+                        if (Catalog.ReservedStat(key)) d.Report += "[Mount.Stats] " + key + " left out: the speeds are the API's own lines (speed = and cart_speed = in [Mount]); ";
+                        else stats.Add(new KeyValuePair<string, string>(key, value));
+                        continue;
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.ride": (ktRide ?? (ktRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.cart": (ktCart ?? (ktCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
@@ -690,6 +693,19 @@ namespace GK2DonkeyAPI
                     if (float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
                     else d.Report += "[Mount] foal_scale = " + ms + " is not a number (0.2 to 1), the babies stay 0.6; ";
                 }
+                float? ReadSpeed(string speedKey)
+                {
+                    if (!mount.TryGetValue(speedKey, out string speedText)) return null;
+                    if (float.TryParse(speedText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float speedValue) && speedValue > 0f)
+                    {
+                        if (speedValue < Catalog.SpeedMin || speedValue > Catalog.SpeedMax) d.Report += "[Mount] " + speedKey + " = " + speedText + " is outside 0.5 to 4, taken as " + Num(Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax)) + "; ";
+                        return Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax);
+                    }
+                    d.Report += "[Mount] " + speedKey + " = " + speedText + " is not a number (0.5 to 4, times walking speed), the donkey's applies; ";
+                    return null;
+                }
+                k.Speed = ReadSpeed("speed");
+                k.CartSpeed = ReadSpeed("cart_speed");
                 if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
                 if (mount.TryGetValue("effect_when", out string mw))
                 {
@@ -877,7 +893,7 @@ namespace GK2DonkeyAPI
         }
 
         // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "effect", "effect_when" };
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cart_speed", "effect", "effect_when" };
 
         // The portrait a pack names (a PNG next to its frames), read once; null when it has none or it can't be read.
         private static readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -1154,6 +1170,8 @@ namespace GK2DonkeyAPI
                     mn.Key(sb, "cart", k.Cart ? "true" : "false");
                     mn.Key(sb, "foals", k.Foals ? "true" : "false");
                     if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
+                    if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
+                    if (k.CartSpeed.HasValue) mn.Key(sb, "cart_speed", Num(k.CartSpeed.Value));
                     if (!string.IsNullOrEmpty(k.Effect))
                     {
                         mn.Key(sb, "effect", k.Effect);
@@ -2350,6 +2368,12 @@ namespace GK2DonkeyAPI
                 }
                 TakeMount(k.Tuning);
                 TakeMount(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
+                float? ownSpeed = style == MountStyle.Cart ? k.CartSpeed : k.Speed; // [Mount] speed / cart_speed: over a SpeedMultiplier in its tuning
+                if (ownSpeed.HasValue)
+                {
+                    merged["SpeedMultiplier"] = ownSpeed.Value;
+                    fromMount.Add("SpeedMultiplier");
+                }
                 if (d != null)
                 {
                     // A skin is the drawing: its [Tuning] may move the rider and the cart to fit its pictures, never

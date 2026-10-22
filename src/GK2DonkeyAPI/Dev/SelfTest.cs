@@ -165,9 +165,11 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "tuning: a value belongs to the owner that set it; what a mount and an ability may pin", Body = TuningOwnership },
             new Scenario { Group = GroupLooks, Name = "ids: the mount's own skin owns its declaration; the same skin id twice, the newer wins", Body = IdRules },
             new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
+            new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "game creature: Gerry's frames found, scaled and worn", Body = GameCreature },
             new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every shipped mount, AutoSeat off and on (a readout)", Body = SeatReadout },
@@ -3268,13 +3270,15 @@ namespace GK2DonkeyAPI
             try
             {
                 r1 = WriteTempPack("gk2donkeyapi-selftest-fmt1", "fmt-test",
-                    "[Skin]\nformat = 1\nneeds = 0.35\nid = fmt-test\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = fmt-beast\n\n[Mount]\nid = fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
+                    "[Skin]\nformat = 1\nneeds = 0.35\nid = fmt-test\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = fmt-beast\n\n[Mount]\nid = fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nspeed = 2.75\ncart_speed = 0.9\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
                 int n = Looks.RegisterFolder(r1, owner);
                 MountSkinInfo sk = Mounts.Looks.Find("fmt-test");
                 MountInfo k = Mounts.Catalog.Find("fmt-beast");
                 Check(n == 1 && sk != null && sk.Description == "A test look." && sk.HasPortrait, $"the skin's description and portrait are read (\"{sk?.Description}\", portrait {sk?.HasPortrait})");
                 Check(k != null && k.Description == "A test creature." && k.HasPortrait, $"the mount's description and portrait are read (\"{k?.Description}\")");
-                Check(k != null && k.Stats.Count == 2 && k.Stats[0].Label == "Speed" && k.Stats[0].Value == "steady" && k.Stats[1].Label == "Diet", $"[Mount.Stats] lines in file order ({k?.Stats.Count})");
+                Check(k != null && k.Stats.Count == 1 && k.Stats[0].Label == "Diet", $"[Mount.Stats] lines in file order, its own Speed line left out: the API writes that one ({k?.Stats.Count})");
+                Check(k != null && Mathf.Approximately(k.Speed, 2.75f) && Mathf.Approximately(k.CartSpeed, 0.9f) && k.SpeedWord == "Very fast" && k.CartSpeedWord == "Very slow", $"[Mount] speed and cart_speed are read ({k?.Speed} {k?.SpeedWord}, {k?.CartSpeed} {k?.CartSpeedWord})");
+                Check((Looks.Find("fmt-test")?.Report ?? "").Contains("[Mount.Stats] Speed left out"), "and the report says the Speed line was left out");
                 Texture2D portrait = Looks.PortraitOf(Looks.Find("fmt-test"));
                 Check(portrait != null && portrait.width == 96 && portrait.height == 96, $"the portrait PNG is read from the pack ({portrait?.width}x{portrait?.height})");
                 Check(Looks.PortraitOfMount(Catalog.Find("fmt-beast")) != null, "the mount's portrait too (from its declaring skin's pack)");

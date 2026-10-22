@@ -90,7 +90,7 @@ namespace GK2DonkeyAPI
             internal string Id, Label, Description;
             internal readonly List<string> Lines = new List<string>();  // what it does, in words: the cart, babies, speed, what it comes with, its skins
             internal readonly List<string> Extra = new List<string>();  // its own stats and abilities
-            internal readonly List<(string Label, string Value)> Stats = new List<(string, string)>(); // the stats card: Speed, Cart, Babies, Skins
+            internal readonly List<(string Label, string Value)> Stats = new List<(string, string)>(); // the stats card: Speed, Cart speed, Babies, Skins
             internal bool HasPortrait;
             internal bool Fake; // a made-up entry (Debug.MountsPanelFakeEntries): listed, not pickable
         }
@@ -113,8 +113,10 @@ namespace GK2DonkeyAPI
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
-                object speed = SkinValue(def, "SpeedMultiplier") ?? ValueOf(k, "SpeedMultiplier"); // the Default skin's pin wins over the mount's, as on the wearer (Looks.LayeredValue)
-                if (speed != null) e.Lines.Add("Speed: " + SpeedText(speed));
+                // the mount's speeds as words against the donkey's (Catalog.SpeedWord), the number beside (the user, 2026-10-22)
+                float ride = Catalog.SpeedOf(k, MountStyle.Ride), cartSpeed = Catalog.SpeedOf(k, MountStyle.Cart);
+                e.Lines.Add("Speed: " + SpeedText(ride, MountStyle.Ride));
+                if (k.Cart) e.Lines.Add("Cart speed: " + SpeedText(cartSpeed, MountStyle.Cart));
                 if (!string.IsNullOrEmpty(k.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(k.Effect)?.Name ?? k.Effect) + (k.EffectWhen == MountEffectWhen.Night ? " (at night)" : ""));
                 else if (def != null && !string.IsNullOrEmpty(def.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(def.Effect)?.Name ?? def.Effect));
                 int skins = (k == Catalog.Donkey ? 1 : 0);
@@ -126,9 +128,9 @@ namespace GK2DonkeyAPI
                     string name = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
                     e.Extra.Add(string.IsNullOrEmpty(a.Description) ? name : name + ": " + a.Description);
                 }
-                // the stats card (the user's pick, 2026-10-21): speed, the cart, babies, skins
-                e.Stats.Add(("Speed", SpeedValue(speed)));
-                e.Stats.Add(("Cart", k.Cart ? "pulls it" : "can't pull it"));
+                // the stats card (the user's pick, 2026-10-21): speed, the cart's speed (or that it can't pull one), babies, skins
+                e.Stats.Add(("Speed", Catalog.SpeedWord(ride, MountStyle.Ride)));
+                e.Stats.Add(("Cart speed", k.Cart ? Catalog.SpeedWord(cartSpeed, MountStyle.Cart) : "can't pull it"));
                 e.Stats.Add(("Babies", k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"{k.FoalScale:0.##}x its size" : "yes") : "none"));
                 e.Stats.Add(("Skins", skins.ToString()));
                 list.Add(e);
@@ -141,52 +143,9 @@ namespace GK2DonkeyAPI
             return list;
         }
 
-        private static object SkinValue(Looks.SkinDef d, string key)
-        {
-            if (d == null) return null;
-            if (d.TuningRide != null && d.TuningRide.TryGetValue(key, out object r)) return r;
-            if (d.TuningValues != null && d.TuningValues.TryGetValue(key, out object t)) return t;
-            if (d.Tuning != null && d.Tuning.TryGetValue(key, out string s)) return s;
-            return null;
-        }
-
-        private static object ValueOf(Catalog.Entry k, string key)
-        {
-            object v = null;
-            if (k.Tuning != null && k.Tuning.TryGetValue(key, out object t)) v = t;
-            if (k.TuningRide != null && k.TuningRide.TryGetValue(key, out object r)) v = r;
-            return v;
-        }
-
-        private static float? AsFloat(object v)
-        {
-            if (v is string s && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f)) return f;
-            try
-            {
-                if (v is IConvertible && !(v is string)) return Convert.ToSingle(v, System.Globalization.CultureInfo.InvariantCulture); // a code mount's int or double
-            }
-            catch
-            {
-            }
-            return null;
-        }
-
-        private static string SpeedText(object v)
-        {
-            float? x = AsFloat(v);
-            return x.HasValue ? x.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + " times walking speed" : v?.ToString() ?? ""; // SpeedMultiplier: times the keeper's walking speed (docs/reference.md)
-        }
-
-        // The speed the mount rides at: its own pin, else the value in effect for every mount (the player's Ride setting).
-        private static string SpeedValue(object pinned)
-        {
-            float? x = AsFloat(pinned);
-            if (!x.HasValue)
-            {
-                try { x = Mounts.Tuning(MountStyle.Ride).Get<float>("SpeedMultiplier"); } catch { }
-            }
-            return x.HasValue ? x.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "x walking" : "";
-        }
+        // "Fast (2.25x walking speed)": SpeedMultiplier is times the keeper's walking speed (docs/reference.md).
+        private static string SpeedText(float v, MountStyle style) =>
+            Catalog.SpeedWord(v, style) + " (" + v.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "x walking speed)";
 
         internal static void Open(MountSettingsPage p, bool toggle)
         {
@@ -994,7 +953,7 @@ namespace GK2DonkeyAPI
             sr.horizontal = false;
             sr.vertical = true;
             sr.movementType = ScrollRect.MovementType.Clamped;
-            sr.scrollSensitivity = 30f;
+            sr.scrollSensitivity = 0f; // the wheel is Wheel()'s, anywhere on the window (a second scroll here would double it)
             sr.inertia = false;
             content = crt;
             return sr;
@@ -1178,6 +1137,53 @@ namespace GK2DonkeyAPI
             if (shift != 0f) sr.content.anchoredPosition -= new Vector2(0f, shift / Mathf.Max(0.0001f, sr.content.lossyScale.y / sr.viewport.lossyScale.y));
         }
 
+        // The mouse wheel scrolls anywhere on a window, not only over a row (the user, 2026-10-22: the scrollbars could
+        // only be dragged). The colours window, while open, takes it whole; on the journal, the list over the list and
+        // the right side's rows everywhere else. Read here rather than through the scroll views' own event: that one
+        // reaches a view only over something that takes the pointer, and the stage, the margins and the gaps between
+        // rows don't.
+        private const float WheelStep = 40f; // canvas units per notch
+        private static bool wheelSaid;
+
+        private static void Wheel()
+        {
+            float d = UnityInput.Current.mouseScrollDelta.y;
+            if (Mathf.Approximately(d, 0f)) return;
+            Vector2 at = UnityInput.Current.mousePosition;
+            ScrollRect target = null;
+            if (colours != null && colours.activeSelf)
+            {
+                if (Over(colours, at)) target = coloursScroll;
+            }
+            else if (panel.activeSelf && Over(panel, at))
+            {
+                target = listScroll != null && Over(listScroll.gameObject, at) ? listScroll : contentScroll;
+            }
+            if (target == null || target.content == null || target.viewport == null) return;
+            float room = target.content.rect.height - target.viewport.rect.height;
+            if (room <= 0f) return; // all of it fits: nothing to scroll
+            Vector2 p = target.content.anchoredPosition;
+            float y = Mathf.Clamp(p.y - d * WheelStep, 0f, room); // the content's top is pinned: up the page is a larger y
+            if (!wheelSaid)
+            {
+                wheelSaid = true;
+                Plugin.Log.LogInfo($"Settings: the mouse wheel scrolls {target.name} ({d:0.##} a notch, {room:0} units to scroll). Said once.");
+            }
+            if (Mathf.Approximately(y, p.y)) return;
+            target.StopMovement();
+            target.content.anchoredPosition = new Vector2(p.x, y);
+        }
+
+        private static bool Over(GameObject go, Vector2 screen)
+        {
+            var rt = go.transform as RectTransform;
+            if (rt == null) return false;
+            Canvas c = go.GetComponentInParent<Canvas>();
+            Canvas root = c != null ? c.rootCanvas : null;
+            Camera cam = root == null || root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
+            return RectTransformUtility.RectangleContainsScreenPoint(rt, screen, cam);
+        }
+
         // A thin scrollbar at the right edge of a scroll view, shown while there is more than fits.
         private static void AddScrollbar(ScrollRect sr)
         {
@@ -1286,6 +1292,7 @@ namespace GK2DonkeyAPI
                 return;
             }
             if (search != null && search.isFocused) searchFocusFrame = Time.frameCount;
+            if (panel != null) Wheel();
             if (panel != null && controlsTaken) TakeControls(); // re-asserted: a game popup closing gives ByUI back
             if (panel != null && controlsTaken) TickGamepad();
             if (panel != null && (UnityInput.Current.GetKeyDown(KeyCode.Escape) || (LazyInput.IsGamepadActive && LazyInput.GetKeyDown(GameKey.Back)))) // the gamepad's Back is the game windows' close too

@@ -42,7 +42,7 @@ if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Coun
 var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
 // The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountKeys = StringsIn(looksCs, "MountKeys");
-if (mountKeys.Count < 12) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (12 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Count < 14) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (14 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
@@ -440,6 +440,17 @@ foreach (var dir in skinDirs)
             if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) Bad($"[Mount] foal_scale = {fsv}: 0.2 to 1");
             else if (Math.Abs(fs - 0.6) < 0.001) Bad("[Mount] foal_scale = 0.6 is the default: leave it out");
         }
+        // the speeds (times the keeper's walking speed): every built-in mount says its own, in 0.5 to 4; a pulled cart's
+        // only on a mount that pulls one; never a SpeedMultiplier in its tuning or a [Mount.Stats] Speed line as well
+        foreach (var sk in new[] { "speed", "cart_speed" })
+        {
+            if (!m.TryGetValue(sk, out var sv)) { if (sk == "speed" || m.GetValueOrDefault("cart") != "false") Bad($"[Mount] {sk} missing: a built-in mount says its own speed (times walking speed; the donkey's are 2 and 1.5)"); continue; }
+            if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) Bad($"[Mount] {sk} = {sv}: a number, 0.5 to 4 (times walking speed)");
+            if (sk == "cart_speed" && m.GetValueOrDefault("cart") == "false") Bad("[Mount] cart_speed on a mount that can't pull the cart");
+        }
+        foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
+            if (cfg.TryGetValue(sec, out var st) && st.ContainsKey("SpeedMultiplier")) Bad($"[{sec}] SpeedMultiplier: the mount's speed is [Mount] speed / cart_speed");
+        if (cfg.TryGetValue("Mount.Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cart speed", StringComparison.OrdinalIgnoreCase)) Bad($"[Mount.Stats] {key}: the API writes the speed lines itself (left out in the game)");
         if (m.TryGetValue("effect", out var ef))
         {
             if (ef == "none" || ef.Length == 0) Bad("[Mount] effect = none is the default: leave it out");

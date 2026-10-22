@@ -489,7 +489,6 @@ p.Publish();
 | `FoalsComeIndoors` | The foals come through doors with the keeper, follow him inside and come back out with him (`ShuffleFollowKeeperIndoors` on each foal). Off. |
 | `FoalsFollowOnFoot` | (0.36.0) The foals follow the keeper while he walks outdoors on foot, instead of staying by the mount (`ShuffleFollowKeeperOnFoot` on each of this companion's foals, never on another mod's); when he gets on a mount they go back to it, following it when it's theirs. Into buildings only with `FoalsComeIndoors`. Off. |
 | `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
-| `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
 | `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
 | *(every setting)* | Starts at the default a mod's settings should use: pass the property as the row's default (`p.Toggle(..., me.BellOnSetOff, ...)`), so it's written once, in the API. |
 | `Coat`, `Harness`, `Muzzle`, `Paint`, `Wheels`, `Hubs`, `LanternLight` | Look presets (`CoatColor`, `HarnessColor`, `MuzzleColor`: the second body tone, the donkey's muzzle, the rat's pink parts, the snail's shell, ignored by a mount whose look has no Muzzle region; `CartPaint`, `WheelColor`, `HubColor`, `LanternColor`); `Game` is the game's art. The paint is the cart body and shafts; the wheels' wood and their hubs have their own (0.19.0). |
@@ -674,7 +673,7 @@ for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged se
 system and is re-applied only when the skin, the mount or the style changes.
 
 A **pack declares a mount without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `author`, `version`,
-`cart`, `foals`, `foal_scale`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
+`cart`, `foals`, `foal_scale`, `speed`, `cart_speed`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
 values, each key in one of the three); the mount's own skin (the one whose id is the mount's, its Default) owns
 the declaration: a joiner (`mount = <id>` with a `[Mount]` block of its own) declares only until the Default is
 registered, which re-declares over it, and a declaring skin is that mount's own skin whatever its `mount =` line
@@ -909,6 +908,17 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.36.0 (breaking, pre-release): **each mount's own speeds.** `MountDef.Speed` / `CartSpeed` (`float?`, times the
+  keeper's walking speed, 0.5 to 4; null: the donkey's, the API cfg's `[Ride]` / `[Cart]` `SpeedMultiplier`, 2 and
+  1.5 as shipped), a pack's `[Mount] speed` / `cart_speed`; either wins over a `SpeedMultiplier` in the mount's
+  tuning. `MountInfo.Speed`, `CartSpeed` (its own, else the donkey's), `SpeedWord`, `CartSpeedWord` (the Mounts
+  panel's words against the donkey's for that style: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to
+  1.35 Fast, above Very fast; no cart word on a mount that can't pull one). A stat line named Speed or Cart speed
+  (`[Mount.Stats]`, `MountStat`) is left out with a report: the API writes those. Removed: `MountCompanion.RideSpeed`,
+  `CartSpeed`, `SpeedLabels`, `SpeedLabelsFor`, `MountSpeed` (the user, 2026-10-22: the mounts define the speeds, the
+  players' Faster / Fastest is dropped). `MountSettingsPage.RetiredKey(section, key)`: a setting dropped on purpose;
+  its line leaves the player's file at Publish (any number of the section) and the upgrade self-test counts it as
+  retired, not lost.
 - 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
   foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
   old places for one key (a call each; before, the last call won).

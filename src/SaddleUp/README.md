@@ -61,8 +61,7 @@ All of these apply at once:
 | 5. Effect | Effect | As the mount or skin | (in the Mounts panel) A particle effect on your mount. In this version there is none to pick (the donkey comes with none); Hellfire (the game's lamp fire in a ring, with sparks) and effects from mods come in the next update, and a row at the top of the section says so. |
 | | Effect shown | Always | (in the Mounts panel, with the four effect toggles) Never, At night, Always. |
 | | Leaves a trail, Round the cart too, Shows in fights, Babies have it too | on, off, on, off | (in the Mounts panel, under the Effect row) How the effect behaves. |
-| 6. Behaviour | Riding speed | Normal | Riding your mount: Normal (x2 walking speed), Faster (x2.25), Fastest (x2.5). |
-| | Cart speed | Normal | Driving the cart: Normal (x1.5), Faster (x1.75), Fastest (x2). |
+| 6. Behaviour | *(speeds)* | | Each mount has its own riding and cart speed (the Mounts panel shows them: the donkey Normal, the rat and Gerry Fast, the dragon Fast, the worm Slow, the snail Very slow). The Riding speed and Cart speed rows were here until 0.12. |
 | | Say why mounting is refused | on | The keeper's thought bubble. |
 | | Shuffles while standing | on | Left without its cart, your mount takes a few slow steps now and then. |
 | | Allow mounting indoors | off | Ride into houses, the church and the morgue, and get on inside. A door with a loading screen still ends the ride. Off: you get off at the door and can't mount inside. |

@@ -46,8 +46,10 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
   long as a released version wrote the old place. `tools/page-carryover.py` is the offline check: it reads the rows
   and the aliases out of Plugin.cs and tries every key of an older cfg against them; the upgrade self-test is the
   same check through the live page.
-- **A key may be dropped** only when its value has nowhere to go; the self-test lists the drop and the allow-list
-  in the test names it on purpose.
+- **A key may be dropped** only when its value has nowhere to go, with a `RetiredKey(section, key)` call (0.36.0):
+  its line leaves the player's file at Publish under any number of the section, `tools/page-carryover.py` and the
+  upgrade self-test count it as retired, not lost. Saddle Up 0.12.0: RideSpeed and CartSpeed (Behaviour), the
+  speeds being each mount's own now; the player's Faster / Fastest is dropped on purpose (the user, 2026-10-22).
 - **A default may change**, but it reaches new players only: BepInEx writes every key with its value, so an existing
   player's file holds the old default as an explicit value. See 3.
 
@@ -134,6 +136,7 @@ changelog line that says it reaches new installs only.
 |---|---|
 | Move a section on a page | nothing more; the carry-over handles numbers |
 | Move or rename a page key | `MovedKey` before the row; keep it; changelog |
+| Drop a page key on purpose | `RetiredKey` (any time before Publish); keep it; changelog For players |
 | Rename an enum member behind a `Choice` | don't; add a member instead |
 | Rename or drop an API cfg key | don't; a new key reads the old one once, the old stays bound until the next major |
 | Change a default | changelog line "new installs only" until section 3 is built |

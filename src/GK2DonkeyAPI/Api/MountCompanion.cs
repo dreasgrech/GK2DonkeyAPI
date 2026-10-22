@@ -4,9 +4,6 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Riding speed steps (MountCompanion.RideSpeed / CartSpeed): each a tested speed per style.
-    public enum MountSpeed { Normal, Faster, Fastest }
-
     // Look presets (MountCompanion): Game is the game's own art, Custom uses the matching Custom* hex colour.
     public enum CoatColor { Game, Brown, Dark, Cream, Black, Custom }
     public enum HarnessColor { Game, Black, Red, Blue, Green, Custom }
@@ -84,30 +81,8 @@ namespace GK2DonkeyAPI.Api
         // FoalCount at most.
         public const int MaxFoals = 5;
 
-        // The speed steps as players read them, in MountSpeed's order.
-        public static readonly string[] SpeedLabels = { "Normal", "Faster", "Fastest" };
-
-        // The same with each step's speed for that style: "Normal (x1.75 walking speed)". Normal is the player's own
-        // value (the style's SpeedMultiplier in the cfg), the others the fixed steps below.
-        public static string[] SpeedLabelsFor(MountStyle style)
-        {
-            float[] steps = style == MountStyle.Ride ? RideSpeeds : CartSpeeds;
-            var labels = new string[SpeedLabels.Length];
-            for (int i = 0; i < labels.Length; i++)
-            {
-                float x = Mathf.Round((steps[i] > 0f ? steps[i] : PlayerSpeed(style)) * 20f) / 20f; // to 0.05: x2, not x1.99
-                labels[i] = $"{SpeedLabels[i]} (x{x.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture)} walking speed)";
-            }
-            return labels;
-        }
-
-        // The player's own speed for a style: the cfg value, not a session override (shipped: Ride 2, Cart 1.5).
-        private static float PlayerSpeed(MountStyle style)
-        {
-            StyleSettings s = Plugin.For(style);
-            return s != null && s.SpeedMultiplier != null && s.SpeedMultiplier.Entry != null ? s.SpeedMultiplier.Entry.Value
-                : style == MountStyle.Ride ? 1.75f : 1.5f;
-        }
+        // The speeds are each mount's own since 0.36.0 (MountDef.Speed / CartSpeed, a pack's [Mount] speed / cart_speed):
+        // the companion's speed steps (RideSpeed, CartSpeed, SpeedLabels) are gone.
 
         // The first foal keeps the key "foal" (as before there were several); the others "foal2" to "foal5".
         internal static string FoalKeyOf(int i) => i == 0 ? FoalKey : FoalKey + (i + 1);
@@ -208,7 +183,6 @@ namespace GK2DonkeyAPI.Api
         private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true, foalsIndoors, foalsFollow;
         private int foals;
         private string name;
-        private MountSpeed rideSpeed, cartSpeed;
         private float volume = 1f;
         // The look (the colour rows) per mount: the dragon stays green when the donkey is brown (docs/mount-colours.md;
         // the user, 2026-10-18). Coat, Harness... below are the current mount's (MountId): what a page's rows set is
@@ -272,10 +246,6 @@ namespace GK2DonkeyAPI.Api
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
         public string Name { get => name; set { name = value; ApplyName(); } }
-
-        // How fast the keeper goes riding the donkey alone, and driving the cart.
-        public MountSpeed RideSpeed { get => rideSpeed; set { rideSpeed = value; ApplyRide(); } }
-        public MountSpeed CartSpeed { get => cartSpeed; set { cartSpeed = value; ApplyRide(); } }
 
         // Brays at mounting and while standing.
         public bool Brays { get => brays; set { brays = value; ApplyRide(); } }
@@ -342,6 +312,36 @@ namespace GK2DonkeyAPI.Api
                 Plugin.Log.LogInfo($"{OwnerId}: {style} not now: {r.Reason}");
             }
             return r;
+        }
+
+        // The Mounts panel's Ride and Drive the cart buttons (the user, 2026-10-22: pressed while riding, they got him off,
+        // as the keys do for the style he is in). Unlike the keys they never end the ride: already on this companion's
+        // mount in that style, he stays on (the mount picked in the panel is already on it, changed in place); in the
+        // other style, the keys' switch (the cart left standing, or brought); on someone else's mount, he gets off it
+        // and this companion's mount is called in the style.
+        internal MountResult UseFromPanel(MountStyle style)
+        {
+            if (!Mounts.IsAvailable || !Mounts.IsMounted)
+            {
+                return Use(style);
+            }
+            MountHandle riding = Mounts.Riding;
+            bool mine = riding != null && Donkey != null && Donkey.Exists && riding.I == Donkey.I;
+            if (mine && Mounts.Style == style)
+            {
+                Plugin.Log.LogInfo($"{OwnerId}: {style} from the panel: already on it in that style, the ride goes on.");
+                return MountResult.Success;
+            }
+            if (mine || riding == null)
+            {
+                return Use(style); // the other style: the keys' switch
+            }
+            Mounts.Dismount("another mount called");
+            if (Mounts.IsMounted)
+            {
+                return MountResult.Refused("Could not get off the mount ridden now.");
+            }
+            return Use(style);
         }
 
         // The bell, while mounted (else nothing).
@@ -695,11 +695,6 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // Speeds per style for Faster and Fastest; Normal leaves the player's own (Ride 2, Cart 1.5 as shipped). Steps
-        // of a quarter, up to the tested 2.5 (Ride) and 2 (Cart).
-        private static readonly float[] RideSpeeds = { 0f, 2.25f, 2.5f };
-        private static readonly float[] CartSpeeds = { 0f, 1.75f, 2f };
-
         private void ApplyRide()
         {
             if (!Mounts.IsAvailable)
@@ -709,8 +704,6 @@ namespace GK2DonkeyAPI.Api
             foreach (MountStyle style in new[] { MountStyle.Ride, MountStyle.Cart })
             {
                 MountTuning t = Mounts.Tuning(style);
-                float s = style == MountStyle.Ride ? RideSpeeds[(int)rideSpeed] : CartSpeeds[(int)cartSpeed];
-                Session(t, "SpeedMultiplier", s > 0f, s);
                 Session(t, "BrayOnMountChance", !brays, 0f);
                 Session(t, "BrayIdleEverySeconds", !brays, 0f);
                 Session(t, "SoundVolume", !Mathf.Approximately(volume, 1f), volume);

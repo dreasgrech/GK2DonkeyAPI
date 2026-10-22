@@ -12,6 +12,19 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The mouse wheel scrolls the Mounts panel and the colours window anywhere on them**, not only by dragging the
+  scrollbar: over the mount list it scrolls the list, elsewhere on the panel the rows on the right; on the colours
+  window, its rows.
+- **Fixed: Ride and Drive the cart in the Mounts panel no longer get you off.** Pressed while riding, they ended the
+  ride (as the keys do for the way you're riding). Now you stay on: pick another mount and press Ride, and you ride
+  on as the new one; Drive the cart brings the cart, Ride while driving leaves it standing; on someone else's
+  donkey, yours comes and you get on it.
+- **Each mount has its own speed now.** How fast you ride and how fast you drive the cart belong to the mount you
+  pick, and the Mounts panel shows them: "Speed: Fast", "Cart speed: Normal" (against the donkey). The donkey is
+  as fast as ever (twice walking speed riding, 1.5 times with the cart); the
+  giant rat and Gerry are a little faster, the dragon fastest, the worm a little slower and the snail slowest.
+  **The Riding speed and Cart speed rows are gone**, and a Faster or Fastest you had picked no longer applies: the
+  mounts set the speeds now. Their old lines leave your settings file by themselves.
 - **New: babies follow you on foot.** A new row, "Babies follow you on foot", on: off your mount, outdoors, your
   babies come with you instead of staying by it (turn it off for the old way). They trot after you,
   and catch up out of sight when you're far ahead; when you get on a mount they go back to yours. Into buildings
@@ -112,6 +125,16 @@ For players:
 
 For mod authors:
 
+- **Each mount's own speeds** (breaking, pre-release): `MountDef.Speed` / `CartSpeed` (`float?`, times the keeper's
+  walking speed, 0.5 to 4; null = the donkey's, the API cfg's `SpeedMultiplier`) and a pack's `[Mount] speed =` /
+  `cart_speed =`, over a `SpeedMultiplier` in the mount's tuning. `MountInfo.Speed`, `CartSpeed`, `SpeedWord`,
+  `CartSpeedWord` (Very slow, Slow, Normal, Fast, Very fast against the donkey's 2 and 1.5). A `[Mount.Stats]` or
+  `MountStat` line named Speed or Cart speed is left out (the API writes those). **Removed:** `MountCompanion.RideSpeed`,
+  `CartSpeed`, `SpeedLabels`, `SpeedLabelsFor` and the `MountSpeed` enum. New `MountSettingsPage.RetiredKey(section,
+  key)`: a setting dropped on purpose leaves the player's file at Publish and the upgrade check counts it as retired,
+  not lost (Saddle Up's RideSpeed and CartSpeed). The built-in mounts' speeds: rat and Gerry 2.25 / 1.75, dragon
+  2.5 / 2, worm 1.75 / 1.25, snail 1.25 / 1; SkinsScan wants both on every built-in mount and refuses a
+  `SpeedMultiplier` in its tuning. docs/skins.md, docs/api.md.
 - **Babies on foot:** the Shuffle key `ShuffleFollowKeeperOnFoot` (off in the core; a companion sets it on its own
   foals only), `MountCompanion.FoalsFollowOnFoot`, and `FoalRows` adds `FoalsFollow` ("Babies follow you on foot").
   The row defaults to the companion's `FoalsFollowOnFoot` (Saddle Up sets it on first; the core stays off).
@@ -471,6 +494,13 @@ For mod authors:
 
 Development:
 
+- **Self-test "speed: each mount's own"** (Looks group): the words at the band edges, every built-in mount's
+  speeds, Saddle Up's retired rows and its file, a code mount ridden (2.5, over a 1.1 in its tuning) and driven
+  (1.75), the donkey at the cfg's speed, the panel's card; the format scenario reads `speed` / `cart_speed` and
+  leaves a `Speed` stat line out. `tools/page-carryover.py` reads `RetiredKey` calls.
+- **`tools/skins/creatures/make_creatures.py` runs again:** the mount rename ("kind" to "mount") had put a real
+  line break inside its `[Mount]` template string, a syntax error; fixed, and the template writes `speed` and
+  `cart_speed` (as does `tools/skins/new_skin.py`).
 - **The run makes its own starting state, wherever it is started** (2026-10-21: a run started in a house failed 29
   times, every ride "Not indoors.": the move to the test spot by SetPosition kept the house's light). Before the
   first scenario: the keeper free (waited for up to 15 s; a script or conversation that doesn't let go is the one

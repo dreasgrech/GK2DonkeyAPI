@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
         // The creature's own keys a mount sets (speed; its sounds are listed by OtherMountKeys).
         private static readonly (string Key, string Label, string Tip, float Min, float Max, bool Int, bool CartOnly)[] MountKeys =
         {
-            ("SpeedMultiplier", "Speed (x normal walking)", "How fast this mount goes.", 0.5f, 4f, false, false),
+            ("SpeedMultiplier", "Speed (x normal walking)", "How fast this mount goes in this style, times the keeper's walking speed (the donkey: 2 riding, 1.5 with the cart): the mount's speed = / cart_speed = in its [Mount] block.", 0.5f, 4f, false, false),
             ("WalkCycleSpeed", "Stride (walk clip rate per unit of speed)", "How fast the walk animation plays for each unit of walking speed: the donkey's is 1.5. Less for a longer stride, more for a scurry, so the legs match the speed (docs/mounts-foundation-2.md 2.4).", 0.5f, 4f, false, false),
         };
 
@@ -224,6 +224,15 @@ namespace GK2DonkeyAPI
         // What a row shows: the style's value, else the both-styles value, else the player's own (plain, not set).
         private static bool MountHas(Catalog.Entry mount, bool ride, string key, out object value)
         {
+            if (key == SpeedKey)
+            {
+                float? own = ride ? mount.Speed : mount.CartSpeed; // the mount's speed / cart_speed (over a pin in its tuning)
+                if (own.HasValue)
+                {
+                    value = own.Value;
+                    return true;
+                }
+            }
             Dictionary<string, object> mine = ride ? mount.TuningRide : mount.TuningCart;
             if (mine != null && mine.TryGetValue(key, out value)) return true;
             if (mount.Tuning != null && mount.Tuning.TryGetValue(key, out value)) return true;
@@ -231,8 +240,20 @@ namespace GK2DonkeyAPI
             return false;
         }
 
+        // The speed row is the mount's speed / cart_speed, never a SpeedMultiplier in its tuning (SkinsScan refuses one).
+        private const string SpeedKey = "SpeedMultiplier";
+
         private static void MountSet(Catalog.Entry mount, bool ride, string key, object value)
         {
+            if (key == SpeedKey)
+            {
+                float s = Mathf.Clamp(Convert.ToSingle(value, System.Globalization.CultureInfo.InvariantCulture), Catalog.SpeedMin, Catalog.SpeedMax);
+                if (ride) mount.Speed = s; else mount.CartSpeed = s;
+                (ride ? mount.TuningRide : mount.TuningCart)?.Remove(key);
+                mount.Tuning?.Remove(key);
+                Catalog.Touch(mount);
+                return;
+            }
             Dictionary<string, object> mine = ride ? mount.TuningRide : mount.TuningCart;
             if (mine == null)
             {
@@ -245,6 +266,10 @@ namespace GK2DonkeyAPI
 
         private static void MountUnset(Catalog.Entry mount, bool ride, string key)
         {
+            if (key == SpeedKey)
+            {
+                if (ride) mount.Speed = null; else mount.CartSpeed = null;
+            }
             (ride ? mount.TuningRide : mount.TuningCart)?.Remove(key);
             mount.Tuning?.Remove(key);
             Catalog.Touch(mount);

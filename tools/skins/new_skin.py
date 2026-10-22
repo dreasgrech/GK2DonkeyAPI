@@ -86,7 +86,7 @@ def main():
     if mount:
         lines += ["", "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.",
                   "[Mount]", f"id = {mount}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).", "author = dreas", "version = 0.1", "cart = true", "foals = true",
-                  "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6",
+                  "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)", "cart_speed = 1.5  # driving the cart (the donkey: 1.5)",
                   "", "# What the creature is: its sounds (docs/reference.md); the rider's seat and the cart are the skin's rows above.",
                   "# [Mount.Tuning]", "# BrayVolume = 0", "# HoofVolume = 0"]
     cfg_path = os.path.join(folder, "skin.cfg")

@@ -3,7 +3,7 @@ GK2 Saddle Up cfg must land on a row of today's page, by its own (section, key),
 another number, or by a MovedKey alias. A key that lands nowhere is a player's value the update would lose.
 
 The rows and the aliases are read out of src/SaddleUp/Plugin.cs itself: p.X("Section", "Key"...) calls, the
-MovedKey calls, Color (a colour key and its <key>Lightness), MountRows / FoalRows / EffectRows, and the PerMount
+MovedKey and RetiredKey calls, Color (a colour key and its <key>Lightness), MountRows / FoalRows / EffectRows, and the PerMount
 suffixes (the mounts below; a player's file holds the donkey's unsuffixed set only). The in-game upgrade self-test
 is the same check through the live page; run this one first, it needs no game.
 
@@ -36,18 +36,14 @@ def page_rows(src):
             rows.add((sec, key + s))
             if kind == "Color":
                 rows.add((sec, key + "Lightness" + s))
-    # rows whose key is a variable (Saddle Up's Speed local function): p.Choice("Behaviour", key, ...)
-    for m in re.finditer(r'(\w+)\((?:MountStyle\.\w+), "(\w+)", ', src):
-        fn, key = m.groups()
-        sec = re.search(r'void ' + fn + r'\(.*?p\.Choice\("(\w+)", key', src, re.S)
-        if sec:
-            rows.add((sec.group(1), key))
     for m in re.finditer(r'p\.MovedKey\("(\w+)", "(\w+)"( \+ sfx)?, "(\w+)"(?:, "(\w+)")?\)', src):
         sec, key, sfx, old, oldKey = m.groups()
         for s in (MOUNTS if sfx else [""]):
             aliases.setdefault((sec, key + s), []).append((old, (oldKey or key) + s))  # a key may name several old places
             if (sec, key + "Lightness" + s) in rows:  # Color() carries the lightness alias along
                 aliases.setdefault((sec, key + "Lightness" + s), []).append((old, (oldKey or key) + "Lightness" + s))
+    for m in re.finditer(r'p\.RetiredKey\("(\w+)", "(\w+)"\)', src):
+        rows.add((m.group(1), m.group(2)))  # retired on purpose: its line leaves the file, never a value lost
     for m in re.finditer(r'p\.MountRows\("(\w+)"', src):
         rows.add((m.group(1), "Mount"))
         rows.update((m.group(1), "Skin_" + k) for k in KINDS)

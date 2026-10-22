@@ -71,9 +71,10 @@ version = 1.0
 cart = true
 foals = true
 foal_scale = 0.4
+speed = 2.25           # riding, times walking speed (the donkey: 2); the panel says "Fast"
+cart_speed = 1.5       # with the cart (the donkey: 1.5): "Normal"
 
-[Mount.Tuning]         # the mount's own values; a mount may pin its speed, seat, sounds, cart geometry and shuffle
-SpeedMultiplier = 2
+[Mount.Tuning]         # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0
 
 [Mount.Stats]          # free lines for the Mounts panel

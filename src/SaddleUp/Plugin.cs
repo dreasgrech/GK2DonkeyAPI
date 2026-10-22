@@ -178,15 +178,11 @@ namespace SaddleUp
             }
             p.EffectRows("Effect", me);
 
-            // The companion's own values are the defaults: written once, in the API (MountCompanion).
-            void Speed(MountStyle style, string key, string label, string how, MountSpeed now, Action<MountSpeed> set) =>
-                p.Choice("Behaviour", key, now, label, "How fast you go " + how + ".", set, MountCompanion.SpeedLabelsFor(style));
-            Speed(MountStyle.Ride, "RideSpeed", "Riding speed", "riding your mount", me.RideSpeed, v => me.RideSpeed = v);
-            Speed(MountStyle.Cart, "CartSpeed", "Cart speed", "driving the cart", me.CartSpeed, v => me.CartSpeed = v);
-            // a mount that sets its own speed or sounds ([Mount.Tuning]) pins these keys: the rows are left out of the menu
-            // for that mount instead of doing nothing (docs/mounts-foundation-2.md 2.1)
-            p.TuningKey("Behaviour", "RideSpeed", "SpeedMultiplier", me);
-            p.TuningKey("Behaviour", "CartSpeed", "SpeedMultiplier", me);
+            // Riding speed and Cart speed were rows here until 0.12: each mount has its own speeds now ([Mount] speed /
+            // cart_speed; the Mounts panel shows them), so the player's choice is dropped (the user, 2026-10-22) and the
+            // old lines leave the file.
+            p.RetiredKey("Behaviour", "RideSpeed");
+            p.RetiredKey("Behaviour", "CartSpeed");
             p.Toggle("Behaviour", "ShowMessages", true, "Say why mounting is refused", "The keeper's thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
             p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             // Indoors (a player asked, 2026-10-21): both off = as before, the ride ends at a building's door. The API's

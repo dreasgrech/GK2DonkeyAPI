@@ -101,7 +101,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
-| `SpeedMultiplier` | 1.75 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). |
+| `SpeedMultiplier` | 2 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). The donkey's: a mount says its own (`[Mount] speed` / `cart_speed`, `MountDef.Speed` / `CartSpeed`), which wins over this. |
 | `WalkCycleSpeed` | 1.5 | 1.5 | How fast the walk animation plays for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate; a constant until 0.35.0). A mount with a longer stride sets less in its `[Mount.Tuning]`, a scurrying one more, so its legs match its speed. |
 | `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
