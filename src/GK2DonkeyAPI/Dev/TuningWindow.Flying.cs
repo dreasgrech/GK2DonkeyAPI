@@ -17,13 +17,14 @@ namespace GK2DonkeyAPI
         {
             Mount.Instance i = Mount.Ridden;
             Header("Flying (experiment)");
-            Help("The ridden mount, its rider and its cart lift off the ground and fly at a height. Step 1: the picture only. The keeper still walks underneath, so the flight goes where walking goes (no water, no cliffs yet). Nothing here is saved.");
+            Help("The ridden mount, its rider and its cart lift off the ground and fly at a height. From the clear height up (free flight) the keeper's body leaves the game's physics: over water, fences and roofs; it lands only where he can stand. Nothing here is saved.");
             if (OnOffRow("Flying experiment", Flight.Enabled, tip: "On by default on this machine (the dev tools unlocked), never for players. Off: nothing changes. Switching it off while airborne drops to the ground at once.")) Flight.Enabled = !Flight.Enabled;
             if (OnOffRow("Any mount flies (off: the dragon only)", Flight.AnyMount)) Flight.AnyMount = !Flight.AnyMount;
 
             string why;
             bool can = Flight.CanFly(i, out why);
-            GUILayout.Label($"Now: {Flight.Now}, {Flight.HeightPx:0} px up. {(Flight.Why.Length > 0 ? Flight.Why + "." : "")}", label);
+            GUILayout.Label($"Now: {Flight.Now}, {Flight.HeightPx:0} px up{(Flight.Free ? ", flying free (the body is the mod's)" : "")}. {(Flight.Why.Length > 0 ? Flight.Why + "." : "")}", label);
+            if (Flight.Free) GUILayout.Label($"Last spot he could land on: {Flight.LastSafe:F1}", small);
             if (!can && Flight.Now == Flight.Phase.Ground) GUILayout.Label("Can't take off: " + why + ".", small);
             GUILayout.BeginHorizontal();
             GUI.enabled = can || Flight.Now != Flight.Phase.Ground;
@@ -32,6 +33,18 @@ namespace GK2DonkeyAPI
             if (GUILayout.Button("Jump", Wd(110f))) Flight.Jump(i);
             GUI.enabled = true;
             GUILayout.EndHorizontal();
+
+            Header("Free flight (over everything)");
+            if (OnOffRow("Free flight from the clear height", Flight.FreeFlight, tip: "On: from the clear height up, the keeper's body is moved by the mod, through fences and over water, roofs and cliffs; down only where he can stand. Off: the lift only (the keeper walks underneath).")) Flight.FreeFlight = !Flight.FreeFlight;
+            if (OnOffRow("Bump into what's taller than the flight", Flight.BumpTall, tip: "On: buildings, trees and walls whose collider or picture reaches above the flight's feet stop it (it slides along them); fences, rocks and water below pass under. Off: through everything.")) Flight.BumpTall = !Flight.BumpTall;
+            Flight.ClearancePx = SessionFloatRow("Clearance under the flight (px)", Flight.ClearancePx, 0f, 32f, "A top this close under the flight's feet still stops it.");
+            if (Flight.Free && Flight.Blocker != null) GUILayout.Label("Bumping into: " + Flight.Blocker, small);
+            Flight.ClearPx = SessionFloatRow("Clear height (px): free above it", Flight.ClearPx, 4f, 64f, "Below it the ground's physics hold him again; coming down, the mount holds this height until the ground under him can take him.");
+
+            GUILayout.BeginHorizontal();
+            if (GUILayout.Button(Tip("Survey what's around (12)", "Every collider within 12 of the keeper, with its top, the pictures beside it and its place on a screenshot: BepInEx/GK2-flight-survey.csv and .png (how tall the game's things are, for the bumping)."), Wd(200f))) FlightSurvey.Run(12f);
+            GUILayout.EndHorizontal();
+            if (FlightSurvey.LastResult.Length > 0) GUILayout.Label(FlightSurvey.LastResult, small);
 
             Header("Heights and speeds (art pixels)");
             Flight.CruisePx = SessionFloatRow("Height a take-off climbs to", Flight.CruisePx, 4f, 200f, "Art pixels above where the ground puts the mount.");

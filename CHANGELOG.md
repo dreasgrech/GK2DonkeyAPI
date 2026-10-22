@@ -511,8 +511,10 @@ Development:
 
 - **A flying experiment (the tuning window's new Flying tab; docs/flying.md)**: the ridden mount (the dragon, or
   any mount with a switch) takes off, flies at a height with a hover, climbs and descends on keys and lands, the
-  camera rising with it; a jump on the same lift. Step 1 is the picture only: the keeper walks underneath, so the flight goes where
-  walking goes. Session values; on by default only where the dev tools are
+  camera rising with it; a jump on the same lift. Free flight from a clear height: the keeper's body leaves the
+  game's physics and flies over water, fences and low things, bumps into houses and trees taller than the
+  flight, and comes down only where he can stand (a save or a
+  dismount lands him first). Session values; on by default only where the dev tools are
   unlocked, never for players (with it off nothing changes).
 - **The three pack scenarios clean up whatever stops them** (mount from a pack, skin pack, skin pack auto-reload;
   left from the first review pass): their donkeys and carts, the temp pack and the mount it declared, the temp folder

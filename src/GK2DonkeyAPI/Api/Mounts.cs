@@ -103,6 +103,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (Mount.IsMounted)
             {
+                if (Flight.HoldForLanding("dismount: " + (reason ?? "dismounted"))) return; // flying free: down first
                 Mount.DismountFromApi(string.IsNullOrEmpty(reason) ? "dismounted" : reason);
             }
         }
@@ -118,6 +119,10 @@ namespace GK2DonkeyAPI.Api
             if (Mount.CurrentStyle == style)
             {
                 return MountResult.Success;
+            }
+            if (Flight.HoldForLanding("to " + style))
+            {
+                return MountResult.Refused("Land first."); // flying free: down first
             }
             string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(Mount.Ridden) : null) ?? MountRules.WhyCannotMount(style);
             if (reason != null)

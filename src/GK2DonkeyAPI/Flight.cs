@@ -4,12 +4,15 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // The flying experiment (docs/flying.md, step 1: the lift only). The ridden mount, its rider and its cart rise above
+    // The flying experiment (docs/flying.md). Step 1, the lift: the ridden mount, its rider and its cart rise above
     // where the ground puts them: Follow adds LiftFor to the mount's height, the seat follows through its own measuring
-    // (AutoSeat, a skin's seat) or LiftFor (the manual seat). The keeper's physical body stays on the ground and moves as
-    // on foot, so the flight goes where walking goes (no water, no cliffs yet). A jump is the same height on a ballistic
-    // path. Everything here is session-only, set on the Flying tab of the tuning window; nothing is saved, and with the
-    // experiment off (the default) LiftFor is 0 and nothing changes.
+    // (AutoSeat, a skin's seat) or LiftFor (the manual seat). A jump is the same height on a ballistic path.
+    // Step 2, free flight: from the clear height up the keeper's body leaves the game's physics (kinematic, as the
+    // game's unused ladder did; the edge walls down) and we move it from the input ourselves (FixedStep), over water,
+    // fences and roofs. It comes down only where he can stand (WhyCannotLandAt); every way out lands first (a save, a
+    // dismount or a style change by a key), or, forced (a door, a scene change), gives the body back as it is.
+    // Everything here is session-only, set on the Flying tab of the tuning window; nothing is saved, and with the
+    // experiment off LiftFor is 0, Free is false and nothing changes.
     internal static class Flight
     {
         // the Flying tab's values (art pixels: one is a pixel of the picture on screen)
@@ -29,6 +32,10 @@ namespace GK2DonkeyAPI
         internal static float JumpPx = 14f;        // the top of a jump
         internal static float JumpTimeS = 0.45f;   // from leaving the ground to landing
         internal static float CameraFollow = 1f;   // how much of the height the camera rises with (0: stays on the ground)
+        internal static bool FreeFlight = true;    // step 2: from the clear height up, over everything (off: the lift only)
+        internal static float ClearPx = 16f;       // the free flight's floor: below it he is on the ground's physics again
+        internal static bool BumpTall = true;      // free flight bumps into what stands taller than it (off: through everything)
+        internal static float ClearancePx = 2f;    // how far under the flight's feet a top still counts as in the way
         internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.R, DownKey = KeyCode.F, JumpKey = KeyCode.J;
 
         internal enum Phase { Ground, Rising, Airborne, Landing, Jumping }
@@ -39,6 +46,15 @@ namespace GK2DonkeyAPI
         private static Mount.Instance owner;
         private static float heightPx, jumpVel, bobT;
         private static bool cameraLifted, cameraSaid;
+
+        // step 2: the keeper's body is ours (kinematic, moved by FixedStep)
+        internal static bool Free { get; private set; }
+        private static Vector3 lastSafe;
+        private static float nextSafeCheck, nextLandTry, lastRefusalSaid;
+        private static string lastRefusal, lastBlocker;
+        private static float lastBlockerSaid;
+        internal static string Blocker { get; private set; }
+        internal static Vector3 LastSafe => lastSafe;
         internal static Phase Now { get; private set; }
         internal static float HeightPx => heightPx;
         internal static string Why { get; private set; } = "";
@@ -137,8 +153,164 @@ namespace GK2DonkeyAPI
                     break;
             }
             if (Now != Phase.Ground) bobT += dt;
+            FreeTick(i);
             FollowCamera();
             Probe.AtTick(i);
+        }
+
+        // ------------------------------------------------------------------ step 2: free flight
+
+        private static PlayerPhysicalBody Body => MainGame.Instance != null ? MainGame.PlayerController?.PhysicalBody : null;
+
+        // Every frame after the height's update: take the body at the clear height on the way up, hold the clear
+        // height on the way down until he may land, land, and keep the last spot he could have landed on.
+        private static void FreeTick(Mount.Instance i)
+        {
+            PlayerController pc = MainGame.PlayerController;
+            if (pc?.PhysicalBody?.Rb == null) return;
+            if (!Free && FreeFlight && heightPx >= ClearPx && (Now == Phase.Rising || Now == Phase.Airborne))
+            {
+                if (Mount.Instance.IsIndoors()) { Why = "indoors: the lift only (no flying through walls)"; return; }
+                EnterFree(pc);
+            }
+            if (!Free) return;
+            if (Mount.Instance.IsIndoors())
+            {
+                // through a door with riding indoors allowed (no dismount there): the game has placed him; his body is its own
+                ForceDown(pc, "indoors", move: false);
+                Set(Phase.Landing, "landing: indoors");
+                return;
+            }
+            if (heightPx < ClearPx)
+            {
+                if (Time.unscaledTime >= nextLandTry && TryLand(pc)) return;
+                heightPx = ClearPx; // not here: hold the clear height
+            }
+            if (Time.unscaledTime >= nextSafeCheck)
+            {
+                nextSafeCheck = Time.unscaledTime + 1f;
+                Vector3 spot = pc.PhysicalBody.Rb.position;
+                if (Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: false) == null) lastSafe = spot;
+            }
+        }
+
+        private static void EnterFree(PlayerController pc)
+        {
+            PlayerPhysicalBody pb = pc.PhysicalBody;
+            lastSafe = pb.Rb.position; // the take-off spot: he stood there
+            pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, false); // the one type the game never sets (its ladder is unused)
+            WallsDown(pb);
+            Free = true;
+            Plugin.Log.LogInfo($"[flight] free flight from {heightPx:0} px: the keeper's body is moved by the mod (kinematic {pb.Rb.isKinematic}), over everything; take-off spot {lastSafe:F2}");
+        }
+
+        private static void WallsDown(PlayerPhysicalBody pb)
+        {
+            try { HarmonyLib.Traverse.Create(pb).Field("invisibleWalls").GetValue<PlayerInvisibleWalls>()?.ChangeWallsVisibility(false); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[flight] the edge walls could not be put down: " + e.Message); }
+        }
+
+        // A landing under him: the ground must hold him (SafeGround's rules). The body comes down to it and the picture
+        // keeps its place (the height grows by the drop), then descends as any landing.
+        private static bool TryLand(PlayerController pc)
+        {
+            nextLandTry = Time.unscaledTime + 0.25f;
+            Rigidbody rb = pc.PhysicalBody.Rb;
+            Vector3 spot = rb.position;
+            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true);
+            if (why != null)
+            {
+                Why = "can't land here: " + why;
+                if (why != lastRefusal) Mount.Say("Nowhere to land here.");
+                if (why != lastRefusal || Time.unscaledTime - lastRefusalSaid > 3f)
+                {
+                    lastRefusal = why; lastRefusalSaid = Time.unscaledTime;
+                    Plugin.Log.LogInfo("[flight] " + Why + " (holding the clear height)");
+                }
+                return false;
+            }
+            float drop = rb.position.y - spot.y;
+            heightPx += Mathf.Max(0f, drop) / PxWorldY;
+            GiveBack(pc, spot, $"landing at {spot:F2} (the body down {drop:0.00})");
+            Set(Phase.Landing, "landing");
+            return true;
+        }
+
+        private static void GiveBack(PlayerController pc, Vector3? put, string what)
+        {
+            Free = false;
+            PlayerPhysicalBody pb = pc?.PhysicalBody;
+            if (pb == null) return;
+            try
+            {
+                if (put.HasValue) pb.SetPosition(put.Value);
+                pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, true);
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[flight] giving the body back failed: " + e.Message); }
+            Plugin.Log.LogInfo($"[flight] the body is the game's again: {what} (kinematic {pb.Rb?.isKinematic})");
+        }
+
+        // Down now, the body the game's: on the spot under him when he can stand there, else back at the last spot he
+        // could have (move); without moving him (a door or a scene change: the game has placed him already).
+        private static void ForceDown(PlayerController pc, string reason, bool move)
+        {
+            if (!Free) return;
+            if (!move || pc?.PhysicalBody?.Rb == null) { GiveBack(pc, null, "where he is: " + reason); return; }
+            Vector3 spot = pc.PhysicalBody.Rb.position;
+            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: false);
+            GiveBack(pc, why == null ? spot : lastSafe, why == null ? $"down under him: {reason}" : $"back to the last safe spot {lastSafe:F2} ({why}): {reason}");
+        }
+
+        // The game is about to write a save: never one with the keeper in the air (his place is saved).
+        internal static void BeforeSave()
+        {
+            if (!Free) return;
+            ForceDown(MainGame.PlayerController, "a save", move: true);
+            Set(Phase.Landing, "landing for the save");
+        }
+
+        // A dismount or a style change asked by a key, the panel or a mod while flying free: land first.
+        internal static bool HoldForLanding(string what)
+        {
+            if (!Free) return false;
+            if (Now != Phase.Landing) Set(Phase.Landing, $"landing first ({what})");
+            Mount.Say("Land first.");
+            return true;
+        }
+
+        // Plugin.FixedUpdate: the body moved from the input, at the walking speed the game would give it.
+        internal static void FixedStep()
+        {
+            if (!Free) return;
+            PlayerController pc = MainGame.PlayerController;
+            PlayerPhysicalBody pb = pc?.PhysicalBody;
+            Rigidbody rb = pb?.Rb;
+            if (rb == null) return;
+            if (!rb.isKinematic) rb.isKinematic = true; // a flow's LockMovement(false) writes it past the flags
+            Vector2 d = pc.IsControlsEnabled && !MainGame.IsGamePaused && !(HarmonyLib.Traverse.Create(pb).Field("isMovementLocked").GetValue() is bool locked && locked) ? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
+            if (d.sqrMagnitude > 1f) d.Normalize();
+            float dt = Time.fixedDeltaTime, c = Mathf.Max(0.01f, rb.linearDamping);
+            float speed = (pb.PhysicsConfig != null ? pb.PhysicsConfig.speed : 50f) * pb.SpeedMultiplier * (1f + c * dt) / c; // the top speed walking reaches against the damping
+            Vector3 move = new Vector3(d.x, 0f, d.y * 0.8f) * speed * dt; // the game's 0.8 along z (MoveByDirection)
+            Blocker = null;
+            if (BumpTall)
+            {
+                // the flight's feet: the body plus the lift (the hover left out), a clearance under them
+                float flightY = rb.position.y + Mathf.Round(heightPx) * PxWorldY - ClearancePx * PxWorldY;
+                move = Mount.Instance.FlyMove(pc, rb.position, move, flightY);
+                string b = Mount.Instance.LastBlocker;
+                if (b != null && (b != lastBlocker || Time.unscaledTime - lastBlockerSaid > 2f))
+                {
+                    lastBlocker = b; lastBlockerSaid = Time.unscaledTime;
+                    Plugin.Log.LogInfo("[flight] bumps into " + b);
+                }
+                Blocker = b;
+            }
+            Vector3 next = rb.position + move;
+            float g = Mount.Instance.GroundHeight(next, out _);
+            if (!float.IsNaN(g) && g > next.y) next.y = g; // up the hills; over water, cliffs and roofs the height is kept
+            rb.MovePosition(next);
+            pc.PlayerData.position.Value = next;
         }
 
         // The shake while climbing (the user, 2026-10-22: still there with the camera moved straight up): per frame,
@@ -176,7 +348,7 @@ namespace GK2DonkeyAPI
                 Rigidbody rb = MainGame.PlayerController?.PhysicalBody?.Rb;
                 Vector3 ks = rb != null ? cam.WorldToScreenPoint(rb.transform.position) : Vector3.zero;
                 Vector3 c = cam.transform.position;
-                Plugin.Log.LogInfo($"[flight-probe] f{Time.frameCount} {Now} h{heightPx:0.0} lift {liftAtTick:0.0000} | mount y {m.y:0.0000} screen {ms.x:0.00},{ms.y:0.00} | keeper screen {ks.x:0.00},{ks.y:0.00} | cam tick {camAtTick.x:0.0000},{camAtTick.y:0.0000},{camAtTick.z:0.0000} draw {c.x:0.0000},{c.y:0.0000},{c.z:0.0000} | offset {offsetAtTick.x:0.0000},{offsetAtTick.y:0.0000},{offsetAtTick.z:0.0000}");
+                Plugin.Log.LogInfo($"[flight-probe] f{Time.frameCount} {Now}{(Free ? " free" : "")} body y {(rb != null ? rb.position.y : 0f):0.000} kin {(rb != null && rb.isKinematic)} h{heightPx:0.0} lift {liftAtTick:0.0000} | mount y {m.y:0.0000} screen {ms.x:0.00},{ms.y:0.00} | keeper screen {ks.x:0.00},{ks.y:0.00} | cam tick {camAtTick.x:0.0000},{camAtTick.y:0.0000},{camAtTick.z:0.0000} draw {c.x:0.0000},{c.y:0.0000},{c.z:0.0000} | offset {offsetAtTick.x:0.0000},{offsetAtTick.y:0.0000},{offsetAtTick.z:0.0000}");
             }
         }
 
@@ -213,12 +385,15 @@ namespace GK2DonkeyAPI
         // ground first; step 1 never leaves the walkable ground, so dropping is always safe.)
         internal static void Release(Mount.Instance i, string reason)
         {
-            if (i != owner || Now == Phase.Ground && heightPx == 0f) return;
+            if (i != owner || Now == Phase.Ground && heightPx == 0f && !Free) return;
+            bool door = reason.Contains("indoors") || reason.Contains("scene changed");
+            ForceDown(MainGame.Instance != null ? MainGame.PlayerController : null, reason, move: !door);
             Land("down at once: " + reason);
         }
 
         private static void Land(string what)
         {
+            if (Free) ForceDown(MainGame.PlayerController, what, move: true);
             heightPx = 0f; jumpVel = 0f; bobT = 0f;
             Set(Phase.Ground, what);
             FollowCamera();

@@ -275,6 +275,14 @@ namespace GK2DonkeyAPI
             };
             try
             {
+                Flight.BeforeSave(); // never a save with the keeper in the air (the flying experiment)
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("[flight] landing for the save failed: " + e.Message);
+            }
+            try
+            {
                 if (Mount.IsMounted && Mount.Ridden.Ephemeral && Cargo.Count > 0)
                 {
                     Cargo.SuppressAnnounce = true; // the cargo comes back in the postfix; not an unload for the API
@@ -330,6 +338,21 @@ namespace GK2DonkeyAPI
                 }
             }
             return __exception;
+        }
+    }
+
+    // A flow's LockMovement writes the body's kinematic flag directly, past the game's own flags: an unlock while the
+    // flying experiment flies free would hand the body back to gravity in the air. Kept kinematic then (Flight.cs).
+    [HarmonyPatch(typeof(PlayerPhysicalBody), nameof(PlayerPhysicalBody.LockMovement))]
+    internal static class PlayerPhysicalBody_LockMovement_Patch
+    {
+        private static void Postfix(PlayerPhysicalBody __instance)
+        {
+            if (Flight.Free && __instance.Rb != null && !__instance.Rb.isKinematic)
+            {
+                __instance.Rb.isKinematic = true;
+                Plugin.Log.LogInfo("[flight] a movement unlock while flying free: the body kept kinematic");
+            }
         }
     }
 

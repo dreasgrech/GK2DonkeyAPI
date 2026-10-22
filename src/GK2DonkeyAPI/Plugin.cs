@@ -723,6 +723,14 @@ namespace GK2DonkeyAPI
             Log.LogInfo($"GK2 Donkey API {Version} loaded; nothing happens until a mod uses it.");
         }
 
+        // The flying experiment's free flight moves the keeper's body on the physics step (Flight.FixedStep; nothing
+        // while not flying free).
+        private void FixedUpdate()
+        {
+            try { Flight.FixedStep(); }
+            catch (Exception e) { Log.LogWarning("[flight] the free flight's step failed: " + e.Message); }
+        }
+
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {

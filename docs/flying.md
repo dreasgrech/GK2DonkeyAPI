@@ -57,7 +57,79 @@ Known look gaps: the dragon has no flying frames (folded wings, the walk cycle i
 `tools/skins/creatures/make_creatures.py` has an unused open-wing drawing (`wing(near, flap)`) that is the start
 of a `bdy_fly_left_NN` set, which needs a frame swap of the mod's own while airborne.
 
-## Step 2: really flying over things (investigated, not built)
+## Step 2: free flight (built 2026-10-22, not seen in game)
+
+The user, 2026-10-22: "when I'm flying, I'm getting stuck with things on the ground". Built as planned below
+(Flight.cs, FlightGround.cs), through everything (fences, roofs, water): a "bump into obstacles" variant can come later.
+
+- From the clear height (tab, 16 px) on the way up: `SetNonKinematicFlag(ByLadder, false)` (the one type the game
+  never sets), the edge walls put down once. The body is then moved in `Plugin.FixedUpdate` (`Flight.FixedStep`):
+  `rb.MovePosition` (not `MoveByPosition`, which teleports past the interpolation and sets Walk against
+  `MoveByDirection`'s Idle), the input as `MoveByDirection` reads it (0.8 along z), at the walking top speed against
+  the damping (speed x multiplier x (1 + c dt) / c), `playerData.position` set. Up the hills; over water, cliffs and
+  roofs the body keeps its height. The walk animation and facing still come from the game's `MoveByDirection`.
+- Down: below the clear height only where `Mount.Instance.WhyCannotLandAt` passes (the navmesh under him, his body
+  fits there, the game's walk grid); otherwise the mount holds the clear height, "Nowhere to land here." and the
+  reason on the tab and in the log. Landing: the body put down (`SetPosition`), the height grown by the drop so the
+  picture keeps its place, the flag back, then the usual descent.
+- Ways out: a save (`SaveSystem.Save` prefix) lands him now, under him or back at the last spot he could have landed
+  on (checked once a second, the take-off spot first); a dismount or a style change through the API (H, G, the
+  panel, a mod) becomes "Land first." and a landing; forced exits (`Dismount`, `ForceCleanup`) give the body back,
+  moved to safe ground, except through a door or a scene change (the game placed him) and indoors (riding indoors
+  allowed: given back where he is). A flow's `LockMovement(false)` is undone while free (postfix).
+- `[flight]` lines on every change of who moves the body; `[flight-probe]` lines carry `free`, the body's y and the
+  kinematic flag.
+
+- Through everything was too much (the user, 2026-10-22: "now I'm going through everything ... is there no
+  smarter way, regarding buildings and trees"). Now (tab: "Bump into what's taller than the flight", on): each
+  physics step the body's capsule, from the ground under him up to the flight's height, is swept along the move
+  against what the keeper collides with (`Mount.Instance.FlyMove`, FlightGround.cs). A hit stops the flight only when
+  the thing reaches above the flight's feet (body + lift - a clearance): its collider's top or its picture's
+  (the renderers beside the collider, for a tree's short trunk collider under a tall crown), whichever is higher;
+  ground layers only by where the hit itself is (a cliff face). Blocked: the flight slides along it. So a low
+  flight bumps into houses and trees, a high one passes over; fences, rocks and water always pass under.
+  `[flight] bumps into <name> (layer, top: collider, picture) above the flight at <y>` says what stopped it.
+  Unmeasured: whether the game's colliders and pictures give tops that match what the eye sees (the log is the check).
+
+### How tall is a thing (read of the game code, 2026-10-22)
+
+- The world's objects are real 3D meshes (`Wgo` -> `WgoPart` -> `Object3D` -> `Object3DMesh` with a `Renderer`),
+  so a renderer's bounds are its drawn height. No definition (`WGODef`, `BuildingDef`) stores a height.
+- Colliders come from the prefabs; layer 8 (obstacles) is only ever tested by layer in the game, never by height:
+  their Y size says nothing reliable. A navmesh cut's height copies its box collider's.
+- **The see-through system is the game's own "is something tall here"**: `PlayerView` casts the keeper as a 1.4 tall,
+  0.24 wide capsule towards the camera against layer 15 (`TRANSPARENCY_OCCLUDER`, mask 32768);
+  `TransparencyOccluderMeshCollider` puts on that layer a MeshCollider that *is* the drawn mesh, only on things tall
+  enough to hide him (trees, houses, big props). No height numbers anywhere: a physics cast against the drawn shapes.
+- Baked bounds: `WgoData.SerializedBounds` (all parts' renderers, inactive ones and lights' ranges included: a lamp
+  reports too high); `Object3DMesh.treeHeight` (a shader value, 4 by default). Shadow-only meshes are `*_sh`/`-sh`,
+  water surfaces `*-ws`.
+- Nothing in the game flies around obstacles (wisps go straight, arrows pass through obstacles).
+
+So the bumping (FlightGround.cs) now: sweep 1, the keeper's see-through capsule at the flight's height against
+layer 15 (he meets a crown or a wall where it is drawn, passes over a roof he is above); sweep 2, what his body
+collides with, from the ground up, counting only things whose top (their collider's or their Wgo's meshes', shadow
+and water meshes left out) is above the flight's feet. The tab's survey button writes every collider around him
+with these tops and a screenshot (BepInEx/GK2-flight-survey.csv/.png): the check that they match the eye.
+
+### The first survey (2026-10-22, the Inquisition base plateau, 343 colliders within 12)
+
+- Obstacles (layer 8): 198, nearly all the scene's own pieces (rock walls along the cliff, the ruins, the house; no
+  Wgo), `DecomposedConvexMeshCollider`s. Their heights are fixed extrusions, not the drawing: 135 exactly 2.0 tall,
+  17 at 3.0, 14 at 1.5. So "the collider's top" stopped the flight at every rock below 2 units (the bumps logged
+  "top 8.00 / 9.00 above the flight at 7.62"). The drawn meshes sit beside them in the scene (`Walls/rock_.../
+  rock_...(Clone)` renderers: tops 6.0 to 8.4 on a plateau at 6, i.e. 0 to 2.4 tall).
+- See-through shapes (layer 15): 16, the trees' crowns (min 8.8 to max 10.6 over ground 6: the crown only, the
+  trunk below has none) and a teleport milestone.
+- Now: an obstacle counts by what is drawn over it (its Wgo's meshes, else the nearest parent's renderers that
+  overlap it from above), never by its collider's top; nothing drawn: it doesn't stop. Survey files are now
+  numbered by the time (`GK2-flight-survey-HHmmss.csv/.png`), the column `drawn_top` is what the bumping reads.
+
+Hand tests: cross water and come back; fly over a fence and a building; off a cliff and land below; try to land over
+water (holds, says why); save in the air; H in the air (lands first); a door while flying; then F11 (nothing else
+changed: all of it only while flying free).
+
+## Step 2: the investigation
 
 The keeper's `PlayerPhysicalBody` (decomp) keeps him on the ground:
 
