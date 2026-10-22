@@ -23,6 +23,7 @@ namespace GK2DonkeyAPI
             internal Action Pressed;
             internal string Seen;        // the binding as last polled (KeyboardShortcut.Serialize)
             internal bool WaitRelease;   // the binding just changed: the key that set it is still down, not a press of it
+            internal bool OverPanel;     // the Mounts panel's own key: it still works while the panel is open (it closes it)
         }
 
         private static readonly List<Entry> entries = new List<Entry>();
@@ -31,10 +32,17 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, bool> owners = new Dictionary<string, bool>(StringComparer.Ordinal);
         private static float nextOwnerCheck;
 
-        internal static void Add(string owner, ConfigEntry<KeyboardShortcut> key, Action pressed)
+        internal static void Add(string owner, ConfigEntry<KeyboardShortcut> key, Action pressed, bool overPanel = false)
         {
             Track(owner);
-            entries.Add(new Entry { Owner = owner, Key = key, Pressed = pressed, Seen = key.Value.Serialize() });
+            entries.Add(new Entry { Owner = owner, Key = key, Pressed = pressed, Seen = key.Value.Serialize(), OverPanel = overPanel });
+        }
+
+        // For the self-test: whether a mod's key still works while the Mounts panel is open (null: not a polled key).
+        internal static bool? WorksOverPanel(string owner, string key)
+        {
+            Entry e = entries.Find(x => x.Owner == owner && x.Key.Definition.Key == key);
+            return e?.OverPanel;
         }
 
         internal static void Track(string owner)
@@ -60,6 +68,9 @@ namespace GK2DonkeyAPI
             {
                 return; // typing in the Mounts panel's search box: H is a letter, not the ride key
             }
+            // The Mounts panel or its colours window open: the mods' keys wait, as the game's own do (the user,
+            // 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it.
+            bool panelOpen = MountsPanel.IsOpen;
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
@@ -78,6 +89,10 @@ namespace GK2DonkeyAPI
                     e.WaitRelease = false;
                 }
                 if (!Pressed(e.Key.Value))
+                {
+                    continue;
+                }
+                if (panelOpen && !e.OverPanel)
                 {
                     continue;
                 }

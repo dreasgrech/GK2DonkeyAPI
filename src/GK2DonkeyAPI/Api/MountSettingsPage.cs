@@ -654,7 +654,8 @@ namespace GK2DonkeyAPI.Api
 
         // A key (with modifiers). Read-only in the game's Settings window.
         // pressed: called when the player presses the key (its modifiers held; other keys held, like walking, don't
-        // matter), while the API is on. The API polls it: the mod needs no Update of its own.
+        // matter), while the API is on. The API polls it: the mod needs no Update of its own. Not while the Mounts panel
+        // or its colours window is open (0.36.0), except a key whose pressed is OpenPanel (it closes the panel).
         // Plain Backspace means no key: set from either menu or the cfg, it's cleared at once (GK2 Mod Framework's key
         // capture has no way to clear a key and takes Backspace as one; the game's Settings window does the same on
         // its own). Publish adds a row saying so before the page's first key.
@@ -668,7 +669,7 @@ namespace GK2DonkeyAPI.Api
             Wire(e, apply);
             if (pressed != null)
             {
-                KeyActions.Add(OwnerId, e, pressed);
+                KeyActions.Add(OwnerId, e, pressed, overPanel: pressed == (Action)OpenPanel); // the rest wait while the panel is open
             }
             return e;
         }

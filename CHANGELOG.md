@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Fixed: the mod's keys no longer act while the Mounts panel is open.** H, G, the bell and the send-away key
+  pressed in the panel or its colours window got you on and off your mount behind it; now they wait until the
+  panel is closed, as the game's own keys do. The Mounts panel key still closes it.
 - **The mouse wheel scrolls the Mounts panel and the colours window anywhere on them**, not only by dragging the
   scrollbar: over the mount list it scrolls the list, elsewhere on the panel the rows on the right; on the colours
   window, its rows.
