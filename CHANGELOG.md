@@ -104,6 +104,8 @@ For players:
 
 For mod authors:
 
+- **Saddle Up needs GK2 Donkey API 0.36.0** (was 0.35.0: it uses `CartIndoors`, `Mounts.Catalog` and registers
+  Hellfire's effect itself); an older API gets the clear "too old" message instead of failing part-way.
 - **`CartIndoors`** (a Behaviour key, off): with `DismountIndoors` off, the cart comes indoors only with it on; off,
   a cart ride through a building's door leaves the cart standing at the door (an unhitch, `Unhitched` raised) and
   goes on as a ride; at the morgue with a corpse the keeper gets off inside and takes it into his hands
