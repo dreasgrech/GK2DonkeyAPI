@@ -154,7 +154,7 @@ namespace GK2DonkeyAPI
         private static void Changed()
         {
             Version++;
-            Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false);
+            Looks.MarkWearersDirty();
             Mounts.Catalog.RaiseChanged();
         }
 

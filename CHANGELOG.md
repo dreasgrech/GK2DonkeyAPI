@@ -12,6 +12,14 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **New: babies follow you on foot.** A new row, "Babies follow you on foot", on: off your mount, outdoors, your
+  babies come with you instead of staying by it (turn it off for the old way). They trot after you,
+  and catch up out of sight when you're far ahead; when you get on a mount they go back to yours. Into buildings
+  they still come only with "Babies come indoors". The babies rows have a section of their own now, Babies, under
+  Mount; your values are the same.
+- **Fixed: the settings page's picture of your mount kept the donkey** after a mount drawn from the game's own
+  pictures (Gerry) became available again a scene later, while your mount in the world already showed it. The
+  picture (and the Mounts panel's) now follows at once, as it does for a skin added, replaced or removed.
 - **New: mounting indoors** (a player asked). Behaviour has two new rows, both off, so nothing changes until you
   turn them on: "Allow mounting indoors" rides into houses, the church and the morgue and lets you get on inside;
   "Allow mounting with the cart indoors" (only with the first on) brings the cart in too, a corpse on it staying
@@ -104,6 +112,11 @@ For players:
 
 For mod authors:
 
+- **Babies on foot:** the Shuffle key `ShuffleFollowKeeperOnFoot` (off in the core; a companion sets it on its own
+  foals only), `MountCompanion.FoalsFollowOnFoot`, and `FoalRows` adds `FoalsFollow` ("Babies follow you on foot").
+  The row defaults to the companion's `FoalsFollowOnFoot` (Saddle Up sets it on first; the core stays off).
+  `MovedKey` takes several old places for one key, a call each (before, the last call won): Saddle Up's babies name
+  both Mount and Donkey. docs/foals.md "Following the keeper on foot".
 - **Saddle Up needs GK2 Donkey API 0.36.0** (was 0.35.0: it uses `CartIndoors`, `Mounts.Catalog` and registers
   Hellfire's effect itself); an older API gets the clear "too old" message instead of failing part-way.
 - **`CartIndoors`** (a Behaviour key, off): with `DismountIndoors` off, the cart comes indoors only with it on; off,

@@ -1,4 +1,4 @@
-# Mounting indoors (API 0.36.0 / Saddle Up 0.12.0, built 2026-10-21, not yet seen in game)
+# Mounting indoors (API 0.36.0 / Saddle Up 0.12.0, built 2026-10-21, hand-tested 2026-10-22)
 
 A player asked to ride and drive indoors. Saddle Up has two rows under Behaviour, both off by default, so a player
 who never touches them gets what they had before: the ride ends at a building's door.
@@ -66,6 +66,12 @@ who never touches them gets what they had before: the ride ends at a building's 
 The tests can't judge furniture, door frames or how it looks. That is the hand test below.
 
 ## In game (by hand)
+
+Seen 2026-10-22 with the dragon: riding through Home, its basement and the lab; mount only through the church door (the
+cart and its corpse stayed at the door, "not the morgue"); the cart allowed into the morgue (the corpse stayed on the
+cart and was taken off by hand); the cart in Home; sleeping with the mount parked inside (moved 0.5 off the furniture
+it stood in), saved and loaded indoors (all back, the chest on the cart). Not yet by hand: the morgue with the cart
+row off (the self-test covers it with the morgue's door note).
 
 Turn on "Allow mounting indoors" (Mods -> GK2 Saddle Up -> Behaviour).
 

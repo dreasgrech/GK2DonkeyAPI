@@ -104,13 +104,16 @@ namespace GK2DonkeyAPI.Api
         // A key that moved to another section (or name) on the page: the first bind of (section, key) with nothing in
         // the cfg takes the value the cfg has as (oldSection, oldKey), whatever number oldSection had. Call it before
         // the row. Sections that only moved on the page keep their values without this.
+        // A key that moved more than once names each old place with a call of its own (0.36.0: one call named one).
         public void MovedKey(string section, string key, string oldSection, string oldKey = null)
         {
             if (string.IsNullOrEmpty(section) || string.IsNullOrEmpty(key) || string.IsNullOrEmpty(oldSection)) throw new ArgumentException("section, key and oldSection are needed.");
-            movedKeys[section + "\n" + key] = (oldSection, oldKey ?? key);
+            string at = section + "\n" + key;
+            if (!movedKeys.TryGetValue(at, out List<(string Section, string Key)> places)) movedKeys[at] = places = new List<(string, string)>();
+            if (!places.Contains((oldSection, oldKey ?? key))) places.Add((oldSection, oldKey ?? key));
         }
 
-        private readonly Dictionary<string, (string Section, string Key)> movedKeys = new Dictionary<string, (string, string)>(StringComparer.Ordinal);
+        private readonly Dictionary<string, List<(string Section, string Key)>> movedKeys = new Dictionary<string, List<(string, string)>>(StringComparer.Ordinal);
         private Dictionary<string, Dictionary<string, string>> fileSections; // the cfg file's sections and their keys, raw
         private readonly HashSet<string> movedNoted = new HashSet<string>();
 
@@ -121,13 +124,19 @@ namespace GK2DonkeyAPI.Api
         private IEnumerable<(string Section, string Key)> OldPlaces(string cfgSection, string key, Dictionary<string, Dictionary<string, string>> file)
         {
             string plain = PlainName(cfgSection);
-            movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out (string Section, string Key) alias);
+            movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out List<(string Section, string Key)> aliases);
             foreach (string s in file.Keys)
             {
                 if (s == cfgSection) continue;
                 string p = PlainName(s);
                 if (p == plain) yield return (s, key);
-                else if (alias.Section != null && p == alias.Section) yield return (s, alias.Key);
+                else if (aliases != null)
+                {
+                    foreach ((string Section, string Key) alias in aliases)
+                    {
+                        if (p == alias.Section) yield return (s, alias.Key);
+                    }
+                }
             }
         }
 
@@ -465,14 +474,17 @@ namespace GK2DonkeyAPI.Api
         internal bool HasMountRow => mountRow != null;
         internal bool Shown => shown;
 
-        // The rows for the mount's babies (foals), for the same section as MountRows: how many, whether they come
-        // indoors, whether they are the same mount and skin. Cfg keys: Foals, FoalsIndoors, FoalsWearSkin in the section
-        // given (a mod that had them in another section names it with MovedKey first).
+        // The rows for the mount's babies (foals), for a section of their own ("Babies"; MountRows' section works too):
+        // how many, whether they follow the keeper on foot, whether they come indoors, whether they are the same mount
+        // and skin. Cfg keys: Foals, FoalsFollow, FoalsIndoors, FoalsWearSkin in the section given (a mod that had them
+        // in another section names it with MovedKey first). The count, FoalsFollow and FoalsWearSkin rows default to
+        // the companion's values as they are when this is called (set them first for your own defaults).
         public void FoalRows(string section, MountCompanion companion)
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
             Steps(section, "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "Little ones of your mount that stay with it and follow it around.", v => me.FoalCount = v, v => v == 0 ? "None" : v.ToString());
+            Toggle(section, "FoalsFollow", me.FoalsFollowOnFoot, "Babies follow you on foot", "Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out.", v => me.FoalsFollowOnFoot = v);
             Toggle(section, "FoalsIndoors", true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
             Toggle(section, "FoalsWearSkin", me.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => me.FoalsWearSkin = v);
         }
@@ -658,9 +670,9 @@ namespace GK2DonkeyAPI.Api
             colour = Choice(section, key, value, label, description, _ => Combine(), null, look: true, visible: visible);
             string lightnessKey = LightnessKey(key);
             // a colour key moved here from another section (MovedKey before this call) brings its lightness key along
-            if (movedKeys.TryGetValue(section + "\n" + key, out (string Section, string Key) from))
+            if (movedKeys.TryGetValue(section + "\n" + key, out List<(string Section, string Key)> froms))
             {
-                MovedKey(section, lightnessKey, from.Section, LightnessKey(from.Key));
+                foreach ((string Section, string Key) from in froms.ToArray()) MovedKey(section, lightnessKey, from.Section, LightnessKey(from.Key));
             }
             lightness = Steps(section, lightnessKey, 100, 40, 160, 10, label + ": lightness", "100% is the colour itself; lower is darker, higher is lighter.", _ => Combine(), n => n + "%", look: true, visible: visible);
             Combine();

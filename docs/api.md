@@ -487,6 +487,7 @@ p.Publish();
 | `CartStaysParked` | `Use(Ride)` while the donkey stands hitched to its cart somewhere: the cart is left where it was parked, with its load and chest, and the donkey alone comes. Off: both come and the cart is left standing by the keeper. On (0.25.0). |
 | `FoalCount` | 0 to `MaxFoals` (5) foals (the mount's own size: a donkey's 0.6, not rideable) that stay with the donkey. |
 | `FoalsComeIndoors` | The foals come through doors with the keeper, follow him inside and come back out with him (`ShuffleFollowKeeperIndoors` on each foal). Off. |
+| `FoalsFollowOnFoot` | (0.36.0) The foals follow the keeper while he walks outdoors on foot, instead of staying by the mount (`ShuffleFollowKeeperOnFoot` on each of this companion's foals, never on another mod's); when he gets on a mount they go back to it, following it when it's theirs. Into buildings only with `FoalsComeIndoors`. Off. |
 | `Name` | Shown in the prompt: "[E] Ride Bella" (`MountHandle.SetDisplayName`). |
 | `RideSpeed`, `CartSpeed` | `MountSpeed.Normal / Faster / Fastest` (players' words: `SpeedLabels`, or with each step's speed: `SpeedLabelsFor(style)`, "Normal (x2 walking speed)", Normal being the player's own cfg value, rounded to 0.05), riding the donkey alone / driving the cart: Normal is the player's own speed (shipped: 2 Ride, 1.5 Cart); Faster 2.25 (Ride) / 1.75 (Cart); Fastest 2.5 / 2. |
 | `Brays`, `BellOnSetOff` (off to start with), `SoundVolume` (0–1.5), `Lantern`, `LanternByDay` | The ride's sounds and lamp. |
@@ -533,7 +534,9 @@ Where they apply:
   same name with another number (of several old copies, the fullest section wins, then the highest number), and the
   old copy is dropped from the file at the next save; the log says which section moved. A key you move to another
   section or name: `page.MovedKey("Mount", "Name", "Donkey")` before the row (old key name as a fourth argument when
-  it changed too), and the first bind with nothing in the cfg takes the old value the same way.
+  it changed too), and the first bind with nothing in the cfg takes the old value the same way. A key that moved
+  more than once names each old place in a call of its own (0.36.0), e.g. Saddle Up's babies:
+  `MovedKey("Babies", "Foals", "Mount")` and `MovedKey("Babies", "Foals", "Donkey")`.
 - **`Publish()`, once, after the rows, from your `Awake`:**
   - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
     sorts the sections by name);
@@ -696,9 +699,11 @@ companion's own `Coat`, `Harness`... read and write the current mount's look (`M
 
 A settings page gets the rows in three calls: `page.MountRows("Mount", companion)` adds a **Mount** dropdown (every
 mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
-dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>`; `page.FoalRows("Mount",
-companion)` adds the babies rows (how many, come indoors, the same mount and skin) on `Foals`, `FoalsIndoors`,
-`FoalsWearSkin`; `page.EffectRows("Effect", companion)` adds the effect list ("As the mount or skin", none, every effect),
+dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>`; `page.FoalRows("Babies",
+companion)` adds the babies rows (how many, follow you on foot, come indoors, the same mount and skin) on `Foals`,
+`FoalsFollow`, `FoalsIndoors`, `FoalsWearSkin`, for a section of their own (Saddle Up's since 0.12; the count,
+`FoalsFollow` and `FoalsWearSkin` default to the companion's values when it is called: Saddle Up sets
+`FoalsFollowOnFoot = true` first); `page.EffectRows("Effect", companion)` adds the effect list ("As the mount or skin", none, every effect),
 when it shows and how, on `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`, `EffectInFights`, `EffectOnFoals`.
 The labels say "mount" and "babies", never "donkey": the mount may be a dragon. Mounts, skins and
 effects registered before the page is built appear with no change to yours; later ones at the catch-up (0.34.0: the page is shown a frame after Publish and adds a late mount's rows then). `MountsChanged` fires on a
@@ -904,6 +909,9 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
+  foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
+  old places for one key (a call each; before, the last call won).
 - 0.36.0: the Behaviour key `CartIndoors` (off): with `DismountIndoors` off the cart comes indoors only when it is
   on; off, a cart ride through a building's door leaves the cart at the door and goes on as a ride (at the morgue:
   off inside, the corpse into the hands), and the cart is refused inside ("Not the cart indoors."). Before,

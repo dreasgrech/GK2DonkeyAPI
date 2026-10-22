@@ -108,17 +108,27 @@ namespace GK2DonkeyAPI
         private static void ThroughDoor(PlayerData pd, bool inside)
         {
             int came = 0, back = 0;
+            int stayed = 0;
             ForEachInstance(i =>
             {
+                bool near = i.SceneId == doorFromScene && FlatDistanceStatic(i.Position, doorFrom) <= IdleShuffle.FollowMaxDistance.Value;
+                if (!inside && i.FollowsOnFoot() && Ridden == null && (i.withKeeper || near))
+                {
+                    // outdoors on the far side, on foot: it comes along (placed by him while the screen is black)
+                    i.JoinKeeper(i.withKeeper ? "went on with the keeper" : "came along with the keeper");
+                    stayed++;
+                    return;
+                }
                 if (!i.ComesIndoors())
                 {
                     if (i.withKeeper)
                     {
-                        i.LeaveKeeper("it no longer comes indoors", place: false);
+                        // into a building without "come indoors": back to its parent outside (it joins him again when he
+                        // is out, on foot); out of one: as before
+                        i.LeaveKeeper(inside ? "it doesn't come indoors" : "it no longer comes indoors", place: false);
                     }
                     return;
                 }
-                bool near = i.SceneId == doorFromScene && FlatDistanceStatic(i.Position, doorFrom) <= IdleShuffle.FollowMaxDistance.Value;
                 if (!i.withKeeper && !near)
                 {
                     return;
@@ -134,14 +144,20 @@ namespace GK2DonkeyAPI
                     back++;
                 }
             });
+            if (stayed > 0)
+            {
+                Plugin.Log.LogInfo($"[indoors] {stayed} foal(s) came along with the keeper on foot.");
+            }
             if (came > 0 || back > 0)
             {
                 Plugin.Log.LogInfo($"[indoors] {(inside ? came + " foal(s) came in with the keeper" : back + " foal(s) came out with the keeper and go back to their parents")}.");
             }
         }
 
-        // Once a second while the keeper has control: outdoors, no foal stays with him (a door missed, a load); right
-        // after a load indoors, the flagged foals near him are with him again (being with him isn't saved).
+        // Once a second while the keeper has control: outdoors, a foal that follows him on foot (FollowsOnFoot) is with
+        // him while he walks in its scene, joined by trotting over (not placed), and no other foal stays with him (a door
+        // missed, a load, he got on a mount); right after a load indoors, the flagged foals near him are with him again
+        // (being with him isn't saved).
         private static void SteadyIndoors(PlayerData pd)
         {
             bool inside = Instance.IsIndoors();
@@ -151,9 +167,22 @@ namespace GK2DonkeyAPI
             string scene = pd.currentGameSceneId;
             ForEachInstance(i =>
             {
-                if (i.withKeeper && (!inside || !i.ComesIndoors()))
+                if (!inside)
                 {
-                    i.LeaveKeeper(!inside ? "the keeper is outdoors" : "it no longer comes indoors", place: false);
+                    bool onFoot = i.FollowsOnFoot() && Ridden == null && i.SceneId == scene;
+                    if (onFoot && !i.withKeeper)
+                    {
+                        i.JoinKeeper("the keeper walks on foot", place: false);
+                    }
+                    else if (!onFoot && i.withKeeper)
+                    {
+                        i.LeaveKeeper(Ridden != null ? "the keeper got on a mount" : i.FollowsOnFoot() ? "the keeper is in another place" : "the keeper is outdoors", place: false);
+                    }
+                    return;
+                }
+                if (i.withKeeper && !i.ComesIndoors())
+                {
+                    i.LeaveKeeper("it no longer comes indoors", place: false);
                 }
                 else if (loaded && inside && !i.withKeeper && i.ComesIndoors() && i.SceneId == scene
                     && FlatDistanceStatic(i.Position, k) <= IdleShuffle.FollowMaxDistance.Value)
@@ -184,7 +213,7 @@ namespace GK2DonkeyAPI
 
         internal sealed partial class Instance
         {
-            // With the keeper indoors: he is the one it follows (Foals.cs, LeadNow). Not saved.
+            // With the keeper (indoors, or on foot outdoors): he is the one it follows (Foals.cs, LeadNow). Not saved.
             internal bool withKeeper;
             internal bool placeAgain;    // placed at a door without a clear slot (FreeSlot), the screen still black
 
@@ -195,11 +224,27 @@ namespace GK2DonkeyAPI
                     && IdleShuffle.FollowKeeperIndoors.Value;
             }
 
-            // Next to the keeper where he arrived (into his scene if need be), and following him from now on.
-            internal void JoinKeeper(string why)
+            // A foal (with a parent, not ridden) whose ShuffleFollowKeeperOnFoot is on: it follows the keeper while he
+            // walks outdoors on foot. Read while bound. Only a mod's own foals have it (off in the core).
+            internal bool FollowsOnFoot()
+            {
+                return Parent != null && IsRegistered(Parent) && !IsRidden && IdleShuffle.FollowKeeperOnFoot != null
+                    && IdleShuffle.FollowKeeperOnFoot.Value;
+            }
+
+            // Following the keeper from now on. place: next to him where he arrived (into his scene if need be: a door,
+            // the screen black); not: it trots over from where it is, or catches up out of sight (on foot outdoors).
+            internal void JoinKeeper(string why, bool place = true)
             {
                 withKeeper = true;
                 foalSide = 0f; // the side of the keeper it is on, picked again where it lands
+                if (!place)
+                {
+                    followLost = false;
+                    followTargetSlot = NoSlot;
+                    DiagLog($"[foal] {Describe()} follows the keeper ({why}).");
+                    return;
+                }
                 StopShuffle();
                 PlaceAtDoor(why);
                 WakeNow();

@@ -154,7 +154,7 @@ namespace GK2DonkeyAPI
                 foreach (string n in needed) if (!frames.ContainsKey(n)) return false;
                 d.Unavailable = null;
                 Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its named game frames are there again ({frames.Count} '{d.Game.Prefix}*' frames, {how}); offered again.");
-                Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); // a wearer that gave up on it (drawn as the donkey) wears it on its next tick
+                MarkWearersDirty(); // a wearer that gave up on it (drawn as the donkey) wears it on its next tick
                 Mounts.Looks.RaiseChanged();
                 return true;
             }
@@ -199,7 +199,7 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogWarning($"Looks: skin '{d.Id}': its game frames could not be checked: {e.Message}");
                 }
             }
-            if (changed) Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); // a wearer of a skin set aside now draws the donkey; one healed wears it again
+            if (changed) MarkWearersDirty(); // a wearer of a skin set aside now draws the donkey; one healed wears it again
             Mounts.Looks.RaiseChanged(); // the lists may have lost a skin
         }
 

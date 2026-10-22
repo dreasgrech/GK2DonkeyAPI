@@ -19,7 +19,7 @@ PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
 # the per-mount sets a cfg may hold: the built-in kinds and the example mod's (checker-beast); a player's is "" only
 MOUNTS = ["", "_dragon", "_gerry", "_rat", "_snail", "_worm", "_checker-beast"]
 KINDS = ["donkey", "dragon", "gerry", "rat", "snail", "worm", "checker-beast"]
-FOAL_ROWS = ["Foals", "FoalsIndoors", "FoalsWearSkin"]
+FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
 EFFECT_ROWS = ["Effect", "EffectWhen", "EffectTrail", "EffectWithCart", "EffectInFights", "EffectOnFoals"]
 
 
@@ -45,9 +45,9 @@ def page_rows(src):
     for m in re.finditer(r'p\.MovedKey\("(\w+)", "(\w+)"( \+ sfx)?, "(\w+)"(?:, "(\w+)")?\)', src):
         sec, key, sfx, old, oldKey = m.groups()
         for s in (MOUNTS if sfx else [""]):
-            aliases[(sec, key + s)] = (old, (oldKey or key) + s)
+            aliases.setdefault((sec, key + s), []).append((old, (oldKey or key) + s))  # a key may name several old places
             if (sec, key + "Lightness" + s) in rows:  # Color() carries the lightness alias along
-                aliases[(sec, key + "Lightness" + s)] = (old, (oldKey or key) + "Lightness" + s)
+                aliases.setdefault((sec, key + "Lightness" + s), []).append((old, (oldKey or key) + "Lightness" + s))
     for m in re.finditer(r'p\.MountRows\("(\w+)"', src):
         rows.add((m.group(1), "Mount"))
         rows.update((m.group(1), "Skin_" + k) for k in KINDS)
@@ -73,7 +73,7 @@ def cfg_keys(path):
 def main(argv):
     with io.open(PLUGIN, encoding="utf-8") as f:
         rows, aliases = page_rows(f.read())
-    claimable = set(rows) | set(aliases.values())
+    claimable = set(rows) | {place for places in aliases.values() for place in places}
     print(f"{len(rows)} rows, {len(aliases)} aliases (src/SaddleUp/Plugin.cs)")
     files = sorted(glob.glob(os.path.join(REPO, "tests", "fixtures", "released", "*", "dreas.gk2.saddleup.cfg"))) + argv
     ok = True

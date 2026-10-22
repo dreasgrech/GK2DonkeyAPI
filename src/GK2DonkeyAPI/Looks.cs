@@ -317,7 +317,7 @@ namespace GK2DonkeyAPI
             }
             defs[d.Id] = d;
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
-            Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false); // replaced: its wearers take the new one; new: an instance whose Skin already names it wears it now (its tick gave up on the missing id)
+            MarkWearersDirty(); // replaced: its wearers take the new one; new: an instance whose Skin already names it wears it now (its tick gave up on the missing id)
             Mounts.Looks.RaiseChanged();
         }
 
@@ -484,7 +484,7 @@ namespace GK2DonkeyAPI
                 Catalog.Entry live = Catalog.Find(d.DeclaredMount.Id);
                 if (live != null && live.FromPack && live.Owner == owner && !StillDeclared(live, d)) Catalog.Unregister(live.Id, owner);
             }
-            Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false);
+            MarkWearersDirty();
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' withdrawn by {owner}.");
             Mounts.Looks.RaiseChanged();
             return true;
@@ -882,6 +882,15 @@ namespace GK2DonkeyAPI
         // The portrait a pack names (a PNG next to its frames), read once; null when it has none or it can't be read.
         private static readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
         private static readonly HashSet<string> portraitFailed = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // a read that failed: not tried again (nor warned again)
+
+        // Every wearer looks at its skin again on its next tick: the world's mounts and the paper ones the settings
+        // page and the Mounts panel draw (MountCompanion.Paper, never registered: before, a skin offered again after
+        // being set aside showed on every mount in the world while the page's picture kept the donkey).
+        internal static void MarkWearersDirty()
+        {
+            Mount.ForEachInstance(i => i.LooksRig.MarkDirty(), bind: false);
+            MountCompanion.ForEachPaper(p => p.LooksRig.MarkDirty());
+        }
 
         // A skin withdrawn, replaced or reloaded: its portrait (and its mount's stand-in) read again next time.
         internal static void ForgetPortraits(string id)
@@ -2534,6 +2543,8 @@ namespace GK2DonkeyAPI
             private static readonly HashSet<string> tuningLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             internal void MarkDirty() => dirty = true;
+            internal bool TestDirty => dirty;            // the self-test: whether the next tick looks at the skin again
+            internal void TestClearDirty() => dirty = false;
             internal void RetuneNow() => tunedMount = null; // the mount's or skin's values changed in place: ApplyTuning re-merges on the next tick
 
             // The cart rule while hitched (docs/mounts-design.md §3, the user's decision of 2026-10-20): a mount with a

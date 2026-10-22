@@ -91,8 +91,12 @@ namespace SaddleUp
             // KeepWithSaves in Behaviour, the colours in Donkey and Cart, the cart's rows in Behaviour before 0.11.
             // Moving a section renumbers it in the cfg; the page carries those values over by itself.
             p.MovedKey("Mount", "Name", "Donkey");
-            p.MovedKey("Mount", "Foals", "Donkey");
-            p.MovedKey("Mount", "FoalsIndoors", "Donkey");
+            // The babies have a section of their own since 0.12 (the user, 2026-10-22): Mount from 0.10, Donkey before.
+            p.MovedKey("Babies", "Foals", "Mount");
+            p.MovedKey("Babies", "Foals", "Donkey");
+            p.MovedKey("Babies", "FoalsIndoors", "Mount");
+            p.MovedKey("Babies", "FoalsIndoors", "Donkey");
+            p.MovedKey("Babies", "FoalsWearSkin", "Mount");
             p.MovedKey("Mount", "KeepWithSaves", "Behaviour");
             p.Preview("Mount", me, "Your mount");
             // The mount, its skins, the effect and every colour are chosen in the Mounts panel (the user, 2026-10-20: a
@@ -109,8 +113,11 @@ namespace SaddleUp
                 p.Info("Mount", "Other mounts and skins", () => "Coming in the next update",
                     "A dragon, a giant rat, a giant snail, a giant worm, Gerry, the Hellfire skin, skin packs and the mounts from other mods are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
             }
-            p.FoalRows("Mount", me);
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After loading, your mount and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
+
+            // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
+            me.FoalsFollowOnFoot = true; // the row's default: on in Saddle Up (the user, 2026-10-22); the API's stays off for other mods
+            p.FoalRows("Babies", me);
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
             // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per mount (PerMount: the donkey's rows keep their keys, the dragon's are

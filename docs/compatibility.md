@@ -39,7 +39,8 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
   since a save inside a Bind would write the old line before the drop). Seen in game 2026-10-18 with the user's own
   cfg (Donkey 3 → 5) and with the 0.9.1 fixture (29 values carried, 25 old lines left out, no warning, 21:00).
 - **A key may move to another section or name**, with a `MovedKey(section, key, oldSection, oldKey)` call before the
-  row (Saddle Up 0.10.0: Name, Foals and FoalsIndoors went from Donkey to Mount; 0.11.0: KeepWithSaves from Behaviour
+  row (Saddle Up 0.10.0: Name, Foals and FoalsIndoors went from Donkey to Mount; 0.12.0: Foals, FoalsIndoors and
+  FoalsWearSkin to a Babies section of their own, each naming both old places, Mount and Donkey; 0.11.0: KeepWithSaves from Behaviour
   to Mount, every colour key from Donkey and Cart to Colours, with the per-mount suffixes, the cart's six rows from
   Behaviour to Cart; a `Color` row's `<key>Lightness` follows its colour key's alias by itself). The call stays as
   long as a released version wrote the old place. `tools/page-carryover.py` is the offline check: it reads the rows

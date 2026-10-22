@@ -66,7 +66,8 @@ namespace GK2DonkeyAPI
 
             internal bool RemoveWithParent = true;
 
-            // Who a foal keeps to: its parent, or the keeper while it is with him indoors (FoalsIndoors.cs). Everything the
+            // Who a foal keeps to: its parent, or the keeper while it is with him, indoors or on foot outdoors
+            // (FoalsIndoors.cs). Everything the
             // following reads of it, taken fresh each time (a transform or two).
             private struct Lead
             {

@@ -647,5 +647,142 @@ namespace GK2DonkeyAPI
                 foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists) h.Remove(); // the test bodies go with their carts
             }
         }
+
+        // ------------------------------------------------------------------ babies on foot
+
+        // Babies follow the keeper on foot outdoors (the user, 2026-10-22): a foal with ShuffleFollowKeeperOnFoot follows
+        // him while he walks (trots after him when he moves away); one without (another mod's foal) keeps to its parent
+        // all along. He gets on their parent: they keep to it (ridden); off again: with him. He gets on another mount:
+        // back to their parent. Into the indoor light with "come indoors" off: back to the parent, with him again
+        // outside; with it on: they stay with him. The switch off: back to the parent.
+        private static IEnumerator FoalsOnFoot()
+        {
+            string notHere = WhyNotFromHere();
+            if (notHere != null)
+            {
+                Skip(notHere);
+                yield break;
+            }
+            SaddleUpBabiesRows();
+            Vector3 near = Spot(home, 3f) ?? home;
+            MountHandle p = Spawn(near, right: true);
+            MountHandle other = Spawn(near + new Vector3(0f, 0f, 3f), right: true);
+            if (p == null || other == null)
+            {
+                Fail("could not spawn");
+                yield break;
+            }
+            bool lit = false;
+            MountHandle follows = null, stays = null;
+            try
+            {
+                yield return Until(() => p.IsReady && other.IsReady, 6f);
+                follows = Mounts.SpawnFoal(Owner, p, 0.6f, persist: false);
+                stays = Mounts.SpawnFoal(Owner, p, 0.6f, persist: false);
+                if (follows == null || stays == null)
+                {
+                    Fail("could not spawn the foals");
+                    yield break;
+                }
+                yield return Until(() => follows.IsReady && stays.IsReady, 6f);
+                follows.Tuning.Set(Owner, "ShuffleFollowKeeperOnFoot", true);
+                string StaysNote() => $"the other foal {(stays.IsWithKeeper ? "is with the keeper" : "keeps to its parent")}";
+
+                // on foot, outdoors
+                yield return Until(() => follows.IsWithKeeper, 3f);
+                Check(follows.IsWithKeeper && !stays.IsWithKeeper, $"on foot outdoors: the foal with the switch follows the keeper; {StaysNote()} (another mod's foal: untouched)");
+                Vector3? walk = Spot(Keeper(), 7f, q => Flat(q, p.Position) > 6f);
+                if (walk.HasValue)
+                {
+                    yield return MoveKeeper(walk.Value, homeFacing);
+                    if (moved)
+                    {
+                        yield return Until(() => Flat(follows.Position, Keeper()) < 3f, 12f);
+                        Check(waited, $"the keeper walks off: it comes after him ({Flat(follows.Position, Keeper()):F1} from him)");
+                        Check(Flat(stays.Position, p.Position) < 4f && !stays.IsWithKeeper, $"{StaysNote()}, by it ({Flat(stays.Position, p.Position):F1})");
+                    }
+                }
+                else
+                {
+                    Info("no ground 7 units off to walk to: the walk part skipped");
+                }
+
+                // on their parent, off again, on another mount (from where the run stands, by them)
+                yield return MoveKeeper(home, homeFacing);
+                MountResult r = p.Ride(showMessage: false);
+                Check(r.Ok, $"their parent ridden ({Said(r)})");
+                if (r.Ok)
+                {
+                    yield return Until(() => !follows.IsWithKeeper, 3f);
+                    Check(!follows.IsWithKeeper, "riding their parent: it keeps to the parent (ridden, so with the keeper all the same)");
+                    Mounts.Dismount("self-test");
+                    yield return Until(() => follows.IsWithKeeper, 3f);
+                    Check(follows.IsWithKeeper, "off again: it follows the keeper on foot");
+                }
+                r = other.Ride(showMessage: false);
+                Check(r.Ok, $"another mount ridden ({Said(r)})");
+                if (r.Ok)
+                {
+                    yield return Until(() => !follows.IsWithKeeper, 3f);
+                    Check(!follows.IsWithKeeper, "riding another mount: it goes back to its parent");
+                    Mounts.Dismount("self-test");
+                    yield return Until(() => follows.IsWithKeeper, 3f);
+                    Check(follows.IsWithKeeper, "off again: it follows the keeper on foot");
+                }
+
+                // indoors, without and with "come indoors"
+                lit = true;
+                yield return LightIndoors(true);
+                yield return Until(() => !follows.IsWithKeeper, 3f);
+                Check(!follows.IsWithKeeper, "indoors without \"come indoors\": it goes back to its parent");
+                yield return LightIndoors(false);
+                yield return Until(() => follows.IsWithKeeper, 3f);
+                Check(follows.IsWithKeeper, "outdoors again: it follows the keeper");
+                follows.Tuning.Set(Owner, "ShuffleFollowKeeperIndoors", true);
+                yield return LightIndoors(true);
+                yield return Seconds(2.2f); // two steady checks
+                Check(follows.IsWithKeeper, "indoors with \"come indoors\": it stays with the keeper");
+                yield return LightIndoors(false);
+                lit = false;
+
+                // the switch off
+                follows.Tuning.Clear(Owner, "ShuffleFollowKeeperOnFoot");
+                yield return Until(() => !follows.IsWithKeeper, 3f);
+                Check(!follows.IsWithKeeper, "the switch off: it goes back to its parent");
+                Check(!stays.IsWithKeeper, $"and the other foal never followed the keeper ({StaysNote()})");
+            }
+            finally
+            {
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                if (lit) EnvironmentEngine.Instance.SetTimeOfDayPreset(startPreset);
+                foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists) h.Remove();
+            }
+        }
+
+        // Saddle Up's babies rows in a section of their own, the new one among them, each reaching the companion.
+        private static void SaddleUpBabiesRows()
+        {
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            if (saddle == null)
+            {
+                Info("Saddle Up's page isn't shown: its babies rows not checked");
+                return;
+            }
+            var keys = new[] { "Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin" };
+            var where = new List<string>();
+            bool all = true;
+            foreach (string k in keys)
+            {
+                MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == k);
+                all &= row != null && row.ShownSection == "Babies";
+                where.Add(k + " " + (row == null ? "missing" : row.ShownSection));
+            }
+            Check(all, $"Saddle Up's babies rows are in a Babies section of their own ({string.Join(", ", where)})");
+            MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
+            MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
+            bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;
+            Check(follow != null && me.FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the companion ({(on ? "on" : "off")})");
+            Check(follow?.Entry != null && Equals(follow.Entry.DefaultValue, true), $"and it is on by default in Saddle Up ({follow?.Entry?.DefaultValue})");
+        }
     }
 }

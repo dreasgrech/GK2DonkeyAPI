@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI
             MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange,
             FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin, FoalPauseMax,
             FoalChainChance, FoalBurstChance, FoalBurstSpeed;
-        internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors, FoalLively;
+        internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors, FollowKeeperOnFoot, FoalLively;
 
         internal static void Bind(ConfigFile cfg)
         {
@@ -64,6 +64,8 @@ namespace GK2DonkeyAPI
                 "A donkey with a parent (a foal): when a fence, a building or anything else the keeper can't walk through is in the straight way to the parent, work out a way round it (a small grid search) and follow that. Off: straight lines only; a blocked foal waits and catches up out of sight.");
             FollowKeeperIndoors = cfg.Bind(Section, "ShuffleFollowKeeperIndoors", Defaults.Get(Section, "ShuffleFollowKeeperIndoors", false),
                 "A donkey with a parent (a foal): when the keeper goes through a door into a building, the church or a dungeon (the game's indoor places) while it is within ShuffleFollowMaxDistance of him, it comes in with him and follows him there; when he goes back out it comes out with him and returns to its parent. Off: it stays with its parent outside.");
+            FollowKeeperOnFoot = cfg.Bind(Section, "ShuffleFollowKeeperOnFoot", Defaults.Get(Section, "ShuffleFollowKeeperOnFoot", false),
+                "A donkey with a parent (a foal): while the keeper walks outdoors on foot in its scene, it follows him instead of its parent (it trots over, or catches up out of sight), and through a door outdoors it stays with him. When he gets on a mount it goes back to its parent (following it when that is the one he rides). Into a building only with ShuffleFollowKeeperIndoors. Off: it stays with its parent. Off in the core: a mod switches it on for its own foals.");
             RouteRange = F(cfg, "ShuffleRouteRange", 8f, 2f, 8f,
                 "A donkey with a parent (a foal), with ShuffleFollowRoutes: how far from the foal a way round may reach, world units either way (the search's area). Beyond it the route leads towards the parent and the next one goes on from there.");
             FollowGap = F(cfg, "ShuffleFollowGap", 0.9f, 0.3f, 4f,
@@ -105,7 +107,7 @@ namespace GK2DonkeyAPI
         internal static ITuned[] Settings => new ITuned[]
         {
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
-            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange, FollowKeeperIndoors,
+            FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange, FollowKeeperIndoors, FollowKeeperOnFoot,
             FoalLively, FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin,
             FoalPauseMax, FoalChainChance, FoalBurstChance, FoalBurstSpeed,
         };

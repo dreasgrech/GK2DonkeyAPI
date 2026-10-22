@@ -127,6 +127,15 @@ namespace GK2DonkeyAPI.Api
             return c;
         }
 
+        // Every companion's paper donkey made so far (Looks.MarkWearersDirty).
+        internal static void ForEachPaper(Action<Mount.Instance> act)
+        {
+            foreach (MountCompanion c in all.Values)
+            {
+                if (c.paper != null) act(c.paper);
+            }
+        }
+
         internal static void TickAll()
         {
             foreach (MountCompanion c in all.Values)
@@ -196,7 +205,7 @@ namespace GK2DonkeyAPI.Api
 
         // ------------------------------------------------------------------ settings
 
-        private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true, foalsIndoors;
+        private bool keep = true, brays = true, bell, lantern = true, lanternByDay = true, foalsIndoors, foalsFollow;
         private int foals;
         private string name;
         private MountSpeed rideSpeed, cartSpeed;
@@ -254,6 +263,12 @@ namespace GK2DonkeyAPI.Api
         // out with him (the Shuffle key ShuffleFollowKeeperIndoors on each foal). Off to start with: they stay outside
         // with the donkey.
         public bool FoalsComeIndoors { get => foalsIndoors; set { foalsIndoors = value; ApplyFoals(); } }
+
+        // The foals follow the keeper while he walks on foot outdoors, instead of staying with the mount (the Shuffle key
+        // ShuffleFollowKeeperOnFoot on each of this companion's foals, never on another mod's); when he gets on a mount
+        // they go back to it (following it when it's theirs). Into buildings only with FoalsComeIndoors. Off to start
+        // with (0.36.0); FoalRows' row defaults to it (Saddle Up switches it on first).
+        public bool FoalsFollowOnFoot { get => foalsFollow; set { foalsFollow = value; ApplyFoals(); } }
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
         public string Name { get => name; set { name = value; ApplyName(); } }
@@ -706,7 +721,8 @@ namespace GK2DonkeyAPI.Api
             Session(cart, "LanternLightDayDim", !lanternByDay, 0f);
         }
 
-        // Each foal's own ShuffleFollowKeeperIndoors: set while on, cleared when off if this owner set it.
+        // Each foal's own ShuffleFollowKeeperIndoors and ShuffleFollowKeeperOnFoot: set while on, cleared when off if
+        // this owner set it.
         private void ApplyFoals()
         {
             if (!Mounts.IsAvailable)
@@ -721,19 +737,25 @@ namespace GK2DonkeyAPI.Api
                 }
                 try
                 {
-                    if (foalsIndoors)
-                    {
-                        h.Tuning.Set(OwnerId, "ShuffleFollowKeeperIndoors", true);
-                    }
-                    else if (h.Tuning.IsSet("ShuffleFollowKeeperIndoors") && h.Tuning.SetBy("ShuffleFollowKeeperIndoors") == OwnerId)
-                    {
-                        h.Tuning.Clear(OwnerId, "ShuffleFollowKeeperIndoors");
-                    }
+                    FoalFlag(h, "ShuffleFollowKeeperIndoors", foalsIndoors);
+                    FoalFlag(h, "ShuffleFollowKeeperOnFoot", foalsFollow);
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Companion: ShuffleFollowKeeperIndoors could not be set on {h.FullId}: {e.Message}");
+                    Plugin.Log.LogWarning($"Companion: the babies' follow switches could not be set on {h.FullId}: {e.Message}");
                 }
+            }
+        }
+
+        private void FoalFlag(MountHandle h, string key, bool on)
+        {
+            if (on)
+            {
+                h.Tuning.Set(OwnerId, key, true);
+            }
+            else if (h.Tuning.IsSet(key) && h.Tuning.SetBy(key) == OwnerId)
+            {
+                h.Tuning.Clear(OwnerId, key);
             }
         }
 

@@ -124,6 +124,28 @@ foal.Tuning.Set("you.gk2.mymod", "CoatBrightness", 0.15f);   // its own look, as
 - **Keeper close:** foals don't hold still for the keeper, since nobody rides them. Maybe they should keep a little
   distance instead. That's a decision.
 
+## Following the keeper on foot (API 0.36.0, built 2026-10-22)
+
+The user asked for babies that follow the keeper on foot outdoors too, not only indoors or when he rides their
+parent. Saddle Up's "Babies follow you on foot" (Babies section, on by default: the user, 2026-10-22) switches it on
+for its own foals. The row's default is the companion's `FoalsFollowOnFoot` when `FoalRows` is called (off in the
+core; Saddle Up sets it on first), so another mod's page starts off unless it says otherwise.
+
+- **Only the mod's own foals.** The Shuffle key `ShuffleFollowKeeperOnFoot` is off in the core. A companion sets it on
+  its own foals (`MountCompanion.FoalsFollowOnFoot`, as `FoalsComeIndoors` sets `ShuffleFollowKeeperIndoors`), so a
+  foal any other mod spawns keeps to its parent.
+- **The lead** is the keeper (`withKeeper`, `LeadNow`) while he is on foot outdoors in the foal's scene: the steady
+  check (once a second while he has control, `FoalsIndoors.cs`) joins it without placing it, so it trots over, or
+  catches up out of sight when it fell behind (the catch-up stays out of view, as for a parent).
+- **He gets on a mount:** the foal goes back to its parent. When the mount is the parent, that is following him
+  anyway; another mount: it returns to its parent. Off again: with him within a second.
+- **Doors:** outdoors on the far side (a scene change), the foals with him stay with him, placed by him while the
+  screen is black. Into a building: with "Babies come indoors" as before; without it they go back to the parent
+  outside and join him again when he comes out on foot.
+- **The other babies settings:** the count, "the same mount and skin" and the lively steps work as before; the
+  lively steps go round the keeper while they stand with him.
+- **Self-test:** "foals: follow the keeper on foot outdoors, with the other babies settings" (docs/self-tests.md).
+
 ## Lively foals (API 0.20.0, built 2026-10-03, not yet seen in game)
 
 **Why:** the user, 2026-10-03: the foals "idle in the same spot a lot", and move "from point a to b, then stop, and

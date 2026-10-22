@@ -123,6 +123,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLevels, Name = "mounted while idle (Saddle Up's H)", Body = MountWhileIdle },
             new Scenario { Group = GroupLevels, Name = "reused views", Body = Reuse },
             new Scenario { Group = GroupLevels, Name = "foals keep up off screen", Body = FoalsFollow },
+            new Scenario { Group = GroupLevels, Name = "foals: follow the keeper on foot outdoors, with the other babies settings", Body = FoalsOnFoot },
             new Scenario { Group = GroupLevels, Name = "no leaks over spawn and remove", Body = Leaks },
             new Scenario { Group = GroupLevels, Name = "frame time by mode", Body = FrameTimes, HidesPanel = true },
             new Scenario { Group = GroupChest, Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },
@@ -1383,7 +1384,8 @@ namespace GK2DonkeyAPI
                 Check(dragonEntry != null && dragonEntry.Description.Length > 0 && dragonEntry.Lines.Exists(l => l.StartsWith("Pulls the cart")) && dragonEntry.Lines.Exists(l => l.StartsWith("Has babies")), $"the dragon's entry carries its description and what it does ({dragonEntry?.Lines.Count} lines)");
                 ConfigEntry<int> foals = Row<int>("Foals");
                 ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
-                Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null, "the three babies rows are bound");
+                Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null && Row<bool>("FoalsFollow") != null, "the four babies rows are bound");
+                Check(Row<bool>("FoalsFollow") != null && Equals(Row<bool>("FoalsFollow").DefaultValue, false), "a page whose companion is left as the core has it: \"follow you on foot\" starts off");
                 if (foals != null)
                 {
                     foals.Value = 2;
@@ -3768,6 +3770,7 @@ namespace GK2DonkeyAPI
             const string owner = Owner + ".aside";
             string tempRoot = null;
             MountHandle a = null;
+            MountCompanion pageOf = null;
             try
             {
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-aside", "aside-test",
@@ -3796,6 +3799,11 @@ namespace GK2DonkeyAPI
                 // healed: the skin now names a prefix the game has (Gerry's, in memory once the game-creature scenario ran)
                 d.Game.Prefix = "0901_";
                 Looks.TestResetRecheck(d.Id);
+                // a settings page's picture wearing it (a companion's paper donkey, never registered): told too
+                pageOf = Mounts.Companion(owner + ".page");
+                pageOf.Skin = "aside-test";
+                Mount.Instance paper = pageOf.Paper;
+                paper.LooksRig.TestClearDirty(); // as after its tick gave up on the set-aside skin
                 bool healed = Looks.RecheckGameSource(d);
                 if (!healed)
                 {
@@ -3804,6 +3812,7 @@ namespace GK2DonkeyAPI
                 else
                 {
                     Check(d.Unavailable == null && (Mounts.Looks.Find("aside-test")?.IsAvailable ?? false), "the frames are there: offered again");
+                    Check(paper.LooksRig.TestDirty, "the settings page's picture is told too (its paper donkey looks at the skin again)");
                     yield return Until(() => a.I.TestSkinShowing(), 20f);
                     Check(waited, "and the donkey wearing it draws the skin, with no door and no setting change");
                 }
@@ -3811,6 +3820,7 @@ namespace GK2DonkeyAPI
             finally
             {
                 try { if (a != null && a.Exists) a.Remove(); } catch { }
+                if (pageOf != null) pageOf.Skin = ""; // the test page's picture back to the donkey
                 Looks.Unregister("aside-test", owner);
                 try { if (tempRoot != null) System.IO.Directory.Delete(tempRoot, true); } catch { }
             }
