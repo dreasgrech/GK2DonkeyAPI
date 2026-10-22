@@ -509,6 +509,15 @@ For mod authors:
 
 Development:
 
+- **A flying experiment (the tuning window's new Flying tab; docs/flying.md)**: the ridden mount (the dragon, or
+  any mount with a switch) takes off, flies at a height with a hover, climbs and descends on keys and lands, the
+  camera rising with it; a jump on the same lift. Step 1 is the picture only: the keeper walks underneath, so the flight goes where
+  walking goes. Session values; on by default only where the dev tools are
+  unlocked, never for players (with it off nothing changes).
+- **The three pack scenarios clean up whatever stops them** (mount from a pack, skin pack, skin pack auto-reload;
+  left from the first review pass): their donkeys and carts, the temp pack and the mount it declared, the temp folder
+  and the auto-reload switch go in a `finally`, so a check that throws or a stopped run leaves nothing behind for
+  the scenarios after it.
 - **Self-test "speed: each mount's own"** (Looks group): the words at the band edges, every built-in mount's
   speed and cargo, Saddle Up's retired rows and its file, a code mount ridden (2.5, over a 1.1 in its tuning) and
   driven (2.5 times the donkey's ratio), the donkey at the cfg's speed, the panel's card (Speed, Cargo); the format

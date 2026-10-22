@@ -540,6 +540,7 @@ namespace GK2DonkeyAPI
                     pc.PhysicalBody.SpeedMultiplier = wantSpeed;
                 }
 
+                Flight.Tick(this); // the flying experiment (Flying tab): off by default, then no lift
                 Follow(pc);
                 ChestRig.Follow();
                 RevealDonkeyIfDue();
@@ -1066,6 +1067,7 @@ namespace GK2DonkeyAPI
 
             private void Dismount(PlayerController pc, string reason)
             {
+                Flight.Release(this, "dismount: " + reason);
                 // Not where the keeper is already elsewhere or rides on: a door (indoors, a scene change), a failed
                 // re-summon, a style change (he gets straight on again).
                 if (reason != "indoors" && reason != "scene changed" && reason != "style change" && reason != "could not re-summon the donkey")
@@ -1104,6 +1106,7 @@ namespace GK2DonkeyAPI
             // game is closing); the old summon hands its cargo back first, as always.
             public void ForceCleanup(string reason)
             {
+                Flight.Release(this, "cleanup: " + reason);
                 CargoSheet.Abort("cleanup: " + reason);
                 bool was = mounted;
                 mounted = false;
@@ -2483,6 +2486,7 @@ namespace GK2DonkeyAPI
                     }
                     lastGroundSample = new Vector4(gd, gk, basePos.y, groundDelta);
                 }
+                target.y += Flight.LiftFor(this); // airborne (the flying experiment): above where the ground puts it
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
                 Position = donkey.Data.Position;
                 if (cartParts.Count > 0)
@@ -3119,7 +3123,7 @@ namespace GK2DonkeyAPI
                 else
                 {
                     // Manual height plus the walk-cycle bob (RiderBobPx: the back's, scaled and trailing it).
-                    seat = S.SeatOffset.Value + RiderBobPx(0) * PxWorldY + groundDelta;
+                    seat = S.SeatOffset.Value + RiderBobPx(0) * PxWorldY + groundDelta + Flight.LiftFor(this);
                 }
                 if (!seat.HasValue)
                 {

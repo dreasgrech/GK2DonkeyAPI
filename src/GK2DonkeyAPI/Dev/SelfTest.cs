@@ -2727,6 +2727,8 @@ namespace GK2DonkeyAPI
             }
             bool was = Plugin.SkinPackAutoReload.Value;
             Plugin.SkinPackAutoReload.Value = false;
+            try
+            {
             Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the pack is found");
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
@@ -2751,7 +2753,13 @@ namespace GK2DonkeyAPI
             yield return Frames(2);
             Looks.Unregister("watch-test", owner);
             yield return Frames(2);
-            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+            finally
+            {
+                // whatever stopped the scenario (a check that threw, the run stopped): nothing of it stays
+                LeftOver(owner, "watch-test", tempRoot);
+                Plugin.SkinPackAutoReload.Value = was;
+            }
         }
 
         // Debug.MountsPreview off (what players have in this version): the donkey is the only mount offered, its only
@@ -2841,6 +2849,16 @@ namespace GK2DonkeyAPI
             throw new InvalidOperationException("GK2SaddleUp.dll is not loaded: the shipped skins' pictures are in it");
         }
 
+        // A pack scenario's leftovers, from its finally: the run's donkeys and carts, the temp skin (and the mount its
+        // [Mount] block declared, which goes with it), the temp folder. Each step on its own: one failing never keeps the
+        // next from running. Done already on the way through: each is a no-op.
+        private static void LeftOver(string owner, string skinId, string tempRoot)
+        {
+            try { foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists) h.Remove(); } catch { }
+            try { Looks.Unregister(skinId, owner); } catch { }
+            try { if (tempRoot != null && System.IO.Directory.Exists(tempRoot)) System.IO.Directory.Delete(tempRoot, true); } catch { }
+        }
+
         private static string WriteTempPack(string folder, string id, string cfg)
         {
             string tempRoot = System.IO.Path.Combine(System.IO.Path.GetTempPath(), folder);
@@ -2873,6 +2891,8 @@ namespace GK2DonkeyAPI
                 Warn("the temp pack could not be written: " + e.Message);
                 yield break;
             }
+            try
+            {
             int n = Looks.RegisterFolder(tempRoot, owner);
             Check(n == 1, $"one pack found ({n})");
             MountInfo k = Mounts.Catalog.Find("test-beast");
@@ -2970,7 +2990,12 @@ namespace GK2DonkeyAPI
             a?.Remove();
             cart?.Remove();
             yield return Frames(2);
-            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+            finally
+            {
+                // whatever stopped the scenario (a check that threw, the run stopped): nothing of it stays
+                LeftOver(owner, "mount-test", tempRoot);
+            }
         }
 
         private sealed class CountingAbility : MountAbility
@@ -3366,6 +3391,8 @@ namespace GK2DonkeyAPI
                 Warn("the temp pack could not be written: " + e.Message);
                 yield break;
             }
+            try
+            {
             int n = Looks.RegisterFolder(tempRoot, owner);
             Check(n == 1, $"one pack found under the folder ({n})");
             string report = Looks.Validate("pack-test");
@@ -3392,7 +3419,12 @@ namespace GK2DonkeyAPI
             Check(Looks.Find("pack-test") == null, "withdrawn: gone from the list");
             a?.Remove();
             yield return Frames(2);
-            try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+            finally
+            {
+                // whatever stopped the scenario (a check that threw, the run stopped): nothing of it stays
+                LeftOver(owner, "pack-test", tempRoot);
+            }
         }
 
         // A recipe skin (a mod's, through the public API: no built-in recipe is left since Hellfire became a pack,

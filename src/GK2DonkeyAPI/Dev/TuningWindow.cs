@@ -42,9 +42,9 @@ namespace GK2DonkeyAPI
         private static string donkeyEvent = "";
         private static string cargoItemId = "wood";
         private static string spawnItemId = "wood";
-        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources", "Mounts" };
-        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9, TabMounts = 11;
-        private const int TabsPerRow = 6; // two rows: eleven names in one row of 470 would be cut short
+        private static readonly string[] TabNames = { "General", "Riding", "Cargo", "Lantern", "Sounds", "Colors", "Instances", "Debug", "Tests", "Performance", "Sources", "Mounts", "Flying" };
+        private const int TabCargo = 2, TabInstances = 6, TabDebug = 7, TabTests = 8, TabPerformance = 9, TabMounts = 11, TabFlying = 12;
+        private const int TabsPerRow = 6; // rows of six: eleven names in one row of 470 would be cut short
 
         // Whether the panel draws this frame: in a game, switched on, not hidden by its key, and not while the cargo sheet
         // photographs the cart. Plugin.LateUpdate switches Unity's layout pass off when it doesn't (useGUILayout).
@@ -557,6 +557,7 @@ namespace GK2DonkeyAPI
                     case TabTests: DrawTests(); break;
                     case TabPerformance: DrawPerformance(); break;
                     case TabMounts: DrawMounts(); break;
+                    case TabFlying: DrawFlying(); break;
                     default: DrawDefaults(); break;
                 }
             }
