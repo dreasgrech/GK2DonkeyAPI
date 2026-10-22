@@ -125,6 +125,21 @@ with these tops and a screenshot (BepInEx/GK2-flight-survey.csv/.png): the check
   overlap it from above), never by its collider's top; nothing drawn: it doesn't stop. Survey files are now
   numbered by the time (`GK2-flight-survey-HHmmss.csv/.png`), the column `drawn_top` is what the bumping reads.
 
+- Pushed up at cliffs (the user's video 15-15-26): `[flight-probe]` body y 6.12 -> 8.41 in one physics step,
+  flying free at 109 px, the mount 9.67 -> 12.08. The body followed `GroundHeight`, whose navmesh lies on rock tops
+  and the plateau above a cliff. Now it follows only the ground layers' raycast from half a unit above it (a
+  slope, not a cliff); a higher plateau is crossed at the body's height and a landing puts the body on it (the
+  height adjusted both ways so the picture keeps its place). Seen in the same log, not fixed yet: the first two
+  frames after a landing onto a lower level the mount's height flickers (6.73, 7.98, 6.70).
+- The per-frame probe is now a tab switch, off by default (one session wrote 70 000 lines, an 18 MB log).
+
+- Take-off and landing as a dragon's (the user, 2026-10-22: "like a slow elevator"; they were constant-speed
+  moves). Take-off: a crouch (3 px down, 0.09 s), then a spring launch towards the height (stiffness from the rise
+  time 0.45 s, damping from the overshoot asked) with 3 wing-beat kicks (30 px/s, every 0.16 s): simulated for 48 px,
+  it passes the height at 0.36 s, peaks about 20 % over and settles in about a second. Landing: a dive speeding up
+  (700 px/s^2 to 200 px/s), a flare from 18 px braking to 40 px/s, a 2 px thud: 0.44 s from 48 px. Every value on
+  the tab. The climb and descend keys are unchanged (steady speed while held).
+
 Hand tests: cross water and come back; fly over a fence and a building; off a cliff and land below; try to land over
 water (holds, says why); save in the air; H in the air (lands first); a door while flying; then F11 (nothing else
 changed: all of it only while flying free).

@@ -23,9 +23,22 @@ namespace GK2DonkeyAPI
         internal static bool AnyMount;             // off: the dragon only
         internal static float CruisePx = 48f;      // the height a take-off climbs to
         internal static float MaxPx = 160f;        // the climb key stops here
-        internal static float RisePxPerS = 40f;    // take-off speed
+        // The take-off and the landing as a dragon's, not an elevator's (the user, 2026-10-22: "it feels like a slow
+        // elevator"): a crouch, then a spring launch with wing-beat surges that overshoots a little and settles; down, a
+        // dive that speeds up, a flare near the ground and a thud on touching it.
+        internal static float CrouchPx = 3f;       // the crouch before the launch
+        internal static float CrouchS = 0.09f;
+        internal static float TakeoffTimeS = 0.45f; // the launch's rise to the take-off height
+        internal static float TakeoffBounce = 0.12f; // how far past it the launch carries, as a share (0: none)
+        internal static int Beats = 3;             // wing beats in the launch, each a surge
+        internal static float BeatKickPxPerS = 30f;
+        internal static float BeatS = 0.16f;
+        internal static float DiveSpeedPxPerS = 200f; // the landing's fastest fall
+        internal static float DiveAccelPxPerS2 = 700f;
+        internal static float FlarePx = 18f;       // from here down the dragon brakes
+        internal static float TouchSpeedPxPerS = 40f; // its speed when it touches the ground
+        internal static float ThudPx = 2f;         // the squat on touching the ground
         internal static float ClimbPxPerS = 60f;   // the climb and descend keys
-        internal static float LandPxPerS = 50f;    // landing speed
         internal static float BobPx = 2f;          // the hover's up and down while airborne
         internal static float BobPeriodS = 1.6f;
         internal static bool JumpAnyMount = true;  // off: the jump only on the mounts that fly
@@ -43,8 +56,14 @@ namespace GK2DonkeyAPI
         // one art pixel up the screen, in world y: two steps of the camera's y grid (CameraController.
         // GetRoundedCameraPosition, 0.01666667 at pixel size 2), so a lift of whole pixels keeps the camera on it
         private const float PxWorldY = 2f * 0.01666667f;
+        private const float StepUp = 0.5f;   // the highest rise of the ground the flying body follows in one step (a slope, not a cliff)
+        private const int GroundMask = 6144; // layers 11 and 12, what the game walks on
+        internal static bool ProbeOn;        // the per-frame [flight-probe] lines (the tab; off: 70 000 lines filled the log)
         private static Mount.Instance owner;
         private static float heightPx, jumpVel, bobT;
+        private static float vel, phaseT, nextBeat, thudT = -1f; // the launch's and the landing's motion
+        private static int beatsLeft;
+        private static bool launched;
         private static bool cameraLifted, cameraSaid;
 
         // step 2: the keeper's body is ours (kinematic, moved by FixedStep)
@@ -68,7 +87,8 @@ namespace GK2DonkeyAPI
             // a mount rounded as height + hover stepped a frame or two before or after the camera while climbing, so it
             // shook a pixel against the screen once the hover had eased in (the user's video 2026-10-22 14-05-15: the
             // world moving smoothly, the dragon flipping 1 px back and forth on the screen, from about 8 px up)
-            return Mathf.Max(0f, Mathf.Round(heightPx) + Mathf.Round(bob)) * PxWorldY;
+            // below 0: the crouch before a launch and the thud of a landing (a few pixels into the ground: a squat)
+            return Mathf.Max(-8f, Mathf.Round(heightPx) + Mathf.Round(bob)) * PxWorldY;
         }
 
         // This mount may fly: the experiment on, riding plain (not the cart), the dragon or any mount.
@@ -138,12 +158,10 @@ namespace GK2DonkeyAPI
             switch (Now)
             {
                 case Phase.Rising:
-                    heightPx = Mathf.MoveTowards(heightPx, CruisePx, RisePxPerS * dt);
-                    if (Mathf.Approximately(heightPx, CruisePx)) Set(Phase.Airborne, $"airborne at {CruisePx:0} px");
+                    Launch(Mathf.Min(dt, 0.05f));
                     break;
                 case Phase.Landing:
-                    heightPx = Mathf.MoveTowards(heightPx, 0f, LandPxPerS * dt);
-                    if (heightPx <= 0f) Land("landed");
+                    Descend(Mathf.Min(dt, 0.05f));
                     break;
                 case Phase.Jumping:
                     float t = Mathf.Max(0.1f, JumpTimeS);
@@ -155,7 +173,7 @@ namespace GK2DonkeyAPI
             if (Now != Phase.Ground) bobT += dt;
             FreeTick(i);
             FollowCamera();
-            Probe.AtTick(i);
+            if (ProbeOn) Probe.AtTick(i);
         }
 
         // ------------------------------------------------------------------ step 2: free flight
@@ -184,7 +202,7 @@ namespace GK2DonkeyAPI
             if (heightPx < ClearPx)
             {
                 if (Time.unscaledTime >= nextLandTry && TryLand(pc)) return;
-                heightPx = ClearPx; // not here: hold the clear height
+                heightPx = ClearPx; vel = 0f; // not here: hold the clear height
             }
             if (Time.unscaledTime >= nextSafeCheck)
             {
@@ -230,7 +248,7 @@ namespace GK2DonkeyAPI
                 return false;
             }
             float drop = rb.position.y - spot.y;
-            heightPx += Mathf.Max(0f, drop) / PxWorldY;
+            heightPx = Mathf.Max(0f, heightPx + drop / PxWorldY); // the picture keeps its place (a plateau above: the body goes up)
             GiveBack(pc, spot, $"landing at {spot:F2} (the body down {drop:0.00})");
             Set(Phase.Landing, "landing");
             return true;
@@ -307,8 +325,17 @@ namespace GK2DonkeyAPI
                 Blocker = b;
             }
             Vector3 next = rb.position + move;
-            float g = Mount.Instance.GroundHeight(next, out _);
-            if (!float.IsNaN(g) && g > next.y) next.y = g; // up the hills; over water, cliffs and roofs the height is kept
+            // Up the hills: the walkable surface right under him (the ground layers' raycast from half a unit above his
+            // body), never higher. Not GroundHeight: its navmesh also lies on top of rocks and on the plateau above a
+            // cliff (seen from above, the nearest node), and touching a cliff's rim lifted the body 2.3 at once onto it
+            // (the user's video 2026-10-22 15-15-26; [flight-probe] body y 6.12 -> 8.41, 6.01 -> 3.60 and back). A
+            // plateau higher than that is crossed at the body's height; the flight's height carries the picture over it,
+            // and a landing puts the body on it. Over water, cliffs and roofs the height is kept.
+            if (Physics.Raycast(next + Vector3.up * StepUp, Vector3.down, out RaycastHit under, StepUp + 0.5f, GroundMask, QueryTriggerInteraction.Ignore)
+                && under.point.y > next.y)
+            {
+                next.y = under.point.y;
+            }
             rb.MovePosition(next);
             pc.PlayerData.position.Value = next;
         }
@@ -364,7 +391,7 @@ namespace GK2DonkeyAPI
         // Straight up by whole art pixels is whole steps of the camera's y grid.
         private static void FollowCamera()
         {
-            float lift = Now == Phase.Ground ? 0f : Mathf.Round(heightPx) * PxWorldY * Mathf.Clamp01(CameraFollow);
+            float lift = Now == Phase.Ground ? 0f : Mathf.Max(0f, Mathf.Round(heightPx)) * PxWorldY * Mathf.Clamp01(CameraFollow); // the crouch and the thud: not the camera
             if (lift <= 0f && !cameraLifted) return;
             CameraController cc = CameraSystem.Instance != null ? CameraSystem.Instance.ActiveCameraController : null;
             if (cc == null) return;
@@ -394,15 +421,81 @@ namespace GK2DonkeyAPI
         private static void Land(string what)
         {
             if (Free) ForceDown(MainGame.PlayerController, what, move: true);
-            heightPx = 0f; jumpVel = 0f; bobT = 0f;
+            heightPx = 0f; jumpVel = 0f; bobT = 0f; vel = 0f; thudT = -1f;
             Set(Phase.Ground, what);
             FollowCamera();
             owner = null;
         }
 
+        // The launch: a crouch, then a spring towards the take-off height (its stiffness from the rise time, its damping
+        // from the overshoot asked), each wing beat a kick upwards; airborne once it has settled.
+        private static void Launch(float dt)
+        {
+            phaseT += dt;
+            float h = Mathf.Max(1f, CruisePx);
+            if (!launched)
+            {
+                if (phaseT < CrouchS && heightPx <= 0.5f)
+                {
+                    heightPx = -CrouchPx * (phaseT / Mathf.Max(0.01f, CrouchS));
+                    return;
+                }
+                launched = true;
+                beatsLeft = Beats;
+                nextBeat = phaseT;
+                phaseT = 0f;
+            }
+            float os = Mathf.Clamp(TakeoffBounce, 0.001f, 0.6f);
+            float ln = Mathf.Log(os);
+            float zeta = -ln / Mathf.Sqrt(Mathf.PI * Mathf.PI + ln * ln);
+            float wd = Mathf.Sqrt(1f - zeta * zeta);
+            float omega = (Mathf.PI - Mathf.Acos(zeta)) / (Mathf.Max(0.1f, TakeoffTimeS) * wd); // reaches the target in the rise time
+            if (beatsLeft > 0 && phaseT >= nextBeat)
+            {
+                vel += BeatKickPxPerS;
+                beatsLeft--;
+                nextBeat += Mathf.Max(0.05f, BeatS);
+            }
+            float a = omega * omega * (h - heightPx) - 2f * zeta * omega * vel;
+            vel += a * dt;
+            heightPx += vel * dt;
+            if (phaseT > TakeoffTimeS && beatsLeft == 0 && Mathf.Abs(h - heightPx) < 0.5f && Mathf.Abs(vel) < 4f)
+            {
+                heightPx = h; vel = 0f;
+                Set(Phase.Airborne, $"airborne at {h:0} px");
+            }
+        }
+
+        // The landing: a dive that speeds up to its fastest, a flare from the flare height (braking to the touch speed),
+        // then the thud: a squat into the ground and back.
+        private static void Descend(float dt)
+        {
+            if (thudT >= 0f)
+            {
+                thudT += dt;
+                const float thudS = 0.14f;
+                heightPx = -ThudPx * Mathf.Sin(Mathf.Clamp01(thudT / thudS) * Mathf.PI);
+                if (thudT >= thudS) Land("landed");
+                return;
+            }
+            if (heightPx > FlarePx) vel = Mathf.Max(vel - DiveAccelPxPerS2 * dt, -DiveSpeedPxPerS);
+            else vel = Mathf.MoveTowards(vel, -TouchSpeedPxPerS, DiveAccelPxPerS2 * 1.5f * dt);
+            heightPx += vel * dt;
+            if (heightPx <= 0f)
+            {
+                heightPx = 0f; vel = 0f;
+                if (Free) return; // FreeTick lands the body first (or holds the clear height)
+                if (ThudPx <= 0f) Land("landed");
+                else thudT = 0f;
+            }
+        }
+
         private static void Set(Phase p, string what)
         {
             if (Now == p) return;
+            if (p == Phase.Rising) { phaseT = 0f; launched = heightPx > 0.5f; beatsLeft = launched ? 0 : Beats; nextBeat = 0f; if (launched) vel = Mathf.Max(vel, 0f); }
+            if (p == Phase.Landing) { thudT = -1f; vel = Mathf.Min(vel, 0f); }
+            if (p == Phase.Airborne || p == Phase.Ground) vel = 0f;
             Now = p;
             Why = what;
             Plugin.Log.LogInfo($"[flight] {what} (height {heightPx:0} px)");

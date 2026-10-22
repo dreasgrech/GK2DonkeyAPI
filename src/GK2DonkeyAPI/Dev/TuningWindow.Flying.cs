@@ -44,17 +44,32 @@ namespace GK2DonkeyAPI
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip("Survey what's around (12)", "Every collider within 12 of the keeper, with its top, the pictures beside it and its place on a screenshot: BepInEx/GK2-flight-survey.csv and .png (how tall the game's things are, for the bumping)."), Wd(200f))) FlightSurvey.Run(12f);
             GUILayout.EndHorizontal();
+            if (OnOffRow("Per-frame log lines ([flight-probe])", Flight.ProbeOn, tip: "Where the mount, the keeper and the camera are every frame while off the ground: for measuring a shake or a jump. Many lines.")) Flight.ProbeOn = !Flight.ProbeOn;
             if (FlightSurvey.LastResult.Length > 0) GUILayout.Label(FlightSurvey.LastResult, small);
 
             Header("Heights and speeds (art pixels)");
             Flight.CruisePx = SessionFloatRow("Height a take-off climbs to", Flight.CruisePx, 4f, 200f, "Art pixels above where the ground puts the mount.");
             Flight.MaxPx = SessionFloatRow("Highest (the climb key stops here)", Flight.MaxPx, 8f, 400f);
-            Flight.RisePxPerS = SessionFloatRow("Take-off speed (px per second)", Flight.RisePxPerS, 5f, 200f);
             Flight.ClimbPxPerS = SessionFloatRow("Climb and descend speed (px per second)", Flight.ClimbPxPerS, 5f, 200f);
-            Flight.LandPxPerS = SessionFloatRow("Landing speed (px per second)", Flight.LandPxPerS, 5f, 200f);
             Flight.BobPx = SessionFloatRow("Hover: up and down (px)", Flight.BobPx, 0f, 8f, "The mount rises and sinks this much while airborne, eased in near the ground.");
             Flight.BobPeriodS = SessionFloatRow("Hover: one up and down (seconds)", Flight.BobPeriodS, 0.2f, 4f);
             Flight.CameraFollow = SessionFloatRow("Camera rises with the height (0 none, 1 all)", Flight.CameraFollow, 0f, 1f, "The view goes up with the mount, so it stays in the middle of the screen. The hover's bob is left out.");
+
+            Header("Take-off (a launch, not a lift)");
+            Flight.CrouchPx = SessionFloatRow("Crouch before the launch (px)", Flight.CrouchPx, 0f, 8f);
+            Flight.CrouchS = SessionFloatRow("Crouch time (seconds)", Flight.CrouchS, 0f, 0.4f);
+            Flight.TakeoffTimeS = SessionFloatRow("Launch: time to the height (seconds)", Flight.TakeoffTimeS, 0.15f, 2f, "A spring: fast at the start, slowing into the height.");
+            Flight.TakeoffBounce = SessionFloatRow("Launch: overshoot (share of the height)", Flight.TakeoffBounce, 0f, 0.5f, "How far past the height the launch carries before it settles.");
+            Flight.Beats = Mathf.RoundToInt(SessionFloatRow("Wing beats in the launch", Flight.Beats, 0f, 8f, "Each beat a surge upwards."));
+            Flight.BeatKickPxPerS = SessionFloatRow("Wing beat: kick (px per second)", Flight.BeatKickPxPerS, 0f, 200f);
+            Flight.BeatS = SessionFloatRow("Wing beat: every (seconds)", Flight.BeatS, 0.05f, 0.6f);
+
+            Header("Landing (a dive, a flare, a thud)");
+            Flight.DiveSpeedPxPerS = SessionFloatRow("Dive: fastest (px per second)", Flight.DiveSpeedPxPerS, 20f, 600f);
+            Flight.DiveAccelPxPerS2 = SessionFloatRow("Dive: speeding up (px per second, per second)", Flight.DiveAccelPxPerS2, 50f, 3000f);
+            Flight.FlarePx = SessionFloatRow("Flare from (px above the ground)", Flight.FlarePx, 0f, 80f, "From here down it brakes to the touch speed.");
+            Flight.TouchSpeedPxPerS = SessionFloatRow("Touching down at (px per second)", Flight.TouchSpeedPxPerS, 5f, 200f);
+            Flight.ThudPx = SessionFloatRow("Thud: squat on touching down (px)", Flight.ThudPx, 0f, 6f);
 
             Header("Jump (the same lift on an arc)");
             if (OnOffRow("Every mount jumps (off: the flying ones only)", Flight.JumpAnyMount)) Flight.JumpAnyMount = !Flight.JumpAnyMount;
