@@ -69,7 +69,7 @@ namespace GK2DonkeyAPI.Api
             var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), CartSpeed = ClampSpeed(def.CartSpeed), Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
+                Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null, Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
@@ -81,7 +81,7 @@ namespace GK2DonkeyAPI.Api
                     if (st == null || string.IsNullOrWhiteSpace(st.Label)) continue;
                     if (GK2DonkeyAPI.Catalog.ReservedStat(st.Label))
                     {
-                        Plugin.Log.LogWarning($"Catalog: mount '{def.Id}': the stat \"{st.Label}\" is the API's own line (MountDef.Speed / CartSpeed); left out.");
+                        Plugin.Log.LogWarning($"Catalog: mount '{def.Id}': the stat \"{st.Label}\" is the API's own line (MountDef.Speed / Cargo); left out.");
                         continue;
                     }
                     d.Stats.Add(new KeyValuePair<string, string>(st.Label.Trim(), st.Value ?? ""));
@@ -168,11 +168,14 @@ namespace GK2DonkeyAPI.Api
         // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
         // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
         public float FoalScale = 0.6f;
-        // How fast the keeper goes on it, times his walking speed (1 = walking), riding and driving the cart (0.36.0):
-        // 0.5 to 4 (tested in game up to 2.5 and 2). Null: the donkey's (2 and 1.5 as shipped). Over a SpeedMultiplier in
-        // Tuning / TuningRide / TuningCart. The Mounts panel shows them as words against the donkey's ("Fast").
+        // How fast the keeper rides it, times his walking speed (1 = walking; 0.36.0): 0.5 to 4 (tested in game up to
+        // 2.5). Null: the donkey's (2 as shipped). With the cart: this times the donkey's cart speed over its riding one
+        // (1.5 / 2 as shipped). Over a SpeedMultiplier in Tuning / TuningRide / TuningCart. The Mounts panel shows it as
+        // a word against the donkey's ("Fast").
         public float? Speed;
-        public float? CartSpeed;
+        // How many items its cart carries, 1 to 6 (0.36.0). Null: 6. A stat for the Mounts panel for now: what a cart
+        // holds is still the player's Cart capacity (CartSlots).
+        public int? Cargo;
         // The effect an instance of this mount shows when its own Effect key is MountEffects.FromMount ("mount"): an effect
         // id, or null for none; and when.
         public string Effect;
@@ -258,7 +261,7 @@ namespace GK2DonkeyAPI.Api
             Speed = GK2DonkeyAPI.Catalog.SpeedOf(d, MountStyle.Ride);
             CartSpeed = GK2DonkeyAPI.Catalog.SpeedOf(d, MountStyle.Cart);
             SpeedWord = GK2DonkeyAPI.Catalog.SpeedWord(Speed, MountStyle.Ride);
-            CartSpeedWord = d.Cart ? GK2DonkeyAPI.Catalog.SpeedWord(CartSpeed, MountStyle.Cart) : "";
+            Cargo = d.Cart ? GK2DonkeyAPI.Catalog.CargoOf(d) : 0;
             Effect = d.Effect ?? "";
             EffectWhen = d.EffectWhen;
             Noun = (d.Noun ?? d.Label).ToLowerInvariant();
@@ -300,12 +303,13 @@ namespace GK2DonkeyAPI.Api
         public bool Foals { get; }
         // A baby's size as a fraction of the grown one.
         public float FoalScale { get; }
-        // Its speeds, times the keeper's walking speed (its own, else the donkey's), and the panel's words for them
-        // ("Very slow", "Slow", "Normal", "Fast", "Very fast" against the donkey's; no cart word for a mount that can't pull it).
+        // Its speeds, times the keeper's walking speed (its own, else the donkey's; with the cart its own times the
+        // donkey's cart-to-riding ratio), the panel's word for the riding one ("Very slow", "Slow", "Normal", "Fast",
+        // "Very fast" against the donkey's), and the items its cart carries (0 for a mount that can't pull one).
         public float Speed { get; }
         public float CartSpeed { get; }
         public string SpeedWord { get; }
-        public string CartSpeedWord { get; }
+        public int Cargo { get; }
         public string Effect { get; }
         public MountEffectWhen EffectWhen { get; }
         // The word the game's sentences use for one ("skull", "giant rat").

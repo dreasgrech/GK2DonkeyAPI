@@ -22,12 +22,22 @@ For players:
   ride (as the keys do for the way you're riding). Now you stay on: pick another mount and press Ride, and you ride
   on as the new one; Drive the cart brings the cart, Ride while driving leaves it standing; on someone else's
   donkey, yours comes and you get on it.
-- **Each mount has its own speed now.** How fast you ride and how fast you drive the cart belong to the mount you
-  pick, and the Mounts panel shows them: "Speed: Fast", "Cart speed: Normal" (against the donkey). The donkey is
-  as fast as ever (twice walking speed riding, 1.5 times with the cart); the
-  giant rat and Gerry are a little faster, the dragon fastest, the worm a little slower and the snail slowest.
-  **The Riding speed and Cart speed rows are gone**, and a Faster or Fastest you had picked no longer applies: the
-  mounts set the speeds now. Their old lines leave your settings file by themselves.
+- **Each mount has its own speed now.** How fast you ride belongs to the mount you pick, and the cart slows every
+  mount the same way (to three quarters of its riding speed, as it always did the donkey). The Mounts panel shows it:
+  "Speed: Fast" (against the donkey), and a new stat, "Cargo: 6 items", what its cart carries (every mount the most
+  for now; your Cart capacity setting still decides what a cart holds). The donkey is as fast as ever (twice walking
+  speed riding, 1.5 times with the cart); the giant rat is very fast, Gerry a little faster, the dragon and the worm a
+  little slower and the snail slowest. **The Riding speed and Cart speed rows are gone**, and a Faster or Fastest you
+  had picked no longer applies: the mounts set the speeds now. Their old lines leave your settings file by themselves.
+- **The colours window draws the mount as big as the Mounts panel does** (it was smaller there).
+- **Fixed: a mount picked in the Mounts panel no longer shows small or half-changed for a moment** (its cart's
+  colours first, then the new mount in the old one's frame and spacing): the picture keeps the last one until the
+  new mount is ready, then changes in one go.
+- **Picking a mount in the Mounts panel no longer changes your mount.** The list shows it; Ride or Drive the cart
+  makes it yours. Done (or Escape) keeps the mount you had; a skin or colours picked for a mount stay for when you
+  pick it.
+- **The mount pictures are always lit as outdoors at midday**, not tinted by the hour (tan at dusk, blue at
+  night) or the room, and never washed by the game's fog, its lamps' light or its cloud shadows.
 - **New: babies follow you on foot.** A new row, "Babies follow you on foot", on: off your mount, outdoors, your
   babies come with you instead of staying by it (turn it off for the old way). They trot after you,
   and catch up out of sight when you're far ahead; when you get on a mount they go back to yours. Into buildings
@@ -128,15 +138,17 @@ For players:
 
 For mod authors:
 
-- **Each mount's own speeds** (breaking, pre-release): `MountDef.Speed` / `CartSpeed` (`float?`, times the keeper's
-  walking speed, 0.5 to 4; null = the donkey's, the API cfg's `SpeedMultiplier`) and a pack's `[Mount] speed =` /
-  `cart_speed =`, over a `SpeedMultiplier` in the mount's tuning. `MountInfo.Speed`, `CartSpeed`, `SpeedWord`,
-  `CartSpeedWord` (Very slow, Slow, Normal, Fast, Very fast against the donkey's 2 and 1.5). A `[Mount.Stats]` or
-  `MountStat` line named Speed or Cart speed is left out (the API writes those). **Removed:** `MountCompanion.RideSpeed`,
+- **Each mount's own speed and cargo** (breaking, pre-release): `MountDef.Speed` (`float?`, times the keeper's
+  walking speed, 0.5 to 4; null = the donkey's, the API cfg's `SpeedMultiplier`) and a pack's `[Mount] speed =`, over
+  a `SpeedMultiplier` in the mount's tuning; with the cart it is times the donkey's cart-to-riding ratio (1.5 / 2 as
+  shipped). `MountDef.Cargo` / `[Mount] cargo =` (`int?`, 1 to 6, null = 6): what its cart carries, a stat only for
+  now. `MountInfo.Speed`, `CartSpeed` (the derived one), `SpeedWord` (Very slow, Slow, Normal, Fast, Very fast against
+  the donkey's 2), `Cargo`. A `[Mount.Stats]` or `MountStat` line named Speed or Cargo is left out (the API writes
+  those). **Removed:** `MountCompanion.RideSpeed`,
   `CartSpeed`, `SpeedLabels`, `SpeedLabelsFor` and the `MountSpeed` enum. New `MountSettingsPage.RetiredKey(section,
   key)`: a setting dropped on purpose leaves the player's file at Publish and the upgrade check counts it as retired,
-  not lost (Saddle Up's RideSpeed and CartSpeed). The built-in mounts' speeds: rat and Gerry 2.25 / 1.75, dragon
-  2.5 / 2, worm 1.75 / 1.25, snail 1.25 / 1; SkinsScan wants both on every built-in mount and refuses a
+  not lost (Saddle Up's RideSpeed and CartSpeed). The built-in mounts' speeds: rat 2.75, Gerry 2.25, dragon 1.6,
+  worm 1.75, snail 1.25, every one cargo 6; SkinsScan wants both on every built-in mount and refuses a
   `SpeedMultiplier` in its tuning. docs/skins.md, docs/api.md.
 - **Babies on foot:** the Shuffle key `ShuffleFollowKeeperOnFoot` (off in the core; a companion sets it on its own
   foals only), `MountCompanion.FoalsFollowOnFoot`, and `FoalRows` adds `FoalsFollow` ("Babies follow you on foot").
@@ -498,12 +510,12 @@ For mod authors:
 Development:
 
 - **Self-test "speed: each mount's own"** (Looks group): the words at the band edges, every built-in mount's
-  speeds, Saddle Up's retired rows and its file, a code mount ridden (2.5, over a 1.1 in its tuning) and driven
-  (1.75), the donkey at the cfg's speed, the panel's card; the format scenario reads `speed` / `cart_speed` and
-  leaves a `Speed` stat line out. `tools/page-carryover.py` reads `RetiredKey` calls.
+  speed and cargo, Saddle Up's retired rows and its file, a code mount ridden (2.5, over a 1.1 in its tuning) and
+  driven (2.5 times the donkey's ratio), the donkey at the cfg's speed, the panel's card (Speed, Cargo); the format
+  scenario reads `speed` / `cargo` and leaves a `Speed` stat line out. `tools/page-carryover.py` reads `RetiredKey` calls.
 - **`tools/skins/creatures/make_creatures.py` runs again:** the mount rename ("kind" to "mount") had put a real
   line break inside its `[Mount]` template string, a syntax error; fixed, and the template writes `speed` and
-  `cart_speed` (as does `tools/skins/new_skin.py`).
+  `cargo` (as does `tools/skins/new_skin.py`).
 - **The run makes its own starting state, wherever it is started** (2026-10-21: a run started in a house failed 29
   times, every ride "Not indoors.": the move to the test spot by SetPosition kept the house's light). Before the
   first scenario: the keeper free (waited for up to 15 s; a script or conversation that doesn't let go is the one
@@ -561,7 +573,7 @@ Development:
   Default skin's pin first; stale Cancel comments gone. To probe in game: typing in the search box must not walk
   the keeper or open the inventory (the game reads its own keys).
 - **The Mounts panel, third cut: the journal and a colours window** (2026-10-21; the user: the second cut had a lot of
-  empty space and squashed the customisation). The stage sits beside a stats card (Speed, Cart, Babies, Skins) at
+  empty space and squashed the customisation). The stage sits beside a stats card (Speed, Cargo, Skins since 2026-10-22) at
   one size on every mount; under them the Skin and Effect rows; the colours and the effect's four toggles have a
   window of their own ("Colours and effect...") with the mount's picture at its top and both colour columns at full
   height. The list is flat journal rows (the chosen one in red, hover brightens) with a scrollbar; the tabs are gone.

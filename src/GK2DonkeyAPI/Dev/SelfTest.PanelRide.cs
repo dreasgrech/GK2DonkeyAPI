@@ -23,7 +23,7 @@ namespace GK2DonkeyAPI
             bool? ride = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "RideKey"), cart = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "CartKey"), panelKey = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "MountsKey");
             if (ride == null) Info("Saddle Up's keys aren't polled: the over-the-panel check skipped");
             else Check(ride == false && cart == false && panelKey == true, $"with the panel open the ride and cart keys wait, the panel key works (ride {ride}, cart {cart}, panel {panelKey})");
-            MountCompanion c = Mounts.Companion(Owner + ".panelride");
+            MountCompanion c = Mounts.Companion(Owner); // the run's own GUID: a made-up one is warned about as a typo at every spawn
             c.KeepWithSaves = false;
             c.FoalCount = 0;
             MountHandle other = null;

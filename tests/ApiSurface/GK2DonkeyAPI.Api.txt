@@ -147,8 +147,8 @@ class GK2DonkeyAPI.Api.MountCompanion
 class GK2DonkeyAPI.Api.MountDef
   field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountAbility> Abilities
   field string Author
+  field System.Nullable<int> Cargo
   field bool Cart
-  field System.Nullable<float> CartSpeed
   field string Description
   field string Effect
   field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
@@ -269,9 +269,9 @@ class GK2DonkeyAPI.Api.MountInfo
   property int Abilities { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountAbilityInfo> AbilityInfos { get; }
   property string Author { get; }
+  property int Cargo { get; }
   property bool Cart { get; }
   property float CartSpeed { get; }
-  property string CartSpeedWord { get; }
   property string Description { get; }
   property string Effect { get; }
   property GK2DonkeyAPI.Api.MountEffectWhen EffectWhen { get; }

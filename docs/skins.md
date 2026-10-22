@@ -89,13 +89,13 @@ cart = true           # may it pull the cart
 foals = true          # may the baby donkeys be it
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33); it lives on the mount, not the skin
 speed = 2.5           # riding, times the keeper's walking speed (1 = walking; the donkey: 2), 0.5 to 4
-cart_speed = 2        # driving the cart, the same way (the donkey: 1.5); only on a mount that pulls one
+cargo = 6             # items its cart carries, 1 to 6 (a stat for now); only on a mount that pulls one
 effect = none         # an effect it comes with (hellfire, or one a mod added); players see it under "As the mount or skin" (a skin's own effect = wins)
 effect_when = Always  # Off, Night or Always (the menu says "Never" for Off)
 
 noun = dragon         # the word the game's sentences use ("a dragon can't pull the cart"); default: the name in lower case
 
-[Mount.Stats]         # lines the Mounts panel shows as given, in this order (optional; Speed and Cart speed are the API's own lines)
+[Mount.Stats]         # lines the Mounts panel shows as given, in this order (optional; Speed and Cargo are the API's own lines)
 Diet = keepers
 
 [Mount.Tuning]        # what the creature is, both styles: its sounds (docs/reference.md; the speed is speed = above); the rider's seat and
@@ -110,15 +110,17 @@ skins. The skin whose id is the mount's id is its **Default** (the game's own ar
 that word; the others by their `name`. So a mount with one skin shows "Default" only, and a second dragon pack
 (`mount = dragon`, no `[Mount]` of its own) shows next to it by its name. Every mount a player can pick exists only
 through its skins. Keys the loader doesn't know in `[Mount]` are ignored and named in the log; a bad `foal_scale`,
-`speed`, `cart_speed` or `effect_when` is named too and the default stands (a speed outside 0.5 to 4 is taken to the
+`speed`, `cargo` or `effect_when` is named too and the default stands (a speed outside 0.5 to 4 is taken to the
 nearest end).
 
-**Speeds** (the user, 2026-10-22): a mount's `speed` and `cart_speed` are how fast the keeper goes on it, times his
-walking speed (the game's speed is linear in it). The Mounts panel shows them as words against the donkey's for
-that style: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above that Very fast
-(`MountInfo.SpeedWord`; the number is `MountInfo.Speed`). A mount without them rides at the donkey's, the API
-cfg's `[Ride]` / `[Cart]` `SpeedMultiplier`. Tested in game up to 2.5 riding and 2 with the cart. The built-in
-mounts: donkey 2 / 1.5, rat and Gerry 2.25 / 1.75, dragon 2.5 / 2, worm 1.75 / 1.25, snail 1.25 / 1.
+**Speed and cargo** (the user, 2026-10-22): a mount's `speed` is how fast the keeper rides it, times his walking
+speed (the game's speed is linear in it). With the cart it is that times the donkey's cart speed over its riding
+one (1.5 / 2 as shipped): the cart slows every mount alike. The Mounts panel shows it as a word against the
+donkey's: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above that Very fast
+(`MountInfo.SpeedWord`; the number is `MountInfo.Speed`). A mount without one rides at the donkey's, the API cfg's
+`[Ride]` / `[Cart]` `SpeedMultiplier`. Tested in game up to 2.5 riding. `cargo` is how many items its cart carries,
+1 to 6, shown as "Cargo: 6 items"; a stat only for now (what a cart holds is the player's Cart capacity), and every
+built-in mount says 6. The built-in speeds: donkey 2, rat 2.75 (above the 2.5 seen in game so far), Gerry 2.25, dragon 1.6, worm 1.75, snail 1.25.
 
 Two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up): `offset = 0 0` while
 riding and `offset_cart = 0 0` with the cart hitched (a skin that should stand closer to the shafts). And a

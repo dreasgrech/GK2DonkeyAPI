@@ -81,7 +81,7 @@ namespace GK2DonkeyAPI.Api
         // FoalCount at most.
         public const int MaxFoals = 5;
 
-        // The speeds are each mount's own since 0.36.0 (MountDef.Speed / CartSpeed, a pack's [Mount] speed / cart_speed):
+        // The speeds are each mount's own since 0.36.0 (MountDef.Speed, a pack's [Mount] speed):
         // the companion's speed steps (RideSpeed, CartSpeed, SpeedLabels) are gone.
 
         // The first foal keeps the key "foal" (as before there were several); the others "foal2" to "foal5".
@@ -201,21 +201,20 @@ namespace GK2DonkeyAPI.Api
         }
 
         // The mount the companion's skin is a look of (the donkey without a skin, or with one that isn't installed).
-        public string MountId
+        public string MountId => MountOfSkin(skin);
+
+        private static string MountOfSkin(string skinId)
         {
-            get
-            {
-                string s = (skin ?? "").Trim();
-                if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountCatalog.DonkeyId;
-                return Mounts.Looks.Find(s)?.Mount ?? MountCatalog.DonkeyId;
-            }
+            string s = (skinId ?? "").Trim();
+            if (s.Length == 0 || s.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountCatalog.DonkeyId;
+            return Mounts.Looks.Find(s)?.Mount ?? MountCatalog.DonkeyId;
         }
 
         private MountLook Current => LookOf(MountId);
 
         internal void LookChanged(MountLook l)
         {
-            if (string.Equals(l.MountId, MountId, StringComparison.OrdinalIgnoreCase)) ApplyLook();
+            if (string.Equals(l.MountId, MountId, StringComparison.OrdinalIgnoreCase) || string.Equals(l.MountId, MountOfSkin(PaperSkin), StringComparison.OrdinalIgnoreCase)) ApplyLook();
         }
         private string skin = "";
         private bool foalsWearSkin = true;
@@ -287,7 +286,31 @@ namespace GK2DonkeyAPI.Api
         // The skin the donkey wears, by id (Mounts.Looks.Skins lists them; "donkey", "" or an unknown id: the donkey as the
         // game draws it, and an unknown id is kept, so the skin returns with its pack). Foals wear it too unless
         // FoalsWearSkin is off, or the skin says no foals.
-        public string Skin { get => skin; set { skin = value ?? ""; ApplyLook(); } }
+        public string Skin { get => skin; set { if (panelHeld) panelSkin = value ?? ""; else skin = value ?? ""; ApplyLook(); } }
+
+        // The Mounts panel's choice while it is open (the user, 2026-10-22: picking a row changed the mount he had):
+        // the settings picture wears it, his donkey keeps its own until Ride or Drive the cart takes it (Commit).
+        private bool panelHeld;
+        private string panelSkin;
+
+        internal void HoldForPanel()
+        {
+            panelHeld = true;
+            panelSkin = null;
+        }
+
+        // The panel closes: with commit the picture's choice becomes his (his donkey changes), without it the choice
+        // is dropped (the page puts its Mount row back).
+        internal void ReleasePanel(bool commit)
+        {
+            if (!panelHeld) return;
+            panelHeld = false;
+            if (commit && panelSkin != null) skin = panelSkin;
+            panelSkin = null;
+            ApplyLook();
+        }
+
+        private string PaperSkin => panelHeld && panelSkin != null ? panelSkin : skin;
         public bool FoalsWearSkin { get => foalsWearSkin; set { foalsWearSkin = value; ApplyLook(); } }
 
         // The particle effect on the donkey (Mounts.Effects lists them; "hellfire" is built in; "" none) and when it
@@ -782,8 +805,11 @@ namespace GK2DonkeyAPI.Api
             var coatKeys = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skin));
             var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));
             var muzzleKeys = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", skin));
-            var skinKeys = new Dictionary<string, object>();
-            if (!string.IsNullOrWhiteSpace(skin) && !skin.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) skinKeys["Skin"] = skin.Trim();
+            var skinKeys = SkinKeys(skin);
+            // the paper: the Mounts panel's choice while it is open (PaperSkin), with that mount's look; else the same
+            string ps = PaperSkin;
+            bool sameOnPaper = string.Equals(ps, skin, StringComparison.Ordinal);
+            MountLook pl = sameOnPaper ? l : LookOf(MountOfSkin(ps));
             var noSkin = new Dictionary<string, object>();
             var effectKeys = new Dictionary<string, object>();
             if (!MountEffects.IsNone(effect))
@@ -793,22 +819,22 @@ namespace GK2DonkeyAPI.Api
             }
             if (paper != null)
             {
-                OnPaper(CoatKeys, coatKeys);
-                OnPaper(HarnessKeys, harnessKeys);
-                OnPaper(MuzzleKeys, muzzleKeys);
-                OnPaper(LookKeys, skinKeys);
+                OnPaper(CoatKeys, sameOnPaper ? coatKeys : Look(CoatPreset(pl.Coat, pl.CustomCoat, "coat", ps)));
+                OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
+                OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
+                OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
                 paper.LooksRig.MarkDirty();
             }
-            var paperPaint = Look(PaintPreset(l.Paint, l.CustomPaint, "cart paint"));
-            var paperLantern = Look(LanternPreset(l.LanternLight, l.CustomLantern, "lantern"));
+            var paperPaint = Look(PaintPreset(pl.Paint, pl.CustomPaint, "cart paint"));
+            var paperLantern = Look(LanternPreset(pl.LanternLight, pl.CustomLantern, "lantern"));
             var wheelKeys = Look(WheelPreset(l.Wheels, l.CustomWheels, "wheels"));
             var hubKeys = Look(HubPreset(l.Hubs, l.CustomHubs, "wheel hubs"));
             if (paper != null)
             {
                 OnPaper(PaintKeys, paperPaint);
                 OnPaper(LanternKeys, paperLantern);
-                OnPaper(WheelKeys, wheelKeys);
-                OnPaper(HubKeys, hubKeys);
+                OnPaper(WheelKeys, sameOnPaper ? wheelKeys : Look(WheelPreset(pl.Wheels, pl.CustomWheels, "wheels")));
+                OnPaper(HubKeys, sameOnPaper ? hubKeys : Look(HubPreset(pl.Hubs, pl.CustomHubs, "wheel hubs")));
                 paper.ColorsRig.MarkDirty();
             }
             var paintKeys = Look(PaintPreset(l.Paint, l.CustomPaint, "cart paint"));
@@ -838,6 +864,13 @@ namespace GK2DonkeyAPI.Api
         }
 
         private static Dictionary<string, object> Look(Dictionary<string, object> d) => d ?? new Dictionary<string, object>();
+
+        private static Dictionary<string, object> SkinKeys(string skinId)
+        {
+            var d = new Dictionary<string, object>();
+            if (!string.IsNullOrWhiteSpace(skinId) && !skinId.Trim().Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) d["Skin"] = skinId.Trim();
+            return d;
+        }
 
         // The paper donkey's own values, as an instance override would be (the values are already of the key's type).
         private void OnPaper(string[] keys, Dictionary<string, object> values)

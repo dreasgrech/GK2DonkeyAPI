@@ -6,9 +6,9 @@ using GK2DonkeyAPI.Api;
 
 namespace GK2DonkeyAPI
 {
-    // Each mount's own speeds (the user, 2026-10-22; docs/skins.md "Speeds"): MountDef.Speed / CartSpeed and a
-    // pack's [Mount] speed / cart_speed, times the keeper's walking speed. Riding and driving at the mount's values, the
-    // donkey at the API cfg's, the panel's words against the donkey's, and Saddle Up's retired Riding speed / Cart speed.
+    // Each mount's own speed (the user, 2026-10-22; docs/skins.md "Speeds"): MountDef.Speed and a pack's [Mount] speed,
+    // times the keeper's walking speed, with the cart times the donkey's cart-to-riding ratio; its cargo stat. Riding and
+    // driving at the mount's values, the donkey at the API cfg's, the panel's card, Saddle Up's retired speed rows.
     internal static partial class SelfTest
     {
         private static IEnumerator MountSpeeds()
@@ -39,11 +39,11 @@ namespace GK2DonkeyAPI
             {
                 Catalog.Entry k = Catalog.Find(id);
                 if (k == null) { said.Add(id + " not loaded"); continue; }
-                allOwn &= k.Speed.HasValue && (!k.Cart || k.CartSpeed.HasValue);
-                said.Add($"{id} {k.Speed?.ToString("0.##") ?? "-"}/{k.CartSpeed?.ToString("0.##") ?? "-"} {Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Ride), MountStyle.Ride)}/{Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Cart), MountStyle.Cart)}");
+                allOwn &= k.Speed.HasValue && Catalog.CargoOf(k) == Catalog.CargoMax;
+                said.Add($"{id} {k.Speed?.ToString("0.##") ?? "-"} {Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Ride), MountStyle.Ride)}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
             }
-            Check(allOwn, "every built-in mount says its own speeds (" + string.Join(", ", said) + ")");
-            Check(!Catalog.Donkey.Speed.HasValue && !Catalog.Donkey.CartSpeed.HasValue, "the donkey says none: it rides at the API cfg's speeds, as it always did");
+            Check(allOwn, "every built-in mount says its own speed and carries the most (for now) (" + string.Join(", ", said) + ")");
+            Check(!Catalog.Donkey.Speed.HasValue && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax, "the donkey says none: it rides at the API cfg's speeds, as it always did");
 
             // Saddle Up: the two rows are gone, their lines retired (out of the file)
             MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
@@ -64,7 +64,7 @@ namespace GK2DonkeyAPI
             Info("the next \"is the API's own line\" warning is this test's own: a mount's Speed stat line is left out");
             try
             {
-                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "speed-beast", Name = "Speed Beast", Speed = 2.5f, CartSpeed = 1.75f,
+                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "speed-beast", Name = "Speed Beast", Speed = 2.5f, Cargo = 4,
                     TuningRide = new Dictionary<string, object> { ["SpeedMultiplier"] = 1.1f }, Stats = { new MountStat { Label = "Speed", Value = "a made-up line" }, new MountStat { Label = "Diet", Value = "keepers" } } });
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-speed", "speed-test", "[Skin]\nformat = 1\nid = speed-test\nname = Speed Test\nmount = speed-beast\n");
                 Looks.RegisterFolder(tempRoot, owner);
@@ -78,14 +78,15 @@ namespace GK2DonkeyAPI
             try
             {
                 MountInfo info = Mounts.Catalog.Find("speed-beast");
-                Check(info != null && Mathf.Approximately(info.Speed, 2.5f) && Mathf.Approximately(info.CartSpeed, 1.75f) && info.SpeedWord == "Fast" && info.CartSpeedWord == "Fast", $"MountInfo: {info?.Speed}/{info?.CartSpeed}, \"{info?.SpeedWord}\"/\"{info?.CartSpeedWord}\"");
+                float wantCart = 2.5f * Catalog.CartFactor;
+                Check(info != null && Mathf.Approximately(info.Speed, 2.5f) && Mathf.Abs(info.CartSpeed - wantCart) < 0.001f && info.SpeedWord == "Fast" && info.Cargo == 4, $"MountInfo: {info?.Speed}, with the cart {info?.CartSpeed:0.###} (2.5 x {Catalog.CartFactor:0.###}), \"{info?.SpeedWord}\", cargo {info?.Cargo}");
                 Check(info != null && info.Stats.Count == 1 && info.Stats[0].Label == "Diet", $"its own \"Speed\" stat line is left out (the API writes that one): {info?.Stats.Count} line(s)");
                 MountsPanel.Entry entry = MountsPanel.Entries().Find(x => x.Id == "speed-beast");
-                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cart speed", "Fast"), $"the panel's stats card: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
-                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.5x walking speed)") && entry.Lines.Contains("Cart speed: Fast (1.75x walking speed)"), "and the entry's lines carry the number (for the API; the card shows the word)");
+                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
+                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.5x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
                 MountsPanel.Entry donkeyEntry = MountsPanel.Entries().Find(x => x.Id == MountCatalog.DonkeyId);
                 float cfgRide = Plugin.For(MountStyle.Ride).SpeedMultiplier.Entry.Value, cfgCart = Plugin.For(MountStyle.Cart).SpeedMultiplier.Entry.Value;
-                Check(donkeyEntry != null && donkeyEntry.Stats[0].Value == Catalog.SpeedWord(cfgRide, MountStyle.Ride) && donkeyEntry.Stats[1].Value == Catalog.SpeedWord(cfgCart, MountStyle.Cart), $"the donkey's card reads the cfg's speeds ({cfgRide}/{cfgCart}: {donkeyEntry?.Stats[0].Value}/{donkeyEntry?.Stats[1].Value})");
+                Check(donkeyEntry != null && donkeyEntry.Stats[0].Value == Catalog.SpeedWord(cfgRide, MountStyle.Ride) && donkeyEntry.Stats[1].Value == Catalog.CargoMax + " items", $"the donkey's card reads the cfg's speed and the most cargo ({cfgRide}: {donkeyEntry?.Stats[0].Value}, {donkeyEntry?.Stats[1].Value})");
 
                 Vector3 near = Spot(home, 3f) ?? home;
                 plain = Spawn(near, right: homeFacing > 0f);
@@ -132,7 +133,7 @@ namespace GK2DonkeyAPI
                 if (r.Ok)
                 {
                     yield return Frames(3);
-                    Check(Mounts.Style == MountStyle.Cart && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - 1.75f) < 0.01f, $"driving at its own 1.75 ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.##})");
+                    Check(Mounts.Style == MountStyle.Cart && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantCart) < 0.01f, $"driving at its speed times the donkey's ratio, {wantCart:0.###} ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.###})");
                     Mounts.Dismount("self-test");
                     yield return Until(() => !Mounts.IsMounted, 5f);
                 }

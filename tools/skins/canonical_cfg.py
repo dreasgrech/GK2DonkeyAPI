@@ -17,7 +17,7 @@ import skinroots
 REPO = skinroots.REPO
 SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
-MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cart_speed", "effect", "effect_when"]
+MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cargo", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
 TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart"]  # [Mount.Stats] first: the panel's lines, then the tuning
 MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."

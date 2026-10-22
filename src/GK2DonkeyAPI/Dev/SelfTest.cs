@@ -3270,14 +3270,14 @@ namespace GK2DonkeyAPI
             try
             {
                 r1 = WriteTempPack("gk2donkeyapi-selftest-fmt1", "fmt-test",
-                    "[Skin]\nformat = 1\nneeds = 0.35\nid = fmt-test\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = fmt-beast\n\n[Mount]\nid = fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nspeed = 2.75\ncart_speed = 0.9\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
+                    "[Skin]\nformat = 1\nneeds = 0.35\nid = fmt-test\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = fmt-beast\n\n[Mount]\nid = fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nspeed = 2.75\ncargo = 3\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
                 int n = Looks.RegisterFolder(r1, owner);
                 MountSkinInfo sk = Mounts.Looks.Find("fmt-test");
                 MountInfo k = Mounts.Catalog.Find("fmt-beast");
                 Check(n == 1 && sk != null && sk.Description == "A test look." && sk.HasPortrait, $"the skin's description and portrait are read (\"{sk?.Description}\", portrait {sk?.HasPortrait})");
                 Check(k != null && k.Description == "A test creature." && k.HasPortrait, $"the mount's description and portrait are read (\"{k?.Description}\")");
                 Check(k != null && k.Stats.Count == 1 && k.Stats[0].Label == "Diet", $"[Mount.Stats] lines in file order, its own Speed line left out: the API writes that one ({k?.Stats.Count})");
-                Check(k != null && Mathf.Approximately(k.Speed, 2.75f) && Mathf.Approximately(k.CartSpeed, 0.9f) && k.SpeedWord == "Very fast" && k.CartSpeedWord == "Very slow", $"[Mount] speed and cart_speed are read ({k?.Speed} {k?.SpeedWord}, {k?.CartSpeed} {k?.CartSpeedWord})");
+                Check(k != null && Mathf.Approximately(k.Speed, 2.75f) && k.SpeedWord == "Very fast" && k.Cargo == 3, $"[Mount] speed and cargo are read ({k?.Speed} {k?.SpeedWord}, cargo {k?.Cargo})");
                 Check((Looks.Find("fmt-test")?.Report ?? "").Contains("[Mount.Stats] Speed left out"), "and the report says the Speed line was left out");
                 Texture2D portrait = Looks.PortraitOf(Looks.Find("fmt-test"));
                 Check(portrait != null && portrait.width == 96 && portrait.height == 96, $"the portrait PNG is read from the pack ({portrait?.width}x{portrait?.height})");
@@ -3727,9 +3727,14 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
+                    MountCompanion me = page.TestCompanion;
+                    string hadSkin = me?.Skin;
                     MountsPanel.TestSelect(other);
                     yield return Frames(2);
                     Check(string.Equals(page.MountChosen, other, StringComparison.OrdinalIgnoreCase) && string.Equals(MountsPanel.TestBuiltFor, other, StringComparison.OrdinalIgnoreCase) && MountsPanel.TestRows > 0, $"picking {other} in the list: the page's mount follows and the right side is built for it ({MountsPanel.TestRows} rows)");
+                    // the user, 2026-10-22: a pick shows a mount, only Ride or Drive the cart makes it his
+                    Check(me != null && me.Skin == hadSkin && string.Equals(Looks.MountOf(Looks.Find(me.Paper.LooksRig.DefNow?.Id ?? ""))?.Id ?? MountCatalog.DonkeyId, other, StringComparison.OrdinalIgnoreCase),
+                        $"and his mount is not changed: the companion still wears \"{me?.Skin}\", the picture's paper wears {other}'s (\"{me?.Paper.LooksRig.DefNow?.Id}\")");
                     var m2 = MountsPanel.TestMeasure();
                     Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
                 }
@@ -3739,11 +3744,31 @@ namespace GK2DonkeyAPI
                 MountsPanel.TestCloseColours(keep: true);
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");
-                MountsPanel.TestSelect(was); // back to the first mount (no Cancel since 2026-10-21: Done and Escape keep what was chosen)
-                yield return Frames(2);
+                // Done with another mount picked: his mount stays (the Mount row goes back), the skin he wore with it
+                MountCompanion meNow = page.TestCompanion;
+                string wore = meNow?.Skin;
+                if (other != null)
+                {
+                    MountsPanel.TestSelect(other);
+                    yield return Frames(2);
+                }
                 MountsPanel.TestClose(keep: true);
                 yield return Frames(2);
-                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase), $"picked back and closed: the mount is {was} again");
+                Check(!MountsPanel.IsOpen && string.Equals(page.MountChosen ?? MountCatalog.DonkeyId, was, StringComparison.OrdinalIgnoreCase) && meNow?.Skin == wore, $"Done with {other ?? "the same mount"} picked: the mount is {was} again, the companion still wears \"{meNow?.Skin}\"");
+                if (other != null && meNow != null)
+                {
+                    // the way Ride and Drive the cart close it: the pick becomes his
+                    MountsPanel.Open(page, toggle: false);
+                    yield return Frames(2);
+                    MountsPanel.TestSelect(other);
+                    yield return Frames(2);
+                    MountsPanel.TestClose(keep: true, commit: true);
+                    yield return Frames(2);
+                    Check(string.Equals(page.MountChosen, other, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, other, StringComparison.OrdinalIgnoreCase), $"closed as Ride and Drive close it: {other} is his (the companion's mount {meNow.MountId}, \"{meNow.Skin}\")");
+                    page.SelectMount(was); // put back, outside the panel: at once
+                    yield return Frames(2);
+                    Check(string.Equals(meNow.MountId, was, StringComparison.OrdinalIgnoreCase), $"and back to {was} outside the panel, at once (\"{meNow.Skin}\")");
+                }
                 MountsPanel.Open(page, toggle: true);
                 yield return Frames(2);
                 Check(MountsPanel.IsOpen, "the key opens it");

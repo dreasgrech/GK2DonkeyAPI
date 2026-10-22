@@ -440,17 +440,20 @@ foreach (var dir in skinDirs)
             if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) Bad($"[Mount] foal_scale = {fsv}: 0.2 to 1");
             else if (Math.Abs(fs - 0.6) < 0.001) Bad("[Mount] foal_scale = 0.6 is the default: leave it out");
         }
-        // the speeds (times the keeper's walking speed): every built-in mount says its own, in 0.5 to 4; a pulled cart's
-        // only on a mount that pulls one; never a SpeedMultiplier in its tuning or a [Mount.Stats] Speed line as well
-        foreach (var sk in new[] { "speed", "cart_speed" })
+        // the speed (times the keeper's walking speed; with the cart times the donkey's ratio): every built-in mount says
+        // its own, 0.5 to 4; the cargo (items its cart carries) 1 to 6 on a mount that pulls one, said by every built-in;
+        // never a SpeedMultiplier in its tuning or a [Mount.Stats] Speed / Cargo line as well
+        if (!m.TryGetValue("speed", out var sv)) Bad("[Mount] speed missing: a built-in mount says its own speed (times walking speed; the donkey's is 2)");
+        else if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) Bad($"[Mount] speed = {sv}: a number, 0.5 to 4 (times walking speed)");
+        if (m.TryGetValue("cargo", out var cg))
         {
-            if (!m.TryGetValue(sk, out var sv)) { if (sk == "speed" || m.GetValueOrDefault("cart") != "false") Bad($"[Mount] {sk} missing: a built-in mount says its own speed (times walking speed; the donkey's are 2 and 1.5)"); continue; }
-            if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) Bad($"[Mount] {sk} = {sv}: a number, 0.5 to 4 (times walking speed)");
-            if (sk == "cart_speed" && m.GetValueOrDefault("cart") == "false") Bad("[Mount] cart_speed on a mount that can't pull the cart");
+            if (!int.TryParse(cg, out var cgn) || cgn < 1 || cgn > 6) Bad($"[Mount] cargo = {cg}: a whole number, 1 to 6");
+            if (m.GetValueOrDefault("cart") == "false") Bad("[Mount] cargo on a mount that can't pull the cart");
         }
+        else if (m.GetValueOrDefault("cart") != "false") Bad("[Mount] cargo missing: a built-in mount that pulls the cart says how much it carries (1 to 6)");
         foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
-            if (cfg.TryGetValue(sec, out var st) && st.ContainsKey("SpeedMultiplier")) Bad($"[{sec}] SpeedMultiplier: the mount's speed is [Mount] speed / cart_speed");
-        if (cfg.TryGetValue("Mount.Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cart speed", StringComparison.OrdinalIgnoreCase)) Bad($"[Mount.Stats] {key}: the API writes the speed lines itself (left out in the game)");
+            if (cfg.TryGetValue(sec, out var st) && st.ContainsKey("SpeedMultiplier")) Bad($"[{sec}] SpeedMultiplier: the mount's speed is [Mount] speed (the cart's follows it)");
+        if (cfg.TryGetValue("Mount.Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cargo", StringComparison.OrdinalIgnoreCase)) Bad($"[Mount.Stats] {key}: the API writes the speed and cargo lines itself (left out in the game)");
         if (m.TryGetValue("effect", out var ef))
         {
             if (ef == "none" || ef.Length == 0) Bad("[Mount] effect = none is the default: leave it out");

@@ -852,7 +852,7 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
                 + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + mount + "\n"
                 + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
                 + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
-                "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\nspeed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncart_speed = 1.5  # driving the cart (the donkey: 1.5)\n")
+                "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\nspeed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
             import canonical_cfg  # byte for byte the layout the scans expect
             text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)

@@ -413,6 +413,31 @@ namespace GK2DonkeyAPI.Api
 
         private MountCompanion mountCompanion;
         private string mountSection;
+
+        // The Mounts panel open: its list moves the Mount row (the picture and the rows follow), the companion's donkey
+        // keeps its mount (MountCompanion.HoldForPanel). Closed with Ride or Drive the cart: the choice is his; closed
+        // otherwise: the Mount row goes back to the mount he had (that mount's Skin row keeps what was picked for it).
+        private string heldMount;
+
+        internal MountCompanion TestCompanion => mountCompanion; // the self-tests
+
+        internal void HoldMountForPanel()
+        {
+            if (mountRow == null || mountCompanion == null || heldMount != null) return;
+            heldMount = mountRow.Value ?? MountCatalog.DonkeyId;
+            mountCompanion.HoldForPanel();
+        }
+
+        internal void ReleaseMountForPanel(bool commit)
+        {
+            if (heldMount == null) return;
+            string was = heldMount;
+            heldMount = null;
+            mountCompanion.ReleasePanel(commit);
+            if (commit) { ApplyMountRows(); return; }
+            if (!string.Equals(mountRow.Value, was, StringComparison.OrdinalIgnoreCase)) mountRow.Value = was; // its SettingChanged applies it
+            else ApplyMountRows();
+        }
         private readonly Dictionary<string, ConfigEntry<string>> skinRows = new Dictionary<string, ConfigEntry<string>>(StringComparer.OrdinalIgnoreCase); // the Skin row per mount id
         private readonly List<Action<string, string, Func<bool>>> perMountBuilders = new List<Action<string, string, Func<bool>>>(); // PerMount's callers, for the mounts that come later
 

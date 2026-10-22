@@ -72,7 +72,7 @@ cart = true
 foals = true
 foal_scale = 0.4
 speed = 2.25           # riding, times walking speed (the donkey: 2); the panel says "Fast"
-cart_speed = 1.5       # with the cart (the donkey: 1.5): "Normal"
+cargo = 6              # items its cart carries, 1 to 6 (with the cart it goes at its speed x 0.75, as the donkey)
 
 [Mount.Tuning]         # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0

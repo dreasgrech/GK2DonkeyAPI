@@ -178,8 +178,8 @@ namespace SaddleUp
             }
             p.EffectRows("Effect", me);
 
-            // Riding speed and Cart speed were rows here until 0.12: each mount has its own speeds now ([Mount] speed /
-            // cart_speed; the Mounts panel shows them), so the player's choice is dropped (the user, 2026-10-22) and the
+            // Riding speed and Cart speed were rows here until 0.12: each mount has its own speed now ([Mount] speed; the
+            // cart's follows it; the Mounts panel shows it), so the player's choice is dropped (the user, 2026-10-22) and the
             // old lines leave the file.
             p.RetiredKey("Behaviour", "RideSpeed");
             p.RetiredKey("Behaviour", "CartSpeed");

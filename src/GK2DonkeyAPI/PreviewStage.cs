@@ -49,6 +49,7 @@ namespace GK2DonkeyAPI
             internal bool Reframe = true;
             internal float NextEdgeCheck, LastAsked = -10f;
             internal int LastRenderFrame = -1;
+            internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
 
             internal View(bool withCart)
             {
@@ -207,10 +208,19 @@ namespace GK2DonkeyAPI
                         }
                     }
                 }
+                // A new look still being put together (its sheet building, the Skin key ahead of the worn skin): the last
+                // finished photo stays, and the new one comes whole, framed and spaced for it, in one frame (the user's
+                // videos, 2026-10-22: the cart's colours first, the new mount ten frames later in the old one's frame and
+                // with its hitch gap, then the framing). Nothing to hold on to yet: nothing, rather than a half look.
+                if (paper.LooksRig.Settling)
+                {
+                    return v.Drawn ? v.Rt : null;
+                }
                 if (Time.frameCount != v.LastRenderFrame)
                 {
                     v.LastRenderFrame = Time.frameCount;
                     Render(v);
+                    v.Drawn = true;
                 }
                 return v.Rt;
             }
@@ -224,6 +234,152 @@ namespace GK2DonkeyAPI
         // One photo: for the donkey alone, everything but the donkey's sprites is off just for it (and on again after,
         // also on a failure).
         private static void Render(View v)
+        {
+            using (Midday.Hold())
+            {
+                RenderLit(v);
+            }
+        }
+
+        // The pictures by the outdoor midday light, whatever the hour or the room (the user, 2026-10-22: a picture washed
+        // tan at dusk; the colours self-test, 2026-10-19: blue at night). The game lights its scene from its time-of-day
+        // presets (EnvironmentEngine.ApplyPreset: the sun and back lights, the ambient colour, GlobalShaderParameters'
+        // shader globals); for the stage's own renders only, those are set to the outdoor presets' midday blend and put
+        // back at once, before any camera of the game's draws. The colour grading (the main camera's post effect) never
+        // reached the stage. Nothing found (the main menu, presets not loaded yet): the scene's light as it is.
+        // And what the game draws over its world by place: the vertical fog (by height: the stage, 5000 units below the
+        // world, sat under all of it, so a misty hour washed the picture in the fog's colour; the user, 2026-10-22,
+        // still at times with the midday light), the light texture (the lamps and fires, sampled by screen place: off
+        // the game's screen the stage took its edge) and the clouds' shadows (the same): off for the stage's renders,
+        // as each of them switches itself off (VerticalFog, LightRTManager.ClearGlobals, CloudsController), put back after.
+        private sealed class Midday : IDisposable
+        {
+            private static readonly int idVertFog = Shader.PropertyToID("_VertFog");
+            private static readonly int idFogIntensity = Shader.PropertyToID("_FogIntensity");
+            private static readonly int idFogColor = Shader.PropertyToID("_FogColor");
+            private static readonly int idLightRTIntensity = Shader.PropertyToID("_LightRTIntensity");
+            private static readonly int idCloudsRTIntensity = Shader.PropertyToID("_CloudsRTIntensity");
+            private const string FogKeyword = "VERT_FOG", LightRTKeyword = "USE_LIGHT_RT", CloudsKeyword = "USE_CLOUDS_RT";
+            private bool sky, fogKw, lightKw, cloudsKw;
+            private float vertFog, lightRT, cloudsRT;
+            private static float nextSaid;
+            private static readonly int idBacklightColor = Shader.PropertyToID("_BacklightColor");
+            private static readonly int idLightMaxBurn = Shader.PropertyToID("_LightMaxBurn");
+            private static readonly int idSunLight = Shader.PropertyToID("_SunLight");
+            private static readonly int idTimeOfDay = Shader.PropertyToID("_TimeOfDay");
+            private static readonly Midday held = new Midday();
+            private static LightEnvironmentPreset noon;
+            private static bool said;
+            private bool on;
+            private Light sun, back;
+            private Color sunColor, backColor, ambient, gspBack;
+            private float sunIntensity, sunShadow, backIntensity, gspBurn, gspSun, gspTime;
+            private Quaternion sunRotation;
+
+            internal static IDisposable Hold()
+            {
+                Midday m = held;
+                // the sky's effects by place: off for this render (said every 10 s while pictures are drawn, as they were)
+                m.sky = true;
+                m.fogKw = Shader.IsKeywordEnabled(FogKeyword); m.lightKw = Shader.IsKeywordEnabled(LightRTKeyword); m.cloudsKw = Shader.IsKeywordEnabled(CloudsKeyword);
+                m.vertFog = Shader.GetGlobalFloat(idVertFog); m.lightRT = Shader.GetGlobalFloat(idLightRTIntensity); m.cloudsRT = Shader.GetGlobalFloat(idCloudsRTIntensity);
+                if (Time.unscaledTime >= nextSaid)
+                {
+                    nextSaid = Time.unscaledTime + 10f;
+                    Plugin.Log.LogInfo($"[preview] the scene's effects kept off the picture: fog {(m.fogKw ? "on" : "off")} ({m.vertFog:0.##}, intensity {Shader.GetGlobalFloat(idFogIntensity):0.##}, colour {ColorUtility.ToHtmlStringRGB(Shader.GetGlobalColor(idFogColor))}), lamps' light texture {(m.lightKw ? "on" : "off")} ({m.lightRT:0.##}), cloud shadows {(m.cloudsKw ? "on" : "off")} ({m.cloudsRT:0.##}); ambient {ColorUtility.ToHtmlStringRGB(RenderSettings.ambientLight)}.");
+                }
+                Shader.DisableKeyword(FogKeyword); Shader.DisableKeyword(LightRTKeyword); Shader.DisableKeyword(CloudsKeyword);
+                Shader.SetGlobalFloat(idVertFog, 0f); Shader.SetGlobalFloat(idLightRTIntensity, 0f); Shader.SetGlobalFloat(idCloudsRTIntensity, 0f);
+                LightEnvironmentPreset p = Noon();
+                LightsSystem ls = p != null ? LightsSystem.Instance : null;
+                if (ls == null || ls.SunLight == null || ls.BackLight == null) return m; // the light as it is (on stays false), the sky's effects put back
+                m.sun = ls.SunLight;
+                m.back = ls.BackLight;
+                m.sunColor = m.sun.color; m.sunIntensity = m.sun.intensity; m.sunShadow = m.sun.shadowStrength; m.sunRotation = m.sun.transform.rotation;
+                m.backColor = m.back.color; m.backIntensity = m.back.intensity;
+                m.ambient = RenderSettings.ambientLight;
+                m.gspBack = Shader.GetGlobalColor(idBacklightColor); m.gspBurn = Shader.GetGlobalFloat(idLightMaxBurn);
+                m.gspSun = Shader.GetGlobalFloat(idSunLight); m.gspTime = Shader.GetGlobalFloat(idTimeOfDay);
+                m.on = true;
+                m.sun.color = p.sunLightColor; m.sun.intensity = p.sunLightIntensity; m.sun.shadowStrength = p.sunLightShadowStrength;
+                m.sun.transform.rotation = Quaternion.Euler(p.sunLightRotation);
+                m.back.color = p.backLightColor; m.back.intensity = p.backLightIntensity;
+                RenderSettings.ambientLight = p.ambientLightColor;
+                Shader.SetGlobalColor(idBacklightColor, p.gspBacklightColor);
+                Shader.SetGlobalFloat(idLightMaxBurn, p.gspMaxLightBurn);
+                Shader.SetGlobalFloat(idSunLight, p.sunLightAmount);
+                Shader.SetGlobalFloat(idTimeOfDay, 0.5f);
+                return m;
+            }
+
+            public void Dispose()
+            {
+                if (sky)
+                {
+                    sky = false;
+                    Shader.SetGlobalFloat(idVertFog, vertFog); Shader.SetGlobalFloat(idLightRTIntensity, lightRT); Shader.SetGlobalFloat(idCloudsRTIntensity, cloudsRT);
+                    if (fogKw) Shader.EnableKeyword(FogKeyword);
+                    if (lightKw) Shader.EnableKeyword(LightRTKeyword);
+                    if (cloudsKw) Shader.EnableKeyword(CloudsKeyword);
+                }
+                if (!on) return;
+                on = false;
+                if (sun != null) { sun.color = sunColor; sun.intensity = sunIntensity; sun.shadowStrength = sunShadow; sun.transform.rotation = sunRotation; }
+                if (back != null) { back.color = backColor; back.intensity = backIntensity; }
+                RenderSettings.ambientLight = ambient;
+                Shader.SetGlobalColor(idBacklightColor, gspBack);
+                Shader.SetGlobalFloat(idLightMaxBurn, gspBurn);
+                Shader.SetGlobalFloat(idSunLight, gspSun);
+                Shader.SetGlobalFloat(idTimeOfDay, gspTime);
+            }
+
+            // The outdoor presets' blend at midday (time 0.5), as EnvironmentEngine.OnTimeOfDayChanged picks and blends
+            // them; made once, when the outdoor presets are there (EnvironmentEngine's availablePresets, loaded with the game).
+            private static LightEnvironmentPreset Noon()
+            {
+                if (noon != null) return noon;
+                EnvironmentEngine env = EnvironmentEngine.Instance;
+                if (env == null) return null;
+                try
+                {
+                    var all = HarmonyLib.AccessTools.Field(typeof(EnvironmentEngine), "availablePresets")?.GetValue(env) as Dictionary<string, TimeOfDayPresets>;
+                    TimeOfDayPresets outdoor = null;
+                    if (all != null) all.TryGetValue("outdoor", out outdoor);
+                    if (outdoor == null)
+                    {
+                        var current = HarmonyLib.AccessTools.Field(typeof(EnvironmentEngine), "timesOfDay")?.GetValue(env) as TimeOfDayPresets;
+                        if (current != null && !current.indoorPreset) outdoor = current;
+                    }
+                    if (outdoor == null || outdoor.presets == null || outdoor.presets.Count == 0) return null; // not loaded yet: asked again next time
+                    List<TimeOfDayPresets.TimeAndPreset> list = outdoor.presets;
+                    LightEnvironmentPreset a = list[0].preset, b = a;
+                    float t = 0f;
+                    for (int i = 0; i < list.Count; i++)
+                    {
+                        if (list[i].time <= 0.5f) { a = list[i].preset; b = a; t = 0f; if (i + 1 < list.Count && list[i + 1].time > 0.5f) { b = list[i + 1].preset; t = (0.5f - list[i].time) / Mathf.Max(0.0001f, list[i + 1].time - list[i].time); } }
+                    }
+                    if (a == null || b == null) return null;
+                    var made = ScriptableObject.CreateInstance<LightEnvironmentPreset>();
+                    made.hideFlags = HideFlags.HideAndDontSave;
+                    LightEnvironmentPreset.Lerp(made, a, b, t);
+                    noon = made;
+                    Plugin.Log.LogInfo($"[preview] the pictures are lit as outdoors at midday ({a.name}{(b != a ? " to " + b.name + $" at {t:0.##}" : "")}: sun {ColorUtility.ToHtmlStringRGB(noon.sunLightColor)} x{noon.sunLightIntensity:0.##}, ambient {ColorUtility.ToHtmlStringRGB(noon.ambientLightColor)}).");
+                    return noon;
+                }
+                catch (Exception e)
+                {
+                    if (!said)
+                    {
+                        said = true;
+                        Plugin.Log.LogWarning("[preview] the midday light for the pictures could not be made (" + e.Message + "); they take the scene's light as it is.");
+                    }
+                    noon = null;
+                    return null;
+                }
+            }
+        }
+
+        private static void RenderLit(View v)
         {
             switchedOff.Clear();
             if (!v.WithCart)
@@ -296,13 +452,10 @@ namespace GK2DonkeyAPI
             // The mount's hitch gap (the skin's [Tuning.Cart] HitchGapPx, docs/mounts-parity-matrix.md 2.2): the whole
             // cart sits that much further behind the body in the picture, as Mount.ApplyHitchGap moves it in the world.
             // The animator writes the sway parts' positions every frame, so a non-zero gap is put back after it every
-            // frame; the value itself is read from the layers only when the rig re-merged them (or once a second).
-            if (paper.LooksRig.TuneStamp != gapStamp || ++gapFrames >= 60)
-            {
-                gapStamp = paper.LooksRig.TuneStamp;
-                gapFrames = 0;
-                gapWanted = Looks.HitchGapWorldFor(paper);
-            }
+            // frame; the value itself is read from the layers every frame too (read on the rig's re-merge stamp before,
+            // a new mount's gap came frames after its picture: the donkey drawn with the dragon's long shafts, 2026-10-22).
+            gapStamp = paper.LooksRig.TuneStamp;
+            gapWanted = Looks.HitchGapWorldFor(paper);
             float gap = gapWanted;
             if (Mathf.Abs(gap) > 0.0005f || Mathf.Abs(gapApplied) > 0.0005f)
             {
@@ -321,7 +474,7 @@ namespace GK2DonkeyAPI
         private static float gapApplied;
         private static float gapWanted;                  // the layers' gap, read when the rig re-merged them (TuneStamp) or once a second
                                                          // (static like cartRest/cartDir: the stage poses one paper at a time)
-        private static int gapStamp = -1, gapFrames;
+        private static int gapStamp = -1;
         internal static float TestGapApplied => gapApplied;   // the self-tests: the hitch gap on the stage's cart parts now
         internal static int TestReframes;                     // the self-tests: how often a picture was framed again
 

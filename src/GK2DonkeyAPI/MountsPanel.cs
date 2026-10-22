@@ -29,13 +29,13 @@ namespace GK2DonkeyAPI
         private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
         private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
         private const float StageW = 440f, StageH = 236f, PictureScale = 3f; // the stage is one size on every mount: nothing moves
-        private const float StatLineH = 30f, StatsCardH = 44f + 4f * StatLineH + 8f; // the card is as tall as its lines, not as the stage
+        private const int StatCount = 3; private const float StatLineH = 30f, StatsCardH = 44f + StatCount * StatLineH + 8f; // the card is as tall as its lines, not as the stage
         private const float IconPx = 36f, HeaderIconPx = 64f;
         private const float SearchH = 26f;
         private const int SearchFrom = 8; // a search box above the list once it has more mounts than this
         private const float SwatchPx = 14f, SwatchGap = 2f, SwatchRowH = 2f * SwatchPx + SwatchGap + 6f, SwatchLabelW = 160f; // a custom colour's row: the 24 named colours as squares, two rows of twelve
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
-        private const float CW = 800f, CH = 640f, CStageW = 400f, CStageH = 170f, CPictureScale = 2f; // the colours window and its picture
+        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = StageH, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
         private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
         private static readonly Color BoxColor = new Color(0f, 0f, 0f, 0.35f), EdgeColor = new Color(1f, 1f, 1f, 0.12f);
 
@@ -90,7 +90,7 @@ namespace GK2DonkeyAPI
             internal string Id, Label, Description;
             internal readonly List<string> Lines = new List<string>();  // what it does, in words: the cart, babies, speed, what it comes with, its skins
             internal readonly List<string> Extra = new List<string>();  // its own stats and abilities
-            internal readonly List<(string Label, string Value)> Stats = new List<(string, string)>(); // the stats card: Speed, Cart speed, Babies, Skins
+            internal readonly List<(string Label, string Value)> Stats = new List<(string, string)>(); // the stats card: Speed, Cargo, Skins
             internal bool HasPortrait;
             internal bool Fake; // a made-up entry (Debug.MountsPanelFakeEntries): listed, not pickable
         }
@@ -113,10 +113,11 @@ namespace GK2DonkeyAPI
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
-                // the mount's speeds as words against the donkey's (Catalog.SpeedWord), the number beside (the user, 2026-10-22)
-                float ride = Catalog.SpeedOf(k, MountStyle.Ride), cartSpeed = Catalog.SpeedOf(k, MountStyle.Cart);
+                // the mount's speed as a word against the donkey's (Catalog.SpeedWord), and what its cart carries (the user,
+                // 2026-10-22: cargo, not the cart's speed, which follows the mount's)
+                float ride = Catalog.SpeedOf(k, MountStyle.Ride);
                 e.Lines.Add("Speed: " + SpeedText(ride, MountStyle.Ride));
-                if (k.Cart) e.Lines.Add("Cart speed: " + SpeedText(cartSpeed, MountStyle.Cart));
+                if (k.Cart) e.Lines.Add("Cargo: " + Catalog.CargoOf(k) + " items");
                 if (!string.IsNullOrEmpty(k.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(k.Effect)?.Name ?? k.Effect) + (k.EffectWhen == MountEffectWhen.Night ? " (at night)" : ""));
                 else if (def != null && !string.IsNullOrEmpty(def.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(def.Effect)?.Name ?? def.Effect));
                 int skins = (k == Catalog.Donkey ? 1 : 0);
@@ -128,10 +129,10 @@ namespace GK2DonkeyAPI
                     string name = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
                     e.Extra.Add(string.IsNullOrEmpty(a.Description) ? name : name + ": " + a.Description);
                 }
-                // the stats card (the user's pick, 2026-10-21): speed, the cart's speed (or that it can't pull one), babies, skins
+                // the stats card (the user's pick, 2026-10-21; cargo for the cart's speed and no babies line, 2026-10-22): speed,
+                // what its cart carries (or no cart), skins
                 e.Stats.Add(("Speed", Catalog.SpeedWord(ride, MountStyle.Ride)));
-                e.Stats.Add(("Cart speed", k.Cart ? Catalog.SpeedWord(cartSpeed, MountStyle.Cart) : "can't pull it"));
-                e.Stats.Add(("Babies", k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"{k.FoalScale:0.##}x its size" : "yes") : "none"));
+                e.Stats.Add(("Cargo", k.Cart ? Catalog.CargoOf(k) + " items" : "no cart"));
                 e.Stats.Add(("Skins", skins.ToString()));
                 list.Add(e);
             }
@@ -176,6 +177,7 @@ namespace GK2DonkeyAPI
                 }
                 Close(keep: true, back: false);
                 page = p;
+                p.HoldMountForPanel(); // picking a row shows a mount, Ride or Drive the cart makes it his
                 Build(settings);
                 HideUnder(); // the game window it was opened from (if any) waits underneath, as it is
                 TakeControls();
@@ -265,7 +267,7 @@ namespace GK2DonkeyAPI
             RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
             Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.Left, false, 12f, 8f, statsW - 24f, 26f).fontStyle = FontStyles.Bold;
             statLines.Clear();
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < StatCount; i++)
             {
                 float ly = 44f + i * StatLineH;
                 TextMeshProUGUI l = Text(statsCard, "stat label " + i, "", 0.9f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
@@ -729,9 +731,12 @@ namespace GK2DonkeyAPI
         }
 
         // The panel closed (what was chosen kept) and the companion's mount called in the style, as the ride and cart keys do.
+        private static bool committing; // Close from Ride / Drive the cart: the mount picked becomes his
+
         private static void Call(MountStyle style)
         {
             MountSettingsPage p = page;
+            committing = true;
             Close(keep: true, back: false); // straight into the game: the windows under it closed, the mount comes
             try
             {
@@ -1227,7 +1232,11 @@ namespace GK2DonkeyAPI
         internal static int TestEntries => entries.Count;
         internal static string TestBuiltFor => builtFor;
         internal static void TestSelect(string id) => Select(id);
-        internal static void TestClose(bool keep) => Close(keep);
+        internal static void TestClose(bool keep, bool commit = false)
+        {
+            committing = commit; // commit: as Ride and Drive the cart close it
+            Close(keep);
+        }
         internal static void TestOpenColours() => OpenColours();
         internal static void TestCloseColours(bool keep) => CloseColours(keep);
         internal static (float W, float H, float Scale, float RoomW, float RoomH) TestMeasure()
@@ -1461,12 +1470,48 @@ namespace GK2DonkeyAPI
             if (pic != null)
             {
                 img.texture = pic;
+                fitted[img] = (pic.width, pic.height);
+                if (!refitHooked)
+                {
+                    refitHooked = true;
+                    Canvas.willRenderCanvases += Refit;
+                }
                 Vector2 art = PreviewStage.ArtSize(pic);
                 float k = Mathf.Min(maxScale, (box.rect.width - 16f) / Mathf.Max(1f, art.x), (box.rect.height - 16f) / Mathf.Max(1f, art.y));
                 if (k >= 1f) k = Mathf.Floor(k); // the stage is point-filtered: a whole number of screen pixels per art pixel, no shimmer
                 ((RectTransform)img.transform).sizeDelta = new Vector2(art.x * k, art.y * k);
             }
             img.gameObject.SetActive(pic != null);
+        }
+
+        // The stage frames a new mount's picture in the same frame the mount changes and resizes its texture in place
+        // (PreviewStage.NewTexture): the picture's box, fitted only on the 0.2 s picture timer, showed the new mount in
+        // the old one's box for a few frames, squeezed smaller (the user's video, 2026-10-22: the dragon and its cart
+        // small for 4 frames, then their size). So every frame, just before the canvases draw, a picture whose texture
+        // is no longer the size it was fitted at is fitted again.
+        private static readonly Dictionary<RawImage, (int W, int H)> fitted = new Dictionary<RawImage, (int, int)>();
+        private static bool refitHooked;
+
+        private static void Refit()
+        {
+            try
+            {
+                if (picture != null && stage != null) RefitOne(picture, stage, PictureScale);
+                if (coloursPicture != null && coloursStage != null) RefitOne(coloursPicture, coloursStage, CPictureScale);
+            }
+            catch (Exception e)
+            {
+                Canvas.willRenderCanvases -= Refit; // never every frame: off for the session, said once
+                Plugin.Log.LogWarning("Settings: the Mounts panel's picture refit is off (" + e.Message + ").");
+            }
+        }
+
+        private static void RefitOne(RawImage img, RectTransform box, float maxScale)
+        {
+            if (!img || !box || !img.gameObject.activeInHierarchy) return;
+            Texture t = img.texture;
+            if (t == null || !fitted.TryGetValue(img, out (int W, int H) was) || (was.W == t.width && was.H == t.height)) return;
+            Fit(img, box, t, maxScale);
         }
 
         // A skin or mount registered, reloaded or withdrawn while the panel is open (the Mounts tab, the pack watch): the
@@ -1518,6 +1563,16 @@ namespace GK2DonkeyAPI
             }
             try
             {
+                bool commit = committing;
+                committing = false;
+                closing?.ReleaseMountForPanel(commit); // Ride / Drive: the mount picked is his; else his mount stays
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Settings: the mount held for the Mounts panel could not be let go: " + e.Message);
+            }
+            try
+            {
                 page?.RefreshMenu?.Invoke(); // the Mods menu re-reads its conditions: a row the chosen mount pins or leaves out
             }
             catch
@@ -1553,6 +1608,7 @@ namespace GK2DonkeyAPI
             font = null;
             fontMaterial = null;
             nextPicture = 0f;
+            fitted.Clear(); // the pictures go with the windows
             page = null;
             if (wasOpen)
             {

@@ -586,7 +586,7 @@ namespace GK2DonkeyAPI
                     case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
                     case "mount.stats":
-                        if (Catalog.ReservedStat(key)) d.Report += "[Mount.Stats] " + key + " left out: the speeds are the API's own lines (speed = and cart_speed = in [Mount]); ";
+                        if (Catalog.ReservedStat(key)) d.Report += "[Mount.Stats] " + key + " left out: the speed and the cargo are the API's own lines (speed = and cargo = in [Mount]); ";
                         else stats.Add(new KeyValuePair<string, string>(key, value));
                         continue;
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
@@ -705,7 +705,11 @@ namespace GK2DonkeyAPI
                     return null;
                 }
                 k.Speed = ReadSpeed("speed");
-                k.CartSpeed = ReadSpeed("cart_speed");
+                if (mount.TryGetValue("cargo", out string mcargo))
+                {
+                    if (int.TryParse(mcargo.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int cargo) && cargo >= 1 && cargo <= Catalog.CargoMax) k.Cargo = cargo;
+                    else d.Report += "[Mount] cargo = " + mcargo + " is not a whole number 1 to " + Catalog.CargoMax + ", taken as " + Catalog.CargoMax + "; ";
+                }
                 if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
                 if (mount.TryGetValue("effect_when", out string mw))
                 {
@@ -893,7 +897,7 @@ namespace GK2DonkeyAPI
         }
 
         // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cart_speed", "effect", "effect_when" };
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cargo", "effect", "effect_when" };
 
         // The portrait a pack names (a PNG next to its frames), read once; null when it has none or it can't be read.
         private static readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -1171,7 +1175,7 @@ namespace GK2DonkeyAPI
                     mn.Key(sb, "foals", k.Foals ? "true" : "false");
                     if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
                     if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
-                    if (k.CartSpeed.HasValue) mn.Key(sb, "cart_speed", Num(k.CartSpeed.Value));
+                    if (k.Cargo.HasValue) mn.Key(sb, "cargo", k.Cargo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
                     if (!string.IsNullOrEmpty(k.Effect))
                     {
                         mn.Key(sb, "effect", k.Effect);
@@ -2107,6 +2111,9 @@ namespace GK2DonkeyAPI
             internal Catalog.Entry MountNow => (pending?.Def ?? WantedDef ?? skin?.Def)?.Mount ?? Catalog.Donkey;
             internal SkinDef DefNow => pending?.Def ?? WantedDef ?? skin?.Def;
             internal SkinDef WornDef => skin?.Def;
+            // A new look on its way: a sheet still building, or the Skin key naming another skin than the one worn (the
+            // settings picture holds its last finished photo meanwhile, PreviewStage).
+            internal bool Settling => pending != null || !string.Equals(WantedDef?.Id ?? "", skin?.Def.Id ?? "", StringComparison.OrdinalIgnoreCase);
 
             // A column of the worn body picture (0 = the canvas's left edge, art facing left) as a world point on the
             // ground row of the body overlay, mirrored with the part: the cart readout measures the body's rear edge.
@@ -2368,7 +2375,7 @@ namespace GK2DonkeyAPI
                 }
                 TakeMount(k.Tuning);
                 TakeMount(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
-                float? ownSpeed = style == MountStyle.Cart ? k.CartSpeed : k.Speed; // [Mount] speed / cart_speed: over a SpeedMultiplier in its tuning
+                float? ownSpeed = Catalog.OwnSpeed(k, style); // [Mount] speed (with the cart times the donkey's ratio): over a SpeedMultiplier in its tuning
                 if (ownSpeed.HasValue)
                 {
                     merged["SpeedMultiplier"] = ownSpeed.Value;

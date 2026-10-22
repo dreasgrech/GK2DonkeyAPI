@@ -673,7 +673,7 @@ for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged se
 system and is re-applied only when the skin, the mount or the style changes.
 
 A **pack declares a mount without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `author`, `version`,
-`cart`, `foals`, `foal_scale`, `speed`, `cart_speed`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
+`cart`, `foals`, `foal_scale`, `speed`, `cargo`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
 values, each key in one of the three); the mount's own skin (the one whose id is the mount's, its Default) owns
 the declaration: a joiner (`mount = <id>` with a `[Mount]` block of its own) declares only until the Default is
 registered, which re-declares over it, and a declaring skin is that mount's own skin whatever its `mount =` line
@@ -908,13 +908,15 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
-- 0.36.0 (breaking, pre-release): **each mount's own speeds.** `MountDef.Speed` / `CartSpeed` (`float?`, times the
+- 0.36.0 (breaking, pre-release): **each mount's own speed and cargo.** `MountDef.Speed` (`float?`, times the
   keeper's walking speed, 0.5 to 4; null: the donkey's, the API cfg's `[Ride]` / `[Cart]` `SpeedMultiplier`, 2 and
-  1.5 as shipped), a pack's `[Mount] speed` / `cart_speed`; either wins over a `SpeedMultiplier` in the mount's
-  tuning. `MountInfo.Speed`, `CartSpeed` (its own, else the donkey's), `SpeedWord`, `CartSpeedWord` (the Mounts
-  panel's words against the donkey's for that style: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to
-  1.35 Fast, above Very fast; no cart word on a mount that can't pull one). A stat line named Speed or Cart speed
-  (`[Mount.Stats]`, `MountStat`) is left out with a report: the API writes those. Removed: `MountCompanion.RideSpeed`,
+  1.5 as shipped), a pack's `[Mount] speed`; it wins over a `SpeedMultiplier` in the mount's tuning, and with the cart
+  it is times the donkey's cart speed over its riding one (0.75 as shipped: the cart slows every mount alike; carts of
+  their own speed maybe later). `MountDef.Cargo` / `[Mount] cargo` (`int?`, 1 to 6; null: 6): the items its cart
+  carries, a stat for now (what a cart holds is still `CartSlots`). `MountInfo.Speed`, `CartSpeed` (derived),
+  `SpeedWord` (the Mounts panel's word against the donkey's 2: under 0.7 of it Very slow, under 0.9 Slow, to 1.1
+  Normal, to 1.35 Fast, above Very fast), `Cargo` (0 for a mount that can't pull the cart). A stat line named Speed or
+  Cargo (`[Mount.Stats]`, `MountStat`) is left out with a report: the API writes those. Removed: `MountCompanion.RideSpeed`,
   `CartSpeed`, `SpeedLabels`, `SpeedLabelsFor`, `MountSpeed` (the user, 2026-10-22: the mounts define the speeds, the
   players' Faster / Fastest is dropped). `MountSettingsPage.RetiredKey(section, key)`: a setting dropped on purpose;
   its line leaves the player's file at Publish (any number of the section) and the upgrade self-test counts it as

@@ -27,7 +27,8 @@ namespace GK2DonkeyAPI
             internal bool Cart = true;                 // may pull the cart
             internal bool Foals = true;                // foals may be drawn as it
             internal float FoalScale = 0.6f;           // a baby's size as a fraction of the grown one (the view's scale)
-            internal float? Speed, CartSpeed;          // times the keeper's walking speed, riding / with the cart ([Mount] speed, cart_speed); null: the donkey's
+            internal float? Speed;                     // riding, times the keeper's walking speed ([Mount] speed); null: the donkey's. With the cart: times CartFactor
+            internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Shown only, for now
             internal string Effect;                    // the effect an instance shows when its own key says "the mount's"
             internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
@@ -54,15 +55,35 @@ namespace GK2DonkeyAPI
         }
 
         // A mount's speed (the user, 2026-10-22): times the keeper's walking speed, 1 = walking (the game's speed is
-        // linear in PlayerPhysicalBody.SpeedMultiplier: PROBE-FINDINGS.md "Speed is linear"). Its own ([Mount] speed /
-        // cart_speed, MountDef.Speed / CartSpeed), else a SpeedMultiplier in its tuning, else the donkey's: the API cfg's
-        // [Ride] / [Cart] SpeedMultiplier (2 and 1.5 as shipped), so a default player's donkey is as it always was.
+        // linear in PlayerPhysicalBody.SpeedMultiplier: PROBE-FINDINGS.md "Speed is linear"). Its own ([Mount] speed,
+        // MountDef.Speed), else a SpeedMultiplier in its tuning, else the donkey's: the API cfg's [Ride] / [Cart]
+        // SpeedMultiplier (2 and 1.5 as shipped), so a default player's donkey is as it always was. With the cart a mount
+        // that says its speed goes at it times CartFactor, the donkey's cart speed over its riding one (0.75 as shipped):
+        // the cart slows every mount the same way (the user: "always relative to the speed of the mount"; carts of their
+        // own speed maybe later).
         internal const float SpeedMin = 0.5f, SpeedMax = 4f;
         internal const float DonkeyRideSpeed = 2f, DonkeyCartSpeed = 1.5f; // as shipped: what the panel's words compare with
+        // The cart's most items (the CartSlots row's top, 1 to 6): a mount's cargo stat is 1 to this.
+        internal const int CargoMax = 6;
+
+        internal static int CargoOf(Entry k) => k?.Cargo ?? CargoMax;
+
+        internal static float CartFactor
+        {
+            get
+            {
+                float ride = Plugin.For(MountStyle.Ride)?.SpeedMultiplier?.Entry?.Value ?? DonkeyRideSpeed;
+                float cart = Plugin.For(MountStyle.Cart)?.SpeedMultiplier?.Entry?.Value ?? DonkeyCartSpeed;
+                return ride > 0.01f ? cart / ride : DonkeyCartSpeed / DonkeyRideSpeed;
+            }
+        }
+
+        // The speed a mount's own value gives in a style: riding as said, with the cart times CartFactor; null without one.
+        internal static float? OwnSpeed(Entry k, MountStyle style) => k?.Speed == null ? (float?)null : style == MountStyle.Cart ? k.Speed.Value * CartFactor : k.Speed.Value;
 
         internal static float SpeedOf(Entry k, MountStyle style)
         {
-            float? own = k == null ? null : style == MountStyle.Cart ? k.CartSpeed : k.Speed;
+            float? own = OwnSpeed(k, style);
             if (own.HasValue) return own.Value;
             if (k != null)
             {
@@ -92,7 +113,7 @@ namespace GK2DonkeyAPI
         internal static bool ReservedStat(string label)
         {
             string l = (label ?? "").Trim();
-            return l.Equals("Speed", StringComparison.OrdinalIgnoreCase) || l.Equals("Cart speed", StringComparison.OrdinalIgnoreCase);
+            return l.Equals("Speed", StringComparison.OrdinalIgnoreCase) || l.Equals("Cargo", StringComparison.OrdinalIgnoreCase);
         }
 
         internal static float? AsFloat(object v)
@@ -167,13 +188,13 @@ namespace GK2DonkeyAPI
             d.DeclaredBy = skinId;
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.CartSpeed.HasValue ? ", cart speed " + d.CartSpeed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
             return d;
         }
 
         private static bool Same(Entry a, Entry b)
         {
-            return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.CartSpeed == b.CartSpeed && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
+            return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
                 && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
         }
@@ -240,7 +261,7 @@ namespace GK2DonkeyAPI
             into.Foals = from.Foals;
             into.FoalScale = from.FoalScale;
             into.Speed = from.Speed;
-            into.CartSpeed = from.CartSpeed;
+            into.Cargo = from.Cargo;
             into.Effect = from.Effect;
             into.EffectWhen = from.EffectWhen;
             into.Tuning = from.Tuning;
