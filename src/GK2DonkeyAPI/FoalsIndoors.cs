@@ -37,8 +37,15 @@ namespace GK2DonkeyAPI
         }
 
         // PlayerController.OnPlayerTeleported (subscribed by Plugin): every door, the map's fast travel, a script's move.
+        // A self-test's door (SelfTest.Indoors.cs): the player's own foals stay where they are.
+        internal static bool TestDoorQuiet;
+
         internal static void OnKeeperTeleported()
         {
+            if (TestDoorQuiet)
+            {
+                return;
+            }
             doorFrame = Time.frameCount;
             doorPending = true;
             doorFrom = keeperWasAt;

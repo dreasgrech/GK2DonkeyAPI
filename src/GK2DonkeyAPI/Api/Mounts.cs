@@ -47,7 +47,8 @@ namespace GK2DonkeyAPI.Api
     //
     // Reference GK2DonkeyAPI.dll and declare [BepInDependency("dreas.gk2.donkeyapi")]. Call from the Unity main thread only
     // (Update, event handlers, Harmony patches of game code). Everything goes through the core's own safety checks:
-    // rules added here can refuse more, never allow what the core refuses (co-op, indoors, busy, building, saves).
+    // rules added here can refuse more, never allow what the core refuses (co-op, busy, building, saves; indoors is a
+    // Behaviour switch, DismountIndoors and CartIndoors, not a rule).
     public static class Mounts
     {
         // The API's version, the same number as the mod's (Plugin.Version is the one place): minor for additions, major
@@ -224,6 +225,9 @@ namespace GK2DonkeyAPI.Api
         // The ride behaviour switches, for both styles, overridable like tuning (keys = their [General] cfg names):
         //   StayMountedThroughDoors  keep riding through doors that load another scene
         //   DismountIndoors          dismount entering a building, church or dungeon, and refuse to mount inside
+        //   CartIndoors              with DismountIndoors off: the cart comes indoors too (0.36.0, off); off, a cart
+        //                            ride through a building's door leaves the cart there and goes on as a ride (at
+        //                            the morgue: off inside, the corpse into the hands), the cart refused inside
         //   ShowMessages             the keeper's thought bubble for refusals
         //   CargoZombies             zombies ride on the cart (0.22.0, on); off: the cart refuses them
         //   CargoChest               a plain storage chest rides on the cart, alone (0.23.0, on); off: chests stay put
@@ -242,7 +246,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
-                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
+                    Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
                     Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots,
                 }));
             }

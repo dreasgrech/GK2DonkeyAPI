@@ -458,6 +458,14 @@ namespace GK2DonkeyAPI
                     TuningKeys(pc);
                 }
                 string why = WhyMustDismount(pc);
+                if (why == CartAtTheDoor)
+                {
+                    if (LeaveCartAtTheDoor(pc))
+                    {
+                        return; // a Ride-style view at the keeper, ready in a frame or two
+                    }
+                    why = "indoors"; // the cart can't be left there: off at the door, as before
+                }
                 if (why != null)
                 {
                     Dismount(pc, why);
@@ -870,7 +878,13 @@ namespace GK2DonkeyAPI
 
             // The cart in a fight: not for now (a wide object in a bordered arena, cargo and zombies aboard during a dash,
             // the cart's own interaction key handling); the Ride style fights (docs/mounted-combat.md).
-            internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? "Not the cart in a fight." : null;
+            internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? "Not the cart in a fight." : !CartAllowedHere() ? NotTheCartIndoors : null;
+
+            internal const string NotTheCartIndoors = "Not the cart indoors.";
+
+            // The cart indoors only with both switches saying so: riding indoors allowed (DismountIndoors off) and the
+            // cart with it (CartIndoors). Outdoors always.
+            internal static bool CartAllowedHere() => !IsIndoors() || (!Plugin.DismountIndoors.Value && Plugin.CartIndoors.Value);
 
             // The keeper in the armour view now (a fight on): for the features that keep clear of game members.
             internal static bool RiderInArmour() => InArmour(MainGame.PlayerController);
@@ -991,7 +1005,34 @@ namespace GK2DonkeyAPI
                 {
                     return "indoors";
                 }
+                if (activeStyle == MountStyle.Cart && !CartAllowedHere())
+                {
+                    // riding indoors allowed, the cart not (CartIndoors off): the cart stays at the door and the ride goes on
+                    // (Tick); a summoned mount, whose cart goes with the ride, gets off there as before
+                    return Ephemeral ? "indoors" : CartAtTheDoor;
+                }
                 return null;
+            }
+
+            internal const string CartAtTheDoor = "the cart stays at the door";
+
+            // Through a door into a building with the cart not allowed in (DismountIndoors off, CartIndoors off): the cart
+            // is left standing where it is still drawn, on the doorstep (the door moved only the keeper, Follow hasn't
+            // run), and the mount goes on under him inside, in the Ride style. Its load stays on the cart; a corpse
+            // aboard at the morgue door goes into his hands once the door is known to be the morgue (MorgueHandover,
+            // rider: he gets off inside first, a ride needs empty hands). False: the cart couldn't be left there.
+            private bool LeaveCartAtTheDoor(PlayerController pc)
+            {
+                CargoSheet.Abort("the cart left at the door");
+                Instance cart = Unhitch(pc, out string no, atTheDoor: true);
+                if (cart == null)
+                {
+                    Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart at the door ({no}); the ride ends there.");
+                    return false;
+                }
+                Plugin.Log.LogInfo($"Mount: {Describe()} rides on indoors; its cart stays at the door as {cart.Describe()} with {cart.CargoRig.Count} item(s).");
+                MorgueHandover.Arm(cart, "indoors", rider: true);
+                return true;
             }
 
             // The letterbox bars of a staged scene (Flow_Cinematic, Flow_SetControlActive with cinematic).

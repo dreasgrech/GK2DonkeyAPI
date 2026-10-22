@@ -11,7 +11,10 @@ namespace GK2DonkeyAPI
     // that loads another scene: "scene changed"), and the cart is parked where it stood outside, with its load. This
     // takes the corpse off that parked cart and into the keeper's hands, so he arrives inside carrying it. Only at the
     // morgue: it is the one building a body is worked in (its pallets, the autopsy table, the crematorium); in a house
-    // or the church a body in hand is of no use, and no other cargo comes inside either.
+    // or the church a body in hand is of no use, and no other cargo comes inside either. With riding allowed indoors
+    // and the cart not (docs/indoors.md) the cart is left at the door and the keeper rides in: at the morgue he gets
+    // off inside first (a ride needs empty hands), then the corpse comes off the cart at the door into his hands, the
+    // mount inside with him (Arm with rider). With the cart allowed in, the corpse stays on the cart inside.
     //
     // Knowing it was the morgue door, two ways, either one enough (CorpseIntoMorguePlaces lists both mounts):
     //   - the building area the keeper arrives in, as the game itself tracks it (PlayerData.CurrentWorldZoneData, set
@@ -36,6 +39,7 @@ namespace GK2DonkeyAPI
             internal static float LastDoorAt = -1f;
 
             private static Instance armed;
+            private static bool armedRider; // the cart left at the door, the keeper riding on inside (LeaveCartAtTheDoor)
             private static float armedAt;
             private static float controlBackAt = -1f;
 
@@ -44,7 +48,7 @@ namespace GK2DonkeyAPI
             // PlayerController.Teleport, before anything has faded or moved (PlayerController_Teleport_DoorNote_Patch).
             internal static void NoteTeleport(TeleportDataBase td)
             {
-                if (td == null)
+                if (td == null || TestDoorQuiet) // a self-test's door is no door to the morgue
                 {
                     return;
                 }
@@ -71,10 +75,13 @@ namespace GK2DonkeyAPI
             // preset), and nothing is handed over.
             private const float DoorWindow = 60f;
 
-            // The ride ended at a door (Instance.Dismount, reasons "indoors" and "scene changed"), before Park.
-            internal static void Arm(Instance i, string reason)
+            // The ride ended at a door (Instance.Dismount, reasons "indoors" and "scene changed"), before Park; or
+            // the cart was left at the door and the keeper rides on inside (rider: the cart is i; at the morgue he gets
+            // off inside, then takes the corpse, the mount standing there with him).
+            internal static void Arm(Instance i, string reason, bool rider = false)
             {
                 armed = null;
+                armedRider = rider;
                 if (i == null || i.Ephemeral || !i.HasCart || !Plugin.CorpseIntoMorgue.Value || !HasCorpse(i))
                 {
                     return;
@@ -103,10 +110,14 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 Instance i = armed;
-                if (Ridden != null)
+                if (Ridden != null && !armedRider)
                 {
                     Disarm("the keeper rides again");
                     return;
+                }
+                if (armedRider && Ridden == null && Time.unscaledTime - armedAt > 0.5f)
+                {
+                    armedRider = false; // got off inside by himself: decided as a door's dismount
                 }
                 if (!Plugin.CorpseIntoMorgue.Value)
                 {
@@ -123,6 +134,13 @@ namespace GK2DonkeyAPI
                 if (Decide(zone, door, Plugin.CorpseIntoMorguePlaces.Value, out string why))
                 {
                     armed = null;
+                    if (armedRider && Ridden != null)
+                    {
+                        // riding on inside: off first (a ride needs empty hands); the mount stays inside by him
+                        Plugin.Log.LogInfo($"Mount: the morgue ({why}): the keeper gets off inside to take the corpse off {i.Describe()} at the door.");
+                        DismountFromApi("morgue");
+                    }
+                    armedRider = false;
                     HandOver(i, pd, why);
                     return;
                 }

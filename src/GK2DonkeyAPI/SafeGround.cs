@@ -550,14 +550,14 @@ namespace GK2DonkeyAPI
 
             // Leaving the cart (Unhitch): null when its cart stands on ground (GroundAt, at the keeper's level), else why
             // not. The free cart stays exactly where it is drawn now, and its cargo is set down there when it goes.
-            private string WhyCartCannotStayHere(PlayerController pc)
+            private string WhyCartCannotStayHere(PlayerController pc, float? level = null)
             {
                 if (!CanJudgeGround || !HasCart || donkey == null || !donkey)
                 {
                     return null;
                 }
                 Vector3 c = CartPoint();
-                if (GroundAt(c, KeeperNow(pc).y, out float g))
+                if (GroundAt(c, level ?? KeeperNow(pc).y, out float g))
                 {
                     return null;
                 }

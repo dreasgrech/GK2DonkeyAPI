@@ -104,6 +104,7 @@ namespace GK2DonkeyAPI
         private const string GroupMorgue = "Morgue";
         private const string GroupCorpses = "Corpses at the crossroads";
         private const string GroupLooks = "Skins and effects";
+        private const string GroupIndoors = "Indoors";
 
         // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
         internal static readonly Scenario[] Scenarios =
@@ -133,6 +134,9 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
             new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
             new Scenario { Group = GroupCargo, Name = "cargo: a cart with a hitch gap keeps its place as items go on", Body = CargoKeepsTheGap },
+            new Scenario { Group = GroupIndoors, Name = "indoors: the two switches (refused, ended, allowed) under the indoor light", Body = IndoorsRules },
+            new Scenario { Group = GroupIndoors, Name = "indoors: through a building's door riding and driving, and back out", Body = IndoorsThroughADoor },
+            new Scenario { Group = GroupIndoors, Name = "indoors: the cart left at the morgue door, the corpse into the hands, the mount inside", Body = IndoorsMorgue },
             new Scenario { Group = GroupMorgue, Name = "morgue: the door rule", Body = MorgueDecisions },
             new Scenario { Group = GroupMorgue, Name = "morgue: a corpse off the parked cart into the hands", Body = MorgueHandOver },
             new Scenario { Group = GroupCorpses, Name = "corpses: drop and stand points", Body = CorpsePoints },
@@ -220,12 +224,31 @@ namespace GK2DonkeyAPI
             // after it. Found 2026-10-16: "two off: the size follows the setting (2 on it, 3 slots)" after a review session.
             int slotFloorWas = Cargo.SlotFloor;
             Cargo.SlotFloor = 0;
+            // The run's own starting state, wherever it was started; each part put back at the end.
+            // Free: a conversation, a script or work holds him (it can't be broken off from here): waited for.
+            yield return Until(() => pc.IsControlsEnabled && pc.Ssm?.CurState is FreePlayerState && (pc.MovementComponent == null || !pc.MovementComponent.IsMoving), 15f);
+            if (!pc.IsControlsEnabled || !(pc.Ssm?.CurState is FreePlayerState))
+            {
+                Cargo.SlotFloor = slotFloorWas;
+                Status = "Not started: the game holds the keeper (a conversation, a script, work) and didn't let go within 15 s. Start the run when he walks freely.";
+                Line("[test] " + Status);
+                yield break;
+            }
+            // Out of the armour view (a fight's look: the cart is refused in it); the fight scenarios put it on themselves.
+            bool armourWas = Mount.Instance.InArmour(pc);
+            if (armourWas)
+            {
+                pc.SetArmorView(false);
+                yield return Frames(2);
+            }
+            // His light (the game writes its name into the save): the run's is outdoor, his comes back with him.
+            string originPreset = EnvironmentEngine.Instance?.TimesOfDay?.name;
             // Where the keeper stood: he is put back there at the end. The run itself starts from the remembered spot
             // (Debug.SelfTestSpot, written by a run that passed everywhere) when it is in this scene.
             Vector3 origin = Keeper();
             float originFacing = pc.PlayerData.Direction.x >= 0f ? 1f : -1f;
             current = "start";
-            if (TryParseSpot(Plugin.SelfTestSpot.Value, out string spotScene, out Vector3 spot) && spotScene == scene.Id && Vector3.Distance(spot, origin) > 1f)
+            if (TryParseSpot(Plugin.SelfTestSpot.Value, out string spotScene, out Vector3 spot) && spotScene == scene.Id && Vector3.Distance(spot, origin) > 1f && !InAnyBuilding(spot, scene))
             {
                 PutKeeper(spot, originFacing);
                 yield return Frames(2);
@@ -240,22 +263,37 @@ namespace GK2DonkeyAPI
             }
             // Not inside a container zone (a built-up area with chests and crafting, the mount a chest can belong to;
             // the player's own zone readout counts other mounts too): into the nearest one, at a free spot with ground.
-            if (ZoneAt(Keeper(), scene) == null)
+            bool inBuilding = InAnyBuilding(Keeper(), scene);
+            if (ZoneAt(Keeper(), scene) == null || inBuilding)
             {
-                Vector3? into = SpotInNearestZone(Keeper(), scene, out WorldZoneData intoZone);
+                // never inside a building (a save loaded in a house: the run of 2026-10-21 rode "Not indoors." 29 times)
+                Vector3? into = SpotInNearestZone(Keeper(), scene, out WorldZoneData intoZone, q => !InAnyBuilding(q, scene));
                 if (into.HasValue)
                 {
                     PutKeeper(into.Value, originFacing);
                     yield return Frames(2);
                     if (Vector3.Distance(Keeper(), into.Value) < 1f)
                     {
-                        Info($"the keeper stood in no container zone; moved into {intoZone.id} at {into.Value:F1} (back to {origin:F1} at the end)");
+                        Info($"the keeper stood {(inBuilding ? "in a building" : "in no container zone")}; moved into {intoZone.id} at {into.Value:F1} (back to {origin:F1} at the end)");
                     }
                     else
                     {
                         Warn($"the spot in {intoZone.id} at {into.Value:F1} didn't take (he is at {Keeper():F1}); running from here");
                     }
                 }
+            }
+            if (InAnyBuilding(Keeper(), scene))
+            {
+                Warn("no spot outside a building could be reached in this scene: the run goes on here under the outdoor light (the door scenario skips)");
+            }
+            // The outdoor light wherever he stands now (moved out by SetPosition, the house's light stays on; a dungeon is
+            // indoor light everywhere): the mount's rules read the light.
+            if (Mount.Instance.IsIndoors())
+            {
+                EnvironmentEngine.Instance.SetTimeOfDayPreset("outdoor");
+                yield return Until(() => !Mount.Instance.IsIndoors(), 3f);
+                if (Mount.Instance.IsIndoors()) Warn($"the light stays indoor ({EnvironmentEngine.Instance?.TimesOfDay?.name}): the rides will be refused as indoors");
+                else Info($"the light set to outdoor for the run (it was {originPreset}; it comes back with the keeper at the end)");
             }
             home = Keeper();
             homeFacing = originFacing;
@@ -378,6 +416,14 @@ namespace GK2DonkeyAPI
             if (Vector3.Distance(origin, Keeper()) > 0.5f)
             {
                 PutKeeper(origin, originFacing);
+            }
+            if (originPreset != null && EnvironmentEngine.Instance?.TimesOfDay?.name != originPreset)
+            {
+                EnvironmentEngine.Instance.SetTimeOfDayPreset(originPreset); // his own light with him (the house's, if he started in one)
+            }
+            if (armourWas && !Mount.Instance.InArmour(PC))
+            {
+                PC.SetArmorView(true);
             }
             string summary = $"{(abort ? "aborted" : "done")}{(full ? "" : $" ({scenarios.Count} of {Scenarios.Length} scenarios)")}: {pass} passed, {fail} failed, {warn} warning(s){(skip > 0 ? $", {skip} scenario(s) skipped" : "")}.";
             Line("[test] " + summary);
@@ -543,7 +589,7 @@ namespace GK2DonkeyAPI
 
         // A free spot with ground inside the nearest active container zone of the scene (its centre first, then rings
         // around it), or null. Nearest by the distance from p to the zone's rectangle.
-        private static Vector3? SpotInNearestZone(Vector3 p, GameScene scene, out WorldZoneData zone)
+        private static Vector3? SpotInNearestZone(Vector3 p, GameScene scene, out WorldZoneData zone, Func<Vector3, bool> also = null)
         {
             zone = null;
             GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(scene.Id);
@@ -562,7 +608,7 @@ namespace GK2DonkeyAPI
             {
                 Vector3 c = new Vector3(z.wholeZoneRect.center.x, p.y, z.wholeZoneRect.center.y);
                 WorldZoneData want = z;
-                Func<Vector3, bool> inside = q => ZoneAt(q, scene) == want;
+                Func<Vector3, bool> inside = q => ZoneAt(q, scene) == want && (also == null || also(q));
                 float g = Mount.Instance.GroundHeight(c, out _);
                 if (!float.IsNaN(g))
                 {

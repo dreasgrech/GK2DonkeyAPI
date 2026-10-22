@@ -12,6 +12,13 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **New: mounting indoors** (a player asked). Behaviour has two new rows, both off, so nothing changes until you
+  turn them on: "Allow mounting indoors" rides into houses, the church and the morgue and lets you get on inside;
+  "Allow mounting with the cart indoors" (only with the first on) brings the cart in too, a corpse on it staying
+  on it. With the cart not allowed, driving through a door leaves the cart standing at the door with its load and
+  you ride on inside; at the morgue you get off inside carrying the corpse, your mount in there with you. A door
+  with a loading screen still ends the ride. The cart can get caught on furniture and door frames inside. Where the cart isn't
+  allowed (indoors, in a fight), the cart key now says so without calling your mount over first.
 - **Fixed: a loaded cart crept back behind a long mount.** With the dragon (or the rat) hitched, every item put on
   the cart moved the whole cart one more hitch gap away; a loaded cart made again (through a door, switching from
   riding to the cart) came back too far as well. The cart keeps its place now. The donkey has no gap, so it never
@@ -97,6 +104,13 @@ For players:
 
 For mod authors:
 
+- **`CartIndoors`** (a Behaviour key, off): with `DismountIndoors` off, the cart comes indoors only with it on; off,
+  a cart ride through a building's door leaves the cart standing at the door (an unhitch, `Unhitched` raised) and
+  goes on as a ride; at the morgue with a corpse the keeper gets off inside and takes it into his hands
+  (`Dismounted` with "morgue"). The cart is refused inside ("Not the cart indoors."). A summoned mount
+  (`TryMount`), or a cart that can't be left there, gets off at the door as before.
+  Before, `DismountIndoors` off let the cart in too: set both for that. Saddle Up no longer pins `DismountIndoors`:
+  its new rows set both (docs/indoors.md).
 - **The API ships no skin** (the user, 2026-10-21: the backend, not bloated with skins). Hellfire, Royal Parade and the
   Hellfire effect moved from GK2 Donkey API to GK2 Saddle Up (`src/SaddleUp/assets/skins`, the effect registered in
   Saddle Up's Awake through the public API, the same definition). Same ids, so a player's `Skin_donkey = hellfire`
@@ -442,6 +456,17 @@ For mod authors:
 
 Development:
 
+- **The run makes its own starting state, wherever it is started** (2026-10-21: a run started in a house failed 29
+  times, every ride "Not indoors.": the move to the test spot by SetPosition kept the house's light). Before the
+  first scenario: the keeper free (waited for up to 15 s; a script or conversation that doesn't let go is the one
+  case it doesn't start, and it says so), out of the armour view, outside every building (the remembered spot only
+  when it's in none; else a spot in the nearest container zone that is in none), the light outdoor. At the end his
+  spot, his armour view and his own light come back.
+- **Indoors self-tests** (group Indoors): the two switches under the game's indoor light, and a real door (the
+  game's own teleport into one of the scene's buildings) riding and driving, and back out (docs/self-tests.md).
+  Safe from any start: the start's own light preset put back by name, only buildings whose zones are visited and
+  wait for no quest, the player's foals left out of the test's doors, the keeper always brought back out
+  (docs/indoors.md).
 - **The first F11 run of the night** (2026-10-21): the sprite manifest check demanded a frame literally named
   `bdy_static_left`, which Gerry maps to his walk frame as the rules allow, so Gerry was set aside at game-ready
   and every Gerry scenario failed from that (three readouts, the game-creature scenario, the new heal check). The

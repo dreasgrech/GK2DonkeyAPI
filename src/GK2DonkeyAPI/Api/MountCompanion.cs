@@ -348,6 +348,17 @@ namespace GK2DonkeyAPI.Api
             {
                 return UseWhileMounted(style);
             }
+            if (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _))
+            {
+                // Asked before anyone is called: the cart refused here (indoors, in a fight) leaves the mount where it is,
+                // instead of bringing it in and refusing its cart after (BringCart asks the same).
+                string noCart = Mount.Instance.WhyNotCart(keeper);
+                if (noCart != null)
+                {
+                    Mount.Say(noCart);
+                    return MountResult.Refused(noCart);
+                }
+            }
             if (Donkey == null || !Donkey.Exists)
             {
                 // Placed by ComeToKeeper right below.

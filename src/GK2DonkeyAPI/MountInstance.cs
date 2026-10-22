@@ -870,7 +870,9 @@ namespace GK2DonkeyAPI
             // goes on without it. Returns the new cart. A standing donkey without a view (asleep far away, or in a
             // scene that isn't loaded) leaves its cart too: the split is data only, and each gets its view in its new
             // style when that is next due (StandTick, ComeTo). Saddle Up's H leaves a parked cart where it is this way.
-            internal Instance Unhitch(PlayerController pc, out string why)
+            // atTheDoor: the keeper went through a door and is elsewhere (another floor): the cart's ground is judged at
+            // its own level, not his (LeaveCartAtTheDoor).
+            internal Instance Unhitch(PlayerController pc, out string why, bool atTheDoor = false)
             {
                 why = null;
                 if (!HasDonkey || !HasCart)
@@ -890,7 +892,7 @@ namespace GK2DonkeyAPI
                     // Ridden, the cart stays where it is drawn: not over water or off a ledge (SafeGround.cs). A standing
                     // cart stands on judged ground already (the dismount's check), and the keeper may be far away at
                     // another level, where the judge (a raycast at his level) would refuse it falsely.
-                    string offGround = WhyCartCannotStayHere(pc);
+                    string offGround = WhyCartCannotStayHere(pc, atTheDoor ? Position.y : (float?)null);
                     if (offGround != null)
                     {
                         Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart here: {offGround}.");

@@ -599,6 +599,7 @@ namespace GK2DonkeyAPI
             Header("Behaviour");
             Toggle("Stay mounted when going through doors (scene changes)", Plugin.StayMountedThroughDoors, null);
             Toggle("Dismount when entering a building, church or dungeon (no mounting indoors)", Plugin.DismountIndoors, null);
+            Toggle("The cart indoors too (only with the row above off)", Plugin.CartIndoors, null);
             Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
             IntSlider("Cart capacity (items)", Plugin.CartSlots, 1, 6, () => Mount.ApplyCartSlots("the panel"));
             GUILayout.Label("How many items the cart carries (1-6). Three and more ride in layers of up to two. Lowering it never drops anything: a fuller cart stays full until unloaded. Saddle Up's own 'Cart capacity' (2 / 4 / 6) overrides this row while it is installed; editing one donkey on the Instances tab gives that cart its own number.", small);

@@ -40,10 +40,11 @@ does.
 - **Main thread only:** call from Update, from event handlers, and from Harmony patches of game code.
 - **Owner id:** pass your plugin GUID wherever it's asked for. It's how the core tells mods apart in rules, rides,
   overrides and the log.
-- **You can add restrictions but never remove the core's.** Co-op, indoors, "busy" (work, fishing, cutscenes;
+- **You can add restrictions but never remove the core's.** Co-op, "busy" (work, fishing, cutscenes;
   not the game's attack states: the keeper fights from the saddle, [mounted-combat.md](mounted-combat.md)), the cart
   while the keeper wears armour (fights are for the Ride style), build mode, the save hand-back and the mount-object
-  check always apply. `TryMount` returns their reason like any other.
+  check always apply. `TryMount` returns their reason like any other. Indoors is not one of them: it is a Behaviour
+  switch (`DismountIndoors`, `CartIndoors`), on in the core.
 - `Mounts.IsAvailable` is false when the player switched the core off (`General.Enabled`) or its start-up check of
   the game's code stopped it (a member gone or the core's code changed since the build). Every call then refuses or
   does nothing; nothing throws. `Mounts.StatusText` says which, and names a feature the check switched off.
@@ -143,7 +144,17 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 **Behaviour** (`Mounts.Behaviour`, section "General"):
 - `HitchKey` (0.14.0, a `KeyCode`; `None` switches the key off)
 - `StayMountedThroughDoors`
-- `DismountIndoors`
+- `DismountIndoors` (on): dismount at the door into a building, the church or a dungeon (the game's indoor light
+  presets) and refuse to mount inside ("Not indoors."). Off: riding goes on through a same-scene door and the
+  keeper can get on inside; a door with a loading screen still follows `StayMountedThroughDoors`.
+- `CartIndoors` (0.36.0, off; counts only with `DismountIndoors` off): the cart comes indoors too, its load on it.
+  Off, a cart ride through the door leaves the cart standing at the door with its load (an unhitch: `Unhitched`)
+  and goes on inside as a ride; at the morgue with a corpse aboard the keeper gets off inside (`Dismounted`,
+  "morgue") and takes the corpse into his hands, the mount there with him. A summoned mount (`TryMount`, its cart
+  goes with the ride) or a cart that can't be left there gets off at the door as before (`"indoors"`). The
+  cart is refused inside wherever it would come from (getting on with it, `SwitchStyle`, a hitch from the saddle
+  or on foot, the companion's cart key) with "Not the cart indoors." Switching either off while inside ends
+  the ride at once. See [indoors.md](indoors.md).
 - `ShowMessages`
 - `IdleShuffle` (0.7.0, off in the core): donkeys standing in the world **without a cart** take a few slow steps now
   and then, so they don't stand perfectly still. See "Idle shuffle" below.
@@ -587,9 +598,14 @@ core; a mod switches it on for its player. How the game delivers and what the fe
 ## A corpse into the morgue (0.27.0)
 
 The way back from the crossroads: a body carted to the morgue. Driving the cart through the morgue door, the ride ends
-at the door as it always does (`DismountIndoors`; a door that loads another scene ends it too) and the cart is parked
-outside with its load. With `CorpseIntoMorgue` on (the core's default) the corpse comes off that parked cart into the
-keeper's hands in the same breath, so he arrives inside carrying it. Code: `src/GK2DonkeyAPI/MorgueHandover.cs`.
+at the door as it always does (`DismountIndoors`, or `CartIndoors` off; a door that loads another scene ends it too)
+and the cart is parked outside with its load. With `CorpseIntoMorgue` on (the core's default) the corpse comes off
+that parked cart into the keeper's hands in the same breath, so he arrives inside carrying it. Code:
+`src/GK2DonkeyAPI/MorgueHandover.cs`. With riding allowed indoors and the cart not (`DismountIndoors` off,
+`CartIndoors` off) the cart is left at the door and the keeper rides in: once the door is known to be the morgue he
+gets off inside ("morgue"; a ride needs empty hands) and the corpse comes off the cart at the door into his
+hands, the mount inside with him. With the cart allowed indoors (both switches) the drive goes on into the morgue
+and nothing is handed over: the corpse is on the cart inside, taken off it as from any cart.
 
 - **Only the morgue.** It is the one building a body is worked in (the pallets, the autopsy table, the crematorium); in
   a house or the church a body in hand is of no use, and no other cargo comes inside either. `CorpseIntoMorguePlaces`
@@ -888,6 +904,10 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.36.0: the Behaviour key `CartIndoors` (off): with `DismountIndoors` off the cart comes indoors only when it is
+  on; off, a cart ride through a building's door leaves the cart at the door and goes on as a ride (at the morgue:
+  off inside, the corpse into the hands), and the cart is refused inside ("Not the cart indoors."). Before,
+  `DismountIndoors` off let the cart in too: a mod that wants that sets both.
 - 0.36.0: **the word is mount, not kind** (the user, 2026-10-21: one word for one thing). Renamed, a pre-1.0 breaking
   change: `MountKindDef` -> `MountDef`, `MountKindInfo` -> `MountInfo`, `MountKinds` -> `MountCatalog` at `Mounts.Catalog`
   (its list `Kinds` -> `All`, `KindsChanged` -> `MountsChanged`), `MountHandle.Kind` -> `MountHandle.Mount`,
