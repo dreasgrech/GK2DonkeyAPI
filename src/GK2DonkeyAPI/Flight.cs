@@ -216,29 +216,6 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // A readout for the landing rule (docs/flying.md "Refused landings near home"): every change of the walkable
-        // mesh's part ("area") under the keeper riding on the ground, and every stretch off the mesh, one line each. The
-        // user rode between two parts the mesh says are not joined (areas 1 and 434, 2026-10-23): where they split.
-        private static int areaWas = -3;
-        private static float areaNext;
-        private static Vector3 areaWasAt;
-
-        private static void AreaWatch()
-        {
-            if (Time.unscaledTime < areaNext) return;
-            areaNext = Time.unscaledTime + 0.2f;
-            Rigidbody rb = MainGame.PlayerController?.PhysicalBody?.Rb;
-            if (rb == null) return;
-            Vector3 p = rb.position;
-            int a = Mount.Instance.MeshAreaAt(p, out float off, out Vector3 node);
-            if (a == areaWas) { areaWasAt = p; return; }
-            if (areaWas != -3)
-                Plugin.Log.LogInfo($"[flight-area] the walkable mesh under the keeper: {AreaName(areaWas)} -> {AreaName(a)} at {p:F2} (last {areaWasAt:F2}; the nearest node {off:0.00} away at {node:F2})");
-            areaWas = a; areaWasAt = p;
-        }
-
-        private static string AreaName(int a) => a == -1 ? "off the mesh" : a == -2 ? "no mesh" : "area " + a;
-
         // The glide's stages (the frames: GlideFrame; the body's rise: GlideBob). It starts as the beat reaches its frame 7
         // (th 0.75, the wings coming up through the glide's pose) and the beat's clock stops there; the way in (4 frames,
         // slowing) blends the rest of that upstroke into the open wings, then the loop runs its length. Ending (its time,
@@ -431,7 +408,6 @@ namespace GK2DonkeyAPI
                 return;
             }
             float dt = Time.deltaTime;
-            if (Now == Phase.Ground) AreaWatch();
             bool climbing = false;
             if (!MountsPanel.IsOpen && GUIUtility.keyboardControl == 0)
             {

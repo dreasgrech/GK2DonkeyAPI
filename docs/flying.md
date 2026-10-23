@@ -701,7 +701,8 @@ keeper's own ground instead:
 - Self-test "landing: the walk-away test" (group Flying): his own spot reaches his part at once; a part no cell is on
   runs to the cap from his spot (the worst case's time, under 400 ms); a pen of four temporary walls 2.5 to his side
   walls its spot in.
-- The `[flight-area]` readout stays until the user has seen landings by the home work.
+- The `[flight-area]` readout was taken out once the user had landed by the home (2026-10-23: "its working well and
+  landing too"); `MeshAreaAt` stays (the walk-away test uses it).
 
 **Second pass (the same day): freezes, and the far take-off.** The user: "sometimes is freezing when i press space
 while trying to land". The log (13:32):

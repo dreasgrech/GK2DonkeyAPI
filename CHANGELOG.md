@@ -541,7 +541,7 @@ Development:
   landing the mesh refuses is now judged by the keeper's own ground, by the game's own rules for where he can walk:
   allowed when he could walk from it to where he took off or it is open ground, refused on a rock top, a ledge or a
   closed pocket. The judging is spread over a few frames while the dragon hovers, so pressing land never freezes the
-  game. A dev readout (`[flight-area]`, `[flight-walk]` log lines) shows each judgement (docs/flying.md "Refused landings").
+  game. A dev readout (`[flight-walk]` log lines) shows each judgement (docs/flying.md "Refused landings").
   The `[occlusion]` readout is now off unless switched on in the Flying tab; the landing's checks are timed in the
   `[perf]` lines (`Landing`, `LandGrid`).
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every

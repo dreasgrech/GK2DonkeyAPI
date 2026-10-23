@@ -64,7 +64,7 @@ defaults):**
 | Look | AutoSeat off (every player) | AutoSeat on | What made it |
 |---|---|---|---|
 | donkey, hellfire, royal-parade | 6.6 px (0.221) | 11.5 px (0.385) | the player's `SeatOffset` 0.22; the donkey's back + the player's -6 |
-| rat, worm, dragon | 6.6 px | 11.5 px | the same: no seat of their own |
+| rat, worm, dragon | 6.6 px | 11.5 px | the same: no seat of their own (the dragon since 2026-10-23: seat row 62, 12.5 px, its body raised 6 px) |
 | snail | **3.0 px** (0.101) | 11.5 px | `SeatOffset = 0.1` (the mount); **lost with AutoSeat on** |
 | gerry | **25.5 px** (0.852) | 25.5 px | `seat = picture` + `SeatAdjustPx = -16` (the mount): the same in both |
 

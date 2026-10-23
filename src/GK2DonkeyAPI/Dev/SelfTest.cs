@@ -106,6 +106,7 @@ namespace GK2DonkeyAPI
         private const string GroupLooks = "Skins and effects";
         private const string GroupIndoors = "Indoors";
         private const string GroupFlying = "Flying";
+        private const float DragonRaisePx = 6f; // the dragon's body raised on longer legs (make_creatures.py RAISE): its seat 6 px above the donkey's
 
         // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
         internal static readonly Scenario[] Scenarios =
@@ -1586,8 +1587,11 @@ namespace GK2DonkeyAPI
             // player's two seats exactly as they were (6.6 px off, the compatibility rule)
             float At(string k) => seats.TryGetValue(k, out float v) ? v : float.NaN;
             Check(Math.Abs(At("donkey|off") - 6.6f) < 0.3f, $"the plain donkey's manual seat is untouched: {At("donkey|off"):0.0} px (6.6)");
-            foreach (string id in new[] { "rat", "worm", "dragon" })
-                Check(Math.Abs(At(id + "|off") - 6.6f) < 0.8f && Math.Abs(At(id + "|on") - At(id + "|off")) < 0.3f, $"{id}: seat = 52 (68 on the 128 canvas) seats the rider where the donkey's seat was, in both modes ({At(id + "|off"):0.0} / {At(id + "|on"):0.0} px)");
+            foreach (string id in new[] { "rat", "worm" })
+                Check(Math.Abs(At(id + "|off") - 6.6f) < 0.8f && Math.Abs(At(id + "|on") - At(id + "|off")) < 0.3f, $"{id}: seat = 52 seats the rider where the donkey's seat was, in both modes ({At(id + "|off"):0.0} / {At(id + "|on"):0.0} px)");
+            // the dragon's body 6 px higher on its longer legs (make_creatures.py RAISE, the user's pick 2026-10-23): its
+            // seat row 68 -> 62, the rider on its raised back 6 px above the donkey's seat
+            Check(Math.Abs(At("dragon|off") - (6.6f + DragonRaisePx)) < 0.8f && Math.Abs(At("dragon|on") - At("dragon|off")) < 0.3f, $"dragon: seat = 62 seats the rider {DragonRaisePx:0} px above the donkey's seat (its raised body), in both modes ({At("dragon|off"):0.0} / {At("dragon|on"):0.0} px)");
             Check(Math.Abs(At("snail|off") - 3.5f) < 0.8f && Math.Abs(At("snail|on") - At("snail|off")) < 0.3f, $"snail: seat = 55 seats the rider 3 px lower in both modes ({At("snail|off"):0.0} / {At("snail|on"):0.0} px)");
             Check(Math.Abs(At("gerry|on") - At("gerry|off")) < 0.3f, $"gerry: the picture seat is the same in both modes ({At("gerry|off"):0.0} / {At("gerry|on"):0.0} px)");
             // the skin's own SeatAdjustPx = -16 (an override on the instance, owned by Looks) counts on a declared seat;
@@ -1682,8 +1686,9 @@ namespace GK2DonkeyAPI
             // with the cart too, the snail 3 px lower
             if (seatsCart.TryGetValue("donkey", out float donkeySeat) && !float.IsNaN(donkeySeat))
             {
-                foreach (string id in new[] { "rat", "worm", "dragon" })
+                foreach (string id in new[] { "rat", "worm" })
                     Check(seatsCart.TryGetValue(id, out float sp) && Math.Abs(sp - donkeySeat) < 0.8f, $"{id}: the cart-style seat is the donkey's ({(seatsCart.TryGetValue(id, out float s2) ? s2.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
+                Check(seatsCart.TryGetValue("dragon", out float sd) && Math.Abs(sd - (donkeySeat + DragonRaisePx)) < 0.8f, $"dragon: the cart-style seat is {DragonRaisePx:0} px above the donkey's, its raised body ({(seatsCart.TryGetValue("dragon", out float s5) ? s5.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
                 Check(seatsCart.TryGetValue("snail", out float ss) && Math.Abs(ss - (donkeySeat - 3f)) < 0.8f, $"snail: the cart-style seat is 3 px lower than the donkey's ({(seatsCart.TryGetValue("snail", out float s3) ? s3.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
                 Check(seatsCart.TryGetValue("gerry", out float sg) && Math.Abs(sg - 25.5f) < 0.8f, $"gerry: the cart-style seat is the picture seat with the skin's -16 ({(seatsCart.TryGetValue("gerry", out float s4) ? s4.ToString("0.0") : "?")} px, 25.5 recorded)");
             }
