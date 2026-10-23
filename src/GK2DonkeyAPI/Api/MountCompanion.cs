@@ -446,6 +446,12 @@ namespace GK2DonkeyAPI.Api
 
         private MountResult UseWhileMounted(MountStyle style)
         {
+            // No cart while flying (the flying experiment; the user, 2026-10-23: quietly, no bubble): the cart key in the
+            // air does nothing
+            if (style == MountStyle.Cart && Mounts.Style != MountStyle.Cart && Flight.InAir)
+            {
+                return MountResult.Refused("flying");
+            }
             if (Mounts.Style == style)
             {
                 Mounts.Dismount("dismounted");

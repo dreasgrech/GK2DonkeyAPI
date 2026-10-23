@@ -416,6 +416,9 @@ Every remaining kind of jump will name its cause there.
   Open, measured next: the detector now logs the camera's and the body's x and z too, to see the sideways lag the
   catch-up removes before changing how the camera catches up.
 
+- No cart in the air (the user, 2026-10-23): the cart key, the panel's Drive the cart and `Mounts.SwitchStyle(Cart)`
+  do nothing while the mount is off the ground (`Flight.InAir`), quietly: no bubble, no landing.
+
 Not yet known: what draws the table (one mesh, its bounds, readable or not), whether any collider at all lies under
 its top (another layer, a trigger, back faces only), and whether such places are common (decorative cliffs, map
 edges). The survey now also writes `GK2-flight-survey-HHmmss-column.txt`: every collider a ray from 60 above meets

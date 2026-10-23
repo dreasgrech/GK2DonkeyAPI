@@ -93,6 +93,7 @@ namespace GK2DonkeyAPI
         internal static string Blocker { get; private set; }
         internal static Vector3 LastSafe => lastSafe;
         internal static bool FreeFor(Mount.Instance i) => Free && i != null && i == owner;
+        internal static bool InAir => owner != null && Now != Phase.Ground; // off the ground: flying, taking off, landing, a jump
         internal static Phase Now { get; private set; }
         internal static float HeightPx => heightPx;
         internal static string Why { get; private set; } = "";

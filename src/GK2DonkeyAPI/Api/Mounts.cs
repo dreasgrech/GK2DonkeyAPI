@@ -120,6 +120,10 @@ namespace GK2DonkeyAPI.Api
             {
                 return MountResult.Success;
             }
+            if (style == MountStyle.Cart && Flight.InAir)
+            {
+                return MountResult.Refused("flying"); // no cart in the air (the flying experiment): quietly, no landing
+            }
             if (Flight.HoldForLanding("to " + style))
             {
                 return MountResult.Refused("Land first."); // flying free: down first
