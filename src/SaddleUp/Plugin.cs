@@ -81,6 +81,14 @@ namespace SaddleUp
             p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Your mount, its cart and its babies go (the cart's load is set down first); the next key brings a new one. None = no key.",
                 pressed: me.SendAway);
+            // jumping and flying (the Donkey API's experiment, dev only for now: the rows show only while it is on). One key for
+            // both: a press jumps, a second press in the air takes off on a mount that flies, a press while flying lands.
+            p.Key("Keys", "JumpKey", new KeyboardShortcut(KeyCode.Space), "Jump", "Riding, your mount jumps: hold the key for a higher jump. Over what is lower than the jump. Not in a fight, where Space attacks. None = no jumping.",
+                apply: v => Mounts.Behaviour.Set(Guid, "JumpKey", v));
+            p.Key("Keys", "FlyKey", new KeyboardShortcut(KeyCode.Space), "Fly", "Riding a mount that flies, outdoors: take off, and land again. The same key as Jump: jump, then press again in the air to take off. None = no flying.",
+                apply: v => Mounts.Behaviour.Set(Guid, "FlyKey", v));
+            p.EnableWhen("Keys", "JumpKey", () => Mounts.FlyingEnabled);
+            p.EnableWhen("Keys", "FlyKey", () => Mounts.FlyingEnabled);
             p.Key("Keys", "MountsKey", KeyboardShortcut.Empty, "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins, effect and colours. None = no key (the Mount section's button opens it too).",
                 pressed: p.OpenPanel);
 

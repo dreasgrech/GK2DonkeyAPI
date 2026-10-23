@@ -28,7 +28,7 @@ the experiment off it is 0 and nothing changes (a default player's donkey is unt
   ridden mount, or only the flying ones.
 - Down at once on a dismount, a style change, the experiment off, a cleanup. Safe in step 1: the keeper never left
   the walkable ground.
-- Keys (session, cycled on the tab; right-click goes back): Space take off / land, Left Shift climb, Left Ctrl descend (R and F until 2026-10-23), J jump. Not
+- Keys: Space jumps (hold for the full height, flick for a hop; over what is lower than the jump), Space again in the air takes off a mount that flies, Space while flying lands (the Behaviour keys JumpKey / FlyKey, Saddle Up's Jump and Fly rows; "Jump and fly on one key" below); Left Shift climb, Left Ctrl descend (session, cycled on the tab; R and F until 2026-10-23). Not
   read while the Mounts panel or a text box has the keys. **Unchecked: whether the game binds any of them** (the
   game reads its keys through its own input map; if one of them also does something, pick another on the tab).
 - The camera rises with the height (seen 2026-10-22: without it the mount flew off the screen's middle): the
@@ -810,6 +810,144 @@ with how much of it was at once.
   mod searches once, as before. A terrain switched off is skipped in the lookups (the build used to leave it out).
 - **Flying indoors** is off unless a mod turns it on (the Behaviour key `FlyIndoors`, off in the API; Saddle Up keeps
   it off with no row): no take-off indoors, a flight through a building's door lands there.
+
+### The jump against things: five fixes (2026-10-24, built, not seen in game)
+
+The user: "i was spammed the bubble ... when jumping while touching objects ... the jump accelerates forward ... and
+then i get teleported backwards to the first spot with the bubble showing". The log (the yard: potter wheel, furnace,
+wood stockpile, ruins) and F11's one failure:
+
+- **The bubble**: every refused touch-down said "Can't land there.". Gone for jumps (the log keeps the reason).
+- **"On top of something" beside it**: pressed against the potter wheel the body never moved (the bump held it), but
+  the floor's 0.24 ball under the jump touched the wheel beside him: "came down on something 21 px up" at the take-off
+  spot, held 0.5 s, sent back (a 22 px drop in one frame). A jump's floor is now cast thin (0.05) straight down
+  (`FloorUnder(..., r)`).
+- **Sent back from a hair inside something**: the bump let the body slide up to the wood stockpile and the landing
+  said "his body doesn't fit ... by 0.06". Now `Mount.Instance.PushOut` moves the touch-down out of what it goes into
+  (up to 0.5) and judges it again; still refused, `Back` lands at the nearest good spot back along the jump's path
+  (every 0.25, judged at once, within 8 ms), the take-off spot last.
+- **The surge**: the flight's mover went at the full walking speed at once and slid along what it touched, so a body
+  slowed against something shot off along it. Now the jump keeps the body's own speed at the take-off and steers
+  towards the stick, the walking speed in `JumpSteerS` 0.35 s; what was really moved (a slide's share, nothing into
+  a wall) is the speed after each step.
+- **Through a bare collider** (F11: the tall test wall, nothing drawn): the bump counts what is drawn (flight's rule:
+  over what isn't). For a jump an obstacle reaches the higher of its picture and its collider (`FlyMove(...,
+  colliderToo)`), so the game's invisible walls stop a jump. The yard's things report both and differ by under 0.5.
+- Tests: the jump's walls are three now: low (over it), tall 0.7 ahead (stopped, down against it, not sent back),
+  tall pressed against (a jump on the spot: never "on top", never sent back, no surge); the camera's check is the
+  gap between the flight and the camera closing smoothly, not the camera's own step (the take-off's climb is fast).
+- F11 2026-10-24 00:3x: 879 passed, 1 failed. Every jump wall passed (over the low one, down against the tall one
+  0.34 from the start, on the spot pressed against it). The failure: the camera still 9.0 px under the flight 30
+  frames after a jump turned flight, at 132 px. The code order is right (the height, then the camera, in one tick);
+  a "Camera rises with the height" slider under 1 gives exactly that (0.93 x 132). The check now takes the slider's
+  share and says it, the ease and the height. Also: "jump landed (in place, ... 124.72 from the take-off)" measured
+  an in-place jump from an older jump's spot (`jumpFreed`).
+- The user, the same night: "if you keep moving while doing the jump, you accelerate forward instead of just
+  jumping". The new build's own lines: held running jumps went 5.08 and 5.32 in x in about half a second (about 10
+  a second). The mover's speed is the free flight's formula (the walk's force over its damping), not what the body
+  really did. Now the ride's top speed is measured on the ground (the fastest `linearVelocity` of this ride, anew when
+  the speed multiplier changes) and a jump's air speed never goes above it; "jump landed (...; speed: took off at X,
+  the ride's top Y, the mover's Z, D moved in the air)" says all three, to see the mismatch in numbers.
+- F11 2026-10-24 (00:38 build): 879 passed, 1 failed, the camera again, now with its numbers: the share 1.00, the
+  ease 0.85, 8.5 px left at 137 px. The camera was right and the test wrong: the ease is 0.3 s of time, and at 117 fps
+  the test's 30 frames were 0.26 s (137 x (1 - smoothstep(0.85)) = 8.4). The check now waits 0.45 s of time. The
+  mover's speed read 12.0 a second in every test jump; the ride's top 0.0 there (the tests never ride on the ground
+  before jumping, so the cap is off in them): the player's own running jumps will show the ride's top against it.
+- The next run (the Flying group, 70 passed, 1 failed): the camera caught up (0.4 px left after 0.46 s, the ease 1.00)
+  but the gap closed 3.8 px in one frame. The ease scaled the camera's whole lift, so mid-ease it trailed the take-off's
+  fast climb (to 209 px) by tens of px and raced after it. Now only the jump's own gap (`cameraGapPx`, the height at
+  the press) is eased away; the camera follows the climb from the first frame.
+
+### Jump and fly on one key (2026-10-23, built, not seen in game)
+
+The user: two Saddle Up keys, Jump and Fly, Space both; every mount jumps; "if the mount is a flying mount ... and is
+outdoors, instead it flies if both fly and jump are the same button". Agreed with the skyriding rule instead of the
+classic one (a flier that never jumps): "so to fly it would be a double jump press? for flying mounts" - yes.
+
+- **Who flies, who jumps**: `[Mount] flies` (off unless said) and `jumps` (on unless said), `Catalog.Entry.Flies` /
+  `Jumps`, `MountDef` / `MountInfo` (the word `Abilities` was taken: `MountAbility` code hooks). The dragon's file says
+  `flies = true`; `CanFly` asks the worn mount's flag (`Looks.MountWanted`), not the id "dragon" (the parity rule).
+  The Flying tab's "Any mount flies" and "Every mount jumps, also those that don't" (now off by default) override.
+- **The keys**: the Behaviour values `JumpKey` and `FlyKey` (`Plugin.cs`, General, Space both, in `defaults.cfg`);
+  Saddle Up's Keys rows Jump and Fly set them (`v.MainKey`: the key alone) and show only while
+  `Mounts.FlyingEnabled`. The tab's old Take off / Jump key rows are gone (a label says what is set); climb (Left
+  Shift) and descend (Left Ctrl) stay session keys on the tab.
+- **The press** (`Flight.Press`): one key means both. On the ground: a jump if the mount jumps, else a take-off if
+  it flies. Mid-jump, in the air (the arc above the ground, or on top of something; not the crouch, the judging, the
+  drop or the squash): a take-off if `CanFly`, else nothing (a mount that flies but is refused here, indoors or the
+  cart: "Can't fly in here." / "Can't fly now.", once a jump; one that doesn't fly: silent, logged). Flying: lands.
+  Two keys: the fly key takes off and lands, the jump key only jumps. A held first press never takes off.
+- **The jump turned flight** (`JumpToFlight`): the launch carries on from the jump's height at the arc's speed (no
+  crouch); the body, taken by the jump, stays the mod's (free flight from there, the take-off spot the jump's); the
+  camera, which stayed down for the jump, eases up over 0.3 s (`cameraEase`, smoothstep, whole pixels) instead of
+  snapping the jump's height in one frame.
+- **Space is the game's too** (the registry `settings` and `GameKey`): Select (menus), SpeechSkip (dialogue) and
+  Attack (a weapon out, the fights). The keys are read only with the controls free and not paused, and in armour Space
+  is left to the attack (logged once a fight).
+- **Checked against the API's own ways** (the user: "is it implemented properly from the api?"), three gaps fixed the
+  same evening: the keys were read while the Settings window captured a key (now `SettingsRows.CapturingKey` stops
+  them, as it stops `KeyActions.Poll`, and a key just changed waits for its release); the Behaviour keys were
+  `KeyCode`s while the rows set key combinations (Ctrl+Space acted as Space): now `KeyboardShortcut`s, pressed as
+  `KeyActions.Pressed` reads them, compared with `SameKey` (`Defaults` compares and parses them too); and a mod had
+  no way to jump, take off or land, nor to know: `Mounts.Jump()`, `TakeOff()`, `Land()` (`MountResult`, the reason
+  in it), `Mounts.FlightState` and `FlightChanged` (raised from `Flight.Set` and once a tick: the climb key takes a
+  launch to Airborne without `Set`).
+
+### The jump, the platformer way (2026-10-23, built, not seen in game)
+
+The user asked how the jump's trajectory was and in what style ("super mario or other types?"); the mount's jump
+only, never the keeper on foot (`CanJump` wants him mounted, riding plain). It was a textbook symmetric parabola
+(up at 4H/T, down under 8H/T^2), the same up and down, a fixed height whatever the key did, no crouch or squash,
+summed frame by frame, and the camera rose and fell with it. Now (`Flight.JumpHeightAt(t, letGo)`):
+
+- A crouch (`JumpCrouchPx` 2 over `JumpCrouchS` 0.05 s), the rise from -C to `JumpPx` 14 in `JumpRiseShare` 0.55 of
+  `JumpTimeS` 0.45 s, a hang (`JumpHangS` 0.04 s), the fall in the rest (gravity about twice the rise's), a squash
+  (`JumpSquashPx` 2 over 0.1 s).
+- The key let go on the way up: the rest of the rise brakes `JumpCut` (3) times harder, the top never below
+  `JumpTapPx` 7. A tap is a 7 px hop, let go after 0.2 s 12.3 px, held 14. The tab's Jump button and the self-test
+  jump held (`Flight.TestJumpHeld` lets the test hold or let go).
+- The height is a function of the time since the press and of the let-go time, never summed: the same top and
+  landing at 30, 60 and 144 fps (checked: 14.00 px all three, down at 0.60-0.63 s; continuous to 0.02 px in 0.1 ms).
+- The camera stays on the ground for a jump (`FollowCamera`); the height-jump detector no longer counts a jump's
+  own screen step (it would at 30 fps: 4-5 px a frame), its other checks stay on.
+- Still open: the legs walk (or stand) in the air: no jump pictures yet; a per-mount feel (the dragon with a wing
+  beat) is an art step after the feel is judged.
+
+Seen in game the same evening: "definitely very little right now, and i wasnt able to jump over anything". The log:
+every press let go after 0.09-0.25 s, so nearly every jump was the 7-9 px tap; and the body never left the ground (the
+jump was drawn only). Now:
+
+- `JumpPx` 28, `JumpTapPx` 16, and a press shorter than `JumpHoldMinS` 0.1 s counts as that long (inside
+  `JumpHeightAt`, so the test covers it): an ordinary press is a jump, a flick a hop (let go after 0.2 s: 24.9 px).
+- **Over things** (`JumpOver`, on): the jump is a short free flight on the arc. As the mount leaves the ground (the
+  crouch done) `EnterFree` takes the body ("the jump takes the body"); `FixedStep` moves it at the walking speed with
+  the bump sweep at the jump's feet (`FlyMove`, `ClearancePx`) and the drawn ground's walls, so what is lower than the
+  jump is passed over and a taller thing stops it. `FreeTick` leaves a jump alone (its floor would lift it to the
+  clear height); the step-up's make-up is the flight's only (a jump's height is its arc, every tick).
+- `JumpTick`'s stages: **Arc** (drawn at the arc, never inside what is under it: the ground's and the drawn things'
+  top, `FloorUnder`); **Perch** (come down onto something: held on its top, ridden off it the mount falls at the jump's
+  fall gravity; still there after `JumpPerchS` 0.5 s: back); **Judge** (the touch-down judged as a flight's landing:
+  `WhyCannotLandAt` with the grid, connected to the take-off spot, the walk-away test in slices, judged at once after
+  0.25 s; the body held still meanwhile); **Drop** (the body given back on the ground under it, the picture keeping its
+  place and falling the rest: the lesson of the landing's 34 px flash); **Squash**. Refused: "Can't land there." and
+  back on the take-off spot (he stood there: the lock-out guarantee).
+- The ways out: a save mid-jump puts him down at once (`BeforeSave`, judged at once); a dismount or a style change
+  mid-jump puts him down at once, then goes on (`HoldForLanding`); a door, a scene change, the experiment off:
+  `Release` as for a flight. Indoors the jump stays in place (logged).
+- Logged: "the jump takes the body", "bumps into ...", "the jump came down on something N px up", "the jump lands at",
+  "the jump can't land (...)", and "jump landed (over things, held / the key let go after N s, D from the take-off,
+  over something up to N px)". The "over something up to" is what the floor read under the jump: the first in-game
+  run says how tall the game's fences and rocks are to the jump.
+- Not known yet: whether the bump sweep sees every kind of fence (it is the flight's: built for trees, rocks and
+  buildings), and how a jump over a fence's top reads when its collider is lower or higher than its picture.
+
+### The glide's head nods (2026-10-23)
+
+The user: "the head is completely 100% static ... we cant have it fully static". Since the glide's first pass the neck
+and head were held still (their 0.3 px sway had only re-rounded the neck's shading into speckle). Now the head nods
+slowly, `GLIDE_HEAD_PX` 1.5 at the head (shares 0, 0.35, 0.7, 1 from the neck's base), 0.3 of the loop after the
+wing's flex, faded in and out through the way in and out (M). Whole pixels: the head's top runs rows 28-30 over the
+loop, moving as one (the job's `glide_head.png`). 28 glide pictures changed.
 
 ### The flying neck shorter and steadier (2026-10-23)
 

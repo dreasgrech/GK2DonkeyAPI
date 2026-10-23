@@ -58,6 +58,8 @@ does.
 | `MountResult SwitchStyle(style, showMessage = true)` | Remounts in place in the other style. The new style's rules are asked first, and if one refuses, the ride goes on unchanged. |
 | `IsMounted`, `Style`, `Owner` | State. `Owner` is the id of the mod that started the ride, kept across style switches. |
 | `RingBell()`, `Bray()` | Sounds, subject to the `Sounds` and `Bell` features. |
+| `MountResult Jump()`, `TakeOff()`, `Land()` (0.36.0) | The ridden mount off the ground, as the jump and fly keys do it (for a mod's own button or a script). `Jump`: a full jump; refused in the air, with the cart, on a mount whose `Jumps` is false. `TakeOff`: from the ground, or from a jump in the air (the jump becomes the take-off); refused on a mount whose `Flies` is false, indoors (`FlyIndoors`), with the cart, already flying. `Land`: while taking off or flying; it comes down where the keeper can stand, else hovers. The reason is in the result; the bubble says nothing. All refused while `FlyingEnabled` is false. |
+| `FlightState`, `FlyingEnabled` (0.36.0) | `MountFlight`: `Ground`, `Jumping`, `TakingOff`, `Flying`, `Landing` (Ground while not riding). `FlyingEnabled`: jumping and flying are switched on (a dev-only experiment for now): show your own jump or fly rows only then. |
 
 **While mounted, the keeper's hands stay empty.** Only the cart carries:
 - in Cart style, pickups land on the cart (`CartSlots` slots: 6 by default, 1 to 6, three and more in layers);
@@ -102,6 +104,9 @@ To keep the player out of the cart style altogether, there's no feature; use a m
 - `Mounted(MountStyle)`: after the donkey is summoned, and after a style switch.
 - `Dismounted(string reason)`: after the ride ended, with the cargo already handed back. Reasons include
   `"dismounted"`, `"style change"`, `"indoors"` and a stay rule's text.
+- `FlightChanged(MountFlight now)` (0.36.0): the ridden mount's `FlightState` changed. A jump: `Jumping`, then
+  `Ground`; a take-off: `TakingOff`, `Flying`; a landing: `Landing`, `Ground`; a jump turned flight: `Jumping`,
+  `TakingOff`. Raised whoever started it: the keys, `Jump` / `TakeOff` / `Land`, or the core (a door, a dismount).
 - `CargoLoaded(CargoItem item)` and `CargoUnloaded(CargoItem item)`: an item went onto the cart or left it.
   `CargoItem` has `Id` (e.g. `"wood"`, `"body_corpse"`, `"body_zombie"`), `UniqueId` (the game's item GUID, which
   tells two zombies apart), `IsZombie` and `ZombieName`. Nothing is reported for the core's own bookkeeping, such as
@@ -150,6 +155,13 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `FlyIndoors` (0.36.0, off): on, a flying mount may take off and fly indoors, as a lift only (never through walls).
   Off: no take-off indoors ("indoors (flying indoors is off)"), and a flight that goes through a building's door
   lands there. Saddle Up keeps it off and offers no row for it.
+- `JumpKey`, `FlyKey` (0.36.0, `KeyboardShortcut`, Space both: a key with its modifiers, Ctrl+Space is Ctrl+Space;
+  more keys held, such as the climb's Left Shift, don't stop a press): riding plain, the mount jumps; a mount that flies takes off
+  and lands. One key for both: a press jumps, a second press in the air during the jump takes off a mount that
+  flies, a press while flying lands. Two keys: each its own. `None`: off. Read only while `Mounts.FlyingEnabled`
+  (the dev-only experiment), never during a dialogue, a menu, a pause or while a key is being set in the Settings
+  window, and Space not in a fight in armour (the game's attack); a key just changed counts once it has been let go.
+  Saddle Up sets both from its Keys rows.
 - `CartIndoors` (0.36.0, off; counts only with `DismountIndoors` off): the cart comes indoors too, its load on it.
   Off, a cart ride through the door leaves the cart standing at the door with its load (an unhitch: `Unhitched`)
   and goes on inside as a ride; at the morgue with a corpse aboard the keeper gets off inside (`Dismounted`,
@@ -652,7 +664,8 @@ What the player rides as a creature type, against a skin, which is how it is dra
 A mount (`Mounts.Catalog`, `MountDef`) owns the rider's seat for it (values for existing tuning keys: `Tuning` for both
 styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`, their size
 against the grown mount in `FoalScale`, 0.2 to 1, 0.6 by default; a running foal is remade when its mount's value
-changes), a default
+changes), whether it flies and jumps ridden plain (`Flies`, false by default, and `Jumps`, true; a pack's `flies = true`
+and `jumps = false`; 0.36.0: flying asks the mount's flag, never its id), a default
 effect (`Effect` / `EffectWhen`, shown when an instance's own `Effect` key is `MountEffects.FromMount`, "mount"), and its
 **abilities**. A skin names its mount (`MountSkinDef.Mount`, a pack's `mount =`; the donkey by default), so the red and
 a hypothetical blue dragon would be two skins of the dragon mount, and Hellfire is a skin of the donkey mount. An instance's mount is its
@@ -927,6 +940,11 @@ History:
 - 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
   foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
   old places for one key (a call each; before, the last call won).
+- 0.36.0: `MountDef.Flies` (false) and `Jumps` (true), `MountInfo.Flies` / `Jumps` (`[Mount] flies`, `jumps`):
+  whether a mount flies and jumps, ridden plain; the Behaviour keys `JumpKey` and `FlyKey` (Space both: one key, a
+  second press in the air takes off; `KeyboardShortcut`s, modifiers kept); `Mounts.FlyingEnabled` (jumping and flying
+  switched on: dev only for now); `Mounts.Jump()`, `TakeOff()`, `Land()`, `Mounts.FlightState` and the event
+  `FlightChanged` (`MountFlight`: Ground, Jumping, TakingOff, Flying, Landing).
 - 0.36.0: the Behaviour key `FlyIndoors` (off): on, flying indoors is allowed, as a lift; off, no take-off indoors
   and a flight through a door lands. Saddle Up keeps it off.
 - 0.36.0: the Behaviour key `CartIndoors` (off): with `DismountIndoors` off the cart comes indoors only when it is

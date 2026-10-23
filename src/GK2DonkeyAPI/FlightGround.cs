@@ -301,7 +301,9 @@ namespace GK2DonkeyAPI
             private static readonly Dictionary<int, float> pictureTop = new Dictionary<int, float>();
             internal static string LastBlocker;
 
-            internal static Vector3 FlyMove(PlayerController pc, Vector3 from, Vector3 move, float flightY)
+            // colliderToo: an obstacle reaches the higher of its picture's top and its collider's (a jump: an undrawn
+            // collider, the game's invisible walls, blocks it; free flight goes over what isn't drawn)
+            internal static Vector3 FlyMove(PlayerController pc, Vector3 from, Vector3 move, float flightY, bool colliderToo = false)
             {
                 LastBlocker = null;
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
@@ -312,7 +314,7 @@ namespace GK2DonkeyAPI
                 {
                     float dist = move.magnitude;
                     Vector3 dir = move / dist;
-                    bool a = Nearest(rb, body, from + done, dir, dist, flightY, out RaycastHit hit, out string what);
+                    bool a = Nearest(rb, body, from + done, dir, dist, flightY, colliderToo, out RaycastHit hit, out string what);
                     if (Shapes(from + done, dir, dist, flightY, out RaycastHit sh, out string shWhat) && (!a || sh.distance < hit.distance))
                     {
                         a = true; hit = sh; what = shWhat;
@@ -333,7 +335,7 @@ namespace GK2DonkeyAPI
                 return done;
             }
 
-            private static bool Nearest(Rigidbody rb, Collider body, Vector3 at, Vector3 dir, float dist, float flightY, out RaycastHit best, out string what)
+            private static bool Nearest(Rigidbody rb, Collider body, Vector3 at, Vector3 dir, float dist, float flightY, bool colliderToo, out RaycastHit best, out string what)
             {
                 best = default; what = null;
                 Bounds b = body.bounds;
@@ -348,7 +350,7 @@ namespace GK2DonkeyAPI
                     Collider c = h.collider;
                     if (h.distance <= 0f || !Blocks(rb, c, h.normal)) continue; // inside it already at the start: let him out
                     bool ground = ((1 << c.gameObject.layer) & GroundLayers) != 0;
-                    float reach = ground ? h.point.y : ObjectTop(c, out _);
+                    float reach = ground ? h.point.y : colliderToo ? Mathf.Max(ObjectTop(c, out _), c.bounds.max.y) : ObjectTop(c, out _);
                     if (reach <= flightY) continue; // under the flight (or nothing drawn there)
                     if (!found || h.distance < best.distance)
                     {
@@ -366,11 +368,12 @@ namespace GK2DonkeyAPI
             // rim's rocks: the floor counted the ground only). NaN: nothing under it (water).
             private static readonly RaycastHit[] downHits = new RaycastHit[32];
 
-            internal static float FloorUnder(PlayerController pc, Vector3 at, float alt)
+            // r: the cast's width; a jump asks with a thin one (straight under the body): the 0.24 ball touched a potter's
+            // wheel beside a jump pressed against it and called it "on top of something 21 px up" (the user, 2026-10-24)
+            internal static float FloorUnder(PlayerController pc, Vector3 at, float alt, float r = 0.24f)
             {
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 if (rb == null) return float.NaN;
-                const float r = 0.24f;
                 float from = alt + 0.3f;
                 int mask = (KeeperMask(rb) & ~(1 << rb.gameObject.layer) & ~(1 << 14)) | OccluderLayers;
                 int n = Physics.SphereCastNonAlloc(new Vector3(at.x, from, at.z), r, Vector3.down, downHits, from - at.y + 30f, mask, QueryTriggerInteraction.Ignore);

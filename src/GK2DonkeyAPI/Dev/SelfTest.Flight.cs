@@ -1,4 +1,5 @@
 using System.Collections;
+using GK2DonkeyAPI.Api;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
@@ -9,6 +10,416 @@ namespace GK2DonkeyAPI
     // time is read out; a pen of four temporary walls next to him walls a spot in.
     internal static partial class SelfTest
     {
+        // The mount's jump (Flight.JumpHeightAt, docs/flying.md "The jump, the platformer way"): the arc by itself at the
+        // tab's values (the top held and tapped, a let-go between, continuous, the same top and landing at 30, 60 and 144
+        // fps, a heavier fall than rise); then, riding plain with the experiment on, one held and one tapped jump live:
+        // their tops, back on the ground, the camera left down, a second press refused mid-jump.
+        private static IEnumerator FlightJump()
+        {
+            const float never = float.PositiveInfinity;
+            float top = Flight.JumpPx, tap = Mathf.Min(Flight.JumpTapPx, Flight.JumpPx);
+            float Top(float letGo, float fps, out float doneAt, out int steps)
+            {
+                float t = 0f, max = -99f, prev = 0f; doneAt = -1f; steps = 0;
+                for (int n = 0; n < 2000; n++)
+                {
+                    t += 1f / fps;
+                    float h = Flight.JumpHeightAt(t, letGo, out bool done);
+                    steps = Mathf.Max(steps, Mathf.RoundToInt(Mathf.Abs(Mathf.Round(h) - Mathf.Round(prev))));
+                    prev = h; max = Mathf.Max(max, h);
+                    if (done) { doneAt = t; break; }
+                }
+                return max;
+            }
+            float held60 = Top(never, 60f, out float heldEnd, out _);
+            float tap60 = Top(0.016f, 60f, out float tapEnd, out _);
+            float mid60 = Top(0.2f, 60f, out _, out _);
+            Check(Mathf.Abs(held60 - top) < 0.1f && heldEnd > 0f, $"held, the top at {held60:0.00} px (the tab's {top:0}), down after {heldEnd:0.00} s");
+            Check(Mathf.Abs(tap60 - tap) < 0.1f && tapEnd > 0f && tapEnd < heldEnd, $"tapped, the top at {tap60:0.00} px (the tab's {tap:0}), down after {tapEnd:0.00} s");
+            Check(mid60 > tap + 0.1f && mid60 < top - 0.1f || tap >= top - 0.2f, $"let go after 0.2 s, between the two: {mid60:0.00} px");
+            float worst = 0f;
+            foreach (float letGo in new[] { never, 0f, 0.08f, 0.15f, 0.25f })
+                for (int k = 0; k < 8000; k++)
+                    worst = Mathf.Max(worst, Mathf.Abs(Flight.JumpHeightAt((k + 1) * 1e-4f, letGo, out _) - Flight.JumpHeightAt(k * 1e-4f, letGo, out _)));
+            Check(worst < 0.05f, $"continuous: the biggest step in 0.1 ms is {worst:0.000} px (no break between the crouch, rise, hang, fall and squash)");
+            float t30 = Top(never, 30f, out float end30, out int s30), t144 = Top(never, 144f, out float end144, out int s144);
+            Check(Mathf.Abs(t30 - t144) < 0.6f && Mathf.Abs(end30 - end144) <= 1f / 30f + 0.001f,
+                $"the same jump at any frame rate: the top {t30:0.00} px at 30 fps, {t144:0.00} at 144; down after {end30:0.000} s and {end144:0.000} s (biggest step {s30} and {s144} px a frame)");
+            // the heavier fall: from the top to the ground faster than from the ground to the top
+            float offT = -1f, topT = -1f, hangEnd = -1f, landT = -1f;
+            for (int k = 1; k < 20000 && landT < 0f; k++)
+            {
+                float tk = k * 1e-4f, h = Flight.JumpHeightAt(tk, never, out _);
+                if (offT < 0f && h > 0f) offT = tk;                                  // leaves the ground (after the crouch)
+                if (topT < 0f && h >= top - 0.001f) topT = tk;                       // reaches the top
+                if (topT >= 0f && hangEnd < 0f && h < top - 0.001f) hangEnd = tk;    // the hang over
+                if (hangEnd >= 0f && h <= 0f) landT = tk;                            // touches the ground
+            }
+            float upS = topT - offT, fallS = landT - hangEnd;
+            Check(fallS > 0f && (fallS < upS || Flight.JumpRiseShare <= 0.5f), $"up from the ground to the top in {upS:0.000} s, down in {fallS:0.000} s (the rise's share {Flight.JumpRiseShare:0.00})");
+
+            // live: a donkey of the test's own ridden plain (the experiment on), in place, then at two walls
+            if (!Flight.Active || !Plugin.MountsOn)
+            {
+                Flight.Jump(null);
+                Check(Flight.Now == Flight.Phase.Ground, "no mount ridden: the jump refused (the keeper on foot never jumps)");
+                Info($"the live part wants the flying experiment on and the mounts on ({(!Flight.Active ? "the experiment off" : "the mounts off")}): skipped");
+                yield break;
+            }
+            if (Mount.Instance.IsIndoors())
+            {
+                Info("indoors: the live part wants open ground (a jump indoors stays in place)");
+                yield break;
+            }
+            Flight.Jump(null);
+            Check(Flight.Now == Flight.Phase.Ground, "no mount ridden: the jump refused (the keeper on foot never jumps)");
+            MountHandle donkey = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+            GameObject walls = null;
+            try
+            {
+                if (donkey == null) { Fail("could not spawn the test's donkey"); yield break; }
+                yield return Until(() => donkey.IsReady, 6f);
+                MountResult r = donkey.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"the test's donkey not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                Mount.Instance i = Mount.IsMounted ? Mount.Ridden : null;
+                Rigidbody rb = PC?.PhysicalBody?.Rb;
+                if (i == null || rb == null) { Fail("riding, but no ridden mount or no keeper's body"); yield break; }
+
+                // a jump: held (or tapped), the stick pushed along x (0: in place); its top, and where he lands
+                float max = 0f;
+                bool camera = false, refused = true, took = false;
+                IEnumerator One(bool held, float push)
+                {
+                    max = -99f; camera = false; refused = true; took = false;
+                    Flight.TestJumpHeld = held;
+                    Flight.TestMoveDir = new Vector2(push, 0f);
+                    try
+                    {
+                        float start = Time.time;
+                        Flight.Jump(i);
+                        if (Flight.Now != Flight.Phase.Jumping) { Fail("the jump didn't start: " + Flight.Why); yield break; }
+                        int frame = 0;
+                        while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.JumpTimeS + Flight.JumpPerchS + 3f)
+                        {
+                            max = Mathf.Max(max, Flight.HeightPx);
+                            camera |= Flight.TestCameraLifted;
+                            took |= Flight.Free;
+                            if (++frame == 5) { float hh = Flight.HeightPx; Flight.Jump(i); refused &= Flight.Now == Flight.Phase.Jumping && Flight.HeightPx == hh; }
+                            yield return null;
+                        }
+                    }
+                    finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                    yield return Frames(10);
+                }
+
+                foreach (bool held in new[] { true, false })
+                {
+                    Vector3 from = rb.position;
+                    yield return One(held, 0f);
+                    string what = held ? "held" : "tapped";
+                    Check(Flight.Now == Flight.Phase.Ground && Flight.HeightPx == 0f && !Flight.Free, $"{what}, in place: back on the ground, the body the game's again");
+                    Check(Mathf.Abs(max - (held ? top : tap)) < 1.01f, $"{what}: the top at {max:0.0} px live (wanted {(held ? top : tap):0})");
+                    Check(!Flight.JumpOver || took, $"{what}: the body taken while off the ground (jump over things {(Flight.JumpOver ? "on" : "off")})");
+                    Check(Flat(rb.position - from) < 0.05f, $"{what}: landed where it jumped ({Flat(rb.position - from):0.000} away)");
+                    Check(!camera, $"{what}: the camera stayed on the ground");
+                    Check(refused, $"{what}: a second press in the air refused");
+                }
+
+                // two walls across the way, 0.7 to his right (on the Obstacle layer, which stops him): a low one is jumped
+                // over, a tall one stops the jump on this side
+                int layer = LayerMask.NameToLayer("Obstacle");
+                if (!Flight.JumpOver) { Info("jump over things is off: the walls not tried"); yield break; }
+                if (layer < 0 || (Mount.Instance.KeeperMask(rb) & (1 << layer)) == 0) { Info("no Obstacle layer stopping the keeper here: the walls not tried"); yield break; }
+                float px = 2f * 0.01666667f; // one art pixel, world y
+                // a low wall 0.7 ahead (jumped over), a tall one 0.7 ahead (stops it: down against it, not sent back),
+                // a tall one he is pressed against (0.03 from his side: a jump on the spot, never "on top of it", never sent back)
+                foreach (int kind in new[] { 0, 1, 2 })
+                {
+                    bool low = kind == 0, pressed = kind == 2;
+                    Vector3 me = rb.position;
+                    // pressed: the wall's face 0.03 from his body's side (its own half-width, whatever the keeper's collider is)
+                    float half = PC.PhysicalBody.MeshCollider != null ? PC.PhysicalBody.MeshCollider.bounds.extents.x : 0.24f;
+                    float wallX = me.x + (pressed ? half + 0.075f + 0.03f : 0.7f), g = Mount.Instance.GroundHeight(new Vector3(wallX, me.y, me.z), out string src);
+                    if (float.IsNaN(g)) { Info($"no ground at the wall's spot ({src}): not tried"); continue; }
+                    float high = low ? 8f * px : 2.5f;
+                    walls = new GameObject("gk2donkeyapi-selftest-jump-wall");
+                    walls.layer = layer;
+                    walls.transform.position = new Vector3(wallX, g, me.z);
+                    var c = walls.AddComponent<BoxCollider>();
+                    c.center = new Vector3(0f, high / 2f, 0f);
+                    c.size = new Vector3(0.15f, high, 3f);
+                    Physics.SyncTransforms();
+                    yield return One(true, 1f);
+                    float x = rb.position.x;
+                    string where = $"{x - wallX:+0.00;-0.00} from the wall, the top {max:0} px, the wall {high / px:0} px";
+                    if (low) Check(x > wallX + 0.2f && Flight.Now == Flight.Phase.Ground && !Flight.Free, "a low wall (8 px) jumped over: down on its far side, " + where);
+                    else if (!pressed)
+                    {
+                        Check(x < wallX - 0.1f && Flight.Now == Flight.Phase.Ground && !Flight.Free, "a tall wall stops the jump (a bare collider: the jump counts its collider): down on this side, " + where);
+                        Check(!Flight.TestJumpWentBack && x > me.x + 0.15f, $"and it came down against the wall, not sent back to the start ({x - me.x:+0.00;-0.00} from the start{(Flight.TestJumpWentBack ? ", sent back" : "")})");
+                    }
+                    else Check(Mathf.Abs(x - me.x) < 0.1f && !Flight.TestJumpPerched && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground,
+                        $"pressed against a tall wall: a jump on the spot ({x - me.x:+0.00;-0.00} from the start{(Flight.TestJumpPerched ? ", came down \"on top\" of it" : "")}{(Flight.TestJumpWentBack ? ", sent back" : "")}), no surge along it");
+                    walls.SetActive(false);
+                    Object.Destroy(walls);
+                    walls = null;
+                    Physics.SyncTransforms();
+                    // back to where it jumped from for the next wall
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null; Flight.TestMoveDir = null;
+                if (walls != null) { walls.SetActive(false); Object.Destroy(walls); }
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (donkey != null && donkey.Exists) donkey.Remove(); } catch { }
+            }
+        }
+
+        private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+
+        // The [Mount] flags flies and jumps (docs/flying.md "Jump and fly on one key"): the shipped mounts' (the dragon
+        // flies, the rest don't, all jump), a pack's own read and listed, written back only when not the default.
+        private static IEnumerator FlightFlags()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            const string owner = Owner + ".flags";
+            MountInfo dragon = Mounts.Catalog.Find("dragon"), rat = Mounts.Catalog.Find("rat");
+            Check(dragon != null && dragon.Flies && dragon.Jumps, $"the dragon flies and jumps (its [Mount] says flies = true): {dragon?.Flies} {dragon?.Jumps}");
+            var grounded = new System.Collections.Generic.List<string>();
+            foreach (string id in new[] { "rat", "snail", "worm", "gerry" })
+            {
+                MountInfo k = Mounts.Catalog.Find(id);
+                if (k == null) grounded.Add(id + " not loaded");
+                else if (k.Flies || !k.Jumps) grounded.Add($"{id} flies {k.Flies}, jumps {k.Jumps}");
+            }
+            Check(grounded.Count == 0, "the other built-in mounts jump and don't fly" + (grounded.Count > 0 ? ": " + string.Join("; ", grounded) : ""));
+            Check(!Catalog.Donkey.Flies && Catalog.Donkey.Jumps, "the donkey jumps and doesn't fly");
+            Check(rat != null && !rat.Flies, "the rat's flag is its own, not the dragon's (no mount id decides it)");
+
+            string tempRoot;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flags", "flags-test",
+                    "[Skin]\nformat = 1\nid = flags-test\nname = Flags Test\nmount = flags-beast\n\n[Mount]\nid = flags-beast\nname = Flags Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\njumps = false\n");
+            }
+            catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            try
+            {
+                Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the pack registered");
+                MountInfo k = Mounts.Catalog.Find("flags-beast");
+                Check(k != null && k.Flies && !k.Jumps, $"a pack's flies = true and jumps = false are its mount's ({k?.Flies}, {k?.Jumps})");
+                Looks.SkinDef def = Looks.Find("flags-test");
+                Catalog.Entry kd = Catalog.Find("flags-beast");
+                if (def != null && kd != null)
+                {
+                    string file = System.IO.Path.Combine(tempRoot, Looks.PackDirName, "flags-test", "skin.cfg");
+                    kd.Jumps = true; // the Mounts tab's "Jumps" toggle does this
+                    string err = Looks.SaveCfg(def);
+                    string text = System.IO.File.ReadAllText(file).Replace("\r\n", "\n");
+                    Check(err == null && text.Contains("\nflies = true\n") && !text.Contains("jumps ="), "saved: flies = true kept, jumps (now the default) left out" + (err != null ? " (" + err + ")" : ""));
+                    kd.Flies = false;
+                    err = Looks.SaveCfg(def);
+                    text = System.IO.File.ReadAllText(file).Replace("\r\n", "\n");
+                    Check(err == null && !text.Contains("flies =") && !text.Contains("jumps ="), "saved with both at the default: neither written");
+                    kd.Flies = true;
+                    err = Looks.ReloadCfg(def);
+                    Check(err == null && !kd.Flies && kd.Jumps, $"reloaded: the file's values are the mount's (flies {kd.Flies}, jumps {kd.Jumps})");
+                }
+                else Fail("the pack's skin or mount not found");
+            }
+            finally
+            {
+                Looks.Unregister("flags-test", owner);
+                try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+            yield return Frames(3);
+            Check(Mounts.Catalog.Find("flags-beast") == null, "the mount goes with its pack");
+        }
+
+        // One key for jump and fly (the skyriding rule): a press jumps; a second press in the air takes off a mount that
+        // flies (by its flag: a pack's mount, not the dragon), the height and the body carried on, the camera easing up;
+        // a press while flying lands. The donkey: the second press does nothing. Two keys: the fly key takes off from
+        // the ground, the jump key only jumps. A flier that doesn't jump: one press takes off. Driven through
+        // Flight.Press, as the keys would.
+        private static IEnumerator FlightOneKey()
+        {
+            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
+            const string owner = Owner + ".onekey";
+            string tempRoot;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-onekey", "onekey-test",
+                    "[Skin]\nformat = 1\nid = onekey-test\nname = One Key Test\nmount = onekey-beast\n\n[Mount]\nid = onekey-beast\nname = One Key Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+            }
+            catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            MountHandle h = null;
+            Catalog.Entry kd = null;
+            try
+            {
+                Looks.RegisterFolder(tempRoot, owner);
+                kd = Catalog.Find("onekey-beast");
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null || kd == null) { Fail("could not spawn, or the pack's mount is missing"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "onekey-test");
+                yield return Until(() => h.Mount == "onekey-beast", 8f);
+                MountResult r = h.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                Mount.Instance i = Mount.Ridden;
+                Flight.TestJumpHeld = true;
+
+                IEnumerator Down(string what)
+                {
+                    float t0 = Time.time;
+                    while (Flight.Now != Flight.Phase.Ground && Time.time - t0 < 20f) yield return null;
+                    Check(Flight.Now == Flight.Phase.Ground, $"{what}: down again ({Flight.Now}, {Flight.HeightPx:0} px; {Flight.Why})");
+                    if (Flight.Now != Flight.Phase.Ground) Flight.Release(i, "self-test");
+                    yield return Frames(10);
+                }
+                IEnumerator InTheAir()
+                {
+                    float t0 = Time.time;
+                    while (Flight.Now == Flight.Phase.Jumping && Flight.HeightPx < 8f && Time.time - t0 < 1f) yield return null;
+                }
+
+                // 1. one key, a flier: a press jumps, a second in the air takes off
+                Flight.Press(i, true, false, same: true);
+                Check(Flight.Now == Flight.Phase.Jumping, $"one key: the first press jumps ({Flight.Now})");
+                yield return InTheAir();
+                float before = Flight.HeightPx;
+                bool freeBefore = Flight.Free;
+                Flight.Press(i, true, false, same: true);
+                Check(Flight.Now == Flight.Phase.Rising && Mathf.Abs(Flight.HeightPx - before) < 0.01f, $"one key: the second press in the air takes off from the jump's height ({Flight.Now}, {before:0.0} -> {Flight.HeightPx:0.0} px)");
+                Check(!Flight.JumpOver || (freeBefore && Flight.Free), $"the body stays the mod's from the jump into the flight (free {freeBefore} -> {Flight.Free})");
+                // against the mount, not the screen: the gap between the flight and the camera closes smoothly (a snap
+                // would close the jump's whole height in one frame); the take-off's own climb moves both alike
+                // the camera's share of the height is the tab's "Camera rises with the height" (CameraFollow, 1 as shipped)
+                float share = Mathf.Clamp01(Flight.CameraFollow);
+                float lastGap = Flight.HeightPx * share - Flight.TestCameraLiftPx, worstStep = 0f, easeT0 = Time.time;
+                int frames = 0;
+                while (Time.time - easeT0 < 0.45f && frames++ < 600) // the ease's 0.3 s and some, in time, not frames
+                {
+                    yield return null;
+                    float gap = Flight.HeightPx * share - Flight.TestCameraLiftPx;
+                    worstStep = Mathf.Max(worstStep, Mathf.Abs(gap - lastGap));
+                    lastGap = gap;
+                }
+                Check(worstStep <= Mathf.Max(3f, before * 0.35f) && Mathf.Abs(lastGap) < 1.01f,
+                    $"the camera eases up to the flight: the gap between them closes by at most {worstStep:0.0} px a frame (it stayed down for the jump, {before:0} px under it at the press), {lastGap:0.0} px after {Time.time - easeT0:0.00} s, {frames} frames (the camera's share {share:0.00}, the ease {Flight.TestCameraEase:0.00}, the flight at {Flight.HeightPx:0} px)");
+                Flight.Press(i, true, false, same: true);
+                Check(Flight.Now == Flight.Phase.Landing, $"one key: a press while flying lands ({Flight.Now})");
+                yield return Down("the flight from a jump");
+
+                // 2. a flier that doesn't jump: one press takes off
+                kd.Jumps = false;
+                Flight.Press(i, true, false, same: true);
+                Check(Flight.Now == Flight.Phase.Rising, $"a flier with jumps = false: one press takes off ({Flight.Now})");
+                Flight.Press(i, true, false, same: true);
+                kd.Jumps = true;
+                yield return Down("its flight");
+
+                // 3. two keys: the fly key takes off from the ground, the jump key only jumps
+                Flight.Press(i, false, true, same: false);
+                Check(Flight.Now == Flight.Phase.Rising, $"two keys: the fly key takes off from the ground ({Flight.Now})");
+                Flight.Press(i, false, true, same: false);
+                Check(Flight.Now == Flight.Phase.Landing, $"two keys: the fly key lands ({Flight.Now})");
+                yield return Down("the fly key's flight");
+                Flight.Press(i, true, false, same: false);
+                yield return InTheAir();
+                Flight.Press(i, true, false, same: false);
+                Check(Flight.Now == Flight.Phase.Jumping, $"two keys: the jump key again in the air does nothing ({Flight.Now})");
+                yield return Down("the jump");
+
+                // 4. the API: Mounts.Jump / TakeOff / Land, FlightState, FlightChanged
+                var seen = new System.Collections.Generic.List<MountFlight>();
+                System.Action<MountFlight> on = st => seen.Add(st);
+                Mounts.FlightChanged += on;
+                try
+                {
+                    MountResult no = Mounts.Land();
+                    Check(!no.Ok && Mounts.FlightState == MountFlight.Ground, $"API: Land on the ground refused ({Said(no)})");
+                    MountResult j = Mounts.Jump();
+                    Check(j.Ok && Mounts.FlightState == MountFlight.Jumping, $"API: Jump ({Said(j)}; {Mounts.FlightState})");
+                    no = Mounts.Jump();
+                    Check(!no.Ok, $"API: a second Jump mid-jump refused ({Said(no)})");
+                    yield return InTheAir();
+                    MountResult t = Mounts.TakeOff();
+                    Check(t.Ok && Mounts.FlightState == MountFlight.TakingOff, $"API: TakeOff in the air turns the jump into the take-off ({Said(t)}; {Mounts.FlightState})");
+                    no = Mounts.TakeOff();
+                    Check(!no.Ok, $"API: TakeOff while flying refused ({Said(no)})");
+                    MountResult l = Mounts.Land();
+                    Check(l.Ok && Mounts.FlightState == MountFlight.Landing, $"API: Land ({Said(l)}; {Mounts.FlightState})");
+                    yield return Down("the API's flight");
+                    Check(Mounts.FlightState == MountFlight.Ground, $"API: FlightState back to Ground ({Mounts.FlightState})");
+                    string got = string.Join(", ", seen);
+                    Check(seen.Count >= 4 && seen[0] == MountFlight.Jumping && seen[1] == MountFlight.TakingOff && seen.Contains(MountFlight.Landing) && seen[seen.Count - 1] == MountFlight.Ground,
+                        $"API: FlightChanged told each step ({got})");
+                }
+                finally { Mounts.FlightChanged -= on; }
+
+                // 5. the donkey (no flies): the second press does nothing, the jump lands
+                h.Tuning.Set(Owner, "Skin", "");
+                yield return Until(() => h.Mount == MountCatalog.DonkeyId, 8f);
+                yield return Frames(5);
+                i = Mount.Ridden;
+                Flight.Press(i, true, false, same: true);
+                yield return InTheAir();
+                Flight.Press(i, true, false, same: true);
+                Check(Flight.Now == Flight.Phase.Jumping, $"the donkey: the second press in the air does nothing (it doesn't fly): {Flight.Now}");
+                MountResult notOff = Mounts.TakeOff();
+                Check(!notOff.Ok && Flight.Now == Flight.Phase.Jumping, $"the donkey: API TakeOff refused with the reason ({Said(notOff)})");
+                yield return Down("the donkey's jump");
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null;
+                if (kd != null) kd.Jumps = true;
+                if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+                Looks.Unregister("onekey-test", owner);
+                try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // Saddle Up's Jump and Fly rows: in Keys, Space both, shown only while flying is on, and the Behaviour values
+        // follow the rows.
+        private static IEnumerator FlightKeyRows()
+        {
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            if (saddle == null) { Skip("Saddle Up's page isn't shown"); yield break; }
+            MountSettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Keys");
+            MountSettingsPage.Row jump = Row("JumpKey"), fly = Row("FlyKey");
+            Check(jump != null && fly != null, "Saddle Up has Jump and Fly rows in its Keys section");
+            if (jump == null || fly == null) yield break;
+            bool on = Mounts.FlyingEnabled;
+            Check((jump.Enabled == null || jump.Enabled() == on) && (fly.Enabled == null || fly.Enabled() == on) && jump.Enabled != null && fly.Enabled != null,
+                $"both shown only while flying is on (flying {(on ? "on" : "off")}: rows {(jump.Enabled?.Invoke() ?? true ? "shown" : "hidden")})");
+            var je = (BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)jump.Entry;
+            Check(Flight.SameKey(Plugin.JumpKey.Value, je.Value) && Flight.SameKey(Plugin.FlyKey.Value, ((BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)fly.Entry).Value),
+                $"the Behaviour keys are the rows' ({Plugin.JumpKey.Value}, {Plugin.FlyKey.Value})");
+            var was = je.Value;
+            try
+            {
+                var ctrlK = new BepInEx.Configuration.KeyboardShortcut(KeyCode.K, KeyCode.LeftControl);
+                je.Value = ctrlK;
+                yield return null;
+                Check(Flight.SameKey(Plugin.JumpKey.Value, ctrlK), $"the Jump row set to Ctrl+K: the Behaviour JumpKey is Ctrl+K, the modifier kept ({Plugin.JumpKey.Value})");
+                Check(!Flight.SameKey(Flight.JumpKeyNow, Flight.FlyKeyNow), "and the two keys are no longer one");
+            }
+            finally { je.Value = was; }
+            yield return null;
+            Check(Flight.SameKey(Plugin.JumpKey.Value, was), $"and back ({Plugin.JumpKey.Value})");
+        }
+
         private static IEnumerator FlightWalkAway()
         {
             Rigidbody rb = PC?.PhysicalBody?.Rb;

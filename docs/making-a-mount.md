@@ -70,6 +70,7 @@ author = you
 version = 1.0
 cart = true
 foals = true
+flies = true           # it flies (leave out for a mount that doesn't; jumps = false for one that never jumps)
 foal_scale = 0.4
 speed = 2.25           # riding, times walking speed (the donkey: 2); the panel says "Fast"
 cargo = 6              # items its cart carries, 1 to 6 (with the cart it goes at its speed x 0.75, as the donkey)

@@ -128,6 +128,16 @@ namespace GK2DonkeyAPI
                 mount.Cart = !mount.Cart;
                 Catalog.Touch(mount);
             }
+            if (OnOffRow("Flies", mount.Flies, mount.Flies ? changed : label, tip: "Ridden plain it takes off and flies (the flying experiment; one key for jump and fly: a second press in the air). Saved as flies in the mount's file."))
+            {
+                mount.Flies = !mount.Flies;
+                Catalog.Touch(mount);
+            }
+            if (OnOffRow("Jumps", mount.Jumps, mount.Jumps ? label : changed, tip: "Off: the jump key does nothing on it (or takes off, if it flies). Saved as jumps in the mount's file."))
+            {
+                mount.Jumps = !mount.Jumps;
+                Catalog.Touch(mount);
+            }
             if (OnOffRow("Babies can be it", mount.Foals, mount.Foals ? label : changed, tip: "Off: the babies stay plain donkeys whatever the parent is."))
             {
                 mount.Foals = !mount.Foals;

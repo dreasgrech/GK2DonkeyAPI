@@ -5,6 +5,16 @@ using UnityEngine;
 namespace GK2DonkeyAPI.Api
 {
     // The two ways to use the mount: sit on the donkey, or ride it while it pulls its cart.
+    // Where the ridden mount is, off the ground or on it (Mounts.FlightState, FlightChanged; 0.36.0).
+    public enum MountFlight
+    {
+        Ground,
+        Jumping,
+        TakingOff,
+        Flying,
+        Landing,
+    }
+
     public enum MountStyle
     {
         Ride,
@@ -245,6 +255,9 @@ namespace GK2DonkeyAPI.Api
         //                            the area ids and door destinations that count ("morgue, tp_RT_morgue_exit, ...")
         //   FlyIndoors               a flying mount may take off and fly indoors, as a lift only (0.36.0, off); off: no
         //                            take-off indoors, and a flight through a building's door lands there
+        //   JumpKey, FlyKey          (KeyboardShortcut, 0.36.0, Space both) riding plain: jump; take off and land a mount that
+        //                            flies. The same key: a second press in the air during a jump takes off. None: off.
+        //                            Read only while FlyingEnabled; Space is left to the game's attack in a fight.
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -258,7 +271,7 @@ namespace GK2DonkeyAPI.Api
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
-                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors,
+                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey,
                 }));
             }
         }
@@ -356,6 +369,28 @@ namespace GK2DonkeyAPI.Api
         // Catalog.Register, Effects.Register and the rest) is kept out: nothing thrown, a handle that does nothing, one
         // log line per owner. A mod that adds a mount can register in Awake as usual and check this to tell its player.
         public static bool MountsEnabled => Plugin.MountsOn;
+
+        // Whether jumping and flying are switched on (0.36.0): a dev-only experiment for now (docs/flying.md), off for
+        // players. A mod showing its own jump or fly key rows shows them only while this is true.
+        public static bool FlyingEnabled => Flight.Active;
+
+        // The ridden mount off the ground (0.36.0; refused while FlyingEnabled is false): what the jump and fly keys do,
+        // for a mod's own button or a script. Jump: a full jump (the key's hold-for-height is the key's); refused off a
+        // mount that doesn't jump, in the air, with the cart. TakeOff: from the ground, or from a jump in the air (the
+        // jump becomes the take-off); refused off a mount that doesn't fly, indoors (FlyIndoors), with the cart, already
+        // flying. Land: while taking off or flying; it lands where the keeper can stand (else it hovers, "Nowhere to land
+        // here."). The reason is in the result; nothing is said in the bubble.
+        public static MountResult Jump() => Flight.ApiJump();
+        public static MountResult TakeOff() => Flight.ApiTakeOff();
+        public static MountResult Land() => Flight.ApiLand();
+
+        // Where the ridden mount is: on the ground, jumping, taking off, flying, landing (always Ground while not riding).
+        public static MountFlight FlightState => Flight.State;
+
+        // FlightState changed (argument: the new one): a jump (Jumping, then Ground), a take-off (TakingOff, Flying), a
+        // landing (Landing, Ground), a jump turned flight (Jumping, TakingOff). Handlers that throw are logged and skipped.
+        public static event Action<MountFlight> FlightChanged;
+        internal static void RaiseFlightChanged(MountFlight s) => Raise(FlightChanged, s, "FlightChanged");
 
         private static readonly HashSet<string> keptOutLogged = new HashSet<string>(StringComparer.Ordinal);
 

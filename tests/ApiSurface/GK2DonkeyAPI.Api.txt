@@ -152,9 +152,11 @@ class GK2DonkeyAPI.Api.MountDef
   field string Description
   field string Effect
   field GK2DonkeyAPI.Api.MountEffectWhen EffectWhen
+  field bool Flies
   field bool Foals
   field float FoalScale
   field string Id
+  field bool Jumps
   field string Name
   field string Noun
   field UnityEngine.Texture2D Portrait
@@ -224,6 +226,12 @@ enum GK2DonkeyAPI.Api.MountFeature
   Sounds = 3
   Bell = 4
   StayThroughDoors = 5
+enum GK2DonkeyAPI.Api.MountFlight
+  Ground = 0
+  Jumping = 1
+  TakingOff = 2
+  Flying = 3
+  Landing = 4
 class GK2DonkeyAPI.Api.MountHandle
   field static const int MaxDisplayName = 24
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.CargoItem> Cargo { get; }
@@ -275,12 +283,14 @@ class GK2DonkeyAPI.Api.MountInfo
   property string Description { get; }
   property string Effect { get; }
   property GK2DonkeyAPI.Api.MountEffectWhen EffectWhen { get; }
+  property bool Flies { get; }
   property bool Foals { get; }
   property float FoalScale { get; }
   property bool FromPack { get; }
   property bool HasPortrait { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }
+  property bool Jumps { get; }
   property string Name { get; }
   property string Noun { get; }
   property string Owner { get; }
@@ -341,6 +351,8 @@ static class GK2DonkeyAPI.Api.Mounts
   property static bool CorpsesActive { get; }
   property static GK2DonkeyAPI.Api.MountEffects Effects { get; }
   property static GK2DonkeyAPI.Api.MountTuning EffectSettings { get; }
+  property static GK2DonkeyAPI.Api.MountFlight FlightState { get; }
+  property static bool FlyingEnabled { get; }
   property static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> Instances { get; }
   property static bool IsAvailable { get; }
   property static bool IsGameReady { get; }
@@ -358,6 +370,7 @@ static class GK2DonkeyAPI.Api.Mounts
   event static System.Action<GK2DonkeyAPI.Api.ChestInfo> ChestUnloaded
   event static System.Action<GK2DonkeyAPI.Api.CorpseInfo> CorpseLeft
   event static System.Action<string> Dismounted
+  event static System.Action<GK2DonkeyAPI.Api.MountFlight> FlightChanged
   event static System.Action GameReady
   event static System.Action<GK2DonkeyAPI.Api.MountHandle, GK2DonkeyAPI.Api.MountHandle> Hitched
   event static System.Action<GK2DonkeyAPI.Api.MountHandle> InstanceRemoved
@@ -377,6 +390,8 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountResult Hitch(GK2DonkeyAPI.Api.MountHandle donkey, GK2DonkeyAPI.Api.MountHandle cart)
   method static System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle> InstancesOf(string ownerId)
   method static bool IsFeatureAllowed(GK2DonkeyAPI.Api.MountFeature feature)
+  method static GK2DonkeyAPI.Api.MountResult Jump()
+  method static GK2DonkeyAPI.Api.MountResult Land()
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
   method static void RingBell()
@@ -387,6 +402,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle SpawnFoal(string ownerId, GK2DonkeyAPI.Api.MountHandle parent, float scale = 0, int id = 0, string key = null, System.Nullable<bool> persist = null)
   method static string StartCorpseDelivery()
   method static GK2DonkeyAPI.Api.MountResult SwitchStyle(GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
+  method static GK2DonkeyAPI.Api.MountResult TakeOff()
   method static GK2DonkeyAPI.Api.MountResult TryMount(string ownerId, GK2DonkeyAPI.Api.MountStyle style, bool showMessage = True)
   method static GK2DonkeyAPI.Api.MountTuning Tuning(GK2DonkeyAPI.Api.MountStyle style)
   method static GK2DonkeyAPI.Api.MountHandle Unhitch(GK2DonkeyAPI.Api.MountHandle donkey)

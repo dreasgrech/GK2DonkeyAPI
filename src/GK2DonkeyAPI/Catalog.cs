@@ -26,6 +26,8 @@ namespace GK2DonkeyAPI
             internal bool BuiltIn, FromPack;
             internal bool Cart = true;                 // may pull the cart
             internal bool Foals = true;                // foals may be drawn as it
+            internal bool Flies;                       // takes off and flies ([Mount] flies; the flying experiment, docs/flying.md)
+            internal bool Jumps = true;                // jumps, riding plain ([Mount] jumps = false: never)
             internal float FoalScale = 0.6f;           // a baby's size as a fraction of the grown one (the view's scale)
             internal float? Speed;                     // riding, times the keeper's walking speed ([Mount] speed); null: the donkey's. With the cart: times CartFactor
             internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Shown only, for now
@@ -149,7 +151,7 @@ namespace GK2DonkeyAPI
             if (d.Id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && d.Owner != Plugin.Guid) throw new ArgumentException("'donkey' is the game's own mount, not a mount to register.");
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}{(d.Effect != null ? ", effect " + d.Effect : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}{(d.Effect != null ? ", effect " + d.Effect : "")}.");
         }
 
         // A pack's [Mount] declaration. The mount's facts belong to its Default skin (the skin whose id is the mount's,
@@ -188,13 +190,13 @@ namespace GK2DonkeyAPI
             d.DeclaredBy = skinId;
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
             return d;
         }
 
         private static bool Same(Entry a, Entry b)
         {
-            return a.Cart == b.Cart && a.Foals == b.Foals && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
+            return a.Cart == b.Cart && a.Foals == b.Foals && a.Flies == b.Flies && a.Jumps == b.Jumps && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
                 && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart);
         }
@@ -259,6 +261,8 @@ namespace GK2DonkeyAPI
             into.Version = from.Version;
             into.Cart = from.Cart;
             into.Foals = from.Foals;
+            into.Flies = from.Flies;
+            into.Jumps = from.Jumps;
             into.FoalScale = from.FoalScale;
             into.Speed = from.Speed;
             into.Cargo = from.Cargo;

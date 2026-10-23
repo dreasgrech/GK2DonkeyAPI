@@ -381,6 +381,9 @@ alter the save, which is the reason Built Count never evaluates one.
     and the mouse buttons.
   - G and H are unbound. The user's current bindings are the same as the defaults.
   - F1–F12 can't be bound at all (`UIGameBindingElement.IsForbiddenKey`).
+  - Space (read 2026-10-23 from the registry `settings` and `LazyBearTechnology.GameKey`'s static constructor) is
+    the game's `Select` (8, menus), `SpeechSkip` (113, dialogue) and `Attack` (114, a weapon out: the fights). The
+    jump and fly keys (Space) are read only with the controls free and not paused, and not in armour (docs/flying.md).
 
 ## Removed: SideViewOnly (2026-09-30)
 

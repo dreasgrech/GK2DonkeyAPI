@@ -42,7 +42,7 @@ if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Coun
 var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
 // The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountKeys = StringsIn(looksCs, "MountKeys");
-if (mountKeys.Count < 14) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (14 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Count < 16) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (16 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
@@ -436,10 +436,13 @@ foreach (var dir in skinDirs)
         if (mid == "donkey") Bad("[Mount] id = donkey: the donkey is the game's own mount, a skin of it declares no [Mount]");
         foreach (var k in m.Keys) if (!mountKeys.Contains(k)) Bad($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
         foreach (var req in mountRequired) if (string.IsNullOrWhiteSpace(m.GetValueOrDefault(req))) Bad($"[Mount] {req} missing (the canonical block always carries it)");
-        foreach (var flag in new[] { "cart", "foals" })
+        foreach (var flag in new[] { "cart", "foals", "flies", "jumps" })
         {
             if (m.TryGetValue(flag, out var v) && v != "true" && v != "false") Bad($"[Mount] {flag} = {v}: true or false");
         }
+        // flies and jumps are written only when not the default (the loader's SaveCfg does the same)
+        if (m.GetValueOrDefault("flies") == "false") Bad("[Mount] flies = false is the default: leave it out");
+        if (m.GetValueOrDefault("jumps") == "true") Bad("[Mount] jumps = true is the default: leave it out");
         if (m.TryGetValue("foal_scale", out var fsv))
         {
             if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) Bad($"[Mount] foal_scale = {fsv}: 0.2 to 1");

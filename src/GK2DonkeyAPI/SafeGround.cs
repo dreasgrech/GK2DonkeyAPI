@@ -292,6 +292,42 @@ namespace GK2DonkeyAPI
                 return null;
             }
 
+            // C (a jump's touch-down a hair inside something, "his body doesn't fit ... by 0.06", the user's log
+            // 2026-10-24): the body pushed out of what it goes into, sideways, up to three times; true when it moved.
+            internal static bool PushOut(PlayerController pc, ref Vector3 spot)
+            {
+                Rigidbody rb = pc?.PhysicalBody?.Rb;
+                Collider body = pc?.PhysicalBody?.MeshCollider;
+                if (rb == null || body == null) return false;
+                int mask = KeeperMask(rb);
+                Vector3 start = spot;
+                for (int pass = 0; pass < 3; pass++)
+                {
+                    Vector3 shift = spot - rb.position;
+                    Transform t = body.transform;
+                    Vector3 pos = t.position + shift;
+                    Bounds b = body.bounds;
+                    int n = Physics.OverlapBoxNonAlloc(b.center + shift, b.extents + Vector3.one * 0.05f, reachOverlaps, Quaternion.identity, mask, QueryTriggerInteraction.Ignore);
+                    Vector3 push = Vector3.zero;
+                    for (int i = 0; i < n && i < reachOverlaps.Length; i++)
+                    {
+                        Collider c = reachOverlaps[i];
+                        if (c == null || !c || c == body || c.attachedRigidbody == rb) continue;
+                        if (((1 << c.gameObject.layer) & GroundLayers) != 0 && c.bounds.max.y <= spot.y + 0.05f) continue;
+                        if (Physics.ComputePenetration(body, pos, t.rotation, c, c.transform.position, c.transform.rotation, out Vector3 outDir, out float depth)
+                            && depth > 0.01f && Blocks(rb, c, outDir))
+                        {
+                            outDir.y = 0f;
+                            if (outDir.sqrMagnitude > 1e-6f) push += outDir.normalized * (depth + 0.03f);
+                        }
+                    }
+                    if (push == Vector3.zero) break;
+                    if (push.magnitude > 0.5f) return false; // deep inside: not a hair, not this
+                    spot += push;
+                }
+                return (spot - start).sqrMagnitude > 1e-6f;
+            }
+
             // The game's own walk grid: graph 3, the grid PlayerLocalAreaMovement rescans around the keeper against the
             // colliders before every walk it gives him (StartMovement, PlayerWorkComponent.FindNearestDockPoint), and whose
             // IsReachable is the game's "can he get there". Not while the game is walking him (it rescans for itself then).

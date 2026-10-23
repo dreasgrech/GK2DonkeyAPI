@@ -69,7 +69,7 @@ namespace GK2DonkeyAPI.Api
             var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null, Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
+                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null, Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
@@ -165,6 +165,11 @@ namespace GK2DonkeyAPI.Api
         public bool Cart = true;
         // Foals (babies) may be drawn as it.
         public bool Foals = true;
+        // Takes off and flies, ridden plain (0.36.0; flying is a dev-only experiment for now, docs/flying.md). With the
+        // jump and fly keys the same, a second press in the air turns a jump into the take-off.
+        public bool Flies;
+        // Jumps, ridden plain (0.36.0; on by default; false: the jump key does nothing on it, or takes off if it flies).
+        public bool Jumps = true;
         // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
         // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
         public float FoalScale = 0.6f;
@@ -257,6 +262,8 @@ namespace GK2DonkeyAPI.Api
             FromPack = d.FromPack;
             Cart = d.Cart;
             Foals = d.Foals;
+            Flies = d.Flies;
+            Jumps = d.Jumps;
             FoalScale = d.FoalScale;
             Speed = GK2DonkeyAPI.Catalog.SpeedOf(d, MountStyle.Ride);
             CartSpeed = GK2DonkeyAPI.Catalog.SpeedOf(d, MountStyle.Cart);
@@ -301,6 +308,9 @@ namespace GK2DonkeyAPI.Api
         public bool FromPack { get; }
         public bool Cart { get; }
         public bool Foals { get; }
+        // Takes off and flies / jumps, ridden plain (MountDef.Flies, Jumps; [Mount] flies, jumps).
+        public bool Flies { get; }
+        public bool Jumps { get; }
         // A baby's size as a fraction of the grown one.
         public float FoalScale { get; }
         // Its speeds, times the keeper's walking speed (its own, else the donkey's; with the cart its own times the

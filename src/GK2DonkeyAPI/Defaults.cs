@@ -178,6 +178,7 @@ namespace GK2DonkeyAPI
                 else if (t == typeof(bool)) value = bool.Parse(raw);
                 else if (t.IsEnum) value = Enum.Parse(t, raw, ignoreCase: true);
                 else if (t == typeof(string)) value = raw;
+                else if (t == typeof(KeyboardShortcut)) value = KeyboardShortcut.Deserialize(raw);
                 return value != null;
             }
             catch
@@ -245,6 +246,8 @@ namespace GK2DonkeyAPI
                     return bo.Value != bd;
                 case ConfigEntry<string> s:
                     return !string.Equals(s.Value ?? "", d as string ?? "", StringComparison.Ordinal);
+                case ConfigEntry<KeyboardShortcut> k when d is KeyboardShortcut kd:
+                    return !Flight.SameKey(k.Value, kd); // the key and its modifiers (a struct holding an array: Equals is not enough)
             }
             object v = e.BoxedValue;
             if (v is float a && d is float b)
@@ -269,7 +272,7 @@ namespace GK2DonkeyAPI
                 if (tracked == null)
                 {
                     tracked = new List<(string, ConfigEntryBase)>();
-                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, Plugin.CargoZombies, Plugin.CargoChest, Plugin.InstanceControls, Plugin.HitchKey, Plugin.CartZoneSide, Plugin.CartZoneRear, Plugin.CartZoneFrontShift, Plugin.DonkeyZoneAhead, IdleShuffle.On })
+                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, Plugin.CargoZombies, Plugin.CargoChest, Plugin.InstanceControls, Plugin.HitchKey, Plugin.JumpKey, Plugin.FlyKey, Plugin.CartZoneSide, Plugin.CartZoneRear, Plugin.CartZoneFrontShift, Plugin.DonkeyZoneAhead, IdleShuffle.On })
                     {
                         tracked.Add(("General", e));
                     }

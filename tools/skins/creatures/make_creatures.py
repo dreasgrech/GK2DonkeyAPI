@@ -512,6 +512,11 @@ PITCH_X = 48.0  # the seat's column, donkey coordinates (the rider is drawn at t
 # idle neck seems a bit dance like an egyptian ... i think its a bit too long with its body proportions": 25 px from
 # the chest to the head). The ground's arched neck, judged good, stays as it is.
 FLY_NECK = float(os.environ.get("DRAGON_FLY_NECK", "0.8"))
+# Gliding, the head nods slowly (the user, 2026-10-23: "the head is completely 100% static ... we cant have it fully
+# static"): GLIDE_HEAD_PX at the head, less down the neck (none at its base), a little after the wing's flex, the way a
+# head rides the air. Whole pixels on purpose: a 0.3 px sway only re-rounded the neck's shading into speckle (the first
+# glide), so the neck and head had been held still.
+GLIDE_HEAD_PX = float(os.environ.get("DRAGON_GLIDE_HEAD_PX", "1.5"))
 # the flex in pixels at the wing's farthest-moving joint, whatever the held pose: the poses change at very different
 # speeds along the beat (a tip moves 84 px per unit of pose at 0.4, 163 at 0.85), so a flex given as pose (0.06) swung
 # the tips 5 px at 0.4 and almost 10 at 0.85, a flap (the user, 2026-10-23: "the glide in preview is still flapping")
@@ -1175,6 +1180,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             n1, n2, n3 = gw(0.08) * 0.08, gw(0.14) * 0.08, gw(0.2) * 0.08
             neck = [(34.0, 44.0 + bob), (26 + n1, 39 + bob + 3 * n1 + follow(0.04, 0.99)),
                     (19 + 2 * n2, 34 + bob + 7 * n2 + follow(0.07, 0.97)), (12 + 2 * n3, 31 + bob + 10 * n3 + follow(0.1, 0.95))]
+            if glide is not None:
+                # the glide's nod (GLIDE_HEAD_PX above), its share of the frame's glide (the way in and out: M)
+                neck = [(x, y + M * GLIDE_HEAD_PX * f * math.sin(2 * math.pi * (glide - 0.3 - 0.05 * j)))
+                        for j, ((x, y), f) in enumerate(zip(neck, (0.0, 0.35, 0.7, 1.0)))]
             neck = shorter(neck)
             if pitch:
                 # climbing the neck arches up and a little back, the head high; diving it reaches forward and down
@@ -1392,6 +1401,7 @@ only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to 
 assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "SaddleUp", "assets", "skins")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
+FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the skin.cfg)
 for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
@@ -1415,7 +1425,7 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
                 + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + mount + "\n"
                 + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
                 + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
-                "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\nspeed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
+                "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "") + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
             import canonical_cfg  # byte for byte the layout the scans expect
             text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)

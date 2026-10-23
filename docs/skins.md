@@ -87,6 +87,8 @@ author = me
 version = 1.0
 cart = true           # may it pull the cart
 foals = true          # may the baby donkeys be it
+flies = true          # ridden plain, it takes off and flies (off unless said; flying is a dev-only experiment for now)
+jumps = false         # ridden plain, it never jumps (on unless said); both written only when not the default
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33); it lives on the mount, not the skin
 speed = 2.5           # riding, times the keeper's walking speed (1 = walking; the donkey: 2), 0.5 to 4
 cargo = 6             # items its cart carries, 1 to 6 (a stat for now); only on a mount that pulls one

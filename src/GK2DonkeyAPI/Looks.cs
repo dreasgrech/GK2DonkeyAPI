@@ -688,6 +688,8 @@ namespace GK2DonkeyAPI
                 if (mount.TryGetValue("version", out string mv)) k.Version = mv;
                 if (mount.TryGetValue("cart", out string mc)) k.Cart = !mc.Equals("false", StringComparison.OrdinalIgnoreCase);
                 if (mount.TryGetValue("foals", out string mf)) k.Foals = !mf.Equals("false", StringComparison.OrdinalIgnoreCase);
+                if (mount.TryGetValue("flies", out string mfl)) k.Flies = mfl.Equals("true", StringComparison.OrdinalIgnoreCase);   // off unless said
+                if (mount.TryGetValue("jumps", out string mj)) k.Jumps = !mj.Equals("false", StringComparison.OrdinalIgnoreCase);   // on unless said
                 if (mount.TryGetValue("foal_scale", out string ms))
                 {
                     if (float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
@@ -900,7 +902,7 @@ namespace GK2DonkeyAPI
         }
 
         // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "foal_scale", "speed", "cargo", "effect", "effect_when" };
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when" };
 
         // The portrait a pack names (a PNG next to its frames), read once; null when it has none or it can't be read.
         private static readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -1176,6 +1178,8 @@ namespace GK2DonkeyAPI
                     mn.Key(sb, "version", k.Version ?? "");
                     mn.Key(sb, "cart", k.Cart ? "true" : "false");
                     mn.Key(sb, "foals", k.Foals ? "true" : "false");
+                    if (k.Flies) mn.Key(sb, "flies", "true");    // written only when not the default
+                    if (!k.Jumps) mn.Key(sb, "jumps", "false");
                     if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
                     if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
                     if (k.Cargo.HasValue) mn.Key(sb, "cargo", k.Cargo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));

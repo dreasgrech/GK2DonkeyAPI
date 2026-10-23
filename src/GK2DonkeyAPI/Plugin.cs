@@ -402,6 +402,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<string> CorpseIntoMorguePlaces;
         internal static ConfigEntry<bool> InstanceControls;
         internal static Tuned<KeyCode> HitchKey;
+        internal static Tuned<KeyboardShortcut> JumpKey, FlyKey;
 
         // Every [HarmonyPatch] class (tests/FrameworkScan checks the list is complete).
         internal static readonly Type[] PatchClasses =
@@ -559,6 +560,10 @@ namespace GK2DonkeyAPI
                 "Donkeys and carts a mod left standing in the world (Mounts.SpawnDonkey / SpawnCart): the interact key next to a standing donkey rides it (empty hands), and next to a free cart while riding a donkey without its cart hitches it; a label over it says so. Off: only mods can do that (MountHandle.Ride, Mounts.Hitch).");
             HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),
                 "With InstanceControls, while riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off (the interact key still hitches).");
+            JumpKey = Config.Bind("General", "JumpKey", Defaults.Get("General", "JumpKey", new KeyboardShortcut(KeyCode.Space)),
+                "Riding plain: the mount jumps (the flying experiment, dev only for now). The same key as FlyKey: a second press in the air takes off on a mount that flies. None: no jumping. In a fight (in armour) Space is the game's attack, and isn't read here.");
+            FlyKey = Config.Bind("General", "FlyKey", Defaults.Get("General", "FlyKey", new KeyboardShortcut(KeyCode.Space)),
+                "Riding plain a mount that flies: take off and land (the flying experiment, dev only for now). The same key as JumpKey: take off with a second press in the air during a jump. None: no flying by key.");
             // The on-foot zones of a standing cart (docs/load-on-foot.md), measured from the cart body's drawn box.
             CartZoneSide = Config.Bind("General", "CartZoneSide", Defaults.Get("General", "CartZoneSide", 0.6f),
                 new ConfigDescription("On foot next to a standing cart: how far beside the cart body's sides the cart's area reaches (and the donkey's, which is as wide), world units.", new AcceptableValueRange<float>(0f, 2f)));

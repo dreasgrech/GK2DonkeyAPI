@@ -1,4 +1,5 @@
 using BepInEx;
+using BepInEx.Configuration;
 using GK2DonkeyAPI.Api;
 using UnityEngine;
 
@@ -41,9 +42,31 @@ namespace GK2DonkeyAPI
         internal static float ClimbPxPerS = 60f;   // the climb and descend keys
         internal static float BobPx = 2f;          // the hover's up and down while airborne
         internal static float BobPeriodS = 1.6f;
-        internal static bool JumpAnyMount = true;  // off: the jump only on the mounts that fly
-        internal static float JumpPx = 14f;        // the top of a jump
-        internal static float JumpTimeS = 0.45f;   // from leaving the ground to landing
+        internal static bool JumpAnyMount;         // on: every mount jumps, also one whose [Mount] says jumps = false
+        // The mount's jump (riding plain; the keeper on foot never jumps here), the platformer way (the user, 2026-10-23:
+        // "super mario or other types?"): a crouch, a fast rise, a short hang at the top, a heavier fall, a squash on
+        // landing; the key let go on the way up cuts the rise short (a tap: JumpTapPx, held: JumpPx). The height is a
+        // function of the time since the press and the time the key was let go (JumpHeightAt), never summed frame by
+        // frame: the same arc at 30 and at 144 fps. The camera stays on the ground for it (FollowCamera).
+        internal static float JumpPx = 28f;        // the top of a jump, the key held (14 until 2026-10-23: "very little")
+        internal static float JumpTapPx = 16f;     // the top of a jump, the key tapped (a flick)
+        internal static float JumpHoldMinS = 0.1f; // a press shorter than this counts as this long (the user's presses: 0.09-0.25 s)
+        // Over things (the user, 2026-10-23: "i wasnt able to jump over anything ... the jumping should affect the
+        // collider hopefully using lessons we learned from the flying system"): the body is the mod's from the moment the
+        // mount leaves the ground to the touch-down, moved as free flight moves it (FixedStep: the walking speed, the
+        // bump sweep at the jump's feet, the drawn ground's walls), so a thing lower than the jump is passed over and a
+        // taller one stops it. Coming down onto something (a wall's top, a rock) the mount stays on it up to JumpPerchS
+        // to be ridden off it; the touch-down is judged as a flight's landing (SafeGround, connected to the take-off spot,
+        // the walk-away test); refused, or still on top after JumpPerchS, he is put back on the take-off spot.
+        internal static bool JumpOver = true;
+        internal static float JumpPerchS = 0.5f;
+        internal static float JumpTimeS = 0.45f;   // from leaving the ground to landing, the key held (the rise, the hang, the fall)
+        internal static float JumpRiseShare = 0.55f; // of that time, the rise's; the fall takes the rest less the hang: a heavier fall
+        internal static float JumpHangS = 0.04f;   // held still at the top
+        internal static float JumpCrouchPx = 2f, JumpCrouchS = 0.05f; // down before leaving the ground
+        internal static float JumpSquashPx = 2f;   // into the ground on landing, over JumpSquashS
+        internal const float JumpSquashS = 0.1f;
+        internal const float JumpCut = 3f;         // the key let go on the way up: the rise brakes this many times harder
         internal static float CameraFollow = 1f;   // how much of the height the camera rises with (0: stays on the ground)
         internal static bool FreeFlight = true;    // step 2: from the clear height up, over everything (off: the lift only)
         internal static float ClearPx = 16f;       // the free flight's floor: below it he is on the ground's physics again
@@ -73,7 +96,30 @@ namespace GK2DonkeyAPI
         // fast. A skin without the frames flies level.
         internal static bool PitchFrames = true;
         internal static float PitchPerS = 3f;      // how fast the pitch eases to its target (1: a full climb's)
-        internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl, JumpKey = KeyCode.J; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
+        internal static KeyCode UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
+        // The jump and fly keys are the Behaviour values JumpKey and FlyKey (Space both; Saddle Up's Keys rows). The same
+        // key (the user, 2026-10-23, the skyriding rule): a press jumps, a second press in the air takes off on a mount
+        // that flies, a press while flying lands. Different keys: each its own (the fly key takes off from the ground).
+        // Whole key combinations, as Saddle Up's rows set them (Ctrl+Space is Ctrl+Space; extra keys held, such as the
+        // climb's Left Shift, don't stop a press).
+        internal static KeyboardShortcut JumpKeyNow => Plugin.JumpKey != null ? Plugin.JumpKey.Value : new KeyboardShortcut(KeyCode.Space);
+        internal static KeyboardShortcut FlyKeyNow => Plugin.FlyKey != null ? Plugin.FlyKey.Value : new KeyboardShortcut(KeyCode.Space);
+        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b) => a.MainKey == b.MainKey && System.Linq.Enumerable.SequenceEqual(a.Modifiers, b.Modifiers);
+        private static bool Held(KeyboardShortcut k)
+        {
+            if (k.MainKey == KeyCode.None || !UnityInput.Current.GetKey(k.MainKey)) return false;
+            foreach (KeyCode m in k.Modifiers) if (!UnityInput.Current.GetKey(m)) return false;
+            return true;
+        }
+        // a key just changed (a row rebound): it counts only once it has been let go (the press that set it, or the
+        // key the Settings window was capturing, is not a jump)
+        private static KeyboardShortcut keysSeenJump, keysSeenFly;
+        private static bool keysWaitRelease;
+        private static bool armourSaid, jumpFlySaid;
+        private const float CameraEaseS = 0.3f;    // a jump turned flight: the camera's lift eases in over this (it stayed down for the jump)
+        private static float cameraEase = 1f, cameraGapPx; // the gap the jump left (the camera down, the flight up), eased away
+        internal static float TestCameraLiftPx { get; private set; } // the camera's lift, art px, as last set (FollowCamera)
+        internal static float TestCameraEase => cameraEase;
 
         internal enum Phase { Ground, Rising, Airborne, Landing, Jumping }
 
@@ -84,7 +130,28 @@ namespace GK2DonkeyAPI
         private const int GroundMask = 6144; // layers 11 and 12, what the game walks on
         internal static bool ProbeOn;        // the per-frame [flight-probe] lines (the tab; off: 70 000 lines filled the log)
         private static Mount.Instance owner;
-        private static float heightPx, jumpVel, bobT, beatT;
+        private static float heightPx, jumpT, jumpLetGo = float.PositiveInfinity, bobT, beatT;
+        private static bool jumpByKey, jumpTook, jumpFreed; // jumpFreed: the jump took the body (its take-off spot is this jump's)
+        private enum JumpStage { Arc, Perch, Judge, Drop, Squash }
+        private static JumpStage jumpStage;
+        private static float jumpPrevArc, jumpStageT, jumpDropV, jumpOverPx;
+        // D: the jump keeps the speed it had and steers in the air towards the stick, reaching the walking speed in
+        // JumpSteerS (the user, 2026-10-24: "the jump accelerates forward" off a body slowed against something: the
+        // flight's mover went at the full speed at once and slid along it)
+        internal static float JumpSteerS = 0.35f;
+        private static Vector3 jumpVel;
+        // ... and never faster than he really rides on the ground (the user, 2026-10-24: "if you keep moving while doing
+        // the jump, you accelerate forward instead of just jumping"; held jumps went 5.1-5.3 in half a second): the
+        // mover's speed is a formula of the walk's force and damping, the ride's is measured here, while riding plain on
+        // the ground (the fastest of the ride; anew when the speed multiplier changes: another mount, the cart)
+        private static float rideTopSpeed, rideTopFor = -1f, jumpTookSpeed, jumpMoverSpeed, jumpAirDist;
+        // C: where the body was during the jump (every 0.25), to land short along it when the touch-down is refused
+        private static readonly System.Collections.Generic.List<Vector3> jumpPath = new System.Collections.Generic.List<Vector3>();
+        internal static bool TestJumpWentBack { get; private set; }  // the last jump: put back on the take-off spot
+        internal static bool TestJumpPerched { get; private set; }   // the last jump: came down on top of something
+        internal static Vector2? TestMoveDir; // the self-test's stick while the body is the mod's
+        internal static bool? TestJumpHeld; // the self-test holds or lets go of the jump's key
+        internal static bool TestCameraLifted => cameraLifted;
         private static float groundBelowPx;          // flying free: how far the ground lies under the body (the body keeps its height off a plateau)
         private static Vector3 bodyMove;             // the body was put somewhere this frame (a landing) by this much: the camera is told
         private static RigidbodyInterpolation smoothWas;
@@ -432,11 +499,108 @@ namespace GK2DonkeyAPI
             // indoors only when a mod leaves flying indoors on (the Behaviour key FlyIndoors; Saddle Up sets it off); a
             // flight that goes in through a door then lands there (Tick: no longer CanFly)
             else if (Plugin.FlyIndoors != null && !Plugin.FlyIndoors.Value && Mount.Instance.IsIndoors()) why = "indoors (flying indoors is off)";
-            else if (!AnyMount && !string.Equals(i.LooksRig?.MountNow?.Id, "dragon", System.StringComparison.OrdinalIgnoreCase)) why = $"rides {i.LooksRig?.MountNow?.Name ?? "the donkey"}, only the dragon flies (or \"any mount\")";
+            else if (!Flies(i)) why = $"rides {Looks.MountWanted(i).Label}, which doesn't fly ([Mount] flies; or \"any mount\")";
             return why == null;
         }
 
-        private static bool CanJump(Mount.Instance i) => Active && i != null && i.IsMounted && i.CurrentStyle == MountStyle.Ride && (JumpAnyMount || CanFly(i, out _));
+        // the mount's own flags ([Mount] flies, jumps; MountDef.Flies, Jumps), the tab's overrides over them
+        private static bool Flies(Mount.Instance i) => AnyMount || Looks.MountWanted(i).Flies;
+        private static bool CanJump(Mount.Instance i) => Active && i != null && i.IsMounted && i.CurrentStyle == MountStyle.Ride && (JumpAnyMount || Looks.MountWanted(i).Jumps);
+
+        // A press of the jump key and/or the fly key (Tick; the self-test calls it as the keys would). One key for both:
+        // the press means both, and the phase decides.
+        // same: the two keys are one (null: as they are set; the self-test says)
+        internal static void Press(Mount.Instance i, bool jumpKey, bool flyKey, bool? same = null)
+        {
+            if (jumpKey && (same ?? (SameKey(JumpKeyNow, FlyKeyNow) && JumpKeyNow.MainKey != KeyCode.None))) flyKey = true;
+            switch (Now)
+            {
+                case Phase.Ground:
+                    if (jumpKey && CanJump(i)) Jump(i, byKey: true);
+                    else if (flyKey && (!jumpKey || CanFly(i, out _))) TakeOffOrLand(i); // a flier that doesn't jump takes off at once
+                    else if (jumpKey) Jump(i, byKey: true); // says why not
+                    return;
+                case Phase.Jumping:
+                    if (!flyKey) return; // the jump key alone mid-jump: nothing (no double jump)
+                    if (!JumpInAir) return; // the crouch, the touch-down being judged, the drop, the squash: on the ground
+                    if (!CanFly(i, out string why))
+                    {
+                        if (!jumpFlySaid)
+                        {
+                            jumpFlySaid = true;
+                            Plugin.Log.LogInfo("[flight] no take-off from the jump: " + why);
+                            // a mount that flies, refused here (indoors, the cart): said; one that doesn't fly: the press does nothing
+                            if (Flies(i)) Mount.Say(Mount.Instance.IsIndoors() ? "Can't fly in here." : "Can't fly now.", BubbleS);
+                        }
+                        return;
+                    }
+                    JumpToFlight();
+                    return;
+                default: // flying: the fly key (or the one key) lands; a landing: takes off again
+                    if (flyKey) TakeOffOrLand(i);
+                    return;
+            }
+        }
+
+        // ---- the API (Mounts.Jump, TakeOff, Land, FlightState, FlightChanged): the ridden mount, as the keys would
+        internal static MountFlight State => Now == Phase.Jumping ? MountFlight.Jumping : Now == Phase.Rising ? MountFlight.TakingOff
+            : Now == Phase.Airborne ? MountFlight.Flying : Now == Phase.Landing ? MountFlight.Landing : MountFlight.Ground;
+        private static MountFlight stateSaid = MountFlight.Ground;
+        private static void NotifyState()
+        {
+            MountFlight s = State;
+            if (s == stateSaid) return;
+            stateSaid = s;
+            Mounts.RaiseFlightChanged(s);
+        }
+
+        internal static MountResult ApiJump()
+        {
+            Mount.Instance i = Mount.IsMounted ? Mount.Ridden : null;
+            string no = WhyNotJump(i);
+            if (no != null) return MountResult.Refused(Cap(no));
+            Jump(i);
+            return Now == Phase.Jumping ? MountResult.Success : MountResult.Refused(Cap(Why));
+        }
+
+        internal static MountResult ApiTakeOff()
+        {
+            Mount.Instance i = Mount.IsMounted ? Mount.Ridden : null;
+            if (Now == Phase.Rising || Now == Phase.Airborne) return MountResult.Refused("Already flying.");
+            if (!CanFly(i, out string why)) return MountResult.Refused(Cap("can't take off: " + why));
+            if (Now == Phase.Jumping)
+            {
+                if (!JumpInAir) return MountResult.Refused("Not in the air yet (the jump's crouch or touch-down).");
+                JumpToFlight();
+            }
+            else TakeOffOrLand(i);
+            return Now == Phase.Rising ? MountResult.Success : MountResult.Refused(Cap(Why));
+        }
+
+        internal static MountResult ApiLand()
+        {
+            if (Now == Phase.Landing) return MountResult.Success;
+            if (Now != Phase.Rising && Now != Phase.Airborne) return MountResult.Refused(Now == Phase.Jumping ? "Jumping, not flying: the jump lands by itself." : "Not flying.");
+            Set(Phase.Landing, "landing (asked by a mod)");
+            return MountResult.Success;
+        }
+
+        private static string Cap(string s) => string.IsNullOrEmpty(s) ? "Refused." : char.ToUpperInvariant(s[0]) + s.Substring(1) + (s.EndsWith(".") ? "" : ".");
+
+        // in the air during a jump: on the arc above the ground, or on top of something
+        private static bool JumpInAir => Now == Phase.Jumping && (jumpStage == JumpStage.Perch || (jumpStage == JumpStage.Arc && jumpT >= JumpCrouchS && heightPx > 0f));
+
+        // The jump becomes the take-off: the launch carries on from the jump's height at the arc's speed (no crouch); the
+        // body, if the jump took it, stays the mod's (free flight from here); the camera eases up to the height.
+        private static void JumpToFlight()
+        {
+            const float e = 0.01f;
+            float v = jumpStage == JumpStage.Arc ? (JumpHeightAt(jumpT + e, jumpLetGo, out _) - JumpHeightAt(jumpT, jumpLetGo, out _)) / e : 0f;
+            vel = Mathf.Max(0f, v);
+            cameraEase = 0f;
+            cameraGapPx = Mathf.Max(0f, Mathf.Round(heightPx));
+            Set(Phase.Rising, $"the jump turns into a take-off at {heightPx:0} px (rising {vel:0} px/s{(Free ? ", the body already the mod's" : "")})");
+        }
 
         // The tab's buttons and the keys.
         internal static void TakeOffOrLand(Mount.Instance i)
@@ -453,13 +617,64 @@ namespace GK2DonkeyAPI
             }
         }
 
-        internal static void Jump(Mount.Instance i)
+        // byKey: the jump's key pressed (its release cuts the rise); the tab's button and the self-test jump held
+        internal static string WhyNotJump(Mount.Instance i)
         {
-            if (Now != Phase.Ground || !CanJump(i)) { Plugin.Log.LogInfo($"[flight] no jump: {(Now != Phase.Ground ? Now.ToString().ToLower() : "this mount doesn't jump (riding plain, the experiment on, 'every mount jumps' or a flying mount)")}"); return; }
+            if (!Active) return "jumping and flying are off (a dev-only experiment for now)";
+            if (i == null || !i.IsMounted) return "not riding";
+            if (i.CurrentStyle != MountStyle.Ride) return "drives the cart (jumping is for riding plain)";
+            if (Now != Phase.Ground) return Now == Phase.Jumping ? "already jumping" : "in the air";
+            if (!CanJump(i)) return $"rides {Looks.MountWanted(i).Label}, which doesn't jump ([Mount] jumps = false)";
+            return null;
+        }
+
+        internal static void Jump(Mount.Instance i, bool byKey = false)
+        {
+            string no = WhyNotJump(i);
+            if (no != null) { Why = "no jump: " + no; Plugin.Log.LogInfo("[flight] " + Why); return; }
             owner = i;
-            float t = Mathf.Max(0.1f, JumpTimeS);
-            jumpVel = 4f * JumpPx / t; // up at v, down under g = 8H/T^2: the top at H after T/2
-            Set(Phase.Jumping, $"jump {JumpPx:0} px in {t:0.##} s");
+            jumpT = 0f; jumpLetGo = float.PositiveInfinity; jumpByKey = byKey;
+            jumpPath.Clear(); jumpVel = Vector3.zero; jumpAirDist = 0f; TestJumpWentBack = false; TestJumpPerched = false;
+            jumpTook = false; jumpFreed = false; jumpFlySaid = false; jumpStage = JumpStage.Arc; jumpPrevArc = 0f; jumpStageT = 0f; jumpDropV = 0f; jumpOverPx = 0f;
+            Set(Phase.Jumping, $"jump: up to {JumpPx:0} px held, {JumpTapPx:0} px tapped, {JumpTimeS:0.##} s in the air");
+        }
+
+        // The jump's height at t seconds after the press, the key let go at letGo seconds (infinity: held), in art px;
+        // done once the squash is over. Below 0: the crouch and the squash. Segments: the crouch (down to -C over Cs);
+        // the rise from -C to H in Tr = T * share (v0 = 2D/Tr, g = 2D/Tr^2, D = H + C); let go before the top, the rest
+        // of the rise brakes JumpCut times harder, never below the tap's height; the hang; the fall from the top P
+        // under 2H/Tf^2 (Tf = T - Tr - hang: the full fall's time); the squash.
+        internal static float JumpHeightAt(float t, float letGo, out bool done)
+        {
+            done = false;
+            float H = Mathf.Max(1f, JumpPx), C = Mathf.Max(0f, JumpCrouchPx), Cs = Mathf.Max(0f, JumpCrouchS);
+            float T = Mathf.Max(0.1f, JumpTimeS), hang = Mathf.Clamp(JumpHangS, 0f, 0.3f * T);
+            float Tr = T * Mathf.Clamp(JumpRiseShare, 0.2f, 0.8f), Tf = Mathf.Max(0.05f, T - Tr - hang);
+            if (t < Cs) return Cs > 0f ? -C * t / Cs : 0f;
+            float u = t - Cs, r = Mathf.Max(0f, Mathf.Max(letGo, Mathf.Max(0f, JumpHoldMinS)) - Cs);
+            float D = H + C, v0 = 2f * D / Tr, g = 2f * D / (Tr * Tr);
+            float P = H, topT = Tr;
+            if (r < Tr)
+            {
+                float h1 = -C + v0 * r - 0.5f * g * r * r, v1 = v0 - g * r;
+                P = Mathf.Min(H, Mathf.Max(Mathf.Min(JumpTapPx, H), h1 + v1 * v1 / (2f * g * JumpCut)));
+                if (P > h1 + 0.001f)
+                {
+                    float g2 = v1 * v1 / (2f * (P - h1));
+                    topT = r + v1 / g2;
+                    if (u >= r && u < topT) { float w = u - r; return h1 + v1 * w - 0.5f * g2 * w * w; }
+                }
+                else { P = h1; topT = r; }
+            }
+            if (u < Mathf.Min(r, topT)) return -C + v0 * u - 0.5f * g * u * u;
+            if (u < topT + hang) return P;
+            float gf = 2f * H / (Tf * Tf), fallS = Mathf.Sqrt(2f * Mathf.Max(0f, P) / gf);
+            float f = u - topT - hang;
+            if (f < fallS) return P - 0.5f * gf * f * f;
+            float s = f - fallS;
+            if (s < JumpSquashS && JumpSquashPx > 0f) return -JumpSquashPx * Mathf.Sin(s / JumpSquashS * Mathf.PI);
+            done = true;
+            return 0f;
         }
 
         // Every frame for the ridden mount, before Follow.
@@ -473,11 +688,29 @@ namespace GK2DonkeyAPI
             }
             float dt = Time.deltaTime;
             bool climbing = false;
-            if (!MountsPanel.IsOpen && GUIUtility.keyboardControl == 0)
+            // the keys: never with the Mounts panel or a text box, the controls taken (a dialogue: Space skips speech; a
+            // menu: Space selects) or the game paused
+            PlayerController pcIn = MainGame.PlayerController;
+            // ... nor while a key is being set in the Settings window (the API's key poller skips those frames too)
+            KeyboardShortcut jk = JumpKeyNow, fk = FlyKeyNow;
+            if (!SameKey(jk, keysSeenJump) || !SameKey(fk, keysSeenFly)) { keysSeenJump = jk; keysSeenFly = fk; keysWaitRelease = true; }
+            if (keysWaitRelease && !Held(jk) && !Held(fk)) keysWaitRelease = false;
+            if (!MountsPanel.IsOpen && GUIUtility.keyboardControl == 0 && !SettingsRows.CapturingKey && pcIn != null && pcIn.IsControlsEnabled && !MainGame.IsGamePaused)
             {
                 var input = UnityInput.Current;
-                if (input.GetKeyDown(TakeOffKey)) TakeOffOrLand(i);
-                if (input.GetKeyDown(JumpKey)) Jump(i);
+                // in a fight (the keeper in armour, a weapon out) the game's Attack is on Space: the jump and fly keys are
+                // left to the game there when they are the attack's key
+                bool armour = Mount.Instance.InArmour(pcIn);
+                if (armour && (jk.MainKey == KeyCode.Space || fk.MainKey == KeyCode.Space))
+                {
+                    if (!armourSaid) { armourSaid = true; Plugin.Log.LogInfo("[flight] in armour (a fight): Space is the game's attack, not the jump or fly key, until he takes the armour off"); }
+                    if (jk.MainKey == KeyCode.Space) jk = KeyboardShortcut.Empty;
+                    if (fk.MainKey == KeyCode.Space) fk = KeyboardShortcut.Empty;
+                }
+                else if (!armour) armourSaid = false;
+                bool jd = !keysWaitRelease && KeyActions.Pressed(jk), fd = !keysWaitRelease && !SameKey(fk, jk) && KeyActions.Pressed(fk);
+                if (jd || fd) Press(i, jd, fd);
+                if (Now == Phase.Jumping && jumpByKey && float.IsPositiveInfinity(jumpLetGo) && !Held(jk)) jumpLetGo = jumpT;
                 if (Now == Phase.Airborne || Now == Phase.Rising)
                 {
                     if (input.GetKey(UpKey)) climbing = true;
@@ -501,13 +734,18 @@ namespace GK2DonkeyAPI
                     Descend(Mathf.Min(dt, 0.05f));
                     break;
                 case Phase.Jumping:
-                    float t = Mathf.Max(0.1f, JumpTimeS);
-                    heightPx += jumpVel * dt;
-                    jumpVel -= 8f * JumpPx / (t * t) * dt;
-                    if (heightPx <= 0f) Land("jump landed");
+                    JumpTick(dt);
                     break;
             }
             climbingNow = climbing;
+            if (Now == Phase.Ground && !Free && pcIn?.PhysicalBody?.Rb != null)
+            {
+                PlayerPhysicalBody pbIn = pcIn.PhysicalBody;
+                if (!Mathf.Approximately(pbIn.SpeedMultiplier, rideTopFor)) { rideTopFor = pbIn.SpeedMultiplier; rideTopSpeed = 0f; }
+                Vector3 gv = pbIn.Rb.linearVelocity; gv.y = 0f;
+                if (!pbIn.Rb.isKinematic) rideTopSpeed = Mathf.Max(rideTopSpeed, gv.magnitude);
+            }
+            if (cameraEase < 1f) cameraEase = Mathf.Min(1f, cameraEase + dt / CameraEaseS);
             GlideTick(i, dt, climbing);
             PitchTick(dt);
             // the beat's clock: still while gliding (the glide's own stages) and through the landing's frames (cut 2 above)
@@ -518,6 +756,7 @@ namespace GK2DonkeyAPI
             LiftBubble();
             if (ProbeOn) Probe.AtTick(i);
             Jumps.AtTick(i);
+            NotifyState(); // the climb key takes a launch to Airborne without Set
         }
 
         private static void ApplyBodyMove()
@@ -562,7 +801,7 @@ namespace GK2DonkeyAPI
         private static void FreeTick(Mount.Instance i)
         {
             PlayerController pc = MainGame.PlayerController;
-            if (pc?.PhysicalBody?.Rb == null) return;
+            if (pc?.PhysicalBody?.Rb == null || Now == Phase.Jumping) return; // a jump moves the body by its own tick (JumpTick)
             if (!Free && FreeFlight && heightPx >= ClearPx && (Now == Phase.Rising || Now == Phase.Airborne))
             {
                 if (Mount.Instance.IsIndoors()) { Why = "indoors: the lift only (no flying through walls)"; return; }
@@ -633,14 +872,178 @@ namespace GK2DonkeyAPI
             return Physics.Raycast(new Vector3(body.x, alt, body.z), Vector3.down, out RaycastHit hit, alt - body.y + 30f, GroundMask, QueryTriggerInteraction.Ignore) ? hit.point.y : float.NaN;
         }
 
-        private static void EnterFree(PlayerController pc)
+        // The jump: the arc (JumpHeightAt), the body the mod's while off the ground (JumpOver), the touch-down judged.
+        private static void JumpTick(float dt)
+        {
+            if (TestJumpHeld == false && float.IsPositiveInfinity(jumpLetGo)) jumpLetGo = jumpT;
+            jumpT += dt;
+            float arc = JumpHeightAt(jumpT, jumpLetGo, out bool done);
+            PlayerController pc = MainGame.PlayerController;
+            Rigidbody rb = pc?.PhysicalBody?.Rb;
+            if (!jumpTook && arc > 0f && rb != null)
+            {
+                jumpTook = true; // once, as the mount leaves the ground
+                if (JumpOver && Mount.Instance.IsIndoors()) Plugin.Log.LogInfo("[flight] jump in place: indoors (no jumping through walls)");
+                else if (JumpOver)
+                {
+                    Vector3 v = rb.linearVelocity; v.y = 0f;
+                    jumpVel = v; // what the game's walk had, before the body turns kinematic
+                    jumpTookSpeed = v.magnitude;
+                    EnterFree(pc, "jump");
+                    jumpFreed = true;
+                    jumpPath.Add(rb.position);
+                }
+            }
+            if (!Free && jumpStage == JumpStage.Arc)
+            {
+                // in place (indoors, JumpOver off, the body given back by a door or a save): the drawn arc alone
+                heightPx = arc;
+                if (done) Land(JumpSaid("in place"));
+                return;
+            }
+            float solid = 0f;
+            if (rb != null && Free)
+            {
+                // what is under the jump higher than the body (a wall's top, a rock, a plateau): never drawn inside it
+                float under = GroundUnderFlight(rb.position);
+                float alt = rb.position.y + Mathf.Max(0f, heightPx) * PxWorldY;
+                float top = Mount.Instance.FloorUnder(pc, rb.position, alt, r: 0.05f);
+                float groundTop = float.IsNaN(under) ? top : float.IsNaN(top) ? under : Mathf.Max(under, top);
+                if (!float.IsNaN(groundTop)) solid = Mathf.Max(0f, (groundTop - rb.position.y) / PxWorldY);
+                Jumps.Floor(under, float.NaN, top, solid);
+                jumpOverPx = Mathf.Max(jumpOverPx, solid);
+            }
+            jumpStageT += dt;
+            switch (jumpStage)
+            {
+                case JumpStage.Arc:
+                {
+                    bool falling = arc < jumpPrevArc;
+                    jumpPrevArc = arc;
+                    if (arc > 0f && !done && !(falling && arc <= solid)) { heightPx = Mathf.Max(arc, solid); return; }
+                    if (solid > 0.5f)
+                    {
+                        Stage(JumpStage.Perch);
+                        TestJumpPerched = true;
+                        heightPx = solid;
+                        Plugin.Log.LogInfo($"[flight] the jump came down on something {solid:0} px up at {rb.position.x:0.00},{rb.position.z:0.00}: on top of it for up to {JumpPerchS:0.0} s");
+                        return;
+                    }
+                    Stage(JumpStage.Judge);
+                    heightPx = 0f;
+                    goto case JumpStage.Judge;
+                }
+                case JumpStage.Perch:
+                    // on top of it: ridden off it, the mount falls (the jump's fall) to what is under it
+                    if (solid >= heightPx) { heightPx = solid; jumpDropV = 0f; }
+                    else { jumpDropV += FallG() * dt; heightPx = Mathf.Max(solid, heightPx - jumpDropV * dt); }
+                    if (heightPx <= 0.01f && solid <= 0.5f) { Stage(JumpStage.Judge); heightPx = 0f; goto case JumpStage.Judge; }
+                    if (jumpStageT > JumpPerchS) Back(pc, $"still on top of something {solid:0} px up after {JumpPerchS:0.0} s");
+                    return;
+                case JumpStage.Judge:
+                {
+                    // the touch-down, judged as a flight's landing; the walk-away test may take a few frames (the body
+                    // held still meanwhile, FixedStep); after 0.25 s of it, judged at once
+                    heightPx = 0f;
+                    if (rb == null || !Free) { Stage(JumpStage.Squash); return; }
+                    Vector3 spot = rb.position;
+                    float under = GroundUnderFlight(spot);
+                    if (!float.IsNaN(under)) spot.y = under;
+                    string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true,
+                        walkBudgetMs: jumpStageT > 0.25f ? 0f : Mount.Instance.WalkSliceMs);
+                    if (why == Mount.Instance.WalkPending) return;
+                    if (why != null)
+                    {
+                        // C: a hair inside something: pushed out of it and judged again (at once)
+                        Vector3 pushed = spot;
+                        if (Mount.Instance.PushOut(pc, ref pushed))
+                        {
+                            Vector3 p2 = pushed;
+                            string why2 = Mount.Instance.WhyCannotLandAt(pc, ref p2, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f);
+                            if (why2 == null)
+                            {
+                                Plugin.Log.LogInfo($"[flight] the jump's touch-down pushed out {Vector3.Distance(pushed, spot):0.00} ({why})");
+                                spot = p2; why = null;
+                            }
+                        }
+                    }
+                    if (why != null) { Back(pc, why); return; }
+                    float drop = rb.position.y - spot.y;
+                    GiveBack(pc, spot, $"the jump lands at {spot:F2} (the body down {drop:0.00})");
+                    // the picture keeps its place: the body down to the ground under it, the mount falls the rest
+                    heightPx = Mathf.Max(0f, drop / PxWorldY);
+                    jumpDropV = 0f;
+                    Stage(heightPx > 0.5f ? JumpStage.Drop : JumpStage.Squash);
+                    return;
+                }
+                case JumpStage.Drop:
+                    jumpDropV += FallG() * dt;
+                    heightPx -= jumpDropV * dt;
+                    if (heightPx <= 0f) { heightPx = 0f; Stage(JumpStage.Squash); }
+                    return;
+                case JumpStage.Squash:
+                    heightPx = JumpSquashPx > 0f ? -JumpSquashPx * Mathf.Sin(Mathf.Clamp01(jumpStageT / JumpSquashS) * Mathf.PI) : 0f;
+                    if (jumpStageT >= JumpSquashS) Land(JumpSaid("over things"));
+                    return;
+            }
+        }
+
+        private static void Stage(JumpStage s) { jumpStage = s; jumpStageT = 0f; }
+
+        // the jump's fall (its gravity when held: 2H/Tf^2)
+        private static float FallG()
+        {
+            float T = Mathf.Max(0.1f, JumpTimeS), hang = Mathf.Clamp(JumpHangS, 0f, 0.3f * T);
+            float Tf = Mathf.Max(0.05f, T - T * Mathf.Clamp(JumpRiseShare, 0.2f, 0.8f) - hang);
+            return 2f * Mathf.Max(1f, JumpPx) / (Tf * Tf);
+        }
+
+        // nowhere to touch down: back on the take-off spot (he stood there), then the squash
+        // Nowhere to touch down here: the nearest spot back along the jump's own path where he can stand (judged at once,
+        // within a few ms), else the take-off spot (he stood there: the lock-out guarantee). No bubble (the user,
+        // 2026-10-24: "i was spammed the bubble ... we dont need the bubble that it cant land when jumping").
+        private static void Back(PlayerController pc, string why)
+        {
+            Vector3 put = takeOffSpot;
+            string how = $"back to the take-off spot {takeOffSpot:F2}";
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            for (int k = jumpPath.Count - 1; k >= 1 && watch.Elapsed.TotalMilliseconds < 8.0; k--)
+            {
+                Vector3 p = jumpPath[k];
+                float under = GroundUnderFlight(p);
+                if (!float.IsNaN(under)) p.y = under;
+                if (Mount.Instance.WhyCannotLandAt(pc, ref p, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f) == null)
+                {
+                    put = p;
+                    how = $"short of it, back along the jump at {p:F2} ({jumpPath.Count - 1 - k} step(s) of the path back, {watch.Elapsed.TotalMilliseconds:0.0} ms)";
+                    break;
+                }
+            }
+            TestJumpWentBack = put == takeOffSpot;
+            GiveBack(pc, put, $"the jump can't land there ({why}): {how}");
+            heightPx = 0f;
+            Stage(JumpStage.Squash);
+        }
+
+        private static string JumpSaid(string how)
+        {
+            Rigidbody rb = MainGame.PlayerController?.PhysicalBody?.Rb;
+            string far = rb != null && jumpFreed ? $", {Vector3.Distance(new Vector3(rb.position.x, 0f, rb.position.z), new Vector3(takeOffSpot.x, 0f, takeOffSpot.z)):0.00} from the take-off" : "";
+            string over = jumpOverPx > 0.5f ? $", over something up to {jumpOverPx:0} px" : "";
+            if (jumpFreed) over += $"; speed: took off at {jumpTookSpeed:0.0}, the ride's top {rideTopSpeed:0.0}, the mover's {jumpMoverSpeed:0.0}, {jumpAirDist:0.00} moved in the air";
+            return $"jump landed ({how}{(float.IsPositiveInfinity(jumpLetGo) ? ", held" : $", the key let go after {jumpLetGo:0.00} s")}{far}{over})";
+        }
+
+        private static void EnterFree(PlayerController pc, string what = null)
         {
             PlayerPhysicalBody pb = pc.PhysicalBody;
             lastSafe = takeOffSpot = pb.Rb.position; // the take-off spot: he stood there (every landing must connect to it)
             pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, false); // the one type the game never sets (its ladder is unused)
             WallsDown(pb);
             Free = true;
-            Plugin.Log.LogInfo($"[flight] free flight from {heightPx:0} px: the keeper's body is moved by the mod (kinematic {pb.Rb.isKinematic}), over everything; take-off spot {lastSafe:F2}");
+            Plugin.Log.LogInfo(what == "jump"
+                ? $"[flight] the jump takes the body (kinematic {pb.Rb.isKinematic}): over what is lower than the jump; take-off spot {lastSafe:F2}"
+                : $"[flight] free flight from {heightPx:0} px: the keeper's body is moved by the mod (kinematic {pb.Rb.isKinematic}), over everything; take-off spot {lastSafe:F2}");
         }
 
         private static void WallsDown(PlayerPhysicalBody pb)
@@ -782,13 +1185,15 @@ namespace GK2DonkeyAPI
         {
             if (!Free) return;
             ForceDown(MainGame.PlayerController, "a save", move: true);
-            Set(Phase.Landing, "landing for the save");
+            if (Now == Phase.Jumping) Land("down at once for a save (mid-jump)");
+            else Set(Phase.Landing, "landing for the save");
         }
 
         // A dismount or a style change asked by a key, the panel or a mod while flying free: land first.
         internal static bool HoldForLanding(string what)
         {
             if (!Free) return false;
+            if (Now == Phase.Jumping) { Release(owner, what + " mid-jump"); return false; }
             if (Now != Phase.Landing) Set(Phase.Landing, $"landing first ({what})");
             Mount.Say("Land first.", BubbleS);
             return true;
@@ -808,17 +1213,28 @@ namespace GK2DonkeyAPI
             Rigidbody rb = pb?.Rb;
             if (rb == null) return;
             if (!rb.isKinematic) rb.isKinematic = true; // a flow's LockMovement(false) writes it past the flags
-            Vector2 d = pc.IsControlsEnabled && !MainGame.IsGamePaused && !(movementLocked != null && movementLocked(pb)) ? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
+            Vector2 d = pc.IsControlsEnabled && !MainGame.IsGamePaused && !(movementLocked != null && movementLocked(pb)) ? TestMoveDir ?? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
+            if (Now == Phase.Jumping && jumpStage != JumpStage.Arc && jumpStage != JumpStage.Perch) d = Vector2.zero; // the touch-down being judged
             if (d.sqrMagnitude > 1f) d.Normalize();
             float dt = Time.fixedDeltaTime, c = Mathf.Max(0.01f, rb.linearDamping);
             float speed = (pb.PhysicsConfig != null ? pb.PhysicsConfig.speed : 50f) * pb.SpeedMultiplier * (1f + c * dt) / c; // the top speed walking reaches against the damping
             Vector3 move = new Vector3(d.x, 0f, d.y * 0.8f) * speed * dt; // the game's 0.8 along z (MoveByDirection)
+            if (Now == Phase.Jumping)
+            {
+                // D: the jump's own speed, steered towards the stick's (momentum: a jump from a standstill or from against
+                // a wall goes up, not off along it)
+                Vector3 wantV = move / dt;
+                jumpMoverSpeed = speed;
+                if (rideTopSpeed > 0.5f && rideTopSpeed < speed) wantV *= rideTopSpeed / speed; // the ride's own top, measured
+                jumpVel = Vector3.MoveTowards(jumpVel, wantV, speed / Mathf.Max(0.05f, JumpSteerS) * dt);
+                move = jumpVel * dt;
+            }
             Blocker = null;
             if (BumpTall)
             {
                 // the flight's feet: the body plus the lift (the hover left out), a clearance under them
                 float flightY = rb.position.y + Mathf.Round(heightPx) * PxWorldY - ClearancePx * PxWorldY;
-                move = Mount.Instance.FlyMove(pc, rb.position, move, flightY);
+                move = Mount.Instance.FlyMove(pc, rb.position, move, flightY, colliderToo: Now == Phase.Jumping);
                 string b = Mount.Instance.LastBlocker;
                 if (b != null && (b != lastBlocker || Time.unscaledTime - lastBlockerSaid > 2f))
                 {
@@ -850,7 +1266,7 @@ namespace GK2DonkeyAPI
             {
                 float step = under.point.y - next.y;
                 next.y = under.point.y;
-                if (step > 0.1f)
+                if (step > 0.1f && Now != Phase.Jumping)
                 {
                     // only the height above the floor makes up for it (the floor over the new ground: the old one less
                     // the step, the clear height at least): flying low the flight rises with the ground, as it must, and
@@ -869,6 +1285,14 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogInfo($"[flight] the body steps up {step:0.00} onto {under.collider.name} at {next.x:0.00},{next.z:0.00}: " +
                         (keep >= stepPx - 0.01f ? $"the flight keeps its place ({was:0} -> {heightPx:0} px over the body)" : $"the flight rises {stepPx - keep:0} px with the ground (its floor), {was:0} -> {heightPx:0} px over the body"));
                 }
+            }
+            if (Now == Phase.Jumping)
+            {
+                // what was really moved is the speed now (into a wall: none of it; along one: the slide's share, never more)
+                Vector3 moved = next - rb.position; moved.y = 0f;
+                jumpVel = moved / dt;
+                jumpAirDist += moved.magnitude;
+                if (jumpPath.Count == 0 || (next - jumpPath[jumpPath.Count - 1]).sqrMagnitude > 0.0625f) jumpPath.Add(next);
             }
             rb.MovePosition(next);
             pc.PlayerData.position.Value = next;
@@ -935,7 +1359,7 @@ namespace GK2DonkeyAPI
                 // between the flying clips (the beat, take-off, landing)
                 float screenStep = now.ScreenY - last.ScreenY;
                 bool clipCut = now.Frame_ != last.Frame_ && Clip(now.Frame_) != Clip(last.Frame_);
-                if (have && now.Frame == last.Frame + 1 && (Mathf.Abs(unexplained) >= 2f * PxWorldY || Mathf.Abs(step) >= 12f * PxWorldY || Mathf.Abs(screenStep) >= 18f || clipCut) && said < 200)
+                if (have && now.Frame == last.Frame + 1 && (Mathf.Abs(unexplained) >= 2f * PxWorldY || Mathf.Abs(step) >= 12f * PxWorldY || (Mathf.Abs(screenStep) >= 18f && now.Phase != Phase.Jumping) || clipCut) && said < 200)
                 {
                     said++;
                     Plugin.Log.LogInfo($"[flight] jump of {step / PxWorldY:+0;-0} px in one frame ({unexplained / PxWorldY:+0;-0} px not from the body or the lift) at {now.At.x:0.00},{now.At.z:0.00}: " +
@@ -1018,7 +1442,13 @@ namespace GK2DonkeyAPI
         // Straight up by whole art pixels is whole steps of the camera's y grid.
         private static void FollowCamera()
         {
-            float lift = Now == Phase.Ground ? 0f : Mathf.Max(0f, Mathf.Round(heightPx)) * PxWorldY * Mathf.Clamp01(CameraFollow); // the crouch and the thud: not the camera
+            // the crouch and the thud: not the camera; nor a jump (a hop would bounce the whole screen)
+            // a jump turned flight: the camera follows the climb at once, less the gap the jump left (it stayed down for the
+            // jump), which eases away (cameraEase), whole pixels. Eased as a share of the whole height, the camera trailed
+            // the take-off's fast climb by tens of px mid-ease and raced after it (F11 2026-10-24: 3.8 px a frame)
+            float behind = Mathf.Round(cameraGapPx * (1f - Mathf.SmoothStep(0f, 1f, cameraEase)));
+            float lift = Now == Phase.Ground || Now == Phase.Jumping ? 0f : Mathf.Max(0f, Mathf.Round(heightPx) - behind) * PxWorldY * Mathf.Clamp01(CameraFollow);
+            TestCameraLiftPx = lift / PxWorldY;
             if (lift <= 0f && !cameraLifted) return;
             CameraController cc = CameraSystem.Instance != null ? CameraSystem.Instance.ActiveCameraController : null;
             if (cc == null) return;
@@ -1049,7 +1479,7 @@ namespace GK2DonkeyAPI
         {
             if (Free) ForceDown(MainGame.PlayerController, what, move: true);
             if (owner != null && Now != Phase.Jumping) { lastOwner = owner; landedAt = Time.unscaledTime; }
-            heightPx = 0f; jumpVel = 0f; bobT = 0f; beatT = 0f; vel = 0f; thudT = -1f;
+            heightPx = 0f; jumpT = 0f; jumpLetGo = float.PositiveInfinity; cameraEase = 1f; bobT = 0f; beatT = 0f; vel = 0f; thudT = -1f;
             Set(Phase.Ground, what);
             FollowCamera();
             ApplyBodyMove();
@@ -1135,6 +1565,7 @@ namespace GK2DonkeyAPI
             Now = p;
             Why = what;
             Plugin.Log.LogInfo($"[flight] {what} (height {heightPx:0} px)");
+            NotifyState();
         }
     }
 }

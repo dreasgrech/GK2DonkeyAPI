@@ -532,6 +532,27 @@ Development:
   open for a moment, held low over the rider's legs, flexing gently in the air and the body rising and sinking with them. It eases into the glide
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
+- **The gliding dragon's head nods gently** instead of holding perfectly still.
+- **Jump and Fly keys, Space both** (dev-only for now, like flying): Saddle Up's Keys section has a Jump and a Fly
+  row, shown only while flying is on. With one key for both (the default): a press jumps on every mount, a second
+  press in the air takes off on a mount that flies (the wings take over from the jump, the camera eases up), a press
+  while flying lands. With two keys each does its own (Fly takes off from the ground). Space does nothing for the
+  mount during a dialogue, a menu, a fight in armour (it is the game's attack there) or while a key is being set in
+  the Settings window, and a key just rebound counts only once let go. The keys are whole combinations (Ctrl+Space is
+  Ctrl+Space). The API has them as the Behaviour keys `JumpKey` and `FlyKey` (0.36.0), and for mods
+  `Mounts.Jump()`, `TakeOff()`, `Land()`, `Mounts.FlightState`, the event `FlightChanged` and `Mounts.FlyingEnabled`.
+- **A mount says whether it flies and jumps**: `[Mount] flies = true` and `jumps = false` (written only when not the
+  default), `MountDef.Flies` / `Jumps`, `MountInfo.Flies` / `Jumps`; the Mounts tab has the toggles and the panel the
+  lines (while flying is on). The dragon flies by its flag: no code asks for the mount named dragon any more.
+- **The mount's jump feels like a platformer's** (dev-only, Space while riding plain; the keeper on foot doesn't jump):
+  a short crouch, a quick rise, a moment at the top, a heavier fall and a squash on landing. Hold the key for the full
+  height (28 px), flick it for a hop (16 px). The camera no longer bounces with a jump, and the jump is the same at any
+  frame rate. **The mount jumps over things**: the keeper's body leaves the ground for the jump, passes over what is
+  lower than the jump and is stopped by what is taller; it lands only where a flight could (never somewhere he'd be
+  locked in). A jump keeps the speed you had and steers a little in the air, never faster than the mount really
+  rides on the ground (no surge along a wall you were pressed against, none from running into a jump); one that can't touch down where it ends lands at the nearest good spot back along its way, the take-off
+  spot only as the last resort, and says nothing (no bubble). Invisible walls stop a jump. The Flying tab has rows for each part; a new self-test
+  "jump: the mount's arc" checks the arc and jumps live over a low wall and against a tall one.
 - **The flying dragon's neck is shorter and steadier.** In the air its neck was long for its body and the head bobbed
   against the body on every wing beat (like a dancer's head); the neck is a fifth shorter and the head now moves
   with the body, a moment behind it.
