@@ -15,13 +15,14 @@ namespace GK2DonkeyAPI
         // line when he mounts or lands, for the front picture's offset there.
         internal static class FrontReadout
         {
+            internal static bool On; // the Flying tab's "[occlusion] lines"; off by default since the wing over the rider was settled (2026-10-23)
             private static float next;
             private static int budget;
             private static string lastState;
 
             internal static void Note(Mount.Instance owner, SpriteRenderer part, SpriteRenderer body, SpriteRenderer front, string flyKey)
             {
-                if (!Flight.Active || owner == null || body == null || front == null || !front.enabled) return;
+                if (!On || !Flight.Active || owner == null || body == null || front == null || !front.enabled) return;
                 SpriteRenderer[] rider = owner.KeeperRenderers;
                 if (owner.KeeperBody == null || rider == null) return;
                 // a fresh budget for each state and facing: one flight each way is logged both ways (the first run's

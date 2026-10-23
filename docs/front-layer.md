@@ -177,11 +177,11 @@ in docs/flying.md ("The rider behind the spread wing"). The short version, for t
 - **This report was not read before that work began.** It cost a day: the box, the band and the head window were
   all cuts, which section 3 already rules out. The composite checks passed while the game was wrong, which section 2
   already warns of.
-- **Where it stands.** The near wing is front layer except over the rider's head (`rider_in_view`: x 64-82 up to row
-  37, x 64-75 for rows 38-42), so his head and face stay in front while the wing covers the rest of him. That is a
-  cut, and section 3 says the honest answer is a shape. With the lift fixed (section 2) and checked on the user's
-  video in both facings, it shows no seams and no clipped hair. Whether to keep the cut, or have the raised wing
-  cover his head for those frames as the rule says, is the user's call.
+- **Where it stands (decided 2026-10-23).** The whole spread near wing is front layer: B below, the rule of
+  section 3. The user, having seen all three in game: "the best looking one is b: the rule". The generator's default
+  is `DRAGON_WING_OVER_RIDER=all`; "head" (A, the cut: `rider_in_view`, x 64-82 up to row 37, x 64-75 for rows 38-42)
+  and "box" stay as switches for a study. The default draws byte for byte what the study's B frames were (133 of 133
+  pictures compared), and the ground frames are unchanged (the folded wing never used the window).
 - **How to check next time.** Use the world: the front-layer readback self-test (section 6), the `[occlusion]` log
   lines (`Looks.FrontReadout`: the front picture against the body picture, and the facing), or the user's video
   registered at its pixel scale. A composite only checks the frames against my own assumptions.
@@ -189,17 +189,15 @@ in docs/flying.md ("The rider behind the spread wing"). The short version, for t
 
   | | his head covered | him covered (worst frame) | the beat |
   |---|---|---|---|
-  | A the cut (shipped) | never | 28% | as drawn |
+  | A the cut (shipped until 2026-10-23) | never | 28% | as drawn |
   | B the rule (the whole wing in front) | 7 of 13 spread-wing frames, up to 168 of his 192 head pixels | 52% | as drawn; he nearly vanishes at the top of every beat |
   | C the shape (raised pose leaned back 35 degrees, `DRAGON_RAISED_TILT`) | never (2 px at most) | 33% | the top of the stroke much lower: raised and level look alike |
 
-  The user is to choose by eye.
-  - **In game:** the Flying tab's "Wing over the rider (a study)" row (A / B / C, switches at once,
-    `Flight.WingLook`).
-  - **The frames:** the dragon skin carries B and C as variant frames, `bdy_<clip>_b_left_NN` and
-    `bdy_<clip>_c_left_NN` (back and front), made by the generator's `WING_STUDIES`. The scans accept the `_b`/`_c`
-    suffix.
-  - **Once chosen:** remove the variants (`DRAGON_WING_STUDIES=0`, the suffix in the scans, the row).
+  Chosen in game with the Flying tab's study row (A / B / C, switching at once between variant frames the skin
+  carried, `bdy_<clip>_b/_c_left_NN`): B. Removed afterwards: the variant frames (96 pictures), the row and
+  `Flight.WingLook`, the generator's `WING_STUDIES` and `RAISED_TILT` (C's lean), the `_b`/`_c` suffix in the scans.
+  B's cost, known and accepted: at the top of the beat the raised wing covers most of his head (7 of 13 spread-wing
+  frames, up to 168 of 192 head pixels).
 
 Related: docs/skins.md (the pack format), docs/mount-looks-design.md (the dragon), docs/sprite-tools.md (the
 pipeline and the hand-over checklist), docs/seat-investigation.md (the seat row), docs/self-tests.md.

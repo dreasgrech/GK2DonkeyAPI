@@ -51,20 +51,21 @@ namespace GK2DonkeyAPI
         internal static bool UseDrawnGround = true; // step 2 of the drawn ground (DrawnGround.cs): floor, walls, landings
         internal static int CoverEdgeTiles = 1;    // a landing under this many edge tiles of a higher level is still allowed
         internal static float ClearancePx = 2f;    // how far under the flight's feet a top still counts as in the way
-        // The wing over the rider, a study to judge in game (2026-10-23, docs/front-layer.md section 9): 0 A (the cut: a
-        // hole for his head), 1 B (the rule: the whole near wing in front), 2 C (the raised wing leaned back 35 degrees,
-        // the whole wing in front). B and C are the skin's bdy_<clip>_b/_c_left_NN frames; a skin without them shows A.
-        internal static int WingLook;
-        internal static string WingLookKey(string key)
-        {
-            if (WingLook == 0 || key == null || !key.EndsWith("_left_" + key.Substring(key.Length - 2))) return key;
-            int at = key.LastIndexOf("_left_", System.StringComparison.Ordinal);
-            return at < 0 ? key : key.Substring(0, at) + (WingLook == 1 ? "_b" : "_c") + key.Substring(at);
-        }
         internal static float BubbleS = 1.5f;      // how long the flight's bubbles stay ("Nowhere to land here.": the game's own time was about 5 s)
         internal static float WingBeatS = 0.6f;    // one wing beat (the eight flying frames)
         internal static float BeatBobPx = 3f;      // the body's rise on each downstroke, with the flying frames
         internal static bool FlyFrames = true;     // the skin's flying frames while airborne (off: its walk and idle frames)
+        // The glide (docs/flying.md "the glide"; the user, 2026-10-23: "a glide animation where the wings are just open"):
+        // flying along in one direction, now and then the beat stops and the wings stay open a while, flexing in the air
+        // (the skin's bdy_glide_left_NN, one slow loop), with a way in (bdy_glidein_left_NN) and a way out
+        // (bdy_glideoutQ_left_NN). Airborne only (not the launch or the landing), not while climbing; stopping, turning
+        // or climbing ends it, by its way out. A skin without the frames never glides.
+        internal static bool Glide = true;
+        internal static float GlideAfterS = 2f;    // flying along this long (and again after each glide) before one may start
+        internal static float GlideChance = 0.35f; // then the chance, once each beat
+        internal static float GlideMinS = 1.5f, GlideMaxS = 3f; // how long one lasts, at random between
+        internal static float GlideLoopS = 1.6f;   // the eight glide frames once round
+        internal static float GlideBobPx = 1f;     // gliding, the body rises and sinks this much as the wings press the air
         internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl, JumpKey = KeyCode.J; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
 
         internal enum Phase { Ground, Rising, Airborne, Landing, Jumping }
@@ -81,6 +82,24 @@ namespace GK2DonkeyAPI
         private static Vector3 bodyMove;             // the body was put somewhere this frame (a landing) by this much: the camera is told
         private static RigidbodyInterpolation smoothWas;
         private static int smoothOffSteps;           // physics steps left with the body's smoothing off after a landing's move
+        private static float floorWasPx;             // the floor over the body, as FreeTick last found it (the step-up keeps above it)
+        // the game's movement lock on the keeper's body, read every physics step (a Traverse allocated each time)
+        private static readonly HarmonyLib.AccessTools.FieldRef<PlayerPhysicalBody, bool> movementLocked = MovementLockedRef();
+
+        private static HarmonyLib.AccessTools.FieldRef<PlayerPhysicalBody, bool> MovementLockedRef()
+        {
+            try { return HarmonyLib.AccessTools.FieldRefAccess<PlayerPhysicalBody, bool>("isMovementLocked"); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[flight] the game's movement lock can't be read (" + e.Message + "): the flight moves while it is on"); return null; }
+        }
+        private enum GlideStage { None, In, Loop, Out }
+        private static GlideStage glide;
+        private static float alongT, glideT, glideLen, glideAll; // flying along for; the time in the stage; the loop's length; the whole glide's
+        private static int glideQ, glideEndQ;       // the quarter of the loop the way out starts from; the quarter to leave at
+        private static string glideEndWhy;          // why it ends (null: it goes on)
+        private static Vector2 alongDir;
+        private static int beatRolled = -1;          // the beat the glide's chance was last rolled on
+        private static bool glideAsked, glideForced; // the tab's "Glide now": the next chance is a yes, and that glide runs its time moving or not
+        internal static bool Gliding => glide != GlideStage.None;
 
         // The flight's height above the real ground under it: above the body, plus how far the ground lies under the
         // body. The flare and the landing frames go by it: by the height above the body, a dragon 87 px over the ground
@@ -119,7 +138,14 @@ namespace GK2DonkeyAPI
             // with the flying frames the hover is the wing beat's: the body (and the rider) rises through the downstroke,
             // highest as the wings come down (frame 4), sinking on the upstroke (the reference's beat; the frames
             // themselves can't move the body, the seat being a fixed row of the picture)
-            if (FlyFrames && Now != Phase.Jumping && FrameFor(i) is string fk && fk.StartsWith("bdy_fly_"))
+            // Every flying frame the skin has (the beat, the take-off, the landing) takes the beat's rise, never the hover:
+            // the landing's first frame switched from the beat's +3 px to the hover's -2 in one frame, the dragon dropping
+            // 7 px with the height's own 2 (the log 2026-10-23: "jump of -7 px ... frame bdy_fly_left_04 -> bdy_land_left_01",
+            // lift 0.733 -> 0.500), and back up 3 px when a refused landing went back to the beat. Through the landing's
+            // frames the beat's clock stands still (Tick), so the rise holds and fades with the height.
+            if (FlyFrames && Now != Phase.Jumping && Gliding)
+                bob = GlideBob() * Mathf.Clamp01(heightPx / 12f);
+            else if (FlyFrames && Now != Phase.Jumping && FrameFor(i) is string fk && IsFlightFrame(fk) && HasFlightFrame(i))
                 bob = BeatBobPx * 0.5f * (1f - Mathf.Cos(beatT / Mathf.Max(0.1f, WingBeatS) * Mathf.PI * 2f)) * Mathf.Clamp01(heightPx / 12f);
             // the height and the hover rounded each on its own: the camera follows the rounded height (FollowCamera), and
             // a mount rounded as height + hover stepped a frame or two before or after the camera while climbing, so it
@@ -129,6 +155,13 @@ namespace GK2DonkeyAPI
             return Mathf.Max(-8f, Mathf.Round(heightPx) + Mathf.Round(bob)) * PxWorldY;
         }
 
+        private static readonly System.Text.RegularExpressions.Regex SkinFrameName = new System.Text.RegularExpressions.Regex(@"^bdy_(fly|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        internal static bool IsSkinFrame(string key) => key != null && SkinFrameName.IsMatch(key); // a picture the flight plays (the skin's load line, the scans' pattern)
+        private static bool IsFlightFrame(string key) => key.StartsWith("bdy_fly_", System.StringComparison.Ordinal) || key.StartsWith("bdy_takeoff_", System.StringComparison.Ordinal) || key.StartsWith("bdy_land_", System.StringComparison.Ordinal);
+        // the hover stays for a skin without the beat (the mount walks in the air on its own frames, the hover moving it);
+        // a skin with the beat keeps its rise through every flight frame, the ones it lacks too (shown as the game's)
+        private static bool HasFlightFrame(Mount.Instance i) => i.LooksRig != null && i.LooksRig.HasFrame(FlyNames[0]);
+
         // The skin frame to show for this mount now (Looks.Rig.ApplyPart), or null: the game's own. The take-off frames
         // through the crouch and the launch's first part, then the wing beat; landing, the beat until the flare, the
         // reaching frames through it, the touch on the thud, the folding a moment after landing. Frame names a skin
@@ -136,6 +169,23 @@ namespace GK2DonkeyAPI
         private static float landedAt = -10f;
         // eight moments of one wing beat, each part of the body at its own lag (docs/flying.md "the beat in time")
         private static readonly string[] FlyNames = { "bdy_fly_left_01", "bdy_fly_left_02", "bdy_fly_left_03", "bdy_fly_left_04", "bdy_fly_left_05", "bdy_fly_left_06", "bdy_fly_left_07", "bdy_fly_left_08" };
+        private static readonly string[] GlideNames = { "bdy_glide_left_01", "bdy_glide_left_02", "bdy_glide_left_03", "bdy_glide_left_04", "bdy_glide_left_05", "bdy_glide_left_06", "bdy_glide_left_07", "bdy_glide_left_08" };
+        private static readonly string[] GlideInNames = { "bdy_glidein_left_01", "bdy_glidein_left_02", "bdy_glidein_left_03", "bdy_glidein_left_04" };
+        private static readonly string[][] GlideOutNames = OutNames();
+        private static string[][] OutNames()
+        {
+            var all = new string[4][];
+            for (int q = 0; q < 4; q++)
+            {
+                all[q] = new string[4];
+                for (int k = 0; k < 4; k++) all[q][k] = $"bdy_glideout{q + 1}_left_{k + 1:00}";
+            }
+            return all;
+        }
+        // each in-between frame's time at the 0.6 s beat (the beat's own frames are 75 ms; scaled with WingBeatS): the way
+        // in slowing into the glide, the way out speeding up into the beat
+        private static readonly float[] GlideInS = { 0.085f, 0.1f, 0.12f, 0.15f };
+        private static readonly float[] GlideOutS = { 0.13f, 0.11f, 0.09f, 0.08f };
         private static readonly string[] TakeoffNames = { "bdy_takeoff_left_01", "bdy_takeoff_left_02", "bdy_takeoff_left_03", "bdy_takeoff_left_04" };
         internal static string FrameFor(Mount.Instance i)
         {
@@ -154,15 +204,183 @@ namespace GK2DonkeyAPI
                     if (phaseT < 0.24f) return TakeoffNames[1 + Mathf.Min(2, Mathf.FloorToInt(phaseT / 0.08f))];
                     return Beat();
                 case Phase.Airborne:
-                    return Beat();
+                    return Gliding ? GlideFrame() : Beat();
                 case Phase.Landing:
                     if (thudT >= 0f) return "bdy_land_left_03";                         // touching down
                     if (AboveGroundPx <= FlarePx) return AboveGroundPx <= FlarePx * 0.5f ? "bdy_land_left_02" : "bdy_land_left_01";
-                    return Beat();
+                    return Gliding ? GlideFrame() : Beat();                             // a glide's way out, then the beat
                 default:
                     return null;
             }
         }
+
+        // A readout for the landing rule (docs/flying.md "Refused landings near home"): every change of the walkable
+        // mesh's part ("area") under the keeper riding on the ground, and every stretch off the mesh, one line each. The
+        // user rode between two parts the mesh says are not joined (areas 1 and 434, 2026-10-23): where they split.
+        private static int areaWas = -3;
+        private static float areaNext;
+        private static Vector3 areaWasAt;
+
+        private static void AreaWatch()
+        {
+            if (Time.unscaledTime < areaNext) return;
+            areaNext = Time.unscaledTime + 0.2f;
+            Rigidbody rb = MainGame.PlayerController?.PhysicalBody?.Rb;
+            if (rb == null) return;
+            Vector3 p = rb.position;
+            int a = Mount.Instance.MeshAreaAt(p, out float off, out Vector3 node);
+            if (a == areaWas) { areaWasAt = p; return; }
+            if (areaWas != -3)
+                Plugin.Log.LogInfo($"[flight-area] the walkable mesh under the keeper: {AreaName(areaWas)} -> {AreaName(a)} at {p:F2} (last {areaWasAt:F2}; the nearest node {off:0.00} away at {node:F2})");
+            areaWas = a; areaWasAt = p;
+        }
+
+        private static string AreaName(int a) => a == -1 ? "off the mesh" : a == -2 ? "no mesh" : "area " + a;
+
+        // The glide's stages (the frames: GlideFrame; the body's rise: GlideBob). It starts as the beat reaches its frame 7
+        // (th 0.75, the wings coming up through the glide's pose) and the beat's clock stops there; the way in (4 frames,
+        // slowing) blends the rest of that upstroke into the open wings, then the loop runs its length. Ending (its time,
+        // stopping, turning, climbing, landing), it waits for the next quarter of the loop (the way out is drawn from
+        // each), then the way out (4 frames, speeding up) pushes off with a downstroke and hands over to the beat at its
+        // frame 7 again. The generator draws each in-between frame from the same moments (make_creatures.py GLIDE_IN/OUT).
+        private static float StageScale => Mathf.Max(0.1f, WingBeatS) / 0.6f;
+        private static float LoopS => Mathf.Max(0.2f, GlideLoopS);
+
+        private static float StageLength(float[] times)
+        {
+            float sum = 0f;
+            foreach (float t in times) sum += t * StageScale;
+            return sum;
+        }
+
+        private static int StageFrame(float[] times, float t)
+        {
+            for (int k = 0; k < times.Length; k++)
+            {
+                t -= times[k] * StageScale;
+                if (t < 0f) return k;
+            }
+            return times.Length - 1;
+        }
+
+        private static string GlideFrame()
+        {
+            switch (glide)
+            {
+                case GlideStage.In: return GlideInNames[StageFrame(GlideInS, glideT)];
+                case GlideStage.Out: return GlideOutNames[glideQ][StageFrame(GlideOutS, glideT)];
+                default: return GlideNames[Mathf.FloorToInt(glideT / LoopS * GlideNames.Length) % GlideNames.Length];
+            }
+        }
+
+        // The body's rise while gliding, art px: the beat's at each in-between frame's moment of the beat, blended as the
+        // frame is into the glide's: half the beat's rise (where it hangs on average) and a slow swell of GlideBobPx as
+        // the wings press the air (their lowest at a quarter of the loop, the body highest a little after)
+        private static float GlideBob()
+        {
+            float BeatRise(float th) => BeatBobPx * 0.5f * (1f - Mathf.Cos(th * Mathf.PI * 2f));
+            float GlideRise(float g) => BeatBobPx * 0.5f + GlideBobPx * Mathf.Sin((g - 0.1f) * Mathf.PI * 2f);
+            switch (glide)
+            {
+                case GlideStage.In:
+                    int k = StageFrame(GlideInS, glideT);
+                    return Mathf.Lerp(BeatRise(0.75f + k / 8f), GlideRise((k - 4) / 8f), (k + 1) / 5f);
+                case GlideStage.Out:
+                    int j = StageFrame(GlideOutS, glideT);
+                    return Mathf.Lerp(BeatRise(0.25f + j / 8f), GlideRise(glideQ / 4f + j / 8f), 1f - (j + 1) / 5f);
+                default:
+                    return GlideRise(glideT / LoopS);
+            }
+        }
+
+        private static bool HasGlideFrames(Mount.Instance i) =>
+            i.LooksRig != null && i.LooksRig.HasFrame(GlideNames[0]) && i.LooksRig.HasFrame(GlideInNames[0]) && i.LooksRig.HasFrame(GlideOutNames[3][3]);
+
+        private static void GlideTick(Mount.Instance i, float dt, bool climbing)
+        {
+            PlayerController pc = MainGame.PlayerController;
+            Vector2 d = pc != null && pc.IsControlsEnabled && !MainGame.IsGamePaused ? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
+            bool can = Glide && FlyFrames && Now == Phase.Airborne && !climbing && HasGlideFrames(i);
+            bool moving = d.sqrMagnitude >= 0.25f;
+            bool turned = moving && alongT > 0f && Vector2.Dot(d.normalized, alongDir) < 0.7f; // more than 45 degrees off the way he was going
+            if (!Gliding)
+            {
+                if (!can || (!glideAsked && (!moving || turned)))
+                {
+                    alongT = 0f;
+                    if (moving) alongDir = d.normalized;
+                    glideAsked &= can;
+                    return;
+                }
+                if (alongT == 0f && moving) alongDir = d.normalized;
+                alongT += dt;
+                float beat = Mathf.Max(0.1f, WingBeatS);
+                int n = Mathf.FloorToInt(beatT / beat);
+                float th = beatT / beat - n;
+                if (th < 6f / 8f || th >= 7f / 8f || n == beatRolled || (!glideAsked && alongT < GlideAfterS)) return;
+                beatRolled = n;
+                if (!glideAsked && UnityEngine.Random.value >= GlideChance) return;
+                beatT = (n + 0.75f) * beat; // the clock stops on frame 7, where the way in and the way out meet the beat
+                glide = GlideStage.In;
+                glideT = glideAll = 0f;
+                glideLen = UnityEngine.Random.Range(Mathf.Min(GlideMinS, GlideMaxS), Mathf.Max(GlideMinS, GlideMaxS));
+                glideEndWhy = null;
+                glideForced = glideAsked;
+                Plugin.Log.LogInfo($"[flight] glide for {glideLen:0.0} s ({(glideAsked ? "asked for" : $"flying along {alongT:0.0} s")})");
+                glideAsked = false;
+                return;
+            }
+            glideT += dt;
+            glideAll += dt;
+            if (glideEndWhy == null)
+            {
+                string why = !can ? (Now != Phase.Airborne ? "now " + Now : climbing ? "climbing" : "switched off")
+                    : glideForced ? null : !moving ? "stopped" : turned ? "turned" : null;
+                if (why == null && glide == GlideStage.Loop && glideT >= glideLen) why = $"its {glideLen:0.0} s";
+                if (why != null)
+                {
+                    glideEndWhy = why;
+                    if (glide == GlideStage.Loop) glideEndQ = Mathf.FloorToInt(glideT / LoopS * 4f) + 1; // the next quarter
+                }
+            }
+            switch (glide)
+            {
+                case GlideStage.In:
+                    float inS = StageLength(GlideInS);
+                    if (glideT < inS) break;
+                    if (glideEndWhy != null) { glide = GlideStage.Out; glideQ = 0; } // the way in ends where the loop begins
+                    else glide = GlideStage.Loop;
+                    glideT -= inS;
+                    break;
+                case GlideStage.Loop:
+                    if (glideEndWhy == null || glideT / LoopS * 4f < glideEndQ) break;
+                    glide = GlideStage.Out;
+                    glideQ = glideEndQ % 4;
+                    glideT = Mathf.Clamp(glideT - glideEndQ * LoopS / 4f, 0f, GlideOutS[0] * StageScale * 0.5f);
+                    break;
+                case GlideStage.Out:
+                    if (glideT >= StageLength(GlideOutS)) EndGlide();
+                    break;
+            }
+        }
+
+        private static void EndGlide()
+        {
+            float beat = Mathf.Max(0.1f, WingBeatS);
+            beatT = (Mathf.FloorToInt(beatT / beat) + 0.75f) * beat; // the beat goes on from its frame 7
+            Plugin.Log.LogInfo($"[flight] glide ends: {glideEndWhy ?? "done"} (after {glideAll:0.0} s)");
+            StopGlide();
+        }
+
+        private static void StopGlide()
+        {
+            glide = GlideStage.None;
+            alongT = 0f; // a while of beating again before the next
+            glideAsked = glideForced = false;
+        }
+
+        // The tab's "Glide now": the next time the beat reaches its frame 7.
+        internal static void GlideNow() { if (Now == Phase.Airborne) glideAsked = true; }
 
         // This mount may fly: the experiment on, riding plain (not the cart), the dragon or any mount.
         internal static bool CanFly(Mount.Instance i, out string why)
@@ -211,6 +429,8 @@ namespace GK2DonkeyAPI
                 return;
             }
             float dt = Time.deltaTime;
+            if (Now == Phase.Ground) AreaWatch();
+            bool climbing = false;
             if (!MountsPanel.IsOpen && GUIUtility.keyboardControl == 0)
             {
                 var input = UnityInput.Current;
@@ -218,7 +438,8 @@ namespace GK2DonkeyAPI
                 if (input.GetKeyDown(JumpKey)) Jump(i);
                 if (Now == Phase.Airborne || Now == Phase.Rising)
                 {
-                    if (input.GetKey(UpKey)) { heightPx = Mathf.Min(MaxPx, heightPx + ClimbPxPerS * dt); Now = Phase.Airborne; }
+                    if (input.GetKey(UpKey)) climbing = true;
+                    if (climbing) { heightPx = Mathf.Min(MaxPx, heightPx + ClimbPxPerS * dt); Now = Phase.Airborne; }
                     descending = input.GetKey(DownKey);
                     if (descending)
                     {
@@ -244,9 +465,19 @@ namespace GK2DonkeyAPI
                     if (heightPx <= 0f) Land("jump landed");
                     break;
             }
-            if (Now != Phase.Ground) { bobT += dt; beatT += dt; }
+            GlideTick(i, dt, climbing);
+            // the beat's clock: still while gliding (the glide's own stages) and through the landing's frames (cut 2 above)
+            if (Now != Phase.Ground) { bobT += dt; if (!Gliding && !(FrameFor(i) is string lk && lk.StartsWith("bdy_land_", System.StringComparison.Ordinal))) beatT += dt; }
             FreeTick(i);
             FollowCamera();
+            ApplyBodyMove();
+            LiftBubble();
+            if (ProbeOn) Probe.AtTick(i);
+            Jumps.AtTick(i);
+        }
+
+        private static void ApplyBodyMove()
+        {
             if (bodyMove != Vector3.zero)
             {
                 // The body was put down on the ground under it this frame and the lift grew by the drop, so the mount's
@@ -256,14 +487,17 @@ namespace GK2DonkeyAPI
                 // CancelDamping) fixed that but threw away the camera's trail behind a moving flight too: x 3.50 -> 5.31
                 // in one frame, the dragon 367 px across the screen (the user's cut, the same day). So the camera is told
                 // the body moved by exactly this much (Cinemachine's OnTargetObjectWarped: its smoothed position shifts
-                // with the follow target), keeping any trail it had.
+                // with the follow target), keeping any trail it had. Up and down by the camera's share of the height
+                // (CameraFollow): the height that made up for the move moved the camera by that share, the rest of the
+                // body's move the camera follows as it follows the body (warped by all of it, the view jumped by the rest).
                 Vector3 move = bodyMove;
                 bodyMove = Vector3.zero;
+                move.y *= Mathf.Clamp01(CameraFollow);
                 CameraController cc = CameraSystem.Instance != null ? CameraSystem.Instance.ActiveCameraController : null;
                 try
                 {
                     string follow = cc != null ? MoveCameraWith(cc, move) : null;
-                    if (follow != null) Plugin.Log.LogInfo($"[flight] the body was set down by {move.y:0.00} (x {move.x:0.00}, z {move.z:0.00}): the camera moved with it (following {follow})");
+                    if (follow != null) Plugin.Log.LogInfo($"[flight] the body was moved by {move.y:0.00} (x {move.x:0.00}, z {move.z:0.00}): the camera moved with it (following {follow})");
                 }
                 catch (System.Exception e)
                 {
@@ -273,9 +507,6 @@ namespace GK2DonkeyAPI
                     cc?.UpdateTargetPosInstant();
                 }
             }
-            LiftBubble();
-            if (ProbeOn) Probe.AtTick(i);
-            Jumps.AtTick(i);
         }
 
         // ------------------------------------------------------------------ step 2: free flight
@@ -316,6 +547,7 @@ namespace GK2DonkeyAPI
             // the ground: the clear height above it always; what is drawn on it: never inside it, and the clear height
             // above it only coming down (flying on over a rock, the bumping already keeps the flight above its top)
             float floorPx = ClearPx + (!float.IsNaN(groundTop) && groundTop > rb.position.y ? (groundTop - rb.position.y) / PxWorldY : 0f);
+            floorWasPx = floorPx;
             if (!float.IsNaN(top)) floorPx = Mathf.Max(floorPx, (top - rb.position.y) / PxWorldY + (Now == Phase.Landing || descending ? ClearPx : 0f));
             Jumps.Floor(under, drawn, top, floorPx);
             thingTop = top;
@@ -369,7 +601,9 @@ namespace GK2DonkeyAPI
             Rigidbody rb = pc.PhysicalBody.Rb;
             Vector3 spot = rb.position;
             if (!float.IsNaN(under)) spot.y = under; // judged at the ground under the flight, not at the body's height
-            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot);
+            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true);
+            // the ground still being judged (a few frames, Mount.Instance.WalkSliceMs each): hover, ask again next frame
+            if (why == Mount.Instance.WalkPending) { nextLandTry = Time.unscaledTime; return false; }
             // Something drawn stands under the flight higher than the ground the landing would put him on (a rock, a
             // roof, a cart): no landing through it. Seen 2026-10-23 at 40.62, 19.68: the floor found a thing drawn up to
             // 6.72 over ground at 3.60, the landing went on, put the body on the ground under it and the dragon came
@@ -423,7 +657,7 @@ namespace GK2DonkeyAPI
                     Vector3 move = put.Value - pb.Rb.position;
                     if (move.sqrMagnitude > 0.0025f)
                     {
-                        bodyMove = move;
+                        bodyMove += move; // with a step-up of the same frame's physics (FixedStep)
                         // The game smooths the drawn body between physics steps from the pose before; after a move the
                         // next frames blended from the old spot: the dragon showed 4.80, then 3.75, with the body at
                         // 3.60 (put down 2.54 off a plateau; a 34 px flash up and back), and a 6 px dip landing up
@@ -451,7 +685,7 @@ namespace GK2DonkeyAPI
             Vector3 spot = pc.PhysicalBody.Rb.position;
             float under = GroundUnderFlight(spot);
             if (!float.IsNaN(under)) spot.y = under;
-            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: false, connectedTo: takeOffSpot);
+            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: false, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f); // down now: judged at once
             GiveBack(pc, why == null ? spot : lastSafe, why == null ? $"down under him: {reason}" : $"back to the last safe spot {lastSafe:F2} ({why}): {reason}");
         }
 
@@ -516,7 +750,7 @@ namespace GK2DonkeyAPI
             Rigidbody rb = pb?.Rb;
             if (rb == null) return;
             if (!rb.isKinematic) rb.isKinematic = true; // a flow's LockMovement(false) writes it past the flags
-            Vector2 d = pc.IsControlsEnabled && !MainGame.IsGamePaused && !(HarmonyLib.Traverse.Create(pb).Field("isMovementLocked").GetValue() is bool locked && locked) ? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
+            Vector2 d = pc.IsControlsEnabled && !MainGame.IsGamePaused && !(movementLocked != null && movementLocked(pb)) ? LazyBearTechnology.LazyInput.GetDirection() : Vector2.zero;
             if (d.sqrMagnitude > 1f) d.Normalize();
             float dt = Time.fixedDeltaTime, c = Mathf.Max(0.01f, rb.linearDamping);
             float speed = (pb.PhysicsConfig != null ? pb.PhysicsConfig.speed : 50f) * pb.SpeedMultiplier * (1f + c * dt) / c; // the top speed walking reaches against the damping
@@ -548,11 +782,35 @@ namespace GK2DonkeyAPI
             // (the user's video 2026-10-22 15-15-26; [flight-probe] body y 6.12 -> 8.41, 6.01 -> 3.60 and back). A
             // plateau higher than that is crossed at the body's height; the flight's height carries the picture over it,
             // and a landing puts the body on it. Over water, cliffs and roofs the height is kept.
+            // The flight keeps its place in the world as the body steps up under it: its height above the body shrinks by
+            // the step (the floor still holds it the clear height above the new ground), the camera is told the body
+            // moved, and the body's smoothing is off for two physics steps, as for a landing's move (GiveBack). Without
+            // that the whole dragon rose with the body: 0.39 onto BigDropTopSurface, 12 art px in three frames, 88
+            // screen px, and it stayed that much higher until it landed (the log 2026-10-23, "jump of +4/+5/+3 px").
             if (Physics.Raycast(next + Vector3.up * StepUp, Vector3.down, out RaycastHit under, StepUp + 0.5f, GroundMask, QueryTriggerInteraction.Ignore)
                 && under.point.y > next.y)
             {
-                if (under.point.y - next.y > 0.1f) Plugin.Log.LogInfo($"[flight] the body steps up {under.point.y - next.y:0.00} onto {under.collider.name} at {next.x:0.00},{next.z:0.00}");
+                float step = under.point.y - next.y;
                 next.y = under.point.y;
+                if (step > 0.1f)
+                {
+                    // only the height above the floor makes up for it (the floor over the new ground: the old one less
+                    // the step, the clear height at least): flying low the flight rises with the ground, as it must, and
+                    // made up below the floor it popped back up the same frame
+                    float stepPx = step / PxWorldY, was = heightPx;
+                    float floorAfter = Mathf.Max(ClearPx, floorWasPx - stepPx);
+                    float keep = Mathf.Clamp(heightPx - floorAfter, 0f, stepPx);
+                    if (keep > 0f)
+                    {
+                        heightPx -= keep;
+                        bodyMove += new Vector3(0f, keep * PxWorldY, 0f);
+                        if (smoothOffSteps == 0) smoothWas = rb.interpolation;
+                        rb.interpolation = RigidbodyInterpolation.None;
+                        smoothOffSteps = 2;
+                    }
+                    Plugin.Log.LogInfo($"[flight] the body steps up {step:0.00} onto {under.collider.name} at {next.x:0.00},{next.z:0.00}: " +
+                        (keep >= stepPx - 0.01f ? $"the flight keeps its place ({was:0} -> {heightPx:0} px over the body)" : $"the flight rises {stepPx - keep:0} px with the ground (its floor), {was:0} -> {heightPx:0} px over the body"));
+                }
             }
             rb.MovePosition(next);
             pc.PlayerData.position.Value = next;
@@ -586,7 +844,7 @@ namespace GK2DonkeyAPI
 
             internal static void Floor(float u, float d, float t, float f) { under = u; drawn = d; top = t; floorPx = f; }
 
-            private static string Clip(string frame) => frame == null || !frame.StartsWith("bdy_") ? "game" : frame.Substring(4, frame.IndexOf('_', 4) - 4);
+            private static string Clip(string frame) => frame == null || !frame.StartsWith("bdy_", System.StringComparison.Ordinal) ? "game" : frame.Substring(4, frame.IndexOf('_', 4) - 4);
 
             internal static void AtTick(Mount.Instance i)
             {
@@ -736,6 +994,7 @@ namespace GK2DonkeyAPI
             heightPx = 0f; jumpVel = 0f; bobT = 0f; beatT = 0f; vel = 0f; thudT = -1f;
             Set(Phase.Ground, what);
             FollowCamera();
+            ApplyBodyMove();
             LiftBubble();
             owner = null;
         }
@@ -806,6 +1065,12 @@ namespace GK2DonkeyAPI
         private static void Set(Phase p, string what)
         {
             if (Now == p) return;
+            // landing, a glide leaves by its way out (GlideTick); any other phase stops it at once
+            if (Gliding && p != Phase.Airborne && p != Phase.Landing)
+            {
+                Plugin.Log.LogInfo($"[flight] glide stopped: now {p} (after {glideAll:0.0} s)");
+                StopGlide();
+            }
             if (p == Phase.Rising) { phaseT = 0f; launched = heightPx > 0.5f; beatsLeft = launched ? 0 : Beats; nextBeat = 0f; if (launched) vel = Mathf.Max(vel, 0f); }
             if (p == Phase.Landing) { thudT = -1f; vel = Mathf.Min(vel, 0f); refusalSaidThisLanding = false; }
             if (p == Phase.Airborne || p == Phase.Ground) vel = 0f;

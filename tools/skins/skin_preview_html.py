@@ -32,7 +32,8 @@ ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] +
 # the flying experiment's frames (docs/flying.md "the frames"): not the game's, the mod plays them while a mount flies;
 # a skin without them shows empty cells there (the donkey has none)
 FLIGHT = ([f"bdy_takeoff_left_{i:02d}" for i in range(1, 5)] + [f"bdy_fly_left_{i:02d}" for i in range(1, 9)]
-          + [f"bdy_land_left_{i:02d}" for i in range(1, 5)])
+          + [f"bdy_land_left_{i:02d}" for i in range(1, 5)] + [f"bdy_glide_left_{i:02d}" for i in range(1, 9)]
+          + [f"bdy_glidein_left_{i:02d}" for i in range(1, 5)] + [f"bdy_glideout1_left_{i:02d}" for i in range(1, 5)])
 MOUNT_NAMES = {"donkey": "Donkey"}  # every other mount's name comes from the [Mount] section of the skin that declares it
 RIDER_HIP_ABOVE_FEET = 7  # the keeper's hip is 7 px above his feet (Mount.SeatOn, tools/skins/review.py)
 
@@ -418,8 +419,9 @@ def main(argv):
             clips.setdefault(mm.group(1), []).append(key)
     clips["head"] = [k for k in ORDER if k.startswith("hed_")]
     speed = {"walk": 970 / 8, "head": 300}
-    # flying: the beat (six frames in Flight.WingBeatS, 0.6 s), the take-off, the landing, and the whole flight once
-    # round (take-off, three beats, landing) as the game plays it, if any skin has the frames
+    # flying: the beat (eight frames in Flight.WingBeatS, 0.6 s), the take-off, the landing, the glide (eight frames in
+    # Flight.GlideLoopS, 1.6 s), and the whole flight once round (take-off, three beats, landing) as the game plays it,
+    # if any skin has the frames
     if any(k in sk.get("frames", {}) for g in groups for sk in g["skins"] for k in FLIGHT):
         fly = [k for k in FLIGHT if "_fly_" in k]
         clips["fly"] = fly
@@ -427,6 +429,15 @@ def main(argv):
         clips["land"] = [k for k in FLIGHT if "_land_" in k]
         clips["flight"] = clips["takeoff"] + fly * 3 + clips["land"]
         speed.update({"fly": 75, "takeoff": 80, "land": 110, "flight": 95})
+        if any(k in sk.get("frames", {}) for g in groups for sk in g["skins"] for k in FLIGHT if "_glide_" in k):
+            clips["glide"] = [k for k in FLIGHT if "_glide_" in k]
+            speed["glide"] = 200
+            # the beat into a glide and out again as the game plays it (one speed for the clip, 100 ms: the in-betweens
+            # and the beat at it, and each glide frame twice for the loop's 200 ms)
+            beat_ = [k for k in FLIGHT if "_fly_" in k]
+            clips["glide-in-out"] = (beat_ + beat_[:6] + [k for k in FLIGHT if "_glidein_" in k]
+                                     + [k for k in clips["glide"] for _ in (0, 1)] + [k for k in FLIGHT if "_glideout1_" in k] + beat_[6:])
+            speed["glide-in-out"] = 100
 
     caps_dir = os.path.join(probe, "captures")
     captures = []

@@ -354,7 +354,8 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   0.18 s after. A skin without the frames shows its own as before. Tab: "Flying frames", "One wing beat".
 - The skin preview page (`tools/skins/skin_preview_html.py`) has the clips `fly` (100 ms a frame), `takeoff`, `land`
   and `flight` (take-off, three beats, landing, as the game plays them) when a skin has the frames.
-- The scans accept `bdy_(fly|takeoff|land)_left_NN` (tests/SkinsScan `FlightKey`, tools/skins/check_skin.py).
+- The scans accept `bdy_(fly|glide|glidein|glideout[1-4]|takeoff|land)_left_NN` (tests/SkinsScan `FlightKey`,
+  tools/skins/check_skin.py; the glide's frames since 2026-10-23, "The glide").
 - Second pass (the user: "the body is completely stiff, look at the reference again"; compared side by side,
   `compare3.png` in the job's tmp): the body moves with the beat, the saddle staying put: the legs hang well under
   the body, bent, the paws with their claws down (the flat walking foot read as standing in the air), the forelegs
@@ -402,7 +403,8 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
     crosses him): in all 14 spread-wing frames, every pixel of him the wing crosses outside his head is covered, and
     his head is never covered. 10-28% of him is hidden per flying frame. The folded take-off and landing frames match
     the ground.
-  - `DRAGON_WING_OVER_RIDER` keeps the old box (`box`) and the whole wing in front (`all`) as studies.
+  - `DRAGON_WING_OVER_RIDER` keeps the old box (`box`) and the whole wing in front (`all`) as studies. (Since
+    2026-10-23 `all` is the default, chosen in game as B; `head`, this window, is the study: docs/front-layer.md section 9.)
   - **Still broken in game** (the user's video 2026-10-23 08-07-28, facing right: "how did u confirm it from the
     frames if its still broken?"). The per-frame check only proved the frames follow the rule. It ran on a composite:
     a still capture of the rider (`rider.png`) centred on the picture by assumption, with the front picture exactly
@@ -579,6 +581,192 @@ The head swings 2 px and the tail tip 8 px. Each leg moves on its own loop (abov
 
 The game plays the eight frames over `WingBeatS` (`FlyNames.Length`): 75 ms a frame at 0.6 s. The preview page's `fly`
 clip also runs at 75 ms.
+
+### The glide (2026-10-23)
+
+The user: "a glide animation where the wings are just open while they are gliding and we can have this trigger
+sometimes when flying in a direction while not idle". Neither reference has a glide; the frames are our own.
+
+**First pass** (the same day): the wings held still at the pose `GLIDE_T = 0.4`, only the tail and the legs moving,
+and a cut from the beat's frame 7 into the glide and back. The user: "the idea is there but it's just making the
+wings look very static ... the transition from flying to gliding and vice versa [should be] more natural for the
+wings mostly". Two things tried in that pass and dropped, both because they changed pixels without a visible move:
+- the finger tips flexing 1 px: every vein re-drawn at a new angle, 200 px of speckle over the membrane each frame;
+- the neck swaying 0.3 px: it only re-rounded its shading, 40-100 px of speckle a frame.
+
+**Second pass.**
+- **The wings flex** (`GLIDE_FLEX` 0.06, `GLIDE_WING_LAGS`): each joint's pose sways about `GLIDE_T`, slowly, at its
+  own lag: the arm first, the wrist, the root, then each finger later (0 .. 0.22 of the loop), so the wing bends
+  like a sail working the air. The tips move 4-5 px, a move the eye follows: the wing's top edge runs rows 12-16 and
+  its tips columns 118-122 over the loop (the job's `glide_flex2.png`). 640-990 px change a frame.
+- **The body swells with them** in the game (`Flight.GlideBob`, `GlideBobPx` 1): half the beat's rise, plus 1 px
+  rising a little after the wings press lowest. The neck, the head, the chest and the hump hold the glide's pose
+  (their own flex would only re-round their shading). The tail waves (tip 1.5 px), each leg keeps its loop at 0.6.
+- **The way in and the way out** are in-between frames whose every part is its beat pose blended into its glide
+  pose (`dragon(..., beat=, glide=, mix=(m, +1|-1))`), the wing's joints each with their own share of the way
+  (`GLIDE_MIX_LAGS`, eased): going in the arm reaches the glide first and the finger tips last; coming out the arm
+  leads back into the beat. The upstroke's half-closed hand opens as the glide takes it.
+  - **In** (`bdy_glidein_left_01..04`): the beat's moments th 0.75, 0.875, 0, 0.125 at 0.2, 0.4, 0.6, 0.8 of the
+    glide. It starts where the beat's frame 7 would be: the wings come up through the open pose, rise a little past it
+    and settle open. Played slowing, 85-150 ms a frame.
+  - **Out** (`bdy_glideout<q>_left_01..04`, q 1-4 from each quarter of the loop): the beat's moments th 0.25 .. 0.625
+    at 0.8 .. 0.2 of the glide: a downstroke out of the open wings, handing over to the beat's frame 7. Played
+    speeding up, 130-80 ms a frame (both scaled with `WingBeatS`).
+  - Checked over the whole sequence (`glideseq.py`, every exit): the change per step is 650-1800 px, inside the
+    beat's own 1000-2400; the hand-over to the beat (out 4 -> frame 7) is 1900 px, as the beat's frame 6 -> 7.
+- **Every other picture of the skin is byte-identical** to before (the beat, take-off, landing, ground frames).
+- The tail's spike reaches the picture's last column (127), as in every flying frame and the standing frame (open,
+  from before).
+
+**When it plays** (`Flight.GlideTick`; Flying tab rows "Glide now and then, flying along" and the "Glide:" rows,
+session-only):
+- Only airborne (not the launch or a jump), not while climbing, and only for a skin that has the loop, the way in
+  and the way out (`Looks.Rig.HasFrame`).
+- He must fly along in one direction (the movement input over half way, within 45 degrees of where he set off) for
+  `GlideAfterS` 2 s. Then, once each beat as the beat reaches its frame 7, a glide starts by chance (`GlideChance`
+  0.35). Its loop lasts `GlideMinS`..`GlideMaxS` (1.5-3 s) at random, over `GlideLoopS` 1.6 s a loop.
+- The beat's clock stops on frame 7 for the whole glide and goes on from there after the way out.
+- Ending: its time, stopping, turning more than 45 degrees, climbing or a landing. It waits for the next quarter of
+  the loop (at most 0.4 s), then plays the way out from that quarter. Begun while the way in still plays, the way out
+  follows it from the first quarter. A landing lets the way out play (its flare frames take over as usual); any
+  other phase change stops the glide at once. After a glide he beats for `GlideAfterS` again before the next.
+- "Glide now" on the tab starts one at the next frame 7 and lets it run its time, moving or not.
+- Log: `[flight] glide for 2.3 s (flying along 2.4 s)`, `[flight] glide ends: turned (after 1.9 s)`,
+  `[flight] glide stopped: now Ground`.
+- The preview page has the clips `glide` (the loop, 200 ms a frame) and `glide-in-out` (two beats, the way in, the
+  loop once, the way out from the first quarter, back into the beat). The scans accept
+  `bdy_(glide|glidein|glideout[1-4])_left_NN`.
+
+Not seen in game yet.
+
+### Refused landings: cut off from the take-off spot (2026-10-23, investigating)
+
+The user: "im flying over a lot of valid landing spots but its telling me that i can't land. i then land on a
+different part of the map, ride towards that area which didnt let me land, and then when i fly there it lands me".
+Their screenshot: open ground by their home, "Nowhere to land here.".
+
+**The log.** Every refusal is the connection rule (`FlightGround.WhyCannotLandAt` -> `WhyNotConnected`: a landing
+must be on the same connected part of the game's walkable mesh, the Recast graph, as the take-off spot, so never on
+a rock top he can't walk off): `(-4.92, 6.00, 15.99) is cut off from (-27.46, 6.00, 18.70) (separate parts of the
+walkable mesh, areas 434 and 1)`, and an earlier flight the same with areas 469 and 1. So:
+- The mesh holds the take-off spot (area 1) and the ground by the home (434) as two parts with no path between them,
+  though the keeper rides from one to the other.
+- Taking off from inside the home's part, the same spots pass (same area as the take-off): the "it lands me" half.
+- The home's part was 469 in the first flight and 434 in the second: the graph's parts are renumbered between
+  flights, so the mesh is updated while playing (a build, a cut).
+
+A readout was added first: `[flight-area]` lines (`Flight.AreaWatch`, every 0.2 s while mounted on the ground), one
+each time the mesh's part under the keeper changes or he leaves the mesh. The user's next session (13:18) logged none
+(no ride across the line), but its refusals drew the line: take-off at (-20.90, 20.27), area 1; refused spots all west of
+it in area 59 (one 127), the nearest (-26.06, 17.74) 5.6 away. The same line as the two sessions before, x -23 to -26.
+
+**The cause, from the game's code** (decompiled 2026-10-23):
+- The mesh is the NPCs' navigation (`PlayerController.SceneRecastGraph`, one Recast graph per world from
+  `SceneGraphsData`; `AgentAI`, workers, mobs walk it). A Recast mesh is shrunk from every obstacle by the agent's
+  radius, and the game cuts it under every building (`NavmeshCut`, `GraphCutUnit`, `NavMeshCutPlannerMesh`). Round a
+  home full of buildings it falls apart where the gaps are narrower than an NPC; the keeper's body (moved by physics,
+  not by the mesh) passes. The part numbers change whenever the cuts change (469, 434, 59, 127, 503, 643).
+- The keeper's own walk grid (`PlayerLocalAreaMovement`, graph 3) is a GridGraph 44 x 44 cells of 0.1, rescanned
+  round him (4.4 x 4.4): for walking him to an interaction spot, too small to join places 20 apart.
+- **The game's own rules for where the keeper walks:** `PlayerInvisibleWalls` raises an edge wall wherever a ray 0.6
+  down from 0.05 over his feet finds no ground layer (11, 12), at eight points 0.1-0.4 round him; and
+  `PlayerColliderTester` says he fits where his collider goes no deeper than 0.05 into anything.
+
+**The fix: the walk-away test** (`Mount.Instance.WhyCannotWalkAway` / `WalkAway`, FlightGround.cs; built 2026-10-23,
+not seen in game). When the NPCs' mesh says the spot is on another part than the take-off spot, a landing asks the
+keeper's own ground instead:
+- a spread from the spot over a grid of 0.25 (breadth first: the nearest way out first); a step counts when the
+  game's edge rule finds ground there (the highest ground layer under it, no more than 0.55 below the step before,
+  no more than 0.45 above it: the shuffle's measured `MaxRisePerSample`) and his body fits there (`BodyDoesNotFit`,
+  the game's penetration test against every layer he collides with);
+- it succeeds at the first step lying on the take-off's part of the mesh **at its own height** (within 0.6: seen from
+  above, a rock top with no mesh finds the ground's mesh under it, and would have passed at once). That part is the
+  NPCs' and so narrower than his: a step on it is joined to the take-off spot;
+- it is refused when the spread ends ("walled in: ... a rock top, a ledge or a closed pocket") or reaches 6000 steps
+  (a hover costs nothing; a wrong landing can strand him on foot);
+- one line per test, `[flight-walk] <spot>: the NPCs' mesh says ...; the keeper's own ground: ...` (how far, how
+  many steps, how many ms); results kept 5 s per spot (the landing asks every 0.25 s while hovering);
+- used by a landing (`TryLand`) and a forced one (`ForceDown`: a save, the experiment off); the 1 s "last safe spot"
+  check keeps the mesh's answer (cheap, and never wrong when it says yes).
+- Self-test "landing: the walk-away test" (group Flying): his own spot reaches his part at once; a part no cell is on
+  runs to the cap from his spot (the worst case's time, under 400 ms); a pen of four temporary walls 2.5 to his side
+  walls its spot in.
+- The `[flight-area]` readout stays until the user has seen landings by the home work.
+
+**Second pass (the same day): freezes, and the far take-off.** The user: "sometimes is freezing when i press space
+while trying to land". The log (13:32):
+- Every test that didn't find the take-off's part ran all 6000 cells in one frame: 282-331 ms (`slow frame 299 ms ...
+  Tick 293`), one freeze per Land pressed. Physics queries only run on the main thread, so the work has to be spread.
+- Those were the user's home ground east of the yard (x -5 to 10, z 16), refused from a take-off on the plateau at
+  (-34.61, 7.19, 18.99): the plateau's part of the mesh is 35 away and a level up, past any short spread (15-18 out).
+  "Walk to the take-off's part" can't be the only yes when the take-off can be anywhere on the map.
+- What worked: by the yard, the take-off's part found 6.0 out in 536 cells, 18.7 ms; a ledge on the 8.4 level refused,
+  a strip of 69 cells.
+
+The test now:
+- **Yes** at a cell on the take-off's part (at its own height), or once his ground from the spot reaches 1000 cells
+  (`WalkOpenCells`, 60 square units of ground he can walk): open ground, no pocket. **No** when the spread ends first:
+  a rock top, a ledge, a closed pocket. A big enough area he can't walk out of is accepted: the ground is his, and the
+  dragon lands with him to fly off again.
+- **Sliced**: at most 4 ms a frame (`WalkSliceMs`), the landing hovering meanwhile (`WalkPending`, asked again the
+  next frame, no bubble); 1000 cells at the measured 0.05 ms a cell is about 50 ms, a dozen frames. A forced landing
+  (`ForceDown`, before a save) judges at once. The log line gives the cells, the ms and the frames.
+- The self-test's open-ground case now expects "open ground" and a whole spread under 200 ms (INFO: how many frames).
+
+**A review before the user's test (2026-10-23, three readers: the flight's states, the walk-away test, the generator).**
+Fixed:
+- the walk-away test walked on lake beds (the ground ray goes through water): `GroundStep` now asks `WaterOver`;
+- the edge walls (layer 14) are left out of its body test, as the flight's own sweeps do (the game may raise them
+  round the body under the flight, beside the spot: a false "walled in");
+- steering while it judged began a new job every 0.25 and never finished (the landing hovered on): a job goes on
+  while the spot stays within a unit of where it began, on the same level; the level is in the kept answers' key;
+- "on the take-off's part" at the game's limits (0.55 down, 0.45 up), not 0.6 either way;
+- its cells are kept between jobs (no new collections per spot), a clock without an allocation per slice;
+- `BodyDoesNotFit` (every ground test) skips the floor under the feet first and asks `IsModView` (a walk over every
+  instance) only for what really goes into him;
+- a landing in the same frame as a step-up replaced the step's camera move (`GiveBack` now adds to it); a flight
+  ended at once (`Release`) left its body move for the next flight's first frame (`Land` now applies it,
+  `ApplyBodyMove`); the camera is warped by `CameraFollow`'s share of the height's change;
+- the step-up makes up only the height above the floor (low over a rise the flight climbs with it; made up below the
+  floor it popped back the same frame);
+- a skin with the beat but no landing frames keeps the beat's rise through the flare;
+- the movement lock read through a cached field reference (a `Traverse` allocated every physics step); ordinal
+  `StartsWith` on the per-frame paths; a glide's way out can't be skipped by a loop length changed mid-glide; "Glide
+  now" greyed while gliding;
+- the self-test: skipped indoors, the timing after a warm-up run, the same answer in 0.2 ms slices as at once, the
+  pen only on a layer that stops him, on the ground, and gone before the next test.
+After the user's next session (14:06): one landing judged by the walk-away test (area 59, refused all day, walked to
+the take-off's part 4.5 out, 353 steps, 14.5 ms over 4 frames); every refusal a real one (inside the ruins, no
+ground, under a ledge); the only slow frame of the mod a touchdown (36 ms, Tick 30.9) with no walk-away test in it.
+Suspected: the game's walk grid rescanned round the keeper on every landing (`WhyNotOnGameGrid`). Timed now (`[perf]`
+parts `Landing` and, inside it, `LandGrid`) before anything is changed. The `[occlusion]` readout is off by default
+(the Flying tab's "Front layer readout"), and a skin's load line counts the flight's own frames instead of listing
+them as names that match no frame.
+Left, by decision: a closed area over 1000 cells (60 square units) counts as open ground (his ground, the dragon with
+him); a cell first reached on one of two stacked surfaces keeps it, a refused cell stays refused (both only refuse).
+
+### Two cuts from the jump detector (2026-10-23, fixed, not seen in game)
+
+The user's session log (12:58), `[flight] jump of N px in one frame` lines of 3 px or more, sorted by kind:
+
+- **Over a raised ground piece, flying free (the biggest).** `the body steps up 0.39 onto BigDropTopSurface`, then
+  +4, +5, +3 px on three frames (88 screen px), the flight at 200 px. The cause: free flight's height is counted
+  above the keeper's body, and `FixedStep` steps the body up onto the walkable surface under it (it follows the hills).
+  The height above the body stayed the same, so the whole dragon rose 0.39 (12 art px), eased over three frames by
+  the body's smoothing, and stayed that much higher until it landed. **Fix:** a step of more than 0.1 shrinks the
+  height above the body by the step, so the flight keeps its place in the world. As for a landing's move, the camera
+  is told the body moved (`bodyMove`, `OnTargetObjectWarped`) and the body's smoothing is off for two physics steps.
+  The floor still holds the flight the clear height above the new ground, so flying low over the rise it still
+  climbs. Log: `the body steps up 0.39 onto ...: the flight keeps its place (200 -> 188 px over the body)`.
+- **The landing's first frame.** -3 to -7 px, every landing, as the frame switched from the beat to `land_01`. The
+  cause, from the numbers (line 535, lift 0.733 -> 0.500): `LiftFor` took the beat's rise only for `bdy_fly_` frames;
+  for the landing's frames it took the old hover, on its own clock. Beat +3 px to hover -2, with the height's own
+  -2: -7. The same switch back put +3 px into a refused landing's return to the beat (`land_01 -> fly_01`). **Fix:**
+  every flying frame the skin has (the beat, the take-off, the landing) takes the beat's rise; through the landing's
+  frames the beat's clock stands still, so the rise holds and fades with the height (`Clamp01(height / 12)`). The
+  hover stays only for a mount without the frames.
+- **The end of the take-off** (+5 to +7 px, `takeoff_04 -> fly_05`): the launch really rises that fast there (height
+  +5 px a frame); the camera rises with it (6-9 screen px). Not a cut, left as it is.
 
 ### Height jumps across the land (2026-10-23, investigating)
 

@@ -796,6 +796,7 @@ namespace GK2DonkeyAPI
             int front = 0;
             var unknown = new List<string>();
             var walkHead = new List<string>();
+            int flight = 0;
             foreach (string key in keys)
             {
                 string k = key;
@@ -810,6 +811,7 @@ namespace GK2DonkeyAPI
                 }
                 if (b.KeySet.Contains(k)) continue;
                 if (IsPartName(b, k) || IsClipName(b, k)) continue;
+                if (Flight.IsSkinFrame(k)) { if (!key.StartsWith(FrontKey, StringComparison.Ordinal)) flight++; continue; } // the mod plays them (Flight.FrameFor)
                 if (k.StartsWith("hed_walk", StringComparison.Ordinal)) walkHead.Add(key); else unknown.Add(key);
             }
             int missing = 0;
@@ -820,6 +822,7 @@ namespace GK2DonkeyAPI
             var sb = new StringBuilder(d.Report);
             sb.Append(what ?? have.Count + " pictures");
             if (front > 0) sb.Append(" and ").Append(front).Append(" in front of the rider");
+            if (flight > 0) sb.Append(", ").Append(flight).Append(" of them the flight's own (take-off, beat, glide, landing)");
             if (missing > 0) sb.Append(", ").Append(missing).Append(" of the ").Append(b.Id).Append("'s ").Append(b.Keys.Length).Append(" frames not drawn (the ").Append(b.Id).Append(" shows there)");
             if (unknown.Count > 0) sb.Append("; names that match no frame: ").Append(string.Join(", ", unknown));
             if (walkHead.Count > 0) sb.Append("; a head in walk frames is never shown (the body frames carry the head): ").Append(string.Join(", ", walkHead));
@@ -2606,6 +2609,7 @@ namespace GK2DonkeyAPI
                 return false;
             }
             internal string Wearing => skin?.Def.Id ?? "";
+            internal bool HasFrame(string key) => skin != null && skin.Frames.ContainsKey(key); // the worn skin has this picture (the flight's glide frames)
             internal bool Building => pending != null;
             // The worn look whose own colours the colour regions map (null: the donkey's own look, or a skin drawn
             // in the donkey's palette colours, which take the donkey's map).
@@ -2690,11 +2694,6 @@ namespace GK2DonkeyAPI
                 // flying (the flying experiment): the skin's own flying, take-off and landing frames, when it has them,
                 // by the flight's timing, in place of whatever walk or idle frame the game shows (docs/flying.md)
                 string flyKey = s.Body && skin != null && owner != null ? Flight.FrameFor(owner) : null;
-                if (flyKey != null)
-                {
-                    string look = Flight.WingLookKey(flyKey); // the Flying tab's study of the wing over the rider
-                    if (look != flyKey && skin.Frames.ContainsKey(look)) flyKey = look;
-                }
                 bool flying = flyKey != null && skin.Frames.TryGetValue(flyKey, out Sprite flyFrame) && (mine = flyFrame) != null;
                 bool show = mine != null && part.enabled && part.gameObject.activeInHierarchy;
                 if (ov.sprite != mine) ov.sprite = mine;

@@ -43,6 +43,8 @@ namespace GK2DonkeyAPI
             WinTop,     //   inside Window: the tab bar, the scope line and the settings-differ snapshot
             WinTab,     //   inside Window: the open tab's rows (PanelTab names it)
             WinFooter,  //   inside Window: the footer (differ text, defaults buttons)
+            Landing,    // a flight's landing judged (FlightGround.WhyCannotLandAt: the ground, the body, the walk-away test)
+            LandGrid,   //   inside Landing: the game's walk grid rescanned round the keeper (WhyNotOnGameGrid; a touchdown hitch, 2026-10-23)
             Count,
         }
 

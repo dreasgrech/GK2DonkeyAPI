@@ -517,17 +517,30 @@ Development:
   The wing beat is now eight frames in which the body moves part after part, not all at once (it "danced"): the
   wing tips trail the arm, the head rides steady a moment behind the body, the legs stay tucked, each swaying a little
   on its own (all four in step paddled like a swimming dog), the tail whips from root to tip (docs/flying.md "The beat in time").
-  In the air the near wing now covers the rider as the folded wing does on the ground: in front of him wherever it
-  crosses him, with only his head left in view (before, the wing went behind him wherever he sat). The raised wings
+  In the air the near wing now covers the rider as the folded wing does on the ground: the whole near wing is in
+  front of him wherever it crosses him (before, the wing went behind him wherever he sat). The raised wings
   are a little lower, so their tops are no longer cut off by the edge of the picture. In flight the front layer is
   now lifted towards the camera along its line of sight: the lift along the sprite's own axis had moved it 3 art px
   down on the screen, so the two halves of the wing didn't meet round the rider. A dev readout (`[occlusion]` log
-  lines) reports where the front layer and the rider's sprites really are in the dragon's picture. For choosing how
-  the wing passes the rider, the Flying tab has a "Wing over the rider (a study)" row: A the cut, B the whole wing in
-  front, C the raised wing leaned back. The dragon skin carries B and C as extra frames until one is chosen.
+  lines) reports where the front layer and the rider's sprites really are in the dragon's picture.
   The spread wings are now drawn like the folded ones: the same dark wine membrane and dark edge, and thin red veins
   fanning from the wrist as densely as the fold's (they had few veins, a lighter purple and thick bones). The far wing
   now rises from the dragon's back instead of floating a few pixels above it.
+  The dragon now glides: flying along in one direction for a while, it sometimes stops beating and holds its wings
+  open for a moment, the wings flexing in the air and the body rising and sinking with them. It eases into the glide
+  out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
+  glide. The Flying tab has the timings and a "Glide now" button.
+- **Flying: two jolts gone.** Flying over a raised piece of ground (a cliff's top) no longer lifts the dragon about
+  12 pixels in a jolt; it keeps its height in the world. And the start of a landing no longer drops it a few pixels in
+  one frame: the body's up and down through the landing frames now carries on from the wing beat's.
+- **Flying: landing by your home.** Landings near buildings were refused as "Nowhere to land here." though the
+  ground was open: the check asked the game's navigation mesh for its NPCs, which buildings cut into pieces. A
+  landing the mesh refuses is now judged by the keeper's own ground, by the game's own rules for where he can walk:
+  allowed when he could walk from it to where he took off or it is open ground, refused on a rock top, a ledge or a
+  closed pocket. The judging is spread over a few frames while the dragon hovers, so pressing land never freezes the
+  game. A dev readout (`[flight-area]`, `[flight-walk]` log lines) shows each judgement (docs/flying.md "Refused landings").
+  The `[occlusion]` readout is now off unless switched on in the Flying tab; the landing's checks are timed in the
+  `[perf]` lines (`Landing`, `LandGrid`).
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
   terrain mesh read just before the game frees them, the highest drawn level at any point, checked on the Flying
   tab against the walkable ground; the flight's floor, walls and landings use it (no landing inside a rock table); a whole-map survey and a map drawing tool (tools/flying/map_survey.py).

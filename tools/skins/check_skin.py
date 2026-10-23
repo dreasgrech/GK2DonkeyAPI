@@ -87,7 +87,7 @@ def main(pack):
                 if not f.endswith(".png"):
                     continue
                 k = f[:-4]
-                if k not in ORDER and not re.match(r"^bdy_(fly|takeoff|land)(_[bc])?_left_\d\d$", k):  # the flying frames (docs/flying.md)
+                if k not in ORDER and not re.match(r"^bdy_(fly|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", k):  # the flying frames (docs/flying.md)
                     warn.append(f"front/{f}: not a frame key")
                     RESULT["errors"] += 1
                     continue

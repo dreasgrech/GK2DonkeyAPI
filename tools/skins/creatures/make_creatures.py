@@ -456,7 +456,10 @@ def _tone(ramp, light):
 SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
 RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 NO_SPREAD_WINGS = os.environ.get("DRAGON_STUDY") == "nowings"  # a study: the flying frames without the spread wings, to measure the body alone
-WING_OVER_RIDER = os.environ.get("DRAGON_WING_OVER_RIDER", "head")  # a study: "box" the spread near wing behind the rider in his box, "all" in front of him everywhere, "head" in front of him except his head
+# The spread near wing over the rider: "all", the whole wing in front of him (docs/front-layer.md section 3's rule; B of
+# the in-game study, chosen by the user 2026-10-23: "the best looking one is b: the rule"). Studies kept as switches:
+# "head" in front of him except his head (A, the cut), "box" behind him in his box.
+WING_OVER_RIDER = os.environ.get("DRAGON_WING_OVER_RIDER", "all")
 
 
 def rider_in_view(xc, yc):
@@ -472,9 +475,24 @@ def rider_in_view(xc, yc):
     return 38 <= yc <= 42 and 64 <= xc <= 75
 
 
-WING_STUDIES = os.environ.get("DRAGON_WING_STUDIES", "1") == "1"  # the B and C flying frames beside A, to judge in game (2026-10-23); 0 = A only
-RAISED_TILT = float(os.environ.get("DRAGON_RAISED_TILT", "0"))  # a study: the raised wing leaned back this many degrees (2026-10-23)
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
+# The glide (docs/flying.md "the glide"): the wings held open, no beat. GLIDE_T is the held wing pose (0 raised .. 0.5
+# level back .. 1 swept down). Held still the wings read dead ("it's just making the wings look very static", the user
+# 2026-10-23), so they flex in the air: each joint's pose sways GLIDE_FLEX about GLIDE_T, slowly, the arm first and each
+# finger later (GLIDE_WING_LAGS), the wing bending like a sail under the air, its tips moving 4-5 px. (A tip flexing 1 px
+# alone re-drew every vein at a new angle with no visible move: speckle. A sway the eye follows is a move.) The tail
+# waves and each leg keeps its loop, smaller. GLIDE_FRAMES one slow loop (Flight.GlideLoopS plays it).
+# The way in and out (the user: "the transition from flying to gliding and vice versa is more natural for the wings"):
+# in-between frames whose every part is its beat pose blended into its glide pose, the arm ahead and the finger tips
+# behind (GLIDE_MIX_LAGS), so the wing slows and opens out of an upstroke going in, and pushes off with a downstroke
+# coming out (docs/flying.md "the glide").
+GLIDE_T = float(os.environ.get("DRAGON_GLIDE_T", "0.4"))
+GLIDE_FLEX = float(os.environ.get("DRAGON_GLIDE_FLEX", "0.06"))
+GLIDE_FRAMES = 8
+GLIDE_WING_LAGS = {"elbow": 0.0, "wrist": 0.05, "root": 0.08, "t1": 0.12, "t2": 0.17, "t3": 0.22}
+GLIDE_MIX_LAGS = {"elbow": 0.0, "wrist": 0.04, "root": 0.06, "t1": 0.10, "t2": 0.15, "t3": 0.20}
+GLIDE_IN = 4    # bdy_glidein_left_01..04: the beat at th 0.75, 0.875, 0, 0.125 blended into the glide 0.2 .. 0.8
+GLIDE_OUT = 4   # bdy_glideout<q>_left_01..04, q 1..4 from the glide's quarters: the beat at th 0.25 .. 0.625, 0.8 .. 0.2 glide
 
 
 # ---- the wing beat in time (docs/flying.md "the beat in time"). Every part of the flying dragon once followed the
@@ -503,28 +521,58 @@ def body_rise(th):
     return 0.5 * (1.0 - math.cos(2.0 * math.pi * (th % 1.0)))
 
 
-def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None):
+def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None, glide=None, mix=None):
     # fly: the spread wings' angle about the shoulder (degrees: 0 raised high over the back, 45 level back, 90 swept
     # down past the belly), None = folded (walking, standing). legs_mode: "walk" on the ground, "tuck" (flying: the
     # forelegs bent up under the chest, the hind legs trailing), "reach" (landing: both stretched down for the ground),
     # "push" (taking off: the hind legs straight down off the ground, the forelegs tucking). lift: the whole body this
     # many px up (a leap, the body rising on a downstroke); the seat moves with it (the rider sits on the back).
     # beat: the moment of the wing beat, 0..1 (the flying frames): each part then reads the beat at its own lag.
+    # glide: the moment of the glide's slow loop, 0..1 (fly = the held pose): the beat's body held still at that pose.
+    # beat and glide both, with mix = (m, +1 into the glide | -1 out of it): every part m of the way from its beat pose
+    # to its glide pose (the wing's joints each at their own share, the arm ahead).
     DRG, DWING, DBELLY, DHORN, DEYE, DOUT = pal
     walking = phase != 0.0 and fly is None
     tb = fly if (fly is not None and legs_mode == "tuck") else None   # the beat drives the body (flying only)
     gb = 0.0 if tb is None else tb                                    # 0 wings raised .. 1 swept down
 
+    # how much of the glide's pose a frame takes: 0 the beat, 1 the glide, between them a way in or out
+    if beat is not None and glide is not None:
+        assert mix is not None, "a frame between the beat and the glide needs mix=(m, +1 into the glide | -1 out of it)"
+        M, MDIR = mix
+    else:
+        M, MDIR = (1.0, 1) if glide is not None else (0.0, 1)
+
+    def mshare(lag):
+        # a part's own share of the glide in a way in or out: the arm (lag 0) ahead, the finger tips (lag 0.2) behind,
+        # eased at both ends; going in the arm reaches the glide first, coming out it reaches the beat first
+        if M in (0.0, 1.0):
+            return M
+        v = (M - lag) / 0.8 if MDIR > 0 else 1.0 - ((1.0 - M) - lag) / 0.8
+        v = max(0.0, min(1.0, v))
+        return v * v * (3 - 2 * v)
+
+    def blend(bv, gv, m):
+        return gv if bv is None else bv if gv is None else bv + (gv - bv) * m
+
     def gw(lag):
-        # the stroke as a part feels it, lag of a beat later (without a beat: the pose given)
-        return gb if beat is None else wing_w(beat - lag)
+        # the stroke as a part feels it, lag of a beat later (without a beat: the pose given); gliding the body holds
+        # the glide's pose (its own flex would only re-round the chest's and the hump's shading)
+        if beat is None and glide is None:
+            return gb
+        return blend(wing_w(beat - lag) if beat is not None else None, GLIDE_T if glide is not None else None, M)
 
     def follow(lag, amp):
         # a loosely hung part, in the picture (y down, px): the body rises BEAT_BOB_PX * body_rise; the part rises
-        # amp of that, lag of a beat later, so in the picture it sinks as the body rises and catches up after
-        if beat is None:
+        # amp of that, lag of a beat later, so in the picture it sinks as the body rises and catches up after.
+        # Gliding the body does not rise with a beat: the part rests where it hangs on average in the beat (so the two
+        # meet without a jump) and only what hangs looser than the body sways, slowly, a wave running down it: the
+        # tail, its tip 1.5 px; the neck and head hold still (their 0.3 px only re-rounded the neck's shading)
+        if beat is None and glide is None:
             return 0.0
-        return BEAT_BOB_PX * (body_rise(beat) - amp * body_rise(beat - lag))
+        bv = BEAT_BOB_PX * (body_rise(beat) - amp * body_rise(beat - lag)) if beat is not None else None
+        gv = BEAT_BOB_PX * 0.5 * (1.0 - amp) + max(0.0, amp - 1.0) * math.sin(2 * math.pi * (glide - lag)) if glide is not None else None
+        return blend(bv, gv, M)
     bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift - RAISE
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
@@ -630,12 +678,6 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # to be clipped"; measured on a picture 32 px taller, tools: tmp tallstudy.py). Now the highest pixel, outline
     # included, is inside the 128 picture in every frame.
     WING_POSES = {k: ((a[0], 42 + (a[1] - 42) * 0.82), b, c) for k, (a, b, c) in WING_POSES.items()}
-    if RAISED_TILT:
-        # a study: the raised pose leaned back towards the tail about the shoulder (47, 42) by RAISED_TILT degrees, so
-        # the wing rises behind the rider's head instead of across it (docs/front-layer.md section 3: a shape, not a cut)
-        ca, sa = math.cos(math.radians(RAISED_TILT)), math.sin(math.radians(RAISED_TILT))
-        WING_POSES = {k: ((47 + (a[0] - 47) * ca - (a[1] - 42) * sa, 42 + (a[0] - 47) * sa + (a[1] - 42) * ca), b, c)
-                      for k, (a, b, c) in WING_POSES.items()}
 
     def pose_at(key, t):
         a, b, c = WING_POSES[key]
@@ -650,10 +692,19 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # not swing as a plank), and on the upstroke the hand folds in a little (a bat's wing comes up half closed).
     WING_LAGS = {"elbow": 0.0, "wrist": 0.03, "root": 0.05, "t1": 0.07, "t2": 0.10, "t3": 0.13}
 
+    def tk(key):
+        # a wing joint's pose: the beat's at its lag; gliding, GLIDE_T swaying GLIDE_FLEX at its own lag; between them
+        # (a way in or out) its own share of the way (mshare)
+        if beat is None and glide is None:
+            return fly
+        bv = wing_w(beat - WING_LAGS[key]) if beat is not None else None
+        gv = GLIDE_T + GLIDE_FLEX * math.sin(2 * math.pi * (glide - GLIDE_WING_LAGS[key])) if glide is not None else None
+        return blend(bv, gv, mshare(GLIDE_MIX_LAGS[key]))
+
     def spread_wing(near, t):
         ox, oy = (0.0, 0.0) if near else (-3.0, -7.0)  # the far wing: up and a little forward (the perspective)
         if not near:
-            tw = t if beat is None else wing_w(beat - WING_LAGS["wrist"])
+            tw = tk("wrist")
             oy += 3.0 * max(0.0, 1.0 - tw / 0.5)        # raised: 4 px above the near wing, not 7 (the picture's top)
 
         # w: how much of the far wing's offset a point takes. The far wing joins the far side of the spine, the same line
@@ -664,8 +715,6 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         def at(q, w=1.0):
             return (q[0] + ox * w, q[1] + oy * w + bob)
 
-        def tk(key):
-            return t if beat is None else wing_w(beat - WING_LAGS[key])
         sh = at((47.0, 42.0), 0.0)
         el, wr = at(pose_at("elbow", tk("elbow")), 0.35), at(pose_at("wrist", tk("wrist")), 0.7)
         tips = [at(pose_at(k, tk(k))) for k in ("t1", "t2", "t3")]
@@ -673,6 +722,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         if beat is not None:
             th = beat % 1.0
             fold = 0.16 * math.sin(math.pi * (th - 0.4) / 0.6) if th >= 0.4 else 0.0
+            fold *= 1.0 - mshare(GLIDE_MIX_LAGS["t2"])   # the upstroke's half-closed hand opens as the glide takes it
             tips = [(wr[0] + (q[0] - wr[0]) * (1 - fold), wr[1] + (q[1] - wr[1]) * (1 - fold)) for q in tips]
         ring = [sh, el, wr] + tips + [root]
         lerp = lambda a, b, f: (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
@@ -952,7 +1002,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # flying (the reference): the forearms hanging, the paws' claws down and forward; the hind leg's thigh forward
         # and down, the foot trailing back, its claws pointing back; raised wings = the legs stretched back, the
         # downstroke = drawn up under the body
-        if beat is not None:
+        if beat is not None or glide is not None:
             # In the beat the legs are HELD, tucked (the flying reference: across its three wing poses the forelegs stay
             # curled under the chest and the hind legs folded under the belly; the body carries them). Drawn up and
             # reaching again on every beat they paddled: "he looks like he's swimming, like how dogs swim" (the user,
@@ -963,16 +1013,20 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             # mostly back and forth (trailing), each at its own moment spread unevenly round the beat (no two in step,
             # no pair opposite: alternating strokes are a paddle again). LEG_SWAY px (0 = still).
             ph = {(False, "f"): 0.0, (True, "f"): 0.3, (False, "h"): 0.55, (True, "h"): 0.8}
-            a = LEG_SWAY
             if far:
                 # the far pair further back and up than on the ground (5, -2 from the near, not 3, -1): 3 px apart,
                 # their claws met as the legs swayed (a four-claw bar, blobs) and the near legs hid the far ones' motion
                 dx, dy = dx + 2, dy - 1
                 fhip, hhip = (fhip[0] + 2, fhip[1] - 1), (hhip[0] + 2, hhip[1] - 1)
-            u = 2 * math.pi * (beat - ph[(far, "f")])
-            fdx, fdy = 0.5 * a * math.cos(u), a * math.sin(u)
-            u = 2 * math.pi * (beat - ph[(far, "h")])
-            hdx, hdy = a * math.sin(u), 0.5 * a * math.cos(u)
+
+            def loops(lb, a):
+                u = 2 * math.pi * (lb - ph[(far, "f")])
+                v = 2 * math.pi * (lb - ph[(far, "h")])
+                return (0.5 * a * math.cos(u), a * math.sin(u), a * math.sin(v), 0.5 * a * math.cos(v))
+            # gliding the same loops, smaller (no beat stirs the air); a way in or out blends the two
+            bl = loops(beat, LEG_SWAY) if beat is not None else None
+            gl = loops(glide, LEG_SWAY * 0.6) if glide is not None else None
+            fdx, fdy, hdx, hdy = [blend(None if bl is None else bl[i], None if gl is None else gl[i], M) for i in range(4)]
             foreleg(fhip, (34.5 + dx + fdx, 63 + bob + dy + fdy), ramp, "hang")
             hock = lp((74, 62), (70, 63), 0.55)
             toe = lp((81, 66), (66, 67), 0.55)
@@ -1000,7 +1054,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # body's rise a little later than the one before and swings further, the tip overshooting (a wave running
         # down the tail, the reference's tail middle and tip on their own lags); the curl down at each point's low
         # (gw at lag - 0.4: the stroke's bottom is th 0.4)
-        if beat is None:
+        if beat is None and glide is None:
             wv = 1.2 * math.sin(2 * math.pi * phase)
             tpts = [(70, 50 + bob), (82, 54 + bob + wv * 0.3 + 2.5 * gb), (92 - 1.5 * gb, 57.5 + bob + wv * 0.7 + 5 * gb),
                     (100 - 3 * gb, 60 + bob + wv + 7 * gb), (106 - 4.5 * gb, 61.5 + bob + wv * 1.2 + 9 * gb)]
@@ -1048,7 +1102,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # flying: the neck stretched forward, the head ahead of the chest (the reference), not arched up; the head a
         # little higher with the wings raised, lower and the neck shorter on the downstroke
         neck = [(34.0, 44.0 + bob), lp((26, 39 + bob), (27, 42 + bob), gb), lp((19, 34 + bob), (21, 41 + bob), gb), lp((12, 31 + bob), (14, 41 + bob), gb)]
-        if beat is not None:
+        if beat is not None or glide is not None:
             # in the beat the neck does not dip with the wings (the old 10 px nod was most of the "dance"): it holds
             # the raised line, a little lower as the stroke passes it, and the head rides steadier than the body: it
             # rises a little less, a quarter of a beat later (the reference's head runs about half a loop behind its back)
@@ -1058,11 +1112,11 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     hx, hy = neck[-1]
 
     def sdf(x, y):
-        hb = gb if beat is None else gw(0.06) * 0.45            # in the beat the hump is the stroke's muscle: smaller, just after it
+        hb = gb if (beat is None and glide is None) else gw(0.06) * 0.45            # in the beat the hump is the stroke's muscle: smaller, just after it
         chest = _ell(x, y, 39, 48.5 + bob - (1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0), 11.5, 9.0)
         back = _ell(x, y, 52, 50.0 + bob, 11.0, 8.6)
         hips = _ell(x, y, 63, 49.0 + bob - 3.5 * hb, 11.0, 9.2 + 2.2 * hb)   # flying: humped behind the saddle on the downstroke
-        haunch = _ell(x, y, 66 - 2.0 * (gb if beat is None else gw(0.12) * 0.5), 54.0 + bob, 8.0, 6.0)
+        haunch = _ell(x, y, 66 - 2.0 * (gb if (beat is None and glide is None) else gw(0.12) * 0.5), 54.0 + bob, 8.0, 6.0)
         d = _smin(chest, back, 5.0)
         d = _smin(d, hips, 5.0)
         d = _smin(d, haunch, 4.0)
@@ -1190,29 +1244,30 @@ def frames_for(fn):
         for k in range(1, BEAT_FRAMES + 1):
             th = (k - 1) / BEAT_FRAMES
             out[f"bdy_fly_left_{k:02d}"] = fn(th, head_down=0.0, fly=wing_w(th), legs_mode="tuck", beat=th)
+        # The glide: the wings held open at GLIDE_T, one slow loop of the rest (the user, 2026-10-23: "a glide animation
+        # where the wings are just open while they are gliding"; Flight.cs plays it now and then, flying along)
+        for k in range(1, GLIDE_FRAMES + 1):
+            g = (k - 1) / GLIDE_FRAMES
+            out[f"bdy_glide_left_{k:02d}"] = fn(0.0, head_down=0.0, fly=GLIDE_T, legs_mode="tuck", glide=g)
+        # (the in-between frames pass fly=GLIDE_T: in flight gb is read only where there is no beat, and tb only as
+        # "flying", so the beat's share of each part comes from beat= alone)
+        # the way in: from the beat's frame 7 (th 0.75, the wings coming up through the glide's pose) on through the top
+        # of the stroke, each frame a fifth more of the glide, the glide's loop running up to its frame 1
+        for k in range(1, GLIDE_IN + 1):
+            out[f"bdy_glidein_left_{k:02d}"] = fn(0.0, head_down=0.0, fly=GLIDE_T, legs_mode="tuck",
+                                                  beat=0.75 + (k - 1) / BEAT_FRAMES, glide=(k - 1 - GLIDE_IN) / GLIDE_FRAMES, mix=(k / (GLIDE_IN + 1), 1))
+        # the way out, from each quarter of the glide's loop (the game waits for the next one): a downstroke from th
+        # 0.25, each frame a fifth less of the glide, handing over to the beat's frame 7 (th 0.75)
+        for q in range(4):
+            for k in range(1, GLIDE_OUT + 1):
+                out[f"bdy_glideout{q + 1}_left_{k:02d}"] = fn(0.0, head_down=0.0, fly=GLIDE_T, legs_mode="tuck",
+                                                               beat=0.25 + (k - 1) / BEAT_FRAMES, glide=q / 4 + (k - 1) / GLIDE_FRAMES, mix=(1 - k / (GLIDE_OUT + 1), -1))
         takeoff = ((None, "walk"), (0.0, "push"), (0.15, "push"), (0.8, "tuck"))
         for k, (ang, mode) in enumerate(takeoff, 1):
             out[f"bdy_takeoff_left_{k:02d}"] = fn(0.0, head_down=0.1 + 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
         land = ((0.1, "reach"), (0.0, "reach"), (0.45, "walk"), (None, "walk"))
         for k, (ang, mode) in enumerate(land, 1):
             out[f"bdy_land_left_{k:02d}"] = fn(0.0, head_down=0.4 - 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
-        if WING_STUDIES:
-            # A study to judge in game (2026-10-23, docs/front-layer.md section 9; the Flying tab's "Wing over the
-            # rider"): the same flying, take-off and landing frames twice more, as bdy_<clip>_b_left_NN (B: the whole
-            # near wing in front of the rider, the rule) and bdy_<clip>_c_left_NN (C: the raised pose leaned back 35
-            # degrees, the whole wing in front). Gone once the user has chosen.
-            global WING_OVER_RIDER, RAISED_TILT
-            keep = (WING_OVER_RIDER, RAISED_TILT)
-            for tag, over, tilt in (("b", "all", 0.0), ("c", "all", 35.0)):
-                WING_OVER_RIDER, RAISED_TILT = over, tilt
-                for k in range(1, BEAT_FRAMES + 1):
-                    th = (k - 1) / BEAT_FRAMES
-                    out[f"bdy_fly_{tag}_left_{k:02d}"] = fn(th, head_down=0.0, fly=wing_w(th), legs_mode="tuck", beat=th)
-                for k, (ang, mode) in enumerate(takeoff, 1):
-                    out[f"bdy_takeoff_{tag}_left_{k:02d}"] = fn(0.0, head_down=0.1 + 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
-                for k, (ang, mode) in enumerate(land, 1):
-                    out[f"bdy_land_{tag}_left_{k:02d}"] = fn(0.0, head_down=0.4 - 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
-            WING_OVER_RIDER, RAISED_TILT = keep
     empty = [(0, 0, 0, 0)] * (W * H)
     for name in ("hed_static_down", "hed_static_down_02", "hed_static_down_03"):
         out[name] = (empty, None)

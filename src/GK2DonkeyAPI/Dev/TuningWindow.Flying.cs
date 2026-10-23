@@ -45,6 +45,7 @@ namespace GK2DonkeyAPI
             if (GUILayout.Button(Tip("Survey what's around (12)", "Every collider within 12 of the keeper, with its top, the pictures beside it and its place on a screenshot: BepInEx/GK2-flight-survey.csv and .png (how tall the game's things are, for the bumping)."), Wd(200f))) FlightSurvey.Run(12f);
             GUILayout.EndHorizontal();
             if (OnOffRow("Per-frame log lines ([flight-probe])", Flight.ProbeOn, tip: "Where the mount, the keeper and the camera are every frame while off the ground: for measuring a shake or a jump. Many lines.")) Flight.ProbeOn = !Flight.ProbeOn;
+            if (OnOffRow("Front layer readout ([occlusion] lines)", Looks.FrontReadout.On, tip: "While flying, a few times a second: where the front picture (the near wing) and the rider's sprites are in the mount's picture, both facings (docs/front-layer.md section 9). Off by default.")) Looks.FrontReadout.On = !Looks.FrontReadout.On;
             if (GUILayout.Button(Tip("Survey the whole map (loaded scenes)", "Every terrain chunk, baked prop, world object, ground, water and zone collider of the loaded scenes: BepInEx/GK2-map-survey-HHmmss/ (tools/flying/map_survey.py draws it)."), Wd(260f))) MapSurvey.Run();
             if (MapSurvey.LastResult.Length > 0) GUILayout.Label(MapSurvey.LastResult, small);
 
@@ -69,20 +70,20 @@ namespace GK2DonkeyAPI
 
             if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "The dragon's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
             Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The eight flying frames once round.");
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("Wing over the rider (a study)", "Three ways the spread near wing passes the rider, to choose by eye (docs/front-layer.md section 9). A: a hole for his head, the wing covers the rest of him. B: the whole wing in front, it covers his head at the top of the beat. C: the raised wing leaned back 35 degrees behind his head, no hole. Switches at once, flying or not."), label, Wd(260f));
-            string[] looks = { "A: the cut", "B: the rule", "C: leaned back" };
-            for (int k = 0; k < looks.Length; k++)
-            {
-                if (GUILayout.Toggle(Flight.WingLook == k, looks[k], "Button", Wd(120f)) && Flight.WingLook != k)
-                {
-                    Flight.WingLook = k;
-                    Plugin.Log.LogInfo("[flight] wing over the rider: " + looks[k]);
-                }
-            }
-            GUILayout.EndHorizontal();
             Flight.BubbleS = SessionFloatRow("Bubble time (seconds)", Flight.BubbleS, 0.5f, 6f, "How long \"Nowhere to land here.\" and \"Land first.\" stay over the rider (the game's own time for them was about 5 s).");
             Flight.BeatBobPx = SessionFloatRow("Rise on each downstroke (px)", Flight.BeatBobPx, 0f, 8f, "With the flying frames: the body and the rider rise as the wings come down, sink on the upstroke (in place of the hover).");
+            GUILayout.BeginHorizontal();
+            if (OnOffRow("Glide now and then, flying along", Flight.Glide, tip: "Flying in one direction for a while, the wings sometimes stop and stay open (the skin's glide frames). Stopping, turning or climbing ends it.")) Flight.Glide = !Flight.Glide;
+            GUI.enabled = Flight.Now == Flight.Phase.Airborne && Flight.Glide && !Flight.Gliding;
+            if (GUILayout.Button(Flight.Gliding ? "Gliding" : "Glide now", Wd(110f))) Flight.GlideNow();
+            GUI.enabled = true;
+            GUILayout.EndHorizontal();
+            Flight.GlideAfterS = SessionFloatRow("Glide: flying along first (seconds)", Flight.GlideAfterS, 0f, 10f, "How long he beats along in one direction before a glide may start, and again after each glide.");
+            Flight.GlideChance = SessionFloatRow("Glide: chance each beat", Flight.GlideChance, 0f, 1f, "After that, the chance on each wing beat (1: always the first beat).");
+            Flight.GlideMinS = SessionFloatRow("Glide: shortest (seconds)", Flight.GlideMinS, 0.3f, 8f);
+            Flight.GlideMaxS = SessionFloatRow("Glide: longest (seconds)", Flight.GlideMaxS, 0.3f, 8f);
+            Flight.GlideLoopS = SessionFloatRow("Glide: its slow loop (seconds)", Flight.GlideLoopS, 0.4f, 4f, "The eight glide frames once round: the wings flexing, the tail's wave and the legs.");
+            Flight.GlideBobPx = SessionFloatRow("Glide: the body's swell (px)", Flight.GlideBobPx, 0f, 4f, "Gliding, the body rises and sinks this much with the wings' flex.");
 
             Header("Take-off (a launch, not a lift)");
             Flight.CrouchPx = SessionFloatRow("Crouch before the launch (px)", Flight.CrouchPx, 0f, 8f);

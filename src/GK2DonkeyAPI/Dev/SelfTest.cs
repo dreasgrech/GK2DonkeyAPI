@@ -105,6 +105,7 @@ namespace GK2DonkeyAPI
         private const string GroupCorpses = "Corpses at the crossroads";
         private const string GroupLooks = "Skins and effects";
         private const string GroupIndoors = "Indoors";
+        private const string GroupFlying = "Flying";
 
         // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
         internal static readonly Scenario[] Scenarios =
@@ -185,6 +186,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
             new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
             new Scenario { Group = GroupLooks, Name = "skin pack: read again by itself when its files change (dev switch)", Body = SkinPackAutoReload },
+            new Scenario { Group = GroupFlying, Name = "landing: the walk-away test (the keeper's own ground, a walled pen, the cap's time)", Body = FlightWalkAway },
         };
 
         // The groups in the order they first appear in the catalog (after Scenarios: static fields initialise in order).

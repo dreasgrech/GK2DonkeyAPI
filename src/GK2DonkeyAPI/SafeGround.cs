@@ -176,7 +176,7 @@ namespace GK2DonkeyAPI
             }
 
             // Every layer the keeper's body collides with.
-            private static int KeeperMask(Rigidbody rb)
+            internal static int KeeperMask(Rigidbody rb)
             {
                 int layer = rb.gameObject.layer, mask = 0;
                 for (int l = 0; l < 32; l++)
@@ -272,7 +272,14 @@ namespace GK2DonkeyAPI
                 for (int i = 0; i < n; i++)
                 {
                     Collider c = reachOverlaps[i];
-                    if (c == null || !c || c == body || c.attachedRigidbody == rb || IsModView(c))
+                    if (c == null || !c || c == body || c.attachedRigidbody == rb)
+                    {
+                        continue;
+                    }
+                    // the floor under his feet can't go into him (Blocks lets an upward ground face through anyway); our
+                    // own views are left out by Blocks, asked only for what really goes into him: IsModView walks every
+                    // instance, and the walk-away test asks this a few thousand times (herds of 300 measured)
+                    if (((1 << c.gameObject.layer) & GroundLayers) != 0 && c.bounds.max.y <= to.y + 0.05f)
                     {
                         continue;
                     }
@@ -311,6 +318,7 @@ namespace GK2DonkeyAPI
                 {
                     if (rescan)
                     {
+                        using var scan = Perf.Measure(Perf.S.LandGrid);
                         lam.RescanPlayerGraph();
                     }
                     Pathfinding.NNInfo a = grid.GetNearest(rb.position, Pathfinding.NearestNodeConstraint.Walkable);
@@ -404,6 +412,29 @@ namespace GK2DonkeyAPI
                     return "the walkable mesh test failed: " + e.Message;
                 }
                 return null;
+            }
+
+            // The walkable mesh's connected part ("area") under a point, as WhyNotConnected judges it: -1 when the point
+            // is off the mesh (its nearest node more than 0.25 away seen from above; 'off' says how far), -2 no mesh.
+            internal static int MeshAreaAt(Vector3 p, out float off, out Vector3 node)
+            {
+                off = float.NaN; node = p;
+                Pathfinding.RecastGraph graph = MainGame.PlayerController?.SceneRecastGraph;
+                if (graph == null) return -2;
+                try
+                {
+                    Pathfinding.NearestNodeConstraint c = Pathfinding.NearestNodeConstraint.Walkable;
+                    c.distanceMetric = Pathfinding.DistanceMetric.ClosestAsSeenFromAbove();
+                    Pathfinding.NNInfo a = graph.GetNearest(p, c);
+                    if (a.node == null) return -2;
+                    node = a.position;
+                    off = FlatOff(a.position, p);
+                    return off > 0.25f ? -1 : (int)a.node.Area;
+                }
+                catch (System.Exception)
+                {
+                    return -2;
+                }
             }
 
             private static float FlatOff(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).magnitude;
