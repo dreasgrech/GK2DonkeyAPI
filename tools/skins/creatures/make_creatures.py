@@ -478,7 +478,7 @@ def rider_in_view(xc, yc):
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
 # The glide (docs/flying.md "the glide"): the wings held open, no beat. GLIDE_T is the held wing pose (0 raised .. 0.5
 # level back .. 1 swept down). Held still the wings read dead ("it's just making the wings look very static", the user
-# 2026-10-23), so they flex in the air: each joint's pose sways GLIDE_FLEX about GLIDE_T, slowly, the arm first and each
+# 2026-10-23), so they flex in the air: each joint's pose sways GLIDE_FLEX_PX (in pixels) about GLIDE_T, slowly, the arm first and each
 # finger later (GLIDE_WING_LAGS), the wing bending like a sail under the air, its tips moving 4-5 px. (A tip flexing 1 px
 # alone re-drew every vein at a new angle with no visible move: speckle. A sway the eye follows is a move.) The tail
 # waves and each leg keeps its loop, smaller. GLIDE_FRAMES one slow loop (Flight.GlideLoopS plays it).
@@ -486,8 +486,14 @@ LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's
 # in-between frames whose every part is its beat pose blended into its glide pose, the arm ahead and the finger tips
 # behind (GLIDE_MIX_LAGS), so the wing slows and opens out of an upstroke going in, and pushes off with a downstroke
 # coming out (docs/flying.md "the glide").
-GLIDE_T = float(os.environ.get("DRAGON_GLIDE_T", "0.4"))
-GLIDE_FLEX = float(os.environ.get("DRAGON_GLIDE_FLEX", "0.06"))
+# 0.9 (the user's pick on the preview page, 2026-10-23, of 0.4, 0.55, 0.8, 0.85 and 0.9): the wings held low and spread
+# back, the near one hanging in front of the flank, over the rider's hips and legs (44 % of his lower body, 4 % of his
+# torso) rather than across his chest (0.4: 60 % of his torso), so the wing doesn't cut through him at the waist
+GLIDE_T = float(os.environ.get("DRAGON_GLIDE_T", "0.9"))
+# the flex in pixels at the wing's farthest-moving joint, whatever the held pose: the poses change at very different
+# speeds along the beat (a tip moves 84 px per unit of pose at 0.4, 163 at 0.85), so a flex given as pose (0.06) swung
+# the tips 5 px at 0.4 and almost 10 at 0.85, a flap (the user, 2026-10-23: "the glide in preview is still flapping")
+GLIDE_FLEX_PX = float(os.environ.get("DRAGON_GLIDE_FLEX_PX", "3"))
 GLIDE_FRAMES = 8
 GLIDE_WING_LAGS = {"elbow": 0.0, "wrist": 0.05, "root": 0.08, "t1": 0.12, "t2": 0.17, "t3": 0.22}
 GLIDE_MIX_LAGS = {"elbow": 0.0, "wrist": 0.04, "root": 0.06, "t1": 0.10, "t2": 0.15, "t3": 0.20}
@@ -692,13 +698,23 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # not swing as a plank), and on the upstroke the hand folds in a little (a bat's wing comes up half closed).
     WING_LAGS = {"elbow": 0.0, "wrist": 0.03, "root": 0.05, "t1": 0.07, "t2": 0.10, "t3": 0.13}
 
+    # the glide's flex as pose: GLIDE_FLEX_PX over how fast the fastest joint moves per unit of pose at GLIDE_T (on the
+    # pose's own side of the level pose, 0.5, where the curve bends)
+    def joint_speed(key):
+        e = 0.01
+        lo, hi = (GLIDE_T - e, GLIDE_T + e)
+        if lo < 0.5 <= hi:
+            lo, hi = (GLIDE_T - 2 * e, GLIDE_T) if GLIDE_T <= 0.5 else (GLIDE_T, GLIDE_T + 2 * e)
+        return math.dist(pose_at(key, max(0.0, lo)), pose_at(key, min(1.0, hi))) / (min(1.0, hi) - max(0.0, lo))
+    glide_flex = GLIDE_FLEX_PX / max(1.0, max(joint_speed(k) for k in GLIDE_WING_LAGS))
+
     def tk(key):
-        # a wing joint's pose: the beat's at its lag; gliding, GLIDE_T swaying GLIDE_FLEX at its own lag; between them
+        # a wing joint's pose: the beat's at its lag; gliding, GLIDE_T swaying glide_flex at its own lag; between them
         # (a way in or out) its own share of the way (mshare)
         if beat is None and glide is None:
             return fly
         bv = wing_w(beat - WING_LAGS[key]) if beat is not None else None
-        gv = GLIDE_T + GLIDE_FLEX * math.sin(2 * math.pi * (glide - GLIDE_WING_LAGS[key])) if glide is not None else None
+        gv = GLIDE_T + glide_flex * math.sin(2 * math.pi * (glide - GLIDE_WING_LAGS[key])) if glide is not None else None
         return blend(bv, gv, mshare(GLIDE_MIX_LAGS[key]))
 
     def spread_wing(near, t):

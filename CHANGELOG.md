@@ -527,9 +527,12 @@ Development:
   fanning from the wrist as densely as the fold's (they had few veins, a lighter purple and thick bones). The far wing
   now rises from the dragon's back instead of floating a few pixels above it.
   The dragon now glides: flying along in one direction for a while, it sometimes stops beating and holds its wings
-  open for a moment, the wings flexing in the air and the body rising and sinking with them. It eases into the glide
+  open for a moment, held low over the rider's legs, flexing gently in the air and the body rising and sinking with them. It eases into the glide
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
+- **Flying: no more hops over trees and ledges.** Flying low over a wood, or climbing out from under a ledge's edge,
+  the dragon no longer jumps up 12-20 pixels at once: it rises smoothly to its height over what is under it, and is
+  never drawn inside it.
 - **Flying: two jolts gone.** Flying over a raised piece of ground (a cliff's top) no longer lifts the dragon about
   12 pixels in a jolt; it keeps its height in the world. And the start of a landing no longer drops it a few pixels in
   one frame: the body's up and down through the landing frames now carries on from the wing beat's.

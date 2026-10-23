@@ -618,6 +618,16 @@ wings mostly". Two things tried in that pass and dropped, both because they chan
 - The tail's spike reaches the picture's last column (127), as in every flying frame and the standing frame (open,
   from before).
 
+**Third pass: the flex in pixels** (the user, looking at lower held poses on the preview page: "the glide in preview is
+still flapping"). The flex was a share of the pose (0.06), and the poses change at very different speeds along the beat:
+a tip moves 84 px per unit of pose at 0.4 and 163 at 0.85, so the same share swung the tips 5 px at 0.4 and nearly
+10 at 0.85, a flap. Now `GLIDE_FLEX_PX` (3) is the swing of the fastest joint, turned into pose at the held pose:
+over the loop the front layer's outline moves 4-6 px end to end at every held pose (0.4, 0.55, 0.8, 0.85, 0.9).
+The held pose: the user's pick from the page's studies (0.4, 0.55, 0.8, 0.85, 0.9), **0.9** ("angle wise of the wing,
+the last one i think looks better"): the wings held low and spread back, the near one hanging in front of the flank
+over his hips and legs (44 % of his lower body, 4 % of his torso, never his head) instead of across his chest (0.4:
+60 % of his torso), so it no longer cuts through him at the waist. The way in and out blend to it as before.
+
 **When it plays** (`Flight.GlideTick`; Flying tab rows "Glide now and then, flying along" and the "Glide:" rows,
 session-only):
 - Only airborne (not the launch or a jump), not while climbing, and only for a skin that has the loop, the way in
@@ -767,6 +777,20 @@ The user's session log (12:58), `[flight] jump of N px in one frame` lines of 3 
   hover stays only for a mount without the frames.
 - **The end of the take-off** (+5 to +7 px, `takeoff_04 -> fly_05`): the launch really rises that fast there (height
   +5 px a frame); the camera rises with it (6-9 screen px). Not a cut, left as it is.
+
+### The floor risen to, not jumped to (2026-10-23, built, not seen in game)
+
+The jump detector in the user's 14:16 session: +12 to +20 px in one frame, two kinds, both the floor taken at once
+(`heightPx = floorPx`) when it rose:
+- climbing out from under a ledge's edge (take-off at 21.10, -7.43 on ground at 3.60 under the 6.00 level's edge
+  tiles): once the flight was above 6.0 that level counted under it, the floor went 30 -> 88 px, +20 px in a frame;
+- hovering low over a wood after a refused landing (13.17, 27.92): every bush and tree top raised the floor 12-17 px.
+
+Now (`FreeTick`): the flight goes at once only as far as what is really there (the ground, a rock, a tree top: the
+floor without its clear height), and the clear height over it at `FloorRisePxPerS` (240 px a second, a Flying tab
+row). Never below what is there, only inside the 16 px over it for a few frames. A launch keeps its upward speed
+while it rises to the floor (its spring was stopped every frame under it). The floor's log line comes once per rise,
+with how much of it was at once.
 
 ### Height jumps across the land (2026-10-23, investigating)
 

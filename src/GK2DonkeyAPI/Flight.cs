@@ -47,6 +47,7 @@ namespace GK2DonkeyAPI
         internal static float CameraFollow = 1f;   // how much of the height the camera rises with (0: stays on the ground)
         internal static bool FreeFlight = true;    // step 2: from the clear height up, over everything (off: the lift only)
         internal static float ClearPx = 16f;       // the free flight's floor: below it he is on the ground's physics again
+        internal static float FloorRisePxPerS = 240f; // a floor that rises (a ledge's level, a treetop) is risen to at this speed, never below what is there
         internal static bool BumpTall = true;      // free flight bumps into what stands taller than it (off: through everything)
         internal static bool UseDrawnGround = true; // step 2 of the drawn ground (DrawnGround.cs): floor, walls, landings
         internal static int CoverEdgeTiles = 1;    // a landing under this many edge tiles of a higher level is still allowed
@@ -83,6 +84,7 @@ namespace GK2DonkeyAPI
         private static RigidbodyInterpolation smoothWas;
         private static int smoothOffSteps;           // physics steps left with the body's smoothing off after a landing's move
         private static float floorWasPx;             // the floor over the body, as FreeTick last found it (the step-up keeps above it)
+        private static float floorGapWas;            // how far under the floor the flight was the frame before (the floor's line once per rise)
         // the game's movement lock on the keeper's body, read every physics step (a Traverse allocated each time)
         private static readonly HarmonyLib.AccessTools.FieldRef<PlayerPhysicalBody, bool> movementLocked = MovementLockedRef();
 
@@ -547,17 +549,31 @@ namespace GK2DonkeyAPI
             // the ground: the clear height above it always; what is drawn on it: never inside it, and the clear height
             // above it only coming down (flying on over a rock, the bumping already keeps the flight above its top)
             float floorPx = ClearPx + (!float.IsNaN(groundTop) && groundTop > rb.position.y ? (groundTop - rb.position.y) / PxWorldY : 0f);
-            floorWasPx = floorPx;
+            // what is really there, without the clear height over it: the flight is never drawn below it
+            float solidPx = Mathf.Max(0f, !float.IsNaN(groundTop) && groundTop > rb.position.y ? (groundTop - rb.position.y) / PxWorldY : 0f);
             if (!float.IsNaN(top)) floorPx = Mathf.Max(floorPx, (top - rb.position.y) / PxWorldY + (Now == Phase.Landing || descending ? ClearPx : 0f));
+            if (!float.IsNaN(top)) solidPx = Mathf.Max(solidPx, (top - rb.position.y) / PxWorldY);
+            floorWasPx = floorPx;
             Jumps.Floor(under, drawn, top, floorPx);
             thingTop = top;
             if (heightPx < floorPx)
             {
                 // a landing (or the descend key) asks the ground; flying low over a rise just keeps above it
                 if ((Now == Phase.Landing || descending) && Time.unscaledTime >= nextLandTry && TryLand(pc, under)) return;
-                if (floorPx - heightPx > 2f) Plugin.Log.LogInfo($"[flight] the floor lifts the flight {floorPx - heightPx:0} px: walkable ground under it {under:0.00}, drawn ground {drawn:0.00}, drawn things up to {top:0.00}, the body at {rb.position.y:0.00}, now {floorPx:0} px up");
-                heightPx = floorPx; vel = 0f; // not here: hold the clear height
+                // Up to the floor smoothly: at once only as far as what is there (the ground, a rock, a treetop), the clear
+                // height over it at FloorRisePxPerS. Taken at once the whole way, the floor's own steps were the flight's:
+                // +20 px in one frame climbing out from under a ledge's edge (the higher level counting once the flight
+                // was above it, the floor 30 -> 88 px) and 12-17 px a tree hovering low over a wood (the log 2026-10-23,
+                // "the floor lifts the flight 16 px", "jump of +16 px in one frame").
+                float gap = floorPx - heightPx;
+                if (gap > 2f && floorGapWas <= 2f) Plugin.Log.LogInfo($"[flight] the floor lifts the flight {gap:0} px ({Mathf.Max(0f, solidPx - heightPx):0} at once): walkable ground under it {under:0.00}, drawn ground {drawn:0.00}, drawn things up to {top:0.00}, the body at {rb.position.y:0.00}, now {floorPx:0} px up");
+                heightPx = Mathf.Max(solidPx, Mathf.MoveTowards(heightPx, floorPx, Mathf.Max(1f, FloorRisePxPerS) * Time.deltaTime));
+                // not here: hold the clear height (a launch keeps rising: its spring stopped each frame under the floor,
+                // the climb out from under a ledge stalled while the floor was risen to)
+                vel = Now == Phase.Rising ? Mathf.Max(0f, vel) : 0f;
+                floorGapWas = floorPx - heightPx;
             }
+            else floorGapWas = 0f;
             if (Time.unscaledTime >= nextSafeCheck)
             {
                 nextSafeCheck = Time.unscaledTime + 1f;
@@ -601,15 +617,15 @@ namespace GK2DonkeyAPI
             Rigidbody rb = pc.PhysicalBody.Rb;
             Vector3 spot = rb.position;
             if (!float.IsNaN(under)) spot.y = under; // judged at the ground under the flight, not at the body's height
-            string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true);
-            // the ground still being judged (a few frames, Mount.Instance.WalkSliceMs each): hover, ask again next frame
-            if (why == Mount.Instance.WalkPending) { nextLandTry = Time.unscaledTime; return false; }
             // Something drawn stands under the flight higher than the ground the landing would put him on (a rock, a
             // roof, a cart): no landing through it. Seen 2026-10-23 at 40.62, 19.68: the floor found a thing drawn up to
             // 6.72 over ground at 3.60, the landing went on, put the body on the ground under it and the dragon came
-            // down through it. The dragon stays on top of it instead ("Nowhere to land here.").
-            if (why == null && !float.IsNaN(thingTop) && thingTop > spot.y + 0.6f)
-                why = $"something drawn stands there, up to {thingTop:F2}, over the ground at {spot.y:F2}";
+            // down through it. The dragon stays on top of it instead ("Nowhere to land here."). Asked first: the
+            // walk-away test (up to 30 ms over a few frames) ran for a spot under a tree and was refused after it anyway.
+            string why = !float.IsNaN(thingTop) && thingTop > spot.y + 0.6f ? $"something drawn stands there, up to {thingTop:F2}, over the ground at {spot.y:F2}" : null;
+            if (why == null) why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true);
+            // the ground still being judged (a few frames, Mount.Instance.WalkSliceMs each): hover, ask again next frame
+            if (why == Mount.Instance.WalkPending) { nextLandTry = Time.unscaledTime; return false; }
             if (why != null)
             {
                 Why = "can't land here: " + why;

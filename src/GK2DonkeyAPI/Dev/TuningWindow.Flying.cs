@@ -40,6 +40,7 @@ namespace GK2DonkeyAPI
             Flight.ClearancePx = SessionFloatRow("Clearance under the flight (px)", Flight.ClearancePx, 0f, 32f, "A top this close under the flight's feet still stops it.");
             if (Flight.Free && Flight.Blocker != null) GUILayout.Label("Bumping into: " + Flight.Blocker, small);
             Flight.ClearPx = SessionFloatRow("Clear height (px): free above it", Flight.ClearPx, 4f, 64f, "Below it the ground's physics hold him again; coming down, the mount holds this height until the ground under him can take him.");
+            Flight.FloorRisePxPerS = SessionFloatRow("Floor rising: up to it (px per second)", Flight.FloorRisePxPerS, 20f, 2000f, "When the floor rises (a higher level under him, a treetop), the flight climbs to it at this speed; it is never drawn below what is there, only inside the clear height over it.");
 
             GUILayout.BeginHorizontal();
             if (GUILayout.Button(Tip("Survey what's around (12)", "Every collider within 12 of the keeper, with its top, the pictures beside it and its place on a screenshot: BepInEx/GK2-flight-survey.csv and .png (how tall the game's things are, for the bumping)."), Wd(200f))) FlightSurvey.Run(12f);
