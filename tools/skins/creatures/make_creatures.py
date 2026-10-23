@@ -656,15 +656,20 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             tw = t if beat is None else wing_w(beat - WING_LAGS["wrist"])
             oy += 3.0 * max(0.0, 1.0 - tw / 0.5)        # raised: 4 px above the near wing, not 7 (the picture's top)
 
-        def at(q):
-            return (q[0] + ox, q[1] + oy + bob)
+        # w: how much of the far wing's offset a point takes. The far wing joins the far side of the spine, the same line
+        # of the back from this side, so its shoulder and its root on the back take none of it and only its outer parts
+        # rise, as the camera looks down on them; the whole wing moved up 4-7 px floated its joint above the back, a gap
+        # of ground between the wing and the body ("detached from the body", the user 2026-10-23, the level and down
+        # frames)
+        def at(q, w=1.0):
+            return (q[0] + ox * w, q[1] + oy * w + bob)
 
         def tk(key):
             return t if beat is None else wing_w(beat - WING_LAGS[key])
-        sh = at((47.0, 42.0))
-        el, wr = at(pose_at("elbow", tk("elbow"))), at(pose_at("wrist", tk("wrist")))
+        sh = at((47.0, 42.0), 0.0)
+        el, wr = at(pose_at("elbow", tk("elbow")), 0.35), at(pose_at("wrist", tk("wrist")), 0.7)
         tips = [at(pose_at(k, tk(k))) for k in ("t1", "t2", "t3")]
-        root = at(pose_at("root", tk("root")))
+        root = at(pose_at("root", tk("root")), 0.0)
         if beat is not None:
             th = beat % 1.0
             fold = 0.16 * math.sin(math.pi * (th - 0.4) / 0.6) if th >= 0.4 else 0.0

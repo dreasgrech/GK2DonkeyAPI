@@ -465,6 +465,21 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
       each pixel is measured along its own nearest vein, so every vein gets the dark band in its outer third.
     - Also: the veins start 1.5 px out from the wrist (all meeting in one pixel made a red knot there).
     - The folded frames are byte for byte unchanged; the head-cover counts for A, B and C are unchanged.
+- **The far wing joined to the back (2026-10-23).** The user: the far wing sits higher on the body's side than the
+  near one, so a gap shows between it and the body, as if detached.
+  - **The cause:** the far wing was the near one moved 3 px forward and 7 px up (4 when raised), its shoulder and its
+    root on the back too. In the level and down frames (3, 4, 6) its arm floated above the back with ground under it.
+  - **Now** the offset grows from the body out:
+    | point | share of the offset |
+    |---|---|
+    | shoulder, root on the back | none |
+    | elbow | 0.35 |
+    | wrist | 0.7 |
+    | finger tips | all |
+    The far wing joins the far side of the spine, the same line of the back from this side, and only its outer parts
+    rise as the camera looks down on them.
+  - Checked at 5x over the eight beat frames, before and after. The folded frames are unchanged and nothing reaches
+    the picture's top row.
   - Open: the tail's tip runs 2 px past the picture's right edge in every flying, take-off and landing frame. The
     flying tail streams back further than the walking one. Shorten it by 2 px.
 - **The raised wing was cut off at the top** (the same video). With the body 6 px higher on its longer legs, the
