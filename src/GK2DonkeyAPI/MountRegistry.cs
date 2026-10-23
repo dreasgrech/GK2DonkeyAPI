@@ -273,7 +273,7 @@ namespace GK2DonkeyAPI
         internal static Vector3 TorsoShiftWorld => Instance.TorsoShiftWorld;
         public static bool PoseBlocksMovement => Instance.PoseBlocksMovement;
         internal static float BackHeightPx(Sprite donkeyBody) => Instance.BackHeightPx(donkeyBody);
-        internal static void Say(string text) => Instance.Say(text);
+        internal static void Say(string text, float seconds = 0f) => Instance.Say(text, seconds);
         public static string CartSlopeStatus() => OnRidden(r => r.CartSlopeStatus()) ?? "";
         public static void RefreshSpeed() => OnRidden(r => { r.RefreshSpeed(); return ""; });
         public static void RefreshSeat() => OnRidden(r => { r.RefreshSeat(); return ""; });

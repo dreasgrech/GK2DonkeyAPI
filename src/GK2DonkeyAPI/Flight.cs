@@ -51,6 +51,7 @@ namespace GK2DonkeyAPI
         internal static bool UseDrawnGround = true; // step 2 of the drawn ground (DrawnGround.cs): floor, walls, landings
         internal static int CoverEdgeTiles = 1;    // a landing under this many edge tiles of a higher level is still allowed
         internal static float ClearancePx = 2f;    // how far under the flight's feet a top still counts as in the way
+        internal static float BubbleS = 1.5f;      // how long the flight's bubbles stay ("Nowhere to land here.": the game's own time was about 5 s)
         internal static float WingBeatS = 0.6f;    // one wing beat (the eight flying frames)
         internal static float BeatBobPx = 3f;      // the body's rise on each downstroke, with the flying frames
         internal static bool FlyFrames = true;     // the skin's flying frames while airborne (off: its walk and idle frames)
@@ -67,7 +68,9 @@ namespace GK2DonkeyAPI
         private static Mount.Instance owner;
         private static float heightPx, jumpVel, bobT, beatT;
         private static float groundBelowPx;          // flying free: how far the ground lies under the body (the body keeps its height off a plateau)
-        private static bool bodyMoved;               // the body was put somewhere this frame (a landing): the camera catches up at once
+        private static Vector3 bodyMove;             // the body was put somewhere this frame (a landing) by this much: the camera is told
+        private static RigidbodyInterpolation smoothWas;
+        private static int smoothOffSteps;           // physics steps left with the body's smoothing off after a landing's move
 
         // The flight's height above the real ground under it: above the body, plus how far the ground lies under the
         // body. The flare and the landing frames go by it: by the height above the body, a dragon 87 px over the ground
@@ -234,15 +237,31 @@ namespace GK2DonkeyAPI
             if (Now != Phase.Ground) { bobT += dt; beatT += dt; }
             FreeTick(i);
             FollowCamera();
-            if (bodyMoved)
+            if (bodyMove != Vector3.zero)
             {
                 // The body was put down on the ground under it this frame and the lift grew by the drop, so the mount's
                 // height is the same; the camera's offset grew at once, but its follow of the body eases down over many
                 // frames: the view jumped up 2.3 and came back down (the user's cut while landing, 2026-10-23: "on the
-                // screen 972 -> 684, camera y 14.583 -> 16.841"). The camera catches up with the body at once instead.
-                bodyMoved = false;
+                // screen 972 -> 684, camera y 14.583 -> 16.841"). Snapping the camera to the body (UpdateTargetPosInstant,
+                // CancelDamping) fixed that but threw away the camera's trail behind a moving flight too: x 3.50 -> 5.31
+                // in one frame, the dragon 367 px across the screen (the user's cut, the same day). So the camera is told
+                // the body moved by exactly this much (Cinemachine's OnTargetObjectWarped: its smoothed position shifts
+                // with the follow target), keeping any trail it had.
+                Vector3 move = bodyMove;
+                bodyMove = Vector3.zero;
                 CameraController cc = CameraSystem.Instance != null ? CameraSystem.Instance.ActiveCameraController : null;
-                if (cc != null) { cc.UpdateTargetPosInstant(); Plugin.Log.LogInfo("[flight] the body was set down: the camera caught up with it at once"); }
+                try
+                {
+                    string follow = cc != null ? MoveCameraWith(cc, move) : null;
+                    if (follow != null) Plugin.Log.LogInfo($"[flight] the body was set down by {move.y:0.00} (x {move.x:0.00}, z {move.z:0.00}): the camera moved with it (following {follow})");
+                }
+                catch (System.Exception e)
+                {
+                    // Cinemachine is the game's camera library, outside the dependency manifest's scopes: if it ever
+                    // changes, the old snap (which loses the camera's trail) rather than a broken landing
+                    Plugin.Log.LogWarning("[flight] could not move the camera with the body (" + e.Message + "): snapping it to the body instead");
+                    cc?.UpdateTargetPosInstant();
+                }
             }
             LiftBubble();
             if (ProbeOn) Probe.AtTick(i);
@@ -350,7 +369,7 @@ namespace GK2DonkeyAPI
             if (why != null)
             {
                 Why = "can't land here: " + why;
-                if (why != lastRefusal || !refusalSaidThisLanding) Mount.Say("Nowhere to land here.");
+                if (why != lastRefusal || !refusalSaidThisLanding) Mount.Say("Nowhere to land here.", BubbleS);
                 refusalSaidThisLanding = true;
                 if (why != lastRefusal || Time.unscaledTime - lastRefusalSaid > 3f)
                 {
@@ -371,6 +390,17 @@ namespace GK2DonkeyAPI
             return true;
         }
 
+        // The camera's smoothed position shifted with its follow target by the body's move; the follow target's name, or
+        // null without one. A method of its own: a missing Cinemachine fails here, where the caller catches it.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static string MoveCameraWith(CameraController cc, Vector3 move)
+        {
+            Transform follow = cc.VirtualCamera != null ? cc.VirtualCamera.Follow : null;
+            if (follow == null) return null;
+            cc.VirtualCamera.OnTargetObjectWarped(follow, move);
+            return follow.name;
+        }
+
         private static void GiveBack(PlayerController pc, Vector3? put, string what)
         {
             Free = false;
@@ -380,7 +410,20 @@ namespace GK2DonkeyAPI
             {
                 if (put.HasValue)
                 {
-                    bodyMoved = (put.Value - pb.Rb.position).sqrMagnitude > 0.0025f;
+                    Vector3 move = put.Value - pb.Rb.position;
+                    if (move.sqrMagnitude > 0.0025f)
+                    {
+                        bodyMove = move;
+                        // The game smooths the drawn body between physics steps from the pose before; after a move the
+                        // next frames blended from the old spot: the dragon showed 4.80, then 3.75, with the body at
+                        // 3.60 (put down 2.54 off a plateau; a 34 px flash up and back), and a 6 px dip landing up
+                        // onto one (the user's cuts, 2026-10-23). The smoothing is off until two physics steps have
+                        // run from the new spot, then back as it was.
+                        Rigidbody rb = pb.Rb;
+                        if (smoothOffSteps == 0) smoothWas = rb.interpolation;
+                        rb.interpolation = RigidbodyInterpolation.None;
+                        smoothOffSteps = 2;
+                    }
                     pb.SetPosition(put.Value);
                 }
                 pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, true);
@@ -445,13 +488,18 @@ namespace GK2DonkeyAPI
         {
             if (!Free) return false;
             if (Now != Phase.Landing) Set(Phase.Landing, $"landing first ({what})");
-            Mount.Say("Land first.");
+            Mount.Say("Land first.", BubbleS);
             return true;
         }
 
         // Plugin.FixedUpdate: the body moved from the input, at the walking speed the game would give it.
         internal static void FixedStep()
         {
+            if (smoothOffSteps > 0 && --smoothOffSteps == 0)
+            {
+                Rigidbody body = MainGame.PlayerController?.PhysicalBody?.Rb;
+                if (body != null) body.interpolation = smoothWas;
+            }
             if (!Free) return;
             PlayerController pc = MainGame.PlayerController;
             PlayerPhysicalBody pb = pc?.PhysicalBody;

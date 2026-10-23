@@ -456,6 +456,7 @@ def _tone(ramp, light):
 SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
 RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 NO_SPREAD_WINGS = os.environ.get("DRAGON_STUDY") == "nowings"  # a study: the flying frames without the spread wings, to measure the body alone
+LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
 
 
 # ---- the wing beat in time (docs/flying.md "the beat in time"). Every part of the flying dragon once followed the
@@ -880,16 +881,37 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # flying (the reference): the forearms hanging, the paws' claws down and forward; the hind leg's thigh forward
         # and down, the foot trailing back, its claws pointing back; raised wings = the legs stretched back, the
         # downstroke = drawn up under the body
-        # in the beat the legs hang loose: drawn up a while after the downstroke, swinging under the body as it rises
-        # (the reference's feet lag the body about a third of its walk), the hind pair later than the fore
-        ff = lp((32, 67), (35, 62), gb if beat is None else gw(0.25) * 0.7)
-        fdy = follow(0.3, 0.6)
-        foreleg(fhip, (ff[0] + dx, ff[1] + bob + dy + fdy), ramp, "hang")
-        hw = gb if beat is None else gw(0.35) * 0.7
-        hdy = follow(0.38, 0.5)
-        hock = lp((74, 62), (70, 63), hw)
-        toe = lp((81, 66), (66, 67), hw)
-        hindleg(hhip, (hock[0] + dx, hock[1] + bob + dy + hdy * 0.6), (toe[0] + dx, toe[1] + bob + dy + hdy), ramp, "trail")
+        if beat is not None:
+            # In the beat the legs are HELD, tucked (the flying reference: across its three wing poses the forelegs stay
+            # curled under the chest and the hind legs folded under the belly; the body carries them). Drawn up and
+            # reaching again on every beat they paddled: "he looks like he's swimming, like how dogs swim" (the user,
+            # 2026-10-23). A "hanging loose" trail (each leg following the body's rise at its own lag) moved all four
+            # 3-4 px on the same frames, the shared body term swamping the lags ("all legs are still bobbing exactly
+            # the same"); held still they were dead ("all now completely static????"). So each leg has its own small
+            # loop in the airflow, not a share of the body's rise: the forelegs mostly up and down (a curl), the hind
+            # mostly back and forth (trailing), each at its own moment spread unevenly round the beat (no two in step,
+            # no pair opposite: alternating strokes are a paddle again). LEG_SWAY px (0 = still).
+            ph = {(False, "f"): 0.0, (True, "f"): 0.3, (False, "h"): 0.55, (True, "h"): 0.8}
+            a = LEG_SWAY
+            if far:
+                # the far pair further back and up than on the ground (5, -2 from the near, not 3, -1): 3 px apart,
+                # their claws met as the legs swayed (a four-claw bar, blobs) and the near legs hid the far ones' motion
+                dx, dy = dx + 2, dy - 1
+                fhip, hhip = (fhip[0] + 2, fhip[1] - 1), (hhip[0] + 2, hhip[1] - 1)
+            u = 2 * math.pi * (beat - ph[(far, "f")])
+            fdx, fdy = 0.5 * a * math.cos(u), a * math.sin(u)
+            u = 2 * math.pi * (beat - ph[(far, "h")])
+            hdx, hdy = a * math.sin(u), 0.5 * a * math.cos(u)
+            foreleg(fhip, (34.5 + dx + fdx, 63 + bob + dy + fdy), ramp, "hang")
+            hock = lp((74, 62), (70, 63), 0.55)
+            toe = lp((81, 66), (66, 67), 0.55)
+            hindleg(hhip, (hock[0] + dx + hdx * 0.5, hock[1] + bob + dy + hdy * 0.5), (toe[0] + dx + hdx, toe[1] + bob + dy + hdy), ramp, "trail")
+            return
+        ff = lp((32, 67), (35, 62), gb)
+        foreleg(fhip, (ff[0] + dx, ff[1] + bob + dy), ramp, "hang")
+        hock = lp((74, 62), (70, 63), gb)
+        toe = lp((81, 66), (66, 67), gb)
+        hindleg(hhip, (hock[0] + dx, hock[1] + bob + dy), (toe[0] + dx, toe[1] + bob + dy), ramp, "trail")
 
     legs(far=True)
 

@@ -43,6 +43,7 @@
   <ItemGroup>
     <Reference Include="Assembly-CSharp"><HintPath>$(Managed)\Assembly-CSharp.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="LazyBearTechnology"><HintPath>$(Managed)\LazyBearTechnology.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="Cinemachine"><HintPath>$(Managed)\Cinemachine.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="Sirenix.Serialization"><HintPath>$(Managed)\Sirenix.Serialization.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="AstarPathfindingProject"><HintPath>$(Managed)\AstarPathfindingProject.dll</HintPath><Private>false</Private></Reference>
     <Reference Include="FlowCanvas"><HintPath>$(Managed)/FlowCanvas.dll</HintPath><Private>false</Private></Reference>

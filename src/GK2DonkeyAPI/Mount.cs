@@ -3329,7 +3329,9 @@ namespace GK2DonkeyAPI
                 return f.sqrMagnitude < 0.0001f ? Vector3.forward : f.normalized;
             }
 
-            internal static void Say(string text)
+            // seconds: how long the bubble stays (0 = the game's own time: 2.5 s plus 0.085 s a letter, after the letters
+            // have typed in; UISpeechBubble / SpeechBubbleSettings.CalculateBubbleShowingTime)
+            internal static void Say(string text, float seconds = 0f)
             {
                 if (!Plugin.ShowMessages.Value || string.IsNullOrEmpty(text))
                 {
@@ -3337,7 +3339,7 @@ namespace GK2DonkeyAPI
                 }
                 try
                 {
-                    Bubble.Talk(new PhraseData(true, null, text, null, null, SpeechBubbleType.Think));
+                    Bubble.Talk(new PhraseData(true, null, text, null, null, SpeechBubbleType.Think, fixedShowTimeValue: Mathf.Max(0f, seconds)));
                 }
                 catch (Exception e)
                 {

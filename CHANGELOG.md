@@ -515,8 +515,8 @@ Development:
 - **The dragon flies with its wings spread** (the flying experiment): 14 new frames drawn by the creature generator
   (the wing beat, the take-off, the landing), played while the dragon is in the air; the skin scans accept them.
   The wing beat is now eight frames in which the body moves part after part, not all at once (it "danced"): the
-  wing tips trail the arm, the head rides steady a moment behind the body, the legs dangle, the tail whips from root
-  to tip (docs/flying.md "The beat in time").
+  wing tips trail the arm, the head rides steady a moment behind the body, the legs stay tucked, each swaying a little
+  on its own (all four in step paddled like a swimming dog), the tail whips from root to tip (docs/flying.md "The beat in time").
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
   terrain mesh read just before the game frees them, the highest drawn level at any point, checked on the Flying
   tab against the walkable ground; the flight's floor, walls and landings use it (no landing inside a rock table); a whole-map survey and a map drawing tool (tools/flying/map_survey.py).
@@ -529,6 +529,11 @@ Development:
   flight, and comes down only where he can stand (a save or a
   dismount lands him first). Session values; on by default only where the dev tools are
   unlocked, never for players (with it off nothing changes).
+  Landing cuts fixed: the body no longer flashes from its old spot for a frame when a landing sets it down (its
+  smoothing is off for two physics steps), and the camera moves with the set-down instead of snapping to the body
+  (which threw away its sideways trail: the view jumped across the screen). The API references the game's
+  Cinemachine.dll for it. The flight's bubbles ("Nowhere to land here.", "Land first.") stay 1.5 s, not about 5
+  (the Flying tab's "Bubble time").
 - **The three pack scenarios clean up whatever stops them** (mount from a pack, skin pack, skin pack auto-reload;
   left from the first review pass): their donkeys and carts, the temp pack and the mount it declared, the temp folder
   and the auto-reload switch go in a `finally`, so a check that throws or a stopped run leaves nothing behind for

@@ -430,8 +430,28 @@ Each part reads the beat at its own lag:
 - **The hump and chest.** These are the stroke's muscles: just after it (0.06), at under half the old size.
 - **The neck and head.** No nod with the wings; that nod was most of the "dance". The head rises by 0.8 of the body's
   rise, a quarter beat later: steadier than the body, and behind it.
-- **The legs** dangle. The forelegs are drawn up at 0.25 and the hind legs at 0.35. They swing after the body's rise
-  (0.3 and 0.38).
+- **The legs** are held, tucked: forelegs curled under the chest, hind legs folded under the belly. A first pass
+  drew them up and reaching again on every beat (fore at 0.25, hind at 0.35). The user: "he looks like he's swimming
+  more than flying ... like how dogs swim". The flying reference holds its legs in one pose across all three wing
+  poses, with the body carrying them.
+  - A second pass let them hang loose from the hips, each trailing the body's rise at its own lag (near fore 0.14,
+    near hind 0.26, far fore 0.22, far hind 0.34). Worked out per frame, all four moved 3-4 px on the same frames:
+    the shared body term (B(th) - 0.8 B(th - lag)) swamped the lags. The user: "all legs are still bobbing exactly
+    the same".
+  - A third pass held them still in the picture (the paw rows pixel-identical across the frames). The user: "the
+    legs are all now completely static????". The flying reference has only three frames, so its legs could hardly
+    move; that was over-read.
+  - Now each leg has its own small loop in the airflow, not a share of the body's rise. The forelegs move mostly
+    up and down (a curl), the hind legs mostly back and forth (trailing). `LEG_SWAY` sets the size, 1.5 px.
+  - Each leg runs at its own moment, spread unevenly round the beat: near fore 0, far fore 0.3, near hind 0.55,
+    far hind 0.8. No two legs are in step, and no pair is opposite (alternating strokes are a paddle again).
+  - In flight the far pair sits 5 px back and 2 up from the near pair (3 and 1 on the ground). At 3 px apart the
+    swaying claws met (a four-claw bar on one frame, blobs at the hind paws on others), and the near legs hid the
+    far legs' motion.
+  - Checked before handing over: each paw's offset per frame (no pair shares an offset on more than 4 of 8 frames
+    at 1 px, 2 of 8 at 2 px); zoomed crops of all eight frames at 8x without the wings (`DRAGON_STUDY=nowings`)
+    and with them. The preview page carried 1 and 2 px as studies beside the shipped 1.5, and the walk frames were
+    identical across the three.
 - **The tail** is a whip. Its points follow the body's rise at 0.06 / 0.14 / 0.22 / 0.30, with 1.0 / 1.4 / 1.9 / 2.5 of
   its size, so the tip overshoots. The curl goes down at each point's own low.
 
@@ -439,14 +459,12 @@ Measured the same way (wings left out), each part is now highest at:
 
 | Part | phase |
 |---|---|
-| hind feet | 0.34 |
 | hump | 0.53 |
-| tail middle | 0.58 |
-| fore paws | 0.71 |
+| tail middle | 0.61 |
 | tail tip | 0.73 |
 | head and neck | 0.76 |
 
-The head swings 2 px, the tail tip 8 px and the fore paws 7 px.
+The head swings 2 px and the tail tip 8 px. Each leg moves on its own loop (above).
 
 The game plays the eight frames over `WingBeatS` (`FlyNames.Length`): 75 ms a frame at 0.6 s. The preview page's `fly`
 clip also runs at 75 ms.
@@ -488,6 +506,28 @@ Every remaining kind of jump will name its cause there.
   cut of its own. Fixed: no landing where something drawn stands higher than the ground (the dragon stays on top).
   Open, measured next: the detector now logs the camera's and the body's x and z too, to see the sideways lag the
   catch-up removes before changing how the camera catches up.
+
+- The landing cuts, measured (the user, 2026-10-23: "cuts when landing in some places while I'm still flying"). The
+  detector's lines show two causes.
+  - **The drawn body blended from the old spot.** At 23.24, 11.15 the body was set down 2.54 off a plateau. Its
+    physics position was 3.60 from then on, but the drawn body showed 4.80, then 3.75, then 3.60: a 34 px flash up
+    and back (on the screen 776 -> 934 -> 772). At 5.31, 15.77 (set down 2.40 up onto a plateau) the drawn body dipped
+    5.996 -> 5.787 -> 5.996, a 6 px dip. The game smooths the drawn body between physics steps from the pose before
+    (Rigidbody interpolation); `PlayerPhysicalBody.SetPosition` sets the body and its transform, but the next frames
+    still blend from the old pose. Fixed: when a landing moves the body, its smoothing is off until two physics steps
+    have run from the new spot, then back as it was (`Flight.GiveBack`, `FixedStep`).
+  - **The camera's catch-up threw away its sideways trail.** At 5.31, 15.77 the camera's x went 3.50 -> 5.31 in one
+    frame, and the dragon moved 367 px across the screen (1566 -> 1199). `UpdateTargetPosInstant` is Cinemachine's
+    `CancelDamping`: it ends every lag, the camera's normal trail behind a moving flight too. This is the 322 px snap
+    above. Fixed: the camera is told the body moved by exactly the landing's move. Cinemachine's
+    `OnTargetObjectWarped(follow, delta)` shifts the framing transposer's smoothed position with its follow target,
+    so the drop and the lift's equal growth cancel and the trail stays. It is logged as "the camera moved with it
+    (following <target>)". The API now references the game's Cinemachine.dll; the call sits in a method of its own
+    so that a missing Cinemachine falls back to the old snap with a warning.
+- The flight's bubbles stay `Flight.BubbleS`, 1.5 s (the Flying tab's "Bubble time"; the user: "way too long"). The
+  game's own time for a bubble is 2.5 s plus 0.085 s a letter, counted after the letters type in
+  (`SpeechBubbleSettings.CalculateBubbleShowingTime`): about 5 s for "Nowhere to land here.". `Mount.Say(text,
+  seconds)` passes `PhraseData.fixedShowTimeValue`; the other callers keep the game's time.
 
 - No cart in the air (the user, 2026-10-23): the cart key, the panel's Drive the cart and `Mounts.SwitchStyle(Cart)`
   do nothing while the mount is off the ground (`Flight.InAir`), quietly: no bubble, no landing.

@@ -68,7 +68,8 @@ namespace GK2DonkeyAPI
             Flight.CameraFollow = SessionFloatRow("Camera rises with the height (0 none, 1 all)", Flight.CameraFollow, 0f, 1f, "The view goes up with the mount, so it stays in the middle of the screen. The hover's bob is left out.");
 
             if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "The dragon's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
-            Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The six flying frames once round.");
+            Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The eight flying frames once round.");
+            Flight.BubbleS = SessionFloatRow("Bubble time (seconds)", Flight.BubbleS, 0.5f, 6f, "How long \"Nowhere to land here.\" and \"Land first.\" stay over the rider (the game's own time for them was about 5 s).");
             Flight.BeatBobPx = SessionFloatRow("Rise on each downstroke (px)", Flight.BeatBobPx, 0f, 8f, "With the flying frames: the body and the rider rise as the wings come down, sink on the upstroke (in place of the hover).");
 
             Header("Take-off (a launch, not a lift)");
