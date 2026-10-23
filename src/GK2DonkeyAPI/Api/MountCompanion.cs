@@ -807,6 +807,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return;
             }
+            Looks.WarmWanted = skin; // its sheet built ahead: the first spawn wears it at once (Looks.TickWarm)
             MountLook l = Current;
             var coatKeys = Look(CoatPreset(l.Coat, l.CustomCoat, "coat", skin));
             var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));

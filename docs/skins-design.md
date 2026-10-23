@@ -286,6 +286,10 @@ per-skin offsets (14).
   carries the part's property block, which the built-in pipeline doesn't batch). The frames are decoded `BuildPerTick`
   (6) a tick for every source, not only recipes, so no first wear stalls a frame, and the skin is worn once the sheet
   is whole (`Loaded.Ready`). A code source's sprites are the mod's own (any texture, their sheet if they like).
+  Until then the previous look stays, which on a new view is the game's donkey: the first call of a session showed
+  it for the build's ~29 frames (the dragon's 173 pictures; the user, 2026-10-23). So the companion's chosen skin is
+  built ahead and held (`Looks.WarmWanted`, set in `MountCompanion.ApplyLook`; `Looks.TickWarm` each registry tick,
+  one skin at a time, the old one released on a new choice): the first spawn wears it at once.
 - **Per skinned view per frame:** one dictionary lookup per part, a few property copies, one bool. Measured target:
   under 0.01 ms per view (the perf runner's census and suites, docs/performance-hog.md); the budget for a herd of 60
   skinned donkeys and foals is under 0.5 ms a frame.

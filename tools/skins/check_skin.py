@@ -87,7 +87,7 @@ def main(pack):
                 if not f.endswith(".png"):
                     continue
                 k = f[:-4]
-                if k not in ORDER and not re.match(r"^bdy_(fly|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", k):  # the flying frames (docs/flying.md)
+                if k not in ORDER and not re.match(r"^bdy_(fly|flyup[12]|flydown[12]|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", k):  # the flying frames (docs/flying.md)
                     warn.append(f"front/{f}: not a frame key")
                     RESULT["errors"] += 1
                     continue
@@ -137,8 +137,12 @@ def main(pack):
         # lone pixel on top of them is not a stray (a lava crack on the coat is one pixel wide; Hellfire walk 2)
         base_key = k[6:] if k.startswith("front/") else k
         under = [placed(dk[base_key]).load()] if base_key in dk else []
-        if k.startswith("front/") and base_key in body_cells:  # the flying frames' bodies aren't in ORDER's cells
+        if k.startswith("front/") and base_key in body_cells:
             under.append(body_cells[base_key].load())
+        elif k.startswith("front/") and os.path.isfile(os.path.join(pack, base_key + ".png")):
+            # a flying frame's body (not in ORDER's cells): its own picture, or a pixel of the near wing over the body was
+            # a "stray" (the thumb claw's tip in a climbing frame, 2026-10-23)
+            under.append(placed(Image.open(os.path.join(pack, base_key + ".png")).convert("RGBA")).load())
         for y in range(ch):
             for x in range(cw):
                 p = px[x, y]

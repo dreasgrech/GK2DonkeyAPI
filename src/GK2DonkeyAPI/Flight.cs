@@ -67,6 +67,12 @@ namespace GK2DonkeyAPI
         internal static float GlideMinS = 1.5f, GlideMaxS = 3f; // how long one lasts, at random between
         internal static float GlideLoopS = 1.6f;   // the eight glide frames once round
         internal static float GlideBobPx = 1f;     // gliding, the body rises and sinks this much as the wings press the air
+        // Climbing and diving shown (the user, 2026-10-23): the skin's pitched beats (bdy_flyup1/2, bdy_flydown1/2: the neck
+        // arched up and the tail low climbing, the neck reaching down and the tail up diving; make_creatures.py PITCH_*),
+        // eased in and out at PitchPerS. Climbing: the climb key held. Diving: the descend key, or a landing coming down
+        // fast. A skin without the frames flies level.
+        internal static bool PitchFrames = true;
+        internal static float PitchPerS = 3f;      // how fast the pitch eases to its target (1: a full climb's)
         internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl, JumpKey = KeyCode.J; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
 
         internal enum Phase { Ground, Rising, Airborne, Landing, Jumping }
@@ -157,9 +163,23 @@ namespace GK2DonkeyAPI
             return Mathf.Max(-8f, Mathf.Round(heightPx) + Mathf.Round(bob)) * PxWorldY;
         }
 
-        private static readonly System.Text.RegularExpressions.Regex SkinFrameName = new System.Text.RegularExpressions.Regex(@"^bdy_(fly|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
+        private static readonly System.Text.RegularExpressions.Regex SkinFrameName = new System.Text.RegularExpressions.Regex(@"^bdy_(fly|flyup[12]|flydown[12]|glide|glidein|glideout[1-4]|takeoff|land)_left_\d\d$", System.Text.RegularExpressions.RegexOptions.CultureInvariant);
         internal static bool IsSkinFrame(string key) => key != null && SkinFrameName.IsMatch(key); // a picture the flight plays (the skin's load line, the scans' pattern)
-        private static bool IsFlightFrame(string key) => key.StartsWith("bdy_fly_", System.StringComparison.Ordinal) || key.StartsWith("bdy_takeoff_", System.StringComparison.Ordinal) || key.StartsWith("bdy_land_", System.StringComparison.Ordinal);
+        private static bool HasPitchFrames(Mount.Instance i) => i.LooksRig != null && i.LooksRig.HasFrame(PitchedNames[4][0]) && i.LooksRig.HasFrame(PitchedNames[0][0]);
+        // the pitch's target: up climbing (the key; a launch climbing), down diving (the key; a landing coming down fast)
+        private static void PitchTick(float dt)
+        {
+            float target = 0f;
+            if (Now == Phase.Airborne || Now == Phase.Rising)
+            {
+                if (climbingNow || (Now == Phase.Rising && launched && vel > 20f)) target = 1f;
+                else if (descending) target = -1f;
+            }
+            else if (Now == Phase.Landing && thudT < 0f && AboveGroundPx > FlarePx && vel < -0.3f * DiveSpeedPxPerS) target = -1f;
+            if (Now == Phase.Ground) pitchNow = 0f;
+            else pitchNow = Mathf.MoveTowards(pitchNow, target, Mathf.Max(0.1f, PitchPerS) * dt);
+        }
+        private static bool IsFlightFrame(string key) => key.StartsWith("bdy_fly", System.StringComparison.Ordinal) || key.StartsWith("bdy_takeoff_", System.StringComparison.Ordinal) || key.StartsWith("bdy_land_", System.StringComparison.Ordinal);
         // the hover stays for a skin without the beat (the mount walks in the air on its own frames, the hover moving it);
         // a skin with the beat keeps its rise through every flight frame, the ones it lacks too (shown as the game's)
         private static bool HasFlightFrame(Mount.Instance i) => i.LooksRig != null && i.LooksRig.HasFrame(FlyNames[0]);
@@ -171,6 +191,22 @@ namespace GK2DonkeyAPI
         private static float landedAt = -10f;
         // eight moments of one wing beat, each part of the body at its own lag (docs/flying.md "the beat in time")
         private static readonly string[] FlyNames = { "bdy_fly_left_01", "bdy_fly_left_02", "bdy_fly_left_03", "bdy_fly_left_04", "bdy_fly_left_05", "bdy_fly_left_06", "bdy_fly_left_07", "bdy_fly_left_08" };
+        // the beat pitched: index 0 the full dive .. 2 level .. 4 the full climb
+        private static readonly string[][] PitchedNames = Pitched();
+        private static string[][] Pitched()
+        {
+            string[] tags = { "flydown2", "flydown1", "fly", "flyup1", "flyup2" };
+            var all = new string[tags.Length][];
+            for (int p = 0; p < tags.Length; p++)
+            {
+                all[p] = new string[8];
+                for (int k = 0; k < 8; k++) all[p][k] = $"bdy_{tags[p]}_left_{k + 1:00}";
+            }
+            return all;
+        }
+        private static float pitchNow;      // -1 a full dive .. +1 a full climb, eased (PitchTick)
+        private static bool climbingNow;    // the climb key held this frame (Tick)
+
         private static readonly string[] GlideNames = { "bdy_glide_left_01", "bdy_glide_left_02", "bdy_glide_left_03", "bdy_glide_left_04", "bdy_glide_left_05", "bdy_glide_left_06", "bdy_glide_left_07", "bdy_glide_left_08" };
         private static readonly string[] GlideInNames = { "bdy_glidein_left_01", "bdy_glidein_left_02", "bdy_glidein_left_03", "bdy_glidein_left_04" };
         private static readonly string[][] GlideOutNames = OutNames();
@@ -198,7 +234,8 @@ namespace GK2DonkeyAPI
                 return null;
             }
             float beat = Mathf.Max(0.1f, WingBeatS);
-            string Beat() => FlyNames[Mathf.FloorToInt(beatT / beat * FlyNames.Length) % FlyNames.Length];
+            int set = PitchFrames && HasPitchFrames(i) ? 2 + Mathf.RoundToInt(Mathf.Clamp(pitchNow, -1f, 1f) * 2f) : 2;
+            string Beat() => PitchedNames[set][Mathf.FloorToInt(beatT / beat * FlyNames.Length) % FlyNames.Length];
             switch (Now)
             {
                 case Phase.Rising:
@@ -358,6 +395,30 @@ namespace GK2DonkeyAPI
             glideAsked = glideForced = false;
         }
 
+        // The game's walk grid (graph 3, PlayerLocalAreaMovement) scanned once as the game finishes loading: its first scan
+        // of a session allocates its nodes, 25 ms and 1.8 MB in the frame of the first landing that asked it (the [perf]
+        // line 2026-10-23: "Landing 26.5, LandGrid 25.0"; every later landing's at most 1.3 ms). The experiment only.
+        private static bool gridWarm;
+
+        internal static void WarmUp()
+        {
+            if (gridWarm || !Active) return;
+            PlayerLocalAreaMovement lam = MainGame.PlayerController?.PlayerLocalAreaMovement;
+            if (lam == null || lam.Status != PlayerLocalAreaMovement.MovementStatus.NotMoving) return;
+            try
+            {
+                long started = System.Diagnostics.Stopwatch.GetTimestamp();
+                lam.RescanPlayerGraph();
+                gridWarm = true;
+                Plugin.Log.LogInfo($"[flight] the game's walk grid scanned ahead ({(System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency:0.0} ms, while the game finished loading)");
+            }
+            catch (System.Exception e)
+            {
+                gridWarm = true;
+                Plugin.Log.LogWarning("[flight] the game's walk grid could not be scanned ahead: " + e.Message);
+            }
+        }
+
         // The tab's "Glide now": the next time the beat reaches its frame 7.
         internal static void GlideNow() { if (Now == Phase.Airborne) glideAsked = true; }
 
@@ -368,6 +429,9 @@ namespace GK2DonkeyAPI
             if (!Active) why = "the experiment is off";
             else if (i == null || !i.IsMounted) why = "not riding";
             else if (i.CurrentStyle != MountStyle.Ride) why = "drives the cart (flying is for riding plain)";
+            // indoors only when a mod leaves flying indoors on (the Behaviour key FlyIndoors; Saddle Up sets it off); a
+            // flight that goes in through a door then lands there (Tick: no longer CanFly)
+            else if (Plugin.FlyIndoors != null && !Plugin.FlyIndoors.Value && Mount.Instance.IsIndoors()) why = "indoors (flying indoors is off)";
             else if (!AnyMount && !string.Equals(i.LooksRig?.MountNow?.Id, "dragon", System.StringComparison.OrdinalIgnoreCase)) why = $"rides {i.LooksRig?.MountNow?.Name ?? "the donkey"}, only the dragon flies (or \"any mount\")";
             return why == null;
         }
@@ -443,7 +507,9 @@ namespace GK2DonkeyAPI
                     if (heightPx <= 0f) Land("jump landed");
                     break;
             }
+            climbingNow = climbing;
             GlideTick(i, dt, climbing);
+            PitchTick(dt);
             // the beat's clock: still while gliding (the glide's own stages) and through the landing's frames (cut 2 above)
             if (Now != Phase.Ground) { bobT += dt; if (!Gliding && !(FrameFor(i) is string lk && lk.StartsWith("bdy_land_", System.StringComparison.Ordinal))) beatT += dt; }
             using (Perf.Measure(Perf.S.FlyFree)) FreeTick(i); // the session's first take-off cost one 14-20 ms frame (2026-10-23): timed

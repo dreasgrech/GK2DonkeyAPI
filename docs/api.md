@@ -147,6 +147,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `DismountIndoors` (on): dismount at the door into a building, the church or a dungeon (the game's indoor light
   presets) and refuse to mount inside ("Not indoors."). Off: riding goes on through a same-scene door and the
   keeper can get on inside; a door with a loading screen still follows `StayMountedThroughDoors`.
+- `FlyIndoors` (0.36.0, off): on, a flying mount may take off and fly indoors, as a lift only (never through walls).
+  Off: no take-off indoors ("indoors (flying indoors is off)"), and a flight that goes through a building's door
+  lands there. Saddle Up keeps it off and offers no row for it.
 - `CartIndoors` (0.36.0, off; counts only with `DismountIndoors` off): the cart comes indoors too, its load on it.
   Off, a cart ride through the door leaves the cart standing at the door with its load (an unhitch: `Unhitched`)
   and goes on inside as a ride; at the morgue with a corpse aboard the keeper gets off inside (`Dismounted`,
@@ -924,6 +927,8 @@ History:
 - 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
   foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
   old places for one key (a call each; before, the last call won).
+- 0.36.0: the Behaviour key `FlyIndoors` (off): on, flying indoors is allowed, as a lift; off, no take-off indoors
+  and a flight through a door lands. Saddle Up keeps it off.
 - 0.36.0: the Behaviour key `CartIndoors` (off): with `DismountIndoors` off the cart comes indoors only when it is
   on; off, a cart ride through a building's door leaves the cart at the door and goes on as a ride (at the morgue:
   off inside, the corpse into the hands), and the cart is refused inside ("Not the cart indoors."). Before,

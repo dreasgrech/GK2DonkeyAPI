@@ -2013,6 +2013,43 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' unloaded (no donkey wears it).");
         }
 
+        // ------------------------------------------------------------------ the next skin built ahead
+
+        // The skin the player will most likely wear next (the companion's choice, MountCompanion.ApplyLook): its sheet is
+        // acquired ahead and built in the background with the others (BuildPerTick a frame), and held, so the first
+        // spawn wears it at once. Built on the first spawn, the mount showed as the game's donkey for the build's ~29
+        // frames (the dragon's 173 pictures at 6 a frame) and then changed (the user, 2026-10-23: "the first time you
+        // press h to spawn the mount, for a couple of frames i see the game donkey instead of my mount"). One skin held
+        // at a time: a new choice releases the old one (unloaded when no mount wears it). A reloaded pack's new
+        // definition is acquired again.
+        internal static string WarmWanted = "";
+        private static Loaded warm;
+
+        internal static void TickWarm()
+        {
+            if (!Plugin.MountsOn) return;
+            string id = (WarmWanted ?? "").Trim();
+            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
+            if (d != null && d.Unavailable != null) d = null;
+            if (warm != null && warm.Def == d) return;
+            if (warm == null && d == null) return;
+            Loaded prev = warm;
+            warm = null;
+            if (d != null)
+            {
+                try
+                {
+                    warm = Acquire(d, d.Base.GamePrefix);
+                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}' built ahead (the companion's choice), worn at once on the next spawn.");
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Looks: skin '{d.Id}' could not be built ahead: {e.Message}");
+                }
+            }
+            if (prev != null) Release(prev);
+        }
+
         // ------------------------------------------------------------------ building, a few frames a tick
 
         private const int BuildPerTick = 6;

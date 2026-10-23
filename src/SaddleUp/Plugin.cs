@@ -66,6 +66,7 @@ namespace SaddleUp
             RegisterHellfire(); // the effect Hellfire comes with: Saddle Up's too, defined through the API as any mod's
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
+            Mounts.Behaviour.Set(Guid, "FlyIndoors", false); // never offered: no flying inside buildings with Saddle Up (the user, 2026-10-23)
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",

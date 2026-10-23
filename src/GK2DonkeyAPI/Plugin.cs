@@ -393,6 +393,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> StayMountedThroughDoors;
         internal static Tuned<bool> DismountIndoors;
         internal static Tuned<bool> CartIndoors;
+        internal static Tuned<bool> FlyIndoors;
         internal static Tuned<bool> ShowMessages;
         internal static Tuned<bool> CargoZombies;
         internal static Tuned<bool> CargoChest;
@@ -440,6 +441,7 @@ namespace GK2DonkeyAPI
             typeof(SaveSystem_Remove_Patch),
             typeof(PlayerPhysicalBody_LockMovement_Patch), // the flying experiment: a movement unlock keeps a flying body kinematic (Flight.cs)
             typeof(LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch), // the flying experiment: the drawn ground's tiles (DrawnGround.cs)
+            typeof(LazyTerrain_Awake_Patch), typeof(LazyTerrain_OnDestroy_Patch), // and its index, kept as the terrains come and go
         };
         internal static ConfigEntry<float> CartZoneSide, CartZoneRear, CartZoneFrontShift, DonkeyZoneAhead;
 
@@ -538,6 +540,8 @@ namespace GK2DonkeyAPI
                 "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
             CartIndoors = Config.Bind("General", "CartIndoors", Defaults.Get("General", "CartIndoors", false),
                 "With DismountIndoors off (riding indoors allowed): the cart comes indoors too. Off: riding indoors is allowed, the cart is not (driving it through a door into a building leaves it standing at the door with its load and the ride goes on inside; at the morgue with a corpse aboard the keeper gets off inside carrying it; the cart can't be called, hitched or switched to indoors). Ignored while DismountIndoors is on.");
+            FlyIndoors = Config.Bind("General", "FlyIndoors", Defaults.Get("General", "FlyIndoors", false),
+                "A flying mount may take off and fly indoors (there the flight is a lift only, never through walls). Off: no take-off indoors, and a flight that goes through a door into a building lands there.");
             ShowMessages = Config.Bind("General", "ShowMessages", Defaults.Get("General", "ShowMessages", true),
                 "Show a thought bubble when the keeper cannot mount and why.");
             CargoZombies = Config.Bind("General", "CargoZombies", Defaults.Get("General", "CargoZombies", true),

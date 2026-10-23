@@ -490,6 +490,24 @@ LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's
 # back, the near one hanging in front of the flank, over the rider's hips and legs (44 % of his lower body, 4 % of his
 # torso) rather than across his chest (0.4: 60 % of his torso), so the wing doesn't cut through him at the waist
 GLIDE_T = float(os.environ.get("DRAGON_GLIDE_T", "0.9"))
+# Climbing and diving (the user, 2026-10-23: "when going down we can tilt his head a bit lower and when going upwards we
+# can maybe tilt his back a bit upwards"): the whole dragon pitched about the rider's seat, column by column. Each column
+# of the picture moves up or down as one, by a whole number of pixels, PITCH_SHEAR px per px from the seat's column at
+# full pitch (forward of it up when climbing, behind it down; a dive the other way), so the pixel art stays clean (a
+# rotated sprite's pixels go jagged: slanted sprites were tried for slopes and dropped, 2026-10-04) and the rider's seat
+# stays where it is. Two strengths each way (bdy_flyup1/2, bdy_flydown1/2: half and full pitch, the beat's eight
+# moments each) so the game eases into a climb or a dive (Flight.FrameFor).
+# What the reference shows ("Dragon - Fully Animated", 2026-10-23: rearing in Attack 2 frames 61-106 and Hurt 19-37,
+# lunging down in Attack 2 136-151): the body itself tilts only a little; the NECK carries the motion (arching up and
+# lifting the head high above the back when rearing; reaching forward and down, the head near the ground, lunging) and
+# the TAIL answers with a curve (trailing low when rearing; rising, its tip curling up most, lunging). A rigid tilt
+# alone (the first study, 0.11) moved the head only 4-5 px and never bent the neck. So: a small tilt of the whole
+# (PITCH_SHEAR), the neck bent by PITCH_NECK px at the head (each point a share, the base least, an arch back up / a
+# reach forward down), the tail by PITCH_TAIL px at its tip (the root least).
+PITCH_SHEAR = float(os.environ.get("DRAGON_PITCH_SHEAR", "0.05"))
+PITCH_NECK = float(os.environ.get("DRAGON_PITCH_NECK", "6"))
+PITCH_TAIL = float(os.environ.get("DRAGON_PITCH_TAIL", "4"))
+PITCH_X = 48.0  # the seat's column, donkey coordinates (the rider is drawn at the picture's middle)
 # the flex in pixels at the wing's farthest-moving joint, whatever the held pose: the poses change at very different
 # speeds along the beat (a tip moves 84 px per unit of pose at 0.4, 163 at 0.85), so a flex given as pose (0.06) swung
 # the tips 5 px at 0.4 and almost 10 at 0.85, a flap (the user, 2026-10-23: "the glide in preview is still flapping")
@@ -527,7 +545,7 @@ def body_rise(th):
     return 0.5 * (1.0 - math.cos(2.0 * math.pi * (th % 1.0)))
 
 
-def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None, glide=None, mix=None):
+def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0, beat=None, glide=None, mix=None, pitch=0.0):
     # fly: the spread wings' angle about the shoulder (degrees: 0 raised high over the back, 45 level back, 90 swept
     # down past the belly), None = folded (walking, standing). legs_mode: "walk" on the ground, "tuck" (flying: the
     # forelegs bent up under the chest, the hind legs trailing), "reach" (landing: both stretched down for the ground),
@@ -584,13 +602,19 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     L = (-0.6, -0.8)
 
+    def pitched(xx_world, y):
+        # the column's own shift (climbing: forward of the seat up, behind it down), whole pixels for the whole column
+        return y + (round(PITCH_SHEAR * pitch * (xx_world - PITCH_X)) if pitch else 0)
+
     def put(x, y, col, dst=None):
-        xx, yy = int(round(x)) + OX, int(round(y)) + OY
+        cx = int(round(x))
+        xx, yy = cx + OX, int(round(pitched(cx, y))) + OY
         if 0 <= xx < W and 0 <= yy < H:
             (dst if dst is not None else px)[yy * W + xx] = col + (255,)
 
     def get(x, y):
-        xx, yy = int(round(x)) + OX, int(round(y)) + OY
+        cx = int(round(x))
+        xx, yy = cx + OX, int(round(pitched(cx, y))) + OY
         return px[yy * W + xx] if 0 <= xx < W and 0 <= yy < H else (0, 0, 0, 0)
 
     def lp(a, b, t):
@@ -1089,6 +1113,11 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             w_ = [follow(l, a) for l, a in zip(lags, amps)]
             tpts = [(70, 50 + bob), (82, 54 + bob + w_[0] + 2.5 * c[0]), (91 - 1.5 * c[1], 57.5 + bob + w_[1] + 5 * c[1]),
                     (98.5 - 3 * c[2], 60 + bob + w_[2] + 7 * c[2]), (103 - 4.5 * c[3], 61.5 + bob + w_[3] + 9 * c[3])]
+            if pitch:
+                # climbing the tail trails lower, diving it rises with the tip curling up most (PITCH_TAIL above)
+                tshare = (0.0, 0.15, 0.4, 0.7, 1.0)
+                curl = 1.0 if pitch > 0 else 1.3      # a dive's tip curls up more than a climb's droops
+                tpts = [(x, y + PITCH_TAIL * pitch * f * curl) for (x, y), f in zip(tpts, tshare)]
     else:
         tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
     tail = catmull(tpts, 160)
@@ -1134,6 +1163,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             n1, n2, n3 = gw(0.08) * 0.08, gw(0.14) * 0.08, gw(0.2) * 0.08
             neck = [(34.0, 44.0 + bob), (26 + n1, 39 + bob + 3 * n1 + follow(0.12, 0.95)),
                     (19 + 2 * n2, 34 + bob + 7 * n2 + follow(0.2, 0.88)), (12 + 2 * n3, 31 + bob + 10 * n3 + follow(0.27, 0.8))]
+            if pitch:
+                # climbing the neck arches up and a little back, the head high; diving it reaches forward and down
+                # (PITCH_NECK above): the base of the neck moves least, the head most
+                share = (0.0, 0.35, 0.7, 1.0)
+                back = 0.25 if pitch > 0 else 0.35   # px of x per px of lift: an arch back up, a reach forward down
+                neck = [(x + (back * PITCH_NECK * pitch * f if pitch > 0 else back * PITCH_NECK * pitch * f), y - PITCH_NECK * pitch * f)
+                        for (x, y), f in zip(neck, share)]
     hx, hy = neck[-1]
 
     def sdf(x, y):
@@ -1210,6 +1246,22 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         if not NO_SPREAD_WINGS:
             spread_wing(True, fly)
 
+    # ---- a pitched frame: a pixel the column shift could leave alone (nothing round it in either layer, two neighbouring
+    # columns moved by different whole pixels across a thin edge) is dropped. A safeguard: the first build had none (the
+    # one check_skin.py flagged was the thumb claw over the body, a gap in the checker, fixed there)
+    if pitch:
+        lone = []
+        for y in range(H):
+            for x in range(W):
+                i = y * W + x
+                if not (px[i][3] or fpx[i][3]):
+                    continue
+                if not any(0 <= x + dx < W and 0 <= y + dy < H and (px[(y + dy) * W + x + dx][3] or fpx[(y + dy) * W + x + dx][3])
+                           for dx in (-1, 0, 1) for dy in (-1, 0, 1) if dx or dy):
+                    lone.append(i)
+        for i in lone:
+            px[i] = fpx[i] = (0, 0, 0, 0)
+
     # ---- the outline, dark, round the union of both layers (no line along the cut between them); an outline pixel
     # goes to the front layer when it borders a front pixel, else to the back
     back, front = list(px), list(fpx)
@@ -1269,6 +1321,11 @@ def frames_for(fn):
         for k in range(1, BEAT_FRAMES + 1):
             th = (k - 1) / BEAT_FRAMES
             out[f"bdy_fly_left_{k:02d}"] = fn(th, head_down=0.0, fly=wing_w(th), legs_mode="tuck", beat=th)
+        # Climbing and diving: the beat pitched, half and full (PITCH_SHEAR above)
+        for tag, pt in (("flyup1", 0.5), ("flyup2", 1.0), ("flydown1", -0.5), ("flydown2", -1.0)):
+            for k in range(1, BEAT_FRAMES + 1):
+                th = (k - 1) / BEAT_FRAMES
+                out[f"bdy_{tag}_left_{k:02d}"] = fn(th, head_down=0.0, fly=wing_w(th), legs_mode="tuck", beat=th, pitch=pt)
         # The glide: the wings held open at GLIDE_T, one slow loop of the rest (the user, 2026-10-23: "a glide animation
         # where the wings are just open while they are gliding"; Flight.cs plays it now and then, flying along)
         for k in range(1, GLIDE_FRAMES + 1):

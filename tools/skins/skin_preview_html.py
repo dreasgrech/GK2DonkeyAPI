@@ -33,7 +33,8 @@ ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] +
 # a skin without them shows empty cells there (the donkey has none)
 FLIGHT = ([f"bdy_takeoff_left_{i:02d}" for i in range(1, 5)] + [f"bdy_fly_left_{i:02d}" for i in range(1, 9)]
           + [f"bdy_land_left_{i:02d}" for i in range(1, 5)] + [f"bdy_glide_left_{i:02d}" for i in range(1, 9)]
-          + [f"bdy_glidein_left_{i:02d}" for i in range(1, 5)] + [f"bdy_glideout1_left_{i:02d}" for i in range(1, 5)])
+          + [f"bdy_glidein_left_{i:02d}" for i in range(1, 5)] + [f"bdy_glideout1_left_{i:02d}" for i in range(1, 5)]
+          + [f"bdy_{p}_left_{i:02d}" for p in ("flyup1", "flyup2", "flydown1", "flydown2") for i in range(1, 9)])
 MOUNT_NAMES = {"donkey": "Donkey"}  # every other mount's name comes from the [Mount] section of the skin that declares it
 RIDER_HIP_ABOVE_FEET = 7  # the keeper's hip is 7 px above his feet (Mount.SeatOn, tools/skins/review.py)
 
@@ -438,6 +439,16 @@ def main(argv):
             clips["glide-in-out"] = (beat_ + beat_[:6] + [k for k in FLIGHT if "_glidein_" in k]
                                      + [k for k in clips["glide"] for _ in (0, 1)] + [k for k in FLIGHT if "_glideout1_" in k] + beat_[6:])
             speed["glide-in-out"] = 100
+        # climbing and diving: the pitched beat (full), and a flight that eases from level into a climb, back, into a
+        # dive and back (a beat at each step, as the game eases its pitch)
+        if any(k in sk.get("frames", {}) for g in groups for sk in g["skins"] for k in FLIGHT if "_flyup2_" in k):
+            beat_ = [k for k in FLIGHT if "_fly_" in k]
+            steps = {p: [k for k in FLIGHT if f"_{p}_" in k] for p in ("flyup1", "flyup2", "flydown1", "flydown2")}
+            clips["climb"] = steps["flyup2"]
+            clips["dive"] = steps["flydown2"]
+            clips["climb-dive"] = (beat_ + steps["flyup1"] + steps["flyup2"] * 2 + steps["flyup1"] + beat_
+                                   + steps["flydown1"] + steps["flydown2"] * 2 + steps["flydown1"] + beat_)
+            speed.update({"climb": 75, "dive": 75, "climb-dive": 75})
 
     caps_dir = os.path.join(probe, "captures")
     captures = []

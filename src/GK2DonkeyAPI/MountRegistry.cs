@@ -380,6 +380,7 @@ namespace GK2DonkeyAPI
                 Mounts.RaiseInstancesRestored(restored);
             }
             Looks.VerifyGameSources(); // game-source skins: their frames checked now that the game is up (the sprite manifest)
+            Flight.WarmUp();           // the flying experiment: the game's walk grid scanned once now, not at the first landing
             Mounts.RaiseGameReady();
         }
 
@@ -398,6 +399,7 @@ namespace GK2DonkeyAPI
                 MenuLabels.Tick();
                 PreviewStage.Tick();
                 MountsPanel.Tick();
+                Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
                 Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)

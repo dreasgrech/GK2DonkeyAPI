@@ -801,8 +801,38 @@ with how much of it was at once.
 - **The ground's front layer:** aligned, the fold drawn 3 px lower (docs/front-layer.md section 2).
 - **The first take-off of a session** cost one 14-20 ms frame (16:02: 20 ms with 1.6 MB allocated and the drawn
   ground's index line in the same frame; 16:09: 14 ms, 72 KB, no index line, likely the flight's code compiled on its
-  first run). Timed now before anything is changed: `[perf]` parts `FlyFree` and `DrawnIndex`, and the index line says
-  how long the index took.
+  first run). Timed (`[perf]` parts `FlyFree` and `DrawnIndex`), the next session (17:07): the first take-off's frame
+  23 ms, `FlyFree` 17.1 of it, `DrawnIndex` 12.6 (the index built on the first lookup); and in flight the index's
+  check every 3 s, a search for every LazyTerrain in the scene, 8-10 ms each time (`DrawnIndex worst 7.5-8.8` in every
+  10 s summary; it never found a change). **Fixed:** the index is kept as the terrains come and go (patches on
+  `LazyTerrain.Awake` and `OnDestroy`): each terrain adds its chunks as it wakes during the scene's loading and takes
+  them out when destroyed; no search, no 3 s check, no build at the take-off. A scene whose terrains woke before the
+  mod searches once, as before. A terrain switched off is skipped in the lookups (the build used to leave it out).
+- **Flying indoors** is off unless a mod turns it on (the Behaviour key `FlyIndoors`, off in the API; Saddle Up keeps
+  it off with no row): no take-off indoors, a flight through a building's door lands there.
+
+### Climbing and diving shown (2026-10-23, built, on the preview page; not seen in game)
+
+The user: "when going down we can tilt his head a bit lower and when going upwards we can maybe tilt his back a bit
+upwards"; then "make sure you reference our references".
+- **The reference** ("Dragon - Fully Animated": no flying clip; rearing in Attack 2 frames 61-106 and Hurt 19-37,
+  lunging down in Attack 2 136-151): the body tilts only a little, the **neck** carries the motion (arching up and
+  lifting the head well above the back rearing; reaching forward and down, the head near the ground, lunging), and
+  the **tail** answers with a curve (trailing low rearing; rising, the tip curled up most, lunging).
+- **First study**, a rigid tilt about the seat (0.11 px per px): the head moved 4-5 px and the neck never bent. Dropped.
+- **Built** (make_creatures.py `pitch`): a small tilt of the whole, column by column about the seat's column
+  (`PITCH_SHEAR` 0.05: each column moves as one by whole pixels, so the pixel art stays clean and the rider's seat
+  stays), the neck bent by `PITCH_NECK` 6 px at the head (shares 0, 0.35, 0.7, 1 from its base; an arch back climbing,
+  a reach forward diving), the tail by `PITCH_TAIL` 4 px at its tip (a dive's 1.3 times: the tip curls up more).
+  Frames `bdy_flyup1/2` and `bdy_flydown1/2`: the beat's eight moments at half and full pitch, 64 pictures with the
+  front layer. Every frame inside the picture (top row 2 at most, right column 126); no new stray pixels.
+- **In the game** (`Flight.PitchTick`, `FrameFor`): the pitch eases (`PitchPerS` 3 a second) towards climbing (the
+  climb key; a launch still rising), diving (the descend key; a landing coming down at over 0.3 of the dive speed,
+  above the flare) or level, and the beat is drawn from the set nearest (half, full). A skin without the frames flies
+  level. Flying tab rows: "Climbing and diving shown", "Pitch: easing in and out".
+- The preview page: clips `climb`, `dive` and `climb-dive` (level, easing into a climb and back, into a dive and back).
+- `check_skin.py` now looks under a flying frame's front picture at its body (the thumb claw's tip over the body read
+  as a lone pixel: the checker knew only the ground frames' bodies).
 
 ### Height jumps across the land (2026-10-23, investigating)
 

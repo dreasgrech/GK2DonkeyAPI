@@ -85,6 +85,8 @@ namespace GK2DonkeyAPI
             Flight.GlideMaxS = SessionFloatRow("Glide: longest (seconds)", Flight.GlideMaxS, 0.3f, 8f);
             Flight.GlideLoopS = SessionFloatRow("Glide: its slow loop (seconds)", Flight.GlideLoopS, 0.4f, 4f, "The eight glide frames once round: the wings flexing, the tail's wave and the legs.");
             Flight.GlideBobPx = SessionFloatRow("Glide: the body's swell (px)", Flight.GlideBobPx, 0f, 4f, "Gliding, the body rises and sinks this much with the wings' flex.");
+            if (OnOffRow("Climbing and diving shown (the pitched beats)", Flight.PitchFrames, tip: "Climbing, the neck arches up and the tail hangs low; descending (or a landing coming down fast), the neck reaches down and the tail rises. Off: level.")) Flight.PitchFrames = !Flight.PitchFrames;
+            Flight.PitchPerS = SessionFloatRow("Pitch: easing in and out (per second)", Flight.PitchPerS, 0.5f, 10f, "How fast the dragon tilts into a climb or a dive and back: 3 = a full tilt in a third of a second.");
 
             Header("Take-off (a launch, not a lift)");
             Flight.CrouchPx = SessionFloatRow("Crouch before the launch (px)", Flight.CrouchPx, 0f, 8f);

@@ -42,7 +42,6 @@ namespace GK2DonkeyAPI
         private const float Bucket = 6f;
         private static readonly Dictionary<long, List<Chunk>> buckets = new Dictionary<long, List<Chunk>>();
         private static int indexedTerrains = -1, indexedChunks;
-        private static float nextIndexCheck;
         internal static string IndexNote = "";
 
         // ------------------------------------------------------------------ reading the tiles
@@ -110,45 +109,89 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ the lookup
 
-        private static void Index()
+        // The index kept as the terrains come and go: each LazyTerrain adds its chunks when it wakes (the patch on its
+        // Awake, during the scene's loading) and takes them out when it is destroyed. It used to be built on the first
+        // lookup and checked every 3 s by finding every LazyTerrain in the scene: the build was 12.6 ms on the first
+        // take-off of a session and the scene search alone 8-10 ms every 3 s in flight (the [perf] lines, 2026-10-23:
+        // "FlyFree 17.1, DrawnIndex 12.6", "DrawnIndex worst 8.8"). A scene's terrains are placed once, so what they
+        // cover doesn't change while they live. A lookup with nothing indexed yet in this scene (the mod loaded after
+        // its terrains woke) searches once, as before.
+        private static readonly Dictionary<int, List<(long Key, Chunk Chunk)>> byTerrain = new Dictionary<int, List<(long, Chunk)>>();
+        private static int oddTerrains;
+        private static double indexMs;
+        private static bool searched, noted;
+
+        internal static void TerrainAwake(LazyTerrain t)
         {
-            if (Time.unscaledTime < nextIndexCheck && indexedTerrains >= 0) return;
-            nextIndexCheck = Time.unscaledTime + 3f;
-            using var perf = Perf.Measure(Perf.S.DrawnIndex);
+            if (!DevTools.Unlocked || t == null || t.meshesData == null) return;
             long started = System.Diagnostics.Stopwatch.GetTimestamp();
-            LazyTerrain[] all = Object.FindObjectsByType<LazyTerrain>(FindObjectsSortMode.None);
-            int chunks = 0;
-            foreach (LazyTerrain t in all) if (t != null && t.meshesData != null) chunks += t.meshesData.Count;
-            if (all.Length == indexedTerrains && chunks == indexedChunks) return;
-            buckets.Clear();
-            int odd = 0;
-            foreach (LazyTerrain t in all)
+            Add(t);
+            indexMs += (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+        }
+
+        internal static void TerrainGone(LazyTerrain t)
+        {
+            if (t == null || !byTerrain.TryGetValue(t.GetInstanceID(), out var mine)) return;
+            foreach (var (key, ch) in mine)
             {
-                if (t == null || t.meshesData == null || !t.gameObject.activeInHierarchy) continue;
-                Transform tt = t.transform;
-                if (Quaternion.Angle(tt.rotation, Quaternion.identity) > 0.1f || (tt.lossyScale - Vector3.one).sqrMagnitude > 1e-4f) odd++; // read as unrotated, unscaled
-                foreach (LazyTerrainMeshData d in t.meshesData)
+                if (buckets.TryGetValue(key, out List<Chunk> list))
                 {
-                    if (d == null || d.mesh == null) continue;
-                    var ch = new Chunk { Terrain = t, Data = d, Origin = tt.position + d.localPosition };
-                    ch.Y = ch.Origin.y;
-                    Bounds mb = d.mesh.bounds;
-                    int x0 = Mathf.FloorToInt((ch.Origin.x + mb.min.x) / Bucket), x1 = Mathf.FloorToInt((ch.Origin.x + mb.max.x) / Bucket);
-                    int z0 = Mathf.FloorToInt((ch.Origin.z + mb.min.z) / Bucket), z1 = Mathf.FloorToInt((ch.Origin.z + mb.max.z) / Bucket);
-                    for (int x = x0; x <= x1; x++)
-                        for (int z = z0; z <= z1; z++)
-                        {
-                            long key = ((long)x << 32) ^ (uint)z;
-                            if (!buckets.TryGetValue(key, out List<Chunk> list)) buckets[key] = list = new List<Chunk>(8);
-                            list.Add(ch);
-                        }
+                    list.Remove(ch);
+                    if (list.Count == 0) buckets.Remove(key);
                 }
             }
-            indexedTerrains = all.Length;
-            indexedChunks = chunks;
-            IndexNote = $"{all.Length} terrains, {chunks} chunks indexed{(odd > 0 ? $", {odd} rotated or scaled (read as if not)" : "")}";
-            double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
-            Plugin.Log.LogInfo($"[drawn-ground] {IndexNote} in {ms:0.0} ms; {Captured} meshes' tiles read so far ({CapturedAtStrip} as the game freed them)");
+            byTerrain.Remove(t.GetInstanceID());
+            indexedTerrains = byTerrain.Count;
+            indexedChunks -= t.meshesData?.Count ?? 0;
+            if (byTerrain.Count == 0) { searched = false; noted = false; indexMs = 0; oddTerrains = 0; indexedChunks = 0; } // a scene left: the next one indexes afresh
+        }
+
+        private static void Add(LazyTerrain t)
+        {
+            int id = t.GetInstanceID();
+            if (byTerrain.ContainsKey(id)) return;
+            var mine = new List<(long, Chunk)>(t.meshesData.Count * 2);
+            Transform tt = t.transform;
+            if (Quaternion.Angle(tt.rotation, Quaternion.identity) > 0.1f || (tt.lossyScale - Vector3.one).sqrMagnitude > 1e-4f) oddTerrains++; // read as unrotated, unscaled
+            foreach (LazyTerrainMeshData d in t.meshesData)
+            {
+                if (d == null || d.mesh == null) continue;
+                var ch = new Chunk { Terrain = t, Data = d, Origin = tt.position + d.localPosition };
+                ch.Y = ch.Origin.y;
+                Bounds mb = d.mesh.bounds;
+                int x0 = Mathf.FloorToInt((ch.Origin.x + mb.min.x) / Bucket), x1 = Mathf.FloorToInt((ch.Origin.x + mb.max.x) / Bucket);
+                int z0 = Mathf.FloorToInt((ch.Origin.z + mb.min.z) / Bucket), z1 = Mathf.FloorToInt((ch.Origin.z + mb.max.z) / Bucket);
+                for (int x = x0; x <= x1; x++)
+                    for (int z = z0; z <= z1; z++)
+                    {
+                        long key = ((long)x << 32) ^ (uint)z;
+                        if (!buckets.TryGetValue(key, out List<Chunk> list)) buckets[key] = list = new List<Chunk>(8);
+                        list.Add(ch);
+                        mine.Add((key, ch));
+                    }
+            }
+            byTerrain[id] = mine;
+            indexedTerrains = byTerrain.Count;
+            indexedChunks += t.meshesData.Count;
+            noted = false;
+        }
+
+        private static void Index()
+        {
+            if (byTerrain.Count == 0 && !searched)
+            {
+                // nothing woke under the patch in this scene: the terrains were there before the mod (search once)
+                searched = true;
+                using var perf = Perf.Measure(Perf.S.DrawnIndex);
+                long started = System.Diagnostics.Stopwatch.GetTimestamp();
+                foreach (LazyTerrain t in Object.FindObjectsByType<LazyTerrain>(FindObjectsSortMode.None))
+                    if (t != null && t.meshesData != null && t.gameObject.activeInHierarchy) Add(t);
+                indexMs += (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            }
+            if (noted) return;
+            noted = true;
+            IndexNote = $"{indexedTerrains} terrains, {indexedChunks} chunks indexed{(oddTerrains > 0 ? $", {oddTerrains} rotated or scaled (read as if not)" : "")}";
+            Plugin.Log.LogInfo($"[drawn-ground] {IndexNote} as they loaded ({indexMs:0.0} ms in all){(searched ? ", found by a search" : "")}; {Captured} meshes' tiles read so far ({CapturedAtStrip} as the game freed them)");
         }
 
         internal enum Tile { None, Drawn, Unknown }
@@ -164,7 +207,7 @@ namespace GK2DonkeyAPI
             if (!buckets.TryGetValue(key, out List<Chunk> list)) return;
             foreach (Chunk ch in list)
             {
-                if (ch.Terrain == null) continue;
+                if (ch.Terrain == null || !ch.Terrain.gameObject.activeInHierarchy) continue;
                 Tile t = TileAt(ch, x, z, out bool inside);
                 if (inside) into.Add((ch.Y, t, ch.Terrain.name));
             }
@@ -183,7 +226,7 @@ namespace GK2DonkeyAPI
             float best = float.NaN;
             foreach (Chunk ch in list)
             {
-                if (ch.Terrain == null || ch.Y > below || (!float.IsNaN(best) && ch.Y <= best)) continue;
+                if (ch.Terrain == null || ch.Y > below || (!float.IsNaN(best) && ch.Y <= best) || !ch.Terrain.gameObject.activeInHierarchy) continue;
                 Tile t = TileAt(ch, x, z, out bool inside);
                 if (!inside) continue;
                 if (t == Tile.Unknown) unknown++;
@@ -323,6 +366,27 @@ namespace GK2DonkeyAPI
             var parts = new List<string>();
             foreach (var l in levels) parts.Add($"{l.Y:0.0}{(l.Tile == Tile.Drawn ? " drawn" : l.Tile == Tile.Unknown ? " ?" : " -")}");
             return parts.Count > 0 ? string.Join(", ", parts) : "no terrain chunk";
+        }
+    }
+
+    // A terrain wakes (the scene loading) or goes: the drawn ground's index follows (DrawnGround.TerrainAwake). Dev tools only.
+    [HarmonyPatch(typeof(LazyTerrain), "Awake")]
+    internal static class LazyTerrain_Awake_Patch
+    {
+        private static void Postfix(LazyTerrain __instance)
+        {
+            try { DrawnGround.TerrainAwake(__instance); }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[drawn-ground] a terrain could not be indexed: " + e.Message); }
+        }
+    }
+
+    [HarmonyPatch(typeof(LazyTerrain), "OnDestroy")]
+    internal static class LazyTerrain_OnDestroy_Patch
+    {
+        private static void Prefix(LazyTerrain __instance)
+        {
+            try { DrawnGround.TerrainGone(__instance); }
+            catch { }
         }
     }
 

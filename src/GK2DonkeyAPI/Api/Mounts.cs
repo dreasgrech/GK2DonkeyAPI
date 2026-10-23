@@ -243,6 +243,8 @@ namespace GK2DonkeyAPI.Api
         //   CorpseIntoMorgue         a corpse on the cart goes into the keeper's hands when the ride ends at the morgue
         //                            door, so he walks in carrying it (0.27.0, on); CorpseIntoMorguePlaces (a string):
         //                            the area ids and door destinations that count ("morgue, tp_RT_morgue_exit, ...")
+        //   FlyIndoors               a flying mount may take off and fly indoors, as a lift only (0.36.0, off); off: no
+        //                            take-off indoors, and a flight through a building's door lands there
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -256,7 +258,7 @@ namespace GK2DonkeyAPI.Api
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
-                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots,
+                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors,
                 }));
             }
         }

@@ -155,6 +155,8 @@ For mod authors:
   The row defaults to the companion's `FoalsFollowOnFoot` (Saddle Up sets it on first; the core stays off).
   `MovedKey` takes several old places for one key, a call each (before, the last call won): Saddle Up's babies name
   both Mount and Donkey. docs/foals.md "Following the keeper on foot".
+- **The Behaviour key `FlyIndoors`** (API 0.36.0, off): on, a flying mount may take off and fly indoors, as a lift
+  only; off, no take-off indoors and a flight through a building's door lands there. Saddle Up keeps it off, with no row.
 - **Saddle Up needs GK2 Donkey API 0.36.0** (was 0.35.0: it uses `CartIndoors`, `Mounts.Catalog` and registers
   Hellfire's effect itself); an older API gets the clear "too old" message instead of failing part-way.
 - **`CartIndoors`** (a Behaviour key, off): with `DismountIndoors` off, the cart comes indoors only with it on; off,
@@ -530,6 +532,11 @@ Development:
   open for a moment, held low over the rider's legs, flexing gently in the air and the body rising and sinking with them. It eases into the glide
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
+- **The dragon shows climbing and diving.** Climbing, it arches its neck up and its tail hangs low; descending, or
+  coming down to land, it reaches its head forward and down and its tail rises; it eases in and out of each.
+- **Your mount appears as itself at once.** The first time you called it in a session, you saw the game's donkey for
+  a moment before it turned into your mount (its pictures were being prepared, a few a frame). The mount you have
+  chosen is now prepared in the background beforehand, and again whenever you choose another.
 - **The dragon's tail is no longer cut off** at the edge of its picture while flying, and its folded near wing
   sits the same whether ridden or not (it moved a few pixels when the rider got on or off, and at take-off and landing).
 - **Flying: no more hops over trees and ledges.** Flying low over a wood, or climbing out from under a ledge's edge,
