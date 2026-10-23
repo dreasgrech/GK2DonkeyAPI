@@ -437,6 +437,34 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
     frame (#124) is the hair's own: from the front of his face to the back of his hair is about 15 art px, the same as
     in a wing-down frame (#164). So the head window (x 64-82) holds in both facings.
   - The readout's budget now restarts on each state and facing, so one flight each way logs both.
+- **The spread wing drawn as the folded one (2026-10-23).** The user: "the veins aren't as plentiful or the same as
+  when on the ground". Measured on the front pictures:
+  - **The fold:** veins (801A24) 26% of its pixels, one wine tone (4A1242), a dark border (260828) inside its edge,
+    1 px finger lines fanning from the peak.
+  - **The spread wing:** veins 9-18%, a lighter purple (702260) the fold never uses, no inner border, and three
+    thicker fingers with a light centre (AC282E).
+  - **Now `spread_wing` draws the fold's way:**
+    - the membrane first, in the fold's tones (its light rule, kept below the lighter wine), darker by the veins;
+    - the dark border on its edge;
+    - 1 px red veins over the membrane only, fanning from the wrist: every finger, and as many between as the
+      trailing edge's length takes, about 9.5 px apart, as the fold's finger tips meet its hem;
+    - the arm, the leading edge, a thicker bone in the same red.
+  - **Measured after:** veins 17-31% per frame (the raised frames 17-20%: a big wing, with its veins spread over it),
+    no lighter purple, no light bone centre. The folded frames are byte for byte as before. On the preview page next
+    to "Red Dragon (before: the spread wing's old veins)".
+  - **Second pass.** The user: "not exactly. When idle, they look very detailed and structured, but less so when
+    flying... it will look like slop otherwise". Compared whole (both layers) at 8x, the fold against the raised and
+    down poses, three structural differences remained:
+    - **Half the raised wing had no veins.** The fan only reached the trailing edge; the triangle between the arm and
+      the back was one flat colour. The fold's fan covers its whole membrane down to the shoulder. Now veins also end
+      along the wing's line on the back (root to shoulder), as far apart.
+    - **Only three big scallops.** The fold's hem is scalloped between every pair of vein ends. Now every vein end on
+      the trailing edge is a scallop point.
+    - **No pleats.** The fold's dark bands beside its veins fall in its lower third (its light runs from the peak to
+      the hem). The spread wing measured its light against the longest vein, so only the farthest tip had them. Now
+      each pixel is measured along its own nearest vein, so every vein gets the dark band in its outer third.
+    - Also: the veins start 1.5 px out from the wrist (all meeting in one pixel made a red knot there).
+    - The folded frames are byte for byte unchanged; the head-cover counts for A, B and C are unchanged.
   - Open: the tail's tip runs 2 px past the picture's right edge in every flying, take-off and landing frame. The
     flying tail streams back further than the walking one. Shorten it by 2 px.
 - **The raised wing was cut off at the top** (the same video). With the body 6 px higher on its longer legs, the

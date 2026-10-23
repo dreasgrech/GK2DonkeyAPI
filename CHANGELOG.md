@@ -525,6 +525,8 @@ Development:
   lines) reports where the front layer and the rider's sprites really are in the dragon's picture. For choosing how
   the wing passes the rider, the Flying tab has a "Wing over the rider (a study)" row: A the cut, B the whole wing in
   front, C the raised wing leaned back. The dragon skin carries B and C as extra frames until one is chosen.
+  The spread wings are now drawn like the folded ones: the same dark wine membrane and dark edge, and thin red veins
+  fanning from the wrist as densely as the fold's (they had few veins, a lighter purple and thick bones).
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
   terrain mesh read just before the game frees them, the highest drawn level at any point, checked on the Flying
   tab against the walkable ground; the flight's floor, walls and landings use it (no landing inside a rock table); a whole-map survey and a map drawing tool (tools/flying/map_survey.py).

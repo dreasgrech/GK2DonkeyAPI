@@ -670,7 +670,20 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             fold = 0.16 * math.sin(math.pi * (th - 0.4) / 0.6) if th >= 0.4 else 0.0
             tips = [(wr[0] + (q[0] - wr[0]) * (1 - fold), wr[1] + (q[1] - wr[1]) * (1 - fold)) for q in tips]
         ring = [sh, el, wr] + tips + [root]
-        trail = tips + [root]
+        lerp = lambda a, b, f: (a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f)
+        # The veins end along the trailing edge about 9.5 px apart, as the fold's finger tips meet its hem: every finger,
+        # and as many between as the edge's length there takes. Each end is a point of the scalloped edge (the fold's hem
+        # is scalloped between every pair of vein ends; three big scallops between the fingers alone read plain).
+        trail = []
+        for a_, b_ in zip(tips + [root], tips[1:] + [root]):
+            k_ = max(1, int(round(math.dist(a_, b_) / 9.5)))
+            trail += [lerp(a_, b_, j / k_) for j in range(k_)]
+        trail.append(root)
+        # and the inner part of the membrane, from the wing's root on the back to the shoulder, gets veins too (the
+        # fold's fan covers its whole membrane down to the shoulder; spread, the triangle between the arm and the back
+        # was one flat colour): ends along that line, as far apart, no scallops there (it is the body's edge)
+        k_ = max(1, int(round(math.dist(root, sh) / 9.5)))
+        inner = [lerp(root, sh, j / k_) for j in range(1, k_)]
         scal = []
         for a, b in zip(trail, trail[1:]):                        # the trailing edge's scallops, bulging into the membrane
             mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
@@ -688,31 +701,49 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 if (ay > Y) != (by > Y) and X < ax + (Y - ay) * (bx - ax) / (by - ay):
                     hit = not hit
             return hit
-        ramp = DWING if near else DWING[:3]
-        bones = [(sh, el), (el, wr)] + [(wr, (wr[0] + (q[0] - wr[0]) * 0.97, wr[1] + (q[1] - wr[1]) * 0.97)) for q in tips]
+        # Drawn the way the folded wing is (the user, 2026-10-23: "the veins aren't as plentiful or the same as when on
+        # the ground"; measured: the fold's veins are 26 % of its pixels, one wine tone with a dark border inside its
+        # edge; the spread wing had 11-18 % veins, a lighter purple the fold never uses, and thicker bones with a light
+        # centre). So: the membrane first, its tone from the fold's rule (lit near the wrist, darker away from it and by
+        # the veins), a dark border on its edge; then the veins, 1 px lines in the fold's red over the membrane only,
+        # fanning from the wrist: the three fingers and more between them, spaced along the trailing edge as the fold's
+        # along its hem. The arm, the leading edge, stays a thicker bone in the same red.
+        def in_rider_at(x, y):
+            return (WING_OVER_RIDER == "box" and 43 <= x <= 66 and 16 <= y - bob <= 52) or (WING_OVER_RIDER == "head" and rider_in_view(x + OX, y + OY))
+        # each vein from 1.5 px out of the wrist (all meeting in the wrist's pixel made a red knot there) to its end
+        def from_wrist(q):
+            dd = math.dist(wr, q) or 1
+            return (wr[0] + (q[0] - wr[0]) * 1.5 / dd, wr[1] + (q[1] - wr[1]) * 1.5 / dd)
+        veins = [(from_wrist(q), lerp(wr, q, 0.98)) for q in trail[:-1] + inner]
         xs = [q[0] for q in ring]
         ys = [q[1] for q in ring]
         far_d = max(math.dist(wr, q) for q in tips) or 1
+        cells = {}
         for y in range(int(min(ys)) - 1, int(max(ys)) + 2):
             for x in range(int(min(xs)) - 1, int(max(xs)) + 2):
                 X, Y = x + 0.5, y + 0.5
                 if not inside(X, Y) or any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
                     continue
-                db = min(_seg(X, Y, *a, *b) for a, b in bones)
-                u = math.dist((X, Y), wr) / far_d
-                light = 0.62 - 0.3 * u + (0.0 if db > 2.2 else -0.16)
-                in_rider = (WING_OVER_RIDER == "box" and 43 <= x <= 66 and 16 <= y - bob <= 52) or (WING_OVER_RIDER == "head" and rider_in_view(x + OX, y + OY))
-                put(x, y, _tone(ramp, light), fpx if (near and not in_rider) else px)
-        for (ax, ay), (bx, by) in bones:                         # the bones: the arm thick, the fingers thin
-            arm = (ax, ay) == sh or (ax, ay) == el
-            thick = 2.6 if arm else 1.4
+                dv, vl = min((_seg(X, Y, *a, *b), math.dist(a, b)) for a, b in veins)
+                # how far out along its own vein (0 at the wrist, 1 at the edge), as the fold's light runs from its peak
+                # to its hem: the dark bands beside the veins in their outer third, along every vein (measured against
+                # the longest vein, only the farthest tip had them)
+                u = min(1.0, math.dist((X, Y), wr) / max(1.0, vl))
+                cells[(x, y)] = min(0.49, 0.62 - 0.36 * u) + (0.0 if dv > 2.0 else -0.14)   # the fold's light rule, in the fold's tones (its peak's lighter wine has no room on the fold; spread, it filled the wing near the wrist)
+        for (x, y), light in cells.items():
+            border = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            put(x, y, DOUT[1] if border else _tone(DWING, light), fpx if (near and not in_rider_at(x, y)) else px)
+        for (ax, ay), (bx, by) in veins:                         # the veins: 1 px red lines over the membrane, as the fold's
+            n = int(math.dist((ax, ay), (bx, by)) * 2) + 1
+            for i in range(n + 1):
+                x, y = ax + (bx - ax) * i / n, ay + (by - ay) * i / n
+                if (int(round(x)), int(round(y))) in cells:
+                    put(x, y, DRG[2], fpx if (near and not in_rider_at(int(round(x)), int(round(y)))) else px)
+        for (ax, ay), (bx, by) in ((sh, el), (el, wr)):          # the arm, the leading edge: a thicker bone, the same red
             for y in range(int(min(ay, by)) - 3, int(max(ay, by)) + 4):
                 for x in range(int(min(ax, bx)) - 3, int(max(ax, bx)) + 4):
-                    d = _seg(x + 0.5, y + 0.5, ax, ay, bx, by)
-                    if d <= thick / 2:
-                        in_rider = (WING_OVER_RIDER == "box" and 43 <= x <= 66 and 16 <= y - bob <= 52) or (WING_OVER_RIDER == "head" and rider_in_view(x + OX, y + OY))
-                        col = (DRG[3] if d < thick / 2 - 0.6 else DRG[2]) if near else DWING[1]
-                        put(x, y, col, fpx if (near and not in_rider) else px)
+                    if _seg(x + 0.5, y + 0.5, ax, ay, bx, by) <= 1.3:
+                        put(x, y, DRG[2], fpx if (near and not in_rider_at(x, y)) else px)
         for k in range(4):                                       # the thumb claw at the wrist, hooking forward (behind his face too)
             cx_, cy_ = wr[0] - 1 - k, wr[1] - k * 0.5
             face = WING_OVER_RIDER == "head" and rider_in_view(int(round(cx_)) + OX, int(round(cy_)) + OY)
