@@ -114,6 +114,8 @@ namespace GK2DonkeyAPI
         {
             if (Time.unscaledTime < nextIndexCheck && indexedTerrains >= 0) return;
             nextIndexCheck = Time.unscaledTime + 3f;
+            using var perf = Perf.Measure(Perf.S.DrawnIndex);
+            long started = System.Diagnostics.Stopwatch.GetTimestamp();
             LazyTerrain[] all = Object.FindObjectsByType<LazyTerrain>(FindObjectsSortMode.None);
             int chunks = 0;
             foreach (LazyTerrain t in all) if (t != null && t.meshesData != null) chunks += t.meshesData.Count;
@@ -145,7 +147,8 @@ namespace GK2DonkeyAPI
             indexedTerrains = all.Length;
             indexedChunks = chunks;
             IndexNote = $"{all.Length} terrains, {chunks} chunks indexed{(odd > 0 ? $", {odd} rotated or scaled (read as if not)" : "")}";
-            Plugin.Log.LogInfo($"[drawn-ground] {IndexNote}; {Captured} meshes' tiles read so far ({CapturedAtStrip} as the game freed them)");
+            double ms = (System.Diagnostics.Stopwatch.GetTimestamp() - started) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            Plugin.Log.LogInfo($"[drawn-ground] {IndexNote} in {ms:0.0} ms; {Captured} meshes' tiles read so far ({CapturedAtStrip} as the game freed them)");
         }
 
         internal enum Tile { None, Drawn, Unknown }

@@ -39,8 +39,12 @@ Two bugs taught the lift:
 **Correction (2026-10-23):** the lift is *not* along the view axis. It runs along the part's own -z, and the camera
 looks down at an angle, so it also moves the front picture down on the screen:
 - **The ground:** 2.7 art px lower than the body picture, in both facings (`[occlusion]` readout). The folded wing that
-  was judged good on 2026-10-20 includes this drop. Aligning the ground means drawing the fold about 3 px lower, so
-  the look stays.
+  was judged good on 2026-10-20 includes this drop. **Aligned since 2026-10-23:** the lift runs along the line of sight
+  on the ground too, ridden (`FrontLift`) and not (`OverLift`), and the dragon's near fold is drawn 3 px lower in its
+  picture (make_creatures.py `folded_wing`), so the ridden look stays (0.3 px off) and the fold no longer moved
+  2.7 px when he mounted or got off, at the take-off crouch and after a landing (those frames were already aligned).
+  Checked against today's in-game look (the old pictures with the front 3 px lower): about 20 px differ a frame, all
+  outline pixels, now traced round the fold where it is drawn (the union's outline goes to the layer it borders).
 - **Flight:** 3.1 art px, measured on the user's video. Flying, the lift now runs along the camera's line of sight
   (`Follow(..., alongView)`), and the readout reads +0.0 / +0.0. See section 9.
 

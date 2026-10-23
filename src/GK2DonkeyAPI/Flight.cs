@@ -446,7 +446,7 @@ namespace GK2DonkeyAPI
             GlideTick(i, dt, climbing);
             // the beat's clock: still while gliding (the glide's own stages) and through the landing's frames (cut 2 above)
             if (Now != Phase.Ground) { bobT += dt; if (!Gliding && !(FrameFor(i) is string lk && lk.StartsWith("bdy_land_", System.StringComparison.Ordinal))) beatT += dt; }
-            FreeTick(i);
+            using (Perf.Measure(Perf.S.FlyFree)) FreeTick(i); // the session's first take-off cost one 14-20 ms frame (2026-10-23): timed
             FollowCamera();
             ApplyBodyMove();
             LiftBubble();

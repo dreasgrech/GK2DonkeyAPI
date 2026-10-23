@@ -793,6 +793,17 @@ row). Never below what is there, only inside the 16 px over it for a few frames.
 while it rises to the floor (its spring was stopped every frame under it). The floor's log line comes once per rise,
 with how much of it was at once.
 
+### The tail inside the picture, the fold aligned, the first take-off timed (2026-10-23)
+
+- **The tail:** the flying tail's spike reached columns 128-129 of the 128 picture and was cut off at its edge in every
+  flying frame (measured on a 160 copy of the generator). Its last three points are 1, 1.5 and 3 px shorter
+  (91, 98.5, 103): every frame now ends by column 126, the walking tail's margin, nothing clipped.
+- **The ground's front layer:** aligned, the fold drawn 3 px lower (docs/front-layer.md section 2).
+- **The first take-off of a session** cost one 14-20 ms frame (16:02: 20 ms with 1.6 MB allocated and the drawn
+  ground's index line in the same frame; 16:09: 14 ms, 72 KB, no index line, likely the flight's code compiled on its
+  first run). Timed now before anything is changed: `[perf]` parts `FlyFree` and `DrawnIndex`, and the index line says
+  how long the index took.
+
 ### Height jumps across the land (2026-10-23, investigating)
 
 The user: flying across the land the height sometimes jumps from one height to another at once. The one line the

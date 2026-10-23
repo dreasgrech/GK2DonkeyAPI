@@ -838,7 +838,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # over the rider wherever the two overlap: he sits inside the fold with his face, the top of his head and the
         # reins arm out of it. The far wing is the same shape a few pixels back and up (the perspective), drawn before
         # the body, which hides all but its peak and the top of its membrane.
-        ox, oy = (4.0, -5.0) if far else (0.0, 0.0)
+        # The near fold 3 px lower than first drawn: in the game the front layer was lifted along the part's own axis,
+        # which (the camera looking down) drew it 2.7 art px lower than the body picture while ridden (the [occlusion]
+        # readout, both facings), and that is the look judged good (2026-10-20). The lift now runs along the camera's
+        # line of sight on the ground too (Looks.Rig, as in flight), so the drop is drawn into the picture instead: the
+        # same look ridden, and now also unridden, at the take-off crouch and after a landing, on the review page and in
+        # the Mods picture (it jumped 2.7 px between them). The far fold is in the body picture, never lifted: as drawn.
+        ox, oy = (4.0, -5.0) if far else (0.0, 3.0)
 
         def at(x, y):
             return (x + ox, y + bob + oy)
@@ -1064,7 +1070,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     # sausage (the same day).
     sway = (1.5 * math.sin(2 * math.pi * phase) if walking else idle)
     if fly is not None:
-        # flying: the tail streams back nearly level behind the hips, a slow wave down its length (the reference)
+        # flying: the tail streams back nearly level behind the hips, a slow wave down its length (the reference). Its
+        # last points 1, 1.5 and 3 px shorter than first drawn (91, 98.5, 103): the spike reached column 128-129 of the
+        # 128 picture and was cut off at its edge in every flying frame (measured on a 160 copy, 2026-10-23); now it ends
+        # at 126, the walking tail's margin
         # the tail swings with the beat: straight out, the tip a little up with the wings raised; curving down and in
         # on the downstroke (the reference's first pose). In the beat the tail is a whip: each point follows the
         # body's rise a little later than the one before and swings further, the tip overshooting (a wave running
@@ -1072,14 +1081,14 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # (gw at lag - 0.4: the stroke's bottom is th 0.4)
         if beat is None and glide is None:
             wv = 1.2 * math.sin(2 * math.pi * phase)
-            tpts = [(70, 50 + bob), (82, 54 + bob + wv * 0.3 + 2.5 * gb), (92 - 1.5 * gb, 57.5 + bob + wv * 0.7 + 5 * gb),
-                    (100 - 3 * gb, 60 + bob + wv + 7 * gb), (106 - 4.5 * gb, 61.5 + bob + wv * 1.2 + 9 * gb)]
+            tpts = [(70, 50 + bob), (82, 54 + bob + wv * 0.3 + 2.5 * gb), (91 - 1.5 * gb, 57.5 + bob + wv * 0.7 + 5 * gb),
+                    (98.5 - 3 * gb, 60 + bob + wv + 7 * gb), (103 - 4.5 * gb, 61.5 + bob + wv * 1.2 + 9 * gb)]
         else:
             lags, amps = (0.06, 0.14, 0.22, 0.30), (1.0, 1.4, 1.9, 2.5)
             c = [gw(l - 0.4) * 0.3 for l in lags]
             w_ = [follow(l, a) for l, a in zip(lags, amps)]
-            tpts = [(70, 50 + bob), (82, 54 + bob + w_[0] + 2.5 * c[0]), (92 - 1.5 * c[1], 57.5 + bob + w_[1] + 5 * c[1]),
-                    (100 - 3 * c[2], 60 + bob + w_[2] + 7 * c[2]), (106 - 4.5 * c[3], 61.5 + bob + w_[3] + 9 * c[3])]
+            tpts = [(70, 50 + bob), (82, 54 + bob + w_[0] + 2.5 * c[0]), (91 - 1.5 * c[1], 57.5 + bob + w_[1] + 5 * c[1]),
+                    (98.5 - 3 * c[2], 60 + bob + w_[2] + 7 * c[2]), (103 - 4.5 * c[3], 61.5 + bob + w_[3] + 9 * c[3])]
     else:
         tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
     tail = catmull(tpts, 160)

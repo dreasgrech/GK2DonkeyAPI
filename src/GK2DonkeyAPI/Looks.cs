@@ -2735,11 +2735,13 @@ namespace GK2DonkeyAPI
                             // body picture in every frame of the user's video (2026-10-23 08-07-28, the front picture's
                             // outline registered on the frames at 8 screen px an art px), so the near wing's halves in the
                             // two layers no longer met and the hole round the rider's head sat 3 px low ("there are still
-                            // problems with the wing occlusion"). On the ground it stays as it was until the readout says
-                            // whether the ground has the same offset (the fold there is all front layer, and judged good).
-                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth), alongView: flying);
+                            // problems with the wing occlusion"). On the ground too since the readout measured it there
+                            // (2.7 art px lower, both facings, 2026-10-23): the dragon's fold is drawn that much lower in
+                            // its picture instead (make_creatures.py), so it looks the same ridden and unridden, on the
+                            // ground and at the take-off and landing, and where it was judged.
+                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth), alongView: true);
                         }
-                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift); // above the body overlay too
+                        else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift, alongView: true); // above the body overlay too
                         if (s.Body) FrontReadout.Note(owner, part, ov, fr, flying ? flyKey : null);
                     }
                 }

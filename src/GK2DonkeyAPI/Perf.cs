@@ -45,6 +45,8 @@ namespace GK2DonkeyAPI
             WinFooter,  //   inside Window: the footer (differ text, defaults buttons)
             Landing,    // a flight's landing judged (FlightGround.WhyCannotLandAt: the ground, the body, the walk-away test)
             LandGrid,   //   inside Landing: the game's walk grid rescanned round the keeper (WhyNotOnGameGrid; a touchdown hitch, 2026-10-23)
+            FlyFree,    // the free flight's frame (Flight.FreeTick: the floor, the ground under it, the safe-spot check, a landing)
+            DrawnIndex, //   the drawn ground's index of the terrain chunks, checked every 3 s, built when they change (DrawnGround.Index)
             Count,
         }
 

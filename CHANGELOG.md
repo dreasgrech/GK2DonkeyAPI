@@ -530,6 +530,8 @@ Development:
   open for a moment, held low over the rider's legs, flexing gently in the air and the body rising and sinking with them. It eases into the glide
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
+- **The dragon's tail is no longer cut off** at the edge of its picture while flying, and its folded near wing
+  sits the same whether ridden or not (it moved a few pixels when the rider got on or off, and at take-off and landing).
 - **Flying: no more hops over trees and ledges.** Flying low over a wood, or climbing out from under a ledge's edge,
   the dragon no longer jumps up 12-20 pixels at once: it rises smoothly to its height over what is under it, and is
   never drawn inside it.
