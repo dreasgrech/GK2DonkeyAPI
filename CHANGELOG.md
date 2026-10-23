@@ -532,6 +532,9 @@ Development:
   open for a moment, held low over the rider's legs, flexing gently in the air and the body rising and sinking with them. It eases into the glide
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
+- **The flying dragon's neck is shorter and steadier.** In the air its neck was long for its body and the head bobbed
+  against the body on every wing beat (like a dancer's head); the neck is a fifth shorter and the head now moves
+  with the body, a moment behind it.
 - **The dragon shows climbing and diving.** Climbing, it arches its neck up and its tail hangs low; descending, or
   coming down to land, it reaches its head forward and down and its tail rises; it eases in and out of each.
 - **Your mount appears as itself at once.** The first time you called it in a session, you saw the game's donkey for

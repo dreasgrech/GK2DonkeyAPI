@@ -811,6 +811,17 @@ with how much of it was at once.
 - **Flying indoors** is off unless a mod turns it on (the Behaviour key `FlyIndoors`, off in the API; Saddle Up keeps
   it off with no row): no take-off indoors, a flight through a building's door lands there.
 
+### The flying neck shorter and steadier (2026-10-23)
+
+The user: "the current flying idle neck seems a bit dance like an egyptian ... i think its a bit too long with its body
+proportions". Traced from the generator (a copy printing the head's place per beat frame, `mk_trace.py` in the job's
+tmp): the head never moved sideways (x 12.0-12.2), but it rode 0.8 of the body's rise a quarter of a beat late, so it
+moved 3.9 px up and down **against the body** every beat, on a neck 25 px long: an isolated head. Now the neck's
+points take 0.99 / 0.97 / 0.95 of the body's rise at lags 0.04 / 0.07 / 0.10 (the head 1.2 px against the body, worked
+out first: the same formula gave today's 3.89), and the flying neck is 20 % shorter from its base at the chest
+(`FLY_NECK` 0.8; the head 4.4 px nearer). The ground's arched neck and the landing's flare poses are unchanged; 72
+flying pictures changed (the beat, climb and dive, the glide, the last take-off frame).
+
 ### Climbing and diving shown (2026-10-23, built, on the preview page; not seen in game)
 
 The user: "when going down we can tilt his head a bit lower and when going upwards we can maybe tilt his back a bit

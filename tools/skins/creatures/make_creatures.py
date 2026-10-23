@@ -508,6 +508,10 @@ PITCH_SHEAR = float(os.environ.get("DRAGON_PITCH_SHEAR", "0.05"))
 PITCH_NECK = float(os.environ.get("DRAGON_PITCH_NECK", "6"))
 PITCH_TAIL = float(os.environ.get("DRAGON_PITCH_TAIL", "4"))
 PITCH_X = 48.0  # the seat's column, donkey coordinates (the rider is drawn at the picture's middle)
+# The flying neck 20 % shorter than first drawn, from its base at the chest (the user, 2026-10-23: "the current flying
+# idle neck seems a bit dance like an egyptian ... i think its a bit too long with its body proportions": 25 px from
+# the chest to the head). The ground's arched neck, judged good, stays as it is.
+FLY_NECK = float(os.environ.get("DRAGON_FLY_NECK", "0.8"))
 # the flex in pixels at the wing's farthest-moving joint, whatever the held pose: the poses change at very different
 # speeds along the beat (a tip moves 84 px per unit of pose at 0.4, 163 at 0.85), so a flex given as pose (0.06) swung
 # the tips 5 px at 0.4 and almost 10 at 0.85, a flap (the user, 2026-10-23: "the glide in preview is still flapping")
@@ -1156,13 +1160,22 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         # flying: the neck stretched forward, the head ahead of the chest (the reference), not arched up; the head a
         # little higher with the wings raised, lower and the neck shorter on the downstroke
         neck = [(34.0, 44.0 + bob), lp((26, 39 + bob), (27, 42 + bob), gb), lp((19, 34 + bob), (21, 41 + bob), gb), lp((12, 31 + bob), (14, 41 + bob), gb)]
+
+        def shorter(pts):
+            # FLY_NECK of each point's way from the neck's base (the chest), the base itself where it was
+            bx, by = pts[0]
+            return [pts[0]] + [(bx + (x - bx) * FLY_NECK, by + (y - by) * FLY_NECK) for x, y in pts[1:]]
+        neck = shorter(neck)
         if beat is not None or glide is not None:
             # in the beat the neck does not dip with the wings (the old 10 px nod was most of the "dance"): it holds
-            # the raised line, a little lower as the stroke passes it, and the head rides steadier than the body: it
-            # rises a little less, a quarter of a beat later (the reference's head runs about half a loop behind its back)
+            # the raised line, a little lower as the stroke passes it, and the head rides a little steadier than the
+            # body and a moment behind it. Riding much steadier (0.8 of the body's rise, a quarter beat late) the head
+            # moved 3.9 px up and down against the body every beat on the long neck: the "dance like an egyptian" (the
+            # user, 2026-10-23; traced from this function). Now 0.95 of it, a tenth of a beat late: 1.6 px.
             n1, n2, n3 = gw(0.08) * 0.08, gw(0.14) * 0.08, gw(0.2) * 0.08
-            neck = [(34.0, 44.0 + bob), (26 + n1, 39 + bob + 3 * n1 + follow(0.12, 0.95)),
-                    (19 + 2 * n2, 34 + bob + 7 * n2 + follow(0.2, 0.88)), (12 + 2 * n3, 31 + bob + 10 * n3 + follow(0.27, 0.8))]
+            neck = [(34.0, 44.0 + bob), (26 + n1, 39 + bob + 3 * n1 + follow(0.04, 0.99)),
+                    (19 + 2 * n2, 34 + bob + 7 * n2 + follow(0.07, 0.97)), (12 + 2 * n3, 31 + bob + 10 * n3 + follow(0.1, 0.95))]
+            neck = shorter(neck)
             if pitch:
                 # climbing the neck arches up and a little back, the head high; diving it reaches forward and down
                 # (PITCH_NECK above): the base of the neck moves least, the head most
