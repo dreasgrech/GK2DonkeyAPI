@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI
         internal static bool UseDrawnGround = true; // step 2 of the drawn ground (DrawnGround.cs): floor, walls, landings
         internal static int CoverEdgeTiles = 1;    // a landing under this many edge tiles of a higher level is still allowed
         internal static float ClearancePx = 2f;    // how far under the flight's feet a top still counts as in the way
-        internal static float WingBeatS = 0.6f;    // one wing beat (the six flying frames)
+        internal static float WingBeatS = 0.6f;    // one wing beat (the eight flying frames)
         internal static float BeatBobPx = 3f;      // the body's rise on each downstroke, with the flying frames
         internal static bool FlyFrames = true;     // the skin's flying frames while airborne (off: its walk and idle frames)
         internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl, JumpKey = KeyCode.J; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
@@ -121,7 +121,8 @@ namespace GK2DonkeyAPI
         // reaching frames through it, the touch on the thud, the folding a moment after landing. Frame names a skin
         // lacks fall back to the game's (the rig checks), so a mount without them just walks in the air as before.
         private static float landedAt = -10f;
-        private static readonly string[] FlyNames = { "bdy_fly_left_01", "bdy_fly_left_02", "bdy_fly_left_03", "bdy_fly_left_04", "bdy_fly_left_05", "bdy_fly_left_06" };
+        // eight moments of one wing beat, each part of the body at its own lag (docs/flying.md "the beat in time")
+        private static readonly string[] FlyNames = { "bdy_fly_left_01", "bdy_fly_left_02", "bdy_fly_left_03", "bdy_fly_left_04", "bdy_fly_left_05", "bdy_fly_left_06", "bdy_fly_left_07", "bdy_fly_left_08" };
         private static readonly string[] TakeoffNames = { "bdy_takeoff_left_01", "bdy_takeoff_left_02", "bdy_takeoff_left_03", "bdy_takeoff_left_04" };
         internal static string FrameFor(Mount.Instance i)
         {
@@ -132,7 +133,7 @@ namespace GK2DonkeyAPI
                 return null;
             }
             float beat = Mathf.Max(0.1f, WingBeatS);
-            string Beat() => FlyNames[Mathf.FloorToInt(beatT / beat * 6f) % 6];
+            string Beat() => FlyNames[Mathf.FloorToInt(beatT / beat * FlyNames.Length) % FlyNames.Length];
             switch (Now)
             {
                 case Phase.Rising:

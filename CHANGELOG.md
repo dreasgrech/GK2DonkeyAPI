@@ -514,6 +514,9 @@ Development:
   The skin preview page takes `--study <folder>` to show a skin being drawn next to the shipped one.
 - **The dragon flies with its wings spread** (the flying experiment): 14 new frames drawn by the creature generator
   (the wing beat, the take-off, the landing), played while the dragon is in the air; the skin scans accept them.
+  The wing beat is now eight frames in which the body moves part after part, not all at once (it "danced"): the
+  wing tips trail the arm, the head rides steady a moment behind the body, the legs dangle, the tail whips from root
+  to tip (docs/flying.md "The beat in time").
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
   terrain mesh read just before the game frees them, the highest drawn level at any point, checked on the Flying
   tab against the walkable ground; the flight's floor, walls and landings use it (no landing inside a rock table); a whole-map survey and a map drawing tool (tools/flying/map_survey.py).

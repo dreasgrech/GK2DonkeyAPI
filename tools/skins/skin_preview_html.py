@@ -31,7 +31,7 @@ ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] +
          + ["hed_static_down", "hed_static_down_02", "hed_static_down_03"])
 # the flying experiment's frames (docs/flying.md "the frames"): not the game's, the mod plays them while a mount flies;
 # a skin without them shows empty cells there (the donkey has none)
-FLIGHT = ([f"bdy_takeoff_left_{i:02d}" for i in range(1, 5)] + [f"bdy_fly_left_{i:02d}" for i in range(1, 7)]
+FLIGHT = ([f"bdy_takeoff_left_{i:02d}" for i in range(1, 5)] + [f"bdy_fly_left_{i:02d}" for i in range(1, 9)]
           + [f"bdy_land_left_{i:02d}" for i in range(1, 5)])
 MOUNT_NAMES = {"donkey": "Donkey"}  # every other mount's name comes from the [Mount] section of the skin that declares it
 RIDER_HIP_ABOVE_FEET = 7  # the keeper's hip is 7 px above his feet (Mount.SeatOn, tools/skins/review.py)
@@ -426,7 +426,7 @@ def main(argv):
         clips["takeoff"] = [k for k in FLIGHT if "_takeoff_" in k]
         clips["land"] = [k for k in FLIGHT if "_land_" in k]
         clips["flight"] = clips["takeoff"] + fly * 3 + clips["land"]
-        speed.update({"fly": 100, "takeoff": 80, "land": 110, "flight": 95})
+        speed.update({"fly": 75, "takeoff": 80, "land": 110, "flight": 95})
 
     caps_dir = os.path.join(probe, "captures")
     captures = []

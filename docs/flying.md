@@ -378,6 +378,79 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   tail while it carries and swings forward to the head (`step_at`; the dragon faces left).
 - Known for the next pass: the raised wing goes behind the rider (a compromise); the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
 
+### The beat in time (2026-10-23)
+
+The user: "every part of the body is moving literally synced at the same time ... almost like the dragon is dancing".
+They gave a second reference, `Downloads/2dsprites/Dragon - Fully Animated`. It is a 60 fps rig with Idle, Walking,
+two attacks, Hurt and Death, 140-300 frames each. It has **no flying clip**. The first reference was studied again.
+
+**The cause.** Every moving part of a flying frame was a function of one number, the wings' pose `gb`:
+- the neck and head, nodding 10 px;
+- the chest, the hump and the haunch;
+- the legs;
+- every point of the tail.
+
+Inside the wing, `pose_at(key, t)` gave the elbow, the wrist, the three finger tips and the root the same `t`, so the
+wing swung as a plank.
+
+Measured on frames drawn without the wings (`DRAGON_STUDY=nowings`; world height = the frame plus the game's bob),
+every part was highest at either 0.00 or 0.50 of the beat:
+- at 0.00: head, neck, tail tip;
+- at 0.50: hump, tail middle, fore paws.
+
+The head swung 7 px and the fore paws 19.
+
+**The reference, measured.** The top of each part per frame, with its phase against the back (`tmp/ref2/track.py`):
+
+| Idle (161 frames) | swing px | lag behind the back |
+|---|---|---|
+| back | 3 | 0 |
+| neck, head top | 12, 7 | 0.58 (rises as the back sinks) |
+| head forward/back | 5 | 0.29 |
+| tail middle | 7 | 0.76 |
+| tail tip | 4 | 0.58 |
+
+In Walking, the feet lag the back by about a third of a loop, and the tail's middle and tip again have lags of their
+own. Treat these as an order, not numbers to copy, since they come from idle and walk, not a flap:
+- the trunk leads;
+- the loose parts follow later, each by its own amount;
+- the tail is a wave, its middle and tip moving at different moments.
+
+**Ours now** (`make_creatures.py`, "the wing beat in time"):
+- **Frames.** A flying frame is a moment of the beat, `th` 0..1. There are eight of them: `bdy_fly_left_01..08`
+  (`BEAT_FRAMES`).
+- **The stroke.** `wing_w(th)` goes down in 40 % of the beat (lowest at 0.4) and up in the rest, eased at each end.
+- **The body.** It is highest at 0.5, from the game's bob (`Flight.BeatBobPx`, unchanged), so it rises after the
+  power stroke, not with it.
+
+Each part reads the beat at its own lag:
+- **The wing.** Elbow 0, wrist 0.03, root 0.05, finger tips 0.07 / 0.10 / 0.13. The tips trail up early in the
+  downstroke and down early in the upstroke, so the wing bends like a sail. On the upstroke the hand folds in by up to
+  16 %.
+- **The hump and chest.** These are the stroke's muscles: just after it (0.06), at under half the old size.
+- **The neck and head.** No nod with the wings; that nod was most of the "dance". The head rises by 0.8 of the body's
+  rise, a quarter beat later: steadier than the body, and behind it.
+- **The legs** dangle. The forelegs are drawn up at 0.25 and the hind legs at 0.35. They swing after the body's rise
+  (0.3 and 0.38).
+- **The tail** is a whip. Its points follow the body's rise at 0.06 / 0.14 / 0.22 / 0.30, with 1.0 / 1.4 / 1.9 / 2.5 of
+  its size, so the tip overshoots. The curl goes down at each point's own low.
+
+Measured the same way (wings left out), each part is now highest at:
+
+| Part | phase |
+|---|---|
+| hind feet | 0.34 |
+| hump | 0.53 |
+| tail middle | 0.58 |
+| fore paws | 0.71 |
+| tail tip | 0.73 |
+| head and neck | 0.76 |
+
+The head swings 2 px, the tail tip 8 px and the fore paws 7 px.
+
+The game plays the eight frames over `WingBeatS` (`FlyNames.Length`): 75 ms a frame at 0.6 s. The preview page's `fly`
+clip also runs at 75 ms.
+
 ### Height jumps across the land (2026-10-23, investigating)
 
 The user: flying across the land the height sometimes jumps from one height to another at once. The one line the
