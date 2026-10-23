@@ -376,7 +376,75 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   To check in game: the rider on the seat, the cart's harness and hitch gap at the new height.
   The walk first went backwards (the user): the planted foot slid towards the head; now it slides back towards the
   tail while it carries and swings forward to the head (`step_at`; the dragon faces left).
-- Known for the next pass: the raised wing goes behind the rider (a compromise); the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
+- Known for the next pass: the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
+- **The rider behind the spread wing (2026-10-23).** The user: the occlusion on the ground "looks great (and took us
+  a long time to get right) ... can we get that working during the flying animation too".
+  - The cause: the folded wing is all front layer and simply doesn't reach his head. The spread wings sent every near
+    wing pixel inside a box round the rider (x 43-66, y 16-52) to the back layer, so the rider was always in front.
+    That was the 2026-10-17 compromise: with the whole wing in front, the raised wing hid him completely.
+  - Measured (rider composited at seat 62): the folded wing hides 75% of him, everything but his head and face (down
+    to canvas row 36) and his front, reins arm (rows 37-52, left of a line from x 67 to 62). The whole spread wing in
+    front would hide 55% at the top of the beat, his head included.
+  - First pass: `rider_in_view(xc, yc)` (`make_creatures.py`) was that visible part, up to a pixel more, in canvas
+    pixels, and the spread near wing was front layer everywhere except there.
+  - The user's video (2026-10-23 06-09-32, 120 fps, one beat studied frame by frame): "there are frames which the
+    occlusion is missing". The window was a band down to row 37 across his whole width, so as the wing swept across
+    at chin height (video frames #188-#196 and #224-#228; our fly_03 and fly_07) his shoulders and upper back stayed
+    in front of it. That made a straight cut across his body at row 37. On the ground the fold never reaches that
+    high, so "what the fold leaves in view" was the wrong rule.
+  - Now the window is his head only. Read off the rider at 12x: the hair spans rows 27-37 across x 66-81; the face
+    and beard x 65-75 down to about row 42; the jacket's back x 74-82 from row 38; the reins hands out front at x
+    54-62. So the window is x 64-82 up to row 37 (to the picture's top: no rider there, and no stray edge over his
+    hair, which the skin check had flagged as a lone pixel), plus x 64-75 for rows 38-42. The wing's thumb claw obeys
+    it too. The near wing is nearer the camera than he is, so it covers him everywhere else it crosses him, as the
+    fold does on the ground.
+  - Checked per frame against the whole wing in front (`DRAGON_WING_OVER_RIDER=all`, which shows where the wing
+    crosses him): in all 14 spread-wing frames, every pixel of him the wing crosses outside his head is covered, and
+    his head is never covered. 10-28% of him is hidden per flying frame. The folded take-off and landing frames match
+    the ground.
+  - `DRAGON_WING_OVER_RIDER` keeps the old box (`box`) and the whole wing in front (`all`) as studies.
+  - **Still broken in game** (the user's video 2026-10-23 08-07-28, facing right: "how did u confirm it from the
+    frames if its still broken?"). The per-frame check only proved the frames follow the rule. It ran on a composite:
+    a still capture of the rider (`rider.png`) centred on the picture by assumption, with the front picture exactly
+    on the body picture. Neither assumption had been checked against the game.
+  - Measured on the video: the frames were registered on the screen (8 screen px an art px; the body picture by its
+    red pixels, the front picture by its wing pixels, separately). In every frame, the front picture sits 3.1 art px
+    lower than the body picture (registration score 0.99). Cause: `Follow` lifts the front picture towards the
+    camera along the part's own -z, and the camera looks down at an angle, so that lift also moves it down on the
+    screen. The comment said "along the view axis, so nothing moves on screen"; the code didn't do that. With the
+    two halves of the near wing 3 px apart, steps showed where they meet, and the hole round his head sat 3 px low.
+  - Fixed in flight: the lift goes along the camera's line of sight (`Follow(..., alongView)`, the same distance, at
+    least as near the camera). On the ground it is unchanged until measured. The fold there is all front layer and
+    was judged good, and the ground screenshot was too small to register (score 0.43).
+  - Not known yet: where his head goes in game. The rider's head and bob motion move him, and a video can't separate
+    his hair from the dragon's dark pixels. `Looks.FrontReadout` logs it (`[occlusion]` lines, dev only): while
+    flying, a few times a second, the frame, the facing, the front picture's offset from the body picture in art px,
+    and the box each of the rider's sprites covers in the picture's own pixels (mirrored back when facing right). On
+    the ground, one line with the front picture's offset there. The head window is to be set from those boxes.
+  - The readout's run (2026-10-23, 82 lines; the video 08-27-56 at 4 screen px an art px) settled three things:
+    - In flight the front picture is now on the body picture: +0.0 x, +0.0 y, in every line.
+    - On the ground it sits 2.7 art px low, in both facings. The ground look that was judged good includes that.
+      Aligning the ground later means drawing the fold 3 px lower so the look stays.
+    - The rider's head sprite is `hed_static_left` through the whole flight (his body and arm cycle through the
+      game's `fishing_idle_left_01..04`). His picture's x is constant and its y moves 2.7-5.0, so his head only bobs
+      about 2 px and never moves sideways.
+  - The readout can't size the window: every rider sprite is a full 96 px square, so its box is the square, not his
+    pixels. The square's x also differs between facings (55 facing left, 25 facing right, mirrored back), so the
+    square's position says nothing about where his head pixels are inside it.
+  - The video, cropped round the rider at plain zoom, both facings: the steps and notches where the two halves of
+    the wing meet are gone. His head, face and beard stay in front in every raised-wing frame. The wing covers his
+    back and shoulders, and crosses his chest below the beard. The straight edge at the back of his hair in a raised
+    frame (#124) is the hair's own: from the front of his face to the back of his hair is about 15 art px, the same as
+    in a wing-down frame (#164). So the head window (x 64-82) holds in both facings.
+  - The readout's budget now restarts on each state and facing, so one flight each way logs both.
+  - Open: the tail's tip runs 2 px past the picture's right edge in every flying, take-off and landing frame. The
+    flying tail streams back further than the walking one. Shorten it by 2 px.
+- **The raised wing was cut off at the top** (the same video). With the body 6 px higher on its longer legs, the
+  raised wings ran 8-11 px past the 128 picture's top. Measured by drawing the frames on a picture 32 px taller: the
+  back layer reached rows -8 to -11 in flying 1 and 2, take-off 2 and landing 2, mostly the far wing, which sits 7 px
+  above the near one. Fixed: the raised pose is 18% lower about the shoulder, and the far wing is 4 px above the near
+  one while raised (7 level and down). Every frame now ends at least 2 px inside the picture, outline included, and
+  no picture uses its top row.
 
 ### The beat in time (2026-10-23)
 

@@ -69,6 +69,18 @@ namespace GK2DonkeyAPI
 
             if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "The dragon's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
             Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The eight flying frames once round.");
+            GUILayout.BeginHorizontal();
+            GUILayout.Label(Tip("Wing over the rider (a study)", "Three ways the spread near wing passes the rider, to choose by eye (docs/front-layer.md section 9). A: a hole for his head, the wing covers the rest of him. B: the whole wing in front, it covers his head at the top of the beat. C: the raised wing leaned back 35 degrees behind his head, no hole. Switches at once, flying or not."), label, Wd(260f));
+            string[] looks = { "A: the cut", "B: the rule", "C: leaned back" };
+            for (int k = 0; k < looks.Length; k++)
+            {
+                if (GUILayout.Toggle(Flight.WingLook == k, looks[k], "Button", Wd(120f)) && Flight.WingLook != k)
+                {
+                    Flight.WingLook = k;
+                    Plugin.Log.LogInfo("[flight] wing over the rider: " + looks[k]);
+                }
+            }
+            GUILayout.EndHorizontal();
             Flight.BubbleS = SessionFloatRow("Bubble time (seconds)", Flight.BubbleS, 0.5f, 6f, "How long \"Nowhere to land here.\" and \"Land first.\" stay over the rider (the game's own time for them was about 5 s).");
             Flight.BeatBobPx = SessionFloatRow("Rise on each downstroke (px)", Flight.BeatBobPx, 0f, 8f, "With the flying frames: the body and the rider rise as the wings come down, sink on the upstroke (in place of the hover).");
 

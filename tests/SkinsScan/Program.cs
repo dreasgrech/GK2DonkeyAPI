@@ -90,7 +90,7 @@ static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
 
 // The flying experiment's frames (docs/flying.md "the frames"): not the game's, played by the mod while a mount flies.
 
-static bool FlightKey(string key) => System.Text.RegularExpressions.Regex.IsMatch(key, @"^bdy_(fly|takeoff|land)_left_\d\d$");
+static bool FlightKey(string key) => System.Text.RegularExpressions.Regex.IsMatch(key, @"^bdy_(fly|takeoff|land)(_[bc])?_left_\d\d$"); // _b/_c: the wing-over-the-rider study (docs/front-layer.md section 9)
 
 
 static (int W, int H) PngSize(string path)

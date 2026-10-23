@@ -51,6 +51,16 @@ namespace GK2DonkeyAPI
         internal static bool UseDrawnGround = true; // step 2 of the drawn ground (DrawnGround.cs): floor, walls, landings
         internal static int CoverEdgeTiles = 1;    // a landing under this many edge tiles of a higher level is still allowed
         internal static float ClearancePx = 2f;    // how far under the flight's feet a top still counts as in the way
+        // The wing over the rider, a study to judge in game (2026-10-23, docs/front-layer.md section 9): 0 A (the cut: a
+        // hole for his head), 1 B (the rule: the whole near wing in front), 2 C (the raised wing leaned back 35 degrees,
+        // the whole wing in front). B and C are the skin's bdy_<clip>_b/_c_left_NN frames; a skin without them shows A.
+        internal static int WingLook;
+        internal static string WingLookKey(string key)
+        {
+            if (WingLook == 0 || key == null || !key.EndsWith("_left_" + key.Substring(key.Length - 2))) return key;
+            int at = key.LastIndexOf("_left_", System.StringComparison.Ordinal);
+            return at < 0 ? key : key.Substring(0, at) + (WingLook == 1 ? "_b" : "_c") + key.Substring(at);
+        }
         internal static float BubbleS = 1.5f;      // how long the flight's bubbles stay ("Nowhere to land here.": the game's own time was about 5 s)
         internal static float WingBeatS = 0.6f;    // one wing beat (the eight flying frames)
         internal static float BeatBobPx = 3f;      // the body's rise on each downstroke, with the flying frames

@@ -456,6 +456,24 @@ def _tone(ramp, light):
 SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
 RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 NO_SPREAD_WINGS = os.environ.get("DRAGON_STUDY") == "nowings"  # a study: the flying frames without the spread wings, to measure the body alone
+WING_OVER_RIDER = os.environ.get("DRAGON_WING_OVER_RIDER", "head")  # a study: "box" the spread near wing behind the rider in his box, "all" in front of him everywhere, "head" in front of him except his head
+
+
+def rider_in_view(xc, yc):
+    """Where the rider stays in front of the dragon's near wing, in canvas pixels (the 128 canvas, the seat at row 62):
+    his head only, the hair (rows 26-37 across x 64-82) and the face and beard below it (rows 38-42, x 64-75), read off
+    the rider at 12x (2026-10-23), a pixel more round. The near wing is nearer the camera than he is, so it covers him
+    wherever it crosses him, his back, shoulders and arms too, as the folded wing does on the ground; only his face
+    stays in view. A first window, everything the fold leaves in view on the ground (a band down to row 37 across his
+    whole width and his reins arm), left his shoulders and upper back in front of a wing sweeping across at chin height:
+    a straight cut across his body (the user's video, 2026-10-23: "frames which the occlusion is missing")."""
+    if yc <= 37:                     # up to the picture's top: no rider above row 27, and no stray edge over his hair
+        return 64 <= xc <= 82
+    return 38 <= yc <= 42 and 64 <= xc <= 75
+
+
+WING_STUDIES = os.environ.get("DRAGON_WING_STUDIES", "1") == "1"  # the B and C flying frames beside A, to judge in game (2026-10-23); 0 = A only
+RAISED_TILT = float(os.environ.get("DRAGON_RAISED_TILT", "0"))  # a study: the raised wing leaned back this many degrees (2026-10-23)
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
 
 
@@ -606,6 +624,18 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         "t3": ((105, 5), (104, 44), (86, 72)),
         "root": ((78, 41), (78, 45), (74, 47)),
     }
+    # The raised pose 18 % lower about the shoulder (y 42), and the far wing only 4 px above the near one while raised
+    # (7 level and down): with the body 6 px higher on its longer legs (RAISE) the raised wings ran 8-11 px past the
+    # picture's top and were cut off flat (the user's video, 2026-10-23: "the upper part of the wing when flying seems
+    # to be clipped"; measured on a picture 32 px taller, tools: tmp tallstudy.py). Now the highest pixel, outline
+    # included, is inside the 128 picture in every frame.
+    WING_POSES = {k: ((a[0], 42 + (a[1] - 42) * 0.82), b, c) for k, (a, b, c) in WING_POSES.items()}
+    if RAISED_TILT:
+        # a study: the raised pose leaned back towards the tail about the shoulder (47, 42) by RAISED_TILT degrees, so
+        # the wing rises behind the rider's head instead of across it (docs/front-layer.md section 3: a shape, not a cut)
+        ca, sa = math.cos(math.radians(RAISED_TILT)), math.sin(math.radians(RAISED_TILT))
+        WING_POSES = {k: ((47 + (a[0] - 47) * ca - (a[1] - 42) * sa, 42 + (a[0] - 47) * sa + (a[1] - 42) * ca), b, c)
+                      for k, (a, b, c) in WING_POSES.items()}
 
     def pose_at(key, t):
         a, b, c = WING_POSES[key]
@@ -622,6 +652,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
 
     def spread_wing(near, t):
         ox, oy = (0.0, 0.0) if near else (-3.0, -7.0)  # the far wing: up and a little forward (the perspective)
+        if not near:
+            tw = t if beat is None else wing_w(beat - WING_LAGS["wrist"])
+            oy += 3.0 * max(0.0, 1.0 - tw / 0.5)        # raised: 4 px above the near wing, not 7 (the picture's top)
 
         def at(q):
             return (q[0] + ox, q[1] + oy + bob)
@@ -668,7 +701,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 db = min(_seg(X, Y, *a, *b) for a, b in bones)
                 u = math.dist((X, Y), wr) / far_d
                 light = 0.62 - 0.3 * u + (0.0 if db > 2.2 else -0.16)
-                in_rider = 43 <= x <= 66 and 16 <= y - bob <= 52
+                in_rider = (WING_OVER_RIDER == "box" and 43 <= x <= 66 and 16 <= y - bob <= 52) or (WING_OVER_RIDER == "head" and rider_in_view(x + OX, y + OY))
                 put(x, y, _tone(ramp, light), fpx if (near and not in_rider) else px)
         for (ax, ay), (bx, by) in bones:                         # the bones: the arm thick, the fingers thin
             arm = (ax, ay) == sh or (ax, ay) == el
@@ -677,11 +710,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 for x in range(int(min(ax, bx)) - 3, int(max(ax, bx)) + 4):
                     d = _seg(x + 0.5, y + 0.5, ax, ay, bx, by)
                     if d <= thick / 2:
-                        in_rider = 43 <= x <= 66 and 16 <= y - bob <= 52
+                        in_rider = (WING_OVER_RIDER == "box" and 43 <= x <= 66 and 16 <= y - bob <= 52) or (WING_OVER_RIDER == "head" and rider_in_view(x + OX, y + OY))
                         col = (DRG[3] if d < thick / 2 - 0.6 else DRG[2]) if near else DWING[1]
                         put(x, y, col, fpx if (near and not in_rider) else px)
-        for k in range(4):                                       # the thumb claw at the wrist, hooking forward
-            put(wr[0] - 1 - k, wr[1] - k * 0.5, DHORN[2 if k > 1 else 1], fpx if near else px)
+        for k in range(4):                                       # the thumb claw at the wrist, hooking forward (behind his face too)
+            cx_, cy_ = wr[0] - 1 - k, wr[1] - k * 0.5
+            face = WING_OVER_RIDER == "head" and rider_in_view(int(round(cx_)) + OX, int(round(cy_)) + OY)
+            put(cx_, cy_, DHORN[2 if k > 1 else 1], fpx if (near and not face) else px)
 
     # ---- the wings, FOLDED, as the user's references draw them (2026-10-20; docs/mount-looks-design.md): the wrist is a
     # tall PEAK above the back, its thumb claw hooking towards the head; the fingers run DOWN from the peak; the membrane
@@ -1125,6 +1160,23 @@ def frames_for(fn):
         land = ((0.1, "reach"), (0.0, "reach"), (0.45, "walk"), (None, "walk"))
         for k, (ang, mode) in enumerate(land, 1):
             out[f"bdy_land_left_{k:02d}"] = fn(0.0, head_down=0.4 - 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
+        if WING_STUDIES:
+            # A study to judge in game (2026-10-23, docs/front-layer.md section 9; the Flying tab's "Wing over the
+            # rider"): the same flying, take-off and landing frames twice more, as bdy_<clip>_b_left_NN (B: the whole
+            # near wing in front of the rider, the rule) and bdy_<clip>_c_left_NN (C: the raised pose leaned back 35
+            # degrees, the whole wing in front). Gone once the user has chosen.
+            global WING_OVER_RIDER, RAISED_TILT
+            keep = (WING_OVER_RIDER, RAISED_TILT)
+            for tag, over, tilt in (("b", "all", 0.0), ("c", "all", 35.0)):
+                WING_OVER_RIDER, RAISED_TILT = over, tilt
+                for k in range(1, BEAT_FRAMES + 1):
+                    th = (k - 1) / BEAT_FRAMES
+                    out[f"bdy_fly_{tag}_left_{k:02d}"] = fn(th, head_down=0.0, fly=wing_w(th), legs_mode="tuck", beat=th)
+                for k, (ang, mode) in enumerate(takeoff, 1):
+                    out[f"bdy_takeoff_{tag}_left_{k:02d}"] = fn(0.0, head_down=0.1 + 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
+                for k, (ang, mode) in enumerate(land, 1):
+                    out[f"bdy_land_{tag}_left_{k:02d}"] = fn(0.0, head_down=0.4 - 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
+            WING_OVER_RIDER, RAISED_TILT = keep
     empty = [(0, 0, 0, 0)] * (W * H)
     for name in ("hed_static_down", "hed_static_down_02", "hed_static_down_03"):
         out[name] = (empty, None)

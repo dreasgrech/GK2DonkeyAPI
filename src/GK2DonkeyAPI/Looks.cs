@@ -2690,6 +2690,11 @@ namespace GK2DonkeyAPI
                 // flying (the flying experiment): the skin's own flying, take-off and landing frames, when it has them,
                 // by the flight's timing, in place of whatever walk or idle frame the game shows (docs/flying.md)
                 string flyKey = s.Body && skin != null && owner != null ? Flight.FrameFor(owner) : null;
+                if (flyKey != null)
+                {
+                    string look = Flight.WingLookKey(flyKey); // the Flying tab's study of the wing over the rider
+                    if (look != flyKey && skin.Frames.ContainsKey(look)) flyKey = look;
+                }
                 bool flying = flyKey != null && skin.Frames.TryGetValue(flyKey, out Sprite flyFrame) && (mine = flyFrame) != null;
                 bool show = mine != null && part.enabled && part.gameObject.activeInHierarchy;
                 if (ov.sprite != mine) ov.sprite = mine;
@@ -2726,9 +2731,17 @@ namespace GK2DonkeyAPI
                             // he moved (the same day)
                             float keeperDepth = owner.KeeperNearestDepth(part.transform); // local -z = towards the camera
                             if (float.IsNaN(keeperDepth)) keeperDepth = part.transform.InverseTransformPoint(keeper.transform.position).z;
-                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth));
+                            // Flying, the lift goes along the camera's line of sight: along the part's own -z it moved the
+                            // front picture on the screen, the camera looking down at an angle: 3.1 art px lower than the
+                            // body picture in every frame of the user's video (2026-10-23 08-07-28, the front picture's
+                            // outline registered on the frames at 8 screen px an art px), so the near wing's halves in the
+                            // two layers no longer met and the hole round the rider's head sat 3 px low ("there are still
+                            // problems with the wing occlusion"). On the ground it stays as it was until the readout says
+                            // whether the ground has the same offset (the fold there is all front layer, and judged good).
+                            Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth), alongView: flying);
                         }
                         else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift); // above the body overlay too
+                        if (s.Body) FrontReadout.Note(owner, part, ov, fr, flying ? flyKey : null);
                     }
                 }
                 bool hide = show && (!skin.Def.Over || skin.Whole.Contains(mine)); // a whole frame (the erase colour) takes the part's place
@@ -2758,7 +2771,10 @@ namespace GK2DonkeyAPI
             // An overlay takes the part's material, block, flip, colour and the frame's trim offset (plus the skin's own
             // offset), and the sorting it is given; lift: how far in front of the part (OverLift). Nothing is written
             // that is already so.
-            private void Follow(SpriteRenderer ov, SpriteRenderer part, Sprite game, int layer, int order, float lift = 0f)
+            // alongView: the lift along the camera's line of sight (nothing moves on the screen, the camera being
+            // orthographic), not along the part's -z (which moves the picture on the screen when the camera looks down at
+            // an angle); the same distance.
+            private void Follow(SpriteRenderer ov, SpriteRenderer part, Sprite game, int layer, int order, float lift = 0f, bool alongView = false)
             {
                 if (ov.sharedMaterial != part.sharedMaterial) ov.sharedMaterial = part.sharedMaterial;
                 if (part.HasPropertyBlock())
@@ -2778,6 +2794,13 @@ namespace GK2DonkeyAPI
                 float ppu = game.pixelsPerUnit;
                 Vector2 own = owner != null && owner.HasCart ? skin.Def.OffsetCart : skin.Def.OffsetRide;
                 var local = new Vector3((off.x - Mathf.Floor(off.x) - own.x) / ppu * (part.flipX ? -1f : 1f), (off.y - Mathf.Floor(off.y) + own.y) / ppu, -lift);
+                Camera cam = alongView && lift > 0f ? Camera.main : null;
+                if (cam != null)
+                {
+                    Transform pt = part.transform;
+                    float world = pt.TransformVector(new Vector3(0f, 0f, lift)).magnitude;
+                    local = new Vector3(local.x, local.y, 0f) + pt.InverseTransformVector(-cam.transform.forward * world);
+                }
                 if (ov.transform.localPosition != local) ov.transform.localPosition = local;
             }
 

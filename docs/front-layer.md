@@ -34,8 +34,15 @@ Two bugs taught the lift:
    front of the mount's. Sorted above him but not lifted, the wing was drawn behind him (the first readback, 2026-10-20).
 2. **A fifth of a pixel is not enough.** Lifted by `OverLift` (0.004) past his body plane, the wing flickered with his
    shirt while he moved: the depth buffer cannot tell the two planes apart at the camera's distance, so each pixel
-   went to whichever won the rounding that frame. 0.05 is well past the buffer's step; being along the view axis it
-   moves nothing on screen.
+   went to whichever won the rounding that frame. 0.05 is well past the buffer's step.
+
+**Correction (2026-10-23):** the lift is *not* along the view axis. It runs along the part's own -z, and the camera
+looks down at an angle, so it also moves the front picture down on the screen:
+- **The ground:** 2.7 art px lower than the body picture, in both facings (`[occlusion]` readout). The folded wing that
+  was judged good on 2026-10-20 includes this drop. Aligning the ground means drawing the fold about 3 px lower, so
+  the look stays.
+- **Flight:** 3.1 art px, measured on the user's video. Flying, the lift now runs along the camera's line of sight
+  (`Follow(..., alongView)`), and the readout reads +0.0 / +0.0. See section 9.
 
 Neither is visible on the review page or in the Mods picture: only the world draws through the game's camera.
 That is why the front-layer self-test reads the world back (section 6).
@@ -161,6 +168,38 @@ checklist and the measurements replaced the hoping:
   lift past the nearest of his sprites by 2.5 px fixed the first two; the last three went away together when the
   wing was read again from the walking references and tucked against the flank, one piece with the body, its hem
   at the belly line above the legs (section 5).
+
+## 9. Flying: the spread wings (2026-10-23)
+
+The flying frames split the spread near wing between the two pictures. The full story, with every measurement, is
+in docs/flying.md ("The rider behind the spread wing"). The short version, for the next pass:
+
+- **This report was not read before that work began.** It cost a day: the box, the band and the head window were
+  all cuts, which section 3 already rules out. The composite checks passed while the game was wrong, which section 2
+  already warns of.
+- **Where it stands.** The near wing is front layer except over the rider's head (`rider_in_view`: x 64-82 up to row
+  37, x 64-75 for rows 38-42), so his head and face stay in front while the wing covers the rest of him. That is a
+  cut, and section 3 says the honest answer is a shape. With the lift fixed (section 2) and checked on the user's
+  video in both facings, it shows no seams and no clipped hair. Whether to keep the cut, or have the raised wing
+  cover his head for those frames as the rule says, is the user's call.
+- **How to check next time.** Use the world: the front-layer readback self-test (section 6), the `[occlusion]` log
+  lines (`Looks.FrontReadout`: the front picture against the body picture, and the facing), or the user's video
+  registered at its pixel scale. A composite only checks the frames against my own assumptions.
+- **The three choices, measured (2026-10-23; the preview page, the studies' head and body counts per frame):**
+
+  | | his head covered | him covered (worst frame) | the beat |
+  |---|---|---|---|
+  | A the cut (shipped) | never | 28% | as drawn |
+  | B the rule (the whole wing in front) | 7 of 13 spread-wing frames, up to 168 of his 192 head pixels | 52% | as drawn; he nearly vanishes at the top of every beat |
+  | C the shape (raised pose leaned back 35 degrees, `DRAGON_RAISED_TILT`) | never (2 px at most) | 33% | the top of the stroke much lower: raised and level look alike |
+
+  The user is to choose by eye.
+  - **In game:** the Flying tab's "Wing over the rider (a study)" row (A / B / C, switches at once,
+    `Flight.WingLook`).
+  - **The frames:** the dragon skin carries B and C as variant frames, `bdy_<clip>_b_left_NN` and
+    `bdy_<clip>_c_left_NN` (back and front), made by the generator's `WING_STUDIES`. The scans accept the `_b`/`_c`
+    suffix.
+  - **Once chosen:** remove the variants (`DRAGON_WING_STUDIES=0`, the suffix in the scans, the row).
 
 Related: docs/skins.md (the pack format), docs/mount-looks-design.md (the dragon), docs/sprite-tools.md (the
 pipeline and the hand-over checklist), docs/seat-investigation.md (the seat row), docs/self-tests.md.
