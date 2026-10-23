@@ -19,7 +19,7 @@ shows the game's export when there is one. The captures of the probe's Capture t
 
 LOCAL ONLY: the frames are the game's art (and ours); the page embeds them and stays on this machine.
 
-    python tools/skins/skin_preview_html.py <probe folder> <out.html> [--recipe id=folder ...]
+    python tools/skins/skin_preview_html.py <probe folder> <out.html> [--recipe id=folder ...] [--study <skin folder> ...]
 """
 import base64, io, json, os, re, sys
 
@@ -250,10 +250,13 @@ def main(argv):
         print(__doc__); return 2
     probe, out_path = argv[0], argv[1]
     recipes = {}
+    studies = []
     i = 2
     while i < len(argv):
         if argv[i] == "--recipe" and i + 1 < len(argv) and "=" in argv[i + 1]:
             rid, folder = argv[i + 1].split("=", 1); recipes[rid] = folder; i += 2
+        elif argv[i] == "--study" and i + 1 < len(argv):
+            studies.append(argv[i + 1]); i += 2   # a skin folder (skin.cfg + pictures) being drawn, not in the game
         else:
             i += 1
     # (Hellfire was a recipe until 2026-10-19 and had its drawn frames listed here; it is a built-in pack now, found with the others.)
@@ -372,6 +375,11 @@ def main(argv):
                 cfg = read_cfg(os.path.join(p, "skin.cfg"))
                 frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
                 add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p)
+    # 3b. studies: skin folders being drawn (a generator's output in a temp folder), shown with their mount
+    for p in studies:
+        if os.path.isfile(os.path.join(p, "skin.cfg")):
+            cfg = read_cfg(os.path.join(p, "skin.cfg"))
+            add(cfg.get(("Skin", "id"), os.path.basename(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (not in the game)", p)
     # 4. recipes drawn to pictures
     for rid, folder in sorted(recipes.items()):
         if os.path.isdir(folder):

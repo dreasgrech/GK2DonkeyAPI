@@ -66,6 +66,17 @@ namespace GK2DonkeyAPI
         internal static bool ProbeOn;        // the per-frame [flight-probe] lines (the tab; off: 70 000 lines filled the log)
         private static Mount.Instance owner;
         private static float heightPx, jumpVel, bobT, beatT;
+        private static float groundBelowPx;          // flying free: how far the ground lies under the body (the body keeps its height off a plateau)
+        private static bool bodyMoved;               // the body was put somewhere this frame (a landing): the camera catches up at once
+
+        // The flight's height above the real ground under it: above the body, plus how far the ground lies under the
+        // body. The flare and the landing frames go by it: by the height above the body, a dragon 87 px over the ground
+        // (2.4 under the plateau it took off from) flared and showed its landing legs, then flew on down with the wings
+        // beating again (the user's cut, 2026-10-23: "frame bdy_land_left_01 -> bdy_fly_left_04" in the jump lines).
+        // Both ways: a plateau higher than the body (landing on it from lower ground) counts too, or the dragon dove at
+        // full speed to the floor 16 px over the plateau, was set down there, and touched down at once from its dive
+        // (the user's second cut, 2026-10-23: "the body down -2.40", frame fly_04 -> land_01, landed the same moment).
+        internal static float AboveGroundPx => Mathf.Max(0f, heightPx + (Free ? groundBelowPx : 0f));
         private static Mount.Instance lastOwner;
         private static float vel, phaseT, nextBeat, thudT = -1f; // the launch's and the landing's motion
         private static int beatsLeft;
@@ -131,7 +142,7 @@ namespace GK2DonkeyAPI
                     return Beat();
                 case Phase.Landing:
                     if (thudT >= 0f) return "bdy_land_left_03";                         // touching down
-                    if (heightPx <= FlarePx) return heightPx <= FlarePx * 0.5f ? "bdy_land_left_02" : "bdy_land_left_01";
+                    if (AboveGroundPx <= FlarePx) return AboveGroundPx <= FlarePx * 0.5f ? "bdy_land_left_02" : "bdy_land_left_01";
                     return Beat();
                 default:
                     return null;
@@ -221,6 +232,16 @@ namespace GK2DonkeyAPI
             if (Now != Phase.Ground) { bobT += dt; beatT += dt; }
             FreeTick(i);
             FollowCamera();
+            if (bodyMoved)
+            {
+                // The body was put down on the ground under it this frame and the lift grew by the drop, so the mount's
+                // height is the same; the camera's offset grew at once, but its follow of the body eases down over many
+                // frames: the view jumped up 2.3 and came back down (the user's cut while landing, 2026-10-23: "on the
+                // screen 972 -> 684, camera y 14.583 -> 16.841"). The camera catches up with the body at once instead.
+                bodyMoved = false;
+                CameraController cc = CameraSystem.Instance != null ? CameraSystem.Instance.ActiveCameraController : null;
+                if (cc != null) { cc.UpdateTargetPosInstant(); Plugin.Log.LogInfo("[flight] the body was set down: the camera caught up with it at once"); }
+            }
             LiftBubble();
             if (ProbeOn) Probe.AtTick(i);
             Jumps.AtTick(i);
@@ -260,11 +281,13 @@ namespace GK2DonkeyAPI
             // the drawn ground under the flight (a level drawn with no collider: a rock table's top, a ledge): ground too
             float drawn = UseDrawnGround ? DrawnGround.HighestAt(rb.position.x, rb.position.z, alt + 0.05f, out _) : float.NaN;
             float groundTop = float.IsNaN(drawn) ? under : float.IsNaN(under) ? drawn : Mathf.Max(under, drawn);
+            groundBelowPx = float.IsNaN(groundTop) ? 0f : (rb.position.y - groundTop) / PxWorldY; // the ground this far under the body (a plateau left behind)
             // the ground: the clear height above it always; what is drawn on it: never inside it, and the clear height
             // above it only coming down (flying on over a rock, the bumping already keeps the flight above its top)
             float floorPx = ClearPx + (!float.IsNaN(groundTop) && groundTop > rb.position.y ? (groundTop - rb.position.y) / PxWorldY : 0f);
             if (!float.IsNaN(top)) floorPx = Mathf.Max(floorPx, (top - rb.position.y) / PxWorldY + (Now == Phase.Landing || descending ? ClearPx : 0f));
             Jumps.Floor(under, drawn, top, floorPx);
+            thingTop = top;
             if (heightPx < floorPx)
             {
                 // a landing (or the descend key) asks the ground; flying low over a rise just keeps above it
@@ -307,6 +330,8 @@ namespace GK2DonkeyAPI
 
         // A landing under him: the ground must hold him (SafeGround's rules). The body comes down to it and the picture
         // keeps its place (the height grows by the drop), then descends as any landing.
+        private static float thingTop = float.NaN; // what the floor found drawn under the flight this frame (FloorUnder)
+
         private static bool TryLand(PlayerController pc, float under)
         {
             nextLandTry = Time.unscaledTime + 0.25f;
@@ -314,6 +339,12 @@ namespace GK2DonkeyAPI
             Vector3 spot = rb.position;
             if (!float.IsNaN(under)) spot.y = under; // judged at the ground under the flight, not at the body's height
             string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot);
+            // Something drawn stands under the flight higher than the ground the landing would put him on (a rock, a
+            // roof, a cart): no landing through it. Seen 2026-10-23 at 40.62, 19.68: the floor found a thing drawn up to
+            // 6.72 over ground at 3.60, the landing went on, put the body on the ground under it and the dragon came
+            // down through it. The dragon stays on top of it instead ("Nowhere to land here.").
+            if (why == null && !float.IsNaN(thingTop) && thingTop > spot.y + 0.6f)
+                why = $"something drawn stands there, up to {thingTop:F2}, over the ground at {spot.y:F2}";
             if (why != null)
             {
                 Why = "can't land here: " + why;
@@ -322,12 +353,13 @@ namespace GK2DonkeyAPI
                 if (why != lastRefusal || Time.unscaledTime - lastRefusalSaid > 3f)
                 {
                     lastRefusal = why; lastRefusalSaid = Time.unscaledTime;
-                    Plugin.Log.LogInfo("[flight] " + Why + (Now == Phase.Landing ? " (the landing is called off: up again)" : " (holding the clear height)"));
+                    Plugin.Log.LogInfo("[flight] " + Why + (Now == Phase.Landing ? " (the landing is called off: hovering here)" : " (holding the clear height)"));
                 }
-                // A landing refused is called off: the dragon pulls up to its flying height and waits for the next Land
-                // (the user, 2026-10-22: after one refusal it kept trying everywhere it went until a spot took it).
+                // A landing refused is called off: the dragon hovers where it was refused, at the floor's height, and waits
+                // for the next Land (the user, 2026-10-22: after one refusal it kept trying everywhere it went until a spot
+                // took it; 2026-10-23: pulled back up to the flying height it "shoots back up" instead of hovering there).
                 // The descend key held down stays at the floor: letting go of it is the player's call.
-                if (Now == Phase.Landing) Set(Phase.Rising, "pulling up: nowhere to land here");
+                if (Now == Phase.Landing) { vel = 0f; Set(Phase.Airborne, "hovering: nowhere to land here"); }
                 return false;
             }
             float drop = rb.position.y - spot.y;
@@ -344,7 +376,11 @@ namespace GK2DonkeyAPI
             if (pb == null) return;
             try
             {
-                if (put.HasValue) pb.SetPosition(put.Value);
+                if (put.HasValue)
+                {
+                    bodyMoved = (put.Value - pb.Rb.position).sqrMagnitude > 0.0025f;
+                    pb.SetPosition(put.Value);
+                }
                 pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, true);
             }
             catch (System.Exception e) { Plugin.Log.LogWarning("[flight] giving the body back failed: " + e.Message); }
@@ -477,7 +513,8 @@ namespace GK2DonkeyAPI
                 internal Phase Phase;
                 internal bool Free;
                 internal Vector3 At;
-                internal float ScreenY, CamY;
+                internal float ScreenY, CamY, ScreenX;
+                internal Vector3 Cam;
                 internal string Frame_;
             }
 
@@ -510,6 +547,7 @@ namespace GK2DonkeyAPI
                     H = heightPx, Lift = LiftFor(who), Phase = Now, Free = Free, Under = under, Drawn = drawn, Top = top, FloorPx = floorPx,
                     At = rb.position,
                     ScreenY = cam.WorldToScreenPoint(who.Position).y, CamY = cam.transform.position.y, Frame_ = FrameFor(who) ?? "the game's",
+                    ScreenX = cam.WorldToScreenPoint(who.Position).x, Cam = cam.transform.position,
                 };
                 // Logged: a step of the drawn mount that the flight's own height doesn't explain (the mount moved more than
                 // the body plus the lift did, by 2 px or more), or any step of 12 px or more. A launch to 200 px climbs
@@ -528,7 +566,7 @@ namespace GK2DonkeyAPI
                         $"mount {last.Mount:0.000} -> {now.Mount:0.000}; body (drawn) {last.BodyT:0.000} -> {now.BodyT:0.000}, (physics) {last.BodyP:0.000} -> {now.BodyP:0.000}; " +
                         $"height {last.H:0.0} -> {now.H:0.0} px, lift {last.Lift:0.000} -> {now.Lift:0.000}; {last.Phase}{(last.Free ? " free" : "")} -> {now.Phase}{(now.Free ? " free" : "")}; " +
                         $"floor: walkable {last.Under:0.00} -> {now.Under:0.00}, drawn ground {last.Drawn:0.00} -> {now.Drawn:0.00}, drawn things {last.Top:0.00} -> {now.Top:0.00}, floor {last.FloorPx:0} -> {now.FloorPx:0} px; " +
-                        $"on the screen {last.ScreenY:0} -> {now.ScreenY:0} (camera y {last.CamY:0.000} -> {now.CamY:0.000}); frame {last.Frame_} -> {now.Frame_}");
+                        $"on the screen {last.ScreenX:0},{last.ScreenY:0} -> {now.ScreenX:0},{now.ScreenY:0} (camera {last.Cam.x:0.000},{last.Cam.y:0.000},{last.Cam.z:0.000} -> {now.Cam.x:0.000},{now.Cam.y:0.000},{now.Cam.z:0.000}; the body {last.At.x:0.000},{last.At.z:0.000} -> {now.At.x:0.000},{now.At.z:0.000}); frame {last.Frame_} -> {now.Frame_}");
                 }
                 last = now;
                 have = true;
@@ -693,7 +731,7 @@ namespace GK2DonkeyAPI
                 if (thudT >= thudS) Land("landed");
                 return;
             }
-            if (heightPx > FlarePx) vel = Mathf.Max(vel - DiveAccelPxPerS2 * dt, -DiveSpeedPxPerS);
+            if (AboveGroundPx > FlarePx) vel = Mathf.Max(vel - DiveAccelPxPerS2 * dt, -DiveSpeedPxPerS);
             else vel = Mathf.MoveTowards(vel, -TouchSpeedPxPerS, DiveAccelPxPerS2 * 1.5f * dt);
             heightPx += vel * dt;
             if (heightPx <= 0f)

@@ -454,6 +454,7 @@ def _tone(ramp, light):
 
 
 SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
+RAISE = int(os.environ.get("DRAGON_RAISE", "6"))  # the body 6 px higher on longer legs (the user chose it from the preview page, 2026-10-23); the seat row (68 -> 62) moves with it
 
 
 def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0):
@@ -466,7 +467,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     walking = phase != 0.0 and fly is None
     tb = fly if (fly is not None and legs_mode == "tuck") else None   # the beat drives the body (flying only)
     gb = 0.0 if tb is None else tb                                    # 0 wings raised .. 1 swept down
-    bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift
+    bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift - RAISE
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     L = (-0.6, -0.8)
@@ -710,77 +711,128 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
     else:
         spread_wing(False, fly)
 
-    # ---- the legs (far first): a thigh, a shin, a wide clawed foot
-    def gait(off):
-        a = math.sin(2 * math.pi * (phase + off)) if walking else 0.0
-        lift = max(0.0, math.cos(2 * math.pi * (phase + off))) * 2.0 if walking else 0.0
-        return a, lift
+    # ---- the legs, as the user's reference draws a dragon's (2026-10-23: ours were sticks with flat bar feet that slid
+    # along, "a slide or a crawl rather than a walk", and in the air "hooves"): thick muscled limbs that taper, the
+    # hind leg a big thigh, a shin and a long foot rising to the hock, the foreleg an upper arm and a forearm; every
+    # paw a pad with three curved claws in the horn colour, the claws resting on the ground walking and hanging down
+    # (the forepaws) or trailing back (the hind) in the air. Lit from the upper left like the body; the far pair darker
+    # and a few px back. Walking: each foot is planted and slides back under the body while it carries (the stance),
+    # then lifts, the knee bending, and swings forward on an arc (the swing); the four in the walk's order (near hind,
+    # near fore, far hind, far fore, a quarter of the cycle apart).
+    def bone(a, b, r0, r1, ramp, dst=None):
+        ax, ay = a
+        bx, by = b
+        Lg = math.dist(a, b) or 1e-6
+        ux, uy = (bx - ax) / Lg, (by - ay) / Lg
+        nx, ny = -uy, ux                                      # the side normal; lit where it faces the light (upper left)
+        if nx * L[0] + ny * L[1] < 0:
+            nx, ny = -nx, -ny
+        R = max(r0, r1)
+        for y in range(int(min(ay, by) - R) - 1, int(max(ay, by) + R) + 2):
+            for x in range(int(min(ax, bx) - R) - 1, int(max(ax, bx) + R) + 2):
+                X, Y = x + 0.5, y + 0.5
+                t = max(0.0, min(1.0, ((X - ax) * ux + (Y - ay) * uy) / Lg))
+                cx, cy = ax + ux * Lg * t, ay + uy * Lg * t
+                r = r0 + (r1 - r0) * t
+                d = math.hypot(X - cx, Y - cy)
+                if d > r:
+                    continue
+                side = ((X - cx) * nx + (Y - cy) * ny) / max(r, 0.5)   # +1 the lit side, -1 the shadow side
+                col = ramp[3] if side > 0.45 else ramp[2] if side > -0.35 else ramp[1]
+                put(x, y, col, dst)
 
-    def limb(a, b, w, ramp, dst=None):
-        n = int(max(abs(b[0] - a[0]), abs(b[1] - a[1])) * 2) + 1
-        for t in range(n + 1):
-            x, y = a[0] + (b[0] - a[0]) * t / n, a[1] + (b[1] - a[1]) * t / n
-            for ox in range(-(w // 2), w - w // 2):
-                put(x + ox, y, ramp[2] if ox < 0 else ramp[1], dst)
+    # The paws, placed by hand pixel by pixel (procedural claws at this size read as a broom or a hoof, the user's
+    # second look 2026-10-23): the reference's paw is a red pad with separate claws in yellow (ours: the belly's gold),
+    # a gap between each. Facing left; (0, 0) is the end of the limb. 'ground' walking: the toes forward along the
+    # ground, the claw tips touching it (the bottom row is the ground row); 'hang' in the air or lifted: the claws
+    # down and a little forward; 'trail' the hind paw flying: the claws back and down.
+    # r/R the pad (lit, shadow), g/G/d the claws (light, mid, dark)
+    PAWS = {
+        "ground": ((-5, 0), ["...rrR",
+                             "GgdgrR"]),
+        "hang": ((-2, 0), [".rrR",
+                           ".rrR",
+                           "g.g.",
+                           "G.G."]),
+        "trail": ((-1, 0), ["Rrr.",
+                            "Rrr.",
+                            ".g.g",
+                            "..G.G"]),
+    }
 
-    def foot(fx, fy, ramp, dst=None):
-        for ox in range(-5, 2):
-            put(fx + ox, fy, ramp[1] if ox > -5 else DHORN[1], dst)
-        for ox in (-5, -3, -1):
-            put(fx + ox, fy - 1, DHORN[2], dst)
-        put(fx + 1, fy - 1, ramp[2], dst)
+    def paw(at, kind, ramp, dst=None):
+        (ox, oy), rows = PAWS[kind]
+        cols = {"r": ramp[2], "R": ramp[1], "g": DBELLY[3], "G": DBELLY[2], "d": DBELLY[1]}
+        for j, row in enumerate(rows):
+            for i, ch in enumerate(row):
+                if ch in cols:
+                    put(round(at[0]) + ox + i, round(at[1]) + oy + j, cols[ch], dst)
 
-    def claws(fx, fy, ramp, back):
-        # a paw hanging in the air: a knuckle and three claws pointing down (the forepaw) or down and back (the hind)
-        for ox in (-1, 0, 1):
-            put(fx + ox, fy, ramp[1])
-        for k, ox in enumerate((-1, 0, 1)):
-            for dy in (1, 2):
-                put(fx + ox + (dy * 0.6 if back else -dy * 0.3), fy + dy, DHORN[2 if dy == 2 else 1])
+    def ik(hip, foot, l1, l2, bend):
+        # the knee of a two-bone limb from hip to foot; bend +1 = the knee behind the line (an elbow), -1 = in front
+        d = min(math.dist(hip, foot), l1 + l2 - 0.01)
+        ang = math.atan2(foot[1] - hip[1], foot[0] - hip[0])
+        a = math.acos(max(-1.0, min(1.0, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))))
+        k = ang - bend * a
+        return (hip[0] + l1 * math.cos(k), hip[1] + l1 * math.sin(k))
+
+    STRIDE, LIFT, STANCE = 9.0, 4.0, 0.62
+
+    def step_at(q, cx):
+        # the foot's place over the cycle: planted and sliding back, then lifted and swung forward
+        q %= 1.0
+        if q < STANCE:
+            return (cx - STRIDE / 2 + STRIDE * q / STANCE, GROUND), False   # planted: slides back towards the tail (+x) as the body walks on (it faces left)
+        u = (q - STANCE) / (1 - STANCE)
+        e = u * u * (3 - 2 * u)
+        return (cx + STRIDE / 2 - STRIDE * e, GROUND - LIFT * math.sin(math.pi * u)), True   # lifted: swings forward to the head (-x); walked backwards the other way round (the user, 2026-10-23)
+
+    def foreleg(hip, foot, ramp, paw_kind):
+        elbow = ik(hip, foot, 6.5 + RAISE * 0.5, 6.5 + RAISE * 0.5, +1)
+        bone(hip, elbow, 3.6, 2.6, ramp)
+        bone(elbow, foot, 2.6, 1.8, ramp)
+        paw(foot, paw_kind, ramp)
+
+    def hindleg(hip, hock, toe, ramp, paw_kind):
+        knee = ik(hip, hock, 7.5 + RAISE * 0.55, 6.0 + RAISE * 0.45, -1)
+        bone(hip, knee, 5.2, 3.2, ramp)                       # the big thigh
+        bone(knee, hock, 3.0, 2.0, ramp)
+        bone(hock, toe, 2.0, 1.6, ramp)                       # the long foot up to the hock
+        paw(toe, paw_kind, ramp)
 
     def legs(far):
-        ramp = DRG[0:3] if far else DRG[1:4]
-        dx = 3 if far else 0
-        if legs_mode != "walk":
-            # the reference's flying dragon: the forelegs bent up and forward under the chest, claws hanging; the hind
-            # legs trailing back under the tail root. Reaching (landing): both stretched down and a little forward.
-            # Pushing (taking off): the hind legs straight down, the forelegs folding.
-            fh = (39 + dx, 54 + bob)
-            if legs_mode == "reach":
-                fk, ff = (37 + dx, 61 + bob), (34 + dx, 67 + bob)
-            elif legs_mode == "push":
-                fk, ff = (35 + dx, 59 + bob), (31 + dx, 58 + bob)
-            else:   # flying: hanging forward and down with the wings up, drawn up under the chest on the downstroke
-                fk = (lp((31, 62), (33, 59), gb)[0] + dx, lp((31, 62), (33, 59), gb)[1] + bob)
-                ff = (lp((34, 68), (36, 63), gb)[0] + dx, lp((34, 68), (36, 63), gb)[1] + bob)
-            flying_legs = legs_mode == "tuck"
-            limb(fh, fk, 5 if flying_legs else 4, ramp)
-            limb(fk, ff, 4 if flying_legs else 3, ramp)
-            claws(ff[0], ff[1], ramp, back=False) if flying_legs else foot(ff[0], ff[1], ramp)
-            hh = (66 + dx, 54 + bob)
-            if legs_mode == "reach":
-                hk, hf = (67 + dx, 61 + bob), (64 + dx, 67 + bob)
-            elif legs_mode == "push":
-                hk, hf = (68 + dx, 60 + bob), (68 + dx, min(GROUND, 67 + bob))
-            else:   # flying: stretched down and back with the wings up, pulled forward under the belly on the downstroke
-                hk = (lp((72, 63), (69, 63), gb)[0] + dx, lp((72, 63), (69, 63), gb)[1] + bob)
-                hf = (lp((81, 70), (63, 69), gb)[0] + dx, lp((81, 70), (63, 69), gb)[1] + bob)
-            limb(hh, hk, 7 if flying_legs else 5, ramp)
-            limb(hk, hf, 4 if flying_legs else 3, ramp)
-            claws(hf[0], hf[1], ramp, back=True) if flying_legs else foot(hf[0], hf[1], ramp)
+        ramp = (DRG[0], DRG[0], DRG[1], DRG[2]) if far else (DRG[0], DRG[1], DRG[2], DRG[3])
+        dx, dy = (3, -1) if far else (0, 0)
+        fhip, hhip = (39 + dx, 53 + bob + dy), (66 + dx, 53 + bob + dy)
+        fwd = (-1.0, 0.0)
+        if legs_mode == "walk":
+            qf = phase + (0.75 if far else 0.25)
+            qh = phase + (0.5 if far else 0.0)
+            if not walking:
+                qf = qh = 0.31                                 # standing: each foot under its hip
+            (ff, f_up), (ht, h_up) = step_at(qf, 36 + dx), step_at(qh, 66 + dx)
+            ff = (ff[0], ff[1] + dy - 1)
+            ht = (ht[0], ht[1] + dy - 1)                      # the paw's pad row; its bottom row is the ground's
+            foreleg(fhip, ff, ramp, "hang" if f_up else "ground")
+            hock = (ht[0] + 3.0, ht[1] - (4.5 if h_up else 3.5))
+            hindleg(hhip, hock, ht, ramp, "hang" if h_up else "ground")
             return
-        a, lift = gait(0.5 if far else 0.0)
-        hx, hy = 39 + dx, 54 + bob
-        fx, fy = 36 + dx - 3.5 * a, GROUND - lift
-        limb((hx, hy), (hx + 1.5, 59 + bob), 4, ramp)
-        limb((hx + 1.5, 59 + bob), (fx, fy), 3, ramp)
-        foot(fx, fy, ramp)
-        a, lift = gait(0.0 if far else 0.5)
-        hx, hy = 66 + dx, 54 + bob
-        fx, fy = 66 + dx - 4.0 * a, GROUND - lift
-        limb((hx, hy), (hx - 2, 59 + bob), 5, ramp)                          # both hind legs: the tucked wing ends at the belly line above them
-        limb((hx - 2, 59 + bob), (fx, fy), 3, ramp)
-        foot(fx, fy, ramp)
+        if legs_mode == "reach":                              # landing: both pairs stretched down for the ground
+            foreleg(fhip, (34 + dx, 66 + bob + dy), ramp, "hang")
+            hindleg(hhip, (67 + dx, 63 + bob + dy), (64 + dx, 67 + bob + dy), ramp, "hang")
+            return
+        if legs_mode == "push":                               # taking off: the hind legs straight down off the ground
+            foreleg(fhip, (33 + dx, 60 + bob + dy), ramp, "hang")
+            hindleg(hhip, (69 + dx, 61 + bob + dy), (67 + dx, min(GROUND - 1, 66 + bob + dy)), ramp, "ground")
+            return
+        # flying (the reference): the forearms hanging, the paws' claws down and forward; the hind leg's thigh forward
+        # and down, the foot trailing back, its claws pointing back; raised wings = the legs stretched back, the
+        # downstroke = drawn up under the body
+        ff = lp((32, 67), (35, 62), gb)
+        foreleg(fhip, (ff[0] + dx, ff[1] + bob + dy), ramp, "hang")
+        hock = lp((74, 62), (70, 63), gb)
+        toe = lp((81, 66), (66, 67), gb)
+        hindleg(hhip, (hock[0] + dx, hock[1] + bob + dy), (toe[0] + dx, toe[1] + bob + dy), ramp, "trail")
 
     legs(far=True)
 
@@ -996,7 +1048,7 @@ def frames_for(fn):
 # HitchGapPx; the donkey's is 0; None = not measured yet: the "cart readout" self-test says what it is)
 CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 55, None),
              ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 52, 9),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68, 24))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, 24))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one

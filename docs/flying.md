@@ -363,6 +363,19 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   on the downstroke; the head a little higher with the wings raised, lower with them down; the chest leads up with the
   wings raised. And in code (`Flight.BeatBobPx`, 3 px, the tab): the whole dragon and the rider rise through each
   downstroke and sink on the upstroke, in place of the hover, since a frame can't move the seat.
+- Third pass, the legs (the user, 2026-10-23: walking "a slide or a crawl", flying feet "like a hoof"; "don't rush,
+  learn from the reference"): the reference's legs are as long as its body is deep, thick and muscled, a big thigh,
+  a shin and a long foot up to the hock, a strong forearm, every paw a red pad with separate yellow claws. Ours were
+  6 px sticks under the folded wing's hem with flat bar feet. Now: tapered, shaded limbs (`bone`), two-bone IK
+  (`ik`; the elbow bends back, the knee forward, the hind foot rising to the hock), a walk that plants each foot,
+  slides it back under the body and swings it forward on a 4 px arc (stance 62 %, the four feet a quarter apart),
+  and hand-placed paws (`PAWS`: "ground" toes forward with the gold claw tips on the ground, "hang" claws down,
+  "trail" the hind paw flying, claws back; procedural claws read as a broom). The body stands 6 px higher on the
+  longer legs (`RAISE`; the user chose it on the preview page from a "body as now" / "6 px higher" pair, the
+  preview's new `--study <folder>`), so the seat row moved 68 -> 62 (skin.cfg; the self-test reads the skin's row).
+  To check in game: the rider on the seat, the cart's harness and hitch gap at the new height.
+  The walk first went backwards (the user): the planted foot slid towards the head; now it slides back towards the
+  tail while it carries and swings forward to the head (`step_at`; the dragon faces left).
 - Known for the next pass: the raised wing goes behind the rider (a compromise); the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
 
 ### Height jumps across the land (2026-10-23, investigating)
@@ -377,6 +390,31 @@ For the rest, a detector, always on while flying (`Flight.Jumps`): a step of the
 in one frame is logged as `[flight] jump of N px in one frame at x,z:` with the mount's height, the body's (drawn
 and physics), the flight's height and lift, the phase and free flight, and the floor's four reads, before and after.
 Every remaining kind of jump will name its cause there.
+
+- The cut while landing (2026-10-23, caught by the detector at 83.22, 12.88): the dragon took off from a plateau
+  (6.0) and came down over ground 2.4 lower. The landing put the body down 2.42 and grew the lift by as much (the
+  mount's height unchanged, 6.583 -> 6.600), but "on the screen 972 -> 684 (camera y 14.583 -> 16.841)": the
+  camera's offset grew at once while its follow of the body eased down over the next frames, so the view jumped
+  up 2.3 and slid back. And the frames went `land_01 -> fly_04`: the flare had been judged on the height above the
+  body (16 px) while the dragon was still 87 px over the ground, then the beat came back. Fixed: after the body is
+  set down the camera catches up at once (`CameraController.UpdateTargetPosInstant`, logged), and the flare and
+  the landing frames go by the height above the real ground under the flight (`Flight.AboveGroundPx`).
+  A second cut the same night, the other way round (12.48, 13.98: landing on a plateau 2.4 above the body): the
+  dragon dove at full speed to the floor over the plateau, was set down and touched down from its dive in the same
+  moment (frame fly_04 -> land_01, "landed" at once). `AboveGroundPx` counted only ground below the body; it now
+  counts ground above it too, so the flare starts over the plateau as over any ground. The camera catch-up worked
+  there (camera y 14.567 -> 14.534).
+
+- A refused landing now hovers where it was refused (at the floor), airborne, waiting for the next Land (the
+  user, 2026-10-23: it shot back up to the flying height); still no landing at the next spot that would take it.
+
+- More cuts from the same build (2026-10-23, the log): at 40.62, 19.68 the floor found a thing drawn up to 6.72 under
+  the flight (over ground at 3.60), the landing still went on, the body was set down on the ground under the thing
+  and the dragon came down through it; and the camera's catch-up there moved the dragon 322 px on the screen with the
+  camera's height unchanged (1094 -> 772): the catch-up also ends the camera's sideways lag behind a moving body, a
+  cut of its own. Fixed: no landing where something drawn stands higher than the ground (the dragon stays on top).
+  Open, measured next: the detector now logs the camera's and the body's x and z too, to see the sideways lag the
+  catch-up removes before changing how the camera catches up.
 
 Not yet known: what draws the table (one mesh, its bounds, readable or not), whether any collider at all lies under
 its top (another layer, a trigger, back faces only), and whether such places are common (decorative cliffs, map

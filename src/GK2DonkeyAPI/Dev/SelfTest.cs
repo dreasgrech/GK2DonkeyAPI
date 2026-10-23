@@ -1928,8 +1928,9 @@ namespace GK2DonkeyAPI
                 {
                     Vector3 at = ov.bounds.center;
                     float hipRow = a.I.TestHipCanvasRow();
-                    Info($"the rider's hip sits on canvas row {hipRow:0.0} of the dragon's 128 (declared seat = 68; the review strips draw him there)");
-                    Check(!float.IsNaN(hipRow) && Math.Abs(hipRow - 68f) < 2.5f, $"the rider's hip is on the declared row ({hipRow:0.0} vs 68)");
+                    int seatRow = Looks.Find("dragon")?.SeatRow ?? 62; // the skin's own (62 since the longer legs, 2026-10-23)
+                    Info($"the rider's hip sits on canvas row {hipRow:0.0} of the dragon's 128 (declared seat = {seatRow}; the review strips draw him there)");
+                    Check(!float.IsNaN(hipRow) && Math.Abs(hipRow - seatRow) < 2.5f, $"the rider's hip is on the declared row ({hipRow:0.0} vs {seatRow})");
                     SpriteRenderer partNow = a.I.LooksRig.TestPart();
                     if (partNow != null) Info($"depths in the body part's space (local z, negative = towards the camera): the keeper {partNow.transform.InverseTransformPoint(keeper.transform.position).z:0.000}, the front picture {partNow.transform.InverseTransformPoint(front.transform.position).z:0.000}, the body overlay {partNow.transform.InverseTransformPoint(ov.transform.position).z:0.000}");
                     // the nearest of his sprites decides the lift (Looks.Rig.FrontLift): each drawn one, in the same space

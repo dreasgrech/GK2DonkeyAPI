@@ -509,6 +509,9 @@ For mod authors:
 
 Development:
 
+- **The dragon's legs redrawn** (mounts and skins are still off for players in this version): long, muscled legs that
+  step properly when walking, paws with gold claws, the body 6 px higher on them (its seat row 62).
+  The skin preview page takes `--study <folder>` to show a skin being drawn next to the shipped one.
 - **The dragon flies with its wings spread** (the flying experiment): 14 new frames drawn by the creature generator
   (the wing beat, the take-off, the landing), played while the dragon is in the air; the skin scans accept them.
 - **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
