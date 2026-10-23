@@ -10,7 +10,7 @@ namespace GK2DonkeyAPI
         private static readonly KeyCode[] FlightKeyChoices =
         {
             KeyCode.Space, KeyCode.R, KeyCode.F, KeyCode.J, KeyCode.T, KeyCode.Y, KeyCode.U, KeyCode.Z, KeyCode.X, KeyCode.C, KeyCode.V,
-            KeyCode.LeftControl, KeyCode.LeftAlt, // not PageUp/PageDown/Home (the Grave Zoom mod's zoom), not the keypad (the tuning keys)
+            KeyCode.LeftShift, KeyCode.LeftControl, KeyCode.LeftAlt, // not PageUp/PageDown/Home (the Grave Zoom mod's zoom), not the keypad (the tuning keys)
         };
 
         private static void DrawFlying()
@@ -60,7 +60,7 @@ namespace GK2DonkeyAPI
             if (FlightSurvey.LastResult.Length > 0) GUILayout.Label(FlightSurvey.LastResult, small);
 
             Header("Heights and speeds (art pixels)");
-            Flight.CruisePx = SessionFloatRow("Height a take-off climbs to", Flight.CruisePx, 4f, 200f, "Art pixels above where the ground puts the mount.");
+            Flight.CruisePx = SessionFloatRow("Height a take-off climbs to", Flight.CruisePx, 4f, 320f, "Art pixels above where the ground puts the mount.");
             Flight.MaxPx = SessionFloatRow("Highest (the climb key stops here)", Flight.MaxPx, 8f, 400f);
             Flight.ClimbPxPerS = SessionFloatRow("Climb and descend speed (px per second)", Flight.ClimbPxPerS, 5f, 200f);
             Flight.BobPx = SessionFloatRow("Hover: up and down (px)", Flight.BobPx, 0f, 8f, "The mount rises and sinks this much while airborne, eased in near the ground.");

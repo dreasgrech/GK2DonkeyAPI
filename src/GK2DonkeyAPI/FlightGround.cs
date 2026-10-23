@@ -170,6 +170,11 @@ namespace GK2DonkeyAPI
                     if ((bit & GroundLayers) != 0 || (bit & OccluderLayers) != 0) y = h.point.y;
                     else if (Blocks(rb, c, Vector3.up)) y = Mathf.Max(h.point.y, ObjectTop(c, out _));
                     else continue;
+                    // Only what is under the mount's feet: a thing drawn higher than them (a tree whose trunk the cast met
+                    // while the dragon flew low past its crown) is beside or around the flight, not a floor; taken as one, it
+                    // lifted the flight 134 px in one frame to the tree's top (the log, 2026-10-23: "drawn things up to
+                    // 9.77, now 185 px up" over ground at 3.6). The bumping keeps the flight out of such things sideways.
+                    if (y > alt + 0.05f) continue;
                     if (float.IsNaN(best) || y > best) best = y;
                 }
                 return best;

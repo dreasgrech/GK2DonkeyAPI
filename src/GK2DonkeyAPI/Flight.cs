@@ -21,8 +21,8 @@ namespace GK2DonkeyAPI
         internal static bool Enabled = true;
         internal static bool Active => Enabled && DevTools.Unlocked;
         internal static bool AnyMount;             // off: the dragon only
-        internal static float CruisePx = 48f;      // the height a take-off climbs to
-        internal static float MaxPx = 160f;        // the climb key stops here
+        internal static float CruisePx = 200f;     // the height a take-off climbs to (48 until 2026-10-23, the user)
+        internal static float MaxPx = 320f;        // the climb key stops here (above the take-off height)
         // The take-off and the landing as a dragon's, not an elevator's (the user, 2026-10-22: "it feels like a slow
         // elevator"): a crouch, then a spring launch with wing-beat surges that overshoots a little and settles; down, a
         // dive that speeds up, a flare near the ground and a thud on touching it.
@@ -54,7 +54,7 @@ namespace GK2DonkeyAPI
         internal static float WingBeatS = 0.6f;    // one wing beat (the six flying frames)
         internal static float BeatBobPx = 3f;      // the body's rise on each downstroke, with the flying frames
         internal static bool FlyFrames = true;     // the skin's flying frames while airborne (off: its walk and idle frames)
-        internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.R, DownKey = KeyCode.F, JumpKey = KeyCode.J;
+        internal static KeyCode TakeOffKey = KeyCode.Space, UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl, JumpKey = KeyCode.J; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
 
         internal enum Phase { Ground, Rising, Airborne, Landing, Jumping }
 
@@ -223,6 +223,7 @@ namespace GK2DonkeyAPI
             FollowCamera();
             LiftBubble();
             if (ProbeOn) Probe.AtTick(i);
+            Jumps.AtTick(i);
         }
 
         // ------------------------------------------------------------------ step 2: free flight
@@ -263,6 +264,7 @@ namespace GK2DonkeyAPI
             // above it only coming down (flying on over a rock, the bumping already keeps the flight above its top)
             float floorPx = ClearPx + (!float.IsNaN(groundTop) && groundTop > rb.position.y ? (groundTop - rb.position.y) / PxWorldY : 0f);
             if (!float.IsNaN(top)) floorPx = Mathf.Max(floorPx, (top - rb.position.y) / PxWorldY + (Now == Phase.Landing || descending ? ClearPx : 0f));
+            Jumps.Floor(under, drawn, top, floorPx);
             if (heightPx < floorPx)
             {
                 // a landing (or the descend key) asks the ground; flying low over a rise just keeps above it
@@ -458,6 +460,79 @@ namespace GK2DonkeyAPI
             }
             rb.MovePosition(next);
             pc.PlayerData.position.Value = next;
+        }
+
+        // The jump detector (the user, 2026-10-23: "flying across the land the height sometimes jumps from one height
+        // to another at once"): every frame while off the ground, where the mount is drawn (its root, set by Follow in
+        // the frame before the draw) against the frame before; a step of more than 3 art px in one frame is logged with
+        // everything the height is made of, then and before: the body's height (its interpolated transform and its
+        // physics position), the flight's height, the lift, the phase, free or not, and the floor's four reads (walkable
+        // ground, drawn ground, drawn things, the floor). `[flight] jump`. Always on with the experiment: it is a check.
+        private static class Jumps
+        {
+            private struct Snap
+            {
+                internal int Frame;
+                internal float Mount, BodyT, BodyP, H, Lift, Under, Drawn, Top, FloorPx;
+                internal Phase Phase;
+                internal bool Free;
+                internal Vector3 At;
+                internal float ScreenY, CamY;
+                internal string Frame_;
+            }
+
+            private static Snap last, now;
+            private static bool hooked, have;
+            private static Mount.Instance who;
+            private static float under, drawn, top, floorPx;
+            private static int said;
+
+            internal static void Floor(float u, float d, float t, float f) { under = u; drawn = d; top = t; floorPx = f; }
+
+            private static string Clip(string frame) => frame == null || !frame.StartsWith("bdy_") ? "game" : frame.Substring(4, frame.IndexOf('_', 4) - 4);
+
+            internal static void AtTick(Mount.Instance i)
+            {
+                if (!hooked) { hooked = true; Camera.onPreCull += PreCull; }
+                who = Now != Phase.Ground ? i : null;
+                if (who == null) { have = false; said = 0; } // a fresh budget every flight
+            }
+
+            private static void PreCull(Camera cam)
+            {
+                if (who == null || CameraSystem.Instance == null || cam != CameraSystem.Instance.WorldCamera) return;
+                if (now.Frame == Time.frameCount) return;
+                Rigidbody rb = MainGame.PlayerController?.PhysicalBody?.Rb;
+                if (rb == null) return;
+                now = new Snap
+                {
+                    Frame = Time.frameCount, Mount = who.Position.y, BodyT = rb.transform.position.y, BodyP = rb.position.y,
+                    H = heightPx, Lift = LiftFor(who), Phase = Now, Free = Free, Under = under, Drawn = drawn, Top = top, FloorPx = floorPx,
+                    At = rb.position,
+                    ScreenY = cam.WorldToScreenPoint(who.Position).y, CamY = cam.transform.position.y, Frame_ = FrameFor(who) ?? "the game's",
+                };
+                // Logged: a step of the drawn mount that the flight's own height doesn't explain (the mount moved more than
+                // the body plus the lift did, by 2 px or more), or any step of 12 px or more. A launch to 200 px climbs
+                // 5 px a frame by itself: logged as any step over 3 px, it filled the 200 lines in one take-off.
+                float step = now.Mount - last.Mount;
+                float unexplained = step - ((now.BodyT - last.BodyT) + (now.Lift - last.Lift));
+                // ... or the mount's place on the screen stepping by more than 3 art pixels (6 screen px a pixel at the
+                // smallest zoom is the floor; the camera follows the lift, so a climb holds it still) or its frame cutting
+                // between the flying clips (the beat, take-off, landing)
+                float screenStep = now.ScreenY - last.ScreenY;
+                bool clipCut = now.Frame_ != last.Frame_ && Clip(now.Frame_) != Clip(last.Frame_);
+                if (have && now.Frame == last.Frame + 1 && (Mathf.Abs(unexplained) >= 2f * PxWorldY || Mathf.Abs(step) >= 12f * PxWorldY || Mathf.Abs(screenStep) >= 18f || clipCut) && said < 200)
+                {
+                    said++;
+                    Plugin.Log.LogInfo($"[flight] jump of {step / PxWorldY:+0;-0} px in one frame ({unexplained / PxWorldY:+0;-0} px not from the body or the lift) at {now.At.x:0.00},{now.At.z:0.00}: " +
+                        $"mount {last.Mount:0.000} -> {now.Mount:0.000}; body (drawn) {last.BodyT:0.000} -> {now.BodyT:0.000}, (physics) {last.BodyP:0.000} -> {now.BodyP:0.000}; " +
+                        $"height {last.H:0.0} -> {now.H:0.0} px, lift {last.Lift:0.000} -> {now.Lift:0.000}; {last.Phase}{(last.Free ? " free" : "")} -> {now.Phase}{(now.Free ? " free" : "")}; " +
+                        $"floor: walkable {last.Under:0.00} -> {now.Under:0.00}, drawn ground {last.Drawn:0.00} -> {now.Drawn:0.00}, drawn things {last.Top:0.00} -> {now.Top:0.00}, floor {last.FloorPx:0} -> {now.FloorPx:0} px; " +
+                        $"on the screen {last.ScreenY:0} -> {now.ScreenY:0} (camera y {last.CamY:0.000} -> {now.CamY:0.000}); frame {last.Frame_} -> {now.Frame_}");
+                }
+                last = now;
+                have = true;
+            }
         }
 
         // The shake while climbing (the user, 2026-10-22: still there with the camera moved straight up): per frame,

@@ -28,7 +28,7 @@ the experiment off it is 0 and nothing changes (a default player's donkey is unt
   ridden mount, or only the flying ones.
 - Down at once on a dismount, a style change, the experiment off, a cleanup. Safe in step 1: the keeper never left
   the walkable ground.
-- Keys (session, cycled on the tab; right-click goes back): Space take off / land, R climb, F descend, J jump. Not
+- Keys (session, cycled on the tab; right-click goes back): Space take off / land, Left Shift climb, Left Ctrl descend (R and F until 2026-10-23), J jump. Not
   read while the Mounts panel or a text box has the keys. **Unchecked: whether the game binds any of them** (the
   game reads its keys through its own input map; if one of them also does something, pick another on the tab).
 - The camera rises with the height (seen 2026-10-22: without it the mount flew off the screen's middle): the
@@ -364,6 +364,19 @@ wing poses per direction). Our own drawing in `tools/skins/creatures/make_creatu
   wings raised. And in code (`Flight.BeatBobPx`, 3 px, the tab): the whole dragon and the rider rise through each
   downstroke and sink on the upstroke, in place of the hover, since a frame can't move the seat.
 - Known for the next pass: the raised wing goes behind the rider (a compromise); the rider's bob and hands still follow the game's walk frames (they read the game's sprite, RiderMotion).
+
+### Height jumps across the land (2026-10-23, investigating)
+
+The user: flying across the land the height sometimes jumps from one height to another at once. The one line the
+log had: `the floor lifts the flight 134 px: walkable ground under it 3.60, drawn ground 3.60, drawn things up to
+9.77, the body at 3.60, now 185 px up`: the floor's downward cast met a tree's trunk collider and took the tree's
+drawn top (9.77, its crown) as a floor under a flight at about 5.3. Fixed: the floor counts only what lies under
+the mount's feet (a thing drawn higher is beside or around the flight; the bumping keeps it out sideways).
+
+For the rest, a detector, always on while flying (`Flight.Jumps`): a step of the drawn mount of more than 3 art px
+in one frame is logged as `[flight] jump of N px in one frame at x,z:` with the mount's height, the body's (drawn
+and physics), the flight's height and lift, the phase and free flight, and the floor's four reads, before and after.
+Every remaining kind of jump will name its cause there.
 
 Not yet known: what draws the table (one mesh, its bounds, readable or not), whether any collider at all lies under
 its top (another layer, a trigger, back faces only), and whether such places are common (decorative cliffs, map
