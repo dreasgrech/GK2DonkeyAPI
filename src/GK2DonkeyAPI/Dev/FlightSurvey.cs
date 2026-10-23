@@ -59,12 +59,87 @@ namespace GK2DonkeyAPI
             string dir = Paths.BepInExRootPath;
             runs++;
             string stem = $"GK2-flight-survey-{System.DateTime.Now:HHmmss}";
+            File.WriteAllText(System.IO.Path.Combine(dir, stem + "-column.txt"), Column(at, pc));
             File.WriteAllText(System.IO.Path.Combine(dir, stem + ".csv"), $"# keeper at {at.x:0.000},{at.y:0.000},{at.z:0.000}; camera {cam.transform.position:F3} ortho {cam.orthographicSize:0.###}; screen {Screen.width}x{Screen.height}; radius {radius}\n" + sb);
             ScreenCapture.CaptureScreenshot(System.IO.Path.Combine(dir, stem + ".png"));
             var parts = new List<string>();
             foreach (var kv in layers) parts.Add($"{kv.Key} {kv.Value}");
             LastResult = $"{rows} colliders within {radius:0} (by layer: {string.Join(", ", parts)}); BepInEx/{stem}.csv and .png (survey {runs} this session)";
             Plugin.Log.LogInfo("[flight-survey] " + LastResult);
+        }
+
+        // What stands in the column over the keeper (the mount's flight above him): every collider a ray from 60 above
+        // meets straight down, any layer, triggers too, and every renderer whose bounds hold his x and z, any size, with
+        // whether it has a collider of its own and whether its mesh could be read (made into a collider). For the places
+        // a flight goes through drawn ground (the user, 2026-10-22: a high rock table with no ground under it to physics).
+        private static string Column(Vector3 at, PlayerController pc)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"# the column over the keeper at {at.x:0.000},{at.y:0.000},{at.z:0.000}; flight: {Flight.Now}, {Flight.HeightPx:0} px, free {Flight.Free}");
+            sb.AppendLine("## colliders straight down from 60 above (y, layer, type, trigger, name, path)");
+            Vector3 top = new Vector3(at.x, at.y + 60f, at.z);
+            RaycastHit[] hits = Physics.RaycastAll(top, Vector3.down, 120f, ~0, QueryTriggerInteraction.Collide);
+            System.Array.Sort(hits, (a, b) => b.point.y.CompareTo(a.point.y));
+            foreach (RaycastHit h in hits)
+            {
+                Collider c = h.collider;
+                sb.AppendLine($"{h.point.y:0.000}; {LayerMask.LayerToName(c.gameObject.layer)}; {c.GetType().Name}; {c.isTrigger}; {c.name}; {Path(c.transform)}");
+            }
+            sb.AppendLine("## also with back faces (a one-sided mesh seen from below its surface)");
+            bool backfaces = Physics.queriesHitBackfaces;
+            try
+            {
+                Physics.queriesHitBackfaces = true;
+                foreach (RaycastHit h in Physics.RaycastAll(top, Vector3.down, 120f, ~0, QueryTriggerInteraction.Collide))
+                    sb.AppendLine($"{h.point.y:0.000}; {LayerMask.LayerToName(h.collider.gameObject.layer)}; {h.collider.name}; {Path(h.collider.transform)}");
+            }
+            finally { Physics.queriesHitBackfaces = backfaces; }
+            sb.AppendLine("## renderers whose bounds hold his x and z (min y, max y, size x z, layer, type, enabled, shadows, mesh, readable, vertices, own collider, path)");
+            foreach (Renderer rd in Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None))
+            {
+                if (rd == null || !rd.gameObject.activeInHierarchy) continue;
+                Bounds b = rd.bounds;
+                if (at.x < b.min.x || at.x > b.max.x || at.z < b.min.z || at.z > b.max.z) continue;
+                if (b.max.y < at.y - 20f || b.min.y > at.y + 40f) continue;
+                Mesh mesh = rd.GetComponent<MeshFilter>()?.sharedMesh;
+                string meshInfo = mesh != null ? $"{mesh.name}; {mesh.isReadable}; {mesh.vertexCount}" : (rd is SpriteRenderer sr && sr.sprite != null ? $"sprite {sr.sprite.name}; -; -" : "-; -; -");
+                Collider own = rd.GetComponent<Collider>();
+                sb.AppendLine($"{b.min.y:0.000}; {b.max.y:0.000}; {b.size.x:0.0}x{b.size.z:0.0}; {LayerMask.LayerToName(rd.gameObject.layer)}; {rd.GetType().Name}; {rd.enabled}; {rd.shadowCastingMode}; {meshInfo}; {(own != null ? own.GetType().Name + " " + LayerMask.LayerToName(own.gameObject.layer) : "-")}; {Path(rd.transform)}");
+            }
+            // The drawn terrain (the game's LazyTerrain: chunks of baked meshes, the only copy of the drawn ground; the game
+            // strips their CPU data when it shows them, LazyTerrainMesh.DrawFromData): every terrain, its height, and its
+            // chunks whose x/z bounds hold the keeper or lie within 4 of him, with whether the mesh can still be read.
+            sb.AppendLine("## LazyTerrain objects (path, position, size, chunks, castShadows)");
+            foreach (LazyTerrain t in Object.FindObjectsByType<LazyTerrain>(FindObjectsSortMode.None))
+            {
+                if (t == null) continue;
+                sb.AppendLine($"terrain {Path(t.transform)}; pos {t.transform.position.x:0.000},{t.transform.position.y:0.000},{t.transform.position.z:0.000}; {t.width}x{t.height} meshSize {t.meshSize} tile {t.meshTileSize}; chunks {t.meshesData?.Count ?? 0}; active {t.gameObject.activeInHierarchy}");
+                if (t.meshesData == null) continue;
+                foreach (LazyTerrainMeshData d in t.meshesData)
+                {
+                    if (d == null) continue;
+                    Vector3 wp = t.transform.position + d.localPosition;
+                    if (Mathf.Abs(wp.x - at.x) > 5f || Mathf.Abs(wp.z - at.z) > 5f) continue;
+                    Mesh m = d.mesh;
+                    string mi = m == null ? "no mesh" : $"mesh {m.name}; readable {m.isReadable}; vertices {m.vertexCount}; submeshes {m.subMeshCount}; mesh bounds y {m.bounds.min.y:0.000}..{m.bounds.max.y:0.000} (local), x {m.bounds.min.x:0.00}..{m.bounds.max.x:0.00} z {m.bounds.min.z:0.00}..{m.bounds.max.z:0.00}";
+                    sb.AppendLine($"  chunk at {wp.x:0.000},{wp.y:0.000},{wp.z:0.000} (local {d.localPosition.x:0.00},{d.localPosition.y:0.00},{d.localPosition.z:0.00}; center {d.center.x:0.00},{d.center.y:0.00},{d.center.z:0.00}); data bounds {d.bounds.center.y:0.000}±{d.bounds.extents.y:0.000}; {mi}");
+                    if (m != null && m.isReadable && m.vertexCount > 0)
+                    {
+                        // the heights its vertices sit at (world), as a histogram: does a chunk hold one level or several?
+                        var ys = new Dictionary<float, int>();
+                        foreach (Vector3 v in m.vertices)
+                        {
+                            float y = Mathf.Round((wp.y + v.y) * 100f) / 100f;
+                            ys[y] = ys.TryGetValue(y, out int k) ? k + 1 : 1;
+                        }
+                        var parts = new List<string>();
+                        foreach (var kv in ys) if (parts.Count < 30) parts.Add($"{kv.Key:0.00}x{kv.Value}");
+                        sb.AppendLine("    vertex heights: " + string.Join(" ", parts));
+                    }
+                }
+            }
+            sb.AppendLine($"## the flight's own reads here: ground under the flight {Mount.Instance.GroundHeight(at, out string src):0.000} ({src}), the floor under the mount {Mount.Instance.FloorUnder(pc, at, at.y + Mathf.Max(0f, Flight.HeightPx) * 2f * 0.01666667f):0.000}");
+            return sb.ToString();
         }
 
         // The collider's object: its Wgo's name, its meshes' top (what the flight's bumping reads) and its baked bounds' top.

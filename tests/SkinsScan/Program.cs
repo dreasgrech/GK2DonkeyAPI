@@ -88,6 +88,11 @@ static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
     return result;
 }
 
+// The flying experiment's frames (docs/flying.md "the frames"): not the game's, played by the mod while a mount flies.
+
+static bool FlightKey(string key) => System.Text.RegularExpressions.Regex.IsMatch(key, @"^bdy_(fly|takeoff|land)_left_\d\d$");
+
+
 static (int W, int H) PngSize(string path)
 {
     using var f = File.OpenRead(path);
@@ -322,7 +327,7 @@ foreach (var dir in skinDirs)
         foreach (var png in Directory.GetFiles(dir, "*.png"))
         {
             string key = Path.GetFileNameWithoutExtension(png);
-            if (!knownKeys.Contains(key)) Bad($"{key}.png: not a frame key of the donkey base");
+            if (!knownKeys.Contains(key) && !FlightKey(key)) Bad($"{key}.png: not a frame key of the donkey base (nor a flying one)");
         }
         string frontDir = Path.Combine(dir, "front");
         if (Directory.Exists(frontDir))
@@ -331,7 +336,7 @@ foreach (var dir in skinDirs)
             foreach (var png in Directory.GetFiles(frontDir, "*.png"))
             {
                 string key = Path.GetFileNameWithoutExtension(png);
-                if (!knownKeys.Contains(key)) { Bad($"front/{key}.png: not a frame key"); continue; }
+                if (!knownKeys.Contains(key) && !FlightKey(key)) { Bad($"front/{key}.png: not a frame key"); continue; }
                 var (w, h) = PngSize(png);
                 if (w != cw || h != ch) Bad($"front/{key}.png is {w}x{h}, the canvas is {cw}x{ch}");
                 front++;

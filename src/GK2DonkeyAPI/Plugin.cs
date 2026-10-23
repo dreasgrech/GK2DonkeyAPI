@@ -438,6 +438,8 @@ namespace GK2DonkeyAPI
             typeof(Wgo_OnDestroy_Patch),
             typeof(SaveSystem_Save_Patch),
             typeof(SaveSystem_Remove_Patch),
+            typeof(PlayerPhysicalBody_LockMovement_Patch), // the flying experiment: a movement unlock keeps a flying body kinematic (Flight.cs)
+            typeof(LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch), // the flying experiment: the drawn ground's tiles (DrawnGround.cs)
         };
         internal static ConfigEntry<float> CartZoneSide, CartZoneRear, CartZoneFrontShift, DonkeyZoneAhead;
 
@@ -643,7 +645,7 @@ namespace GK2DonkeyAPI
             SelfTestSpot = dbg.Bind("Debug", "SelfTestSpot", "",
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = dbg.Bind("Debug", "TuningKeys", false,
-                "While mounted: PageUp/PageDown move the torso, Home/End the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
+                "While mounted: keypad 8/2 move the torso, keypad 4/6 the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
             // The mounts other than the donkey, the skins and the effects are in this DLL but off for players in this
             // version (the next update switches them on; CHANGELOG "switched on in the next update"). A dev key, so a
             // player's cfg can't flip it: locked, it answers false. Nothing of it is registered when off, so every list

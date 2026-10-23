@@ -10,9 +10,12 @@ namespace GK2DonkeyAPI
     {
         internal sealed partial class Instance
         {
-            // Null when the keeper may land under 'spot' (its x and z; y comes back as the ground's), else why not. The
-            // walk grid is asked only on a landing (rescan: the grid is rebuilt around him), not on the 1 s safe-spot check.
-            internal static string WhyCannotLandAt(PlayerController pc, ref Vector3 spot, bool grid)
+            // Null when the keeper may land under 'spot' (its x and z; its y the ground he comes down to, coming back as the
+            // walkable mesh's there), else why not. The walk grid is asked only on a landing (rescan: the grid is rebuilt
+            // around him), not on the 1 s safe-spot check. 'connectedTo' (the take-off spot): the landing must be on the
+            // same connected part of the walkable mesh, so never on a rock top or a ledge the keeper can't walk off (the
+            // user, 2026-10-22: a landing on a place the keeper never reaches went through its ground).
+            internal static string WhyCannotLandAt(PlayerController pc, ref Vector3 spot, bool grid, Vector3? connectedTo = null)
             {
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 Collider body = pc?.PhysicalBody?.MeshCollider;
@@ -23,7 +26,28 @@ namespace GK2DonkeyAPI
                     float other = GroundHeight(spot, out string src);
                     return float.IsNaN(other) ? $"no ground under him ({src ?? "nothing found"})" : $"no walkable ground under him ({src})";
                 }
+                if (Mathf.Abs(g - spot.y) > MaxRise)
+                {
+                    return $"the walkable mesh under him is at {g:F2}, the ground he comes down to at {spot.y:F2}";
+                }
                 spot.y = g;
+                if (Flight.UseDrawnGround)
+                {
+                    // a higher level drawn over the spot: the walkable ground under a rock table, or under a ledge (the
+                    // user's landing at 18.71, 6.00, 28.79 put the keeper inside the table, on the 6.0 ground it hides).
+                    // The level's outermost tiles may hang over its cliff's foot: that many are allowed.
+                    float over = DrawnGround.HighestAt(spot.x, spot.z, float.PositiveInfinity, out _);
+                    if (!float.IsNaN(over) && over > g + MaxRise)
+                    {
+                        int depth = DrawnGround.TilesFromEdge(spot.x, spot.z, over, Flight.CoverEdgeTiles + 1);
+                        if (depth >= Flight.CoverEdgeTiles) return $"a higher level is drawn over it ({over:F2}, {depth} tile(s) in from its edge): inside a rock or under a ledge";
+                    }
+                }
+                if (connectedTo.HasValue)
+                {
+                    string cut = WhyNotConnected(connectedTo.Value, spot);
+                    if (cut != null) return cut;
+                }
                 bool backfaces = Physics.queriesHitBackfaces;
                 try
                 {
@@ -118,6 +142,37 @@ namespace GK2DonkeyAPI
                     }
                 }
                 return found;
+            }
+
+            // What the flight may come down to under 'at' from 'alt' (the mount's feet): the highest of the ground's
+            // surface, the see-through shapes' (drawn) surfaces and the drawn tops of the obstacles under it. The floor
+            // is the clear height above this, so hovering over a cliff's rim or a rock the mount stays on top of what is
+            // drawn there (the user, 2026-10-22: hovering over a cliff after a refused landing, the dragon was inside the
+            // rim's rocks: the floor counted the ground only). NaN: nothing under it (water).
+            private static readonly RaycastHit[] downHits = new RaycastHit[32];
+
+            internal static float FloorUnder(PlayerController pc, Vector3 at, float alt)
+            {
+                Rigidbody rb = pc?.PhysicalBody?.Rb;
+                if (rb == null) return float.NaN;
+                const float r = 0.24f;
+                float from = alt + 0.3f;
+                int mask = (KeeperMask(rb) & ~(1 << rb.gameObject.layer) & ~(1 << 14)) | OccluderLayers;
+                int n = Physics.SphereCastNonAlloc(new Vector3(at.x, from, at.z), r, Vector3.down, downHits, from - at.y + 30f, mask, QueryTriggerInteraction.Ignore);
+                float best = float.NaN;
+                for (int i = 0; i < n; i++)
+                {
+                    RaycastHit h = downHits[i];
+                    Collider c = h.collider;
+                    if (c == null || h.distance <= 0f || IsModView(c)) continue;
+                    int bit = 1 << c.gameObject.layer;
+                    float y;
+                    if ((bit & GroundLayers) != 0 || (bit & OccluderLayers) != 0) y = h.point.y;
+                    else if (Blocks(rb, c, Vector3.up)) y = Mathf.Max(h.point.y, ObjectTop(c, out _));
+                    else continue;
+                    if (float.IsNaN(best) || y > best) best = y;
+                }
+                return best;
             }
 
             // Sweep 1: the keeper's see-through capsule (1.4 tall, 0.24 wide, as the game casts it) at the flight's feet.

@@ -509,6 +509,13 @@ For mod authors:
 
 Development:
 
+- **The dragon flies with its wings spread** (the flying experiment): 14 new frames drawn by the creature generator
+  (the wing beat, the take-off, the landing), played while the dragon is in the air; the skin scans accept them.
+- **The drawn ground, read from the game's terrain** (the flying experiment, docs/flying.md): the tiles of every
+  terrain mesh read just before the game frees them, the highest drawn level at any point, checked on the Flying
+  tab against the walkable ground; the flight's floor, walls and landings use it (no landing inside a rock table); a whole-map survey and a map drawing tool (tools/flying/map_survey.py).
+- **The tuning keys moved to keypad 8/2 (torso) and 4/6 (legs sideways)**, off PageUp/PageDown and Home/End,
+  which the Grave Zoom mod uses for its zoom.
 - **A flying experiment (the tuning window's new Flying tab; docs/flying.md)**: the ridden mount (the dragon, or
   any mount with a switch) takes off, flies at a height with a hover, climbs and descends on keys and lands, the
   camera rising with it; a jump on the same lift. Free flight from a clear height: the keeper's body leaves the

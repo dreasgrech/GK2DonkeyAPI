@@ -2252,16 +2252,17 @@ namespace GK2DonkeyAPI
             private const float PxWorldY = 0.02f * 1.6667f;
             internal const float PxWorld = 0.02f; // one art pixel along the ground (50 pixels per unit)
 
-            // Debug.TuningKeys: PageUp/PageDown seat, Home/End leg X, Insert/Delete leg Y, all in art pixels. They edit
+            // Debug.TuningKeys: keypad 8/2 seat, keypad 4/6 leg X, Insert/Delete leg Y, all in art pixels (not PageUp/PageDown
+            // and Home/End: the Grave Zoom mod's zoom keys, 2026-10-22). They edit
             // the same config values the tuning window shows.
             private void TuningKeys(PlayerController pc)
             {
                 var input = UnityInput.Current;
                 bool changed = false;
-                if (input.GetKeyDown(KeyCode.PageUp)) { S.SeatAdjustPx.Value++; changed = true; }
-                if (input.GetKeyDown(KeyCode.PageDown)) { S.SeatAdjustPx.Value--; changed = true; }
-                if (input.GetKeyDown(KeyCode.End)) { S.LegAdjustXPx.Value++; changed = true; }
-                if (input.GetKeyDown(KeyCode.Home)) { S.LegAdjustXPx.Value--; changed = true; }
+                if (input.GetKeyDown(KeyCode.Keypad8)) { S.SeatAdjustPx.Value++; changed = true; }
+                if (input.GetKeyDown(KeyCode.Keypad2)) { S.SeatAdjustPx.Value--; changed = true; }
+                if (input.GetKeyDown(KeyCode.Keypad6)) { S.LegAdjustXPx.Value++; changed = true; }
+                if (input.GetKeyDown(KeyCode.Keypad4)) { S.LegAdjustXPx.Value--; changed = true; }
                 if (input.GetKeyDown(KeyCode.Insert)) { S.LegAdjustYPx.Value++; changed = true; }
                 if (input.GetKeyDown(KeyCode.Delete)) { S.LegAdjustYPx.Value--; changed = true; }
                 if (!changed)
@@ -2432,7 +2433,10 @@ namespace GK2DonkeyAPI
                 // objects (our temp donkey never moves through that system). Without it the donkey and cart take the
                 // keeper's height and dig into slopes. The rider follows the donkey's height through groundDelta.
                 groundDelta = 0f;
-                if (S.SnapToGround.Value)
+                // Flying free (the flying experiment) the body is in the air: the ground under the mount says nothing about
+                // where to draw it, the flight's height does (the body plus the lift). Snapped, the mount took the step
+                // limit's last good difference near slopes and jumped up (the user's video 2026-10-22 15-31-34).
+                if (S.SnapToGround.Value && !Flight.FreeFor(this))
                 {
                     // Difference between the ground under the donkey and under the keeper, both from the same source, so
                     // flat ground is exactly 0 and no absolute mismatch between sources can sink or float the donkey.

@@ -1385,7 +1385,7 @@ namespace GK2DonkeyAPI
             Stepper("Panel size, everything (Debug.TuningWindowScale)", Plugin.TuningWindowScale, 0.1f, 0.75f, 3f, "0.00");
             Stepper("Text size inside the panel (Debug.TuningWindowFontScale)", Plugin.TuningWindowFontScale, 0.05f, 0.5f, 2f, "0.00");
             Stepper("Panel width (Debug.TuningWindowWidth)", Plugin.TuningWindowWidth, 20f, 300f, 900f, "0");
-            Toggle("Tuning keys (PageUp/Down torso, Home/End legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
+            Toggle("Tuning keys (keypad 8/2 torso, keypad 4/6 legs sideways, Insert/Delete legs up/down)", Plugin.TuningKeys, null);
             Toggle($"Mounts, skins and effects preview (Debug.MountsPreview; now {(Plugin.MountsOn ? "on" : "off")}, a change takes the next start)", Plugin.MountsPreview, null,
                 "Off, as players have it in this version: the donkey is the only mount, no skins, no effects; a mod's registrations are kept out with a log line. On: the dragon, the rat, the snail, the worm, Gerry, Hellfire, the skin packs and the effects, as the next update will have them.");
             Help("Debug.TuningWindow=false in the cfg hides this panel for normal play.");

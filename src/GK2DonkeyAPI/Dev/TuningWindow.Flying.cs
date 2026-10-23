@@ -10,7 +10,7 @@ namespace GK2DonkeyAPI
         private static readonly KeyCode[] FlightKeyChoices =
         {
             KeyCode.Space, KeyCode.R, KeyCode.F, KeyCode.J, KeyCode.T, KeyCode.Y, KeyCode.U, KeyCode.Z, KeyCode.X, KeyCode.C, KeyCode.V,
-            KeyCode.LeftControl, KeyCode.LeftAlt, KeyCode.PageUp, KeyCode.PageDown, KeyCode.Keypad8, KeyCode.Keypad2, KeyCode.Keypad5,
+            KeyCode.LeftControl, KeyCode.LeftAlt, // not PageUp/PageDown/Home (the Grave Zoom mod's zoom), not the keypad (the tuning keys)
         };
 
         private static void DrawFlying()
@@ -45,6 +45,18 @@ namespace GK2DonkeyAPI
             if (GUILayout.Button(Tip("Survey what's around (12)", "Every collider within 12 of the keeper, with its top, the pictures beside it and its place on a screenshot: BepInEx/GK2-flight-survey.csv and .png (how tall the game's things are, for the bumping)."), Wd(200f))) FlightSurvey.Run(12f);
             GUILayout.EndHorizontal();
             if (OnOffRow("Per-frame log lines ([flight-probe])", Flight.ProbeOn, tip: "Where the mount, the keeper and the camera are every frame while off the ground: for measuring a shake or a jump. Many lines.")) Flight.ProbeOn = !Flight.ProbeOn;
+            if (GUILayout.Button(Tip("Survey the whole map (loaded scenes)", "Every terrain chunk, baked prop, world object, ground, water and zone collider of the loaded scenes: BepInEx/GK2-map-survey-HHmmss/ (tools/flying/map_survey.py draws it)."), Wd(260f))) MapSurvey.Run();
+            if (MapSurvey.LastResult.Length > 0) GUILayout.Label(MapSurvey.LastResult, small);
+
+            Header("The drawn ground (step 1: the map and its checks; the flight doesn't use it yet)");
+            Help("The game's ground is flat levels drawn tile by tile; the mod reads each terrain mesh's tiles just before the game frees them. The check compares the drawn level with the walkable ground wherever both exist (they must agree) and lists the levels under the keeper (hover over a rock table: its top level shows as drawn).");
+            GUILayout.Label("Under the keeper: " + DrawnGround.Here(), small);
+            if (GUILayout.Button(Tip("Check the drawn ground (radius 30)", "Rays down on a 0.75 grid around the keeper: where one meets walkable ground, the drawn level there must be at its height. Written to the log ([drawn-ground] check)."), Wd(260f))) DrawnGround.Check();
+            if (DrawnGround.CheckResult.Length > 0) GUILayout.Label(DrawnGround.CheckResult, small);
+            if (GUILayout.Button(Tip("Cover check (radius 30)", "Where walkable ground has a higher level drawn over it (a rock table over the ground it hides, a rim's edge over its cliff's foot), and how many tiles in from that level's edge. Written to the log ([drawn-ground] cover check)."), Wd(260f))) DrawnGround.CoverCheck();
+            if (DrawnGround.CoverResult.Length > 0) GUILayout.Label(DrawnGround.CoverResult, small);
+            if (OnOffRow("The flight uses the drawn ground (step 2)", Flight.UseDrawnGround, tip: "On: the floor stays above the drawn ground too, a higher level ahead stops the flight like a wall, and no landing where a higher level is drawn over the spot. Off: walkable ground and objects only, as before.")) Flight.UseDrawnGround = !Flight.UseDrawnGround;
+            Flight.CoverEdgeTiles = Mathf.RoundToInt(SessionFloatRow("Landing under a level's edge tiles allowed (tiles)", Flight.CoverEdgeTiles, 0f, 3f, "A higher level's outermost tiles can hang over the foot of its cliff: a landing under that many edge tiles is still allowed (0: none). Deeper under a level: never."));
             if (FlightSurvey.LastResult.Length > 0) GUILayout.Label(FlightSurvey.LastResult, small);
 
             Header("Heights and speeds (art pixels)");
@@ -54,6 +66,10 @@ namespace GK2DonkeyAPI
             Flight.BobPx = SessionFloatRow("Hover: up and down (px)", Flight.BobPx, 0f, 8f, "The mount rises and sinks this much while airborne, eased in near the ground.");
             Flight.BobPeriodS = SessionFloatRow("Hover: one up and down (seconds)", Flight.BobPeriodS, 0.2f, 4f);
             Flight.CameraFollow = SessionFloatRow("Camera rises with the height (0 none, 1 all)", Flight.CameraFollow, 0f, 1f, "The view goes up with the mount, so it stays in the middle of the screen. The hover's bob is left out.");
+
+            if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "The dragon's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
+            Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The six flying frames once round.");
+            Flight.BeatBobPx = SessionFloatRow("Rise on each downstroke (px)", Flight.BeatBobPx, 0f, 8f, "With the flying frames: the body and the rider rise as the wings come down, sink on the upstroke (in place of the hover).");
 
             Header("Take-off (a launch, not a lift)");
             Flight.CrouchPx = SessionFloatRow("Crouch before the launch (px)", Flight.CrouchPx, 0f, 8f);

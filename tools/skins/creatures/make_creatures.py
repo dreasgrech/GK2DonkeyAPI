@@ -453,10 +453,20 @@ def _tone(ramp, light):
     return ramp[max(0, min(len(ramp) - 1, int(light * len(ramp))))]
 
 
-def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
+SPAN = 1.35  # the spread wings' size against the raised wing the dragon first had
+
+
+def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="walk", lift=0.0):
+    # fly: the spread wings' angle about the shoulder (degrees: 0 raised high over the back, 45 level back, 90 swept
+    # down past the belly), None = folded (walking, standing). legs_mode: "walk" on the ground, "tuck" (flying: the
+    # forelegs bent up under the chest, the hind legs trailing), "reach" (landing: both stretched down for the ground),
+    # "push" (taking off: the hind legs straight down off the ground, the forelegs tucking). lift: the whole body this
+    # many px up (a leap, the body rising on a downstroke); the seat moves with it (the rider sits on the back).
     DRG, DWING, DBELLY, DHORN, DEYE, DOUT = pal
-    walking = phase != 0.0
-    bob = 0.8 * math.sin(4 * math.pi * phase) if walking else 0.0
+    walking = phase != 0.0 and fly is None
+    tb = fly if (fly is not None and legs_mode == "tuck") else None   # the beat drives the body (flying only)
+    gb = 0.0 if tb is None else tb                                    # 0 wings raised .. 1 swept down
+    bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     L = (-0.6, -0.8)
@@ -480,12 +490,17 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
     # him reads as a cape growing from his back. So the arm bone (shoulder to wrist) and the membrane above his head
     # go in front of him, the rest of the membrane and the fingers behind: he sits between the wings, the leading edge
     # crossing in front of his chest.
-    def wing(near, flap):
+    def wing(near, flap, span=1.0):
         sh = (46.0 + (0 if near else 7), 42.0 + bob - (0 if near else 6))
         pts = {"elbow": (48, 26), "wrist": (54, 8), "root": (73, 38),
                "tips": [(84, 1), (97, 15), (99, 33), (90, 48)]}
         if not near:
             pts = {k: ([(x + 7, y - 10) for x, y in v] if k == "tips" else (v[0] + 7, v[1] - 10)) for k, v in pts.items()}
+        if span != 1.0:  # spread for flying: the wing longer than the body is deep (the reference's span), the root stays
+            o = (46.0 + (0 if near else 7), 42.0 - (0 if near else 6))
+            sc = lambda q: (o[0] + (q[0] - o[0]) * span, o[1] + (q[1] - o[1]) * span)
+            pts = {k: ([sc(q) for q in v] if k == "tips" else (v if k == "root" else sc(v))) for k, v in pts.items()}
+            pts = {k: ([(x, y + bob) for x, y in v] if k == "tips" else (v[0], v[1] + bob)) for k, v in pts.items()}
         ang = flap * math.pi / 180
         elbow, wrist, root = (_rot(pts[k], sh, ang) for k in ("elbow", "wrist", "root"))
         tips = [_rot(t, sh, ang) for t in pts["tips"]]
@@ -518,7 +533,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                 u = math.dist((X, Y), wrist) / far
                 db = min(_seg(X, Y, *a, *b) for a, b in bones + [(sh, elbow), (elbow, wrist)])
                 light = 0.3 + 0.5 * u + (0.18 if db > 3.5 else 0.0)     # lighter away from the bones and the wrist
-                put(x, y, _tone(ramp, light), fpx if (near and in_outer) else px)
+                # the near wing over the rider: in the front layer, except where the rider sits (spread wings sweep
+                # right over his seat: there he stays in front, the membrane behind him, as the folded wing's arm is)
+                in_rider = span != 1.0 and 43 <= x <= 66 and 16 <= y - bob <= 52
+                put(x, y, _tone(ramp, light), fpx if (near and in_outer and not in_rider) else px)
         for (ax, ay), (bx, by) in bones + [(sh, elbow), (elbow, wrist)]:
             dst = fpx if near else px
             thick = 1.6 if (ax, ay) == wrist else 2.6
@@ -529,6 +547,88 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                         put(x, y, (DRG[3] if d < thick / 2 - 0.7 else DRG[2]) if near else DWING[1], dst)
         for k in range(4):                                                  # the thumb claw at the wrist
             put(wrist[0] - 1 - k, wrist[1] - k * 0.6, DHORN[2 if k > 1 else 1], dst)
+
+    # ---- the wings SPREAD, flying (docs/flying.md "the frames"; the user's reference 2026-10-22: a red dragon in side
+    # view, three poses of the beat; our own drawing). A bat wing seen from the side: the arm from the shoulder over
+    # the elbow to the wrist is the leading edge, three long fingers fan from the wrist, the membrane spans them and
+    # runs back to the root on the back before the hips, scalloped between the finger tips. Poses, t: 0 raised high
+    # over the back (the tips up and back), 0.5 level back over the tail (seen nearly edge-on: thin), 1 swept down
+    # under the belly; between them the joints move on together. All inside the 128 canvas (x <= 111, y >= -16 in the
+    # donkey's coordinates). The far wing is the same a few px back and up, darker, behind the body. The near wing is
+    # in front of everything except where the rider sits: there it passes behind him (else it hides him on the
+    # upstroke), as the folded wing's arm does.
+    WING_POSES = {
+        "elbow": ((52, 28), (58, 34), (54, 49)),
+        "wrist": ((58, 9), (72, 25), (58, 63)),
+        "t1": ((64, -13), (102, 15), (62, 86)),
+        "t2": ((89, -10), (110, 29), (75, 84)),
+        "t3": ((105, 5), (104, 44), (86, 72)),
+        "root": ((78, 41), (78, 45), (74, 47)),
+    }
+
+    def pose_at(key, t):
+        a, b, c = WING_POSES[key]
+        if t <= 0.5:
+            u = t / 0.5
+            return (a[0] + (b[0] - a[0]) * u, a[1] + (b[1] - a[1]) * u)
+        u = (t - 0.5) / 0.5
+        return (b[0] + (c[0] - b[0]) * u, b[1] + (c[1] - b[1]) * u)
+
+    def spread_wing(near, t):
+        ox, oy = (0.0, 0.0) if near else (-3.0, -7.0)  # the far wing: up and a little forward (the perspective)
+
+        def at(q):
+            return (q[0] + ox, q[1] + oy + bob)
+        sh = at((47.0, 42.0))
+        el, wr = at(pose_at("elbow", t)), at(pose_at("wrist", t))
+        tips = [at(pose_at(k, t)) for k in ("t1", "t2", "t3")]
+        root = at(pose_at("root", t))
+        ring = [sh, el, wr] + tips + [root]
+        trail = tips + [root]
+        scal = []
+        for a, b in zip(trail, trail[1:]):                        # the trailing edge's scallops, bulging into the membrane
+            mx, my = (a[0] + b[0]) / 2, (a[1] + b[1]) / 2
+            vx, vy = mx - wr[0], my - wr[1]
+            vl = math.hypot(vx, vy) or 1
+            half = math.dist(a, b) / 2
+            depth = half * 0.32
+            k = (half * half - depth * depth) / (2 * depth)
+            scal.append((mx + vx / vl * k, my + vy / vl * k, math.dist((mx + vx / vl * k, my + vy / vl * k), a)))
+
+        def inside(X, Y):
+            hit = False
+            for i in range(len(ring)):
+                (ax, ay), (bx, by) = ring[i], ring[(i + 1) % len(ring)]
+                if (ay > Y) != (by > Y) and X < ax + (Y - ay) * (bx - ax) / (by - ay):
+                    hit = not hit
+            return hit
+        ramp = DWING if near else DWING[:3]
+        bones = [(sh, el), (el, wr)] + [(wr, (wr[0] + (q[0] - wr[0]) * 0.97, wr[1] + (q[1] - wr[1]) * 0.97)) for q in tips]
+        xs = [q[0] for q in ring]
+        ys = [q[1] for q in ring]
+        far_d = max(math.dist(wr, q) for q in tips) or 1
+        for y in range(int(min(ys)) - 1, int(max(ys)) + 2):
+            for x in range(int(min(xs)) - 1, int(max(xs)) + 2):
+                X, Y = x + 0.5, y + 0.5
+                if not inside(X, Y) or any(math.hypot(X - cx, Y - cy) < r for cx, cy, r in scal):
+                    continue
+                db = min(_seg(X, Y, *a, *b) for a, b in bones)
+                u = math.dist((X, Y), wr) / far_d
+                light = 0.62 - 0.3 * u + (0.0 if db > 2.2 else -0.16)
+                in_rider = 43 <= x <= 66 and 16 <= y - bob <= 52
+                put(x, y, _tone(ramp, light), fpx if (near and not in_rider) else px)
+        for (ax, ay), (bx, by) in bones:                         # the bones: the arm thick, the fingers thin
+            arm = (ax, ay) == sh or (ax, ay) == el
+            thick = 2.6 if arm else 1.4
+            for y in range(int(min(ay, by)) - 3, int(max(ay, by)) + 4):
+                for x in range(int(min(ax, bx)) - 3, int(max(ax, bx)) + 4):
+                    d = _seg(x + 0.5, y + 0.5, ax, ay, bx, by)
+                    if d <= thick / 2:
+                        in_rider = 43 <= x <= 66 and 16 <= y - bob <= 52
+                        col = (DRG[3] if d < thick / 2 - 0.6 else DRG[2]) if near else DWING[1]
+                        put(x, y, col, fpx if (near and not in_rider) else px)
+        for k in range(4):                                       # the thumb claw at the wrist, hooking forward
+            put(wr[0] - 1 - k, wr[1] - k * 0.5, DHORN[2 if k > 1 else 1], fpx if near else px)
 
     # ---- the wings, FOLDED, as the user's references draw them (2026-10-20; docs/mount-looks-design.md): the wrist is a
     # tall PEAK above the back, its thumb claw hooking towards the head; the fingers run DOWN from the peak; the membrane
@@ -605,7 +705,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             put(peak[0] - 1 - k * 0.9, peak[1] - 1 - k * 0.5 + (0.6 * (k - 2) ** 2 if k > 2 else 0), DHORN[2 if k > 1 else 1], dst)
 
     flap = (8.0 * math.sin(2 * math.pi * phase) if walking else 3.0 * idle)
-    folded_wing(flap * 0.8, far=True)
+    if fly is None:
+        folded_wing(flap * 0.8, far=True)
+    else:
+        spread_wing(False, fly)
 
     # ---- the legs (far first): a thigh, a shin, a wide clawed foot
     def gait(off):
@@ -627,9 +730,45 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
             put(fx + ox, fy - 1, DHORN[2], dst)
         put(fx + 1, fy - 1, ramp[2], dst)
 
+    def claws(fx, fy, ramp, back):
+        # a paw hanging in the air: a knuckle and three claws pointing down (the forepaw) or down and back (the hind)
+        for ox in (-1, 0, 1):
+            put(fx + ox, fy, ramp[1])
+        for k, ox in enumerate((-1, 0, 1)):
+            for dy in (1, 2):
+                put(fx + ox + (dy * 0.6 if back else -dy * 0.3), fy + dy, DHORN[2 if dy == 2 else 1])
+
     def legs(far):
         ramp = DRG[0:3] if far else DRG[1:4]
         dx = 3 if far else 0
+        if legs_mode != "walk":
+            # the reference's flying dragon: the forelegs bent up and forward under the chest, claws hanging; the hind
+            # legs trailing back under the tail root. Reaching (landing): both stretched down and a little forward.
+            # Pushing (taking off): the hind legs straight down, the forelegs folding.
+            fh = (39 + dx, 54 + bob)
+            if legs_mode == "reach":
+                fk, ff = (37 + dx, 61 + bob), (34 + dx, 67 + bob)
+            elif legs_mode == "push":
+                fk, ff = (35 + dx, 59 + bob), (31 + dx, 58 + bob)
+            else:   # flying: hanging forward and down with the wings up, drawn up under the chest on the downstroke
+                fk = (lp((31, 62), (33, 59), gb)[0] + dx, lp((31, 62), (33, 59), gb)[1] + bob)
+                ff = (lp((34, 68), (36, 63), gb)[0] + dx, lp((34, 68), (36, 63), gb)[1] + bob)
+            flying_legs = legs_mode == "tuck"
+            limb(fh, fk, 5 if flying_legs else 4, ramp)
+            limb(fk, ff, 4 if flying_legs else 3, ramp)
+            claws(ff[0], ff[1], ramp, back=False) if flying_legs else foot(ff[0], ff[1], ramp)
+            hh = (66 + dx, 54 + bob)
+            if legs_mode == "reach":
+                hk, hf = (67 + dx, 61 + bob), (64 + dx, 67 + bob)
+            elif legs_mode == "push":
+                hk, hf = (68 + dx, 60 + bob), (68 + dx, min(GROUND, 67 + bob))
+            else:   # flying: stretched down and back with the wings up, pulled forward under the belly on the downstroke
+                hk = (lp((72, 63), (69, 63), gb)[0] + dx, lp((72, 63), (69, 63), gb)[1] + bob)
+                hf = (lp((81, 70), (63, 69), gb)[0] + dx, lp((81, 70), (63, 69), gb)[1] + bob)
+            limb(hh, hk, 7 if flying_legs else 5, ramp)
+            limb(hk, hf, 4 if flying_legs else 3, ramp)
+            claws(hf[0], hf[1], ramp, back=True) if flying_legs else foot(hf[0], hf[1], ramp)
+            return
         a, lift = gait(0.5 if far else 0.0)
         hx, hy = 39 + dx, 54 + bob
         fx, fy = 36 + dx - 3.5 * a, GROUND - lift
@@ -652,7 +791,15 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
     # hole under each (the user's blue box, 2026-10-20). A near-even thickness with a kink up into the spade read as a
     # sausage (the same day).
     sway = (1.5 * math.sin(2 * math.pi * phase) if walking else idle)
-    tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
+    if fly is not None:
+        # flying: the tail streams back nearly level behind the hips, a slow wave down its length (the reference)
+        wv = 1.2 * math.sin(2 * math.pi * phase)
+        # the tail swings with the beat: straight out, the tip a little up with the wings raised; curving down and in
+        # on the downstroke (the reference's first pose)
+        tpts = [(70, 50 + bob), (82, 54 + bob + wv * 0.3 + 2.5 * gb), (92 - 1.5 * gb, 57.5 + bob + wv * 0.7 + 5 * gb),
+                (100 - 3 * gb, 60 + bob + wv + 7 * gb), (106 - 4.5 * gb, 61.5 + bob + wv * 1.2 + 9 * gb)]
+    else:
+        tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
     tail = catmull(tpts, 160)
     tail_top = {}
     for i, (x, y) in enumerate(tail):
@@ -685,13 +832,17 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
     # neck arching up (down when grazing), a big skull with a long jaw
     hd = head_down
     neck = [(34.0, 44.0 + bob), lp((27, 36 + bob), (30, 50), hd), lp((22, 27 + bob), (23, 57), hd), lp((17, 22 + bob), (16, 59), hd)]
+    if tb is not None:
+        # flying: the neck stretched forward, the head ahead of the chest (the reference), not arched up; the head a
+        # little higher with the wings raised, lower and the neck shorter on the downstroke
+        neck = [(34.0, 44.0 + bob), lp((26, 39 + bob), (27, 42 + bob), gb), lp((19, 34 + bob), (21, 41 + bob), gb), lp((12, 31 + bob), (14, 41 + bob), gb)]
     hx, hy = neck[-1]
 
     def sdf(x, y):
-        chest = _ell(x, y, 39, 48.5 + bob, 11.5, 9.0)
+        chest = _ell(x, y, 39, 48.5 + bob - (1.0 - gb) * (1.0 if tb is not None else 0.0), 11.5, 9.0)
         back = _ell(x, y, 52, 50.0 + bob, 11.0, 8.6)
-        hips = _ell(x, y, 63, 49.0 + bob, 11.0, 9.2)
-        haunch = _ell(x, y, 66, 54.0 + bob, 8.0, 6.0)
+        hips = _ell(x, y, 63, 49.0 + bob - 3.5 * gb, 11.0, 9.2 + 2.2 * gb)   # flying: humped behind the saddle on the downstroke
+        haunch = _ell(x, y, 66 - 2.0 * gb, 54.0 + bob, 8.0, 6.0)
         d = _smin(chest, back, 5.0)
         d = _smin(d, hips, 5.0)
         d = _smin(d, haunch, 4.0)
@@ -754,7 +905,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
 
     legs(far=False)
 
-    folded_wing(flap, far=False)
+    if fly is None:
+        folded_wing(flap, far=False)
+    else:
+        spread_wing(True, fly)
 
     # ---- the outline, dark, round the union of both layers (no line along the cut between them); an outline pixel
     # goes to the front layer when it borders a front pixel, else to the back
@@ -770,6 +924,9 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON):
                     (front if fpx[ny2 * W + nx2][3] else back)[y * W + x] = col
                     break
     return back, front
+
+
+dragon.flies = True  # its frames include flying, taking off and landing (frames_for)
 
 
 def dragon_blue(phase, head_down=0.0, idle=0.0):
@@ -800,6 +957,23 @@ def frames_for(fn):
         out[f"bdy_graze_left_{k:02d}"] = fn(0.0, head_down=min(1.0, k / 3))
     for k in range(1, 7):
         out[f"bdy_turn_left_{k:02d}"] = fn(0.0, idle=0.8 * math.sin(k / 6 * math.pi))
+    if getattr(plain, "flies", False):
+        # flying (docs/flying.md, "the frames"): not frames the game shows; the mod plays them while the mount flies.
+        # The wing beat: raised, level, swept down, level (the reference's three poses, our own drawing), six frames;
+        # the body rises a pixel on the downstroke. Take-off: a crouch with the wings opening, the leap (hind legs
+        # pushing, wings high), the first downstroke. Landing: the wings flared high, the legs reaching down, the
+        # touch (the body down on its feet, the wings level), the wings folding.
+        # No lift drawn into a frame: the seat is a fixed row of the picture, the rider would come off the back; the
+        # flight moves the whole picture (the crouch, the climb, the thud: Flight.cs).
+        beat = (0.0, 0.3, 0.6, 1.0, 0.65, 0.3)   # the wings' pose: 0 raised, 0.5 level, 1 down (down faster than up)
+        for k, ang in enumerate(beat, 1):
+            out[f"bdy_fly_left_{k:02d}"] = fn((k - 1) / 6, head_down=0.0, fly=ang, legs_mode="tuck")
+        takeoff = ((None, "walk"), (0.0, "push"), (0.15, "push"), (0.8, "tuck"))
+        for k, (ang, mode) in enumerate(takeoff, 1):
+            out[f"bdy_takeoff_left_{k:02d}"] = fn(0.0, head_down=0.1 + 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
+        land = ((0.1, "reach"), (0.0, "reach"), (0.45, "walk"), (None, "walk"))
+        for k, (ang, mode) in enumerate(land, 1):
+            out[f"bdy_land_left_{k:02d}"] = fn(0.0, head_down=0.4 - 0.1 * k, idle=0.8 if ang is None else 0.0, fly=ang, legs_mode=mode)
     empty = [(0, 0, 0, 0)] * (W * H)
     for name in ("hed_static_down", "hed_static_down_02", "hed_static_down_03"):
         out[name] = (empty, None)

@@ -29,6 +29,10 @@ ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] +
          + [f"bdy_graze_left_{i:02d}" for i in range(1, 6)] + [f"bdy_chew_left_{i:02d}" for i in range(1, 4)]
          + [f"bdy_lips_left_{i:02d}" for i in range(1, 14)] + [f"bdy_turn_left_{i:02d}" for i in range(1, 7)]
          + ["hed_static_down", "hed_static_down_02", "hed_static_down_03"])
+# the flying experiment's frames (docs/flying.md "the frames"): not the game's, the mod plays them while a mount flies;
+# a skin without them shows empty cells there (the donkey has none)
+FLIGHT = ([f"bdy_takeoff_left_{i:02d}" for i in range(1, 5)] + [f"bdy_fly_left_{i:02d}" for i in range(1, 7)]
+          + [f"bdy_land_left_{i:02d}" for i in range(1, 5)])
 MOUNT_NAMES = {"donkey": "Donkey"}  # every other mount's name comes from the [Mount] section of the skin that declares it
 RIDER_HIP_ABOVE_FEET = 7  # the keeper's hip is 7 px above his feet (Mount.SeatOn, tools/skins/review.py)
 
@@ -406,6 +410,15 @@ def main(argv):
             clips.setdefault(mm.group(1), []).append(key)
     clips["head"] = [k for k in ORDER if k.startswith("hed_")]
     speed = {"walk": 970 / 8, "head": 300}
+    # flying: the beat (six frames in Flight.WingBeatS, 0.6 s), the take-off, the landing, and the whole flight once
+    # round (take-off, three beats, landing) as the game plays it, if any skin has the frames
+    if any(k in sk.get("frames", {}) for g in groups for sk in g["skins"] for k in FLIGHT):
+        fly = [k for k in FLIGHT if "_fly_" in k]
+        clips["fly"] = fly
+        clips["takeoff"] = [k for k in FLIGHT if "_takeoff_" in k]
+        clips["land"] = [k for k in FLIGHT if "_land_" in k]
+        clips["flight"] = clips["takeoff"] + fly * 3 + clips["land"]
+        speed.update({"fly": 100, "takeoff": 80, "land": 110, "flight": 95})
 
     caps_dir = os.path.join(probe, "captures")
     captures = []
@@ -427,7 +440,7 @@ def main(argv):
         same = "the same as the probe's" if donkey_diverge == 0 else str(donkey_diverge) + " px differ from the probe's donkey-frames"
         export_note += "; the donkey's frames: " + same
     page = HTML.replace("__GROUPS__", json.dumps(groups)).replace("__CLIPS__", json.dumps(clips)).replace("__SPEED__", json.dumps(speed)) \
-               .replace("__CAPS__", json.dumps(captures)).replace("__RIDER__", json.dumps(rider)).replace("__ORDER__", json.dumps(ORDER)) \
+               .replace("__CAPS__", json.dumps(captures)).replace("__RIDER__", json.dumps(rider)).replace("__ORDER__", json.dumps(ORDER + (FLIGHT if "fly" in clips else []))) \
                .replace("__EXPORT__", json.dumps(export_note)).replace("__RIDER_HIP__", json.dumps(rider_hip))
     open(out_path, "w", encoding="utf-8").write(page)
     print("ok", out_path, f"{len(page) // 1024} KB" + (f" | game export: {export_note}" if export_note else " | no game export yet (Mounts tab: Export the loaded skins as built)"))

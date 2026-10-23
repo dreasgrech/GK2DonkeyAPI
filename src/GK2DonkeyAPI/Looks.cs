@@ -2086,6 +2086,7 @@ namespace GK2DonkeyAPI
             private sealed class Slot
             {
                 internal SpriteRenderer Part, Overlay, Front;
+                internal bool Body;  // the body part (bdy): the one the flight's own frames replace (Flight.FrameFor)
                 internal bool Hid;   // forceRenderingOff set by this rig (cleared only by it)
             }
 
@@ -2165,7 +2166,7 @@ namespace GK2DonkeyAPI
             {
                 this.owner = owner;
                 slots = new Slot[viewBase.Parts.Length];
-                for (int i = 0; i < slots.Length; i++) slots[i] = new Slot();
+                for (int i = 0; i < slots.Length; i++) slots[i] = new Slot { Body = viewBase.Parts[i] == "bdy" };
             }
 
             internal string Note => failed ? "off (failed)" : root == null ? "not attached" : skin != null ? "wears " + skin.Def.Id : "the " + viewBase.Id;
@@ -2686,6 +2687,10 @@ namespace GK2DonkeyAPI
                 if (part == null || !part || ov == null || !ov) return;
                 Sprite game = part.sprite;
                 Sprite mine = game != null && skin != null ? skin.Resolve(game) : null;
+                // flying (the flying experiment): the skin's own flying, take-off and landing frames, when it has them,
+                // by the flight's timing, in place of whatever walk or idle frame the game shows (docs/flying.md)
+                string flyKey = s.Body && skin != null && owner != null ? Flight.FrameFor(owner) : null;
+                bool flying = flyKey != null && skin.Frames.TryGetValue(flyKey, out Sprite flyFrame) && (mine = flyFrame) != null;
                 bool show = mine != null && part.enabled && part.gameObject.activeInHierarchy;
                 if (ov.sprite != mine) ov.sprite = mine;
                 if (ov.enabled != show) ov.enabled = show;
@@ -2704,7 +2709,8 @@ namespace GK2DonkeyAPI
                 SpriteRenderer fr = s.Front;
                 if (fr != null && fr)
                 {
-                    Sprite front = game != null && skin != null && part.enabled && part.gameObject.activeInHierarchy ? skin.Resolve(game, front: true) : null;
+                    Sprite front = game != null && skin != null && part.enabled && part.gameObject.activeInHierarchy
+                        ? (flying ? (skin.Frames.TryGetValue("front/" + flyKey, out Sprite ff) ? ff : null) : skin.Resolve(game, front: true)) : null;
                     bool showFront = front != null;
                     if (fr.sprite != front) fr.sprite = front;
                     if (fr.enabled != showFront) fr.enabled = showFront;

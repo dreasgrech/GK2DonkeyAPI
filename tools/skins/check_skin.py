@@ -1,6 +1,7 @@
 # Checks a skin pack (skin.cfg + a PNG per frame, or one sheet.png of cells) before it is looked at in game. Says
 # what is wrong in plain words; never changes anything. Usage: python check_skin.py <pack folder>
 # Run by "GK2 Export skin" after each export (the "check =" line of the .gk2export.txt next to the .aseprite file).
+import re
 import os, sys
 from PIL import Image
 
@@ -86,7 +87,7 @@ def main(pack):
                 if not f.endswith(".png"):
                     continue
                 k = f[:-4]
-                if k not in ORDER:
+                if k not in ORDER and not re.match(r"^bdy_(fly|takeoff|land)_left_\d\d$", k):  # the flying frames (docs/flying.md)
                     warn.append(f"front/{f}: not a frame key")
                     RESULT["errors"] += 1
                     continue
@@ -136,7 +137,7 @@ def main(pack):
         # lone pixel on top of them is not a stray (a lava crack on the coat is one pixel wide; Hellfire walk 2)
         base_key = k[6:] if k.startswith("front/") else k
         under = [placed(dk[base_key]).load()] if base_key in dk else []
-        if k.startswith("front/"):
+        if k.startswith("front/") and base_key in body_cells:  # the flying frames' bodies aren't in ORDER's cells
             under.append(body_cells[base_key].load())
         for y in range(ch):
             for x in range(cw):

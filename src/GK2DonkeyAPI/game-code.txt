@@ -24,6 +24,9 @@ frozen the chest on the cart: CartChest ChestMoves ChestInteractionHandler_Inter
 frozen the colours: Colors
 frozen the lantern: Lantern
 
+# the flying experiment (docs/flying.md): dev tools only
+dev Flight FlightSurvey MapSurvey DrawnGround PlayerPhysicalBody_LockMovement_Patch LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch
+
 warned the sounds: MountSounds AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
 warned the Mounts panel (the look bar's successor): MountsPanel
 warned the settings page in the game's Settings window: SettingsRows
