@@ -25,8 +25,24 @@ authors; the player-facing keys are in [reference.md](reference.md) "Sounds".
 | `bell` | the bell | on setting off after standing (`on_set_off`, `set_off_idle`, `only_with_cargo`), the bell key, `Mounts.RingBell()` |
 | `sent`, `called` | sent away / called over | silent unless a layer gives a sound |
 
-Flying events (take-off, wing beats, the glide, the landing, the jump) come with phase 2; a standing herd's calls
-and the babies' answers with phase 3 (the design's sections 3.2 and 3.3).
+**Flying and jumping** (the flying experiment, docs/flying.md; a mount with `flies = true`, and every mount's jump),
+all silent unless a layer gives a sound:
+
+| Event | When | Notes |
+|---|---|---|
+| `takeoff` | the take-off begins (the crouch; a jump turning into a take-off) | |
+| `flap` | each wing beat: the launch's kicks, then every beat airborne | not while gliding |
+| `glide` | the glide begins | stoppable: `loop = true` for a sound through the glide, cut at its way out |
+| `fly` | airborne | stoppable: a loop through the flight, stopped on the ground (wind) |
+| `land` | the landing begins (the dive) | |
+| `touchdown` | the thud on touching the ground | |
+| `landed` | the flight is over, on the ground | |
+| `refused_takeoff` | a take-off refused (indoors, with the cart, a mount that doesn't fly) | |
+| `jump` | a jump leaves the ground | ground mounts too |
+| `jumpland` | a jump comes down (the squash) | |
+| `perch` | a jump comes down on top of something | |
+
+A standing herd's calls and the babies' answers come with phase 3 (the design's section 3.3).
 
 ## A pack's sounds
 

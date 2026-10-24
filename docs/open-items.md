@@ -369,8 +369,9 @@ closed):
   the Mods menu).
 - **Mount sounds system** ([mount-sounds-design.md](mount-sounds-design.md), [mount-sounds.md](mount-sounds.md)):
   **phase 1 built and F11-green 2026-10-24** (the probe, a Sounds.Rig per instance, packs' own files with [Sounds] /
-  [Mount.Sounds], the API). Open: phase 2 (the flying events: take-off, wing beats, glide, landing, jump; the hook
-  points are in the design's 3.2), phase 3 (a standing herd's calls, the babies' answers, [Sounds.Baby]), the built-in
+  [Mount.Sounds], the API); **phase 2 built 2026-10-24** (the flying and jumping events; the embedded-pack route
+  proved with the API's own test pack: .ogg via the cache file, .wav in place, a loop, a reload; F11 pending). Open:
+  phase 3 (a standing herd's calls, the babies' answers, [Sounds.Baby]), the built-in
   skins' own sound files (none yet: the dragon's roar and the rat's squeak are the user's picks or recordings; the
   game's donkey_default_* lines are free by id), a Saddle Up row for StandingSounds, the by-ear check of the probe
   tone (3D, the Sounds slider, the pause).

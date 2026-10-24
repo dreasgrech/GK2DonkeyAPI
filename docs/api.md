@@ -736,7 +736,9 @@ registration, a pack's declaration or a withdrawal.
 
 Every mount instance plays the events of one catalogue through the game's own player ([mount-sounds-design.md](mount-sounds-design.md)):
 `step` (with the surface variants `grass`, `dirt`, `wood`, `stone`), `wheel`, `setoff`, `stop`, `graze`, `lips`,
-`ear`, `turn`, `voice`, `refused`, `mount`, `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, `sent`, `called`. What
+`ear`, `turn`, `voice`, `refused`, `mount`, `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, `sent`, `called`, and
+the flying and jumping ones `takeoff`, `flap`, `glide`, `fly`, `land`, `touchdown`, `landed`, `refused_takeoff`,
+`jump`, `jumpland`, `perch`. What
 plays for an event on an instance comes from layers, the first that says a source wins: a mod's `Set` here, the
 skin's own (`MountSkinDef.Sounds`, a pack's `[Sounds]`; `SoundsRide` / `SoundsCart` for one style), the mount's
 (`MountDef.Sounds`, a pack's `[Mount.Sounds]`), the player's keys (`Mounts.Tuning`: the donkey's sounds as shipped

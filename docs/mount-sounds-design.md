@@ -16,7 +16,10 @@ over the base, `SaveCfg` writes the sections, `SkinsScan` and `canonical_cfg.py`
 own sounds"; F11: 49/2, the two the rig's own Resolve not binding, fixed); **step 4 built 2026-10-24** (the API
 `Mounts.Sounds` / `MountSound` / `MountSoundEvent`, the defs' `Sounds` dictionaries, the Mounts tab's sound rows, the
 self-test "the API"); **phase 1 complete: F11 group Sounds 67/0 on 2026-10-24, the author's page is
-[mount-sounds.md](mount-sounds.md)**; phases 2 and 3 open; the build plan is in the session's plan file
+[mount-sounds.md](mount-sounds.md)**; **phase 2 built 2026-10-24** (the flying and jumping events: `takeoff`, `flap`,
+`glide`, `fly`, `land`, `touchdown`, `landed`, `refused_takeoff`, `jump`, `jumpland`, `perch`; the self-test "the flying
+events"), with the embedded-pack route proved by the API's own test pack (an `.ogg` through the cache file, a `.wav` in
+place, a loop, a reload after a file changed); phase 3 open; the build plan is in the session's plan file
 (the probe, then phase 1 in four steps). Corrections from the code read for the plan are marked *(plan)* below. The
 facts below are from the game's code (LazyBearTechnology and
 Assembly-CSharp decompiles of game 1.010, `lbt_1010` and `decomp_1010`), the mod's sources, and the earlier reports
@@ -169,7 +172,7 @@ Not events: the keeper's own sounds (his steps are skipped while mounted and sta
 sounds (they play as they do), the cart chest's open sound (the game's), anything in a fight (the mount does not
 act; a later `hit` event is a row away).
 
-### 3.2 Flying mounts (phase 2; the hook points exist today in `Flight.cs`)
+### 3.2 Flying mounts (phase 2: **built 2026-10-24**, the hooks in `Flight.cs`; the self-test "the flying events")
 
 | Event | Trigger | Kind | Notes |
 |---|---|---|---|

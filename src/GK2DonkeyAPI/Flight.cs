@@ -213,6 +213,8 @@ namespace GK2DonkeyAPI
         internal static float AboveGroundPx => Mathf.Max(0f, heightPx + (Free ? groundBelowPx : 0f));
         private static Mount.Instance lastOwner;
         private static float vel, phaseT, nextBeat, thudT = -1f; // the launch's and the landing's motion
+        private static int lastBeatN = -1;   // the wing beat last sounded airborne (the flap event, Sounds.cs)
+        private static bool flyLoopOn;       // the fly event (a loop) is on until the ground
         private static int beatsLeft;
         private static bool launched;
         private static bool cameraLifted, cameraSaid;
@@ -437,6 +439,7 @@ namespace GK2DonkeyAPI
                 beatT = (n + 0.75f) * beat; // the clock stops on frame 7, where the way in and the way out meet the beat
                 glide = GlideStage.In;
                 glideT = glideAll = 0f;
+                Sound("glide");
                 glideLen = UnityEngine.Random.Range(Mathf.Min(GlideMinS, GlideMaxS), Mathf.Max(GlideMinS, GlideMaxS));
                 glideEndWhy = null;
                 glideForced = glideAsked;
@@ -488,6 +491,7 @@ namespace GK2DonkeyAPI
 
         private static void StopGlide()
         {
+            if (glide != GlideStage.None) StopSound("glide");
             glide = GlideStage.None;
             alongT = 0f; // a while of beating again before the next
             glideAsked = glideForced = false;
@@ -641,7 +645,7 @@ namespace GK2DonkeyAPI
         {
             if (Now == Phase.Ground || Now == Phase.Landing)
             {
-                if (!CanFly(i, out string why)) { Why = "can't take off: " + why; Plugin.Log.LogInfo("[flight] " + Why); return; }
+                if (!CanFly(i, out string why)) { Why = "can't take off: " + why; Plugin.Log.LogInfo("[flight] " + Why); try { i?.SoundsRig?.Emit("refused_takeoff"); } catch { } return; }
                 owner = i;
                 Set(Phase.Rising, $"take off to {CruisePx:0} px");
             }
@@ -792,7 +796,16 @@ namespace GK2DonkeyAPI
             GlideTick(i, dt, climbing);
             PitchTick(dt);
             // the beat's clock: still while gliding (the glide's own stages) and through the landing's frames (cut 2 above)
-            if (Now != Phase.Ground) { bobT += dt; if (!Gliding && !(FrameFor(i) is string lk && lk.StartsWith("bdy_land_", System.StringComparison.Ordinal))) beatT += dt; }
+            if (Now != Phase.Ground)
+            {
+                bobT += dt;
+                if (!Gliding && !(FrameFor(i) is string lk && lk.StartsWith("bdy_land_", System.StringComparison.Ordinal)))
+                {
+                    beatT += dt;
+                    int beatN = Mathf.FloorToInt(beatT / Mathf.Max(0.1f, WingBeatS));
+                    if (Now == Phase.Airborne && beatN != lastBeatN) { lastBeatN = beatN; Sound("flap"); } // each beat airborne: a flap
+                }
+            }
             using (Perf.Measure(Perf.S.FlyFree)) FreeTick(i); // the session's first take-off cost one 14-20 ms frame (2026-10-23): timed
             FollowCamera();
             ApplyBodyMove();
@@ -926,6 +939,7 @@ namespace GK2DonkeyAPI
             if (!jumpTook && arc > 0f && rb != null)
             {
                 jumpTook = true; // once, as the mount leaves the ground
+                Sound("jump");
                 if (JumpOver && Mount.Instance.IsIndoors()) Plugin.Log.LogInfo("[flight] jump in place: indoors (no jumping through walls)");
                 else if (JumpOver)
                 {
@@ -1053,7 +1067,13 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static void Stage(JumpStage s) { jumpStage = s; jumpStageT = 0f; }
+        private static void Stage(JumpStage s)
+        {
+            if (s == JumpStage.Squash && jumpStage != JumpStage.Squash) Sound("jumpland");
+            if (s == JumpStage.Perch && jumpStage != JumpStage.Perch) Sound("perch");
+            jumpStage = s;
+            jumpStageT = 0f;
+        }
 
         // the way off what the jump came down on: to the nearest side of its outline (its bounds, flat), else back the way it came
         private static void EdgeOf(Vector3 at)
@@ -1616,6 +1636,7 @@ namespace GK2DonkeyAPI
 
         private static void Land(string what)
         {
+            if (Now == Phase.Jumping && jumpStage != JumpStage.Squash && jumpTook) Sound("jumpland"); // a jump in place comes down here, without the squash stage
             if (Now == Phase.Jumping) JumpTrace.End(what);
             if (Free) ForceDown(MainGame.PlayerController, what, move: true);
             if (owner != null && Now != Phase.Jumping) { lastOwner = owner; landedAt = Time.unscaledTime; }
@@ -1653,6 +1674,7 @@ namespace GK2DonkeyAPI
             if (beatsLeft > 0 && phaseT >= nextBeat)
             {
                 vel += BeatKickPxPerS;
+                Sound("flap");
                 beatsLeft--;
                 nextBeat += Mathf.Max(0.05f, BeatS);
             }
@@ -1686,7 +1708,7 @@ namespace GK2DonkeyAPI
                 heightPx = 0f; vel = 0f;
                 if (Free) return; // FreeTick lands the body first (or holds the clear height)
                 if (ThudPx <= 0f) Land("landed");
-                else thudT = 0f;
+                else { thudT = 0f; Sound("touchdown"); }
             }
         }
 
@@ -1718,6 +1740,43 @@ namespace GK2DonkeyAPI
             interactionPaused = false;
         }
 
+        // The flying events on the ridden mount's sound rig (docs/mount-sounds.md; the catalogue in SoundEvents.cs):
+        // the phases here, the wing beats in Launch and the beat clock, the glide in GlideTick, the thud in Descend, the
+        // jump in JumpTick and Stage. Every one is silent unless the mount's or skin's sounds give it a sound.
+        private static void Sound(string eventId)
+        {
+            try { owner?.SoundsRig?.Emit(eventId); } catch { }
+        }
+
+        private static void StopSound(string eventId)
+        {
+            try { owner?.SoundsRig?.Stop(eventId); } catch { }
+        }
+
+        private static void FlightSound(Phase p, bool fromFlight)
+        {
+            switch (p)
+            {
+                case Phase.Rising:
+                    lastBeatN = -1;
+                    Sound("takeoff");
+                    break;
+                case Phase.Airborne:
+                    lastBeatN = Mathf.FloorToInt(beatT / Mathf.Max(0.1f, WingBeatS)); // the beats from here are the flaps
+                    if (!flyLoopOn) { flyLoopOn = true; Sound("fly"); }
+                    break;
+                case Phase.Landing:
+                    Sound("land");
+                    break;
+                case Phase.Ground:
+                    StopSound("fly");
+                    StopSound("glide");
+                    flyLoopOn = false;
+                    if (fromFlight) Sound("landed");
+                    break;
+            }
+        }
+
         private static void Set(Phase p, string what)
         {
             if (Now == p) return;
@@ -1733,6 +1792,7 @@ namespace GK2DonkeyAPI
             if (p == Phase.Airborne || p == Phase.Ground) vel = 0f;
             Now = p;
             Why = what;
+            FlightSound(p, fromFlight);
             if (p != Phase.Ground && p != Phase.Jumping) InteractionPause(true);
             else if (fromFlight || interactionPaused) InteractionPause(false, always: fromFlight); // not at a jump's end: the game would log a line per hop
             Plugin.Log.LogInfo($"[flight] {what} (height {heightPx:0} px)");

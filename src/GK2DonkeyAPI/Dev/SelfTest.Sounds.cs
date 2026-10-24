@@ -212,8 +212,9 @@ namespace GK2DonkeyAPI
                     yield return Frames(2);
                     sr.Invalidate();
                     SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
-                    Check(waited && sv != null && sv.Volume < 0.001f && sl != null && sl.Volume < 0.001f && ss != null && ss.Volume < 0.001f,
-                        $"a standing snail: its mount's pins reach the rig (voice {sv?.Volume:0.00}, lips {sl?.Volume:0.00}, step {ss?.Volume:0.00}; the pins {(waited ? "on the wearer" : "NOT on the wearer within 10 s")}, BrayVolume {(standing.Tuning.IsSet("BrayVolume") ? "set by " + standing.Tuning.SetBy("BrayVolume") : "unset")})");
+                    bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f); // the mount's pins (volume 0) and its [Mount.Sounds] none both silence
+                    Check(waited && Off(sv) && Off(sl) && Off(ss),
+                        $"a standing snail: its mount's pins and [Mount.Sounds] reach the rig (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; the pins {(waited ? "on the wearer" : "NOT on the wearer within 10 s")}, BrayVolume {(standing.Tuning.IsSet("BrayVolume") ? "set by " + standing.Tuning.SetBy("BrayVolume") : "unset")})");
                     Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
                     standing.Tuning.Set(Owner, "Skin", "");
                     yield return Until(() => standing.Mount == "donkey", 8f);
@@ -343,6 +344,21 @@ namespace GK2DonkeyAPI
                     && text.Contains("[Mount.Sounds]\nvoice = mount_voice.wav") && text.Contains("bell.volume = 0.25") && text.IndexOf("[Sounds]") < text.IndexOf("[Mount]") && text.IndexOf("[Mount.Sounds]") > text.IndexOf("[Mount]"),
                     "saved: [Sounds], [Sounds.Cart] and [Mount.Sounds] kept with their lines and comment, in their places" + (err != null ? " (" + err + ")" : ""));
 
+                // a changed file: the pack read again (the dev auto-reload does this by itself), the bank's entry
+                // forgotten and the new file decoded on the next play
+                h.Tuning.Set(Owner, "Skin", "sounds-test");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "sounds-test", 8f);
+                File.WriteAllBytes(Path.Combine(packDir, "sounds", "voice_1.wav"), SoundBank.TestTone(0.5f, 440f));
+                File.WriteAllBytes(Path.Combine(packDir, "sounds", "voice_2.wav"), SoundBank.TestTone(0.5f, 520f));
+                string reloadErr = Looks.ReloadCfg(def);
+                Check(reloadErr == null && SoundBank.Find(voiceId) == null, "read again after a file changed: the bank's entry is forgotten" + (reloadErr != null ? " (" + reloadErr + ")" : ""));
+                def = Looks.Find("sounds-test");
+                rig.Invalidate();
+                SoundSpec v3 = rig.Resolve("voice");
+                yield return Until(() => v3 != null && SoundBank.StateOf(v3.BankId) == SoundBank.State.Ready, 6f);
+                SoundBank.Entry ve3 = SoundBank.Find(v3?.BankId);
+                Check(waited && ve3 != null && ve3.Clips.Length == 2 && Mathf.Abs(ve3.Clips[0].length - 0.5f) < 0.03f, $"... and the new files play ({(ve3 != null && ve3.Clips.Length > 0 ? ve3.Clips[0].length.ToString("0.00") : "-")} s now, 0.30 before)");
+
                 // the clean-up: the skins withdrawn, the bank's entries gone
                 Check(Looks.Unregister("sounds-test-2", owner) && Looks.Unregister("sounds-test", owner), "both skins withdrawn");
                 yield return null;
@@ -457,6 +473,137 @@ namespace GK2DonkeyAPI
                 try { if (tempRoot != null && Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true); } catch { }
                 try { if (own != null) UnityEngine.Object.Destroy(own); } catch { }
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
+            }
+        }
+
+        // An embedded pack's sounds, the route the built-in skins' sounds take (Saddle Up's are embedded in its DLL):
+        // the API's own test pack (assets\testskin, never registered at start), its .ogg decoded through the cache
+        // file under BepInEx\cache, its .wav parsed in place by the convention name, a looping event stopped.
+        private static IEnumerator SoundsEmbedded()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string owner = Owner + ".embedded";
+            MountHandle h = null;
+            try
+            {
+                int n = Looks.RegisterEmbedded(typeof(Plugin).Assembly, "GK2DonkeyAPI.testskins.", owner);
+                Looks.SkinDef def = Looks.Find("embedded-sound-test");
+                Check(n == 1 && def != null && def.FileNames.Contains("sounds/voice_1.ogg") && def.FileNames.Contains("sounds/step_1.wav"),
+                    $"the API's embedded test pack registers with its two sound files ({n} pack(s); {(def != null ? string.Join(", ", def.FileNames) : "-")})");
+                if (def == null) yield break;
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "embedded-sound-test");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "embedded-sound-test", 8f);
+                Sounds.Rig rig = h.I.SoundsRig;
+                rig.Invalidate();
+                SoundSpec st = rig.Resolve("step");
+                Check(st != null && st.Layer == "skin" && st.BankId != null && SoundBank.StateOf(st.BankId) == SoundBank.State.Ready, $"step_1.wav by convention, parsed in place: ready at once ({st?.Describe()})");
+                SoundBank.Entry se = SoundBank.Find(st?.BankId);
+                Check(se != null && se.Clips.Length == 1 && Mathf.Abs(se.Clips[0].length - 0.25f) < 0.03f, $"... a 0.25 s clip ({(se != null && se.Clips.Length > 0 ? se.Clips[0].length.ToString("0.00") : "-")})");
+                SoundSpec v = rig.Resolve("voice");
+                string vid = v?.BankId;
+                Check(v != null && v.Layer == "skin" && vid != null, $"voice_1.ogg: resolved to the bank ({v?.Describe()})");
+                yield return Until(() => SoundBank.StateOf(vid) == SoundBank.State.Ready, 8f);
+                SoundBank.Entry ve = SoundBank.Find(vid);
+                Check(waited && ve != null && ve.Clips.Length == 1 && Mathf.Abs(ve.Clips[0].length - 0.4f) < 0.05f, $"... decoded through the cache file: a 0.4 s clip ({(ve != null && ve.Clips.Length > 0 ? ve.Clips[0].length.ToString("0.00") : "-")})");
+                string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", owner, "embedded-sound-test", "voice_1.ogg");
+                Check(File.Exists(cache), "the cache file exists: " + cache);
+                rig.Invalidate();
+                SoundHandler hv = rig.Emit("voice");
+                Check(hv != null && hv.IsActive, $"Emit(voice) plays it ({ClipOf(hv)})");
+                // graze names the same file under its own line: its own bank entry, decoded on its first resolve (a
+                // play before that is silent, as a pack's first seconds are); waited for here
+                SoundSpec gs = rig.Resolve("graze");
+                yield return Until(() => gs != null && SoundBank.StateOf(gs.BankId) == SoundBank.State.Ready, 8f);
+                rig.Invalidate();
+                SoundHandler g = rig.Emit("graze");
+                yield return Seconds(1f);
+                Check(g != null && g.IsActive, $"graze.loop = true: the 0.4 s clip is still playing after a second (looping; {(g != null ? "played" : "not played: " + rig.LastEvent)})");
+                rig.Stop("graze");
+                yield return null;
+                Check(g == null || !g.IsActive, "Stop(graze) ends the loop");
+                h.Tuning.Set(Owner, "Skin", "");
+                yield return Until(() => h.Mount == MountCatalog.DonkeyId, 8f);
+            }
+            finally
+            {
+                try { Looks.Unregister("embedded-sound-test", owner); } catch { }
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+            }
+        }
+
+        // The flying events (docs/mount-sounds-design.md 3.2) on a flier of the test's own, every event given a game
+        // sound: the take-off, the launch's flaps and the beats airborne, the fly loop, the landing, the thud, landed;
+        // a jump's own two; a jump plays none of the flight's.
+        private static IEnumerator SoundsFlying()
+        {
+            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string owner = Owner + ".flysounds";
+            string tempRoot;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flysounds", "flysound-test",
+                    "[Skin]\nformat = 1\nid = flysound-test\nname = Fly Sound Test\nmount = flysound-beast\n\n" +
+                    "[Sounds]\ntakeoff = fishing_cast_swoosh\nflap = conveyor_furnace_bellows\nglide = tree_wind\nfly = weather_wind\nland = bush_chop\ntouchdown = oh_wood_drop\nlanded = item_put\njump = equip_tool\njumpland = oh_wood_container_drop\n\n" +
+                    "[Mount]\nid = flysound-beast\nname = Fly Sound Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+            }
+            catch (Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            MountHandle h = null;
+            try
+            {
+                Looks.RegisterFolder(tempRoot, owner);
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "flysound-test");
+                yield return Until(() => h.Mount == "flysound-beast", 8f);
+                MountResult r = h.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                Mount.Instance i = Mount.Ridden;
+                Sounds.Rig rig = i.SoundsRig;
+                rig.TestPlays.Clear();
+                int Plays(string e) => rig.TestPlays.TryGetValue(e, out int c) ? c : 0;
+
+                MountResult t = Mounts.TakeOff();
+                Check(t.Ok, $"take-off ({Said(t)})");
+                yield return Until(() => Flight.Now == Flight.Phase.Airborne, 10f);
+                Check(waited && Plays("takeoff") == 1 && Plays("flap") >= Flight.Beats, $"the take-off: takeoff once, {Plays("flap")} flap(s) in the launch ({Flight.Beats} beats), fly {Plays("fly")}");
+                Check(Plays("fly") == 1, "the fly loop started once");
+                int afterLaunch = Plays("flap");
+                yield return Seconds(2f);
+                Check(Plays("flap") > afterLaunch, $"airborne: the flaps go on with the beat ({Plays("flap")} after two seconds, {afterLaunch} after the launch)");
+                MountResult l = Mounts.Land();
+                Check(l.Ok, $"land ({Said(l)})");
+                yield return Until(() => Flight.Now == Flight.Phase.Ground, 15f);
+                Check(waited && Plays("land") == 1 && Plays("touchdown") == 1 && Plays("landed") == 1, $"the landing: land {Plays("land")}, touchdown {Plays("touchdown")}, landed {Plays("landed")} ({Flight.Why})");
+                yield return Frames(10);
+
+                // a jump: its own two events, nothing of the flight
+                rig.TestPlays.Clear();
+                i = Mount.Ridden;
+                Flight.TestJumpHeld = true;
+                Flight.Press(i, true, false, same: true);
+                yield return Until(() => Flight.Now == Flight.Phase.Jumping && Flight.HeightPx > 2f, 2f);
+                Flight.TestJumpHeld = false;
+                yield return Until(() => Flight.Now == Flight.Phase.Ground, 10f);
+                Check(waited && Plays("jump") == 1 && Plays("jumpland") >= 1, $"the jump: jump {Plays("jump")}, jumpland {Plays("jumpland")} ({Flight.Why})");
+                Check(Plays("takeoff") == 0 && Plays("flap") == 0 && Plays("fly") == 0 && Plays("land") == 0, "a jump plays none of the flight's events");
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null;
+                if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+                Looks.Unregister("flysound-test", owner);
+                try { Directory.Delete(tempRoot, true); } catch { }
             }
         }
 

@@ -539,6 +539,31 @@ For mod authors:
 
 Development:
 
+- **The hillside jump test, run and corrected** (the flying experiment): the streaming fix found the slope and both
+  jumps landed; its two failures were the test's own: the downhill start had been placed at the foot's height inside
+  the ramp (a 17 px jolt as the physics pushed the body out), now both starts sit on the ground's surface; and a
+  24-degree hillside climbs 3.2 px a physics step by itself, so the cap is the ramp rule's 4 px, not the flat yard's
+  2 (docs/flying.md "The hillside, run"). The embedded-pack sound test waits for its graze line's own bank entry.
+- **The flying and jumping sound events** (docs/mount-sounds.md; phase 2 of the sound system): `takeoff`, `flap`
+  (the launch's kicks, then every wing beat airborne, not while gliding), `glide` and `fly` (stoppable: loops through
+  the glide and the flight, cut at the way out and on the ground), `land`, `touchdown` (the thud), `landed`,
+  `refused_takeoff`, `jump`, `jumpland` (the squash, or a jump in place coming down), `perch`. All silent unless a
+  mount's or skin's sounds give them one. Self-test "the flying events" (group Sounds).
+- **The route the built-in skins' sounds take is proved**: the API's DLL carries a test pack of its own
+  (`assets\testskin`, never registered at start) with an `.ogg` and a `.wav`; the self-test "an embedded pack's
+  sounds" registers it, decodes the `.ogg` through the cache file under BepInEx\cache, parses the `.wav` in place,
+  plays a looping event and stops it. "A pack's own sounds" now also changes a file on disk, reads the pack again and
+  hears the new file. What to hand over for the creatures' own sounds: OGG Vorbis or WAV, mono, 44.1 or 48 kHz, a few
+  seconds, in the skin's `sounds` folder, named for the event (`voice_1.ogg`, `voice_2.ogg`, `flap_1.ogg`).
+- **First sounds for the built-in creatures, from the game's own ids** (`[Mount.Sounds]` in the five skin.cfgs, to
+  audition on the Mounts tab): the dragon growls (the zombie's attack cry pitched down), treads heavily (the stone
+  step, two a cycle) and breathes at the grass (the furnace bellows); the giant rat squeals (the spitter's cry pitched
+  up), patters (six light steps a cycle) and nibbles (the food sound); the snail is silent but for a wet blop getting
+  on and off; the worm rustles as it drags (two a cycle), eats dirt (the shovel) and slaps wetly getting on and off;
+  Gerry speaks in his own dialogue voice (the game's "garry" clips, in the speech channel) and clatters on bone steps
+  (Larry's). The snail's, the worm's and Gerry's older `[Mount.Tuning]` pins stay. These are first picks by name:
+  what to keep is the user's ear's call; a real roar and a real squeak want files of our own. The game's 311 sound
+  ids with their clips are listed in `C:\ClaudeCodeTemp\GK2-music\sound_ids.txt` (`dump_audiocfg.py` there).
 - **A sound rig per mount instance** (docs/mount-sounds-design.md, phase 1 step 2): `MountSounds.cs` (one static
   set of timers for the ridden mount) is now `Sounds.cs`: every instance has a `Sounds.Rig` with its own timers and
   animator reading, so the ridden one, a standing one in the Active tier and a foal all sound; every event is a row

@@ -842,6 +842,15 @@ the ground's layer from 1.2 up down to the ground 5 ahead, a running jump down i
 4 px a frame (the touch-down frame on the 13-degree ramp read 2.5: the last kinematic step and the game's walk in one
 frame; the cut was 30 and 51) and the body down on the ramp's surface.
 
+**The hillside, run (F11 2026-10-24 ~14:07, 1010/3).** The streaming fix worked: from next to the road the finder
+found the slope and both jumps ran (3.49 up, 3.48 down, down on the ground, never sent back). The two checks failed
+on the drawn ground's step: 3.5 px a frame uphill and 17 px downhill. The traces (`GK2-jumps` 034 and 035): uphill
+the body climbs the 24-degree ramp 0.108 a physics step (0.24 along at the mover's 12 a second, times the rise of
+0.45 a unit), 3.2 px, the ramp itself, not a fault; the cap was the flat yard's 2 px and is now the ramp rule's 4 px.
+Downhill the test had put the keeper at the ramp's top x but at the foot's height, inside the ramp mesh, and the
+physics pushed the body out 0.45 in one step at x 21.37 before it ran down normally: the test's placement, not the
+jump's; both starts now sit on the ground's surface (a ray down onto the ground layers). To run again.
+
 ### The yard, for real (2026-10-24, built)
 
 The user: "the jump tests are done in an empty area instead of the home yard where there are many things to jump and

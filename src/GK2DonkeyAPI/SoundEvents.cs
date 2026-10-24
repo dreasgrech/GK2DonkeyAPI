@@ -144,6 +144,18 @@ namespace GK2DonkeyAPI
             },
             new Def { Id = "sent", Description = "sent away", Variants = None, Numbers = None },
             new Def { Id = "called", Description = "called over", Variants = None, Numbers = None },
+            // flying and jumping (docs/mount-sounds-design.md 3.2; the hooks in Flight.cs): silent unless a layer gives a sound
+            new Def { Id = "takeoff", Description = "the take-off begins (the crouch; a jump turning into a take-off)", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "flap", Description = "each wing beat: the launch's kicks, then every beat airborne (not while gliding)", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "glide", Description = "the glide begins (stoppable: a loop until the way out)", Stoppable = true, StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "fly", Description = "airborne (stoppable: a loop through the flight, stopped on the ground)", Stoppable = true, StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "land", Description = "the landing begins (the dive)", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "touchdown", Description = "the thud on touching the ground", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "landed", Description = "a flight is over, on the ground", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "refused_takeoff", Description = "a take-off refused (indoors, with the cart, a mount that doesn't fly)", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "jump", Description = "a jump leaves the ground", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "jumpland", Description = "a jump comes down (the squash)", StandingGated = true, Variants = None, Numbers = None },
+            new Def { Id = "perch", Description = "a jump comes down on top of something", StandingGated = true, Variants = None, Numbers = None },
         };
 
         private static readonly Dictionary<string, Def> byId = Index();

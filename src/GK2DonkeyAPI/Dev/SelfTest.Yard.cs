@@ -223,6 +223,9 @@ namespace GK2DonkeyAPI
                 foreach (bool uphill in new[] { true, false })
                 {
                     Vector3 start = uphill ? foot - up * 1.0f : foot + up * (run + 1.0f);
+                    // on the ground's surface there: the downhill start is up the slope, where the foot's height is inside
+                    // the ramp (the body put there was pushed out by the physics in one step: a 17 px jolt, F11 2026-10-24)
+                    if (Physics.Raycast(start + Vector3.up * 4f, Vector3.down, out RaycastHit sh, 10f, GroundLayersMask, QueryTriggerInteraction.Ignore)) start.y = sh.point.y;
                     Vector3 dir = uphill ? up : -up;
                     PutKeeper(start, dir.x >= 0f ? 1f : -1f);
                     TestSay(uphill ? "Jumping up the slope" : "Jumping down the slope");
@@ -250,8 +253,10 @@ namespace GK2DonkeyAPI
                     Vector3 at = rb.position;
                     float along = Vector3.Dot(at - before, dir);
                     bool grounded = SurfaceAtFeet(at);
-                    Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && worst <= 2f * px,
-                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it (held in place: a fault), {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame{(Flight.TestJumpWentBack ? ", SENT BACK" : "")}");
+                    // the step cap is the ramp rule's 4 px (docs/flying.md "running downhill"): a 24-degree hillside at the
+                    // mover's speed climbs 0.11 a physics step, 3.2 px, by itself; the flat yard's 2 px can't hold here
+                    Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && worst <= 4f * px,
+                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it (held in place: a fault), {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame (4 allowed on a slope){(Flight.TestJumpWentBack ? ", SENT BACK" : "")}");
                 }
             }
             finally

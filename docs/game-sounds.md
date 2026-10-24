@@ -30,6 +30,19 @@ Short folders with made-up names (`aduda`, `kaka`, `yala`, ...) are the characte
   the music. Checked: the lengths match the game's `m_Length`, and the audio is not silent.
 - Clips are deduplicated by name and length; a second clip with the same name gets `_2`.
 
+## The sound ids (2026-10-24)
+
+The mod plays game sounds by their **id** (`AudioConfig.sounds`, 311 entries), not by clip name. `dump_audiocfg.py`
+(next to `scan.py`; UnityPy with the type-tree generator fed the game, the `AudioConfig` node from
+LazyBearTechnology.dll) writes `sound_ids.csv` and `sound_ids.txt`: every id with its 3D preset (0 = 2D, 1 = the
+in-world 3D preset, 2 = sound zones, 3 = fights, 4 = stations), volume, loop flag and its clips. Run it from a folder
+with no stray `.py` files (a helper named `snappy.py` next to it shadowed a module UnityPy imports, 2026-10-24).
+The creature-like ids are few: `garry` (Gerry's voice), `voice_larry` (burps), `larry_steps`, `larry_chatterteeth`,
+`gerry_somersault`, `spitter_attack` / `spitter_hit`, `stinker_death`, `zombie_idle` / `zombie_attack` / `zombie_death`,
+`wolves_howl`, `plague_doctor_cough`, the `step_*` ids, `item_use_food`, `fishing_blop`, `bush_chop`,
+`conveyor_furnace_bellows`. The built-in mounts' first picks are in their skin.cfg `[Mount.Sounds]` blocks
+(docs/mount-sounds.md).
+
 ## The donkey shortlist
 
 Picked by name only; nobody has listened to them yet.
