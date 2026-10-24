@@ -43,6 +43,9 @@ A mod built on the API needs none of this code itself; Saddle Up is about 160 li
 the dev panel's Instances tab. Foals (small donkeys that stay with a parent, `Mounts.SpawnFoal`):
 [`docs/foals.md`](foals.md).
 
+**Never lost** (`FallGuard`, on; `ReturnKey`, None): the keeper fallen out of the world is put back on the last ground
+he stood on; the key does it by hand ([`docs/never-lost.md`](never-lost.md)).
+
 **Behaviour switches with Saddle Up:** `StayMountedThroughDoors`, `DismountIndoors`, `ShowMessages`,
 `CargoZombies` and `IdleShuffle` are the core's defaults. Saddle Up sets them from its
 own settings (its cfg or the Mods menu) as session overrides, so the dev panel shows them locked.

@@ -87,14 +87,27 @@ namespace GK2DonkeyAPI
                 Rigidbody rb = PC?.PhysicalBody?.Rb;
                 if (i == null || rb == null) { Fail("riding, but no ridden mount or no keeper's body"); yield break; }
 
-                // a jump: held (or tapped), the stick pushed along x (0: in place); its top, and where he lands
+                // a jump: held (or tapped), the stick pushed along x (0: in place); its top, and where he lands. After each
+                // one: never underground (nothing of the ground's layers over him within his height, ground under his feet)
+                var under = new System.Collections.Generic.List<string>();
+                int jumpsSeen = 0, returns0 = SafeSpots.TestReturns;
+                void NotUnder(string what)
+                {
+                    jumpsSeen++;
+                    Vector3 at = rb.position;
+                    string over = Mount.Instance.WhyUnderground(at);
+                    // the walkable layers' surface right under his feet (not GroundHeight: its navmesh lies under a deck)
+                    bool hitG = Physics.Raycast(at + Vector3.up * 0.3f, Vector3.down, out RaycastHit gh, 0.6f, 6144, QueryTriggerInteraction.Ignore);
+                    bool grounded = hitG && Mathf.Abs(gh.point.y - at.y) < 0.12f;
+                    if (over != null || !grounded) under.Add($"{what} at {at:F2}: {over ?? ""}{(grounded ? "" : $" the ground under him {(hitG ? gh.point.y.ToString("F2") + " (" + gh.collider.name + ")" : "none within 0.3")}, not at his feet")}");
+                }
                 float max = 0f;
                 bool camera = false, refused = true, took = false;
-                IEnumerator One(bool held, float push)
+                IEnumerator One(bool held, float push, bool stopOnTop = false, float pushZ = 0f)
                 {
                     max = -99f; camera = false; refused = true; took = false;
                     Flight.TestJumpHeld = held;
-                    Flight.TestMoveDir = new Vector2(push, 0f);
+                    Flight.TestMoveDir = new Vector2(push, pushZ);
                     try
                     {
                         float start = Time.time;
@@ -106,12 +119,14 @@ namespace GK2DonkeyAPI
                             max = Mathf.Max(max, Flight.HeightPx);
                             camera |= Flight.TestCameraLifted;
                             took |= Flight.Free;
+                            if (stopOnTop && Flight.TestJumpPerched) Flight.TestMoveDir = Vector2.zero; // he stays on top of it
                             if (++frame == 5) { float hh = Flight.HeightPx; Flight.Jump(i); refused &= Flight.Now == Flight.Phase.Jumping && Flight.HeightPx == hh; }
                             yield return null;
                         }
                     }
                     finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
                     yield return Frames(10);
+                    NotUnder($"jump {jumpsSeen + 1} (push {push:0.#},{pushZ:0.#})");
                 }
 
                 foreach (bool held in new[] { true, false })
@@ -133,34 +148,51 @@ namespace GK2DonkeyAPI
                 if (!Flight.JumpOver) { Info("jump over things is off: the walls not tried"); yield break; }
                 if (layer < 0 || (Mount.Instance.KeeperMask(rb) & (1 << layer)) == 0) { Info("no Obstacle layer stopping the keeper here: the walls not tried"); yield break; }
                 float px = 2f * 0.01666667f; // one art pixel, world y
+                int said0 = Mount.Instance.TestSaidCount;
                 // a low wall 0.7 ahead (jumped over), a tall one 0.7 ahead (stops it: down against it, not sent back),
                 // a tall one he is pressed against (0.03 from his side: a jump on the spot, never "on top of it", never sent back)
-                foreach (int kind in new[] { 0, 1, 2 })
+                // ... and a workbench: wide (2.4), 14 px, come down on and stayed on: he slides off its edge and lands,
+                // never sent back (the user, 2026-10-24: a jump onto something built sent him back to where he jumped)
+                foreach (int kind in new[] { 0, 1, 2, 3 })
                 {
-                    bool low = kind == 0, pressed = kind == 2;
+                    bool low = kind == 0, pressed = kind == 2, bench = kind == 3;
                     Vector3 me = rb.position;
                     // pressed: the wall's face 0.03 from his body's side (its own half-width, whatever the keeper's collider is)
                     float half = PC.PhysicalBody.MeshCollider != null ? PC.PhysicalBody.MeshCollider.bounds.extents.x : 0.24f;
-                    float wallX = me.x + (pressed ? half + 0.075f + 0.03f : 0.7f), g = Mount.Instance.GroundHeight(new Vector3(wallX, me.y, me.z), out string src);
+                    float wallX = me.x + (pressed ? half + 0.075f + 0.03f : bench ? 0.7f + 1.2f : 0.7f), g = Mount.Instance.GroundHeight(new Vector3(wallX, me.y, me.z), out string src);
                     if (float.IsNaN(g)) { Info($"no ground at the wall's spot ({src}): not tried"); continue; }
-                    float high = low ? 8f * px : 2.5f;
+                    float high = low ? 8f * px : bench ? 14f * px : 2.5f;
                     walls = new GameObject("gk2donkeyapi-selftest-jump-wall");
                     walls.layer = layer;
                     walls.transform.position = new Vector3(wallX, g, me.z);
                     var c = walls.AddComponent<BoxCollider>();
                     c.center = new Vector3(0f, high / 2f, 0f);
-                    c.size = new Vector3(0.15f, high, 3f);
+                    c.size = new Vector3(bench ? 2.4f : 0.15f, high, 3f);
+                    if (bench)
+                    {
+                        // a workbench's second collider, taller than its box (the yard's: a box to 6.31, a capsule to 6.43,
+                        // its picture to 6.51): carried off the bench, the bench's own colliders must not stop it
+                        var cap = walls.AddComponent<CapsuleCollider>();
+                        cap.direction = 0;
+                        cap.radius = 0.12f;
+                        cap.height = 2.4f;
+                        cap.center = new Vector3(0f, high * 0.8f, 0f);
+                    }
                     Physics.SyncTransforms();
-                    yield return One(true, 1f);
+                    TestSay(low ? "Jumping an invisible test wall (8 px)" : pressed ? "Jumping pressed against an invisible test wall" : bench ? "Jumping onto an invisible test bench" : "Jumping at an invisible tall test wall");
+                    yield return One(true, 1f, stopOnTop: bench);
                     float x = rb.position.x;
                     string where = $"{x - wallX:+0.00;-0.00} from the wall, the top {max:0} px, the wall {high / px:0} px";
-                    if (low) Check(x > wallX + 0.2f && Flight.Now == Flight.Phase.Ground && !Flight.Free, "a low wall (8 px) jumped over: down on its far side, " + where);
+                    if (bench && Mathf.Abs(x - me.x) > 2.2f) Pass($"the touch-down {Mathf.Abs(x - me.x):0.00} from the take-off, past the game's walk grid's reach (4.4 square round the keeper): judged by the NPCs' mesh, not sent back");
+                    if (bench) Check(!Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && Mathf.Abs(x - wallX) > 1.2f - 0.05f,
+                        $"a workbench (2.4 wide, 14 px) come down on{(Flight.TestJumpPerched ? " and stayed on" : " (not on top: over it)")}: down off it, not sent back ({x - wallX:+0.00;-0.00} from its middle{(Flight.TestJumpWentBack ? ", sent back" : "")})");
+                    else if (low) Check(x > wallX + 0.2f && Flight.Now == Flight.Phase.Ground && !Flight.Free, "a low wall (8 px) jumped over: down on its far side, " + where);
                     else if (!pressed)
                     {
                         Check(x < wallX - 0.1f && Flight.Now == Flight.Phase.Ground && !Flight.Free, "a tall wall stops the jump (a bare collider: the jump counts its collider): down on this side, " + where);
                         Check(!Flight.TestJumpWentBack && x > me.x + 0.15f, $"and it came down against the wall, not sent back to the start ({x - me.x:+0.00;-0.00} from the start{(Flight.TestJumpWentBack ? ", sent back" : "")})");
                     }
-                    else Check(Mathf.Abs(x - me.x) < 0.1f && !Flight.TestJumpPerched && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground,
+                    else if (pressed) Check(Mathf.Abs(x - me.x) < 0.1f && !Flight.TestJumpPerched && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground,
                         $"pressed against a tall wall: a jump on the spot ({x - me.x:+0.00;-0.00} from the start{(Flight.TestJumpPerched ? ", came down \"on top\" of it" : "")}{(Flight.TestJumpWentBack ? ", sent back" : "")}), no surge along it");
                     walls.SetActive(false);
                     Object.Destroy(walls);
@@ -170,6 +202,205 @@ namespace GK2DonkeyAPI
                     PutKeeper(me, homeFacing);
                     yield return Frames(10);
                 }
+                Check(Mount.Instance.TestSaidCount == said0, $"no bubble from any of these jumps (refused, pushed out or carried off: {Mount.Instance.TestSaidCount - said0} said)");
+
+                // the speed: never faster in the air than he rides on the ground (the user: "you accelerate forward")
+                Flight.TestSetRideTop(3f);
+                try
+                {
+                    yield return One(true, 1f);
+                    Check(Flight.TestJumpTopAirSpeed <= 3f * 1.05f + 0.01f, $"a running jump never goes faster than the ride (its fastest step {Flight.TestJumpTopAirSpeed:0.00} a second, the ride's top set to 3.00)");
+                }
+                finally { Flight.TestSetRideTop(0f); } // forgotten again: left at 3 it capped every later jump (the yard's, the player's)
+                PutKeeper(rb.position, homeFacing);
+                yield return Frames(10);
+
+                GameObject Box(string name, int lay, Vector3 at, Vector3 size, Vector3 centre)
+                {
+                    var o = new GameObject(name);
+                    o.layer = lay;
+                    o.transform.position = at;
+                    var bc = o.AddComponent<BoxCollider>();
+                    bc.size = size;
+                    bc.center = centre;
+                    return o;
+                }
+                int groundLay = LayerMask.NameToLayer("Ground");
+
+                // a deck (a bridge's: the ground's layer, 0.3 over the ground, the NPCs' mesh under it): jumped onto, and
+                // from on it, he is never put under it (the flight's rule set the touch-down to the mesh's height under it)
+                if (groundLay >= 0)
+                {
+                    Vector3 me = rb.position;
+                    float g0 = Mount.Instance.GroundHeight(me, out _);
+                    float deckTop = (float.IsNaN(g0) ? me.y : g0) + 0.3f;
+                    walls = Box("gk2donkeyapi-selftest-jump-deck", groundLay, new Vector3(me.x + 0.9f + 1.5f, deckTop - 0.15f, me.z), new Vector3(3f, 0.3f, 3f), Vector3.zero);
+                    Physics.SyncTransforms();
+                    yield return One(true, 1f);
+                    Vector3 at = rb.position;
+                    bool overDeck = at.x > me.x + 0.9f && at.x < me.x + 3.9f;
+                    Check(!overDeck || at.y >= deckTop - 0.05f, $"onto a deck 0.3 high: {(overDeck ? $"on its top ({at.y:F2}, the top {deckTop:F2})" : $"not on it ({at.x - me.x:+0.00;-0.00} from the start)")}, never under it");
+                    if (overDeck)
+                    {
+                        yield return One(true, 0f);
+                        Check(rb.position.y >= deckTop - 0.05f, $"a jump from on the deck lands on it again ({rb.position.y:F2}, the top {deckTop:F2})");
+                    }
+                    walls.SetActive(false); Object.Destroy(walls); walls = null; Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+
+                // jump sliding: into a tall wall at an angle, he slides along it, ends beside it, on the ground
+                {
+                    Vector3 me = rb.position;
+                    float wallX = me.x + 0.8f;
+                    walls = Box("gk2donkeyapi-selftest-jump-slide", layer, new Vector3(wallX, me.y, me.z), new Vector3(0.15f, 2.5f, 6f), new Vector3(0f, 1.25f, 0f));
+                    Physics.SyncTransforms();
+                    yield return One(true, 1f, pushZ: 0.8f);
+                    Vector3 at = rb.position;
+                    Check(at.x < wallX - 0.1f && at.z - me.z > 0.2f && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free,
+                        $"a jump into a wall at an angle slides along it: {at.x - wallX:+0.00;-0.00} from the wall, {at.z - me.z:+0.00;-0.00} along it{(Flight.TestJumpWentBack ? ", sent back" : "")}");
+                    walls.SetActive(false); Object.Destroy(walls); walls = null; Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+
+                // built things: a building (3 x 3, 2.5 tall) is never jumped into or over; a row of two low things (a
+                // fence's rails, 8 px) is jumped across
+                {
+                    Vector3 me = rb.position;
+                    walls = Box("gk2donkeyapi-selftest-jump-building", layer, new Vector3(me.x + 1f + 1.5f, me.y, me.z), new Vector3(3f, 2.5f, 3f), new Vector3(0f, 1.25f, 0f));
+                    Physics.SyncTransforms();
+                    yield return One(true, 1f);
+                    Vector3 at = rb.position;
+                    Check(at.x < me.x + 1f - 0.1f && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground, $"a building stops the jump: down before its wall ({at.x - me.x - 1f:+0.00;-0.00} from it)");
+                    walls.SetActive(false); Object.Destroy(walls); walls = null; Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                    walls = new GameObject("gk2donkeyapi-selftest-jump-row");
+                    walls.layer = layer;
+                    walls.transform.position = me;
+                    foreach (float rx in new[] { 0.7f, 1.4f })
+                    {
+                        var rail = walls.AddComponent<BoxCollider>();
+                        rail.center = new Vector3(rx, 4f * px, 0f);
+                        rail.size = new Vector3(0.12f, 8f * px, 3f);
+                    }
+                    Physics.SyncTransforms();
+                    yield return One(true, 1f);
+                    at = rb.position;
+                    Check(at.x > me.x + 0.7f + 0.15f && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free,
+                        $"a row of two low things jumped across: down {at.x - me.x:+0.00;-0.00} from the start (the rails at +0.70 and +1.40){(Flight.TestJumpWentBack ? ", sent back" : "")}");
+                    walls.SetActive(false); Object.Destroy(walls); walls = null; Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+
+                // a slope (the bridge's jolts): two ramps of the ground's layer rising away from him both ways, so the
+                // ground under the mount's body (half a unit to its side) is higher than under him; a jump in place: the
+                // mount's drawn place less the jump's height never steps (it stepped at the take and the touch-down)
+                int groundLayer = LayerMask.NameToLayer("Ground");
+                if (groundLayer < 0) Info("no Ground layer: the slope not tried");
+                else
+                {
+                    Vector3 me = rb.position;
+                    float g0 = Mount.Instance.GroundHeight(me, out _);
+                    walls = new GameObject("gk2donkeyapi-selftest-jump-ramps");
+                    walls.layer = groundLayer;
+                    walls.transform.position = new Vector3(me.x, float.IsNaN(g0) ? me.y : g0, me.z);
+                    foreach (float side in new[] { 1f, -1f })
+                    {
+                        var ramp = new GameObject("ramp");
+                        ramp.layer = groundLayer;
+                        ramp.transform.SetParent(walls.transform, false);
+                        ramp.transform.localRotation = Quaternion.Euler(0f, 0f, 30f * side);
+                        // its top face through the ground under him at his feet, rising away from him
+                        ramp.transform.localPosition = Quaternion.Euler(0f, 0f, 30f * side) * new Vector3(side * 1.5f, -0.05f, 0f) + new Vector3(side * 0.3f, 0f, 0f);
+                        var box = ramp.AddComponent<BoxCollider>();
+                        box.size = new Vector3(3f, 0.1f, 2f);
+                    }
+                    Physics.SyncTransforms();
+                    yield return Frames(10);
+                    Mount.Instance mi = Mount.Ridden;
+                    float last = float.NaN, slopeWorst = 0f, worstAt = 0f;
+                    Flight.TestJumpHeld = true;
+                    Flight.TestMoveDir = Vector2.zero;
+                    try
+                    {
+                        Flight.Jump(mi);
+                        float t0 = Time.time;
+                        while (Time.time - t0 < Flight.JumpTimeS + 1.5f)
+                        {
+                            float drawn = mi.Position.y - Flight.LiftFor(mi);
+                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > slopeWorst) { slopeWorst = Mathf.Abs(drawn - last); worstAt = Time.time - t0; }
+                            last = drawn;
+                            if (Flight.Now != Flight.Phase.Jumping && Time.time - t0 > 0.2f) break;
+                            yield return null;
+                        }
+                    }
+                    finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                    NotUnder("the jump on the slope");
+                    Check(slopeWorst <= 1.5f * px, $"on a slope the mount's ground stays put through the jump: its biggest step {slopeWorst / px:0.0} px (at {worstAt:0.00} s; it stepped at the take and the touch-down on the bridge)");
+                    walls.SetActive(false);
+                    Object.Destroy(walls);
+                    walls = null;
+                    Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+                // downhill (the user's slope jumps, 2026-10-24 03:18: +30 px mid-jump, -51 px at the touch-down): a ramp of the
+                // ground's layer from 1.2 up at the keeper down to the ground 5 ahead; a running jump down it: the ground the
+                // mount is drawn on never steps, and the body comes down on the ramp, not dropped at the end
+                if (groundLayer >= 0)
+                {
+                    Vector3 me = rb.position;
+                    float g0 = Mount.Instance.GroundHeight(me, out _);
+                    if (float.IsNaN(g0)) g0 = me.y;
+                    const float len = 5f, drop = 1.2f;
+                    float ang = Mathf.Atan2(drop, len) * Mathf.Rad2Deg;
+                    walls = new GameObject("gk2donkeyapi-selftest-jump-downhill");
+                    walls.layer = groundLayer;
+                    walls.transform.position = new Vector3(me.x + len / 2f, g0 + drop / 2f - 0.05f, me.z);
+                    walls.transform.rotation = Quaternion.Euler(0f, 0f, -ang); // +x runs down
+                    var ramp = walls.AddComponent<BoxCollider>();
+                    ramp.size = new Vector3(Mathf.Sqrt(len * len + drop * drop), 0.1f, 2.5f);
+                    Physics.SyncTransforms();
+                    PutKeeper(new Vector3(me.x + 0.5f, g0 + drop * (1f - 0.5f / len) + 0.03f, me.z), 1f);
+                    yield return Frames(12);
+                    Mount.Instance mi = Mount.Ridden;
+                    float last = float.NaN, worstDown = 0f, worstAt = 0f;
+                    Vector3 before = rb.position;
+                    Flight.TestJumpHeld = true;
+                    Flight.TestMoveDir = new Vector2(1f, 0f);
+                    try
+                    {
+                        Flight.Jump(mi);
+                        float t0 = Time.time;
+                        while (Time.time - t0 < Flight.JumpTimeS + 2f)
+                        {
+                            float drawn = mi.Position.y - Flight.LiftFor(mi);
+                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worstDown) { worstDown = Mathf.Abs(drawn - last); worstAt = Time.time - t0; }
+                            last = drawn;
+                            if (Flight.Now != Flight.Phase.Jumping && Time.time - t0 > 0.2f) break;
+                            yield return null;
+                        }
+                    }
+                    finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                    yield return Frames(5);
+                    Vector3 at = rb.position;
+                    bool onRamp = Physics.Raycast(at + Vector3.up * 0.3f, Vector3.down, out RaycastHit rh, 0.6f, GroundLayersMask, QueryTriggerInteraction.Ignore) && Mathf.Abs(rh.point.y - at.y) < 0.12f;
+                    Check(worstDown <= 2f * px && onRamp && at.x > before.x + 1f && at.y < before.y - 0.2f,
+                        $"a running jump downhill: the ground the mount is drawn on steps at most {worstDown / px:0.0} px a frame (at {worstAt:0.00} s), down the ramp {at.x - before.x:0.00} along and {before.y - at.y:0.00} lower, on its surface{(onRamp ? "" : " (NOT on the ground)")}");
+                    NotUnder("the downhill jump");
+                    walls.SetActive(false);
+                    Object.Destroy(walls);
+                    walls = null;
+                    Physics.SyncTransforms();
+                    PutKeeper(me, homeFacing);
+                    yield return Frames(10);
+                }
+                Check(under.Count == 0, $"never underground: after each of the {jumpsSeen} jumps nothing of the ground's layers over him and ground at his feet" + (under.Count > 0 ? ": " + string.Join("; ", under) : ""));
+                Check(SafeSpots.TestReturns == returns0, $"the fall watchdog never fired through these jumps ({SafeSpots.TestReturns - returns0} return(s){(SafeSpots.TestReturns != returns0 ? ": " + SafeSpots.LastReason : "")})");
             }
             finally
             {
@@ -418,6 +649,81 @@ namespace GK2DonkeyAPI
             finally { je.Value = was; }
             yield return null;
             Check(Flight.SameKey(Plugin.JumpKey.Value, was), $"and back ({Plugin.JumpKey.Value})");
+        }
+
+        // A jump beside a real thing (the user's yard, 2026-10-24: every jump sent back was beside a workbench, refused
+        // "no walkable ground" where he stood): a spot beside a built or placed thing near the keeper where the flight's
+        // rule refuses the ground (Mount.Instance.FindBesideSpot); a jump in place there lands in place.
+        private static IEnumerator FlightJumpBeside()
+        {
+            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors: the jump stays in place there"); yield break; }
+            MountHandle donkey = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+            try
+            {
+                if (donkey == null) { Fail("could not spawn the test's donkey"); yield break; }
+                yield return Until(() => donkey.IsReady, 6f);
+                MountResult r = donkey.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                if (!Mount.Instance.FindBesideSpot(PC, 14f, out Vector3 spot, out string what) && !Mount.Instance.FindOffMeshSpot(PC, 14f, out _, out _))
+                {
+                    Skip("no thing near the keeper where the flight's rule refuses the ground beside it, and no ground the NPCs' mesh doesn't cover: run this one from the yard or by a bridge");
+                    yield break;
+                }
+                if (what == null) { Info("no thing near here to jump beside (the yard's case not tried)"); spot = PC.PhysicalBody.Rb.position; }
+                Info(what != null ? "beside " + what + $" at {spot:F2}" : $"no thing near here: a jump in place where he stands, {spot:F2} (the yard's things: the home-yard scenario)");
+                PutKeeper(spot, homeFacing);
+                yield return Frames(15);
+                Rigidbody rb = PC.PhysicalBody.Rb;
+                Vector3 from = rb.position;
+                Mount.Instance i = Mount.Ridden;
+                Flight.TestJumpHeld = false;
+                Flight.TestMoveDir = Vector2.zero;
+                try
+                {
+                    Flight.Jump(i);
+                    float t0 = Time.time;
+                    while (Flight.Now == Flight.Phase.Jumping && Time.time - t0 < 4f) yield return null;
+                }
+                finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                yield return Frames(5);
+                float moved = new Vector2(rb.position.x - from.x, rb.position.z - from.z).magnitude;
+                Check(Flight.Now == Flight.Phase.Ground && !Flight.Free && !Flight.TestJumpWentBack && moved < 0.15f,
+                    $"a jump in place beside it lands in place ({moved:0.000} from where it jumped{(Flight.TestJumpWentBack ? ", sent back" : "")}; {Flight.Now}; {Flight.Why})");
+
+                // ground the NPCs' mesh doesn't cover (a bridge's deck)
+                if (!Mount.Instance.FindOffMeshSpot(PC, 14f, out Vector3 deck, out string deckWhat))
+                {
+                    Info("no ground at his level near here that the NPCs' mesh doesn't cover (a bridge's deck): that case not tried; run this one by a bridge");
+                    yield break;
+                }
+                Info("off the NPCs' mesh: " + deckWhat + $" at {deck:F2}");
+                PutKeeper(deck, homeFacing);
+                yield return Frames(15);
+                from = rb.position;
+                i = Mount.Ridden;
+                Flight.TestJumpHeld = false;
+                Flight.TestMoveDir = Vector2.zero;
+                try
+                {
+                    Flight.Jump(i);
+                    float t1 = Time.time;
+                    while (Flight.Now == Flight.Phase.Jumping && Time.time - t1 < 4f) yield return null;
+                }
+                finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                yield return Frames(5);
+                moved = new Vector2(rb.position.x - from.x, rb.position.z - from.z).magnitude;
+                Check(Flight.Now == Flight.Phase.Ground && !Flight.Free && moved < 0.15f,
+                    $"a jump in place on ground the NPCs' mesh doesn't cover lands in place ({moved:0.000} from where it jumped{(Flight.TestJumpWentBack ? ", sent back" : "")}; {Flight.Why})");
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null; Flight.TestMoveDir = null;
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (donkey != null && donkey.Exists) donkey.Remove(); } catch { }
+            }
         }
 
         private static IEnumerator FlightWalkAway()

@@ -356,6 +356,7 @@ namespace GK2DonkeyAPI
             }
             nextIds.Clear();
             ClearDormant();
+            SafeSpots.NewGame(); // the spots of the game before are not this game's
             List<MountHandle> restored = null;
             try
             {
@@ -461,6 +462,7 @@ namespace GK2DonkeyAPI
                 BecomeReady(save, started);
             }
 
+            SafeSpots.Tick(pc); // never lost: the safe-spot record, the key and the fall watchdog (mounts on or off)
             BuildByScene();
             if (Ridden == null && Time.frameCount <= Instance.gearHideUntilFrame)
             {

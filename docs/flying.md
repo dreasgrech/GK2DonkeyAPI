@@ -811,6 +811,159 @@ with how much of it was at once.
 - **Flying indoors** is off unless a mod turns it on (the Behaviour key `FlyIndoors`, off in the API; Saddle Up keeps
   it off with no row): no take-off indoors, a flight through a building's door lands there.
 
+### Downhill (2026-10-24, built)
+
+The user: "im still getting a jump cut when jumping with a mount across a slope downhill". The detector (three times,
+03:18): mid-jump **+30 px in one frame**, the body and the lift unchanged (the mount 5.63 -> 6.63, the body at 5.69, the
+ground under it fallen to 4.75); at the touch-down **-51 px** (the body given back and put down 1.64 to the ground).
+Cause: a jump's body never stepped down. `FixedStep` follows the ground up (the step-up) but, as for a flight (which
+keeps its height over a cliff on purpose), not down; running downhill the body kept the take-off height while the
+ground fell away, the snap lost the ground under the body once it was out of its window and drew the mount at the
+body instead (+1 unit), and the touch-down dropped the body the whole way. Now, during a jump, the body follows the
+ground down too, up to a level's step (1.2) per physics step (`below`); a real drop stays the touch-down's. The slope
+test had two ramps rising away from the keeper and a jump in place: it never ran downhill. Now a third case: a ramp of
+the ground's layer from 1.2 up down to the ground 5 ahead, a running jump down it, the drawn ground stepping at most
+2 px a frame and the body down on the ramp's surface.
+
+### The yard, for real (2026-10-24, built)
+
+The user: "the jump tests are done in an empty area instead of the home yard where there are many things to jump and
+slide over". The runner moves to its remembered spot (`Debug.SelfTestSpot`, the temple at 38.4, 15.6, written by a
+run that passed everywhere), so the yard and bridge cases always skipped. `FlightJumpYard` (Dev/SelfTest.Yard.cs) goes
+to the yard itself: `World/yard(Clone)`'s area colliders give its bounds, the Obstacle colliders in it grouped by
+their thing (`SameThing`) are the built things and fences, and each is jumped at from the side with room; every jump
+must end on the ground, never underground, never sent back, with the watchdog silent; what the jump did is said. A
+slide along the longest thin thing at an angle too. (To run the whole F11 from where you stand instead, clear
+`Debug.SelfTestSpot` in the API cfg.)
+
+Its first run (F11 02:40, 916/0) found **2 things** in a full yard: a 7.8 x 3.9 blocker named "Obstacle" and a
+"Colliders", 90 px tall both, no bench, chest or fence. Two causes, both the test's: the scan ran from the runner's
+spot 40 away, before moving in (the game streams and optimises the world's things by distance:
+`WsoOptimizedStagesLoadManager`, `HiddenOptimization`), and the grouping by the `Wgo` component would have merged every
+built thing under their shared "New Game Object" parent. Now it moves into the yard first, waits 1.5 s, scans, groups
+by the prefab root (the "(Clone)" object, else the Wgo, else the parent), says how many obstacle colliders and things
+it found, and slides along the longest thing (not only a thin one).
+
+Its second run (02:47, 87/0) saw the yard: 161 obstacle colliders, 59 things, 12 jumped at, every one down, never sent
+back, never underground, the watchdog silent, the slide along `garden_t1` fine. But **nothing was jumped over**: the 15 px
+workbench and the 21-22 px tool rack and potter wheel all "stopped before it" at 1.03-1.26 along a 1.7 run. The jump
+trace's header said why: "the ride's top 3.00". The jump test's speed-cap check sets the ride's top to 3 and never
+put it back, so every jump after it (the yard's, and the player's own until the speed multiplier changed) crawled at
+2.4 a second (3 x the game's 0.8 along z) and reached each thing after the arc had come down. `TestSetRideTop(0)`
+forgets it again (in a `finally`), and the yard scenario checks the cap in force before it jumps.
+
+The third run (02:52, the real speed), 12 things, every one down on the ground, never underground, never sent back, the
+watchdog silent: **over** the tool rack (22 px), the bucket anvil (20) and the chopping spot; **came down on and carried
+off the far side** the potter's wheel (21), both firewood sheds (14, 25) and the workbench (15), ending 2.8-4.3 along
+the run; **stopped by** both furnaces (53, 87), the brick kiln (45) and the zombie station (36); **against** the hammer
+(37). The slide along `garden_t1` 1.82 along it. The cap check failed on a 0.03 drift recorded as the ride's top (the
+cap applies from 0.5): loosened to 0.5. The "px tall" counts from the ground under the thing now (a collider may dip
+under it: the chopping spot read 30 for 15).
+
+### Never lost (2026-10-24, built)
+
+The net under all of this: the safe-spot record, the fall watchdog and "Back to the last safe spot" are in
+[never-lost.md](never-lost.md) (`SafeSpots.cs`). The jump's own guard stays: every put-down of the body goes onto the
+top surface at the spot (`OntoTopSurface`), and the jump test checks that the watchdog never fires through its jumps.
+
+### The jump probe (2026-10-24, built)
+
+Two fixes in a row for the same teleport failed (below). The user: "u sure we got enough probing now? this is taking
+too many trial and error" and "lets get as much data as possible no guessing". So no fix until the data says why.
+`Dev/JumpProbe.cs` (`JumpTrace`, `Mount.Instance.LandAudit`), no behaviour changed:
+
+- A file per jump in `BepInEx/GK2-jumps/` (`jump-<date>-<time>-<n>-<outcome>.txt`, the newest 30 kept; outcome `ok`,
+  `over` (came down over something), `pushed`, `short` (landed back along its path), `back` (the take-off spot)).
+- `F` rows, every frame of the jump: the stage, the arc, the drawn height, what is under it (`solid`, and which thing:
+  `FloorUnder`'s `LastFloorThing` by its path), the body's place, the jump's speed, free or not, the let-go.
+- `S` rows, every physics step: the stick, the speed wanted, the move intended, after the bump (and what it bumped),
+  after the drawn ground's wall, the body's next place, what was really moved.
+- `N` rows: the take (the body's speed), came down over (the thing and its bounds), every touch-down judged and its
+  **audit**: the ground (navmesh or raycast), the walkable mesh's parts of the spot and the take-off, the drawn ground
+  over it, **every** collider the body would go into (depth, direction, whether it counts), the NPCs' mesh, the
+  walk-away (only where the mesh says cut off, as the rule), the game's walk grid (the spot's cell free or blocked, the
+  nearest free cell, a way from the body's cell and from the take-off's cell), the rule's answer, and every collider
+  within 1.2 (shape, bounds, drawn top, whether it stops him); the push-out; each path point tried on the way back.
+- The main log says `[jump-trace] <file> (<outcome>, N rows)` for each.
+
+**What the first 19 traced jumps showed** (the user's yard, 01:28-01:29; 6 ok, 7 over something, 2 pushed, 4 back;
+the Flying group 72/72):
+
+1. Every jump sent back (4, 5, 6, 8) failed rule 1, "no walkable ground under him": beside the workbenches the
+   NPCs' mesh (shrunk by their radius from every object) was 0.055-0.135 away, the ground only the raycast's. Jumps 4
+   and 6 were in place (0.02-0.03 from where he stood): the spot he stood on fails it. In jump 5 the game's own walk
+   grid said free, with a way from the take-off. Every point on the way back failed the same. Rule 7 (the walk grid)
+   called cells blocked with a free one 0.001-0.042 away (its rounding at a thing's edge).
+2. The slides (3, 8, 9): every blocker while carried off was the bench it was over (its box to 6.31, its capsule to
+   6.43, its picture to 6.51 / 6.61), the carry's feet its drawn height less the 2 px clearance. Jump 8 stuck 0.165
+   from the edge, "the nearest side" the blocked way, until the 1 s ran out.
+3. A jump turned flight never closed its trace (12, 14).
+4. The ride's top 6.9-7.2 against the mover's 12.0: the cap held every jump to the ride's speed.
+
+The fixes (01:34): a jump's touch-down (`WhyCannotLandAt(..., besideThings: true)`, the Judge, the push-out's second
+look, the way back) takes the raycast's ground at his level when the mesh's nearest node is within `BesideMesh` 0.3 on
+the take-off's own part (`BesideTheMesh`), and a blocked grid cell with a free one within `BesideGrid` 0.1 joined to
+the take-off's cell moves the touch-down onto it (`WhyNotOnGameGridBeside`, the body asked again there); flight's
+landings keep their rules. Carried off a thing, its own colliders don't block (`FlyMove(..., ignoreThing)`,
+`SameThing`: one collider, transform, parent or Wgo) and the carry's feet are its drawn height (no clearance). A jump
+turned flight closes its trace (outcome `flight`). The audit's last line gives both rules' answers. Checked against
+the traces before building: all four sent back pass the new rules. Tests: the bench is two colliders (a box and a
+taller capsule, as the workbench); a new scenario finds a real thing near the keeper where flight's rule refuses the
+ground beside it (`FindBesideSpot`) and jumps in place there (skipped where there is none: run it from the yard).
+
+**The next traces** (01:38, the user: "STILL TELEPORTING SOMETIMES"): 30 jumps, 5 back. Four new ones (7-10) the same
+jump: from (0.04, 17.09) west over woodworking_workbench_1 to about (-2.0, 17.15). The ground, the mesh (part 1, 0.000
+off, the take-off's part 1) and the body were all right; the refusal was the walk grid: "no way from the take-off
+spot", even to the free cell 0.019 away. The game's code (`PlayerLocalAreaMovement.RescanPlayerGraph`): graph 3 is
+44 x 44 cells of 0.1, a 4.4 square centred on the keeper (rounded), collision diameter 2.8 cells, rebuilt at each ask.
+At a touch-down two units from the take-off a walk round the bench may not fit in it. The NPCs' mesh, the whole
+scene's, says joined, and its yes is the one the flight's 1 s safe spot already trusts. Now (01:40) a jump's
+touch-down asks the grid for a free cell only where the mesh vouches for the spot (on it, the take-off's part:
+`meshVouches`); beside things (off the mesh) the grid's way is still asked. Checked against the four traces first:
+all four land. The audit now writes the grid's size and, when it says no way, its map ('.' joined to the take-off,
+',' free but not joined, '#' blocked, T, S), so the next "no way" shows what the grid sees.
+
+**Every jump problem and its test** (the user, 2026-10-24: "make sure we have tests for all the problems we had";
+group Flying):
+
+| Problem (seen) | Test |
+|---|---|
+| The jump far too small; a press counted as a tap | jump arc: held 28, tapped 16, let go after 0.2 between, the press minimum |
+| The same arc at any frame rate; a heavier fall | jump arc: 30 / 144 fps, down faster than up, continuous |
+| The camera bouncing with a jump | jump live: the camera stays down |
+| No jumping over things | jump walls: the low wall jumped over |
+| Through a bare (undrawn) collider | jump walls: the tall bare wall stops it |
+| Sent back from a hair inside a thing | jump walls: down against the tall wall, not sent back (pushed out) |
+| A surge along a wall pressed against; a false "on top" beside it | jump walls: pressed against it, a jump on the spot |
+| Sent back from on top of a bench; stuck by its own colliders | jump walls: the bench (a box and a taller capsule), stayed on, off it, not sent back |
+| Sent back past the walk grid's 4.4 square | jump walls: the bench's touch-down past 2.2 from the take-off |
+| The bubble spam | jump walls: no bubble from any of them |
+| Faster in the air than the ride | jump walls: the ride's top set to 3, the fastest step under it |
+| Jolts at the take and the touch-down on a slope (the bridge) | jump walls: two ramps of the ground's layer, the mount's ground never steps |
+| Sent back beside the yard's workbenches (the NPCs' mesh cut back) | jump beside: a real thing near the keeper, a jump in place lands in place (from the yard; skipped elsewhere) |
+| Landed short on a bridge's deck (no NPCs' mesh there) | jump beside: real ground the mesh doesn't cover near the keeper (by a bridge; INFO elsewhere) |
+| Jump and fly on one key, two keys, the API, the event | keys: one key and two; the rows |
+| Ctrl+Space kept as Ctrl+Space | keys: the rows (Ctrl+K) |
+| The camera snapping at a jump turned flight | keys: the gap closing smoothly in time |
+| The flags (flies, jumps) | mounts: the flags |
+
+Not in F11: a key rebound while riding (the Settings window's capture can't be faked; by hand), and the real yard and
+bridge cases away from them (they skip, and say so).
+
+**The bridge** (the user: "there are still cuts when jumping while on a bridge too"; 01:45, 30 jumps: 19 ok, 6 over,
+2 pushed, 3 short, none back). Two things:
+
+- The cuts: the height-jump detector at the take ("Jumping -> Jumping free") and the touch-down ("free -> Jumping"),
+  +5 to +11 px with the body still: on the ground `Mount.Follow` draws the mount on the ground under its own body
+  (half a unit to its facing side, `HighestHitUnder`), free it skipped the snap and drew it at the keeper's height plus
+  the lift; on the bridge's ramp the two differ by the slope over that half unit (503: the mount at 6.25, the body at
+  6.54). Now the snap stays on through a jump (`!FreeFor || Now == Jumping`), and the touch-down adds no drop height
+  (the drawing was on the ground all along); flight unchanged.
+- The landings short of the deck: "no walkable ground ... its nearest node 0.56 / 0.59 away": the NPCs' mesh doesn't
+  cover the deck (y 6.51) at all, its nearest node the ground under the bridge (6.00). Ground at his level the mesh
+  doesn't cover is judged by the keeper's own ground now (`offMesh`: the walk-away test, then the grid's free cell and
+  way), not refused; the 0.3 rule beside things stays for the mesh-cut-back case.
+
 ### The jump against things: five fixes (2026-10-24, built, not seen in game)
 
 The user: "i was spammed the bubble ... when jumping while touching objects ... the jump accelerates forward ... and
@@ -857,6 +1010,27 @@ wood stockpile, ruins) and F11's one failure:
   but the gap closed 3.8 px in one frame. The ease scaled the camera's whole lift, so mid-ease it trailed the take-off's
   fast climb (to 209 px) by tens of px and raced after it. Now only the jump's own gap (`cameraGapPx`, the height at
   the press) is eased away; the camera follows the climb from the first frame.
+- The user, the same night: "if you jump and land on something that you've built, the rider and mount get teleported
+  back to where before u jumped". The log: "the jump came down on something 15 px up" (woodworking_workbench_1), ridden
+  off it, then "still on top of something **0** px up after 0.5 s: back to the take-off spot". Ridden off, the mount
+  fell to the ground under it, which sits a fraction of a pixel above the body there; the Perch stage ended only at
+  exactly 0, so it held at 0.3 px, timed out and sent him back. Now it ends within half a pixel of the ground under
+  it. And still on top after `JumpPerchS` (he stays on the bench): he slides off its nearest edge (`PushOut`, up to
+  1.5) and falls there; only if that fails, the path back, then the take-off spot.
+- The ride's top speed against the mover's, from the user's own running jumps: 7.2 and 7.9 against 12.0. The cap is
+  what keeps a jump at the ride's speed.
+- **That fix failed** (the user: "no still teleporting backwards; and tests fail"), so measured, not guessed again. The
+  bench test: "came down on something 14 px up" 0.12 from its middle, no "slides off" line, back to the take-off spot.
+  The user's benches: twice no slide, once a slide of 0.04 (still on it), once 0.34 onto rubble with no walkable
+  ground. The cause: for a body inside a low wide box the way out of least depth is **up**, over its top; `PushOut`
+  drops the up part, so the push was nothing. And the idea was wrong: nothing stands on things in this game, the body
+  is inside the bench's footprint at the ground's level.
+- Now a jump that comes down over something **carries on** the way it went, at its own speed (2.5 a second at least),
+  the stick left out, drawn on its top (`Perch`: `perchDir`, `perchSpeed`), until it is past it, then falls and is
+  judged as any touch-down. Blocked there (3 steps at under a third of the speed) it heads for the nearest side of the
+  thing's outline (`EdgeOf`, the bounds of `LastFloorThing`, which `FloorUnder` now names). After `JumpPerchS` (1 s
+  now) still over it: back, as before. Logged: "the jump came down over something N px up (its name): carried on off
+  it", "the jump heads off the nearest side of ...".
 
 ### Jump and fly on one key (2026-10-23, built, not seen in game)
 

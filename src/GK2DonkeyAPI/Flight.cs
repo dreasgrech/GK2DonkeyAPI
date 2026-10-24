@@ -59,7 +59,7 @@ namespace GK2DonkeyAPI
         // to be ridden off it; the touch-down is judged as a flight's landing (SafeGround, connected to the take-off spot,
         // the walk-away test); refused, or still on top after JumpPerchS, he is put back on the take-off spot.
         internal static bool JumpOver = true;
-        internal static float JumpPerchS = 0.5f;
+        internal static float JumpPerchS = 1f;     // over something at most this long, carrying on off it (then back)
         internal static float JumpTimeS = 0.45f;   // from leaving the ground to landing, the key held (the rise, the hang, the fall)
         internal static float JumpRiseShare = 0.55f; // of that time, the rise's; the fall takes the rest less the hang: a heavier fall
         internal static float JumpHangS = 0.04f;   // held still at the top
@@ -131,7 +131,22 @@ namespace GK2DonkeyAPI
         internal static bool ProbeOn;        // the per-frame [flight-probe] lines (the tab; off: 70 000 lines filled the log)
         private static Mount.Instance owner;
         private static float heightPx, jumpT, jumpLetGo = float.PositiveInfinity, bobT, beatT;
-        private static bool jumpByKey, jumpTook, jumpFreed; // jumpFreed: the jump took the body (its take-off spot is this jump's)
+        private static bool jumpByKey, jumpTook, jumpFreed, perchEdged;
+        // Come down over something (a workbench): nothing stands on things in this game (the body is inside its
+        // footprint at the ground's level), so the jump carries on the way it went, at its own speed (a slow walk at
+        // least), drawn on its top, the stick left out, until it is past it, then falls and lands (the user, 2026-10-24:
+        // still sent back; F11: the bench test's push-out was "up", out over its top, and so nothing). Blocked there, it
+        // heads for the nearest side of the thing's outline instead.
+        private static Vector3 perchDir;
+        private static float perchSpeed;
+        private static int perchStuck;
+        private static Collider perchThing;
+        // the jump probe (Dev/JumpProbe.cs): this frame's arc and floor, this step's moves
+        private static float traceArc, traceSolid;
+        private static string traceThing = "";
+        private static Vector2 traceStick;
+        private static Vector3 traceWant, traceIntended, traceBump, traceWall;
+        private static string traceBlocker; // jumpFreed: the jump took the body (its take-off spot is this jump's)
         private enum JumpStage { Arc, Perch, Judge, Drop, Squash }
         private static JumpStage jumpStage;
         private static float jumpPrevArc, jumpStageT, jumpDropV, jumpOverPx;
@@ -148,6 +163,18 @@ namespace GK2DonkeyAPI
         // C: where the body was during the jump (every 0.25), to land short along it when the touch-down is refused
         private static readonly System.Collections.Generic.List<Vector3> jumpPath = new System.Collections.Generic.List<Vector3>();
         internal static bool TestJumpWentBack { get; private set; }  // the last jump: put back on the take-off spot
+        internal static float TestJumpTopAirSpeed { get; private set; } // the last jump: its fastest physics step, units a second
+        // the self-test's ride: as if he had ridden this fast on the ground (the cap on a jump's speed)
+        // speed <= 0: forgotten (measured anew). The first build left the test's 3 in place: every jump after the test,
+        // the yard scenario's and the player's own, crawled at 2.4 a second (F11 2026-10-24 02:47).
+        internal static void TestSetRideTop(float speed)
+        {
+            if (speed <= 0f) { rideTopSpeed = 0f; rideTopFor = -1f; return; }
+            rideTopSpeed = speed;
+            PlayerPhysicalBody pb = MainGame.PlayerController?.PhysicalBody;
+            if (pb != null) rideTopFor = pb.SpeedMultiplier;
+        }
+        internal static float TestRideTop => rideTopSpeed;
         internal static bool TestJumpPerched { get; private set; }   // the last jump: came down on top of something
         internal static Vector2? TestMoveDir; // the self-test's stick while the body is the mod's
         internal static bool? TestJumpHeld; // the self-test holds or lets go of the jump's key
@@ -597,6 +624,9 @@ namespace GK2DonkeyAPI
             const float e = 0.01f;
             float v = jumpStage == JumpStage.Arc ? (JumpHeightAt(jumpT + e, jumpLetGo, out _) - JumpHeightAt(jumpT, jumpLetGo, out _)) / e : 0f;
             vel = Mathf.Max(0f, v);
+            JumpTrace.Note($"turns into a take-off at {heightPx:0.0} px, rising {vel:0}");
+            JumpTrace.Outcome("flight");
+            JumpTrace.End("turned into a take-off");
             cameraEase = 0f;
             cameraGapPx = Mathf.Max(0f, Mathf.Round(heightPx));
             Set(Phase.Rising, $"the jump turns into a take-off at {heightPx:0} px (rising {vel:0} px/s{(Free ? ", the body already the mod's" : "")})");
@@ -634,9 +664,13 @@ namespace GK2DonkeyAPI
             if (no != null) { Why = "no jump: " + no; Plugin.Log.LogInfo("[flight] " + Why); return; }
             owner = i;
             jumpT = 0f; jumpLetGo = float.PositiveInfinity; jumpByKey = byKey;
-            jumpPath.Clear(); jumpVel = Vector3.zero; jumpAirDist = 0f; TestJumpWentBack = false; TestJumpPerched = false;
-            jumpTook = false; jumpFreed = false; jumpFlySaid = false; jumpStage = JumpStage.Arc; jumpPrevArc = 0f; jumpStageT = 0f; jumpDropV = 0f; jumpOverPx = 0f;
+            jumpPath.Clear(); jumpVel = Vector3.zero; jumpAirDist = 0f; TestJumpTopAirSpeed = 0f; TestJumpWentBack = false; TestJumpPerched = false;
+            jumpTook = false; jumpFreed = false; perchEdged = false; perchStuck = 0; perchThing = null; jumpFlySaid = false; jumpStage = JumpStage.Arc; jumpPrevArc = 0f; jumpStageT = 0f; jumpDropV = 0f; jumpOverPx = 0f;
             Set(Phase.Jumping, $"jump: up to {JumpPx:0} px held, {JumpTapPx:0} px tapped, {JumpTimeS:0.##} s in the air");
+            Rigidbody rb0 = MainGame.PlayerController?.PhysicalBody?.Rb;
+            JumpTrace.Begin($"mount {Looks.MountWanted(i).Label}; {(byKey ? "by the key" : "held (a button or a mod)")}; at {(rb0 != null ? rb0.position.ToString("F3") : "-")}, its speed {(rb0 != null ? new Vector3(rb0.linearVelocity.x, 0f, rb0.linearVelocity.z).magnitude.ToString("0.00") : "-")}; " +
+                $"JumpPx {JumpPx}, tap {JumpTapPx}, time {JumpTimeS}, rise share {JumpRiseShare}, hang {JumpHangS}, crouch {JumpCrouchPx}/{JumpCrouchS}, squash {JumpSquashPx}, perch {JumpPerchS}, steer {JumpSteerS}, over things {JumpOver}; " +
+                $"the ride's top {rideTopSpeed:0.00}, clearance {ClearancePx}, bump tall {BumpTall}, drawn ground {UseDrawnGround}; indoors {Mount.Instance.IsIndoors()}");
         }
 
         // The jump's height at t seconds after the press, the key let go at letGo seconds (infinity: held), in art px;
@@ -735,6 +769,11 @@ namespace GK2DonkeyAPI
                     break;
                 case Phase.Jumping:
                     JumpTick(dt);
+                    if (Now == Phase.Jumping)
+                    {
+                        Rigidbody rbT = MainGame.PlayerController?.PhysicalBody?.Rb;
+                        JumpTrace.Frame($"{jumpStage};{jumpT:0.000};{traceArc:0.00};{heightPx:0.00};{traceSolid:0.00};{traceThing};{(rbT != null ? JumpTrace.V(rbT.position) : "-;-;-")};{jumpVel.x:0.00};{jumpVel.z:0.00};{Free};{(float.IsPositiveInfinity(jumpLetGo) ? "-" : jumpLetGo.ToString("0.00"))}");
+                    }
                     break;
             }
             climbingNow = climbing;
@@ -891,6 +930,7 @@ namespace GK2DonkeyAPI
                     jumpTookSpeed = v.magnitude;
                     EnterFree(pc, "jump");
                     jumpFreed = true;
+                    JumpTrace.Note($"the body taken at {rb.position:F3} (the take-off spot), its speed {v.magnitude:0.00} ({v.x:0.00}, {v.z:0.00})");
                     jumpPath.Add(rb.position);
                 }
             }
@@ -912,7 +952,10 @@ namespace GK2DonkeyAPI
                 if (!float.IsNaN(groundTop)) solid = Mathf.Max(0f, (groundTop - rb.position.y) / PxWorldY);
                 Jumps.Floor(under, float.NaN, top, solid);
                 jumpOverPx = Mathf.Max(jumpOverPx, solid);
+                traceThing = Mount.Instance.LastFloorThing != null ? Mount.Instance.PathOf(Mount.Instance.LastFloorThing) : (float.IsNaN(under) ? "no ground" : "ground");
             }
+            traceArc = arc; traceSolid = solid;
+            if (rb == null || !Free) traceThing = "";
             jumpStageT += dt;
             switch (jumpStage)
             {
@@ -926,7 +969,13 @@ namespace GK2DonkeyAPI
                         Stage(JumpStage.Perch);
                         TestJumpPerched = true;
                         heightPx = solid;
-                        Plugin.Log.LogInfo($"[flight] the jump came down on something {solid:0} px up at {rb.position.x:0.00},{rb.position.z:0.00}: on top of it for up to {JumpPerchS:0.0} s");
+                        perchThing = Mount.Instance.LastFloorThing;
+                        JumpTrace.Outcome("over");
+                        JumpTrace.Note($"came down over {traceThing} ({solid:0.0} px up) at {rb.position:F3}, the jump's speed {jumpVel.magnitude:0.00}; the thing's bounds {(perchThing != null ? perchThing.bounds.min.ToString("F2") + ".." + perchThing.bounds.max.ToString("F2") : "-")}");
+                        Vector3 hv = jumpVel; hv.y = 0f;
+                        if (hv.magnitude > 0.5f) { perchDir = hv.normalized; perchSpeed = Mathf.Max(hv.magnitude, 2.5f); }
+                        else EdgeOf(rb.position);
+                        Plugin.Log.LogInfo($"[flight] the jump came down over something {solid:0} px up at {rb.position.x:0.00},{rb.position.z:0.00}{(Mount.Instance.LastFloorThing != null ? " (" + Mount.Instance.LastFloorThing.name + ")" : "")}: carried on off it ({jumpVel.magnitude:0.0} a second, at most {JumpPerchS:0.0} s)");
                         return;
                     }
                     Stage(JumpStage.Judge);
@@ -937,8 +986,11 @@ namespace GK2DonkeyAPI
                     // on top of it: ridden off it, the mount falls (the jump's fall) to what is under it
                     if (solid >= heightPx) { heightPx = solid; jumpDropV = 0f; }
                     else { jumpDropV += FallG() * dt; heightPx = Mathf.Max(solid, heightPx - jumpDropV * dt); }
-                    if (heightPx <= 0.01f && solid <= 0.5f) { Stage(JumpStage.Judge); heightPx = 0f; goto case JumpStage.Judge; }
-                    if (jumpStageT > JumpPerchS) Back(pc, $"still on top of something {solid:0} px up after {JumpPerchS:0.0} s");
+                    // down: on the ground under it, to within half a pixel (it sits a fraction of a pixel over the body
+                    // here and there; asked for exactly 0 the fall stopped at 0.3 px, the stage never ended and timed
+                    // out into "back to the take-off spot": the user's jumps onto a workbench, 2026-10-24)
+                    if (solid <= 0.5f && heightPx <= solid + 0.01f) { Stage(JumpStage.Judge); heightPx = 0f; goto case JumpStage.Judge; }
+                    if (jumpStageT > JumpPerchS) Back(pc, $"still over something {solid:0} px up after {JumpPerchS:0.0} s{(perchThing != null ? " (" + perchThing.name + ")" : "")}");
                     return;
                 case JumpStage.Judge:
                 {
@@ -949,9 +1001,15 @@ namespace GK2DonkeyAPI
                     Vector3 spot = rb.position;
                     float under = GroundUnderFlight(spot);
                     if (!float.IsNaN(under)) spot.y = under;
+                    Vector3 asked = spot;
                     string why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true,
-                        walkBudgetMs: jumpStageT > 0.25f ? 0f : Mount.Instance.WalkSliceMs);
+                        walkBudgetMs: jumpStageT > 0.25f ? 0f : Mount.Instance.WalkSliceMs, besideThings: true);
                     if (why == Mount.Instance.WalkPending) return;
+                    if (JumpTrace.On)
+                    {
+                        JumpTrace.Note($"touch-down judged at {asked:F3}: {why ?? "lands"}");
+                        JumpTrace.Note(Mount.Instance.LandAudit(pc, asked, takeOffSpot));
+                    }
                     if (why != null)
                     {
                         // C: a hair inside something: pushed out of it and judged again (at once)
@@ -959,10 +1017,12 @@ namespace GK2DonkeyAPI
                         if (Mount.Instance.PushOut(pc, ref pushed))
                         {
                             Vector3 p2 = pushed;
-                            string why2 = Mount.Instance.WhyCannotLandAt(pc, ref p2, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f);
+                            string why2 = Mount.Instance.WhyCannotLandAt(pc, ref p2, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f, besideThings: true);
                             if (why2 == null)
                             {
                                 Plugin.Log.LogInfo($"[flight] the jump's touch-down pushed out {Vector3.Distance(pushed, spot):0.00} ({why})");
+                                JumpTrace.Outcome("pushed");
+                                JumpTrace.Note($"pushed out {Vector3.Distance(pushed, spot):0.000} to {pushed:F3}: lands");
                                 spot = p2; why = null;
                             }
                         }
@@ -970,8 +1030,9 @@ namespace GK2DonkeyAPI
                     if (why != null) { Back(pc, why); return; }
                     float drop = rb.position.y - spot.y;
                     GiveBack(pc, spot, $"the jump lands at {spot:F2} (the body down {drop:0.00})");
-                    // the picture keeps its place: the body down to the ground under it, the mount falls the rest
-                    heightPx = Mathf.Max(0f, drop / PxWorldY);
+                    // the mount is drawn on the ground under it all through a jump (Mount.Follow's snap), so the body's
+                    // drop to the ground moves nothing drawn; without the snap, the picture keeps its place and falls
+                    heightPx = Mount.S.SnapToGround.Value ? 0f : Mathf.Max(0f, drop / PxWorldY);
                     jumpDropV = 0f;
                     Stage(heightPx > 0.5f ? JumpStage.Drop : JumpStage.Squash);
                     return;
@@ -989,6 +1050,20 @@ namespace GK2DonkeyAPI
         }
 
         private static void Stage(JumpStage s) { jumpStage = s; jumpStageT = 0f; }
+
+        // the way off what the jump came down on: to the nearest side of its outline (its bounds, flat), else back the way it came
+        private static void EdgeOf(Vector3 at)
+        {
+            perchEdged = true;
+            perchSpeed = Mathf.Max(perchSpeed, 2.5f);
+            if (perchThing == null) { perchDir = perchDir.sqrMagnitude > 0.01f ? -perchDir : Vector3.right; return; }
+            Bounds b = perchThing.bounds;
+            float l = at.x - b.min.x, r = b.max.x - at.x, d = at.z - b.min.z, u = b.max.z - at.z;
+            float m = Mathf.Min(Mathf.Min(l, r), Mathf.Min(d, u));
+            perchDir = m == l ? Vector3.left : m == r ? Vector3.right : m == d ? Vector3.back : Vector3.forward;
+            Plugin.Log.LogInfo($"[flight] the jump heads off the nearest side of {perchThing.name} ({perchDir}, {m:0.00} to its edge)");
+            JumpTrace.Note($"blocked while carried off: heads off the nearest side of {Mount.Instance.PathOf(perchThing)} ({perchDir}, {m:0.000} to its edge, at {at:F3})");
+        }
 
         // the jump's fall (its gravity when held: 2H/Tf^2)
         private static float FallG()
@@ -1012,7 +1087,9 @@ namespace GK2DonkeyAPI
                 Vector3 p = jumpPath[k];
                 float under = GroundUnderFlight(p);
                 if (!float.IsNaN(under)) p.y = under;
-                if (Mount.Instance.WhyCannotLandAt(pc, ref p, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f) == null)
+                string whyP = Mount.Instance.WhyCannotLandAt(pc, ref p, grid: true, connectedTo: takeOffSpot, walkOut: true, walkBudgetMs: 0f, besideThings: true);
+                JumpTrace.Note($"the way back: path point {k} of {jumpPath.Count - 1} at {p:F3}: {whyP ?? "lands"}");
+                if (whyP == null)
                 {
                     put = p;
                     how = $"short of it, back along the jump at {p:F2} ({jumpPath.Count - 1 - k} step(s) of the path back, {watch.Elapsed.TotalMilliseconds:0.0} ms)";
@@ -1020,6 +1097,8 @@ namespace GK2DonkeyAPI
                 }
             }
             TestJumpWentBack = put == takeOffSpot;
+            JumpTrace.Outcome(TestJumpWentBack ? "back" : "short");
+            JumpTrace.Note($"can't land ({why}): {how}; the path had {jumpPath.Count} point(s)");
             GiveBack(pc, put, $"the jump can't land there ({why}): {how}");
             heightPx = 0f;
             Stage(JumpStage.Squash);
@@ -1115,6 +1194,23 @@ namespace GK2DonkeyAPI
             {
                 if (put.HasValue)
                 {
+                    // the no-underground guard: onto the top surface there, never under one; refused, back to the last
+                    // spot he could stand on (a jump's: its take-off spot), where he stood. Said as a warning: it must not
+                    // happen, and when it does the cause is to be found.
+                    Vector3 safe = put.Value;
+                    if (!Mount.Instance.OntoTopSurface(ref safe, pb.Rb.position.y, out string guard))
+                    {
+                        Vector3 back = lastSafe;
+                        Plugin.Log.LogWarning($"[flight] the no-underground guard refused the put at {put.Value:F2} ({guard}); {what}: put at the last safe spot {back:F2} instead");
+                        JumpTrace.Note("NO-UNDERGROUND GUARD refused " + put.Value.ToString("F3") + ": " + guard);
+                        safe = back;
+                    }
+                    else if (guard != null)
+                    {
+                        Plugin.Log.LogWarning($"[flight] the no-underground guard: {guard}; {what}");
+                        JumpTrace.Note("NO-UNDERGROUND GUARD: " + guard);
+                    }
+                    put = safe;
                     Vector3 move = put.Value - pb.Rb.position;
                     if (move.sqrMagnitude > 0.0025f)
                     {
@@ -1228,14 +1324,20 @@ namespace GK2DonkeyAPI
                 if (rideTopSpeed > 0.5f && rideTopSpeed < speed) wantV *= rideTopSpeed / speed; // the ride's own top, measured
                 jumpVel = Vector3.MoveTowards(jumpVel, wantV, speed / Mathf.Max(0.05f, JumpSteerS) * dt);
                 move = jumpVel * dt;
+                if (jumpStage == JumpStage.Perch) move = perchDir * perchSpeed * dt; // carried off what it came down on
+                traceStick = d; traceWant = wantV; traceIntended = move;
             }
             Blocker = null;
             if (BumpTall)
             {
                 // the flight's feet: the body plus the lift (the hover left out), a clearance under them
-                float flightY = rb.position.y + Mathf.Round(heightPx) * PxWorldY - ClearancePx * PxWorldY;
-                move = Mount.Instance.FlyMove(pc, rb.position, move, flightY, colliderToo: Now == Phase.Jumping);
+                bool carried = Now == Phase.Jumping && jumpStage == JumpStage.Perch;
+                // carried off a thing the mount is drawn on its top: no clearance under it (the 2 px put the feet under the
+                // bench's own picture top)
+                float flightY = rb.position.y + Mathf.Round(heightPx) * PxWorldY - (carried ? 0f : ClearancePx * PxWorldY);
+                move = Mount.Instance.FlyMove(pc, rb.position, move, flightY, colliderToo: Now == Phase.Jumping, ignoreThing: carried ? perchThing : null);
                 string b = Mount.Instance.LastBlocker;
+                traceBump = move; traceBlocker = b;
                 if (b != null && (b != lastBlocker || Time.unscaledTime - lastBlockerSaid > 2f))
                 {
                     lastBlocker = b; lastBlockerSaid = Time.unscaledTime;
@@ -1249,6 +1351,7 @@ namespace GK2DonkeyAPI
                 float feet = rb.position.y + Mathf.Round(heightPx) * PxWorldY - ClearancePx * PxWorldY;
                 move = DrawnWall(rb.position, move, feet);
             }
+            traceWall = move;
             Vector3 next = rb.position + move;
             // Up the hills: the walkable surface right under him (the ground layers' raycast from half a unit above his
             // body), never higher. Not GroundHeight: its navmesh also lies on top of rocks and on the plateau above a
@@ -1261,6 +1364,16 @@ namespace GK2DonkeyAPI
             // moved, and the body's smoothing is off for two physics steps, as for a landing's move (GiveBack). Without
             // that the whole dragon rose with the body: 0.39 onto BigDropTopSurface, 12 art px in three frames, 88
             // screen px, and it stayed that much higher until it landed (the log 2026-10-23, "jump of +4/+5/+3 px").
+            // A jump's body follows the ground down as well as up (a flight keeps its height over a cliff on purpose; a jump
+            // is the ground's): running downhill the body stayed at the take-off height while the ground fell away, the
+            // snap lost the ground under it (+30 px in one frame, the mount flipping from the ground to the body) and the
+            // touch-down dropped the body 1.6 at once (-51 px; the user's slope jumps, 2026-10-24 03:18). Down to a level's
+            // step (1.2) per physics step; a real drop is the touch-down's.
+            if (Now == Phase.Jumping && Physics.Raycast(next + Vector3.up * StepUp, Vector3.down, out RaycastHit below, StepUp + 1.3f, GroundMask, QueryTriggerInteraction.Ignore)
+                && below.point.y < next.y - 0.005f && next.y - below.point.y <= 1.2f)
+            {
+                next.y = below.point.y;
+            }
             if (Physics.Raycast(next + Vector3.up * StepUp, Vector3.down, out RaycastHit under, StepUp + 0.5f, GroundMask, QueryTriggerInteraction.Ignore)
                 && under.point.y > next.y)
             {
@@ -1290,8 +1403,17 @@ namespace GK2DonkeyAPI
             {
                 // what was really moved is the speed now (into a wall: none of it; along one: the slide's share, never more)
                 Vector3 moved = next - rb.position; moved.y = 0f;
-                jumpVel = moved / dt;
+                JumpTrace.Step($"{jumpStage};{traceStick.x:0.00};{traceStick.y:0.00};{traceWant.x / 1f:0.00};{traceWant.z:0.00};{traceIntended.x:0.0000};{traceIntended.z:0.0000};{traceBump.x:0.0000};{traceBump.z:0.0000};{(traceBlocker ?? "-").Replace(';', ',')};{traceWall.x:0.0000};{traceWall.z:0.0000};{JumpTrace.V(next)};{moved.magnitude:0.0000}");
+                traceBlocker = null;
+                if (jumpStage == JumpStage.Perch)
+                {
+                    // blocked while carried off it (a wall behind the bench): the nearest side of its outline instead, once
+                    if (moved.magnitude < 0.3f * perchSpeed * dt) perchStuck++; else perchStuck = 0;
+                    if (perchStuck >= 3 && !perchEdged) EdgeOf(rb.position);
+                }
+                else jumpVel = moved / dt;
                 jumpAirDist += moved.magnitude;
+                TestJumpTopAirSpeed = Mathf.Max(TestJumpTopAirSpeed, moved.magnitude / dt);
                 if (jumpPath.Count == 0 || (next - jumpPath[jumpPath.Count - 1]).sqrMagnitude > 0.0625f) jumpPath.Add(next);
             }
             rb.MovePosition(next);
@@ -1477,6 +1599,7 @@ namespace GK2DonkeyAPI
 
         private static void Land(string what)
         {
+            if (Now == Phase.Jumping) JumpTrace.End(what);
             if (Free) ForceDown(MainGame.PlayerController, what, move: true);
             if (owner != null && Now != Phase.Jumping) { lastOwner = owner; landedAt = Time.unscaledTime; }
             heightPx = 0f; jumpT = 0f; jumpLetGo = float.PositiveInfinity; cameraEase = 1f; bobT = 0f; beatT = 0f; vel = 0f; thudT = -1f;

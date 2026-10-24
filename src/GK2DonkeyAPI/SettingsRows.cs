@@ -505,7 +505,7 @@ namespace GK2DonkeyAPI
                     break;
                 case MountSettingsPage.RowKind.Button:
                     // Either arrow (or the gamepad's left/right) presses it.
-                    b.Fields = new[] { "Open", "Open " };
+                    b.Fields = new[] { r.ButtonText ?? "Open", (r.ButtonText ?? "Open") + " " };
                     break;
                 case MountSettingsPage.RowKind.Key:
                     // Either arrow starts the capture (Tick): two fields, so either arrow is a change.

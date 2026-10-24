@@ -59,6 +59,7 @@ does.
 | `IsMounted`, `Style`, `Owner` | State. `Owner` is the id of the mod that started the ride, kept across style switches. |
 | `RingBell()`, `Bray()` | Sounds, subject to the `Sounds` and `Bell` features. |
 | `MountResult Jump()`, `TakeOff()`, `Land()` (0.36.0) | The ridden mount off the ground, as the jump and fly keys do it (for a mod's own button or a script). `Jump`: a full jump; refused in the air, with the cart, on a mount whose `Jumps` is false. `TakeOff`: from the ground, or from a jump in the air (the jump becomes the take-off); refused on a mount whose `Flies` is false, indoors (`FlyIndoors`), with the cart, already flying. `Land`: while taking off or flying; it comes down where the keeper can stand, else hovers. The reason is in the result; the bubble says nothing. All refused while `FlyingEnabled` is false. |
+| `MountResult ReturnToSafeSpot(reason = null)`, `LastSafeSpot`, event `ReturnedToSafeSpot` (0.36.0) | Never lost ([never-lost.md](never-lost.md)): the API keeps the spots the keeper stood on (the walkable ground under his feet, nothing over him, his body fitting; eight per scene, plus where the game put him at a load and after each door) and, with the Behaviour key `FallGuard` on, puts him back on the newest one that still holds when he has fallen out of the world (under the ground, into nothing, far below it). `ReturnToSafeSpot` does the same by hand (a mod's button or key; Saddle Up's "Back to the last safe spot"): refused with the reason while not in a game, while a door, a cutscene or a dialogue has the keeper, and in a scene with no spot yet; the bubble says the result. A flight or a jump is ended first, a ride goes on. `LastSafeSpot`: this scene's newest, or null. The event: where he was put, by whoever asked. Every return is a warning in the log with its facts. |
 | `FlightState`, `FlyingEnabled` (0.36.0) | `MountFlight`: `Ground`, `Jumping`, `TakingOff`, `Flying`, `Landing` (Ground while not riding). `FlyingEnabled`: jumping and flying are switched on (a dev-only experiment for now): show your own jump or fly rows only then. |
 
 **While mounted, the keeper's hands stay empty.** Only the cart carries:
@@ -155,6 +156,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `FlyIndoors` (0.36.0, off): on, a flying mount may take off and fly indoors, as a lift only (never through walls).
   Off: no take-off indoors ("indoors (flying indoors is off)"), and a flight that goes through a building's door
   lands there. Saddle Up keeps it off and offers no row for it.
+- `FallGuard` (0.36.0, on): the fall watchdog ([never-lost.md](never-lost.md)); off, nothing watches (the record and
+  `ReturnToSafeSpot` still work). `ReturnKey` (0.36.0, `KeyboardShortcut`, None): a key for `ReturnToSafeSpot`, read by
+  the API with the flight keys' gate.
 - `JumpKey`, `FlyKey` (0.36.0, `KeyboardShortcut`, Space both: a key with its modifiers, Ctrl+Space is Ctrl+Space;
   more keys held, such as the climb's Left Shift, don't stop a press): riding plain, the mount jumps; a mount that flies takes off
   and lands. One key for both: a press jumps, a second press in the air during the jump takes off a mount that
@@ -533,6 +537,7 @@ Where they apply:
 | `Choice` / `Steps` with `look: true` | as above | in the Mounts panel, not in the menus (0.35.0) |
 | `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings (the Mounts panel draws its own). No donkey needed: the art comes from the game's files, the colours from the companion |
 | `PanelButton(section, label, description)` (`LookButton` is the same) | nothing | a button: the menu closes and the Mounts panel opens over the game (every mount listed, the chosen one drawn with its words, its look rows under it). `OpenPanel()` opens it from a key, and closes it when the key comes again while it is open; the button only brings it forward |
+| `Button(section, label, description, onClick, buttonText = "Go", enabled = null)` (0.36.0) | nothing | a button of the mod's own: `onClick` runs when it is pressed (the game's Settings window; the Mods menu in a game), `buttonText` is the word on it, `enabled` greys it in the Settings window and leaves it out of the Mods menu while false. A handler that throws is logged. Saddle Up's "Back to the last safe spot" ([never-lost.md](never-lost.md)) |
 | `TuningKey(section, key, tuningKey, companion)` | nothing | says which tuning key the row sets: the row is left out of the Mods menu and the game's Settings window while the companion's chosen mount pins that key (`PinnedBy(companion, key)` names the mount; only for a key a mount may pin; a set-aside skin pins nothing) |
 | `Heading(section, label, description = "")` | nothing | a heading inside a section: a line with the label and no value, before the rows it names (Saddle Up: "Mount colours" and "Cart colours" in Colours). In the Mounts panel the look rows after it, in its section, stand under this heading in a group of their own instead of under the section's name. Not a picture row's label: a `Preview` row is found on screen by its label, so no other row may share it (the page throws) |
 
@@ -940,6 +945,9 @@ History:
 - 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
   foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
   old places for one key (a call each; before, the last call won).
+- 0.36.0: never lost ([never-lost.md](never-lost.md)): `Mounts.ReturnToSafeSpot`, `Mounts.LastSafeSpot`, the event
+  `Mounts.ReturnedToSafeSpot`, the Behaviour keys `FallGuard` (on) and `ReturnKey` (None); `MountSettingsPage.Button`
+  (a button row of the mod's own: its action, the word on it, an enabled condition; `PanelButton` stays).
 - 0.36.0: `MountDef.Flies` (false) and `Jumps` (true), `MountInfo.Flies` / `Jumps` (`[Mount] flies`, `jumps`):
   whether a mount flies and jumps, ridden plain; the Behaviour keys `JumpKey` and `FlyKey` (Space both: one key, a
   second press in the air takes off; `KeyboardShortcut`s, modifiers kept); `Mounts.FlyingEnabled` (jumping and flying

@@ -2436,7 +2436,12 @@ namespace GK2DonkeyAPI
                 // Flying free (the flying experiment) the body is in the air: the ground under the mount says nothing about
                 // where to draw it, the flight's height does (the body plus the lift). Snapped, the mount took the step
                 // limit's last good difference near slopes and jumped up (the user's video 2026-10-22 15-31-34).
-                if (S.SnapToGround.Value && !Flight.FreeFor(this))
+                // A jump (the body the mod's for a hop) stays on the ground's snap: the mount drawn on the ground under it
+                // plus the jump's height. Drawn at the keeper's height while free, it stepped by the slope across the half
+                // unit to its body at the take and at the touch-down: +5 to +11 px in one frame on the bridge (the user,
+                // 2026-10-24: "there are still cuts when jumping while on a bridge"; the log: the mount on the ramp at
+                // 6.25, the body at 6.54).
+                if (S.SnapToGround.Value && (!Flight.FreeFor(this) || Flight.Now == Flight.Phase.Jumping))
                 {
                     // Difference between the ground under the donkey and under the keeper, both from the same source, so
                     // flat ground is exactly 0 and no absolute mismatch between sources can sink or float the donkey.
@@ -3331,8 +3336,10 @@ namespace GK2DonkeyAPI
 
             // seconds: how long the bubble stays (0 = the game's own time: 2.5 s plus 0.085 s a letter, after the letters
             // have typed in; UISpeechBubble / SpeechBubbleSettings.CalculateBubbleShowingTime)
+            internal static int TestSaidCount; // every bubble asked for (the self-test: a jump says nothing)
             internal static void Say(string text, float seconds = 0f)
             {
+                TestSaidCount++;
                 if (!Plugin.ShowMessages.Value || string.IsNullOrEmpty(text))
                 {
                     return;

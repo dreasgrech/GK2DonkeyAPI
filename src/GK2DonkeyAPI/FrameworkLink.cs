@@ -171,13 +171,20 @@ namespace GK2DonkeyAPI
                             break;
                         case MountSettingsPage.RowKind.Button:
                             MountSettingsPage.Row button = r;
-                            s.AddButton(r.Section, "Button" + order, r.Label, r.Description, () => Mounts.IsGameReady ? "Open" : "In a game", () =>
+                            s.AddButton(r.Section, "Button" + order, r.Label, r.Description, () => Mounts.IsGameReady ? (button.ButtonText ?? "Open") : "In a game", () =>
                             {
                                 if (!Mounts.IsGameReady)
                                 {
                                     return;
                                 }
-                                button.OnClick?.Invoke(); // the panel hides the Mods menu itself and brings it back as it was (not the framework's Toggle: that closes the menu for good)
+                                try
+                                {
+                                    button.OnClick?.Invoke(); // the panel hides the Mods menu itself and brings it back as it was (not the framework's Toggle: that closes the menu for good)
+                                }
+                                catch (Exception e)
+                                {
+                                    Plugin.Log.LogWarning($"Mods menu: {button.Label} failed: {e.Message}");
+                                }
                             }, order);
                             break;
                     }

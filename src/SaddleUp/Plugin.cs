@@ -89,6 +89,10 @@ namespace SaddleUp
                 apply: v => Mounts.Behaviour.Set(Guid, "FlyKey", v));
             p.EnableWhen("Keys", "JumpKey", () => Mounts.FlyingEnabled);
             p.EnableWhen("Keys", "FlyKey", () => Mounts.FlyingEnabled);
+            // never lost (the API's safe spots, docs/never-lost.md): a key for "back to the last safe spot"; the API reads it
+            // with its own gate (not during a door, a cutscene or a dialogue)
+            p.Key("Keys", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Stuck, or fallen somewhere you shouldn't be: puts you back on the last ground you stood on in this scene. None = no key (the Behaviour section has a button).",
+                apply: v => Mounts.Behaviour.Set(Guid, "ReturnKey", v));
             p.Key("Keys", "MountsKey", KeyboardShortcut.Empty, "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins, effect and colours. None = no key (the Mount section's button opens it too).",
                 pressed: p.OpenPanel);
 
@@ -199,6 +203,13 @@ namespace SaddleUp
             ConfigEntry<bool> indoors = p.Toggle("Behaviour", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue, and get on inside. A door with a loading screen still ends the ride. Off: you get off at the door and can't mount inside.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
             p.Toggle("Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "With mounting indoors allowed: the cart comes inside too (it can get caught on furniture and door frames). Off: driving the cart through a door, the cart stays at the door with its load and you ride on inside (at the morgue you get off inside carrying the corpse, your mount with you); inside you can ride, not drive.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
             p.EnableWhen("Behaviour", "CartIndoors", () => indoors.Value);
+            // never lost: the fall watchdog, and the same by hand
+            p.Toggle("Behaviour", "FallGuard", true, "Bring me back if I fall out of the world", "If you ever end up under the ground, falling into nothing or far below the world, you are put back on the last ground you stood on (the log says why). Never during a door, a cutscene or a dialogue; standing under a bridge is fine.", v => Mounts.Behaviour.Set(Guid, "FallGuard", v));
+            p.Button("Behaviour", "Back to the last safe spot", "Puts you back on the last ground you stood on in this scene, right now (stuck somewhere, or the watchdog is off). The Keys section has a key for it.", () =>
+            {
+                Mounts.ReturnToSafeSpot("Saddle Up's settings button"); // the API says the result in the keeper's bubble
+            });
+            p.Info("Behaviour", "Last safe spot", () => Mounts.LastSafeSpot is Vector3 spot ? $"{spot.x:0.0}, {spot.z:0.0} (height {spot.y:0.0})" : "none yet in this scene", "Where \"Back to the last safe spot\" would put you.");
 
             p.MovedKey("Cart", "CartSlots", "Behaviour");
             p.MovedKey("Cart", "CargoZombies", "Behaviour");

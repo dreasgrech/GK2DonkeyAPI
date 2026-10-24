@@ -161,6 +161,7 @@ ground.
 | Dismount, doors, saving while riding | He stays where he is; doors are the game's teleport; the game saves his real position |
 | Work, ladders, the game walking him | The ride ends first; the game walks him on its own grid |
 | Saddle Up, the examples | Never touch the keeper's body |
+| Never lost (`SafeSpots.Return`, 2026-10-24, [never-lost.md](never-lost.md)) | The one move that goes **to** a spot he could not walk to from where he is: he is out of the world (under the ground, falling into nothing, far below it) or asked for it (the button, the key, a mod). The spot is one he stood on in this scene, verified again at the move (the walkable surface at his feet, nothing over him, his body fitting), checked again two physics steps later; every such move is a warning in the log |
 
 **Known, not a lock-out:**
 - `SceneRecastGraph` is kept from the last scene that had one; in a scene without its own, the ground tests judge

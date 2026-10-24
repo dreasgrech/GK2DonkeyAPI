@@ -294,7 +294,8 @@ namespace GK2DonkeyAPI
 
             // C (a jump's touch-down a hair inside something, "his body doesn't fit ... by 0.06", the user's log
             // 2026-10-24): the body pushed out of what it goes into, sideways, up to three times; true when it moved.
-            internal static bool PushOut(PlayerController pc, ref Vector3 spot)
+            // maxPush: how far at most (0.5: a hair; a jump stranded on top of a workbench slides off its edge, 1.5)
+            internal static bool PushOut(PlayerController pc, ref Vector3 spot, float maxPush = 0.5f)
             {
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 Collider body = pc?.PhysicalBody?.MeshCollider;
@@ -322,7 +323,7 @@ namespace GK2DonkeyAPI
                         }
                     }
                     if (push == Vector3.zero) break;
-                    if (push.magnitude > 0.5f) return false; // deep inside: not a hair, not this
+                    if (push.magnitude > maxPush) return false; // deep inside: not this
                     spot += push;
                 }
                 return (spot - start).sqrMagnitude > 1e-6f;
@@ -371,6 +372,93 @@ namespace GK2DonkeyAPI
                     {
                         return $"the game's walk grid has no way from the keeper to {to:F2}";
                     }
+                }
+                catch (System.Exception e)
+                {
+                    return "the game's walk grid test failed: " + e.Message;
+                }
+                return null;
+            }
+
+            // The keeper's body at p: null when it fits (BodyDoesNotFit with the back faces on), else why not (SafeSpots).
+            internal static string KeeperFits(PlayerController pc, Vector3 p)
+            {
+                Rigidbody rb = pc?.PhysicalBody?.Rb;
+                Collider body = pc?.PhysicalBody?.MeshCollider;
+                if (rb == null || body == null) return "no keeper's body";
+                bool bf = Physics.queriesHitBackfaces;
+                try { Physics.queriesHitBackfaces = true; return BodyDoesNotFit(rb, body, KeeperMask(rb), p); }
+                finally { Physics.queriesHitBackfaces = bf; }
+            }
+
+            // The no-underground guard (the user, 2026-10-24: "extremely important to not have any possibility of us going
+            // underground; that is catastrophic"). Every put-down of the keeper's body by the flight or a jump goes through
+            // OntoTopSurface (Flight.GiveBack): the highest ground surface at the spot that he can reach from his level
+            // (MaxRise over the higher of the spot and where he is), the spot raised onto it when it lies above (a deck
+            // over the NPCs' mesh); then nothing of the ground's layers over him within his height. False: no ground there,
+            // or ground over him he can't stand on: the put is refused.
+            private static readonly RaycastHit[] surfaceHits = new RaycastHit[16];
+
+            internal static bool OntoTopSurface(ref Vector3 put, float levelY, out string what)
+            {
+                what = null;
+                float from = Mathf.Max(put.y, levelY) + MaxRise + 0.05f;
+                int n = Physics.RaycastNonAlloc(new Vector3(put.x, from, put.z), Vector3.down, surfaceHits, from - put.y + 1.5f, GroundLayers, QueryTriggerInteraction.Ignore);
+                float best = float.NaN;
+                Collider top = null;
+                for (int i = 0; i < n && i < surfaceHits.Length; i++)
+                {
+                    if (surfaceHits[i].distance <= 0f) continue;
+                    if (float.IsNaN(best) || surfaceHits[i].point.y > best) { best = surfaceHits[i].point.y; top = surfaceHits[i].collider; }
+                }
+                if (float.IsNaN(best)) { what = $"no ground under {put:F2} from {from:F2} down"; return false; }
+                if (best > put.y + 0.03f)
+                {
+                    what = $"raised {best - put.y:F2} onto {(top != null ? top.name : "the ground")} at {best:F2} (it was under it, at {put.y:F2})";
+                    put.y = best;
+                }
+                string over = WhyUnderground(put);
+                if (over != null) { what = (what != null ? what + "; " : "") + over; return false; }
+                return true;
+            }
+
+            // Ground of the walkable layers over a body standing at p, within his height: null when there is none.
+            // reach: how far up (his height, 1.2; the fall watchdog looks 5: a body under the ground falls while it is judged)
+            internal static string WhyUnderground(Vector3 p, float reach = 1.2f)
+            {
+                bool bf = Physics.queriesHitBackfaces;
+                try
+                {
+                    Physics.queriesHitBackfaces = true; // a terrain mesh seen from under it
+                    if (Physics.Raycast(p + Vector3.up * 0.05f, Vector3.up, out RaycastHit hit, reach, GroundLayers, QueryTriggerInteraction.Ignore))
+                        return $"ground over him: {hit.collider.name} (layer {LayerMask.LayerToName(hit.collider.gameObject.layer)}) {hit.distance + 0.05f:F2} above {p:F2}";
+                }
+                finally { Physics.queriesHitBackfaces = bf; }
+                return null;
+            }
+
+            // The jump's walk-grid rule (besideThings): from the take-off spot's cell (the body is the mod's, at the spot);
+            // a blocked cell with a free one within BesideGrid moves 'to' onto that one.
+            private static string WhyNotOnGameGridBeside(PlayerController pc, Rigidbody rb, ref Vector3 to, Vector3 takeOff, bool needWay = true)
+            {
+                PlayerLocalAreaMovement lam = pc.PlayerLocalAreaMovement;
+                Pathfinding.NavGraph[] graphs = AstarPath.active?.data?.graphs;
+                if (lam == null || graphs == null || graphs.Length <= 3 || !(graphs[3] is Pathfinding.GridGraph grid)) return null;
+                if (lam.Status != PlayerLocalAreaMovement.MovementStatus.NotMoving) return "the game is walking the keeper";
+                try
+                {
+                    using (Perf.Measure(Perf.S.LandGrid)) lam.RescanPlayerGraph();
+                    Pathfinding.NNInfo a = grid.GetNearest(takeOff, Pathfinding.NearestNodeConstraint.Walkable);
+                    Pathfinding.NNInfo b = grid.GetNearest(to);
+                    if (a.node == null) return "the take-off spot isn't on the game's walk grid";
+                    if (b.node == null || !b.node.Walkable || FlatOff(b.position, to) > 0.15f)
+                    {
+                        Pathfinding.NNInfo free = grid.GetNearest(to, Pathfinding.NearestNodeConstraint.Walkable);
+                        if (free.node == null || FlatOff(free.position, to) > BesideGrid) return $"the game's walk grid has no free cell at {to:F2} (the nearest {(free.node == null ? "none" : FlatOff(free.position, to).ToString("F3") + " away")})";
+                        b = free;
+                        to = new Vector3(free.position.x, to.y, free.position.z);
+                    }
+                    if (needWay && !Pathfinding.PathUtilities.IsPathPossible(a.node, b.node)) return $"the game's walk grid has no way from the take-off spot to {to:F2}";
                 }
                 catch (System.Exception e)
                 {

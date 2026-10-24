@@ -66,6 +66,7 @@ static int Check(ModuleDefinition mod, string ns)
     foreach (var m in new[] { "Start", "OnEnable", "OnDisable", "FixedUpdate", "LateUpdate", "OnApplicationQuit" })
     {
         if (m == "LateUpdate" && ns == "GK2DonkeyAPI") continue;
+        if (m == "FixedUpdate" && ns == "GK2DonkeyAPI") continue; // the free flight and the jump move the keeper's body on the physics step (Flight.FixedStep), on purpose
         if (plugin.Methods.Any(x => x.Name == m))
         {
             Result(false, $"Plugin has a method named {m} (Unity would call it)");

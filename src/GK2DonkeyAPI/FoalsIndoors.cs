@@ -42,6 +42,7 @@ namespace GK2DonkeyAPI
 
         internal static void OnKeeperTeleported()
         {
+            SafeSpots.NoteTeleport(); // every door, the self-test's too: nothing judged until it has settled
             if (TestDoorQuiet)
             {
                 return;

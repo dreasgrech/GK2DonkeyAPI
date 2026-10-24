@@ -106,6 +106,7 @@ namespace GK2DonkeyAPI
         private const string GroupLooks = "Skins and effects";
         private const string GroupIndoors = "Indoors";
         private const string GroupFlying = "Flying";
+        private const string GroupSafety = "Never lost";
         private const float DragonRaisePx = 6f; // the dragon's body raised on longer legs (make_creatures.py RAISE): its seat 6 px above the donkey's
 
         // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
@@ -191,7 +192,12 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupFlying, Name = "mounts: the flies and jumps flags ([Mount] flies, jumps; the dragon flies by its flag)", Body = FlightFlags },
             new Scenario { Group = GroupFlying, Name = "keys: jump and fly on one key (a second press in the air takes off a flier), and on two", Body = FlightOneKey },
             new Scenario { Group = GroupFlying, Name = "keys: Saddle Up's Jump and Fly rows (Space, shown only while flying is on, the Behaviour keys follow)", Body = FlightKeyRows },
+            new Scenario { Group = GroupFlying, Name = "jump: beside a real thing (the yard's workbenches) and on ground the NPCs' mesh doesn't cover (a bridge): a jump in place lands in place", Body = FlightJumpBeside },
             new Scenario { Group = GroupFlying, Name = "jump: the mount's arc (held and tapped, the same at any frame rate), and jumped live riding plain: in place, over a low wall, stopped by a tall one", Body = FlightJump },
+            new Scenario { Group = GroupFlying, Name = "jump: the home yard (every built thing and fence jumped at, a slide along the fence): down, never sent back, never underground", Body = FlightJumpYard },
+            new Scenario { Group = GroupSafety, Name = "safe spots: standing records one, under the ground never; a seed after the load", Body = SafeRecord },
+            new Scenario { Group = GroupSafety, Name = "the fall watchdog: under the ground, far below the world, caught; a drop onto the ground and standing under a bridge, left alone", Body = SafeWatchdog },
+            new Scenario { Group = GroupSafety, Name = "back to the last safe spot: the API call (on foot, riding), refused with the reason (controls taken, no spot), Saddle Up's rows and button, the watchdog off", Body = SafeReturn },
         };
 
         // The groups in the order they first appear in the catalog (after Scenarios: static fields initialise in order).

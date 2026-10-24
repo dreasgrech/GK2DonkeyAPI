@@ -12,6 +12,12 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Never lost.** If you ever fall out of the world (under the ground, into nothing, far below it) you are put back on
+  the last ground you stood on, with "Back on solid ground." (the game itself has no protection: off the ground the
+  keeper falls for ever, and a door places him without a check). Saddle Up's Behaviour section has the switch ("Bring
+  me back if I fall out of the world", on), a button "Back to the last safe spot" for when you are stuck, and the Keys
+  section a key for it (none by default). Never during a door, a cutscene or a dialogue; standing under a bridge is
+  fine. docs/never-lost.md.
 - **Fixed: the mod's keys no longer act while the Mounts panel is open.** H, G, the bell and the send-away key
   pressed in the panel or its colours window got you on and off your mount behind it; now they wait until the
   panel is closed, as the game's own keys do. The Mounts panel key still closes it.
@@ -533,6 +539,16 @@ Development:
   out of an upstroke and leaves it with a downstroke back into the beat. Stopping, turning or climbing ends the
   glide. The Flying tab has the timings and a "Glide now" button.
 - **The gliding dragon's head nods gently** instead of holding perfectly still.
+- **Never lost, for mods** (API 0.36.0): `Mounts.ReturnToSafeSpot(reason)`, `Mounts.LastSafeSpot`, the event
+  `ReturnedToSafeSpot`, the Behaviour keys `FallGuard` (on) and `ReturnKey` (None), and a button row of a mod's own on
+  its settings page, `MountSettingsPage.Button(section, label, description, onClick, buttonText, enabled)`.
+- **The Tests tab's group titles in colour** (dev): white with no result, green when every scenario run passed, yellow
+  when one warned, red when one failed; a run resets the groups it runs. A new scenario jumps at the real things of the
+  player's yard (`World/yard(Clone)`): every built thing and fence from the side with room, and a slide along the
+  fence, each landing on the ground, never underground, never sent back.
+- **The jump probe** (dev): every jump traced into `BepInEx/GK2-jumps/` (the newest 30), frame by frame and physics
+  step by physics step, with a landing audit at each touch-down (every rule of the landing check on its own, the game's
+  walk grid from the take-off spot, every collider near the spot). The file's name says how the jump ended.
 - **Jump and Fly keys, Space both** (dev-only for now, like flying): Saddle Up's Keys section has a Jump and a Fly
   row, shown only while flying is on. With one key for both (the default): a press jumps on every mount, a second
   press in the air takes off on a mount that flies (the wings take over from the jump, the camera eases up), a press
@@ -550,7 +566,10 @@ Development:
   frame rate. **The mount jumps over things**: the keeper's body leaves the ground for the jump, passes over what is
   lower than the jump and is stopped by what is taller; it lands only where a flight could (never somewhere he'd be
   locked in). A jump keeps the speed you had and steers a little in the air, never faster than the mount really
-  rides on the ground (no surge along a wall you were pressed against, none from running into a jump); one that can't touch down where it ends lands at the nearest good spot back along its way, the take-off
+  rides on the ground (no surge along a wall you were pressed against, none from running into a jump); a jump that
+  comes down over something built (a workbench) carries on off it the way it was going, and lands past it; a jump
+  lands beside built things where the keeper can stand (it was sent back there) and on a bridge's deck; no more
+  jolts at the start and end of a jump on a slope or a bridge; one that can't touch down where it ends lands at the nearest good spot back along its way, the take-off
   spot only as the last resort, and says nothing (no bubble). Invisible walls stop a jump. The Flying tab has rows for each part; a new self-test
   "jump: the mount's arc" checks the arc and jumps live over a low wall and against a tall one.
 - **The flying dragon's neck is shorter and steadier.** In the air its neck was long for its body and the head bobbed

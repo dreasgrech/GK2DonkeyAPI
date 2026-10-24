@@ -44,6 +44,7 @@ namespace GK2DonkeyAPI.Api
             internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel leaves the row out while false (a custom colour shows with its preset), the Settings window greys it
             internal bool IsLook;           // the Mounts panel's, not the menus' (InMenu); a Note with it is a heading there (Heading)
             internal Action OnClick;         // RowKind.Button
+            internal string ButtonText;      // RowKind.Button: the word on it ("Open", "Go")
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
         }
 
@@ -797,7 +798,16 @@ namespace GK2DonkeyAPI.Api
         // effect, the colours), with Done (Escape too; both keep what was chosen). Only in a game; in the main menu it says so.
         public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, OnClick = () => MountsPanel.Open(this, toggle: false) });
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false) });
+        }
+
+        // A button of the mod's own (0.36.0): onClick runs when it is pressed, in the game's Settings window and in the
+        // Mods menu (there only in a game). buttonText: the word on it. enabled: the Settings window greys it and the Mods
+        // menu leaves it out while false. No cfg key. A handler that throws is logged.
+        public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null)
+        {
+            if (onClick == null) throw new ArgumentNullException(nameof(onClick));
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = string.IsNullOrEmpty(buttonText) ? "Go" : buttonText, OnClick = onClick, Enabled = enabled });
         }
 
         // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.

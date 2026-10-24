@@ -18,23 +18,43 @@ namespace GK2DonkeyAPI
             // NPCs' (shrunk by their radius from everything, cut by every building), so it falls apart around a home: a
             // spot on another part of it is then judged by the keeper's own ground (WhyCannotWalkAway) when 'walkOut' is
             // set (a landing; the 1 s safe-spot check keeps the mesh's answer, cheap and never wrong when it says yes).
-            internal static string WhyCannotLandAt(PlayerController pc, ref Vector3 spot, bool grid, Vector3? connectedTo = null, bool walkOut = false, float walkBudgetMs = WalkSliceMs)
+            // besideThings (a jump's touch-down, docs/flying.md "The jump probe: what the 19 jumps showed"): the NPCs' mesh is
+            // shrunk back from every object by their radius, so beside a workbench the keeper stands where it isn't (its
+            // nearest node 0.055-0.135 away in the user's yard: every jump sent back failed "no walkable ground", the
+            // spot he jumped from in place included). Then the ground's raycast at his level counts, when the mesh's
+            // nearest node is within BesideMesh on the take-off's own part. And a walk-grid cell "blocked" at the edge of
+            // a thing with a free cell within BesideGrid, joined to the take-off's, moves the touch-down onto it (the
+            // grid's rounding: the free cell 0.001-0.042 away).
+            internal const float BesideMesh = 0.3f, BesideGrid = 0.1f;
+            internal static string WhyCannotLandAt(PlayerController pc, ref Vector3 spot, bool grid, Vector3? connectedTo = null, bool walkOut = false, float walkBudgetMs = WalkSliceMs, bool besideThings = false)
             {
                 using var perf = Perf.Measure(Perf.S.Landing);
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 Collider body = pc?.PhysicalBody?.MeshCollider;
                 if (rb == null || body == null) return "the keeper's body isn't there to test";
                 if (!CanJudgeGround) return "this scene has no walkable mesh to judge the ground by";
+                bool offMesh = false;
                 if (!OnNavmesh(spot, out float g))
                 {
                     float other = GroundHeight(spot, out string src);
-                    return float.IsNaN(other) ? $"no ground under him ({src ?? "nothing found"})" : $"no walkable ground under him ({src})";
+                    if (float.IsNaN(other)) return $"no ground under him ({src ?? "nothing found"})";
+                    string beside = besideThings && connectedTo.HasValue ? BesideTheMesh(spot, connectedTo.Value, other) : "not a jump's touch-down";
+                    // Ground at his level the NPCs' mesh doesn't cover at all (a bridge's deck: its nearest node the ground
+                    // under the bridge, 0.56-0.59 away and 0.5 lower, the user's jumps 2026-10-24): the keeper's own ground
+                    // judges it, the walk-away test below, as for any spot the mesh can't vouch for.
+                    if (beside != null && besideThings && connectedTo.HasValue && walkOut && Mathf.Abs(other - spot.y) <= MaxRise) offMesh = true;
+                    else if (beside != null) return $"no walkable ground under him ({src}; beside the mesh: {beside})";
+                    g = other;
                 }
                 if (Mathf.Abs(g - spot.y) > MaxRise)
                 {
                     return $"the walkable mesh under him is at {g:F2}, the ground he comes down to at {spot.y:F2}";
                 }
-                spot.y = g;
+                // Never under the surface he comes down to (the user, 2026-10-24: "extremely important to not have any
+                // possibility of us going underground"): a bridge's deck (6.3-6.5) lies over the NPCs' mesh (6.0 on the
+                // ground under it), within MaxRise of it, and set to the mesh's height the body went under the deck.
+                // The higher of the two: the surface found under the flight, or the mesh where it is the top.
+                spot.y = Mathf.Max(g, spot.y);
                 if (Flight.UseDrawnGround)
                 {
                     // a higher level drawn over the spot: the walkable ground under a rock table, or under a ledge (the
@@ -64,7 +84,7 @@ namespace GK2DonkeyAPI
                 }
                 if (connectedTo.HasValue)
                 {
-                    string cut = WhyNotConnected(connectedTo.Value, spot);
+                    string cut = offMesh ? "off the NPCs' mesh (ground at his level it doesn't cover)" : WhyNotConnected(connectedTo.Value, spot);
                     if (cut != null)
                     {
                         if (!walkOut) return cut;
@@ -74,7 +94,39 @@ namespace GK2DonkeyAPI
                         if (walled != null) return walled;
                     }
                 }
-                return grid ? WhyNotOnGameGrid(pc, rb, spot) : null;
+                if (!grid) return null;
+                if (!besideThings || !connectedTo.HasValue) return WhyNotOnGameGrid(pc, rb, spot);
+                // The game's walk grid is 44 x 44 cells of 0.1 (4.4 x 4.4) round the keeper, rebuilt at each ask
+                // (PlayerLocalAreaMovement.RescanPlayerGraph): at a touch-down 2 from the take-off its way round a
+                // workbench may not fit in it ("no way" four times over in the user's yard, 2026-10-24, the NPCs' mesh
+                // saying both on part 1). Where that mesh vouches for the spot (on it, the take-off's part) its yes
+                // stands (never wrong when it says yes) and the grid is asked only for a free cell.
+                int spotPart = MeshAreaAt(spot, out _, out _), takePart = MeshAreaAt(connectedTo.Value, out _, out _);
+                bool meshVouches = spotPart >= 0 && spotPart == takePart;
+                string onGrid = WhyNotOnGameGridBeside(pc, rb, ref spot, connectedTo.Value, needWay: !meshVouches);
+                if (onGrid != null) return onGrid;
+                // moved onto the free cell: the body there too
+                bool bf = Physics.queriesHitBackfaces;
+                try { Physics.queriesHitBackfaces = true; return BodyDoesNotFit(rb, body, KeeperMask(rb), spot); }
+                finally { Physics.queriesHitBackfaces = bf; }
+            }
+
+            // Ground beside the NPCs' mesh: null when the raycast's ground at 'groundY' is at the spot's level and the mesh's
+            // nearest node is within BesideMesh on the take-off's part; else why not.
+            private static string BesideTheMesh(Vector3 spot, Vector3 takeOff, float groundY)
+            {
+                if (Mathf.Abs(groundY - spot.y) > MaxRise) return $"the ground at {groundY:F2}, the spot at {spot.y:F2}";
+                Pathfinding.RecastGraph graph = MainGame.PlayerController?.SceneRecastGraph;
+                if (graph == null) return "no mesh";
+                Pathfinding.NearestNodeConstraint c = Pathfinding.NearestNodeConstraint.Walkable;
+                c.distanceMetric = Pathfinding.DistanceMetric.ClosestAsSeenFromAbove();
+                Pathfinding.NNInfo a = graph.GetNearest(spot, c), t = graph.GetNearest(takeOff, c);
+                if (a.node == null || t.node == null) return "no node near";
+                float off = FlatOff(a.position, spot);
+                if (off > BesideMesh) return $"its nearest node {off:F2} away";
+                if (Mathf.Abs(a.position.y - groundY) > MaxRise) return $"its nearest node at {a.position.y:F2}, another level";
+                if (a.node.Area != t.node.Area) return $"its nearest node on another part ({a.node.Area}, the take-off's {t.node.Area})";
+                return null;
             }
 
             // The walk-away test (docs/flying.md "Refused landings: cut off from the take-off spot"): from the landing spot,
@@ -303,7 +355,10 @@ namespace GK2DonkeyAPI
 
             // colliderToo: an obstacle reaches the higher of its picture's top and its collider's (a jump: an undrawn
             // collider, the game's invisible walls, blocks it; free flight goes over what isn't drawn)
-            internal static Vector3 FlyMove(PlayerController pc, Vector3 from, Vector3 move, float flightY, bool colliderToo = false)
+            // ignoreThing: a jump carried off a thing (a workbench: a box, a capsule, its picture higher than both) is not
+            // blocked by that same thing's colliders (the user's yard, 2026-10-24: every blocker while carried off was the
+            // bench it was over; one carry stuck 0.165 from the edge until it was sent back)
+            internal static Vector3 FlyMove(PlayerController pc, Vector3 from, Vector3 move, float flightY, bool colliderToo = false, Collider ignoreThing = null)
             {
                 LastBlocker = null;
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
@@ -314,7 +369,7 @@ namespace GK2DonkeyAPI
                 {
                     float dist = move.magnitude;
                     Vector3 dir = move / dist;
-                    bool a = Nearest(rb, body, from + done, dir, dist, flightY, colliderToo, out RaycastHit hit, out string what);
+                    bool a = Nearest(rb, body, from + done, dir, dist, flightY, colliderToo, ignoreThing, out RaycastHit hit, out string what);
                     if (Shapes(from + done, dir, dist, flightY, out RaycastHit sh, out string shWhat) && (!a || sh.distance < hit.distance))
                     {
                         a = true; hit = sh; what = shWhat;
@@ -335,7 +390,7 @@ namespace GK2DonkeyAPI
                 return done;
             }
 
-            private static bool Nearest(Rigidbody rb, Collider body, Vector3 at, Vector3 dir, float dist, float flightY, bool colliderToo, out RaycastHit best, out string what)
+            private static bool Nearest(Rigidbody rb, Collider body, Vector3 at, Vector3 dir, float dist, float flightY, bool colliderToo, Collider ignoreThing, out RaycastHit best, out string what)
             {
                 best = default; what = null;
                 Bounds b = body.bounds;
@@ -349,6 +404,7 @@ namespace GK2DonkeyAPI
                     RaycastHit h = flyHits[i];
                     Collider c = h.collider;
                     if (h.distance <= 0f || !Blocks(rb, c, h.normal)) continue; // inside it already at the start: let him out
+                    if (ignoreThing != null && SameThing(c, ignoreThing)) continue;
                     bool ground = ((1 << c.gameObject.layer) & GroundLayers) != 0;
                     float reach = ground ? h.point.y : colliderToo ? Mathf.Max(ObjectTop(c, out _), c.bounds.max.y) : ObjectTop(c, out _);
                     if (reach <= flightY) continue; // under the flight (or nothing drawn there)
@@ -370,8 +426,23 @@ namespace GK2DonkeyAPI
 
             // r: the cast's width; a jump asks with a thin one (straight under the body): the 0.24 ball touched a potter's
             // wheel beside a jump pressed against it and called it "on top of something 21 px up" (the user, 2026-10-24)
+            internal static Collider LastFloorThing;
+
+            // Two colliders of one thing: the same collider, the same game object (its Wgo), the same transform, or two
+            // children of one parent (a workbench's Obstacle, Obstacle (3), Obstacle (5) under its Base).
+            internal static bool SameThing(Collider a, Collider b)
+            {
+                if (a == b) return true;
+                if (a == null || b == null) return false;
+                if (a.transform == b.transform) return true;
+                Transform pa = a.transform.parent;
+                if (pa != null && pa == b.transform.parent) return true;
+                Wgo wa = a.GetComponentInParent<Wgo>();
+                return wa != null && wa == b.GetComponentInParent<Wgo>();
+            } // the thing (not the ground) the last FloorUnder's answer came from, or null
             internal static float FloorUnder(PlayerController pc, Vector3 at, float alt, float r = 0.24f)
             {
+                LastFloorThing = null;
                 Rigidbody rb = pc?.PhysicalBody?.Rb;
                 if (rb == null) return float.NaN;
                 float from = alt + 0.3f;
@@ -393,7 +464,7 @@ namespace GK2DonkeyAPI
                     // lifted the flight 134 px in one frame to the tree's top (the log, 2026-10-23: "drawn things up to
                     // 9.77, now 185 px up" over ground at 3.6). The bumping keeps the flight out of such things sideways.
                     if (y > alt + 0.05f) continue;
-                    if (float.IsNaN(best) || y > best) best = y;
+                    if (float.IsNaN(best) || y > best) { best = y; LastFloorThing = (bit & GroundLayers) != 0 ? null : c; }
                 }
                 return best;
             }

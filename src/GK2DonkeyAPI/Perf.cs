@@ -47,6 +47,7 @@ namespace GK2DonkeyAPI
             LandGrid,   //   inside Landing: the game's walk grid rescanned round the keeper (WhyNotOnGameGrid; a touchdown hitch, 2026-10-23)
             FlyFree,    // the free flight's frame (Flight.FreeTick: the floor, the ground under it, the safe-spot check, a landing)
             DrawnIndex, //   the drawn ground's index: a search for the terrains, only when none woke under the patch (DrawnGround.Index)
+            SafeSpots,  // never lost: the safe-spot record and the fall watchdog (SafeSpots.Tick)
             Count,
         }
 

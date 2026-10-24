@@ -403,6 +403,8 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> InstanceControls;
         internal static Tuned<KeyCode> HitchKey;
         internal static Tuned<KeyboardShortcut> JumpKey, FlyKey;
+        internal static Tuned<bool> FallGuard;              // never lost: the fall watchdog (SafeSpots.cs)
+        internal static Tuned<KeyboardShortcut> ReturnKey;  // never lost: back to the last safe spot by a key
 
         // Every [HarmonyPatch] class (tests/FrameworkScan checks the list is complete).
         internal static readonly Type[] PatchClasses =
@@ -441,6 +443,7 @@ namespace GK2DonkeyAPI
             typeof(SaveSystem_Save_Patch),
             typeof(SaveSystem_Remove_Patch),
             typeof(PlayerPhysicalBody_LockMovement_Patch), // the flying experiment: a movement unlock keeps a flying body kinematic (Flight.cs)
+            typeof(PlayerController_SetPosition_Patch), // never lost: a placement of the keeper starts the fall watchdog's clocks anew (SafeSpots.cs)
             typeof(LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch), // the flying experiment: the drawn ground's tiles (DrawnGround.cs)
             typeof(LazyTerrain_Awake_Patch), typeof(LazyTerrain_OnDestroy_Patch), // and its index, kept as the terrains come and go
         };
@@ -564,6 +567,10 @@ namespace GK2DonkeyAPI
                 "Riding plain: the mount jumps (the flying experiment, dev only for now). The same key as FlyKey: a second press in the air takes off on a mount that flies. None: no jumping. In a fight (in armour) Space is the game's attack, and isn't read here.");
             FlyKey = Config.Bind("General", "FlyKey", Defaults.Get("General", "FlyKey", new KeyboardShortcut(KeyCode.Space)),
                 "Riding plain a mount that flies: take off and land (the flying experiment, dev only for now). The same key as JumpKey: take off with a second press in the air during a jump. None: no flying by key.");
+            FallGuard = Config.Bind("General", "FallGuard", Defaults.Get("General", "FallGuard", true),
+                "If the keeper ever falls out of the world (under the ground, into nothing, far below it) he is put back on the last ground he stood on, with a warning in the log (docs/never-lost.md). Never during a door, a cutscene or a dialogue. Off: nothing watches (the record and the key still work).");
+            ReturnKey = Config.Bind("General", "ReturnKey", Defaults.Get("General", "ReturnKey", KeyboardShortcut.Empty),
+                "A key that puts the keeper back on the last safe spot of this scene by hand (stuck somewhere). None: no key. Not during a door, a cutscene or a dialogue.");
             // The on-foot zones of a standing cart (docs/load-on-foot.md), measured from the cart body's drawn box.
             CartZoneSide = Config.Bind("General", "CartZoneSide", Defaults.Get("General", "CartZoneSide", 0.6f),
                 new ConfigDescription("On foot next to a standing cart: how far beside the cart body's sides the cart's area reaches (and the donkey's, which is as wide), world units.", new AcceptableValueRange<float>(0f, 2f)));

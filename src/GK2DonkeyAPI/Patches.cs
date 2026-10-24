@@ -356,6 +356,17 @@ namespace GK2DonkeyAPI
         }
     }
 
+    // Anyone placing the keeper (a door, a script, the mod): the safe-spot record and the fall watchdog start their
+    // clocks anew (SafeSpots.NotePlaced: a bad place is caught after a moment, and never recorded as safe).
+    [HarmonyPatch(typeof(PlayerController), nameof(PlayerController.SetPosition), new[] { typeof(UnityEngine.Vector3), typeof(bool), typeof(bool) })]
+    internal static class PlayerController_SetPosition_Patch
+    {
+        private static void Postfix()
+        {
+            SafeSpots.NotePlaced();
+        }
+    }
+
     // A save slot deleted in the game's menu: its side file goes too (Persistence.cs).
     [HarmonyPatch(typeof(SaveSystem), nameof(SaveSystem.Remove))]
     internal static class SaveSystem_Remove_Patch

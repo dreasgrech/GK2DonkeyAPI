@@ -357,6 +357,7 @@ static class GK2DonkeyAPI.Api.Mounts
   property static bool IsAvailable { get; }
   property static bool IsGameReady { get; }
   property static bool IsMounted { get; }
+  property static System.Nullable<UnityEngine.Vector3> LastSafeSpot { get; }
   property static GK2DonkeyAPI.Api.MountLooks Looks { get; }
   property static bool MountsEnabled { get; }
   property static string Owner { get; }
@@ -377,6 +378,7 @@ static class GK2DonkeyAPI.Api.Mounts
   event static System.Action<GK2DonkeyAPI.Api.MountHandle> InstanceSpawned
   event static System.Action<System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountHandle>> InstancesRestored
   event static System.Action<GK2DonkeyAPI.Api.MountStyle> Mounted
+  event static System.Action<UnityEngine.Vector3> ReturnedToSafeSpot
   event static System.Action<GK2DonkeyAPI.Api.MountHandle, GK2DonkeyAPI.Api.MountHandle> Unhitched
   method static System.IDisposable AddFeatureRule(string ownerId, GK2DonkeyAPI.Api.MountFeature feature, System.Func<bool> allowed)
   method static System.IDisposable AddMountRule(string ownerId, System.Func<GK2DonkeyAPI.Api.MountStyle, string> whyNot)
@@ -394,6 +396,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountResult Land()
   method static void RefreshRules()
   method static void RemoveRules(string ownerId)
+  method static GK2DonkeyAPI.Api.MountResult ReturnToSafeSpot(string reason = null)
   method static void RingBell()
   method static GK2DonkeyAPI.Api.MountSettingsPage SettingsPage(string ownerId, BepInEx.Configuration.ConfigFile config, string title, string author, string description, System.Func<string> status = null)
   method static GK2DonkeyAPI.Api.MountHandle Spawn(string ownerId, GK2DonkeyAPI.Api.MountSpawn spec)
@@ -408,6 +411,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle Unhitch(GK2DonkeyAPI.Api.MountHandle donkey)
   method static GK2DonkeyAPI.Api.MountHandle UnhitchRidden()
 class GK2DonkeyAPI.Api.MountSettingsPage
+  method void Button(string section, string label, string description, System.Action onClick, string buttonText = Go, System.Func<bool> enabled = null)
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void EffectRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)

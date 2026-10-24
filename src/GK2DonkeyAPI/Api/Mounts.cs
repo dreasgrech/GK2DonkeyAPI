@@ -258,6 +258,9 @@ namespace GK2DonkeyAPI.Api
         //   JumpKey, FlyKey          (KeyboardShortcut, 0.36.0, Space both) riding plain: jump; take off and land a mount that
         //                            flies. The same key: a second press in the air during a jump takes off. None: off.
         //                            Read only while FlyingEnabled; Space is left to the game's attack in a fight.
+        //   FallGuard                (0.36.0, on) the keeper fallen out of the world (under the ground, into nothing, far
+        //                            below it) is put back on the last ground he stood on (docs/never-lost.md)
+        //   ReturnKey                (KeyboardShortcut, 0.36.0, None) a key for ReturnToSafeSpot
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
         public static MountTuning Behaviour
@@ -272,6 +275,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
                     Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey,
+                    Plugin.FallGuard, Plugin.ReturnKey,
                 }));
             }
         }
@@ -391,6 +395,27 @@ namespace GK2DonkeyAPI.Api
         // landing (Landing, Ground), a jump turned flight (Jumping, TakingOff). Handlers that throw are logged and skipped.
         public static event Action<MountFlight> FlightChanged;
         internal static void RaiseFlightChanged(MountFlight s) => Raise(FlightChanged, s, "FlightChanged");
+
+        // Never lost (0.36.0, docs/never-lost.md). The API records the spots the keeper stood on (the walkable ground
+        // under his feet, nothing over him, his body fitting; a ring of eight per scene, plus where the game put him at
+        // a load and after each door) and, with the Behaviour key FallGuard on, puts him back on the newest one that
+        // still holds when he has fallen out of the world. ReturnToSafeSpot does the same by hand (a mod's button or key;
+        // Saddle Up's "Back to the last safe spot"): refused, with the reason, while not in a game, while a door, a
+        // cutscene or a dialogue has the keeper, and in a scene with no spot yet. A flight or a jump is ended first; a
+        // ride goes on (the mount follows). Every return is a warning in the log with its facts.
+        public static MountResult ReturnToSafeSpot(string reason = null)
+        {
+            MountResult r = SafeSpots.Return(string.IsNullOrEmpty(reason) ? "asked by a mod" : reason);
+            if (!r.Ok) Mount.Say(r.Reason, 3f); // "Back on solid ground." is said by the return itself
+            return r;
+        }
+
+        // The newest safe spot of the keeper's scene, or null (none recorded yet).
+        public static Vector3? LastSafeSpot => SafeSpots.Newest(out Vector3 p) ? p : (Vector3?)null;
+
+        // The keeper was put back on a safe spot (argument: where), by the watchdog, a key, a mod or Saddle Up's button.
+        public static event Action<Vector3> ReturnedToSafeSpot;
+        internal static void RaiseReturnedToSafeSpot(Vector3 p) => Raise(ReturnedToSafeSpot, p, "ReturnedToSafeSpot");
 
         private static readonly HashSet<string> keptOutLogged = new HashSet<string>(StringComparer.Ordinal);
 

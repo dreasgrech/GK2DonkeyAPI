@@ -1571,7 +1571,10 @@ namespace GK2DonkeyAPI
                 string summary = passed + failed + warned + running == 0 ? $"{count} scenarios"
                     : $"{count} scenarios: {passed} passed" + (failed > 0 ? $", {failed} FAILED" : "") + (warned > 0 ? $", {warned} with warnings" : "") + (running > 0 ? ", running" : "");
                 GUILayout.BeginHorizontal();
-                if (GUILayout.Button((open ? "\u25BE " : "\u25B8 ") + g, header, ExpandW))
+                // the title in the group's colour (the user, 2026-10-24): white with no result yet (a run resets them at
+                // its start), green when every scenario run passed, yellow when one warned, red when one failed
+                string colour = failed > 0 ? "#ff6666" : warned > 0 ? "#ffd84d" : passed > 0 && running == 0 ? "#7fe07f" : "#ffffff";
+                if (GUILayout.Button($"<color={colour}>{(open ? "\u25BE " : "\u25B8 ")}{g}</color>", header, ExpandW))
                 {
                     testGroupOpen[g] = !open;
                 }
