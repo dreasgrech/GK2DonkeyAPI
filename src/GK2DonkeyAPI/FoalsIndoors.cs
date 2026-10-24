@@ -39,11 +39,13 @@ namespace GK2DonkeyAPI
         // PlayerController.OnPlayerTeleported (subscribed by Plugin): every door, the map's fast travel, a script's move.
         // A self-test's door (SelfTest.Indoors.cs): the player's own foals stay where they are.
         internal static bool TestDoorQuiet;
+        // ... except the foals of the mount ridden through it (the self-test's own mount's): they come along, nothing else moves.
+        internal static bool TestDoorRiddenFoalsOnly;
 
         internal static void OnKeeperTeleported()
         {
             SafeSpots.NoteTeleport(); // every door, the self-test's too: nothing judged until it has settled
-            if (TestDoorQuiet)
+            if (TestDoorQuiet && !TestDoorRiddenFoalsOnly)
             {
                 return;
             }
@@ -109,10 +111,21 @@ namespace GK2DonkeyAPI
         private static void ThroughDoor(PlayerData pd, bool inside)
         {
             int came = 0, back = 0;
-            int stayed = 0;
+            int stayed = 0, rode = 0;
             ForEachInstance(i =>
             {
                 bool near = i.SceneId == doorFromScene && FlatDistanceStatic(i.Position, doorFrom) <= IdleShuffle.FollowMaxDistance.Value;
+                if (Ridden != null && i.Parent == Ridden && !i.IsRidden && !i.withKeeper && near)
+                {
+                    // a foal of the mount he rides through the door: it comes along with its parent, placed by it while the
+                    // screen is black, in or out. It stayed behind (the user, 2026-10-24: "i selected gerry when inside the
+                    // house and rode him out, and the babies didnt follow me outside"): the house and the yard are one
+                    // scene, so it waited for its parent to stand still out of reach, and a ridden parent never does.
+                    i.FollowParentThroughDoor("came through the door with its parent");
+                    rode++;
+                    return;
+                }
+                if (TestDoorRiddenFoalsOnly) return; // a self-test's door: the player's own foals stay put
                 if (!inside && i.FollowsOnFoot() && Ridden == null && (i.withKeeper || near))
                 {
                     // outdoors on the far side, on foot: it comes along (placed by him while the screen is black)
@@ -148,6 +161,10 @@ namespace GK2DonkeyAPI
             if (stayed > 0)
             {
                 Plugin.Log.LogInfo($"[indoors] {stayed} foal(s) came along with the keeper on foot.");
+            }
+            if (rode > 0)
+            {
+                Plugin.Log.LogInfo($"[indoors] {rode} foal(s) came through the door with the mount he rides ({Ridden.FullId}).");
             }
             if (came > 0 || back > 0)
             {
@@ -284,6 +301,19 @@ namespace GK2DonkeyAPI
                 TierNow();
                 nextViewlessTick = 0f;
                 nextSpawnTry = 0f;
+            }
+
+            // Through a door with its parent, the mount the keeper rides: placed by it (the screen black; again until a slot
+            // is clear), then it follows it as usual.
+            internal void FollowParentThroughDoor(string why)
+            {
+                withKeeper = false;
+                foalSide = 0f;
+                followLost = false;
+                followTargetSlot = NoSlot;
+                StopShuffle();
+                PlaceAtDoor(why);
+                WakeNow();
             }
 
             // Back to its parent: placed next to the keeper first when it comes out through the door with him, then it

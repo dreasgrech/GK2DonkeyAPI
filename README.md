@@ -5,7 +5,7 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 | Mod | Version | For | What it is |
 |---|---|---|---|
 | [GK2 Saddle Up](src/SaddleUp/README.md) | 0.12.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Five more mounts come with it (the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry the skull), switched off until the next update. |
-| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.35.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
+| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.36.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
@@ -28,7 +28,7 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
    `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
-3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.35.0 loaded` and `GK2 Saddle Up 0.12.0
+3. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.36.0 loaded` and `GK2 Saddle Up 0.12.0
    loaded`.
 4. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
    the game's **Mods** menu. Without it, everything works the same and the settings are in

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.Collections;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
@@ -50,6 +51,14 @@ namespace GK2DonkeyAPI
             internal float NextEdgeCheck, LastAsked = -10f;
             internal int LastRenderFrame = -1;
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
+            // The framing measured over the walk a step a frame (Tighten): the camera renders into Scratch meanwhile and Rt
+            // keeps the last photo. All twenty steps in one frame held the game 40 to 60 ms on every mount picked in the
+            // Mounts panel (the user, 2026-10-24: "the game freezes for some frames" on the dragon; the log's slow frames).
+            internal int TightenStep = -1;     // -1: not measuring
+            internal int MinX, MinY, MaxX, MaxY;
+            internal bool EdgeReframe;         // framed again because something reached the edge: measured anew, not taken from memory
+            internal RenderTexture Scratch;
+            internal Texture2D Readback;       // one buffer for this view's read-backs (a new texture and array each was 1.3 MB a read)
 
             internal View(bool withCart)
             {
@@ -59,6 +68,19 @@ namespace GK2DonkeyAPI
         }
 
         private static readonly View cartView = new View(true), donkeyView = new View(false);
+
+        // Each look's framing once measured, per picture: the same mount picked again in the panel is framed at once.
+        // Forgotten when the stage is built again; a framing that something outgrows (the edge check) is measured anew.
+        private struct Framing
+        {
+            internal Vector3 CamFromStage, LampFromStage;
+            internal float Ortho, Aspect, Near, Far, LampRange;
+            internal int W, H;
+        }
+
+        private static readonly Dictionary<string, Framing> framings = new Dictionary<string, Framing>(StringComparer.Ordinal);
+
+        private static string FramingKey(View v) => (framedLook ?? "") + "|" + v.Name;
         private static readonly View[] views = { cartView, donkeyView };
 
         private static GameObject stage, copy;
@@ -220,8 +242,10 @@ namespace GK2DonkeyAPI
                 {
                     v.LastRenderFrame = Time.frameCount;
                     Render(v);
-                    v.Drawn = true;
+                    if (v.TightenStep < 0) v.Drawn = true;
                 }
+                // measuring the new framing (a step a frame): the last finished photo stays meanwhile, as for a look settling
+                if (v.TightenStep >= 0) return v.Drawn ? v.Rt : null;
                 return v.Rt;
             }
             catch (Exception e)
@@ -400,9 +424,23 @@ namespace GK2DonkeyAPI
                 {
                     v.Reframe = false;
                     TestReframes++;
-                    Frame(v);
-                    v.Cam.Render();
-                    Tighten(v);
+                    if (!v.EdgeReframe && framings.TryGetValue(FramingKey(v), out Framing known))
+                    {
+                        Use(v, known); // this look framed before: at once
+                        v.TightenStep = -1;
+                    }
+                    else
+                    {
+                        framings.Remove(FramingKey(v));
+                        Frame(v, scratch: true);
+                        StartTighten(v);
+                    }
+                    v.EdgeReframe = false;
+                }
+                if (v.TightenStep >= 0)
+                {
+                    TightenStep(v);
+                    if (v.TightenStep >= 0) return; // still measuring: the shown picture keeps its last photo
                 }
                 v.Cam.Render();
                 if (Time.unscaledTime >= v.NextEdgeCheck)
@@ -411,6 +449,7 @@ namespace GK2DonkeyAPI
                     if (TouchesEdge(v))
                     {
                         v.Reframe = true; // something reached the edge (the lamp hung, a setting changed): frame again
+                        v.EdgeReframe = true;
                     }
                 }
             }
@@ -502,7 +541,16 @@ namespace GK2DonkeyAPI
                         v.Rt.Release();
                         UnityEngine.Object.Destroy(v.Rt);
                     }
+                    if (v.Scratch != null)
+                    {
+                        v.Scratch.Release();
+                        UnityEngine.Object.Destroy(v.Scratch);
+                    }
+                    if (v.Readback != null) UnityEngine.Object.Destroy(v.Readback);
                     v.Rt = null;
+                    v.Scratch = null;
+                    v.Readback = null;
+                    v.TightenStep = -1;
                     v.Cam = null;
                 }
             }
@@ -621,6 +669,7 @@ namespace GK2DonkeyAPI
 
             framesSinceBuilt = 0;
             described = false;
+            framings.Clear(); // a new stage: measured again
             Frame(cartView);
             Plugin.Log.LogInfo($"Settings: the pictures are set up ({cartParts} cart parts on, {donkeyRenderers.Count} donkey sprites, {ppu} pixels per unit).");
             Describe("built");
@@ -628,7 +677,7 @@ namespace GK2DonkeyAPI
 
         // The camera at the game's angle, framed wide on every shown part's bounds (then Tighten crops to what's drawn).
         // The light is placed by the cart picture's framing only, so both pictures are lit the same.
-        private static void Frame(View v)
+        private static void Frame(View v, bool scratch = false)
         {
             Transform ct = v.Cam.transform;
             ct.rotation = Quaternion.Euler(GameCameraPitch, 0f, 0f);
@@ -668,7 +717,8 @@ namespace GK2DonkeyAPI
             ct.position = centre - forward * (b.extents.z + 50f);
             v.Cam.nearClipPlane = 0.01f;
             v.Cam.farClipPlane = b.size.z + 100f;
-            NewTexture(v, w, h);
+            if (scratch) ScratchTexture(v, w, h);
+            else NewTexture(v, w, h);
             if (v.WithCart)
             {
                 lamp.transform.position = centre - forward * 4f;
@@ -699,24 +749,61 @@ namespace GK2DonkeyAPI
             v.Cam.targetTexture = v.Rt;
         }
 
-        private static Color32[] ReadBack(View v)
+        // The wide picture the framing is measured on (Frame with scratch): the shown Rt keeps the last photo meanwhile.
+        private static void ScratchTexture(View v, int w, int h)
         {
+            if (v.Scratch == null || v.Scratch.width != w || v.Scratch.height != h)
+            {
+                v.Cam.targetTexture = null;
+                if (v.Scratch != null)
+                {
+                    v.Scratch.Release();
+                    UnityEngine.Object.Destroy(v.Scratch);
+                }
+                v.Scratch = new RenderTexture(w, h, 16, RenderTextureFormat.ARGB32) { filterMode = FilterMode.Point, name = "GK2DonkeyAPI preview measure (" + v.Name + ")" };
+                v.Scratch.Create();
+            }
+            v.Cam.targetTexture = v.Scratch;
+        }
+
+        // A framing measured before, put back as it was.
+        private static void Use(View v, Framing f)
+        {
+            Transform ct = v.Cam.transform;
+            ct.rotation = Quaternion.Euler(GameCameraPitch, 0f, 0f);
+            ct.position = stage.transform.position + f.CamFromStage;
+            v.Cam.orthographicSize = f.Ortho;
+            v.Cam.aspect = f.Aspect;
+            v.Cam.nearClipPlane = f.Near;
+            v.Cam.farClipPlane = f.Far;
+            NewTexture(v, f.W, f.H);
+            v.Cam.targetTexture = v.Rt;
+            if (v.WithCart)
+            {
+                lamp.transform.position = stage.transform.position + f.LampFromStage;
+                lamp.range = f.LampRange;
+            }
+        }
+
+        // A picture's pixels, read into this view's one buffer (valid until the next read-back of the view).
+        private static NativeArray<Color32> ReadBack(View v, RenderTexture rt = null)
+        {
+            rt = rt ?? v.Rt;
             RenderTexture prev = RenderTexture.active;
-            Texture2D t = null;
             try
             {
-                RenderTexture.active = v.Rt;
-                t = new Texture2D(v.Rt.width, v.Rt.height, TextureFormat.RGBA32, mipChain: false);
-                t.ReadPixels(new Rect(0, 0, v.Rt.width, v.Rt.height), 0, 0, false);
-                return t.GetPixels32();
+                RenderTexture.active = rt;
+                if (v.Readback == null || v.Readback.width != rt.width || v.Readback.height != rt.height)
+                {
+                    if (v.Readback != null) UnityEngine.Object.Destroy(v.Readback);
+                    v.Readback = new Texture2D(rt.width, rt.height, TextureFormat.RGBA32, mipChain: false) { name = "GK2DonkeyAPI preview read-back (" + v.Name + ")" };
+                }
+                v.Readback.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0, false);
+                return v.Readback.GetRawTextureData<Color32>();
             }
             finally
             {
                 RenderTexture.active = prev;
-                if (t != null)
-                {
-                    UnityEngine.Object.Destroy(t);
-                }
             }
         }
 
@@ -728,7 +815,7 @@ namespace GK2DonkeyAPI
             topColours = "";
             View v = withCart ? cartView : donkeyView;
             if (failed || v.Rt == null) return -1f;
-            Color32[] px = ReadBack(v);
+            NativeArray<Color32> px = ReadBack(v);
             double x = 0, y = 0;
             var counts = new Dictionary<int, int>();
             foreach (Color32 c in px)
@@ -757,7 +844,7 @@ namespace GK2DonkeyAPI
         // Is anything drawn on the picture's outermost pixels? Then it was cut off.
         private static bool TouchesEdge(View v)
         {
-            Color32[] px = ReadBack(v);
+            NativeArray<Color32> px = ReadBack(v);
             int w = v.Rt.width, h = v.Rt.height;
             for (int x = 0; x < w; x++)
             {
@@ -777,49 +864,63 @@ namespace GK2DonkeyAPI
         // first second after a mount change (the video of 2026-10-18 21-07).
         private const float CycleSeconds = 2f, CycleStep = 0.1f;
 
-        private static void Tighten(View v)
+        private static void StartTighten(View v)
         {
-            int w0 = v.Rt.width, h0 = v.Rt.height;
-            int minX = w0, minY = h0, maxX = -1, maxY = -1;
+            v.TightenStep = 0;
+            v.MinX = v.Scratch.width;
+            v.MinY = v.Scratch.height;
+            v.MaxX = -1;
+            v.MaxY = -1;
+        }
+
+        // One step of the measure a frame (the animator stepped by hand, a photo into Scratch, its drawn pixels added);
+        // after the last, the camera narrowed onto them, the framing remembered, and the first photo taken into Rt.
+        private static void TightenStep(View v)
+        {
+            int w0 = v.Scratch.width, h0 = v.Scratch.height;
             int steps = Mathf.Max(1, Mathf.RoundToInt(CycleSeconds / CycleStep));
-            for (int step = 0; step < steps; step++)
+            if (v.TightenStep > 0)
             {
-                if (step > 0)
+                if (animator != null) animator.Update(CycleStep);
+                if (dressedAs != null)
                 {
-                    if (animator != null) animator.Update(CycleStep);
-                    if (dressedAs != null)
+                    using (Mount.Bind(dressedAs))
                     {
-                        using (Mount.Bind(dressedAs))
-                        {
-                            dressedAs.LooksRig.Tick();
-                            dressedAs.LooksRig.ApplySafe();
-                        }
-                    }
-                    v.Cam.Render();
-                }
-                Color32[] px = ReadBack(v);
-                for (int y = 0; y < h0; y++)
-                {
-                    for (int x = 0; x < w0; x++)
-                    {
-                        if (px[y * w0 + x].a > 8)
-                        {
-                            if (x < minX) minX = x;
-                            if (x > maxX) maxX = x;
-                            if (y < minY) minY = y;
-                            if (y > maxY) maxY = y;
-                        }
+                        dressedAs.LooksRig.Tick();
+                        dressedAs.LooksRig.ApplySafe();
                     }
                 }
             }
-            if (maxX < 0)
+            v.Cam.targetTexture = v.Scratch;
+            v.Cam.Render();
+            NativeArray<Color32> px = ReadBack(v, v.Scratch);
+            for (int y = 0; y < h0; y++)
+            {
+                int row = y * w0;
+                for (int x = 0; x < w0; x++)
+                {
+                    if (px[row + x].a > 8)
+                    {
+                        if (x < v.MinX) v.MinX = x;
+                        if (x > v.MaxX) v.MaxX = x;
+                        if (y < v.MinY) v.MinY = y;
+                        if (y > v.MaxY) v.MaxY = y;
+                    }
+                }
+            }
+            if (++v.TightenStep < steps) return;
+            v.TightenStep = -1;
+            if (v.MaxX < 0)
             {
                 Plugin.Log.LogInfo($"[preview] the picture {v.Name} is empty; framing left wide.");
+                NewTexture(v, w0, h0);
+                v.Cam.targetTexture = v.Rt;
+                v.Cam.Render();
                 return;
             }
             const int margin = 6 * Detail; // room for the walk's bob and the lamp's swing
-            minX = Math.Max(0, minX - margin); minY = Math.Max(0, minY - margin);
-            maxX = Math.Min(w0 - 1, maxX + margin); maxY = Math.Min(h0 - 1, maxY + margin);
+            int minX = Math.Max(0, v.MinX - margin), minY = Math.Max(0, v.MinY - margin);
+            int maxX = Math.Min(w0 - 1, v.MaxX + margin), maxY = Math.Min(h0 - 1, v.MaxY + margin);
             int w = maxX - minX + 1, h = maxY - minY + 1;
             float unitsPerPixel = v.Cam.orthographicSize * 2f / h0;
             float dx = ((minX + maxX + 1) / 2f - w0 / 2f) * unitsPerPixel;
@@ -827,9 +928,17 @@ namespace GK2DonkeyAPI
             Transform ct = v.Cam.transform;
             ct.position += ct.right * dx + ct.up * dy;
             NewTexture(v, w, h);
+            v.Cam.targetTexture = v.Rt;
             v.Cam.orthographicSize = h * unitsPerPixel / 2f;
             v.Cam.aspect = (float)w / h;
-            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk, {w} x {h} pixels (from {w0} x {h0}).");
+            framings[FramingKey(v)] = new Framing
+            {
+                CamFromStage = ct.position - stage.transform.position, Ortho = v.Cam.orthographicSize, Aspect = v.Cam.aspect,
+                Near = v.Cam.nearClipPlane, Far = v.Cam.farClipPlane, W = w, H = h,
+                LampFromStage = lamp.transform.position - stage.transform.position, LampRange = lamp.range,
+            };
+            v.Cam.Render();
+            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {w} x {h} pixels (from {w0} x {h0}); remembered for this look.");
         }
 
         // ------------------------------------------------------------------ the log

@@ -239,10 +239,11 @@ namespace GK2DonkeyAPI
 
         private static bool doorOk;
 
-        private static IEnumerator ThroughDoor(Vector3 to, bool indoors)
+        private static IEnumerator ThroughDoor(Vector3 to, bool indoors, bool riddenFoals = false)
         {
             doorOk = false;
             Mount.TestDoorQuiet = true; // the player's own foals stay put, the morgue's door note isn't taken
+            Mount.TestDoorRiddenFoalsOnly = riddenFoals; // but the foals of the mount ridden through it come along
             try
             {
                 if (!PlayerController.Teleport(new SelfTestDoor(to, indoors ? IndoorPreset : startPreset)))
@@ -255,6 +256,7 @@ namespace GK2DonkeyAPI
             finally
             {
                 Mount.TestDoorQuiet = false;
+                Mount.TestDoorRiddenFoalsOnly = false;
             }
             doorOk = PC.IsControlsEnabled && Mount.Instance.IsIndoors() == indoors && Flat(Keeper(), to) < 1.5f;
         }
@@ -461,7 +463,16 @@ namespace GK2DonkeyAPI
                     return Flat(k, p) < 2.5f && Mathf.Abs(k.y - p.y) < 0.6f ? null : $"the mount at {p:F1}, the keeper at {k:F1}";
                 }
 
-                // riding allowed, the cart not: riding in and out
+                // riding allowed, the cart not: riding in and out, with a foal of the ridden mount, which comes along
+                // through both doors (the user, 2026-10-24: Gerry's babies stayed in the house when he was ridden out)
+                MountHandle baby = Mounts.SpawnFoal(Owner, plain, 0.6f, persist: false);
+                if (baby != null) yield return Until(() => baby.IsReady, 6f);
+                string ByParent()
+                {
+                    if (baby == null || !baby.Exists) return "no foal";
+                    Vector3 f = baby.Position, m = plain.I.Position;
+                    return Flat(f, m) < 4f && Mathf.Abs(f.y - m.y) < 0.6f ? null : $"the foal at {f:F1}, its parent at {m:F1}";
+                }
                 sw.Set(true, false);
                 MountResult r = plain.Ride(showMessage: false);
                 Check(r.Ok, $"ridden ({Said(r)})");
@@ -469,7 +480,7 @@ namespace GK2DonkeyAPI
                 yield return Frames(3);
                 Vector3 outside = Keeper();
                 reason = null;
-                yield return ThroughDoor(inside, indoors: true);
+                yield return ThroughDoor(inside, indoors: true, riddenFoals: true);
                 if (!doorOk)
                 {
                     Warn($"the door didn't take the keeper in (he is at {Keeper():F1}, indoors {Mount.Instance.IsIndoors()}): skipped");
@@ -478,10 +489,25 @@ namespace GK2DonkeyAPI
                 Check(Mounts.IsMounted && Mounts.Style == MountStyle.Ride, $"riding through the door: still riding inside ({reason ?? "riding"})");
                 string off = Mounts.IsMounted ? Beside(plain) : "not ridden";
                 Check(off == null, $"inside, the mount is under the keeper, on the building's floor ({off ?? "yes"})");
-                yield return ThroughDoor(outside, indoors: false);
+                if (baby != null)
+                {
+                    yield return Until(() => ByParent() == null, 3f);
+                    Check(ByParent() == null, $"its foal came through the door with it, by it on the building's floor ({ByParent() ?? "yes"})");
+                }
+                yield return ThroughDoor(outside, indoors: false, riddenFoals: true);
                 Check(doorOk && Mounts.IsMounted, $"and back out, still riding ({reason ?? "riding"})");
                 off = Mounts.IsMounted ? Beside(plain) : "not ridden";
                 Check(off == null, $"outside, the mount is under the keeper again ({off ?? "yes"})");
+                if (baby != null)
+                {
+                    yield return Until(() => ByParent() == null, 3f);
+                    Check(ByParent() == null, $"and its foal came back out with it ({ByParent() ?? "yes"})");
+                    baby.Remove();
+                }
+                else
+                {
+                    Warn("no foal could be spawned for the ridden mount: the foal-through-the-door part skipped");
+                }
                 Mounts.Dismount("self-test");
                 yield return Frames(2);
 

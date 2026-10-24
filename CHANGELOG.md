@@ -12,6 +12,17 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Picking a mount in the Mounts panel no longer freezes the game for a moment** (the user, 2026-10-24: "when
+  selecting the dragon from the mount journal, the game freezes for some frames"). The picture is framed on what the
+  mount draws over two seconds of its walk: twenty photos, each read back from the graphics card, all in one frame (40
+  to 60 ms and 19 to 26 MB a pick; the dragon's picture is the biggest). Now one photo a frame (the last picture stays
+  until the new one is framed, so it never visibly resizes), each look's framing is remembered (picked again: framed at
+  once), and one read-back buffer per picture replaces a new texture and array per photo.
+- **The babies of the mount you ride come through a door with it** (the user, 2026-10-24: "i selected gerry when
+  inside the house and rode him out, and the babies didnt follow me outside"). They stayed: the house and the yard are
+  one place to the game, so they waited for their parent to stand still out of reach, and a ridden parent never does.
+  Now the ridden mount's babies near the door are placed beside it on the other side while the screen is black, in or
+  out.
 - **A skin of a mount is built on its default** (the user, 2026-10-24: "all other skins are built on top of it";
   docs/skin-layering-plan.md, docs/skins.md "Variants: built on the default"). Every skin of a mount but the donkey
   starts as a copy of that mount's `default` look: the pictures it doesn't draw, and its settings it doesn't give
