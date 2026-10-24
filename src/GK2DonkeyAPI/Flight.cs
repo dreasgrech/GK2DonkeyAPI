@@ -228,6 +228,10 @@ namespace GK2DonkeyAPI
         internal static Vector3 LastSafe => lastSafe;
         internal static bool FreeFor(Mount.Instance i) => Free && i != null && i == owner;
         internal static bool InAir => owner != null && Now != Phase.Ground; // off the ground: flying, taking off, landing, a jump
+        internal static bool Flying => owner != null && (Now == Phase.Rising || Now == Phase.Airborne || Now == Phase.Landing); // a flight, not a jump
+        internal static bool FlyingFor(Mount.Instance i) => Flying && i == owner;
+        internal static bool TestInteractionPaused => interactionPaused;
+        private static bool interactionPaused;
         internal static Phase Now { get; private set; }
         internal static float HeightPx => heightPx;
         internal static string Why { get; private set; } = "";
@@ -1686,9 +1690,38 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // In the air the game's E and F prompts are off. Its interaction box sits on the body, at the ground's level,
+        // while the mount is drawn far above it: a flight over the smelter showed its F and its contents (the user's
+        // screenshot, 2026-10-24), and F held there entered the work state: the ride ended as a state change, the keeper
+        // was put down on that spot from 320 px up and the dragon parked in the air ("the rider teleports to the F
+        // location"). The pause is the game's own (PlayerInteractionComponent.SetPauseState, its ladder state's slot:
+        // the one the body borrows too, and never the game's while mounted): the box disabled, the target left, every
+        // prompt and bubble gone, nothing to press. Not for a jump (half a second: the prompt would blink at every hop);
+        // the work state is refused by itself there and in the air (WorkPlayerState_CanEnter_Patch).
+        private static void InteractionPause(bool on, bool always = false)
+        {
+            if (on == interactionPaused && !always) return; // the release after a flight is sent whatever the static says (always)
+            try
+            {
+                PlayerInteractionComponent ic = MainGame.Instance != null ? MainGame.PlayerController?.PlayerInteractionComponent : null;
+                if (ic == null) { interactionPaused = false; return; } // no keeper (the menu): a new one starts unpaused
+                ic.SetPauseState(PlayerInteractionPauseType.ByLadder, on);
+                if (on != interactionPaused) Plugin.Log.LogInfo(on ? "[flight] the game's E and F prompts are off in the air" : "[flight] the game's E and F prompts are back");
+                interactionPaused = on;
+            }
+            catch (System.Exception e) { Plugin.Log.LogWarning("[flight] pausing the game's interactions failed: " + e.Message); }
+        }
+
+        // A new game (a load, a new save): its keeper is a new object, unpaused (MountRegistry.BecomeReady).
+        internal static void NewGame()
+        {
+            interactionPaused = false;
+        }
+
         private static void Set(Phase p, string what)
         {
             if (Now == p) return;
+            bool fromFlight = Now == Phase.Rising || Now == Phase.Airborne || Now == Phase.Landing;
             // landing, a glide leaves by its way out (GlideTick); any other phase stops it at once
             if (Gliding && p != Phase.Airborne && p != Phase.Landing)
             {
@@ -1700,6 +1733,8 @@ namespace GK2DonkeyAPI
             if (p == Phase.Airborne || p == Phase.Ground) vel = 0f;
             Now = p;
             Why = what;
+            if (p != Phase.Ground && p != Phase.Jumping) InteractionPause(true);
+            else if (fromFlight || interactionPaused) InteractionPause(false, always: fromFlight); // not at a jump's end: the game would log a line per hop
             Plugin.Log.LogInfo($"[flight] {what} (height {heightPx:0} px)");
             NotifyState();
         }

@@ -178,6 +178,8 @@ namespace GK2DonkeyAPI
             }
             private bool seatPending;
             private float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
+            private float liftDrawn;   // the flight's lift in the last Follow: a ride ended in the air parks under it (Park)
+            internal float TestLiftDrawn => liftDrawn;
             private float lastGoodGroundDelta;
             private const float RideGroundStepLimit = 0.5f; // world units between the donkey's and the keeper's sample
             private float nextGroundLog;
@@ -1107,6 +1109,7 @@ namespace GK2DonkeyAPI
             public void ForceCleanup(string reason)
             {
                 Flight.Release(this, "cleanup: " + reason);
+                Grounded("cleanup: " + reason);
                 CargoSheet.Abort("cleanup: " + reason);
                 bool was = mounted;
                 mounted = false;
@@ -1149,6 +1152,18 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogInfo("Dismounted (" + reason + ").");
                     Mounts.RaiseDismounted(reason);
                 }
+            }
+
+            // A ride ended in the air (a state change, a save, a cleanup): where the mount stands is the ground under where
+            // it flew, not the drawn height (the dragon stood parked at 16.77 over ground at 6 after the work state ended a
+            // flight, the user's log 2026-10-24; a parked place is judged against the keeper's by KeepOnGround and would
+            // have been "a door" there).
+            private void Grounded(string reason)
+            {
+                if (liftDrawn <= 0.001f) return;
+                Position = new Vector3(Position.x, Position.y - liftDrawn, Position.z);
+                Plugin.Log.LogInfo($"Mount: {Describe()} parked under where it flew ({liftDrawn:0.00} down to {Position.y:0.00}): {reason}");
+                liftDrawn = 0f;
             }
 
             // If the keeper is standing still at dismount, nothing would call SetState again; put the real state back.
@@ -2495,7 +2510,8 @@ namespace GK2DonkeyAPI
                     }
                     lastGroundSample = new Vector4(gd, gk, basePos.y, groundDelta);
                 }
-                target.y += Flight.LiftFor(this); // airborne (the flying experiment): above where the ground puts it
+                liftDrawn = Flight.LiftFor(this); // airborne (the flying experiment): above where the ground puts it
+                target.y += liftDrawn;
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
                 Position = donkey.Data.Position;
                 if (cartParts.Count > 0)

@@ -560,6 +560,15 @@ Development:
 - **A mount says whether it flies and jumps**: `[Mount] flies = true` and `jumps = false` (written only when not the
   default), `MountDef.Flies` / `Jumps`, `MountInfo.Flies` / `Jumps`; the Mounts tab has the toggles and the panel the
   lines (while flying is on). The dragon flies by its flag: no code asks for the mount named dragon any more.
+- **In the air the game's E and F prompts are off** (dev-only flying): the keeper's body stays on the ground under the
+  flying mount, so the game offered the things under it (the smelter's F and contents drawn over the dragon), and F
+  held there ended the ride as the work state and put the keeper down on that spot from the air, the mount left parked
+  up there. Now a flight pauses the game's interactions (its own ladder pause; a jump doesn't), the work state is
+  refused while flying, and a ride ended in the air parks the mount on the ground under where it flew. The game's own
+  bubbles (a station's ready output, a quest mark) are screen-space UI drawn over everything in the world, the keeper on
+  foot included, and stay so over a flying mount (an order shift and a fade were tried and taken out: docs/flying.md).
+  Self-test "in the air" (group Flying); docs/flying.md "In the air: no prompts, no work state, parked on the ground,
+  the bubbles".
 - **The mount's jump feels like a platformer's** (dev-only, Space while riding plain; the keeper on foot doesn't jump):
   a short crouch, a quick rise, a moment at the top, a heavier fall and a squash on landing. Hold the key for the full
   height (28 px), flick it for a hop (16 px). The camera no longer bounces with a jump, and the jump is the same at any

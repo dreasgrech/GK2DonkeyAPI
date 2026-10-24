@@ -53,10 +53,16 @@ namespace GK2DonkeyAPI
             // into the yard first: the game streams and optimises the world's things by distance, and a scan from the
             // runner's spot 40 away found 2 things of a full yard (F11 2026-10-24); then a moment for its stages to load
             Vector3 from = Keeper();
-            Vector3? first = YardFreeSpot(area, new List<YardThing>());
-            if (!first.HasValue) { Skip("no spot in the yard to stand on"); yield break; }
-            yield return MoveKeeper(first.Value, homeFacing);
-            if (!moved) { Skip("the keeper could not be put into the yard"); yield break; }
+            // several spots tried: the game pushes him off one now and then (a zombie at work there, a thing with a collider
+            // the finder doesn't know: "that spot is blocked", F11 2026-10-24 03:42)
+            Vector3? first = null;
+            foreach (Vector3 cand in YardFreeSpots(area, new List<YardThing>(), 6))
+            {
+                PutKeeper(cand, homeFacing);
+                yield return Frames(3);
+                if (Flat(Keeper() - cand) < 0.6f) { first = Keeper(); break; }
+            }
+            if (!first.HasValue) { Skip("no spot in the yard the keeper stays on (each tried pushed him off)"); yield break; }
             yield return Seconds(1.5f);
 
             // the things in it: Obstacle-layer colliders that stop the keeper, grouped by the thing they belong to (its
@@ -177,9 +183,25 @@ namespace GK2DonkeyAPI
             if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors"); yield break; }
             Vector3 me = Keeper();
-            if (!FindSlope(me, 30f, out Vector3 foot, out Vector3 up, out float rise, out float run))
+            bool found = FindSlope(me, 30f, out Vector3 foot, out Vector3 up, out float rise, out float run);
+            if (!found && KnownSlopeNear(out Vector3 near))
             {
-                Info("no hillside within 30 (the ground rising 0.4 to 1.3 over 2.5 of walkable ground): run this one near a slope");
+                // the world streams by distance (the yard's lesson): from the runner's spot the road 17 to 23 away read flat
+                // at 3.6 and then no ground at all where the user's traces had the body standing at 6.0 (F11 2026-10-24
+                // 11:17, Profiles); in close and loaded first, the finder again from there, then the known road itself
+                yield return MoveKeeper(near, -1f);
+                if (moved)
+                {
+                    yield return Seconds(1.5f);
+                    found = FindSlope(Keeper(), 12f, out foot, out up, out rise, out run) || KnownSlope(out foot, out up, out rise, out run);
+                    if (found) Info($"found from next to the road (from the runner's spot {Vector3.Distance(me, near):0} away it had read flat: the world streams by distance)");
+                    else Info("still none from next to the road: " + Profiles(Keeper(), 10));
+                }
+            }
+            if (!found)
+            {
+                Info($"no hillside within 30 (the ground rising 0.35 to 1.6 over 2.5 of walkable ground): {slopeSeen}; run this one near a slope");
+                Info("the ground along each line from the keeper, a reading every unit: " + Profiles(me, 30));
                 Skip("no slope near here");
                 yield break;
             }
@@ -242,9 +264,16 @@ namespace GK2DonkeyAPI
 
         // A hillside near 'me': walkable ground (the ground layers' raycast) rising 0.4 to 1.3 over 2.5 along one of
         // eight directions, with ground at both ends and no obstacle in the way; 'foot' its lower end, 'up' the way up.
+        private static string slopeSeen = "none";
+
         private static bool FindSlope(Vector3 me, float radius, out Vector3 foot, out Vector3 up, out float rise, out float run)
         {
             foot = default; up = default; rise = 0f; run = 2.5f;
+            // what the finder saw, for the INFO when nothing is taken: how many runs rose within the window, and why the
+            // first few were rejected (the steepest run alone said nothing: a cliff two levels up, F11 2026-10-24 03:50)
+            int inWindow = 0, pairs = 0;
+            var rejected = new List<string>();
+            slopeSeen = "none";
             for (float r = 0f; r <= radius; r += 1.5f)
             {
                 for (int k = 0; k < 16; k++)
@@ -257,19 +286,67 @@ namespace GK2DonkeyAPI
                         Vector3 top = c + dir * run;
                         if (!GroundAt(top, out float ty)) continue;
                         float dy = ty - cy;
-                        if (dy < 0.4f || dy > 1.3f) continue;
+                        pairs++;
+                        if (dy < 0.35f || dy > 1.6f) continue;
+                        inWindow++;
+                        string cand = $"{dy:0.00} at ({c.x:0},{c.z:0})>{(dir.x > 0.5f ? "+x" : dir.x < -0.5f ? "-x" : "")}{(dir.z > 0.5f ? "+z" : dir.z < -0.5f ? "-z" : "")}";
+                        void Reject(string why) { if (rejected.Count < 20) rejected.Add(cand + ": " + why); slopeSeen = $"{pairs} runs sampled, {inWindow} rose within the window, none taken: " + string.Join("; ", rejected); }
                         // a slope, not a step: the middle about half way up
-                        if (!GroundAt(c + dir * (run * 0.5f), out float my) || Mathf.Abs((my - cy) - dy * 0.5f) > dy * 0.3f) continue;
-                        // room to run at it, and to land past its top
+                        if (!GroundAt(c + dir * (run * 0.5f), out float my)) { Reject("no ground in the middle"); continue; }
+                        if (Mathf.Abs((my - cy) - dy * 0.5f) > dy * 0.4f) { Reject($"a step, not a slope (the middle {my - cy:0.00} up of {dy:0.00})"); continue; }
+                        // room to run at it, and to land past its top: ground there he fits on (any height short of a cliff: a
+                        // long hillside has lower ground behind every foot and higher beyond every top; the first finder
+                        // wanted them flat and found no slope within 30 of the runner's spot, the user's 19 away, F11 2026-10-24)
                         Vector3 before = c - dir * 1.2f, after = top + dir * 1.5f;
-                        if (!GroundAt(before, out float by) || Mathf.Abs(by - cy) > 0.3f || !GroundAt(after, out float ay) || Mathf.Abs(ay - ty) > 0.4f) continue;
-                        if (Mount.Instance.KeeperFits(PC, new Vector3(before.x, by, before.z)) != null || Mount.Instance.KeeperFits(PC, new Vector3(after.x, ay, after.z)) != null) continue;
+                        if (!GroundAt(before, out float by) || !GroundAt(after, out float ay)) { Reject("no ground before or after"); continue; }
+                        if (Mathf.Abs(by - cy) > 1.3f || Mathf.Abs(ay - ty) > 1.3f) { Reject($"a cliff before ({by - cy:+0.00;-0.00}) or after ({ay - ty:+0.00;-0.00})"); continue; }
+                        string fitB = Mount.Instance.KeeperFits(PC, new Vector3(before.x, by, before.z)), fitA = Mount.Instance.KeeperFits(PC, new Vector3(after.x, ay, after.z));
+                        if (fitB != null || fitA != null) { Reject("no room: " + (fitB ?? fitA)); continue; }
                         foot = new Vector3(c.x, cy, c.z); up = dir; rise = dy;
                         return true;
                     }
                 }
             }
+            if (inWindow == 0) slopeSeen = $"{pairs} runs sampled, none rose 0.35 to 1.6 over 2.5";
             return false;
+        }
+
+        // The road up to the yard in the temple's scene, as the user's jump traces measured it (2026-10-24: the ground 4.05 at
+        // x 21.4, 4.75 at 20.0, 5.35 at 18.5, z 15.3, rising towards -x): the fallback when the finder takes nothing near the
+        // runner's spot, checked live (the ground there must still rise within the window).
+        // Next to the known road (RuinedTemple), where the finder is run again with the ground loaded.
+        private static bool KnownSlopeNear(out Vector3 near)
+        {
+            near = new Vector3(24.5f, 3.6f, 15.7f);
+            string scene = PC?.PlayerData?.currentGameSceneId;
+            return scene != null && scene.IndexOf("RuinedTemple", System.StringComparison.OrdinalIgnoreCase) >= 0;
+        }
+
+        private static bool KnownSlope(out Vector3 foot, out Vector3 up, out float rise, out float run)
+        {
+            foot = default; up = Vector3.left; rise = 0f; run = 2.5f;
+            string scene = PC?.PlayerData?.currentGameSceneId;
+            if (scene == null || scene.IndexOf("RuinedTemple", System.StringComparison.OrdinalIgnoreCase) < 0) return false;
+            Vector3 c = new Vector3(21.6f, 4f, 15.3f);
+            if (!GroundAt(c, out float cy) || !GroundAt(c + up * run, out float ty)) return false;
+            rise = ty - cy;
+            if (rise < 0.35f || rise > 1.6f) { Info($"the known road slope reads {rise:0.00} over {run:0.0} now: not taken"); return false; }
+            foot = new Vector3(c.x, cy, c.z);
+            Info($"the known road slope taken ({rise:0.00} over {run:0.0} towards -x from {foot:F1})");
+            return true;
+        }
+
+        // the ground's height every unit along +x, -x, +z and -z from p, for the INFO when no slope is found
+        private static string Profiles(Vector3 p, int units)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var (name, dir) in new[] { ("+x", Vector3.right), ("-x", Vector3.left), ("+z", Vector3.forward), ("-z", Vector3.back) })
+            {
+                sb.Append(name).Append(':');
+                for (int i = 0; i <= units; i++) sb.Append(' ').Append(GroundAt(p + dir * i, out float y) ? y.ToString("0.0") : "-");
+                sb.Append(" | ");
+            }
+            return sb.ToString();
         }
 
         private static bool GroundAt(Vector3 p, out float y)
@@ -295,20 +372,29 @@ namespace GK2DonkeyAPI
             yield return Frames(8);
         }
 
-        // a spot in the yard the keeper can stand on, away from every thing
+        // a spot in the yard the keeper can stand on, away from every thing (the first of YardFreeSpots)
         private static Vector3? YardFreeSpot(Bounds area, List<YardThing> things)
         {
-            for (float r = 0f; r < Mathf.Max(area.extents.x, area.extents.z); r += 0.6f)
+            foreach (Vector3 p in YardFreeSpots(area, things, 1)) return p;
+            return null;
+        }
+
+        // up to 'count' spots in the yard the keeper can stand on, away from every thing, the middle first, spread out
+        private static List<Vector3> YardFreeSpots(Bounds area, List<YardThing> things, int count)
+        {
+            var found = new List<Vector3>();
+            for (float r = 0f; r < Mathf.Max(area.extents.x, area.extents.z) && found.Count < count; r += 0.9f)
             {
-                for (int k = 0; k < 16; k++)
+                for (int k = 0; k < 16 && found.Count < count; k++)
                 {
                     Vector3 p = area.center + Quaternion.Euler(0f, k * 22.5f, 0f) * Vector3.forward * r;
                     if (!area.Contains(new Vector3(p.x, area.center.y, p.z))) continue;
                     if (!StandSpot(ref p, things, 0.6f)) continue;
-                    return p;
+                    if (found.Exists(q => Flat(q - p) < 1.5f)) continue;
+                    found.Add(p);
                 }
             }
-            return null;
+            return found;
         }
 
         // p put on the ground and judged: ground at his level, his body fitting, no thing within 'clear'

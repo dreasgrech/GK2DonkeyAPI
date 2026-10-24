@@ -419,6 +419,7 @@ namespace GK2DonkeyAPI
             typeof(ChestInteractionHandler_HasInteraction2_Patch),
             typeof(PlayerController_Teleport_Patch),
             typeof(PlayerController_Teleport_DoorNote_Patch),
+            typeof(WorkPlayerState_CanEnter_Patch), // no work state while the mount flies (Flight.cs)
             typeof(Projectile_Launch_Patch), // the arrow leaves the drawn bow while mounted (ArrowOrigin.cs)
             typeof(WorldZoneData_TryAddWgoData_Patch),
             typeof(GameSave_PrepareToSave_Patch),

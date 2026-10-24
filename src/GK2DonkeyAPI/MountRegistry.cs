@@ -357,6 +357,7 @@ namespace GK2DonkeyAPI
             nextIds.Clear();
             ClearDormant();
             SafeSpots.NewGame(); // the spots of the game before are not this game's
+            Flight.NewGame();    // its interaction pause is for the keeper before
             List<MountHandle> restored = null;
             try
             {

@@ -629,6 +629,7 @@ namespace GK2DonkeyAPI
                 if (donkey != null && donkey)
                 {
                     Position = donkey.Data.Position;
+                    Grounded("dismount: " + reason); // a ride ended in the air: under where it flew (Mount.cs)
                     donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value);
                     KeepOnGround(pc); // not left in the water where the ride drew it (SafeGround.cs)
                 }

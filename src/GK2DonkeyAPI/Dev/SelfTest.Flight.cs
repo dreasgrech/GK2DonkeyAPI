@@ -389,7 +389,9 @@ namespace GK2DonkeyAPI
                     yield return Frames(5);
                     Vector3 at = rb.position;
                     bool onRamp = Physics.Raycast(at + Vector3.up * 0.3f, Vector3.down, out RaycastHit rh, 0.6f, GroundLayersMask, QueryTriggerInteraction.Ignore) && Mathf.Abs(rh.point.y - at.y) < 0.12f;
-                    Check(worstDown <= 2f * px && onRamp && at.x > before.x + 1f && at.y < before.y - 0.2f,
+                    // 4 px: the touch-down frame on this 13-degree ramp read 2.5 (the last kinematic step and the game's walk in one
+                    // frame, the ramp's slope under the mount's snap point half a unit ahead); the cut this guards against was 30 and 51
+                    Check(worstDown <= 4f * px && onRamp && at.x > before.x + 1f && at.y < before.y - 0.2f,
                         $"a running jump downhill: the ground the mount is drawn on steps at most {worstDown / px:0.0} px a frame (at {worstAt:0.00} s), down the ramp {at.x - before.x:0.00} along and {before.y - at.y:0.00} lower, on its surface{(onRamp ? "" : " (NOT on the ground)")}");
                     NotUnder("the downhill jump");
                     walls.SetActive(false);
@@ -617,6 +619,100 @@ namespace GK2DonkeyAPI
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
                 Looks.Unregister("onekey-test", owner);
+                try { System.IO.Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // In the air (docs/flying.md "In the air: no prompts, no work state, parked on the ground"): the game's
+        // interaction component is paused through a flight (its prompts and bubbles gone), not through a jump; its work
+        // state (F held) is refused while flying (the patched CanEnter); a ride ended in the air (the mod's dismount,
+        // as a state change would) parks the mount on the ground under where it flew, the prompts back, nothing fallen.
+        private static IEnumerator FlightInTheAir()
+        {
+            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
+            PlayerInteractionComponent ic = PC.PlayerInteractionComponent;
+            if (ic == null) { Skip("the keeper has no interaction component"); yield break; }
+            if (ic.IsPaused) { Skip("the game has its interactions paused already (a window, a ladder, work)"); yield break; }
+            const string owner = Owner + ".inair";
+            string tempRoot;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-inair", "inair-test",
+                    "[Skin]\nformat = 1\nid = inair-test\nname = In The Air Test\nmount = inair-beast\n\n[Mount]\nid = inair-beast\nname = In The Air Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+            }
+            catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            MountHandle h = null;
+            int returns = SafeSpots.TestReturns;
+            try
+            {
+                Looks.RegisterFolder(tempRoot, owner);
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null || Catalog.Find("inair-beast") == null) { Fail("could not spawn, or the pack's mount is missing"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "inair-test");
+                yield return Until(() => h.Mount == "inair-beast", 8f);
+                MountResult r = h.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                Mount.Instance i = Mount.Ridden;
+                if (i == null) { Fail("not riding"); yield break; }
+                Flight.TestJumpHeld = true;
+                Check(!ic.IsPaused && !Flight.TestInteractionPaused, "riding on the ground: the game's interactions are its own (not paused)");
+                // the game's bubbles are screen-space UI (placed by CameraSystem.WorldToScreenPoint): over every sprite
+                Canvas bubbleCanvas = null;
+                try { bubbleCanvas = UIObjectBubbleManager.Instance != null ? UIObjectBubbleManager.Instance.GetComponent<Canvas>() : null; } catch { }
+                Canvas rootCanvas = bubbleCanvas != null ? bubbleCanvas.rootCanvas : null;
+                Info($"the bubble canvas: {(bubbleCanvas == null ? "not in this scene" : $"{bubbleCanvas.renderMode}, order {bubbleCanvas.sortingOrder}, its root '{rootCanvas?.name}' {rootCanvas?.renderMode} on camera {(rootCanvas != null && rootCanvas.worldCamera != null ? rootCanvas.worldCamera.name : "none")}")}");
+
+                // 1. a jump leaves them alone
+                MountResult j = Mounts.Jump();
+                if (!j.Ok) { Fail($"no jump ({Said(j)})"); yield break; }
+                float t0 = Time.time;
+                while (Flight.Now == Flight.Phase.Jumping && Flight.HeightPx < 8f && Time.time - t0 < 1f) yield return null;
+                Check(Flight.Now == Flight.Phase.Jumping && !ic.IsPaused && !Flight.TestInteractionPaused, $"a jump: the prompts stay ({Flight.Now}, {Flight.HeightPx:0} px, paused {ic.IsPaused})");
+                t0 = Time.time;
+                while (Flight.Now != Flight.Phase.Ground && Time.time - t0 < 10f) yield return null;
+                if (Flight.Now != Flight.Phase.Ground) { Fail($"the jump never landed ({Flight.Now}: {Flight.Why})"); yield break; }
+                yield return Frames(5);
+
+                // 2. a flight pauses them, and the work state is refused
+                MountResult t = Mounts.TakeOff();
+                if (!t.Ok) { Fail($"no take-off ({Said(t)})"); yield break; }
+                yield return Until(() => Flight.Now == Flight.Phase.Airborne || Flight.HeightPx >= 24f, 6f);
+                Check(Flight.Flying && ic.IsPaused && Flight.TestInteractionPaused && !ic.HasWgoUnderInteraction && ic.BigDropUnderInteraction == null,
+                    $"flying ({Flight.Now}, {Flight.HeightPx:0} px): the game's interactions paused (paused {ic.IsPaused}, a thing under interaction {ic.HasWgoUnderInteraction}, a big drop {(ic.BigDropUnderInteraction != null)})");
+                WorkPlayerState ws = null;
+                try { ws = PC.Ssm?.GetState<WorkPlayerState>(); } catch (System.Exception e) { Warn("the work state could not be read: " + e.Message); }
+                if (ws != null)
+                {
+                    int blocked = WorkPlayerState_CanEnter_Patch.Blocked;
+                    bool can = ws.CanEnter;
+                    Check(!can && WorkPlayerState_CanEnter_Patch.Blocked == blocked + 1, $"the work state's CanEnter asked while flying: refused by the patch ({(can ? "it could enter" : "no")}, refusals {blocked} -> {WorkPlayerState_CanEnter_Patch.Blocked})");
+                }
+
+                // 3. the ride ended up there (as the game's state change does): the mount parked on the ground under it
+                float flewAt = i.Position.y, lift = i.TestLiftDrawn; // the lift in the place (the hover moves between a Follow and now)
+                Mount.DismountFromApi("self-test: a ride ended in the air");
+                yield return Frames(3);
+                string groundSrc;
+                float ground = Mount.Instance.GroundHeight(new Vector3(i.Position.x, flewAt, i.Position.z), out groundSrc);
+                bool groundKnown = !float.IsNaN(ground) && !float.IsInfinity(ground);
+                Check(!Mounts.IsMounted && Flight.Now == Flight.Phase.Ground, $"the ride ended in the air: off, the flight over ({Flight.Now}: {Flight.Why})");
+                Check(!ic.IsPaused && !Flight.TestInteractionPaused, $"the prompts are the game's again (paused {ic.IsPaused})");
+                Check(lift > 0.3f && i.Position.y < flewAt - lift + 0.1f && (!groundKnown || Mathf.Abs(i.Position.y - ground) <= 0.6f),
+                    $"parked under where it flew: at y {i.Position.y:0.00} (it flew at {flewAt:0.00}, the lift {lift:0.00}; the ground there {(groundKnown ? ground.ToString("0.00") + " by " + groundSrc : "unknown")})");
+                string under = Mount.Instance.WhyUnderground(PC.PhysicalBody.Rb.position);
+                Check(under == null && SafeSpots.TestReturns == returns, $"the keeper on the ground, never under it ({under ?? "fine"}), the fall watchdog silent ({SafeSpots.TestReturns - returns} return(s))");
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null;
+                if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+                Looks.Unregister("inair-test", owner);
                 try { System.IO.Directory.Delete(tempRoot, true); } catch { }
             }
         }

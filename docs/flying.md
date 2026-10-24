@@ -824,6 +824,8 @@ ahead rises as a slope (`SlopeAhead`: within StepUp of the body, not a drop of m
 unchanged. No test could have caught it: the test ramps are not in the drawn-ground index. A new scenario finds a real
 hillside near the keeper (terrain levels) and runs a jump up it and down it (`FlightJumpSlope`, `FindSlope`). The
 30-file trace ring had swept the first stuck jump away under a test run: 120 kept now.
+Seen in game 03:36 (the user: "ok worked well"): the running jumps up the same slope moved 2.2-3.5 in the air (took
+off at 7.9), none held. The hillside scenario not yet run.
 
 ### Downhill (2026-10-24, built)
 
@@ -837,7 +839,8 @@ body instead (+1 unit), and the touch-down dropped the body the whole way. Now, 
 ground down too, up to a level's step (1.2) per physics step (`below`); a real drop stays the touch-down's. The slope
 test had two ramps rising away from the keeper and a jump in place: it never ran downhill. Now a third case: a ramp of
 the ground's layer from 1.2 up down to the ground 5 ahead, a running jump down it, the drawn ground stepping at most
-2 px a frame and the body down on the ramp's surface.
+4 px a frame (the touch-down frame on the 13-degree ramp read 2.5: the last kinematic step and the game's walk in one
+frame; the cut was 30 and 51) and the body down on the ramp's surface.
 
 ### The yard, for real (2026-10-24, built)
 
@@ -1246,6 +1249,68 @@ tops as the floor there.
 Hand tests: cross water and come back; fly over a fence and a building; off a cliff and land below; try to land over
 water (holds, says why); save in the air; H in the air (lands first); a door while flying; then F11 (nothing else
 changed: all of it only while flying free).
+
+### In the air: no prompts, no work state, parked on the ground, the bubbles (2026-10-24)
+
+The user, flying the dragon over the yard: the mount drawn behind the smelter's bubble (its F and its contents, a
+screenshot), and "if the F becomes available on an item on the ground while you're flying high above, the rider
+teleports to the F location".
+
+**The facts.** The flight lifts the picture, not the body: the keeper's body stays on the ground under the mount
+(the log: the body at 5.995 with the mount drawn at 16.7, 320 px up). Everything the game reads off the body reads
+it on the ground:
+
+- `PlayerInteractionComponent` (decomp) overlaps a box on the body each frame (layers 65600) and takes the nearest
+  thing or big drop as the interaction target: its handler draws the thing's bubble (`Wgo.DrawWidgets`, the smelter's
+  contents) and the E/F hints, `UIObjectBubbleManager.PutOnTopTargetId`. The bubbles are one world canvas with
+  `overrideSorting` at order 40: over every sprite by design (the keeper on foot is behind it too); the dragon at
+  height overlaps far more of the screen than the keeper, so it showed.
+- F is `GameKey.Action` (E is the interaction): held, `WorkPlayerState.IsActive`; `CanEnter` = `CanWork()`, which
+  takes the interaction target or **scans round the body by itself** (`PlayerWorkComponent.FindWgoToWorkWith`).
+  Entered, the state is not `FreePlayerState`: the ride ends ("Dismounted (state WorkPlayerState)"), the flight is
+  released ("down under him", height 0 at once): the keeper is put down on the body's spot, the thing's, from the air.
+  The log of 2026-10-24: `[flight] the body is the game's again: down under him: dismount: state WorkPlayerState`,
+  then `dragon stays where it stood at (14.09, 16.77, 14.43): the keeper is not on it (at (13.73, 6.00, 14.19), a
+  door)`: the parked place was the drawn one, 10.77 up, and `KeepOnGround` took the gap for a door.
+- The game's own ladder state pauses the component (`SetPauseState(PlayerInteractionPauseType.ByLadder, true)`):
+  the box disabled, the current target left (its bubble and hints hidden, `PutOnTop` cleared). Never the game's while
+  mounted (a ladder can't be climbed from the saddle): the same slot the flight's body borrows.
+
+**Built:**
+
+- `Flight.InteractionPause` (Flight.cs, from `Set`): through a flight (Rising, Airborne, Landing: the lift-only mode
+  too) the component is paused with `ByLadder`; back at Ground it is released. Not for a jump (half a second: the
+  prompt would blink at every hop). "[flight] the game's E and F prompts are off in the air" / "... are back".
+- `WorkPlayerState_CanEnter_Patch` (Patches.cs): the getter returns false while `Flight.Flying` (the work finder
+  scans by itself, so the pause alone is not enough). Jumps are left alone: a work state there ends the jump where
+  it is, near the ground.
+- The parked place: `Mount.Instance.Grounded` takes the last Follow's lift (`liftDrawn`) off `Position` at Park and at
+  ForceCleanup, so a ride ended in the air (a state change the patch doesn't cover, a save, a cleanup) parks the mount
+  on the ground under where it flew ("Mount: ... parked under where it flew (10.77 down to 6.00)").
+- **The bubbles: left as the game has them (decided 2026-10-24 12:05).** The pause alone was not it: the user's
+  second screenshot (at night) had the smelter's ready-output bubble over the dragon with no one near it: a station
+  draws that one by itself. Two things were tried and taken out again:
+  - A sprite order shift (every sprite of the mount's and the keeper's view to the bubble canvas's layer, one order
+    over it: "129 sprite(s) to layer Default order 41+") changed nothing (the third screenshot): the bubbles are
+    **screen-space UI**, each bubble's transform set to `CameraSystem.WorldToScreenPoint` of its thing
+    (`UIObjectBubble.UpdatePos`, decomp), so no world sprite can ever be drawn over them, the keeper on foot included.
+  - A fade of the bubbles the mount's picture overlaps on the screen (a CanvasGroup per bubble, the mount's box from
+    its sprites' bounds projected as the game projects). Bubbles vanished far from the dragon in batches, and the box
+    changed with the zoom (the user's video 12-03-37): a view's sprite bounds are no picture, and the game's screen
+    point and the UI's pixels don't scale alike. The user: "it's too inconsistent ... let's leave it since the game
+    does it that way as well".
+  - What stays: the self-test reads the canvas out (its render mode, its root and its camera) for the record. The game
+    draws its bubbles over the keeper on foot the same way; a mount in the air passes behind them.
+- The release is sent after every flight whatever the mod's own flag says (the game's flag and the mod's can't drift
+  apart), and a new game starts unpaused (`Flight.NewGame` from `BecomeReady`).
+- Self-test "in the air" (group Flying): on a flier of its own, a jump leaves the prompts, a take-off pauses them
+  (`IsPaused`, no target), the work state's `CanEnter` asked while flying is refused by the patch (its counter), the
+  ride ended in the air by the mod's dismount parks the mount on the ground under where it flew with the prompts back,
+  the keeper never underground, the fall watchdog silent.
+
+What to look at in game: fly over the smelter and the yard: no F, no E (the smelter's own bubble stays, over the
+dragon as over the keeper); hold F in the air: nothing; land next to the smelter: its bubble and F are back at once;
+a save in the air, then the mount's place in the panel.
 
 ## Step 2: the investigation
 
