@@ -16,9 +16,11 @@ import glob, io, os, re, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
-# the per-mount sets a cfg may hold: the built-in kinds and the example mod's (checker-beast); a player's is "" only
-MOUNTS = ["", "_dragon", "_gerry", "_rat", "_snail", "_worm", "_checker-beast"]
-KINDS = ["donkey", "dragon", "gerry", "rat", "snail", "worm", "checker-beast"]
+# the per-mount sets a cfg may hold: the built-in kinds and the example mod's (example.checker-beast); a player's is ""
+# only. The keys carry the mount's id (MountSettingsPage.PerMount "_<id>", MountRows "Skin_<id>"): "<mod>.<name>" since
+# 2026-10-24, the donkey's plain
+KINDS = ["donkey", "saddleup.dragon", "saddleup.gerry", "saddleup.rat", "saddleup.snail", "saddleup.worm", "example.checker-beast"]
+MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"]
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
 EFFECT_ROWS = ["Effect", "EffectWhen", "EffectTrail", "EffectWithCart", "EffectInFights", "EffectOnFoals"]
 

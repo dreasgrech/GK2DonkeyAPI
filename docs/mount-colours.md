@@ -162,7 +162,7 @@ saturation and value thresholds; the first match wins; everything else is Coat).
   shell and Hellfire's lava by at least 22, most by 40 and more. The worm has no second tone: its rows are
   left out of the menu and greyed in the Mounts panel.
 - **Gerry:** Dark = the sockets and cracks, the bone is Coat, read from the game's export of his frames
-  (`BepInEx\GK2-asset-probe\game-skins\gerry\`) when one exists; without the export the cfg carries no `[Colors]`
+  (`BepInEx\GK2-asset-probe\game-skins\saddleup.gerry\default\`) when one exists; without the export the cfg carries no `[Colors]`
   and everything is Coat.
 - **Hellfire, Royal Parade** (over the donkey): Hellfire's written once by its generator (`make_hellfire.py`, `--cfg`
   rewrites it; the cracks and the glow as Muzzle and Eye, so the page's Second tone row recolours Hellfire's lava), Royal Parade's by hand in its cfg (the cloth's reds as Harness); a donkey colour drawn by an over skin is kept as the donkey's (its own

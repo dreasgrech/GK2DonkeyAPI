@@ -1,5 +1,5 @@
 # The crown's fallback anchors: the Hellfire horn bases per frame, measured from the Hellfire pack itself
-# (src/SaddleUp/assets/mounts/donkey/skins/hellfire/<key>.png, bone-coloured pixels on the game's canvas). Each horn is one
+# (src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire/<key>.png, bone-coloured pixels on the game's canvas). Each horn is one
 # 8-connected cluster of bone pixels; its base is the cluster's lowest row, the x the base's edge on the side the horn
 # leans to (the tip's columns against the base's: 1 = leans right, -1 = left, the turn frames facing the camera).
 # Writes horn_bases.json as [[x, y, lean], [x, y, lean]] per frame (left horn first), the same file the first
@@ -13,7 +13,7 @@ from contact import ORDER
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-PACK = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "hellfire")
+PACK = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "saddleup.hellfire")
 BONE = {(0xEC, 0xDC, 0xB4), (0xC8, 0xB0, 0x82), (0x78, 0x5A, 0x3C)}  # the horns' light, mid and shadow, as hellfire_proto.BONE
 
 

@@ -34,7 +34,7 @@ for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan; do
 done
 run "$REPO" "canonical skin.cfg layout" python -I tools/skins/canonical_cfg.py --check
 for d in "$REPO"/src/*/assets/mounts/*/skins/*/; do
-  run "$REPO" "check_skin $(basename "$d")" python -I tools/skins/check_skin.py "$d"
+  run "$REPO" "check_skin $(basename "$(dirname "$(dirname "$d")")")/$(basename "$d")" python -I tools/skins/check_skin.py "$d"  # <mount id>/<skin>: every mount's own look is "default", a donkey skin "<mod>.<name>" (donkey/saddleup.hellfire)
 done
 run "$T/PackerScan" "PackerScan" dotnet run -c Release
 run "$T/PackerScan" "PackerScan --shapes" dotnet run -c Release -- --shapes

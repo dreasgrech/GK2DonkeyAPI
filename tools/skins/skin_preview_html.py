@@ -1,13 +1,14 @@
 """The skin preview page: every skin the API knows, grouped by mount, playing the donkey's clips next to the plain donkey
 at the game's speed, pixel-sharp, with a frame-strip view for a frame-by-frame look (docs/sprite-tools.md).
 
-Sources, in this order (the first that holds a skin id wins):
+Sources, in this order (the first that holds a skin wins; a skin is known by its full name, <mount id>/<skin folder>:
+saddleup.dragon/default, donkey/saddleup.hellfire; a mount's own look is its skins\\default\\):
   1. the plain donkey: <probe>\\donkey-frames\\ (the game's 44 frames on the 96 canvas, from the asset probe);
-  2. the built-in packs: <repo>\\src\\<project>\\assets\\mounts\\<mount>\\skins\\<id>\\ (skin.cfg + a picture per frame,
+  2. the built-in packs: <repo>\\src\\<project>\\assets\\mounts\\<mount>\\skins\\<skin>\\ (skin.cfg + a picture per frame,
      front\\ for the front layer; a skin with source = game has no pictures and is listed as such), the mount's name and
      babies from its mount.cfg;
-  3. the packs in the game: <probe>\\..\\plugins\\gk2mounts\\<mount>\\skins\\<id>\\ (skin.cfg + pictures, or one sheet);
-  4. recipes, drawn from the donkey's frames by the game's code and saved as pictures: --recipe <id>=<folder>
+  3. the packs in the game: <probe>\\..\\plugins\\gk2mounts\\<mount>\\skins\\<skin>\\ (skin.cfg + pictures, or one sheet);
+  4. recipes, drawn from the donkey's frames by the game's code and saved as pictures: --recipe <full name>=<folder>
      (Hellfire: C:\\ClaudeCodeTemp\\GK2-donkey-frames\\hellfire-96 when it exists, the frames the game's code drew,
      the code version's output on the game's canvas, kept until Hellfire is confirmed in game);
   5. the leftover test folders <probe>\\test\\skins\\<name>\\ without a skin.cfg: "Experiments", collapsed at the end.
@@ -20,7 +21,7 @@ shows the game's export when there is one. The captures of the probe's Capture t
 
 LOCAL ONLY: the frames are the game's art (and ours); the page embeds them and stays on this machine.
 
-    python tools/skins/skin_preview_html.py <probe folder> <out.html> [--recipe id=folder ...] [--study <skin folder> ...]
+    python tools/skins/skin_preview_html.py <probe folder> <out.html> [--recipe <mount>/<skin>=folder ...] [--study <skin folder> ...]
 """
 import base64, io, json, os, re, sys
 
@@ -298,7 +299,7 @@ def main(argv):
         note = ""
         if cfg and cfg.get(("Skin", "source"), "").lower() == "game":
             note = "no pictures of its own: the game's " + cfg.get(("Game", "prefix"), "") + " frames, read back and scaled at run time" + (
-                "; shown from the game's export" if os.path.isdir(os.path.join(export_dir, sid)) else "; export the loaded skins from the Mounts tab to see them here")
+                "; shown from the game's export" if os.path.isdir(os.path.join(export_dir, *sid.split("/"))) else "; export the loaded skins from the Mounts tab to see them here")
         shown = frames
         if layer == "over" and frames:
             e = (cfg.get(("Skin", "erase"), "FF00FF") if cfg else "FF00FF").strip()
@@ -306,7 +307,7 @@ def main(argv):
             shown = composite_over(donkey, frames, erase)
             note = "drawn over the donkey (layer = over): shown composited, without the player's colours"
         # the game's export of this skin, when it has one: shown instead, and the page's composite checked against it
-        game_dir = os.path.join(export_dir, sid)
+        game_dir = os.path.join(export_dir, *sid.split("/"))  # Looks.ExportBuilt: <mount id>/<skin>/
         diverge = None
         if os.path.isdir(game_dir):
             exported = frames_from_folder(game_dir)
@@ -377,7 +378,7 @@ def main(argv):
         project = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(p))))))  # src/<project>/assets/mounts/<mount>/skins/<skin>
         cfg = read_cfg(os.path.join(p, "skin.cfg"))
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-        add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "the " + project + " mod", p, skinroots.mount_of(p), mount_cfg_of(p))
+        add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, "the " + project + " mod", p, skinroots.mount_of(p), mount_cfg_of(p))
     # 3. the packs in the game (plugins\gk2mounts\<mount>\skins\<skin>)
     packs = os.path.normpath(os.path.join(probe, "..", "plugins", "gk2mounts"))
     if os.path.isdir(packs):
@@ -390,12 +391,12 @@ def main(argv):
                 if os.path.isfile(os.path.join(p, "skin.cfg")):
                     cfg = read_cfg(os.path.join(p, "skin.cfg"))
                     frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-                    add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p, m, mount_cfg_of(p))
+                    add(m + "/" + d, cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p, m, mount_cfg_of(p))
     # 3b. studies: skin folders being drawn (a generator's output in a temp folder), shown with their mount
     for p in studies:
         if os.path.isfile(os.path.join(p, "skin.cfg")):
             cfg = read_cfg(os.path.join(p, "skin.cfg"))
-            add(cfg.get(("Skin", "id"), os.path.basename(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (not in the game)", p)
+            add(cfg.get(("Skin", "mount"), "donkey") + "/" + os.path.basename(os.path.normpath(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (not in the game)", p)
     # 4. recipes drawn to pictures
     for rid, folder in sorted(recipes.items()):
         if os.path.isdir(folder):
@@ -421,7 +422,7 @@ def main(argv):
     groups = []
     for m in mounts:
         items = [s for s in skins if s["mount"] == m]
-        items.sort(key=lambda s: (0 if s["id"] in (m, "donkey") else 1, s["name"].lower()))
+        items.sort(key=lambda s: (0 if s["id"] in (m + "/default", "donkey") else 1, s["name"].lower()))  # the mount's own look: its skins/default/
         groups.append({"id": m, "name": mount_names.get(m, m), "skins": items})
     if experiments:
         groups.append({"id": "experiments", "name": "Experiments (old test folders)", "skins": experiments, "collapsed": True})

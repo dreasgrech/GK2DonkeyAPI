@@ -11,6 +11,11 @@ skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `defau
 its own `sounds\`); the donkey's folder holds skins only. The "declaring skin", joiner and Default-by-id rules
 below are history; docs/skins.md "What a pack is" and docs/making-a-mount.md are current (MountPacks.cs).
 
+**Amended 2026-10-24, later (the ids):** a mount's id is `<mod>.<name>` (`saddleup.dragon`; only the game's `donkey`
+is plain; one without a dot is refused). A skin is named within its mount, full name `<mount id>/<skin>`
+(`saddleup.dragon/default`, `donkey/saddleup.hellfire`; skin.cfg has no `id =`). Every mount but the donkey has exactly one
+default look, its `skins\default\`; `default_skin` is gone. Why: docs/mount-id-collisions.md.
+
 Status: **the probe passed in game 2026-10-24** (section 5: `SoundBank.cs`, the self-test "the probe" in group Sounds
 15/0, the dev Sounds tab's button; the results under section 5); **phase 1 step 2 built 2026-10-24** (the catalogue
 `SoundEvents.cs`, a `Sounds.Rig` per instance in `Sounds.cs` replacing `MountSounds.cs`, the base layer from the

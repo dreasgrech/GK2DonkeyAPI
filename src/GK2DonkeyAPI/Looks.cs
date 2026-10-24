@@ -156,7 +156,10 @@ namespace GK2DonkeyAPI
         // A skin as registered: where its pictures come from (one of the four sources), and what the loader found.
         internal sealed class SkinDef
         {
-            internal string Id, Name, Author, Version, Owner;
+            // Id: the skin's full name, "<mount>/<skin>" (dragon/default, donkey/hellfire): a skin is named within its mount,
+            // so two mods' "fire" for two mounts never meet (the user, 2026-10-24). LocalId: the "<skin>" part, its folder's
+            // name; "default" is the mount's own look (DefaultSkinName).
+            internal string Id, LocalId, Name, Author, Version, Owner;
             internal string Description;      // for the Mounts panel: a line or two about the look
             internal string Unavailable;      // why the skin can't be worn now (a game-source skin whose frames the game no longer has): not offered, the donkey shows
             internal string Portrait;         // a pack's: a PNG of the pack (next to the frames) for the panel's list; null: the mount drawn
@@ -179,6 +182,7 @@ namespace GK2DonkeyAPI
             internal Dictionary<string, Colors.RegionTweak> BaseRegions;
             internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md): a pack's is its mount folder's
             internal string MountDirName;                // a pack's: the mount folder it sits in (gk2mounts\<this>\skins\<skin>), for its file's path
+            internal bool AddedToOthers;                 // a pack's from a mount folder without mount.cfg: a look added to a mount another mod owns (its name carries its mod's prefix)
             private Catalog.Entry mount;
             private int mountVersion;
             private bool mountFallbackLogged;
@@ -262,31 +266,105 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, SkinDef> defs = new Dictionary<string, SkinDef>(StringComparer.OrdinalIgnoreCase);
         internal static IEnumerable<SkinDef> All => defs.Values;
 
+        // A skin by its full name ("saddleup.dragon/default"). A short name finds one too: a mount's id, or the name
+        // after its prefix when only one mount has it, is that mount's default look ("dragon", "dragon/default": what a
+        // dev's own world saved before the names, 2026-10-24); a skin's own name ("hellfire") the skin when only one
+        // mount has a skin of that name.
         internal static SkinDef Find(string id)
         {
-            return !string.IsNullOrEmpty(id) && defs.TryGetValue(id.Trim(), out SkinDef d) ? d : null;
+            if (string.IsNullOrEmpty(id)) return null;
+            string t = id.Trim();
+            if (defs.TryGetValue(t, out SkinDef d)) return d;
+            if (oldDonkeySkins.TryGetValue(t, out string renamed) && defs.TryGetValue(renamed, out d)) return d; // "donkey/hellfire"
+            int slash = t.IndexOf('/');
+            if (slash >= 0) return Catalog.FindShort(t.Substring(0, slash)) is Catalog.Entry m && defs.TryGetValue(SkinKey(m.Id, t.Substring(slash + 1)), out d) ? d : null; // "dragon/default": saddleup.dragon's
+            if (t.Length == 0) return null;
+            if (oldLookNames.TryGetValue(t, out string mountShort)) t = mountShort; // "red-dragon": the dragon's default
+            if (defs.TryGetValue(SkinKey(t, DefaultSkinName), out d)) return d;
+            if (Catalog.FindShort(t) is Catalog.Entry byName && defs.TryGetValue(SkinKey(byName.Id, DefaultSkinName), out d)) return d;
+            SkinDef only = null;
+            foreach (SkinDef s in defs.Values)
+            {
+                if (!string.Equals(s.LocalId, t, StringComparison.OrdinalIgnoreCase)) continue;
+                if (only != null) return null; // two mounts have a skin of that name: say which (dragon/fire)
+                only = s;
+            }
+            return only;
         }
 
-        // The built-in looks renamed with the mount folders (2026-10-24: the default looks got names of their own). An id
-        // saved before that (a mount's Skin in a save, a settings row; only a dev's own world: the mounts were off in
-        // every release) still finds its look, so a saved dragon stays a dragon. Not for new renames.
-        private static readonly Dictionary<string, string> renamedSkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        // The names the built-in looks had for a few hours on 2026-10-24 (the mount folders, before skins\default\): a
+        // dev's world and cfg saved then still find the look (the user: "also fix in the old names thing"). Each is its
+        // mount's default; never released.
+        private static readonly Dictionary<string, string> oldLookNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["dragon"] = "red-dragon", ["rat"] = "grey-rat", ["snail"] = "garden-snail", ["worm"] = "earth-worm",
+            ["red-dragon"] = "dragon", ["grey-rat"] = "rat", ["garden-snail"] = "snail", ["earth-worm"] = "worm",
         };
 
-        internal static string RenamedTo(string id) => !string.IsNullOrEmpty(id) && renamedSkins.TryGetValue(id.Trim(), out string to) ? to : null;
+        // Whether a skin is a look added to a mount it doesn't own (Register: its name needs its mod's prefix).
+        internal static bool AddsToOthers(SkinDef d)
+        {
+            if (d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase)) return true;
+            if (d.ReadFile != null) return d.AddedToOthers; // a pack's: its folder says
+            Catalog.Entry k = Catalog.Find(d.MountId);
+            return k != null && k.Owner != d.Owner;
+        }
 
-        // A wanted skin by its id, or by its id from before the rename.
-        internal static SkinDef FindWanted(string id) => Find(id) ?? (RenamedTo(id) is string to && Find(id) == null ? Find(to) : null);
+        // Saddle Up's donkey skins before they carried its prefix (2026-10-24, a few hours; never released).
+        private static readonly Dictionary<string, string> oldDonkeySkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["donkey/hellfire"] = "donkey/saddleup.hellfire", ["hellfire"] = "donkey/saddleup.hellfire",
+            ["donkey/royal-parade"] = "donkey/saddleup.royal-parade", ["royal-parade"] = "donkey/saddleup.royal-parade",
+        };
+
+        // A mount's own look: the folder skins\default\ of its pack, the skin a new one of it wears (one per mount; the
+        // user, 2026-10-24: every other skin is built on top of it).
+        internal const string DefaultSkinName = "default";
+
+        // A skin's full name: its mount's id and its own name.
+        internal static string SkinKey(string mountId, string localId) => (string.IsNullOrWhiteSpace(mountId) ? Catalog.DonkeyId : mountId.Trim()) + "/" + localId;
+
+        // The "<skin>" part of a full name ("dragon/default" -> "default"); a short name as it is.
+        internal static string LocalOf(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return id;
+            int s = id.IndexOf('/');
+            return s >= 0 ? id.Substring(s + 1) : id;
+        }
 
         internal static void Register(SkinDef d)
         {
             if (d == null || string.IsNullOrEmpty(d.Id)) throw new ArgumentException("A skin needs an id.");
-            if (d.Id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("'donkey' is the game's own look, not a skin id.");
-            foreach (char c in d.Id)
+            if (string.IsNullOrWhiteSpace(d.MountId)) d.MountId = Catalog.DonkeyId;
+            d.MountId = d.MountId.Trim();
+            if (d.LocalId == null)
             {
-                if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Skin id '{d.Id}': letters, digits, dots, dashes and underscores only.");
+                // a code skin's Id: its own name ("fire"), or the full name of its mount ("dragon/fire")
+                string given = d.Id.Trim();
+                int slash = given.IndexOf('/');
+                if (slash >= 0)
+                {
+                    if (!given.Substring(0, slash).Equals(d.MountId, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException($"Skin id '{given}' names the mount '{given.Substring(0, slash)}', but the skin is a look of '{d.MountId}' (its Mount).");
+                    given = given.Substring(slash + 1);
+                }
+                d.LocalId = given;
+            }
+            if (d.LocalId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) && d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("'donkey' is the game's own look, not a skin id.");
+            if (d.LocalId.Length == 0) throw new ArgumentException("A skin needs an id.");
+            foreach (char c in d.LocalId)
+            {
+                if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Skin id '{d.LocalId}': letters, digits, dots, dashes and underscores only.");
+            }
+            // the donkey's own look is the game's art: no skin of it is its default
+            if (d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && d.LocalId.Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException($"'{DefaultSkinName}' is the donkey's own look (the game's art): a donkey skin needs a name of its own.");
+            d.Id = SkinKey(d.MountId, d.LocalId);
+            // a look added to a mount another mod owns is named "<mod>.<name>" (donkey/saddleup.hellfire): two mods'
+            // "frost" for one mount are two skins, and a saved one never turns into the other mod's (the user,
+            // 2026-10-24; docs/mount-id-collisions.md). On your own mount any name. A pack's: a folder without mount.cfg;
+            // a code skin's: a mount registered by another owner; every donkey skin (the donkey is the game's).
+            if (AddsToOthers(d))
+            {
+                int dot = d.LocalId.IndexOf('.');
+                if (dot <= 0 || dot == d.LocalId.Length - 1) throw new ArgumentException($"Skin '{d.Id}': a skin added to a mount another mod owns is named '<mod>.<name>', your mod's prefix and the skin's name ({SkinKey(d.MountId, "saddleup." + d.LocalId)}; docs/skins.md).");
             }
             if (d.Base == null) throw new ArgumentException($"Skin '{d.Id}' names no base.");
             // Everything that can refuse the skin comes before its mount is declared: a mount with no skin would be
@@ -302,10 +380,6 @@ namespace GK2DonkeyAPI
                     throw new ArgumentException($"Skin id '{d.Id}' is already registered by {old.Owner} ({Where(old)}, version {old.Version ?? "none"}); this one ({Where(d)}, version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
                 }
                 Plugin.Log.LogWarning($"Looks: skin '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) replaces the one from {Where(old)} (version {old.Version ?? "none"}, registered by {old.Owner}): the newer wins. Delete the old one.");
-            }
-            if (!FirstParty(d.Owner) && d.Id.IndexOf('.') < 0 && prefixNoted.Add(d.Id))
-            {
-                Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Owner}) has no author prefix: a skin or mount id from another mod is '<author>.<name>' by convention (docs/skins.md), so two authors' names never meet.");
             }
             if (old != null)
             {
@@ -324,8 +398,6 @@ namespace GK2DonkeyAPI
             MarkWearersDirty(); // replaced: its wearers take the new one; new: an instance whose Skin already names it wears it now (its tick gave up on the missing id)
             Mounts.Looks.RaiseChanged();
         }
-
-        private static readonly HashSet<string> prefixNoted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         // Our own mods (the API, Saddle Up, the self-tests) ship the plain ids; everyone else's carry an author prefix.
         internal static bool FirstParty(string owner) => owner != null && owner.StartsWith("dreas.gk2.", StringComparison.Ordinal) && !owner.StartsWith(Plugin.Guid + ".packs", StringComparison.Ordinal);
@@ -353,12 +425,15 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // Whether an embedded mount folder has its mount.cfg (a folder holding only skins, like the donkey's, has no files of its own).
+        private static bool MountCfgIn(Dictionary<string, Dictionary<string, string>> files, string dir) => files.TryGetValue(dir, out var top) && top.ContainsKey(MountCfgName);
+
         // Every mount and skin embedded in an assembly under a prefix: resources named <prefix><mount>\mount.cfg,
         // <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file> (+ front\, sounds\): the csproj embeds
         // assets\mounts\**\* that way. The mounts first, then their skins. The number of skins registered.
         internal static int RegisterEmbedded(Assembly asm, string prefix, string owner, bool builtIn = false)
         {
-            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("dragon", "dragon/skins/red-dragon/front") -> file -> resource
+            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("saddleup.dragon", "saddleup.dragon/skins/default/front") -> file -> resource
             foreach (string res in asm.GetManifestResourceNames())
             {
                 if (!res.StartsWith(prefix, StringComparison.Ordinal)) continue;
@@ -381,10 +456,17 @@ namespace GK2DonkeyAPI
             };
             var dirs = new List<string>(files.Keys);
             dirs.Sort(StringComparer.OrdinalIgnoreCase);
-            // the mounts: a top-level dir with a mount.cfg
+            // the mounts: a top-level dir with a mount.cfg (and its own look, skins/default)
+            var refusedMounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (string dir in dirs)
             {
                 if (dir.IndexOf('/') >= 0 || !files[dir].ContainsKey(MountCfgName)) continue;
+                if (!files.TryGetValue(dir + "/" + SkinsDirName + "/" + DefaultSkinName, out var defFiles) || !defFiles.ContainsKey("skin.cfg"))
+                {
+                    Plugin.Log.LogWarning($"Looks: the embedded mount '{dir}' has no {SkinsDirName}\\{DefaultSkinName}\\skin.cfg: a mount's own look is its skins\\default\\ (docs/skins.md); left out with its skins.");
+                    refusedMounts.Add(dir);
+                    continue;
+                }
                 var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 foreach (var f in files[dir]) map[f.Key] = f.Value;
                 if (files.TryGetValue(dir + "/sounds", out var ms)) foreach (var f in ms) if (SoundBlock.IsSoundFile(f.Key)) map[SoundsKey + f.Key] = f.Value;
@@ -410,10 +492,17 @@ namespace GK2DonkeyAPI
                     if (files.TryGetValue(dir + "/front", out var front)) foreach (var f in front) pics[FrontKey + f.Key] = f.Value;
                     if (files.TryGetValue(dir + "/sounds", out var sounds)) foreach (var f in sounds) if (SoundBlock.IsSoundFile(f.Key)) pics[SoundsKey + f.Key] = f.Value;
                     Func<string, byte[]> bytes = Reader(pics);
+                    if (refusedMounts.Contains(parts[0])) continue;
+                    if (parts[2].Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase) && !MountCfgIn(files, parts[0]) && !parts[0].Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Plugin.Log.LogWarning($"Looks: the embedded skin '{dir}': a mount's '{DefaultSkinName}' look comes with its mount.cfg; a folder that adds skins to a mount gives them names of their own. Left out.");
+                        continue;
+                    }
                     Catalog.Entry mount = Catalog.Find(parts[0]);
                     string mountId = mount != null ? mount.Id : parts[0];
                     SkinDef def = FromCfg(Encoding.UTF8.GetString(bytes("skin.cfg")), parts[2], owner, "embedded " + asm.GetName().Name + " " + dir, bytes, pics.Keys, mountId);
                     def.MountDirName = parts[0];
+                    def.AddedToOthers = !MountCfgIn(files, parts[0]);
                     def.BuiltIn = builtIn;
                     def.SourceAssembly = asm;
                     Register(def);
@@ -481,7 +570,7 @@ namespace GK2DonkeyAPI
 
         // One skin folder: skin.cfg plus its pictures (a PNG per frame, or one sheet) and its sounds\; mountId: the mount
         // folder it sits in.
-        internal static SkinDef RegisterPack(string skinDir, string owner, string mountId)
+        internal static SkinDef RegisterPack(string skinDir, string owner, string mountId, bool addedToOthers)
         {
             string dir = skinDir;
             string cfgText = File.ReadAllText(Path.Combine(dir, "skin.cfg"), Encoding.UTF8);
@@ -505,6 +594,7 @@ namespace GK2DonkeyAPI
             SkinDef def = FromCfg(cfgText, Path.GetFileName(skinDir), owner, "pack " + skinDir, Bytes, names, mountId);
             def.MountDirName = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(skinDir.TrimEnd('\\', '/'))));
             def.Source = skinDir;
+            def.AddedToOthers = addedToOthers;
             def.DiskStamp = PackStamp(def);
             Register(def);
             return def;
@@ -576,7 +666,7 @@ namespace GK2DonkeyAPI
         // fileNames lists its files (the PNGs are the frames, unless the cfg names a sheet).
         internal static SkinDef FromCfg(string text, string dirName, string owner, string where, Func<string, byte[]> bytes, IEnumerable<string> fileNames, string folderMount = null)
         {
-            var d = new SkinDef { Id = dirName, Name = dirName, Owner = owner, DirName = dirName, ReadFile = bytes, FileNames = new List<string>(fileNames) };
+            var d = new SkinDef { Id = dirName, LocalId = dirName, Name = dirName, Owner = owner, DirName = dirName, ReadFile = bytes, FileNames = new List<string>(fileNames) };
             if (!string.IsNullOrEmpty(folderMount)) d.MountId = folderMount;
             string mountLine = null;
             fileNames = d.FileNames;
@@ -646,7 +736,7 @@ namespace GK2DonkeyAPI
                         break;
                     case "description": d.Description = value; break;
                     case "portrait": d.Portrait = value; break;
-                    case "id": d.Id = value; break;
+                    case "id": if (!LocalOf(value).Equals(dirName, StringComparison.OrdinalIgnoreCase)) d.Report += $"id = {value} ignored: a skin's name is its folder's ('{dirName}'); "; break;
                     case "name": d.Name = value; break;
                     case "author": d.Author = value; break;
                     case "version": d.Version = value; break;
@@ -1197,6 +1287,7 @@ namespace GK2DonkeyAPI
             {
                 SkinDef fresh = FromCfg(File.ReadAllText(path, Encoding.UTF8), d.DirName ?? d.Id, d.Owner, "reload " + path, d.ReadFile, d.FileNames, d.MountDirName != null ? d.MountId : null);
                 fresh.MountDirName = d.MountDirName;
+                fresh.AddedToOthers = d.AddedToOthers;
                 fresh.BuiltIn = d.BuiltIn;
                 fresh.Source = d.Source;
                 fresh.SourceAssembly = d.SourceAssembly; // an embedded skin keeps its DLL, so CfgPathFor still finds its sources after a reload
@@ -1370,14 +1461,13 @@ namespace GK2DonkeyAPI
         }
 
         // The skin a mount comes as, shown as "Default" in its Skin row (the user, 2026-10-18: every mount's default
-        // skin is called Default): the donkey's own art for the donkey; for another mount the skin whose id is the
-        // mount's default_skin (mount.cfg), else a skin whose id is the mount's, else its first by name.
+        // skin is called Default): the donkey's own art for the donkey; for another mount its skin named "default"
+        // (a pack's skins\default\, one per mount, 2026-10-24); a code mount that registered none: its first by name.
         internal static string DefaultSkinOf(Catalog.Entry k)
         {
             if (k == Catalog.Donkey) return MountLooks.DonkeyId;
             List<SkinDef> skins = Catalog.SkinsOf(k);
-            if (!string.IsNullOrEmpty(k.DefaultSkin)) foreach (SkinDef s in skins) if (s.Id.Equals(k.DefaultSkin, StringComparison.OrdinalIgnoreCase)) return s.Id; // mount.cfg default_skin
-            foreach (SkinDef s in skins) if (s.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
+            foreach (SkinDef s in skins) if (DefaultSkinName.Equals(s.LocalId, StringComparison.OrdinalIgnoreCase)) return s.Id;
             skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
             return skins.Count > 0 ? skins[0].Id : MountLooks.DonkeyId;
         }
@@ -1947,10 +2037,14 @@ namespace GK2DonkeyAPI
         {
             if (!Plugin.MountsOn) return;
             string id = (WarmWanted ?? "").Trim();
-            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : FindWanted(id);
+            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
             if (d != null && d.Unavailable != null) d = null;
             if (warm != null && warm.Def == d) return;
             if (warm == null && d == null) return;
+            // a skin built from the base's own frames (an over skin that erases, a recipe) waits until they are in memory:
+            // built at the main menu it lost its holes (2026-10-24 log: Hellfire "its erase colour can't clear the donkey
+            // (the base's frame is not in memory)", 0 of 44 frames found), and the first spawn wore it so
+            if (d != null && NeedsBaseFrames(d) && !BaseFramesInMemory(d.Base, d.Base.GamePrefix)) return;
             Loaded prev = warm;
             warm = null;
             if (d != null)
@@ -2105,7 +2199,7 @@ namespace GK2DonkeyAPI
                         want = (Skin.Value ?? "").Trim();
                     }
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
-                    SkinDef d = FindWanted(want);
+                    SkinDef d = Find(want);
                     if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
                     if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
                     return d;
@@ -2238,7 +2332,7 @@ namespace GK2DonkeyAPI
                 Loaded next = null;
                 if (want.Length > 0 && !want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
                 {
-                    SkinDef d = FindWanted(want);
+                    SkinDef d = Find(want);
                     if (d != null && d.Unavailable != null)
                     {
                         if (RecheckGameSource(d))

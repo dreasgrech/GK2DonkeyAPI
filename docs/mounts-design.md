@@ -6,6 +6,11 @@ skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `defau
 its own `sounds\`); the donkey's folder holds skins only. The "declaring skin", joiner and Default-by-id rules
 below are history; docs/skins.md "What a pack is" and docs/making-a-mount.md are current (MountPacks.cs).
 
+**Amended 2026-10-24, later (the ids):** a mount's id is `<mod>.<name>` (`saddleup.dragon`; only the game's `donkey`
+is plain; one without a dot is refused). A skin is named within its mount, full name `<mount id>/<skin>`
+(`saddleup.dragon/default`, `donkey/saddleup.hellfire`; skin.cfg has no `id =`). Every mount but the donkey has exactly one
+default look, its `skins\default\`; `default_skin` is gone. Why: docs/mount-id-collisions.md.
+
 Status 2026-10-20 (the foundation audit, docs/mounts-foundation-audit.md): the five built-in mounts are declared in
 one layout (`[Mount]` with id, name, author, version, cart, foals always, the block last in the file, every tuning key
 in one section; `tools/skins/canonical_cfg.py`, enforced by `tests/SkinsScan`); a built-in skin's mount reports

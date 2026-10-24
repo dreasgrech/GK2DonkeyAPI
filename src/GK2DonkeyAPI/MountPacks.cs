@@ -36,9 +36,9 @@ namespace GK2DonkeyAPI
             internal SoundBank.FileSource SoundFiles => new SoundBank.FileSource(Owner, "mount-" + Id, Source, ReadFile, "mount '" + Id + "'");
         }
 
-        // The keys of [Mount], in the order the file keeps them (docs/mounts-foundation-audit.md §4; default_skin since
-        // the mount folders, 2026-10-24).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "default_skin", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when" };
+        // The keys of [Mount], in the order the file keeps them (docs/mounts-foundation-audit.md). No default_skin: a
+        // mount's own look is its skins\default\ (2026-10-24).
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when" };
 
         private static readonly string[] MountSections = { "mount", "stats", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "sounds.baby" };
 
@@ -92,7 +92,7 @@ namespace GK2DonkeyAPI
             if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
             if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
             if (mount.TryGetValue("portrait", out string mport) && !string.IsNullOrWhiteSpace(mport)) k.Portrait = mport.Trim();
-            if (mount.TryGetValue("default_skin", out string mdef) && !string.IsNullOrWhiteSpace(mdef)) k.DefaultSkin = mdef.Trim();
+            if (mount.ContainsKey("default_skin")) p.Report += "[Mount] default_skin ignored: a mount's own look is its skins\\default\\ folder; ";
             k.Stats = stats;
             if (mount.TryGetValue("author", out string ma)) k.Author = ma;
             if (mount.TryGetValue("version", out string mv)) k.Version = mv;
@@ -149,7 +149,13 @@ namespace GK2DonkeyAPI
             string mountId = dirName;
             Catalog.Entry declared = null;
             string cfgPath = Path.Combine(mountDir, MountCfgName);
-            if (File.Exists(cfgPath))
+            bool ownMount = File.Exists(cfgPath);
+            if (ownMount && !dirName.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && !File.Exists(Path.Combine(mountDir, SkinsDirName, DefaultSkinName, "skin.cfg")))
+            {
+                Plugin.Log.LogWarning($"Looks: the mount pack '{mountDir}' has no {SkinsDirName}\\{DefaultSkinName}\\skin.cfg: a mount's own look is its skins\\default\\ (docs/skins.md); left out with its skins.");
+                return 0;
+            }
+            if (ownMount)
             {
                 var p = new MountPack { Owner = owner, DirName = dirName, Source = mountDir };
                 p.FileNames.Add(MountCfgName);
@@ -175,9 +181,14 @@ namespace GK2DonkeyAPI
                 foreach (string skinDir in skinDirs)
                 {
                     if (!File.Exists(Path.Combine(skinDir, "skin.cfg"))) continue;
+                    if (!ownMount && Path.GetFileName(skinDir).Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase) && !dirName.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        Plugin.Log.LogWarning($"Looks: '{skinDir}': a mount's '{DefaultSkinName}' look comes with its mount.cfg; a folder that adds skins to a mount gives them names of their own. Left out.");
+                        continue;
+                    }
                     try
                     {
-                        RegisterPack(skinDir, owner, mountId);
+                        RegisterPack(skinDir, owner, mountId, !ownMount);
                         n++;
                     }
                     catch (Exception e)
@@ -213,13 +224,15 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // A mount whose pack brought no skin that registered: withdrawn (a mount offered with nothing to wear showed as
-        // "donkey (not installed)", 2026-10-18), unless skins of it come from elsewhere.
+        // A mount whose pack brought no own look that registered (its skins\default\ refused): withdrawn with its other
+        // skins (a mount offered with nothing to wear showed as "donkey (not installed)", 2026-10-18; one default per
+        // mount, 2026-10-24).
         private static void NoSkinLeft(Catalog.Entry k, string owner)
         {
             if (k == null || !k.FromPack || k.Owner != owner) return;
-            if (Catalog.SkinsOf(k).Count > 0) return;
-            Plugin.Log.LogWarning($"Looks: mount '{k.Id}' has no skin that registered (its skins\\ folder is empty or every skin was refused): withdrawn.");
+            if (Find(SkinKey(k.Id, DefaultSkinName)) != null) return;
+            Plugin.Log.LogWarning($"Looks: mount '{k.Id}' has no own look that registered (its skins\\{DefaultSkinName}\\ was refused): withdrawn with its skins.");
+            foreach (SkinDef sd in Catalog.SkinsOf(k)) if (sd.Owner == owner) Unregister(sd.Id, owner);
             UnregisterMount(k.Id, owner);
         }
 
@@ -314,7 +327,6 @@ namespace GK2DonkeyAPI
                 if (!string.IsNullOrEmpty(k.Noun)) mn.Key(sb, "noun", k.Noun);
                 if (!string.IsNullOrEmpty(k.Description)) mn.Key(sb, "description", k.Description);
                 if (!string.IsNullOrEmpty(k.Portrait)) mn.Key(sb, "portrait", k.Portrait);
-                if (!string.IsNullOrEmpty(k.DefaultSkin)) mn.Key(sb, "default_skin", k.DefaultSkin);
                 mn.Key(sb, "author", k.Author ?? "");
                 mn.Key(sb, "version", k.Version ?? "");
                 mn.Key(sb, "cart", k.Cart ? "true" : "false");

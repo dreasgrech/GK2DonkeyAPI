@@ -3,7 +3,9 @@ colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules are
 (per skin, per region, in order: a colour's hue, saturation and value against thresholds; the first match wins; the
 rest is Coat), so a new creature adds a block there, never code here. The hex lists come from the PNGs (front/ too),
 so they are exact; a skin with "source": "game-export" (Gerry) reads the in-game export folder instead. Re-runnable
-(replaces the section, then the canonical layout): run it after the art changes, then tests/SkinsScan.
+(replaces the section, then the canonical layout): run it after the art changes, then tests/SkinsScan. colors.json is
+keyed by the skin's full name (saddleup.dragon/default); a skin on the command line is any name skinroots.find
+takes (saddleup.dragon/default, dragon, donkey/saddleup.hellfire, hellfire).
 
     python -I tools/skins/skin_colors.py [skin ...]
 """
@@ -21,7 +23,7 @@ RULES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "creatures
 def export_dir(skin):
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     from gamedir import game_dir
-    return os.path.join(game_dir(), "BepInEx", "GK2-asset-probe", "game-skins", skin)
+    return os.path.join(game_dir(), "BepInEx", "GK2-asset-probe", "game-skins", *skin.split("/"))  # Looks.ExportBuilt writes a skin to <mount id>/<skin>/
 
 
 def colours(skin, source=None):
@@ -114,8 +116,19 @@ def write_section(skin, regions):
     io.open(p, "w", encoding="utf-8", newline="").write(text)
 
 
+for skin in RULES:
+    if "/" not in skin:
+        raise SystemExit(f"colors.json: '{skin}' is not a skin's full name (<mount id>/<skin>, as saddleup.dragon/default)")
+WANTED = None
+if len(sys.argv) > 1:
+    WANTED = set()
+    for a in sys.argv[1:]:
+        d = skinroots.find(a)
+        if d is None and a not in RULES:
+            raise SystemExit(f"{a}: no such skin (a full name like saddleup.dragon/default, a mount's name, or a skin's folder name)")
+        WANTED.add(skinroots.full_name(d) if d else a)
 for skin in sorted(RULES):
-    if len(sys.argv) > 1 and skin not in sys.argv[1:]:
+    if WANTED is not None and skin not in WANTED:
         continue
     got = colours(skin, RULES[skin].get("source"))
     if got is None:

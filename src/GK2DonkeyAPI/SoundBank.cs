@@ -348,7 +348,7 @@ namespace GK2DonkeyAPI
         }
 
         // Where a pack's sound files come from: a skin's own folder, or a mount folder's (MountPacks.cs). Name is the
-        // bank's name for it ("red-dragon", "mount-dragon"), Label the log's ("skin 'red-dragon'", "mount 'dragon'").
+        // bank's name for it ("saddleup.dragon/default", "mount-saddleup.dragon"), Label the log's ("skin '...'", "mount '...'").
         internal sealed class FileSource
         {
             internal readonly string Owner, Name, Source, Label;

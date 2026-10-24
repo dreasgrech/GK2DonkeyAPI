@@ -46,7 +46,7 @@ Design docs: [skins-design.md](skins-design.md) (drawing), [mounts-design.md](mo
 - **Values:** per instance and key: another mod's override › the skin's `[Tuning]` › the mount's for the style › the
   mount's for both › the player's cfg; merged once, re-applied only on a skin, mount or style change.
 - `MountSettingsPage.MountRows(section, companion)`: every look row in one call (Saddle Up uses it; cfg keys unchanged).
-- Example: `examples/GK2DonkeySkins` `checker-beast` (no cart, seat +2, burns with Hellfire while ridden).
+- Example: `examples/GK2DonkeySkins` `example.checker-beast` (no cart, seat +2, burns with Hellfire while ridden).
 
 ### 1.3 Particle effects (Hellfire first)
 - `Mounts.Effects`: an effect = parts of **sources** (`IMountEffectSource`: the game's own particle systems copied by

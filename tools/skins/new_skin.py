@@ -1,17 +1,35 @@
 """A new skin, started the one way (docs/sprite-tools.md "Making a skin: the one pipeline"): its folder under its mount
-(assets/mounts/<mount>/skins/<id>/, the mount's folder and mount.cfg made when the mount is new) with a skin.cfg in the
-canonical layout, a generator folder with a stub that draws a placeholder for every frame, and the
+(assets/mounts/<mount id>/skins/<skin>/, the mount's folder and mount.cfg made when the mount is new) with a skin.cfg in
+the canonical layout, a generator folder with a stub that draws a placeholder for every frame, and the
 Aseprite sidecar, then the scan. Everything else is drawing.
 
-    python -I tools/skins/new_skin.py <id> [--mount <mount id> [--name "Giant Thing"]] [--canvas 96] [--seat 52] [--over] [--mod <project>]
+The names (2026-10-24): a mount's id is "<mod>.<name>" and its folder's name (saddleup.dragon; only the game's donkey is
+plain); a skin is named by its folder within its mount, its full name "<mount id>/<skin>" (saddleup.dragon/default,
+donkey/saddleup.hellfire). A mount's own look, the one a new one wears, is its skins\\default\\: a new mount gets its
+first skin there. No id = in skin.cfg, no default_skin = in mount.cfg. A skin added to a mount another mod owns (every
+donkey skin: the donkey is the game's; a mount of another project) sits in a mount folder of your mod's without
+mount.cfg and is named "<mod>.<name>" (the loader leaves it out otherwise): <skin> gets the --prefix in front unless it
+carries one already. A skin of your own mod's mount takes any name.
 
-  <id>        the skin's id and folder name (letters, digits, dashes): giant-crab
+    python -I tools/skins/new_skin.py <skin>                       a skin of the donkey: skins\\<prefix><skin>\\ (never "default")
+    python -I tools/skins/new_skin.py <skin> --over                a skin drawn over the donkey
+    python -I tools/skins/new_skin.py <skin> --mount <mount>       one more skin for a mount that exists (saddleup.rat or rat)
+    python -I tools/skins/new_skin.py --mount <name> [--name "Giant Thing"] [--prefix <mod>.]
+                                                                   a new mount, <prefix><name>, its look in skins\\default\\
+    common: [--canvas 96] [--seat 52] [--mod <project>]
+
+  <skin>      the skin's folder name, its name within the mount (letters, digits, dashes): giant-crab; on a mount your
+              mod doesn't own (the donkey, another project's) --prefix goes in front (saddleup.giant-crab), or give it
+              whole
   --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, which ships every
               skin and mount; the API ships none; docs/mounts-as-mods.md). A mount mod of its own: a project whose
               csproj embeds assets\\mounts\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
-              lines to copy), then --mod <its folder>
-  --mount     the mount the skin is a look of (default: donkey). A mount with no folder yet is a creature of its own:
-              assets/mounts/<mount>/mount.cfg is written (default_skin = this skin)
+              lines to copy), then --mod <its folder> and --prefix
+  --mount     the mount the skin is a look of (default: donkey), by its id (saddleup.rat) or the name after the prefix
+              (rat). A mount with no folder yet is a creature of its own: assets/mounts/<prefix><name>/mount.cfg is
+              written and the skin goes to its skins\\default\\ (leave <skin> out, or say default)
+  --prefix    your mod's prefix, for a new mount's id and for a skin added to a mount another mod owns (default:
+              saddleup. for Saddle Up's assets; another --mod needs its own)
   --over      drawn OVER the donkey (a cloth, a hat): layer = over with the erase colour, no [Mount]
   --canvas    the picture size (96; 128 for a bigger creature; the donkey's frame sits centred)
   --seat      the canvas row the rider's hip sits on (52 = the donkey's own seat on the 96 canvas; +16 on 128)
@@ -31,7 +49,7 @@ def arg(name, default=None):
     return default
 
 
-VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod"}  # the flags that take a value; --over stands alone
+VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod", "--prefix"}  # the flags that take a value; --over stands alone
 
 
 def main():
@@ -47,38 +65,77 @@ def main():
                 print("unknown flag", a); print(__doc__); return 2
         else:
             ids.append(a)
-    if len(ids) != 1:
+    if len(ids) > 1:
         print(__doc__); return 2
-    sid = ids[0]
-    if not re.fullmatch(r"[a-z0-9][a-z0-9-]*", sid):
-        print("the id is letters, digits and dashes, lower case:", sid); return 2
     mount = arg("--mount")
     over = "--over" in sys.argv
     if over and mount:
         print("--over is a skin drawn over the donkey: it has no mount of its own (drop --mount)"); return 2
-    canvas = int(arg("--canvas", "96"))
-    seat = int(arg("--seat", str(52 + (canvas - 96) // 2)))
-    name = arg("--name") or sid.replace("-", " ").title()
     project = arg("--mod") or skinroots.MOUNTS_PROJECT  # every shipped skin is Saddle Up's; the API ships none
     if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
         print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/mounts/** and registers them as src/SaddleUp does)"); return 2
-    if skinroots.find(sid):
-        print("a skin with that id exists already:", skinroots.find(sid)); return 2
     assets_root = skinroots.root_of(project)
-    mount_id = mount or "donkey"
-    mount_dir = skinroots.find_mount(mount_id) or os.path.join(assets_root, mount_id)
-    new_mount = mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
+    prefix = arg("--prefix") or ("saddleup." if project == skinroots.MOUNTS_PROJECT else None)
+    if prefix and not prefix.endswith("."):
+        prefix += "."
+    if mount and mount.lower() == "donkey":
+        mount = None  # the game's own mount: the default
+    mount_dir = skinroots.find_mount(mount) if mount else None
+    new_mount = bool(mount) and mount_dir is None  # a folder without mount.cfg adds skins to another mod's mount
+    if not mount:
+        mount_id = "donkey"
+        mount_dir = os.path.join(assets_root, "donkey")  # the game's mount: this mod's folder of it holds skins only
+    elif mount_dir is not None:
+        mount_id = os.path.basename(mount_dir)
+        if os.path.normcase(os.path.dirname(mount_dir)) != os.path.normcase(assets_root):
+            mount_dir = os.path.join(assets_root, mount_id)  # another project's mount: a folder of this mod's without mount.cfg
+    else:
+        # a new mount: "<mod>.<name>" (Catalog.CheckId refuses a plain id)
+        if prefix is None and "." not in mount:
+            print("a new mount of src/" + project + " needs its mod's prefix: --prefix <mod>. (Saddle Up's are saddleup.<name>)"); return 2
+        mount_id = mount if "." in mount else prefix + mount
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*\.[a-z0-9][a-z0-9-]*", mount_id):
+            print("a mount id is <mod>.<name>, lower case letters, digits and dashes:", mount_id); return 2
+        mount_dir = os.path.join(assets_root, mount_id)
+    if new_mount:
+        if ids and ids[0] != "default":
+            print(f"a new mount's own look is its skins\\default\\ (the one a new {mount_id} wears): leave '{ids[0]}' out, and add more skins with --mount {mount_id} once it exists"); return 2
+        sid = "default"
+    else:
+        if not ids:
+            print(__doc__); return 2
+        sid = ids[0]
+        if sid == "default":
+            print("default is a mount's own look, made with its mount.cfg" + (" (the donkey's is the game's art)" if mount_id == "donkey" else f" ({mount_id} has one)") + ": give the skin a name of its own"); return 2
+    # a skin added to a mount another mod owns (a mount folder without mount.cfg: every donkey skin) is "<mod>.<name>"
+    # (Looks.AddsToOthers; docs/skins.md); on the mod's own mount any name
+    added = not new_mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
+    if added:
+        if "." not in sid:
+            if prefix is None:
+                print(f"a skin added to a mount another mod owns ({mount_id}) is named <mod>.<name>: --prefix <mod>. (Saddle Up's are saddleup.<name>)"); return 2
+            sid = prefix + sid
+        if not re.fullmatch(r"[a-z0-9][a-z0-9_-]*\.[a-z0-9][a-z0-9-]*", sid):
+            print(f"a skin added to a mount another mod owns ({mount_id}) is named <mod>.<name>, lower case letters, digits and dashes:", sid); return 2
+    elif not re.fullmatch(r"[a-z0-9][a-z0-9-]*", sid):
+        print("the skin's name is letters, digits and dashes, lower case:", sid); return 2
+    canvas = int(arg("--canvas", "96"))
+    seat = int(arg("--seat", str(52 + (canvas - 96) // 2)))
+    short = skinroots.short_name(mount_id)
+    name = arg("--name") or (short if new_mount else skinroots.short_name(sid)).replace("-", " ").title()
+    full = mount_id + "/" + sid  # the skin's full name (Looks.SkinKey)
     folder = os.path.join(mount_dir, "skins", sid)
-    gen_dir = os.path.join(HERE, sid)
+    gen_name = short if new_mount else skinroots.short_name(sid)  # the generator's folder under tools/skins/ (the name after a prefix)
+    gen_dir = os.path.join(HERE, gen_name)
     if os.path.exists(folder) or os.path.exists(gen_dir):
         print("exists already:", folder if os.path.exists(folder) else gen_dir); return 2
     os.makedirs(folder)
     os.makedirs(gen_dir)
     # (the mount's folder and mount.cfg, when new, are written below with the skin's cfg)
-    gen = f"make_{sid.replace('-', '_')}.py"
+    gen = f"make_{gen_name.replace('-', '_')}.py"
     # the cfg, in the canonical layout (tools/skins/canonical_cfg.py: [Skin], the colours, the mount block last)
-    lines = [f"# {name}: a {'skin drawn over the donkey' if over else 'mount of its own' if mount else 'skin of the donkey'} (docs/skins.md). Our own art, drawn by tools/skins/{sid}/{gen}.",
-             "[Skin]", "format = 1", f"id = {sid}", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "colours = own",
+    lines = [f"# {name}: {'a skin drawn over the donkey' if over else 'the own look of a mount of its own' if new_mount else 'a skin of ' + mount_id} (docs/skins.md). Our own art, drawn by tools/skins/{gen_name}/{gen}.",
+             "[Skin]", "format = 1", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "colours = own",
              f"layer = {'over' if over else 'replace'}"]
     if over:
         lines.append("erase = FF00FF       # over only: pixels of this colour clear the donkey there (the ears under horns)")
@@ -89,11 +146,12 @@ def main():
               "Dark = 141E14        # the placeholder's outline: replace with the hexes your pictures use (tools/skins/skin_colors.py writes the section from a colors.json block)"]
     if new_mount:
         mlines = [f"# A mount of {project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
-                  "[Mount]", f"id = {mount}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
-                  f"default_skin = {sid}", "author = dreas", "version = 0.1", "cart = true", "foals = true",
+                  "[Mount]", f"id = {mount_id}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
+                  "author = dreas", "version = 0.1", "cart = true", "foals = true",
                   "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)", "cargo = 6  # items its cart carries, 1 to 6",
                   "", "# The creature's sounds (docs/mount-sounds.md): files in sounds\\ next to this file, or the game's sound ids.",
                   "[Sounds]", "lips = none  # the donkey's own lip smack is not this creature's"]
+        os.makedirs(mount_dir, exist_ok=True)
         mcfg = os.path.join(mount_dir, "mount.cfg")
         with open(mcfg, "w", encoding="utf-8", newline="\r\n") as f:
             f.write("\n".join(mlines) + "\n")
@@ -112,12 +170,12 @@ def main():
     with open(cfg_path, "w", encoding="utf-8", newline="") as f:
         f.write(text)
     # the generator stub: a placeholder block per frame on the canvas, through the shared review pictures
-    stub = f'''"""{name}: the generator (docs/sprite-tools.md "Making a skin"). Draws every frame of the skin on the {canvas}x{canvas}
+    stub = f'''"""{name} ({full}): the generator (docs/sprite-tools.md "Making a skin"). Draws every frame of the skin on the {canvas}x{canvas}
 canvas (the donkey's frame sits centred; its back at row 41, feet on row 64 of the 96 canvas), writes a PNG per frame
 into src/{project}/assets/mounts/{mount_id}/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
 
-    python -I tools/skins/{sid}/{gen}            # the built-in's pictures + out\\\\
-    python -I tools/skins/{sid}/{gen} --no-assets  # out\\\\ only
+    python -I tools/skins/{gen_name}/{gen}            # the built-in's pictures + out\\\\
+    python -I tools/skins/{gen_name}/{gen} --no-assets  # out\\\\ only
 """
 import os, sys
 from PIL import Image, ImageDraw
@@ -170,7 +228,7 @@ if __name__ == "__main__":
     with open(os.path.join(gen_dir, ".gitignore"), "w", encoding="utf-8", newline="\n") as f:
         f.write("out/\n__pycache__/\n")
     # the Aseprite sidecar: the watcher exports a drawing into the built-in's folder as per-frame PNGs
-    with open(os.path.join(gen_dir, f"{sid}.gk2export.txt"), "w", encoding="utf-8", newline="\n") as f:
+    with open(os.path.join(gen_dir, f"{gen_name}.gk2export.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(f"pack = {folder}\ncolumns = 8\ncheck = python \"{os.path.join(HERE, 'check_skin.py')}\" \"{folder}\"\n")
     print("made:", folder, "and", gen_dir)
     # the placeholder pictures, then the scan
@@ -179,9 +237,9 @@ if __name__ == "__main__":
     print("scan:")
     r = subprocess.run(["dotnet", "run", "--project", os.path.join(REPO, "tests", "SkinsScan"), "-c", "Release"], capture_output=True, text=True, cwd=REPO)
     for line in (r.stdout + r.stderr).splitlines():
-        if sid in line or line.startswith(("ALL PASS", "FAILURES")):
+        if full in line or (new_mount and "mount " + mount_id + ":" in line) or line.startswith(("ALL PASS", "FAILURES")):
             print("  " + line)
-    print(f"Next: draw in tools/skins/{sid}/{gen} (or in Aseprite with the watcher), fill [Colors] (tools/skins/skin_colors.py),"
+    print(f"Next: draw in tools/skins/{gen_name}/{gen} (or in Aseprite with the watcher), fill [Colors] (tools/skins/skin_colors.py),"
           f" run the checks, build, and look in game. To remove it: delete {folder} and {gen_dir}" + (f" (and the new mount's {mount_dir})" if new_mount else "") + ".")
     return 0
 

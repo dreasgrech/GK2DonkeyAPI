@@ -6,9 +6,11 @@ using UnityEngine;
 namespace GK2DonkeyAPI.Api
 {
     // The skins the donkey can wear (docs/skins-design.md; docs/skins.md for pack authors): the game's own look
-    // ("donkey"), the built-in skins, every skin pack found on disk, and the skins mods register here. A donkey wears
-    // one through its instance tuning key "Skin" (handle.Tuning.Set(owner, "Skin", info.Id); "donkey" or "" is the
-    // game's own look), or through MountCompanion.Skin.
+    // ("donkey"), the built-in skins, every skin pack found on disk, and the skins mods register here. A skin is named
+    // within its mount: its Id is "<mount id>/<skin>" ("saddleup.dragon/default", "donkey/hellfire"), and every mount
+    // but the donkey has one skin called "default", its own look. A donkey wears one through its instance tuning key
+    // "Skin" (handle.Tuning.Set(owner, "Skin", info.Id); "donkey" or "" is the game's own look), or through
+    // MountCompanion.Skin.
     //
     // Registering: a skin is a picture per donkey frame (FrameKeys names the 44 frames: "bdy_walk_left_03", ...), 96x96
     // facing left with the donkey's anchor in the middle, or a bigger canvas with the same centre. Four ways:
@@ -18,7 +20,7 @@ namespace GK2DonkeyAPI.Api
     //     BepInEx/plugins are found by the API itself at start, so most mods need nothing here (docs/skins.md);
     //   - RegisterEmbedded: the same tree embedded in your DLL (EmbeddedResource with logical names
     //     "<prefix><mount>\mount.cfg", "<prefix><mount>\skins\<skin>\<file>", e.g.
-    //     "MyMod.mounts.rat\skins\grey-rat\bdy_walk_left_03.png");
+    //     "MyMod.mounts.me.rat\skins\default\bdy_walk_left_03.png");
     //   - Register: pictures from your own code (IMountSkinSource gives a Texture2D per frame key; the textures stay
     //     yours, the API never destroys them);
     //   - RegisterRecipe: a rule over the donkey's own frames (a function from the frame's pixels to new pixels), so the
@@ -52,7 +54,9 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // A skin by id (case doesn't matter), or null. "donkey" and "" give the game's own look.
+        // A skin by its full name ("saddleup.dragon/default"; case doesn't matter), or null. "donkey" and "" give the
+        // game's own look. A short name finds one when it is clear: a mount's id gives its default, a skin's own name
+        // the skin when only one mount has a skin of that name.
         public MountSkinInfo Find(string id)
         {
             if (string.IsNullOrWhiteSpace(id) || id.Trim().Equals(DonkeyId, StringComparison.OrdinalIgnoreCase))
@@ -90,7 +94,8 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // A skin from your own code. The id must be new (or yours already: then it replaces). Dispose to withdraw.
+        // A skin from your own code, a look of def.Mount named def.Id within it ("default" for your mount's own look).
+        // The name must be new for that mount (or yours already: then it replaces). Dispose to withdraw.
         public IDisposable Register(string ownerId, MountSkinDef def)
         {
             Owner(ownerId);
@@ -187,6 +192,8 @@ namespace GK2DonkeyAPI.Api
     // What a skin registered from code says about itself (the same as a pack's skin.cfg).
     public sealed class MountSkinDef
     {
+        // The skin's name within its mount ("default": the mount's own look, one per mount; "frost"), or its full
+        // name ("me.dragon/frost"). The registered skin's Id is "<Mount>/<name>".
         public string Id;
         public string Name;
         public string Author;
@@ -195,7 +202,7 @@ namespace GK2DonkeyAPI.Api
         public bool PaletteColours;
         // Drawn over the donkey (a saddle, a hat) instead of in its place.
         public bool Over;
-        // The mount this skin is a look of (Mounts.Catalog; "donkey" by default: a differently drawn donkey).
+        // The mount this skin is a look of (Mounts.Catalog: "<mod>.<name>"; "donkey" by default: a differently drawn donkey).
         public string Mount = MountCatalog.DonkeyId;
         // For information (the sprites carry their own size and pivot): the pictures' size and where the donkey's
         // anchor sits in them, from the bottom left.

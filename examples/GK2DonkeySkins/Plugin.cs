@@ -7,7 +7,9 @@ using UnityEngine;
 namespace GK2DonkeySkins
 {
     // Example mod: two skins for the donkey registered from code (docs/skins-design.md, docs/api.md "Skins").
-    //   - "sepia": a recipe, a rule over the donkey's own frames (the API builds it from the game's art when first worn);
+    //   - "example.sepia": a recipe, a rule over the donkey's own frames (the API builds it from the game's art when first
+    //     worn); a skin added to a mount another mod owns (every donkey skin: the donkey is the game's) is named
+    //     "<mod>.<name>", our prefix and its name, or the API refuses it (docs/skins.md);
     //   - "checker": pictures drawn by code (IMountSkinSource), a placeholder that shows how a source works.
     // A skin pack needs none of this: a gk2skins/<id>/ folder with skin.cfg and PNGs anywhere under BepInEx/plugins is
     // found by the API itself (docs/skins.md). Register in Awake, and dispose the handles to withdraw.
@@ -26,7 +28,7 @@ namespace GK2DonkeySkins
                 Logger.LogWarning("Skins example: GK2 Donkey API 0.30.0 or newer is needed.");
                 return;
             }
-            registered.Add(Mounts.Looks.RegisterRecipe(Guid, "sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
+            registered.Add(Mounts.Looks.RegisterRecipe(Guid, "example.sepia", "Sepia (example)", Sepia, author: "dreas", version: "0.1"));
             // A mount of our own (docs/mounts-design.md): the checker skin is a look of it. It can't pull the cart,
             // sits the rider two pixels higher than its skin's seat row (SeatAdjustPx nudges from the row the skin
             // declares, for every player; docs/seat-investigation.md), and carries one ability: it gallops (half again
@@ -34,7 +36,7 @@ namespace GK2DonkeySkins
             // an ability may not take; a mount that should burn declares effect = hellfire in its definition.)
             registered.Add(Mounts.Catalog.Register(Guid, new MountDef
             {
-                Id = "checker-beast",
+                Id = "example.checker-beast",  // a mount's id carries the mod's prefix (<mod>.<name>)
                 Name = "Checker Beast",
                 Author = "dreas",
                 Version = "0.1",
@@ -44,15 +46,15 @@ namespace GK2DonkeySkins
             }));
             registered.Add(Mounts.Looks.Register(Guid, new MountSkinDef
             {
-                Id = "checker",
+                Id = "default",              // the mount's own look: every mount has one "default" skin
                 Name = "Checker (example)",
                 Author = "dreas",
                 Version = "0.1",
-                Mount = "checker-beast",
+                Mount = "example.checker-beast",
                 SeatRow = 52,               // the rider's hip on row 52 of the 96 canvas (the donkey's own seat), for every player
                 Source = new CheckerSource(),
             }));
-            Logger.LogInfo("Skins example: 'sepia' and 'checker' registered (checker is a Checker Beast: no cart, gallops while ridden); pick them in Saddle Up's Mount section.");
+            Logger.LogInfo("Skins example: 'donkey/example.sepia' and 'example.checker-beast/default' registered (a Checker Beast: no cart, gallops while ridden); pick them in Saddle Up's Mount section.");
         }
 
         private void OnDestroy()
@@ -89,7 +91,7 @@ namespace GK2DonkeySkins
         }
 
         // An ability: the instance's speed raised while the keeper rides it and cleared after. Its values are set under
-        // Owner (given by the API: "<this mod>.ability.checker-beast"), which the API clears by itself when the instance
+        // Owner (given by the API: "<this mod>.ability.example.checker-beast"), which the API clears by itself when the instance
         // stops being this mount, so Detached needs nothing. A mount may set its speed (the player's Speed row greys on
         // it, Saddle Up's TuningKey); it may not set the player's Effect, Skin or colours: such a Set is refused and
         // said once in the log. The hooks run on the API's LateUpdate; nothing here allocates per frame.

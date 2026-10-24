@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
             bool allOwn = true;
             foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
             {
-                Catalog.Entry k = Catalog.Find(id);
+                Catalog.Entry k = Catalog.Find(M(id));
                 if (k == null) { said.Add(id + " not loaded"); continue; }
                 allOwn &= k.Speed.HasValue && Catalog.CargoOf(k) == Catalog.CargoMax;
                 said.Add($"{id} {k.Speed?.ToString("0.##") ?? "-"} {Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Ride), MountStyle.Ride)}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
@@ -64,9 +64,9 @@ namespace GK2DonkeyAPI
             Info("the next \"is the API's own line\" warning is this test's own: a mount's Speed stat line is left out");
             try
             {
-                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "speed-beast", Name = "Speed Beast", Speed = 2.5f, Cargo = 4,
+                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "selftest.speed-beast", Name = "Speed Beast", Speed = 2.5f, Cargo = 4,
                     TuningRide = new Dictionary<string, object> { ["SpeedMultiplier"] = 1.1f }, Stats = { new MountStat { Label = "Speed", Value = "a made-up line" }, new MountStat { Label = "Diet", Value = "keepers" } } });
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-speed", "speed-test", "[Skin]\nformat = 1\nid = speed-test\nname = Speed Test\nmount = speed-beast\n");
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-speed", "selftest.speed-test", "[Skin]\nformat = 1\nname = Speed Test\nmount = selftest.speed-beast\n");
                 Looks.RegisterFolder(tempRoot, owner);
             }
             catch (Exception e)
@@ -77,11 +77,11 @@ namespace GK2DonkeyAPI
             }
             try
             {
-                MountInfo info = Mounts.Catalog.Find("speed-beast");
+                MountInfo info = Mounts.Catalog.Find("selftest.speed-beast");
                 float wantCart = 2.5f * Catalog.CartFactor;
                 Check(info != null && Mathf.Approximately(info.Speed, 2.5f) && Mathf.Abs(info.CartSpeed - wantCart) < 0.001f && info.SpeedWord == "Fast" && info.Cargo == 4, $"MountInfo: {info?.Speed}, with the cart {info?.CartSpeed:0.###} (2.5 x {Catalog.CartFactor:0.###}), \"{info?.SpeedWord}\", cargo {info?.Cargo}");
                 Check(info != null && info.Stats.Count == 1 && info.Stats[0].Label == "Diet", $"its own \"Speed\" stat line is left out (the API writes that one): {info?.Stats.Count} line(s)");
-                MountsPanel.Entry entry = MountsPanel.Entries().Find(x => x.Id == "speed-beast");
+                MountsPanel.Entry entry = MountsPanel.Entries().Find(x => x.Id == "selftest.speed-beast");
                 Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
                 Check(entry != null && entry.Lines.Contains("Speed: Fast (2.5x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
                 MountsPanel.Entry donkeyEntry = MountsPanel.Entries().Find(x => x.Id == MountCatalog.DonkeyId);
@@ -113,9 +113,9 @@ namespace GK2DonkeyAPI
                     yield return Until(() => !Mounts.IsMounted, 5f);
                 }
 
-                plain.Tuning.Set(Owner, "Skin", "speed-test");
-                carted.Tuning.Set(Owner, "Skin", "speed-test");
-                yield return Until(() => plain.Mount == "speed-beast" && carted.Mount == "speed-beast" && plain.Tuning.IsSet("SpeedMultiplier") && carted.Tuning.IsSet("SpeedMultiplier"), 8f);
+                plain.Tuning.Set(Owner, "Skin", "selftest.speed-beast/selftest.speed-test");
+                carted.Tuning.Set(Owner, "Skin", "selftest.speed-beast/selftest.speed-test");
+                yield return Until(() => plain.Mount == "selftest.speed-beast" && carted.Mount == "selftest.speed-beast" && plain.Tuning.IsSet("SpeedMultiplier") && carted.Tuning.IsSet("SpeedMultiplier"), 8f);
                 Check(waited && plain.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner, $"worn: the mount's speed is on the wearer, owned by the skin system ({plain.Tuning.SetBy("SpeedMultiplier")})");
                 Check(Math.Abs(plain.Tuning.Get<float>("SpeedMultiplier") - 2.5f) < 0.001f, $"Speed wins over a SpeedMultiplier in its tuning ({plain.Tuning.Get<float>("SpeedMultiplier")}, not 1.1)");
 
@@ -144,7 +144,7 @@ namespace GK2DonkeyAPI
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (plain != null && plain.Exists) plain.Remove(); } catch { }
                 try { if (carted != null && carted.Exists) carted.Remove(); } catch { }
-                Looks.Unregister("speed-test", owner);
+                Looks.Unregister("selftest.speed-beast/selftest.speed-test", owner);
                 reg?.Dispose();
                 try { if (tempRoot != null) System.IO.Directory.Delete(tempRoot, true); } catch { }
             }

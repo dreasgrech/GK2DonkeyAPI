@@ -10,7 +10,7 @@ file says how each one is set and built.
 |---|---|---|
 | `Api/` (+ `Tuned.cs`) | 760 | The public API other mods call ([`docs/api.md`](api.md)). |
 | the files at the top | 6,400 | The mount itself: `Mount.cs` (spawning, following, the cart on slopes, dismount rules), `Cargo.cs`, `CargoLayout.cs` and `HeadReroute.cs` (the cart as the keeper's hands), `Lantern.cs` and `LampHang.cs`, `MountSounds.cs`, `RiderLeg.cs`, `Patches.cs`, `Plugin.cs` (settings, the game-update guard), `Defaults.cs` (the mod defaults). |
-| `assets/` | (data) | The lantern's mesh (`lantern-*.bin`) and the self-tests' embedded pack `testmounts/donkey/skins/embedded-sound-test/` (embedded as `GK2DonkeyAPI.testmounts.`). The API ships no mounts or skins: Saddle Up's are in `src/SaddleUp/assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/<skin>/`; docs/skins.md). |
+| `assets/` | (data) | The lantern's mesh (`lantern-*.bin`) and the self-tests' embedded pack `testmounts/donkey/skins/selftest.embedded-sound-test/` (embedded as `GK2DonkeyAPI.testmounts.`). The API ships no mounts or skins: Saddle Up's are in `src/SaddleUp/assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/<skin>/`; docs/skins.md). |
 | `Dev/` | 11,800 | The dev panel (`TuningWindow.cs`) and the investigation tools behind it: probes, dumps, the cargo photo sheet. They're in the same DLL, but only reachable with `Debug.TuningWindow = true`. |
 
 A mod built on the API needs none of this code itself; Saddle Up is about 160 lines.
@@ -262,7 +262,7 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Skin` | (empty) | The skin by id (`grey-rat`, `garden-snail`, `earth-worm`, `red-dragon`, `gerry`, `hellfire`, `royal-parade`; the mount is the skin's; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
+| `Skin` | (empty) | The skin by its full name, `<mount id>/<skin>` (`saddleup.rat/default`, `saddleup.snail/default`, `saddleup.worm/default`, `saddleup.dragon/default`, `saddleup.gerry/default`, `donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`; a clear short name such as a mount's id finds its default too, `hellfire` the donkey's); the mount is the skin's; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
 **A mount's sounds.** A mount's and a skin's own sounds live in the `[Sounds]` of its `mount.cfg` and its `skin.cfg`
 ([`docs/mount-sounds.md`](mount-sounds.md)); the keys above are the base they sit on. The donkey's own sounds (the

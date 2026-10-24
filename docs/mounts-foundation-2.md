@@ -1,5 +1,12 @@
 # Mounts and skins from many hands: the foundation, second look (2026-10-20, night)
 
+**Amended 2026-10-24:** the packs are sorted by mount (`gk2mounts\<mount>\` with `mount.cfg`, its skins under
+`skins\`), and three id rules hold: a mount's id is `<mod>.<name>` (`saddleup.dragon`; only the game's `donkey` is
+plain; one without a dot is refused); a skin is named within its mount, full name `<mount id>/<skin>`
+(`saddleup.dragon/default`); every mount but the donkey has exactly one default look, its `skins\default\`. The
+`gk2skins` folders, `[Mount]` blocks in skin.cfg and the author-prefix Info below are history; docs/skins.md and
+docs/mount-id-collisions.md are current.
+
 The user, after the five mounts moved into Saddle Up and the API took a mount from any mod's DLL: *"any side effects or
 issues this can cause in the future once we start adding mounts and skins, all with different abilities and speed
 values and everything customized?"*, then *"lets investigate this properly so our foundation is solid"*, and: the

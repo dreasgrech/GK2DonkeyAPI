@@ -43,7 +43,6 @@ namespace GK2DonkeyAPI
             internal MountAbility[] Abilities = Array.Empty<MountAbility>();
             internal string AbilityOwner;               // the owner the abilities' values are set under ("<owner>.ability.<id>"); cleared when the mount leaves an instance
             internal Looks.MountPack Pack;               // a pack mount: its folder (mount.cfg, sounds\, the portrait); null: a code mount or the donkey
-            internal string DefaultSkin;                // mount.cfg default_skin: the look a new instance of it wears (Looks.DefaultSkinOf)
 
             internal string Label => string.IsNullOrEmpty(Name) ? Id : Name;
         }
@@ -138,6 +137,21 @@ namespace GK2DonkeyAPI
 
         internal static Entry Find(string id) => !string.IsNullOrEmpty(id) && defs.TryGetValue(id.Trim(), out Entry d) ? d : null;
 
+        // A mount by the name after its prefix ("dragon" -> saddleup.dragon) when exactly one mount has it: what a dev's
+        // own cfg and saves held before the prefixes (2026-10-24). Null when none or several.
+        internal static Entry FindShort(string name)
+        {
+            if (string.IsNullOrEmpty(name) || name.IndexOf('.') >= 0) return null;
+            Entry only = null;
+            foreach (Entry e in defs.Values)
+            {
+                if (!e.Id.EndsWith("." + name, StringComparison.OrdinalIgnoreCase)) continue;
+                if (only != null) return null;
+                only = e;
+            }
+            return only;
+        }
+
         private static void CheckId(string id)
         {
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("A mount needs an id.");
@@ -145,6 +159,11 @@ namespace GK2DonkeyAPI
             {
                 if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Mount id '{id}': letters, digits, dots, dashes and underscores only.");
             }
+            // a mount's id carries its mod's prefix, "<mod>.<name>" (saddleup.dragon, acme.dragon): two mods' dragons are
+            // two mounts, and a saved one never turns into another mod's (docs/mount-id-collisions.md; the user,
+            // 2026-10-24). Only the game's own donkey is plain.
+            int dot = id.IndexOf('.');
+            if (!id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && (dot <= 0 || dot == id.Length - 1)) throw new ArgumentException($"Mount id '{id}': a mount's id is '<mod>.<name>', your mod's prefix and the mount's name (Saddle Up's dragon is saddleup.dragon; docs/making-a-mount.md).");
         }
 
         // Code: the same owner replaces (its instances re-apply), another owner is refused; the donkey mount is the API's.
@@ -187,7 +206,7 @@ namespace GK2DonkeyAPI
             }
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.DefaultSkin != null ? ", default look " + d.DefaultSkin : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
             return d;
         }
 
@@ -202,7 +221,7 @@ namespace GK2DonkeyAPI
         private static bool Same(Entry a, Entry b)
         {
             return a.Cart == b.Cart && a.Foals == b.Foals && a.Flies == b.Flies && a.Jumps == b.Jumps && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
-                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && a.DefaultSkin == b.DefaultSkin && SameStats(a.Stats, b.Stats)
+                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart)
                 && SameDict(a.Sounds, b.Sounds) && SameDict(a.SoundsRide, b.SoundsRide) && SameDict(a.SoundsCart, b.SoundsCart) && SameDict(a.SoundsBaby, b.SoundsBaby);
         }
@@ -263,7 +282,6 @@ namespace GK2DonkeyAPI
             into.Noun = from.Noun;
             into.Description = from.Description;
             into.Portrait = from.Portrait;
-            into.DefaultSkin = from.DefaultSkin;
             into.Stats = from.Stats ?? new List<KeyValuePair<string, string>>();
             into.Author = from.Author;
             into.Version = from.Version;

@@ -214,10 +214,10 @@ namespace GK2DonkeyAPI
                 else Info("no foal could be spawned here: the foal's scaling not seen");
 
                 // 5. the snail on a standing wearer: silent by its [Mount.Sounds] and by the rule (the donkey's own sounds are not another mount's), through the bind in the rig
-                if (Mounts.Looks.Find("garden-snail") != null)
+                if (Mounts.Looks.Find(Sk("snail")) != null)
                 {
-                    standing.Tuning.Set(Owner, "Skin", "garden-snail");
-                    yield return Until(() => standing.Mount == "snail", 8f);
+                    standing.Tuning.Set(Owner, "Skin", Sk("snail"));
+                    yield return Until(() => standing.Mount == M("snail"), 8f);
                     yield return Frames(2);
                     sr.Invalidate();
                     SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
@@ -226,7 +226,7 @@ namespace GK2DonkeyAPI
                         $"a standing snail: silent by its [Mount.Sounds] and the rule (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
                     Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
                     standing.Tuning.Set(Owner, "Skin", "");
-                    yield return Until(() => standing.Mount == "donkey", 8f);
+                    yield return Until(() => standing.Mount == MountCatalog.DonkeyId, 8f);
                 }
                 else Info("the snail skin is not installed: the mount pins on a standing wearer not seen");
             }
@@ -255,13 +255,13 @@ namespace GK2DonkeyAPI
             bool soundsWas = Plugin.For(MountStyle.Ride).SoundsOn.Value;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundpack", "sounds-test",
-                    "# a test pack\n[Skin]\nformat = 1\nid = sounds-test\nname = Sounds Test\nmount = sounds-beast\n\n" +
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundpack", Looks.DefaultSkinName,
+                    "# a test pack\n[Skin]\nformat = 1\nname = Sounds Test\nmount = selftest.sounds-beast\n\n" +
                     "[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav\nvoice.volume = 0.5\nstep.grass = step_grass\nlips = none\nbogus = x.wav\n\n" +
                     "[Sounds.Cart]\nvoice = voice_cart.wav\n\n" +
-                    "[Mount]\nid = sounds-beast\nname = Sounds Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n" +
+                    "[Mount]\nid = selftest.sounds-beast\nname = Sounds Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n" +
                     "[Mount.Sounds]\nvoice = mount_voice.wav\nbell.volume = 0.25\nhitch = voice_1.wav\n");
-                packDir = TempSkinDir(tempRoot, "sounds-beast", "sounds-test");
+                packDir = TempSkinDir(tempRoot, "selftest.sounds-beast", Looks.DefaultSkinName);
                 string sdir = Path.Combine(packDir, "sounds");
                 Directory.CreateDirectory(sdir);
                 File.WriteAllBytes(Path.Combine(sdir, "voice_1.wav"), SoundBank.TestTone(0.3f, 440f));
@@ -269,24 +269,24 @@ namespace GK2DonkeyAPI
                 File.WriteAllBytes(Path.Combine(sdir, "voice_cart.wav"), SoundBank.TestTone(0.3f, 330f));
                 // the mount's files: the mount folder's own sounds\ (a line's, and one by its name); voice_1.wav is the
                 // skin's only, so the mount's hitch line naming it finds no file there
-                string mdir = Path.Combine(TempMountDir(tempRoot, "sounds-beast"), "sounds");
+                string mdir = Path.Combine(TempMountDir(tempRoot, "selftest.sounds-beast"), "sounds");
                 Directory.CreateDirectory(mdir);
                 File.WriteAllBytes(Path.Combine(mdir, "mount_voice.wav"), SoundBank.TestTone(0.3f, 220f));
                 File.WriteAllBytes(Path.Combine(mdir, "stop_1.wav"), SoundBank.TestTone(0.3f, 260f));
                 File.WriteAllBytes(Path.Combine(sdir, "graze_1.wav"), SoundBank.TestTone(0.6f, 180f)); // the convention: no cfg line
-                string pack2 = TempSkinDir(tempRoot, "sounds-beast", "sounds-test-2");
+                string pack2 = TempSkinDir(tempRoot, "selftest.sounds-beast", "sounds-test-2");
                 Directory.CreateDirectory(pack2);
                 File.Copy(Path.Combine(packDir, "bdy_static_left.png"), Path.Combine(pack2, "bdy_static_left.png"));
-                File.WriteAllText(Path.Combine(pack2, "skin.cfg"), "[Skin]\nformat = 1\nid = sounds-test-2\nname = Sounds Test Two\nmount = sounds-beast\n");
+                File.WriteAllText(Path.Combine(pack2, "skin.cfg"), "[Skin]\nformat = 1\nname = Sounds Test Two\nmount = selftest.sounds-beast\n");
             }
             catch (Exception e) { Warn("the temp packs could not be written: " + e.Message); yield break; }
             try
             {
                 int n = Looks.RegisterFolder(tempRoot, owner);
                 Check(n == 2, $"two packs found ({n})");
-                Looks.SkinDef def = Looks.Find("sounds-test");
+                Looks.SkinDef def = Looks.Find("selftest.sounds-beast/default");
                 Check(def != null && def.Report.Contains("sound line(s)") && def.Report.Contains("no sound event 'bogus'"), "the loader counts the sound lines and names the bogus event: " + (def?.Report ?? "-"));
-                Catalog.Entry beast = Catalog.Find("sounds-beast");
+                Catalog.Entry beast = Catalog.Find("selftest.sounds-beast");
                 Check(def != null && def.FileNames.Contains("sounds/voice_1.wav") && !def.FileNames.Contains("sounds/mount_voice.wav") && beast?.Pack != null && beast.Pack.FileNames.Contains("sounds/mount_voice.wav") && beast.Pack.FileNames.Contains("sounds/stop_1.wav"),
                     "the files: the skin's sounds\\ its own, the mount folder's sounds\\ the mount's");
                 Check(beast?.Pack != null && beast.Pack.Report.Contains("[Sounds] hitch: the pack has no sounds\\voice_1.wav"), "a mount.cfg line reads the mount folder's sounds\\ only: hitch = voice_1.wav (a file of the skin's) is named and left out: " + beast?.Pack?.Report);
@@ -294,8 +294,8 @@ namespace GK2DonkeyAPI
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null || def == null) { Fail("could not spawn, or the pack is missing"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
-                h.Tuning.Set(Owner, "Skin", "sounds-test");
-                yield return Until(() => h.Mount == "sounds-beast", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.sounds-beast/default");
+                yield return Until(() => h.Mount == "selftest.sounds-beast", 8f);
                 Check(waited, "the donkey wears the pack's skin and is its mount");
                 Sounds.Rig rig = h.I.SoundsRig;
                 rig.Invalidate();
@@ -319,7 +319,7 @@ namespace GK2DonkeyAPI
                 SoundSpec sgr = rig.Resolve("graze");
                 Check(sgr != null && sgr.Layer == "skin" && sgr.BankId != null && sgr.BankId.EndsWith("sounds:graze", StringComparison.Ordinal), $"graze_1.wav by convention, no cfg line ({sgr?.Describe()})");
                 SoundSpec st0 = rig.Resolve("stop"), hi0 = rig.Resolve("hitch");
-                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith(".mount-sounds-beast.sounds:stop", StringComparison.Ordinal), $"the mount folder's stop_1.wav by the name rule: the mount's stop ({st0?.Describe()})");
+                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith(".mount-selftest.sounds-beast.sounds:stop", StringComparison.Ordinal), $"the mount folder's stop_1.wav by the name rule: the mount's stop ({st0?.Describe()})");
                 Check(hi0 != null && hi0.Layer == "base", $"the mount's hitch line with no file in its sounds\\ falls through to the base ({hi0?.Describe()})");
                 SoundSpec sb = rig.Resolve("bell");
                 float bellVol = Plugin.For(MountStyle.Ride).BellVolume.Value;
@@ -340,8 +340,8 @@ namespace GK2DonkeyAPI
                 if (hc != null)
                 {
                     yield return Until(() => hc.IsReady, 6f);
-                    hc.Tuning.Set(Owner, "Skin", "sounds-test");
-                    yield return Until(() => hc.Mount == "sounds-beast", 8f);
+                    hc.Tuning.Set(Owner, "Skin", "selftest.sounds-beast/default");
+                    yield return Until(() => hc.Mount == "selftest.sounds-beast", 8f);
                     hc.I.SoundsRig.Invalidate();
                     SoundSpec vc = hc.I.SoundsRig.Resolve("voice");
                     Check(vc != null && vc.Layer == "skin" && vc.BankId != null && vc.BankId.EndsWith("sounds.cart:voice", StringComparison.Ordinal), $"with the cart: [Sounds.Cart] voice wins ({vc?.Describe()})");
@@ -350,11 +350,11 @@ namespace GK2DonkeyAPI
                 }
 
                 // a second skin of the mount, no [Sounds]: the mount's voice, its file from the declaring skin's folder
-                h.Tuning.Set(Owner, "Skin", "sounds-test-2");
-                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "sounds-test-2", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.sounds-beast/sounds-test-2");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "selftest.sounds-beast/sounds-test-2", 8f);
                 rig.Invalidate();
                 SoundSpec v2 = rig.Resolve("voice");
-                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith(".mount-sounds-beast.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
+                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith(".mount-selftest.sounds-beast.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
                 string mountVoiceId = v2?.BankId;
                 yield return Until(() => SoundBank.StateOf(mountVoiceId) == SoundBank.State.Ready, 6f);
                 Check(waited, "the mount's file loaded (from the mount folder's sounds\\)");
@@ -364,31 +364,31 @@ namespace GK2DonkeyAPI
                 SoundSpec l2 = rig.Resolve("lips"), g2 = rig.Resolve("graze"), m2 = rig.Resolve("mount"), sd2 = rig.Resolve("step", "dirt"), b2 = rig.Resolve("bell");
                 Check(l2 != null && l2.Silent && g2 != null && g2.Silent && m2 != null && m2.Silent, $"a mount with no line for them: lips, graze and the getting-on snort are silent (the donkey's own; lips {l2?.Describe()})");
                 Check(sd2 != null && !sd2.Silent && sd2.Layer == "base" && b2 != null && !b2.Silent, $"... while the step by the ground and the bell stay the donkey's ({sd2?.Describe()}; {b2?.Describe()})");
-                var cover = Sounds.Coverage(Looks.Find("sounds-test-2"), Catalog.Find("sounds-beast"));
+                var cover = Sounds.Coverage(Looks.Find("selftest.sounds-beast/sounds-test-2"), Catalog.Find("selftest.sounds-beast"));
                 var missing = new List<string>();
                 string voiceFrom = "-";
                 foreach (var c in cover) { if (c.From == "missing") missing.Add(c.Event); if (c.Event == "voice") voiceFrom = c.From; }
                 Check(voiceFrom == "mount" && missing.Contains("lips") && missing.Contains("graze") && missing.Contains("mount") && missing.Contains("dismount") && missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("step"),
                     $"the coverage report: voice from the mount; missing: {string.Join(", ", missing)}");
-                Info(Sounds.CoverageLine(Looks.Find("sounds-test-2")));
+                Info(Sounds.CoverageLine(Looks.Find("selftest.sounds-beast/sounds-test-2")));
 
                 // the save round trip keeps the sound sections with their lines and comment
                 string err = Looks.SaveCfg(def) ?? Looks.SaveMountCfg(beast);
                 string text = File.ReadAllText(Path.Combine(packDir, "skin.cfg")).Replace("\r\n", "\n");
-                string mtext = File.ReadAllText(TempMountCfg(tempRoot, "sounds-beast")).Replace("\r\n", "\n");
+                string mtext = File.ReadAllText(TempMountCfg(tempRoot, "selftest.sounds-beast")).Replace("\r\n", "\n");
                 Check(err == null && text.Contains("[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav") && text.Contains("voice.volume = 0.5") && text.Contains("[Sounds.Cart]\nvoice = voice_cart.wav") && text.IndexOf("[Mount", StringComparison.Ordinal) < 0
                     && mtext.Contains("[Sounds]\nvoice = mount_voice.wav") && mtext.Contains("bell.volume = 0.25") && mtext.IndexOf("[Sounds]") > mtext.IndexOf("[Mount]"),
                     "saved: the skin's [Sounds] and [Sounds.Cart] in skin.cfg, the mount's [Sounds] in mount.cfg, with their lines and comment" + (err != null ? " (" + err + ")" : ""));
 
                 // a changed file: the pack read again (the dev auto-reload does this by itself), the bank's entry
                 // forgotten and the new file decoded on the next play
-                h.Tuning.Set(Owner, "Skin", "sounds-test");
-                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "sounds-test", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.sounds-beast/default");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "selftest.sounds-beast/default", 8f);
                 File.WriteAllBytes(Path.Combine(packDir, "sounds", "voice_1.wav"), SoundBank.TestTone(0.5f, 440f));
                 File.WriteAllBytes(Path.Combine(packDir, "sounds", "voice_2.wav"), SoundBank.TestTone(0.5f, 520f));
                 string reloadErr = Looks.ReloadCfg(def);
                 Check(reloadErr == null && SoundBank.Find(voiceId) == null, "read again after a file changed: the bank's entry is forgotten" + (reloadErr != null ? " (" + reloadErr + ")" : ""));
-                def = Looks.Find("sounds-test");
+                def = Looks.Find("selftest.sounds-beast/default");
                 rig.Invalidate();
                 SoundSpec v3 = rig.Resolve("voice");
                 yield return Until(() => v3 != null && SoundBank.StateOf(v3.BankId) == SoundBank.State.Ready, 6f);
@@ -396,7 +396,7 @@ namespace GK2DonkeyAPI
                 Check(waited && ve3 != null && ve3.Clips.Length == 2 && Mathf.Abs(ve3.Clips[0].length - 0.5f) < 0.03f, $"... and the new files play ({(ve3 != null && ve3.Clips.Length > 0 ? ve3.Clips[0].length.ToString("0.00") : "-")} s now, 0.30 before)");
 
                 // the clean-up: the skins withdrawn, the bank's entries gone
-                Check(Looks.Unregister("sounds-test-2", owner) && Looks.Unregister("sounds-test", owner), "both skins withdrawn");
+                Check(Looks.Unregister("selftest.sounds-beast/sounds-test-2", owner) && Looks.Unregister("selftest.sounds-beast/default", owner), "both skins withdrawn");
                 yield return null;
                 Check(SoundBank.Count == bankBefore && SoundBank.Find(voiceId) == null, $"the bank's entries are gone ({SoundBank.Count}, {bankBefore} before)");
             }
@@ -404,8 +404,8 @@ namespace GK2DonkeyAPI
             {
                 Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
                 try { if (hc != null && hc.Exists) hc.Remove(); } catch { }
-                try { Looks.Unregister("sounds-test-2", owner); } catch { }
-                LeftOver(owner, "sounds-test", tempRoot);
+                try { Looks.Unregister("selftest.sounds-beast/sounds-test-2", owner); } catch { }
+                LeftOver(owner, "selftest.sounds-beast/default", tempRoot);
             }
         }
 
@@ -483,15 +483,15 @@ namespace GK2DonkeyAPI
                 // a code mount with its own sounds, a pack skin joining it
                 try
                 {
-                    mountReg = Mounts.Catalog.Register(modOwner, new MountDef { Id = "sound-code-beast", Name = "Sound Code Beast", Sounds = new Dictionary<string, MountSound> { ["voice"] = MountSound.Game("donkey_bell"), ["lips"] = MountSound.None } });
-                    tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundapi", "soundapi-test", "[Skin]\nformat = 1\nid = soundapi-test\nname = Sound API Test\nmount = sound-code-beast\n");
+                    mountReg = Mounts.Catalog.Register(modOwner, new MountDef { Id = "selftest.sound-code-beast", Name = "Sound Code Beast", Sounds = new Dictionary<string, MountSound> { ["voice"] = MountSound.Game("donkey_bell"), ["lips"] = MountSound.None } });
+                    tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundapi", "selftest.soundapi-test", "[Skin]\nformat = 1\nname = Sound API Test\nmount = selftest.sound-code-beast\n");
                 }
                 catch (Exception e) { Warn("the code mount or the temp pack could not be made: " + e.Message); yield break; }
-                MountInfo info = Mounts.Catalog.Find("sound-code-beast");
+                MountInfo info = Mounts.Catalog.Find("selftest.sound-code-beast");
                 Check(info != null && info.Sounds != null && info.Sounds["voice"] is MountSound, "MountInfo carries the code mount's sounds");
                 Looks.RegisterFolder(tempRoot, modOwner);
-                h.Tuning.Set(Owner, "Skin", "soundapi-test");
-                yield return Until(() => h.Mount == "sound-code-beast", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.sound-code-beast/selftest.soundapi-test");
+                yield return Until(() => h.Mount == "selftest.sound-code-beast", 8f);
                 h.I.SoundsRig.Invalidate();
                 r = Mounts.Sounds.Resolved(h, "voice", out layer);
                 Check(waited && r != null && layer == "mount" && r.GameId == "donkey_bell", $"the pack skin of the code mount: voice from the mount's MountSound ({r?.GameId}, {layer})");
@@ -504,7 +504,7 @@ namespace GK2DonkeyAPI
             {
                 Mounts.Sounds.Played -= onPlayed;
                 try { set?.Dispose(); } catch { }
-                try { Looks.Unregister("soundapi-test", modOwner); } catch { }
+                try { Looks.Unregister("selftest.sound-code-beast/selftest.soundapi-test", modOwner); } catch { }
                 try { mountReg?.Dispose(); } catch { }
                 try { if (tempRoot != null && Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true); } catch { }
                 try { if (own != null) UnityEngine.Object.Destroy(own); } catch { }
@@ -524,15 +524,15 @@ namespace GK2DonkeyAPI
             try
             {
                 int n = Looks.RegisterEmbedded(typeof(Plugin).Assembly, "GK2DonkeyAPI.testmounts.", owner);
-                Looks.SkinDef def = Looks.Find("embedded-sound-test");
+                Looks.SkinDef def = Looks.Find("donkey/selftest.embedded-sound-test");
                 Check(n == 1 && def != null && def.FileNames.Contains("sounds/voice_1.ogg") && def.FileNames.Contains("sounds/step_1.wav"),
                     $"the API's embedded test pack registers with its two sound files ({n} pack(s); {(def != null ? string.Join(", ", def.FileNames) : "-")})");
                 if (def == null) yield break;
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null) { Fail("could not spawn"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
-                h.Tuning.Set(Owner, "Skin", "embedded-sound-test");
-                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "embedded-sound-test", 8f);
+                h.Tuning.Set(Owner, "Skin", "donkey/selftest.embedded-sound-test");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "donkey/selftest.embedded-sound-test", 8f);
                 Sounds.Rig rig = h.I.SoundsRig;
                 rig.Invalidate();
                 SoundSpec st = rig.Resolve("step");
@@ -545,7 +545,7 @@ namespace GK2DonkeyAPI
                 yield return Until(() => SoundBank.StateOf(vid) == SoundBank.State.Ready, 8f);
                 SoundBank.Entry ve = SoundBank.Find(vid);
                 Check(waited && ve != null && ve.Clips.Length == 1 && Mathf.Abs(ve.Clips[0].length - 0.4f) < 0.05f, $"... decoded through the cache file: a 0.4 s clip ({(ve != null && ve.Clips.Length > 0 ? ve.Clips[0].length.ToString("0.00") : "-")})");
-                string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", owner, "embedded-sound-test", "voice_1.ogg");
+                string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", owner, "donkey_selftest.embedded-sound-test", "voice_1.ogg");
                 Check(File.Exists(cache), "the cache file exists: " + cache);
                 rig.Invalidate();
                 SoundHandler hv = rig.Emit("voice");
@@ -566,7 +566,7 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                try { Looks.Unregister("embedded-sound-test", owner); } catch { }
+                try { Looks.Unregister("donkey/selftest.embedded-sound-test", owner); } catch { }
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
             }
         }
@@ -576,17 +576,18 @@ namespace GK2DonkeyAPI
         // a jump's own two; a jump plays none of the flight's.
         // The built-in dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as
         // files ... a solid foundation"; the mount folders the same day): its flight's files are the mount's, in Saddle
-        // Up's embedded mounts\dragon\sounds\, for every skin of the dragon; the red dragon skin has none of its own.
+        // Up's embedded mounts\saddleup.dragon\sounds\, for every skin of the dragon; its own look (skins\default\)
+        // has none of its own.
         private static IEnumerator SoundsDragonFiles()
         {
             if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
-            Looks.SkinDef red = Looks.Find("red-dragon");
-            Catalog.Entry mount = Catalog.Find("dragon");
+            Looks.SkinDef red = Looks.Find(Sk("dragon"));
+            Catalog.Entry mount = Catalog.Find(M("dragon"));
             if (red == null || mount == null) { Skip("Saddle Up's dragon is not loaded"); yield break; }
             var events = new[] { "takeoff", "flap", "glide", "land" };
             int inMount = mount.Pack != null ? mount.Pack.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count : 0;
             int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
-            Check(inMount >= 12 && inSkin == 0 && mount.DefaultSkin == "red-dragon", $"the embedded mount folder: {inMount} sound file(s) in dragon\\sounds\\ (the mount's), {inSkin} in the red dragon's own; default look {mount.DefaultSkin}");
+            Check(inMount >= 12 && inSkin == 0 && Looks.DefaultSkinOf(mount) == "saddleup.dragon/default", $"the embedded mount folder: {inMount} sound file(s) in saddleup.dragon\\sounds\\ (the mount's), {inSkin} in its own look's (skins\\default\\); default look {Looks.DefaultSkinOf(mount)}");
             var skinLines = new List<string>();
             foreach (string e in events) if (Looks.SkinSoundBlock(red, Looks.SoundLayer.Both)?.Get(e, null) != null) skinLines.Add(e);
             Check(skinLines.Count == 0, "no flight sound is the red dragon skin's own line" + (skinLines.Count > 0 ? ": " + string.Join(", ", skinLines) : ""));
@@ -610,7 +611,7 @@ namespace GK2DonkeyAPI
             yield return Until(() => SoundBank.StateOf(id) == SoundBank.State.Ready, 8f);
             SoundBank.Entry te = SoundBank.Find(id);
             Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the embedded mount folder ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
-            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-dragon");
+            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-" + M("dragon"));
             Check(Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")), "their cache files sit under the mount's own name (" + cache + ")");
         }
 
@@ -623,10 +624,10 @@ namespace GK2DonkeyAPI
             string tempRoot;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flysounds", "flysound-test",
-                    "[Skin]\nformat = 1\nid = flysound-test\nname = Fly Sound Test\nmount = flysound-beast\n\n" +
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flysounds", Looks.DefaultSkinName,
+                    "[Skin]\nformat = 1\nname = Fly Sound Test\nmount = selftest.flysound-beast\n\n" +
                     "[Sounds]\ntakeoff = fishing_cast_swoosh\nflap = conveyor_furnace_bellows\nglide = tree_wind\nfly = weather_wind\nland = bush_chop\ntouchdown = oh_wood_drop\nlanded = item_put\njump = equip_tool\njumpland = oh_wood_container_drop\n\n" +
-                    "[Mount]\nid = flysound-beast\nname = Fly Sound Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+                    "[Mount]\nid = selftest.flysound-beast\nname = Fly Sound Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
             }
             catch (Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
             MountHandle h = null;
@@ -636,8 +637,8 @@ namespace GK2DonkeyAPI
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null) { Fail("could not spawn"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
-                h.Tuning.Set(Owner, "Skin", "flysound-test");
-                yield return Until(() => h.Mount == "flysound-beast", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.flysound-beast/default");
+                yield return Until(() => h.Mount == "selftest.flysound-beast", 8f);
                 MountResult r = h.Ride(showMessage: false);
                 if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
                 yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
@@ -683,7 +684,7 @@ namespace GK2DonkeyAPI
                 if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
-                Looks.Unregister("flysound-test", owner);
+                Looks.Unregister("selftest.flysound-beast/default", owner);
                 try { Directory.Delete(tempRoot, true); } catch { }
             }
         }
@@ -699,9 +700,9 @@ namespace GK2DonkeyAPI
             string tempRoot;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-herd", "herd-test",
-                    "[Skin]\nformat = 1\nid = herd-test\nname = Herd Test\nmount = herd-beast\n\n[Sounds]\nvoice = donkey_bell\nvoice.idle_every = 1\n\n[Sounds.Baby]\nanswer = fishing_blop\n\n" +
-                    "[Mount]\nid = herd-beast\nname = Herd Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n");
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-herd", Looks.DefaultSkinName,
+                    "[Skin]\nformat = 1\nname = Herd Test\nmount = selftest.herd-beast\n\n[Sounds]\nvoice = donkey_bell\nvoice.idle_every = 1\n\n[Sounds.Baby]\nanswer = fishing_blop\n\n" +
+                    "[Mount]\nid = selftest.herd-beast\nname = Herd Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n");
             }
             catch (Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
             MountHandle a = null, b = null, k1 = null, k2 = null;
@@ -714,15 +715,15 @@ namespace GK2DonkeyAPI
                 a = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (a == null) { Fail("could not spawn"); yield break; }
                 yield return Until(() => a.IsReady, 6f);
-                a.Tuning.Set(Owner, "Skin", "herd-test");
-                yield return Until(() => a.Mount == "herd-beast", 8f);
+                a.Tuning.Set(Owner, "Skin", "selftest.herd-beast/default");
+                yield return Until(() => a.Mount == "selftest.herd-beast", 8f);
                 k1 = Mounts.SpawnFoal(Owner, a);
                 k2 = Mounts.SpawnFoal(Owner, a);
                 yield return Until(() => k1 != null && k2 != null && k1.IsReady && k2.IsReady, 8f);
                 if (k1 == null || k2 == null) { Fail("no foals could be spawned here"); yield break; }
-                k1.Tuning.Set(Owner, "Skin", "herd-test");
-                k2.Tuning.Set(Owner, "Skin", "herd-test");
-                yield return Until(() => k1.Mount == "herd-beast" && k2.Mount == "herd-beast", 8f);
+                k1.Tuning.Set(Owner, "Skin", "selftest.herd-beast/default");
+                k2.Tuning.Set(Owner, "Skin", "selftest.herd-beast/default");
+                yield return Until(() => k1.Mount == "selftest.herd-beast" && k2.Mount == "selftest.herd-beast", 8f);
                 yield return Frames(3);
                 Sounds.Rig ra = a.I.SoundsRig, r1 = k1.I.SoundsRig, r2 = k2.I.SoundsRig;
                 ra.Invalidate(); r1.Invalidate(); r2.Invalidate();
@@ -757,8 +758,8 @@ namespace GK2DonkeyAPI
                 if (b != null)
                 {
                     yield return Until(() => b.IsReady, 6f);
-                    b.Tuning.Set(Owner, "Skin", "herd-test");
-                    yield return Until(() => b.Mount == "herd-beast", 8f);
+                    b.Tuning.Set(Owner, "Skin", "selftest.herd-beast/default");
+                    yield return Until(() => b.Mount == "selftest.herd-beast", 8f);
                     Sounds.TestResetHerd();
                     yield return Seconds(12f);
                     var calls = new List<float>();
@@ -807,7 +808,7 @@ namespace GK2DonkeyAPI
                 try { if (k2 != null && k2.Exists) k2.Remove(); } catch { }
                 try { if (b != null && b.Exists) b.Remove(); } catch { }
                 try { if (a != null && a.Exists) a.Remove(); } catch { }
-                LeftOver(owner, "herd-test", tempRoot);
+                LeftOver(owner, "selftest.herd-beast/default", tempRoot);
             }
         }
 

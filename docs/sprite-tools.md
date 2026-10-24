@@ -111,7 +111,7 @@ needs); **Pixelorama** if it should be free.
    Hellfire then starts from what you reviewed, not from scratch.
 3. You draw and move things by eye, with onion skin and the loop preview.
 4. Export into `BepInEx\plugins\gk2skins\<id>\` as one `sheet.png` (so reload always works; the folder is
-   `gk2mounts\<mount>\skins\<id>\` since 2026-10-24); in Aseprite I can make that one command or a button.
+   `gk2mounts\<mount>\skins\<skin>\` since 2026-10-24); in Aseprite I can make that one command or a button.
 5. In game: dev panel, "Reload from the file", look.
 6. I check what you exported before you look in game: sizes, feet and back rows, transparency, stray colours, no game
    pixels left in the overlay. That catches the mechanical errors, so your rounds are only about looks.
@@ -130,7 +130,7 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | The checker, the watcher, the .aseprite writer, the game-folder helper | `tools/skins/check_skin.py`, `watch_skin.py`, `ase_write.py`, `gamedir.py` (the game folder from Directory.Build.props) |
 | The donkey's 44 frames as the game places them | `BepInEx\GK2-asset-probe\donkey-frames\` (the asset probe writes them) |
 | Royal Parade: the generator, its measurements, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `contact.py`, `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
-| Royal Parade: the pack | `src/SaddleUp/assets/mounts/donkey/skins/royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), a built-in like Hellfire since 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24) |
+| Royal Parade: the pack | `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), a built-in like Hellfire since 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24) |
 
 ### Making a skin: the one pipeline (2026-10-19 23:00; the tools finished 2026-10-20, the plan's M6)
 
@@ -139,12 +139,13 @@ they will both be included", "once we set up this pipeline we can keep following
 other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatures and Gerry (a game character)
 are the worked examples; the next skin or mount is **scaffold, generate or draw, check, look, build, export**:
 
-1. **Scaffold**: `python -I tools/skins/new_skin.py <id> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
-   [--over] [--mod <project>]` makes `src/<project>/assets/mounts/<mount>/skins/<id>/skin.cfg` in the canonical
+1. **Scaffold**: `python -I tools/skins/new_skin.py <skin> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
+   [--over] [--mod <project>]` makes `src/<project>/assets/mounts/<mount>/skins/<skin>/skin.cfg` in the canonical
    layout (the mount is `donkey` without `--mount`; the project is `SaddleUp` by default, which ships every mount and
    skin, or a mount mod of its own that embeds and registers its packs as Saddle Up does; docs/mounts-as-mods.md)
    (`seat = <row>`, a `[Colors]` stub), and for a mount with no folder yet the mount folder and its `mount.cfg`
-   (`[Mount]` with `default_skin = <id>`, the speed and cargo, a `[Sounds]` stub),
+   (`[Mount]` with the speed and cargo, a `[Sounds]` stub; the mount id is `<mod>.<name>` and its own look the skin
+   `default`, so a new mount starts with `new_skin.py default --mount me.giant-crab`),
    `tools/skins/<id>/make_<id>.py` (a generator stub drawing a placeholder in every frame through the shared review
    module), the `.gk2export.txt` sidecar for Aseprite, runs the stub and the scan. Nothing else to set up.
 2. **Generate or draw.** The generator (`tools/skins/<id>/make_<id>.py`) reads the base's frames as the game places
@@ -160,7 +161,7 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    into `front\`), runs the checker and writes previews with the front layer and the rider (the round below). A
    hand-drawn skin's sidecar names the built-in's folder; a generated skin's (Royal Parade) names its `out\pack`, so
    the generator stays the source and carries the fix (its next run would overwrite the folder anyway).
-3. **The pack** is `src/<project>/assets/mounts/<mount>/skins/<id>/`, with the mount's `mount.cfg` and `sounds\` in
+3. **The pack** is `src/<project>/assets/mounts/<mount>/skins/<skin>/`, with the mount's `mount.cfg` and `sounds\` in
    `assets/mounts/<mount>/` (`tools/skins/skinroots.py` knows every such root, mount and skin): `skin.cfg` (by
    hand, commented, kept by the generator, in
    the layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base, `erase` when it
@@ -169,12 +170,12 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    `tools/skins/creatures/colors.json`: a block per skin, hue, saturation and value thresholds per region, Gerry's from
    the game's export), `seat = <row>` for the canvas row the rider's hip sits on (52 on the 96 canvas is the donkey's
    own seat; `+16` on 128), the skin's own geometry in `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (`HitchGapPx`,
-   `RiderOffsetPx`); no `[Mount]` section: a creature of its own has its `mount.cfg` with id, name, `default_skin`,
-   author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
+   `RiderOffsetPx`); no `id =` line (the folder's name is the skin's) and no `[Mount]` section: a creature of its own
+   has its `mount.cfg` with id, name, author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our
    pixels, nothing of the game's art. The DLL build embeds the folder (the project's csproj, `assets\mounts\**`:
    `SaddleUp.csproj` for the five mounts and the donkey's two skins); no file is copied into the game.
-4. **Check before the game**: `python -I tools/skins/check_skin.py src/<project>/assets/mounts/<mount>/skins/<id>` (frames and
+4. **Check before the game**: `python -I tools/skins/check_skin.py src/<project>/assets/mounts/<mount>/skins/<skin>` (frames and
    the front layer present and the canvas size, every colour with its region, the erase marks, lone pixels judged
    over what the game draws under them, half-transparent pixels; an exit code for the scans, the warnings for the
    eye), `python -I tools/skins/canonical_cfg.py --check` (the layout) and the headless scan `dotnet run --project
@@ -234,7 +235,7 @@ So a round is: draw, Ctrl+S, look at the game (or the GIFs). Nothing else to pre
 
 **Generated, no drawing (2026-10-19 18:10, the user: "automate as much as possible, I'm not a sprite designer"):**
 `tools/skins/royal-parade/make_royal.py` makes the whole skin from the donkey's own frames and writes a PNG per frame into the built-in
-pack `src/SaddleUp/assets/mounts/donkey/skins/royal-parade/` (`--no-assets` writes them to `out\pack` instead), plus `royal.aseprite` for a by-hand touch, `preview.png` (all
+pack `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (`--no-assets` writes them to `out\pack` instead), plus `royal.aseprite` for a by-hand touch, `preview.png` (all
 frames, 4x), `zoom.png` (six frames, 8x, the grid) and **`strips\<animation>.png`, every animation as a strip of
 its frames over the donkey: look at every strip before the game does.** The cloth is one shape measured on the
 standing frame (its width the back from the collar strap to the hip plus `FRONT`, its depth per column the back to

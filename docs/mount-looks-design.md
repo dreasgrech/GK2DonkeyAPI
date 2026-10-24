@@ -391,7 +391,7 @@ nothing of the donkey is assumed by the loader or the rig, sheet packs, and spri
 ## The dragon, Gerry and Royal Parade (built 2026-10-18 to 21)
 
 **Red Dragon** (`tools/skins/creatures/make_creatures.py`, `assets/skins/dragon/`; since 2026-10-24 the mount
-`assets/mounts/dragon/` with the skin `skins/red-dragon/`): the one mount on a bigger canvas
+`assets/mounts/saddleup.dragon/` with its look in `skins/default/`): the one mount on a bigger canvas
 (128: the donkey's frame sits centred, so its pivot and ground row are the donkey's), drawn with a **front layer**
 (`front\`: the near wing, drawn in front of the rider; the self-test "front layer" reads it back over him). The
 near wing was raised at first, its outer fan in front of him: ridden, it hid him (the user, 2026-10-20), so it is
@@ -417,7 +417,7 @@ that far further back, or the body is drawn inside it), colours Coat = scales an
 Dark = bone, Eye = yellow. One dragon: a blue one is the red one with a custom coat (the colour rows do it). Cart and
 babies allowed; the effect ring scales by its drawn width (108 px over the donkey's 46).
 
-**Gerry** (`assets/skins/gerry/skin.cfg`, since 2026-10-24 `assets/mounts/gerry/mount.cfg` and `skins/gerry/skin.cfg`;
+**Gerry** (`assets/skins/gerry/skin.cfg`, since 2026-10-24 `assets/mounts/saddleup.gerry/mount.cfg` and `skins/default/skin.cfg`;
 docs/gerry-mount.md): the game's talking skull as a mount with no pictures
 of our own (`source = game`: his `0901_` frames read out of the character atlas at run time, 3x on a 160 canvas, the
 hop kept at a quarter under a rider), `seat = picture` (the rider on the skull's own top, per frame), `noun = skull`,
@@ -425,7 +425,7 @@ babies 0.33 (his own size), lips silenced. The first mount that is another chara
 goes the same way.
 
 **Royal Parade** (`tools/skins/royal-parade/make_royal.py`, `assets/skins/royal-parade/`, since 2026-10-24
-`assets/mounts/donkey/skins/royal-parade/`): the plain **over** pack
+`assets/mounts/donkey/skins/royal-parade/`, later that day `saddleup.royal-parade/`): the plain **over** pack
 and the worked example of drawing on the donkey without touching it: a saddle cloth cut from the standing frame and
 hung from the hip in every frame (so it rides the walk's bob and the graze's dip), a crown at the Hellfire horn
 bases, the cloth's reds named `Harness` so the player's harness colour recolours them, the gold kept as drawn. A

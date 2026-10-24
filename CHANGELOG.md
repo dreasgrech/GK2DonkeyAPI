@@ -18,18 +18,38 @@ For players:
   `src\SaddleUp\assets\mounts\`): `mount.cfg` (the mount: `[Mount]`, `[Stats]`, `[Tuning]`, `[Tuning.Ride]`,
   `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`, plain names), its `sounds\` (the
   mount's files, for every skin of it) and `skins\<skin>\` (each look: `skin.cfg`, its pictures, `front\`, its own
-  `sounds\`). `[Mount] default_skin` names the look a new one wears. The donkey's folder holds skins only (Hellfire and
-  Royal Parade: `mounts\donkey\skins\`). Before, a mount was a `[Mount]` block inside its default skin's `skin.cfg`
+  `sounds\`). The donkey's folder holds skins only (Hellfire and Royal Parade: `mounts\donkey\skins\`). Before, a mount was a `[Mount]` block inside its default skin's `skin.cfg`
   (the "declaring skin", the joiner and Default rules) and its sounds sat in that skin's `sounds\mount\`: a mount's file
   named after its event was also the skin's own, and the dragon's flight sounds loaded twice. Now a `skin.cfg` holds
   no `[Mount*]` section (said in its report), a skin's mount is its folder's, a mount folder without `mount.cfg` adds
   its skins to a mount registered elsewhere, two `mount.cfg` of one id meet the skins' version rule, and a pack mount
-  goes with its last skin. The Mounts tab (F11) saves the mount's rows into `mount.cfg`. The built-in looks have names of
-  their own: `red-dragon`, `grey-rat`, `garden-snail`, `earth-worm` (Gerry's stays `gerry`); the mount ids are unchanged.
-  Nothing a player has changes (mounts and packs were off in every release). Tools (`skinroots.py`, `canonical_cfg.py`
+  goes with its last skin. The Mounts tab (F11) saves the mount's rows into `mount.cfg`. Nothing a player has changes (mounts and packs were off in every release). Tools (`skinroots.py`, `canonical_cfg.py`
   for both files, `new_skin.py --mount`, the generators, the preview page by mount), `tests/SkinsScan` (a pass per
   mount folder) and the self-tests (the temp packs, the id rules for mount packs, the sound folders) follow the tree;
   the embedded resources are `GK2SaddleUp.mounts.<mount>\...` and the dev write-back root `GK2MountsSourceDir`.
+- **Every mount has one default look, `skins\default\`; skins are named within their mount; mount ids carry their
+  mod's prefix** (the user, 2026-10-24: "every default skin directory called 'default' ... a mount must only have one
+  and only one default skin"; "I dont think the skin ids being global is a good idea ... other mods adding more mounts";
+  "saddleup specifically would have its own modifier"; docs/mount-id-collisions.md). A mount's id is `<mod>.<name>`:
+  Saddle Up's are `saddleup.dragon`, `saddleup.rat`, `saddleup.snail`, `saddleup.worm`, `saddleup.gerry` (their
+  folders too); an id without a prefix is refused, only the game's `donkey` is plain, so two mods' dragons are two
+  mounts and a saved one never turns into another mod's. A skin's full name is `<mount>/<skin>`
+  (`saddleup.dragon/default`, `donkey/saddleup.hellfire`): its folder's name, within its mount (`skin.cfg` has no `id =` any more),
+  so two mounts may each have a `fire`. A mount's own look is its `skins\default\` (`[Mount] default_skin` is gone): a
+  pack `mount.cfg` without one is refused with its skins, a folder adding skins to another mod's mount may not bring a
+  `default`, the donkey has none (its own look is the game's). A skin added to a mount another mod owns (every
+  donkey skin, a folder without `mount.cfg`, a code skin on another's mount) is named `<mod>.<name>` or refused, on
+  your own mount any name: Saddle Up's donkey skins are `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`
+  (the old names `hellfire` and `royal-parade` still find them). The settings rows hold the full names (`Mount =
+  saddleup.dragon`, `Skin_saddleup.dragon = saddleup.dragon/default`); a dev's cfg or save from before that names a mount (`dragon`) finds its mount's default and is rewritten; the
+  looks' names of the mount folders (`red-dragon`, `grey-rat`, `garden-snail`, `earth-worm`: a few hours old, never
+  released) still find their mount's default (the user: "also fix in the old names thing"), and a per-mount settings row
+  under the mount's old id (`Coat_dragon`) carries its value to the new one (`Coat_saddleup.dragon`) when that has none.
+- **Hellfire's first spawn after a start has its holes again**: the companion's skin is built ahead at the main menu,
+  before the game has the donkey's own frames (0 of 44 found), and Hellfire (drawn over the donkey, erasing its ears
+  under the horns) was built without them ("its erase colour can't clear the donkey", 2026-10-24 log). A skin built
+  from the donkey's frames (an over skin that erases, a recipe) now waits until the frames are in memory (looked for
+  every 3 s, no log line until found).
 - **The dragon walks like a heavy beast** (the user, 2026-10-24: "his legs ... too dinky", "walks like a lady", "like
   someone modelling stilettos on a catwalk", "a stick stuck up his arse"; the reference's Walking studied, docs/flying.md
   "The walk, studied"): thicker legs with no thin ankle, the forelegs built like the hind (a shoulder mass, a thick upper
@@ -196,6 +216,14 @@ For players:
 
 For mod authors:
 
+- **Mount ids are `<mod>.<name>`, skin ids `<mount>/<skin>`** (see For players; docs/skins.md, docs/making-a-mount.md):
+  `Mounts.Catalog.Register` refuses an id without a prefix; `MountSkinDef.Id` is the name within `Mount` ("default" for
+  your mount's own look) and the registered skin's `Id` (`MountSkinInfo.Id`, the "Skin" tuning value) is
+  `<Mount>/<name>`; a recipe is a donkey skin (`donkey/<id>`). A code skin on a mount another owner registered and
+  every donkey skin and recipe are named `<mod>.<name>` (`Mounts.Looks.RegisterRecipe(Guid, "example.sepia", ...)` is
+  `donkey/example.sepia`): without the prefix `Register` / `RegisterRecipe` throw an `ArgumentException`; a code skin
+  on your own mount takes any name. `Mounts.Looks.Find` takes the full name and a clear short one. No signature
+  changed.
 - **The dev Sounds tab's events are grouped by status**: what is playing on top, then its own, the donkey's, loading,
   MISSING, silent by choice and no sound, each group under its coloured heading, the catalogue's order inside one.
 - **The flaps follow the drawn wing beat from the start of the climb** (the user, 2026-10-24: the flapping began

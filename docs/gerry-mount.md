@@ -100,7 +100,8 @@ owns its drawing's geometry; the mount file's "seat lifted 10 px" is gone); the 
 and babies, **`foal_scale = 0.33`** (baby skulls his own size), **`noun = skull`** ("a skull can't pull the cart"),
 and `[Mount.Tuning] LipsVolume = 0` (a skull does not smack lips; the bray and the hoofsteps stay; since the sound
 system his `[Sounds]` says `lips = none`, and since the mount folders, 2026-10-24, the mount's facts and sounds are
-`src/SaddleUp/assets/mounts/gerry/mount.cfg` and the skin `skins/gerry/skin.cfg` beside it). **Seen in game**
+`src/SaddleUp/assets/mounts/saddleup.gerry/mount.cfg` (the mount `saddleup.gerry`) and the skin, his default look,
+`skins/default/skin.cfg` beside it). **Seen in game**
 on 2026-10-18 (the first run: the skin failed to register at first, the babies were huge and the hop too big; the
 fixes above came from it) and in the seat readout of 2026-10-20 (25.5 px in both AutoSeat modes, the Gerry scenario
 green). Not recorded as settled from that first run: a clipping at the top of the canvas and a dark square behind
@@ -112,6 +113,6 @@ gerry\`, the Mounts tab's "Export the loaded skins as built") when one exists; u
 **Another game character, by hand** (docs/sprite-tools.md "Making a skin"): `python -I tools/skins/gerry/gerry_probe.py
 <game folder> <out> <prefix>` finds the addressables bundle holding `<prefix>bdy_walk_left_01` and exports the
 sprites; `gerry_sheet.py <out> <prefix>` lays them out to measure the hop and the sizes; copy Gerry's mount folder
-(`assets/mounts/gerry/`: its `mount.cfg` and `skins/gerry/skin.cfg`) under the new mount's id, set the prefix,
-scale, lift, the frame map and the seat in the skin.cfg and the mount's facts (`id`, `name`, `default_skin`, ...) in
-the mount.cfg; `python -I tools/skins/canonical_cfg.py`, the scan, build, look. No pictures of our own, nothing of the game's art in the repo.
+(`assets/mounts/saddleup.gerry/`: its `mount.cfg` and `skins/default/skin.cfg`) under the new mount's id
+(`<mod>.<name>`), set the prefix, scale, lift, the frame map and the seat in the skin.cfg and the mount's facts (`id`,
+`name`, ...) in the mount.cfg; `python -I tools/skins/canonical_cfg.py`, the scan, build, look. No pictures of our own, nothing of the game's art in the repo.

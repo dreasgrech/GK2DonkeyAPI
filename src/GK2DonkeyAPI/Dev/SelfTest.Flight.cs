@@ -421,12 +421,12 @@ namespace GK2DonkeyAPI
         {
             if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             const string owner = Owner + ".flags";
-            MountInfo dragon = Mounts.Catalog.Find("dragon"), rat = Mounts.Catalog.Find("rat");
+            MountInfo dragon = Mounts.Catalog.Find(M("dragon")), rat = Mounts.Catalog.Find(M("rat"));
             Check(dragon != null && dragon.Flies && dragon.Jumps, $"the dragon flies and jumps (its [Mount] says flies = true): {dragon?.Flies} {dragon?.Jumps}");
             var grounded = new System.Collections.Generic.List<string>();
             foreach (string id in new[] { "rat", "snail", "worm", "gerry" })
             {
-                MountInfo k = Mounts.Catalog.Find(id);
+                MountInfo k = Mounts.Catalog.Find(M(id));
                 if (k == null) grounded.Add(id + " not loaded");
                 else if (k.Flies || !k.Jumps) grounded.Add($"{id} flies {k.Flies}, jumps {k.Jumps}");
             }
@@ -437,20 +437,20 @@ namespace GK2DonkeyAPI
             string tempRoot;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flags", "flags-test",
-                    "[Skin]\nformat = 1\nid = flags-test\nname = Flags Test\nmount = flags-beast\n\n[Mount]\nid = flags-beast\nname = Flags Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\njumps = false\n");
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-flags", Looks.DefaultSkinName,
+                    "[Skin]\nformat = 1\nname = Flags Test\nmount = selftest.flags-beast\n\n[Mount]\nid = selftest.flags-beast\nname = Flags Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\njumps = false\n");
             }
             catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
             try
             {
                 Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the pack registered");
-                MountInfo k = Mounts.Catalog.Find("flags-beast");
+                MountInfo k = Mounts.Catalog.Find("selftest.flags-beast");
                 Check(k != null && k.Flies && !k.Jumps, $"a pack's flies = true and jumps = false are its mount's ({k?.Flies}, {k?.Jumps})");
-                Looks.SkinDef def = Looks.Find("flags-test");
-                Catalog.Entry kd = Catalog.Find("flags-beast");
+                Looks.SkinDef def = Looks.Find("selftest.flags-beast/default");
+                Catalog.Entry kd = Catalog.Find("selftest.flags-beast");
                 if (def != null && kd != null)
                 {
-                    string file = TempMountCfg(tempRoot, "flags-beast"); // the mount's values: its mount.cfg
+                    string file = TempMountCfg(tempRoot, "selftest.flags-beast"); // the mount's values: its mount.cfg
                     kd.Jumps = true; // the Mounts tab's "Jumps" toggle does this
                     string err = Looks.SaveMountCfg(kd);
                     string text = System.IO.File.ReadAllText(file).Replace("\r\n", "\n");
@@ -467,11 +467,11 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                Looks.Unregister("flags-test", owner);
+                Looks.Unregister("selftest.flags-beast/default", owner);
                 try { System.IO.Directory.Delete(tempRoot, true); } catch { }
             }
             yield return Frames(3);
-            Check(Mounts.Catalog.Find("flags-beast") == null, "the mount goes with its pack");
+            Check(Mounts.Catalog.Find("selftest.flags-beast") == null, "the mount goes with its pack");
         }
 
         // One key for jump and fly (the skyriding rule): a press jumps; a second press in the air takes off a mount that
@@ -487,8 +487,8 @@ namespace GK2DonkeyAPI
             string tempRoot;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-onekey", "onekey-test",
-                    "[Skin]\nformat = 1\nid = onekey-test\nname = One Key Test\nmount = onekey-beast\n\n[Mount]\nid = onekey-beast\nname = One Key Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-onekey", Looks.DefaultSkinName,
+                    "[Skin]\nformat = 1\nname = One Key Test\nmount = selftest.onekey-beast\n\n[Mount]\nid = selftest.onekey-beast\nname = One Key Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
             }
             catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
             MountHandle h = null;
@@ -496,12 +496,12 @@ namespace GK2DonkeyAPI
             try
             {
                 Looks.RegisterFolder(tempRoot, owner);
-                kd = Catalog.Find("onekey-beast");
+                kd = Catalog.Find("selftest.onekey-beast");
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null || kd == null) { Fail("could not spawn, or the pack's mount is missing"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
-                h.Tuning.Set(Owner, "Skin", "onekey-test");
-                yield return Until(() => h.Mount == "onekey-beast", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.onekey-beast/default");
+                yield return Until(() => h.Mount == "selftest.onekey-beast", 8f);
                 MountResult r = h.Ride(showMessage: false);
                 if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
                 yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
@@ -618,7 +618,7 @@ namespace GK2DonkeyAPI
                 if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
-                Looks.Unregister("onekey-test", owner);
+                Looks.Unregister("selftest.onekey-beast/default", owner);
                 try { System.IO.Directory.Delete(tempRoot, true); } catch { }
             }
         }
@@ -638,8 +638,8 @@ namespace GK2DonkeyAPI
             string tempRoot;
             try
             {
-                tempRoot = WriteTempPack("gk2donkeyapi-selftest-inair", "inair-test",
-                    "[Skin]\nformat = 1\nid = inair-test\nname = In The Air Test\nmount = inair-beast\n\n[Mount]\nid = inair-beast\nname = In The Air Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-inair", Looks.DefaultSkinName,
+                    "[Skin]\nformat = 1\nname = In The Air Test\nmount = selftest.inair-beast\n\n[Mount]\nid = selftest.inair-beast\nname = In The Air Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nflies = true\n");
             }
             catch (System.Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
             MountHandle h = null;
@@ -648,10 +648,10 @@ namespace GK2DonkeyAPI
             {
                 Looks.RegisterFolder(tempRoot, owner);
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
-                if (h == null || Catalog.Find("inair-beast") == null) { Fail("could not spawn, or the pack's mount is missing"); yield break; }
+                if (h == null || Catalog.Find("selftest.inair-beast") == null) { Fail("could not spawn, or the pack's mount is missing"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
-                h.Tuning.Set(Owner, "Skin", "inair-test");
-                yield return Until(() => h.Mount == "inair-beast", 8f);
+                h.Tuning.Set(Owner, "Skin", "selftest.inair-beast/default");
+                yield return Until(() => h.Mount == "selftest.inair-beast", 8f);
                 MountResult r = h.Ride(showMessage: false);
                 if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
                 yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
@@ -712,7 +712,7 @@ namespace GK2DonkeyAPI
                 if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
-                Looks.Unregister("inair-test", owner);
+                Looks.Unregister("selftest.inair-beast/default", owner);
                 try { System.IO.Directory.Delete(tempRoot, true); } catch { }
             }
         }

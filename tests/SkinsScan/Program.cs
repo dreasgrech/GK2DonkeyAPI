@@ -3,7 +3,11 @@
 // docs/skins.md "What a pack is", docs/mounts-as-mods.md): every mount.cfg and skin.cfg must parse the way the loader
 // reads them (MountPacks.cs, Looks.cs), every picture the donkey base needs must be there at the canvas size, a
 // skin's [Tuning] may only hold the picture keys (a skin is the drawing, the mount the creature: docs/mounts-design.md
-// §1), and a mount's tuning keys must exist. The frame keys
+// §1), and a mount's tuning keys must exist. The names (2026-10-24): a mount's folder is its id, "<mod>.<name>"
+// (saddleup.dragon; only the donkey's is plain), its own look is skins\default\ (no default_skin; the donkey has none),
+// and a skin is named by its folder, its full name "<mount id>/<skin>" (no id = in skin.cfg). A skin added to a mount
+// another mod owns (a mount folder without mount.cfg, so every donkey skin) is named "<mod>.<name>"
+// (donkey/saddleup.hellfire; Looks.Register refuses it otherwise); on its own mount any name. The frame keys
 // and the allowed skin tuning keys are read from Looks.cs, the tuning keys from Plugin.cs, so this stays in step.
 // Usage: dotnet run -c Release
 using System.Text.RegularExpressions;
@@ -12,7 +16,7 @@ var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "
 var mountDirs = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "mounts")).Where(Directory.Exists)
     .SelectMany(Directory.GetDirectories).OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
 var skinDirs = mountDirs.Select(m => Path.Combine(m, "skins")).Where(Directory.Exists).SelectMany(Directory.GetDirectories)
-    .OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+    .OrderBy(d => Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(d))) + "/" + Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList(); // by full name, <mount>/<skin>
 foreach (var stray in Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "skins")).Where(Directory.Exists))
     Console.WriteLine($"FAIL {stray}: the flat skins folder is gone (2026-10-24): a skin sits in assets/mounts/<mount>/skins/<skin>/");
 var looksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Looks.cs"));
@@ -44,11 +48,12 @@ if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys rea
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
 // The [Mount] block's keys as MountPacks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountPacksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "MountPacks.cs"));
 var mountKeys = StringsIn(mountPacksCs, "MountKeys");
-if (mountKeys.Count < 17) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (17 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Count < 16) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (16 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Contains("default_skin")) Fail("MountPacks.cs MountKeys still has default_skin (a mount's own look is its skins\\default\\ since 2026-10-24)");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
@@ -204,9 +209,6 @@ static int Paeth(int a, int b, int c)
     return pa <= pb && pa <= pc ? a : pb <= pc ? b : c;
 }
 
-static string SectionText(Dictionary<string, Dictionary<string, string>> cfg, string name)
-    => cfg.TryGetValue(name, out var s) ? string.Join("\n", s.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).Select(kv => kv.Key.ToLowerInvariant() + "=" + kv.Value)) : "";
-
 // The sound lines of a skin's or a mount's cfg (docs/mount-sounds.md "A pack's sounds"): every line an event, an
 // event.variant, or an event's attribute or number; every file named is in the sounds\ folder next to that cfg; every
 // file there is named by a line or by the name rule.
@@ -255,6 +257,11 @@ foreach (var mdir in mountDirs)
     void BadM(string what) { Fail($"mount {mid}: {what}"); mok = false; }
     var skinsHere = Directory.Exists(Path.Combine(mdir, "skins")) ? Directory.GetDirectories(Path.Combine(mdir, "skins")).Select(Path.GetFileName).ToList() : new List<string?>();
     if (skinsHere.Count == 0) BadM("no skins\\<skin>\\ folder: a mount with nothing to wear is withdrawn at the start");
+    // a folder without mount.cfg adds its skins to a mount another mod owns (the donkey is the game's): each is named
+    // "<mod>.<name>", a dot neither first nor last (Looks.AddsToOthers; the loader leaves the others out)
+    if (!File.Exists(mcfgPath))
+        foreach (var s in skinsHere.Where(s => s!.IndexOf('.') <= 0 || s.IndexOf('.') == s.Length - 1))
+            if (!s!.Equals("default", StringComparison.OrdinalIgnoreCase)) BadM($"skins\\{s}\\: a skin added to a mount another mod owns is named '<mod>.<name>' ({mid}/saddleup.{s}); the loader leaves it out");
     foreach (var stray in Directory.GetFiles(mdir).Select(Path.GetFileName).Where(f => !f!.Equals("mount.cfg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
         BadM($"{stray}: a mount folder holds mount.cfg, sounds\\, skins\\ and its portrait PNG");
     foreach (var sub in Directory.GetDirectories(mdir).Select(Path.GetFileName).Where(d => d != "skins" && d != "sounds")) BadM($"{sub}\\: a mount folder holds sounds\\ and skins\\ only");
@@ -262,7 +269,8 @@ foreach (var mdir in mountDirs)
     {
         if (File.Exists(mcfgPath)) BadM("mount.cfg in donkey\\: the donkey is the game's own mount, its folder holds skins only");
         if (Directory.Exists(Path.Combine(mdir, "sounds"))) BadM("sounds\\ in donkey\\: the donkey's sounds are the game's (a skin's own go in its folder)");
-        if (mok) Pass($"mount donkey: the game's own, {skinsHere.Count} skin(s) of it here");
+        if (skinsHere.Contains("default", StringComparer.OrdinalIgnoreCase)) BadM("skins\\default\\ in donkey\\: the donkey's own look is the game's art; a donkey skin needs a name of its own (the loader refuses it)");
+        if (mok) Pass($"mount donkey: the game's own, {skinsHere.Count} skin(s) of it here, each named <mod>.<name> ({string.Join(", ", skinsHere)})");
         continue;
     }
     if (!File.Exists(mcfgPath)) { BadM("no mount.cfg (a mount folder of this repo declares its mount)"); continue; }
@@ -283,12 +291,17 @@ foreach (var mdir in mountDirs)
     if (order.GroupBy(x => x, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) BadM("a section appears twice");
     if (!cfg.TryGetValue("Mount", out var m)) { BadM("no [Mount] section"); continue; }
     if ((m.GetValueOrDefault("id") ?? "") != mid) BadM($"[Mount] id = {m.GetValueOrDefault("id")}: the folder's name ({mid})");
-    foreach (var k in m.Keys) if (!mountKeys.Contains(k)) BadM($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
+    {
+        // a mount's id is "<mod>.<name>" (Catalog.CheckId; only the game's donkey is plain): the folder is named so too
+        int dot = mid.IndexOf('.');
+        if (dot <= 0 || dot == mid.Length - 1) BadM($"the folder (the mount's id) '{mid}' is not '<mod>.<name>' (Saddle Up's dragon is saddleup.dragon; the loader refuses a plain id)");
+    }
+    foreach (var k in m.Keys) if (!mountKeys.Contains(k) && !k.Equals("default_skin", StringComparison.OrdinalIgnoreCase)) BadM($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
     foreach (var req in mountRequired) if (string.IsNullOrWhiteSpace(m.GetValueOrDefault(req))) BadM($"[Mount] {req} missing (the canonical block always carries it)");
     if (!m.ContainsKey("description")) BadM("[Mount] has no description (the Mounts panel shows it)");
     if (m.TryGetValue("portrait", out var mportrait) && !File.Exists(Path.Combine(mdir, mportrait))) BadM($"[Mount] portrait = {mportrait}: no such file in the mount folder");
-    if (!m.TryGetValue("default_skin", out var defSkin)) BadM("[Mount] default_skin missing: the look a new one wears (a skin in skins\\)");
-    else if (!skinsHere.Contains(defSkin, StringComparer.OrdinalIgnoreCase)) BadM($"[Mount] default_skin = {defSkin}: no skins\\{defSkin}\\ ({string.Join(", ", skinsHere)})");
+    if (m.ContainsKey("default_skin")) BadM("[Mount] default_skin: gone (the loader ignores it); a mount's own look is its skins\\default\\ folder");
+    if (!File.Exists(Path.Combine(mdir, "skins", "default", "skin.cfg"))) BadM("no skins\\default\\skin.cfg: a mount's own look (the one a new one wears) is its skins\\default\\; the loader refuses the mount without it");
     foreach (var flag in new[] { "cart", "foals", "flies", "jumps" })
         if (m.TryGetValue(flag, out var v) && v != "true" && v != "false") BadM($"[Mount] {flag} = {v}: true or false");
     if (m.GetValueOrDefault("flies") == "false") BadM("[Mount] flies = false is the default: leave it out");
@@ -336,14 +349,14 @@ foreach (var mdir in mountDirs)
         }
     }
     CheckSounds(cfg, mdir, BadM);
-    if (mok) Pass($"mount {mid}: mount.cfg, default look {defSkin}, {skinsHere.Count} skin(s){(Directory.Exists(Path.Combine(mdir, "sounds")) ? ", " + Directory.GetFiles(Path.Combine(mdir, "sounds")).Length + " sound file(s)" : "")}");
+    if (mok) Pass($"mount {mid}: mount.cfg, own look skins\\default\\, {skinsHere.Count} skin(s){(Directory.Exists(Path.Combine(mdir, "sounds")) ? ", " + Directory.GetFiles(Path.Combine(mdir, "sounds")).Length + " sound file(s)" : "")}");
 }
 
 int skins = 0, pictures = 0;
 foreach (var dir in skinDirs)
 {
-    string id = Path.GetFileName(dir);
     string folderMount = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(dir))!)!;
+    string id = folderMount + "/" + Path.GetFileName(dir); // a skin's full name: its mount and its folder (Looks.SkinKey)
     string cfgPath = Path.Combine(dir, "skin.cfg");
     if (!File.Exists(cfgPath)) { Fail($"{id}: no skin.cfg"); continue; }
     skins++;
@@ -352,12 +365,12 @@ foreach (var dir in skinDirs)
     bool ok = true;
     void Bad(string what) { Fail($"{id}: {what}"); ok = false; }
     if (!skin.TryGetValue("format", out var format) || format != "1") Bad("format = 1 missing");
-    if (!skin.TryGetValue("id", out var sid) || sid != id) Bad($"id = {skin.GetValueOrDefault("id") ?? "(none)"} should be the folder name");
+    if (skin.ContainsKey("id")) Bad($"[Skin] id = {skin["id"]}: id = is not used: the folder's name is the skin's name (leave the line out)");
     if (string.IsNullOrWhiteSpace(skin.GetValueOrDefault("name"))) Bad("name missing");
     string mount = folderMount;
     if (skin.TryGetValue("mount", out var mountLine) && !mountLine.Equals(folderMount, StringComparison.OrdinalIgnoreCase)) Bad($"[Skin] mount = {mountLine}: the skin sits in the folder of the mount '{folderMount}' (leave the line out: the folder says it)");
     if (skin.TryGetValue("base", out var b) && b != "donkey") Bad($"base = {b}: the donkey is the only base");
-    foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
+    foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k) && !k.Equals("id", StringComparison.OrdinalIgnoreCase)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
     if (skin.TryGetValue("portrait", out var portrait) && !File.Exists(Path.Combine(dir, portrait))) Bad($"[Skin] portrait = {portrait}: no such file in the pack");
     if (!skin.ContainsKey("description")) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
     foreach (var sec in cfg.Keys.Where(k => k.Equals("Mount", StringComparison.OrdinalIgnoreCase) || k.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase)))

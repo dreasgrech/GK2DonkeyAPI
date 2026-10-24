@@ -10,7 +10,7 @@ the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo);
 | Mount | What ships | How the pictures come to be |
 |---|---|---|
 | **Recipe** | code in the API | built in the game from the donkey's own frames when first worn; no picture stored anywhere |
-| **Pack** | `skin.cfg` + pictures (a PNG per frame, or one sheet of cells) | drawn or generated beforehand; a built-in pack is embedded in the DLL, a loose one sits in `BepInEx\plugins\gk2mounts\<mount>\skins\<id>\` (its mount's `mount.cfg` two folders up, or none for a skin of a mount registered elsewhere). **Every skin we ship is a built-in pack made the same way** (`docs/sprite-tools.md` "Making a skin: the one pipeline") |
+| **Pack** | `skin.cfg` + pictures (a PNG per frame, or one sheet of cells) | drawn or generated beforehand; a built-in pack is embedded in the DLL, a loose one sits in `BepInEx\plugins\gk2mounts\<mount>\skins\<skin>\` (its mount's `mount.cfg` two folders up, or none for a skin of a mount registered elsewhere); a mount's own look is its `skins\default\`. **Every skin we ship is a built-in pack made the same way** (`docs/sprite-tools.md` "Making a skin: the one pipeline") |
 | **Game creature** (`source = game`) | `skin.cfg` only | the game's own frames of another character, read back and scaled at run time |
 
 The machinery for all three: `src/GK2DonkeyAPI/Looks.cs` (packs, sheets, sources, the overlay drawing, colours by
@@ -30,7 +30,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   were retired 2026-10-19 23:30).
 
 ### Hellfire (donkey, pack drawn over the donkey; a recipe in code until 2026-10-19 evening)
-- **Pack**: `src/SaddleUp/assets/mounts/donkey/skins/hellfire/` (`skin.cfg` + a PNG per frame), embedded in the DLL like the
+- **Pack**: `src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire/` (`donkey/saddleup.hellfire`) (`skin.cfg` + a PNG per frame), embedded in the DLL like the
   creatures. The pictures hold only our pixels (horns, the devil's tail, the rump fill, the cracks, the glowing
   eyes) and erase marks (magenta) where the ears and the tail come off; the ash coat is the cfg's `[Base.Coat]`
   recolour. Nothing of the game's art.
@@ -47,7 +47,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Docs: `docs/sprite-tools.md`, `docs/skins.md` ("Erasing from the donkey", "Recolouring the donkey under the skin").
 
 ### Royal Parade (donkey, pack drawn over the donkey; a built-in since 2026-10-19 23:00)
-- **Pack**: `src/SaddleUp/assets/mounts/donkey/skins/royal-parade/` (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...`
+- **Pack**: `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (`donkey/saddleup.royal-parade`) (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...`
   so the cloth's reds follow the harness colour; a PNG per frame generated), embedded in the DLL exactly like
   Hellfire (before: `packs/royal-parade/` as one sheet, copied into the game's `gk2skins\` by the generator).
 - **Generator**: `tools/skins/royal-parade/make_royal.py` (the saddle cloth cut from the standing frame and hung from
@@ -61,14 +61,15 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Docs: `docs/sprite-tools.md` ("Generated, no drawing", "The canvas, found wrong", "The crown"), `docs/open-items.md`.
 
 ### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts; Saddle Up's packs since 2026-10-20)
-- **Ids**: the mounts `dragon`, `rat`, `snail`, `worm`; their skins `red-dragon`, `grey-rat`, `garden-snail`,
-  `earth-worm` (until 2026-10-24 the skins had the mounts' ids).
-- **Pictures and cfg**: `src/SaddleUp/assets/mounts/<dragon|rat|snail|worm>/`: the mount's `mount.cfg` (`[Mount]`
-  with `default_skin`, its tuning and sounds; the dragon's `sounds\` holds its flight's twelve `.ogg`) and
-  `skins/<red-dragon|grey-rat|garden-snail|earth-worm>/` (44 PNGs each, the dragon's more for its flight and a
+- **Ids**: the mounts `saddleup.dragon`, `saddleup.rat`, `saddleup.snail`, `saddleup.worm`; each one's look is its
+  default skin, `saddleup.dragon/default` and so on (the skins were `red-dragon`, `grey-rat`, `garden-snail`,
+  `earth-worm` earlier on 2026-10-24, and before that the mounts' plain ids).
+- **Pictures and cfg**: `src/SaddleUp/assets/mounts/saddleup.<dragon|rat|snail|worm>/`: the mount's `mount.cfg`
+  (`[Mount]`, its tuning and sounds; the dragon's `sounds\` holds its flight's twelve `.ogg`) and `skins/default/`
+  (44 PNGs each, the dragon's more for its flight and a
   `front\` layer drawn above the rider, and a `skin.cfg` with the seat, the skin's geometry and its `[Colors]`).
   Embedded into Saddle Up's DLL by its csproj (`GK2SaddleUp.mounts.<mount>\mount.cfg`,
-  `GK2SaddleUp.mounts.<mount>\skins\<skin>\<file>`) and registered through `Mounts.Looks.RegisterEmbedded` in its
+  `GK2SaddleUp.mounts.<mount>\skins\<skin>\<file>`: `GK2SaddleUp.mounts.saddleup.dragon\skins\default\...`) and registered through `Mounts.Looks.RegisterEmbedded` in its
   Awake (docs/mounts-as-mods.md).
 - **Generator**: `tools/skins/creatures/make_creatures.py` (our own art, drawn by code: a crawl cycle for the walk, idle frames for
   the rest; writes straight into `assets\mounts\<mount>\skins\<skin>\` like every other generator, and the
@@ -78,15 +79,16 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Docs: `docs/mount-looks-design.md` (the creatures), `docs/mount-colours.md`, `docs/mounts-design.md` (mounts).
 
 ### Gerry (its own mount, game creature; Saddle Up's pack since 2026-10-20)
-- **Cfg only**: `src/SaddleUp/assets/mounts/gerry/mount.cfg` (the mount `gerry`: `noun = skull`, babies 0.33, his
-  sounds, `default_skin = gerry`) and `skins/gerry/skin.cfg` (`source = game`, `[Game] prefix = 0901_`, the seat
+- **Cfg only**: `src/SaddleUp/assets/mounts/saddleup.gerry/mount.cfg` (the mount `saddleup.gerry`: `noun = skull`,
+  babies 0.33, his sounds) and `skins/default/skin.cfg` (`source = game`, `[Game] prefix = 0901_`, the seat
   from the picture). The frames are the game's talking skull, read back and scaled at run time: `LooksGame.cs`.
 - **Tools**: `tools/skins/gerry/gerry_probe.py`, `tools/skins/gerry/gerry_sheet.py` (the exported frames, contact sheets). Docs:
   `docs/gerry-mount.md`.
 
 ### Sepia and Checker (example mod, source only)
-- `examples/GK2DonkeySkins/Plugin.cs`: "sepia", a recipe registered from code; "checker", pictures drawn by code
-  (`IMountSkinSource`) as the look of a mount of its own, `checker-beast`. Built and deployed only when the
+- `examples/GK2DonkeySkins/Plugin.cs`: `donkey/example.sepia`, a recipe registered from code; `default`, pictures drawn by
+  code (`IMountSkinSource`) as the look of a mount of its own, `example.checker-beast` (so
+  `example.checker-beast/default`). Built and deployed only when the
   example is being tested (`-p:Deploy=true`); not in the game folder otherwise (taken out 2026-10-19 23:30, with
   the loose `gk2skins\worm-pack\` that tested the folder loader).
 
@@ -102,7 +104,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | `tools/GK2AssetProbe` (dev plugin, Shift+F7) | exports the donkey's frames to `donkey-frames\`, the rider, films to `captures\`; its `test\skins\` tester |
 | `tools/skins/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
 | `tools/skins/check_skin.py` | checks a pack folder (frames and the front layer, colours per region, lone pixels over what the game draws beneath, the layout; exit code = errors only); run by the watcher and the release scans on every built-in |
-| `tools/skins/new_skin.py` | scaffolds a new skin: `<id> [--mount <mount>]` puts its `skin.cfg` in `assets/mounts/<mount>/skins/<id>/` in the canonical layout (the donkey's without `--mount`), and a new mount's folder and `mount.cfg` (`default_skin` = this skin); a generator stub, the Aseprite sidecar; runs the scan |
+| `tools/skins/new_skin.py` | scaffolds a new skin: `<skin> [--mount <mount>]` puts its `skin.cfg` in `assets/mounts/<mount>/skins/<skin>/` in the canonical layout (the donkey's without `--mount`; `default` for a new mount's own look), and a new mount's folder and `mount.cfg`; a generator stub, the Aseprite sidecar; runs the scan |
 | `tools/skins/review.py` | the review pictures every generator writes the same way (strips with the front layer and the rider on the seat row, preview, pack sheet) |
 | `tools/skins/skinroots.py` | where the mounts and skins are: every `src/<project>/assets/mounts/` (`roots()`), its mount folders (`mount_dirs()`) and their `skins/<skin>/` (`skin_dirs()`; `mount_of(dir)`, `find(skin_id)`, `find_mount(id)`, `root_of(project)`): Saddle Up's five mounts and the donkey's two skins; the API ships none; a mount mod of its own would be another root; every tool and scan below walks them through it |
 | `tools/skins/canonical_cfg.py` | rewrites every shipped `skin.cfg` and `mount.cfg` into its one layout: a skin's `[Skin]`, `[Game]`, its `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (its geometry), its `[Sounds*]`, the colours; a mount's `[Mount]`, `[Stats]`, `[Tuning*]`, `[Sounds*]` (`--check` in the release scans) |
@@ -112,7 +114,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | `tools/skins/ase_write.py` | writes an `.aseprite` file (layers, frames, tags) from Python |
 | `tools/skins/gamedir.py` | the game folder from `Directory.Build.props`, the frames and packs folders in it (`packs_dir()` = `BepInEx\plugins\gk2mounts`) |
 | `tools/skins/pngcolors.py` | a plain PNG reader and colour counter |
-| `tests/SkinsScan` | every built-in mount and skin: each `mount.cfg` (its keys, `default_skin` naming a skin folder, its tuning keys, its sounds in the mount's `sounds\`, the section order; the donkey's folder without one) and each `skin.cfg` key by key and value by value (no `[Mount*]` section), the layout, pictures, `[Colors]` against its pixels (in the release scans) |
+| `tests/SkinsScan` | every built-in mount and skin: each `mount.cfg` (its keys, no `default_skin`, a `skins\default\skin.cfg` beside it, the folder named `<mod>.<name>`, its tuning keys, its sounds in the mount's `sounds\`, the section order; the donkey's folder without one and without a `default`) and each `skin.cfg` key by key and value by value (no `id =` line, no `[Mount*]` section), the layout, pictures, `[Colors]` against its pixels (in the release scans) |
 | Dev panel, Mounts tab (`src/GK2DonkeyAPI/Dev/TuningWindow.Mounts.cs`) | the worn skin's rows, "Reload from the file", "Reload by itself when the pack's files change", "Export the loaded skins as built" (`LooksExport.cs`) |
 | Self-tests (`src/GK2DonkeyAPI/Dev/SelfTest.cs`, "Skins and effects") | packs, recipes, over skins with the world readback, auto-reload, mounts |
 

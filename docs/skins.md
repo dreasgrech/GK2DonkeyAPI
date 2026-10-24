@@ -10,12 +10,12 @@ Packs are sorted by mount: a folder per mount, and under it a folder per skin (l
 
 ```
 BepInEx\plugins\gk2mounts\
-  me.giant-rat\                  a mount of your own: its folder is its id
+  me.giant-rat\                  a mount of your own: its folder is its id, "<mod>.<name>"
     mount.cfg                    the mount: what the player rides ([Mount], [Stats], [Tuning*], [Sounds*]; see below)
     sounds\takeoff_1.ogg ...     optional: the mount's sounds, for every skin of it (docs/mount-sounds.md)
     portrait.png                 optional: the mount's picture in the Mounts panel ([Mount] portrait =)
     skins\
-      me.grey-rat\               one look of the mount: its folder is the skin's id
+      default\                  the mount's own look (required): what a new giant rat wears; me.giant-rat/default
         skin.cfg
         bdy_static_left.png
         bdy_walk_left_01.png ... bdy_walk_left_08.png
@@ -29,7 +29,7 @@ BepInEx\plugins\gk2mounts\
         sounds\voice_1.ogg ...   optional: this skin's own sounds (docs/mount-sounds.md)
   donkey\                        the game's donkey: no mount.cfg (one there is refused), skins only
     skins\
-      me.my-saddle\
+      me.my-saddle\              a look of the donkey: its full name is donkey/me.my-saddle
         skin.cfg ...
 ```
 
@@ -37,17 +37,34 @@ BepInEx\plugins\gk2mounts\
   (`BepInEx\plugins\<AnyFolder>\gk2mounts\`). Several mounts can share one `gk2mounts` folder, one subfolder each, and
   a mount several skins, one folder each under its `skins\`.
 - **A mount folder without `mount.cfg`** adds its skins to a mount registered elsewhere: another mod's, a mount
-  registered in code, or the donkey (`gk2mounts\donkey\skins\<id>\`). So a second look for someone else's dragon is
-  `gk2mounts\dragon\skins\<your id>\` and nothing else.
-- The skin id is its folder's name (letters, digits, dots, dashes, underscores), the mount id its mount folder's.
-  `donkey` is taken: it's the game's own look and mount. **Prefix your ids with your name** (`anna.sea-horse`): skin
-  ids are global (two skins of different mounts can't share one), two authors' plain names would meet, and the log
-  notes an unprefixed id from another mod once. The same skin id from two places (a folder and a DLL): the higher
-  `version` wins, a tie goes to the DLL, and the log names the loser and its folder. The same mount from two places
+  registered in code, or the donkey (`gk2mounts\donkey\skins\<mod>.<skin>\`). So a second look for Saddle Up's dragon
+  is `gk2mounts\saddleup.dragon\skins\<mod>.<your skin>\` and nothing else (its name carries your prefix: below). Such a folder may not bring a `default` (that is
+  the mount's own look, and it comes with the `mount.cfg`): one is left out with a warning.
+- **A mount's id is `<mod>.<name>`**: your mod's prefix, a dot, the mount's name (`anna.sea-horse`; Saddle Up's
+  dragon is `saddleup.dragon`). A mount id without a dot is refused. Only the game's `donkey` is plain. So two mods'
+  dragons are two mounts, and a saved dragon never turns into another mod's (docs/mount-id-collisions.md). The
+  mount folder's name is the mount's id.
+- **A skin is named within its mount.** Its folder's name is its name (letters, digits, dots, dashes, underscores),
+  and its full name is `<mount id>/<skin>`: `saddleup.dragon/default`, `donkey/saddleup.hellfire`. Two mounts may each
+  have a skin called `fire`.
+- **A skin added to a mount another mod owns is named `<mod>.<name>`**: your mod's prefix, a dot, the skin's name
+  (`saddleup.dragon\skins\anna.frost\` is `saddleup.dragon/anna.frost`), so two authors' additions never meet and a
+  saved one never turns into another mod's. That is every skin in a mount folder without `mount.cfg`, every skin of
+  the donkey (the donkey is the game's: Saddle Up's are `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`),
+  and a code skin or recipe on a mount another mod registered. A skin without the prefix there is left out with a
+  warning (a pack) or refused with an `ArgumentException` (code). On your own mount (a folder with its `mount.cfg`, or
+  a mount your mod registered in code) any name will do: `saddleup.dragon/default`, `acme.crab/fire`.
+  The same skin from two places (a folder and a DLL): the higher `version` wins, a tie goes to the DLL, and the log names the loser and its folder. The same mount from two places
   (two `mount.cfg` with one id): the higher `[Mount] version` wins and its facts replace the other's in place (the
   other pack's skins keep the mount), a tie goes to the DLL over a loose folder, and otherwise the first stays and the
   later one is refused with its skins, with a warning. A mount registered in code is never replaced by a pack.
-- A mount pack whose skins all fail to register is withdrawn: a mount with nothing to wear is not offered.
+- **Every mount has exactly one default look: its `skins\default\` folder.** It is the look a new one wears and the
+  Skin row's "Default". A pack `mount.cfg` without `skins\default\skin.cfg` is refused with its skins (one warning),
+  and a mount whose `default` fails to register is withdrawn with its skins. The donkey has no `default` folder: its
+  own look is the game's art, and its skins have names of their own with their mod's prefix (`donkey/saddleup.hellfire`).
+- Today a skin is a complete set of pictures of its own: a mount's other skins are not layered on its default's
+  pictures (only a `layer = over` skin draws over the game's donkey). Layering skins on a mount's default is not
+  built.
 - The pack is found when the game starts. Its pictures are read only when a donkey wears the skin, a few at a time,
   and put together on one sheet in memory; the skin shows once they are all in.
 - **One sheet instead of 44 files** works too: put `sheet = sheet.png` in `skin.cfg` and draw every frame as a cell of
@@ -62,12 +79,11 @@ BepInEx\plugins\gk2mounts\
 [Skin]
 format = 1          # keep 1
 # needs = 0.36      # the GK2 Donkey API version the pack was written for: an older API refuses it with the reason
-id = me.grey-rat    # the same as the folder name; your name in front, so no other author's id meets yours
-name = Grey Rat     # what the settings show
+name = Grey Rat     # what the settings show (the skin's own name is its folder's: no id = line; one is ignored)
 description = A rat the size of a donkey, drawn by me.   # a line or two for the Mounts panel
 # portrait = portrait.png   # a PNG next to the frames: the Mounts panel shows it for this skin (2x when 48 px or less, at most 96 px a side)
 author = me
-version = 1.0       # the higher version wins when the same id comes from two places
+version = 1.0       # the higher version wins when the same skin comes from two places
 colours = own          # own: your colours as drawn; the player's coat and harness colours recolour them by region
                     #      ([Colors] below). palette: drawn in the donkey's exact colours, which take the donkey's regions
 layer = replace     # replace: instead of the donkey. over: on top of the donkey (a saddle, a hat)
@@ -99,17 +115,16 @@ it goes in `mount.cfg`.
 yours. The mount carries what is the creature's, not the picture's: whether it pulls the cart, whether baby donkeys
 can be it and how big they are, its speed, an effect it comes with, its own tuning and its sounds. It is its own
 folder, `gk2mounts\<mount id>\`, with a `mount.cfg` and its skins under `skins\`; every skin in there is a look of it
-(a second dragon colour is a second folder under `me.dragon\skins\`). The keys of `[Mount]`, in the order the file keeps
-them:
+(a second dragon colour is a second folder under `me.dragon\skins\`, beside its `default\`). The keys of `[Mount]`,
+in the order the file keeps them:
 
 ```
 [Mount]
-id = me.dragon        # the same as the mount folder's name
+id = me.dragon        # the same as the mount folder's name: "<mod>.<name>", a dot required
 name = Dragon         # the creature's name: the Mount list, "a dragon can't ..." in the game's sentences
 noun = dragon         # the word the game's sentences use ("a dragon can't pull the cart"); default: the name in lower case
 description = A dragon of the keeper's own.   # for the Mounts panel
 # portrait = portrait.png   # a PNG in the mount folder: the Mounts panel shows it under the mount's name
-default_skin = me.red-dragon  # the look a new dragon wears: a skin folder under skins\ (the Skin row's "Default")
 author = me
 version = 1.0         # the higher version wins when the same mount comes from two places
 cart = true           # may it pull the cart
@@ -140,9 +155,10 @@ folder the file sits in decides whose they are. The file keeps them in this orde
 `author`, `version`, `cart` and `foals` are always written.
 
 The settings show a **Mount** list (Donkey, Dragon, Giant Rat, ...) and under it a **Skin** row with that mount's
-skins. The mount's `default_skin` is its **Default** (the game's own art for the donkey), listed first by that word,
-and the one a new instance of the mount wears; the others by their `name`. So a mount with one skin shows "Default"
-only, and a second dragon look (another folder under `dragon\skins\`, from any pack) shows next to it by its name.
+skins. The mount's `skins\default\` is its **Default** (the game's own art for the donkey), listed first by that
+word, and the one a new instance of the mount wears; the others by their `name`. So a mount with one skin shows
+"Default" only, and a second dragon look (another folder under `saddleup.dragon\skins\`, from any pack) shows next
+to it by its name. There is no `default_skin` key: one in `[Mount]` is reported as ignored.
 Every mount a player can pick has at least one skin. Keys the loader doesn't know in `[Mount]` are ignored and named
 in the log; a bad `foal_scale`, `speed`, `cargo` or `effect_when` is named too and the default stands (a speed
 outside 0.5 to 4 is taken to the nearest end).
@@ -238,12 +254,12 @@ Every built-in skin is a pack of exactly this format, kept as the example of one
 
 | Example | What it shows | Where |
 |---|---|---|
-| **Hellfire** | a skin drawn **over** the donkey that also takes things off it: the erase colour under horns and a devil's tail, `[Base.Coat]` for the ash coat, `[Colors]` so the cracks and the glow follow the player's muzzle and eye colours | `src/SaddleUp/assets/mounts/donkey/skins/hellfire/` (generated by `tools/skins/hellfire/make_hellfire.py`) |
-| **Royal Parade** | a plain **over** pack: a saddle cloth and a crown, the cloth's reds named `Harness` so the player's harness colour recolours them, the gold kept as drawn | `src/SaddleUp/assets/mounts/donkey/skins/royal-parade/` (generated by `tools/skins/royal-parade/make_royal.py`) |
-| **Giant Rat, Giant Snail, Giant Worm, Dragon** | a **mount** of its own (`mount.cfg`: its facts, speed, sounds) with a skin that **replaces** the donkey (`grey-rat`, `garden-snail`, `earth-worm`, `red-dragon`: the pictures, the rider's seat, the colours); the dragon's `front\` layer drawn above the rider and its flight sounds in the mount's `sounds\` | `src/SaddleUp/assets/mounts/<mount>/` with `mount.cfg` and `skins/<skin>/` (drawn by `tools/skins/creatures/make_creatures.py`): Saddle Up's packs, embedded in its DLL and registered with the API at start, the worked example of shipping mounts in a mod (docs/mounts-as-mods.md) |
-| **Gerry** | a mount out of the game's own character frames (`source = game`), no pictures of its own; `noun = skull`, babies 0.33, `seat = picture` | `src/SaddleUp/assets/mounts/gerry/mount.cfg` and `skins/gerry/skin.cfg` |
+| **Hellfire** | a skin drawn **over** the donkey that also takes things off it: the erase colour under horns and a devil's tail, `[Base.Coat]` for the ash coat, `[Colors]` so the cracks and the glow follow the player's muzzle and eye colours | `src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire/` (generated by `tools/skins/hellfire/make_hellfire.py`) |
+| **Royal Parade** | a plain **over** pack: a saddle cloth and a crown, the cloth's reds named `Harness` so the player's harness colour recolours them, the gold kept as drawn | `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (generated by `tools/skins/royal-parade/make_royal.py`) |
+| **Giant Rat, Giant Snail, Giant Worm, Dragon** | a **mount** of its own (`saddleup.rat`, `saddleup.snail`, `saddleup.worm`, `saddleup.dragon`; `mount.cfg`: its facts, speed, sounds) with its default look, which **replaces** the donkey (`skins/default/`: the pictures, the rider's seat, the colours); the dragon's `front\` layer drawn above the rider and its flight sounds in the mount's `sounds\` | `src/SaddleUp/assets/mounts/<mount>/` with `mount.cfg` and `skins/default/` (drawn by `tools/skins/creatures/make_creatures.py`): Saddle Up's packs, embedded in its DLL and registered with the API at start, the worked example of shipping mounts in a mod (docs/mounts-as-mods.md) |
+| **Gerry** | a mount (`saddleup.gerry`) out of the game's own character frames (`source = game`), no pictures of its own; `noun = skull`, babies 0.33, `seat = picture` | `src/SaddleUp/assets/mounts/saddleup.gerry/mount.cfg` and `skins/default/skin.cfg` |
 | **The donkey** | the one mount that is not a file (the game's own art, no `SkinDef`, no `mount.cfg`): what every skin under `donkey\skins\` is a look of | none: its facts are in the code (`Catalog.Donkey`) |
-| **Sepia, Checker** | the same from code: a recipe and a picture source registered through the API | `examples/GK2DonkeySkins/` |
+| **Sepia, Checker** | the same from code: a recipe (`donkey/example.sepia`) and a mount `example.checker-beast` whose `default` skin is a picture source, registered through the API | `examples/GK2DonkeySkins/` |
 
 Each `skin.cfg` and `mount.cfg` is commented and in one layout (`tools/skins/canonical_cfg.py` rewrites a built-in
 into it; its `--check` in the release scans refuses one that isn't, and `tests/SkinsScan` checks the section order and
@@ -271,11 +287,11 @@ side by side.
 A skin with no pictures of its own: another character's frames, read out of the game's character atlas at run
 time (as the recipes read the donkey's), mapped onto the donkey's frame keys and scaled by whole pixels onto the
 canvas. Gerry (the talking skull, preset `0901_`) is built in this way (docs/gerry-mount.md). Nothing of the game's
-art is in the pack (its `skin.cfg` in `gk2mounts\gerry\skins\gerry\`, next to the mount's `mount.cfg` two folders up).
+art is in the pack (its `skin.cfg` in `gk2mounts\saddleup.gerry\skins\default\`, next to the mount's `mount.cfg` two
+folders up).
 
 ```
 [Skin]
-id = gerry
 name = Gerry
 canvas = 160 160      # room for the scaled frames (a 29-pixel hop at 3x is 87 above the ground row)
 source = game
@@ -348,6 +364,7 @@ abilities: [making-a-mount.md](making-a-mount.md).
 
 Zip the `gk2mounts\<mount>\` folder (with `BepInEx\plugins\` above it, so it extracts into place): a mount with its
 `mount.cfg`, its `sounds\` and its skins, or, for a new look of a mount that exists already, only
-`gk2mounts\<mount>\skins\<your skin id>\` (no `mount.cfg`; `gk2mounts\donkey\skins\<id>\` for the donkey). Only your
+`gk2mounts\<mount>\skins\<mod>.<your skin>\` (no `mount.cfg`, no `default`, your prefix on the name;
+`gk2mounts\donkey\skins\<mod>.<skin>\` for the donkey). Only your
 own art, or art you may redistribute, goes in. A pack can also travel inside a mod's DLL with a version and a declared
 dependency on the API: Saddle Up's own five mounts travel that way (docs/mounts-as-mods.md 3).

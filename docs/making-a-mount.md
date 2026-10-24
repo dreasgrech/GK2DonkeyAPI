@@ -11,13 +11,26 @@ they are, an effect it comes with, its own tuning (speed, sounds, seat, cart geo
 Mounts panel, and abilities (code hooks). The donkey is the mount with no definition: the game's own.
 
 A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits on that drawing, and what the
-drawing's colours mean. Every mount has at least one skin. Hellfire and Royal Parade are skins of the donkey; the red
-dragon (`red-dragon`) is a skin of the dragon.
+drawing's colours mean. Every mount but the donkey has exactly one default skin, named `default`. Hellfire and Royal
+Parade are skins of the donkey (`donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`); the red dragon is the
+dragon's default (`saddleup.dragon/default`).
 
 The rule that ties them: **a mount is a folder with a `mount.cfg`, and its skins are the folders under its
-`skins\`.** The mount's `default_skin` names the look a new instance of it wears (its Default in the Skin row). A
-mount folder without a `mount.cfg` adds its skins to a mount registered elsewhere (another mod's, a code mount, or the
-donkey's `donkey\skins\`).
+`skins\`.** The folder `skins\default\` is the mount's own look: the one a new instance of it wears (its Default in
+the Skin row); a pack mount without it is refused. A mount folder without a `mount.cfg` adds its skins to a mount
+registered elsewhere (another mod's, a code mount, or the donkey's `donkey\skins\`); it may not bring a `default`,
+and each of its skins is named `<mod>.<name>`, your prefix and the skin's name (`donkey\skins\me.frost\` is
+`donkey/me.frost`): a skin added to a mount another mod owns carries its author, so two mods' `frost` never meet
+(without the prefix it is left out with a warning). The same goes for code: a `MountSkinDef` on a mount another mod
+registered, and every donkey skin and recipe (`Mounts.Looks.RegisterRecipe(Guid, "me.sepia", ...)` is
+`donkey/me.sepia`), throws an `ArgumentException` without it. Your own mount's skins take any name.
+
+**Ids.** A mount's id is `<mod>.<name>`: your mod's prefix, a dot, the mount's name (`me.giant-crab`; Saddle Up's
+dragon is `saddleup.dragon`). One without a dot is refused; only the game's `donkey` is plain. A skin is named within
+its mount: its folder's name, and its full name `<mount id>/<skin>` (`me.giant-crab/default`). A skin you add to a
+mount another mod owns (the donkey too) must carry your prefix, `<mod>.<name>` (`saddleup.dragon\skins\me.frost\`,
+`donkey/me.sepia`), so two authors' additions don't meet; without it the skin is refused. Why: a saved mount or skin
+must never turn into another mod's of the same name (docs/mount-id-collisions.md).
 
 A skin's pictures come one of three ways: a **pack** (a folder of PNGs and a `skin.cfg`, on disk or embedded in a
 DLL; no code), a **recipe** (code that turns each donkey frame's pixels into new ones), or **code sprites** (a mod
@@ -31,12 +44,12 @@ The mount and its skin are a folder of files; the mod only hands the folder to t
 MyMountMod/
   MyMountMod.csproj
   Plugin.cs
-  assets/mounts/giant-crab/
+  assets/mounts/me.giant-crab/
     mount.cfg                                           the mount (every key: skins.md "mount.cfg")
     sounds/click_1.ogg, click_2.ogg                     optional: the mount's sounds, for every skin of it
     portrait.png                                        optional: the panel's icon; else the default skin's standing picture is cut
-    skins/red-crab/
-      skin.cfg                                          the look (every key: skins.md "skin.cfg")
+    skins/default/
+      skin.cfg                                          the mount's own look (every key: skins.md "skin.cfg")
       bdy_static_left.png, bdy_walk_left_01.png, ...    the 44 frames on the canvas (skins.md "The pictures")
       front/ ...                                        optional: parts drawn over the rider
 ```
@@ -45,10 +58,9 @@ MyMountMod/
 
 ```ini
 [Mount]
-id = giant-crab        # the same as the mount folder's name
+id = me.giant-crab     # the same as the mount folder's name: "<mod>.<name>"
 name = Giant Crab
 description = Pulls the cart, has young, scuttles a little faster than a donkey.
-default_skin = red-crab  # the look a new crab wears: a folder under skins\
 author = you
 version = 1.0
 cart = true
@@ -69,13 +81,12 @@ voice = click_1.ogg, click_2.ogg   # folder's sounds\, a game sound id, none, or
 lips = none
 ```
 
-`skins/red-crab/skin.cfg`, its look:
+`skins/default/skin.cfg`, its look (the one a new crab wears):
 
 ```ini
 [Skin]
 format = 1
 needs = 0.36
-id = red-crab
 name = Red Crab
 description = A crab the size of a cart, sideways at everything.
 author = you
@@ -94,8 +105,8 @@ Dark = 2A1008 3C1810
 Eye = F0E040
 ```
 
-The skin's mount is the folder it sits in; a `[Mount]` section in a `skin.cfg` is ignored (the report says it goes in
-`mount.cfg`).
+The skin's mount is the folder it sits in, and its name the folder's own (no `id =` line); a `[Mount]` section in a
+`skin.cfg` is ignored (the report says it goes in `mount.cfg`).
 
 The csproj embeds the folder under a predictable name:
 
@@ -106,8 +117,8 @@ The csproj embeds the folder under a predictable name:
 </ItemGroup>
 ```
 
-The files come out as `MyMountMod.mounts.giant-crab\mount.cfg`, `MyMountMod.mounts.giant-crab\sounds\click_1.ogg`,
-`MyMountMod.mounts.giant-crab\skins\red-crab\bdy_walk_left_03.png` and so on.
+The files come out as `MyMountMod.mounts.me.giant-crab\mount.cfg`, `MyMountMod.mounts.me.giant-crab\sounds\click_1.ogg`,
+`MyMountMod.mounts.me.giant-crab\skins\default\bdy_walk_left_03.png` and so on.
 
 `Plugin.cs`, the whole mod:
 
@@ -130,19 +141,20 @@ public sealed class Plugin : BaseUnityPlugin
 
 That is all. On the next start the Giant Crab is in Saddle Up's Mounts panel with its Skin, Colours and Effect
 rows, its icon cut from the default skin's standing picture, its speed pinned so the player's Speed row is left out
-for it. A second skin of the same mount is another folder under `assets/mounts/giant-crab/skins/`. Several mounts in
+for it. A second skin of the same mount is another folder under `assets/mounts/me.giant-crab/skins/`. Several mounts in
 one DLL: several mount folders under the same prefix. A new look for a mount that isn't yours (the donkey, or another
-mod's) is a mount folder with no `mount.cfg`: `assets/mounts/donkey/skins/<your skin>/`.
+mod's) is a mount folder with no `mount.cfg`: `assets/mounts/donkey/skins/me.<your skin>/` (your prefix on its name).
 
 A mod removed from the plugins folder needs nothing: the next start has no registration, and a player who had its
 mount chosen rides a donkey until it is back. A plugin destroyed while the game runs (a script reloader) loses its
 tuning and keys by itself, but its skins and mounts stay registered until withdrawn: `Mounts.Looks.Unregister(ownerId,
-skinId)` per skin in `OnDestroy` (a pack's mount goes with the last of its skins registered by the same owner).
+skinId)` per skin in `OnDestroy`, with the skin's full name (a pack's mount goes with the last of its skins registered
+by the same owner).
 
-The same folder also works loose, as `BepInEx\plugins\gk2mounts\giant-crab\` (or the same under any mod's
-folder, `BepInEx\plugins\<AnyFolder>\gk2mounts\giant-crab\`) with no DLL at all: the API scans for it at
+The same folder also works loose, as `BepInEx\plugins\gk2mounts\me.giant-crab\` (or the same under any mod's
+folder, `BepInEx\plugins\<AnyFolder>\gk2mounts\me.giant-crab\`) with no DLL at all: the API scans for it at
 start. A loose copy and a DLL's copy of the same
-skin id: the higher version wins, a tie goes to the DLL. Two `mount.cfg` of the same mount id: the higher `[Mount]
+skin: the higher version wins, a tie goes to the DLL. Two `mount.cfg` of the same mount id: the higher `[Mount]
 version` wins (its facts replace the other's, whose skins keep the mount), a tie goes to the DLL over a loose folder,
 otherwise the first stays and the later one is refused with a warning.
 
@@ -170,7 +182,7 @@ public sealed class Plugin : BaseUnityPlugin
         // the mount: what it is and does
         registered.Add(Mounts.Catalog.Register(guid, new MountDef
         {
-            Id = "giant-crab",
+            Id = "me.giant-crab",       // "<mod>.<name>": an id without a dot is refused
             Name = "Giant Crab",
             Description = "Scuttles. Sidles faster when the keeper rides it.",
             Author = "you",
@@ -186,9 +198,9 @@ public sealed class Plugin : BaseUnityPlugin
         // its Default skin: the pictures from your own sprite source (or RegisterRecipe over the donkey's frames)
         registered.Add(Mounts.Looks.Register(guid, new MountSkinDef
         {
-            Id = "giant-crab",          // the mount's id: this skin is its Default
+            Id = "default",             // its name within the mount: "default" is the mount's own look
             Name = "Giant Crab",
-            Mount = "giant-crab",
+            Mount = "me.giant-crab",    // registered as me.giant-crab/default
             CanvasWidth = 128, CanvasHeight = 128,
             SeatRow = 70,
             Source = new CrabSprites(), // IMountSkinSource: Keys, TryGetFrame(key, out Sprite)
@@ -203,7 +215,7 @@ public sealed class Plugin : BaseUnityPlugin
     }
 
     // An ability: hooks on the instance. Its values go under Owner, which the API gives it as
-    // "<your guid>.ability.giant-crab" and clears when the instance stops being a crab.
+    // "<your guid>.ability.me.giant-crab" and clears when the instance stops being a crab.
     private sealed class SidlesWhenRidden : MountAbility
     {
         public override string Id => "sidles-when-ridden";
@@ -234,36 +246,39 @@ log), and its values are never saved (set again in play).
 - Lists the mount in the Mounts panel: its icon (a `portrait` if named, else its Default skin's standing picture),
   its description, and a line built from `cart`, `foals`, the speed, the effect it comes with, its skins, its
   `[Stats]` (`MountDef.Stats` in code) and its abilities' names and descriptions.
-- Makes Saddle Up's rows for it: Skin, the colours, the effect, kept per mount in the cfg (`Skin_giant-crab`,
-  `Coat_giant-crab`, ...). A mount registered after the page was built is caught up the next frame.
+- Makes Saddle Up's rows for it: Skin, the colours, the effect, kept per mount in the cfg (`Skin_me.giant-crab =
+  me.giant-crab/default`, `Coat_me.giant-crab`, ...). A mount registered after the page was built is caught up the next frame.
 - Pins the mount's tuning on every instance of it under the API's own owner. A player's row for a pinned key is left
   out of the menus for that mount (Saddle Up's `TuningKey`); a mod's value still wins over the mount's. A mount may
   not pin a behaviour switch, a colour, a look key or the lantern's keys: refused with one warning.
 - Refuses a second mount with the same id from another owner, except a pack's `mount.cfg` with a higher `[Mount]
   version` (or the same version from a DLL over a loose folder), which takes over a pack's mount; a mount registered
-  in code is never replaced. A pack skin of the same id from another place: the higher version wins, a tie goes to
-  the DLL; the log names the loser.
-- Saves nothing of the mount itself. A player's kept donkey records the skin id; if the mod is gone it comes back
+  in code is never replaced. The same pack skin (one full name) from another place: the higher version wins, a tie
+  goes to the DLL; the log names the loser.
+- Saves nothing of the mount itself. A player's kept donkey records the skin's full name (`me.giant-crab/default`);
+  if the mod is gone it comes back
   as a donkey and keeps the choice for when the mod returns.
 - A game-source skin (`source = game`, another character's frames) is checked at game-ready; frames the game lacks
   set it aside, the donkey comes instead, and it is offered again when they are there.
 
-Ids: use `<author>.<name>` for a mount or skin from a mod (the API says so once in the log for a bare id), so two
-authors' names never meet.
+Ids: a mount's id is `<mod>.<name>` (refused without a dot); a skin is named within its mount, and one you add to
+another mod's mount carries your name (`me.frost`). A code mount should register a skin named `default`; if it
+doesn't, its first skin by name is its default.
 
 ## Building one from this repo (the shipped mounts' way)
 
-1. `python -I tools/skins/new_skin.py red-crab --mount giant-crab --name "Giant Crab" --canvas 128 --seat 70`
-   writes `src/SaddleUp/assets/mounts/giant-crab/skins/red-crab/skin.cfg` in the canonical layout, and, the mount
-   being new, `src/SaddleUp/assets/mounts/giant-crab/mount.cfg` with `default_skin = red-crab`; a generator stub under
-   `tools/skins/red-crab/` drawing placeholder frames, and the Aseprite sidecar. A second look of the same mount is
-   the same command with another skin id (the mount's folder and `mount.cfg` are left as they are); without
-   `--mount` the skin is the donkey's (`assets/mounts/donkey/skins/<id>/`).
+1. `python -I tools/skins/new_skin.py default --mount me.giant-crab --name "Giant Crab" --canvas 128 --seat 70`
+   writes `src/SaddleUp/assets/mounts/me.giant-crab/skins/default/skin.cfg` in the canonical layout, and, the mount
+   being new, `src/SaddleUp/assets/mounts/me.giant-crab/mount.cfg`; a generator stub drawing placeholder frames, and
+   the Aseprite sidecar. A second look of the same mount is the same command with another skin name (the mount's
+   folder and `mount.cfg` are left as they are); without `--mount` the skin is the donkey's
+   (`assets/mounts/donkey/skins/<prefix><skin>/`: `--prefix me.`, Saddle Up's `saddleup.` by default, goes in front of
+   a skin added to a mount your mod doesn't own).
 2. Draw the 44 frames (Aseprite: `scripts/GK2 Export skin.lua` splits the sheet into the PNGs) or extend the
    generator. docs/skins.md "The pictures" names each key and what the rider does on it.
 3. Set `seat`, `[Tuning.Cart] HitchGapPx` if the body is longer than the donkey's, and the `[Colors]` regions in the
    `skin.cfg`; the speed, the babies and the sounds in the `mount.cfg` (the mount's sound files in its `sounds\`).
-4. Check: `python -I tools/skins/check_skin.py src/SaddleUp/assets/mounts/giant-crab/skins/red-crab` (the
+4. Check: `python -I tools/skins/check_skin.py src/SaddleUp/assets/mounts/me.giant-crab/skins/default` (the
    pictures), `dotnet run --project tests/SkinsScan -c Release` (both cfgs), or `bash tools/release-scans.sh`
    (everything).
 5. Build Saddle Up: its csproj embeds everything under `assets/mounts`; its Awake registers them.

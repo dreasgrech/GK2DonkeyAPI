@@ -156,11 +156,17 @@ namespace GK2DonkeyAPI.Api
         {
             string plain = PlainName(cfgSection);
             movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out List<(string Section, string Key)> aliases);
+            string unprefixed = UnprefixedMountKey(key);
+            if (unprefixed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, unprefixed);
             foreach (string s in file.Keys)
             {
                 if (s == cfgSection) continue;
                 string p = PlainName(s);
-                if (p == plain) yield return (s, key);
+                if (p == plain)
+                {
+                    yield return (s, key);
+                    if (unprefixed != null) yield return (s, unprefixed);
+                }
                 else if (aliases != null)
                 {
                     foreach ((string Section, string Key) alias in aliases)
@@ -169,6 +175,16 @@ namespace GK2DonkeyAPI.Api
                     }
                 }
             }
+        }
+
+        // A per-mount key with its mount's id from before the prefixes ("Coat_saddleup.dragon" -> "Coat_dragon": a dev's
+        // cfg of 2026-10-24, mounts never released): its old name, so the value carries over; null for any other key.
+        internal static string UnprefixedMountKey(string key)
+        {
+            int u = key.IndexOf('_');
+            if (u <= 0) return null;
+            int dot = key.IndexOf('.', u + 1);
+            return dot > u + 1 && dot < key.Length - 1 ? key.Substring(0, u + 1) + key.Substring(dot + 1) : null;
         }
 
         // The file's value for key from an old place (OldPlaces) when the file has none under cfgSection itself; null
@@ -466,14 +482,25 @@ namespace GK2DonkeyAPI.Api
         {
             if (mountRow == null) return;
             string mount = mountRow.Value ?? MountCatalog.DonkeyId;
+            // a mount's id from before the prefixes ("dragon": a dev's cfg, 2026-10-24): its full id (saddleup.dragon), kept
+            if (GK2DonkeyAPI.Catalog.Find(mount) == null && GK2DonkeyAPI.Catalog.FindShort(mount) is GK2DonkeyAPI.Catalog.Entry full)
+            {
+                mountRow.Value = full.Id; // SettingChanged runs Apply again
+                return;
+            }
             skinRows.TryGetValue(mount, out ConfigEntry<string> row);
             string value = row?.Value;
             // The donkey's own art is no skin of another mount: a cfg holding it for one (written while that
             // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
             bool donkeyMount = mount.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(value) || (!donkeyMount && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(mount);
-            // a built-in look's id from before the mount folders (2026-10-24: "dragon" is "red-dragon" now): the new id, kept
-            if (Looks.Find(value) == null && Looks.RenamedTo(value) is string renamed && Looks.Find(renamed) != null) value = renamed;
+            // a short name ("dragon", "hellfire": a dev's cfg from before skins were named within their mount, 2026-10-24):
+            // the skin's full name ("dragon/default"), kept
+            if (!donkeyMount || !value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
+            {
+                Looks.SkinDef named = Looks.Find(value);
+                if (named != null && !named.Id.Equals(value, StringComparison.OrdinalIgnoreCase) && named.MountId.Equals(mount, StringComparison.OrdinalIgnoreCase)) value = named.Id;
+            }
             if (row != null && row.Value != value)
             {
                 row.Value = value; // SettingChanged runs Apply again with the healed value

@@ -20,9 +20,9 @@ import io, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import skinroots
 REPO = skinroots.REPO
-SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "erase", "canvas", "pivot", "source", "seat",
+SKIN_ORDER = ["format", "needs", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
-MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "default_skin", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
+MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
 SKIN_SECTIONS = [("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
 MOUNT_SECTIONS = [("stats", "[Stats]"), ("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]

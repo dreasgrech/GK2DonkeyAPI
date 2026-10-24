@@ -2,7 +2,7 @@
 
 Old: the frames the code drew (the reviewed prototype's output, moved onto the game's canvas: C:\\ClaudeCodeTemp\\
 GK2-donkey-frames\\hellfire-96\\; the C# recipe LooksHellfire.cs was its port, pixel for pixel).
-New: the pack (src/SaddleUp/assets/mounts/donkey/skins/hellfire) composited over the donkey's frame as the game does it (the
+New: the pack (src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire) composited over the donkey's frame as the game does it (the
 erase colour clears, the other pixels draw), shown two ways:
   - "new, prototype coat": the coat darkened with the prototype's own formula (darken_coat): must equal old exactly;
   - "new, game coat": the coat through the game's [Base.Coat] rule (Brightness, then Colorize at full amount, the
@@ -21,7 +21,7 @@ from gamedir import donkey_frames
 import hellfire_proto as HP
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-PACK = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "hellfire")
+PACK = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "saddleup.hellfire")
 OLD = r"C:\ClaudeCodeTemp\GK2-donkey-frames\hellfire-96"
 OUT = os.path.join(HERE, "out", "compare.html")
 ORDER = (["bdy_static_left"] + [f"bdy_walk_left_{i:02d}" for i in range(1, 9)] + [f"bdy_ear_left_{i:02d}" for i in range(1, 6)]

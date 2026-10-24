@@ -4,7 +4,7 @@
 -- except the reference layers (name starting with "donkey": the game's frames to paint over) and the layers whose
 -- name starts with "front" (those go to front.png: drawn in front of the rider). The settings live next to the
 -- .aseprite file in "<name>.gk2export.txt":
---   pack = C:\...\BepInEx\plugins\gk2mounts\donkey\skins\royal-parade   (where sheet.png goes; asked for the first time)
+--   pack = C:\...\BepInEx\plugins\gk2mounts\donkey\skins\saddleup.royal-parade   (where sheet.png goes; asked for the first time)
 --   columns = 8                                            (cells per row; skin.cfg says the same)
 --   check = python "C:\...\check_skin.py" "<pack>"         (optional: run after the export, its output shown)
 
@@ -28,7 +28,7 @@ end
 if not cfg.pack or cfg.pack == "" then
   if not app.isUIAvailable then return say("No pack folder in " .. side) end
   local d = Dialog{ title = "GK2 Export skin: where to?" }
-  d:label{ text = "The skin's pack folder (BepInEx\\plugins\\gk2mounts\\<mount>\\skins\\<id>):" }
+  d:label{ text = "The skin's pack folder (BepInEx\\plugins\\gk2mounts\\<mount id>\\skins\\<skin>):" }
   d:entry{ id = "pack", text = "" }
   d:button{ id = "ok", text = "Save and export" }
   d:button{ id = "cancel", text = "Cancel" }

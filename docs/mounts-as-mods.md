@@ -8,6 +8,17 @@ its `skins\` (`skin.cfg`, the PNGs, `front\`, the skin's own `sounds\`); in this
 A skin's `[Mount]` block, the declaring skin, joiners and `gk2skins\<id>\` are gone. Where sections 1 to 9 describe
 those, they are the 2026-10-20 state; the current forms are given next to them, and docs/skins.md has them all.
 
+**2026-10-24, later (the user):** three id rules. A mount's id is `<mod>.<name>` (`saddleup.dragon`, `acme.dragon`;
+only the game's `donkey` is plain; one without a dot is refused), and its folder is named so:
+`src/SaddleUp/assets/mounts/saddleup.dragon/`. A skin is named within its mount: its folder's name, full name
+`<mount id>/<skin>` (`saddleup.dragon/default`, `donkey/saddleup.hellfire`); the side file and the cfg rows hold the full
+name. A skin added to a mount another mod owns (every donkey skin, a folder without `mount.cfg`, a code skin or recipe
+on another's mount) is named `<mod>.<name>` or refused; Saddle Up's donkey skins are `saddleup.hellfire` and
+`saddleup.royal-parade` (`hellfire` and `royal-parade` until later the same day; the old names still find them). Every mount but the donkey has exactly one default look, the folder `skins\default\`; `default_skin` is gone.
+The old look ids `red-dragon`, `grey-rat`, `garden-snail`, `earth-worm`, `gerry` are each mount's `skins\default\`
+now. Why: docs/mount-id-collisions.md. Where the text below says `dragon` or `red-dragon` as the current form, read
+`saddleup.dragon` and `saddleup.dragon/default`.
+
 How a mod registers a mount of its own, in one page: [making-a-mount.md](making-a-mount.md).
 
 The user: *"are mounts also structured all the same or do they have fiddly code involved? ... my idea is we would be
@@ -27,8 +38,8 @@ mount or skin id anywhere: the only built-in id in code is the `hellfire` effect
 effect, not a mount. There is no dragon code, no rat code, no Gerry code: the dragon's 128 canvas, its front layer,
 its hitch gap, its belly colour, Gerry's game frames and his picture seat are all keys of their files, read by one
 loader. So a "Saddle Up Dragon" mod is the dragon's folder moved out of `src/GK2DonkeyAPI/assets/skins/` into a mod
-of its own, and nothing in the game would know the difference (today: `src/SaddleUp/assets/mounts/dragon/`, the
-mount's `mount.cfg` and `sounds\` with the red dragon's look under `skins\red-dragon\`).
+of its own, and nothing in the game would know the difference (today: `src/SaddleUp/assets/mounts/saddleup.dragon/`,
+the mount's `mount.cfg` and `sounds\` with the red dragon's look under `skins\default\`).
 
 What *is* fiddly sits in three places, none of them the runtime: **the load order of a mod that registers from code**
 (section 4: a real gap, with a fix on our side), **the tooling and the tests** (sections 5 and 6: a dozen scripts and
@@ -49,8 +60,8 @@ Three ways in, all public since API 0.30.0 (`Api/MountLooks.cs:14-24`, docs/api.
 A mount declared by a pack and a mount registered from code are the same `Entry` (`Catalog.Declare`, Catalog.cs:69-80:
 first declaration wins, later skins with `mount = <id>` join it; since 2026-10-24 a pack's `mount.cfg` with a higher
 `[Mount] version` takes over a pack's mount, and a code mount is never replaced). A second dragon colour from a third
-mod is a pack with `mount = dragon` and no `[Mount]` block (today: `gk2mounts\dragon\skins\<its id>\`, a mount folder
-with no `mount.cfg`), and it lists under the dragon's Skin row by its name (Looks.cs:1242).
+mod is a pack with `mount = dragon` and no `[Mount]` block (today: `gk2mounts\saddleup.dragon\skins\<author>.<skin>\`,
+a mount folder with no `mount.cfg` and no `default`), and it lists under the dragon's Skin row by its name (Looks.cs:1242).
 
 **Proof already in the suite.** The self-test "mount from a pack" writes a loose `gk2skins\mount-test` folder
 (today `gk2mounts\test-beast\mount.cfg` with `skins\mount-test\`) with a `[Mount] cart = false` block, registers it
@@ -66,16 +77,16 @@ is `builtIn: false`, which decides the Mounts tab's Save path, Looks.cs:780, and
 `[Skin]`, `[Tuning.Cart] HitchGapPx = 24`, `[Colors]` (Dark, Eye, Muzzle) and `[Mount]`. `RegisterPack`
 (Looks.cs:386-404) reads the folder's PNGs and its `front\` subfolder and hands them to the same `FromCfg` the
 embedded loader uses. Nothing of the dragon lives outside that folder except the generator (section 5) and the tests
-(section 6). (Since 2026-10-24: `src/SaddleUp/assets/mounts/dragon/` holds `mount.cfg` (`[Mount]` with
-`default_skin = red-dragon`, `[Sounds]`) and `sounds\` with the flight's twelve `.ogg`, and `skins\red-dragon\` the
-PNGs, `front\` and a `skin.cfg` with `[Skin]`, `[Tuning.Cart] HitchGapPx = 24` and `[Colors]`.)
+(section 6). (Since 2026-10-24: `src/SaddleUp/assets/mounts/saddleup.dragon/` holds `mount.cfg` (`[Mount]` with
+`id = saddleup.dragon`, `[Sounds]`) and `sounds\` with the flight's twelve `.ogg`, and `skins\default\` the PNGs,
+`front\` and a `skin.cfg` with `[Skin]`, `[Tuning.Cart] HitchGapPx = 24` and `[Colors]`.)
 
 ## 3. What a "Saddle Up Dragon" mod would be
 
 Two shapes, both valid today; the recommendation is the second.
 
-**(a) A zip of a folder.** `BepInEx\plugins\GK2SaddleUpDragon\gk2mounts\dragon\...` (`gk2skins\dragon\` before
-2026-10-24): the dragon's folder as it is in the repo (or its skin's sheet form: `sheet = sheet.png`,
+**(a) A zip of a folder.** `BepInEx\plugins\GK2SaddleUpDragon\gk2mounts\saddleup.dragon\...` (`gk2skins\dragon\`
+before 2026-10-24): the dragon's folder as it is in the repo (or its skin's sheet form: `sheet = sheet.png`,
 `sheet_front = front.png`, two PNGs instead of 85). No DLL, no version, no dependency declaration: a mod manager sees files, not a plugin. The API finds it at its own Awake, before
 Saddle Up's (hard dependency), so every list has it. The cheapest route and the one an artist takes
 (docs/skins.md "Sharing it").
@@ -83,8 +94,8 @@ Saddle Up's (hard dependency), so every list has it. The cheapest route and the 
 **(b) A plugin DLL with the folder embedded** (recommended for anything we publish; since the evening it is how Saddle
 Up itself ships its five mounts, section 10): `GK2SaddleUpDragon.dll` with
 `[BepInPlugin("dreas.gk2.saddleup.dragon", "GK2 Saddle Up: Dragon", "1.0.0")]`, `[BepInDependency("dreas.gk2.donkeyapi",
-"0.33.0")]`, the `assets\mounts\dragon\**` embedded with the csproj line above (`assets\skins\dragon\**` before
-2026-10-24), and an Awake of five lines: the API
+"0.33.0")]`, the `assets\mounts\saddleup.dragon\**` embedded with the csproj line above (`assets\skins\dragon\**`
+before 2026-10-24), and an Awake of five lines: the API
 version check (`Mounts.ApiVersion`, as the example does) and `RegisterEmbedded`. It carries a version and the
 dependency (mod managers and the Mods menu show it; an old API is refused with one log line instead of a half-read
 file), one file instead of a folder of pictures, and a home for an ability later (the dragon's wing beat, a flight)
@@ -93,15 +104,16 @@ is the template (a `HintPath` to the released `GK2DonkeyAPI.dll`, no game refere
 a mount mod touches no game member).
 
 Either way the player's side is the same: the dragon appears in Saddle Up's Mount list, its Skin row says Default,
-its colour rows are its own (`Coat_dragon`, `Muzzle_dragon`: the page builds a set per mount, MountSettingsPage.cs
-`PerMount`), the settings picture shows it with its cart at its gap, the F11 Mounts tab tunes it, the side file keeps
-`Skin = red-dragon` (the skin's id; `dragon` before 2026-10-24) on every instance that is one.
+its colour rows are its own (`Coat_dragon`, `Muzzle_dragon`; today `Coat_saddleup.dragon`: the page builds a set per
+mount, MountSettingsPage.cs `PerMount`), the settings picture shows it with its cart at its gap, the F11 Mounts tab
+tunes it, the side file keeps `Skin = saddleup.dragon/default` (the skin's full name; `dragon` until 2026-10-24) on
+every instance that is one.
 
 **When the mod is gone again** (uninstalled, or the API loaded without it): the cfg keeps `Mount = dragon` and the
 row shows "dragon (not installed)" and is left alone (MountSettingsPage.cs:465, 503); the companion's `MountId`
 falls back to the donkey (MountCompanion.cs:227), so the player rides a donkey; the per-mount colour rows vanish from
 the page but their cfg lines stay (BepInEx keeps orphaned entries on save); every kept instance with
-`Skin = red-dragon` loads as a donkey wearing a missing skin, its cart and babies with it, the record's label says
+`Skin = saddleup.dragon/default` loads as a donkey wearing a missing skin, its cart and babies with it, the record's label says
 "donkey" (Persistence.cs:402-420); the choice is kept on all of them and returns with the mod. One thing to change:
 with the mounts on, a missing skin id logs a **warning** per start (Looks.cs:2039, "no skin 'dragon' is installed"). Right
 for a typo in a cfg, wrong for a mod a player chose to remove: once mounts come from separate mods, that line is an
@@ -261,7 +273,8 @@ between; gone.)
   checks every root.
 - **The move** (section 7, into Saddle Up): `SaddleUp.csproj` embeds `assets\skins\**` as `GK2SaddleUp.skins.<dir>\<file>`
   and records `GK2SkinsSourceDir` in a dev build (since 2026-10-24: `assets\mounts\**` as
-  `GK2SaddleUp.mounts.<mount>\mount.cfg`, `GK2SaddleUp.mounts.<mount>\skins\<skin>\<file>`, and
+  `GK2SaddleUp.mounts.<mount>\mount.cfg`, `GK2SaddleUp.mounts.<mount>\skins\<skin>\<file>`, e.g.
+  `GK2SaddleUp.mounts.saddleup.dragon\skins\default\bdy_walk_left_03.png`, and
   `GK2MountsSourceDir` = `assets\mounts`; the Mounts tab saves into the repo as before: `Looks.CfgPathFor` reads it
   off the skin's `SourceAssembly`, and a mount's rows go to its `mount.cfg`); Saddle Up's Awake calls
   `Mounts.Looks.RegisterEmbedded` (prefix `GK2SaddleUp.mounts.`) before it builds its page; Saddle Up needs API
@@ -272,13 +285,14 @@ between; gone.)
   the API's Awake, before Saddle Up's, so a loose `gk2skins\dragon` pack took the id first and Saddle Up's embedded
   dragon was refused with the loader's "already registered" warning (before, the built-in won); and a loose pack
   with a `[Mount] id = dragon` block declared the Dragon's facts first, Saddle Up's dragon joining it (first
-  declaration wins). Since 2026-10-24 the version rules decide instead of the order: the same skin id from two
-  places, the higher `version` wins and a tie goes to the DLL; two `mount.cfg` of one mount id, the higher `[Mount]
+  declaration wins). Since 2026-10-24 the version rules decide instead of the order: the same skin (one full name)
+  from two places, the higher `version` wins and a tie goes to the DLL; two `mount.cfg` of one mount id, the higher `[Mount]
   version` wins (its facts replace the other's in place, the other's skins keep the mount), a tie goes to the DLL
   over a loose folder, otherwise the first stays and the later one is refused with a warning. A pack author who wants
-  a second dragon look puts it in `gk2mounts\dragon\skins\<another id>\` with no `mount.cfg`.
-- **What a third party does now**, in full: a folder `gk2mounts\<mount>\` with `mount.cfg` and `skins\<skin>\`
-  (`skin.cfg` and the pictures), dropped under `plugins\` (no code), or the same folder embedded in a DLL with the
+  a second dragon look puts it in `gk2mounts\saddleup.dragon\skins\<author>.<skin>\` with no `mount.cfg` and no
+  `default`.
+- **What a third party does now**, in full: a folder `gk2mounts\<mod>.<name>\` with `mount.cfg` and
+  `skins\default\` (its own look; more looks beside it, `skin.cfg` and the pictures each), dropped under `plugins\` (no code), or the same folder embedded in a DLL with the
   two lines Saddle Up uses (the csproj's `EmbeddedResource` and `RegisterEmbedded` in Awake) and a `BepInDependency`
   on the API 0.34.0 or newer. (Until 2026-10-24: a folder `gk2skins\<id>\` with `skin.cfg` and its `[Mount]`
   block.) Either way the mount is in Saddle Up's Mount row with its own Skin and colour rows, its cart, babies and

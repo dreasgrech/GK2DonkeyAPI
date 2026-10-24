@@ -70,7 +70,7 @@ namespace GK2DonkeyAPI
         {
             // No built-in recipe is left: the earlier five (zebra, ghost, ember, golden, shadow) were recolours and
             // patterns, which the colour settings cover (gone 2026-10-18); Hellfire changed the drawing itself and was
-            // code (LooksHellfire.cs) until 2026-10-19, when it became a pack drawn over the donkey (Saddle Up's assets/mounts/donkey/skins/hellfire,
+            // code (LooksHellfire.cs) until 2026-10-19, when it became a pack drawn over the donkey (Saddle Up's assets/mounts/donkey/skins/saddleup.hellfire,
             // made by tools/skins/hellfire/make_hellfire.py from the same prototype), the erase colour and the [Base.Coat]
             // recolour doing what only code could before. Recipes stay for mods (Mounts.Looks.RegisterRecipe).
         }
@@ -81,7 +81,7 @@ namespace GK2DonkeyAPI
         private static string gamePrefix;
         private static SkinBase gameBase;
 
-        private static void FindGameFrames(SkinBase b, string prefix)
+        private static void FindGameFrames(SkinBase b, string prefix, bool quiet = false)
         {
             if (gameBase == b && gamePrefix == prefix && gameFrames.Count > 0) return;
             gameFrames.Clear();
@@ -99,7 +99,23 @@ namespace GK2DonkeyAPI
                     gameFrames[key] = s;
                 }
             }
-            Plugin.Log.LogInfo($"Looks: the {b.Id}'s frames found for the recipes: {gameFrames.Count} of {b.Keys.Length} ('{prefix}*' in the {b.AtlasName} atlases).");
+            if (!quiet || gameFrames.Count > 0) Plugin.Log.LogInfo($"Looks: the {b.Id}'s frames found for the recipes: {gameFrames.Count} of {b.Keys.Length} ('{prefix}*' in the {b.AtlasName} atlases).");
+        }
+
+        // Whether a skin is built from the base's own frames: a recipe, or an over skin that erases (WrapErase).
+        internal static bool NeedsBaseFrames(SkinDef d) => d.Recipe != null || (d.Over && d.Erase != null);
+
+        // Whether the base's frames are in memory now (the game loads them with the world, not at the main menu). The
+        // atlases are searched again at most every 3 s while they aren't, without a log line.
+        private static float baseFramesCheckAt;
+
+        internal static bool BaseFramesInMemory(SkinBase b, string prefix)
+        {
+            if (gameBase == b && gamePrefix == prefix && gameFrames.Count > 0) return true;
+            if (Time.realtimeSinceStartup < baseFramesCheckAt) return false;
+            baseFramesCheckAt = Time.realtimeSinceStartup + 3f;
+            FindGameFrames(b, prefix, quiet: true);
+            return gameFrames.Count > 0;
         }
 
         // The sprite's pixels on its canvas, at its trim offset (ReadPixels from a blit of its atlas).

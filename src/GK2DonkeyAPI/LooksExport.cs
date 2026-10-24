@@ -41,7 +41,7 @@ namespace GK2DonkeyAPI
                 foreach (Loaded l in loaded.Values)
                 {
                     if (!l.Ready || l.Frames.Count == 0) continue;
-                    string dir = Path.Combine(folder, l.Def.Id);
+                    string dir = Path.Combine(folder, l.Def.Id.Replace('/', Path.DirectorySeparatorChar)); // game-skins\<mount>\<skin>\, sorted by mount (the donkey's own frames sit in donkey\ itself)
                     Directory.CreateDirectory(dir);
                     Directory.CreateDirectory(Path.Combine(dir, "front"));
                     int n = 0;

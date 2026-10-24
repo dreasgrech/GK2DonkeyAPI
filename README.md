@@ -53,7 +53,7 @@ a second mod keeping its own donkeys with the save.
 | Where | What |
 |---|---|
 | `src/GK2DonkeyAPI` | The API mod. Its README lists every feature; the settings and internals are in [`docs/reference.md`](docs/reference.md). |
-| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its five mounts and the donkey's two skins are packs in `assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
+| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its five mounts and the donkey's two skins are packs in `assets/mounts/<mount>/` (`saddleup.dragon` and so on: `mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
 | `examples/` | `GK2DonkeyTechGate` (the cart and the lamp's light need techs) and `GK2DonkeyHerd` (a second mod with its own kept donkeys). Not shipped. |
 | `tools/` | `GK2DonkeyProbe` (the investigation plugin and its archived reports), `GK2DonkeyAPIProbe` (every API call on F-keys), `colors` (the shader and texture tools behind the colours), `GK2PerfRunner` (scripted profiling, [`docs/performance-hog.md`](docs/performance-hog.md)), `GK2AssetProbe` (art from outside the game, [`docs/external-assets.md`](docs/external-assets.md)). Not shipped. |
 | `tests/` | Checks run without the game: the public API snapshot, the game members the API uses, the optional framework link, and the game-update diff ([`tests/README.md`](tests/README.md)). |
