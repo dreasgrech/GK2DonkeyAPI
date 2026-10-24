@@ -168,6 +168,118 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A real slope (the user, 2026-10-24: "going uphill, sometimes when jumping, you get stuck like jumping against a
+        // wall"): a hillside between two terrain levels near the keeper (the drawn ground's levels are flat, so only the
+        // real terrain shows the fault; a test ramp never could), a running jump up it and one down it: the body moves
+        // in the air (not held), lands on the ground, never sent back; the ground the mount is drawn on never steps.
+        private static IEnumerator FlightJumpSlope()
+        {
+            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors"); yield break; }
+            Vector3 me = Keeper();
+            if (!FindSlope(me, 30f, out Vector3 foot, out Vector3 up, out float rise, out float run))
+            {
+                Info("no hillside within 30 (the ground rising 0.4 to 1.3 over 2.5 of walkable ground): run this one near a slope");
+                Skip("no slope near here");
+                yield break;
+            }
+            Info($"a slope at {foot:F2}, rising {rise:0.00} over {run:0.0} towards {up:F1}");
+            yield return MoveKeeper(foot - up * 1.2f, up.x >= 0f ? 1f : -1f);
+            if (!moved) { Skip("the keeper could not be put at the slope's foot"); yield break; }
+            MountHandle donkey = Spawn(Keeper(), right: up.x >= 0f);
+            try
+            {
+                if (donkey == null) { Fail("could not spawn the test's donkey"); yield break; }
+                yield return Until(() => donkey.IsReady, 6f);
+                MountResult r = donkey.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(5);
+                Rigidbody rb = PC.PhysicalBody.Rb;
+                Mount.Instance mi = Mount.Ridden;
+                float px = 2f * 0.01666667f;
+                foreach (bool uphill in new[] { true, false })
+                {
+                    Vector3 start = uphill ? foot - up * 1.0f : foot + up * (run + 1.0f);
+                    Vector3 dir = uphill ? up : -up;
+                    PutKeeper(start, dir.x >= 0f ? 1f : -1f);
+                    TestSay(uphill ? "Jumping up the slope" : "Jumping down the slope");
+                    yield return Frames(12);
+                    Vector3 before = rb.position;
+                    int returns = SafeSpots.TestReturns;
+                    float last = float.NaN, worst = 0f;
+                    Flight.TestJumpHeld = true;
+                    Flight.TestMoveDir = new Vector2(dir.x, dir.z);
+                    try
+                    {
+                        Flight.Jump(mi);
+                        float t0 = Time.time;
+                        while (Time.time - t0 < Flight.JumpTimeS + 2f)
+                        {
+                            float drawn = mi.Position.y - Flight.LiftFor(mi);
+                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worst) worst = Mathf.Abs(drawn - last);
+                            last = drawn;
+                            if (Flight.Now != Flight.Phase.Jumping && Time.time - t0 > 0.2f) break;
+                            yield return null;
+                        }
+                    }
+                    finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                    yield return Frames(6);
+                    Vector3 at = rb.position;
+                    float along = Vector3.Dot(at - before, dir);
+                    bool grounded = SurfaceAtFeet(at);
+                    Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && worst <= 2f * px,
+                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it (held in place: a fault), {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame{(Flight.TestJumpWentBack ? ", SENT BACK" : "")}");
+                }
+            }
+            finally
+            {
+                Flight.TestJumpHeld = null; Flight.TestMoveDir = null;
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (donkey != null && donkey.Exists) donkey.Remove(); } catch { }
+            }
+        }
+
+        // A hillside near 'me': walkable ground (the ground layers' raycast) rising 0.4 to 1.3 over 2.5 along one of
+        // eight directions, with ground at both ends and no obstacle in the way; 'foot' its lower end, 'up' the way up.
+        private static bool FindSlope(Vector3 me, float radius, out Vector3 foot, out Vector3 up, out float rise, out float run)
+        {
+            foot = default; up = default; rise = 0f; run = 2.5f;
+            for (float r = 0f; r <= radius; r += 1.5f)
+            {
+                for (int k = 0; k < 16; k++)
+                {
+                    Vector3 c = me + Quaternion.Euler(0f, k * 22.5f, 0f) * Vector3.forward * r;
+                    if (!GroundAt(c, out float cy)) continue;
+                    foreach (int d in new[] { 0, 2, 4, 6, 1, 3, 5, 7 })
+                    {
+                        Vector3 dir = Quaternion.Euler(0f, d * 45f, 0f) * Vector3.forward;
+                        Vector3 top = c + dir * run;
+                        if (!GroundAt(top, out float ty)) continue;
+                        float dy = ty - cy;
+                        if (dy < 0.4f || dy > 1.3f) continue;
+                        // a slope, not a step: the middle about half way up
+                        if (!GroundAt(c + dir * (run * 0.5f), out float my) || Mathf.Abs((my - cy) - dy * 0.5f) > dy * 0.3f) continue;
+                        // room to run at it, and to land past its top
+                        Vector3 before = c - dir * 1.2f, after = top + dir * 1.5f;
+                        if (!GroundAt(before, out float by) || Mathf.Abs(by - cy) > 0.3f || !GroundAt(after, out float ay) || Mathf.Abs(ay - ty) > 0.4f) continue;
+                        if (Mount.Instance.KeeperFits(PC, new Vector3(before.x, by, before.z)) != null || Mount.Instance.KeeperFits(PC, new Vector3(after.x, ay, after.z)) != null) continue;
+                        foot = new Vector3(c.x, cy, c.z); up = dir; rise = dy;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static bool GroundAt(Vector3 p, out float y)
+        {
+            y = 0f;
+            if (!Physics.Raycast(p + Vector3.up * 6f, Vector3.down, out RaycastHit hit, 12f, GroundLayersMask, QueryTriggerInteraction.Ignore)) return false;
+            y = hit.point.y;
+            return true;
+        }
+
         // one jump of the ridden mount: held, the stick pushed 'push' (as the keys would), waited out
         private static IEnumerator JumpWith(Mount.Instance i, Vector2 push, bool held)
         {

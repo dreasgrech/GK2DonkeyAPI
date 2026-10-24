@@ -811,6 +811,20 @@ with how much of it was at once.
 - **Flying indoors** is off unless a mod turns it on (the Behaviour key `FlyIndoors`, off in the API; Saddle Up keeps
   it off with no row): no take-off indoors, a flight through a building's door lands there.
 
+### Uphill (2026-10-24, built)
+
+The user: "going uphill, sometimes when jumping, you get stuck like jumping against a wall before continuing moving".
+The jump trace of one (03:30, jump 015: ran at 4.1, 0.16 moved in the air, 0.43 from the take-off), every step: the
+stick pushed, the move intended -0.095, **after the bump -0.095, no blocker, after the wall 0.000**. `DrawnWall`: a
+higher drawn level ahead is a wall to a flight below its top (a rock table's side). The drawn ground is the terrain's
+flat levels (4.8, 6.0...); on the hillside between them the body sat at 5.35 and the level 6.0 a quarter unit ahead
+stood above the jump's feet, so the rule zeroed the move each step, the jump's speed with it (`jumpVel` is what was
+moved), until the jump ended; then walking took over. Now a jump skips the drawn wall where the walkable ground a step
+ahead rises as a slope (`SlopeAhead`: within StepUp of the body, not a drop of more than a level); a flight is
+unchanged. No test could have caught it: the test ramps are not in the drawn-ground index. A new scenario finds a real
+hillside near the keeper (terrain levels) and runs a jump up it and down it (`FlightJumpSlope`, `FindSlope`). The
+30-file trace ring had swept the first stuck jump away under a test run: 120 kept now.
+
 ### Downhill (2026-10-24, built)
 
 The user: "im still getting a jump cut when jumping with a mount across a slope downhill". The detector (three times,

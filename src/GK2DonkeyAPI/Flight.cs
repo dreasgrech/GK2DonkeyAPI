@@ -1251,6 +1251,16 @@ namespace GK2DonkeyAPI
         // move slides along x or along z when one of them is free.
         private static float lastWallSaid;
 
+        // The walkable ground a step ahead rises as a slope (within StepUp of the body, not a drop of more than a level):
+        // walking ground, whatever the drawn levels say.
+        private static bool SlopeAhead(Vector3 at, Vector3 move)
+        {
+            Vector3 p = at + move + move.normalized * 0.25f;
+            if (!Physics.Raycast(p + Vector3.up * (StepUp + 0.5f), Vector3.down, out RaycastHit hit, StepUp + 0.5f + 1.3f, GroundMask, QueryTriggerInteraction.Ignore)) return false;
+            float dy = hit.point.y - at.y;
+            return dy <= StepUp + 0.05f && dy >= -1.2f;
+        }
+
         private static Vector3 DrawnWall(Vector3 at, Vector3 move, float feet)
         {
             const float r = 0.25f;
@@ -1345,9 +1355,12 @@ namespace GK2DonkeyAPI
                 }
                 Blocker = b;
             }
-            if (UseDrawnGround && move.sqrMagnitude > 1e-8f)
+            if (UseDrawnGround && move.sqrMagnitude > 1e-8f && !(Now == Phase.Jumping && SlopeAhead(rb.position, move)))
             {
-                // a higher drawn level ahead (a rock table's side, the next level up) is a wall to a flight below its top
+                // a higher drawn level ahead (a rock table's side, the next level up) is a wall to a flight below its top.
+                // Not to a jump on a slope: the drawn ground is flat levels (4.8, 6.0), and on the hillside between them the
+                // next level up stood just above the jump's feet, so the rule zeroed every step uphill (the user, 2026-10-24
+                // 03:30: "stuck like jumping against a wall"; the trace: after the bump -0.095, after the wall 0.000).
                 float feet = rb.position.y + Mathf.Round(heightPx) * PxWorldY - ClearancePx * PxWorldY;
                 move = DrawnWall(rb.position, move, feet);
             }
