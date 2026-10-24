@@ -409,6 +409,8 @@ namespace GK2DonkeyAPI
             }
 
             internal int TestTicks;             // TickInner entries (the self-tests: is the rig ticked at all)
+            internal int TestAirFrames;         // frames the walk clip ran while the mount was in the air (its footfalls kept silent)
+            private Looks.SkinDef preloadedFor = null;
             internal string TestLastGate = "";  // why the last tick stopped early, or "ran"
             internal string TestState => $"ticks {TestTicks}, last gate '{TestLastGate}', nextBray {nextBray:0.00} (now {Time.time:0.00}), nextVoiceAt {nextVoiceAt:0.00}, walking last {wasWalking}, baby {IsBaby}, ridden {owner.IsRidden}, standing on {StandingOn}, answerAt {answerAt:0.00}";
 
@@ -468,6 +470,38 @@ namespace GK2DonkeyAPI
                 Detach();
                 overrides.Clear();
                 cache.Clear();
+                if (anchor != null) { UnityEngine.Object.Destroy(anchor.gameObject); anchor = null; }
+            }
+
+            // Where the mount's sounds play: at the mount, or for a mount drawn up in the air (the flying experiment) at
+            // the ground point under it. The game's listener stays at ground level by the keeper's body, which stays on
+            // the ground while flying; at the drawn height a take-off climbed 7 units away from it within half a second
+            // and was heard at an eighth (the [sound] trace, 2026-10-24: 87% at 0 s, 30% at 0.25 s, 12-14% after), a
+            // landing the other way round. The rider flies with the mount, so its sounds stay with him. The anchor is a
+            // GameObject of the rig's own, never a child of the pooled view (docs/pooled-parts.md).
+            private Transform anchor;
+
+            private Transform PlayAt(Transform at)
+            {
+                if (at == null) return null;
+                float lift = owner.TestLiftDrawn;
+                if (lift <= 0.001f && anchor == null) return at;
+                if (anchor == null)
+                {
+                    var go = new GameObject("GK2 mount sound anchor " + owner.FullId);
+                    UnityEngine.Object.DontDestroyOnLoad(go);
+                    anchor = go.transform;
+                }
+                anchor.position = at.position - Vector3.up * Mathf.Max(0f, lift);
+                return anchor;
+            }
+
+            // Each frame: the anchor follows the mount (a sound started in the air keeps sounding under it).
+            private void FollowAnchor()
+            {
+                if (anchor == null) return;
+                Wgo donkey = owner.Donkey;
+                if (donkey != null && donkey) anchor.position = donkey.transform.position - Vector3.up * Mathf.Max(0f, owner.TestLiftDrawn);
             }
 
             // A frame: the ridden instance's from Mount.Tick, a standing one's from StandTick (the Active tier only).
@@ -513,6 +547,15 @@ namespace GK2DonkeyAPI
 
                 StyleSettings S = owner.S;
                 TestTicks++;
+                FollowAnchor();
+                // a skin worn (or changed): its files start loading now, so the first take-off's or call's sound is ready
+                // (decoded on first need, the first flaps of a session were silent)
+                Looks.SkinDef wears = owner.LooksRig?.DefNow;
+                if (!ReferenceEquals(wears, preloadedFor))
+                {
+                    preloadedFor = wears;
+                    foreach (SoundEvents.Def pd in SoundEvents.All) Resolve(pd.Id);
+                }
                 if (!S.SoundsOn.Value || !MountRules.Allowed(MountFeature.Sounds) || ac == null || !ridden && !StandingOn)
                 {
                     TestLastGate = !S.SoundsOn.Value ? "SoundsOn off" : !MountRules.Allowed(MountFeature.Sounds) ? "the Sounds feature refused" : ac == null ? "no animation component" : "standing with StandingSounds off";
@@ -620,7 +663,13 @@ namespace GK2DonkeyAPI
                 }
                 float t = a.GetCurrentAnimatorStateInfo(0).normalizedTime;
 
-                bool walkClip = clip.StartsWith("walk", StringComparison.Ordinal);
+                // Off the ground (a flight or a jump) the view's animator still runs its walk clip whenever the keeper
+                // steers (the flying frames are drawn over it): no footfall, wheel or grazing there (the user, 2026-10-24:
+                // "when we're flying, the mount step is also being played"; heard once a mount's sounds played at the
+                // ground point under it, before that they sounded 7 units up at a seventh)
+                bool inAir = Flight.InAirFor(owner);
+                if (inAir && clip.StartsWith("walk", StringComparison.Ordinal)) TestAirFrames++;
+                bool walkClip = !inAir && clip.StartsWith("walk", StringComparison.Ordinal);
                 if (walkClip)
                 {
                     SoundSpec step = Resolve("step");
@@ -648,7 +697,7 @@ namespace GK2DonkeyAPI
                     if (hk != lastHoofK)
                     {
                         lastHoofK = hk;
-                        Emit("step");
+                        if (!IsBaby || (hk & 1) == 0) Emit("step"); // a baby: every other footfall (its legs cycle 1.7x faster, and several follow at once)
                     }
                     if (Math.Abs(wk - lastWheelK) > 1)
                     {
@@ -673,7 +722,7 @@ namespace GK2DonkeyAPI
                     inWalkClip = false;
                 }
 
-                bool grazeClip = clip.StartsWith("graze", StringComparison.Ordinal);
+                bool grazeClip = !inAir && clip.StartsWith("graze", StringComparison.Ordinal);
                 if (grazeClip && !inGrazeClip)
                 {
                     Emit("graze");
@@ -881,7 +930,7 @@ namespace GK2DonkeyAPI
                 SoundSpec s = Resolve(eventId, variant);
                 if (!May(d, s)) return null;
                 Wgo donkey = owner.Donkey;
-                Transform at = donkey != null && donkey ? donkey.transform : null;
+                Transform at = PlayAt(donkey != null && donkey ? donkey.transform : null);
                 if (at == null) return null;
                 if (d.Stoppable) Stop(eventId);
                 if (s.Silent)
@@ -955,7 +1004,7 @@ namespace GK2DonkeyAPI
                 get
                 {
                     float sc = owner.ViewScale;
-                    return sc > 0.01f && Math.Abs(sc - 1f) > 0.01f ? Mathf.Sqrt(sc) : 1f;
+                    return sc > 0.01f && Math.Abs(sc - 1f) > 0.01f ? Mathf.Pow(sc, 1.5f) : 1f; // 0.46 at 0.6 (was the square root, 0.77: the babies' steps sounded over the grown one's)
                 }
             }
 

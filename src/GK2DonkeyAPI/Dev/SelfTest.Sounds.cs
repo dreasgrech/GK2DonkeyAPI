@@ -594,11 +594,15 @@ namespace GK2DonkeyAPI
                 MountResult t = Mounts.TakeOff();
                 Check(t.Ok, $"take-off ({Said(t)})");
                 yield return Until(() => Flight.Now == Flight.Phase.Airborne, 10f);
-                Check(waited && Plays("takeoff") == 1 && Plays("flap") >= Flight.Beats, $"the take-off: takeoff once, {Plays("flap")} flap(s) in the launch ({Flight.Beats} beats), fly {Plays("fly")}");
+                Check(waited && Plays("takeoff") == 1 && Plays("flap") >= 1, $"the take-off: takeoff once, {Plays("flap")} flap(s) in the launch ({Flight.Beats} beats), fly {Plays("fly")}");
                 Check(Plays("fly") == 1, "the fly loop started once");
                 int afterLaunch = Plays("flap");
+                int stepsBefore = Plays("step"), airFrames = rig.TestAirFrames;
+                Flight.TestMoveDir = new Vector2(1f, 0f); // steered: the view's walk clip runs under the flying frames
                 yield return Seconds(2f);
+                Flight.TestMoveDir = null;
                 Check(Plays("flap") > afterLaunch, $"airborne: the flaps go on with the beat ({Plays("flap")} after two seconds, {afterLaunch} after the launch)");
+                Check(Plays("step") == stepsBefore, $"airborne and steered: no footstep ({Plays("step") - stepsBefore} played; the walk clip ran {rig.TestAirFrames - airFrames} frame(s) in the air, its footfalls kept silent)");
                 MountResult l = Mounts.Land();
                 Check(l.Ok, $"land ({Said(l)})");
                 yield return Until(() => Flight.Now == Flight.Phase.Ground, 15f);
@@ -619,6 +623,7 @@ namespace GK2DonkeyAPI
             finally
             {
                 Flight.TestJumpHeld = null;
+                Flight.TestMoveDir = null;
                 if (Flight.Now != Flight.Phase.Ground && Mount.Ridden != null) Flight.Release(Mount.Ridden, "self-test");
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (h != null && h.Exists) h.Remove(); } catch { }

@@ -873,8 +873,33 @@ namespace GK2DonkeyAPI
                 Header("Events of " + ei.Describe() + "  (what plays, from which layer; docs/mount-sounds.md)");
                 GUILayout.Label(SoundKey(0) + "  " + SoundKey(1) + "  " + SoundKey(2) + "  " + SoundKey(3) + "  " + SoundKey(4) + "  " + SoundKey(5) + "  " + SoundKey(6), small);
                 Sounds.TraceOn = GUILayout.Toggle(Sounds.TraceOn, Tip("Log every sound played (the flying ones always)", "A [sound] line in the log for each play: the sound's place, its distance from the game's listener and what it is heard at, sampled over its life. Off by default; the flying events are always logged while the volume question is open."));
-                foreach (SoundEvents.Def d in SoundEvents.All)
+                // grouped by status (the user, 2026-10-24): what is playing on top, then its own, the donkey's, loading, missing,
+                // silent by choice, no sound; the catalogue's order inside a group. The order is taken at the
+                // layout pass and kept for the frame's other passes: a sound starting between them would change the rows
+                // and IMGUI throws on a layout that differs from its repaint.
+                if (Event.current.type == EventType.Layout || soundOrder == null || soundOrderFor != ei)
                 {
+                    soundOrderFor = ei;
+                    var rows = new List<(SoundEvents.Def D, int Group, int Index)>();
+                    for (int k = 0; k < SoundEvents.All.Length; k++)
+                    {
+                        SoundEvents.Def dd = SoundEvents.All[k];
+                        int g = ei.SoundsRig.IsPlaying(dd.Id, out _) ? 0 : 1 + Array.IndexOf(GroupOrder, SoundKind(ei.SoundsRig.Resolve(dd.Id)));
+                        rows.Add((dd, g, k));
+                    }
+                    rows.Sort((x, y) => x.Group != y.Group ? x.Group.CompareTo(y.Group) : x.Index.CompareTo(y.Index));
+                    soundOrder = rows;
+                }
+                int lastGroup = -1;
+                foreach (var row in soundOrder)
+                {
+                    SoundEvents.Def d = row.D;
+                    if (row.Group != lastGroup)
+                    {
+                        lastGroup = row.Group;
+                        int gk = row.Group == 0 ? 6 : GroupOrder[row.Group - 1];
+                        GUILayout.Label(Colour((gk == 6 ? "\u25B6 " : "") + KindName[gk].ToUpperInvariant(), gk == 6 ? PlayingHex : KindHex[gk], bold: true), RichSmall);
+                    }
                     SoundSpec sp = ei.SoundsRig.Resolve(d.Id);
                     int kind = SoundKind(sp);
                     bool playing = ei.SoundsRig.IsPlaying(d.Id, out float since);
@@ -974,6 +999,12 @@ namespace GK2DonkeyAPI
         private static readonly string[] KindHex = { "#FF5A4E", "#62D96B", "#E8E8E8", "#7FA8D9", "#F2C744", "#7A7A7A" };
         private const string PlayingHex = "#38E8FF";
         private static readonly string[] KindName = { "MISSING", "its own", "the donkey's", "silent by choice", "loading", "no sound", "playing" };
+
+        // the groups' order below "playing": its own, the donkey's, loading, missing, silent by choice, no sound (the user:
+        // missing not so high up)
+        private static readonly int[] GroupOrder = { 1, 2, 4, 0, 3, 5 };
+        private static List<(SoundEvents.Def D, int Group, int Index)> soundOrder;
+        private static Mount.Instance soundOrderFor;
 
         private static int SoundKind(SoundSpec sp)
         {

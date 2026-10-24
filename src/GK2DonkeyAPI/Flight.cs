@@ -232,6 +232,7 @@ namespace GK2DonkeyAPI
         internal static bool InAir => owner != null && Now != Phase.Ground; // off the ground: flying, taking off, landing, a jump
         internal static bool Flying => owner != null && (Now == Phase.Rising || Now == Phase.Airborne || Now == Phase.Landing); // a flight, not a jump
         internal static bool FlyingFor(Mount.Instance i) => Flying && i == owner;
+        internal static bool InAirFor(Mount.Instance i) => InAir && i == owner; // this mount off the ground: a flight or a jump
         internal static bool TestInteractionPaused => interactionPaused;
         private static bool interactionPaused;
         internal static Phase Now { get; private set; }
@@ -803,7 +804,11 @@ namespace GK2DonkeyAPI
                 {
                     beatT += dt;
                     int beatN = Mathf.FloorToInt(beatT / Mathf.Max(0.1f, WingBeatS));
-                    if (Now == Phase.Airborne && beatN != lastBeatN) { lastBeatN = beatN; Sound("flap"); } // each beat airborne: a flap
+                    // a flap on each beat the picture shows: from the climb's first beat (after the crouch and the
+                    // take-off frames) through the flight to the dive (the user, 2026-10-24: the flaps began late; only
+                    // airborne ones sounded, after the climb had settled, and the launch's three surges in 0.32 s blurred)
+                    bool beatShown = Flying && !(Now == Phase.Rising && (!launched || phaseT < 0.24f));
+                    if (beatShown && beatN != lastBeatN) { lastBeatN = beatN; Sound("flap"); }
                 }
             }
             using (Perf.Measure(Perf.S.FlyFree)) FreeTick(i); // the session's first take-off cost one 14-20 ms frame (2026-10-23): timed
@@ -1674,7 +1679,6 @@ namespace GK2DonkeyAPI
             if (beatsLeft > 0 && phaseT >= nextBeat)
             {
                 vel += BeatKickPxPerS;
-                Sound("flap");
                 beatsLeft--;
                 nextBeat += Mathf.Max(0.05f, BeatS);
             }
@@ -1762,7 +1766,6 @@ namespace GK2DonkeyAPI
                     Sound("takeoff");
                     break;
                 case Phase.Airborne:
-                    lastBeatN = Mathf.FloorToInt(beatT / Mathf.Max(0.1f, WingBeatS)); // the beats from here are the flaps
                     if (!flyLoopOn) { flyLoopOn = true; Sound("fly"); }
                     break;
                 case Phase.Landing:

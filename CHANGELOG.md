@@ -151,6 +151,28 @@ For players:
 
 For mod authors:
 
+- **The dev Sounds tab's events are grouped by status**: what is playing on top, then its own, the donkey's, loading,
+  MISSING, silent by choice and no sound, each group under its coloured heading, the catalogue's order inside one.
+- **The flaps follow the drawn wing beat from the start of the climb** (the user, 2026-10-24: the flapping began
+  late and missed the first flaps): only the airborne beats sounded, once the climb had settled at the top, and the
+  launch's three surges fired three flaps in 0.32 s that blurred into one; and a session's first flaps were silent
+  while their files decoded. Now a flap plays on every beat the picture shows, from the climb's first beat (after the
+  crouch and the take-off frames) through the flight to the dive, and a skin's sound files start loading as soon as a
+  mount wears it. The take-off files have no silence at their ends (their 60 ms fades only; checked).
+- **No footsteps in the air** (the user, 2026-10-24: "when we're flying, the mount step is also being played"): the
+  view's animator runs its walk clip under the flying frames whenever the keeper steers, and every footfall of it
+  played a step; heard once a mount's sounds played at the ground point under it. Off the ground (a flight or a jump)
+  no footfall, wheel or grazing sound plays now. The flying self-test steers in the air and checks no step plays.
+- **Flying sounds are heard at full strength, babies' steps are toned down** (the user, 2026-10-24: "the takeoff
+  sounds are still barely audible compared to the landing sounds"; "the baby steps are much louder than all our other
+  sounds"). Measured first: the game's listener stays at ground level by the keeper's body (it stays on the ground
+  while flying), and a mount's sound followed its drawn height: a take-off was heard at 87% at its start, 30% a quarter
+  second on and 12-14% from half a second (7 units up), a landing the other way round (14% up to 93%). A mount's
+  sounds now play at the ground point under it (a sound anchor of the rig's own, following it), so the rider hears
+  his mount as he flies; on the ground nothing changes. A baby's steps: every other footfall (its legs cycle 1.7
+  times faster than a grown one's and several follow at once), and a baby's volume falls with its size as size^1.5
+  (0.46 at 0.6, was 0.77). Note: the player's own `[Ride] HoofVolume` here is 3 (the default 1.3), which every step
+  is scaled by.
 - **The dev Sounds tab shows what is missing and what is playing, in colour**: each event's name and source in its
   colour (red MISSING: the donkey's own sound, silent on this mount until its pack gives one; green its own, from the
   mount or the skin; white the donkey's; blue silent by choice; yellow loading; grey no sound), a key above the table,
