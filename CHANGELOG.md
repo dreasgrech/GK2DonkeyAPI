@@ -162,7 +162,13 @@ For mod authors:
   (0.05 to 0.25 s in front, 0.1 to 0.43 s behind), levelled to the same loudness without clipping and made mono OGG, in
   the dragon skin's `sounds` folder: four lift-offs (`takeoff_1.ogg` to `takeoff_4.ogg`, its `[Mount.Sounds] takeoff`)
   and two landings (`land_1.ogg`, `land_2.ogg`, its `land`, from the start of the dive); one at random per flight,
-  never the same twice in a row, shared by every dragon skin. Its voice stays the game's growl placeholder. The first sound files the mod ships. The trimming tool,
+  never the same twice in a row, shared by every dragon skin. Its voice stays the game's growl placeholder.
+  Then its wing beats and glide: the user's two flapping clips held 2 and 3 wing beats, cut at their quiet dips into
+  five single flaps (`flap_1.ogg` to `flap_5.ogg`, the `flap` event, one per 0.6 s beat in step with the picture,
+  volume 0.6), and a glide whoosh (`glide_1.ogg`, with the second landing clip, which came in the glide folder too; cut
+  when the glide ends). The always-on flight trace leaves the flaps out (one every 0.6 s). The first clip's two beats overlap (the
+  first one's tail still at -35 dB when the second starts): `flap_1` is cut at the second beat's onset (0.81 s) with a
+  fade over the whole tail, not 50 ms earlier with a short fade (it cut out audibly, the user). The first sound files the mod ships. The trimming tool,
   for the next batch: `trim_sounds.py <folder> <out> [prefix]` (kept with the work copies in
   `C:\ClaudeCodeTemp\GK2-dragon-sounds`, with WAV previews and a README of what was cut).
 - **The donkey's own sounds stay the donkey's** (docs/mount-sounds.md "The layers"): a mount other than the donkey

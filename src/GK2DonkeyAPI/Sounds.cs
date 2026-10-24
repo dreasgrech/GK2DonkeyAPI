@@ -41,7 +41,8 @@ namespace GK2DonkeyAPI
         // measured before anything is changed).
         internal static bool TraceOn;
 
-        internal static bool FlightEvent(string e) => e == "takeoff" || e == "flap" || e == "glide" || e == "fly" || e == "land" || e == "touchdown" || e == "landed" || e == "jump" || e == "jumpland";
+        // the flight's one-off sounds (a flap every 0.6 s would flood the log: only with the switch)
+        internal static bool FlightEvent(string e) => e == "takeoff" || e == "glide" || e == "fly" || e == "land" || e == "touchdown" || e == "landed" || e == "jump" || e == "jumpland";
 
         private static readonly AccessTools.FieldRef<SoundHandler, SoundController> handlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
 
