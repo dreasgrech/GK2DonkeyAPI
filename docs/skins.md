@@ -101,9 +101,8 @@ noun = dragon         # the word the game's sentences use ("a dragon can't pull 
 [Mount.Stats]         # lines the Mounts panel shows as given, in this order (optional; Speed and Cargo are the API's own lines)
 Diet = keepers
 
-[Mount.Tuning]        # what the creature is, both styles: its sounds (docs/reference.md; the speed is speed = above); the rider's seat and
-BrayVolume = 0        # the cart's place are the SKIN's rows ([Tuning], [Tuning.Ride], [Tuning.Cart] above)
-HoofVolume = 0
+[Mount.Tuning]        # what the creature is, both styles (a sound key's volume or timing; the speed is speed = above); the rider's seat and
+WalkCycleSpeed = 1.5  # the cart's place are the SKIN's rows ([Tuning], [Tuning.Ride], [Tuning.Cart] above)
 [Mount.Tuning.Ride]   # riding only
 [Mount.Tuning.Cart]   # with the cart only
 ```
@@ -219,9 +218,10 @@ Each `skin.cfg` is commented and in one layout (`tools/skins/canonical_cfg.py` r
 the skin's sounds (`[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`) and the `[Mount]` block last with its tuning and
 sound sections (the creature's facts), every key in one place. The donkey itself, the one mount that is not a file, would read `[Mount] id = donkey, name = Donkey, author =
 the game, version = 1.0, cart = true, foals = true` with no tuning and no effect; a donkey skin never declares it. A
-mount's sounds are set or silenced under `[Mount.Tuning]` with the ordinary sound keys (docs/reference.md): the snail
-and the worm say `BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`; Gerry `LipsVolume = 0`. Since 2026-10-24 a
-mount or a skin can also bring **sounds of its own**: files in the pack's `sounds\` folder, named for their event
+mount's sounds live in `[Mount.Sounds]`, and the donkey's own sounds (the bray, the lip smack, the chewing, the
+snorts getting on and off) never reach another mount: a creature with no line for one is silent there, and the log
+at the game's start says what each skin is missing (docs/mount-sounds.md). A mount or a skin brings **sounds of its
+own**: files in the pack's `sounds\` folder, named for their event
 (`voice_1.ogg`, `voice_2.ogg`, `step.grass_1.wav`: played by convention with no line) or lined up in a `[Sounds]`
 block (`voice = a.ogg, b.ogg`, `voice.volume = 0.8`, `step.grass = step_grass`, `lips = none`; `[Sounds.Ride]` /
 `[Sounds.Cart]` for one style) and, for the creature, in `[Mount.Sounds]` of its declaring skin. A skin's line wins

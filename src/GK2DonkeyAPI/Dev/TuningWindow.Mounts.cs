@@ -385,6 +385,15 @@ namespace GK2DonkeyAPI
         {
             bool code = ofSkin ? skin.Source == null && !skin.BuiltIn && skin.SourceAssembly == null : !mount.FromPack;
             Header(ofSkin ? "Sounds of this skin  ([Sounds]" + (ride ? "" : ", [Sounds.Cart]") + ")" : "Sounds of the mount  ([Mount.Sounds]" + (ride ? "" : ", [Mount.Sounds.Cart]") + ", shared by its skins)");
+            if (ofSkin)
+            {
+                var missing = new List<string>();
+                foreach (var c in Sounds.Coverage(skin, mount)) if (c.From == "missing") missing.Add(c.Event);
+                GUILayout.Label(missing.Count > 0
+                    ? "MISSING (the donkey's own sounds, silent on this mount until this skin or its mount gives one): " + string.Join(", ", missing) + "."
+                    : mount == Catalog.Donkey ? "The donkey: every event has its sound (the player's keys)." : "Nothing missing: every one of the donkey's own sounds has one here (the log at the game's start lists every skin).",
+                    missing.Count > 0 ? changed : small);
+            }
             if (code)
             {
                 GUILayout.Label("From code: its sounds are the mod's own (MountSound) and are not edited here.", small);

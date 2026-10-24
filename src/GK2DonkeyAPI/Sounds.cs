@@ -35,6 +35,102 @@ namespace GK2DonkeyAPI
         internal static readonly List<(float At, Mount.Instance Who, string Event)> TestVoiceTimes = new List<(float, Mount.Instance, string)>();
         internal static void TestResetHerd() { nextVoiceAt = 0f; TestVoiceTimes.Clear(); }
 
+        // The donkey's own sound on another mount (Def.DonkeyOwn): the ride-style getting-on and getting-off snorts are
+        // the donkey's, the cart style's ladder sounds are everyone's.
+        internal static bool DonkeyOwnFor(SoundEvents.Def d, Catalog.Entry mount, bool cart)
+        {
+            if (d == null || !d.DonkeyOwn || mount == null || mount == Catalog.Donkey) return false;
+            if (cart && (d.Id == "mount" || d.Id == "dismount")) return false;
+            return true;
+        }
+
+        // ------------------------------------------------------------------ what a skin has and lacks
+
+        // Where each event of a skin on its mount gets its sound from, riding plain, with no mod override: "skin" or
+        // "mount" (and what the line says), "donkey" (the neutral base: the player's keys), "none" (no layer gives it
+        // one and the donkey has none either), or "missing" (the donkey's own sound on another mount, silent here until
+        // a pack gives one). For the log at the game's start, the Mounts tab and the skins scan (the user, 2026-10-24:
+        // "a clear way of seeing what sounds a skin is missing").
+        internal static List<(string Event, string From, string What)> Coverage(Looks.SkinDef skin, Catalog.Entry mount, bool baby = false)
+        {
+            var list = new List<(string, string, string)>();
+            if (mount == null) mount = Looks.MountOf(skin);
+            foreach (SoundEvents.Def d in SoundEvents.All)
+            {
+                SoundLine l = null;
+                string from = null;
+                if (skin != null)
+                {
+                    l = (baby ? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    if (l != null && l.HasSource) from = "skin";
+                }
+                if (from == null)
+                {
+                    l = (baby ? Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    if (l != null && l.HasSource) from = "mount";
+                }
+                if (from != null) list.Add((d.Id, from, LineText(l)));
+                else if (d.Base == null) list.Add((d.Id, "none", "no sound (no layer gives one, the donkey has none)"));
+                else if (DonkeyOwnFor(d, mount, false)) list.Add((d.Id, "missing", "the donkey's own: silent on this mount until a pack gives one"));
+                else list.Add((d.Id, "donkey", "the donkey's (the player's keys)"));
+            }
+            return list;
+        }
+
+        private static string LineText(SoundLine l)
+        {
+            if (l == null) return "-";
+            if (l.Clips != null) return l.Clips.Length + " clip(s) of the mod's";
+            if (l.Files != null) return l.Files.Length == 1 ? l.Files[0] : l.Files.Length + " files";
+            if (l.Source == "none") return "silent (none)";
+            if (l.Source == "ground") return "by the ground";
+            return l.Source ?? "-";
+        }
+
+        // One line for a skin: what it brings, what its mount brings, what is missing.
+        internal static string CoverageLine(Looks.SkinDef skin)
+        {
+            Catalog.Entry mount = Looks.MountOf(skin);
+            var own = new List<string>();
+            var fromMount = new List<string>();
+            var missing = new List<string>();
+            int donkey = 0, none = 0;
+            foreach (var c in Coverage(skin, mount))
+            {
+                switch (c.From)
+                {
+                    case "skin": own.Add(c.Event + " (" + c.What + ")"); break;
+                    case "mount": fromMount.Add(c.Event + " (" + c.What + ")"); break;
+                    case "missing": missing.Add(c.Event); break;
+                    case "donkey": donkey++; break;
+                    default: none++; break;
+                }
+            }
+            return $"Sounds: skin '{skin.Id}' (mount {mount.Id}): its own: {(own.Count > 0 ? string.Join(", ", own) : "none")}; its mount's: {(fromMount.Count > 0 ? string.Join(", ", fromMount) : "none")}; "
+                + $"MISSING (the donkey's own, silent here): {(missing.Count > 0 ? string.Join(", ", missing) : "nothing")}; the donkey's neutral ones {donkey}; silent by default {none}.";
+        }
+
+        private static bool coverageLogged;
+
+        // Once per session, when the game is ready (every pack and mod has registered by then): a line per skin.
+        internal static void LogCoverageOnce()
+        {
+            if (coverageLogged) return;
+            coverageLogged = true;
+            try
+            {
+                foreach (Looks.SkinDef s in Looks.All)
+                {
+                    if (s.Owner != null && s.Owner.Contains(".selftest")) continue;
+                    Plugin.Log.LogInfo(CoverageLine(s));
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning("Sounds: the coverage report failed: " + e.Message);
+            }
+        }
+
         // ------------------------------------------------------------------ the ridden instance's shortcuts
 
         internal static Rig RiddenRig => Mount.Ridden?.SoundsRig;
@@ -589,6 +685,12 @@ namespace GK2DonkeyAPI
                 Looks.SkinDef skin = owner.LooksRig?.DefNow;
                 Catalog.Entry mount = owner.LooksRig?.MountNow ?? Catalog.Donkey;
                 bool cart = owner.CurrentStyle == MountStyle.Cart;
+                if (touched && DonkeyOwnFor(d, mount, cart))
+                {
+                    // the donkey's own sound on another creature: silent unless a layer below gives it one (a crab
+                    // never brays by default; the user, 2026-10-24)
+                    r.Silent = true; r.GameId = null; r.BySurface = false;
+                }
                 Looks.SkinDef mountFiles = Looks.MountSoundFileOwner(mount);
                 Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
                 bool baby = IsBaby;

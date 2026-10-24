@@ -743,7 +743,8 @@ the flying and jumping ones `takeoff`, `flap`, `glide`, `fly`, `land`, `touchdow
 plays for an event on an instance comes from layers, the first that says a source wins: a mod's `Set` here, the
 skin's own (`MountSkinDef.Sounds`, a pack's `[Sounds]`; `SoundsRide` / `SoundsCart` for one style), the mount's
 (`MountDef.Sounds`, a pack's `[Mount.Sounds]`), the player's keys (`Mounts.Tuning`: the donkey's sounds as shipped
-and as tuned). The player's switches and volumes scale whatever won.
+and as tuned; the donkey's own sounds among them, its voice, lip smack, chewing and ride-style snorts, never reach
+another mount: silent there until a layer gives one). The player's switches and volumes scale whatever won.
 
 `Mounts.Sounds`:
 

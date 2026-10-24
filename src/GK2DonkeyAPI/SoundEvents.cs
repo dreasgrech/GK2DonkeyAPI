@@ -60,6 +60,10 @@ namespace GK2DonkeyAPI
             internal string Description;
             internal bool Stoppable;       // plays until Stop (the graze cut when the clip ends early; a loop)
             internal bool StandingGated;   // an unridden instance plays it only with StandingSounds on (the animator's events, the voice)
+            // The donkey's own sound (its voice, its lip smack, its chewing, its getting-on and getting-off snorts riding
+            // plain): another mount is silent here unless its own layers give it a sound; the neutral events (steps by
+            // the ground, the cart's, the bell) are everyone's (docs/mount-sounds.md "The layers").
+            internal bool DonkeyOwn;
             internal string[] Variants;    // sub-keys a layer may give ("step.grass"): the surfaces for step
             internal string[] Numbers;     // the event's own numbers a layer may set ("voice.idle_every")
             internal Func<StyleSettings, SoundSpec> Base;
@@ -92,12 +96,12 @@ namespace GK2DonkeyAPI
             new Def { Id = "stop", Description = "walking ends", StandingGated = true, Variants = None, Numbers = None },
             new Def
             {
-                Id = "graze", Description = "the graze clip starts (cut when it ends early)", Stoppable = true, StandingGated = true, Variants = None, Numbers = None,
+                Id = "graze", Description = "the graze clip starts (cut when it ends early)", DonkeyOwn = true, Stoppable = true, StandingGated = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = s.GrazeSoundId.Value, On = s.GrazeOn.Value, Volume = s.GrazeVolume.Value },
             },
             new Def
             {
-                Id = "lips", Description = "the game's lip-smack animation event", StandingGated = true, Variants = None, Numbers = None,
+                Id = "lips", Description = "the game's lip-smack animation event", DonkeyOwn = true, StandingGated = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = "donkey_lips", Volume = s.LipsVolume.Value },
             },
             new Def { Id = "ear", Description = "the ear clip starts", StandingGated = true, Variants = None, Numbers = None },
@@ -105,25 +109,25 @@ namespace GK2DonkeyAPI
             new Def
             {
                 Id = "voice", Description = "the creature's call: the idle timer (idle_every seconds, 0 = never; while_walking), a chance at mounting (mount_chance), Mounts.Bray()",
-                StandingGated = true, Variants = None, Numbers = new[] { "idle_every", "mount_chance", "while_walking" },
+                DonkeyOwn = true, StandingGated = true, Variants = None, Numbers = new[] { "idle_every", "mount_chance", "while_walking" },
                 Base = s => new SoundSpec { GameId = s.BraySoundId.Value, Volume = s.BrayVolume.Value, Pitch = s.BrayPitch.Value, Speech = !s.BrayInSfxChannel.Value }
                     .Set("idle_every", s.BrayIdleEverySeconds.Value).Set("mount_chance", s.BrayOnMountChance.Value).Set("while_walking", s.BrayWhileWalking.Value ? 1f : 0f),
             },
             new Def
             {
                 Id = "answer", Description = "a baby's reply to its parent's call, half a second to a second after it, siblings one after another (the donkey's voice pitched up unless [Sounds.Baby] gives one)",
-                StandingGated = true, Variants = None, Numbers = None,
+                DonkeyOwn = true, StandingGated = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = s.BraySoundId.Value, Volume = s.BrayVolume.Value, Pitch = s.BrayPitch.Value, Speech = !s.BrayInSfxChannel.Value },
             },
             new Def { Id = "refused", Description = "a ride or a hitch refused at the mount", Variants = None, Numbers = None },
             new Def
             {
-                Id = "mount", Description = "the keeper gets on", Variants = None, Numbers = None,
+                Id = "mount", Description = "the keeper gets on (riding plain: the donkey's own snort; with the cart: the ladder, everyone's)", DonkeyOwn = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = s.MountSoundId.Value, On = s.MountOn.Value, Volume = s.MountVolume.Value, Pitch = s.MountPitch.Value, Start = s.MountSoundStart.Value },
             },
             new Def
             {
-                Id = "dismount", Description = "he gets off (not at doors, scene changes, failed re-summons, style changes)", Variants = None, Numbers = None,
+                Id = "dismount", Description = "he gets off (not at doors, scene changes, failed re-summons, style changes; riding plain the donkey's own snort)", DonkeyOwn = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = s.DismountSoundId.Value, On = s.DismountOn.Value, Volume = s.DismountVolume.Value, Pitch = s.DismountPitch.Value, Start = s.DismountSoundStart.Value },
             },
             new Def

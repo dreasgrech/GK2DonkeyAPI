@@ -376,6 +376,7 @@ namespace GK2DonkeyAPI
             ClearDormant();
             SafeSpots.NewGame(); // the spots of the game before are not this game's
             Flight.NewGame();    // its interaction pause is for the keeper before
+            Sounds.LogCoverageOnce(); // what each skin's sounds are and which it lacks, once a session (docs/mount-sounds.md)
             List<MountHandle> restored = null;
             try
             {

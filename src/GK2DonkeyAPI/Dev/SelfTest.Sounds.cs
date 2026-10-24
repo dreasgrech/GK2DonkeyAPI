@@ -213,18 +213,17 @@ namespace GK2DonkeyAPI
                 }
                 else Info("no foal could be spawned here: the foal's scaling not seen");
 
-                // 5. a mount's pins on a standing wearer: the snail is silent by its [Mount.Tuning]
+                // 5. the snail on a standing wearer: silent by its [Mount.Sounds] and by the rule (the donkey's own sounds are not another mount's), through the bind in the rig
                 if (Mounts.Looks.Find("snail") != null)
                 {
                     standing.Tuning.Set(Owner, "Skin", "snail");
                     yield return Until(() => standing.Mount == "snail", 8f);
-                    yield return Until(() => standing.Tuning.IsSet("BrayVolume"), 10f); // the mount's pins land on the wearer once its pictures are in (the skin rig's merge)
                     yield return Frames(2);
                     sr.Invalidate();
                     SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
-                    bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f); // the mount's pins (volume 0) and its [Mount.Sounds] none both silence
+                    bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f);
                     Check(waited && Off(sv) && Off(sl) && Off(ss),
-                        $"a standing snail: its mount's pins and [Mount.Sounds] reach the rig (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; the pins {(waited ? "on the wearer" : "NOT on the wearer within 10 s")}, BrayVolume {(standing.Tuning.IsSet("BrayVolume") ? "set by " + standing.Tuning.SetBy("BrayVolume") : "unset")})");
+                        $"a standing snail: silent by its [Mount.Sounds] and the rule (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
                     Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
                     standing.Tuning.Set(Owner, "Skin", "");
                     yield return Until(() => standing.Mount == "donkey", 8f);
@@ -346,6 +345,17 @@ namespace GK2DonkeyAPI
                 string mountVoiceId = v2?.BankId;
                 yield return Until(() => SoundBank.StateOf(mountVoiceId) == SoundBank.State.Ready, 6f);
                 Check(waited, "the mount's file loaded (from the declaring skin's folder)");
+                // the donkey's own sounds are not another creature's: with no line for them, silent; the neutral ones stay the donkey's
+                SoundSpec l2 = rig.Resolve("lips"), g2 = rig.Resolve("graze"), m2 = rig.Resolve("mount"), sd2 = rig.Resolve("step", "dirt"), b2 = rig.Resolve("bell");
+                Check(l2 != null && l2.Silent && g2 != null && g2.Silent && m2 != null && m2.Silent, $"a mount with no line for them: lips, graze and the getting-on snort are silent (the donkey's own; lips {l2?.Describe()})");
+                Check(sd2 != null && !sd2.Silent && sd2.Layer == "base" && b2 != null && !b2.Silent, $"... while the step by the ground and the bell stay the donkey's ({sd2?.Describe()}; {b2?.Describe()})");
+                var cover = Sounds.Coverage(Looks.Find("sounds-test-2"), Catalog.Find("sounds-beast"));
+                var missing = new List<string>();
+                string voiceFrom = "-";
+                foreach (var c in cover) { if (c.From == "missing") missing.Add(c.Event); if (c.Event == "voice") voiceFrom = c.From; }
+                Check(voiceFrom == "mount" && missing.Contains("lips") && missing.Contains("graze") && missing.Contains("mount") && missing.Contains("dismount") && missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("step"),
+                    $"the coverage report: voice from the mount; missing: {string.Join(", ", missing)}");
+                Info(Sounds.CoverageLine(Looks.Find("sounds-test-2")));
 
                 // the save round trip keeps the sound sections with their lines and comment
                 string err = Looks.SaveCfg(def);
@@ -661,7 +671,7 @@ namespace GK2DonkeyAPI
                 SoundSpec aa = ra.Resolve("answer"), ka = r1.Resolve("answer");
                 Check(!ra.IsBaby && r1.IsBaby && r2.IsBaby, $"a grown one and two babies ({a.I.ViewScale:0.00}, {k1.I.ViewScale:0.00}, {k2.I.ViewScale:0.00})");
                 Check(ka != null && ka.GameId == "fishing_blop" && ka.Layer == "skin", $"a baby's answer: [Sounds.Baby]'s ({ka?.Describe()})");
-                Check(aa != null && aa.Layer == "base" && aa.GameId == Plugin.For(MountStyle.Ride).BraySoundId.Value, $"the grown one's answer: the base's, the babies' block not for it ({aa?.Describe()})");
+                Check(aa != null && aa.Silent && aa.Layer == "base", $"the grown one's answer: not the babies' block; the donkey's own sound, silent on another mount ({aa?.Describe()})");
 
                 // the standing call and the answers
                 Sounds.TestResetHerd();

@@ -263,10 +263,11 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 |---|---|---|
 | `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`, `royal-parade`; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
-**A mount's sounds.** Every sound key above (`BraySoundId`, `GrazeSoundId`, `MountSoundId`, `DismountSoundId`,
-`HitchSoundId`, `UnhitchSoundId`, the volumes, pitch and timing) is a creature fact a mount may set in its
-`[Mount.Tuning]` (docs/skins.md): the snail and the worm silence the bray, the hoofsteps and the lip smack
-(`BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`), Gerry the lip smack. Other creature voices come later.
+**A mount's sounds.** A mount's and a skin's own sounds live in `[Mount.Sounds]` and `[Sounds]`
+([`docs/mount-sounds.md`](mount-sounds.md)); the keys above are the base they sit on. The donkey's own sounds (the
+bray, the lip smack, the chewing, the getting-on and getting-off snorts riding plain) never reach another mount: a
+creature without its own is silent there, and the log at the game's start says what each skin is missing. A mount
+may still pin a sound key in `[Mount.Tuning]` (a volume, a timing); none of the built-ins does any more.
 
 ### `[Effects]`: particle effects on the donkey
 

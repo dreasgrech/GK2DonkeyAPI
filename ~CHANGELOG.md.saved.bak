@@ -151,6 +151,13 @@ For players:
 
 For mod authors:
 
+- **The donkey's own sounds stay the donkey's** (docs/mount-sounds.md "The layers"): a mount other than the donkey
+  no longer inherits the bray, the lip smack, the chewing or the getting-on and getting-off snorts riding plain; they
+  are silent on it until its pack gives them a sound (a new creature is silent by default where it matters). The
+  neutral sounds stay everyone's: the step by the ground, the cart's, the bell, the cart style's ladder. The snail's,
+  the worm's and Gerry's old volume pins are gone. **What a skin is missing** is said in three places: one log line
+  per skin when the game is ready, the first line of the Mounts tab's "Sounds of this skin", and an INFO line per
+  built-in in `tests/SkinsScan`.
 - **The herd and the babies' own sounds** (docs/mount-sounds.md; phase 3 of the sound system): the `answer` event
   (a baby's reply to its parent's call, the donkey's voice pitched up by its size unless given one), `[Sounds.Baby]`
   and `[Mount.Sounds.Baby]` blocks (`MountSkinDef.SoundsBaby`, `MountDef.SoundsBaby`, `MountInfo.SoundsBaby`) for the

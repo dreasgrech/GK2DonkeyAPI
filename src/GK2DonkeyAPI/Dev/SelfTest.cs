@@ -1576,7 +1576,7 @@ namespace GK2DonkeyAPI
                     seats[(id.Length == 0 ? "donkey" : id) + (auto ? "|on" : "|off")] = seat / px;
                     if (id == "snail" && !auto)
                     {
-                        Check(a.Tuning.IsSet("BrayVolume") && a.Tuning.SetBy("BrayVolume") == Looks.TuningOwner && Math.Abs(a.Tuning.Get<float>("BrayVolume")) < 0.001f, "the snail is silent by its mount ([Mount.Tuning] BrayVolume = 0)");
+                        Check(a.I.SoundsRig.Resolve("voice") is SoundSpec snailVoice && snailVoice.Silent, "the snail is silent: its voice resolves to none (its [Mount.Sounds]; the donkey's own sounds never reach another mount)");
                         MountSkinInfo snailInfo = Mounts.Looks.Find("snail");
                         var snailRegions = snailInfo != null ? new List<string>(snailInfo.Regions) : new List<string>(); Check(snailInfo != null && snailRegions.Contains("Muzzle") && !snailRegions.Contains("Harness") && !MountSettingsPage.MountHasRegion("snail", "Harness"), "the snail's regions are Coat, Dark and Muzzle: a Harness row greys for it");
                         // the legs (NearLeg on) hang from the skin's seat row, not the donkey's back line

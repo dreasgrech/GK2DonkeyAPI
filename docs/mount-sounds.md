@@ -107,8 +107,24 @@ step = thud.ogg
 lips = none
 ```
 
-The snail's and the worm's existing silence is the older form, `[Mount.Tuning] BrayVolume = 0` and friends: it
-still works (those keys are the base layer, section below); `[Mount.Sounds] voice = none` says the same.
+The snail's, the worm's and Gerry's older `[Mount.Tuning]` volume pins are gone: the rule above silences the
+donkey's own sounds on them by itself, and their `[Mount.Sounds]` lines say `none` where that is meant. (A pin still
+works: those keys are the base layer.)
+
+## What a skin is missing
+
+Three places say it, for the same question ("which of its sounds has this skin still no sound for"):
+
+- **The log at the game's start** (once a session, when the game is ready): one line per skin, `Sounds: skin 'rat'
+  (mount rat): its own: ...; its mount's: voice (spitter_attack), step (by the ground), ...; MISSING (the donkey's
+  own, silent here): answer, mount, dismount; the donkey's neutral ones 6; silent by default 18.`
+- **The Mounts tab** (F11): the first line of "Sounds of this skin" lists the missing events in orange, or says
+  nothing is missing.
+- **`tests/SkinsScan`**: an `INFO <skin>: sounds MISSING ...` line per built-in creature.
+
+"Missing" means exactly the donkey's own events with no line in the skin's or its mount's blocks, riding plain. An
+explicit `none` counts as given (silent by choice). The neutral events and the ones no mount sounds by default
+(`setoff`, `ear`, the flying ones, ...) are never "missing".
 
 ## The layers, and the player
 
@@ -122,6 +138,13 @@ For every event on every instance, the first layer that gives a **source** wins;
 4. the **base**: the player's `[Ride]` / `[Cart]` keys of the API cfg (reference.md "Sounds": `HoofSoundId`,
    `BraySoundId`, `GrazeSoundId`, ... with their volumes, pitches and numbers), which are the donkey's sounds as
    shipped and as the player tuned them, and which a mount's `[Mount.Tuning]` may pin.
+
+**The donkey's own sounds are the donkey's.** Its voice, its lip smack, its chewing, its getting-on and getting-off
+snorts riding plain (`voice`, `answer`, `lips`, `graze`, and `mount` / `dismount` riding plain) never reach another
+mount: on any other creature they are **silent until its pack gives them a sound** (a crab never brays by default;
+decided 2026-10-24). The neutral sounds are everyone's: the step by the ground, the cart's wheel and thump, hitching
+and unhitching, the bell, and the cart style's ladder sounds getting on and off. The donkey mount itself, Hellfire and
+Royal Parade included, is untouched.
 
 A layer's `volume` and `pitch` multiply the base's (the topmost layer that says one wins among the layers); its
 other attributes and numbers replace the base's. The player's switches stay on top of every layer: `SoundsOn`,

@@ -61,6 +61,9 @@ var soundVariants = new HashSet<string>(Regex.Matches(Regex.Match(soundEventsCs,
 var soundAttrs = new HashSet<string>(Regex.Matches(Regex.Match(soundBlockCs, @"Attributes = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (soundEvents.Count < 10 || soundAttrs.Count < 5 || soundVariants.Count != 4) Fail($"SoundEvents.cs / SoundBlock.cs: the sound catalogue could not be read ({soundEvents.Count} events, {soundAttrs.Count} attributes, {soundVariants.Count} variants)"); else Pass($"SoundEvents.cs: {soundEvents.Count} sound events, {soundNumbers.Count} numbers, {soundVariants.Count} variants; SoundBlock.cs: {soundAttrs.Count} line attributes");
 var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" };
+// the donkey's own events (DonkeyOwn = true in SoundEvents.cs): silent on another mount unless its pack gives them a sound
+var donkeyOwn = new HashSet<string>(Regex.Matches(soundEventsCs, @"Id = ""(\w+)""(?:(?!Id = "")[\s\S])*?DonkeyOwn = true").Select(m => m.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+if (donkeyOwn.Count < 4) Fail($"SoundEvents.cs: the donkey's own events could not be read ({donkeyOwn.Count})"); else Pass($"SoundEvents.cs: {donkeyOwn.Count} of the donkey's own events ({string.Join(", ", donkeyOwn.OrderBy(e => e))})");
 
 // The section headers of a cfg in file order, for the canonical layout: [Skin] first, [Game] right after it, the
 // colour sections before the mount block, the mount block last.
@@ -543,6 +546,15 @@ foreach (var dir in skinDirs)
         else mountDecl[mid] = (id, text);
     }
     else if (mount != "donkey") Bad($"names the mount '{mount}' but declares no [Mount] section (a built-in declares its own)");
+    if (!mount.Equals("donkey", StringComparison.OrdinalIgnoreCase))
+    {
+        // what the skin lacks: the donkey's own events with no line in its own or its mount's blocks (riding plain)
+        var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var sec in new[] { "Sounds", "Sounds.Ride", "Mount.Sounds", "Mount.Sounds.Ride" })
+            if (cfg.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if (parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) covered.Add(parts[0]); }
+        var missing = donkeyOwn.Where(e => !covered.Contains(e)).OrderBy(e => e).ToList();
+        Console.WriteLine(missing.Count == 0 ? $"INFO {id}: no sound missing (every one of the donkey's own events has a line)" : $"INFO {id}: sounds MISSING (the donkey's own, silent on this mount until given): {string.Join(", ", missing)}{(cfg.ContainsKey("Mount") ? "" : " (a joiner: its mount's block is in the declaring skin's file, not counted here)")}");
+    }
     if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
 Console.WriteLine($"INFO {skins} shipped skins (the API's and Saddle Up's), {mountDecl.Count} mounts declared ({string.Join(", ", mountDecl.Keys.OrderBy(k => k))}), {pictures} pictures");

@@ -141,6 +141,12 @@ rat a squeak, a player can still turn brays off. A skin's or mount's own volume 
 they never replace them. (This is the same shape as the locked, orange rows of today: the creature's value shows,
 the player's row scales it.)
 
+**Amended 2026-10-24 evening (the user: "if someone creates a new mount, by default the mount is silent?"):** the
+donkey's own events (`voice`, `answer`, `lips`, `graze`, the ride-style `mount` and `dismount`; `SoundEvents.Def.DonkeyOwn`)
+never reach another mount through the base layer: silent there unless a layer gives a sound. The neutral events
+stay everyone's. The snail's, worm's and Gerry's pins are gone. `Sounds.Coverage` / `CoverageLine` say what a skin
+is missing (the log once a session, the Mounts tab, the skins scan).
+
 Why a skin may override: the user's requirement, and the one case that needs it (two drawings of one creature with
 different voices). Why the mount still declares first: a creature's voice is shared by its skins by default, so a
 second dragon pack with no `[Sounds]` sounds like the dragon, not like a donkey.
