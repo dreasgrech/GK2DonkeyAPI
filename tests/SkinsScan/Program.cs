@@ -416,12 +416,18 @@ foreach (var dir in skinDirs)
         foreach (var sec in new[] { "Tuning.Ride", "Tuning.Cart" })
             if (cfg.TryGetValue(sec, out var st)) foreach (var key in bothStyles.Keys) if (st.ContainsKey(key)) Bad($"{key} set in [Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
     }
-    // the sounds (docs/mount-sounds-design.md section 4): every line an event, an event.variant, or an event's attribute
-    // or number; every file named is in sounds\; every file in sounds\ is named by a line or by the convention
+    // the sounds (docs/mount-sounds.md "A pack's sounds"): every line an event, an event.variant, or an event's attribute
+    // or number; a skin's [Sounds*] files are in sounds\, its mount's [Mount.Sounds*] files in sounds\mount\ (2026-10-24:
+    // a mount's files named by event in sounds\ were also the declaring skin's own by the name rule, loaded twice); every
+    // file in either folder is named by a line of its own sections or by the convention; sounds\mount\ only in a skin
+    // that declares a mount
+    bool declaresMount = cfg.TryGetValue("Mount", out var mountSec) && mountSec.TryGetValue("id", out var mountIdVal) && mountIdVal.Length > 0;
     foreach (var sec in soundSections)
     {
         if (!cfg.TryGetValue(sec, out var snd)) continue;
         if (snd.Count == 0) Bad($"[{sec}] is empty: leave it out");
+        bool mountSection = sec.StartsWith("Mount.", StringComparison.Ordinal);
+        string folder = mountSection ? Path.Combine("sounds", "mount") : "sounds";
         foreach (var kv in snd)
         {
             var parts = kv.Key.Split('.');
@@ -432,23 +438,31 @@ foreach (var dir in skinDirs)
             if (attr != null && !soundAttrs.Contains(attr) && !soundNumbers.Contains(attr)) Bad($"[{sec}] {kv.Key}: '{attr}' is neither a line attribute ({string.Join(", ", soundAttrs)}) nor a number of a sound event ({string.Join(", ", soundNumbers.OrderBy(n => n))})");
             if (attr == null)
                 foreach (var tok in kv.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()))
-                    if (Regex.IsMatch(tok, @"\.(ogg|wav|mp3)$", RegexOptions.IgnoreCase) && !File.Exists(Path.Combine(dir, "sounds", tok))) Bad($"[{sec}] {kv.Key}: no sounds\\{tok} in the pack");
+                    if (Regex.IsMatch(tok, @"\.(ogg|wav|mp3)$", RegexOptions.IgnoreCase) && !File.Exists(Path.Combine(dir, folder, tok)))
+                        Bad($"[{sec}] {kv.Key}: no {folder}\\{tok} in the pack" + (File.Exists(Path.Combine(dir, mountSection ? "sounds" : Path.Combine("sounds", "mount"), tok)) ? (mountSection ? " (it is in sounds\\: a mount's files go in sounds\\mount\\)" : " (it is in sounds\\mount\\: the mount's files; a skin's own go in sounds\\)") : ""));
         }
     }
-    if (Directory.Exists(Path.Combine(dir, "sounds")))
+    void CheckSoundFolder(string folder, string[] sections)
     {
-        foreach (var f in Directory.GetFiles(Path.Combine(dir, "sounds")))
+        if (!Directory.Exists(Path.Combine(dir, folder))) return;
+        foreach (var f in Directory.GetFiles(Path.Combine(dir, folder)))
         {
             string fileName = Path.GetFileName(f);
-            if (!Regex.IsMatch(fileName, @"\.(ogg|wav)$", RegexOptions.IgnoreCase)) { Bad($"sounds\\{fileName}: not an .ogg or .wav file"); continue; }
+            if (!Regex.IsMatch(fileName, @"\.(ogg|wav)$", RegexOptions.IgnoreCase)) { Bad($"{folder}\\{fileName}: not an .ogg or .wav file"); continue; }
             string stem = Path.GetFileNameWithoutExtension(f);
             int us = stem.LastIndexOf('_');
             if (us > 0 && int.TryParse(stem[(us + 1)..], out _)) stem = stem[..us];
             var sp = stem.Split('.');
-            bool named = soundSections.Any(sec => cfg.TryGetValue(sec, out var s2) && s2.Values.Any(v => v.Split(new[] { ',', ';' }).Select(t => t.Trim()).Contains(fileName, StringComparer.OrdinalIgnoreCase)));
+            bool named = sections.Any(sec => cfg.TryGetValue(sec, out var s2) && s2.Values.Any(v => v.Split(new[] { ',', ';' }).Select(t => t.Trim()).Contains(fileName, StringComparer.OrdinalIgnoreCase)));
             bool convention = soundEvents.Contains(sp[0]) && (sp.Length == 1 || sp.Length == 2 && soundVariants.Contains(sp[1]));
-            if (!named && !convention) Bad($"sounds\\{fileName}: named like no event (<event>[.<variant>][_<n>].ogg) and lined up in no sound section: it is never played");
+            if (!named && !convention) Bad($"{folder}\\{fileName}: named like no event (<event>[.<variant>][_<n>].ogg) and lined up in no [{sections[0]}*] section: it is never played");
         }
+    }
+    CheckSoundFolder("sounds", soundSections.Where(x => !x.StartsWith("Mount.", StringComparison.Ordinal)).ToArray());
+    if (Directory.Exists(Path.Combine(dir, "sounds", "mount")))
+    {
+        if (!declaresMount) Bad("sounds\\mount\\ holds the files of a mount, but this skin declares none ([Mount] id): they are never played");
+        else CheckSoundFolder(Path.Combine("sounds", "mount"), soundSections.Where(x => x.StartsWith("Mount.", StringComparison.Ordinal)).ToArray());
     }
     // [Colors] (docs/mount-colours.md): regions from the mount vocabulary (Colors.cs MountRegionKeys, never Coat: it is
     // everything not named), every colour RRGGBB, in the pictures, and under one region only. A game-source skin has

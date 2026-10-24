@@ -60,8 +60,9 @@ namespace GK2DonkeyAPI
             return b.For(layer);
         }
 
-        // The mount's block for a layer. A pack mount's files are the files of the skin that declared it (the block
-        // sits in that skin's cfg); a code mount's lines carry their own clips.
+        // The mount's block for a layer. A pack mount's files are in the sounds\mount\ folder of the skin that declared
+        // it (the block sits in that skin's cfg; its files named by event there are the mount's by convention, as a
+        // skin's are in sounds\); a code mount's lines carry their own clips.
         internal static SoundBlock MountSoundBlock(Catalog.Entry k, SoundLayer layer)
         {
             if (k == null) return null;
@@ -71,10 +72,11 @@ namespace GK2DonkeyAPI
                 SkinDef declaring = k.DeclaredBy != null ? Find(k.DeclaredBy) : null;
                 List<string> files = declaring?.FileNames;
                 b = k.SoundBlocks = new SoundBlocks { Version = Catalog.Version };
-                b.Both = SoundBlock.Parse(Lines(k.Sounds), "Mount.Sounds", files, null);
-                b.Ride = SoundBlock.Parse(Lines(k.SoundsRide), "Mount.Sounds.Ride", files, null);
-                b.Cart = SoundBlock.Parse(Lines(k.SoundsCart), "Mount.Sounds.Cart", files, null);
-                b.Baby = SoundBlock.Parse(Lines(k.SoundsBaby), "Mount.Sounds.Baby", files, null);
+                b.Both = SoundBlock.Parse(Lines(k.Sounds), "Mount.Sounds", files, null, MountSoundsKey);
+                b.Both.AddConvention(files, "Mount.Sounds", null, MountSoundsKey);
+                b.Ride = SoundBlock.Parse(Lines(k.SoundsRide), "Mount.Sounds.Ride", files, null, MountSoundsKey);
+                b.Cart = SoundBlock.Parse(Lines(k.SoundsCart), "Mount.Sounds.Cart", files, null, MountSoundsKey);
+                b.Baby = SoundBlock.Parse(Lines(k.SoundsBaby), "Mount.Sounds.Baby", files, null, MountSoundsKey);
             }
             return b.For(layer);
         }
@@ -92,7 +94,7 @@ namespace GK2DonkeyAPI
         }
 
         // The blocks parsed for the loader's report (FromCfg): every problem named once in the skin's report.
-        internal static int ReportSoundBlocks(SkinDef d, Dictionary<string, object> mountBoth, Dictionary<string, object> mountRide, Dictionary<string, object> mountCart, Dictionary<string, object> mountBaby)
+        internal static int ReportSoundBlocks(SkinDef d, Dictionary<string, object> mountBoth, Dictionary<string, object> mountRide, Dictionary<string, object> mountCart, Dictionary<string, object> mountBaby, bool declaresMount)
         {
             int lines = 0;
             void Report(string s) { d.Report += s + "; "; }
@@ -100,8 +102,13 @@ namespace GK2DonkeyAPI
             both.AddConvention(d.FileNames, "Sounds", Report);
             lines += both.Count + SoundBlock.Parse(d.SoundsRide, "Sounds.Ride", d.FileNames, Report).Count + SoundBlock.Parse(d.SoundsCart, "Sounds.Cart", d.FileNames, Report).Count
                 + SoundBlock.Parse(d.SoundsBaby, "Sounds.Baby", d.FileNames, Report).Count;
-            lines += SoundBlock.Parse(Lines(mountBoth), "Mount.Sounds", d.FileNames, Report).Count + SoundBlock.Parse(Lines(mountRide), "Mount.Sounds.Ride", d.FileNames, Report).Count
-                + SoundBlock.Parse(Lines(mountCart), "Mount.Sounds.Cart", d.FileNames, Report).Count + SoundBlock.Parse(Lines(mountBaby), "Mount.Sounds.Baby", d.FileNames, Report).Count;
+            SoundBlock mb = SoundBlock.Parse(Lines(mountBoth), "Mount.Sounds", d.FileNames, Report, MountSoundsKey);
+            bool declares = declaresMount;
+            bool mountFiles = d.FileNames != null && d.FileNames.Exists(f => f.StartsWith(MountSoundsKey, StringComparison.OrdinalIgnoreCase));
+            if (declares) mb.AddConvention(d.FileNames, "Mount.Sounds", Report, MountSoundsKey);
+            else if (mountFiles) Report("sounds\\mount\\ holds files but the skin declares no mount ([Mount]): they are never played (a skin's own sounds go in sounds\\)");
+            lines += mb.Count + SoundBlock.Parse(Lines(mountRide), "Mount.Sounds.Ride", d.FileNames, Report, MountSoundsKey).Count
+                + SoundBlock.Parse(Lines(mountCart), "Mount.Sounds.Cart", d.FileNames, Report, MountSoundsKey).Count + SoundBlock.Parse(Lines(mountBaby), "Mount.Sounds.Baby", d.FileNames, Report, MountSoundsKey).Count;
             return lines;
         }
     }

@@ -22,7 +22,7 @@ events"), with the embedded-pack route proved by the API's own test pack (an `.o
 place, a loop, a reload after a file changed); **phase 3 built 2026-10-24** (a standing grown one's idle call at
 three times the ridden interval under a scene-wide four-second voice gap, the babies' `answer` event half a second on
 and a third of a second apart, `[Sounds.Baby]` / `[Mount.Sounds.Baby]`, Saddle Up's "Standing mounts and babies sound"
-row; the self-test "herds and babies"); the system is complete, the files are the user's; the build plan is in the session's plan file
+row; the self-test "herds and babies"); the system is complete, the files are the user's; **the files' layout amended 2026-10-24**: a mount's files in `sounds\mount\` of its declaring skin, a skin's own in `sounds\` (each folder with its own name rule; before, a mount's file named after its event was also the declaring skin's own and loaded twice: [mount-sounds.md](mount-sounds.md) "A pack's sounds"); the build plan is in the session's plan file
 (the probe, then phase 1 in four steps). Corrections from the code read for the plan are marked *(plan)* below. The
 facts below are from the game's code (LazyBearTechnology and
 Assembly-CSharp decompiles of game 1.010, `lbt_1010` and `decomp_1010`), the mod's sources, and the earlier reports

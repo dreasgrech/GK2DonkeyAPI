@@ -12,6 +12,16 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A mount's sound files have a folder of their own: `sounds\mount\`** (the user, 2026-10-24: "make sure that the
+  sounds are structured properly as files ... a solid foundation before making more"). A skin's own files stay in
+  `sounds\` (its `[Sounds*]` lines and its name rule), the mount's are in `sounds\mount\` of the skin that declares
+  it (its `[Mount.Sounds*]` lines and the same name rule there), loaded once for every skin of the mount. Before, both
+  shared `sounds\`, so a mount's file named after its event was also the declaring skin's own: the dragon's take-off,
+  flap, glide and landing files loaded twice and the red dragon's copy won (the log called them the skin's own). A line
+  naming a file of the other folder is named in the log (and by `tests/SkinsScan`, which says which folder it is in) and
+  left out; `sounds\mount\` in a skin that declares no mount is reported. The dragon's 12 files moved to
+  `sounds\mount\`; their cache files sit under `...\dragon\mount\`. Self-tests: the pack scenario checks both folders,
+  the name rule kept to its folder and a line reading the wrong one; a new one checks the built-in dragon's files.
 - **The dragon walks like a heavy beast** (the user, 2026-10-24: "his legs ... too dinky", "walks like a lady", "like
   someone modelling stilettos on a catwalk", "a stick stuck up his arse"; the reference's Walking studied, docs/flying.md
   "The walk, studied"): thicker legs with no thin ankle, the forelegs built like the hind (a shoulder mass, a thick upper

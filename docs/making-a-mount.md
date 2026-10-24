@@ -79,7 +79,7 @@ cargo = 6              # items its cart carries, 1 to 6 (with the cart it goes a
 BrayVolume = 0
 
 [Mount.Sounds]         # the creature's own sounds, shared by its skins (docs/mount-sounds.md): files of this skin's
-voice = click_1.ogg, click_2.ogg   # sounds\ folder, a game sound id, none, or ground; <event>.volume etc.
+voice = click_1.ogg, click_2.ogg   # sounds\mount\ folder, a game sound id, none, or ground; <event>.volume etc.
 lips = none
 
 [Mount.Stats]          # free lines for the Mounts panel

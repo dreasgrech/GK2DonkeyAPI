@@ -52,7 +52,8 @@ namespace GK2DonkeyAPI
         internal const string OverlayHead = OverlayPrefix + "hed";
         internal const string FrontSuffix = "_front";   // the second overlay per part: drawn in front of the rider
         internal const string FrontKey = "front/";
-        internal const string SoundsKey = "sounds/"; // a pack's sounds\ folder: its files keyed "sounds/<file>" (SoundBank.ForSkin reads them)      // a front picture's key: "front/bdy_walk_left_03"
+        internal const string SoundsKey = "sounds/"; // a pack's sounds\ folder: the skin's own files, keyed "sounds/<file>" (SoundBank.ForSkin reads them)
+        internal const string MountSoundsKey = "sounds/mount/"; // its sounds\mount\ folder: the files of the mount the skin declares, for every skin of it (2026-10-24)      // a front picture's key: "front/bdy_walk_left_03"
         internal const string TuningOwner = "dreas.gk2.donkeyapi.skin"; // the owner of the overrides a skin's tuning sets
 
         // The skin an instance wears, by id ("" or "donkey" = the game's own look). A look key (IsLook): an instance
@@ -387,10 +388,15 @@ namespace GK2DonkeyAPI
                         {
                             foreach (var f in front) pics[FrontKey + f.Key] = f.Value;
                         }
-                        // the skin's sounds: the "sounds" subdirectory, keyed "sounds/<file>"
+                        // the skin's sounds: the "sounds" subdirectory, keyed "sounds/<file>"; its mount's: "sounds\mount",
+                        // keyed "sounds/mount/<file>"
                         if (files.TryGetValue(kv.Key + sep + "sounds", out var sounds))
                         {
                             foreach (var f in sounds) if (SoundBlock.IsSoundFile(f.Key)) pics[SoundsKey + f.Key] = f.Value;
+                        }
+                        if (files.TryGetValue(kv.Key + sep + "sounds" + sep + "mount", out var mountSounds))
+                        {
+                            foreach (var f in mountSounds) if (SoundBlock.IsSoundFile(f.Key)) pics[MountSoundsKey + f.Key] = f.Value;
                         }
                     }
                     byte[] Bytes(string file)
@@ -475,6 +481,11 @@ namespace GK2DonkeyAPI
             if (Directory.Exists(soundsDir))
             {
                 foreach (string f in Directory.GetFiles(soundsDir)) if (SoundBlock.IsSoundFile(f)) names.Add(SoundsKey + Path.GetFileName(f));
+                string mountDir = Path.Combine(soundsDir, "mount");
+                if (Directory.Exists(mountDir))
+                {
+                    foreach (string f in Directory.GetFiles(mountDir)) if (SoundBlock.IsSoundFile(f)) names.Add(MountSoundsKey + Path.GetFileName(f));
+                }
             }
             byte[] Bytes(string file)
             {
@@ -704,7 +715,7 @@ namespace GK2DonkeyAPI
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
             int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
             if (tuningKeys > 0) d.Report += tuningKeys + " tuning key(s)" + (d.TuningRide != null || d.TuningCart != null ? " (some per style)" : "") + "; ";
-            int soundLines = ReportSoundBlocks(d, ks, ksRide, ksCart, ksBaby); // every line checked, the problems named (LooksSounds.cs)
+            int soundLines = ReportSoundBlocks(d, ks, ksRide, ksCart, ksBaby, mount.TryGetValue("id", out string declaredId) && !string.IsNullOrEmpty(declaredId)); // every line checked, the problems named (LooksSounds.cs)
             if (soundLines > 0) d.Report += soundLines + " sound line(s); ";
             if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
             {

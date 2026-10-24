@@ -17,7 +17,8 @@ BepInEx\plugins\gk2skins\<your skin id>\
     bdy_lips_left_01.png ... _13.png
     bdy_turn_left_01.png ... _06.png
     hed_static_down.png, hed_static_down_02.png, hed_static_down_03.png
-    sounds\voice_1.ogg, sounds\voice_2.ogg ...   (optional: the skin's own sounds, docs/mount-sounds-design.md)
+    sounds\voice_1.ogg, sounds\voice_2.ogg ...   (optional: the skin's own sounds, docs/mount-sounds.md)
+    sounds\mount\takeoff_1.ogg ...              (optional, a skin that declares a mount: the mount's sounds, for every skin of it)
 ```
 
 - The `gk2skins` folder can sit straight under `BepInEx\plugins`, or inside any mod's own folder there. Several skins
@@ -221,7 +222,7 @@ the game, version = 1.0, cart = true, foals = true` with no tuning and no effect
 mount's sounds live in `[Mount.Sounds]`, and the donkey's own sounds (the bray, the lip smack, the chewing, the
 snorts getting on and off) never reach another mount: a creature with no line for one is silent there, and the log
 at the game's start says what each skin is missing (docs/mount-sounds.md). A mount or a skin brings **sounds of its
-own**: files in the pack's `sounds\` folder, named for their event
+own**: files in the pack's `sounds\` folder (the skin's) or `sounds\mount\` (the mount's, in the skin that declares it), named for their event
 (`voice_1.ogg`, `voice_2.ogg`, `step.grass_1.wav`: played by convention with no line) or lined up in a `[Sounds]`
 block (`voice = a.ogg, b.ogg`, `voice.volume = 0.8`, `step.grass = step_grass`, `lips = none`; `[Sounds.Ride]` /
 `[Sounds.Cart]` for one style) and, for the creature, in `[Mount.Sounds]` of its declaring skin. A skin's line wins

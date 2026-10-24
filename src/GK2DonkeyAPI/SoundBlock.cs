@@ -15,7 +15,8 @@ namespace GK2DonkeyAPI
         internal string BankKey;             // the bank's key for this line's files: "<section>:<key>" ("sounds.cart:voice"), so each block's files are an entry of their own
         internal string Owner;               // a mod's override line: the mod (its clips are registered under it)
         internal string Source;              // a game id, "none", "ground"; null when files or not said
-        internal string[] Files;             // the pack's files (names in its sounds\ folder) when the source is files
+        internal string[] Files;             // the pack's files (names in Folder) when the source is files
+        internal string Folder = Looks.SoundsKey; // the folder key of Files: "sounds/" (a skin's own) or "sounds/mount/" (its mount's)
         internal AudioClip[] Clips;          // a code mount's or skin's own clips (the API)
         internal float? Volume, Pitch, PitchVariation, Start;
         internal bool? Loop, Speech;
@@ -27,7 +28,7 @@ namespace GK2DonkeyAPI
         {
             return new SoundLine
             {
-                Key = Key, BankKey = BankKey, Owner = Owner, Source = Source, Files = Files, Clips = Clips, Volume = Volume, Pitch = Pitch, PitchVariation = PitchVariation, Start = Start,
+                Key = Key, BankKey = BankKey, Owner = Owner, Source = Source, Files = Files, Folder = Folder, Clips = Clips, Volume = Volume, Pitch = Pitch, PitchVariation = PitchVariation, Start = Start,
                 Loop = Loop, Speech = Speech, Numbers = Numbers != null ? new Dictionary<string, float>(Numbers, StringComparer.OrdinalIgnoreCase) : null, BankId = BankId,
             };
         }
@@ -62,8 +63,9 @@ namespace GK2DonkeyAPI
         }
 
         // The block from its raw lines. fileNames: the pack's files ("sounds/<file>" among them) to check a file line
-        // against; null: no check. report: a problem, one sentence (the loader's report); the line is dropped.
-        internal static SoundBlock Parse(IEnumerable<KeyValuePair<string, string>> raw, string section, ICollection<string> fileNames, Action<string> report)
+        // against; null: no check. report: a problem, one sentence (the loader's report); the line is dropped. folder:
+        // where its file lines read from: the skin's sounds\ (Looks.SoundsKey) or the mount's sounds\mount\.
+        internal static SoundBlock Parse(IEnumerable<KeyValuePair<string, string>> raw, string section, ICollection<string> fileNames, Action<string> report, string folder = Looks.SoundsKey)
         {
             var b = new SoundBlock();
             if (raw == null) return b;
@@ -98,10 +100,10 @@ namespace GK2DonkeyAPI
                     report?.Invoke($"[{section}] {key}: not an event, event.variant or event.attribute");
                     continue;
                 }
-                if (!b.Lines.TryGetValue(lineKey, out SoundLine l)) b.Lines[lineKey] = l = new SoundLine { Key = lineKey, BankKey = section.ToLowerInvariant() + ":" + lineKey };
+                if (!b.Lines.TryGetValue(lineKey, out SoundLine l)) b.Lines[lineKey] = l = new SoundLine { Key = lineKey, BankKey = section.ToLowerInvariant() + ":" + lineKey, Folder = folder };
                 if (attr == null)
                 {
-                    SetSource(l, value, section, key, fileNames, report);
+                    SetSource(l, value, section, key, fileNames, report, folder);
                     continue;
                 }
                 string a = attr.ToLowerInvariant();
@@ -166,7 +168,9 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        private static void SetSource(SoundLine l, string value, string section, string key, ICollection<string> fileNames, Action<string> report)
+        internal static string FolderText(string folder) => folder.Replace('/', '\\'); // "sounds\\mount\\" for the reports
+
+        private static void SetSource(SoundLine l, string value, string section, string key, ICollection<string> fileNames, Action<string> report, string folder)
         {
             if (value.Length == 0)
             {
@@ -189,35 +193,38 @@ namespace GK2DonkeyAPI
             foreach (string t in toks)
             {
                 if (!IsSoundFile(t)) { report?.Invoke($"[{section}] {key}: '{t}' is not a sound file (.ogg or .wav); left out"); continue; }
-                if (fileNames != null && !fileNames.Contains("sounds/" + t)) { report?.Invoke($"[{section}] {key}: the pack has no sounds\\{t}; left out"); continue; }
+                if (fileNames != null && !fileNames.Contains(folder + t)) { report?.Invoke($"[{section}] {key}: the pack has no {FolderText(folder)}{t}; left out"); continue; }
                 files.Add(t);
             }
             if (files.Count == 0)
             {
-                report?.Invoke($"[{section}] {key}: none of its files is in the pack's sounds\\ folder; the layer below applies");
+                report?.Invoke($"[{section}] {key}: none of its files is in the pack's {FolderText(folder)} folder; the layer below applies");
                 return;
             }
             l.Source = null;
             l.Files = files.ToArray();
         }
 
-        // The convention: sounds\<event>[.<variant>][_<n>].ogg|wav with no cfg line for that key is that key's files
-        // (voice_1.ogg, voice_2.ogg; step.grass_1.wav). A key the cfg gives a source keeps the cfg's.
-        internal void AddConvention(IEnumerable<string> fileNames, string section, Action<string> report)
+        // The convention: <folder><event>[.<variant>][_<n>].ogg|wav with no cfg line for that key is that key's files
+        // (voice_1.ogg, voice_2.ogg; step.grass_1.wav). A key the cfg gives a source keeps the cfg's. The folder's own
+        // files only: a skin's sounds\ convention never reaches into sounds\mount\ (its mount's files: a file named
+        // takeoff_1.ogg there is every skin of the mount's take-off, not the declaring skin's own; the user, 2026-10-24).
+        internal void AddConvention(IEnumerable<string> fileNames, string section, Action<string> report, string folder = Looks.SoundsKey)
         {
             if (fileNames == null) return;
             var byKey = new SortedDictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
             foreach (string f in fileNames)
             {
-                if (!f.StartsWith("sounds/", StringComparison.OrdinalIgnoreCase) || !IsSoundFile(f)) continue;
-                string name = f.Substring(7);
+                if (!f.StartsWith(folder, StringComparison.OrdinalIgnoreCase) || !IsSoundFile(f)) continue;
+                string name = f.Substring(folder.Length);
+                if (name.IndexOf('/') >= 0) continue; // a subfolder's (sounds\mount\ under sounds\)
                 string stem = name.Substring(0, name.LastIndexOf('.'));
                 int us = stem.LastIndexOf('_');
                 if (us > 0 && int.TryParse(stem.Substring(us + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out _)) stem = stem.Substring(0, us);
                 SoundEvents.Def d = SoundEvents.Split(stem, out string variant);
                 if (d == null || variant != null && !SoundEvents.IsVariant(d, variant))
                 {
-                    report?.Invoke($"sounds\\{name}: '{stem}' names no sound event (or variant), so it is not played by convention; name it <event>[.<variant>][_<n>] or line it up in [{section}]");
+                    report?.Invoke($"{FolderText(folder)}{name}: '{stem}' names no sound event (or variant), so it is not played by convention; name it <event>[.<variant>][_<n>] or line it up in [{section}]");
                     continue;
                 }
                 string key = variant != null ? d.Id + "." + variant.ToLowerInvariant() : d.Id;
@@ -227,9 +234,10 @@ namespace GK2DonkeyAPI
             foreach (KeyValuePair<string, List<string>> kv in byKey)
             {
                 if (Lines.TryGetValue(kv.Key, out SoundLine l) && l.HasSource) continue;
-                if (l == null) Lines[kv.Key] = l = new SoundLine { Key = kv.Key, BankKey = section.ToLowerInvariant() + ":" + kv.Key };
+                if (l == null) Lines[kv.Key] = l = new SoundLine { Key = kv.Key, BankKey = section.ToLowerInvariant() + ":" + kv.Key, Folder = folder };
                 kv.Value.Sort(StringComparer.OrdinalIgnoreCase);
                 l.Files = kv.Value.ToArray();
+                l.Folder = folder;
                 l.Source = null;
             }
         }

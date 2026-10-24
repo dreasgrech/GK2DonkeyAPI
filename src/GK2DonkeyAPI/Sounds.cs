@@ -830,8 +830,8 @@ namespace GK2DonkeyAPI
                 return touched ? r : null;
             }
 
-            // One layer's line onto the spec being built. fileOwner: the skin whose sounds\ folder a file line reads
-            // from (a pack); a line with its own clips (the API) registers them under whoId.
+            // One layer's line onto the spec being built. fileOwner: the skin whose sounds\ (or, for a mount's line, whose
+            // sounds\mount\) folder a file line reads from (a pack); a line with its own clips (the API) registers them under whoId.
             private static bool Apply(SoundLine l, string layer, Looks.SkinDef fileOwner, string whoId, SoundSpec r, ref float vol, ref float pitch)
             {
                 if (l == null) return false;
@@ -841,7 +841,7 @@ namespace GK2DonkeyAPI
                     if (id == null)
                     {
                         if (l.Clips != null) id = SoundBank.ForClips(layer, whoId ?? "code", l.BankKey ?? l.Key, l.Clips, l.Speech ?? false, l.Loop ?? false);
-                        else if (fileOwner != null) id = SoundBank.ForSkin(fileOwner, l.BankKey ?? l.Key, l.Files, l.Speech ?? false, l.Loop ?? false);
+                        else if (fileOwner != null) id = SoundBank.ForSkin(fileOwner, l.BankKey ?? l.Key, l.Files, l.Speech ?? false, l.Loop ?? false, l.Folder);
                         l.BankId = id;
                     }
                     SoundBank.State st = SoundBank.StateOf(id);

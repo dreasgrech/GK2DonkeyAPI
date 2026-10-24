@@ -52,13 +52,31 @@ sound" row).
 
 ## A pack's sounds
 
-Put the files in the pack's `sounds\` folder (next to `skin.cfg`), `.ogg` (Vorbis, the game's own format, small)
-or `.wav` (PCM 8/16/24/32-bit or float, mono or stereo, any rate); a few seconds each.
+Two folders, as the cfg has two kinds of sound sections:
+
+```
+gk2skins\dragon\
+  skin.cfg            [Sounds*]        the skin's own: this look only
+                      [Mount.Sounds*]  the mount's: every skin of it (only in the skin that declares the mount)
+  sounds\             the skin's own files ([Sounds*] lines, and its name rule)
+    roar_1.ogg
+    mount\            the mount's files ([Mount.Sounds*] lines, and its name rule), for every skin of the mount
+      takeoff_1.ogg
+      flap_1.ogg
+```
+
+`.ogg` (Vorbis, the game's own format, small) or `.wav` (PCM 8/16/24/32-bit or float, mono or stereo, any rate); a
+few seconds each. A `[Sounds]` line reads `sounds\` only and a `[Mount.Sounds]` line `sounds\mount\` only: a line
+naming a file of the other folder is named in the log and left out, and the layer below applies. `sounds\mount\` in
+a skin that declares no mount is reported and never played. (Until 2026-10-24 a mount's files sat in `sounds\` too,
+and a file named after its event there was also the declaring skin's own by the name rule: the dragon's flight sounds
+loaded twice, and the red dragon's copy won over the mount's.)
 
 **By name, with no line in the cfg:** `sounds\<event>[.<variant>][_<n>].ogg|wav`. `voice_1.ogg`, `voice_2.ogg`
 and `voice_3.ogg` are the skin's `voice` (one at random per call, never the same twice in a row);
-`step.grass_1.wav` its step on grass; `graze.ogg` its grazing. A file named like no event is listed in the log
-and never played.
+`step.grass_1.wav` its step on grass; `graze.ogg` its grazing. The same rule in `sounds\mount\` gives the mount's:
+`sounds\mount\takeoff_1.ogg` is every skin of the mount's take-off. Each folder's rule reads its own files only. A
+file named like no event is listed in the log and never played.
 
 **Or in a `[Sounds]` block of skin.cfg**, which also takes a game sound id, silence, the ground, and the attributes:
 
@@ -92,8 +110,10 @@ named and left out; a line with none of its files left falls through to the laye
 
 **A mount's sounds**, shared by every skin of it, go in `[Mount.Sounds]` (and `[Mount.Sounds.Ride]`,
 `[Mount.Sounds.Cart]`, `[Mount.Sounds.Baby]`) of the skin that declares the mount (its `[Mount]` block), after `[Mount.Tuning*]`. Their
-files are that skin's `sounds\` folder. A second skin of the mount with no `[Sounds]` sounds like the mount; its own
-`[Sounds]` lines win over the mount's, event by event.
+files are that skin's `sounds\mount\` folder, loaded once for every skin of the mount. A second skin of the mount
+with no `[Sounds]` sounds like the mount; its own `[Sounds]` lines (files in its own `sounds\`) win over the mount's,
+event by event. The declaring skin is the mount's default look: it usually has no `[Sounds]` of its own, its sounds
+are the mount's.
 
 ```
 [Mount]

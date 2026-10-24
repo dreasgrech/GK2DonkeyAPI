@@ -303,9 +303,10 @@ namespace GK2DonkeyAPI
 
         // Bytes that are not on disk (an embedded pack's .ogg) written once under BepInEx\cache so Unity can decode
         // them from a file; the path. Written again only when missing or of another length.
-        internal static string CacheFile(string owner, string skin, string file, byte[] bytes)
+        internal static string CacheFile(string owner, string skin, string file, byte[] bytes, string sub = null)
         {
             string dir = Path.Combine(Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", SafeName(owner), SafeName(skin));
+            if (!string.IsNullOrEmpty(sub)) dir = Path.Combine(dir, SafeName(sub)); // the mount's files apart from the skin's own
             Directory.CreateDirectory(dir);
             string path = Path.Combine(dir, SafeName(file));
             if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length) File.WriteAllBytes(path, bytes);
@@ -328,7 +329,7 @@ namespace GK2DonkeyAPI
 
         private sealed class Job
         {
-            internal string Id, Owner, Skin, Key;
+            internal string Id, Owner, Skin, Key, Folder;
             internal bool Speech, Loop, Cancelled;
             internal int Left;
             internal readonly List<AudioClip> Clips = new List<AudioClip>();
@@ -349,15 +350,15 @@ namespace GK2DonkeyAPI
 
         internal static string IdFor(Looks.SkinDef d, string key) => "gk2." + d.Owner + "." + d.Id + "." + key;
 
-        // The files a layer's line names (the pack's sounds\ folder), registered once as one game sound under the
-        // skin's id for that key; the id at once, the clips a few frames later (a pack on disk and an embedded .ogg
+        // The files a layer's line names (the pack's sounds\ folder, or sounds\mount\ for its mount's: folder),
+        // registered once as one game sound under the skin's id for that key; the id at once, the clips a few frames later (a pack on disk and an embedded .ogg
         // go through Unity's decoder; an embedded .wav is parsed here at once). StateOf says when it plays; a file
         // that doesn't load is left out with a warning, and with none left the entry fails and the layer below applies.
-        internal static string ForSkin(Looks.SkinDef d, string key, string[] files, bool speech, bool loop)
+        internal static string ForSkin(Looks.SkinDef d, string key, string[] files, bool speech, bool loop, string folder = Looks.SoundsKey)
         {
             string id = IdFor(d, key);
             if (entries.ContainsKey(id) || loading.ContainsKey(id) || failed.ContainsKey(id)) return id;
-            var job = new Job { Id = id, Owner = BankOwner(d), Skin = d.Id, Key = key, Speech = speech, Loop = loop, Left = files.Length };
+            var job = new Job { Id = id, Owner = BankOwner(d), Skin = d.Id, Key = key, Folder = folder ?? Looks.SoundsKey, Speech = speech, Loop = loop, Left = files.Length };
             loading[id] = job;
             foreach (string f in files) StartOne(d, job, f);
             return id;
@@ -384,12 +385,13 @@ namespace GK2DonkeyAPI
         {
             try
             {
+                string rel = job.Folder + file; // "sounds/x.ogg", "sounds/mount/x.ogg"
                 if (!string.IsNullOrEmpty(d.Source))
                 {
-                    LoadFile(Path.Combine(d.Source, "sounds", file), (c, e) => Done(job, file, c, e));
+                    LoadFile(Path.Combine(d.Source, rel.Replace('/', Path.DirectorySeparatorChar)), (c, e) => Done(job, file, c, e));
                     return;
                 }
-                byte[] bytes = d.ReadFile?.Invoke("sounds/" + file);
+                byte[] bytes = d.ReadFile?.Invoke(rel);
                 if (bytes == null)
                 {
                     Done(job, file, null, "not in the pack");
@@ -400,7 +402,7 @@ namespace GK2DonkeyAPI
                     Done(job, file, FromWav(bytes, file), null);
                     return;
                 }
-                LoadFile(CacheFile(d.Owner, d.Id, file, bytes), (c, e) => Done(job, file, c, e));
+                LoadFile(CacheFile(d.Owner, d.Id, file, bytes, job.Folder == Looks.MountSoundsKey ? "mount" : null), (c, e) => Done(job, file, c, e));
             }
             catch (Exception e)
             {
@@ -412,7 +414,7 @@ namespace GK2DonkeyAPI
         {
             if (clip != null && !job.Cancelled) job.Clips.Add(clip);
             else if (clip != null) UnityEngine.Object.Destroy(clip);
-            else Plugin.Log.LogWarning($"Sounds: skin '{job.Skin}': sounds\\{file} did not load ({err}); left out");
+            else Plugin.Log.LogWarning($"Sounds: skin '{job.Skin}': {SoundBlock.FolderText(job.Folder)}{file} did not load ({err}); left out");
             if (--job.Left > 0) return;
             loading.Remove(job.Id);
             if (job.Cancelled) return;
