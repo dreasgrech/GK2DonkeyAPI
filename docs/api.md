@@ -736,7 +736,8 @@ registration, a pack's declaration or a withdrawal.
 
 Every mount instance plays the events of one catalogue through the game's own player ([mount-sounds-design.md](mount-sounds-design.md)):
 `step` (with the surface variants `grass`, `dirt`, `wood`, `stone`), `wheel`, `setoff`, `stop`, `graze`, `lips`,
-`ear`, `turn`, `voice`, `refused`, `mount`, `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, `sent`, `called`, and
+`ear`, `turn`, `voice`, `answer` (a baby's reply to its parent's call), `refused`, `mount`, `dismount`, `hitch`,
+`unhitch`, `cargo`, `bell`, `sent`, `called`, and
 the flying and jumping ones `takeoff`, `flap`, `glide`, `fly`, `land`, `touchdown`, `landed`, `refused_takeoff`,
 `jump`, `jumpland`, `perch`. What
 plays for an event on an instance comes from layers, the first that says a source wins: a mod's `Set` here, the
@@ -754,8 +755,8 @@ and as tuned). The player's switches and volumes scale whatever won.
 | `MountResult Play(handle, eventId, variant = null)`, `Stop(handle, eventId)` | Plays an event now as the game would (the layers, the player's volumes, the ground under it for a step); refused with the reason when nothing played. Stop ends a stoppable event's sound (grazing, a loop). |
 | event `Played(handle, eventId)` | After an event played on an instance, by the ride, a standing one or a mod. |
 
-A code skin or mount gives its sounds in its def (`Sounds`, `SoundsRide`, `SoundsCart`: `Dictionary<string, MountSound>` by
-event key); `MountInfo.Sounds` / `SoundsRide` / `SoundsCart` show a mount's (a pack's lines as text, a code mount's
+A code skin or mount gives its sounds in its def (`Sounds`, `SoundsRide`, `SoundsCart`, `SoundsBaby` for the babies:
+`Dictionary<string, MountSound>` by event key); `MountInfo.Sounds` / `SoundsRide` / `SoundsCart` / `SoundsBaby` show a mount's (a pack's lines as text, a code mount's
 `MountSound`). The Behaviour key `StandingSounds` (on) lets standing mounts and babies sound near the keeper.
 
 ## Skins (0.30.0)
@@ -977,7 +978,8 @@ History:
 - 0.36.0: the mount sounds ([mount-sounds-design.md](mount-sounds-design.md)): `Mounts.Sounds` (`Catalogue`,
   `Events`, `Resolved`, `Set`, `Play`, `Stop`, the event `Played`), `MountSound`, `MountSoundEvent`,
   `MountSkinDef.Sounds` / `SoundsRide` / `SoundsCart` and `MountDef.Sounds` / `SoundsRide` / `SoundsCart`,
-  `MountInfo.Sounds` / `SoundsRide` / `SoundsCart`; the Behaviour key `StandingSounds` (on): standing mounts and
+  `MountInfo.Sounds` / `SoundsRide` / `SoundsCart`, then `SoundsBaby` on all three and the `answer` event (the herd:
+  a standing grown one's call, the babies' answers); the Behaviour key `StandingSounds` (on): standing mounts and
   babies make their sounds near the keeper.
 - 0.36.0: never lost ([never-lost.md](never-lost.md)): `Mounts.ReturnToSafeSpot`, `Mounts.LastSafeSpot`, the event
   `Mounts.ReturnedToSafeSpot`, the Behaviour keys `FallGuard` (on) and `ReturnKey` (None); `MountSettingsPage.Button`

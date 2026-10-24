@@ -13,8 +13,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 For players:
 
 - **Standing mounts and babies now make their sounds near you**: a parked donkey grazes and smacks its lips at the
-  mount sounds' volume, a baby's steps are higher and softer, a herd standing in the yard is heard as the ridden one
-  is (within the game's hearing distance). The mount you ride sounds exactly as before. The API cfg's `[General]
+  mount sounds' volume, calls now and then (three times rarer than the one you ride, and never two voices within four
+  seconds in the scene), its babies answer it one after another, a baby's steps are higher and softer, a herd standing
+  in the yard is heard as the ridden one is (within the game's hearing distance). Saddle Up's Sound section has the
+  switch, "Standing mounts and babies sound" (on). The mount you ride sounds exactly as before. The API cfg's `[General]
   StandingSounds` (on) turns it off, which also hands a standing donkey's lip smack back to the game (its own
   volume, as before); the dev Sounds tab has the switch.
 - **Never lost.** If you ever fall out of the world (under the ground, into nothing, far below it) you are put back on
@@ -149,6 +151,14 @@ For players:
 
 For mod authors:
 
+- **The herd and the babies' own sounds** (docs/mount-sounds.md; phase 3 of the sound system): the `answer` event
+  (a baby's reply to its parent's call, the donkey's voice pitched up by its size unless given one), `[Sounds.Baby]`
+  and `[Mount.Sounds.Baby]` blocks (`MountSkinDef.SoundsBaby`, `MountDef.SoundsBaby`, `MountInfo.SoundsBaby`) for the
+  babies' own sounds over the grown one's. Self-test "herds and babies" (group Sounds).
+  Found by that test: the idle call's timer was armed once, at an instance's first tick, with the interval of that
+  moment (a plain donkey's 40 s), and a skin worn later with its own interval never re-armed it; the rig now re-arms
+  whenever the resolved interval changes, ridden or standing. The sound self-tests drive the standing switch through
+  Saddle Up's row, since its session override masks the cfg entry.
 - **The sounds API** (docs/mount-sounds-design.md, phase 1 step 4): `Mounts.Sounds` with the catalogue of events,
   `Resolved` (what plays on an instance and from which layer), `Set` (a mod's own sound over everything, a game id
   or its own clips, back on Dispose), `Play` and `Stop`, the `Played` event; `MountSkinDef.Sounds` and

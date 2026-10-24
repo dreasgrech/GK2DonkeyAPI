@@ -19,7 +19,10 @@ self-test "the API"); **phase 1 complete: F11 group Sounds 67/0 on 2026-10-24, t
 [mount-sounds.md](mount-sounds.md)**; **phase 2 built 2026-10-24** (the flying and jumping events: `takeoff`, `flap`,
 `glide`, `fly`, `land`, `touchdown`, `landed`, `refused_takeoff`, `jump`, `jumpland`, `perch`; the self-test "the flying
 events"), with the embedded-pack route proved by the API's own test pack (an `.ogg` through the cache file, a `.wav` in
-place, a loop, a reload after a file changed); phase 3 open; the build plan is in the session's plan file
+place, a loop, a reload after a file changed); **phase 3 built 2026-10-24** (a standing grown one's idle call at
+three times the ridden interval under a scene-wide four-second voice gap, the babies' `answer` event half a second on
+and a third of a second apart, `[Sounds.Baby]` / `[Mount.Sounds.Baby]`, Saddle Up's "Standing mounts and babies sound"
+row; the self-test "herds and babies"); the system is complete, the files are the user's; the build plan is in the session's plan file
 (the probe, then phase 1 in four steps). Corrections from the code read for the plan are marked *(plan)* below. The
 facts below are from the game's code (LazyBearTechnology and
 Assembly-CSharp decompiles of game 1.010, `lbt_1010` and `decomp_1010`), the mod's sources, and the earlier reports
@@ -188,7 +191,7 @@ act; a later `hit` event is a row away).
 | `jumpland` | the jump's touch-down judged "lands" (the squash begins) | one-shot | `step` of the surface by default |
 | `perch` | the jump lands on top of something (`JumpStage.Perch`) | one-shot | default `jumpland` |
 
-### 3.3 Standing mounts, babies, herds (phase 1 for standing ones; phase 3 for the calls)
+### 3.3 Standing mounts, babies, herds (phase 1 for standing ones; phase 3 for the calls: **built 2026-10-24**, the self-test "herds and babies")
 
 Every instance gets its own emitter (section 7), so a standing donkey grazes audibly and a foal's steps are heard.
 Rules so a yard is not a racket: only instances in the Active tier (Tiers.cs) emit; `voice` has **one shared

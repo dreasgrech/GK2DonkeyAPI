@@ -161,6 +161,7 @@ class GK2DonkeyAPI.Api.MountDef
   field string Noun
   field UnityEngine.Texture2D Portrait
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> Sounds
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsBaby
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
   field System.Nullable<float> Speed
@@ -299,6 +300,7 @@ class GK2DonkeyAPI.Api.MountInfo
   property string Owner { get; }
   property System.Collections.Generic.IReadOnlyList<string> Skins { get; }
   property System.Collections.Generic.IReadOnlyDictionary<string, object> Sounds { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsBaby { get; }
   property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsCart { get; }
   property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsRide { get; }
   property float Speed { get; }
@@ -468,6 +470,7 @@ class GK2DonkeyAPI.Api.MountSkinDef
   field bool SeatFromPicture
   field int SeatRow
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> Sounds
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsBaby
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
   field GK2DonkeyAPI.Api.IMountSkinSource Source

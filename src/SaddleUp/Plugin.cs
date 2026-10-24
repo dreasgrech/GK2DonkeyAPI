@@ -231,6 +231,7 @@ namespace SaddleUp
             p.TuningKey("Sound", "Bell", "BellOnSetOff", me);
             p.TuningKey("Sound", "Brays", "BrayOnMountChance", me);
             p.Steps("Sound", "Volume", Mathf.RoundToInt(me.SoundVolume * 100f), 0, 150, 10, "Mount and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");
+            p.Toggle("Sound", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds: steps, grazing, the lip smack, a call now and then, the babies answering their parent. Off: only the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
             p.Publish();
             Logger.LogInfo($"GK2 Saddle Up {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }

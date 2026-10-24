@@ -26,6 +26,15 @@ namespace GK2DonkeyAPI
 
         internal static bool StandingOn => Plugin.StandingSounds == null || Plugin.StandingSounds.Value;
 
+        // The herd (docs/mount-sounds-design.md 3.3): a standing grown one calls StandingIdleFactor times rarer than the
+        // ridden one, and no standing call comes within VoiceGapS of any voice in the scene; babies never call by
+        // themselves, they answer their parent.
+        internal static float StandingIdleFactor = 3f;
+        internal static float VoiceGapS = 4f;
+        private static float nextVoiceAt;
+        internal static readonly List<(float At, Mount.Instance Who, string Event)> TestVoiceTimes = new List<(float, Mount.Instance, string)>();
+        internal static void TestResetHerd() { nextVoiceAt = 0f; TestVoiceTimes.Clear(); }
+
         // ------------------------------------------------------------------ the ridden instance's shortcuts
 
         internal static Rig RiddenRig => Mount.Ridden?.SoundsRig;
@@ -226,6 +235,8 @@ namespace GK2DonkeyAPI
             private bool inWalkClip, inGrazeClip, wasWalking;
             private long lastHoofK, lastWheelK;
             private float nextBray = -1f, mountBrayAt = -1f, idleSince;
+            private float brayEvery = -1f;  // the interval nextBray was armed with: a layer change (a skin worn, a pack's line) re-arms it
+            private float answerAt = -1f;   // a baby: when its answer to the parent's call is due
             private readonly Dictionary<string, SoundHandler> loops = new Dictionary<string, SoundHandler>(StringComparer.Ordinal);
             private readonly Dictionary<string, SoundLine> overrides = new Dictionary<string, SoundLine>(StringComparer.OrdinalIgnoreCase); // a mod's, by event or event.variant (Mounts.Sounds)
             private readonly Dictionary<string, (SoundSpec Spec, float At)> cache = new Dictionary<string, (SoundSpec, float)>(StringComparer.OrdinalIgnoreCase);
@@ -235,6 +246,9 @@ namespace GK2DonkeyAPI
             internal string LastEvent { get; private set; } = "";
             // Plays that reached the game's player, by event (the self-tests).
             internal readonly Dictionary<string, int> TestPlays = new Dictionary<string, int>(StringComparer.Ordinal);
+            internal int TestTicks;             // TickInner entries (the self-tests: is the rig ticked at all)
+            internal string TestLastGate = "";  // why the last tick stopped early, or "ran"
+            internal string TestState => $"ticks {TestTicks}, last gate '{TestLastGate}', nextBray {nextBray:0.00} (now {Time.time:0.00}), nextVoiceAt {nextVoiceAt:0.00}, walking last {wasWalking}, baby {IsBaby}, ridden {owner.IsRidden}, standing on {StandingOn}, answerAt {answerAt:0.00}";
 
             internal Rig(Mount.Instance owner)
             {
@@ -252,6 +266,7 @@ namespace GK2DonkeyAPI
                         float now = Time.time;
                         idleSince = now;
                         SoundSpec voice = Resolve("voice");
+                        brayEvery = voice != null ? voice.Number("idle_every", 0f) : 0f;
                         nextBray = now + NextBrayDelay(voice);
                         if (voice != null && May(SoundEvents.Find("voice"), voice) && UnityEngine.Random.value < voice.Number("mount_chance", 0f))
                         {
@@ -335,11 +350,14 @@ namespace GK2DonkeyAPI
                 wasWalking = walking;
 
                 StyleSettings S = owner.S;
+                TestTicks++;
                 if (!S.SoundsOn.Value || !MountRules.Allowed(MountFeature.Sounds) || ac == null || !ridden && !StandingOn)
                 {
+                    TestLastGate = !S.SoundsOn.Value ? "SoundsOn off" : !MountRules.Allowed(MountFeature.Sounds) ? "the Sounds feature refused" : ac == null ? "no animation component" : "standing with StandingSounds off";
                     StopLoops();
                     return;
                 }
+                TestLastGate = "ran";
 
                 if (ridden)
                 {
@@ -358,8 +376,11 @@ namespace GK2DonkeyAPI
                     float every = voice != null ? voice.Number("idle_every", 0f) : 0f;
                     if (every > 0f)
                     {
-                        if (nextBray < 0f)
+                        if (nextBray < 0f || Math.Abs(every - brayEvery) > 0.001f)
                         {
+                            // armed anew: the first time, and whenever the interval changed (a skin worn, a pack's
+                            // line); armed once at the first tick, a donkey's 40 s stayed on a pack that said 1 (2026-10-24)
+                            brayEvery = every;
                             nextBray = now + NextBrayDelay(voice);
                         }
                         else if (now >= nextBray)
@@ -379,6 +400,42 @@ namespace GK2DonkeyAPI
                     {
                         nextBray = -1f;
                     }
+                }
+                else if (!IsBaby)
+                {
+                    // a grown one standing: the idle call, rarer than ridden (StandingIdleFactor), never mid-step, and
+                    // one voice at a time in the scene (VoiceGapS: a yard of them is no racket); babies only answer
+                    SoundSpec voice = Resolve("voice");
+                    float every = voice != null ? voice.Number("idle_every", 0f) * StandingIdleFactor : 0f;
+                    if (every > 0f)
+                    {
+                        if (nextBray < 0f || Math.Abs(every - brayEvery) > 0.001f)
+                        {
+                            brayEvery = every;
+                            nextBray = now + NextBrayDelay(voice, StandingIdleFactor);
+                        }
+                        else if (now >= nextBray)
+                        {
+                            if (!walking && now >= nextVoiceAt)
+                            {
+                                Emit("voice");
+                                nextBray = now + NextBrayDelay(voice, StandingIdleFactor);
+                            }
+                            else
+                            {
+                                nextBray = now + UnityEngine.Random.Range(2f, 6f);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        nextBray = -1f;
+                    }
+                }
+                if (answerAt > 0f && now >= answerAt)
+                {
+                    answerAt = -1f;
+                    Emit("answer");
                 }
 
                 Animator a = ac.Animator;
@@ -466,10 +523,32 @@ namespace GK2DonkeyAPI
                 inGrazeClip = grazeClip;
             }
 
-            private static float NextBrayDelay(SoundSpec voice)
+            private static float NextBrayDelay(SoundSpec voice, float factor = 1f)
             {
-                float every = voice != null ? voice.Number("idle_every", 0f) : 0f;
+                float every = voice != null ? voice.Number("idle_every", 0f) * factor : 0f;
                 return every <= 0f ? 1e6f : every * UnityEngine.Random.Range(0.5f, 1.5f);
+            }
+
+            // The parent called: its babies answer one after another, half a second on, each a third of a second after
+            // the one before (docs/foal-sounds.md, calls made in code).
+            private void ScheduleAnswers()
+            {
+                try
+                {
+                    List<Mount.Instance> kids = owner.Children();
+                    if (kids == null) return;
+                    int k = 0;
+                    foreach (Mount.Instance kid in kids)
+                    {
+                        if (kid == null || kid.SoundsRig == null || !kid.SoundsRig.IsBaby) continue;
+                        kid.SoundsRig.answerAt = Time.time + 0.5f + 0.35f * k + UnityEngine.Random.Range(0f, 0.2f);
+                        k++;
+                    }
+                }
+                catch (Exception e)
+                {
+                    Warn("answers", "the babies' answers could not be set up: " + e.Message);
+                }
             }
 
             // ------------------------------------------------------------------ resolving
@@ -511,10 +590,14 @@ namespace GK2DonkeyAPI
                 Catalog.Entry mount = owner.LooksRig?.MountNow ?? Catalog.Donkey;
                 bool cart = owner.CurrentStyle == MountStyle.Cart;
                 Looks.SkinDef mountFiles = Looks.MountSoundFileOwner(mount);
-                touched |= Apply(Looks.MountSoundBlock(mount, null)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.MountSoundBlock(mount, cart)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, null)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, cart)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
+                Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
+                bool baby = IsBaby;
+                touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
+                touched |= Apply(Looks.MountSoundBlock(mount, style)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
                 SoundLine ov = null;
                 if (variant != null) overrides.TryGetValue(eventId + "." + variant, out ov);
                 if (ov == null) overrides.TryGetValue(eventId, out ov);
@@ -672,11 +755,20 @@ namespace GK2DonkeyAPI
                     if (d.Stoppable) loops[eventId] = h;
                     TestPlays.TryGetValue(eventId, out int n);
                     TestPlays[eventId] = n + 1;
+                    if (d.Id == "voice" || d.Id == "answer")
+                    {
+                        nextVoiceAt = Time.time + VoiceGapS; // one voice at a time in the scene (the standing ones wait; the ridden one and the answers go anyway)
+                        TestVoiceTimes.Add((Time.time, owner, d.Id));
+                        if (d.Id == "voice" && !IsBaby) ScheduleAnswers();
+                    }
                     if (owner.Handle != null) Mounts.Sounds.RaisePlayed(owner.Handle, eventId);
                 }
                 LastEvent = Sounds.LastEvent = eventId + (variant != null ? "." + variant : "") + " " + id;
                 return h;
             }
+
+            // Drawn smaller than the grown one: a baby (the [Sounds.Baby] blocks apply, the answers are its).
+            internal bool IsBaby => owner.ViewScale > 0.01f && owner.ViewScale < 0.99f;
 
             // A smaller creature (a foal, ViewScale 0.6) is higher and softer; a grown one is as it is.
             internal float PitchScale

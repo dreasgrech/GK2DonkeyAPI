@@ -227,7 +227,7 @@ namespace GK2DonkeyAPI
             internal Dictionary<string, object> TuningRide, TuningCart;
             // The skin's sounds (skin.cfg [Sounds], [Sounds.Ride], [Sounds.Cart]: the raw lines, written back by SaveCfg)
             // and their parsed form (LooksSounds.cs; docs/mount-sounds-design.md).
-            internal Dictionary<string, string> Sounds, SoundsRide, SoundsCart;
+            internal Dictionary<string, string> Sounds, SoundsRide, SoundsCart, SoundsBaby;
             internal SoundBlocks SoundBlocks;
             // The pictures moved on the view, in art pixels (x towards the head, y up), riding and with the cart hitched
             // (a creature that should sit closer to the shafts, say).
@@ -569,7 +569,7 @@ namespace GK2DonkeyAPI
             var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
             string source = null;
             Dictionary<string, object> kt = null, ktRide = null, ktCart = null;
-            Dictionary<string, object> ks = null, ksRide = null, ksCart = null; // [Mount.Sounds*]: the raw lines
+            Dictionary<string, object> ks = null, ksRide = null, ksCart = null, ksBaby = null; // [Mount.Sounds*]: the raw lines
             var unknownSections = new List<string>();
             foreach (string raw in text.Split('\n'))
             {
@@ -582,7 +582,7 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.stats" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "mount.sounds" && section != "mount.sounds.ride" && section != "mount.sounds.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.stats" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "mount.sounds" && section != "mount.sounds.ride" && section != "mount.sounds.cart" && section != "mount.sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -608,6 +608,7 @@ namespace GK2DonkeyAPI
                     case "sounds": (d.Sounds ?? (d.Sounds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "sounds.ride": (d.SoundsRide ?? (d.SoundsRide = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "sounds.cart": (d.SoundsCart ?? (d.SoundsCart = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "sounds.baby": (d.SoundsBaby ?? (d.SoundsBaby = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
                     case "mount.stats":
@@ -620,6 +621,7 @@ namespace GK2DonkeyAPI
                     case "mount.sounds": (ks ?? (ks = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.sounds.ride": (ksRide ?? (ksRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.sounds.cart": (ksCart ?? (ksCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "mount.sounds.baby": (ksBaby ?? (ksBaby = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "colors": ColorRegionLine(d, key, value, where); continue;
                     case "skin": break;
                     default: continue;
@@ -702,13 +704,13 @@ namespace GK2DonkeyAPI
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
             int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
             if (tuningKeys > 0) d.Report += tuningKeys + " tuning key(s)" + (d.TuningRide != null || d.TuningCart != null ? " (some per style)" : "") + "; ";
-            int soundLines = ReportSoundBlocks(d, null, ks, ksRide, ksCart); // every line checked, the problems named (LooksSounds.cs)
+            int soundLines = ReportSoundBlocks(d, ks, ksRide, ksCart, ksBaby); // every line checked, the problems named (LooksSounds.cs)
             if (soundLines > 0) d.Report += soundLines + " sound line(s); ";
             if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
             {
                 // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
                 // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
-                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart };
+                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby };
                 k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
                 if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
                 if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
@@ -757,7 +759,7 @@ namespace GK2DonkeyAPI
                 d.DeclaredMount = k;
                 d.Report += "declares the mount '" + k.Id + "'; ";
             }
-            else if (kt != null || ktRide != null || ktCart != null || ks != null || ksRide != null || ksCart != null || stats.Count > 0)
+            else if (kt != null || ktRide != null || ktCart != null || ks != null || ksRide != null || ksCart != null || ksBaby != null || stats.Count > 0)
             {
                 d.Report += "a [Mount.Tuning], [Mount.Sounds] or [Mount.Stats] section without a [Mount] id is ignored; ";
             }
@@ -1174,6 +1176,7 @@ namespace GK2DonkeyAPI
                     WriteSection(sb, "[Sounds]", AsObjects(d.Sounds), NotesOf("sounds"));
                     WriteSection(sb, "[Sounds.Ride]", AsObjects(d.SoundsRide), NotesOf("sounds.ride"));
                     WriteSection(sb, "[Sounds.Cart]", AsObjects(d.SoundsCart), NotesOf("sounds.cart"));
+                    WriteSection(sb, "[Sounds.Baby]", AsObjects(d.SoundsBaby), NotesOf("sounds.baby"));
                 }
                 bool tuningWritten = false;
                 foreach ((string Header, List<string> Above, List<string> Lines) other in otherSections)
@@ -1235,6 +1238,7 @@ namespace GK2DonkeyAPI
                     WriteSection(sb, "[Mount.Sounds]", k.Sounds, NotesOf("mount.sounds"));
                     WriteSection(sb, "[Mount.Sounds.Ride]", k.SoundsRide, NotesOf("mount.sounds.ride"));
                     WriteSection(sb, "[Mount.Sounds.Cart]", k.SoundsCart, NotesOf("mount.sounds.cart"));
+                    WriteSection(sb, "[Mount.Sounds.Baby]", k.SoundsBaby, NotesOf("mount.sounds.baby"));
                 }
                 string text = nl == "\n" ? sb.ToString() : sb.ToString().Replace("\n", nl);
                 if (File.Exists(path) && File.ReadAllText(path) == text) return null; // the same already: no write, no undo step

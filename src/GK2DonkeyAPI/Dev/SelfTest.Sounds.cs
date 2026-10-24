@@ -23,6 +23,16 @@ namespace GK2DonkeyAPI
         // The pooled player behind a handler (a private field of the game's; Access.Verify requires it).
         private static readonly AccessTools.FieldRef<SoundHandler, SoundController> HandlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
 
+        // The standing switch for a test: through Saddle Up's row when its page is up (its apply sets the Behaviour
+        // override Saddle Up holds, which masks the cfg entry: Tuned.Value answers the override first), else the entry.
+        private static void SetStandingSounds(bool on)
+        {
+            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+            MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Sound");
+            if (row != null && row.Entry is BepInEx.Configuration.ConfigEntry<bool> e) e.Value = on;
+            else Plugin.StandingSounds.Value = on;
+        }
+
         private static string ClipOf(SoundHandler h)
         {
             try
@@ -175,7 +185,7 @@ namespace GK2DonkeyAPI
                 standing = h;
                 yield return Frames(2);
                 Sounds.Rig sr = standing.I.SoundsRig;
-                Plugin.StandingSounds.Value = true;
+                SetStandingSounds(true);
                 sr.Invalidate();
                 Check(standing.I.Donkey != null && sr.Takes("lips"), "a standing donkey near the keeper takes its lips event (StandingSounds on)");
                 SoundHandler graze = sr.Emit("graze");
@@ -185,11 +195,11 @@ namespace GK2DonkeyAPI
                 Check(graze == null || !graze.IsActive, "Stop(graze) cuts it (the handler inactive a frame later)");
                 SoundHandler unhitchStanding = sr.Emit("hitch");
                 Check(unhitchStanding != null, "the hitch moment plays standing (not gated by the standing switch)");
-                Plugin.StandingSounds.Value = false;
+                SetStandingSounds(false);
                 sr.Invalidate();
                 Check(!sr.Takes("lips") && sr.Emit("graze") == null, "StandingSounds off: the lips event goes back to the game and nothing standing is emitted");
                 Check(sr.Emit("hitch") != null, "... but the hitch moment still plays (as before the rig)");
-                Plugin.StandingSounds.Value = true;
+                SetStandingSounds(true);
                 sr.Invalidate();
                 foal = Mounts.SpawnFoal(Owner, standing);
                 if (foal != null)
@@ -223,7 +233,7 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                Plugin.StandingSounds.Value = standingWas;
+                SetStandingSounds(standingWas);
                 Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
                 if (Mounts.IsMounted) Mounts.Dismount("self-test");
                 try { if (foal != null && foal.Exists) foal.Remove(); } catch { }
@@ -604,6 +614,129 @@ namespace GK2DonkeyAPI
                 try { if (h != null && h.Exists) h.Remove(); } catch { }
                 Looks.Unregister("flysound-test", owner);
                 try { Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // The herd (docs/mount-sounds-design.md 3.3): a standing grown one calls by itself, rarer than ridden and never
+        // within the scene's voice gap of another; its babies answer one after another, with [Sounds.Baby]'s sound
+        // where the pack gives one; nothing of it with the standing switch off; Saddle Up's row drives the switch.
+        private static IEnumerator SoundsHerd()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string owner = Owner + ".herd";
+            string tempRoot;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-herd", "herd-test",
+                    "[Skin]\nformat = 1\nid = herd-test\nname = Herd Test\nmount = herd-beast\n\n[Sounds]\nvoice = donkey_bell\nvoice.idle_every = 1\n\n[Sounds.Baby]\nanswer = fishing_blop\n\n" +
+                    "[Mount]\nid = herd-beast\nname = Herd Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n");
+            }
+            catch (Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            MountHandle a = null, b = null, k1 = null, k2 = null;
+            bool standingWas = Plugin.StandingSounds.Value;
+            float gapWas = Sounds.VoiceGapS;
+            try
+            {
+                Looks.RegisterFolder(tempRoot, owner);
+                SetStandingSounds(true);
+                a = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (a == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => a.IsReady, 6f);
+                a.Tuning.Set(Owner, "Skin", "herd-test");
+                yield return Until(() => a.Mount == "herd-beast", 8f);
+                k1 = Mounts.SpawnFoal(Owner, a);
+                k2 = Mounts.SpawnFoal(Owner, a);
+                yield return Until(() => k1 != null && k2 != null && k1.IsReady && k2.IsReady, 8f);
+                if (k1 == null || k2 == null) { Fail("no foals could be spawned here"); yield break; }
+                k1.Tuning.Set(Owner, "Skin", "herd-test");
+                k2.Tuning.Set(Owner, "Skin", "herd-test");
+                yield return Until(() => k1.Mount == "herd-beast" && k2.Mount == "herd-beast", 8f);
+                yield return Frames(3);
+                Sounds.Rig ra = a.I.SoundsRig, r1 = k1.I.SoundsRig, r2 = k2.I.SoundsRig;
+                ra.Invalidate(); r1.Invalidate(); r2.Invalidate();
+                int Plays(Sounds.Rig r, string e) => r.TestPlays.TryGetValue(e, out int c) ? c : 0;
+
+                // the layers: the babies' block is the babies' only
+                SoundSpec aa = ra.Resolve("answer"), ka = r1.Resolve("answer");
+                Check(!ra.IsBaby && r1.IsBaby && r2.IsBaby, $"a grown one and two babies ({a.I.ViewScale:0.00}, {k1.I.ViewScale:0.00}, {k2.I.ViewScale:0.00})");
+                Check(ka != null && ka.GameId == "fishing_blop" && ka.Layer == "skin", $"a baby's answer: [Sounds.Baby]'s ({ka?.Describe()})");
+                Check(aa != null && aa.Layer == "base" && aa.GameId == Plugin.For(MountStyle.Ride).BraySoundId.Value, $"the grown one's answer: the base's, the babies' block not for it ({aa?.Describe()})");
+
+                // the standing call and the answers
+                Sounds.TestResetHerd();
+                ra.TestPlays.Clear(); r1.TestPlays.Clear(); r2.TestPlays.Clear();
+                yield return Until(() => Plays(ra, "voice") >= 1, 10f);
+                SoundSpec av = ra.Resolve("voice");
+                Check(waited, $"a standing grown one calls by itself within 10 s (idle_every {av?.Number("idle_every", -1f):0.##} x the standing factor {Sounds.StandingIdleFactor}; the rig: {ra.TestState}; voice {av?.Describe()})");
+                yield return Until(() => Plays(r1, "answer") >= 1 && Plays(r2, "answer") >= 1, 3f);
+                Check(waited, $"both babies answered within 3 s ({Plays(r1, "answer")}, {Plays(r2, "answer")})");
+                var times = new List<(float At, Mount.Instance Who, string Event)>(Sounds.TestVoiceTimes);
+                float call = -1f, first = -1f, second = -1f;
+                foreach (var t in times)
+                {
+                    if (t.Event == "voice" && call < 0f) call = t.At;
+                    else if (t.Event == "answer" && call >= 0f && t.At >= call) { if (first < 0f) first = t.At; else if (second < 0f) second = t.At; }
+                }
+                Check(call >= 0f && first >= call + 0.45f && first <= call + 1.0f && second > first + 0.2f, $"the answers come half a second on and one after the other (call at {call:0.00}, answers at {first:0.00} and {second:0.00})");
+
+                // one voice at a time: a second grown one standing by, calls at least the gap apart
+                Sounds.VoiceGapS = 4f;
+                b = Spawn(Spot(home, 5f) ?? home, right: homeFacing > 0f);
+                if (b != null)
+                {
+                    yield return Until(() => b.IsReady, 6f);
+                    b.Tuning.Set(Owner, "Skin", "herd-test");
+                    yield return Until(() => b.Mount == "herd-beast", 8f);
+                    Sounds.TestResetHerd();
+                    yield return Seconds(12f);
+                    var calls = new List<float>();
+                    foreach (var t in Sounds.TestVoiceTimes) if (t.Event == "voice") calls.Add(t.At);
+                    float minGap = float.MaxValue;
+                    for (int i = 1; i < calls.Count; i++) minGap = Mathf.Min(minGap, calls[i] - calls[i - 1]);
+                    Check(calls.Count >= 2 && minGap >= Sounds.VoiceGapS - 0.1f, $"two standing grown ones: {calls.Count} call(s) in 12 s, the nearest two {(calls.Count >= 2 ? minGap.ToString("0.00") : "-")} s apart (at least {Sounds.VoiceGapS})");
+                }
+                else Info("no room for a second grown one: the voice gap not seen");
+
+                // the standing switch off: nothing standing calls or answers
+                SetStandingSounds(false);
+                ra.Invalidate(); r1.Invalidate(); r2.Invalidate();
+                Sounds.TestResetHerd();
+                yield return Seconds(6f);
+                Check(Sounds.TestVoiceTimes.Count == 0, $"StandingSounds off: no call and no answer in 6 s ({Sounds.TestVoiceTimes.Count})");
+                SetStandingSounds(true);
+
+                // Saddle Up's row
+                MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+                MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Sound");
+                if (saddle == null) Info("Saddle Up's page isn't shown: its row not checked");
+                else
+                {
+                    Check(row != null, "Saddle Up has the StandingSounds row in its Sound section");
+                    if (row != null)
+                    {
+                        var re = (BepInEx.Configuration.ConfigEntry<bool>)row.Entry;
+                        bool was = re.Value;
+                        try
+                        {
+                            re.Value = false;
+                            yield return null;
+                            Check(!Plugin.StandingSounds.Value, "the row off: the Behaviour key StandingSounds follows");
+                        }
+                        finally { re.Value = was; }
+                        yield return null;
+                    }
+                }
+            }
+            finally
+            {
+                Sounds.VoiceGapS = gapWas;
+                SetStandingSounds(standingWas);
+                try { if (k1 != null && k1.Exists) k1.Remove(); } catch { }
+                try { if (k2 != null && k2.Exists) k2.Remove(); } catch { }
+                try { if (b != null && b.Exists) b.Remove(); } catch { }
+                try { if (a != null && a.Exists) a.Remove(); } catch { }
+                LeftOver(owner, "herd-test", tempRoot);
             }
         }
 

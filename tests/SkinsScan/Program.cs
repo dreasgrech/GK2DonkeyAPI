@@ -49,9 +49,9 @@ var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", 
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
-var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" };
+var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" };
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
-var skinOwnSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart" }; // the skin's own sections, in the canonical order, before the colour sections
+var skinOwnSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // the skin's own sections, in the canonical order, before the colour sections
 // The sound catalogue (docs/mount-sounds-design.md): the events, their numbers and variants (SoundEvents.cs), the line attributes (SoundBlock.cs)
 var soundEventsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "SoundEvents.cs"));
 var soundBlockCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "SoundBlock.cs"));
@@ -60,7 +60,7 @@ var soundNumbers = new HashSet<string>(Regex.Matches(soundEventsCs, @"Numbers = 
 var soundVariants = new HashSet<string>(Regex.Matches(Regex.Match(soundEventsCs, @"Surfaces = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 var soundAttrs = new HashSet<string>(Regex.Matches(Regex.Match(soundBlockCs, @"Attributes = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (soundEvents.Count < 10 || soundAttrs.Count < 5 || soundVariants.Count != 4) Fail($"SoundEvents.cs / SoundBlock.cs: the sound catalogue could not be read ({soundEvents.Count} events, {soundAttrs.Count} attributes, {soundVariants.Count} variants)"); else Pass($"SoundEvents.cs: {soundEvents.Count} sound events, {soundNumbers.Count} numbers, {soundVariants.Count} variants; SoundBlock.cs: {soundAttrs.Count} line attributes");
-var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" };
+var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" };
 
 // The section headers of a cfg in file order, for the canonical layout: [Skin] first, [Game] right after it, the
 // colour sections before the mount block, the mount block last.
@@ -535,7 +535,7 @@ foreach (var dir in skinDirs)
                 else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) Bad($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
             }
         }
-        string text = string.Join("\n---\n", new[] { "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" }.Select(s => SectionText(cfg, s)));
+        string text = string.Join("\n---\n", new[] { "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" }.Select(s => SectionText(cfg, s)));
         if (mountDecl.TryGetValue(mid, out var first))
         {
             if (first.Text != text) Bad($"declares the mount '{mid}' differently from '{first.Skin}' (the first declaration wins in the game; keep them the same: the Mounts tab's Save writes every declaring file)");

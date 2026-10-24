@@ -44,7 +44,8 @@ the dev panel's Instances tab. Foals (small donkeys that stay with a parent, `Mo
 [`docs/foals.md`](foals.md).
 
 **Standing sounds** (`StandingSounds`, on): standing mounts and babies near the keeper make their sounds (steps,
-grazing, the lip smack, at the mount sounds' volume; a baby higher and softer). Off: only the ridden mount sounds,
+grazing, the lip smack, at the mount sounds' volume; a grown one calls now and then, one voice at a time in the
+scene, and the babies answer it; a baby higher and softer). Off: only the ridden mount sounds,
 and a standing one's lip smack is the game's own ([`docs/mount-sounds-design.md`](mount-sounds-design.md)).
 
 **Never lost** (`FallGuard`, on; `ReturnKey`, None): the keeper fallen out of the world is put back on the last ground

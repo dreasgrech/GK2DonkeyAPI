@@ -20,7 +20,7 @@ SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "autho
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
 MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
-TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart", "mount.sounds", "mount.sounds.ride", "mount.sounds.cart"]  # [Mount.Stats] first: the panel's lines, then the tuning, then the sounds
+TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart", "mount.sounds", "mount.sounds.ride", "mount.sounds.cart", "mount.sounds.baby"]  # [Mount.Stats] first: the panel's lines, then the tuning, then the sounds
 MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."
 
 
@@ -106,7 +106,7 @@ def canonical(path):
         out.append("[Game]")
         out.extend(secs["game"]["lines"])
     # the skin's own geometry ([Tuning], then per style), as written
-    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]")):
+    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")):
         if name in secs and any("=" in l for l in secs[name]["lines"]):  # an empty section is left out (the scan refuses one)
             out.append("")
             out.extend(secs[name]["above"])
@@ -135,7 +135,7 @@ def canonical(path):
                 out.extend(secs[name]["lines"])
     if "mount" not in secs and any(name in secs for name in TUNING_SECTIONS):
         raise SystemExit(f"{path}: a [Mount.*] section without a [Mount] section (the game ignores it; add the block or take the section out)")
-    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "colors", "mount"} | set(TUNING_SECTIONS)
+    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "sounds.baby", "colors", "mount"} | set(TUNING_SECTIONS)
     for name in order:
         if name not in known and not name.startswith("base."):
             raise SystemExit(f"{path}: section [{name}] is not one the loader knows")

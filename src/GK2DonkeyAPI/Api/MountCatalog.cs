@@ -87,12 +87,13 @@ namespace GK2DonkeyAPI.Api
                     d.Stats.Add(new KeyValuePair<string, string>(st.Label.Trim(), st.Value ?? ""));
                 }
             }
-            if ((def.Sounds?.Count ?? 0) + (def.SoundsRide?.Count ?? 0) + (def.SoundsCart?.Count ?? 0) > 0)
+            if ((def.Sounds?.Count ?? 0) + (def.SoundsRide?.Count ?? 0) + (def.SoundsCart?.Count ?? 0) + (def.SoundsBaby?.Count ?? 0) > 0)
             {
-                d.SoundBlocks = GK2DonkeyAPI.Looks.BlocksFromApi(def.Sounds, def.SoundsRide, def.SoundsCart, "Mount.Sounds", "mount " + def.Id);
+                d.SoundBlocks = GK2DonkeyAPI.Looks.BlocksFromApi(def.Sounds, def.SoundsRide, def.SoundsCart, def.SoundsBaby, "Mount.Sounds", "mount " + def.Id);
                 d.Sounds = AsObjects(def.Sounds);
                 d.SoundsRide = AsObjects(def.SoundsRide);
                 d.SoundsCart = AsObjects(def.SoundsCart);
+                d.SoundsBaby = AsObjects(def.SoundsBaby);
             }
             d.AbilityOwner = ownerId + ".ability." + d.Id;
             foreach (MountAbility a in d.Abilities)
@@ -210,6 +211,9 @@ namespace GK2DonkeyAPI.Api
         // every skin of the mount, under a skin's own; SoundsRide / SoundsCart for one style, over Sounds. Null: the
         // player's keys (the donkey's sounds). docs/mount-sounds-design.md.
         public Dictionary<string, MountSound> Sounds, SoundsRide, SoundsCart;
+        // The babies' own sounds, over the blocks above for an instance drawn smaller than the grown one (a pack's
+        // [Mount.Sounds.Baby]). Null: the grown one's, pitched up by the size.
+        public Dictionary<string, MountSound> SoundsBaby;
         // For the Mounts panel (docs/mounts-foundation-2.md 3): a line or two about the creature; a portrait for the
         // list (your own texture, kept by you; null: the panel draws the mount); lines shown as given ("Diet: keepers").
         public string Description;
@@ -306,6 +310,7 @@ namespace GK2DonkeyAPI.Api
             Sounds = CopyOf(d.Sounds);
             SoundsRide = CopyOf(d.SoundsRide);
             SoundsCart = CopyOf(d.SoundsCart);
+            SoundsBaby = CopyOf(d.SoundsBaby);
             // the Default skin first (the skin whose id is the mount's; the donkey's own art for the donkey), then the rest
             var skins = new List<string>();
             string first = GK2DonkeyAPI.Looks.DefaultSkinOf(d);
@@ -361,6 +366,7 @@ namespace GK2DonkeyAPI.Api
         public IReadOnlyDictionary<string, object> Sounds { get; }
         public IReadOnlyDictionary<string, object> SoundsRide { get; }
         public IReadOnlyDictionary<string, object> SoundsCart { get; }
+        public IReadOnlyDictionary<string, object> SoundsBaby { get; }
         // The ids of its skins, its Default first ("donkey", the game's own art, for the donkey mount).
         public IReadOnlyList<string> Skins { get; }
 

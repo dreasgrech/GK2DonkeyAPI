@@ -109,6 +109,12 @@ namespace GK2DonkeyAPI
                 Base = s => new SoundSpec { GameId = s.BraySoundId.Value, Volume = s.BrayVolume.Value, Pitch = s.BrayPitch.Value, Speech = !s.BrayInSfxChannel.Value }
                     .Set("idle_every", s.BrayIdleEverySeconds.Value).Set("mount_chance", s.BrayOnMountChance.Value).Set("while_walking", s.BrayWhileWalking.Value ? 1f : 0f),
             },
+            new Def
+            {
+                Id = "answer", Description = "a baby's reply to its parent's call, half a second to a second after it, siblings one after another (the donkey's voice pitched up unless [Sounds.Baby] gives one)",
+                StandingGated = true, Variants = None, Numbers = None,
+                Base = s => new SoundSpec { GameId = s.BraySoundId.Value, Volume = s.BrayVolume.Value, Pitch = s.BrayPitch.Value, Speech = !s.BrayInSfxChannel.Value },
+            },
             new Def { Id = "refused", Description = "a ride or a hitch refused at the mount", Variants = None, Numbers = None },
             new Def
             {

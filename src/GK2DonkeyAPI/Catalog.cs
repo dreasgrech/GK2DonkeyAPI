@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
             // the mount's sounds ([Mount.Sounds], [Mount.Sounds.Ride], [Mount.Sounds.Cart]: a pack's text lines; a code
             // mount's MountSound objects), parsed in LooksSounds.cs; docs/mount-sounds-design.md
-            internal Dictionary<string, object> Sounds, SoundsRide, SoundsCart;
+            internal Dictionary<string, object> Sounds, SoundsRide, SoundsCart, SoundsBaby;
             internal Looks.SoundBlocks SoundBlocks;
             internal MountAbility[] Abilities = Array.Empty<MountAbility>();
             internal string AbilityOwner;               // the owner the abilities' values are set under ("<owner>.ability.<id>"); cleared when the mount leaves an instance
@@ -203,7 +203,7 @@ namespace GK2DonkeyAPI
             return a.Cart == b.Cart && a.Foals == b.Foals && a.Flies == b.Flies && a.Jumps == b.Jumps && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
                 && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart)
-                && SameDict(a.Sounds, b.Sounds) && SameDict(a.SoundsRide, b.SoundsRide) && SameDict(a.SoundsCart, b.SoundsCart);
+                && SameDict(a.Sounds, b.Sounds) && SameDict(a.SoundsRide, b.SoundsRide) && SameDict(a.SoundsCart, b.SoundsCart) && SameDict(a.SoundsBaby, b.SoundsBaby);
         }
 
         private static bool SameStats(List<KeyValuePair<string, string>> a, List<KeyValuePair<string, string>> b)
@@ -280,6 +280,7 @@ namespace GK2DonkeyAPI
             into.Sounds = from.Sounds;
             into.SoundsRide = from.SoundsRide;
             into.SoundsCart = from.SoundsCart;
+            into.SoundsBaby = from.SoundsBaby;
             into.SoundBlocks = null;
             Touch(into);
         }

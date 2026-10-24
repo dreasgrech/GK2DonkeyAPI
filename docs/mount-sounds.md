@@ -18,6 +18,7 @@ authors; the player-facing keys are in [reference.md](reference.md) "Sounds".
 | `lips` | the game's lip-smack animation event | the game's `donkey_lips` by default |
 | `ear`, `turn` | the ear clip / the turning-head clip starts | silent unless a layer gives a sound |
 | `voice` | the creature's call | the idle timer (`idle_every` seconds, 0 = never; `while_walking`), a chance at mounting (`mount_chance`), `Mounts.Bray()`; the donkey's `voice_donkey` |
+| `answer` | a baby's reply to its parent's call: half a second to a second after it, siblings one after another | the donkey's voice pitched up by the baby's size unless `[Sounds.Baby]` gives one |
 | `refused` | a ride or a hitch refused at the mount | silent unless a layer gives a sound (the game's `donkey_default_nope` is a fit) |
 | `mount`, `dismount` | the keeper gets on / off | not at doors, scene changes, failed re-summons, style changes |
 | `hitch`, `unhitch` | a cart hitched / left standing | |
@@ -42,7 +43,12 @@ all silent unless a layer gives a sound:
 | `jumpland` | a jump comes down (the squash) | |
 | `perch` | a jump comes down on top of something | |
 
-A standing herd's calls and the babies' answers come with phase 3 (the design's section 3.3).
+**The herd.** A grown mount standing near the keeper calls by itself, three times rarer than the ridden one
+(`voice.idle_every` times 3), never mid-step, and no standing call comes within four seconds of any other voice in
+the scene: one voice at a time, a yard of them is no racket. Babies never call by themselves; when their parent calls
+(ridden or standing, or `Mounts.Bray()`) each answers in turn, half a second on and a third of a second apart, with
+the `answer` event. All of it is under the player's `StandingSounds` switch (Saddle Up's "Standing mounts and babies
+sound" row).
 
 ## A pack's sounds
 
@@ -73,6 +79,10 @@ graze.loop = true                    # a stoppable event: the clip loops until i
 
 [Sounds.Cart]                        # with the cart only, over [Sounds]; [Sounds.Ride] for riding plain
 voice = grunt.ogg
+
+[Sounds.Baby]                        # the babies (drawn smaller than the grown one), over the blocks above for them
+answer = squeak_1.ogg, squeak_2.ogg  # a squeak where the grown one roars; without it: the grown one's sound pitched up
+step = patter.ogg
 ```
 
 The sections stand after the skin's `[Tuning]` sections and before `[Colors]` (the canonical layout;
@@ -81,7 +91,7 @@ attributes are named in the skin's report in the log and ignored; a file a line 
 named and left out; a line with none of its files left falls through to the layer below.
 
 **A mount's sounds**, shared by every skin of it, go in `[Mount.Sounds]` (and `[Mount.Sounds.Ride]`,
-`[Mount.Sounds.Cart]`) of the skin that declares the mount (its `[Mount]` block), after `[Mount.Tuning*]`. Their
+`[Mount.Sounds.Cart]`, `[Mount.Sounds.Baby]`) of the skin that declares the mount (its `[Mount]` block), after `[Mount.Tuning*]`. Their
 files are that skin's `sounds\` folder. A second skin of the mount with no `[Sounds]` sounds like the mount; its own
 `[Sounds]` lines win over the mount's, event by event.
 
@@ -105,8 +115,10 @@ still works (those keys are the base layer, section below); `[Mount.Sounds] voic
 For every event on every instance, the first layer that gives a **source** wins; the layers, top down:
 
 1. a mod's `Mounts.Sounds.Set` on that instance (the session only);
-2. the skin's `[Sounds.Ride]` or `[Sounds.Cart]` (the style the mount is in), then its `[Sounds]`;
-3. the mount's `[Mount.Sounds.Ride]` / `[Mount.Sounds.Cart]`, then its `[Mount.Sounds]`;
+2. the skin's `[Sounds.Baby]` for a baby, then its `[Sounds.Ride]` or `[Sounds.Cart]` (the style the mount is in),
+   then its `[Sounds]`;
+3. the mount's `[Mount.Sounds.Baby]` for a baby, then `[Mount.Sounds.Ride]` / `[Mount.Sounds.Cart]`, then its
+   `[Mount.Sounds]`;
 4. the **base**: the player's `[Ride]` / `[Cart]` keys of the API cfg (reference.md "Sounds": `HoofSoundId`,
    `BraySoundId`, `GrazeSoundId`, ... with their volumes, pitches and numbers), which are the donkey's sounds as
    shipped and as the player tuned them, and which a mount's `[Mount.Tuning]` may pin.
@@ -116,8 +128,10 @@ other attributes and numbers replace the base's. The player's switches stay on t
 `SoundVolume`, the per-event `...On` switches, Saddle Up's Bell, Brays and Volume rows, the game's Sounds slider.
 A skin can give the rat a squeak; the player can still turn the brays off.
 
-Standing mounts and babies play their animator's events too (steps, grazing, the lip smack), within the game's
-hearing distance, under the API cfg's `[General] StandingSounds` (on). A baby is pitched up and softer by its size.
+Standing mounts and babies play their animator's events too (steps, grazing, the lip smack), a grown one calls now
+and then and the babies answer it (the herd, above), within the game's hearing distance, under the API cfg's
+`[General] StandingSounds` (on; Saddle Up's "Standing mounts and babies sound" row). A baby is pitched up and softer
+by its size.
 
 ## How it plays
 
@@ -157,7 +171,7 @@ new MountDef
 }
 ```
 
-`MountSkinDef.Sounds` / `SoundsRide` / `SoundsCart` and `MountDef.Sounds` / `SoundsRide` / `SoundsCart` take the
-same dictionaries. `Mounts.Sounds` (api.md "Sounds") answers what plays on an instance (`Resolved`, with the
+`MountSkinDef.Sounds` / `SoundsRide` / `SoundsCart` / `SoundsBaby` and `MountDef.Sounds` / `SoundsRide` / `SoundsCart` /
+`SoundsBaby` take the same dictionaries. `Mounts.Sounds` (api.md "Sounds") answers what plays on an instance (`Resolved`, with the
 layer), sets a mod's own sound over everything (`Set`, back on Dispose), plays and stops an event (`Play`, `Stop`),
 and raises `Played` after every play.
