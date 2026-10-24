@@ -144,6 +144,7 @@ namespace GK2DonkeyAPI
             private float facingSign = 1f; // +1 when the donkey shows its right-facing sprite, -1 for left
             private AnimationState lastMirrored = (AnimationState)(-1);
             private float lastWalkMultiplier; // what the donkey's walk_speed was last set to (sign = direction), 0 = unset
+            internal float WalkMultiplierNow => lastWalkMultiplier; // the stride probe (Dev/StrideProbe.cs)
             private bool reversedWalkLogged;
             private float reversedWalkT0 = -1f; // clip time when the walk was first reversed (one-time confirmation)
             private int reversedWalkFrame;

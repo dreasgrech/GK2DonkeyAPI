@@ -1321,6 +1321,81 @@ What to look at in game: fly over the smelter and the yard: no F, no E (the smel
 dragon as over the keeper); hold F in the air: nothing; land next to the smelter: its bubble and F are back at once;
 a save in the air, then the mount's place in the panel.
 
+### The walk, studied (2026-10-24, a preview; not built into the skin yet)
+
+The user: "his legs ... look a bit derpy still, a bit too dinky", "walks like a lady like walk", "like someone walking
+in a camp way". The second reference's Walking clip (161 frames at 60 fps, one cycle in 2.7 s) was measured against
+our eight walk frames (`tmp/ref2`: legrows.py, track.py), scaled to our size (the reference is 512 px long, ours 107):
+
+| | reference (scaled) | ours |
+|---|---|---|
+| a leg's width, mid-height | about 6 px | 4-5 px fore, wider hind: not the main gap |
+| the ankle | as thick as the shin | 3.6 px: a thin wrist, the "dainty" read |
+| the paw | broad, flat, toes spread | 6 x 2 px, flicked claws-down when lifted (a prance) |
+| the step's lift | low, the foot flat | 4 px on a 12 px leg: a high step |
+| near and far feet | apart, the far pair darker | 3 px apart: the four feet on one line (a catwalk) |
+| the weight | head dips 8 px twice a cycle, the shoulders and hips rise and fall | the body bobs 0.8 px, the head still |
+| the hind leg | a column under the haunch | bones longer than the hip-to-hock reach, so the knee folds forward low (a squat) |
+
+The feet's speed was checked too: the donkey's planted hooves slide about 17 px a cycle in its own frames (the game's
+clip rate matches the ground for it), ours 14.5 (9 px over 0.62 of the cycle), and the dragon's stride key
+(`WalkCycleSpeed` 1.5) times its speed (1.6) keeps the donkey's ratio: the feet barely skate, so the tempo is not the
+cause.
+
+**The preview** (`make_creatures.py`, `DRAGON_*` switches; their defaults draw the dragon as before, byte for byte):
+`LEG_BULK` 1.2, `LEG_WRIST` 0.7 (thicker, no thin ankle), `PAW` heavy (a broad paw, the heel behind, three claws
+apart; lifted flat), `STEP_LIFT` 2.5, `STEP_STANCE` 0.72, `STEP_STRIDE` 12 (lower, longer planted steps; 16.7 px a
+cycle, nearer the ground), `FAR_DX` 5 / `FAR_DY` -2 / `FAR_DARK` (the far legs apart and darker), `WALK_NOD` 2 (the
+head dips with each step), `WALK_HEAVE` 1 (shoulders and haunch rise over their planted legs in turn; the back under
+the seat keeps its bob), `HIND_LEN` 0.72, `HOCK_UP` 3, `FORE_LEN` 0.9 (column legs; on the ground only, the flying legs
+keep their lengths and take the thickness). Also fixed with it: on the ground nothing is drawn below the paws' row
+(the old frames 2, 4, 6 and 8 put a leg 1-2 px below the ground). The seat row and RAISE are unchanged; the chest's
+front edge (column 45) moves 1 px on two frames with the heave. Pictures: `C:\ClaudeCodeTemp\GK2-dragon-walk\`.
+
+Second look (the user: the thicker legs "look better yet but it's still moving like someone modelling stilettos on a
+catwalk", "his head/neck are extremely bouncy", "a dragon would stride more than tiptoe"). The tempo was a cause after
+all, though not by skating: short quick steps are a mince. The reference covers about 21% of its length a cycle (22 px
+at our size), ours 16% (17 px) in 0.4 s. And `HOCK_UP` 3 had put the hind feet on tiptoe (a high heel); `WALK_NOD` 2 on
+the 0.8 px bob moved the head 5 px twice a cycle (15..20), at 5 Hz. **Preview 2:** `STEP_STRIDE` 18.4 (25.5 px a cycle
+at stance 0.72) played with the dragon's `WalkCycleSpeed` 1.0 in place of 1.5 (0.6 s a cycle riding, same ground speed),
+`HOCK_UP` -1 and `HIND_LEN` 0.82 (the hind foot flat), `WALK_NOD` 0 and `HEAD_STEADY` 1 (the body's bob taken off the
+head: it holds its height, measured 0 px a cycle), `WALK_HEAVE` 0.5. The walk's step sound (`per_cycle = 2`) follows
+the slower cycle by itself.
+
+Third look (the user: "why is the head fully static now?", "the front legs still seem smaller than the hind legs, they
+need to be reworked like the hind legs"). Preview 2 had answered "too bouncy" with no motion at all (the head 0 px a
+cycle), the opposite extreme. **Preview 3:** `HEAD_FOLLOW` 1.1 with `HEAD_LAG` 0.12 and `HEAD_FWD` 1.2: the head takes
+the body's bob back, an eighth of a cycle late, and reaches forward and back with the steps (measured per frame: skull
+top 19 20 19 18 18 20 19 18, snout 20 21 20 19 20 21 20 19: 2 px each way, behind the body; preview 1 moved it 5 px,
+preview 2 not at all, today's 1 px with the body). `FORE_HEAVY`: the foreleg built like the hind, a shoulder mass over
+it (as the haunch is over the hind), the upper arm 5.0 to 3.4 (the thigh's 5.2), the forearm 3.2 to 2.4 down to a wrist
+2.5 px above the paw, a short wrist bone to the paw. The flying frames take the thicker forelegs too (their poses
+unchanged).
+
+Fourth look (the user: "still seems like he's moving with a stick stuck up his arse ... a bit fluidity in its body,
+less stiffness overall like the reference"). Measured per frame on fixed columns (`tmp/ref2/parts.py`): in preview 3
+only the legs and the head moved; the back's line, the tail and the wings moved with the 0.8 px bob alone, the tail
+tip not at all sideways. The reference, scaled to our size, swings the tail tip 14 px up and down and 9 px in and out,
+the tail's middle 12, the back 5, each on its own lag. The body's rock (`WALK_HEAVE`) had been drawn under the
+folded wing, which hid it. **Preview 4:** `TAIL_WAVE` 7, `TAIL_LAG` 0.07, `TAIL_IN` 4 (a wave down the tail, each point
+lifting after the one before, the tip swinging in; only up from the old line, so it never goes below the feet);
+`WALK_HEAVE` 1.5 with `HIPS_ROCK` 1 and `WING_ROCK` 1 (the hips' line and the folded wings tilt with the shoulders and
+the haunch in turn, the seat between them about still); `HEAD_FOLLOW` 1.6, `HEAD_LAG` 0.15, `HEAD_FWD` 1.5 with
+`NECK_WAVE` (the head's motion runs up the neck). Measured: seat 2 px (unchanged, the donkey's table), hips 3, the
+tail's middle 4, its tip 6.5 up and 4 in, the skull 3, the snout 2 forward and back. Smaller than the reference's on
+purpose: our cycle is 0.6 s, its 2.7 s.
+
+**Measured in game** (the stride probe, `Dev/StrideProbe.cs`, and the F11 walk survey, 2026-10-24: 198 walk cycles,
+every mount ridden and with the cart). The game divides the multiplier the mod sets by 1.5, so at `WalkCycleSpeed` 1.5
+the 0.97 s walk clip plays at the mount's speed multiplier and every mount covers the same ground a cycle: about 190
+art px (3.8 world units; donkey 191, rat 192, snail 189, worm 189). The game's donkey's drawn hooves cover about 17 of
+them: its feet slide about 11 times their stride, and it reads as walking because its legs keep pace with its speed.
+The preview's estimate (17 px a cycle, from the donkey's frames) was wrong by that factor; the dragon's `WalkCycleSpeed`
+1 made its cycle 0.91 s for 278 px (its legs at half the donkey's pace for its speed: "the legs are walking more slowly
+than the footsteps"), and its two footsteps a cycle (frames 1 and 5) missed two of its four paw landings (frames 1, 3,
+5, 7). Every footstep sounded within 0.02 of a cycle of its frame. Now: no `WalkCycleSpeed` line (1.5), `step.per_cycle`
+4. A baby following at 7 units/s cycles its legs every 0.13 s (open).
+
 ## Step 2: the investigation
 
 The keeper's `PlayerPhysicalBody` (decomp) keeps him on the ground:

@@ -467,6 +467,7 @@ namespace GK2DonkeyAPI
             // The instance goes for good.
             internal void Release()
             {
+                StrideProbe.Forget(owner);
                 Detach();
                 overrides.Clear();
                 cache.Clear();
@@ -670,6 +671,7 @@ namespace GK2DonkeyAPI
                 bool inAir = Flight.InAirFor(owner);
                 if (inAir && clip.StartsWith("walk", StringComparison.Ordinal)) TestAirFrames++;
                 bool walkClip = !inAir && clip.StartsWith("walk", StringComparison.Ordinal);
+                if (StrideProbe.On && clip.StartsWith("walk", StringComparison.Ordinal)) StrideProbe.Tick(owner, a, clip, t, inAir); // dev: the walk measured per cycle
                 if (walkClip)
                 {
                     SoundSpec step = Resolve("step");
@@ -697,7 +699,11 @@ namespace GK2DonkeyAPI
                     if (hk != lastHoofK)
                     {
                         lastHoofK = hk;
-                        if (!IsBaby || (hk & 1) == 0) Emit("step"); // a baby: every other footfall (its legs cycle 1.7x faster, and several follow at once)
+                        if (!IsBaby || (hk & 1) == 0)
+                        {
+                            Emit("step"); // a baby: every other footfall (its legs cycle 1.7x faster, and several follow at once)
+                            if (StrideProbe.On) StrideProbe.Step(owner, t, hk);
+                        }
                     }
                     if (Math.Abs(wk - lastWheelK) > 1)
                     {

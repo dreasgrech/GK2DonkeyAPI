@@ -475,6 +475,34 @@ def rider_in_view(xc, yc):
     return 38 <= yc <= 42 and 64 <= xc <= 75
 
 
+# The walk's legs and weight (the user, 2026-10-24: "his legs ... too dinky", "walks like a lady", "a camp walk"; the
+# second reference's Walking studied, docs/flying.md "The walk, studied"). The defaults are the walk chosen from the
+# previews (2026-10-24: preview 4 with the old tail and a calmer body); the tail's wave (TAIL_WAVE) was judged frantic.
+LEG_BULK = float(os.environ.get("DRAGON_LEG_BULK", "1.2"))        # every leg bone's thickness times this
+LEG_WRIST = float(os.environ.get("DRAGON_LEG_WRIST", "0.7"))      # 0..1: a bone's lower end that much of the way to its upper end's thickness (no thin ankle)
+PAW_HEAVY = os.environ.get("DRAGON_PAW", "heavy") == "heavy"         # a broad flat paw on the ground, lifted flat (not flicked claws-down)
+STEP_LIFT = float(os.environ.get("DRAGON_STEP_LIFT", "2.5"))      # how high a swinging foot rises, px
+STEP_STANCE = float(os.environ.get("DRAGON_STEP_STANCE", "0.72"))  # the share of the cycle a foot is planted
+STEP_STRIDE = float(os.environ.get("DRAGON_STEP_STRIDE", "18.4"))  # how far a planted foot slides back, px
+FAR_DX = float(os.environ.get("DRAGON_FAR_DX", "5"))            # the far legs this far back ...
+FAR_DY = float(os.environ.get("DRAGON_FAR_DY", "-2"))           # ... and up from the near ones (the feet not on one line)
+FAR_DARK = os.environ.get("DRAGON_FAR_DARK", "1") == "1"         # the far legs one tone darker again
+HIND_LEN = float(os.environ.get("DRAGON_HIND_LEN", "0.82"))        # the hind leg's thigh and shin this much of their length (shorter: less of a deep fold, a column)
+HOCK_UP = float(os.environ.get("DRAGON_HOCK_UP", "-1"))          # walking: the hock this many px higher (a longer foot, the knee off the ground)
+FORE_LEN = float(os.environ.get("DRAGON_FORE_LEN", "0.9"))        # the foreleg's two bones this much of their length
+WALK_NOD = float(os.environ.get("DRAGON_WALK_NOD", "0"))        # walking: the head dips this many px with each step (twice a cycle)
+HEAD_STEADY = float(os.environ.get("DRAGON_HEAD_STEADY", "1"))  # walking: 0..1 of the body's bob taken off the head (1: the head holds its height, the neck's base still bobs)
+HEAD_FOLLOW = float(os.environ.get("DRAGON_HEAD_FOLLOW", "1.2"))  # walking: the head rides this share of the body's bob again, HEAD_LAG of a cycle later (a heavy head that follows)
+HEAD_LAG = float(os.environ.get("DRAGON_HEAD_LAG", "0.15"))
+HEAD_FWD = float(os.environ.get("DRAGON_HEAD_FWD", "1"))        # walking: the head reaches forward and back this many px with the steps, HEAD_LAG later
+TAIL_WAVE = float(os.environ.get("DRAGON_TAIL_WAVE", "0"))      # walking: the tail lifts in a wave running down it, the tip this many px (0: the old stiff sway)
+TAIL_LAG = float(os.environ.get("DRAGON_TAIL_LAG", "0.07"))     # walking: each of the tail's four points this much of a cycle after the one before
+TAIL_IN = float(os.environ.get("DRAGON_TAIL_IN", "0"))          # walking: the tip swings in towards the body this many px (the reference's tail swinging to the side)
+WING_ROCK = float(os.environ.get("DRAGON_WING_ROCK", "0.7"))      # walking: the folded wings take this share of the body's rock (front with the shoulders, back with the haunch)
+HIPS_ROCK = float(os.environ.get("DRAGON_HIPS_ROCK", "1"))      # walking: the hips' top line takes this share of the haunch's heave (the back's line rocks, not only what is under it)
+NECK_WAVE = os.environ.get("DRAGON_NECK_WAVE", "1") == "1"       # walking: the head's motion runs up the neck as a wave (each point its share of HEAD_LAG), not the whole neck at once
+FORE_HEAVY = os.environ.get("DRAGON_FORE_HEAVY", "1") == "1"     # the forelegs built like the hind: a shoulder mass over a thick upper arm, a thick forearm, a short wrist to the paw
+WALK_HEAVE = float(os.environ.get("DRAGON_WALK_HEAVE", "1"))    # walking: shoulders and haunch rise over the planted legs, in turn (the seat holds)
 LEG_SWAY = float(os.environ.get("DRAGON_LEG_SWAY", "1.5"))  # flying: each leg's own small loop, px (2026-10-23; the preview page shows 1 and 2 next to it)
 # The glide (docs/flying.md "the glide"): the wings held open, no beat. GLIDE_T is the held wing pose (0 raised .. 0.5
 # level back .. 1 swept down). Held still the wings read dead ("it's just making the wings look very static", the user
@@ -607,6 +635,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         gv = BEAT_BOB_PX * 0.5 * (1.0 - amp) + max(0.0, amp - 1.0) * math.sin(2 * math.pi * (glide - lag)) if glide is not None else None
         return blend(bv, gv, M)
     bob = (0.8 * math.sin(4 * math.pi * phase) if walking else 0.0) - lift - RAISE
+    # the walk's weight: the shoulders rise over a planted foreleg and the haunch over a planted hind leg, twice a cycle
+    # each and in turn (the body rocks; the back under the seat keeps the bob only)
+    heave_f = -WALK_HEAVE * math.cos(4 * math.pi * (phase + 0.25 - 0.31)) if walking else 0.0
+    heave_h = -WALK_HEAVE * math.cos(4 * math.pi * (phase - 0.31)) if walking else 0.0
     px = [(0, 0, 0, 0)] * (W * H)
     fpx = [(0, 0, 0, 0)] * (W * H)   # the front layer: drawn in front of the rider (the near wing)
     L = (-0.6, -0.8)
@@ -880,7 +912,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         ox, oy = (4.0, -5.0) if far else (0.0, 3.0)
 
         def at(x, y):
-            return (x + ox, y + bob + oy)
+            # WING_ROCK: the fold rides the body's rock, the shoulder's heave at the front, the haunch's behind, the seat
+            # between them about still (a tilt of the whole fold, not a sway of its parts)
+            rock = 0.0
+            if WING_ROCK:
+                t = max(0.0, min(1.0, (x - 39.0) / 24.0))
+                rock = WING_ROCK * (heave_f + (heave_h - heave_f) * t)
+            return (x + ox, y + bob + oy + rock)
         sh = at(46.0, 43.0)                                                       # the shoulder, where the wing leaves the back
         peak = at(52.0, 26.0)
         # the wing tip points back along the tail (the blue references: a long wedge from the wrist to past the hips,
@@ -956,8 +994,12 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         nx, ny = -uy, ux                                      # the side normal; lit where it faces the light (upper left)
         if nx * L[0] + ny * L[1] < 0:
             nx, ny = -nx, -ny
+        r0, r1 = r0 * LEG_BULK, r1 * LEG_BULK
+        r1 = r1 + (r0 - r1) * LEG_WRIST
         R = max(r0, r1)
         for y in range(int(min(ay, by) - R) - 1, int(max(ay, by) + R) + 2):
+            if legs_mode == "walk" and y > GROUND:
+                continue                                      # on the ground nothing goes below the paws' ground row (a thick ankle's round end did)
             for x in range(int(min(ax, bx) - R) - 1, int(max(ax, bx) + R) + 2):
                 X, Y = x + 0.5, y + 0.5
                 t = max(0.0, min(1.0, ((X - ax) * ux + (Y - ay) * uy) / Lg))
@@ -987,6 +1029,13 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                             "Rrr.",
                             ".g.g",
                             "..G.G"]),
+        # DRAGON_PAW=heavy: a broad paw, the heel behind the ankle, three claws apart in front; lifted, the same flat
+        "ground_h": ((-6, -1), ["..rrrrR.",
+                                ".rrrrrRR",
+                                "g.g.g.RR"]),
+        "lift_h": ((-5, -1), ["..rrrR",
+                              ".rrrrR",
+                              "g.g.g."]),
     }
 
     def paw(at, kind, ramp, dst=None):
@@ -1005,7 +1054,7 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         k = ang - bend * a
         return (hip[0] + l1 * math.cos(k), hip[1] + l1 * math.sin(k))
 
-    STRIDE, LIFT, STANCE = 9.0, 4.0, 0.62
+    STRIDE, LIFT, STANCE = STEP_STRIDE, STEP_LIFT, STEP_STANCE
 
     def step_at(q, cx):
         # the foot's place over the cycle: planted and sliding back, then lifted and swung forward
@@ -1017,22 +1066,36 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
         return (cx + STRIDE / 2 - STRIDE * e, GROUND - LIFT * math.sin(math.pi * u)), True   # lifted: swings forward to the head (-x); walked backwards the other way round (the user, 2026-10-23)
 
     def foreleg(hip, foot, ramp, paw_kind):
-        elbow = ik(hip, foot, 6.5 + RAISE * 0.5, 6.5 + RAISE * 0.5, +1)
+        fl = FORE_LEN if legs_mode == "walk" else 1.0       # the lengths on the ground only (the flying legs keep theirs)
+        if FORE_HEAVY and legs_mode == "walk":
+            # on the ground only (in the air the folded heavy arm and its shoulder mass made one lump under the chest
+            # that changed shape between the beat's, the glide's and the climb's frames and hid the far paw: the user,
+            # 2026-10-24, "the front leg is jumping from one place to the other"); like the hind leg: a thick upper arm (the thigh's 5.2), a thick forearm (the shin's 3.0) to a wrist above
+            # the paw, and a short wrist bone down to it (the hind foot's), the paw ahead of the wrist
+            wrist = (foot[0] + 1.0, foot[1] - 2.5)
+            elbow = ik(hip, wrist, (6.5 + RAISE * 0.5) * fl, (6.0 + RAISE * 0.5) * fl, +1)
+            bone(hip, elbow, 5.0, 3.4, ramp)
+            bone(elbow, wrist, 3.2, 2.4, ramp)
+            bone(wrist, foot, 2.2, 1.8, ramp)
+            paw(foot, paw_kind, ramp)
+            return
+        elbow = ik(hip, foot, (6.5 + RAISE * 0.5) * fl, (6.5 + RAISE * 0.5) * fl, +1)
         bone(hip, elbow, 3.6, 2.6, ramp)
         bone(elbow, foot, 2.6, 1.8, ramp)
         paw(foot, paw_kind, ramp)
 
     def hindleg(hip, hock, toe, ramp, paw_kind):
-        knee = ik(hip, hock, 7.5 + RAISE * 0.55, 6.0 + RAISE * 0.45, -1)
+        hl = HIND_LEN if legs_mode == "walk" else 1.0
+        knee = ik(hip, hock, (7.5 + RAISE * 0.55) * hl, (6.0 + RAISE * 0.45) * hl, -1)
         bone(hip, knee, 5.2, 3.2, ramp)                       # the big thigh
         bone(knee, hock, 3.0, 2.0, ramp)
         bone(hock, toe, 2.0, 1.6, ramp)                       # the long foot up to the hock
         paw(toe, paw_kind, ramp)
 
     def legs(far):
-        ramp = (DRG[0], DRG[0], DRG[1], DRG[2]) if far else (DRG[0], DRG[1], DRG[2], DRG[3])
-        dx, dy = (3, -1) if far else (0, 0)
-        fhip, hhip = (39 + dx, 53 + bob + dy), (66 + dx, 53 + bob + dy)
+        ramp = ((DRG[0], DRG[0], DRG[0], DRG[1]) if FAR_DARK else (DRG[0], DRG[0], DRG[1], DRG[2])) if far else (DRG[0], DRG[1], DRG[2], DRG[3])
+        dx, dy = (FAR_DX, FAR_DY) if far else (0, 0)
+        fhip, hhip = (39 + dx, 53 + bob + dy + heave_f), (66 + dx, 53 + bob + dy + heave_h)
         fwd = (-1.0, 0.0)
         if legs_mode == "walk":
             qf = phase + (0.75 if far else 0.25)
@@ -1042,9 +1105,10 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
             (ff, f_up), (ht, h_up) = step_at(qf, 36 + dx), step_at(qh, 66 + dx)
             ff = (ff[0], ff[1] + dy - 1)
             ht = (ht[0], ht[1] + dy - 1)                      # the paw's pad row; its bottom row is the ground's
-            foreleg(fhip, ff, ramp, "hang" if f_up else "ground")
-            hock = (ht[0] + 3.0, ht[1] - (4.5 if h_up else 3.5))
-            hindleg(hhip, hock, ht, ramp, "hang" if h_up else "ground")
+            up_paw, down_paw = ("lift_h", "ground_h") if PAW_HEAVY else ("hang", "ground")
+            foreleg(fhip, ff, ramp, up_paw if f_up else down_paw)
+            hock = (ht[0] + 3.0, ht[1] - (4.5 if h_up else 3.5) - HOCK_UP)
+            hindleg(hhip, hock, ht, ramp, up_paw if h_up else down_paw)
             return
         if legs_mode == "reach":                              # landing: both pairs stretched down for the ground
             foreleg(fhip, (34 + dx, 66 + bob + dy), ramp, "hang")
@@ -1129,6 +1193,17 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 tpts = [(x, y + PITCH_TAIL * pitch * f * curl) for (x, y), f in zip(tpts, tshare)]
     else:
         tpts = [(70, 50 + bob), (81, 53 + bob * 0.7 + sway * 0.3), (91, 57 + sway * 0.7), (99, 59.5 + sway), (103, 60.5 + sway * 1.2)]   # the tip's lowest row is the feet's
+        if walking and (TAIL_WAVE or TAIL_IN):
+            # a wave down the tail with each step (the reference: its middle and tip lift on their own lags, the tip most,
+            # and swing to the side): each point lifts its share of TAIL_WAVE, TAIL_LAG of a cycle after the one before;
+            # only up from the old line, so the tip's lowest row stays the feet's
+            base = [(70, 50 + bob), (81, 53 + bob * 0.7), (91, 57.0), (99, 59.5), (103, 60.5)]
+            tpts = [base[0]]
+            for i, f in enumerate((0.2, 0.45, 0.75, 1.0), start=1):
+                lag = TAIL_LAG * i
+                up = TAIL_WAVE * f * (0.5 + 0.5 * math.sin(4 * math.pi * (phase - 0.1 - lag)))
+                inn = TAIL_IN * f * (0.5 + 0.5 * math.sin(4 * math.pi * (phase - 0.35 - lag)))
+                tpts.append((base[i][0] - inn, base[i][1] - up))
     tail = catmull(tpts, 160)
     tail_top = {}
     for i, (x, y) in enumerate(tail):
@@ -1192,14 +1267,29 @@ def dragon(phase, head_down=0.0, idle=0.0, pal=RED_DRAGON, fly=None, legs_mode="
                 back = 0.25 if pitch > 0 else 0.35   # px of x per px of lift: an arch back up, a reach forward down
                 neck = [(x + (back * PITCH_NECK * pitch * f if pitch > 0 else back * PITCH_NECK * pitch * f), y - PITCH_NECK * pitch * f)
                         for (x, y), f in zip(neck, share)]
+    if walking and (WALK_NOD or HEAD_STEADY or HEAD_FOLLOW or HEAD_FWD):
+        # the head dips with each step, the neck's base least (twice a cycle, a little after the body's bob); HEAD_STEADY
+        # takes the body's bob off it the same way (a heavy head carried level)
+        def nod_at(lag):
+            return (WALK_NOD * math.sin(4 * math.pi * (phase - 0.04)) - HEAD_STEADY * 0.8 * math.sin(4 * math.pi * phase)
+                    + HEAD_FOLLOW * 0.8 * math.sin(4 * math.pi * (phase - lag)))
+
+        def fwd_at(lag):
+            return HEAD_FWD * math.sin(4 * math.pi * (phase - lag - 0.125))
+        shares = (0.0, 0.35, 0.7, 1.0)
+        lags = [HEAD_LAG * f if NECK_WAVE else HEAD_LAG for f in shares]
+        neck = [(x - fwd_at(l) * f, y + nod_at(l) * f) for (x, y), f, l in zip(neck, shares, lags)]
     hx, hy = neck[-1]
 
     def sdf(x, y):
         hb = gb if (beat is None and glide is None) else gw(0.06) * 0.45            # in the beat the hump is the stroke's muscle: smaller, just after it
-        chest = _ell(x, y, 39, 48.5 + bob - (1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0), 11.5, 9.0)
+        chest = _ell(x, y, 39, 48.5 + bob + heave_f - (1.0 - gw(0.0)) * (1.0 if tb is not None else 0.0), 11.5, 9.0)
         back = _ell(x, y, 52, 50.0 + bob, 11.0, 8.6)
-        hips = _ell(x, y, 63, 49.0 + bob - 3.5 * hb, 11.0, 9.2 + 2.2 * hb)   # flying: humped behind the saddle on the downstroke
-        haunch = _ell(x, y, 66 - 2.0 * (gb if (beat is None and glide is None) else gw(0.12) * 0.5), 54.0 + bob, 8.0, 6.0)
+        hips = _ell(x, y, 63, 49.0 + bob + heave_h * HIPS_ROCK - 3.5 * hb, 11.0, 9.2 + 2.2 * hb)   # flying: humped behind the saddle on the downstroke
+        haunch = _ell(x, y, 66 - 2.0 * (gb if (beat is None and glide is None) else gw(0.12) * 0.5), 54.0 + bob + heave_h, 8.0, 6.0)
+        if FORE_HEAVY and legs_mode == "walk":
+            # the shoulder: a muscle mass over the foreleg as the haunch is over the hind (the reference's big shoulders)
+            haunch = _smin(haunch, _ell(x, y, 39.5, 54.0 + bob + heave_f, 6.5, 5.5), 3.0)
         d = _smin(chest, back, 5.0)
         d = _smin(d, hips, 5.0)
         d = _smin(d, haunch, 4.0)

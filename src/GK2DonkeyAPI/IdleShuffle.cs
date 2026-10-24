@@ -818,11 +818,15 @@ namespace GK2DonkeyAPI
             // Walk while stepping or trotting; a foal working out a route stands for those frames.
             private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning ? AnimationState.Walk : AnimationState.Idle;
 
-            // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground.
+            // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground,
+            // and a mount's own stride (WalkCycleSpeed against the donkey's 1.5: the dragon's longer steps, 2026-10-24)
+            // plays its cycle slower for the same ground, as it does ridden (the donkey: x 1, unchanged)
             private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : stepSpeed)
-                * IdleShuffle.AnimSpeed.Value / Mathf.Max(0.1f, ViewScale);
+                * IdleShuffle.AnimSpeed.Value / Mathf.Max(0.1f, ViewScale) * (S.WalkCycleSpeed.Value / DonkeyWalkCycleSpeed);
+            private const float DonkeyWalkCycleSpeed = 1.5f;
 
             private float walkSpeedApplied = -1f;
+            internal float StandWalkSpeedApplied => walkSpeedApplied; // the stride probe (Dev/StrideProbe.cs)
 
             private void ApplyStandState()
             {

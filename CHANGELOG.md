@@ -12,6 +12,33 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The dragon walks like a heavy beast** (the user, 2026-10-24: "his legs ... too dinky", "walks like a lady", "like
+  someone modelling stilettos on a catwalk", "a stick stuck up his arse"; the reference's Walking studied, docs/flying.md
+  "The walk, studied"): thicker legs with no thin ankle, the forelegs built like the hind (a shoulder mass, a thick upper
+  arm and forearm, a short wrist), broad flat paws, the hind feet flat (no tiptoe), long low strides (25 px a cycle,
+  was 17), the far legs apart and darker (the four feet were on one line), the shoulders and haunch
+  rocking in turn with the folded wings, the head trailing the body a little and the motion running up the neck. The
+  seat under the rider moves as before. The flying frames keep their poses with the thicker legs. On the ground no leg
+  goes below the paws' row any more (frames 2, 4, 6 and 8 put one 1-2 px under the ground). Standing and baby mounts
+  walking about now follow their mount's stride too (the donkey's unchanged).
+  In the air the forelegs keep their earlier shape, only thicker: the heavy build (a shoulder mass, three bones) is
+  for the legs on the ground only (in flight it folded into one lump under the chest that changed shape between the
+  beat's, the glide's and the climb's frames and hid the far paw: the user, "the front leg is jumping from one place to
+  the other"). Still open: the steps against the ground speed (the user: "the legs pacing dont match with the speed
+  we're moving"); the stride was set from the donkey's frames, not measured: the dev stride probe (`Dev/StrideProbe.cs`,
+  `[stride]` log lines) measures it in game first: every walking mount (ridden, standing, babies, with a cart), a row
+  per walk cycle in `BepInEx/GK2-strides/`: the clip and the animator's speeds, the multiplier set, the speed keys, the
+  cycle's time, the ground covered in world units and the picture's art px, the body frames shown and each footstep
+  with the frame it played on. The F11 group **Walk** ("the walk survey") drives it: every mount ridden and with the
+  cart, steered right and left by the test (the keeper's stick answered for the run only), a standing dragon and a baby
+  left to shuffle near. First reading (the dragon, by hand): 287 art px a cycle in 0.91 s, the drawn steps cover 25.
+  The survey (198 cycles): at `WalkCycleSpeed` 1.5 every mount covers the same ground a cycle, about 190 art px (the
+  game divides the multiplier by 1.5: the clip plays at the mount's speed multiplier), whatever its speed; the dragon's
+  1 (set earlier the same day from a guess) made it 278 px in 0.91 s, its legs at half the donkey's pace for its speed;
+  and its footsteps (two a cycle, frames 1 and 5) missed two of its four paw landings (frames 1, 3, 5, 7). **Fixed:** the
+  dragon's `[Mount.Tuning] WalkCycleSpeed` line is gone (1.5, as every mount: 0.61 s a cycle riding, 0.81 with the
+  cart) and its step sounds four a cycle, one on each paw's landing (the donkey's timing). Every footstep was within
+  0.02 of a cycle of its frame: the timing itself is exact.
 - **Standing mounts and babies now make their sounds near you**: a parked donkey grazes and smacks its lips at the
   mount sounds' volume, calls now and then (three times rarer than the one you ride, and never two voices within four
   seconds in the scene), its babies answer it one after another, a baby's steps are higher and softer, a herd standing
