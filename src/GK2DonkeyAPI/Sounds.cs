@@ -116,6 +116,12 @@ namespace GK2DonkeyAPI
                     l = (baby ? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(d.Id, null);
                     if (l != null && l.HasSource) from = "skin";
                 }
+                if (from == null && skin?.Parent != null)
+                {
+                    // built on its mount's default: the default's own lines next (LooksInherit.cs)
+                    l = (baby ? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    if (l != null && l.HasSource) from = "default";
+                }
                 if (from == null)
                 {
                     l = (baby ? Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(d.Id, null);
@@ -145,6 +151,7 @@ namespace GK2DonkeyAPI
             Catalog.Entry mount = Looks.MountOf(skin);
             var own = new List<string>();
             var fromMount = new List<string>();
+            var fromDefault = new List<string>();
             var missing = new List<string>();
             int donkey = 0, none = 0;
             foreach (var c in Coverage(skin, mount))
@@ -153,12 +160,13 @@ namespace GK2DonkeyAPI
                 {
                     case "skin": own.Add(c.Event + " (" + c.What + ")"); break;
                     case "mount": fromMount.Add(c.Event + " (" + c.What + ")"); break;
+                    case "default": fromDefault.Add(c.Event + " (" + c.What + ")"); break;
                     case "missing": missing.Add(c.Event); break;
                     case "donkey": donkey++; break;
                     default: none++; break;
                 }
             }
-            return $"Sounds: skin '{skin.Id}' (mount {mount.Id}): its own: {(own.Count > 0 ? string.Join(", ", own) : "none")}; its mount's: {(fromMount.Count > 0 ? string.Join(", ", fromMount) : "none")}; "
+            return $"Sounds: skin '{skin.Id}' (mount {mount.Id}): its own: {(own.Count > 0 ? string.Join(", ", own) : "none")}; {(skin.Parent != null ? $"its default's ({skin.Parent.Id}): {(fromDefault.Count > 0 ? string.Join(", ", fromDefault) : "none")}; " : "")}its mount's: {(fromMount.Count > 0 ? string.Join(", ", fromMount) : "none")}; "
                 + $"MISSING (the donkey's own, silent here): {(missing.Count > 0 ? string.Join(", ", missing) : "nothing")}; the donkey's neutral ones {donkey}; silent by default {none}.";
         }
 
@@ -815,12 +823,20 @@ namespace GK2DonkeyAPI
                 SoundBank.FileSource mountFiles = Looks.MountSoundFiles(mount);
                 Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
                 bool baby = IsBaby;
-                touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.MountSoundBlock(mount, style)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                if (baby) touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
-                if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
+                string mountWho = mount.Owner + "/" + mount.Id, skinWho = skin != null ? skin.Owner + "/" + skin.Id : null; // a code mount's or skin's clips are banked under its mod too
+                touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
+                touched |= Apply(Looks.MountSoundBlock(mount, style)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(eventId, variant), "mount", mountFiles, mountWho, r, ref vol, ref pitch);
+                // a skin built on its mount's default: the default's sounds between the mount's and its own, its file lines
+                // read from the default's own sounds\ (docs/skin-layering-plan.md 2.5)
+                Looks.SkinDef parent = skin?.Parent;
+                string parentWho = parent != null ? parent.Owner + "/" + parent.Id : null;
+                touched |= Apply(Looks.SkinSoundBlock(parent, Looks.SoundLayer.Both)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(parent, style)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.SkinSoundBlock(parent, Looks.SoundLayer.Baby)?.Get(eventId, variant), "default", parent?.SoundFiles, parentWho, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(eventId, variant), "skin", skin?.SoundFiles, skinWho, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin?.SoundFiles, skinWho, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin?.SoundFiles, skinWho, r, ref vol, ref pitch);
                 SoundLine ov = null;
                 if (variant != null) overrides.TryGetValue(eventId + "." + variant, out ov);
                 if (ov == null) overrides.TryGetValue(eventId, out ov);
@@ -840,7 +856,7 @@ namespace GK2DonkeyAPI
                     string id = l.BankId;
                     if (id == null)
                     {
-                        if (l.Clips != null) id = SoundBank.ForClips(layer, whoId ?? "code", l.BankKey ?? l.Key, l.Clips, l.Speech ?? false, l.Loop ?? false);
+                        if (l.Clips != null) id = SoundBank.ForClips(layer == "default" ? "skin" : layer, whoId ?? "code", l.BankKey ?? l.Key, l.Clips, l.Speech ?? false, l.Loop ?? false); // a default's clips are banked as that skin's (one entry, withdrawn with it)
                         else if (fileOwner != null) id = SoundBank.ForFiles(fileOwner, l.BankKey ?? l.Key, l.Files, l.Speech ?? false, l.Loop ?? false, l.Folder);
                         l.BankId = id;
                     }

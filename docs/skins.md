@@ -97,6 +97,9 @@ canvas = 96 96      # every picture is this size (see below)
                     # and SeatAdjustPx stop mattering on this skin; only the skin's own [Tuning] SeatAdjustPx nudges from
                     # it); 52 is where the donkey's own seat is on the 96 canvas. Or
                     # "picture" for this frame's picture top (Gerry). Without it the seat is the player's own (docs/seat-investigation.md)
+                    # A skin built on its mount's default (see "Variants") takes the default's seat, effect, portrait,
+                    # offset, canvas and description when it leaves them out; seat = none, effect = none, portrait = none
+                    # say "not the default's"
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
 # mount = me.giant-rat  # optional: the mount is the folder the skin sits in (gk2mounts\<mount>\skins\); a line that
                     # names another mount is ignored with a report line (the baby donkeys wear the skin when the
@@ -247,6 +250,72 @@ Colorize = CC1800
 ColorizeAmount = 0.6
 ```
 
+## Variants: built on the default
+
+Every mount but the donkey has one own look, its `skins\default\`. Every **other** skin of that mount is built on
+it (the user, 2026-10-24: "all other skins are built on top of it"): it starts as a copy of the default, and only
+what it gives replaces the default's. A variant can be one picture and three lines.
+
+- **Pictures.** A frame the variant has no PNG for is the default's. A frame it draws is its own (an all-transparent
+  picture too: a frame blanked on purpose). A picture of the wrong size, or one that can't be read, is said in the
+  log and the default's is drawn there. With `sheet =`, its sheet's cells are its own and loose PNGs beside it are
+  not read; cells past the sheet's end are the default's. The `front\` layer the same, per frame.
+- **Settings.** What its `[Skin]` doesn't say comes from the default: `canvas` (and `pivot`), `colours`, `seat`,
+  `offset` / `offset_cart`, `effect` / `effect_when`, `description`, `portrait`. Its own `[Colors]` lines go over the
+  default's (a colour it names leaves the default's region). Its `[Tuning]`, `[Tuning.Ride]` and `[Tuning.Cart]` go
+  over the default's key by key, and its `[Sounds*]` lines over the default's (which go over the mount's): a variant
+  with no `[Sounds]` sounds like its default. A variant's file lines read its own `sounds\` only.
+- **Saying "not the default's".** `seat = none` (no seat: the player's own), `effect = none` (no effect),
+  `portrait = none` (the mount drawn in the list), `offset = 0 0` (no offset). Never taken from the default: `name`,
+  `author`, `version`, `format`, `needs`.
+- **`layer = over`** on a variant draws it **over the default**, as Hellfire is drawn over the game's donkey: per
+  frame the default's picture, the variant's erase colour (FF00FF unless `erase =` says another, or `none`) clears it
+  there, the variant's other pixels on top. A colour of the default's pixels keeps the default's region (Coat when it
+  names none); a colour only in the variant's pixels is its `[Colors]` region, or kept as drawn. `[Base.*]` is for a
+  skin over the donkey and is ignored here (said in the report).
+- **The canvas.** Layering needs the default's canvas and pivot: leave `canvas` out. A variant with a canvas of its
+  own takes the default's settings but none of its pictures (and not its seat row unless the height and pivot row
+  match): said once in the log.
+- **Order and changes.** The loaders take `skins\default\` first. A skin added to the mount from another mod's folder
+  (a folder without `mount.cfg`) is built on the default too, whenever the default arrives; until then it stands
+  alone, and if the default never comes it stands alone for the session (said at the game's start). The default read
+  again or replaced: its variants follow and their wearers rebuild; withdrawn: they stand alone. The Mounts tab (F11)
+  shows "built on ...: N own pictures, M from it", a row a variant doesn't set as "(from the default)", and a
+  right-click on a row it sets takes the default's again; its save writes only what the variant says itself.
+- **Code skins.** A `MountSkinDef` on a mount other than the donkey, not that mount's `default`, takes the default's
+  values for what it leaves at its "not said" value (`SeatRow` -1 with `SeatFromPicture` false, `Offset` zero and
+  `CartOffset` null, `Effect`, `Description`, `Portrait` and `Regions` null, the canvas 96x96 and pivot 48,48). Its
+  sprites are its own: pictures of or into code sprites are not layered yet, and `Over` on it is refused (drawn in
+  the default's place, said in its report).
+- **The donkey** has no default skin (its own look is the game's art): its skins are exactly as before.
+
+A worked example: a red variant of the rat with its own standing frame and walk, a darker eye, and the rider a
+pixel lower. Everything else (the other 35 frames, the seat row, the description, the sounds) is the rat's default:
+
+```
+gk2mounts\saddleup.rat\skins\me.red\    (in your mod's folder, no mount.cfg: a skin added to Saddle Up's rat, named <mod>.<name>)
+    skin.cfg
+    bdy_static_left.png
+    bdy_walk_left_01.png ... bdy_walk_left_08.png
+```
+
+```ini
+[Skin]
+format = 1
+name = Red Rat
+author = me
+version = 1.0
+
+[Tuning]
+SeatAdjustPx = -1
+
+[Colors]
+Eye = 600000
+```
+
+The same as horns on the rat's head, drawn over its default instead (`layer = over`): only the frames the horns
+show in, each a picture of the horns alone, with FF00FF where the rat's ears should go.
+
 ## Worked examples in this repo
 
 Every built-in skin is a pack of exactly this format, kept as the example of one way to make one (the user,
@@ -321,7 +390,9 @@ prefix).
 ## The pictures
 
 - **One PNG per donkey frame**, named exactly as above. There are 44: the donkey standing (1), walking (8), its ear
-  (5), grazing (5), chewing (3), lips (13), turning its head (6), and the standing head (3).
+  (5), grazing (5), chewing (3), lips (13), turning its head (6), and the standing head (3). A mount's `default`
+  draws them all; its other skins only the ones they change (the rest are the default's: "Variants: built on the
+  default").
 - **96 by 96 pixels**, facing **left**, transparent background. The donkey stands on row 64 from the top (row 32 from
   the bottom) with its back at row 41 from the top: put your animal's feet and back there and the rider sits right
   without any tuning. The mod draws at 50 pixels per unit and stretches upright pictures 1.667 times in height, as it

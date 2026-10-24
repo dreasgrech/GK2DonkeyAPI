@@ -56,6 +56,22 @@ namespace GK2DonkeyAPI
         {
             if (d == null) return default;
             if (d.PortraitTexture != null) return Whole(d.PortraitTexture);
+            if (Looks.InheritsPictures(d))
+            {
+                // built on its mount's default: no standing picture of its own, the default's; drawn over the default, the
+                // two composed as its sheet will have them (docs/skin-layering-plan.md 2.10)
+                if (!Looks.HasOwnKey(d, RestKey)) return OfSkin(d.Parent);
+                if (d.OverDefault)
+                {
+                    if (!decoded.TryGetValue(d.Id, out Texture2D comp) || (comp != null && !comp))
+                    {
+                        Color32[] px = Looks.ResolvedPicture(d, RestKey, out int w, out int h);
+                        comp = px != null ? Cropped(px, w, h, d.Id) : null;
+                        decoded[d.Id] = comp;
+                    }
+                    if (comp != null) return Whole(comp);
+                }
+            }
             if (d.Sprites != null && d.Sprites.TryGetFrame(RestKey, out Sprite s) && s != null && s) return FromSprite(s);
             if (d.Game != null)
             {
@@ -86,6 +102,12 @@ namespace GK2DonkeyAPI
             byte[] png = d.LoadPng(RestKey);
             if (png == null) return null;
             Color32[] px = Looks.DecodePng(png, out int w, out int h, out string why);
+            return Cropped(px, w, h, d.Id);
+        }
+
+        // A picture cropped to its opaque pixels, as a small texture of its own; null when nothing is drawn.
+        private static Texture2D Cropped(Color32[] px, int w, int h, string id)
+        {
             if (px == null || w <= 0 || h <= 0) return null;
             int minX = w, minY = h, maxX = -1, maxY = -1;
             for (int y = 0; y < h; y++)
@@ -106,7 +128,7 @@ namespace GK2DonkeyAPI
             {
                 Array.Copy(px, (minY + y) * w + minX, cropped, y * cw, cw);
             }
-            var tex = new Texture2D(cw, ch, TextureFormat.RGBA32, false) { name = "icon " + d.Id, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var tex = new Texture2D(cw, ch, TextureFormat.RGBA32, false) { name = "icon " + id, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
             tex.SetPixels32(cropped);
             tex.Apply(false, true);
             return tex;

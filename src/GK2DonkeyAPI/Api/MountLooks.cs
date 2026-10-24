@@ -200,12 +200,16 @@ namespace GK2DonkeyAPI.Api
         public string Version;
         // Drawn in the donkey's exact palette colours, so the player's coat and harness colours recolour it.
         public bool PaletteColours;
-        // Drawn over the donkey (a saddle, a hat) instead of in its place.
+        // Drawn over the donkey (a saddle, a hat) instead of in its place. On a skin of another mount (not its "default")
+        // not drawn over that default yet: refused with a line in its report, drawn in its place.
         public bool Over;
         // The mount this skin is a look of (Mounts.Catalog: "<mod>.<name>"; "donkey" by default: a differently drawn donkey).
         public string Mount = MountCatalog.DonkeyId;
         // For information (the sprites carry their own size and pivot): the pictures' size and where the donkey's
-        // anchor sits in them, from the bottom left.
+        // anchor sits in them, from the bottom left. On a mount other than the donkey, a skin that isn't the mount's
+        // "default" is built on that default: every value below left at its "not said" value (96x96 and 48,48 here,
+        // -1 and false for the seat, zero and null for the offsets, null for the effect, description, portrait and
+        // Regions) is the default's (docs/skins.md "Variants: built on the default").
         public int CanvasWidth = 96, CanvasHeight = 96;
         public float PivotX = 48f, PivotY = 48f;
         // The pictures moved on the donkey, in art pixels (x towards the head, y up): riding, and with the cart hitched
@@ -213,7 +217,8 @@ namespace GK2DonkeyAPI.Api
         public Vector2 Offset;
         public Vector2? CartOffset;
         // The canvas row (from the top) the rider's hip sits on, every frame and for every player whatever their
-        // AutoSeat setting; the mount's SeatAdjustPx nudges from it. -1: the base's seat (the player's own keys).
+        // AutoSeat setting; the mount's SeatAdjustPx nudges from it. -1: the base's seat (the player's own keys); on a
+        // skin built on its mount's default, -1 (with SeatFromPicture false) is the default's seat.
         // A pack says the same with "seat = <row>" (docs/skins.md, docs/seat-investigation.md).
         public int SeatRow = -1;
         // The skin's own values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, TorsoOffsetPx, ...),
@@ -231,7 +236,8 @@ namespace GK2DonkeyAPI.Api
         // squeak where the grown one roars; a pack's [Sounds.Baby]. Null: the grown one's, pitched up by the size.
         public Dictionary<string, MountSound> SoundsBaby;
         // The effect this skin comes with, shown when the player's Effect row says "As the mount" (the skin's first,
-        // else its mount's). Null: the mount's. A pack says the same with effect = / effect_when =.
+        // else its mount's). Null: the mount's (built on its mount's default: the default's); "none": none, not the
+        // default's either. A pack says the same with effect = / effect_when =.
         public string Effect;
         public MountEffectWhen EffectWhen = MountEffectWhen.Always;
         // The rider sits on this frame's picture top instead of a row (a game creature that hops: Gerry).
@@ -271,7 +277,19 @@ namespace GK2DonkeyAPI.Api
                 Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : "")
                     + ((Sounds?.Count ?? 0) + (SoundsRide?.Count ?? 0) + (SoundsCart?.Count ?? 0) + (SoundsBaby?.Count ?? 0) is int ns && ns > 0 ? ", " + ns + " sound(s)" : ""),
             };
-            if ((Sounds?.Count ?? 0) + (SoundsRide?.Count ?? 0) + (SoundsCart?.Count ?? 0) + (SoundsBaby?.Count ?? 0) > 0) d.SoundBlocks = Looks.BlocksFromApi(Sounds, SoundsRide, SoundsCart, SoundsBaby, "Sounds", "skin " + Id);
+            // what the mod said, by the sentinels (docs/skin-layering-plan.md 2.2): on a mount other than the donkey, a skin
+            // that isn't the mount's own look takes the rest from that default
+            d.Given = Looks.SkinGiven.Colours | Looks.SkinGiven.Layer;
+            if (CanvasWidth != 96 || CanvasHeight != 96) d.Given |= Looks.SkinGiven.Canvas;
+            if (PivotX != 48f || PivotY != 48f) d.Given |= Looks.SkinGiven.Pivot;
+            if (SeatRow >= 0 || SeatFromPicture) d.Given |= Looks.SkinGiven.Seat;
+            if (Offset != Vector2.zero || CartOffset.HasValue) d.Given |= Looks.SkinGiven.Offset;
+            if (CartOffset.HasValue) d.Given |= Looks.SkinGiven.OffsetCart;
+            if (!string.IsNullOrWhiteSpace(Effect)) d.Given |= Looks.SkinGiven.Effect; // "none" too: no effect, not the default's
+            if (!string.IsNullOrWhiteSpace(Description)) d.Given |= Looks.SkinGiven.Description;
+            if (Portrait != null) d.Given |= Looks.SkinGiven.Portrait;
+            if (Over && Erase.HasValue) d.Given |= Looks.SkinGiven.Erase;
+            if ((Sounds?.Count ?? 0) + (SoundsRide?.Count ?? 0) + (SoundsCart?.Count ?? 0) + (SoundsBaby?.Count ?? 0) > 0) d.SoundBlocks =Looks.BlocksFromApi(Sounds, SoundsRide, SoundsCart, SoundsBaby, "Sounds", "skin " + Id);
             if (Regions != null && PaletteColours) d.Report += "Regions on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
             else if (Regions != null)
             {
@@ -375,7 +393,9 @@ namespace GK2DonkeyAPI.Api
             EffectWhen = d.EffectWhen;
             FromGame = d.Game != null;
             Description = d.Description ?? "";
-            HasPortrait = d.PortraitTexture != null || !string.IsNullOrEmpty(d.Portrait);
+            HasPortrait = d.PortraitTexture != null || !string.IsNullOrEmpty(d.Portrait) || (d.Parent != null && !d.Has(Looks.SkinGiven.Portrait) && (d.Parent.PortraitTexture != null || !string.IsNullOrEmpty(d.Parent.Portrait)));
+            BuiltOn = d.Parent?.Id;
+            OverDefault = d.OverDefault;
             IsAvailable = d.Unavailable == null;
             SetAsideWhy = d.Unavailable;
             var regions = new List<string>();
@@ -431,6 +451,13 @@ namespace GK2DonkeyAPI.Api
         public IReadOnlyList<string> Regions { get; }
         // Its frames are another game character's, read at run time (source = game).
         public bool FromGame { get; }
+        // The skin it is built on: its mount's own look ("<mount>/default") for every other skin of a mount but the
+        // donkey, whose pictures and settings it doesn't give come from there; null for a mount's own look, a donkey skin,
+        // or one whose mount has no default registered (it stands alone).
+        public string BuiltOn { get; }
+        // Drawn over that default (layer = over on a skin of a mount other than the donkey): the default's pictures with
+        // the skin's on top, holes where its erase colour is. Over stays false for it (Over is "over the game's donkey").
+        public bool OverDefault { get; }
 
         public override string ToString() => Name + " (" + Id + ")";
     }

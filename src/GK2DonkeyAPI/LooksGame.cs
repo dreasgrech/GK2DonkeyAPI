@@ -40,9 +40,10 @@ namespace GK2DonkeyAPI
             internal bool Owned;
         }
 
-        private static void StartGameBuild(Loaded l)
+        // The pictures of a game-source skin (MakeProducer): the base's keys, each the creature's frame read back and
+        // scaled. Throws when the game has none of its frames (the caller sets the skin aside).
+        private static Producer GameProducer(SkinDef d)
         {
-            SkinDef d = l.Def;
             GameSource g = d.Game;
             SkinBase b = d.Base;
             Dictionary<string, CreatureFrame> frames = FindCreatureFrames(g.Prefix, b.AtlasName, NeededFrames(g), out string how);
@@ -60,14 +61,12 @@ namespace GK2DonkeyAPI
             var missing = new List<string>();
             foreach (string key in b.Keys) map[key] = ResolveGameFrame(key, g, frames, b, missing);
             if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{d.Id}': [Game] names frames the game doesn't have: {string.Join(", ", missing)}; those keys stay empty.");
-            l.MakeSheet(b.Keys.Length);
-            l.ToBuild = new Queue<string>(b.Keys);
             int scale = Mathf.Max(1, Mathf.RoundToInt(g.Scale));
             // The creature's own geometry, from its rest picture: the feet (its lowest opaque row) go on the base's
             // ground row, its centre column on the base's pivot column. Read once, on the first frame produced.
             int groundSrc = -1, centreSrc = -1;
             string restName = ResolveGameFrame("bdy_static_left", g, frames, b, null);
-            l.Produce = key =>
+            Func<string, Pixels> produce = key =>
             {
                 string name = map[key];
                 if (name == null) return new Pixels { P = new Color32[d.CanvasW * d.CanvasH], W = d.CanvasW, H = d.CanvasH }; // empty on purpose
@@ -95,7 +94,7 @@ namespace GK2DonkeyAPI
                 GameSourceOpaque[d.Id + "/" + key] = opaque; // for the self-test: the sheet itself is unreadable once uploaded
                 return new Pixels { P = px, W = d.CanvasW, H = d.CanvasH };
             };
-            building.Add(l);
+            return new Producer { Keys = new List<string>(b.Keys), Produce = produce };
         }
 
         // The opaque pixels each produced picture had, by "<skin id>/<key>" (the self-test reads them; a key left empty
@@ -135,7 +134,7 @@ namespace GK2DonkeyAPI
             nextAsideSweep = Time.unscaledTime + 60f;
             foreach (SkinDef d in new List<SkinDef>(defs.Values))
             {
-                if (d.Game != null && d.Unavailable != null) RecheckGameSource(d);
+                if ((d.Game != null || d.AsideBy == "build") && d.Unavailable != null) RecheckGameSource(d); // a skin whose default's frames failed its build too
             }
         }
 
@@ -143,17 +142,23 @@ namespace GK2DonkeyAPI
 
         internal static bool RecheckGameSource(SkinDef d)
         {
-            if (d == null || d.Game == null || d.Unavailable == null) return false;
+            if (d == null || d.Unavailable == null) return false;
+            if (d.AsideBy == "default") return d.Parent != null && RecheckGameSource(d.Parent); // set aside with its default: the default is what to check (Healed brings it back)
+            // the game frames to look for: its own, or (its build failed on them) its default's (LooksInherit.cs)
+            SkinDef src = d.Game != null ? d : d.AsideBy == "build" && d.Parent?.Game != null ? d.Parent : null;
+            if (src == null) return false;
             if (recheckAt.TryGetValue(d.Id, out float at) && Time.unscaledTime < at) return false;
             recheckAt[d.Id] = Time.unscaledTime + 10f;
             try
             {
-                List<string> needed = NeededFrames(d.Game);
-                Dictionary<string, CreatureFrame> frames = FindCreatureFrames(d.Game.Prefix, d.Base.AtlasName, needed, out string how);
+                List<string> needed = NeededFrames(src.Game);
+                Dictionary<string, CreatureFrame> frames = FindCreatureFrames(src.Game.Prefix, src.Base.AtlasName, needed, out string how);
                 if (frames.Count == 0) return false;
                 foreach (string n in needed) if (!frames.ContainsKey(n)) return false;
                 d.Unavailable = null;
-                Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its named game frames are there again ({frames.Count} '{d.Game.Prefix}*' frames, {how}); offered again.");
+                d.AsideBy = null;
+                Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its named game frames are there again ({frames.Count} '{src.Game.Prefix}*' frames, {how}); offered again.");
+                if (src == d) Healed(d); // the skins built on it come back with it
                 MarkWearersDirty(); // a wearer that gave up on it (drawn as the donkey) wears it on its next tick
                 Mounts.Looks.RaiseChanged();
                 return true;
@@ -185,11 +190,17 @@ namespace GK2DonkeyAPI
                     if (frames.Count == 0)
                     {
                         // nothing of the prefix is loaded yet (the character's atlas comes with its scene): not a verdict;
-                        // the first wear searches again, and a skin with no frames then shows the donkey (StartGameBuild)
+                        // the first wear searches again, and a skin with no frames then shows the donkey (GameProducer)
                         Plugin.Log.LogInfo($"Looks: skin '{d.Id}': no '{d.Game.Prefix}*' frame is loaded yet ({how}); checked again when it is worn.");
                         continue;
                     }
-                    d.Unavailable = missing.Count > 0 ? $"the game lacks the frames {string.Join(", ", missing)} of '{d.Game.Prefix}*'" : null;
+                    // the skins built on its pictures go and come back with it (SetAside, Healed)
+                    if (missing.Count > 0) SetAside(d, $"the game lacks the frames {string.Join(", ", missing)} of '{d.Game.Prefix}*'");
+                    else
+                    {
+                        d.Unavailable = null;
+                        if (was != null) Healed(d);
+                    }
                     if (d.Unavailable != was) changed = true;
                     if (d.Unavailable != null && was == null) Plugin.Log.LogWarning($"Looks: skin '{d.Id}' is set aside: {d.Unavailable} ({frames.Count} found, {how}). A game update may have renamed them: the skin's [Game] section needs the new names.");
                     else if (d.Unavailable == null) Plugin.Log.LogInfo($"Looks: skin '{d.Id}': its {needed.Count} named game frame(s) are there ({frames.Count} '{d.Game.Prefix}*' frames, {how}).");

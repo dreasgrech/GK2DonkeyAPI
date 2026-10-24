@@ -264,17 +264,29 @@ namespace GK2DonkeyAPI
         // Two physics steps after a return: still standing there? Else the next older spot.
         private static IEnumerator ReturnCheck(PlayerController pc, Vector3 put, int skip)
         {
-            yield return new WaitForFixedUpdate();
-            yield return new WaitForFixedUpdate();
-            yield return null;
-            Rigidbody rb = pc?.PhysicalBody?.Rb;
-            if (rb == null || !Mount.IsGameReady) yield break;
-            Vector3 p = rb.position;
-            bool ok = Vector3.Distance(p, put) < 0.5f && SurfaceUnder(p, FeetSurface) && Mount.Instance.WhyUnderground(p) == null;
-            if (ok) yield break;
-            Plugin.Log.LogWarning($"[safe-spot] the spot {put:F2} failed on arrival (he is at {p:F2}{(SurfaceUnder(p, FeetSurface) ? "" : ", no ground at his feet")}): the next older spot");
-            if (skip < Keep) Return("the spot failed on arrival", skip);
+            TestChecksPending++;
+            try
+            {
+                yield return new WaitForFixedUpdate();
+                yield return new WaitForFixedUpdate();
+                yield return null;
+                Rigidbody rb = pc?.PhysicalBody?.Rb;
+                if (rb == null || !Mount.IsGameReady) yield break;
+                Vector3 p = rb.position;
+                bool ok = Vector3.Distance(p, put) < 0.5f && SurfaceUnder(p, FeetSurface) && Mount.Instance.WhyUnderground(p) == null;
+                if (ok) yield break;
+                Plugin.Log.LogWarning($"[safe-spot] the spot {put:F2} failed on arrival (he is at {p:F2}{(SurfaceUnder(p, FeetSurface) ? "" : ", no ground at his feet")}): the next older spot");
+                if (skip < Keep) Return("the spot failed on arrival", skip);
+            }
+            finally
+            {
+                TestChecksPending--;
+            }
         }
+
+        // Arrival checks still to run (the self-tests wait for none before moving the keeper again: a check judges where
+        // he is when it runs, so a step that moves him inside its two physics steps was taken for a bad spot, 2026-10-24).
+        internal static int TestChecksPending;
 
         // ---- the self-tests: this scene's ring taken out and put back (a scene with no spot)
         internal static object TestTakeRing()

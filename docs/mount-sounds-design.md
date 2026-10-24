@@ -16,6 +16,12 @@ is plain; one without a dot is refused). A skin is named within its mount, full 
 (`saddleup.dragon/default`, `donkey/saddleup.hellfire`; skin.cfg has no `id =`). Every mount but the donkey has exactly one
 default look, its `skins\default\`; `default_skin` is gone. Why: docs/mount-id-collisions.md.
 
+**Amended 2026-10-24, later still (skin layering):** a skin of a mount other than the donkey that isn't its `default`
+is built on the default, so the layers are: the base, the mount's (`mount.cfg`), the **default's** (`<mount>/default`'s
+`[Sounds*]`, its file lines reading the default's own `sounds\`), the skin's own, a mod's override. The resolved
+layer is then `"default"` (`SoundSpec.Layer`, the coverage report's "its default's"); a default's code clips are
+banked as that skin's. docs/skin-layering-plan.md 2.5.
+
 Status: **the probe passed in game 2026-10-24** (section 5: `SoundBank.cs`, the self-test "the probe" in group Sounds
 15/0, the dev Sounds tab's button; the results under section 5); **phase 1 step 2 built 2026-10-24** (the catalogue
 `SoundEvents.cs`, a `Sounds.Rig` per instance in `Sounds.cs` replacing `MountSounds.cs`, the base layer from the

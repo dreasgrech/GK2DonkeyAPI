@@ -251,7 +251,10 @@ namespace GK2DonkeyAPI
                 }
             }
 
-            // 6. the watchdog off: under the ground stays (then back by hand)
+            // 6. the watchdog off: under the ground stays (then back by hand). The button's arrival check runs first: it
+            // judges where he is when it runs, and moved under the ground before it, he was sent to an older spot
+            // (seen 2026-10-24: "failed on arrival", counted as a watchdog return)
+            yield return Until(() => SafeSpots.TestChecksPending == 0, 2f);
             SafeSpots.TestGuardOff = true;
             try
             {

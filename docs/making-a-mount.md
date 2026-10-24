@@ -11,7 +11,8 @@ they are, an effect it comes with, its own tuning (speed, sounds, seat, cart geo
 Mounts panel, and abilities (code hooks). The donkey is the mount with no definition: the game's own.
 
 A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits on that drawing, and what the
-drawing's colours mean. Every mount but the donkey has exactly one default skin, named `default`. Hellfire and Royal
+drawing's colours mean. Every mount but the donkey has exactly one default skin, named `default`; its other skins
+are built on it and draw only what they change (docs/skins.md "Variants: built on the default"). Hellfire and Royal
 Parade are skins of the donkey (`donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`); the red dragon is the
 dragon's default (`saddleup.dragon/default`).
 

@@ -102,8 +102,9 @@ namespace GK2DonkeyAPI
             if (!quiet || gameFrames.Count > 0) Plugin.Log.LogInfo($"Looks: the {b.Id}'s frames found for the recipes: {gameFrames.Count} of {b.Keys.Length} ('{prefix}*' in the {b.AtlasName} atlases).");
         }
 
-        // Whether a skin is built from the base's own frames: a recipe, or an over skin that erases (WrapErase).
-        internal static bool NeedsBaseFrames(SkinDef d) => d.Recipe != null || (d.Over && d.Erase != null);
+        // Whether a skin is built from the base's own frames: a recipe, or an over skin that erases (WrapErase); a skin
+        // built on its default when the default is (LooksInherit.cs).
+        internal static bool NeedsBaseFrames(SkinDef d) => d.Recipe != null || (d.Over && d.Erase != null) || (InheritsPictures(d) && NeedsBaseFrames(d.Parent));
 
         // Whether the base's frames are in memory now (the game loads them with the world, not at the main menu). The
         // atlases are searched again at most every 3 s while they aren't, without a log line.
@@ -174,15 +175,13 @@ namespace GK2DonkeyAPI
         // ------------------------------------------------------------------ building into the sheet
 
         // The recipe run over the base's frames as they are produced (Looks.cs AdvanceBuilds, a few per tick).
-        private static void StartBuild(Loaded l, string prefix)
+        private static Producer RecipeProducer(SkinDef d, string prefix)
         {
-            SkinBase b = l.Def.Base;
+            SkinBase b = d.Base;
             FindGameFrames(b, prefix);
             var keys = new List<string>(gameFrames.Keys);
-            l.MakeSheet(keys.Count);
-            l.ToBuild = new Queue<string>(keys);
-            Func<SkinFrame, Color32[]> recipe = l.Def.Recipe;
-            l.Produce = key =>
+            Func<SkinFrame, Color32[]> recipe = d.Recipe;
+            Func<string, Pixels> produce = key =>
             {
                 if (!gameFrames.TryGetValue(key, out Sprite s) || s == null) return new Pixels { Why = "the game's frame is not in memory" };
                 SkinFrame f = ReadFrame(key, s, b);
@@ -191,7 +190,7 @@ namespace GK2DonkeyAPI
                 if (px == null || px.Length != f.W * f.H) return new Pixels { Why = "the recipe returned " + (px == null ? "nothing" : px.Length + " pixels for " + f.W * f.H) };
                 return new Pixels { P = px, W = f.W, H = f.H };
             };
-            building.Add(l);
+            return new Producer { Keys = keys, Produce = produce };
         }
     }
 }

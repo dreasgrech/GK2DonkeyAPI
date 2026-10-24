@@ -60,8 +60,9 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // A mount of your own. The id must be new (or yours already: then it replaces, and every instance of it
-        // re-applies). Dispose to withdraw: its skins fall back to the donkey mount.
+        // A mount of your own. Yours already: it replaces, and every instance of it re-applies. Another mod's of the same
+        // id: the version rule decides (the higher Version; at a tie the first stays), never a throw; the one left out is
+        // said in the log and its handle does nothing. Dispose to withdraw: its skins fall back to the donkey mount.
         public IDisposable Register(string ownerId, MountDef def)
         {
             if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("An owner id (your plugin GUID) is required.");
@@ -103,7 +104,7 @@ namespace GK2DonkeyAPI.Api
                 a.Owner = d.AbilityOwner;
             }
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
-            GK2DonkeyAPI.Catalog.Register(d);
+            GK2DonkeyAPI.Catalog.Register(d); // false: another mod's of the same id stays (the version rule, a warning said why); the handle then does nothing
             return new Handle(d.Id, ownerId);
         }
 

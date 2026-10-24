@@ -12,6 +12,16 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A skin of a mount is built on its default** (the user, 2026-10-24: "all other skins are built on top of it";
+  docs/skin-layering-plan.md, docs/skins.md "Variants: built on the default"). Every skin of a mount but the donkey
+  starts as a copy of that mount's `default` look: the pictures it doesn't draw, and its settings it doesn't give
+  (seat, offsets, effect, colours, description, portrait, the skin's tuning and sounds), come from the default and
+  follow it when it changes, so a new look can be one picture and a few lines. `layer = over` on such a skin draws it
+  over the default (holes where its erase colour is, its pixels on top), the way Hellfire is drawn over the game's
+  donkey. The donkey's own skins (Hellfire, Royal Parade) are exactly as before; Saddle Up's mounts ship only their
+  defaults, so nothing a player has looks different. The loaders take each mount's `default` first; the Mounts tab
+  (F11) says what a skin takes from its default and saves only its own values.
+
 - **Packs are sorted by mount: a folder per mount, its skins inside it** (the user, 2026-10-24: "i want to see things
   sorted by mount ... a skin can only belong to one mount ... where are the sounds? Shouldn't we have some root mounts
   folder"). A pack is now `gk2mounts\<mount>\` (players: under `BepInEx\plugins\` or a mod's folder there; Saddle Up:
@@ -216,6 +226,18 @@ For players:
 
 For mod authors:
 
+- **Skins built on their mount's default** (see For players): `MountSkinInfo.BuiltOn` (the default's id, or `null`)
+  and `MountSkinInfo.OverDefault` (drawn over that default; `Over` stays "over the game's donkey"). A code skin's
+  sentinels now mean "the default's" on such a skin: `SeatRow` -1 with `SeatFromPicture` false, `Offset` zero and
+  `CartOffset` null, `Effect`, `Description`, `Portrait` and `Regions` null, the canvas 96x96 and pivot 48,48;
+  `Effect = "none"` is none. A pack says "not the default's" with `seat = none`, `effect = none`, `portrait = none`.
+  `Over` on a code skin of a mount other than the donkey is refused (drawn in its place, said in its report). A
+  resolved sound's layer can be `"default"`.
+- **`Mounts.Catalog.Register` no longer throws when another mod has the id**: the version rule decides (the higher
+  version; at a tie code or a DLL over a loose folder; else the first stays), the loser gets a warning and a handle
+  that does nothing; a code mount meets packs by the same rule (a newer `mount.cfg` replaces it, an older one is
+  refused with its skins); code mount and code skin clips are banked under their mod. An embedded pack whose
+  `mount.cfg` is refused now drops its skins as a loose folder does (docs/mount-id-collisions.md "Decided").
 - **Mount ids are `<mod>.<name>`, skin ids `<mount>/<skin>`** (see For players; docs/skins.md, docs/making-a-mount.md):
   `Mounts.Catalog.Register` refuses an id without a prefix; `MountSkinDef.Id` is the name within `Mount` ("default" for
   your mount's own look) and the registered skin's `Id` (`MountSkinInfo.Id`, the "Skin" tuning value) is
@@ -671,6 +693,16 @@ For mod authors:
 
 Development:
 
+- **The safe-spot self-test waits for the last return's arrival check** before it buries the keeper for "the watchdog
+  off": the check runs two physics steps after a return and judges where he is then, so a step that moved him inside
+  that window was sent to an older spot and counted as a watchdog return (1 of 1112 failed, 2026-10-24; timing only).
+- **Skin layering's tools and tests**: `LooksInherit.cs` (what a skin gives, its default, the resolve), the producers
+  split out of `Acquire` (`MakeProducer`, the variant's sheet in `VariantProducer`); `tests/SkinsScan`,
+  `tools/skins/check_skin.py` and `tools/skins/canonical_cfg.py` read a variant against its `../default` (its canvas,
+  the pictures it takes, its colours; `canonical_cfg.py --check` notes a line that only repeats the default's); four
+  new F11 scenarios in the "Skins and effects" group (a variant built on its default, one drawn over it, a variant's lifecycle, a
+  code mount against the version rule); the sounds scenario's second skin now takes its default's sounds (layer
+  `"default"`); the default-looks scenario's cleanup withdraws the variants before the defaults.
 - **The hillside jump test, run and corrected** (the flying experiment): the streaming fix found the slope and both
   jumps landed; its two failures were the test's own: the downhill start had been placed at the foot's height inside
   the ramp (a 17 px jolt as the physics pushed the body out), now both starts sit on the ground's surface; and a

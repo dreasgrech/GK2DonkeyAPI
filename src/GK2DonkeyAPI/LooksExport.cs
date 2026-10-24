@@ -59,7 +59,8 @@ namespace GK2DonkeyAPI
                         if (l.Whole.Contains(s)) whole.Add(key);
                     }
                     skins++;
-                    lines.Add($"{l.Def.Id}: {n} pictures, layer {(l.Def.Over ? "over" : "replace")}, canvas {l.Def.CanvasW}x{l.Def.CanvasH}" + (whole.Count > 0 ? $", built whole over the donkey: {whole.Count} ({string.Join(" ", whole)})" : ""));
+                    lines.Add($"{l.Def.Id}: {n} pictures, layer {(l.Def.Over ? "over" : l.Def.OverDefault ? "over its default" : "replace")}, canvas {l.Def.CanvasW}x{l.Def.CanvasH}" + (whole.Count > 0 ? $", built whole over the donkey: {whole.Count} ({string.Join(" ", whole)})" : "")
+                        + (l.Layered ? $", built on {l.Parent.Id}: {l.OwnPictures} own, {l.Inherited} from it, {l.Composed} drawn over it" : "")); // a variant's frames by where they came from (LooksInherit.cs)
                 }
                 File.WriteAllLines(Path.Combine(folder, "manifest.txt"), lines);
                 string summary = $"{skins} skin(s) and the donkey's {donkeyN} frames written to {folder}";

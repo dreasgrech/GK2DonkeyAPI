@@ -9,6 +9,9 @@
 // another mod owns (a mount folder without mount.cfg, so every donkey skin) is named "<mod>.<name>"
 // (donkey/saddleup.hellfire; Looks.Register refuses it otherwise); on its own mount any name. The frame keys
 // and the allowed skin tuning keys are read from Looks.cs, the tuning keys from Plugin.cs, so this stays in step.
+// A skin of a mount other than the donkey that isn't its "default" is built on that default (docs/skins.md "Variants:
+// built on the default", LooksInherit.cs): it is read against ../default, whose pictures, canvas, description and
+// sounds it takes where it gives none.
 // Usage: dotnet run -c Release
 using System.Text.RegularExpressions;
 
@@ -364,6 +367,21 @@ foreach (var dir in skinDirs)
     if (!cfg.TryGetValue("Skin", out var skin)) { Fail($"{id}: no [Skin] section"); continue; }
     bool ok = true;
     void Bad(string what) { Fail($"{id}: {what}"); ok = false; }
+    // built on the mount's default: a skin of a mount folder with mount.cfg (not the donkey's) that isn't "default"
+    string mountDir = Path.GetDirectoryName(Path.GetDirectoryName(dir))!;
+    string defaultDir = Path.Combine(mountDir, "skins", "default");
+    bool variant = File.Exists(Path.Combine(mountDir, "mount.cfg")) && !Path.GetFileName(dir).Equals("default", StringComparison.OrdinalIgnoreCase) && !folderMount.Equals("donkey", StringComparison.OrdinalIgnoreCase);
+    var defaultCfg = variant && File.Exists(Path.Combine(defaultDir, "skin.cfg")) ? ReadCfg(Path.Combine(defaultDir, "skin.cfg")) : null;
+    var defaultSkin = defaultCfg != null && defaultCfg.TryGetValue("Skin", out var ds) ? ds : null;
+    if (variant && defaultSkin == null) Bad("no ../default/skin.cfg to build on (a mount's other skins are built on its own look)");
+    // whether the default has a picture for a key (a game source has them all; a sheet its cells)
+    bool DefaultHas(string key)
+    {
+        if (defaultSkin == null) return false;
+        if (defaultSkin.TryGetValue("source", out var dsrc) && dsrc.Equals("game", StringComparison.OrdinalIgnoreCase)) return true;
+        if (defaultSkin.TryGetValue("sheet", out _)) return !defaultSkin.TryGetValue("frames", out var fr) || fr.Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries).Contains(key);
+        return File.Exists(Path.Combine(defaultDir, key.Replace('/', Path.DirectorySeparatorChar) + ".png"));
+    }
     if (!skin.TryGetValue("format", out var format) || format != "1") Bad("format = 1 missing");
     if (skin.ContainsKey("id")) Bad($"[Skin] id = {skin["id"]}: id = is not used: the folder's name is the skin's name (leave the line out)");
     if (string.IsNullOrWhiteSpace(skin.GetValueOrDefault("name"))) Bad("name missing");
@@ -372,22 +390,24 @@ foreach (var dir in skinDirs)
     if (skin.TryGetValue("base", out var b) && b != "donkey") Bad($"base = {b}: the donkey is the only base");
     foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k) && !k.Equals("id", StringComparison.OrdinalIgnoreCase)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
     if (skin.TryGetValue("portrait", out var portrait) && !File.Exists(Path.Combine(dir, portrait))) Bad($"[Skin] portrait = {portrait}: no such file in the pack");
-    if (!skin.ContainsKey("description")) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
+    if (!skin.ContainsKey("description") && !(variant && defaultSkin != null && defaultSkin.ContainsKey("description"))) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
     foreach (var sec in cfg.Keys.Where(k => k.Equals("Mount", StringComparison.OrdinalIgnoreCase) || k.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase)))
         Bad($"[{sec}] in a skin.cfg: a mount's values go in its mount.cfg (the loader ignores it here)");
     // the values the loader reads by name (anything else silently means the default in the game)
     if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");
     if (skin.TryGetValue("colours", out var coloursv) && coloursv != "own" && coloursv != "palette") Bad($"[Skin] colours = {coloursv}: own or palette");
-    if (skin.TryGetValue("seat", out var seat) && seat != "picture" && !int.TryParse(seat, out _)) Bad($"[Skin] seat = {seat}: picture, or the canvas row (from the top) the rider's hip sits on");
+    if (skin.TryGetValue("seat", out var seat) && seat != "picture" && !int.TryParse(seat, out _) && !(variant && seat == "none")) Bad($"[Skin] seat = {seat}: picture, or the canvas row (from the top) the rider's hip sits on{(variant ? ", or none (not the default's)" : "")}");
     int seatRow = -1;
     bool seatRowGiven = skin.TryGetValue("seat", out var seatRowText) && int.TryParse(seatRowText, out seatRow);
     if (skin.TryGetValue("source", out var srcv) && srcv != "pictures" && srcv != "game") Bad($"[Skin] source = {srcv}: pictures or game");
     // the effect a skin comes with (shown under "As the mount or skin"): the mount block's rules
     if (skin.TryGetValue("effect", out var skinEffect))
     {
-        if (skinEffect == "none" || skinEffect.Length == 0) Bad("[Skin] effect = none is the default: leave it out");
+        bool cancels = variant && skinEffect == "none" && defaultSkin != null && defaultSkin.ContainsKey("effect"); // a variant's "none": not its default's effect
+        if (cancels) { }
+        else if (skinEffect == "none" || skinEffect.Length == 0) Bad("[Skin] effect = none is the default: leave it out");
         else if (!effectIds.Contains(skinEffect)) Bad($"[Skin] effect = {skinEffect}: not a built-in effect ({string.Join(", ", effectIds)})");
-        if (!skin.ContainsKey("effect_when")) Bad("[Skin] effect without effect_when (Off, Night or Always)");
+        if (!cancels && !skin.ContainsKey("effect_when")) Bad("[Skin] effect without effect_when (Off, Night or Always)");
     }
     if (skin.TryGetValue("effect_when", out var skinWhen))
     {
@@ -400,6 +420,12 @@ foreach (var dir in skinDirs)
         if (!skin.TryGetValue("layer", out var l2) || l2 != "over") Bad("[Skin] erase is for layer = over only");
     }
     int cw = 96, ch = 96;
+    // a variant without a canvas of its own has its default's
+    if (!skin.ContainsKey("canvas") && defaultSkin != null && defaultSkin.TryGetValue("canvas", out var dcanvas))
+    {
+        var dparts = dcanvas.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (dparts.Length == 2 && int.TryParse(dparts[0], out int dcw) && int.TryParse(dparts[1], out int dch)) { cw = dcw; ch = dch; }
+    }
     if (skin.TryGetValue("canvas", out var canvas))
     {
         var parts = canvas.Split(' ', StringSplitOptions.RemoveEmptyEntries);
@@ -467,10 +493,11 @@ foreach (var dir in skinDirs)
     }
     else if (!sheet)
     {
-        int found = 0;
+        int found = 0, fromDefault = 0;
         foreach (var key in knownKeys)
         {
             string png = Path.Combine(dir, key + ".png");
+            if (!File.Exists(png) && variant && DefaultHas(key)) { fromDefault++; continue; } // its default's picture is drawn there
             if (!File.Exists(png)) { Bad($"picture {key}.png missing"); continue; }
             found++;
             var (w, h) = PngSize(png);
@@ -480,8 +507,9 @@ foreach (var dir in skinDirs)
         foreach (var png in Directory.GetFiles(dir, "*.png"))
         {
             string key = Path.GetFileNameWithoutExtension(png);
-            if (!knownKeys.Contains(key) && !FlightKey(key)) Bad($"{key}.png: not a frame key of the donkey base (nor a flying one)");
+            if (!knownKeys.Contains(key) && !FlightKey(key) && !(skin.TryGetValue("portrait", out var pfile) && pfile.Equals(key + ".png", StringComparison.OrdinalIgnoreCase))) Bad($"{key}.png: not a frame key of the donkey base (nor a flying one)");
         }
+        if (variant) Console.WriteLine($"INFO {id}: built on {folderMount}/default: {found} own picture(s), {fromDefault} from it{(skin.GetValueOrDefault("layer") == "over" ? ", drawn over it" : "")}");
         string frontDir = Path.Combine(dir, "front");
         if (Directory.Exists(frontDir))
         {
@@ -533,11 +561,17 @@ foreach (var dir in skinDirs)
         try { inPictures = PngColours(dir); }
         catch (InvalidDataException e) { Bad(e.Message + " (an indexed or 16-bit PNG: export RGBA)"); }
     }
+    // a variant's [Colors] may name colours of its default's pictures too (the ones it takes from there)
+    if (variant && inPictures != null && Directory.Exists(defaultDir) && !(defaultSkin?.ContainsKey("sheet") ?? false))
+    {
+        try { inPictures.UnionWith(PngColours(defaultDir)); }
+        catch (InvalidDataException e) { Bad("../default: " + e.Message); }
+    }
     // the erase colour is an over skin's: a replace skin drawing it would show magenta in the game
     if (!over && inPictures != null)
     {
         string eraseHex = (skin.GetValueOrDefault("erase") ?? "FF00FF").ToUpperInvariant();
-        if (eraseHex != "NONE" && inPictures.Contains(eraseHex)) Bad($"pixels of the erase colour {eraseHex} in a replace skin: only a skin over the donkey erases; they would be drawn as magenta");
+        if (eraseHex != "NONE" && PngColours(dir).Contains(eraseHex)) Bad($"pixels of the erase colour {eraseHex} in a replace skin: only a skin over the donkey (or over its default) erases; they would be drawn as magenta");
     }
     // the skin's own geometry: [Tuning] (both styles), [Tuning.Ride], [Tuning.Cart]; the picture keys only, each in one place
     foreach (var sec in skinTuningSections)
@@ -589,14 +623,14 @@ foreach (var dir in skinDirs)
         // what the skin lacks: the donkey's own events with no line in its own or its mount's blocks (riding plain)
         var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         mountCfgs.TryGetValue(mount, out var mountCfg);
-        foreach (var c in new[] { cfg, mountCfg })
+        foreach (var c in new[] { cfg, defaultCfg, mountCfg }) // a variant: its default's lines too
             if (c != null)
                 foreach (var sec in new[] { "Sounds", "Sounds.Ride" })
                     if (c.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if (parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) covered.Add(parts[0]); }
         var missing = donkeyOwn.Where(e => !covered.Contains(e)).OrderBy(e => e).ToList();
         Console.WriteLine(missing.Count == 0 ? $"INFO {id}: no sound missing (every one of the donkey's own events has a line)" : $"INFO {id}: sounds MISSING (the donkey's own, silent on this mount until given): {string.Join(", ", missing)}");
     }
-    if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
+    if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : variant ? "built on its default" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
 Console.WriteLine($"INFO {skins} shipped skins in {mountDirs.Count} mount folders, {mountCfgs.Count} mounts declared ({string.Join(", ", mountCfgs.Keys.OrderBy(k => k))}), {pictures} pictures");
 Console.WriteLine(fails == 0 ? $"ALL PASS ({passes})" : $"FAILURES: {fails}");

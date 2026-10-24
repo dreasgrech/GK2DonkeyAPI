@@ -505,11 +505,19 @@ namespace GK2DonkeyAPI
             var labels = new List<string> { "none (the mount's, if any)" };
             foreach (MountEffectInfo e in effects) { ids.Add(e.Id); labels.Add(e.Name); }
             int idx = Math.Max(0, ids.IndexOf(skin.Effect ?? ""));
+            bool fromDefault = skin.Parent != null && !skin.Has(Looks.SkinGiven.Effect); // built on its default and not said: the default's (LooksInherit.cs)
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("This skin comes with the effect", "Shown on a wearer whose own Effect row is 'As the mount or skin' (Saddle Up's default): the skin's effect first, else the mount's. Hellfire says hellfire."), idx > 0 ? changed : label, Wd(LabelW));
-            if (GUILayout.Button("<", Wd(22f))) { idx = (idx - 1 + ids.Count) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; Catalog.Touch(mount); }
+            GUILayout.Label(Tip("This skin comes with the effect" + (fromDefault ? "  (from the default)" : ""), "Shown on a wearer whose own Effect row is 'As the mount or skin' (Saddle Up's default): the skin's effect first, else the mount's. Hellfire says hellfire." + (skin.Parent != null ? " A skin built on its default takes the default's until it says its own (none included); right-click: the default's again." : "")), idx > 0 && !fromDefault ? changed : label, Wd(LabelW));
+            Rect effectLabel = GUILayoutUtility.GetLastRect();
+            if (skin.Parent != null && skin.Has(Looks.SkinGiven.Effect) && GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && effectLabel.Contains(Event.current.mousePosition))
+            {
+                Event.current.Use();
+                skin.Given &= ~Looks.SkinGiven.Effect;
+                Catalog.Touch(mount);
+            }
+            if (GUILayout.Button("<", Wd(22f))) { idx = (idx - 1 + ids.Count) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
             GUILayout.Label(labels[idx], label, Wd(SliderW - 44f));
-            if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; Catalog.Touch(mount); }
+            if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
             GUILayout.EndHorizontal();
             if (idx > 0)
             {
@@ -518,9 +526,9 @@ namespace GK2DonkeyAPI
                 int w = Math.Max(0, Array.IndexOf(whens, skin.EffectWhen));
                 GUILayout.BeginHorizontal();
                 GUILayout.Label("Shown", label, Wd(LabelW));
-                if (GUILayout.Button("<", Wd(22f))) { w = (w - 1 + whens.Length) % whens.Length; skin.EffectWhen = whens[w]; Catalog.Touch(mount); }
+                if (GUILayout.Button("<", Wd(22f))) { w = (w - 1 + whens.Length) % whens.Length; skin.EffectWhen = whens[w]; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
                 GUILayout.Label(whenNames[w], label, Wd(SliderW - 44f));
-                if (GUILayout.Button(">", Wd(22f))) { w = (w + 1) % whens.Length; skin.EffectWhen = whens[w]; Catalog.Touch(mount); }
+                if (GUILayout.Button(">", Wd(22f))) { w = (w + 1) % whens.Length; skin.EffectWhen = whens[w]; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
                 GUILayout.EndHorizontal();
             }
         }
@@ -532,7 +540,8 @@ namespace GK2DonkeyAPI
             Header("The rider's seat on this skin  (seat = <row> | picture)");
             GUILayout.BeginHorizontal();
             bool declared = skin.SeatFromPicture || skin.SeatRow >= 0;
-            GUILayout.Label(Tip("Seat: the picture row the rider's hip sits on", "The canvas row from the top (0 = the top edge). The donkey's own seat is row 52 of the 96 canvas. Declared, the rider sits there for every player and their AutoSeat / torso height do nothing on this skin; SeatAdjustPx nudges from it. Right-click: none (the player's own seat)."), declared ? changed : label, Wd(LabelW));
+            bool seatFromDefault = skin.Parent != null && !skin.Has(Looks.SkinGiven.Seat);
+            GUILayout.Label(Tip("Seat: the picture row the rider's hip sits on" + (seatFromDefault ? "  (from the default)" : ""), "The canvas row from the top (0 = the top edge). The donkey's own seat is row 52 of the 96 canvas. Declared, the rider sits there for every player and their AutoSeat / torso height do nothing on this skin; SeatAdjustPx nudges from it. Right-click: none (the player's own seat); on a skin built on its default, the default's seat."), declared && !seatFromDefault ? changed : label, Wd(LabelW));
             if (skin.SeatFromPicture)
             {
                 GUILayout.Label("picture: this frame's own top at the pivot column", label, Wd(SliderW - 84f));
@@ -546,12 +555,13 @@ namespace GK2DonkeyAPI
                 if (unset)
                 {
                     Event.current.Use();
-                    if (skin.SeatRow >= 0) { skin.SeatRow = -1; Catalog.Touch(mount); }
+                    if (skin.Parent != null) { if (skin.Has(Looks.SkinGiven.Seat)) { skin.Given &= ~Looks.SkinGiven.Seat; Catalog.Touch(mount); } } // the default's seat again
+                    else if (skin.SeatRow >= 0) { skin.SeatRow = -1; skin.Given &= ~Looks.SkinGiven.Seat; Catalog.Touch(mount); }
                 }
                 else
                 {
                     int row = Mathf.RoundToInt(v);
-                    if (v != Mathf.Clamp(shownRow, 0f, skin.CanvasH - 1) && (skin.SeatRow < 0 || row != skin.SeatRow)) { skin.SeatRow = row; Catalog.Touch(mount); }
+                    if (v != Mathf.Clamp(shownRow, 0f, skin.CanvasH - 1) && (skin.SeatRow < 0 || row != skin.SeatRow)) { skin.SeatRow = row; skin.Given |= Looks.SkinGiven.Seat; Catalog.Touch(mount); }
                 }
             }
             GUILayout.Label(skin.SeatFromPicture ? "picture" : skin.SeatRow >= 0 ? skin.SeatRow.ToString() : "none", label, Wd(50f));
@@ -559,6 +569,7 @@ namespace GK2DonkeyAPI
             {
                 if (skin.SeatFromPicture) { skin.SeatFromPicture = false; skin.SeatRow = skin.CanvasH / 2; }
                 else { skin.SeatFromPicture = true; skin.SeatRow = -1; }
+                skin.Given |= Looks.SkinGiven.Seat;
                 Catalog.Touch(mount);
             }
             GUILayout.EndHorizontal();
@@ -642,9 +653,10 @@ namespace GK2DonkeyAPI
         private static void SkinValueRow(Looks.SkinDef skin, Catalog.Entry mount, bool ride, string key, string name, string tip, float min, float max, bool isInt)
         {
             bool set = SkinHas(skin, ride, key, out object raw);
-            float value = set ? Convert.ToSingle(raw, System.Globalization.CultureInfo.InvariantCulture) : PlayerValue(ride, key);
+            bool fromDefault = !set && skin.Parent != null && SkinHas(skin.Parent, ride, key, out raw); // built on its default: the default's value until it sets its own
+            float value = set || fromDefault ? Convert.ToSingle(raw, System.Globalization.CultureInfo.InvariantCulture) : PlayerValue(ride, key);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, tip + (set ? "" : " Not set for the skin: your own value is shown. Drag to set it.")), set ? changed : label, Wd(LabelW));
+            GUILayout.Label(Tip(name + (fromDefault ? "  (from the default)" : ""), tip + (set ? "" : fromDefault ? " Not set for the skin: its default's value is shown. Drag to set its own." : " Not set for the skin: your own value is shown. Drag to set it.")), set ? changed : label, Wd(LabelW));
             float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW - 84f));
             Rect r = GUILayoutUtility.GetLastRect();
             bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
@@ -675,33 +687,56 @@ namespace GK2DonkeyAPI
             string name = string.IsNullOrEmpty(skin.Name) ? skin.Id : skin.Name;
             Header("This skin: " + name + "  (" + skin.Id + ")");
             GUILayout.Label($"{(skin.BuiltIn ? "Built in" : skin.Source != null ? "A pack: " + skin.Source : skin.SourceAssembly != null ? "Embedded in " + skin.SourceAssembly.GetName().Name + ".dll" : "From code by " + skin.Owner)}; {skin.CanvasW}x{skin.CanvasH}{(skin.Tuning != null && skin.Tuning.Count > 0 ? $"; its own [Tuning]: {string.Join(", ", skin.Tuning.Keys)} (the rows below)" : "")}.", small);
+            if (skin.Parent != null)
+            {
+                (int own, int from) = Looks.PictureCounts(skin);
+                string parentName = string.IsNullOrEmpty(skin.Parent.Name) ? skin.Parent.Id : skin.Parent.Name;
+                GUILayout.Label($"Built on {parentName} ({skin.Parent.Id}): {own} own pictures, {from} from it{(skin.OverDefault ? ", drawn over it" : "")}. A row this skin doesn't set shows the default's value (\"from the default\"); right-click a row it sets to take the default's again.", small);
+            }
+            else if (Looks.IsVariantSlot(skin))
+            {
+                GUILayout.Label($"Built on {Looks.SkinKey(skin.MountId, Looks.DefaultSkinName)}, which isn't registered: it stands alone.", small);
+            }
             Vector2 ov = skin.OffsetRide;
             Vector2 oc = skin.OffsetCart;
             bool same = ov == oc;
-            if (OffsetRow("Pictures along the mount (riding): tail (-) / head (+)", ref ov.x, -32f, 32f)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; Catalog.Touch(mount); }
-            if (OffsetRow("Pictures down (-) / up (+) (riding)", ref ov.y, -32f, 32f)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; Catalog.Touch(mount); }
+            bool layered = skin.Parent != null, cleared = false, clearedCart = false;
+            bool rideFromDefault = layered && !skin.Has(Looks.SkinGiven.Offset), cartFromDefault = layered && !skin.Has(Looks.SkinGiven.OffsetCart) && !skin.Has(Looks.SkinGiven.Offset);
+            if (OffsetRow("Pictures along the mount (riding): tail (-) / head (+)", ref ov.x, -32f, 32f, layered, rideFromDefault, ref cleared)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; skin.Given |= Looks.SkinGiven.Offset; Catalog.Touch(mount); }
+            if (OffsetRow("Pictures down (-) / up (+) (riding)", ref ov.y, -32f, 32f, layered, rideFromDefault, ref cleared)) { skin.OffsetRide = ov; if (same) skin.OffsetCart = ov; skin.Given |= Looks.SkinGiven.Offset; Catalog.Touch(mount); }
             if (OnOffRow("With the cart: the same offsets", same, same ? label : changed, tip: "Off: the cart's own two rows below (a mount that should stand closer to the shafts)."))
             {
                 skin.OffsetCart = same ? ov + new Vector2(1f, 0f) : ov;
+                if (same) skin.Given |= Looks.SkinGiven.OffsetCart; else skin.Given &= ~Looks.SkinGiven.OffsetCart; // the cart's own rows, or the ride's again
                 Catalog.Touch(mount);
             }
             if (!same)
             {
-                if (OffsetRow("Pictures along the mount (cart): tail (-) / head (+)", ref oc.x, -32f, 32f)) { skin.OffsetCart = oc; Catalog.Touch(mount); }
-                if (OffsetRow("Pictures down (-) / up (+) (cart)", ref oc.y, -32f, 32f)) { skin.OffsetCart = oc; Catalog.Touch(mount); }
+                if (OffsetRow("Pictures along the mount (cart): tail (-) / head (+)", ref oc.x, -32f, 32f, layered, cartFromDefault, ref clearedCart)) { skin.OffsetCart = oc; skin.Given |= Looks.SkinGiven.OffsetCart; Catalog.Touch(mount); }
+                if (OffsetRow("Pictures down (-) / up (+) (cart)", ref oc.y, -32f, 32f, layered, cartFromDefault, ref clearedCart)) { skin.OffsetCart = oc; skin.Given |= Looks.SkinGiven.OffsetCart; Catalog.Touch(mount); }
             }
+            // a right-click on a skin built on its default: the default's offsets again (LooksInherit.cs)
+            if (cleared) { skin.Given &= ~(Looks.SkinGiven.Offset | Looks.SkinGiven.OffsetCart); Catalog.Touch(mount); }
+            if (clearedCart) { skin.Given &= ~Looks.SkinGiven.OffsetCart; Catalog.Touch(mount); }
         }
 
-        private static bool OffsetRow(string name, ref float value, float min, float max)
+        // layered: the skin is built on its default (a right-click takes the default's again: cleared, the value left
+        // alone); fromDefault: the value shown is the default's.
+        private static bool OffsetRow(string name, ref float value, float min, float max, bool layered, bool fromDefault, ref bool cleared)
         {
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip(name, "Art pixels: this skin's pictures moved on the donkey's own frame (the mount's other skins keep theirs). Right-click: 0."), value != 0f ? changed : label, Wd(LabelW));
+            GUILayout.Label(Tip(name + (fromDefault ? "  (from the default)" : ""), "Art pixels: this skin's pictures moved on the donkey's own frame (the mount's other skins keep theirs). Right-click: " + (layered ? "the default's again." : "0.")), value != 0f && !fromDefault ? changed : label, Wd(LabelW));
             float v = GUILayout.HorizontalSlider(value, min, max, Wd(SliderW - 84f)); // room for the number and the x
             Rect r = GUILayoutUtility.GetLastRect();
             if (GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition))
             {
                 Event.current.Use();
-                v = 0f;
+                if (layered)
+                {
+                    cleared = true;
+                    v = value;
+                }
+                else v = 0f;
             }
             GUILayout.Label(Mathf.RoundToInt(value).ToString(), label, Wd(50f));
             GUILayout.EndHorizontal();

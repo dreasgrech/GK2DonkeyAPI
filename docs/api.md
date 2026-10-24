@@ -688,7 +688,18 @@ should register one; if it doesn't, its first skin by name is its default. The d
 its skins have names of their own. A skin added to a mount another mod owns is named `<mod>.<name>` (`Id =
 "me.frost"`): every donkey skin and recipe, a code skin on a mount another owner registered, a pack skin in a folder
 without `mount.cfg`; without the prefix `Register` / `RegisterRecipe` throw an `ArgumentException` (a pack's is left
-out with a warning). On your own mount any name. Why: docs/mount-id-collisions.md. An instance's mount is its
+out with a warning). On your own mount any name. Why: docs/mount-id-collisions.md.
+
+**The same mount id from two mods** (0.36.0): `Mounts.Catalog.Register` no longer throws when another mod has the id.
+One version rule decides, for code and packs alike: the higher `Version` wins; at a tie code or a DLL beats a loose
+folder; otherwise the first stays. The one left out gets one warning in the log and a handle that does nothing (its
+`Dispose` leaves the winner alone); a newer code mount replaces the registered one (its instances become the new one,
+the old one's clips go with it). A code mount meets a pack's `mount.cfg` by the same rule: a newer `mount.cfg`
+replaces it, an older one is refused with its skins. A code mount's and a code skin's clips (`MountSound.Own`) are
+banked under their mod (`gk2.mount.<owner>/<mount id>.<key>`), so two mods' mounts of one id never share an entry.
+A mistake in the call itself (no id, no prefix, the donkey's id) still throws.
+
+An instance's mount is its
 skin's (`MountHandle.Mount`): the player picks a skin, the mount follows, and nothing new is saved. The mount follows the
 instance's `Skin` key whether or not the instance has a view (asleep far from the keeper, it is still that mount).
 
@@ -704,7 +715,8 @@ Mounts.Looks.Register(Guid, new MountSkinDef { Id = "default", Name = "Checker",
 ```
 
 Where a value comes from, per instance and key: an override another mod set on it; the skin's own `TuningRide` /
-`TuningCart` for the style, then its `Tuning` (both styles); the mount's for the style, then for both; the player's cfg. A value of another numeric type than the key's is converted (`4f`
+`TuningCart` for the style, then its `Tuning` (both styles); for a skin built on its mount's default (0.36.0, below:
+"Built on the default"), the default's the same way; the mount's for the style, then for both; the player's cfg. A value of another numeric type than the key's is converted (`4f`
 for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged set goes on the wearer as overrides owned by the skin
 system and is re-applied only when the skin, the mount or the style changes.
 
@@ -721,7 +733,8 @@ skins to a mount registered elsewhere (`gk2mounts\donkey\skins\` for the donkey'
 out with a warning. The same mount from two packs:
 the higher `[Mount] version` wins and replaces the facts in place (the other's skins keep the mount), a tie goes to
 the DLL over a loose folder, otherwise the first stays and the later one is refused with a warning; a mount
-registered in code is never replaced by a pack. A pack's mount is withdrawn with the last of its skins from the same
+registered in code meets the same rule (0.36.0: a newer `mount.cfg` replaces it, an older one is refused with its
+skins; before, a pack never replaced a code mount). A pack's mount is withdrawn with the last of its skins from the same
 owner, and a mount pack whose `default` doesn't register is withdrawn at once with its skins. Saddle Up's five mounts
 (`saddleup.rat`, `saddleup.snail`, `saddleup.worm`, `saddleup.dragon`, `saddleup.gerry`) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
 packs, so `MountInfo.IsBuiltIn` is false for them (true only for the API's own). (Before the mount folders,
@@ -846,6 +859,20 @@ A skin may have a **front layer**: pictures drawn in front of the rider (the nea
 same frame keys, as a pack skin's `front/` subfolder, a sheet pack's `sheet_front`, or `MountSkinDef.FrontSource`; the API
 sorts them on the keeper's own layer above his body while he rides (as the leg overlay), just above the creature
 otherwise.
+
+**Built on the default** (0.36.0; docs/skins.md "Variants: built on the default"). Every skin of a mount but the
+donkey that isn't that mount's `default` is built on it: the pictures it has none of, its `[Skin]` settings it
+doesn't give (canvas and pivot, colours, seat, offsets, effect, description, portrait), the default's `[Colors]` under
+its own, the default's tuning and sounds under its own, all come from `<mount>/default`, and follow it when it is
+read again or replaced (it stands alone while there is none). `layer = over` on such a skin draws it over the default
+(the default's picture, holes where its erase colour is, its pixels on top), not over the game's donkey.
+`MountSkinInfo.BuiltOn` is the default's id (`null` for a default, a donkey skin, or one standing alone) and
+`MountSkinInfo.OverDefault` says it is drawn over it (`Over` stays "over the game's donkey"). A code skin says what it
+gives by leaving the rest at its "not said" value, the sentinels: `SeatRow` -1 with `SeatFromPicture` false, `Offset`
+zero and `CartOffset` null, `Effect`, `Description`, `Portrait` and `Regions` null, `CanvasWidth` / `CanvasHeight` 96
+and `PivotX` / `PivotY` 48 mean "the default's"; `Effect = "none"` means none (not the default's). Its sprites are its
+own (pictures of or into code sprites are not layered yet), and `Over` on it is refused (drawn in the default's
+place, said in its report). The donkey's skins have no default: they are as before.
 
 A skin is the drawing, the mount the creature (docs/mounts-design.md §1). So a skin can move the rider and the cart
 to fit its pictures, when they differ from the mount's other skins: `MountSkinDef.Tuning` (a pack's `[Tuning]`
@@ -997,6 +1024,17 @@ History:
   Brown, Green, Blue, Dark, Custom; each preset moves every second-tone part by a clear step, measured on the
   donkey's muzzle, the rat's pink, the snail's shell and Hellfire's lava), the second body tone as a look preset like Coat and Harness, on the paper mount, the donkey
   and its foals; Saddle Up's "Second tone" row.
+- 0.36.0: **skin layering** ([skin-layering-plan.md](skin-layering-plan.md)): every skin of a mount but the donkey is
+  built on that mount's `default` (pictures, settings, colours, tuning, sounds); `layer = over` on it draws it over the
+  default. `MountSkinInfo.BuiltOn` (the default's id or `null`) and `MountSkinInfo.OverDefault`; a code skin's
+  sentinels (`SeatRow` -1, `Offset` zero and `CartOffset` null, `Effect` / `Description` / `Portrait` / `Regions`
+  null, the canvas 96x96 and pivot 48,48) mean "the default's" on such a skin, `Effect = "none"` none; a pack's
+  `seat = none`, `effect = none` and `portrait = none` say "not the default's"; `Over` on a code skin of another mount
+  than the donkey is refused (drawn in its place). The sound layer `"default"` (`SoundSpec.Layer`, the coverage).
+- 0.36.0: `Mounts.Catalog.Register` no longer throws when another mod has the mount's id: the one version rule
+  decides (the higher version; at a tie code or a DLL over a loose folder; else the first stays), the loser gets a
+  warning and a handle that does nothing; a code mount meets a pack's `mount.cfg` by the same rule (a newer one
+  replaces it, an older one is refused with its skins); code mount and code skin clips are banked under their mod.
 - 0.36.0 (breaking, pre-release): **each mount's own speed and cargo.** `MountDef.Speed` (`float?`, times the
   keeper's walking speed, 0.5 to 4; null: the donkey's, the API cfg's `[Ride]` / `[Cart]` `SpeedMultiplier`, 2 and
   1.5 as shipped), a pack's `[Mount] speed`; it wins over a `SpeedMultiplier` in the mount's tuning, and with the cart

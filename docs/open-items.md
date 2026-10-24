@@ -334,11 +334,6 @@ closed):
   672 of room): the right column holds 28 rows for a mount; fewer rows a column, or a taller room, if it reads small.
 - **The panel's first row group is headed "Mount"** over a lone Skin row (the Skin row's section); "Skin" would
   read better. Cosmetic; judge in game.
-- **A code mount against a loose pack's mount of the same id** (2026-10-20 night, pass 2): the version rule covers
-  skins; a code mount (`Mounts.Catalog.Register`) with the id of a pack-declared mount is refused (`Catalog.Register`
-  throws for another owner) and the re-declare path is `FromPack` only, so a code mod's Default skin that wins by
-  version cannot take the `[Mount]` declaration. Decide when it comes up: let a code mount replace a pack mount of
-  the same id when its Default skin outranks the pack's, or keep code mounts first come first served.
 - **`IsAbilityOwner` is a substring match** (`.ability.` anywhere in the owner): a plugin GUID containing it would
   have its instance values neither saved nor restored. Far-fetched; a stricter shape (`<guid>.ability.<mount>` with
   `<guid>` a loaded plugin) when an ability owner is ever logged for one.

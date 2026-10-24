@@ -1,6 +1,9 @@
 # Checks a skin pack (skin.cfg + a PNG per frame, or one sheet.png of cells) before it is looked at in game. Says
 # what is wrong in plain words; never changes anything. Usage: python check_skin.py <pack folder>
 # Run by "GK2 Export skin" after each export (the "check =" line of the .gk2export.txt next to the .aseprite file).
+# A skin of a mount other than the donkey that isn't its "default" is built on that default (docs/skins.md "Variants:
+# built on the default"): it is read against ../default (its canvas, the pictures it doesn't draw, its [Colors]), and
+# one with layer = over is checked over the default's pictures instead of the donkey's.
 import re
 import os, sys
 from PIL import Image
@@ -31,10 +34,31 @@ def cfg(path):
     return out
 
 
+def default_of(pack):
+    # the default a variant is built on: gk2mounts/<mount>/skins/default/ beside it, the mount folder with its
+    # mount.cfg (not the donkey's); None for a default, a donkey skin, or a folder of another shape
+    pack = os.path.abspath(pack)
+    skins_dir = os.path.dirname(pack)
+    mount_dir = os.path.dirname(skins_dir)
+    if os.path.basename(skins_dir).lower() != "skins" or os.path.basename(pack).lower() == "default" or os.path.basename(mount_dir).lower() == "donkey":
+        return None
+    if not os.path.exists(os.path.join(mount_dir, "mount.cfg")):
+        return None
+    d = os.path.join(skins_dir, "default")
+    return d if os.path.exists(os.path.join(d, "skin.cfg")) else None
+
+
 def main(pack):
     warn, info = [], []
     c = cfg(os.path.join(pack, "skin.cfg"))
-    cw, ch = (int(v) for v in c.get(("Skin", "canvas"), "96 96").split())
+    parent = default_of(pack)
+    pc = cfg(os.path.join(parent, "skin.cfg")) if parent else {}
+    cw, ch = (int(v) for v in c.get(("Skin", "canvas"), pc.get(("Skin", "canvas"), "96 96")).split())  # a variant without its own: the default's
+
+    def parent_picture(k):
+        # the default's picture for a key (a PNG per frame; a sheet or game default gives none here)
+        p = os.path.join(parent, k + ".png") if parent else None
+        return Image.open(p).convert("RGBA") if p and os.path.exists(p) else None
     over = c.get(("Skin", "layer"), "replace").lower() == "over"
     front_keys = []  # the keys of the front/ pictures appended to `cells`, in their order
     # the layout every built-in keeps (tools/skins/canonical_cfg.py): said here, refused by the release scan
@@ -76,9 +100,14 @@ def main(pack):
             else:
                 missing.append(k)
                 cells.append(Image.new("RGBA", (cw, ch), (0, 0, 0, 0)))
+        if parent:
+            # built on its default: a frame it doesn't draw is the default's
+            from_default = [k for k in missing if parent_picture(k) is not None]
+            missing = [k for k in missing if k not in from_default]
+            info.append(f"built on {os.path.basename(os.path.dirname(os.path.dirname(os.path.abspath(pack))))}/default: {len(ORDER) - len(missing) - len(from_default)} own picture(s), {len(from_default)} from it" + (", drawn over it" if over else ""))
         if missing:
-            warn.append(f"no picture for {len(missing)} frame(s): {' '.join(missing)} (the {c.get(('Skin', 'base'), 'donkey')} shows there)")
-            if len(missing) == len(ORDER):
+            warn.append(f"no picture for {len(missing)} frame(s): {' '.join(missing)} (the {'default has none either: the ' if parent else ''}{c.get(('Skin', 'base'), 'donkey')} shows there)")
+            if len(missing) == len(ORDER) and not parent:
                 RESULT["errors"] += 1
         front_dir = os.path.join(pack, "front")
         if os.path.isdir(front_dir):
@@ -106,8 +135,17 @@ def main(pack):
         if sec == "Colors":
             for hx in v.split():
                 named[hx.upper()] = k.capitalize()
+    own_named = set(named)  # the stale-list warning counts its own lines only (the default's may not be in its pictures)
+    for (sec, k), v in pc.items():
+        if sec == "Colors":
+            for hx in v.split():
+                named.setdefault(hx.upper(), k.capitalize())  # a variant's colour map: the default's, its own over it
     donkey_cols = set()
-    dk = {k: donkey(k) for k in ORDER} if over else {}  # the donkey is under an over skin only; a replace skin never meets its colours
+    if over and parent:
+        # over its default: the default's pictures are under it (the donkey's are not)
+        dk = {k: im for k, im in ((k, parent_picture(k)) for k in ORDER) if im is not None}
+    else:
+        dk = {k: donkey(k) for k in ORDER} if over else {}  # the donkey is under an over skin only; a replace skin never meets its colours
     for im in dk.values():
         b = im.tobytes()
         donkey_cols |= {tuple(b[i:i + 3]) for i in range(0, len(b), 4) if b[i + 3] > 0}
@@ -171,21 +209,23 @@ def main(pack):
         warn.append(f"{erased} pixel(s) of the erase colour {e} in a replace skin: only a skin over the donkey erases; they would be drawn as magenta (the scan refuses them)")
         RESULT["errors"] += 1
     elif erased:
-        info.append(f"erase colour {e}: {erased} pixel(s) in {len(erased_frames)} frame(s) clear the donkey there; those frames are built whole in the game")
+        info.append(f"erase colour {e}: {erased} pixel(s) in {len(erased_frames)} frame(s) clear the {'default' if parent else 'donkey'} there; those frames are built whole in the game")
 
     hexes = {f"{r:02X}{g:02X}{b:02X}": (r, g, b) for (r, g, b) in used}
     clash = [h for h, rgb in hexes.items() if rgb in donkey_cols]  # over skins only (dk is empty for a replace skin)
     unnamed = [h for h in hexes if h not in named]
-    missing = [h for h in named if h not in hexes]
+    missing = [h for h in named if h not in hexes and h in own_named]
     # a donkey colour drawn by an over skin follows the donkey's colour settings and the skin's [Base.*], as the
     # donkey's own pixels do: that is how a tuft or a fill continues the body (Hellfire's tuft, rump fill and tail),
     # so it is said, not warned about. The same colour named in [Colors] is a fight (one colour, two regions).
-    fight = sorted(h for h in clash if h in named)
+    # over its default: the default's own colours keep the default's regions (one map), only its own lines can fight
+    fight = sorted(h for h in clash if h in (own_named if parent else named))
     kept = sorted(h for h in clash if h not in named)
+    under_name = "default" if parent else "donkey"
     if fight:
-        warn.append(f"{len(fight)} colour(s) named in [Colors] the donkey itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
+        warn.append(f"{len(fight)} colour(s) named in [Colors] the {under_name} itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
     if kept:
-        info.append(f"{len(kept)} colour(s) of the donkey's own, kept: {', '.join(kept)} (they follow the donkey's colour settings and the skin's [Base.*], as the donkey's pixels do)")
+        info.append(f"{len(kept)} colour(s) of the {under_name}'s own, kept: {', '.join(kept)} (" + ("they are the default's colours: its regions reach them, Coat when unnamed" if parent else "they follow the donkey's colour settings and the skin's [Base.*], as the donkey's pixels do") + ")")
     if missing:
         warn.append(f"[Colors] names {len(missing)} colour(s) no picture has: {', '.join(sorted(missing))}")
     if partial:
@@ -199,7 +239,7 @@ def main(pack):
     # frames where the donkey is drawn the same but the skin differs: likely one of them was missed (over skins only)
     groups = {}
     for k in ORDER:
-        if k in dk and over: groups.setdefault(dk[k].tobytes(), []).append(k)
+        if k in dk and over and not parent: groups.setdefault(dk[k].tobytes(), []).append(k)  # a variant draws a few frames over its default on purpose
     for ks in groups.values():
         if len(ks) > 1:
             first = cells[ORDER.index(ks[0])].tobytes()
@@ -207,9 +247,13 @@ def main(pack):
             if odd:
                 info.append(f"same donkey picture as {ks[0]} but a different skin: {', '.join(odd)}")
 
+    if parent:
+        empty = [k for k in empty if parent_picture(k) is None]  # the default's picture is drawn there
     info.insert(0, f"{len(ORDER) - len(empty)} of {len(ORDER)} frames drawn"
+                + (" (its own or its default's)" if parent else "")
                 + (f" (empty: {', '.join(empty)})" if empty else ""))
-    info.insert(1, f"{len(hexes)} colours: " + ", ".join(f"{h}={named.get(h, 'kept' if over else 'Coat')}" for h in sorted(hexes)))
+    # over its default, a colour of the default's pixels is Coat (Looks.SortColours), one only its own is kept as drawn
+    info.insert(1, f"{len(hexes)} colours: " + ", ".join(f"{h}={named.get(h, 'kept' if over and not (parent and hexes[h] in donkey_cols) else 'Coat')}" for h in sorted(hexes)))
     print("CHECK: " + ("all good" if not warn else f"{len(warn)} thing(s) to look at"))
     for w in warn:
         print("  ! " + w)

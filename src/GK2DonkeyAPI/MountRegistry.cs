@@ -401,7 +401,8 @@ namespace GK2DonkeyAPI
                 Mounts.RaiseInstancesRestored(restored);
             }
             Looks.VerifyGameSources(); // game-source skins: their frames checked now that the game is up (the sprite manifest)
-            Flight.WarmUp();           // the flying experiment: the game's walk grid scanned once now, not at the first landing
+            Looks.CheckParentsAtReady(); // a skin built on a default that never came: said once (docs/skin-layering-plan.md 3)
+            Flight.WarmUp();          // the flying experiment: the game's walk grid scanned once now, not at the first landing
             Mounts.RaiseGameReady();
         }
 

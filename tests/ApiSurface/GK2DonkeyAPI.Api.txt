@@ -493,6 +493,7 @@ class GK2DonkeyAPI.Api.MountSkinFrame
   method bool Rim(int x, int y)
 class GK2DonkeyAPI.Api.MountSkinInfo
   property string Author { get; }
+  property string BuiltOn { get; }
   property int CanvasHeight { get; }
   property int CanvasWidth { get; }
   property string Description { get; }
@@ -508,6 +509,7 @@ class GK2DonkeyAPI.Api.MountSkinInfo
   property string Mount { get; }
   property string Name { get; }
   property bool Over { get; }
+  property bool OverDefault { get; }
   property bool OwnColours { get; }
   property string Owner { get; }
   property System.Collections.Generic.IReadOnlyList<string> Regions { get; }

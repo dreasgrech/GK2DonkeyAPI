@@ -153,8 +153,9 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ the registry
 
-        // A skin as registered: where its pictures come from (one of the four sources), and what the loader found.
-        internal sealed class SkinDef
+        // A skin as registered: where its pictures come from (one of the four sources), and what the loader found. What
+        // it is built on (its mount's default) and what it said itself: LooksInherit.cs.
+        internal sealed partial class SkinDef
         {
             // Id: the skin's full name, "<mount>/<skin>" (dragon/default, donkey/hellfire): a skin is named within its mount,
             // so two mods' "fire" for two mounts never meet (the user, 2026-10-24). LocalId: the "<skin>" part, its folder's
@@ -393,8 +394,23 @@ namespace GK2DonkeyAPI
                 d.PivotX = d.Base.PivotX;
                 d.PivotY = d.Base.PivotY;
             }
+            if (d.Sprites != null && d.Over && IsVariantSlot(d))
+            {
+                // over its default would need the default's pictures under a mod's own sprites (not layered yet)
+                d.Over = false;
+                d.Erase = null;
+                d.BaseRegions = null;
+                d.Report += "Over on a code skin of a mount other than the donkey is not drawn over its default yet: drawn in its place; ";
+            }
+            Resolve(d); // built on its mount's default (LooksInherit.cs): what it doesn't say, the default's
             defs[d.Id] = d;
-            Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
+            Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Parent != null ? ", built on '" + d.Parent.Id + "'" + (d.OverDefault ? " (drawn over it)" : "") : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
+            if (IsDefaultSlot(d))
+            {
+                // a mount's own look came (or a newer one replaced it): its other skins are built on it now
+                RefreshInherited(d.MountId);
+                Catalog.Touch(Catalog.Find(d.MountId));
+            }
             MarkWearersDirty(); // replaced: its wearers take the new one; new: an instance whose Skin already names it wears it now (its tick gave up on the missing id)
             Mounts.Looks.RaiseChanged();
         }
@@ -471,12 +487,23 @@ namespace GK2DonkeyAPI
                 foreach (var f in files[dir]) map[f.Key] = f.Value;
                 if (files.TryGetValue(dir + "/sounds", out var ms)) foreach (var f in ms) if (SoundBlock.IsSoundFile(f.Key)) map[SoundsKey + f.Key] = f.Value;
                 var p = new MountPack { Owner = owner, DirName = dir, SourceAssembly = asm, BuiltIn = builtIn, ReadFile = Reader(map), FileNames = new List<string>(map.Keys) };
-                RegisterMount(p, Encoding.UTF8.GetString(p.ReadFile(MountCfgName)), "embedded " + asm.GetName().Name + " " + dir);
+                // refused (another's of the same id is newer, the id has no prefix): its skins are left out with it, as a
+                // loose folder's are (MountPacks.RegisterMountFolder; the two differed before 2026-10-24)
+                if (RegisterMount(p, Encoding.UTF8.GetString(p.ReadFile(MountCfgName)), "embedded " + asm.GetName().Name + " " + dir) == null) refusedMounts.Add(dir);
             }
-            // the skins: <mount>/skins/<skin> with a skin.cfg
+            // the skins: <mount>/skins/<skin> with a skin.cfg; each mount's own look first, so its other skins are built on
+            // it from their registration ("black" sorts before "default"; docs/skin-layering-plan.md 2.1)
             int n = 0;
             var mountsSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (string dir in dirs)
+            bool IsDefaultDir(string dir)
+            {
+                string[] p = dir.Split('/');
+                return p.Length == 3 && p[1].Equals(SkinsDirName, StringComparison.OrdinalIgnoreCase) && p[2].Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase);
+            }
+            var ordered = new List<string>(dirs.Count);
+            foreach (string dir in dirs) if (IsDefaultDir(dir)) ordered.Add(dir);
+            foreach (string dir in dirs) if (!IsDefaultDir(dir)) ordered.Add(dir);
+            foreach (string dir in ordered)
             {
                 if (!files[dir].ContainsKey("skin.cfg")) continue;
                 string[] parts = dir.Split('/');
@@ -609,11 +636,17 @@ namespace GK2DonkeyAPI
             defs.Remove(d.Id);
             ForgetPortraits(d.Id);
             SoundBank.ForgetSkin(d); // its files' entries, so a pack put back is read anew
-            SoundBank.UnregisterAll("skin/" + d.Id); // a code skin's clips (the entries only: the clips are the mod's)
+            SoundBank.UnregisterAll("skin/" + d.Owner + "/" + d.Id); // a code skin's clips (the entries only: the clips are the mod's; Sounds.Rig banks them under its mod)
             // the pack mount of the same owner goes with its last skin (a mount with nothing to wear is not offered); a
             // code mount (not FromPack) is its mod's handle's to withdraw
             Catalog.Entry live = Catalog.Find(d.MountId);
             if (live != null && live.FromPack && live.Owner == owner && Catalog.SkinsOf(live).Count == 0) UnregisterMount(live.Id, owner);
+            if (IsDefaultSlot(d))
+            {
+                // a mount's own look gone: its other skins stand alone (their wearers rebuild)
+                RefreshInherited(d.MountId);
+                Catalog.Touch(Catalog.Find(d.MountId));
+            }
             MarkWearersDirty();
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' withdrawn by {owner}.");
             Mounts.Looks.RaiseChanged();
@@ -734,40 +767,43 @@ namespace GK2DonkeyAPI
                         if (!System.Version.TryParse(value.Trim().IndexOf('.') < 0 ? value.Trim() + ".0" : value.Trim(), out System.Version needs)) throw new FormatException($"{where}: needs = {value} is not a version (like 0.35)");
                         if (needs > Mounts.ApiVersion) throw new FormatException($"{where}: needs GK2 Donkey API {needs}, this is {Mounts.ApiVersion}; update GK2 Donkey API");
                         break;
-                    case "description": d.Description = value; break;
-                    case "portrait": d.Portrait = value; break;
+                    case "description": d.Description = value; d.Given |= SkinGiven.Description; break;
+                    case "portrait": d.Portrait = value.Equals("none", StringComparison.OrdinalIgnoreCase) ? null : value; d.Given |= SkinGiven.Portrait; break; // none: no portrait, not its default's either
                     case "id": if (!LocalOf(value).Equals(dirName, StringComparison.OrdinalIgnoreCase)) d.Report += $"id = {value} ignored: a skin's name is its folder's ('{dirName}'); "; break;
                     case "name": d.Name = value; break;
                     case "author": d.Author = value; break;
                     case "version": d.Version = value; break;
-                    case "base": baseId = value; break;
-                    case "colours": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); break;
-                    case "layer": d.Over = value.Equals("over", StringComparison.OrdinalIgnoreCase); break;
+                    case "base": baseId = value; d.Given |= SkinGiven.Base; break;
+                    case "colours": d.OwnColours = !value.Equals("palette", StringComparison.OrdinalIgnoreCase); d.Given |= SkinGiven.Colours; break;
+                    case "layer": d.Over = value.Equals("over", StringComparison.OrdinalIgnoreCase); d.Given |= SkinGiven.Layer; break;
                     case "erase":
                         eraseGiven = true;
+                        d.Given |= SkinGiven.Erase;
                         if (value.Equals("none", StringComparison.OrdinalIgnoreCase)) d.Erase = null;
                         else if (Colors.TryHex(value, out Color32 ec)) d.Erase = ec;
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
                     case "mount": mountLine = value; break;
-                    case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); break;
+                    case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); d.Given |= SkinGiven.Effect; break; // none: no effect, not its default's either (the mount's)
                     case "effect_when":
                         if (Enum.TryParse(value.Trim(), true, out MountEffectWhen skinWhen)) d.EffectWhen = skinWhen;
                         else d.Report += "effect_when = " + value + " is not Off, Night or Always, taken as Always; ";
                         break;
-                    case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); break;
-                    case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; break;
-                    case "offset": PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y); if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; break;
-                    case "offset_cart": PairF(value, ref d.OffsetCart.x, ref d.OffsetCart.y); break;
+                    case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); d.Given |= SkinGiven.Canvas; break;
+                    case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; d.Given |= SkinGiven.Pivot; break;
+                    case "offset": PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y); if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; d.Given |= SkinGiven.Offset; break; // "offset = 0 0" given: cancels a default's
+                    case "offset_cart": PairF(value, ref d.OffsetCart.x, ref d.OffsetCart.y); d.Given |= SkinGiven.OffsetCart; break;
                     case "sheet": sheet = value; break;
                     case "sheet_front": frontSheet = value; break;
                     case "columns": int.TryParse(value, out d.SheetColumns); break;
                     case "frames": frames = value; break;
                     case "source": source = value.ToLowerInvariant(); break;
                     case "seat":
+                        d.Given |= SkinGiven.Seat;
                         if (value.Equals("picture", StringComparison.OrdinalIgnoreCase)) d.SeatFromPicture = true;
+                        else if (value.Equals("none", StringComparison.OrdinalIgnoreCase)) d.SeatRow = -1; // no seat of its own, and not its default's: the player's own seat keys
                         else if (int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int seatRow)) d.SeatRow = seatRow;
-                        else d.Report += "seat = " + value + " is neither picture nor a row number, ignored; ";
+                        else { d.Report += "seat = " + value + " is neither picture, none nor a row number, ignored; "; d.Given &= ~SkinGiven.Seat; }
                         break;
                     default: unknown.Add(key); break;
                 }
@@ -785,8 +821,21 @@ namespace GK2DonkeyAPI
                 d.PivotX = d.CanvasW / 2f;
                 d.PivotY = d.CanvasH / 2f;
             }
-            if (d.Over && !eraseGiven) d.Erase = new Color32(255, 0, 255, 255);
-            if (!d.Over && d.Erase != null)
+            // layer = over on a skin built on its mount's default (not the donkey's, not the default itself): drawn over
+            // that default, not over the game's donkey (docs/skin-layering-plan.md 2.4)
+            string finalMount = !string.IsNullOrEmpty(folderMount) ? folderMount : mountLine ?? d.MountId;
+            if (d.Over && IsVariantSlot(finalMount, d.LocalId))
+            {
+                d.Over = false;
+                d.OverDefault = true;
+            }
+            if ((d.Over || d.OverDefault) && !eraseGiven) d.Erase = new Color32(255, 0, 255, 255);
+            if (d.OverDefault && d.BaseRegions != null)
+            {
+                d.Report += "[Base.*] recolours the donkey under a skin drawn over it; this one is drawn over its mount's default, ignored; ";
+                d.BaseRegions = null;
+            }
+            if (!d.Over && !d.OverDefault && d.Erase != null)
             {
                 d.Report += "erase is for layer = over only, ignored; ";
                 d.Erase = null;
@@ -844,6 +893,13 @@ namespace GK2DonkeyAPI
                 d.LoadSheetPng = () => bytes(file);
                 if (frontFile != null) d.LoadFrontSheetPng = () => bytes(frontFile);
                 d.SheetKeys = frames != null ? frames.Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries) : d.Base.Keys;
+                if (IsVariantSlot(d))
+                {
+                    // a variant's own pictures are its sheet's: loose PNGs beside it are not read (its default gives the rest)
+                    int loose = 0;
+                    foreach (string png in KeysOf(fileNames)) if (!(png + ".png").Equals(file, StringComparison.OrdinalIgnoreCase) && !(png + ".png").Equals(frontFile ?? "", StringComparison.OrdinalIgnoreCase) && !(png + ".png").Equals(d.Portrait ?? "", StringComparison.OrdinalIgnoreCase)) loose++;
+                    if (loose > 0) d.Report += loose + " loose PNG(s) not read: a skin with sheet = has its sheet's pictures as its own, the rest from its default; ";
+                }
                 Validate(d, d.SheetKeys, "a sheet for " + d.SheetKeys.Length + " frames" + (frontFile != null ? " and a front sheet" : ""));
             }
             else
@@ -904,7 +960,8 @@ namespace GK2DonkeyAPI
             sb.Append(what ?? have.Count + " pictures");
             if (front > 0) sb.Append(" and ").Append(front).Append(" in front of the rider");
             if (flight > 0) sb.Append(", ").Append(flight).Append(" of them the flight's own (take-off, beat, glide, landing)");
-            if (missing > 0) sb.Append(", ").Append(missing).Append(" of the ").Append(b.Id).Append("'s ").Append(b.Keys.Length).Append(" frames not drawn (the ").Append(b.Id).Append(" shows there)");
+            if (missing > 0 && IsVariantSlot(d)) sb.Append(", ").Append(missing).Append(" of the ").Append(b.Id).Append("'s ").Append(b.Keys.Length).Append(" frames from its default (").Append(SkinKey(d.MountId, DefaultSkinName)).Append(")"); // built on it (LooksInherit.cs)
+            else if (missing > 0) sb.Append(", ").Append(missing).Append(" of the ").Append(b.Id).Append("'s ").Append(b.Keys.Length).Append(" frames not drawn (the ").Append(b.Id).Append(" shows there)");
             if (unknown.Count > 0) sb.Append("; names that match no frame: ").Append(string.Join(", ", unknown));
             if (walkHead.Count > 0) sb.Append("; a head in walk frames is never shown (the body frames carry the head): ").Append(string.Join(", ", walkHead));
             d.Report = sb.ToString();
@@ -1010,6 +1067,7 @@ namespace GK2DonkeyAPI
         {
             if (d == null) return null;
             if (d.PortraitTexture != null) return d.PortraitTexture;
+            if (string.IsNullOrEmpty(d.Portrait) && !d.Has(SkinGiven.Portrait) && d.Parent != null) return PortraitOf(d.Parent); // built on its default, no portrait of its own (nor "portrait = none"): the default's
             if (string.IsNullOrEmpty(d.Portrait) || d.ReadFile == null) return null;
             string key = d.Id + "|" + d.Portrait;
             if (portraits.TryGetValue(key, out Texture2D have) && have != null) return have;
@@ -1182,19 +1240,34 @@ namespace GK2DonkeyAPI
                 foreach (string h in head) sb.Append(h).Append('\n');
                 sb.Append("[Skin]\n");
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
-                if (d.SeatFromPicture || d.SeatRow >= 0)
+                // a skin built on its mount's default writes only what it says itself (its Given): the values it takes
+                // from the default stay the default's, and "none" says it on purpose (docs/skin-layering-plan.md 2.8);
+                // every other skin by its values, as always
+                bool layered = d.Parent != null;
+                if (layered ? d.Has(SkinGiven.Seat) : d.SeatFromPicture || d.SeatRow >= 0)
                 {
-                    sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow >= 0 ? d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture) : "none");
                     if (seatNote != null) sb.Append("  ").Append(seatNote);
                     sb.Append('\n');
                 }
-                if (!string.IsNullOrEmpty(d.Effect))
+                if (!string.IsNullOrEmpty(d.Effect) && (!layered || d.Has(SkinGiven.Effect)))
                 {
                     sb.Append("effect = ").Append(d.Effect);
                     if (effectNote != null) sb.Append("  ").Append(effectNote);
                     sb.Append('\n').Append("effect_when = ").Append(d.EffectWhen.ToString()).Append('\n');
                 }
-                if (d.OffsetRide != Vector2.zero || d.OffsetCart != Vector2.zero)
+                else if (layered && d.Has(SkinGiven.Effect))
+                {
+                    sb.Append("effect = none");
+                    if (effectNote != null) sb.Append("  ").Append(effectNote);
+                    sb.Append('\n');
+                }
+                if (layered)
+                {
+                    if (d.Has(SkinGiven.Offset)) sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
+                    if (d.Has(SkinGiven.OffsetCart) || (d.Has(SkinGiven.Offset) && d.OffsetCart != d.OffsetRide)) sb.Append("offset_cart = ").Append(Num(d.OffsetCart.x)).Append(' ').Append(Num(d.OffsetCart.y)).Append('\n');
+                }
+                else if (d.OffsetRide != Vector2.zero || d.OffsetCart != Vector2.zero)
                 {
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
                     if (d.OffsetCart != d.OffsetRide) sb.Append("offset_cart = ").Append(Num(d.OffsetCart.x)).Append(' ').Append(Num(d.OffsetCart.y)).Append('\n');
@@ -1323,9 +1396,16 @@ namespace GK2DonkeyAPI
             var mounts = new HashSet<Catalog.Entry>();
             foreach (Loaded l in loaded.Values) if (l.Def.Mount?.Pack != null) mounts.Add(l.Def.Mount);
             TickMountWatch(mounts);
-            foreach (Loaded l in new List<Loaded>(loaded.Values))
+            // the skins being worn, and the defaults they are built on (a default's change reaches its variants: a reload
+            // registers it anew, and its variants rebuild on it)
+            var watched = new List<SkinDef>();
+            foreach (Loaded l in loaded.Values)
             {
-                SkinDef d = l.Def;
+                if (!watched.Contains(l.Def)) watched.Add(l.Def);
+                if (l.Parent != null && !watched.Contains(l.Parent)) watched.Add(l.Parent);
+            }
+            foreach (SkinDef d in watched)
+            {
                 if (Find(d.Id) != d) continue; // withdrawn or replaced, its sheet still held by a sleeper: not the registered skin, nothing to reload
                 if (string.IsNullOrEmpty(d.Source) || d.ReadFile == null || d.FileNames == null)
                 {
@@ -1416,10 +1496,14 @@ namespace GK2DonkeyAPI
             if (i.OverrideOwners.TryGetValue(key, out string by) && by != TuningOwner && i.Overrides.TryGetValue(key, out object o)) return o;
             SkinDef d = i.LooksRig?.WornDef ?? i.LooksRig?.WantedDef; // asleep (no drawing worn): the wanted skin's geometry, as the next view will have it
             Catalog.Entry k = i.LooksRig?.MountNow ?? Catalog.Donkey;
-            Dictionary<string, object> skinStyle = d == null ? null : style == MountStyle.Cart ? d.TuningCart : d.TuningRide;
-            if (skinStyle != null && skinStyle.TryGetValue(key, out object skinStyled)) return skinStyled;
-            if (d != null && d.TuningValues != null && d.TuningValues.TryGetValue(key, out object typed)) return typed;
-            if (d != null && d.Tuning != null && d.Tuning.TryGetValue(key, out string text)) return text;
+            // the skin's own, then (built on its mount's default) the default's: Rig.ApplyTuning's order turned round
+            for (SkinDef layer = d; layer != null; layer = layer == d ? d.Parent : null)
+            {
+                Dictionary<string, object> skinStyle = style == MountStyle.Cart ? layer.TuningCart : layer.TuningRide;
+                if (skinStyle != null && skinStyle.TryGetValue(key, out object skinStyled)) return skinStyled;
+                if (layer.TuningValues != null && layer.TuningValues.TryGetValue(key, out object typed)) return typed;
+                if (layer.Tuning != null && layer.Tuning.TryGetValue(key, out string text)) return text;
+            }
             Dictionary<string, object> perStyle = style == MountStyle.Cart ? k.TuningCart : k.TuningRide;
             if (perStyle != null && perStyle.TryGetValue(key, out object styled)) return styled;
             if (k.Tuning != null && k.Tuning.TryGetValue(key, out object both)) return both;
@@ -1561,6 +1645,13 @@ namespace GK2DonkeyAPI
             internal Queue<string> ToBuild;     // the keys still to produce
             internal Func<string, Pixels> Produce;
             internal int Bad, NotInSheet;
+            // Built on a default (LooksInherit.cs): the default it was built on (reused only for the same one), whether its
+            // pictures were layered on the default's, how many frames were its own, the default's, or its own drawn over
+            // the default's; and the colours that came from the default's pixels (a skin over its default: those are Coat).
+            internal SkinDef Parent;
+            internal bool Layered;
+            internal int OwnPictures, Inherited, Composed;
+            internal HashSet<int> ParentColours;
             // The frames an over skin built whole (its erase colour cleared the base there): drawn in the base's place
             // instead of over it (Rig.ApplyPart hides the part for them). By key while building, by sprite after.
             internal readonly HashSet<string> WholeKeys = new HashSet<string>(StringComparer.Ordinal);
@@ -1733,7 +1824,7 @@ namespace GK2DonkeyAPI
                         {
                             int v = int.Parse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
                             if (colourSet.Contains(v)) named[v] = kv.Key;
-                            else missing.Add(kv.Key + " " + hex);
+                            else if (OwnLine(kv.Key, hex)) missing.Add(kv.Key + " " + hex); // a colour its default names may simply not be in its pictures
                         }
                     }
                 }
@@ -1741,11 +1832,15 @@ namespace GK2DonkeyAPI
                 {
                     var c = new Color32((byte)(v >> 16), (byte)(v >> 8), (byte)v, 255);
                     Colours.Add(c);
-                    string region = named.TryGetValue(v, out string r) ? r : Def.Over ? null : "Coat";
+                    // over its default: a colour of the default's pixels is Coat, one only in its own pixels is kept as drawn
+                    string region = named.TryGetValue(v, out string r) ? r : Def.Over ? null : Def.OverDefault && (ParentColours == null || !ParentColours.Contains(v)) ? null : "Coat";
                     if (region != null) ColoursByRegion[region].Add(c);
                 }
                 if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{Def.Id}' [Colors] names {missing.Count} colour(s) its pictures don't have ({string.Join(", ", missing)}); they map nothing.");
             }
+
+            // Whether a [Colors] line is the skin's own (not one of its default's it took).
+            private bool OwnLine(string region, string hex) => Def.Parent == null || (Def.OwnColorRegions != null && Def.OwnColorRegions.TryGetValue(region, out HashSet<string> set) && set.Contains(hex));
 
             internal string SizeNote => Sheet != null ? $"one sheet {Sheet.width}x{Sheet.height}, {Sheet.width * Sheet.height * 4 / 1024} KB" : "the mod's own sprites";
 
@@ -1782,15 +1877,17 @@ namespace GK2DonkeyAPI
         internal static int LoadedCount => loaded.Count;
 
         // A hold on a skin's pictures: loaded on the first, shared after. A sheet is filled a few frames a tick
-        // (AdvanceBuilds) and the skin is Ready when whole; a sprite source is ready at once.
+        // (AdvanceBuilds) and the skin is Ready when whole; a sprite source is ready at once. A skin built on its mount's
+        // default (LooksInherit.cs) takes the default's pictures where it has none of its own, and its sheet is kept only
+        // for the default it was built on: a new default (replaced, reloaded, withdrawn) is a new sheet.
         private static Loaded Acquire(SkinDef d, string gamePrefix)
         {
-            if (loaded.TryGetValue(d.Id, out Loaded l) && l.Def == d)
+            if (loaded.TryGetValue(d.Id, out Loaded l) && l.Def == d && l.Parent == d.Parent)
             {
                 l.Refs++;
                 return l;
             }
-            l = new Loaded { Def = d, Refs = 1 };
+            l = new Loaded { Def = d, Refs = 1, Parent = d.Parent };
             loaded[d.Id] = l;
             try
             {
@@ -1821,41 +1918,41 @@ namespace GK2DonkeyAPI
                     l.Finish();
                     Plugin.Log.LogInfo($"Looks: skin '{d.Id}' loaded: {n} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")} ({l.SizeNote}).");
                 }
-                else if (d.Game != null)
-                {
-                    StartGameBuild(l);
-                }
-                else if (d.Recipe != null)
-                {
-                    StartBuild(l, gamePrefix);
-                }
-                else if (d.LoadSheetPng != null)
-                {
-                    StartSheetBuild(l);
-                }
                 else
                 {
-                    var keys = new List<string>(d.Keys());
-                    l.MakeSheet(keys.Count);
-                    l.ToBuild = new Queue<string>(keys);
-                    l.Produce = key =>
+                    Producer own = MakeProducer(d, gamePrefix, l);
+                    Producer parent = null;
+                    if (InheritsPictures(d))
                     {
-                        byte[] png;
                         try
                         {
-                            png = d.LoadPng(key);
+                            parent = MakeProducer(d.Parent, gamePrefix, l);
                         }
                         catch (Exception e)
                         {
-                            return new Pixels { Why = e.Message };
+                            // the default's pictures can't be read (a game-source default whose frames aren't loaded): set
+                            // aside as a game skin is, rather than worn half drawn; checked again while it is chosen
+                            d.Unavailable = $"its default '{d.Parent.Id}' has no pictures to build on ({e.Message})";
+                            d.AsideBy = "build";
+                            Plugin.Log.LogInfo($"Looks: skin '{d.Id}' is set aside: {d.Unavailable}; checked again while it is chosen, offered again when they are there.");
+                            if (loaded.TryGetValue(d.Id, out Loaded mine) && mine == l) loaded.Remove(d.Id);
+                            return null;
                         }
-                        var px = new Pixels();
-                        px.P = DecodePng(png, out px.W, out px.H, out px.Why);
-                        return px;
-                    };
+                    }
+                    if (parent != null)
+                    {
+                        VariantProducer(l, own, parent);
+                    }
+                    else
+                    {
+                        l.MakeSheet(own.Keys.Count);
+                        l.ToBuild = new Queue<string>(own.Keys);
+                        l.Produce = own.Produce;
+                    }
                     building.Add(l);
                 }
                 if (d.Over && d.Erase != null && l.Produce != null) WrapErase(l, gamePrefix);
+                else if (d.OverDefault && !l.Layered && d.Erase != null && l.Produce != null) WrapAlone(l);
             }
             catch (Exception e)
             {
@@ -1863,8 +1960,9 @@ namespace GK2DonkeyAPI
                 {
                     // a game-source skin with no frames to read (its character's atlas not loaded, or a wrong prefix): set aside
                     // rather than worn as a blank sheet (which would take the player's colours off the donkey and put the
-                    // skin's geometry on it); the donkey shows, and the skin is checked again while chosen (RecheckGameSource)
-                    d.Unavailable = "its game frames were not found (" + e.Message + ")";
+                    // skin's geometry on it); the donkey shows, and the skin is checked again while chosen (RecheckGameSource);
+                    // the skins built on it go with it (SetAside)
+                    SetAside(d, "its game frames were not found (" + e.Message + ")");
                     Plugin.Log.LogInfo($"Looks: skin '{d.Id}' is set aside: {d.Unavailable}; checked again while it is chosen, offered again when they are there.");
                     if (loaded.TryGetValue(d.Id, out Loaded mine) && mine == l) loaded.Remove(d.Id);
                     return null;
@@ -1875,18 +1973,173 @@ namespace GK2DonkeyAPI
             return l;
         }
 
-        // A sheet pack: the one PNG decoded on the first frame, sliced per key after (the cells in reading order); the
-        // front layer's sheet the same, for the "front/" keys.
-        private static void StartSheetBuild(Loaded l)
+        // A skin's own pictures apart from the sheet they go into: the keys in sheet order and a picture per key.
+        internal sealed class Producer
+        {
+            internal List<string> Keys;
+            internal Func<string, Pixels> Produce;
+        }
+
+        // The producer of a skin's pictures, by its source: another game character's frames (LooksGame.cs, throws when the
+        // game has none), a recipe over the base's (LooksRecipes.cs), a sheet, or a PNG per key. counts: the sheet whose
+        // NotInSheet a short sheet counts.
+        private static Producer MakeProducer(SkinDef d, string gamePrefix, Loaded counts)
+        {
+            if (d.Game != null) return GameProducer(d);
+            if (d.Recipe != null) return RecipeProducer(d, gamePrefix);
+            if (d.LoadSheetPng != null) return SheetProducer(d, counts);
+            var keys = new List<string>(d.Keys());
+            return new Producer
+            {
+                Keys = keys,
+                Produce = key =>
+                {
+                    byte[] png;
+                    try
+                    {
+                        png = d.LoadPng(key);
+                    }
+                    catch (Exception e)
+                    {
+                        return new Pixels { Why = e.Message };
+                    }
+                    var px = new Pixels();
+                    px.P = DecodePng(png, out px.W, out px.H, out px.Why);
+                    return px;
+                },
+            };
+        }
+
+        // A variant's sheet (docs/skin-layering-plan.md 2.3, 2.4): the default's keys in its order, then the variant's
+        // own keys the default lacks (its flight frames, a front picture of its own). Per key its own picture when it has
+        // one (an all-transparent one too: a frame blanked on purpose), else the default's; an own picture that can't be
+        // used is said and the default's drawn. Drawn over the default (layer = over): the default's picture with the
+        // erase colour's pixels cleared and the variant's other pixels on top, as Hellfire over the game's donkey; every
+        // frame is then a plain picture of its own (no second layer to draw).
+        private static void VariantProducer(Loaded l, Producer own, Producer parent)
+        {
+            Func<string, Pixels> produce = VariantProduce(l, own, parent, out List<string> keys);
+            l.MakeSheet(keys.Count);
+            l.ToBuild = new Queue<string>(keys);
+            l.Produce = produce;
+        }
+
+        // The variant's picture per key and its keys (VariantProducer; the self-tests' TestPicture, with no sheet).
+        private static Func<string, Pixels> VariantProduce(Loaded l, Producer own, Producer parent, out List<string> keyList)
         {
             SkinDef d = l.Def;
+            var keys = new List<string>(parent.Keys);
+            var parentKeys = new HashSet<string>(parent.Keys, StringComparer.Ordinal);
+            var ownKeys = new HashSet<string>(own.Keys, StringComparer.Ordinal);
+            foreach (string k in own.Keys) if (!parentKeys.Contains(k)) keys.Add(k);
+            l.Layered = true;
+            if (d.OverDefault) l.ParentColours = new HashSet<int>();
+            Color32? erase = d.OverDefault ? d.Erase : null;
+            bool aloneSaid = false;
+            keyList = keys;
+            return key =>
+            {
+                Pixels o = ownKeys.Contains(key) ? own.Produce(key) : default(Pixels);
+                if ((o.P == null && o.Why != null) || (o.P != null && (o.W != d.CanvasW || o.H != d.CanvasH || o.P.Length != o.W * o.H)))
+                {
+                    l.Bad++;
+                    Plugin.Log.LogWarning($"Looks: skin '{d.Id}', picture {key}: its own is skipped ({(o.P == null ? o.Why : $"{o.W}x{o.H}, the skin's canvas is {d.CanvasW}x{d.CanvasH}")}); the default's is drawn there.");
+                    o = default(Pixels);
+                }
+                Pixels p = parentKeys.Contains(key) ? parent.Produce(key) : default(Pixels);
+                if (o.P == null)
+                {
+                    // nothing of its own: the default's (a Why of the default's is said by Put, as for any picture)
+                    if (p.P != null)
+                    {
+                        l.Inherited++;
+                        if (l.ParentColours != null) NoteColours(l.ParentColours, p.P, null);
+                    }
+                    return p;
+                }
+                l.OwnPictures++;
+                if (!d.OverDefault) return o;
+                if (p.P == null || p.W != o.W || p.H != o.H)
+                {
+                    // over a default that has no picture here: its own alone, the erase pixels left out (never drawn)
+                    int cleared = 0;
+                    var alone = new Pixels { W = o.W, H = o.H, P = (Color32[])o.P.Clone() };
+                    if (erase.HasValue)
+                    {
+                        Color32 ec = erase.Value;
+                        for (int i = 0; i < alone.P.Length; i++)
+                        {
+                            Color32 c = alone.P[i];
+                            if (c.a != 0 && c.r == ec.r && c.g == ec.g && c.b == ec.b) { alone.P[i] = default(Color32); cleared++; }
+                        }
+                    }
+                    if (cleared > 0 && !aloneSaid)
+                    {
+                        aloneSaid = true;
+                        Plugin.Log.LogWarning($"Looks: skin '{d.Id}', picture {key}: drawn over its default, which has no picture there; its erase colour's pixels are left out. Said once.");
+                    }
+                    return alone;
+                }
+                var outp = new Pixels { W = p.W, H = p.H, P = ComposeOver(o.P, p.P, erase, out int n) };
+                NoteColours(l.ParentColours, outp.P, o.P);
+                l.Composed++;
+                l.Erased += n;
+                return outp;
+            };
+        }
+
+        // The colours of px (RGB, alpha above zero) into set; with mask, only where mask is transparent (the default's
+        // pixels left showing under a variant drawn over it).
+        private static void NoteColours(HashSet<int> set, Color32[] px, Color32[] mask)
+        {
+            for (int i = 0; i < px.Length; i++)
+            {
+                Color32 c = px[i];
+                if (c.a == 0 || (mask != null && mask[i].a != 0)) continue;
+                set.Add((c.r << 16) | (c.g << 8) | c.b);
+            }
+        }
+
+        // A skin drawn over its default, built without the default's pictures (no default, another canvas): its own
+        // pictures alone, the erase colour's pixels left out (never drawn), said once.
+        private static void WrapAlone(Loaded l)
+        {
+            Func<string, Pixels> inner = l.Produce;
+            Color32 erase = l.Def.Erase.Value;
+            bool said = false;
+            l.Produce = key =>
+            {
+                Pixels px = inner(key);
+                if (px.P == null) return px;
+                int n = 0;
+                Color32[] outp = null;
+                for (int i = 0; i < px.P.Length; i++)
+                {
+                    Color32 c = px.P[i];
+                    if (c.a == 0 || c.r != erase.r || c.g != erase.g || c.b != erase.b) continue;
+                    if (outp == null) outp = (Color32[])px.P.Clone();
+                    outp[i] = default(Color32);
+                    n++;
+                }
+                if (n == 0) return px;
+                if (!said)
+                {
+                    said = true;
+                    Plugin.Log.LogWarning($"Looks: skin '{l.Def.Id}' is drawn over its default but built without its pictures ({(l.Def.Parent == null ? "no default look" : "another canvas")}); its erase colour's pixels are left out. Said once.");
+                }
+                return new Pixels { P = outp, W = px.W, H = px.H };
+            };
+        }
+
+        // A sheet pack: the one PNG decoded on the first frame, sliced per key after (the cells in reading order); the
+        // front layer's sheet the same, for the "front/" keys.
+        private static Producer SheetProducer(SkinDef d, Loaded counts)
+        {
             string[] keys = d.SheetKeys;
             var all = new List<string>(keys);
             if (d.LoadFrontSheetPng != null) foreach (string k in keys) all.Add(FrontKey + k);
-            l.MakeSheet(all.Count);
-            l.ToBuild = new Queue<string>(all);
             var sheets = new SheetSource[] { new SheetSource { Load = d.LoadSheetPng }, new SheetSource { Load = d.LoadFrontSheetPng } };
-            l.Produce = key =>
+            Func<string, Pixels> produce = key =>
             {
                 bool front = key.StartsWith(FrontKey, StringComparison.Ordinal);
                 SheetSource s = sheets[front ? 1 : 0];
@@ -1918,7 +2171,7 @@ namespace GK2DonkeyAPI
                 int cx = (i % s.Columns) * d.CanvasW, cyTop = (i / s.Columns) * d.CanvasH;
                 if (cx + d.CanvasW > s.W || cyTop + d.CanvasH > s.H)
                 {
-                    l.NotInSheet++; // fewer cells than frames: the base shows there (said once in the loaded line)
+                    counts.NotInSheet++; // fewer cells than frames: the base shows there (said once in the loaded line)
                     return new Pixels();
                 }
                 var px = new Pixels { W = d.CanvasW, H = d.CanvasH, P = new Color32[d.CanvasW * d.CanvasH] };
@@ -1929,7 +2182,7 @@ namespace GK2DonkeyAPI
                 }
                 return px;
             };
-            building.Add(l);
+            return new Producer { Keys = all, Produce = produce };
         }
 
         private sealed class SheetSource
@@ -2039,7 +2292,7 @@ namespace GK2DonkeyAPI
             string id = (WarmWanted ?? "").Trim();
             SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
             if (d != null && d.Unavailable != null) d = null;
-            if (warm != null && warm.Def == d) return;
+            if (warm != null && warm.Def == d && warm.Parent == d.Parent) return; // a new default is a new sheet
             if (warm == null && d == null) return;
             // a skin built from the base's own frames (an over skin that erases, a recipe) waits until they are in memory:
             // built at the main menu it lost its holes (2026-10-24 log: Hellfire "its erase colour can't clear the donkey
@@ -2102,7 +2355,7 @@ namespace GK2DonkeyAPI
                     {
                         building.RemoveAt(k);
                         l.Finish();
-                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (the " + l.Def.Base.Id + " shows there)" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}).");
+                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (" + (l.Layered ? "its default's" : "the " + l.Def.Base.Id) + " shows there)" : "")}{(l.Layered ? $", built on '{l.Parent.Id}': {l.OwnPictures} own, {l.Inherited} from it{(l.Composed > 0 ? $", {l.Composed} drawn over it ({l.Erased} pixels erased)" : "")}" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}).");
                     }
                 }
             }
@@ -2310,7 +2563,7 @@ namespace GK2DonkeyAPI
                         {
                             stillWant = (Skin.Value ?? "").Trim();
                         }
-                        if (ReferenceEquals(pending.Def, Find(stillWant))) return; // the same skin (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
+                        if (ReferenceEquals(pending.Def, Find(stillWant)) && pending.Parent == pending.Def.Parent) return; // the same skin (the same definition: a replaced or reloaded one is new and must be switched to), still building: a colour or mount change doesn't throw the half-built sheet away
                         Looks.Release(pending); // the choice changed again before it was ready
                         pending = null;
                     }
@@ -2443,10 +2696,15 @@ namespace GK2DonkeyAPI
                         if (SkinTuningKeys.Contains(key)) { merged[key] = value; fromMount.Remove(key); }
                         else if (tuningLogged.Add(d.Id + "/" + key)) Plugin.Log.LogWarning($"Looks: skin '{d.Id}' wants to set {key}: a skin may only move the rider and the cart to fit its pictures ({string.Join(", ", SkinTuningKeys)}); the mount '{k.Id}' sets the rest. Not applied.");
                     }
-                    if (d.Tuning != null) foreach (var kv in d.Tuning) TakeSkin(kv.Key, kv.Value);
-                    if (d.TuningValues != null) foreach (var kv in d.TuningValues) TakeSkin(kv.Key, kv.Value);
-                    Dictionary<string, object> skinStyle = style == MountStyle.Cart ? d.TuningCart : d.TuningRide;
-                    if (skinStyle != null) foreach (var kv in skinStyle) TakeSkin(kv.Key, kv.Value); // this style's, over [Tuning]
+                    // a skin built on its mount's default takes the default's geometry first, then its own over it
+                    // (LooksInherit.cs; keep in step with LayeredValue)
+                    foreach (SkinDef layer in d.Parent != null ? new[] { d.Parent, d } : new[] { d })
+                    {
+                        if (layer.Tuning != null) foreach (var kv in layer.Tuning) TakeSkin(kv.Key, kv.Value);
+                        if (layer.TuningValues != null) foreach (var kv in layer.TuningValues) TakeSkin(kv.Key, kv.Value);
+                        Dictionary<string, object> skinStyle = style == MountStyle.Cart ? layer.TuningCart : layer.TuningRide;
+                        if (skinStyle != null) foreach (var kv in skinStyle) TakeSkin(kv.Key, kv.Value); // this style's, over [Tuning]
+                    }
                 }
                 var tuning = new InstanceTuning(owner);
                 bool any = tunedKeysWereCleared; // nothing left to set: the clear alone is the change to refresh

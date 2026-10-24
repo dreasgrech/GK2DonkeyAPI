@@ -177,7 +177,9 @@ namespace GK2DonkeyAPI
             if (Directory.Exists(skinsDir))
             {
                 string[] skinDirs = Directory.GetDirectories(skinsDir);
-                Array.Sort(skinDirs, StringComparer.OrdinalIgnoreCase);
+                // the mount's own look first, then by name: its other skins are built on it from their registration
+                bool IsDefault(string dir) => Path.GetFileName(dir).Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase);
+                Array.Sort(skinDirs, (a, b) => IsDefault(a) != IsDefault(b) ? (IsDefault(a) ? -1 : 1) : StringComparer.OrdinalIgnoreCase.Compare(a, b));
                 foreach (string skinDir in skinDirs)
                 {
                     if (!File.Exists(Path.Combine(skinDir, "skin.cfg"))) continue;

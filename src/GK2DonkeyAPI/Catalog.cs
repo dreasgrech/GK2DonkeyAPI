@@ -166,23 +166,52 @@ namespace GK2DonkeyAPI
             if (!id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && (dot <= 0 || dot == id.Length - 1)) throw new ArgumentException($"Mount id '{id}': a mount's id is '<mod>.<name>', your mod's prefix and the mount's name (Saddle Up's dragon is saddleup.dragon; docs/making-a-mount.md).");
         }
 
-        // Code: the same owner replaces (its instances re-apply), another owner is refused; the donkey mount is the API's.
-        internal static void Register(Entry d)
+        // Code: the same owner replaces (its instances re-apply); another owner's mount of the same id (code or pack)
+        // meets the one version rule (Outranks; the user, 2026-10-24: "one version rule, no throw"): the newer wins, the
+        // loser is left out with one warning and false (its handle then does nothing). A mistake in the call itself (no
+        // id, no prefix, the donkey's id) still throws. The donkey mount is the API's.
+        internal static bool Register(Entry d)
         {
             CheckId(d.Id);
             if (d.Abilities == null) d.Abilities = Array.Empty<MountAbility>();
-            if (defs.TryGetValue(d.Id, out Entry old) && old.Owner != d.Owner) throw new ArgumentException($"Mount '{d.Id}' is already registered by {old.Owner}.");
             if (d.Id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && d.Owner != Plugin.Guid) throw new ArgumentException("'donkey' is the game's own mount, not a mount to register.");
+            d.FromPack = false;
+            if (defs.TryGetValue(d.Id, out Entry old) && old.Owner != d.Owner)
+            {
+                if (!Outranks(d, old))
+                {
+                    Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) is left out: {Where(old)} has it (version {old.Version ?? "none"}) and this one is not newer. Remove the one you don't want, or raise the version of the one you do.");
+                    return false;
+                }
+                Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) replaces the one from {Where(old)} (version {old.Version ?? "none"}): the newer wins. Remove the old one.");
+                Retire(old);
+            }
             defs[d.Id] = d;
             Changed();
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}{(d.Effect != null ? ", effect " + d.Effect : "")}.");
+            return true;
         }
+
+        // Where a mount came from, for the log: a loose folder, a mod's DLL, or a mod's code.
+        internal static string Where(Entry k) => k.Pack?.Source != null ? "the folder " + k.Pack.Source : k.Pack?.SourceAssembly != null ? k.Pack.SourceAssembly.GetName().Name + ".dll" : "code (" + k.Owner + ")";
+
+        // A mount that lost its id to another owner's: what it had registered beside its entry goes (a pack's sound
+        // files, a code mount's clips); its skins re-resolve to the winner (Version).
+        private static void Retire(Entry k)
+        {
+            if (k.Pack != null) SoundBank.ForgetFiles(k.Pack.SoundFiles);
+            SoundBank.UnregisterAll(SoundBankOwner(k));
+        }
+
+        // The sound bank owner of a code mount's own clips (Sounds.Rig, SoundBank.ForClips): its mod and id, so two
+        // mods' mounts of one id never share a bank entry.
+        internal static string SoundBankOwner(Entry k) => "mount/" + k.Owner + "/" + k.Id;
 
         // A mount pack's declaration (its mount.cfg; MountPacks.cs). One pack per mount: the same pack again (a second
         // registration of the same owner with the same facts) is the one already there; another pack of the same id
         // meets the skins' version rule (a higher version wins, a tie goes to the DLL over a loose folder, else the
         // first stays) and the winner's facts replace the loser's in place, its skins keeping the object. A code mount
-        // is never replaced by a pack.
+        // meets the same rule (2026-10-24): a newer pack replaces it, an older or equal one is left out.
         internal static Entry Declare(Entry d, string where)
         {
             CheckId(d.Id);
@@ -191,7 +220,15 @@ namespace GK2DonkeyAPI
             d.Abilities = Array.Empty<MountAbility>();
             if (defs.TryGetValue(d.Id, out Entry have))
             {
-                if (!have.FromPack) throw new ArgumentException($"mount '{d.Id}' is registered in code by {have.Owner}; a pack can't redefine it (add skins to it: a mount folder without mount.cfg).");
+                if (!have.FromPack)
+                {
+                    if (!Outranks(d, have)) throw new ArgumentException($"mount '{d.Id}' is registered in code by {have.Owner} (version {have.Version ?? "none"}); this pack (version {d.Version ?? "none"}) is not newer, so it is left out. Add skins to it with a mount folder without mount.cfg, or raise the version.");
+                    Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {where} (version {d.Version ?? "none"}) replaces the one from {Where(have)} (version {have.Version ?? "none"}): the newer wins. Remove the old one.");
+                    Retire(have);
+                    defs[d.Id] = d;
+                    Changed();
+                    return d;
+                }
                 if (have.Owner == d.Owner && Same(have, d)) return have;
                 if (have.Owner == d.Owner || Outranks(d, have))
                 {
@@ -210,7 +247,8 @@ namespace GK2DonkeyAPI
             return d;
         }
 
-        // The skins' version rule for two packs of one mount (Looks.Outranks): a higher version; at a tie the DLL over a folder.
+        // The one version rule for two mounts of one id, code or pack (as the skins', Looks.Outranks): a higher version
+        // wins; at a tie code or a DLL beats a loose folder; else the first stays.
         private static bool Outranks(Entry d, Entry old)
         {
             int cmp = Looks.CompareVersions(d.Version, old.Version);
@@ -250,7 +288,7 @@ namespace GK2DonkeyAPI
             Entry d = Find(id);
             if (d == null || d.Owner != owner || d == Donkey) return false;
             defs.Remove(d.Id);
-            SoundBank.UnregisterAll("mount/" + d.Id); // a code mount's clips (the entries only: the clips are the mod's)
+            SoundBank.UnregisterAll(SoundBankOwner(d)); // a code mount's clips (the entries only: the clips are the mod's)
             Changed();
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' withdrawn by {owner}; its skins fall back to the donkey mount.");
             return true;
@@ -267,6 +305,7 @@ namespace GK2DonkeyAPI
         // when none is given) re-merge their tuning now.
         internal static void Touch(Entry mount = null)
         {
+            Looks.RefreshInherited(mount?.Id); // a default's values changed: its variants take them (docs/skin-layering-plan.md 2.1)
             Version++;
             Mount.ForEachInstance(i =>
             {

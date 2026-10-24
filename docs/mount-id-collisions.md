@@ -20,6 +20,18 @@ The user decided, and the code follows it (the rest of this page is the investig
 - **One default look per mount: `skins\default\`**. `[Mount] default_skin` is gone; a pack mount without
   `skins\default\skin.cfg` is refused; a folder adding skins to another mod's mount may not bring a `default`. The
   donkey has none: its own look is the game's art.
+- **One version rule for two mounts of one id, no throw** (later still, the user: "one version rule, no throw";
+  `Catalog.Register`, `Catalog.Declare`, `Catalog.Outranks`): code against code, code against a pack and pack against
+  pack alike, the higher version wins, at a tie code or a DLL beats a loose folder, else the first stays.
+  `Mounts.Catalog.Register` no longer throws for another owner's id: the loser is left out with one warning and its
+  handle does nothing; a newer code mount replaces the registered one (`Catalog.Retire`: the old one's pack sound
+  files or code clips go). A newer pack `mount.cfg` replaces a code mount; an older one is refused with its skins.
+  A code mount's clips are banked under its mod (`Catalog.SoundBankOwner`, `"mount/<owner>/<id>"`; bank ids
+  `gk2.mount.<owner>/<id>.<key>`), a code skin's the same (`"skin/<owner>/<skin id>"`), so two mods' mounts of one
+  id never share an entry. This settles the open item "a code mount against a loose pack's mount of the same id"
+  (section 2.3 below is the state before). With it, an asymmetry is fixed: an **embedded** pack whose `mount.cfg` is
+  refused now drops its skins as a loose folder's always did (`Looks.RegisterEmbedded`; before, its skins registered
+  onto the other pack's mount). The self-test "ids: a code mount meets the version rule" checks it.
 
 Question (the user, 2026-10-24): two different mods both define a mount `dragon`. What should happen?
 

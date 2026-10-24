@@ -9,6 +9,10 @@ mount.cfg (assets/mounts/<mount>/): [Mount] (MOUNT_ORDER; always id, name, autho
 [Stats], [Tuning], [Tuning.Ride], [Tuning.Cart], [Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]: the order the
 Mounts tab's save writes (Looks.SaveMountCfg).
 
+A skin of a mount other than the donkey that isn't its "default" is built on that default (docs/skins.md "Variants:
+built on the default"): its layout is the same, and a [Skin] line that only repeats its default's value is noted
+(left out, the variant follows the default when that changes; kept, it is pinned). A note never fails --check.
+
 Run it after editing a cfg by hand, then tests/SkinsScan; --check runs in tools/release-scans.sh and refuses a built-in
 that is not byte for byte in this layout. tools/skins/new_skin.py writes new files in this layout from the start.
 
@@ -165,12 +169,37 @@ def files():
     return out
 
 
+def default_of(skin_cfg):
+    """The skin.cfg of the default a variant is built on (../default beside it, in a mount folder with its mount.cfg,
+    not the donkey's), or None."""
+    skin_dir = os.path.dirname(skin_cfg)
+    skins_dir = os.path.dirname(skin_dir)
+    mount_dir = os.path.dirname(skins_dir)
+    if os.path.basename(skin_dir).lower() == "default" or os.path.basename(mount_dir).lower() == "donkey" or not os.path.isfile(os.path.join(mount_dir, "mount.cfg")):
+        return None
+    p = os.path.join(skins_dir, "default", "skin.cfg")
+    return p if os.path.isfile(p) else None
+
+
+def repeats_default(path):
+    """The [Skin] lines of a variant that say what its default says (name, author, version and format are its own)."""
+    parent = default_of(path)
+    if parent is None:
+        return []
+    own = {k.lower(): v for k, v, _, _ in keyed(parse(path)[0].get("skin", {"lines": []})["lines"])[0]}
+    dflt = {k.lower(): v for k, v, _, _ in keyed(parse(parent)[0].get("skin", {"lines": []})["lines"])[0]}
+    return [f"{k} = {v}" for k, v in own.items() if k not in ("format", "needs", "name", "author", "version") and dflt.get(k) == v]
+
+
 def main(argv):
     check = "--check" in argv
     diff = 0
     for label, path, fn in files():
         text = fn(path)
         current = io.open(path, encoding="utf-8", newline="").read()
+        if fn is canonical:
+            for line in repeats_default(path):
+                print(f"{label:28s} note: '{line}' repeats its default's (leave it out to follow the default)")
         if current == text:
             print(f"{label:28s} canonical")
             continue

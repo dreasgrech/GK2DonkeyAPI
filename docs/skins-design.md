@@ -11,6 +11,12 @@ is plain; one without a dot is refused). A skin is named within its mount, full 
 (`saddleup.dragon/default`, `donkey/saddleup.hellfire`; skin.cfg has no `id =`). Every mount but the donkey has exactly one
 default look, its `skins\default\`; `default_skin` is gone. Why: docs/mount-id-collisions.md.
 
+**Amended 2026-10-24, later still (skin layering):** every skin of a mount but the donkey is built on that mount's
+default (`<mount>/default`): what it doesn't give (pictures per frame, `[Skin]` settings, `[Colors]`, `[Tuning*]`,
+`[Sounds*]`) comes from the default, and `layer = over` on it draws it over the default (holes from the erase colour)
+instead of over the game's donkey. The donkey's skins are unchanged. docs/skin-layering-plan.md (built 2026-10-24),
+docs/skins.md "Variants: built on the default", LooksInherit.cs.
+
 Status 2026-10-20: this is the design as written on 2026-10-17; the system has moved on and docs/skins.md (the pack
 format), docs/mounts-design.md (mounts) and docs/mounts-foundation-audit.md (the definitions as they stand) are
 current. Out of date below: the recipes zebra/ghost/ember/golden/shadow and the blue dragon (gone 2026-10-19;

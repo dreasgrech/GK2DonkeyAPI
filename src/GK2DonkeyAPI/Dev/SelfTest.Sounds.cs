@@ -349,27 +349,27 @@ namespace GK2DonkeyAPI
                     hc = null;
                 }
 
-                // a second skin of the mount, no [Sounds]: the mount's voice, its file from the declaring skin's folder
+                // a second skin of the mount, no [Sounds]: built on the mount's own look (its default), it takes the default's
+                // lines before the mount's (docs/skin-layering-plan.md 2.5): the default's voice, the same bank entry (loaded once)
                 h.Tuning.Set(Owner, "Skin", "selftest.sounds-beast/sounds-test-2");
                 yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "selftest.sounds-beast/sounds-test-2", 8f);
                 rig.Invalidate();
                 SoundSpec v2 = rig.Resolve("voice");
-                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith(".mount-selftest.sounds-beast.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
-                string mountVoiceId = v2?.BankId;
-                yield return Until(() => SoundBank.StateOf(mountVoiceId) == SoundBank.State.Ready, 6f);
-                Check(waited, "the mount's file loaded (from the mount folder's sounds\\)");
+                Check(v2 != null && v2.Layer == "default" && v2.BankId != null && v2.BankId == voiceId && SoundBank.StateOf(v2.BankId) == SoundBank.State.Ready, $"the second skin (no [Sounds]) gets its default's voice, the default's bank entry: loaded once ({v2?.Describe()})");
                 SoundSpec st2 = rig.Resolve("stop");
-                Check(st2 != null && st2.Layer == "mount" && st0 != null && st2.BankId == st0.BankId, $"and the mount's stop by the name rule, the same bank entry as under the declaring skin: loaded once ({st2?.Describe()})");
-                // the donkey's own sounds are not another creature's: with no line for them, silent; the neutral ones stay the donkey's
+                Check(st2 != null && st2.Layer == "mount" && st0 != null && st2.BankId == st0.BankId, $"and the mount's stop by the name rule (the default has none), the same bank entry as under the default: loaded once ({st2?.Describe()})");
+                // the default's lips = none and graze by convention reach it; the donkey's own snort, which no layer gives, is
+                // silent on another creature; the neutral ones stay the donkey's
                 SoundSpec l2 = rig.Resolve("lips"), g2 = rig.Resolve("graze"), m2 = rig.Resolve("mount"), sd2 = rig.Resolve("step", "dirt"), b2 = rig.Resolve("bell");
-                Check(l2 != null && l2.Silent && g2 != null && g2.Silent && m2 != null && m2.Silent, $"a mount with no line for them: lips, graze and the getting-on snort are silent (the donkey's own; lips {l2?.Describe()})");
+                Check(l2 != null && l2.Silent && l2.Layer == "default" && g2 != null && !g2.Silent && g2.Layer == "default" && sgr != null && g2.BankId == sgr.BankId && m2 != null && m2.Silent,
+                    $"the default's lips = none and graze_1.wav reach it (layer default), the getting-on snort no layer gives is silent (lips {l2?.Describe()}; graze {g2?.Describe()})");
                 Check(sd2 != null && !sd2.Silent && sd2.Layer == "base" && b2 != null && !b2.Silent, $"... while the step by the ground and the bell stay the donkey's ({sd2?.Describe()}; {b2?.Describe()})");
                 var cover = Sounds.Coverage(Looks.Find("selftest.sounds-beast/sounds-test-2"), Catalog.Find("selftest.sounds-beast"));
                 var missing = new List<string>();
-                string voiceFrom = "-";
-                foreach (var c in cover) { if (c.From == "missing") missing.Add(c.Event); if (c.Event == "voice") voiceFrom = c.From; }
-                Check(voiceFrom == "mount" && missing.Contains("lips") && missing.Contains("graze") && missing.Contains("mount") && missing.Contains("dismount") && missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("step"),
-                    $"the coverage report: voice from the mount; missing: {string.Join(", ", missing)}");
+                string voiceFrom = "-", grazeFrom = "-";
+                foreach (var c in cover) { if (c.From == "missing") missing.Add(c.Event); if (c.Event == "voice") voiceFrom = c.From; if (c.Event == "graze") grazeFrom = c.From; }
+                Check(voiceFrom == "default" && grazeFrom == "default" && missing.Contains("mount") && missing.Contains("dismount") && missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("lips") && !missing.Contains("graze") && !missing.Contains("step"),
+                    $"the coverage report: voice and graze from the default; missing: {string.Join(", ", missing)}");
                 Info(Sounds.CoverageLine(Looks.Find("selftest.sounds-beast/sounds-test-2")));
 
                 // the save round trip keeps the sound sections with their lines and comment

@@ -167,7 +167,11 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "mount from code: the ability's hooks on spawn, ride, dismount, removal", Body = MountFromCode },
             new Scenario { Group = GroupLooks, Name = "tuning: a value belongs to the owner that set it; what a mount and an ability may pin", Body = TuningOwnership },
             new Scenario { Group = GroupLooks, Name = "ids: one mount.cfg per mount (a newer one of the same id takes over, an older one is refused); a mount folder without mount.cfg joins; the same skin twice, the newer wins", Body = IdRules },
+            new Scenario { Group = GroupLooks, Name = "ids: a code mount meets the version rule (another mod's older or equal one left out, its handle doing nothing; a newer one, code or pack, replaces it; an older pack refused with its skins); its clips banked under its mod", Body = IdRulesCode },
             new Scenario { Group = GroupLooks, Name = "default looks: one per mount (its skins\\default\\; a mount pack without one refused, a joiner's left out); one skin name on two mounts; a mount id without its mod's prefix refused; default_skin ignored; a skin added to another's mount without its mod's prefix refused (folder, code skin, donkey recipe)", Body = DefaultSkinRules },
+            new Scenario { Group = GroupLooks, Name = "layering: a variant built on its default (pictures, settings, tuning, the default's sounds and colours; its file keeps its own lines)", Body = SkinVariant },
+            new Scenario { Group = GroupLooks, Name = "layering: a variant drawn over its default (the erase colour's holes, its pixels on top, the colours by where they came from)", Body = SkinOverDefault },
+            new Scenario { Group = GroupLooks, Name = "layering: a variant before its default, the default read again and withdrawn, another canvas, a code skin's sentinels, the donkey's skins unchanged", Body = SkinLayerLifecycle },
             new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
@@ -2978,6 +2982,28 @@ namespace GK2DonkeyAPI
             return dir;
         }
 
+        // A 96x96 picture as PNG bytes for the temp packs: transparent, the rectangles filled (x, y from the bottom left,
+        // width, height, colour), so a pixel read back says where it came from (the layering scenarios).
+        private static byte[] TempPng(params (int X, int Y, int W, int H, Color32 C)[] rects)
+        {
+            var px = new Color32[96 * 96];
+            foreach (var r in rects)
+            {
+                for (int y = r.Y; y < r.Y + r.H; y++) for (int x = r.X; x < r.X + r.W; x++) px[y * 96 + x] = r.C;
+            }
+            var t = new Texture2D(96, 96, TextureFormat.RGBA32, false);
+            try
+            {
+                t.SetPixels32(px);
+                t.Apply(false);
+                return t.EncodeToPNG();
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(t);
+            }
+        }
+
         // A temp mount folder's mount.cfg: gk2mounts\<mount>\mount.cfg as given.
         private static void WriteTempMountCfg(string root, string mount, string mountCfg)
         {
@@ -3465,6 +3491,108 @@ namespace GK2DonkeyAPI
             yield break;
         }
 
+        // A code mount against another mod's mount of the same id (the user, 2026-10-24: "one version rule, no throw";
+        // Catalog.Register, Catalog.Declare): another owner's older or equal one is left out (Catalog.Register false, a
+        // warning, the first stays, the loser's handle does nothing), a newer one replaces it; a newer pack mount.cfg
+        // replaces a code mount, an older one is refused with its skins. A code mount's clips are banked under its mod
+        // ("gk2.mount.<owner>/<id>.<key>"), so two mods' mounts of one id never share an entry, and a mount that lost
+        // its id takes its entries with it.
+        private static IEnumerator IdRulesCode()
+        {
+            if (!Plugin.MountsOn)
+            {
+                Skip("the mounts are off (Debug.MountsPreview): the API keeps a mount out");
+                yield break;
+            }
+            const string oA = Owner + ".clashA", oB = Owner + ".clashB", oC = Owner + ".clashC", oD = Owner + ".clashD", oP = Owner + ".clashP";
+            const string id = "selftest.clash", id2 = "selftest.clash2", id3 = "selftest.clash3";
+            IDisposable hA = null, hC = null, hD = null, hA2 = null, hA3 = null, skinA = null;
+            MountHandle a = null;
+            string r2 = null, r3 = null;
+            AudioClip clipA = null, clipD = null;
+            try
+            {
+                clipA = SoundBank.FromWav(SoundBank.TestTone(0.2f, 300f), "selftest-clash-a");
+                clipD = SoundBank.FromWav(SoundBank.TestTone(0.2f, 500f), "selftest-clash-d");
+                hA = Mounts.Catalog.Register(oA, new MountDef { Id = id, Name = "Clash A", Version = "1.0", Sounds = new Dictionary<string, MountSound> { ["voice"] = MountSound.Own(clipA) } });
+                skinA = Mounts.Looks.Register(oA, new MountSkinDef { Id = Looks.DefaultSkinName, Name = "Clash Look", Mount = id, Source = new NoPictures() });
+                Check(Catalog.Find(id)?.Owner == oA, "a code mount registered (version 1.0)");
+                // its clip banked under its mod
+                a = Spawn(Spot(home, 4f) ?? home, true);
+                a?.Tuning.Set(Owner, "Skin", id + "/" + Looks.DefaultSkinName);
+                yield return Until(() => a != null && a.IsReady && a.Mount == id, 8f);
+                Check(waited, "a donkey wears its look and is the mount");
+                string bankA = null;
+                if (a != null)
+                {
+                    a.I.SoundsRig.Invalidate();
+                    bankA = a.I.SoundsRig.Resolve("voice")?.BankId;
+                }
+                Check(bankA != null && bankA.StartsWith("gk2.mount." + oA + "/" + id + ".", StringComparison.Ordinal), $"its voice clip is banked under its mod: gk2.mount.<owner>/<id>.<key> ({bankA ?? "none"})");
+
+                // code against code: equal and older are left out, no throw, the first stays
+                Info("the next two \"is left out\" warnings are this test's own: another mod's code mount of the same id, not newer (equal, then older)");
+                bool equal = Catalog.Register(new Catalog.Entry { Id = id, Name = "Clash B", Version = "1.0", Owner = oB });
+                Check(!equal && Catalog.Find(id)?.Owner == oA && Catalog.Find(id)?.Name == "Clash A", $"an equal version (1.0) from another mod: Register false, the first stays ({Catalog.Find(id)?.Owner})");
+                hC = Mounts.Catalog.Register(oC, new MountDef { Id = id, Name = "Clash C", Version = "0.5" });
+                Check(hC != null && Catalog.Find(id)?.Owner == oA, "an older one (0.5) through the API: no throw, a handle, the first stays");
+                hC.Dispose();
+                hC = null;
+                Check(Catalog.Find(id)?.Owner == oA && SoundBank.Find(bankA) != null, "the loser's handle disposed: nothing happens to the mount or its clips");
+
+                // a newer one replaces it; the old one's clips go with it
+                Info("the next \"replaces the one from\" warning is this test's own: a newer code mount of the same id replaces the first");
+                hD = Mounts.Catalog.Register(oD, new MountDef { Id = id, Name = "Clash D", Version = "2.0", Sounds = new Dictionary<string, MountSound> { ["voice"] = MountSound.Own(clipD) } });
+                Check(Catalog.Find(id)?.Owner == oD && Catalog.Find(id)?.Name == "Clash D", $"a newer one (2.0) replaces it ({Catalog.Find(id)?.Owner})");
+                Check(bankA == null || SoundBank.Find(bankA) == null, "the replaced mount's clip entry is gone with it");
+                yield return Frames(2);
+                string bankD = null;
+                if (a != null)
+                {
+                    a.I.SoundsRig.Invalidate();
+                    bankD = a.I.SoundsRig.Resolve("voice")?.BankId;
+                }
+                Check(a != null && a.Mount == id && bankD != null && bankD.StartsWith("gk2.mount." + oD + "/" + id + ".", StringComparison.Ordinal) && bankD != bankA, $"the wearer is the new mount, its voice the new mod's own entry ({bankD ?? "none"})");
+                hA.Dispose();
+                hA = null;
+                Check(Catalog.Find(id)?.Owner == oD, "the first mod's handle disposed: the newer mount stays (not its own any more)");
+                a?.Remove();
+                a = null;
+                skinA.Dispose();
+                skinA = null;
+                hD.Dispose();
+                hD = null;
+                Check(Catalog.Find(id) == null && (bankD == null || SoundBank.Find(bankD) == null), "the newer one's handle disposed: the mount and its clip entry are gone");
+
+                // code against a pack: a newer mount.cfg replaces the code mount, an older one is refused with its skins
+                hA2 = Mounts.Catalog.Register(oA, new MountDef { Id = id2, Name = "Clash Two", Version = "1.0" });
+                r2 = WriteTempPack("gk2donkeyapi-selftest-clash2", Looks.DefaultSkinName, "[Skin]\nformat = 1\nname = Clash Two Pack\n\n[Mount]\nid = " + id2 + "\nname = Clash Two Pack\nauthor = the self-test\nversion = 2.0\ncart = true\nfoals = true\n");
+                Info("the next \"replaces the one from\" warning is this test's own: a newer pack mount.cfg replaces a code mount");
+                int n2 = Looks.RegisterFolder(r2, oP);
+                Catalog.Entry k2 = Catalog.Find(id2);
+                Check(n2 == 1 && k2 != null && k2.FromPack && k2.Owner == oP && k2.Name == "Clash Two Pack" && k2.Abilities.Length == 0 && Looks.Find(id2 + "/default") != null, $"a newer pack (2.0) replaces the code mount (1.0) with its own look ({n2}; {k2?.Owner}, from a pack {k2?.FromPack})");
+                hA2.Dispose();
+                hA2 = null;
+                Check(Catalog.Find(id2)?.Owner == oP, "the code mount's handle disposed: the pack's mount stays");
+                hA3 = Mounts.Catalog.Register(oA, new MountDef { Id = id3, Name = "Clash Three", Version = "1.0" });
+                r3 = WriteTempPack("gk2donkeyapi-selftest-clash3", Looks.DefaultSkinName, "[Skin]\nformat = 1\nname = Clash Three Pack\n\n[Mount]\nid = " + id3 + "\nname = Clash Three Pack\nauthor = the self-test\nversion = 0.5\ncart = true\nfoals = true\n");
+                Info("the next \"could not be registered\" warning is this test's own: an older pack mount.cfg against a code mount is refused");
+                int n3 = Looks.RegisterFolder(r3, oP);
+                Check(n3 == 0 && Catalog.Find(id3)?.Owner == oA && !Catalog.Find(id3).FromPack && Looks.Find(id3 + "/default") == null, $"an older pack (0.5) is refused, its skins left out; the code mount stays ({n3}; {Catalog.Find(id3)?.Owner})");
+            }
+            finally
+            {
+                try { if (a != null && a.Exists) a.Remove(); } catch { }
+                foreach (IDisposable h in new[] { skinA, hC, hD, hA, hA2, hA3 }) { try { h?.Dispose(); } catch { } }
+                try { Looks.Unregister(id2 + "/default", oP); } catch { }
+                Catalog.Entry k = Catalog.Find(id2);
+                if (k != null) { try { Looks.UnregisterMount(id2, k.Owner); } catch { } }
+                foreach (string r in new[] { r2, r3 }) { try { if (r != null) System.IO.Directory.Delete(r, true); } catch { } }
+                if (clipA != null) UnityEngine.Object.Destroy(clipA);
+                if (clipD != null) UnityEngine.Object.Destroy(clipD);
+            }
+        }
+
         // One own look per mount (2026-10-24): a mount's default is its pack's skins\default\, the skin a new one of it
         // wears. A mount.cfg without one is refused with its skins; a folder without mount.cfg (skins added to another
         // pack's mount) may not bring a default, its other skins join; a skin is named within its mount, so two mounts'
@@ -3573,7 +3701,9 @@ namespace GK2DonkeyAPI
             }
             finally
             {
-                foreach (Looks.SkinDef d in new List<Looks.SkinDef>(Looks.All)) if (d.Owner == o1 || d.Owner == o2 || d.Owner == o3) { try { Looks.Unregister(d.Id, d.Owner); } catch { } }
+                var mine = new List<Looks.SkinDef>(Looks.All).FindAll(d => d.Owner == o1 || d.Owner == o2 || d.Owner == o3);
+                mine.Sort((x, y) => Looks.IsDefaultSlot(x).CompareTo(Looks.IsDefaultSlot(y))); // the variants first: a default withdrawn under another mod's variant warns (LooksInherit.cs)
+                foreach (Looks.SkinDef d in mine) { try { Looks.Unregister(d.Id, d.Owner); } catch { } }
                 foreach (string m in mounts)
                 {
                     Catalog.Entry k = Catalog.Find(m);
