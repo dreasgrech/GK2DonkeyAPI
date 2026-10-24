@@ -49,6 +49,7 @@ namespace GK2DonkeyAPI
             internal readonly Colors.Rig ColorsRig;
             internal readonly Looks.Rig LooksRig;
             internal readonly Effects.Rig EffectsRig;
+            internal readonly Sounds.Rig SoundsRig;
             internal MountHandle Handle;
 
             // Setting overrides of this instance by key name (any tuning, colour or behaviour key), read by Tuned<T>
@@ -72,6 +73,7 @@ namespace GK2DonkeyAPI
                 ColorsRig = new Colors.Rig(this);
                 LooksRig = new Looks.Rig(this);
                 EffectsRig = new Effects.Rig(this);
+                SoundsRig = new Sounds.Rig(this);
             }
 
             // "dragon with cart", "free cart", "foal", "donkey": the mount's name (Noun) where there is one.
@@ -189,6 +191,10 @@ namespace GK2DonkeyAPI
                 using (Perf.Measure(Perf.S.Effects))
                 {
                     EffectsRig.Tick();
+                }
+                using (Perf.Measure(Perf.S.Sounds))
+                {
+                    SoundsRig.Tick(StandState == AnimationState.Walk); // its steps, graze and lips (Sounds.cs; the standing switch)
                 }
             }
 
@@ -403,6 +409,7 @@ namespace GK2DonkeyAPI
                 donkeyOnly.Clear();
                 try { if (sleep) LooksRig.Sleep(); else LooksRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the skin failed: {e.Message}"); }
                 try { EffectsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the effect failed: {e.Message}"); }
+                try { SoundsRig.Detach(); ForgetAnimation(this); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: stopping the sounds failed: {e.Message}"); }
                 try { ColorsRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the colours failed: {e.Message}"); }
                 try { LanternRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: restoring the lantern failed: {e.Message}"); }
                 try { CargoRig.Detach(); } catch (Exception e) { Plugin.Log.LogWarning($"Mount: {Describe()}: removing the cargo holder failed: {e.Message}"); }
@@ -463,6 +470,7 @@ namespace GK2DonkeyAPI
                 ColorsRig.Release();
                 LooksRig.Release();
                 EffectsRig.Release();
+                SoundsRig.Release();
             }
 
             // ------------------------------------------------------------------ getting on and off
@@ -587,8 +595,8 @@ namespace GK2DonkeyAPI
                 lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
                 Ridden = this;
                 riderAttached = true;
-                MountSounds.OnMounted();
-                MountSounds.Moment(this, "mount");
+                SoundsRig.OnMounted();
+                SoundsRig.Emit("mount");
                 pc.PhysicalBody.SetFacingDirection(new Vector2(riderFacingX, 0f));
                 pc.PhysicalBody.SpeedMultiplier = S.SpeedMultiplier.Value;
                 donkey.MainWgoPart?.AnimationComponent?.SetWalkAnimationSpeedMultiplier(S.WalkCycleSpeed.Value * pc.PhysicalBody.SpeedMultiplier);
@@ -639,7 +647,6 @@ namespace GK2DonkeyAPI
                 RiderLeg.Detach();
                 UnhookKeeperLateUpdate();
                 seatPending = false;
-                MountSounds.OnDonkeyGone();
                 riderAttached = false;
                 lastMirrored = (AnimationState)(-1);
                 lastWalkMultiplier = 0f;
@@ -858,7 +865,7 @@ namespace GK2DonkeyAPI
                 CargoRig.SetCarried(items);
                 Restyle(pc, scene, MountStyle.Cart);
                 Plugin.Log.LogInfo($"Mount: {Describe()} hitched cart {cart.FullId} ({items.Count} item(s) on it).");
-                MountSounds.Moment(this, "hitch");
+                SoundsRig.Emit("hitch");
                 Mounts.RaiseHitched(Handle, cart.Handle);
                 if (!cart.Ephemeral)
                 {
@@ -919,7 +926,7 @@ namespace GK2DonkeyAPI
                 ChestRig.TransferTo(cart.ChestRig); // the chest goes with the cart
                 if (viewed)
                 {
-                    MountSounds.Moment(this, "unhitch"); // still in Cart style: the cart's sound settings
+                    SoundsRig.Emit("unhitch"); // still in Cart style: the cart's sound settings
                     Restyle(pc, scene, MountStyle.Ride);
                 }
                 else

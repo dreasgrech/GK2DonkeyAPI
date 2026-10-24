@@ -25,9 +25,10 @@ frozen the colours: Colors
 frozen the lantern: Lantern
 
 # the flying experiment (docs/flying.md): dev tools only
-dev Flight FlightSurvey MapSurvey DrawnGround PlayerPhysicalBody_LockMovement_Patch LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch
+dev Flight FlightSurvey MapSurvey DrawnGround PlayerPhysicalBody_LockMovement_Patch LazyTerrainMeshCollection_Runtime_StripCpuMeshData_Patch LazyTerrain_Awake_Patch LazyTerrain_OnDestroy_Patch WorkPlayerState_CanEnter_Patch
 
-warned the sounds: MountSounds AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
+warned the safe spots (never lost, docs/never-lost.md): SafeSpots PlayerController_SetPosition_Patch
+warned the sounds: Sounds SoundBank AnimationComponentBase_OnAnimationStepCompleted_Patch AnimationComponentBase_PlaySound_Patch
 warned the Mounts panel (the look bar's successor): MountsPanel
 warned the settings page in the game's Settings window: SettingsRows
 warned the Mods menu's donkey picture and its labelled lists: ModsWindow

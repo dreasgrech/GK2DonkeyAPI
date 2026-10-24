@@ -25,6 +25,24 @@ namespace GK2DonkeyAPI
         // twice in a save's life (a mod may still ask for one itself, MountSpawn.Id). byFullId: Find(owner, id).
         private static readonly Dictionary<string, int> nextIds = new Dictionary<string, int>(StringComparer.Ordinal);
         private static readonly Dictionary<string, Instance> byFullId = new Dictionary<string, Instance>(StringComparer.Ordinal);
+        // The instance behind a view's animation component (the lips animation event finds its sound rig, Sounds.cs):
+        // noted when a view's parts are ready, forgotten when the view is released.
+        private static readonly Dictionary<AnimationComponentBase, Instance> byAnimation = new Dictionary<AnimationComponentBase, Instance>();
+
+        internal static Instance ByAnimation(AnimationComponentBase ac) => ac != null && byAnimation.TryGetValue(ac, out Instance i) ? i : null;
+
+        internal static void NoteAnimation(Instance i, AnimationComponentBase ac)
+        {
+            if (i != null && ac != null) byAnimation[ac] = i;
+        }
+
+        internal static void ForgetAnimation(Instance i)
+        {
+            if (i == null || byAnimation.Count == 0) return;
+            var gone = new List<AnimationComponentBase>();
+            foreach (var kv in byAnimation) if (ReferenceEquals(kv.Value, i)) gone.Add(kv.Key);
+            foreach (AnimationComponentBase ac in gone) byAnimation.Remove(ac);
+        }
 
         internal static string FullIdOf(string owner, int id) => owner + "#" + id;
 

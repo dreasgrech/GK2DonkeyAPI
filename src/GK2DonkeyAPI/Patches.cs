@@ -60,12 +60,13 @@ namespace GK2DonkeyAPI
             Require(AccessTools.Field(typeof(PlayerInputHandler), "curInteractionHandler"), "PlayerInputHandler.curInteractionHandler");
             Require(AccessTools.Method(typeof(PlayerInputHandler), "TryCallFireEvent"), "PlayerInputHandler.TryCallFireEvent");
             Require(AccessTools.Inner(typeof(PlayerInputHandler), "InteractionType"), "PlayerInputHandler.InteractionType");
-            // Sounds (MountSounds.cs)
+            // Sounds (Sounds.cs)
             Require(AccessTools.PropertyGetter(typeof(IOrderedSurface), nameof(IOrderedSurface.SurfaceType)), "IOrderedSurface.SurfaceType");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.OnAnimationStepCompleted)), "AnimationComponentBase.OnAnimationStepCompleted");
             Require(AccessTools.Method(typeof(AnimationComponentBase), nameof(AnimationComponentBase.PlaySound), new[] { typeof(string) }), "AnimationComponentBase.PlaySound(string)");
             Require(AccessTools.Method(typeof(LazyBearTechnology.LazyAudio), nameof(LazyBearTechnology.LazyAudio.PlayAtGameObject)), "LazyAudio.PlayAtGameObject");
             Require(AccessTools.Method(typeof(LazyBearTechnology.SoundHandler), nameof(LazyBearTechnology.SoundHandler.SetFadeInFadeOut)), "SoundHandler.SetFadeInFadeOut");
+            Require(AccessTools.Field(typeof(LazyBearTechnology.SoundHandler), "sourceHolder"), "SoundHandler.sourceHolder");
             Require(AccessTools.Method(typeof(SurfaceStepSoundSettings), nameof(SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType)), "SurfaceStepSoundSettings.GetStepSoundIdForSurfaceType");
             // Colours (Colors.cs)
             Require(AccessTools.Method(typeof(Wgo), "OnDestroy"), "Wgo.OnDestroy");

@@ -212,6 +212,9 @@ namespace GK2DonkeyAPI.Api
         // [Tuning.Cart]). The skin owns its drawing's geometry: the seat row and these keys; the mount keeps what the
         // creature is (docs/mounts-design.md).
         public Dictionary<string, object> TuningRide, TuningCart;
+        // The skin's own sounds by event key ("voice", "step.grass": MountSound; a pack's [Sounds] block): over its
+        // mount's, under a mod's override; SoundsRide / SoundsCart for one style, over Sounds. Null: the mount's.
+        public Dictionary<string, MountSound> Sounds, SoundsRide, SoundsCart;
         // The effect this skin comes with, shown when the player's Effect row says "As the mount" (the skin's first,
         // else its mount's). Null: the mount's. A pack says the same with effect = / effect_when =.
         public string Effect;
@@ -250,8 +253,10 @@ namespace GK2DonkeyAPI.Api
                 Effect = string.IsNullOrWhiteSpace(Effect) || MountEffects.IsNone(Effect) ? null : Effect.Trim(), EffectWhen = EffectWhen,
                 SeatFromPicture = SeatFromPicture, Erase = Over ? Erase : null,
                 Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(), PortraitTexture = Portrait,
-                Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : ""),
+                Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : "")
+                    + ((Sounds?.Count ?? 0) + (SoundsRide?.Count ?? 0) + (SoundsCart?.Count ?? 0) is int ns && ns > 0 ? ", " + ns + " sound(s)" : ""),
             };
+            if ((Sounds?.Count ?? 0) + (SoundsRide?.Count ?? 0) + (SoundsCart?.Count ?? 0) > 0) d.SoundBlocks = Looks.BlocksFromApi(Sounds, SoundsRide, SoundsCart, "Sounds", "skin " + Id);
             if (Regions != null && PaletteColours) d.Report += "Regions on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
             else if (Regions != null)
             {

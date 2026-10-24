@@ -372,6 +372,119 @@ namespace GK2DonkeyAPI
             DrawSkinSeat(skin, mount);
             DrawSkinEffect(skin, mount);
             DrawSkinTuning(skin, mount, ride);
+            DrawSoundRows(skin, mount, ride, ofSkin: true);
+        }
+
+        // ---- the sounds (docs/mount-sounds-design.md): one row per event, the line's source as written in the
+        // skin.cfg block ([Sounds] / [Mount.Sounds], or the style's section when the key is there), set here and
+        // written back by the auto-save; the resolved result (what plays on the ridden instance, and its layer) next to it.
+
+        private static readonly Dictionary<string, string> soundEdits = new Dictionary<string, string>(StringComparer.Ordinal);
+
+        private static void DrawSoundRows(Looks.SkinDef skin, Catalog.Entry mount, bool ride, bool ofSkin)
+        {
+            bool code = ofSkin ? skin.Source == null && !skin.BuiltIn && skin.SourceAssembly == null : !mount.FromPack;
+            Header(ofSkin ? "Sounds of this skin  ([Sounds]" + (ride ? "" : ", [Sounds.Cart]") + ")" : "Sounds of the mount  ([Mount.Sounds]" + (ride ? "" : ", [Mount.Sounds.Cart]") + ", shared by its skins)");
+            if (code)
+            {
+                GUILayout.Label("From code: its sounds are the mod's own (MountSound) and are not edited here.", small);
+                return;
+            }
+            GUILayout.Label("Per event: files of the pack's sounds folder (a.ogg, b.ogg), a game sound id (id#n for one clip), none, or ground (a step by the ground). Empty: not said, the layer below applies. The volume row writes <event>.volume. What plays on the ridden mount, and from which layer, stands to the right.", small);
+            Mount.Instance ridden = Mount.Ridden;
+            foreach (SoundEvents.Def d in SoundEvents.All)
+            {
+                string key = d.Id;
+                string text = ofSkin ? SkinSoundText(skin, ride, key) : MountSoundText(mount, ride, key);
+                string editKey = (ofSkin ? "s:" : "m:") + skin.Id + ":" + key;
+                if (!soundEdits.TryGetValue(editKey, out string shown)) shown = text ?? "";
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(Tip(key, d.Description), text != null ? changed : label, Wd(90f));
+                string typed = GUILayout.TextField(shown, Wd(220f));
+                if (typed != shown) soundEdits[editKey] = typed;
+                bool commit = typed != (text ?? "") && (GUILayout.Button(Tip("Set", "Writes this line into the block (saved to the skin.cfg by the auto-save)."), Wd(40f)) || Event.current.type == EventType.KeyDown && Event.current.keyCode == KeyCode.Return);
+                if (commit)
+                {
+                    soundEdits.Remove(editKey);
+                    if (ofSkin) SkinSoundSet(skin, mount, ride, key, typed.Trim()); else MountSoundSet(mount, ride, key, typed.Trim());
+                }
+                if (text != null && GUILayout.Button(Tip("x", "Takes the line out: the layer below applies again."), Wd(24f)))
+                {
+                    soundEdits.Remove(editKey);
+                    if (ofSkin) SkinSoundSet(skin, mount, ride, key, null); else MountSoundSet(mount, ride, key, null);
+                }
+                SoundSpec sp = ridden != null && ridden.SoundsRig != null ? ridden.SoundsRig.Resolve(key) : null;
+                GUILayout.Label(sp == null ? (ridden == null ? "" : "nothing") : sp.Describe(), small);
+                GUILayout.EndHorizontal();
+                string volKey = key + ".volume";
+                string volText = ofSkin ? SkinSoundText(skin, ride, volKey) : MountSoundText(mount, ride, volKey);
+                float vol = volText != null && float.TryParse(volText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float pv) ? pv : 1f;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(Tip("    volume", "x the player's volume for this event (" + volKey + " in the block). Right-click: not said."), volText != null ? changed : label, Wd(90f));
+                float nv = GUILayout.HorizontalSlider(vol, 0f, 3f, Wd(220f));
+                Rect r = GUILayoutUtility.GetLastRect();
+                bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
+                GUILayout.Label(vol.ToString("0.00"), label, Wd(50f));
+                GUILayout.EndHorizontal();
+                if (unset)
+                {
+                    Event.current.Use();
+                    if (volText != null) { if (ofSkin) SkinSoundSet(skin, mount, ride, volKey, null); else MountSoundSet(mount, ride, volKey, null); }
+                }
+                else if (Mathf.Abs(nv - vol) > 0.0001f)
+                {
+                    string nvText = ((float)Math.Round(nv, 2)).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
+                    if (ofSkin) SkinSoundSet(skin, mount, ride, volKey, nvText); else MountSoundSet(mount, ride, volKey, nvText);
+                }
+            }
+        }
+
+        private static string SkinSoundText(Looks.SkinDef skin, bool ride, string key)
+        {
+            Dictionary<string, string> mine = ride ? skin.SoundsRide : skin.SoundsCart;
+            if (mine != null && mine.TryGetValue(key, out string v)) return v;
+            if (skin.Sounds != null && skin.Sounds.TryGetValue(key, out v)) return v;
+            return null;
+        }
+
+        private static string MountSoundText(Catalog.Entry mount, bool ride, string key)
+        {
+            Dictionary<string, object> mine = ride ? mount.SoundsRide : mount.SoundsCart;
+            if (mine != null && mine.TryGetValue(key, out object v)) return v as string;
+            if (mount.Sounds != null && mount.Sounds.TryGetValue(key, out v)) return v as string;
+            return null;
+        }
+
+        // A line already in the style's section is changed there; else [Sounds] (both styles). Null takes it out
+        // (the style's first, then the shared one).
+        private static void SkinSoundSet(Looks.SkinDef skin, Catalog.Entry mount, bool ride, string key, string value)
+        {
+            Dictionary<string, string> mine = ride ? skin.SoundsRide : skin.SoundsCart;
+            if (value == null)
+            {
+                if (mine != null && mine.Remove(key)) { Catalog.Touch(mount); return; }
+                skin.Sounds?.Remove(key);
+                Catalog.Touch(mount);
+                return;
+            }
+            if (mine != null && mine.ContainsKey(key)) mine[key] = value;
+            else (skin.Sounds ?? (skin.Sounds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value;
+            Catalog.Touch(mount);
+        }
+
+        private static void MountSoundSet(Catalog.Entry mount, bool ride, string key, string value)
+        {
+            Dictionary<string, object> mine = ride ? mount.SoundsRide : mount.SoundsCart;
+            if (value == null)
+            {
+                if (mine != null && mine.Remove(key)) { Catalog.Touch(mount); return; }
+                mount.Sounds?.Remove(key);
+                Catalog.Touch(mount);
+                return;
+            }
+            if (mine != null && mine.ContainsKey(key)) mine[key] = value;
+            else (mount.Sounds ?? (mount.Sounds = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value;
+            Catalog.Touch(mount);
         }
 
         // The effect the skin comes with (effect = / effect_when =): shown under "As the mount or skin" before the mount's own.

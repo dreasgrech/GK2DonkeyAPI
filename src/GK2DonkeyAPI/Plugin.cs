@@ -56,7 +56,7 @@ namespace GK2DonkeyAPI
         // Rider motion while the donkey walks (docs/rider-motion.md): the body's bob, the hands and the head.
         public readonly Tuned<float> BobScale, HandsSteady, HandsSwayPx, HeadSettle;
         public readonly Tuned<int> BobLagFrames, HeadLagFrames;
-        // Sounds tab (MountSounds.cs). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
+        // Sounds tab (Sounds.cs: the base layer of every mount's sounds). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
         public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
             CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo, MountOn, DismountOn, HitchOn, UnhitchOn;
         public readonly Tuned<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
@@ -405,6 +405,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<KeyboardShortcut> JumpKey, FlyKey;
         internal static Tuned<bool> FallGuard;              // never lost: the fall watchdog (SafeSpots.cs)
         internal static Tuned<KeyboardShortcut> ReturnKey;  // never lost: back to the last safe spot by a key
+        internal static Tuned<bool> StandingSounds;         // standing mounts and babies make their sounds near the keeper (Sounds.cs)
 
         // Every [HarmonyPatch] class (tests/FrameworkScan checks the list is complete).
         internal static readonly Type[] PatchClasses =
@@ -572,6 +573,8 @@ namespace GK2DonkeyAPI
                 "If the keeper ever falls out of the world (under the ground, into nothing, far below it) he is put back on the last ground he stood on, with a warning in the log (docs/never-lost.md). Never during a door, a cutscene or a dialogue. Off: nothing watches (the record and the key still work).");
             ReturnKey = Config.Bind("General", "ReturnKey", Defaults.Get("General", "ReturnKey", KeyboardShortcut.Empty),
                 "A key that puts the keeper back on the last safe spot of this scene by hand (stuck somewhere). None: no key. Not during a door, a cutscene or a dialogue.");
+            StandingSounds = Config.Bind("General", "StandingSounds", Defaults.Get("General", "StandingSounds", true),
+                "Standing mounts and babies near you make their sounds: steps, grazing, the lip smack (at the mount sounds' volume). Off: only the mount you ride sounds, and a standing one's lip smack is the game's own.");
             // The on-foot zones of a standing cart (docs/load-on-foot.md), measured from the cart body's drawn box.
             CartZoneSide = Config.Bind("General", "CartZoneSide", Defaults.Get("General", "CartZoneSide", 0.6f),
                 new ConfigDescription("On foot next to a standing cart: how far beside the cart body's sides the cart's area reaches (and the donkey's, which is as wide), world units.", new AcceptableValueRange<float>(0f, 2f)));

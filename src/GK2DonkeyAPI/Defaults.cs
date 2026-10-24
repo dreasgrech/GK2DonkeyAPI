@@ -272,7 +272,7 @@ namespace GK2DonkeyAPI
                 if (tracked == null)
                 {
                     tracked = new List<(string, ConfigEntryBase)>();
-                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, Plugin.CargoZombies, Plugin.CargoChest, Plugin.InstanceControls, Plugin.HitchKey, Plugin.JumpKey, Plugin.FlyKey, Plugin.FallGuard, Plugin.ReturnKey, Plugin.CartZoneSide, Plugin.CartZoneRear, Plugin.CartZoneFrontShift, Plugin.DonkeyZoneAhead, IdleShuffle.On })
+                    foreach (ConfigEntryBase e in new ConfigEntryBase[] { Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, Plugin.CargoZombies, Plugin.CargoChest, Plugin.InstanceControls, Plugin.HitchKey, Plugin.JumpKey, Plugin.FlyKey, Plugin.FallGuard, Plugin.ReturnKey, Plugin.StandingSounds, Plugin.CartZoneSide, Plugin.CartZoneRear, Plugin.CartZoneFrontShift, Plugin.DonkeyZoneAhead, IdleShuffle.On })
                     {
                         tracked.Add(("General", e));
                     }

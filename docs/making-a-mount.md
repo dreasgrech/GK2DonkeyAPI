@@ -78,6 +78,10 @@ cargo = 6              # items its cart carries, 1 to 6 (with the cart it goes a
 [Mount.Tuning]         # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0
 
+[Mount.Sounds]         # the creature's own sounds, shared by its skins (docs/mount-sounds.md): files of this skin's
+voice = click_1.ogg, click_2.ogg   # sounds\ folder, a game sound id, none, or ground; <event>.volume etc.
+lips = none
+
 [Mount.Stats]          # free lines for the Mounts panel
 Legs = 8
 ```
@@ -203,7 +207,7 @@ public sealed class Plugin : BaseUnityPlugin
 The other hooks: `Attached` and `Detached` (the instance becomes or stops being this mount), `Tick(mount, dt)`
 every frame while ridden, or while standing too with `TicksWhileStanding`. One ability object per mount. An
 ability may set the mount's speed, seat, sounds and cart geometry under its owner, and anything on the mount's own
-value replaces it; it may never set the player's skin, effect or colours (such a Set is refused and said once in the
+value replaces it (a sound of its own for an event: `Mounts.Sounds.Set` on the instance, docs/mount-sounds.md); it may never set the player's skin, effect or colours (such a Set is refused and said once in the
 log), and its values are never saved (set again in play).
 
 ## What the API does for either shape, unasked

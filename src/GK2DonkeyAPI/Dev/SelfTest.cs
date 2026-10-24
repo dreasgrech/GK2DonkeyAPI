@@ -200,6 +200,10 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSafety, Name = "safe spots: standing records one, under the ground never; a seed after the load", Body = SafeRecord },
             new Scenario { Group = GroupSafety, Name = "the fall watchdog: under the ground, far below the world, caught; a drop onto the ground and standing under a bridge, left alone", Body = SafeWatchdog },
             new Scenario { Group = GroupSafety, Name = "back to the last safe spot: the API call (on foot, riding), refused with the reason (controls taken, no spot), Saddle Up's rows and button, the watchdog off", Body = SafeReturn },
+            new Scenario { Group = GroupSounds, Name = "the probe: own clips as game sounds (a tone from WAV bytes and from a file, registered in AudioConfig, played by the game's player with its 3D preset and mixer group, taken out again)", Body = SoundsProbe },
+            new Scenario { Group = GroupSounds, Name = "the donkey unchanged: every event of the rig resolves to the [Ride] and [Cart] keys, the API's voice and bell play the game's sounds, a standing one and a foal sound under the standing switch, the lips event taken only when played, a standing snail silent by its mount's pins", Body = SoundsDonkeyUnchanged },
+            new Scenario { Group = GroupSounds, Name = "a pack's own sounds: [Sounds] lines and the sounds folder loaded as game sounds, the convention name, the layers (skin over mount over the keys, a style block), the player's switch on top, a second skin of the mount, the save round trip, the clean-up", Body = SoundsPack },
+            new Scenario { Group = GroupSounds, Name = "the API: Mounts.Sounds (the catalogue, Resolved with its layer, a mod's Set over everything and back, its own clips kept, Play and Stop, the Played event), a code mount's MountSound shared by a pack skin of it", Body = SoundsApi },
         };
 
         // The groups in the order they first appear in the catalog (after Scenarios: static fields initialise in order).

@@ -1,7 +1,8 @@
 """Rewrites every built-in skin.cfg into the canonical layout (docs/mounts-foundation-audit.md section 4) without
 changing a value: [Skin] keys in one order (SKIN_ORDER), then [Game], the skin's own geometry ([Tuning],
-[Tuning.Ride], [Tuning.Cart]), the colour sections ([Colors], [Base.*]), and the [Mount] block last ([Mount], then
-[Mount.Tuning], [Mount.Tuning.Ride], [Mount.Tuning.Cart]), each section's comment above it, CRLF line ends. The
+[Tuning.Ride], [Tuning.Cart]), its sounds ([Sounds], [Sounds.Ride], [Sounds.Cart]), the colour sections ([Colors],
+[Base.*]), and the [Mount] block last ([Mount], then [Mount.Stats], [Mount.Tuning], [Mount.Tuning.Ride],
+[Mount.Tuning.Cart], [Mount.Sounds], [Mount.Sounds.Ride], [Mount.Sounds.Cart]), each section's comment above it, CRLF line ends. The
 [Mount] block always carries id, name, author, version, cart and foals; noun, foal_scale, effect and effect_when
 only when set (MOUNT_ORDER). Run it after editing a cfg by hand, then tests/SkinsScan (the section order and the key
 rules); --check runs in tools/release-scans.sh and refuses a built-in that is not byte for byte in this layout.
@@ -19,7 +20,7 @@ SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "autho
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
 MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
-TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart"]  # [Mount.Stats] first: the panel's lines, then the tuning
+TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart", "mount.sounds", "mount.sounds.ride", "mount.sounds.cart"]  # [Mount.Stats] first: the panel's lines, then the tuning, then the sounds
 MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."
 
 
@@ -105,7 +106,7 @@ def canonical(path):
         out.append("[Game]")
         out.extend(secs["game"]["lines"])
     # the skin's own geometry ([Tuning], then per style), as written
-    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]")):
+    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]")):
         if name in secs and any("=" in l for l in secs[name]["lines"]):  # an empty section is left out (the scan refuses one)
             out.append("")
             out.extend(secs[name]["above"])
@@ -134,7 +135,7 @@ def canonical(path):
                 out.extend(secs[name]["lines"])
     if "mount" not in secs and any(name in secs for name in TUNING_SECTIONS):
         raise SystemExit(f"{path}: a [Mount.*] section without a [Mount] section (the game ignores it; add the block or take the section out)")
-    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "colors", "mount"} | set(TUNING_SECTIONS)
+    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "colors", "mount"} | set(TUNING_SECTIONS)
     for name in order:
         if name not in known and not name.startswith("base."):
             raise SystemExit(f"{path}: section [{name}] is not one the loader knows")

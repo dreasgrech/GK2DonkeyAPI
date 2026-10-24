@@ -550,7 +550,10 @@ namespace GK2DonkeyAPI
                 {
                     try
                     {
-                        MountSounds.Tick(donkey, pc.PlayerData.charState.Value == AnimationState.Walk);
+                        using (Perf.Measure(Perf.S.Sounds))
+                        {
+                            SoundsRig.Tick(pc.PlayerData.charState.Value == AnimationState.Walk);
+                        }
                     }
                     catch (Exception e)
                     {
@@ -762,7 +765,7 @@ namespace GK2DonkeyAPI
                 MountRules.Poll(force: true);
                 activeStyle = style;
                 Position = pc.PlayerData.position.Value;
-                riderAttached = true; // sounds are bound from the mount on (MountSounds.OnMounted below)
+                riderAttached = true; // sounds are bound from the mount on (SoundsRig.OnMounted below)
                 if (!TrySpawn(pc, scene))
                 {
                     reason = "Your mount is nowhere to be found.";
@@ -775,8 +778,8 @@ namespace GK2DonkeyAPI
                 mounted = true;
                 lastGoodGroundDelta = 0f; // a new ride: no ride sample yet (Ride style ground, Mount.cs)
                 Ridden = this;
-                MountSounds.OnMounted();
-                MountSounds.Moment(this, "mount");
+                SoundsRig.OnMounted();
+                SoundsRig.Emit("mount");
                 riderFacingX = pc.PlayerData.Direction.x < -0.05f ? -1f : 1f;
                 if (SideView)
                 {
@@ -1074,7 +1077,7 @@ namespace GK2DonkeyAPI
                 // re-summon, a style change (he gets straight on again).
                 if (reason != "indoors" && reason != "scene changed" && reason != "style change" && reason != "could not re-summon the donkey")
                 {
-                    MountSounds.Moment(this, "dismount");
+                    SoundsRig.Emit("dismount");
                 }
                 CargoSheet.Abort("dismount: " + reason); // before Park keeps the cargo on a standing cart
                 if (reason == "indoors" || reason == "scene changed")
@@ -1095,6 +1098,7 @@ namespace GK2DonkeyAPI
                 ColorsRig.Release();
                 LooksRig.Release();
                 EffectsRig.Release();
+                SoundsRig.Release();
                 RestoreSeat();
                 RestoreSpeed(pc);
                 RestorePose(pc);
@@ -1145,6 +1149,7 @@ namespace GK2DonkeyAPI
                     ColorsRig.Release();
                     LooksRig.Release();
                     EffectsRig.Release();
+                    SoundsRig.Release();
                     Unregister(this);
                 }
                 if (was)
@@ -1291,6 +1296,7 @@ namespace GK2DonkeyAPI
             private void PrepareParts(PlayerController pc)
             {
                 partsReady = true;
+                NoteAnimation(this, donkey != null && donkey ? donkey.MainWgoPart?.AnimationComponent : null); // the lips event finds its instance (Sounds.cs)
                 try
                 {
                     // No still head over the walk (the "double donkey"): the animator started again with the head layer
@@ -2775,7 +2781,6 @@ namespace GK2DonkeyAPI
                 // this view. Not "mounted": a dismount clears that before it gets here, and the old code ran these always.
                 if (riderAttached)
                 {
-                    MountSounds.OnDonkeyGone();
                     RiderLeg.Detach();
                     UnhookKeeperLateUpdate();
                 }

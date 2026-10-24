@@ -336,6 +336,7 @@ namespace GK2DonkeyAPI
                 else if (want == Tier.Idle)
                 {
                     QuietAnimators(true);
+                    SoundsRig.StopAll(); // the view stays but the rig stops ticking: nothing left looping under a frozen donkey
                 }
                 else if (want == Tier.Active)
                 {

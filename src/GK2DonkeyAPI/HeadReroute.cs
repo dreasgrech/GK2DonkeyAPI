@@ -118,7 +118,7 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning("Cargo: take sound failed: " + e.Message);
             }
-            MountSounds.CargoLanded();
+            Sounds.CargoLanded();
             Plugin.Log.LogInfo($"Cargo: picked up {Cargo.Name(item)} straight onto the cart ({inv.Data.Inventory.Count}/{inv.Data.InventorySize}).");
             return true;
         }

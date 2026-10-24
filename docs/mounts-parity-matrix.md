@@ -171,7 +171,8 @@ So one decision remains yours: **9.5 (a) or (b)**; and a yes on 9.1's home for t
 - **1.3** Every skin declares `[Colors]`, Gerry with `Dark` for the sockets.
 - **2.4** The effect ring scales with the canvas (96 = 1.0); a `[Mount] effect_radius` later if a mount wants more.
 - **2.6** Phase 1 now: a mount may set or silence the sound keys in `[Mount.Tuning]`, documented, the snail
-  silenced, the worm's hoofsteps off; phase 2 is a design of its own.
+  silenced, the worm's hoofsteps off; phase 2 is a design of its own (built 2026-10-24: [mount-sounds.md](mount-sounds.md);
+  a skin may now override its mount's sounds, amending 9.1's "creature facts are the mount's" for sounds).
 - **2.13** No skin-level effect; the player's pick stays the rule (an over skin is a drawing).
 - **4.1** Packs are the full format; code skins are for generated or dynamic pictures. Write it down; add only the
   cheap info fields (4.3).
@@ -192,7 +193,7 @@ Everything tagged **fix** needs no decision and goes into the plan as is.
 | 2.3 | **done** (M4): the mount's size for its own babies, 0.6 for plain donkeys; `SpawnFoal` defaults to the parent's |
 | 2.4 | **done** (M3): the ring scales by the drawn standing width (self-test: the rat 1.48); Gerry's by eye (open) |
 | 2.5 | **open**: the user's look first (shadow and grass bend on the dragon and Gerry) |
-| 2.6 | **phase 1 done** (M4): the sound keys are a mount's to set; the snail and the worm silent, Gerry's lips off; phase 2 (a sounds API) not planned |
+| 2.6 | **phase 1 done** (M4): the sound keys are a mount's to set; the snail and the worm silent, Gerry's lips off; **phase 2 built 2026-10-24**: the sound system per instance with a pack's own files, `[Sounds]` / `[Mount.Sounds]` and the API ([mount-sounds.md](mount-sounds.md)) |
 | 2.7 | **done** (M4): `Spawn(WithCart)` refused; a hitched mount that becomes a no-cart mount leaves the cart standing |
 | 2.8 | **done** (M4): report lines, and the scan's rules |
 | 2.9 | **done** (M4): `MountSkinInfo.Regions`, `MountSettingsPage.EnableWhen` / `MountHasRegion`; Saddle Up greys the row |

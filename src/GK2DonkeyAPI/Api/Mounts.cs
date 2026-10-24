@@ -181,7 +181,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (Mount.IsMounted && MountRules.Allowed(MountFeature.Sounds) && MountRules.Allowed(MountFeature.Bell))
             {
-                MountSounds.RingBell();
+                GK2DonkeyAPI.Sounds.RingBell(); // the type, not the Sounds property of this class
             }
         }
 
@@ -189,7 +189,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (Mount.IsMounted && MountRules.Allowed(MountFeature.Sounds))
             {
-                MountSounds.Bray();
+                GK2DonkeyAPI.Sounds.Bray();
             }
         }
 
@@ -275,7 +275,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
                     Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey,
-                    Plugin.FallGuard, Plugin.ReturnKey,
+                    Plugin.FallGuard, Plugin.ReturnKey, Plugin.StandingSounds,
                 }));
             }
         }
@@ -362,6 +362,10 @@ namespace GK2DonkeyAPI.Api
         // Particle effects on donkeys (docs/mount-looks-design.md): the list, registering, the game's particles as a
         // source. A donkey shows one through its tuning keys "Effect" and "EffectWhen", or MountCompanion.Effect.
         public static MountEffects Effects { get; } = new MountEffects();
+
+        // The mount sounds (docs/mount-sounds-design.md): the catalogue of events, what plays for one on an instance,
+        // a mod's own sound for one, Play and Stop, the Played event.
+        public static MountSounds Sounds { get; } = new MountSounds();
 
         // Mounts (docs/mounts-design.md): what is ridden as a creature type, with its seat, rules and abilities;
         // a skin is a look of one mount.

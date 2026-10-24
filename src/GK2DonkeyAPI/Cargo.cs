@@ -350,7 +350,7 @@ namespace GK2DonkeyAPI
                 {
                     if (reason == "mount")
                     {
-                        MountSounds.CargoLanded(); // not when the cargo goes back on after a save (waking up)
+                        Sounds.CargoLanded(); // not when the cargo goes back on after a save (waking up)
                     }
                     Plugin.Log.LogInfo($"Cargo: {moved} item(s) moved from the hands onto the cart ({reason}); cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}.");
                 }
@@ -389,7 +389,7 @@ namespace GK2DonkeyAPI
                 }
                 HeadReroute.RelinkZombie(inv, item, owner.Describe());
                 pd.RemoveOverheadItem(item);
-                MountSounds.CargoLanded();
+                Sounds.CargoLanded();
                 Plugin.Log.LogInfo($"Cargo: {Cargo.Name(item)} loaded onto {owner.Describe()} from the hands; cart {inv.Data.Inventory.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} still held.");
                 return null;
             }

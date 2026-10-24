@@ -51,7 +51,8 @@ namespace GK2DonkeyAPI
         internal const string OverlayBody = OverlayPrefix + "bdy";
         internal const string OverlayHead = OverlayPrefix + "hed";
         internal const string FrontSuffix = "_front";   // the second overlay per part: drawn in front of the rider
-        internal const string FrontKey = "front/";      // a front picture's key: "front/bdy_walk_left_03"
+        internal const string FrontKey = "front/";
+        internal const string SoundsKey = "sounds/"; // a pack's sounds\ folder: its files keyed "sounds/<file>" (SoundBank.ForSkin reads them)      // a front picture's key: "front/bdy_walk_left_03"
         internal const string TuningOwner = "dreas.gk2.donkeyapi.skin"; // the owner of the overrides a skin's tuning sets
 
         // The skin an instance wears, by id ("" or "donkey" = the game's own look). A look key (IsLook): an instance
@@ -224,6 +225,10 @@ namespace GK2DonkeyAPI
             // The skin's per-style values ([Tuning.Ride] / [Tuning.Cart]: a pack's text, a code skin's typed values), on
             // top of [Tuning] for that style. The skin owns its drawing's geometry (docs/mounts-parity-matrix.md 9.1).
             internal Dictionary<string, object> TuningRide, TuningCart;
+            // The skin's sounds (skin.cfg [Sounds], [Sounds.Ride], [Sounds.Cart]: the raw lines, written back by SaveCfg)
+            // and their parsed form (LooksSounds.cs; docs/mount-sounds-design.md).
+            internal Dictionary<string, string> Sounds, SoundsRide, SoundsCart;
+            internal SoundBlocks SoundBlocks;
             // The pictures moved on the view, in art pixels (x towards the head, y up), riding and with the cart hitched
             // (a creature that should sit closer to the shafts, say).
             internal Vector2 OffsetRide, OffsetCart;
@@ -286,7 +291,11 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Owner}) has no author prefix: a skin or mount id from another mod is '<author>.<name>' by convention (docs/skins.md), so two authors' names never meet.");
             }
-            if (old != null) ForgetPortraits(old.Id); // before its declaration moves or is cleared: a joiner mount's stand-in is reached through DeclaredBy
+            if (old != null)
+            {
+                ForgetPortraits(old.Id); // before its declaration moves or is cleared: a joiner mount's stand-in is reached through DeclaredBy
+                SoundBank.ForgetSkin(old);
+            }
             if (d.DeclaredMount != null)
             {
                 d.DeclaredMount.Owner = d.Owner;
@@ -378,6 +387,11 @@ namespace GK2DonkeyAPI
                         {
                             foreach (var f in front) pics[FrontKey + f.Key] = f.Value;
                         }
+                        // the skin's sounds: the "sounds" subdirectory, keyed "sounds/<file>"
+                        if (files.TryGetValue(kv.Key + sep + "sounds", out var sounds))
+                        {
+                            foreach (var f in sounds) if (SoundBlock.IsSoundFile(f.Key)) pics[SoundsKey + f.Key] = f.Value;
+                        }
                     }
                     byte[] Bytes(string file)
                     {
@@ -457,6 +471,11 @@ namespace GK2DonkeyAPI
             {
                 foreach (string f in Directory.GetFiles(frontDir, "*.png")) names.Add(FrontKey + Path.GetFileName(f));
             }
+            string soundsDir = Path.Combine(dir, "sounds");
+            if (Directory.Exists(soundsDir))
+            {
+                foreach (string f in Directory.GetFiles(soundsDir)) if (SoundBlock.IsSoundFile(f)) names.Add(SoundsKey + Path.GetFileName(f));
+            }
             byte[] Bytes(string file)
             {
                 string f = Path.Combine(dir, file.Replace('/', Path.DirectorySeparatorChar));
@@ -477,6 +496,8 @@ namespace GK2DonkeyAPI
             if (d == null || d.Owner != owner) return false;
             defs.Remove(d.Id);
             ForgetPortraits(d.Id);
+            SoundBank.ForgetSkin(d); // its files' entries, so a pack put back is read anew
+            SoundBank.UnregisterAll("skin/" + d.Id); // a code skin's clips (the entries only: the clips are the mod's)
             if (d.DeclaredMount != null)
             {
                 // the mount its [Mount] block declared goes with it unless another skin of this owner declares it (as a
@@ -548,6 +569,7 @@ namespace GK2DonkeyAPI
             var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
             string source = null;
             Dictionary<string, object> kt = null, ktRide = null, ktCart = null;
+            Dictionary<string, object> ks = null, ksRide = null, ksCart = null; // [Mount.Sounds*]: the raw lines
             var unknownSections = new List<string>();
             foreach (string raw in text.Split('\n'))
             {
@@ -560,7 +582,7 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.stats" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
+                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.stats" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "mount.sounds" && section != "mount.sounds.ride" && section != "mount.sounds.cart" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -583,6 +605,9 @@ namespace GK2DonkeyAPI
                     case "tuning": (d.Tuning ?? (d.Tuning = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "tuning.ride": (d.TuningRide ?? (d.TuningRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "tuning.cart": (d.TuningCart ?? (d.TuningCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "sounds": (d.Sounds ?? (d.Sounds = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "sounds.ride": (d.SoundsRide ?? (d.SoundsRide = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "sounds.cart": (d.SoundsCart ?? (d.SoundsCart = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "game": game[key] = value; continue;
                     case "mount": mount[key] = value; continue;
                     case "mount.stats":
@@ -592,6 +617,9 @@ namespace GK2DonkeyAPI
                     case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.ride": (ktRide ?? (ktRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "mount.tuning.cart": (ktCart ?? (ktCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "mount.sounds": (ks ?? (ks = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "mount.sounds.ride": (ksRide ?? (ksRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
+                    case "mount.sounds.cart": (ksCart ?? (ksCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "colors": ColorRegionLine(d, key, value, where); continue;
                     case "skin": break;
                     default: continue;
@@ -674,11 +702,13 @@ namespace GK2DonkeyAPI
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
             int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
             if (tuningKeys > 0) d.Report += tuningKeys + " tuning key(s)" + (d.TuningRide != null || d.TuningCart != null ? " (some per style)" : "") + "; ";
+            int soundLines = ReportSoundBlocks(d, null, ks, ksRide, ksCart); // every line checked, the problems named (LooksSounds.cs)
+            if (soundLines > 0) d.Report += soundLines + " sound line(s); ";
             if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
             {
                 // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
                 // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
-                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart };
+                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart };
                 k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
                 if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
                 if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
@@ -727,9 +757,9 @@ namespace GK2DonkeyAPI
                 d.DeclaredMount = k;
                 d.Report += "declares the mount '" + k.Id + "'; ";
             }
-            else if (kt != null || ktRide != null || ktCart != null || stats.Count > 0)
+            else if (kt != null || ktRide != null || ktCart != null || ks != null || ksRide != null || ksCart != null || stats.Count > 0)
             {
-                d.Report += "a [Mount.Tuning] or [Mount.Stats] section without a [Mount] id is ignored; ";
+                d.Report += "a [Mount.Tuning], [Mount.Sounds] or [Mount.Stats] section without a [Mount] id is ignored; ";
             }
             if (source == "game")
             {
@@ -1032,7 +1062,7 @@ namespace GK2DonkeyAPI
                 var pending = new List<string>();                                // comment lines waiting for the next header or key
                 string seatNote = null;                                          // the remark on the [Skin] seat line (the key is regenerated)
                 string effectNote = null;                                        // the same for the effect line
-                bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec.StartsWith("mount", StringComparison.Ordinal));
+                bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec == "sounds" || sec.StartsWith("sounds.", StringComparison.Ordinal) || sec.StartsWith("mount", StringComparison.Ordinal));
                 bool declaresMount = false;
                 string section = null;
                 string nl = "\n";
@@ -1140,6 +1170,10 @@ namespace GK2DonkeyAPI
                     WriteSection(sb, "[Tuning]", AsObjects(d.Tuning), NotesOf("tuning"));
                     WriteSection(sb, "[Tuning.Ride]", d.TuningRide, NotesOf("tuning.ride"));
                     WriteSection(sb, "[Tuning.Cart]", d.TuningCart, NotesOf("tuning.cart"));
+                    // the skin's sounds, after its geometry (docs/mount-sounds-design.md)
+                    WriteSection(sb, "[Sounds]", AsObjects(d.Sounds), NotesOf("sounds"));
+                    WriteSection(sb, "[Sounds.Ride]", AsObjects(d.SoundsRide), NotesOf("sounds.ride"));
+                    WriteSection(sb, "[Sounds.Cart]", AsObjects(d.SoundsCart), NotesOf("sounds.cart"));
                 }
                 bool tuningWritten = false;
                 foreach ((string Header, List<string> Above, List<string> Lines) other in otherSections)
@@ -1198,6 +1232,9 @@ namespace GK2DonkeyAPI
                     WriteSection(sb, "[Mount.Tuning]", k.Tuning, NotesOf("mount.tuning"));
                     WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide, NotesOf("mount.tuning.ride"));
                     WriteSection(sb, "[Mount.Tuning.Cart]", k.TuningCart, NotesOf("mount.tuning.cart"));
+                    WriteSection(sb, "[Mount.Sounds]", k.Sounds, NotesOf("mount.sounds"));
+                    WriteSection(sb, "[Mount.Sounds.Ride]", k.SoundsRide, NotesOf("mount.sounds.ride"));
+                    WriteSection(sb, "[Mount.Sounds.Cart]", k.SoundsCart, NotesOf("mount.sounds.cart"));
                 }
                 string text = nl == "\n" ? sb.ToString() : sb.ToString().Replace("\n", nl);
                 if (File.Exists(path) && File.ReadAllText(path) == text) return null; // the same already: no write, no undo step
@@ -1270,6 +1307,7 @@ namespace GK2DonkeyAPI
                     }
                 }
                 ForgetPortraits(d.Id);
+                SoundBank.ForgetSkin(d); // a changed sound file is read anew on the next play
                 Register(fresh);
                 // the mount the old file declared, when the new one doesn't (renamed, or the block gone): withdrawn unless
                 // another skin of this owner declares it; its other skins fall back to the donkey mount, said by Unregister

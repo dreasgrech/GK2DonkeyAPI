@@ -160,6 +160,9 @@ class GK2DonkeyAPI.Api.MountDef
   field string Name
   field string Noun
   field UnityEngine.Texture2D Portrait
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> Sounds
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
   field System.Nullable<float> Speed
   field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountStat> Stats
   field System.Collections.Generic.Dictionary<string, object> Tuning
@@ -295,6 +298,9 @@ class GK2DonkeyAPI.Api.MountInfo
   property string Noun { get; }
   property string Owner { get; }
   property System.Collections.Generic.IReadOnlyList<string> Skins { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> Sounds { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsCart { get; }
+  property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsRide { get; }
   property float Speed { get; }
   property string SpeedWord { get; }
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountStat> Stats { get; }
@@ -363,6 +369,7 @@ static class GK2DonkeyAPI.Api.Mounts
   property static string Owner { get; }
   property static GK2DonkeyAPI.Api.MountHandle Riding { get; }
   property static GK2DonkeyAPI.Api.MountTuning Shuffle { get; }
+  property static GK2DonkeyAPI.Api.MountSounds Sounds { get; }
   property static string StatusText { get; }
   property static GK2DonkeyAPI.Api.MountStyle Style { get; }
   event static System.Action<GK2DonkeyAPI.Api.CargoItem> CargoLoaded
@@ -460,6 +467,9 @@ class GK2DonkeyAPI.Api.MountSkinDef
   field System.Collections.Generic.Dictionary<string, System.String[]> Regions
   field bool SeatFromPicture
   field int SeatRow
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> Sounds
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
+  field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
   field GK2DonkeyAPI.Api.IMountSkinSource Source
   field System.Collections.Generic.Dictionary<string, object> Tuning
   field System.Collections.Generic.Dictionary<string, object> TuningCart
@@ -504,6 +514,40 @@ class GK2DonkeyAPI.Api.MountSkinInfo
   property string Source { get; }
   property string Version { get; }
   method string ToString()
+class GK2DonkeyAPI.Api.MountSound
+  field bool ByGround
+  field UnityEngine.AudioClip[] Clips
+  field System.String[] Files
+  field string GameId
+  field System.Nullable<bool> Loop
+  field System.Collections.Generic.Dictionary<string, float> Numbers
+  field System.Nullable<float> Pitch
+  field System.Nullable<float> PitchVariation
+  field bool Silent
+  field System.Nullable<bool> Speech
+  field System.Nullable<float> Start
+  field System.Nullable<float> Volume
+  property static GK2DonkeyAPI.Api.MountSound Ground { get; }
+  property static GK2DonkeyAPI.Api.MountSound None { get; }
+  method void .ctor()
+  method static GK2DonkeyAPI.Api.MountSound Game(string id)
+  method static GK2DonkeyAPI.Api.MountSound Own(UnityEngine.AudioClip[] clips)
+  method string ToString()
+class GK2DonkeyAPI.Api.MountSoundEvent
+  property string Description { get; }
+  property string Id { get; }
+  property System.Collections.Generic.IReadOnlyList<string> Numbers { get; }
+  property bool Stoppable { get; }
+  property System.Collections.Generic.IReadOnlyList<string> Variants { get; }
+  method string ToString()
+class GK2DonkeyAPI.Api.MountSounds
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountSoundEvent> Catalogue { get; }
+  property System.Collections.Generic.IReadOnlyList<string> Events { get; }
+  event System.Action<GK2DonkeyAPI.Api.MountHandle, string> Played
+  method GK2DonkeyAPI.Api.MountResult Play(GK2DonkeyAPI.Api.MountHandle mount, string eventId, string variant = null)
+  method GK2DonkeyAPI.Api.MountSound Resolved(GK2DonkeyAPI.Api.MountHandle mount, string eventId, System.String& layer, string variant = null)
+  method System.IDisposable Set(string ownerId, GK2DonkeyAPI.Api.MountHandle mount, string eventId, GK2DonkeyAPI.Api.MountSound sound)
+  method void Stop(GK2DonkeyAPI.Api.MountHandle mount, string eventId)
 class GK2DonkeyAPI.Api.MountSpawn
   field bool Donkey
   field bool FacingRight

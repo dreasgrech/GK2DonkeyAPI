@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Standing mounts and babies now make their sounds near you**: a parked donkey grazes and smacks its lips at the
+  mount sounds' volume, a baby's steps are higher and softer, a herd standing in the yard is heard as the ridden one
+  is (within the game's hearing distance). The mount you ride sounds exactly as before. The API cfg's `[General]
+  StandingSounds` (on) turns it off, which also hands a standing donkey's lip smack back to the game (its own
+  volume, as before); the dev Sounds tab has the switch.
 - **Never lost.** If you ever fall out of the world (under the ground, into nothing, far below it) you are put back on
   the last ground you stood on, with "Back on solid ground." (the game itself has no protection: off the ground the
   keeper falls for ever, and a door places him without a check). Saddle Up's Behaviour section has the switch ("Bring
@@ -144,6 +149,23 @@ For players:
 
 For mod authors:
 
+- **The sounds API** (docs/mount-sounds-design.md, phase 1 step 4): `Mounts.Sounds` with the catalogue of events,
+  `Resolved` (what plays on an instance and from which layer), `Set` (a mod's own sound over everything, a game id
+  or its own clips, back on Dispose), `Play` and `Stop`, the `Played` event; `MountSkinDef.Sounds` and
+  `MountDef.Sounds` (and the per-style pair) for skins and mounts registered in code; `MountInfo.Sounds`. The Mounts
+  tab (F11) edits a pack's sound lines: one row per event for the skin's block and for the mount's, the line's
+  source and its volume, with what the ridden mount plays and from which layer next to it; the auto-save writes
+  them to the skin.cfg. Self-test "the API" (group Sounds).
+- **A skin pack brings its own sounds** (docs/mount-sounds.md, the author's page; the design in docs/mount-sounds-design.md): `.ogg` or `.wav` files in the pack's `sounds\` folder, named for their event by convention
+  (`voice_1.ogg`, `voice_2.ogg`, `step.grass_1.wav`) or lined up in a `[Sounds]` block of skin.cfg (`voice = a.ogg,
+  b.ogg`, `voice.volume = 0.8`, `step.grass = step_grass`, `lips = none`, `step = ground`; `[Sounds.Ride]` and
+  `[Sounds.Cart]` for one style), and a mount's own in `[Mount.Sounds]` (and its style sections) of the declaring
+  skin's cfg, shared by every skin of the mount. A skin's line wins over its mount's, a style block over the
+  both-styles one, and the player's switches and volumes scale whatever won. The files are loaded when first needed
+  (an embedded `.ogg` through a cache file under BepInEx\cache) and registered as game sounds, so they play through
+  the game's own player and follow its Sounds slider; a missing or bad file is named once and the layer below
+  applies. The Mounts tab's auto-save keeps the sections; `tests/SkinsScan` and `canonical_cfg.py` know them.
+  Self-test "a pack's own sounds" (group Sounds).
 - **Each mount's own speed and cargo** (breaking, pre-release): `MountDef.Speed` (`float?`, times the keeper's
   walking speed, 0.5 to 4; null = the donkey's, the API cfg's `SpeedMultiplier`) and a pack's `[Mount] speed =`, over
   a `SpeedMultiplier` in the mount's tuning; with the cart it is times the donkey's cart-to-riding ratio (1.5 / 2 as
@@ -517,6 +539,27 @@ For mod authors:
 
 Development:
 
+- **A sound rig per mount instance** (docs/mount-sounds-design.md, phase 1 step 2): `MountSounds.cs` (one static
+  set of timers for the ridden mount) is now `Sounds.cs`: every instance has a `Sounds.Rig` with its own timers and
+  animator reading, so the ridden one, a standing one in the Active tier and a foal all sound; every event is a row
+  of the catalogue `SoundEvents.cs` (`step` with its surface variants, `wheel`, `graze`, `lips`, `voice`, `mount`,
+  `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, and the silent-by-default `setoff`, `stop`, `ear`, `turn`,
+  `refused`, `sent`, `called`), resolved per instance into a `SoundSpec` (the source, volume, pitch, start, the
+  event's own numbers, the layer it came from: the player's `[Ride]` / `[Cart]` keys are the base layer; a mount's
+  and a skin's blocks come in the next step). Every rig entry point binds its instance, so a mount's pins reach a
+  standing wearer too (the snail stays silent standing); `Resolve` binds as well, since the dev tab and the tests
+  call it directly and its half-second cache must never hold an unbound reading (found by the test 2026-10-24). The lips animation event finds its instance through a view
+  map (`Mount.ByAnimation`) instead of the ridden view only; a tier change to Idle stops a rig's loops. The dev
+  Sounds tab lists every event of the ridden mount with its resolved source and layer and a Play button; `Perf.S.Sounds`
+  measures the rigs. Self-test "the donkey unchanged" (group Sounds): every event resolves to the keys of both
+  styles, the API's voice and bell play the game's sounds, standing and foal under the switch, the snail's pins.
+- **Own sound clips as game sounds (the probe for a sound system of our own)**: `SoundBank` registers a clip of the
+  mod's own (a `.wav` parsed by the mod, a `.ogg` or `.wav` file decoded by Unity) as an entry of the game's
+  `AudioConfig` under a namespaced id, so it plays through the game's own pooled player with its 3D preset and the
+  in-world mixer group (the Sounds slider, the pause). Self-test "the probe" (group Sounds), the dev Sounds tab's
+  "Play the probe tone at the mount" button; the design, every mount sound event and the plan in
+  docs/mount-sounds-design.md. The game-code map (game-code.txt) now sorts the never-lost classes (warned) and
+  the flight's terrain and work-state patches (dev), which the Cecil scan had been failing on.
 - **The dragon's legs redrawn** (mounts and skins are still off for players in this version): long, muscled legs that
   step properly when walking, paws with gold claws, the body 6 px higher on them (its seat row 62).
   The skin preview page takes `--study <folder>` to show a skin being drawn next to the shipped one.

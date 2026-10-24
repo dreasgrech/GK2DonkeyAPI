@@ -30,6 +30,10 @@ since a mount can have several skins; think about performance.*
 | **Mount** (`MountDef`, `Mounts.Catalog`) | *What the player rides*: a creature type. | Identity (id, name, noun, author, version); rules (may it pull the cart, may it have foals, their size); defaults (an effect); its sounds and other creature facts as tuning values (never the picture keys: those are the skin's, per style); **abilities** (code hooks). | donkey, giant rat, giant snail, giant worm, dragon, gerry |
 | **Skin** (`MountSkinDef`, `Mounts.Looks`) | *How it is drawn*: a complete set of pictures for one mount's frame keys, made any way (a recolour recipe, a folder of PNGs, a sheet, own art, code sprites). | The pictures (behind and in front of the rider), the canvas, where the pictures sit (`offset`, `offset_cart`); and only when its drawing differs from the mount's other skins, the picture-dependent keys of the mount's tuning (its own `[Tuning]`: seat, torso, legs, hitch gap). | Red Dragon (mount dragon); Hellfire, Royal Parade (mount donkey, over its art); rat; snail; worm; gerry (the game's frames) |
 
+**Amended 2026-10-24 (the sound system, [mount-sounds-design.md](mount-sounds-design.md)):** a mount's sounds are
+the creature's by default and **a skin may override any event of them** (`[Sounds]` over `[Mount.Sounds]`, the
+player's keys under both): two drawings of one creature may have different voices. The rest of the table stands.
+
 **In one sentence: a mount has skins.** The Donkey is a mount; the game's own donkey (Default) and Hellfire are its
 skins. The Dragon is a mount with one skin today (Default); a second would be another drawing of it. The Giant Rat, Giant Snail
 and Giant Worm are mounts with one skin each. **The mount is the creature, the skin is the drawing**: a mount's values
@@ -223,5 +227,5 @@ the ids and keys (`npc_donkey`, `FoalCount`, the API's names: 0.9.x is public, t
 
 ## 9. Not in this version
 
-Sounds per mount (the sounds API first), flight/fire/gallop abilities (each its own design), mounts on another base
+~~Sounds per mount (the sounds API first)~~ (built 2026-10-24: [mount-sounds.md](mount-sounds.md)), flight/fire/gallop abilities (each its own design), mounts on another base
 (a second `SkinBase` first), a picker with pictures per mount.

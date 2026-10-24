@@ -43,6 +43,10 @@ A mod built on the API needs none of this code itself; Saddle Up is about 160 li
 the dev panel's Instances tab. Foals (small donkeys that stay with a parent, `Mounts.SpawnFoal`):
 [`docs/foals.md`](foals.md).
 
+**Standing sounds** (`StandingSounds`, on): standing mounts and babies near the keeper make their sounds (steps,
+grazing, the lip smack, at the mount sounds' volume; a baby higher and softer). Off: only the ridden mount sounds,
+and a standing one's lip smack is the game's own ([`docs/mount-sounds-design.md`](mount-sounds-design.md)).
+
 **Never lost** (`FallGuard`, on; `ReturnKey`, None): the keeper fallen out of the world is put back on the last ground
 he stood on; the key does it by hand ([`docs/never-lost.md`](never-lost.md)).
 
@@ -164,6 +168,14 @@ plays these itself through the game's own sound player: game sound ids, 3D at th
 groups, so the in-game volume sliders apply. No audio files ship with the mod. Volumes and pitches multiply the
 game's own values for that sound. Every sound id is editable (any id from the game's list; an unknown id plays
 nothing, is flagged on the tab and logged once), and each has a play button on the tab. Defaults below are Ride / Cart.
+
+Since 2026-10-24 these keys are the **base layer** of a sound system per mount instance
+([`docs/mount-sounds-design.md`](mount-sounds-design.md)): every mount sound is an event of a catalogue (`step`,
+`wheel`, `graze`, `lips`, `voice`, `mount`, `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, ...), each instance has
+its own rig (its timers, its animator), and the keys below say what the donkey plays for each event and scale what a
+mount or a skin gives instead. The table's old names stand: `Hoof*` are the `step` event's keys, `Bray*` the `voice`
+event's, `CargoThump*` the `cargo` event's. Standing instances and babies sound too (`StandingSounds` above). How a
+pack or a mod gives a mount its own sounds: [`docs/mount-sounds.md`](mount-sounds.md).
 
 | Key | Default | Meaning |
 |---|---|---|

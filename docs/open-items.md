@@ -367,6 +367,13 @@ closed):
   0.1.0. Align them before release (and decide whether Saddle Up's dependency should then name a minimum version).
 - **The game's Settings window has no text row:** the donkey's name can't be edited there (only in the cfg or in
   the Mods menu).
+- **Mount sounds system** ([mount-sounds-design.md](mount-sounds-design.md), [mount-sounds.md](mount-sounds.md)):
+  **phase 1 built and F11-green 2026-10-24** (the probe, a Sounds.Rig per instance, packs' own files with [Sounds] /
+  [Mount.Sounds], the API). Open: phase 2 (the flying events: take-off, wing beats, glide, landing, jump; the hook
+  points are in the design's 3.2), phase 3 (a standing herd's calls, the babies' answers, [Sounds.Baby]), the built-in
+  skins' own sound files (none yet: the dragon's roar and the rat's squeak are the user's picks or recordings; the
+  game's donkey_default_* lines are free by id), a Saddle Up row for StandingSounds, the by-ear check of the probe
+  tone (3D, the Sounds slider, the pause).
 - **Foal sounds:** investigated, nothing built ([foal-sounds.md](foal-sounds.md)). Waiting on the audition
   (`C:\ClaudeCodeTemp\GK2-foal-sound-audition\`): the pitch, whether a filter is worth it, which calls.
 - **The game's sounds:** all 6,393 clips extracted 2026-10-04 ([game-sounds.md](game-sounds.md)); a 66-clip donkey

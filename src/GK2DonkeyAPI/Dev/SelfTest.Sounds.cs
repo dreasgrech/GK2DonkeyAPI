@@ -1,0 +1,507 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using HarmonyLib;
+using LazyBearTechnology;
+using UnityEngine;
+using UnityEngine.Audio;
+
+using GK2DonkeyAPI.Api;
+
+namespace GK2DonkeyAPI
+{
+    // The sound system's scenarios (docs/mount-sounds-design.md). The probe: a clip of the mod's own, registered as a
+    // game sound (SoundBank), plays through the game's own player with its 3D preset and mixer group. The donkey
+    // unchanged: every event of the rig resolves to the player's cfg keys as before, standing ones and foals sound
+    // under the standing switch, a mount's pins still silence (the bind in the rig).
+    internal static partial class SelfTest
+    {
+        private const string GroupSounds = "Sounds";
+
+        // The pooled player behind a handler (a private field of the game's; Access.Verify requires it).
+        private static readonly AccessTools.FieldRef<SoundHandler, SoundController> HandlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
+
+        private static string ClipOf(SoundHandler h)
+        {
+            try
+            {
+                SoundController sc = h != null ? HandlerSource(h) : null;
+                return sc != null && sc.audioSource != null && sc.audioSource.clip != null ? sc.audioSource.clip.name : "-";
+            }
+            catch
+            {
+                return "-";
+            }
+        }
+
+        private static IEnumerator SoundsProbe()
+        {
+            const string id = "gk2.selftest.probe";
+            string tempRoot = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-sounds");
+            var clips = new List<AudioClip>();
+            try
+            {
+                AudioConfig cfg = SoundBank.Config;
+                if (cfg == null || cfg.sounds == null || !LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+
+                // 1. the presets the game copies onto its players
+                List<SoundBank.Preset> presets = SoundBank.Presets(log: true);
+                SoundBank.Preset d3 = presets.Find(p => p.Type == AudioSettings3DType.Default3D.value);
+                Check(d3 != null && d3.SpatialBlend > 0.5f, d3 != null ? $"the Default3D preset is 3D: spatial blend {d3.SpatialBlend:0.00}, distance {d3.MinDistance:0.#}..{d3.MaxDistance:0.#}, rolloff {d3.Rolloff} ({presets.Count} presets)" : $"no Default3D preset among {presets.Count}");
+                string binding = SoundBank.ConfigBinding();
+                Check(binding.StartsWith("LazyAudio plays from the AudioConfig we add to"), binding);
+
+                // 2. a tone from WAV bytes, and the same bytes through a file and Unity's decoder
+                byte[] wav = SoundBank.TestTone(0.5f, 440f);
+                AudioClip a = SoundBank.FromWav(wav, "probe-tone");
+                clips.Add(a);
+                Check(a != null && Mathf.Abs(a.length - 0.5f) < 0.02f && a.channels == 1, $"WAV bytes parsed: {(a != null ? a.length.ToString("0.00") : "-")} s, {a?.channels} channel(s), {a?.frequency} Hz");
+                Directory.CreateDirectory(tempRoot);
+                string file = Path.Combine(tempRoot, "tone.wav");
+                File.WriteAllBytes(file, wav);
+                AudioClip b = null;
+                string err = null;
+                bool done = false;
+                SoundBank.LoadFile(file, (c, e) => { b = c; err = e; done = true; });
+                yield return Until(() => done, 5f);
+                if (b != null) clips.Add(b);
+                Check(waited && b != null && Mathf.Abs(b.length - 0.5f) < 0.02f, $"the file loaded through the web request: {(b != null ? b.length.ToString("0.00") + " s, " + b.frequency + " Hz" : err ?? "timed out")}");
+
+                // 3. registered as a game sound
+                int before = cfg.sounds.Count;
+                SoundBank.Register(id, clips, Owner);
+                Check(cfg.Get(id) != null && cfg.sounds.Count == before + 1, $"registered: AudioConfig.Get finds it, the list {before} -> {cfg.sounds.Count}");
+
+                // 4. played through the game's player at the keeper
+                Transform at = PC.transform;
+                SoundHandler h = Sounds.PlayId(id, at, 1f, 1f);
+                Check(h != null && h.IsActive, "PlayAtGameObject returned a live handler");
+                yield return null;
+                SoundController sc = h != null ? HandlerSource(h) : null;
+                AudioSource src = sc != null ? sc.audioSource : null;
+                AudioMixerGroup want = SoundBank.Group(false);
+                Check(src != null && src.clip != null && clips.Contains(src.clip), $"the pooled player has our clip ({(src != null && src.clip != null ? src.clip.name : "-")})");
+                Check(src != null && want != null && src.outputAudioMixerGroup == want, $"its mixer group is the donkey's own in-world group ({(src != null && src.outputAudioMixerGroup != null ? src.outputAudioMixerGroup.name : "none")}; wanted {(want != null ? want.name : "none")})");
+                Check(src != null && d3 != null && Mathf.Abs(src.spatialBlend - d3.SpatialBlend) < 0.01f && Mathf.Abs(src.maxDistance - d3.MaxDistance) < 0.01f, $"the Default3D preset was applied (blend {(src != null ? src.spatialBlend.ToString("0.00") : "-")}, max distance {(src != null ? src.maxDistance.ToString("0.#") : "-")})");
+                float gap = sc != null ? Vector3.Distance(sc.transform.position, at.position) : -1f;
+                Check(sc != null && gap < 0.1f, $"the player sits at the target ({gap:0.00} away)");
+                yield return Until(() => h == null || !h.IsActive, 2f);
+                Check(waited, "it ended by itself (the handler inactive within 2 s)");
+
+                // 5. unregistered: gone from the list, the clips destroyed
+                SoundBank.Unregister(id);
+                Check(cfg.Get(id) == null && cfg.sounds.Count == before, $"unregistered: gone from the list ({cfg.sounds.Count} sounds again)");
+                yield return null;
+                Check(a == null && b == null, "the clips are destroyed");
+            }
+            finally
+            {
+                try { SoundBank.Unregister(id); } catch { }
+                try { if (Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
+
+        // The rig per instance plays the donkey as the static code did: every event resolves to the cfg keys of the
+        // style (ids, volumes, pitches, starts, the numbers), the API's bray and bell still play the game's sounds, a
+        // standing one and a foal sound under the standing switch, the lips event is taken only when the rig plays it,
+        // and a mount's pins silence a standing wearer too (the bind inside the rig).
+        private static IEnumerator SoundsDonkeyUnchanged()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            MountHandle h = null, cartH = null, standing = null, foal = null;
+            bool standingWas = Plugin.StandingSounds.Value;
+            bool soundsWas = Plugin.For(MountStyle.Ride).SoundsOn.Value;
+            try
+            {
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                MountResult r = h.Ride(showMessage: false);
+                if (!r.Ok) { Fail($"not ridden ({Said(r)})"); yield break; }
+                yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Ride, 5f);
+                yield return Frames(3);
+                Mount.Instance i = Mount.Ridden;
+                Sounds.Rig rig = i?.SoundsRig;
+                if (rig == null) { Fail("the ridden instance has no sound rig"); yield break; }
+
+                // 1. the base layer is the cfg of the style, event by event
+                int mapped = CheckBase(rig, Plugin.For(MountStyle.Ride), MountStyle.Ride);
+                Check(mapped == 11, $"riding plain: {mapped} of 11 events with a base resolve to the [Ride] keys");
+
+                // 2. the API's bray and bell play the game's own sounds, the step a step of the ground
+                SoundHandler bray = rig.Emit("voice");
+                string brayClip = ClipOf(bray);
+                Check(bray != null && brayClip.StartsWith("v_donkey", StringComparison.Ordinal), $"Emit(voice) plays the donkey's dialogue voice ({brayClip})");
+                yield return Until(() => bray == null || !bray.IsActive, 2f);
+                SoundHandler bell = rig.Emit("bell");
+                string bellClip = ClipOf(bell);
+                Check(bell != null && bellClip.IndexOf("bell", StringComparison.OrdinalIgnoreCase) >= 0, $"Emit(bell) plays the bell ({bellClip})");
+                if (bell != null) bell.Stop();
+                SoundHandler step = rig.Emit("step");
+                string stepClip = ClipOf(step);
+                Check(step != null, $"Emit(step) plays the game's step sound for the ground ({stepClip}; {rig.LastEvent})");
+                Check(rig.Takes("lips"), "the lips animation event is taken by the rig (played at the player's volume)");
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = false;
+                rig.Invalidate();
+                Check(!rig.Takes("lips") && rig.Emit("voice") == null, "sounds off: the lips event is handed back to the game and nothing is emitted");
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
+                rig.Invalidate();
+
+                // 3. with the cart: the cart style's keys
+                Mounts.Dismount("self-test");
+                yield return Until(() => !Mounts.IsMounted, 4f);
+                cartH = Spawn(Spot(home, 4f) ?? home, right: homeFacing > 0f, withCart: true);
+                if (cartH != null)
+                {
+                    yield return Until(() => cartH.IsReady, 6f);
+                    MountResult rc = cartH.Ride(showMessage: false);
+                    if (rc.Ok)
+                    {
+                        yield return Until(() => Mounts.IsMounted && Mounts.Style == MountStyle.Cart, 5f);
+                        yield return Frames(3);
+                        Sounds.Rig cartRig = Mount.Ridden?.SoundsRig;
+                        int mappedCart = cartRig != null ? CheckBase(cartRig, Plugin.For(MountStyle.Cart), MountStyle.Cart) : 0;
+                        Check(mappedCart == 11, $"with the cart: {mappedCart} of 11 events resolve to the [Cart] keys");
+                        Mounts.Dismount("self-test");
+                        yield return Until(() => !Mounts.IsMounted, 4f);
+                    }
+                    else Warn($"the cart was not ridden ({Said(rc)}): the cart style's keys not checked");
+                }
+
+                // 4. a standing one: takes its lips, grazes, under the standing switch; a foal is higher and softer
+                standing = h;
+                yield return Frames(2);
+                Sounds.Rig sr = standing.I.SoundsRig;
+                Plugin.StandingSounds.Value = true;
+                sr.Invalidate();
+                Check(standing.I.Donkey != null && sr.Takes("lips"), "a standing donkey near the keeper takes its lips event (StandingSounds on)");
+                SoundHandler graze = sr.Emit("graze");
+                Check(graze != null && graze.IsActive, $"a standing donkey's graze plays ({ClipOf(graze)})");
+                sr.Stop("graze");
+                yield return null; // the game's player resets a stopped sound on its next update, and the handler goes inactive then
+                Check(graze == null || !graze.IsActive, "Stop(graze) cuts it (the handler inactive a frame later)");
+                SoundHandler unhitchStanding = sr.Emit("hitch");
+                Check(unhitchStanding != null, "the hitch moment plays standing (not gated by the standing switch)");
+                Plugin.StandingSounds.Value = false;
+                sr.Invalidate();
+                Check(!sr.Takes("lips") && sr.Emit("graze") == null, "StandingSounds off: the lips event goes back to the game and nothing standing is emitted");
+                Check(sr.Emit("hitch") != null, "... but the hitch moment still plays (as before the rig)");
+                Plugin.StandingSounds.Value = true;
+                sr.Invalidate();
+                foal = Mounts.SpawnFoal(Owner, standing);
+                if (foal != null)
+                {
+                    yield return Until(() => foal.IsReady, 8f);
+                    yield return Frames(2);
+                    Sounds.Rig fr = foal.I.SoundsRig;
+                    Check(fr.PitchScale > 1.2f && fr.VolumeScale < 0.9f, $"a foal (scale {foal.I.ViewScale:0.00}) is pitched up x{fr.PitchScale:0.00} and softer x{fr.VolumeScale:0.00}");
+                    SoundHandler fs = fr.Emit("step");
+                    Check(fs != null, $"the foal's step plays ({ClipOf(fs)})");
+                }
+                else Info("no foal could be spawned here: the foal's scaling not seen");
+
+                // 5. a mount's pins on a standing wearer: the snail is silent by its [Mount.Tuning]
+                if (Mounts.Looks.Find("snail") != null)
+                {
+                    standing.Tuning.Set(Owner, "Skin", "snail");
+                    yield return Until(() => standing.Mount == "snail", 8f);
+                    yield return Until(() => standing.Tuning.IsSet("BrayVolume"), 10f); // the mount's pins land on the wearer once its pictures are in (the skin rig's merge)
+                    yield return Frames(2);
+                    sr.Invalidate();
+                    SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
+                    Check(waited && sv != null && sv.Volume < 0.001f && sl != null && sl.Volume < 0.001f && ss != null && ss.Volume < 0.001f,
+                        $"a standing snail: its mount's pins reach the rig (voice {sv?.Volume:0.00}, lips {sl?.Volume:0.00}, step {ss?.Volume:0.00}; the pins {(waited ? "on the wearer" : "NOT on the wearer within 10 s")}, BrayVolume {(standing.Tuning.IsSet("BrayVolume") ? "set by " + standing.Tuning.SetBy("BrayVolume") : "unset")})");
+                    Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
+                    standing.Tuning.Set(Owner, "Skin", "");
+                    yield return Until(() => standing.Mount == "donkey", 8f);
+                }
+                else Info("the snail skin is not installed: the mount pins on a standing wearer not seen");
+            }
+            finally
+            {
+                Plugin.StandingSounds.Value = standingWas;
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
+                if (Mounts.IsMounted) Mounts.Dismount("self-test");
+                try { if (foal != null && foal.Exists) foal.Remove(); } catch { }
+                try { if (cartH != null && cartH.Exists) cartH.Remove(); } catch { }
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+            }
+        }
+
+        // A pack's own sounds (docs/mount-sounds-design.md section 4): [Sounds] lines, the sounds\ folder's files loaded
+        // as game sounds, the convention name, the layers (the skin's over the mount's over the player's keys, a style
+        // block over both), the player's switches on top, a second skin of the mount, the save round trip, the clean-up.
+        private static IEnumerator SoundsPack()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string owner = Owner + ".sounds";
+            string tempRoot = null, packDir = null;
+            MountHandle h = null, hc = null;
+            int bankBefore = SoundBank.Count;
+            bool soundsWas = Plugin.For(MountStyle.Ride).SoundsOn.Value;
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundpack", "sounds-test",
+                    "# a test pack\n[Skin]\nformat = 1\nid = sounds-test\nname = Sounds Test\nmount = sounds-beast\n\n" +
+                    "[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav\nvoice.volume = 0.5\nstep.grass = step_grass\nlips = none\nbogus = x.wav\n\n" +
+                    "[Sounds.Cart]\nvoice = voice_cart.wav\n\n" +
+                    "[Mount]\nid = sounds-beast\nname = Sounds Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n" +
+                    "[Mount.Sounds]\nvoice = mount_voice.wav\nbell.volume = 0.25\n");
+                packDir = Path.Combine(tempRoot, Looks.PackDirName, "sounds-test");
+                string sdir = Path.Combine(packDir, "sounds");
+                Directory.CreateDirectory(sdir);
+                File.WriteAllBytes(Path.Combine(sdir, "voice_1.wav"), SoundBank.TestTone(0.3f, 440f));
+                File.WriteAllBytes(Path.Combine(sdir, "voice_2.wav"), SoundBank.TestTone(0.3f, 520f));
+                File.WriteAllBytes(Path.Combine(sdir, "voice_cart.wav"), SoundBank.TestTone(0.3f, 330f));
+                File.WriteAllBytes(Path.Combine(sdir, "mount_voice.wav"), SoundBank.TestTone(0.3f, 220f));
+                File.WriteAllBytes(Path.Combine(sdir, "graze_1.wav"), SoundBank.TestTone(0.6f, 180f)); // the convention: no cfg line
+                string pack2 = Path.Combine(tempRoot, Looks.PackDirName, "sounds-test-2");
+                Directory.CreateDirectory(pack2);
+                File.Copy(Path.Combine(packDir, "bdy_static_left.png"), Path.Combine(pack2, "bdy_static_left.png"));
+                File.WriteAllText(Path.Combine(pack2, "skin.cfg"), "[Skin]\nformat = 1\nid = sounds-test-2\nname = Sounds Test Two\nmount = sounds-beast\n");
+            }
+            catch (Exception e) { Warn("the temp packs could not be written: " + e.Message); yield break; }
+            try
+            {
+                int n = Looks.RegisterFolder(tempRoot, owner);
+                Check(n == 2, $"two packs found ({n})");
+                Looks.SkinDef def = Looks.Find("sounds-test");
+                Check(def != null && def.Report.Contains("sound line(s)") && def.Report.Contains("no sound event 'bogus'"), "the loader counts the sound lines and names the bogus event: " + (def?.Report ?? "-"));
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null || def == null) { Fail("could not spawn, or the pack is missing"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "sounds-test");
+                yield return Until(() => h.Mount == "sounds-beast", 8f);
+                Check(waited, "the donkey wears the pack's skin and is its mount");
+                Sounds.Rig rig = h.I.SoundsRig;
+                rig.Invalidate();
+
+                // the layers
+                SoundSpec v = rig.Resolve("voice");
+                Check(v != null && v.Layer == "skin" && v.BankId != null && v.BankId.EndsWith("sounds:voice", StringComparison.Ordinal), $"voice resolves to the skin's files ({v?.Describe()})");
+                string voiceId = v?.BankId;
+                yield return Until(() => SoundBank.StateOf(voiceId) == SoundBank.State.Ready, 6f);
+                SoundBank.Entry ve = SoundBank.Find(voiceId);
+                Check(waited && ve != null && ve.Clips.Length == 2, $"its two files are loaded as one game sound with two samples ({(ve != null ? ve.Clips.Length : 0)})");
+                rig.Invalidate();
+                v = rig.Resolve("voice");
+                float playerVol = Plugin.For(MountStyle.Ride).BrayVolume.Value;
+                Check(v != null && !v.Loading && Mathf.Abs(v.Volume - 0.5f * playerVol) < 0.001f, $"voice.volume 0.5 x the player's BrayVolume {playerVol:0.00} = {(v != null ? v.Volume.ToString("0.00") : "-")}");
+                SoundSpec sg = rig.Resolve("step", "grass"), sd = rig.Resolve("step", "dirt");
+                Check(sg != null && sg.GameId == "step_grass" && sg.Layer == "skin", $"step.grass: the skin's game id ({sg?.Describe()})");
+                Check(sd != null && sd.Layer == "base", $"step.dirt: the base's ({sd?.Describe()})");
+                SoundSpec sl = rig.Resolve("lips");
+                Check(sl != null && sl.Silent && sl.Layer == "skin" && rig.Emit("lips") == null && rig.Takes("lips"), "lips = none: silent, the event still taken");
+                SoundSpec sgr = rig.Resolve("graze");
+                Check(sgr != null && sgr.Layer == "skin" && sgr.BankId != null && sgr.BankId.EndsWith("sounds:graze", StringComparison.Ordinal), $"graze_1.wav by convention, no cfg line ({sgr?.Describe()})");
+                SoundSpec sb = rig.Resolve("bell");
+                float bellVol = Plugin.For(MountStyle.Ride).BellVolume.Value;
+                Check(sb != null && sb.Layer == "base" && Mathf.Abs(sb.Volume - 0.25f * bellVol) < 0.001f, $"bell.volume 0.25 from [Mount.Sounds] scales the base's bell, the source stays the base's ({sb?.Describe()})");
+
+                // played, and the player's switch on top
+                SoundHandler hv = rig.Emit("voice");
+                SoundController hsc = hv != null ? HandlerSource(hv) : null;
+                Check(hv != null && ve != null && hsc != null && hsc.audioSource != null && Array.IndexOf(ve.Clips, hsc.audioSource.clip) >= 0, $"Emit(voice) plays one of the pack's clips ({ClipOf(hv)})");
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = false;
+                rig.Invalidate();
+                Check(rig.Emit("voice") == null, "SoundsOn off silences the pack's voice");
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
+                rig.Invalidate();
+
+                // the style block: with the cart, [Sounds.Cart] voice wins
+                hc = Spawn(Spot(home, 4.5f) ?? home, right: homeFacing > 0f, withCart: true);
+                if (hc != null)
+                {
+                    yield return Until(() => hc.IsReady, 6f);
+                    hc.Tuning.Set(Owner, "Skin", "sounds-test");
+                    yield return Until(() => hc.Mount == "sounds-beast", 8f);
+                    hc.I.SoundsRig.Invalidate();
+                    SoundSpec vc = hc.I.SoundsRig.Resolve("voice");
+                    Check(vc != null && vc.Layer == "skin" && vc.BankId != null && vc.BankId.EndsWith("sounds.cart:voice", StringComparison.Ordinal), $"with the cart: [Sounds.Cart] voice wins ({vc?.Describe()})");
+                    hc.Remove();
+                    hc = null;
+                }
+
+                // a second skin of the mount, no [Sounds]: the mount's voice, its file from the declaring skin's folder
+                h.Tuning.Set(Owner, "Skin", "sounds-test-2");
+                yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "sounds-test-2", 8f);
+                rig.Invalidate();
+                SoundSpec v2 = rig.Resolve("voice");
+                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith("mount.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
+                string mountVoiceId = v2?.BankId;
+                yield return Until(() => SoundBank.StateOf(mountVoiceId) == SoundBank.State.Ready, 6f);
+                Check(waited, "the mount's file loaded (from the declaring skin's folder)");
+
+                // the save round trip keeps the sound sections with their lines and comment
+                string err = Looks.SaveCfg(def);
+                string text = File.ReadAllText(Path.Combine(packDir, "skin.cfg")).Replace("\r\n", "\n");
+                Check(err == null && text.Contains("[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav") && text.Contains("voice.volume = 0.5") && text.Contains("[Sounds.Cart]\nvoice = voice_cart.wav")
+                    && text.Contains("[Mount.Sounds]\nvoice = mount_voice.wav") && text.Contains("bell.volume = 0.25") && text.IndexOf("[Sounds]") < text.IndexOf("[Mount]") && text.IndexOf("[Mount.Sounds]") > text.IndexOf("[Mount]"),
+                    "saved: [Sounds], [Sounds.Cart] and [Mount.Sounds] kept with their lines and comment, in their places" + (err != null ? " (" + err + ")" : ""));
+
+                // the clean-up: the skins withdrawn, the bank's entries gone
+                Check(Looks.Unregister("sounds-test-2", owner) && Looks.Unregister("sounds-test", owner), "both skins withdrawn");
+                yield return null;
+                Check(SoundBank.Count == bankBefore && SoundBank.Find(voiceId) == null, $"the bank's entries are gone ({SoundBank.Count}, {bankBefore} before)");
+            }
+            finally
+            {
+                Plugin.For(MountStyle.Ride).SoundsOn.Value = soundsWas;
+                try { if (hc != null && hc.Exists) hc.Remove(); } catch { }
+                try { Looks.Unregister("sounds-test-2", owner); } catch { }
+                LeftOver(owner, "sounds-test", tempRoot);
+            }
+        }
+
+        // The public API (docs/mount-sounds-design.md section 9): the catalogue, what plays and from which layer, a mod's
+        // own sound over everything (a game id, its own clip kept by the mod, silence) and back on Dispose, Play and
+        // Stop with their reasons, the Played event; a code mount's MountSound shared by a pack skin that joins it.
+        private static IEnumerator SoundsApi()
+        {
+            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string modOwner = Owner + ".soundmod";
+            MountHandle h = null;
+            IDisposable set = null, mountReg = null;
+            string tempRoot = null;
+            AudioClip own = null;
+            var played = new List<string>();
+            Action<MountHandle, string> onPlayed = (mh, e) => played.Add(e);
+            Mounts.Sounds.Played += onPlayed;
+            try
+            {
+                IReadOnlyList<MountSoundEvent> cat = Mounts.Sounds.Catalogue;
+                Check(cat.Count == SoundEvents.All.Length && Mounts.Sounds.Events.Contains("voice") && cat[0].Id == "step" && cat[0].Variants.Count == 4 && cat[0].Numbers.Contains("per_cycle"),
+                    $"the catalogue: {cat.Count} events, step's four variants and its numbers");
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                yield return Frames(2);
+
+                // what plays, from which layer
+                MountSound r = Mounts.Sounds.Resolved(h, "voice", out string layer);
+                Check(r != null && layer == "base" && r.GameId == Plugin.For(MountStyle.Ride).BraySoundId.Value, $"Resolved(voice): the base layer, {r?.GameId} ({layer})");
+                Check(Mounts.Sounds.Resolved(h, "ear", out string none) == null && none == "none", "Resolved(ear): null, no layer gives it a sound");
+                MountResult bad = Mounts.Sounds.Play(h, "nope");
+                Check(!bad.Ok && bad.Reason.Contains("No sound event"), $"Play(nope) refused with the reason ({Said(bad)})");
+
+                // a mod's own sound over everything: a game id
+                set = Mounts.Sounds.Set(modOwner, h, "voice", MountSound.Game("donkey_bell"));
+                r = Mounts.Sounds.Resolved(h, "voice", out layer);
+                Check(r != null && layer == "mod" && r.GameId == "donkey_bell", $"Set(voice, donkey_bell): resolved from the mod layer ({r?.GameId}, {layer})");
+                played.Clear();
+                MountResult pr = Mounts.Sounds.Play(h, "voice");
+                yield return null;
+                Check(pr.Ok && played.Contains("voice"), $"Play(voice) ok and the Played event came ({Said(pr)}; {played.Count} event(s))");
+                set.Dispose();
+                r = Mounts.Sounds.Resolved(h, "voice", out layer);
+                Check(r != null && layer == "base", $"disposed: the base layer again ({layer})");
+
+                // the mod's own clip, kept by the mod
+                own = SoundBank.FromWav(SoundBank.TestTone(0.3f, 660f), "mod-own");
+                set = Mounts.Sounds.Set(modOwner, h, "voice", MountSound.Own(own));
+                r = Mounts.Sounds.Resolved(h, "voice", out layer);
+                Check(r != null && layer == "mod" && r.GameId != null && r.GameId.StartsWith("gk2.mod." + modOwner, StringComparison.Ordinal) && SoundBank.StateOf(r.GameId) == SoundBank.State.Ready, $"Set(voice, own clip): registered as a game sound at once ({r?.GameId})");
+                string bankId = r?.GameId;
+                SoundHandler hv = h.I.SoundsRig.Emit("voice");
+                Check(hv != null && ClipOf(hv) == "mod-own", $"it plays the mod's clip ({ClipOf(hv)})");
+                set.Dispose();
+                yield return null;
+                Check(SoundBank.Find(bankId) == null && own != null, "disposed: the bank entry is gone and the mod's clip is not destroyed");
+
+                // silence, and Play's reason
+                set = Mounts.Sounds.Set(modOwner, h, "voice", MountSound.None);
+                MountResult silent = Mounts.Sounds.Play(h, "voice");
+                Check(!silent.Ok && silent.Reason.Contains("silent"), $"Set(voice, None): Play refused as silent ({Said(silent)})");
+                set.Dispose();
+                set = null;
+
+                // Stop on a stoppable event
+                MountResult gr = Mounts.Sounds.Play(h, "graze");
+                SoundSpec gs = h.I.SoundsRig.Resolve("graze");
+                Check(gr.Ok || gs == null || !gs.On, $"Play(graze) ({Said(gr)})");
+                Mounts.Sounds.Stop(h, "graze");
+                yield return null;
+                Pass("Stop(graze) returned");
+
+                // a code mount with its own sounds, a pack skin joining it
+                try
+                {
+                    mountReg = Mounts.Catalog.Register(modOwner, new MountDef { Id = "sound-code-beast", Name = "Sound Code Beast", Sounds = new Dictionary<string, MountSound> { ["voice"] = MountSound.Game("donkey_bell"), ["lips"] = MountSound.None } });
+                    tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundapi", "soundapi-test", "[Skin]\nformat = 1\nid = soundapi-test\nname = Sound API Test\nmount = sound-code-beast\n");
+                }
+                catch (Exception e) { Warn("the code mount or the temp pack could not be made: " + e.Message); yield break; }
+                MountInfo info = Mounts.Catalog.Find("sound-code-beast");
+                Check(info != null && info.Sounds != null && info.Sounds["voice"] is MountSound, "MountInfo carries the code mount's sounds");
+                Looks.RegisterFolder(tempRoot, modOwner);
+                h.Tuning.Set(Owner, "Skin", "soundapi-test");
+                yield return Until(() => h.Mount == "sound-code-beast", 8f);
+                h.I.SoundsRig.Invalidate();
+                r = Mounts.Sounds.Resolved(h, "voice", out layer);
+                Check(waited && r != null && layer == "mount" && r.GameId == "donkey_bell", $"the pack skin of the code mount: voice from the mount's MountSound ({r?.GameId}, {layer})");
+                MountSound lips = Mounts.Sounds.Resolved(h, "lips", out string lipsLayer);
+                Check(lips != null && lips.Silent && lipsLayer == "mount", "and its lips are silent by the mount");
+                h.Tuning.Set(Owner, "Skin", "");
+                yield return Until(() => h.Mount == MountCatalog.DonkeyId, 8f);
+            }
+            finally
+            {
+                Mounts.Sounds.Played -= onPlayed;
+                try { set?.Dispose(); } catch { }
+                try { Looks.Unregister("soundapi-test", modOwner); } catch { }
+                try { mountReg?.Dispose(); } catch { }
+                try { if (tempRoot != null && Directory.Exists(tempRoot)) Directory.Delete(tempRoot, true); } catch { }
+                try { if (own != null) UnityEngine.Object.Destroy(own); } catch { }
+                try { if (h != null && h.Exists) h.Remove(); } catch { }
+            }
+        }
+
+        // Every event with a base: the resolved spec equals the style's keys. Returns how many matched.
+        private static int CheckBase(Sounds.Rig rig, StyleSettings s, MountStyle style)
+        {
+            int ok = 0;
+            bool Near(float a, float b) => Math.Abs(a - b) < 0.0005f;
+            void Row(string evt, bool match, string got, string want)
+            {
+                if (match) ok++;
+                else Fail($"{style}: {evt} resolves to {got}, the keys say {want}");
+            }
+            rig.Invalidate();
+            SoundSpec v = rig.Resolve("voice");
+            Row("voice", v != null && v.GameId == s.BraySoundId.Value && Near(v.Volume, s.BrayVolume.Value) && Near(v.Pitch, s.BrayPitch.Value) && v.Speech == !s.BrayInSfxChannel.Value
+                && Near(v.Number("idle_every", -1f), s.BrayIdleEverySeconds.Value) && Near(v.Number("mount_chance", -1f), s.BrayOnMountChance.Value), v?.Describe(), $"{s.BraySoundId.Value} x{s.BrayVolume.Value} p{s.BrayPitch.Value}");
+            SoundSpec st = rig.Resolve("step");
+            bool bySurface = string.IsNullOrEmpty(s.HoofSoundId.Value?.Trim());
+            Row("step", st != null && st.BySurface == bySurface && (bySurface || st.GameId == s.HoofSoundId.Value.Trim()) && st.On == s.HoofOn.Value && Near(st.Volume, s.HoofVolume.Value) && Near(st.Pitch, s.HoofPitch.Value)
+                && Near(st.PitchVariation, s.HoofPitchVariation.Value) && Near(st.Number("per_cycle", -1f), s.HoofStepsPerCycle.Value) && Near(st.Number("phase", -1f), s.HoofPhase.Value), st?.Describe(), $"hoof keys ({(bySurface ? "by the ground" : s.HoofSoundId.Value)} x{s.HoofVolume.Value} p{s.HoofPitch.Value}, {s.HoofStepsPerCycle.Value}/cycle)");
+            SoundSpec g = rig.Resolve("graze");
+            Row("graze", g != null && g.GameId == s.GrazeSoundId.Value && g.On == s.GrazeOn.Value && Near(g.Volume, s.GrazeVolume.Value), g?.Describe(), $"{s.GrazeSoundId.Value} x{s.GrazeVolume.Value}");
+            SoundSpec l = rig.Resolve("lips");
+            Row("lips", l != null && l.GameId == "donkey_lips" && Near(l.Volume, s.LipsVolume.Value), l?.Describe(), $"donkey_lips x{s.LipsVolume.Value}");
+            SoundSpec w = rig.Resolve("wheel");
+            Row("wheel", w != null && w.GameId == s.WheelSoundId.Value && w.On == s.WheelOn.Value && Near(w.Volume, s.WheelVolume.Value) && Near(w.Pitch, s.WheelPitch.Value) && Near(w.Number("every_cycles", -1f), s.WheelEveryCycles.Value), w?.Describe(), $"{s.WheelSoundId.Value} x{s.WheelVolume.Value}");
+            SoundSpec c = rig.Resolve("cargo");
+            Row("cargo", c != null && c.GameId == s.CargoThumpSoundId.Value && c.On == s.CargoThumpOn.Value && Near(c.Volume, s.CargoThumpVolume.Value) && Near(c.Pitch, s.CargoThumpPitch.Value), c?.Describe(), $"{s.CargoThumpSoundId.Value} x{s.CargoThumpVolume.Value}");
+            SoundSpec m = rig.Resolve("mount");
+            Row("mount", m != null && m.GameId == s.MountSoundId.Value && m.On == s.MountOn.Value && Near(m.Volume, s.MountVolume.Value) && Near(m.Pitch, s.MountPitch.Value) && Near(m.Start, s.MountSoundStart.Value), m?.Describe(), $"{s.MountSoundId.Value} from {s.MountSoundStart.Value}");
+            SoundSpec dm = rig.Resolve("dismount");
+            Row("dismount", dm != null && dm.GameId == s.DismountSoundId.Value && dm.On == s.DismountOn.Value && Near(dm.Volume, s.DismountVolume.Value) && Near(dm.Pitch, s.DismountPitch.Value) && Near(dm.Start, s.DismountSoundStart.Value), dm?.Describe(), $"{s.DismountSoundId.Value} from {s.DismountSoundStart.Value}");
+            SoundSpec hi = rig.Resolve("hitch");
+            Row("hitch", hi != null && hi.GameId == s.HitchSoundId.Value && hi.On == s.HitchOn.Value && Near(hi.Volume, s.HitchVolume.Value) && Near(hi.Pitch, s.HitchPitch.Value), hi?.Describe(), s.HitchSoundId.Value);
+            SoundSpec un = rig.Resolve("unhitch");
+            Row("unhitch", un != null && un.GameId == s.UnhitchSoundId.Value && un.On == s.UnhitchOn.Value && Near(un.Volume, s.UnhitchVolume.Value) && Near(un.Pitch, s.UnhitchPitch.Value), un?.Describe(), s.UnhitchSoundId.Value);
+            SoundSpec b = rig.Resolve("bell");
+            Row("bell", b != null && b.GameId == s.BellSoundId.Value && Near(b.Volume, s.BellVolume.Value) && Near(b.Pitch, s.BellPitch.Value) && Near(b.Number("set_off_idle", -1f), s.BellSetOffIdleSeconds.Value)
+                && Near(b.Number("on_set_off", -1f), s.BellOnSetOff.Value ? 1f : 0f) && Near(b.Number("only_with_cargo", -1f), s.BellOnlyWithCargo.Value ? 1f : 0f), b?.Describe(), $"{s.BellSoundId.Value} x{s.BellVolume.Value}");
+            foreach (string none in new[] { "setoff", "stop", "ear", "turn", "refused", "sent", "called" })
+            {
+                if (rig.Resolve(none) != null) Fail($"{style}: {none} has a base sound; the donkey never had one");
+            }
+            return ok;
+        }
+    }
+}

@@ -49,8 +49,18 @@ var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", 
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
-var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" };
+var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" };
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
+var skinOwnSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart" }; // the skin's own sections, in the canonical order, before the colour sections
+// The sound catalogue (docs/mount-sounds-design.md): the events, their numbers and variants (SoundEvents.cs), the line attributes (SoundBlock.cs)
+var soundEventsCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "SoundEvents.cs"));
+var soundBlockCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "SoundBlock.cs"));
+var soundEvents = new HashSet<string>(Regex.Matches(soundEventsCs, @"Id = ""(\w+)""").Select(m => m.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+var soundNumbers = new HashSet<string>(Regex.Matches(soundEventsCs, @"Numbers = new\[\] \{([^}]*)\}").SelectMany(m => Regex.Matches(m.Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value)), StringComparer.OrdinalIgnoreCase);
+var soundVariants = new HashSet<string>(Regex.Matches(Regex.Match(soundEventsCs, @"Surfaces = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+var soundAttrs = new HashSet<string>(Regex.Matches(Regex.Match(soundBlockCs, @"Attributes = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+if (soundEvents.Count < 10 || soundAttrs.Count < 5 || soundVariants.Count != 4) Fail($"SoundEvents.cs / SoundBlock.cs: the sound catalogue could not be read ({soundEvents.Count} events, {soundAttrs.Count} attributes, {soundVariants.Count} variants)"); else Pass($"SoundEvents.cs: {soundEvents.Count} sound events, {soundNumbers.Count} numbers, {soundVariants.Count} variants; SoundBlock.cs: {soundAttrs.Count} line attributes");
+var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" };
 
 // The section headers of a cfg in file order, for the canonical layout: [Skin] first, [Game] right after it, the
 // colour sections before the mount block, the mount block last.
@@ -263,20 +273,20 @@ foreach (var dir in skinDirs)
     int gameAt = order.FindIndex(s => s.Equals("Game", StringComparison.OrdinalIgnoreCase));
     if (gameAt > 1) Bad("[Game] stands right after [Skin]");
     int firstColour = order.FindIndex(s => s.Equals("Colors", StringComparison.OrdinalIgnoreCase) || s.StartsWith("Base.", StringComparison.OrdinalIgnoreCase));
-    foreach (var sec in skinTuningSections)
+    foreach (var sec in skinOwnSections)
     {
         int at = order.FindIndex(s => s.Equals(sec, StringComparison.OrdinalIgnoreCase));
-        if (at >= 0 && firstColour >= 0 && at > firstColour) Bad($"[{sec}] after the colour sections: the skin's tuning sections stand before them");
+        if (at >= 0 && firstColour >= 0 && at > firstColour) Bad($"[{sec}] after the colour sections: the skin's tuning and sound sections stand before them");
         if (at >= 0 && gameAt >= 0 && at < gameAt) Bad($"[{sec}] before [Game]: [Game] stands right after [Skin]");
     }
     {
-        // among themselves: [Tuning], then [Tuning.Ride], then [Tuning.Cart] (the canonical writer's order)
+        // among themselves: [Tuning], [Tuning.Ride], [Tuning.Cart], then [Sounds], [Sounds.Ride], [Sounds.Cart] (the canonical writer's order)
         int last = -1;
-        foreach (var sec in skinTuningSections)
+        foreach (var sec in skinOwnSections)
         {
             int at = order.FindIndex(s => s.Equals(sec, StringComparison.OrdinalIgnoreCase));
             if (at < 0) continue;
-            if (at < last) Bad($"[{sec}] stands before an earlier skin tuning section: the order is [Tuning], [Tuning.Ride], [Tuning.Cart]");
+            if (at < last) Bad($"[{sec}] stands before an earlier section of the skin's own: the order is [Tuning], [Tuning.Ride], [Tuning.Cart], [Sounds], [Sounds.Ride], [Sounds.Cart]");
             last = at;
         }
     }
@@ -403,6 +413,40 @@ foreach (var dir in skinDirs)
         foreach (var sec in new[] { "Tuning.Ride", "Tuning.Cart" })
             if (cfg.TryGetValue(sec, out var st)) foreach (var key in bothStyles.Keys) if (st.ContainsKey(key)) Bad($"{key} set in [Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
     }
+    // the sounds (docs/mount-sounds-design.md section 4): every line an event, an event.variant, or an event's attribute
+    // or number; every file named is in sounds\; every file in sounds\ is named by a line or by the convention
+    foreach (var sec in soundSections)
+    {
+        if (!cfg.TryGetValue(sec, out var snd)) continue;
+        if (snd.Count == 0) Bad($"[{sec}] is empty: leave it out");
+        foreach (var kv in snd)
+        {
+            var parts = kv.Key.Split('.');
+            if (!soundEvents.Contains(parts[0])) { Bad($"[{sec}] {kv.Key}: '{parts[0]}' is no sound event ({string.Join(", ", soundEvents.OrderBy(e => e))})"); continue; }
+            bool variant = parts.Length >= 2 && soundVariants.Contains(parts[1]);
+            string? attr = parts.Length == 1 ? null : parts.Length == 2 ? (variant ? null : parts[1]) : parts.Length == 3 && variant ? parts[2] : "?";
+            if (attr == "?") { Bad($"[{sec}] {kv.Key}: not an event, event.variant or event.attribute"); continue; }
+            if (attr != null && !soundAttrs.Contains(attr) && !soundNumbers.Contains(attr)) Bad($"[{sec}] {kv.Key}: '{attr}' is neither a line attribute ({string.Join(", ", soundAttrs)}) nor a number of a sound event ({string.Join(", ", soundNumbers.OrderBy(n => n))})");
+            if (attr == null)
+                foreach (var tok in kv.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()))
+                    if (Regex.IsMatch(tok, @"\.(ogg|wav|mp3)$", RegexOptions.IgnoreCase) && !File.Exists(Path.Combine(dir, "sounds", tok))) Bad($"[{sec}] {kv.Key}: no sounds\\{tok} in the pack");
+        }
+    }
+    if (Directory.Exists(Path.Combine(dir, "sounds")))
+    {
+        foreach (var f in Directory.GetFiles(Path.Combine(dir, "sounds")))
+        {
+            string fileName = Path.GetFileName(f);
+            if (!Regex.IsMatch(fileName, @"\.(ogg|wav)$", RegexOptions.IgnoreCase)) { Bad($"sounds\\{fileName}: not an .ogg or .wav file"); continue; }
+            string stem = Path.GetFileNameWithoutExtension(f);
+            int us = stem.LastIndexOf('_');
+            if (us > 0 && int.TryParse(stem[(us + 1)..], out _)) stem = stem[..us];
+            var sp = stem.Split('.');
+            bool named = soundSections.Any(sec => cfg.TryGetValue(sec, out var s2) && s2.Values.Any(v => v.Split(new[] { ',', ';' }).Select(t => t.Trim()).Contains(fileName, StringComparer.OrdinalIgnoreCase)));
+            bool convention = soundEvents.Contains(sp[0]) && (sp.Length == 1 || sp.Length == 2 && soundVariants.Contains(sp[1]));
+            if (!named && !convention) Bad($"sounds\\{fileName}: named like no event (<event>[.<variant>][_<n>].ogg) and lined up in no sound section: it is never played");
+        }
+    }
     // [Colors] (docs/mount-colours.md): regions from the mount vocabulary (Colors.cs MountRegionKeys, never Coat: it is
     // everything not named), every colour RRGGBB, in the pictures, and under one region only. A game-source skin has
     // no pictures here to check against.
@@ -491,7 +535,7 @@ foreach (var dir in skinDirs)
                 else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) Bad($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
             }
         }
-        string text = string.Join("\n---\n", new[] { "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" }.Select(s => SectionText(cfg, s)));
+        string text = string.Join("\n---\n", new[] { "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart" }.Select(s => SectionText(cfg, s)));
         if (mountDecl.TryGetValue(mid, out var first))
         {
             if (first.Text != text) Bad($"declares the mount '{mid}' differently from '{first.Skin}' (the first declaration wins in the game; keep them the same: the Mounts tab's Save writes every declaring file)");

@@ -17,6 +17,7 @@ BepInEx\plugins\gk2skins\<your skin id>\
     bdy_lips_left_01.png ... _13.png
     bdy_turn_left_01.png ... _06.png
     hed_static_down.png, hed_static_down_02.png, hed_static_down_03.png
+    sounds\voice_1.ogg, sounds\voice_2.ogg ...   (optional: the skin's own sounds, docs/mount-sounds-design.md)
 ```
 
 - The `gk2skins` folder can sit straight under `BepInEx\plugins`, or inside any mod's own folder there. Several skins
@@ -215,11 +216,17 @@ Every built-in skin is a pack of exactly this format, kept as the example of one
 Each `skin.cfg` is commented and in one layout (`tools/skins/canonical_cfg.py` rewrites a built-in into it; its
 `--check` in the release scans refuses one that isn't, and `tests/SkinsScan` checks the section order and the key rules): `[Skin]`, then `[Game]` for a game creature, the skin's own geometry
 (`[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`: the seat and the pixel keys this drawing needs), the colour sections,
-and the `[Mount]` block last with its tuning sections (the creature's facts: its sounds, for one), every key in one
-place. The donkey itself, the one mount that is not a file, would read `[Mount] id = donkey, name = Donkey, author =
+the skin's sounds (`[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`) and the `[Mount]` block last with its tuning and
+sound sections (the creature's facts), every key in one place. The donkey itself, the one mount that is not a file, would read `[Mount] id = donkey, name = Donkey, author =
 the game, version = 1.0, cart = true, foals = true` with no tuning and no effect; a donkey skin never declares it. A
 mount's sounds are set or silenced under `[Mount.Tuning]` with the ordinary sound keys (docs/reference.md): the snail
-and the worm say `BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`; Gerry `LipsVolume = 0`. The generators show how the pictures were measured
+and the worm say `BrayVolume = 0`, `HoofVolume = 0`, `LipsVolume = 0`; Gerry `LipsVolume = 0`. Since 2026-10-24 a
+mount or a skin can also bring **sounds of its own**: files in the pack's `sounds\` folder, named for their event
+(`voice_1.ogg`, `voice_2.ogg`, `step.grass_1.wav`: played by convention with no line) or lined up in a `[Sounds]`
+block (`voice = a.ogg, b.ogg`, `voice.volume = 0.8`, `step.grass = step_grass`, `lips = none`; `[Sounds.Ride]` /
+`[Sounds.Cart]` for one style) and, for the creature, in `[Mount.Sounds]` of its declaring skin. A skin's line wins
+over its mount's, and the player's switches and volumes scale the result (the author's page: docs/mount-sounds.md; the design in
+docs/mount-sounds-design.md). The generators show how the pictures were measured
 on the donkey's frames (docs/sprite-tools.md). The review page (`tools/skins/skin_preview_html.py`) plays them all
 side by side.
 

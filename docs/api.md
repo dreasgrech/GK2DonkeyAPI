@@ -159,6 +159,9 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `FallGuard` (0.36.0, on): the fall watchdog ([never-lost.md](never-lost.md)); off, nothing watches (the record and
   `ReturnToSafeSpot` still work). `ReturnKey` (0.36.0, `KeyboardShortcut`, None): a key for `ReturnToSafeSpot`, read by
   the API with the flight keys' gate.
+- `StandingSounds` (0.36.0, on): standing mounts and babies near the keeper make their sounds (steps, grazing, the
+  lip smack; a baby higher and softer). Off: only the ridden mount, and a standing one's lip smack is the game's own
+  ([mount-sounds-design.md](mount-sounds-design.md)).
 - `JumpKey`, `FlyKey` (0.36.0, `KeyboardShortcut`, Space both: a key with its modifiers, Ctrl+Space is Ctrl+Space;
   more keys held, such as the climb's Left Shift, don't stop a press): riding plain, the mount jumps; a mount that flies takes off
   and lands. One key for both: a press jumps, a second press in the air during the jump takes off a mount that
@@ -729,6 +732,30 @@ The labels say "mount" and "babies", never "donkey": the mount may be a dragon. 
 effects registered before the page is built appear with no change to yours; later ones at the catch-up (0.34.0: the page is shown a frame after Publish and adds a late mount's rows then). `MountsChanged` fires on a
 registration, a pack's declaration or a withdrawal.
 
+## Sounds (0.36.0)
+
+Every mount instance plays the events of one catalogue through the game's own player ([mount-sounds-design.md](mount-sounds-design.md)):
+`step` (with the surface variants `grass`, `dirt`, `wood`, `stone`), `wheel`, `setoff`, `stop`, `graze`, `lips`,
+`ear`, `turn`, `voice`, `refused`, `mount`, `dismount`, `hitch`, `unhitch`, `cargo`, `bell`, `sent`, `called`. What
+plays for an event on an instance comes from layers, the first that says a source wins: a mod's `Set` here, the
+skin's own (`MountSkinDef.Sounds`, a pack's `[Sounds]`; `SoundsRide` / `SoundsCart` for one style), the mount's
+(`MountDef.Sounds`, a pack's `[Mount.Sounds]`), the player's keys (`Mounts.Tuning`: the donkey's sounds as shipped
+and as tuned). The player's switches and volumes scale whatever won.
+
+`Mounts.Sounds`:
+
+| Member | What |
+|---|---|
+| `Catalogue`, `Events` | The events (`MountSoundEvent`: id, description, stoppable, variants, its own numbers), and their ids. |
+| `MountSound Resolved(handle, eventId, out layer, variant = null)` | What plays now and from which layer (`mod`, `skin`, `mount`, `base`); null and `none` when no layer gives the event a sound. For a layer's files or clips `GameId` holds the bank's id (a game sound id of the API's own). |
+| `IDisposable Set(ownerId, handle, eventId, MountSound)` | Your sound for an event (or `event.variant`) on this instance, over every other layer, for the session; Dispose takes it back. `MountSound.Game("id")`, `MountSound.Own(clips)` (your clips, registered as a game sound under your owner id and left to you), `MountSound.None`, `MountSound.Ground`, with optional `Volume`, `Pitch` (x the player's), `PitchVariation`, `Start`, `Loop`, `Speech`, `Numbers`. |
+| `MountResult Play(handle, eventId, variant = null)`, `Stop(handle, eventId)` | Plays an event now as the game would (the layers, the player's volumes, the ground under it for a step); refused with the reason when nothing played. Stop ends a stoppable event's sound (grazing, a loop). |
+| event `Played(handle, eventId)` | After an event played on an instance, by the ride, a standing one or a mod. |
+
+A code skin or mount gives its sounds in its def (`Sounds`, `SoundsRide`, `SoundsCart`: `Dictionary<string, MountSound>` by
+event key); `MountInfo.Sounds` / `SoundsRide` / `SoundsCart` show a mount's (a pack's lines as text, a code mount's
+`MountSound`). The Behaviour key `StandingSounds` (on) lets standing mounts and babies sound near the keeper.
+
 ## Skins (0.30.0)
 
 > **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
@@ -945,6 +972,11 @@ History:
 - 0.36.0: babies on foot: the `Mounts.Shuffle` key `ShuffleFollowKeeperOnFoot` (off in the core: only a mod's own
   foals get it), `MountCompanion.FoalsFollowOnFoot`, the `FoalsFollow` row in `FoalRows`; `MovedKey` takes several
   old places for one key (a call each; before, the last call won).
+- 0.36.0: the mount sounds ([mount-sounds-design.md](mount-sounds-design.md)): `Mounts.Sounds` (`Catalogue`,
+  `Events`, `Resolved`, `Set`, `Play`, `Stop`, the event `Played`), `MountSound`, `MountSoundEvent`,
+  `MountSkinDef.Sounds` / `SoundsRide` / `SoundsCart` and `MountDef.Sounds` / `SoundsRide` / `SoundsCart`,
+  `MountInfo.Sounds` / `SoundsRide` / `SoundsCart`; the Behaviour key `StandingSounds` (on): standing mounts and
+  babies make their sounds near the keeper.
 - 0.36.0: never lost ([never-lost.md](never-lost.md)): `Mounts.ReturnToSafeSpot`, `Mounts.LastSafeSpot`, the event
   `Mounts.ReturnedToSafeSpot`, the Behaviour keys `FallGuard` (on) and `ReturnKey` (None); `MountSettingsPage.Button`
   (a button row of the mod's own: its action, the word on it, an enabled condition; `PanelButton` stays).

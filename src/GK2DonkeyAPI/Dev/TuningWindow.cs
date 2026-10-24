@@ -857,10 +857,29 @@ namespace GK2DonkeyAPI
             GUILayout.Label("All sounds are the game's own, played at the donkey through the game's sound player, so the in-game SFX volume applies. Volumes and pitches multiply the game's values for that sound (1 = as the game plays it). Sound ids can be any id from the game's list (PROBE-FINDINGS Round 12); an unknown id plays nothing and is marked here. The play buttons preview a sound with the settings below.", small);
             Toggle("All mount sounds on", s.SoundsOn, null);
             FloatSlider("Master volume", s.SoundVolume, 0f, 3f, 2, null);
+            if (GUILayout.Button(Tip("Play the probe tone at the mount", "A half-second tone of the mod's own, registered as a game sound and played at the ridden mount (or at you) through the game's player (docs/mount-sounds-design.md section 5). To check by ear: quieter walking away, the game's Sounds slider, the pause menu."), Wd(260f)))
+            {
+                SoundBank.PlayProbeTone(Mount.Donkey != null ? Mount.Donkey.transform : MainGame.PlayerController != null ? MainGame.PlayerController.transform : null);
+            }
+            Toggle("Standing mounts and babies make their sounds near you", Plugin.StandingSounds, null);
             if (!s.SoundsOn.Value)
             {
                 GUILayout.Label("Off: the game's own behaviour (a silent donkey, the keeper's footsteps, the game's lip sound).", small);
                 return;
+            }
+            Mount.Instance ei = Mount.Current ?? Mount.Ridden;
+            if (ei != null && ei.SoundsRig != null)
+            {
+                Header("Events of " + ei.Describe() + "  (what plays, from which layer; docs/mount-sounds-design.md)");
+                foreach (SoundEvents.Def d in SoundEvents.All)
+                {
+                    SoundSpec sp = ei.SoundsRig.Resolve(d.Id);
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(Tip(d.Id, d.Description), Wd(90f));
+                    if (GUILayout.Button(Tip("Play", "Plays this event on this mount now, as it would play in game (its layer's sound, the volumes, the ground under it for a step)."), Wd(50f))) ei.SoundsRig.Emit(d.Id);
+                    GUILayout.Label(sp == null ? "nothing (no layer gives this event a sound)" : sp.Describe(), small);
+                    GUILayout.EndHorizontal();
+                }
             }
 
             Header("Hoofsteps");
@@ -878,7 +897,7 @@ namespace GK2DonkeyAPI
             SoundIdRow("Graze sound id", s.GrazeSoundId, "graze", allowEmpty: false);
             FloatSlider("Graze volume", s.GrazeVolume, 0f, 3f, 2, null);
             FloatSlider("Lip-smacking volume (the game's own lips sound; 0 = silent)", s.LipsVolume, 0f, 3f, 2, null);
-            if (GUILayout.Button(Tip("Play the lips sound", "Plays the game's own lip-smacking sound at the donkey once. Needs a mounted donkey."), Wd(160f))) MountSounds.Preview("lips");
+            if (GUILayout.Button(Tip("Play the lips sound", "Plays the game's own lip-smacking sound at the donkey once. Needs a mounted donkey."), Wd(160f))) Sounds.Preview("lips");
 
             Header("Braying");
             SoundIdRow("Bray sound id (voice_donkey: four short ee-aw sounds)", s.BraySoundId, "bray", allowEmpty: false);
@@ -938,7 +957,7 @@ namespace GK2DonkeyAPI
             FloatSlider("Pitch", s.BellPitch, 0.3f, 2f, 2, null);
 
             Header("Status");
-            GUILayout.Label("Last sound: " + (string.IsNullOrEmpty(MountSounds.LastEvent) ? "none yet" : MountSounds.LastEvent), small);
+            GUILayout.Label("Last sound: " + (string.IsNullOrEmpty(Sounds.LastEvent) ? "none yet" : Sounds.LastEvent), small);
             if (GUILayout.Button(Tip("Reset the sounds of this style to defaults", "Puts every sound setting of this style (ids, volumes, pitches, timings) back to the mod defaults. Other styles and tabs are untouched.")))
             {
                 s.ResetSounds();
@@ -952,7 +971,7 @@ namespace GK2DonkeyAPI
             GUILayout.Label(name, LabelFor(entry), Wd(LabelW));
             if (GUILayout.Button(Tip("Play", "Plays this row's sound once at the donkey, with the volume and pitch set here. Needs a mounted donkey; an unknown id plays nothing."), Wd(50f)))
             {
-                MountSounds.Preview(preview);
+                Sounds.Preview(preview);
             }
             GUILayout.EndHorizontal();
             GUILayout.BeginHorizontal();
@@ -961,7 +980,7 @@ namespace GK2DonkeyAPI
             string v = GUILayout.TextField(shown ?? "", Wd(LabelW));
             GUI.enabled = true;
             string id = (v ?? "").Trim(); // stored trimmed: a space around a pasted id would not be found
-            bool ok = (allowEmpty && id.Length == 0) || MountSounds.KnownId(id);
+            bool ok = (allowEmpty && id.Length == 0) || Sounds.KnownId(id);
             GUILayout.Label(ok ? "" : "unknown id", small);
             GUILayout.EndHorizontal();
             if (locked) { return; }

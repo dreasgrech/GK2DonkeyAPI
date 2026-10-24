@@ -48,6 +48,7 @@ namespace GK2DonkeyAPI
             FlyFree,    // the free flight's frame (Flight.FreeTick: the floor, the ground under it, the safe-spot check, a landing)
             DrawnIndex, //   the drawn ground's index: a search for the terrains, only when none woke under the patch (DrawnGround.Index)
             SafeSpots,  // never lost: the safe-spot record and the fall watchdog (SafeSpots.Tick)
+            Sounds,     // the mount sounds' rigs (Sounds.Rig.Tick: the ridden one's frame and every standing Active instance's)
             Count,
         }
 
