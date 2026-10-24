@@ -151,6 +151,13 @@ For players:
 
 For mod authors:
 
+- **The dragon takes off and lands with sounds of its own**: six sounds the user supplied, trimmed of their silence
+  (0.05 to 0.25 s in front, 0.1 to 0.43 s behind), levelled to the same loudness without clipping and made mono OGG, in
+  the dragon skin's `sounds` folder: four lift-offs (`takeoff_1.ogg` to `takeoff_4.ogg`, its `[Mount.Sounds] takeoff`)
+  and two landings (`land_1.ogg`, `land_2.ogg`, its `land`, from the start of the dive); one at random per flight,
+  never the same twice in a row, shared by every dragon skin. Its voice stays the game's growl placeholder. The first sound files the mod ships. The trimming tool,
+  for the next batch: `trim_sounds.py <folder> <out> [prefix]` (kept with the work copies in
+  `C:\ClaudeCodeTemp\GK2-dragon-sounds`, with WAV previews and a README of what was cut).
 - **The donkey's own sounds stay the donkey's** (docs/mount-sounds.md "The layers"): a mount other than the donkey
   no longer inherits the bray, the lip smack, the chewing or the getting-on and getting-off snorts riding plain; they
   are silent on it until its pack gives them a sound (a new creature is silent by default where it matters). The
