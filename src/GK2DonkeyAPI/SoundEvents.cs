@@ -24,6 +24,7 @@ namespace GK2DonkeyAPI
         internal bool Loop;            // a stoppable event's clip looped until Stop
         internal bool Speech;          // the dialogue voices' mixer group instead of the in-world sfx one
         internal bool Loading;         // the layer's files are still being decoded: nothing plays yet
+        internal bool Missing;         // the donkey's own sound on another mount, silent because no layer gives one
         internal Dictionary<string, float> Numbers; // the event's own numbers (SoundEvents.Def.Numbers)
         internal string Layer = "base";
 
@@ -43,6 +44,7 @@ namespace GK2DonkeyAPI
         // What the dev tab shows: the source, the volume and pitch, the layer.
         internal string Describe()
         {
+            if (Missing) return "MISSING: the donkey's own sound, silent on this mount until its pack gives one";
             string src = Silent ? "none" : BankId != null ? BankId + (Loading ? " (loading)" : "") : GameId ?? (BySurface ? "by the ground" : "nothing");
             return $"{src}  x{Volume.ToString("0.00", CultureInfo.InvariantCulture)} vol, {Pitch.ToString("0.00", CultureInfo.InvariantCulture)} pitch{(PitchVariation > 0f ? " +/-" + PitchVariation.ToString("0.00", CultureInfo.InvariantCulture) : "")}{(Start > 0f ? " from " + Start.ToString("0.00", CultureInfo.InvariantCulture) + " s" : "")}{(Loop ? ", loop" : "")}{(Speech ? ", speech" : "")}{(On ? "" : ", OFF")}  [{Layer}]";
         }

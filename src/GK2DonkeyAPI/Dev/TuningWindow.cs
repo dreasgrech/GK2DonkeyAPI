@@ -870,14 +870,18 @@ namespace GK2DonkeyAPI
             Mount.Instance ei = Mount.Current ?? Mount.Ridden;
             if (ei != null && ei.SoundsRig != null)
             {
-                Header("Events of " + ei.Describe() + "  (what plays, from which layer; docs/mount-sounds-design.md)");
+                Header("Events of " + ei.Describe() + "  (what plays, from which layer; docs/mount-sounds.md)");
+                GUILayout.Label(SoundKey(0) + "  " + SoundKey(1) + "  " + SoundKey(2) + "  " + SoundKey(3) + "  " + SoundKey(4) + "  " + SoundKey(5) + "  " + SoundKey(6), small);
+                Sounds.TraceOn = GUILayout.Toggle(Sounds.TraceOn, Tip("Log every sound played (the flying ones always)", "A [sound] line in the log for each play: the sound's place, its distance from the game's listener and what it is heard at, sampled over its life. Off by default; the flying events are always logged while the volume question is open."));
                 foreach (SoundEvents.Def d in SoundEvents.All)
                 {
                     SoundSpec sp = ei.SoundsRig.Resolve(d.Id);
+                    int kind = SoundKind(sp);
+                    bool playing = ei.SoundsRig.IsPlaying(d.Id, out float since);
                     GUILayout.BeginHorizontal();
-                    GUILayout.Label(Tip(d.Id, d.Description), Wd(90f));
+                    GUILayout.Label(Tip(Colour(playing ? "\u25B6 " + d.Id : d.Id, playing ? PlayingHex : KindHex[kind], bold: playing), d.Description), RichLabel, Wd(110f));
                     if (GUILayout.Button(Tip("Play", "Plays this event on this mount now, as it would play in game (its layer's sound, the volumes, the ground under it for a step)."), Wd(50f))) ei.SoundsRig.Emit(d.Id);
-                    GUILayout.Label(sp == null ? "nothing (no layer gives this event a sound)" : sp.Describe(), small);
+                    GUILayout.Label(Colour(sp == null ? "nothing (no layer gives this event a sound)" : sp.Describe(), KindHex[kind]) + (playing ? Colour("   playing", PlayingHex, bold: true) : since >= 0f && since < 60f ? Colour($"   played {since:0}s ago", "#9A9A9A") : ""), RichSmall);
                     GUILayout.EndHorizontal();
                 }
             }
@@ -963,6 +967,30 @@ namespace GK2DonkeyAPI
                 s.ResetSounds();
             }
         }
+
+        // The events table's colours (the user, 2026-10-24: "a better visual way of telling which sounds are missing and
+        // which are currently playing"): 0 missing, 1 its own (the mount's or the skin's, or a mod's), 2 the donkey's (the
+        // player's keys), 3 silent by choice (none), 4 loading, 5 nothing (no layer gives one), 6 playing now.
+        private static readonly string[] KindHex = { "#FF5A4E", "#62D96B", "#E8E8E8", "#7FA8D9", "#F2C744", "#7A7A7A" };
+        private const string PlayingHex = "#38E8FF";
+        private static readonly string[] KindName = { "MISSING", "its own", "the donkey's", "silent by choice", "loading", "no sound", "playing" };
+
+        private static int SoundKind(SoundSpec sp)
+        {
+            if (sp == null) return 5;
+            if (sp.Missing) return 0;
+            if (sp.Loading) return 4;
+            if (sp.Silent) return 3;
+            return sp.Layer == "base" ? 2 : 1;
+        }
+
+        private static string SoundKey(int k) => Colour((k == 6 ? "\u25B6 " : "\u25A0 ") + KindName[k], k == 6 ? PlayingHex : KindHex[k], bold: k == 0 || k == 6);
+
+        private static string Colour(string text, string hex, bool bold = false) => (bold ? "<b>" : "") + "<color=" + hex + ">" + text + "</color>" + (bold ? "</b>" : "");
+
+        private static GUIStyle richLabel, richSmall;
+        private static GUIStyle RichLabel => richLabel ?? (richLabel = new GUIStyle(label) { richText = true });
+        private static GUIStyle RichSmall => richSmall ?? (richSmall = new GUIStyle(small) { richText = true, wordWrap = false });
 
         // A sound id as a text field with a play button; an id the game does not have is flagged.
         private static void SoundIdRow(string name, ConfigEntry<string> entry, string preview, bool allowEmpty)

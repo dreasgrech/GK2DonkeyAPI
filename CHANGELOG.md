@@ -151,6 +151,13 @@ For players:
 
 For mod authors:
 
+- **The dev Sounds tab shows what is missing and what is playing, in colour**: each event's name and source in its
+  colour (red MISSING: the donkey's own sound, silent on this mount until its pack gives one; green its own, from the
+  mount or the skin; white the donkey's; blue silent by choice; yellow loading; grey no sound), a key above the table,
+  and a cyan ▶ with "playing" while an event's sound plays ("played 12s ago" after). The Mounts tab's sound rows
+  take the same colours. A [sound] log line per play gives the sound's place, its distance from the game's listener and
+  what it is heard at over its life (the flying events always, everything with the tab's switch): the measurement for
+  the lift-off sounds heard much quieter than the landing ones.
 - **The dragon takes off and lands with sounds of its own**: six sounds the user supplied, trimmed of their silence
   (0.05 to 0.25 s in front, 0.1 to 0.43 s behind), levelled to the same loudness without clipping and made mono OGG, in
   the dragon skin's `sounds` folder: four lift-offs (`takeoff_1.ogg` to `takeoff_4.ogg`, its `[Mount.Sounds] takeoff`)

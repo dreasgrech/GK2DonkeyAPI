@@ -35,6 +35,57 @@ namespace GK2DonkeyAPI
         internal static readonly List<(float At, Mount.Instance Who, string Event)> TestVoiceTimes = new List<(float, Mount.Instance, string)>();
         internal static void TestResetHerd() { nextVoiceAt = 0f; TestVoiceTimes.Clear(); }
 
+        // The trace (the dev Sounds tab's switch; the flying events always): a line per play with the distance from the
+        // sound to the game's listener (LazyAudio.Microphone) and the falloff it is heard at, sampled over its life
+        // (the user, 2026-10-24: "the lift-off sounds are barely audible while the landing sounds sound louder";
+        // measured before anything is changed).
+        internal static bool TraceOn;
+
+        internal static bool FlightEvent(string e) => e == "takeoff" || e == "flap" || e == "glide" || e == "fly" || e == "land" || e == "touchdown" || e == "landed" || e == "jump" || e == "jumpland";
+
+        private static readonly AccessTools.FieldRef<SoundHandler, SoundController> handlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
+
+        private static void Trace(string eventId, string id, SoundHandler h, Transform at)
+        {
+            try
+            {
+                if (Plugin.Instance != null) Plugin.Instance.StartCoroutine(TraceRoutine(eventId, id, h, at));
+            }
+            catch
+            {
+            }
+        }
+
+        private static System.Collections.IEnumerator TraceRoutine(string eventId, string id, SoundHandler h, Transform at)
+        {
+            var parts = new List<string>();
+            float t0 = Time.unscaledTime;
+            float[] marks = { 0f, 0.25f, 0.5f, 1f, 1.5f, 2f, 2.5f };
+            foreach (float m in marks)
+            {
+                while (Time.unscaledTime - t0 < m) yield return null;
+                SoundController sc = null;
+                try { sc = h != null && h.IsActive ? handlerSource(h) : null; } catch { }
+                if (sc == null || sc.audioSource == null) { parts.Add($"{m:0.00}s ended"); break; }
+                AudioSource src = sc.audioSource;
+                Transform mic = null;
+                try { mic = LazyAudio.Microphone; } catch { }
+                Vector3 sp = src.transform.position;
+                float dist = mic != null ? Vector3.Distance(sp, mic.position) : -1f;
+                float fall = 1f;
+                try
+                {
+                    AnimationCurve curve = src.rolloffMode == AudioRolloffMode.Custom ? src.GetCustomCurve(AudioSourceCurveType.CustomRolloff) : null;
+                    if (curve != null && dist >= 0f) fall = curve.Evaluate(Mathf.Clamp01(dist / Mathf.Max(0.01f, src.maxDistance)));
+                }
+                catch { }
+                parts.Add($"{m:0.00}s at {sp.x:0.0},{sp.y:0.0},{sp.z:0.0} {(dist >= 0f ? dist.ToString("0.0") + " from the listener" : "no listener")}, heard x{fall * src.volume:0.000} (volume {src.volume:0.000} x falloff {fall:0.000})");
+            }
+            Transform m0 = null;
+            try { m0 = LazyAudio.Microphone; } catch { }
+            Plugin.Log.LogInfo($"[sound] {eventId} {id}: the listener at {(m0 != null ? m0.position.ToString("F1") + " (" + m0.name + ")" : "?")}; " + string.Join("; ", parts));
+        }
+
         // The donkey's own sound on another mount (Def.DonkeyOwn): the ride-style getting-on and getting-off snorts are
         // the donkey's, the cart style's ladder sounds are everyone's.
         internal static bool DonkeyOwnFor(SoundEvents.Def d, Catalog.Entry mount, bool cart)
@@ -342,6 +393,20 @@ namespace GK2DonkeyAPI
             internal string LastEvent { get; private set; } = "";
             // Plays that reached the game's player, by event (the self-tests).
             internal readonly Dictionary<string, int> TestPlays = new Dictionary<string, int>(StringComparer.Ordinal);
+            // the last play of each event and its handler: the dev table marks what is playing now
+            private readonly Dictionary<string, (float At, SoundHandler H)> lastPlayed = new Dictionary<string, (float, SoundHandler)>(StringComparer.Ordinal);
+
+            // Playing now (its handler still live), or played in the last half second (a short sound still shows a beat).
+            internal bool IsPlaying(string eventId, out float sinceS)
+            {
+                sinceS = -1f;
+                if (!lastPlayed.TryGetValue(eventId, out var p)) return false;
+                sinceS = Time.unscaledTime - p.At;
+                bool live = false;
+                try { live = p.H != null && p.H.IsActive; } catch { }
+                return live || sinceS < 0.5f;
+            }
+
             internal int TestTicks;             // TickInner entries (the self-tests: is the rig ticked at all)
             internal string TestLastGate = "";  // why the last tick stopped early, or "ran"
             internal string TestState => $"ticks {TestTicks}, last gate '{TestLastGate}', nextBray {nextBray:0.00} (now {Time.time:0.00}), nextVoiceAt {nextVoiceAt:0.00}, walking last {wasWalking}, baby {IsBaby}, ridden {owner.IsRidden}, standing on {StandingOn}, answerAt {answerAt:0.00}";
@@ -689,7 +754,7 @@ namespace GK2DonkeyAPI
                 {
                     // the donkey's own sound on another creature: silent unless a layer below gives it one (a crab
                     // never brays by default; the user, 2026-10-24)
-                    r.Silent = true; r.GameId = null; r.BySurface = false;
+                    r.Silent = true; r.GameId = null; r.BySurface = false; r.Missing = true; // a layer's line below clears it
                 }
                 Looks.SkinDef mountFiles = Looks.MountSoundFileOwner(mount);
                 Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
@@ -726,13 +791,13 @@ namespace GK2DonkeyAPI
                     SoundBank.State st = SoundBank.StateOf(id);
                     if (id != null && st != SoundBank.State.Failed)
                     {
-                        r.BankId = id; r.GameId = null; r.Silent = false; r.BySurface = false; r.Layer = layer;
+                        r.BankId = id; r.GameId = null; r.Silent = false; r.BySurface = false; r.Missing = false; r.Layer = layer;
                         r.Loading = st != SoundBank.State.Ready;
                     }
                 }
-                else if (l.Source == "none") { r.Silent = true; r.GameId = null; r.BankId = null; r.BySurface = false; r.Loading = false; r.Layer = layer; }
-                else if (l.Source == "ground") { r.BySurface = true; r.GameId = null; r.BankId = null; r.Silent = false; r.Loading = false; r.Layer = layer; }
-                else if (l.Source != null) { r.GameId = l.Source; r.BankId = null; r.Silent = false; r.BySurface = false; r.Loading = false; r.Layer = layer; }
+                else if (l.Source == "none") { r.Silent = true; r.GameId = null; r.BankId = null; r.BySurface = false; r.Loading = false; r.Missing = false; r.Layer = layer; }
+                else if (l.Source == "ground") { r.BySurface = true; r.GameId = null; r.BankId = null; r.Silent = false; r.Loading = false; r.Missing = false; r.Layer = layer; }
+                else if (l.Source != null) { r.GameId = l.Source; r.BankId = null; r.Silent = false; r.BySurface = false; r.Loading = false; r.Missing = false; r.Layer = layer; }
                 if (l.Volume.HasValue) vol = l.Volume.Value;
                 if (l.Pitch.HasValue) pitch = l.Pitch.Value;
                 if (l.PitchVariation.HasValue) r.PitchVariation = l.PitchVariation.Value;
@@ -855,6 +920,8 @@ namespace GK2DonkeyAPI
                         if (sfx != null && sfx.group != null) h.SetMixerGroup(sfx.group);
                     }
                     if (d.Stoppable) loops[eventId] = h;
+                    lastPlayed[eventId] = (Time.unscaledTime, h);
+                    if (TraceOn || FlightEvent(eventId)) Trace(eventId, id, h, at);
                     TestPlays.TryGetValue(eventId, out int n);
                     TestPlays[eventId] = n + 1;
                     if (d.Id == "voice" || d.Id == "answer")

@@ -423,7 +423,8 @@ namespace GK2DonkeyAPI
                     if (ofSkin) SkinSoundSet(skin, mount, ride, key, null); else MountSoundSet(mount, ride, key, null);
                 }
                 SoundSpec sp = ridden != null && ridden.SoundsRig != null ? ridden.SoundsRig.Resolve(key) : null;
-                GUILayout.Label(sp == null ? (ridden == null ? "" : "nothing") : sp.Describe(), small);
+                bool playing = ridden != null && ridden.SoundsRig != null && ridden.SoundsRig.IsPlaying(key, out _);
+                GUILayout.Label(sp == null ? (ridden == null ? "" : "nothing") : Colour(sp.Describe(), KindHex[SoundKind(sp)]) + (playing ? Colour("   playing", PlayingHex, bold: true) : ""), RichSmall);
                 GUILayout.EndHorizontal();
                 string volKey = key + ".volume";
                 string volText = ofSkin ? SkinSoundText(skin, ride, volKey) : MountSoundText(mount, ride, volKey);
