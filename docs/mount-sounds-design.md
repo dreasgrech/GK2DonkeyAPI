@@ -5,6 +5,12 @@ where a mount emits audio, ground mounts first, then flying; study the donkey's 
 that eventually replaces it and works for all skins; it must be skin-specific, since a mount's skins can have
 different audio; solid and scalable.*
 
+**Amended 2026-10-24 (the mount folders):** a mount is no longer a `[Mount]` block inside its default skin's
+skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `default_skin`, `[Stats]`, `[Tuning*]`,
+`[Sounds*]`: plain names), the mount's `sounds\`, and `skins\<skin>\` for each look (skin.cfg, pictures, `front\`,
+its own `sounds\`); the donkey's folder holds skins only. The "declaring skin", joiner and Default-by-id rules
+below are history; docs/skins.md "What a pack is" and docs/making-a-mount.md are current (MountPacks.cs).
+
 Status: **the probe passed in game 2026-10-24** (section 5: `SoundBank.cs`, the self-test "the probe" in group Sounds
 15/0, the dev Sounds tab's button; the results under section 5); **phase 1 step 2 built 2026-10-24** (the catalogue
 `SoundEvents.cs`, a `Sounds.Rig` per instance in `Sounds.cs` replacing `MountSounds.cs`, the base layer from the

@@ -12,7 +12,8 @@ namespace SaddleUp
     // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs. Its five mounts (the Red Dragon, the Giant Rat, the Giant Snail,
-    // the Giant Worm, Gerry) are skin packs embedded in this DLL (the csproj's assets\skins\**) and handed to the API
+    // the Giant Worm, Gerry) are mount packs embedded in this DLL (the csproj's assets\mounts\**: each mount's
+    // mount.cfg and sounds\, its skins under skins\; the donkey's Hellfire and Royal Parade under donkey\skins\) and handed to the API
     // in Awake: the API is the backend, this mod ships the content, exactly as anyone else's mod ships a mount
     // (docs/mounts-as-mods.md: a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart).
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
@@ -33,7 +34,7 @@ namespace SaddleUp
         // BepInDependency minimum above.
         private static readonly Version NeedsApi = new Version(0, 36, 0);
 
-        private const string SkinsPrefix = "GK2SaddleUp.skins."; // the embedded packs' resource names (the csproj)
+        private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
         // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind. The
         // API keeps it out with the mounts off (this version), as every registration.

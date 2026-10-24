@@ -1,15 +1,20 @@
-// The skins this repo ships (every src/*/assets/skins/<id>/: the API's own and Saddle Up's five mounts, each embedded into
-// its DLL; docs/mounts-as-mods.md): every skin.cfg must parse the way
-// Looks.cs reads it, every picture the donkey base needs must be there at the canvas size, a mount declared by
-// several skins must be declared the same way, a skin's [Tuning] may only hold the picture keys (a skin is the
-// drawing, the mount the creature: docs/mounts-design.md §1), and a mount's tuning keys must exist. The frame keys
+// The mounts and skins this repo ships, sorted by mount (every src/*/assets/mounts/<mount>/: its mount.cfg and sounds\,
+// and skins/<skin>/ with each skin.cfg; Saddle Up's five mounts and the donkey's two skins, embedded into its DLL;
+// docs/skins.md "What a pack is", docs/mounts-as-mods.md): every mount.cfg and skin.cfg must parse the way the loader
+// reads them (MountPacks.cs, Looks.cs), every picture the donkey base needs must be there at the canvas size, a
+// skin's [Tuning] may only hold the picture keys (a skin is the drawing, the mount the creature: docs/mounts-design.md
+// §1), and a mount's tuning keys must exist. The frame keys
 // and the allowed skin tuning keys are read from Looks.cs, the tuning keys from Plugin.cs, so this stays in step.
 // Usage: dotnet run -c Release
 using System.Text.RegularExpressions;
 
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
-var skinDirs = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "skins")).Where(Directory.Exists)
+var mountDirs = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "mounts")).Where(Directory.Exists)
     .SelectMany(Directory.GetDirectories).OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+var skinDirs = mountDirs.Select(m => Path.Combine(m, "skins")).Where(Directory.Exists).SelectMany(Directory.GetDirectories)
+    .OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+foreach (var stray in Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "skins")).Where(Directory.Exists))
+    Console.WriteLine($"FAIL {stray}: the flat skins folder is gone (2026-10-24): a skin sits in assets/mounts/<mount>/skins/<skin>/");
 var looksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Looks.cs"));
 var pluginCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Plugin.cs"));
 int fails = 0, passes = 0;
@@ -40,16 +45,18 @@ if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else P
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
 var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
-// The [Mount] block's keys as Looks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
-var mountKeys = StringsIn(looksCs, "MountKeys");
-if (mountKeys.Count < 16) Fail($"Looks.cs MountKeys: {mountKeys.Count} keys read (16 expected)"); else Pass("Looks.cs MountKeys: the [Mount] block's keys");
+// The [Mount] block's keys as MountPacks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
+var mountPacksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "MountPacks.cs"));
+var mountKeys = StringsIn(mountPacksCs, "MountKeys");
+if (mountKeys.Count < 17) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (17 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
-var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors", "Mount", "Mount.Stats", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" };
+var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors" };
+var mountSections = new[] { "Mount", "Stats", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // mount.cfg, in its canonical order
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
 var skinOwnSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // the skin's own sections, in the canonical order, before the colour sections
 // The sound catalogue (docs/mount-sounds-design.md): the events, their numbers and variants (SoundEvents.cs), the line attributes (SoundBlock.cs)
@@ -60,7 +67,7 @@ var soundNumbers = new HashSet<string>(Regex.Matches(soundEventsCs, @"Numbers = 
 var soundVariants = new HashSet<string>(Regex.Matches(Regex.Match(soundEventsCs, @"Surfaces = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 var soundAttrs = new HashSet<string>(Regex.Matches(Regex.Match(soundBlockCs, @"Attributes = \{([^}]*)\}").Groups[1].Value, @"""(\w+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (soundEvents.Count < 10 || soundAttrs.Count < 5 || soundVariants.Count != 4) Fail($"SoundEvents.cs / SoundBlock.cs: the sound catalogue could not be read ({soundEvents.Count} events, {soundAttrs.Count} attributes, {soundVariants.Count} variants)"); else Pass($"SoundEvents.cs: {soundEvents.Count} sound events, {soundNumbers.Count} numbers, {soundVariants.Count} variants; SoundBlock.cs: {soundAttrs.Count} line attributes");
-var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" };
+var soundSections = new[] { "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // a skin.cfg's and a mount.cfg's alike
 // the donkey's own events (DonkeyOwn = true in SoundEvents.cs): silent on another mount unless its pack gives them a sound
 var donkeyOwn = new HashSet<string>(Regex.Matches(soundEventsCs, @"Id = ""(\w+)""(?:(?!Id = "")[\s\S])*?DonkeyOwn = true").Select(m => m.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (donkeyOwn.Count < 4) Fail($"SoundEvents.cs: the donkey's own events could not be read ({donkeyOwn.Count})"); else Pass($"SoundEvents.cs: {donkeyOwn.Count} of the donkey's own events ({string.Join(", ", donkeyOwn.OrderBy(e => e))})");
@@ -200,11 +207,143 @@ static int Paeth(int a, int b, int c)
 static string SectionText(Dictionary<string, Dictionary<string, string>> cfg, string name)
     => cfg.TryGetValue(name, out var s) ? string.Join("\n", s.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase).Select(kv => kv.Key.ToLowerInvariant() + "=" + kv.Value)) : "";
 
-var mountDecl = new Dictionary<string, (string Skin, string Text)>(StringComparer.OrdinalIgnoreCase);
+// The sound lines of a skin's or a mount's cfg (docs/mount-sounds.md "A pack's sounds"): every line an event, an
+// event.variant, or an event's attribute or number; every file named is in the sounds\ folder next to that cfg; every
+// file there is named by a line or by the name rule.
+void CheckSounds(Dictionary<string, Dictionary<string, string>> cfg, string dir, Action<string> Bad)
+{
+    foreach (var sec in soundSections)
+    {
+        if (!cfg.TryGetValue(sec, out var snd)) continue;
+        if (snd.Count == 0) Bad($"[{sec}] is empty: leave it out");
+        foreach (var kv in snd)
+        {
+            var parts = kv.Key.Split('.');
+            if (!soundEvents.Contains(parts[0])) { Bad($"[{sec}] {kv.Key}: '{parts[0]}' is no sound event ({string.Join(", ", soundEvents.OrderBy(e => e))})"); continue; }
+            bool variant = parts.Length >= 2 && soundVariants.Contains(parts[1]);
+            string? attr = parts.Length == 1 ? null : parts.Length == 2 ? (variant ? null : parts[1]) : parts.Length == 3 && variant ? parts[2] : "?";
+            if (attr == "?") { Bad($"[{sec}] {kv.Key}: not an event, event.variant or event.attribute"); continue; }
+            if (attr != null && !soundAttrs.Contains(attr) && !soundNumbers.Contains(attr)) Bad($"[{sec}] {kv.Key}: '{attr}' is neither a line attribute ({string.Join(", ", soundAttrs)}) nor a number of a sound event ({string.Join(", ", soundNumbers.OrderBy(n => n))})");
+            if (attr == null)
+                foreach (var tok in kv.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()))
+                    if (Regex.IsMatch(tok, @"\.(ogg|wav|mp3)$", RegexOptions.IgnoreCase) && !File.Exists(Path.Combine(dir, "sounds", tok))) Bad($"[{sec}] {kv.Key}: no sounds\\{tok} next to this cfg");
+        }
+    }
+    if (!Directory.Exists(Path.Combine(dir, "sounds"))) return;
+    foreach (var sub in Directory.GetDirectories(Path.Combine(dir, "sounds"))) Bad($"sounds\\{Path.GetFileName(sub)}\\: a folder in sounds\\ is never read (a mount's files are in the mount folder's own sounds\\)");
+    foreach (var f in Directory.GetFiles(Path.Combine(dir, "sounds")))
+    {
+        string fileName = Path.GetFileName(f);
+        if (!Regex.IsMatch(fileName, @"\.(ogg|wav)$", RegexOptions.IgnoreCase)) { Bad($"sounds\\{fileName}: not an .ogg or .wav file"); continue; }
+        string stem = Path.GetFileNameWithoutExtension(f);
+        int us = stem.LastIndexOf('_');
+        if (us > 0 && int.TryParse(stem[(us + 1)..], out _)) stem = stem[..us];
+        var sp = stem.Split('.');
+        bool named = soundSections.Any(sec => cfg.TryGetValue(sec, out var s2) && s2.Values.Any(v => v.Split(new[] { ',', ';' }).Select(t => t.Trim()).Contains(fileName, StringComparer.OrdinalIgnoreCase)));
+        bool convention = soundEvents.Contains(sp[0]) && (sp.Length == 1 || sp.Length == 2 && soundVariants.Contains(sp[1]));
+        if (!named && !convention) Bad($"sounds\\{fileName}: named like no event (<event>[.<variant>][_<n>].ogg) and lined up in no [Sounds*] section: it is never played");
+    }
+}
+
+// The mounts: a mount.cfg per folder (the donkey's holds skins only)
+var mountCfgs = new Dictionary<string, Dictionary<string, Dictionary<string, string>>>(StringComparer.OrdinalIgnoreCase);
+foreach (var mdir in mountDirs)
+{
+    string mid = Path.GetFileName(mdir);
+    string mcfgPath = Path.Combine(mdir, "mount.cfg");
+    bool mok = true;
+    void BadM(string what) { Fail($"mount {mid}: {what}"); mok = false; }
+    var skinsHere = Directory.Exists(Path.Combine(mdir, "skins")) ? Directory.GetDirectories(Path.Combine(mdir, "skins")).Select(Path.GetFileName).ToList() : new List<string?>();
+    if (skinsHere.Count == 0) BadM("no skins\\<skin>\\ folder: a mount with nothing to wear is withdrawn at the start");
+    foreach (var stray in Directory.GetFiles(mdir).Select(Path.GetFileName).Where(f => !f!.Equals("mount.cfg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
+        BadM($"{stray}: a mount folder holds mount.cfg, sounds\\, skins\\ and its portrait PNG");
+    foreach (var sub in Directory.GetDirectories(mdir).Select(Path.GetFileName).Where(d => d != "skins" && d != "sounds")) BadM($"{sub}\\: a mount folder holds sounds\\ and skins\\ only");
+    if (mid.Equals("donkey", StringComparison.OrdinalIgnoreCase))
+    {
+        if (File.Exists(mcfgPath)) BadM("mount.cfg in donkey\\: the donkey is the game's own mount, its folder holds skins only");
+        if (Directory.Exists(Path.Combine(mdir, "sounds"))) BadM("sounds\\ in donkey\\: the donkey's sounds are the game's (a skin's own go in its folder)");
+        if (mok) Pass($"mount donkey: the game's own, {skinsHere.Count} skin(s) of it here");
+        continue;
+    }
+    if (!File.Exists(mcfgPath)) { BadM("no mount.cfg (a mount folder of this repo declares its mount)"); continue; }
+    var cfg = ReadCfg(mcfgPath);
+    mountCfgs[mid] = cfg;
+    var order = SectionOrder(mcfgPath);
+    foreach (var sec in order) if (!mountSections.Contains(sec, StringComparer.OrdinalIgnoreCase)) BadM($"[{sec}]: not a section of mount.cfg ({string.Join(", ", mountSections)})");
+    {
+        int last = -1;
+        foreach (var sec in mountSections)
+        {
+            int at = order.FindIndex(x => x.Equals(sec, StringComparison.OrdinalIgnoreCase));
+            if (at < 0) continue;
+            if (at < last) BadM($"[{sec}] out of order: {string.Join(", ", mountSections)}");
+            last = at;
+        }
+    }
+    if (order.GroupBy(x => x, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) BadM("a section appears twice");
+    if (!cfg.TryGetValue("Mount", out var m)) { BadM("no [Mount] section"); continue; }
+    if ((m.GetValueOrDefault("id") ?? "") != mid) BadM($"[Mount] id = {m.GetValueOrDefault("id")}: the folder's name ({mid})");
+    foreach (var k in m.Keys) if (!mountKeys.Contains(k)) BadM($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
+    foreach (var req in mountRequired) if (string.IsNullOrWhiteSpace(m.GetValueOrDefault(req))) BadM($"[Mount] {req} missing (the canonical block always carries it)");
+    if (!m.ContainsKey("description")) BadM("[Mount] has no description (the Mounts panel shows it)");
+    if (m.TryGetValue("portrait", out var mportrait) && !File.Exists(Path.Combine(mdir, mportrait))) BadM($"[Mount] portrait = {mportrait}: no such file in the mount folder");
+    if (!m.TryGetValue("default_skin", out var defSkin)) BadM("[Mount] default_skin missing: the look a new one wears (a skin in skins\\)");
+    else if (!skinsHere.Contains(defSkin, StringComparer.OrdinalIgnoreCase)) BadM($"[Mount] default_skin = {defSkin}: no skins\\{defSkin}\\ ({string.Join(", ", skinsHere)})");
+    foreach (var flag in new[] { "cart", "foals", "flies", "jumps" })
+        if (m.TryGetValue(flag, out var v) && v != "true" && v != "false") BadM($"[Mount] {flag} = {v}: true or false");
+    if (m.GetValueOrDefault("flies") == "false") BadM("[Mount] flies = false is the default: leave it out");
+    if (m.GetValueOrDefault("jumps") == "true") BadM("[Mount] jumps = true is the default: leave it out");
+    if (m.TryGetValue("foal_scale", out var fsv))
+    {
+        if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) BadM($"[Mount] foal_scale = {fsv}: 0.2 to 1");
+        else if (Math.Abs(fs - 0.6) < 0.001) BadM("[Mount] foal_scale = 0.6 is the default: leave it out");
+    }
+    if (!m.TryGetValue("speed", out var sv)) BadM("[Mount] speed missing: a built-in mount says its own speed (times walking speed; the donkey's is 2)");
+    else if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) BadM($"[Mount] speed = {sv}: a number, 0.5 to 4 (times walking speed)");
+    if (m.TryGetValue("cargo", out var cg))
+    {
+        if (!int.TryParse(cg, out var cgn) || cgn < 1 || cgn > 6) BadM($"[Mount] cargo = {cg}: a whole number, 1 to 6");
+        if (m.GetValueOrDefault("cart") == "false") BadM("[Mount] cargo on a mount that can't pull the cart");
+    }
+    else if (m.GetValueOrDefault("cart") != "false") BadM("[Mount] cargo missing: a built-in mount that pulls the cart says how much it carries (1 to 6)");
+    if (m.TryGetValue("effect", out var ef))
+    {
+        if (ef == "none" || ef.Length == 0) BadM("[Mount] effect = none is the default: leave it out");
+        else if (!effectIds.Contains(ef)) BadM($"[Mount] effect = {ef}: not a built-in effect ({string.Join(", ", effectIds)})");
+        if (!m.ContainsKey("effect_when")) BadM("[Mount] effect without effect_when (Off, Night or Always)");
+    }
+    if (m.TryGetValue("effect_when", out var ew))
+    {
+        if (!effectWhen.Contains(ew)) BadM($"[Mount] effect_when = {ew}: Off, Night or Always (Never is the menu's word, not a value)");
+        if (!m.ContainsKey("effect")) BadM("[Mount] effect_when without an effect");
+    }
+    if (cfg.TryGetValue("Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cargo", StringComparison.OrdinalIgnoreCase)) BadM($"[Stats] {key}: the API writes the speed and cargo lines itself (left out in the game)");
+    if (cfg.TryGetValue("Tuning", out var both))
+        foreach (var sec in new[] { "Tuning.Ride", "Tuning.Cart" })
+            if (cfg.TryGetValue(sec, out var st)) foreach (var key in both.Keys) if (st.ContainsKey(key)) BadM($"{key} set in [Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
+    foreach (var sec in new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" })
+    {
+        if (!cfg.TryGetValue(sec, out var t)) continue;
+        if (t.Count == 0) BadM($"[{sec}] is empty: leave it out");
+        foreach (var kv in t)
+        {
+            if (kv.Key.Equals("SpeedMultiplier", StringComparison.OrdinalIgnoreCase)) BadM($"[{sec}] SpeedMultiplier: the mount's speed is [Mount] speed (the cart's follows it)");
+            if (kv.Key.Equals("SeatOffset", StringComparison.OrdinalIgnoreCase)) BadM($"[{sec}] SeatOffset: a mount's seat is its skins' seat row (seat = <row>), which holds for every player; SeatOffset only reaches players with AutoSeat off (docs/seat-investigation.md)");
+            if (skinTuningKeys.Contains(kv.Key)) BadM($"[{sec}] {kv.Key}: a drawing's key; a skin's [Tuning] (or [Tuning.Ride] / [Tuning.Cart]) is its home, the mount keeps what the creature is (docs/mounts-parity-matrix.md 9.1)");
+            if (kv.Key.StartsWith("Lantern", StringComparison.OrdinalIgnoreCase)) BadM($"[{sec}] {kv.Key}: the lantern's keys are the cart's own, a mount may not pin them (refused at the merge)");
+            else if (!tuningKeys.Contains(kv.Key) && !shuffleKeys.Contains(kv.Key)) BadM($"[{sec}] {kv.Key}: not a tuning key of [Ride]/[Cart] or of the shuffle (docs/reference.md)");
+            else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) BadM($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
+        }
+    }
+    CheckSounds(cfg, mdir, BadM);
+    if (mok) Pass($"mount {mid}: mount.cfg, default look {defSkin}, {skinsHere.Count} skin(s){(Directory.Exists(Path.Combine(mdir, "sounds")) ? ", " + Directory.GetFiles(Path.Combine(mdir, "sounds")).Length + " sound file(s)" : "")}");
+}
+
 int skins = 0, pictures = 0;
 foreach (var dir in skinDirs)
 {
     string id = Path.GetFileName(dir);
+    string folderMount = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(dir))!)!;
     string cfgPath = Path.Combine(dir, "skin.cfg");
     if (!File.Exists(cfgPath)) { Fail($"{id}: no skin.cfg"); continue; }
     skins++;
@@ -215,17 +354,14 @@ foreach (var dir in skinDirs)
     if (!skin.TryGetValue("format", out var format) || format != "1") Bad("format = 1 missing");
     if (!skin.TryGetValue("id", out var sid) || sid != id) Bad($"id = {skin.GetValueOrDefault("id") ?? "(none)"} should be the folder name");
     if (string.IsNullOrWhiteSpace(skin.GetValueOrDefault("name"))) Bad("name missing");
-    string mount = skin.GetValueOrDefault("mount") ?? "";
-    if (mount.Length == 0) Bad("mount missing (a built-in names its mount)");
+    string mount = folderMount;
+    if (skin.TryGetValue("mount", out var mountLine) && !mountLine.Equals(folderMount, StringComparison.OrdinalIgnoreCase)) Bad($"[Skin] mount = {mountLine}: the skin sits in the folder of the mount '{folderMount}' (leave the line out: the folder says it)");
     if (skin.TryGetValue("base", out var b) && b != "donkey") Bad($"base = {b}: the donkey is the only base");
     foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
     if (skin.TryGetValue("portrait", out var portrait) && !File.Exists(Path.Combine(dir, portrait))) Bad($"[Skin] portrait = {portrait}: no such file in the pack");
     if (!skin.ContainsKey("description")) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
-    if (cfg.TryGetValue("Mount", out var mountBlock))
-    {
-        if (mountBlock.TryGetValue("portrait", out var mportrait) && !File.Exists(Path.Combine(dir, mportrait))) Bad($"[Mount] portrait = {mportrait}: no such file in the pack");
-        if (!mountBlock.ContainsKey("description")) Bad("[Mount] has no description (the Mounts panel shows it)");
-    }
+    foreach (var sec in cfg.Keys.Where(k => k.Equals("Mount", StringComparison.OrdinalIgnoreCase) || k.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase)))
+        Bad($"[{sec}] in a skin.cfg: a mount's values go in its mount.cfg (the loader ignores it here)");
     // the values the loader reads by name (anything else silently means the default in the game)
     if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");
     if (skin.TryGetValue("colours", out var coloursv) && coloursv != "own" && coloursv != "palette") Bad($"[Skin] colours = {coloursv}: own or palette");
@@ -258,13 +394,11 @@ foreach (var dir in skinDirs)
         else if (cw < 8 || cw > maxCanvas || ch < 8 || ch > maxCanvas) Bad($"canvas = {canvas}: 8 to {maxCanvas} (Looks.MaxCanvas: the loader refuses more)");
     }
     if (seatRowGiven && (seatRow < 0 || seatRow >= ch)) Bad($"[Skin] seat = {seatRow}: a row of the {cw}x{ch} canvas (0 to {ch - 1}, from the top)");
-    foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
-        if (cfg.TryGetValue(sec, out var st) && st.ContainsKey("SeatOffset")) Bad($"[{sec}] SeatOffset: a mount's seat is the skin's seat row (seat = <row>), which holds for every player; SeatOffset only reaches players with AutoSeat off (docs/seat-investigation.md)");
     // the sections and their order (the canonical layout, tools/skins/canonical_cfg.py)
     var order = SectionOrder(cfgPath);
     foreach (var sec in order)
     {
-        if (!knownSections.Contains(sec) && !sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}]: not a section the loader knows");
+        if (!knownSections.Contains(sec) && !sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase) && !sec.StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}]: not a section the loader knows");
         if (sec.StartsWith("Base.", StringComparison.OrdinalIgnoreCase))
         {
             string region = sec.Substring(5);
@@ -293,13 +427,6 @@ foreach (var dir in skinDirs)
             last = at;
         }
     }
-    int firstMount = order.FindIndex(s => s.StartsWith("Mount", StringComparison.OrdinalIgnoreCase));
-    if (firstMount >= 0)
-    {
-        if (!order[firstMount].Equals("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[firstMount]}] before [Mount]: the mount block starts with [Mount]");
-        for (int i = firstMount; i < order.Count; i++) if (!order[i].StartsWith("Mount", StringComparison.OrdinalIgnoreCase)) Bad($"[{order[i]}] after the mount block: the mount block comes last");
-    }
-    else if (order.Any(s => s.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase))) Bad("a [Mount.*] section without a [Mount] section (ignored in the game)");
     if (order.GroupBy(s => s, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1)) Bad("a section appears twice");
     bool sheet = skin.ContainsKey("sheet");
     bool game = skin.TryGetValue("source", out var src) && src.Equals("game", StringComparison.OrdinalIgnoreCase);
@@ -416,54 +543,8 @@ foreach (var dir in skinDirs)
         foreach (var sec in new[] { "Tuning.Ride", "Tuning.Cart" })
             if (cfg.TryGetValue(sec, out var st)) foreach (var key in bothStyles.Keys) if (st.ContainsKey(key)) Bad($"{key} set in [Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
     }
-    // the sounds (docs/mount-sounds.md "A pack's sounds"): every line an event, an event.variant, or an event's attribute
-    // or number; a skin's [Sounds*] files are in sounds\, its mount's [Mount.Sounds*] files in sounds\mount\ (2026-10-24:
-    // a mount's files named by event in sounds\ were also the declaring skin's own by the name rule, loaded twice); every
-    // file in either folder is named by a line of its own sections or by the convention; sounds\mount\ only in a skin
-    // that declares a mount
-    bool declaresMount = cfg.TryGetValue("Mount", out var mountSec) && mountSec.TryGetValue("id", out var mountIdVal) && mountIdVal.Length > 0;
-    foreach (var sec in soundSections)
-    {
-        if (!cfg.TryGetValue(sec, out var snd)) continue;
-        if (snd.Count == 0) Bad($"[{sec}] is empty: leave it out");
-        bool mountSection = sec.StartsWith("Mount.", StringComparison.Ordinal);
-        string folder = mountSection ? Path.Combine("sounds", "mount") : "sounds";
-        foreach (var kv in snd)
-        {
-            var parts = kv.Key.Split('.');
-            if (!soundEvents.Contains(parts[0])) { Bad($"[{sec}] {kv.Key}: '{parts[0]}' is no sound event ({string.Join(", ", soundEvents.OrderBy(e => e))})"); continue; }
-            bool variant = parts.Length >= 2 && soundVariants.Contains(parts[1]);
-            string? attr = parts.Length == 1 ? null : parts.Length == 2 ? (variant ? null : parts[1]) : parts.Length == 3 && variant ? parts[2] : "?";
-            if (attr == "?") { Bad($"[{sec}] {kv.Key}: not an event, event.variant or event.attribute"); continue; }
-            if (attr != null && !soundAttrs.Contains(attr) && !soundNumbers.Contains(attr)) Bad($"[{sec}] {kv.Key}: '{attr}' is neither a line attribute ({string.Join(", ", soundAttrs)}) nor a number of a sound event ({string.Join(", ", soundNumbers.OrderBy(n => n))})");
-            if (attr == null)
-                foreach (var tok in kv.Value.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()))
-                    if (Regex.IsMatch(tok, @"\.(ogg|wav|mp3)$", RegexOptions.IgnoreCase) && !File.Exists(Path.Combine(dir, folder, tok)))
-                        Bad($"[{sec}] {kv.Key}: no {folder}\\{tok} in the pack" + (File.Exists(Path.Combine(dir, mountSection ? "sounds" : Path.Combine("sounds", "mount"), tok)) ? (mountSection ? " (it is in sounds\\: a mount's files go in sounds\\mount\\)" : " (it is in sounds\\mount\\: the mount's files; a skin's own go in sounds\\)") : ""));
-        }
-    }
-    void CheckSoundFolder(string folder, string[] sections)
-    {
-        if (!Directory.Exists(Path.Combine(dir, folder))) return;
-        foreach (var f in Directory.GetFiles(Path.Combine(dir, folder)))
-        {
-            string fileName = Path.GetFileName(f);
-            if (!Regex.IsMatch(fileName, @"\.(ogg|wav)$", RegexOptions.IgnoreCase)) { Bad($"{folder}\\{fileName}: not an .ogg or .wav file"); continue; }
-            string stem = Path.GetFileNameWithoutExtension(f);
-            int us = stem.LastIndexOf('_');
-            if (us > 0 && int.TryParse(stem[(us + 1)..], out _)) stem = stem[..us];
-            var sp = stem.Split('.');
-            bool named = sections.Any(sec => cfg.TryGetValue(sec, out var s2) && s2.Values.Any(v => v.Split(new[] { ',', ';' }).Select(t => t.Trim()).Contains(fileName, StringComparer.OrdinalIgnoreCase)));
-            bool convention = soundEvents.Contains(sp[0]) && (sp.Length == 1 || sp.Length == 2 && soundVariants.Contains(sp[1]));
-            if (!named && !convention) Bad($"{folder}\\{fileName}: named like no event (<event>[.<variant>][_<n>].ogg) and lined up in no [{sections[0]}*] section: it is never played");
-        }
-    }
-    CheckSoundFolder("sounds", soundSections.Where(x => !x.StartsWith("Mount.", StringComparison.Ordinal)).ToArray());
-    if (Directory.Exists(Path.Combine(dir, "sounds", "mount")))
-    {
-        if (!declaresMount) Bad("sounds\\mount\\ holds the files of a mount, but this skin declares none ([Mount] id): they are never played");
-        else CheckSoundFolder(Path.Combine("sounds", "mount"), soundSections.Where(x => x.StartsWith("Mount.", StringComparison.Ordinal)).ToArray());
-    }
+    // the sounds: its own lines and its own sounds\ (the mount's are in mount.cfg and the mount folder's sounds\)
+    CheckSounds(cfg, dir, Bad);
     // [Colors] (docs/mount-colours.md): regions from the mount vocabulary (Colors.cs MountRegionKeys, never Coat: it is
     // everything not named), every colour RRGGBB, in the pictures, and under one region only. A game-source skin has
     // no pictures here to check against.
@@ -490,87 +571,20 @@ foreach (var dir in skinDirs)
         // where two colours in one cell change together (anti-aliased edges and the front layer count too)
         if (inPictures != null) Console.WriteLine($"INFO {id}: {inPictures.Count} colour(s) in the pictures: {(inPictures.Count > 48 ? "over 48, the colour cube (a few near-identical colours may change together; fewer colours = the exact swap)" : "the exact swap")}");
     }
-    if (cfg.TryGetValue("Mount", out var m))
-    {
-        string mid = m.GetValueOrDefault("id") ?? "";
-        if (mid != mount) Bad($"[Mount] id = {mid} but the skin's mount = {mount}");
-        if (mid == "donkey") Bad("[Mount] id = donkey: the donkey is the game's own mount, a skin of it declares no [Mount]");
-        foreach (var k in m.Keys) if (!mountKeys.Contains(k)) Bad($"[Mount] {k}: not a key the loader knows ({string.Join(", ", mountKeys)})");
-        foreach (var req in mountRequired) if (string.IsNullOrWhiteSpace(m.GetValueOrDefault(req))) Bad($"[Mount] {req} missing (the canonical block always carries it)");
-        foreach (var flag in new[] { "cart", "foals", "flies", "jumps" })
-        {
-            if (m.TryGetValue(flag, out var v) && v != "true" && v != "false") Bad($"[Mount] {flag} = {v}: true or false");
-        }
-        // flies and jumps are written only when not the default (the loader's SaveCfg does the same)
-        if (m.GetValueOrDefault("flies") == "false") Bad("[Mount] flies = false is the default: leave it out");
-        if (m.GetValueOrDefault("jumps") == "true") Bad("[Mount] jumps = true is the default: leave it out");
-        if (m.TryGetValue("foal_scale", out var fsv))
-        {
-            if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) Bad($"[Mount] foal_scale = {fsv}: 0.2 to 1");
-            else if (Math.Abs(fs - 0.6) < 0.001) Bad("[Mount] foal_scale = 0.6 is the default: leave it out");
-        }
-        // the speed (times the keeper's walking speed; with the cart times the donkey's ratio): every built-in mount says
-        // its own, 0.5 to 4; the cargo (items its cart carries) 1 to 6 on a mount that pulls one, said by every built-in;
-        // never a SpeedMultiplier in its tuning or a [Mount.Stats] Speed / Cargo line as well
-        if (!m.TryGetValue("speed", out var sv)) Bad("[Mount] speed missing: a built-in mount says its own speed (times walking speed; the donkey's is 2)");
-        else if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) Bad($"[Mount] speed = {sv}: a number, 0.5 to 4 (times walking speed)");
-        if (m.TryGetValue("cargo", out var cg))
-        {
-            if (!int.TryParse(cg, out var cgn) || cgn < 1 || cgn > 6) Bad($"[Mount] cargo = {cg}: a whole number, 1 to 6");
-            if (m.GetValueOrDefault("cart") == "false") Bad("[Mount] cargo on a mount that can't pull the cart");
-        }
-        else if (m.GetValueOrDefault("cart") != "false") Bad("[Mount] cargo missing: a built-in mount that pulls the cart says how much it carries (1 to 6)");
-        foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
-            if (cfg.TryGetValue(sec, out var st) && st.ContainsKey("SpeedMultiplier")) Bad($"[{sec}] SpeedMultiplier: the mount's speed is [Mount] speed (the cart's follows it)");
-        if (cfg.TryGetValue("Mount.Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cargo", StringComparison.OrdinalIgnoreCase)) Bad($"[Mount.Stats] {key}: the API writes the speed and cargo lines itself (left out in the game)");
-        if (m.TryGetValue("effect", out var ef))
-        {
-            if (ef == "none" || ef.Length == 0) Bad("[Mount] effect = none is the default: leave it out");
-            else if (!effectIds.Contains(ef)) Bad($"[Mount] effect = {ef}: not a built-in effect ({string.Join(", ", effectIds)})");
-            if (!m.ContainsKey("effect_when")) Bad("[Mount] effect without effect_when (Off, Night or Always)");
-        }
-        if (m.TryGetValue("effect_when", out var ew))
-        {
-            if (!effectWhen.Contains(ew)) Bad($"[Mount] effect_when = {ew}: Off, Night or Always (Never is the menu's word, not a value)");
-            if (!m.ContainsKey("effect")) Bad("[Mount] effect_when without an effect");
-        }
-        // every tuning key in one place: a style section always wins over [Mount.Tuning], so a key in both is dead there
-        if (cfg.TryGetValue("Mount.Tuning", out var both))
-        {
-            foreach (var sec in new[] { "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
-                if (cfg.TryGetValue(sec, out var st)) foreach (var key in both.Keys) if (st.ContainsKey(key)) Bad($"{key} set in [Mount.Tuning] and [{sec}]: the style section wins, the other value is dead; keep it in one place");
-        }
-        foreach (var sec in new[] { "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart" })
-        {
-            if (!cfg.TryGetValue(sec, out var t)) continue;
-            if (t.Count == 0) Bad($"[{sec}] is empty: leave it out");
-            foreach (var kv in t)
-            {
-                if (skinTuningKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: a drawing's key; the skin's [Tuning] (or [Tuning.Ride] / [Tuning.Cart]) is its home, the mount keeps what the creature is (docs/mounts-parity-matrix.md 9.1)");
-                if (kv.Key.StartsWith("Lantern", StringComparison.OrdinalIgnoreCase)) Bad($"[{sec}] {kv.Key}: the lantern's keys are the cart's own, a mount may not pin them (refused at the merge)");
-                else if (!tuningKeys.Contains(kv.Key) && !shuffleKeys.Contains(kv.Key)) Bad($"[{sec}] {kv.Key}: not a tuning key of [Ride]/[Cart] or of the shuffle (docs/reference.md)");
-                else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) Bad($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
-            }
-        }
-        string text = string.Join("\n---\n", new[] { "Mount", "Mount.Tuning", "Mount.Tuning.Ride", "Mount.Tuning.Cart", "Mount.Sounds", "Mount.Sounds.Ride", "Mount.Sounds.Cart", "Mount.Sounds.Baby" }.Select(s => SectionText(cfg, s)));
-        if (mountDecl.TryGetValue(mid, out var first))
-        {
-            if (first.Text != text) Bad($"declares the mount '{mid}' differently from '{first.Skin}' (the first declaration wins in the game; keep them the same: the Mounts tab's Save writes every declaring file)");
-        }
-        else mountDecl[mid] = (id, text);
-    }
-    else if (mount != "donkey") Bad($"names the mount '{mount}' but declares no [Mount] section (a built-in declares its own)");
     if (!mount.Equals("donkey", StringComparison.OrdinalIgnoreCase))
     {
         // what the skin lacks: the donkey's own events with no line in its own or its mount's blocks (riding plain)
         var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        foreach (var sec in new[] { "Sounds", "Sounds.Ride", "Mount.Sounds", "Mount.Sounds.Ride" })
-            if (cfg.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if (parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) covered.Add(parts[0]); }
+        mountCfgs.TryGetValue(mount, out var mountCfg);
+        foreach (var c in new[] { cfg, mountCfg })
+            if (c != null)
+                foreach (var sec in new[] { "Sounds", "Sounds.Ride" })
+                    if (c.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if (parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) covered.Add(parts[0]); }
         var missing = donkeyOwn.Where(e => !covered.Contains(e)).OrderBy(e => e).ToList();
-        Console.WriteLine(missing.Count == 0 ? $"INFO {id}: no sound missing (every one of the donkey's own events has a line)" : $"INFO {id}: sounds MISSING (the donkey's own, silent on this mount until given): {string.Join(", ", missing)}{(cfg.ContainsKey("Mount") ? "" : " (a joiner: its mount's block is in the declaring skin's file, not counted here)")}");
+        Console.WriteLine(missing.Count == 0 ? $"INFO {id}: no sound missing (every one of the donkey's own events has a line)" : $"INFO {id}: sounds MISSING (the donkey's own, silent on this mount until given): {string.Join(", ", missing)}");
     }
     if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
-Console.WriteLine($"INFO {skins} shipped skins (the API's and Saddle Up's), {mountDecl.Count} mounts declared ({string.Join(", ", mountDecl.Keys.OrderBy(k => k))}), {pictures} pictures");
+Console.WriteLine($"INFO {skins} shipped skins in {mountDirs.Count} mount folders, {mountCfgs.Count} mounts declared ({string.Join(", ", mountCfgs.Keys.OrderBy(k => k))}), {pictures} pictures");
 Console.WriteLine(fails == 0 ? $"ALL PASS ({passes})" : $"FAILURES: {fails}");
 return fails;

@@ -33,4 +33,4 @@ warned the Mounts panel (the look bar's successor): MountsPanel
 warned the settings page in the game's Settings window: SettingsRows
 warned the Mods menu's donkey picture and its labelled lists: ModsWindow
 
-dev SelfTest TestLoads CargoSheet TuningWindow ScriptDump CarryProbe ChestProbe HeadProbe HeldItemProbe LanternProbe ReachProbe ShapeProbe
+dev SelfTest TestLoads CargoSheet TuningWindow ScriptDump CarryProbe ChestProbe HeadProbe HeldItemProbe LanternProbe ReachProbe ShapeProbe StrideProbe

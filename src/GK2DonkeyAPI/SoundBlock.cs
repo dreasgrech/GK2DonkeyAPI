@@ -64,7 +64,7 @@ namespace GK2DonkeyAPI
 
         // The block from its raw lines. fileNames: the pack's files ("sounds/<file>" among them) to check a file line
         // against; null: no check. report: a problem, one sentence (the loader's report); the line is dropped. folder:
-        // where its file lines read from: the skin's sounds\ (Looks.SoundsKey) or the mount's sounds\mount\.
+        // where its file lines read from (Looks.SoundsKey: the sounds\ folder of the skin or of the mount folder).
         internal static SoundBlock Parse(IEnumerable<KeyValuePair<string, string>> raw, string section, ICollection<string> fileNames, Action<string> report, string folder = Looks.SoundsKey)
         {
             var b = new SoundBlock();
@@ -207,8 +207,7 @@ namespace GK2DonkeyAPI
 
         // The convention: <folder><event>[.<variant>][_<n>].ogg|wav with no cfg line for that key is that key's files
         // (voice_1.ogg, voice_2.ogg; step.grass_1.wav). A key the cfg gives a source keeps the cfg's. The folder's own
-        // files only: a skin's sounds\ convention never reaches into sounds\mount\ (its mount's files: a file named
-        // takeoff_1.ogg there is every skin of the mount's take-off, not the declaring skin's own; the user, 2026-10-24).
+        // files only, never a subfolder's.
         internal void AddConvention(IEnumerable<string> fileNames, string section, Action<string> report, string folder = Looks.SoundsKey)
         {
             if (fileNames == null) return;
@@ -217,7 +216,7 @@ namespace GK2DonkeyAPI
             {
                 if (!f.StartsWith(folder, StringComparison.OrdinalIgnoreCase) || !IsSoundFile(f)) continue;
                 string name = f.Substring(folder.Length);
-                if (name.IndexOf('/') >= 0) continue; // a subfolder's (sounds\mount\ under sounds\)
+                if (name.IndexOf('/') >= 0) continue; // a subfolder's
                 string stem = name.Substring(0, name.LastIndexOf('.'));
                 int us = stem.LastIndexOf('_');
                 if (us > 0 && int.TryParse(stem.Substring(us + 1), NumberStyles.Integer, CultureInfo.InvariantCulture, out _)) stem = stem.Substring(0, us);

@@ -1,5 +1,11 @@
 # Mounts: design (2026-10-17 evening)
 
+**Amended 2026-10-24 (the mount folders):** a mount is no longer a `[Mount]` block inside its default skin's
+skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `default_skin`, `[Stats]`, `[Tuning*]`,
+`[Sounds*]`: plain names), the mount's `sounds\`, and `skins\<skin>\` for each look (skin.cfg, pictures, `front\`,
+its own `sounds\`); the donkey's folder holds skins only. The "declaring skin", joiner and Default-by-id rules
+below are history; docs/skins.md "What a pack is" and docs/making-a-mount.md are current (MountPacks.cs).
+
 Status 2026-10-20 (the foundation audit, docs/mounts-foundation-audit.md): the five built-in mounts are declared in
 one layout (`[Mount]` with id, name, author, version, cart, foals always, the block last in the file, every tuning key
 in one section; `tools/skins/canonical_cfg.py`, enforced by `tests/SkinsScan`); a built-in skin's mount reports

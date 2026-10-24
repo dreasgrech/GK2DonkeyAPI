@@ -8,8 +8,9 @@ namespace GK2DonkeyAPI
     // Mounts (docs/mounts-design.md): what the player rides as a creature type. A mount owns the rider's seat for
     // it (values for existing tuning keys, per style), its rules (the cart, foals), a default effect and its abilities
     // (code hooks, MountAbility). A skin names its mount; an instance's mount is its skin's, so nothing new is saved.
-    // The donkey mount is the base the game gives us; the built-in creatures declare theirs in their skin.cfg [Mount]
-    // sections (the pack path, exercised by the shipped skins every start); mods register mounts with abilities in code.
+    // The donkey mount is the base the game gives us; the built-in creatures come as mount packs (a folder per mount:
+    // mount.cfg, its sounds and its skins; MountPacks.cs, exercised by Saddle Up's every start); mods register mounts
+    // with abilities in code.
     internal static class Catalog
     {
         internal const string DonkeyId = MountLooks.DonkeyId;
@@ -19,9 +20,9 @@ namespace GK2DonkeyAPI
             internal string Id, Name, Author, Version, Owner;
             internal string Noun;                      // the word a sentence uses ("a skull can't pull the cart"); null: the name in lower case
             internal string Description;               // for the Mounts panel: a line or two about the creature
-            internal string Portrait;                  // a pack's: a PNG of the declaring skin's folder for the panel's list; null: the mount drawn
+            internal string Portrait;                  // a pack's: a PNG of the mount's folder for the panel's list; null: the mount drawn
             internal Texture2D PortraitTexture;        // a code mount's portrait, the mod's own texture
-            internal List<KeyValuePair<string, string>> Stats = new List<KeyValuePair<string, string>>(); // [Mount.Stats]: lines the panel shows as given
+            internal List<KeyValuePair<string, string>> Stats = new List<KeyValuePair<string, string>>(); // mount.cfg [Stats]: lines the panel shows as given
             internal string NounText => (Noun ?? Label).ToLowerInvariant(); // the word every sentence and label uses
             internal bool BuiltIn, FromPack;
             internal bool Cart = true;                 // may pull the cart
@@ -35,14 +36,14 @@ namespace GK2DonkeyAPI
             internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
-            // the mount's sounds ([Mount.Sounds], [Mount.Sounds.Ride], [Mount.Sounds.Cart]: a pack's text lines; a code
+            // the mount's sounds (mount.cfg [Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]: a pack's text lines; a code
             // mount's MountSound objects), parsed in LooksSounds.cs; docs/mount-sounds-design.md
             internal Dictionary<string, object> Sounds, SoundsRide, SoundsCart, SoundsBaby;
             internal Looks.SoundBlocks SoundBlocks;
             internal MountAbility[] Abilities = Array.Empty<MountAbility>();
             internal string AbilityOwner;               // the owner the abilities' values are set under ("<owner>.ability.<id>"); cleared when the mount leaves an instance
-            internal string DeclaredBy;                 // a pack mount: the skin whose [Mount] block defined it (its Default when the ids match)
-            internal bool DeclaredByDefault => FromPack && DeclaredBy != null && DeclaredBy.Equals(Id, StringComparison.OrdinalIgnoreCase);
+            internal Looks.MountPack Pack;               // a pack mount: its folder (mount.cfg, sounds\, the portrait); null: a code mount or the donkey
+            internal string DefaultSkin;                // mount.cfg default_skin: the look a new instance of it wears (Looks.DefaultSkinOf)
 
             internal string Label => string.IsNullOrEmpty(Name) ? Id : Name;
         }
@@ -114,7 +115,7 @@ namespace GK2DonkeyAPI
             return r < 0.7f - e ? "Very slow" : r < 0.9f - e ? "Slow" : r <= 1.1f + e ? "Normal" : r <= 1.35f + e ? "Fast" : "Very fast";
         }
 
-        // The stat lines the API writes itself: a [Mount.Stats] line (or a code mount's MountStat) by these names is
+        // The stat lines the API writes itself: a mount.cfg [Stats] line (or a code mount's MountStat) by these names is
         // left out, so the panel never shows two speeds.
         internal static bool ReservedStat(string label)
         {
@@ -158,50 +159,50 @@ namespace GK2DonkeyAPI
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}{(d.Effect != null ? ", effect " + d.Effect : "")}.");
         }
 
-        // A pack's [Mount] declaration. The mount's facts belong to its Default skin (the skin whose id is the mount's,
-        // docs/mounts-foundation-2.md 2.2): the first declaration defines the mount, and a Default that comes later
-        // re-declares it over a joiner's (a loose pack declaring 'dragon' before Saddle Up's dragon registers); any
-        // other later declaration joins, its own facts and tuning unused (said once). A code-registered mount is never
-        // re-declared by a pack.
-        internal static Entry Declare(Entry d, string where, string skinId = null)
+        // A mount pack's declaration (its mount.cfg; MountPacks.cs). One pack per mount: the same pack again (a second
+        // registration of the same owner with the same facts) is the one already there; another pack of the same id
+        // meets the skins' version rule (a higher version wins, a tie goes to the DLL over a loose folder, else the
+        // first stays) and the winner's facts replace the loser's in place, its skins keeping the object. A code mount
+        // is never replaced by a pack.
+        internal static Entry Declare(Entry d, string where)
         {
             CheckId(d.Id);
+            if (d.Id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("'donkey' is the game's own mount: its folder holds skins only.");
+            d.FromPack = true;
+            d.Abilities = Array.Empty<MountAbility>();
             if (defs.TryGetValue(d.Id, out Entry have))
             {
-                if (have.FromPack && have.Owner == d.Owner && Same(have, d))
+                if (!have.FromPack) throw new ArgumentException($"mount '{d.Id}' is registered in code by {have.Owner}; a pack can't redefine it (add skins to it: a mount folder without mount.cfg).");
+                if (have.Owner == d.Owner && Same(have, d)) return have;
+                if (have.Owner == d.Owner || Outranks(d, have))
                 {
-                    if (have.DeclaredBy == null && skinId != null) have.DeclaredBy = skinId;
-                    return have;
-                }
-                bool isDefault = skinId != null && skinId.Equals(d.Id, StringComparison.OrdinalIgnoreCase);
-                // the mount's own skin re-declares over a joiner's declaration, and over the declaration of an earlier
-                // copy of itself that the version rule replaced (Looks.Register: the winner's facts, not the loser's)
-                if (have.FromPack && isDefault && (!have.DeclaredByDefault || have.Owner != d.Owner))
-                {
-                    Plugin.Log.LogInfo($"Catalog: {where} is mount '{d.Id}''s own skin: its [Mount] block defines the mount from now on, over {(have.DeclaredBy != null ? "skin '" + have.DeclaredBy + "'" : have.Owner)}'s declaration (which joins).");
+                    if (have.Owner != d.Owner) Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {where} (version {d.Version ?? "none"}) replaces the one of {have.Owner} (version {have.Version ?? "none"}): the newer wins. Delete the old one.");
                     have.Owner = d.Owner;
                     have.BuiltIn = d.BuiltIn;
-                    have.DeclaredBy = skinId;
+                    have.Pack = d.Pack;
                     Redeclare(have, d);
                     return have;
                 }
-                bool differs = !Same(have, d);
-                Plugin.Log.LogInfo($"Catalog: {where} declares mount '{d.Id}', which {(have.FromPack ? (have.Owner == d.Owner ? "another skin" : "another pack") : have.Owner)} already defines; the skin joins that one{(differs ? ", and its own [Mount] facts and tuning are not used (the mount's own skin's are)" : "")}.");
-                return have;
+                throw new ArgumentException($"mount '{d.Id}' is already defined by {have.Owner} (version {have.Version ?? "none"}); this one (version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
             }
-            d.FromPack = true; // BuiltIn is the declaring skin's (set by Looks.Register): a built-in skin's mount is built in
-            d.Abilities = Array.Empty<MountAbility>();
-            d.DeclaredBy = skinId;
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Effect != null ? ", effect " + d.Effect : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.DefaultSkin != null ? ", default look " + d.DefaultSkin : "")}.");
             return d;
+        }
+
+        // The skins' version rule for two packs of one mount (Looks.Outranks): a higher version; at a tie the DLL over a folder.
+        private static bool Outranks(Entry d, Entry old)
+        {
+            int cmp = Looks.CompareVersions(d.Version, old.Version);
+            if (cmp != 0) return cmp > 0;
+            return d.Pack?.Source == null && old.Pack?.Source != null;
         }
 
         private static bool Same(Entry a, Entry b)
         {
             return a.Cart == b.Cart && a.Foals == b.Foals && a.Flies == b.Flies && a.Jumps == b.Jumps && Math.Abs(a.FoalScale - b.FoalScale) < 0.001f && a.Speed == b.Speed && a.Cargo == b.Cargo && a.Effect == b.Effect && a.EffectWhen == b.EffectWhen && a.Name == b.Name
-                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && SameStats(a.Stats, b.Stats)
+                && a.Author == b.Author && a.Version == b.Version && a.Noun == b.Noun && a.Description == b.Description && a.Portrait == b.Portrait && a.DefaultSkin == b.DefaultSkin && SameStats(a.Stats, b.Stats)
                 && SameDict(a.Tuning, b.Tuning) && SameDict(a.TuningRide, b.TuningRide) && SameDict(a.TuningCart, b.TuningCart)
                 && SameDict(a.Sounds, b.Sounds) && SameDict(a.SoundsRide, b.SoundsRide) && SameDict(a.SoundsCart, b.SoundsCart) && SameDict(a.SoundsBaby, b.SoundsBaby);
         }
@@ -262,6 +263,7 @@ namespace GK2DonkeyAPI
             into.Noun = from.Noun;
             into.Description = from.Description;
             into.Portrait = from.Portrait;
+            into.DefaultSkin = from.DefaultSkin;
             into.Stats = from.Stats ?? new List<KeyValuePair<string, string>>();
             into.Author = from.Author;
             into.Version = from.Version;

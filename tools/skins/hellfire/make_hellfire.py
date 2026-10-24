@@ -7,7 +7,7 @@ every frame turned into pack pixels by comparing the result with the frame it ca
     the colour knobs (hue 7 degrees, saturation about 0.5, brightness 0.42), so the player's coat colour still works.
 So the pack holds nothing of the game's art, and the recipe code (LooksHellfire.cs) is not needed any more.
 
-    python tools/skins/hellfire/make_hellfire.py            # src/SaddleUp/assets/skins/hellfire/ (the built-in pack:
+    python tools/skins/hellfire/make_hellfire.py            # src/SaddleUp/assets/mounts/donkey/skins/hellfire/ (the built-in pack:
                                                              # skin.cfg + a PNG per frame) and out\\ (strips, preview, a sheet)
     python tools/skins/hellfire/make_hellfire.py --no-assets # out\\ only
     python tools/skins/hellfire/make_hellfire.py --cfg       # rewrite the built-in's skin.cfg too (it is by hand otherwise)
@@ -25,7 +25,7 @@ from gamedir import donkey_frames
 import hellfire_proto as HP
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-ASSETS = os.path.join(REPO, "src", "SaddleUp", "assets", "skins", "hellfire")
+ASSETS = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "hellfire")
 OUT = os.path.join(HERE, "out")
 FRAMES = donkey_frames()
 ERASE = (255, 0, 255, 255)

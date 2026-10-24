@@ -17,4 +17,4 @@ def donkey_frames():
 
 
 def packs_dir():
-    return os.path.join(game_dir(), "BepInEx", "plugins", "gk2skins")
+    return os.path.join(game_dir(), "BepInEx", "plugins", "gk2mounts")  # <mount>\\skins\\<skin>\\ (docs/skins.md)

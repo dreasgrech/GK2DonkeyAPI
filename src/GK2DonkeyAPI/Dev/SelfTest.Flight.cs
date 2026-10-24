@@ -450,17 +450,17 @@ namespace GK2DonkeyAPI
                 Catalog.Entry kd = Catalog.Find("flags-beast");
                 if (def != null && kd != null)
                 {
-                    string file = System.IO.Path.Combine(tempRoot, Looks.PackDirName, "flags-test", "skin.cfg");
+                    string file = TempMountCfg(tempRoot, "flags-beast"); // the mount's values: its mount.cfg
                     kd.Jumps = true; // the Mounts tab's "Jumps" toggle does this
-                    string err = Looks.SaveCfg(def);
+                    string err = Looks.SaveMountCfg(kd);
                     string text = System.IO.File.ReadAllText(file).Replace("\r\n", "\n");
                     Check(err == null && text.Contains("\nflies = true\n") && !text.Contains("jumps ="), "saved: flies = true kept, jumps (now the default) left out" + (err != null ? " (" + err + ")" : ""));
                     kd.Flies = false;
-                    err = Looks.SaveCfg(def);
+                    err = Looks.SaveMountCfg(kd);
                     text = System.IO.File.ReadAllText(file).Replace("\r\n", "\n");
                     Check(err == null && !text.Contains("flies =") && !text.Contains("jumps ="), "saved with both at the default: neither written");
                     kd.Flies = true;
-                    err = Looks.ReloadCfg(def);
+                    err = Looks.ReloadMountCfg(kd);
                     Check(err == null && !kd.Flies && kd.Jumps, $"reloaded: the file's values are the mount's (flies {kd.Flies}, jumps {kd.Jumps})");
                 }
                 else Fail("the pack's skin or mount not found");

@@ -675,7 +675,8 @@ against the grown mount in `FoalScale`, 0.2 to 1, 0.6 by default; a running foal
 changes), whether it flies and jumps ridden plain (`Flies`, false by default, and `Jumps`, true; a pack's `flies = true`
 and `jumps = false`; 0.36.0: flying asks the mount's flag, never its id), a default
 effect (`Effect` / `EffectWhen`, shown when an instance's own `Effect` key is `MountEffects.FromMount`, "mount"), and its
-**abilities**. A skin names its mount (`MountSkinDef.Mount`, a pack's `mount =`; the donkey by default), so the red and
+**abilities**. A skin names its mount (`MountSkinDef.Mount`; a pack's skin is a look of the mount folder it sits in;
+the donkey by default), so the red and
 a hypothetical blue dragon would be two skins of the dragon mount, and Hellfire is a skin of the donkey mount. An instance's mount is its
 skin's (`MountHandle.Mount`): the player picks a skin, the mount follows, and nothing new is saved. The mount follows the
 instance's `Skin` key whether or not the instance has a view (asleep far from the keeper, it is still that mount).
@@ -685,7 +686,7 @@ foreach (MountInfo k in Mounts.Catalog.All) Log(k.Name + ": " + string.Join(", "
 IDisposable reg = Mounts.Catalog.Register(Guid, new MountDef
 {
     Id = "checker-beast", Name = "Checker Beast", Cart = false,
-    TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },   // the API takes a picture key on a mount; a pack puts it on the skin (the scan refuses it under [Mount.Tuning*])
+    TuningRide = new Dictionary<string, object> { ["SeatAdjustPx"] = 2f },   // the API takes a picture key on a mount; a pack puts it on the skin (the scan refuses it in a mount.cfg's [Tuning*])
     Abilities = { new GallopsWhenRidden(Guid) },
 });
 Mounts.Looks.Register(Guid, new MountSkinDef { Id = "checker", Name = "Checker", Mount = "checker-beast", Source = src });
@@ -696,14 +697,19 @@ Where a value comes from, per instance and key: an override another mod set on i
 for the int `SeatAdjustPx`); `MountTuning.TypeOf(key)` says which. The merged set goes on the wearer as overrides owned by the skin
 system and is re-applied only when the skin, the mount or the style changes.
 
-A **pack declares a mount without code** with a `[Mount]` section in its `skin.cfg` (`id`, `name`, `author`, `version`,
-`cart`, `foals`, `foal_scale`, `speed`, `cargo`, `effect`, `effect_when`; `[Mount.Tuning]`, `[Mount.Tuning.Ride]`, `[Mount.Tuning.Cart]` for its
-values, each key in one of the three); the mount's own skin (the one whose id is the mount's, its Default) owns
-the declaration: a joiner (`mount = <id>` with a `[Mount]` block of its own) declares only until the Default is
-registered, which re-declares over it, and a declaring skin is that mount's own skin whatever its `mount =` line
-says (0.35.0). Saddle Up's five mounts (rat, snail, worm, dragon, Gerry) declare theirs this way, all in one
-layout (docs/skins.md "Worked examples"); they are Saddle Up's packs, so `MountInfo.IsBuiltIn` is false for
-them (true only for the API's own).
+A **pack declares a mount without code** as a mount folder `gk2mounts\<mount>\` with a `mount.cfg`: `[Mount]` (`id`,
+`name`, `noun`, `description`, `portrait`, `default_skin`, `author`, `version`, `cart`, `foals`, `flies`, `jumps`,
+`foal_scale`, `speed`, `cargo`, `effect`, `effect_when`), `[Stats]`, `[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]` for
+its values (each key in one of the three) and `[Sounds*]`; its skins are the folders under its `skins\`, and
+`default_skin` names the one a new instance wears (the Skin row's Default). A mount folder without `mount.cfg` adds
+its skins to a mount registered elsewhere (`gk2mounts\donkey\skins\` for the donkey's). The same mount from two packs:
+the higher `[Mount] version` wins and replaces the facts in place (the other's skins keep the mount), a tie goes to
+the DLL over a loose folder, otherwise the first stays and the later one is refused with a warning; a mount
+registered in code is never replaced by a pack. A pack's mount is withdrawn with the last of its skins from the same
+owner, and a mount pack none of whose skins registers is withdrawn at once. Saddle Up's five mounts (rat, snail,
+worm, dragon, Gerry) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
+packs, so `MountInfo.IsBuiltIn` is false for them (true only for the API's own). (Before the mount folders,
+2026-10-24, a skin's `[Mount]` block declared the mount and the skin with the mount's id owned the declaration.)
 
 An **ability** (`MountAbility`, abstract: override what you need) is code the API calls for every instance of the
 mount that has a handle: `Attached` / `Detached` when the instance becomes / stops being the mount, `Mounted(style)` /
@@ -742,7 +748,7 @@ the flying and jumping ones `takeoff`, `flap`, `glide`, `fly`, `land`, `touchdow
 `jump`, `jumpland`, `perch`. What
 plays for an event on an instance comes from layers, the first that says a source wins: a mod's `Set` here, the
 skin's own (`MountSkinDef.Sounds`, a pack's `[Sounds]`; `SoundsRide` / `SoundsCart` for one style), the mount's
-(`MountDef.Sounds`, a pack's `[Mount.Sounds]`), the player's keys (`Mounts.Tuning`: the donkey's sounds as shipped
+(`MountDef.Sounds`, a pack's `mount.cfg` `[Sounds]`), the player's keys (`Mounts.Tuning`: the donkey's sounds as shipped
 and as tuned; the donkey's own sounds among them, its voice, lip smack, chewing and ride-style snorts, never reach
 another mount: silent there until a layer gives one). The player's switches and volumes scale whatever won.
 
@@ -775,20 +781,26 @@ recoloured by the colour settings when drawn in the donkey's palette colours.
 
 ```csharp
 foreach (MountSkinInfo s in Mounts.Looks.Skins) Log(s.Id + ": " + s.Name);   // "donkey" first, then the rest
-handle.Tuning.Set(Guid, "Skin", "rat");                                        // this donkey wears the rat
+handle.Tuning.Set(Guid, "Skin", "grey-rat");                                   // this donkey wears the giant rat's look
 handle.Tuning.Set(Guid, "Skin", MountLooks.DonkeyId);                          // the game's own look ("" does the same)
 companion.Skin = "hellfire"; companion.FoalsWearSkin = false;                     // the player's donkey, foals left plain
 ```
 
 Where skins come from, in order of how little they need:
-- **Skin packs** (no code): a folder `gk2skins/<id>/` with `skin.cfg` and the PNGs, anywhere one or two levels under
-  `BepInEx/plugins`. The API finds them at start. `Mounts.Looks.RegisterFolder(owner, folder)` reads packs under a
-  folder of your own.
-- **Embedded in your DLL:** the same files as `EmbeddedResource` with logical names `<prefix><skin dir>\<file>`, then
-  `Mounts.Looks.RegisterEmbedded(owner, assembly, "<prefix>")`. The worked example is Saddle Up itself (its five
-  mounts: the csproj's embed line, one call in its Awake, nothing else; docs/mounts-as-mods.md).
-  A dev build may record the packs' source folder as the assembly metadata `GK2SkinsSourceDir`; the F11 Mounts
-  tab then writes a skin's tuned values back into its skin.cfg.
+- **Skin packs** (no code), sorted by mount: `gk2mounts/<mount>/skins/<skin>/` with `skin.cfg` and the PNGs, the
+  mount's `gk2mounts/<mount>/mount.cfg` and `sounds/` beside them (no `mount.cfg` for a skin of a mount registered
+  elsewhere: `gk2mounts/donkey/skins/<skin>/` for the donkey), the `gk2mounts` folder in `BepInEx/plugins` or in any
+  folder there (`BepInEx/plugins/<AnyFolder>/gk2mounts/`). The API finds them at start.
+  `Mounts.Looks.RegisterFolder(owner, folder)` reads `<folder>/gk2mounts/<mount>/` and
+  `<folder>/*/gk2mounts/<mount>/` under a folder of your own and returns the number of skins registered.
+- **Embedded in your DLL:** the same tree as `EmbeddedResource` with logical names `<prefix><mount>\mount.cfg`,
+  `<prefix><mount>\sounds\<file>`, `<prefix><mount>\skins\<skin>\<file>` (the csproj line `<EmbeddedResource
+  Include="assets\mounts\**\*" LogicalName="<Prefix>.mounts.%(RecursiveDir)%(Filename)%(Extension)" />`), then
+  `Mounts.Looks.RegisterEmbedded(owner, assembly, "<Prefix>.mounts.")`. The worked example is Saddle Up itself
+  (prefix `GK2SaddleUp.mounts.`; its five mounts and the donkey's two skins: the csproj's embed line, one call in its
+  Awake, nothing else; docs/mounts-as-mods.md). A dev build may record the packs' source folder as the assembly
+  metadata `GK2MountsSourceDir` (`$(MSBuildProjectDirectory)\assets\mounts`); the F11 Mounts tab then writes a
+  skin's tuned values back into its `skin.cfg` and the mount's into its `mount.cfg`.
 - **A sheet instead of 44 files:** the same pack with one PNG (`sheet = sheet.png` in `skin.cfg`, cells of the
   canvas size in reading order, the frames in `Mounts.Looks.FrameKeys` order or as `frames = ...` lists them).
 - **From code:** `Mounts.Looks.Register(owner, new MountSkinDef { Id, Name, Source = yourSource })` with an
@@ -810,7 +822,7 @@ one today): the frame keys, canvas, pivot and pixels per unit are the base's, so
 is a second base, not a change to the format.
 
 A skin may have a **front layer**: pictures drawn in front of the rider (the near wing, a saddle's near side), the
-same frame keys, as a pack's `front/` subfolder, a sheet pack's `sheet_front`, or `MountSkinDef.FrontSource`; the API
+same frame keys, as a pack skin's `front/` subfolder, a sheet pack's `sheet_front`, or `MountSkinDef.FrontSource`; the API
 sorts them on the keeper's own layer above his body while he rides (as the leg overlay), just above the creature
 otherwise.
 

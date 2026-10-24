@@ -7,6 +7,12 @@ so that all folders are structured the same"*. This is that investigation: what 
 seven built-in definitions and the tooling differ, the canonical shape they should all have, and the plan. Nothing
 was changed while writing it. Line numbers are of 2026-10-19 night (commit ea0ef64 plus the uncommitted cleanup).
 
+**Amended 2026-10-24 (the mount folders):** a mount is no longer a `[Mount]` block inside its default skin's
+skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `default_skin`, `[Stats]`, `[Tuning*]`,
+`[Sounds*]`: plain names), the mount's `sounds\`, and `skins\<skin>\` for each look (skin.cfg, pictures, `front\`,
+its own `sounds\`); the donkey's folder holds skins only. The "declaring skin", joiner and Default-by-id rules
+below are history; docs/skins.md "What a pack is" and docs/making-a-mount.md are current (MountPacks.cs).
+
 **Status 2026-10-20:** the user chose the tools move (3.8, done) and asked for more investigation on the seat (3.1,
 open: see docs/seat-investigation.md once written). Everything in §5 "safe" is built: the five cfgs in §4's layout
 (`tools/skins/canonical_cfg.py`, checked by `tests/SkinsScan` and the release scans), Save keeps comments (3.4),

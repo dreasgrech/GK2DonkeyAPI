@@ -2,8 +2,9 @@
 
   <!-- The playable mount built on the GK2 Donkey API. Ships in one zip
        with GK2DonkeyAPI.dll, which it needs (hard dependency). Its five mounts (the Red Dragon, the Giant Rat, the
-       Giant Snail, the Giant Worm, Gerry) are skin packs in assets\skins\<id>\ (skin.cfg and a PNG per frame, front\
-       for the dragon's near wing; Gerry's a cfg alone), embedded here and registered with the API at start
+       Giant Snail, the Giant Worm, Gerry) are mount packs in assets\mounts\<mount>\ (mount.cfg, sounds\, and
+       skins\<skin>\ with skin.cfg and a PNG per frame, front\ for the dragon's near wing; Gerry's a cfg alone; the
+       donkey's own Hellfire and Royal Parade in assets\mounts\donkey\skins\), embedded here and registered with the API at start
        (Plugin.cs): the API is the backend, the player mod ships the content, the way any mod ships a mount
        (docs/mounts-as-mods.md). -->
   <PropertyGroup>
@@ -19,16 +20,17 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- The packs, by the name pattern Mounts.Looks.RegisterEmbedded reads: <prefix><skin dir>\<file>. -->
-    <EmbeddedResource Include="assets\skins\**\*" LogicalName="GK2SaddleUp.skins.%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- The packs, by the name pattern Mounts.Looks.RegisterEmbedded reads: <prefix><mount>\mount.cfg,
+         <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file>. -->
+    <EmbeddedResource Include="assets\mounts\**\*" LogicalName="GK2SaddleUp.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
-  <!-- The packs' source folder, so the API's Mounts tab (F11) can write a skin's tuned values back into its skin.cfg on
-       this machine (the same as the API's own GK2DonkeyAPISourceDir). Left out of a release build. -->
+  <!-- The packs' source folder, so the API's Mounts tab (F11) can write tuned values back into a skin's skin.cfg and a
+       mount's mount.cfg on this machine (the same as the API's own GK2DonkeyAPISourceDir). Left out of a release build. -->
   <ItemGroup Condition="'$(ForDist)' != 'true'">
     <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
-      <_Parameter1>GK2SkinsSourceDir</_Parameter1>
-      <_Parameter2>$(MSBuildProjectDirectory)\assets\skins</_Parameter2>
+      <_Parameter1>GK2MountsSourceDir</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)\assets\mounts</_Parameter2>
     </AssemblyAttribute>
   </ItemGroup>
 

@@ -330,6 +330,7 @@ namespace GK2DonkeyAPI
         private sealed class Job
         {
             internal string Id, Owner, Skin, Key, Folder;
+            internal FileSource Src;
             internal bool Speech, Loop, Cancelled;
             internal int Left;
             internal readonly List<AudioClip> Clips = new List<AudioClip>();
@@ -346,21 +347,39 @@ namespace GK2DonkeyAPI
             return failed.ContainsKey(id) ? State.Failed : State.None;
         }
 
+        // Where a pack's sound files come from: a skin's own folder, or a mount folder's (MountPacks.cs). Name is the
+        // bank's name for it ("red-dragon", "mount-dragon"), Label the log's ("skin 'red-dragon'", "mount 'dragon'").
+        internal sealed class FileSource
+        {
+            internal readonly string Owner, Name, Source, Label;
+            internal readonly Func<string, byte[]> ReadFile;
+
+            internal FileSource(string owner, string name, string source, Func<string, byte[]> readFile, string label)
+            {
+                Owner = owner; Name = name; Source = source; ReadFile = readFile; Label = label;
+            }
+
+            internal string BankOwner => Owner + "/" + Name;
+        }
+
         internal static string BankOwner(Looks.SkinDef d) => d.Owner + "/" + d.Id;
 
-        internal static string IdFor(Looks.SkinDef d, string key) => "gk2." + d.Owner + "." + d.Id + "." + key;
+        internal static string IdFor(FileSource src, string key) => "gk2." + src.Owner + "." + src.Name + "." + key;
 
         // The files a layer's line names (the pack's sounds\ folder, or sounds\mount\ for its mount's: folder),
         // registered once as one game sound under the skin's id for that key; the id at once, the clips a few frames later (a pack on disk and an embedded .ogg
         // go through Unity's decoder; an embedded .wav is parsed here at once). StateOf says when it plays; a file
         // that doesn't load is left out with a warning, and with none left the entry fails and the layer below applies.
         internal static string ForSkin(Looks.SkinDef d, string key, string[] files, bool speech, bool loop, string folder = Looks.SoundsKey)
+            => ForFiles(d.SoundFiles, key, files, speech, loop, folder);
+
+        internal static string ForFiles(FileSource src, string key, string[] files, bool speech, bool loop, string folder = Looks.SoundsKey)
         {
-            string id = IdFor(d, key);
+            string id = IdFor(src, key);
             if (entries.ContainsKey(id) || loading.ContainsKey(id) || failed.ContainsKey(id)) return id;
-            var job = new Job { Id = id, Owner = BankOwner(d), Skin = d.Id, Key = key, Folder = folder ?? Looks.SoundsKey, Speech = speech, Loop = loop, Left = files.Length };
+            var job = new Job { Id = id, Owner = src.BankOwner, Skin = src.Label, Src = src, Key = key, Folder = folder ?? Looks.SoundsKey, Speech = speech, Loop = loop, Left = files.Length };
             loading[id] = job;
-            foreach (string f in files) StartOne(d, job, f);
+            foreach (string f in files) StartOne(job, f);
             return id;
         }
 
@@ -381,8 +400,9 @@ namespace GK2DonkeyAPI
             return id;
         }
 
-        private static void StartOne(Looks.SkinDef d, Job job, string file)
+        private static void StartOne(Job job, string file)
         {
+            FileSource d = job.Src;
             try
             {
                 string rel = job.Folder + file; // "sounds/x.ogg", "sounds/mount/x.ogg"
@@ -402,7 +422,7 @@ namespace GK2DonkeyAPI
                     Done(job, file, FromWav(bytes, file), null);
                     return;
                 }
-                LoadFile(CacheFile(d.Owner, d.Id, file, bytes, job.Folder == Looks.MountSoundsKey ? "mount" : null), (c, e) => Done(job, file, c, e));
+                LoadFile(CacheFile(d.Owner, d.Name, file, bytes), (c, e) => Done(job, file, c, e));
             }
             catch (Exception e)
             {
@@ -414,33 +434,36 @@ namespace GK2DonkeyAPI
         {
             if (clip != null && !job.Cancelled) job.Clips.Add(clip);
             else if (clip != null) UnityEngine.Object.Destroy(clip);
-            else Plugin.Log.LogWarning($"Sounds: skin '{job.Skin}': {SoundBlock.FolderText(job.Folder)}{file} did not load ({err}); left out");
+            else Plugin.Log.LogWarning($"Sounds: {job.Skin}: {SoundBlock.FolderText(job.Folder)}{file} did not load ({err}); left out");
             if (--job.Left > 0) return;
             loading.Remove(job.Id);
             if (job.Cancelled) return;
             if (job.Clips.Count == 0)
             {
                 failed[job.Id] = job.Owner;
-                Plugin.Log.LogWarning($"Sounds: skin '{job.Skin}': no file of '{job.Key}' loaded; the layer below applies");
+                Plugin.Log.LogWarning($"Sounds: {job.Skin}: no file of '{job.Key}' loaded; the layer below applies");
                 return;
             }
             try
             {
                 Register(job.Id, job.Clips, job.Owner, job.Loop, job.Speech);
-                Plugin.Log.LogInfo($"Sounds: skin '{job.Skin}': {job.Clips.Count} file(s) loaded for '{job.Key}'");
+                Plugin.Log.LogInfo($"Sounds: {job.Skin}: {job.Clips.Count} file(s) loaded for '{job.Key}'");
             }
             catch (Exception e)
             {
                 failed[job.Id] = job.Owner;
-                Plugin.Log.LogWarning($"Sounds: skin '{job.Skin}': '{job.Key}' could not be registered ({e.Message}); the layer below applies");
+                Plugin.Log.LogWarning($"Sounds: {job.Skin}: '{job.Key}' could not be registered ({e.Message}); the layer below applies");
             }
         }
 
         // A skin withdrawn or read again: its entries, its failures and its loads in flight go, so a changed file is
         // read anew on the next play.
-        internal static int ForgetSkin(Looks.SkinDef d)
+        internal static int ForgetSkin(Looks.SkinDef d) => ForgetOwner(BankOwner(d));
+
+        internal static int ForgetFiles(FileSource src) => ForgetOwner(src.BankOwner);
+
+        private static int ForgetOwner(string owner)
         {
-            string owner = BankOwner(d);
             int n = UnregisterAll(owner);
             var ids = new List<string>();
             foreach (var kv in failed) if (kv.Value == owner) ids.Add(kv.Key);

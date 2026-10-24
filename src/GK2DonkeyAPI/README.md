@@ -190,8 +190,8 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 
 ### 14. Mounts, skins and effects
 
-One rig (the donkey's, `MountWgoId`); another mount is a skin that replaces the drawing and declares the creature
-([`docs/skins.md`](../../docs/skins.md), [`docs/mounts-design.md`](../../docs/mounts-design.md)). Switched off for
+One rig (the donkey's, `MountWgoId`); another mount is a creature of its own (a pack's `mount.cfg`, or code) worn
+through a skin that replaces the drawing ([`docs/skins.md`](../../docs/skins.md), [`docs/mounts-design.md`](../../docs/mounts-design.md)). Switched off for
 players in this version (`Debug.MountsPreview`). Built; the skins, mounts, effects and colours were seen in game as
 they were first built (docs/mount-looks-design.md); the parity work's new self-tests (docs/self-tests.md, "Skins and
 effects") are written and not yet run in game.
@@ -199,16 +199,16 @@ effects") are written and not yet run in game.
 | Feature | Reached by | Status |
 |---|---|---|
 | **Skins:** a pack (`skin.cfg` + a PNG per frame, or a sheet; over the donkey with an erase colour and a recolour of the base, or replacing it on its own canvas with a front layer), a code skin, a recipe, or another character of the game (`source = game`); the skin owns its drawing's geometry (`seat = <row>` or `picture`, the pixel keys per style). | cfg, API (`Mounts.Looks`), packs | built; the seat rows seen in game, the per-style keys self-tested (run pending) |
-| **Mounts:** a skin's `[Mount]` block declares the creature (cart, babies and their size, noun, effect, sounds, abilities through the API); the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Catalog`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
+| **Mounts:** a pack's mount folder declares the creature in its `mount.cfg` (cart, babies and their size, noun, effect, sounds; abilities through the API), its skins under `skins\`; the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Catalog`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
 | **Effects:** particle effects from the game's own systems or a mod's prefab (`Mounts.Effects`; Hellfire = lamp flames and sparks in a ring, a trail); a skin may come with one; the ring fits the creature's drawn width. | cfg, API | built; Hellfire seen in game, the skin's own effect and the ring's size self-tested (run pending) |
 | **The Mounts panel:** every mount a player can ride listed on the left, the chosen one drawn on the right with its description, what it does (the cart, babies, speed, its effect), its stat lines and its abilities, and that mount's skin, effect and colour rows under it; Done keeps, Cancel puts back. A page's look rows live here, not in the menus (`MountSettingsPage.PanelButton`, `OpenPanel`; docs/mounts-foundation-2.md 3). | API | built 2026-10-20 night; to see in game |
-| **Rules between mods:** a value on an instance belongs to the owner that set it; a mount may pin its speed, seat, sounds and the like, never the player's switches or look; the mount's own skin owns its declaration; the same skin id from two places, the newer wins (docs/mounts-foundation-2.md 2). | API | built 2026-10-20 night, self-tested; run pending |
+| **Rules between mods:** a value on an instance belongs to the owner that set it; a mount may pin its speed, seat, sounds and the like, never the player's switches or look; the same skin id from two places, the newer wins, and the same mount from two packs, the higher `[Mount] version` wins (docs/mounts-foundation-2.md 2; the mount folders since 2026-10-24). | API | built 2026-10-20 night, self-tested; run pending |
 | **Colours on every mount:** a skin names which of its colours are Dark, Muzzle, Eye or Harness (`[Colors]`), the rest is Coat; the player's five colour rows reach them; a row for a region the mount lacks is greyed. | cfg, API | built; the regions self-tested with a readback, the greyed row not yet seen in game |
 
 | Built in | What |
 |---|---|
 | Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`) |
-| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs (`src/SaddleUp/assets/skins/`; our own art from `tools/skins/creatures/`, Gerry's frames read from the game), registered through the API like any mod's (`docs/mounts-as-mods.md`) |
+| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs (`src/SaddleUp/assets/mounts/<mount>/`, the donkey's skins in `mounts/donkey/skins/`; our own art from `tools/skins/creatures/`, Gerry's frames read from the game), registered through the API like any mod's (`docs/mounts-as-mods.md`) |
 
 ## Not built
 

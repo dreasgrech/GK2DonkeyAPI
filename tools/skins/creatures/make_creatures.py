@@ -1,15 +1,16 @@
 """Mounts drawn from nothing (docs/mount-looks-design.md): a giant worm, a giant snail, a giant rat and a dragon, as
-the built-in skins src/GK2DonkeyAPI/assets/skins/<name>/ (the one pipeline, docs/sprite-tools.md "Making a skin": a
-PNG per frame, skin.cfg kept as written by hand once it exists). Our own art, made by code: no game pixels.
+Saddle Up's mount packs src/SaddleUp/assets/mounts/<mount>/ (mount.cfg) with their default look in
+skins/<skin>/ (the one pipeline, docs/sprite-tools.md "Making a skin": a PNG per frame, skin.cfg and mount.cfg kept as
+written by hand once they exist). Our own art, made by code: no game pixels.
 
 Every donkey frame name gets a picture (96x96, facing left, the donkey's pivot in the middle), so the creature covers
 every clip: the 8 walk frames are one crawl cycle; standing, ear, lips, chew, turn and graze are idle frames (graze puts
 the head down). The donkey's head layer gets empty pictures, so "Instead of it" hides the donkey completely.
 Fitted to the donkey's measures so the rider sits right without tuning: the back (the seat) at row 41 around columns
 47-63, the ground at row 64, the front (where the cart's shafts and the harness are) around column 33.
-    python tools/skins/creatures/make_creatures.py                 # every creature into the repo's assets\\skins\\<name>\\
+    python tools/skins/creatures/make_creatures.py                 # every creature into the repo's assets\\mounts\\<mount>\\skins\\<skin>\\
     python tools/skins/creatures/make_creatures.py rat             # one creature
-    python tools/skins/creatures/make_creatures.py rat <folder>    # into another folder (a test pack, never the game's plugins)
+    python tools/skins/creatures/make_creatures.py rat <folder>    # the pictures into <folder>\\rat\\ (a preview, never the game's plugins)
 Then tools/skins/skin_colors.py when the art's colours changed, and tests/SkinsScan."""
 import math, os, struct, sys, zlib
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -1488,17 +1489,32 @@ CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None),
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
-assets = sys.argv[2] if len(sys.argv) > 2 else os.path.join(REPO, "src", "SaddleUp", "assets", "skins")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
+custom = len(sys.argv) > 2                            # a folder of its own: the pictures flat in <folder>\<name>\ (the previews)
+assets = sys.argv[2] if custom else os.path.join(REPO, "src", "SaddleUp", "assets", "mounts")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
+SKIN_IDS = {"worm": "earth-worm", "snail": "garden-snail", "rat": "grey-rat", "dragon": "red-dragon"}  # each mount's default look (mount.cfg default_skin)
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
-FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the skin.cfg)
+FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the mount.cfg)
 for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
     W = H = size
     OX = OY = (size - 96) // 2
     fr = frames_for(fn)
-    outs = [os.path.join(assets, name)]
+    sid = SKIN_IDS.get(name, name)
+    outs = [os.path.join(assets, name) if custom else os.path.join(assets, mount, "skins", sid)]
+    if not custom and not os.path.isfile(os.path.join(assets, mount, "mount.cfg")):
+        # the mount, written once (the Mounts tab saves its values here afterwards)
+        mcfg = os.path.join(assets, mount, "mount.cfg")
+        os.makedirs(os.path.dirname(mcfg), exist_ok=True)
+        open(mcfg, "w", encoding="utf-8", newline="\r\n").write(
+            "# A mount of GK2 Saddle Up (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.\n"
+            "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\n"
+            "default_skin = " + sid + "\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "")
+            + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
+        import canonical_cfg
+        mtext = canonical_cfg.canonical_mount(mcfg)
+        open(mcfg, "w", encoding="utf-8", newline="").write(mtext)
     for d in outs:
         os.makedirs(d, exist_ok=True)
         if any(k.startswith("front/") for k in fr):
@@ -1509,13 +1525,11 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
             # written once, in the canonical layout (tools/skins/canonical_cfg.py; tools/skins/skin_colors.py adds [Colors]);
             # the tuning panel's Mounts tab saves the creature's values into this file afterwards
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="\r\n").write(
-                "# A built-in skin of GK2 Donkey API (docs/skins-design.md). Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
-                "[Skin]\nformat = 1\nid = " + name + "\nname = " + title + "\ndescription = " + title + ", our own art drawn by code (edit me).\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
+                "# A skin of GK2 Saddle Up's " + mount + " mount (docs/skins.md): its look, the mount's own values in ..\\..\\mount.cfg. Drawn by tools/skins/creatures/make_creatures.py: our own art.\n"
+                "[Skin]\nformat = 1\nid = " + sid + "\nname = " + title + "\ndescription = " + title + ", our own art drawn by code (edit me).\nauthor = dreas\nversion = 1.0\nbase = donkey\n"
                 "colours = own\nlayer = replace\ncanvas = " + str(size) + " " + str(size) + "\nseat = " + str(seat_row)
-                + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\nmount = " + mount + "\n"
-                + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else "")
-                + "\n# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.\n"
-                "[Mount]\nid = " + mount + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\nauthor = dreas\nversion = 1.0\ncart = true\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "") + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
+                + "            # the rider's hip on this row of the picture, every frame, for every player (docs/seat-investigation.md)\n"
+                + ("\n# With the cart only: the whole cart this many px further behind the body (the skin owns its drawing's geometry).\n[Tuning.Cart]\nHitchGapPx = " + str(hitch_gap) + "\n" if hitch_gap is not None else ""))
             import canonical_cfg  # byte for byte the layout the scans expect
             text = canonical_cfg.canonical(os.path.join(d, "skin.cfg"))
             open(os.path.join(d, "skin.cfg"), "w", encoding="utf-8", newline="").write(text)

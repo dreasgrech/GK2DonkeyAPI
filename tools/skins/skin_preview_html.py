@@ -3,9 +3,10 @@ at the game's speed, pixel-sharp, with a frame-strip view for a frame-by-frame l
 
 Sources, in this order (the first that holds a skin id wins):
   1. the plain donkey: <probe>\\donkey-frames\\ (the game's 44 frames on the 96 canvas, from the asset probe);
-  2. the built-in skins: <repo>\\src\\GK2DonkeyAPI\\assets\\skins\\<id>\\ (skin.cfg + a picture per frame, front\\ for the
-     front layer; a skin with source = game has no pictures and is listed as such);
-  3. the packs in the game: <probe>\\..\\plugins\\gk2skins\\<id>\\ (skin.cfg + pictures, or one sheet of cells);
+  2. the built-in packs: <repo>\\src\\<project>\\assets\\mounts\\<mount>\\skins\\<id>\\ (skin.cfg + a picture per frame,
+     front\\ for the front layer; a skin with source = game has no pictures and is listed as such), the mount's name and
+     babies from its mount.cfg;
+  3. the packs in the game: <probe>\\..\\plugins\\gk2mounts\\<mount>\\skins\\<id>\\ (skin.cfg + pictures, or one sheet);
   4. recipes, drawn from the donkey's frames by the game's code and saved as pictures: --recipe <id>=<folder>
      (Hellfire: C:\\ClaudeCodeTemp\\GK2-donkey-frames\\hellfire-96 when it exists, the frames the game's code drew,
      the code version's output on the game's canvas, kept until Hellfire is confirmed in game);
@@ -281,14 +282,18 @@ def main(argv):
     seen = set()
     regions = donkey_regions()
 
-    def add(sid, name, cfg, frames, source, folder):
+    def add(sid, name, cfg, frames, source, folder, mid=None, mcfg=None):
+        # mid / mcfg: the mount folder the skin sits in and its mount.cfg (a pack of the mounts tree); else the skin's own
+        # mount = line (a study, a flat folder)
         if sid in seen:
             return
         seen.add(sid)
         layer = (cfg.get(("Skin", "layer"), "replace") if cfg else "replace").lower()
         cw, ch = (int(x) for x in (cfg.get(("Skin", "canvas"), "96 96") if cfg else "96 96").split())
-        mount = (cfg.get(("Skin", "mount"), "donkey") if cfg else "donkey").lower()
-        if cfg and ("Mount", "name") in cfg:
+        mount = (mid or (cfg.get(("Skin", "mount"), "donkey") if cfg else "donkey")).lower()
+        if mcfg and ("Mount", "name") in mcfg:
+            mount_names[mount] = mcfg[("Mount", "name")]
+        elif cfg and ("Mount", "name") in cfg:
             mount_names[cfg.get(("Mount", "id"), mount).lower()] = cfg[("Mount", "name")]
         note = ""
         if cfg and cfg.get(("Skin", "source"), "").lower() == "game":
@@ -343,7 +348,8 @@ def main(argv):
             colour_regions = ["Coat"] + [r for r in colour_regions if r != "Coat"]  # every colour not named is Coat
         elif cfg and colour_regions:
             colour_regions = ["the donkey's five"] + colour_regions  # an over skin: the donkey's regions under it, its own on top
-        babies = (cfg or {}).get(("Mount", "foal_scale"), "0.6" if ("Mount", "id") in (cfg or {}) else "")
+        mc = mcfg or cfg or {}
+        babies = mc.get(("Mount", "foal_scale"), "0.6" if ("Mount", "id") in mc else "")
         facts = []
         if seat is not None: facts.append(f"seat row {seat}" + (" (the picture's top)" if seat_text == "picture" else "") + (f", rider {rider_dx:+d} px" if rider_dx else "") + (f", seat nudge {seat_adj:+d} px" if seat_adj else ""))
         if hitch: facts.append(f"hitch gap {hitch} px")
@@ -358,25 +364,33 @@ def main(argv):
                   "frames": {k: data_url(v) for k, v in donkey.items()}, "note": "the donkey as the game draws it: the reference", "missing": 0, "folder": donkey_dir,
                   "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness"})
     seen.add("donkey")
-    # 2. the built-in skins
-    # (every src/*/assets/skins: the API's own and Saddle Up's, skinroots.py)
+    # 2. the built-in packs (every src/*/assets/mounts/<mount>/skins/<skin>: Saddle Up's, skinroots.py)
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import skinroots
+
+    def mount_cfg_of(skin_dir):
+        m = os.path.join(os.path.dirname(os.path.dirname(skin_dir)), "mount.cfg")
+        return read_cfg(m) if os.path.isfile(m) else None
+
     for p in skinroots.skin_dirs():
         d = os.path.basename(p)
-        project = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(p))))
+        project = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(p))))))  # src/<project>/assets/mounts/<mount>/skins/<skin>
         cfg = read_cfg(os.path.join(p, "skin.cfg"))
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-        add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "built in" if project == skinroots.API_PROJECT else "the " + project + " mod", p)
-    # 3. the packs in the game
-    packs = os.path.normpath(os.path.join(probe, "..", "plugins", "gk2skins"))
+        add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "the " + project + " mod", p, skinroots.mount_of(p), mount_cfg_of(p))
+    # 3. the packs in the game (plugins\gk2mounts\<mount>\skins\<skin>)
+    packs = os.path.normpath(os.path.join(probe, "..", "plugins", "gk2mounts"))
     if os.path.isdir(packs):
-        for d in sorted(os.listdir(packs)):
-            p = os.path.join(packs, d)
-            if os.path.isfile(os.path.join(p, "skin.cfg")):
-                cfg = read_cfg(os.path.join(p, "skin.cfg"))
-                frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-                add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p)
+        for m in sorted(os.listdir(packs)):
+            sk = os.path.join(packs, m, "skins")
+            if not os.path.isdir(sk):
+                continue
+            for d in sorted(os.listdir(sk)):
+                p = os.path.join(sk, d)
+                if os.path.isfile(os.path.join(p, "skin.cfg")):
+                    cfg = read_cfg(os.path.join(p, "skin.cfg"))
+                    frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
+                    add(cfg.get(("Skin", "id"), d), cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p, m, mount_cfg_of(p))
     # 3b. studies: skin folders being drawn (a generator's output in a temp folder), shown with their mount
     for p in studies:
         if os.path.isfile(os.path.join(p, "skin.cfg")):

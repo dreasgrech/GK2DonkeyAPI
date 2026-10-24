@@ -53,7 +53,7 @@ namespace GK2DonkeyAPI
         }
 
         // A folder a dev build of a DLL recorded as assembly metadata (the API's GK2DonkeyAPISourceDir, a mod's
-        // GK2SkinsSourceDir for its embedded skin packs), when it exists on this machine; else null.
+        // GK2MountsSourceDir for its embedded mount packs), when it exists on this machine; else null.
         internal static string SourceDirOf(Assembly asm, string key)
         {
             try

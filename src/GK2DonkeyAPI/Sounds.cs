@@ -371,7 +371,7 @@ namespace GK2DonkeyAPI
 
         // One instance's sounds: its timers, its reading of its animator, what plays for each event. Every entry
         // point binds the owner (Mount.Bind) before reading a setting: Tuned<T>.Value serves an instance's own
-        // overrides (a mount's [Mount.Tuning] pins: the snail's BrayVolume = 0) only for the bound instance, and the
+        // overrides (a mount's mount.cfg [Tuning] pins: the snail's BrayVolume = 0) only for the bound instance, and the
         // hitch, the cargo thump, the API and the animation-event prefix are not bound to the emitting instance.
         internal sealed class Rig
         {
@@ -793,7 +793,7 @@ namespace GK2DonkeyAPI
             }
 
             // The layers, bottom up (docs/mount-sounds-design.md section 2): the base (the player's keys of the style,
-            // a mount's pins on them included), the mount's [Mount.Sounds] then its style block, the skin's [Sounds]
+            // a mount's pins on them included), the mount's mount.cfg [Sounds] then its style block, the skin's [Sounds]
             // then its style block, a mod's override. A layer's source replaces the one below; its volume and pitch
             // multiply the base's (the topmost said wins among the layers); its other fields and numbers replace.
             private SoundSpec ResolveNow(SoundEvents.Def d, string eventId, string variant)
@@ -812,15 +812,15 @@ namespace GK2DonkeyAPI
                     // never brays by default; the user, 2026-10-24)
                     r.Silent = true; r.GameId = null; r.BySurface = false; r.Missing = true; // a layer's line below clears it
                 }
-                Looks.SkinDef mountFiles = Looks.MountSoundFileOwner(mount);
+                SoundBank.FileSource mountFiles = Looks.MountSoundFiles(mount);
                 Looks.SoundLayer style = cart ? Looks.SoundLayer.Cart : Looks.SoundLayer.Ride;
                 bool baby = IsBaby;
                 touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
                 touched |= Apply(Looks.MountSoundBlock(mount, style)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
                 if (baby) touched |= Apply(Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(eventId, variant), "mount", mountFiles, mount.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
-                touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
-                if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin, skin?.Id, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
+                touched |= Apply(Looks.SkinSoundBlock(skin, style)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
+                if (baby) touched |= Apply(Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(eventId, variant), "skin", skin?.SoundFiles, skin?.Id, r, ref vol, ref pitch);
                 SoundLine ov = null;
                 if (variant != null) overrides.TryGetValue(eventId + "." + variant, out ov);
                 if (ov == null) overrides.TryGetValue(eventId, out ov);
@@ -830,9 +830,9 @@ namespace GK2DonkeyAPI
                 return touched ? r : null;
             }
 
-            // One layer's line onto the spec being built. fileOwner: the skin whose sounds\ (or, for a mount's line, whose
-            // sounds\mount\) folder a file line reads from (a pack); a line with its own clips (the API) registers them under whoId.
-            private static bool Apply(SoundLine l, string layer, Looks.SkinDef fileOwner, string whoId, SoundSpec r, ref float vol, ref float pitch)
+            // One layer's line onto the spec being built. fileOwner: the pack folder (a skin's, or a mount folder's) whose
+            // sounds\ a file line reads from; a line with its own clips (the API) registers them under whoId.
+            private static bool Apply(SoundLine l, string layer, SoundBank.FileSource fileOwner, string whoId, SoundSpec r, ref float vol, ref float pitch)
             {
                 if (l == null) return false;
                 if (l.Files != null || l.Clips != null)
@@ -841,7 +841,7 @@ namespace GK2DonkeyAPI
                     if (id == null)
                     {
                         if (l.Clips != null) id = SoundBank.ForClips(layer, whoId ?? "code", l.BankKey ?? l.Key, l.Clips, l.Speech ?? false, l.Loop ?? false);
-                        else if (fileOwner != null) id = SoundBank.ForSkin(fileOwner, l.BankKey ?? l.Key, l.Files, l.Speech ?? false, l.Loop ?? false, l.Folder);
+                        else if (fileOwner != null) id = SoundBank.ForFiles(fileOwner, l.BankKey ?? l.Key, l.Files, l.Speech ?? false, l.Loop ?? false, l.Folder);
                         l.BankId = id;
                     }
                     SoundBank.State st = SoundBank.StateOf(id);

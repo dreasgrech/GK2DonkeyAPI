@@ -1,14 +1,18 @@
-"""Rewrites every built-in skin.cfg into the canonical layout (docs/mounts-foundation-audit.md section 4) without
-changing a value: [Skin] keys in one order (SKIN_ORDER), then [Game], the skin's own geometry ([Tuning],
-[Tuning.Ride], [Tuning.Cart]), its sounds ([Sounds], [Sounds.Ride], [Sounds.Cart]), the colour sections ([Colors],
-[Base.*]), and the [Mount] block last ([Mount], then [Mount.Stats], [Mount.Tuning], [Mount.Tuning.Ride],
-[Mount.Tuning.Cart], [Mount.Sounds], [Mount.Sounds.Ride], [Mount.Sounds.Cart]), each section's comment above it, CRLF line ends. The
-[Mount] block always carries id, name, author, version, cart and foals; noun, foal_scale, effect and effect_when
-only when set (MOUNT_ORDER). Run it after editing a cfg by hand, then tests/SkinsScan (the section order and the key
-rules); --check runs in tools/release-scans.sh and refuses a built-in that is not byte for byte in this layout.
-tools/skins/new_skin.py writes a new skin's cfg in this layout from the start.
+"""Rewrites every built-in skin.cfg and mount.cfg into the canonical layout (docs/mounts-foundation-audit.md section 4)
+without changing a value, CRLF line ends, each section's comment above it.
 
-    python -I tools/skins/canonical_cfg.py            # rewrites every src/*/assets/skins/*/skin.cfg (skinroots.py)
+skin.cfg (assets/mounts/<mount>/skins/<skin>/): [Skin] keys in one order (SKIN_ORDER), then [Game], the skin's own
+geometry ([Tuning], [Tuning.Ride], [Tuning.Cart]), its sounds ([Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]),
+the colour sections ([Colors], [Base.*]). No [Mount*] section: a mount's values are its mount.cfg's (2026-10-24).
+
+mount.cfg (assets/mounts/<mount>/): [Mount] (MOUNT_ORDER; always id, name, author, version, cart and foals), then
+[Stats], [Tuning], [Tuning.Ride], [Tuning.Cart], [Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]: the order the
+Mounts tab's save writes (Looks.SaveMountCfg).
+
+Run it after editing a cfg by hand, then tests/SkinsScan; --check runs in tools/release-scans.sh and refuses a built-in
+that is not byte for byte in this layout. tools/skins/new_skin.py writes new files in this layout from the start.
+
+    python -I tools/skins/canonical_cfg.py            # rewrites every pack cfg under src/*/assets/mounts (skinroots.py)
     python -I tools/skins/canonical_cfg.py --check    # says which files differ from their canonical text, writes nothing
 """
 import io, os, sys
@@ -18,10 +22,10 @@ import skinroots
 REPO = skinroots.REPO
 SKIN_ORDER = ["format", "needs", "id", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "erase", "canvas", "pivot", "source", "seat",
               "effect", "effect_when", "sheet", "sheet_front", "columns", "frames", "offset", "offset_cart", "mount"]  # the order the Mounts tab's Save writes
-MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
+MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "default_skin", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
-TUNING_SECTIONS = ["mount.stats", "mount.tuning", "mount.tuning.ride", "mount.tuning.cart", "mount.sounds", "mount.sounds.ride", "mount.sounds.cart", "mount.sounds.baby"]  # [Mount.Stats] first: the panel's lines, then the tuning, then the sounds
-MOUNT_COMMENT = "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it."
+SKIN_SECTIONS = [("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
+MOUNT_SECTIONS = [("stats", "[Stats]"), ("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
 
 
 def parse(path):
@@ -91,74 +95,91 @@ def emit_keyed(out, items, order, defaults=None, trailing=()):
     out.extend(trailing)
 
 
-def canonical(path):
-    secs, order = parse(path)
-    out = []
-    out.extend(secs[""]["lines"])  # the head comment
-    # [Skin]
-    items, trailing = keyed(secs["skin"]["lines"])
-    out.append("[Skin]")
-    emit_keyed(out, items, SKIN_ORDER, trailing=trailing)
-    # [Game] right after, as written
-    if "game" in secs:
-        out.append("")
-        out.extend(secs["game"]["above"])
-        out.append("[Game]")
-        out.extend(secs["game"]["lines"])
-    # the skin's own geometry ([Tuning], then per style), as written
-    for name, header in (("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")):
+def sections(out, secs, names):
+    for name, header in names:
         if name in secs and any("=" in l for l in secs[name]["lines"]):  # an empty section is left out (the scan refuses one)
             out.append("")
             out.extend(secs[name]["above"])
             out.append(header)
             out.extend(secs[name]["lines"])
-    # the colour sections, as written, in file order
+
+
+def canonical(path):
+    """skin.cfg"""
+    secs, order = parse(path)
+    for name in order:
+        if name == "mount" or name.startswith("mount."):
+            raise SystemExit(f"{path}: [{secs[name]['header'].strip('[]')}] in a skin.cfg: a mount's values go in its mount.cfg (assets/mounts/<mount>/mount.cfg)")
+    out = []
+    out.extend(secs[""]["lines"])  # the head comment
+    items, trailing = keyed(secs["skin"]["lines"])
+    out.append("[Skin]")
+    emit_keyed(out, items, SKIN_ORDER, trailing=trailing)
+    if "game" in secs:
+        out.append("")
+        out.extend(secs["game"]["above"])
+        out.append("[Game]")
+        out.extend(secs["game"]["lines"])
+    sections(out, secs, SKIN_SECTIONS)
     for name in order:
         if name == "colors" or name.startswith("base."):
             out.append("")
             out.extend(secs[name]["above"])
             out.append(secs[name]["header"])
             out.extend(secs[name]["lines"])
-    # the mount block last
-    if "mount" in secs:
-        out.append("")
-        above = secs["mount"]["above"] or [MOUNT_COMMENT]
-        out.extend(above)
-        out.append("[Mount]")
-        items, trailing = keyed(secs["mount"]["lines"])
-        emit_keyed(out, items, MOUNT_ORDER, defaults=MOUNT_DEFAULTS, trailing=trailing)
-        for name in TUNING_SECTIONS:
-            if name in secs and any("=" in l for l in secs[name]["lines"]):
-                out.append("")
-                out.extend(secs[name]["above"])
-                out.append(secs[name]["header"])
-                out.extend(secs[name]["lines"])
-    if "mount" not in secs and any(name in secs for name in TUNING_SECTIONS):
-        raise SystemExit(f"{path}: a [Mount.*] section without a [Mount] section (the game ignores it; add the block or take the section out)")
-    known = {"", "skin", "game", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "sounds.baby", "colors", "mount"} | set(TUNING_SECTIONS)
+    known = {"", "skin", "game", "colors"} | {n for n, _ in SKIN_SECTIONS}
     for name in order:
         if name not in known and not name.startswith("base."):
-            raise SystemExit(f"{path}: section [{name}] is not one the loader knows")
+            raise SystemExit(f"{path}: section [{name}] is not one a skin.cfg has")
     return "\r\n".join(out) + "\r\n"
+
+
+def canonical_mount(path):
+    """mount.cfg"""
+    secs, order = parse(path)
+    if "mount" not in secs:
+        raise SystemExit(f"{path}: no [Mount] section")
+    out = []
+    out.extend(secs[""]["lines"])
+    out.extend(secs["mount"]["above"])
+    out.append("[Mount]")
+    items, trailing = keyed(secs["mount"]["lines"])
+    emit_keyed(out, items, MOUNT_ORDER, defaults=MOUNT_DEFAULTS, trailing=trailing)
+    sections(out, secs, MOUNT_SECTIONS)
+    known = {"", "mount"} | {n for n, _ in MOUNT_SECTIONS}
+    for name in order:
+        if name not in known:
+            raise SystemExit(f"{path}: section [{name}] is not one a mount.cfg has ([Mount], [Stats], [Tuning*], [Sounds*])")
+    return "\r\n".join(out) + "\r\n"
+
+
+def files():
+    """(label, path, canonical function) for every pack cfg"""
+    out = []
+    for m in skinroots.mount_dirs():
+        p = os.path.join(m, "mount.cfg")
+        if os.path.isfile(p):
+            out.append((os.path.basename(m) + "/mount.cfg", p, canonical_mount))
+    for s in skinroots.skin_dirs():
+        out.append((skinroots.mount_of(s) + "/" + os.path.basename(s), os.path.join(s, "skin.cfg"), canonical))
+    return out
 
 
 def main(argv):
     check = "--check" in argv
     diff = 0
-    for folder in skinroots.skin_dirs():
-        skin = os.path.basename(folder)
-        path = os.path.join(folder, "skin.cfg")
-        text = canonical(path)
+    for label, path, fn in files():
+        text = fn(path)
         current = io.open(path, encoding="utf-8", newline="").read()
         if current == text:
-            print(f"{skin:14s} canonical")
+            print(f"{label:28s} canonical")
             continue
         diff += 1
         if check:
-            print(f"{skin:14s} DIFFERS from the canonical layout (run without --check to rewrite it)")
+            print(f"{label:28s} DIFFERS from the canonical layout (run without --check to rewrite it)")
         else:
             io.open(path, "w", encoding="utf-8", newline="").write(text)
-            print(f"{skin:14s} rewritten")
+            print(f"{label:28s} rewritten")
     return 1 if (check and diff) else 0
 
 

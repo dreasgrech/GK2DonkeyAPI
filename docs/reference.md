@@ -10,6 +10,7 @@ file says how each one is set and built.
 |---|---|---|
 | `Api/` (+ `Tuned.cs`) | 760 | The public API other mods call ([`docs/api.md`](api.md)). |
 | the files at the top | 6,400 | The mount itself: `Mount.cs` (spawning, following, the cart on slopes, dismount rules), `Cargo.cs`, `CargoLayout.cs` and `HeadReroute.cs` (the cart as the keeper's hands), `Lantern.cs` and `LampHang.cs`, `MountSounds.cs`, `RiderLeg.cs`, `Patches.cs`, `Plugin.cs` (settings, the game-update guard), `Defaults.cs` (the mod defaults). |
+| `assets/` | (data) | The lantern's mesh (`lantern-*.bin`) and the self-tests' embedded pack `testmounts/donkey/skins/embedded-sound-test/` (embedded as `GK2DonkeyAPI.testmounts.`). The API ships no mounts or skins: Saddle Up's are in `src/SaddleUp/assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/<skin>/`; docs/skins.md). |
 | `Dev/` | 11,800 | The dev panel (`TuningWindow.cs`) and the investigation tools behind it: probes, dumps, the cargo photo sheet. They're in the same DLL, but only reachable with `Debug.TuningWindow = true`. |
 
 A mod built on the API needs none of this code itself; Saddle Up is about 160 lines.
@@ -110,7 +111,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
 | `SpeedMultiplier` | 2 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). The donkey's: a mount says its own (`[Mount] speed`, `MountDef.Speed`; with the cart times this column's ratio, Cart over Ride), which wins over this. |
-| `WalkCycleSpeed` | 1.5 | 1.5 | How fast the walk animation plays for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate; a constant until 0.35.0). A mount with a longer stride sets less in its `[Mount.Tuning]`, a scurrying one more, so its legs match its speed. |
+| `WalkCycleSpeed` | 1.5 | 1.5 | How fast the walk animation plays for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate; a constant until 0.35.0). A mount with a longer stride sets less in its `mount.cfg`'s `[Tuning]`, a scurrying one more, so its legs match its speed. |
 | `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |
 | `CenterOffset` | 0.48 | 0 | Above 0: keep the donkey centred under the rider (its sprite's sideways offset is measured and cancelled every frame). 0: leave it where the game draws it, half a body to the side. A toggle in the panel. |
@@ -138,7 +139,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 | `CartSlope` | WholeCartPitch | WholeCartPitch | Cart style, with `CartFollowsGround`: how the cart meets a slope. `WholeCartPitch`: the wheels follow the ground and the cart body, shafts, pole and cargo pitch about the axle (the point the walk animation rocks the cart about), so the shafts stay at the donkey; the lamp keeps hanging upright at the pole head. `ShaftsTilt`: the cart is lifted level and only the shafts turn about their harness end. `HalfLift`: the cart is lifted level and the shafts by half (a gap at both ends). The Riding tab has a button that switches between them live, to compare. |
 | `CartPitchMaxDegrees` | 20 | 20 | `WholeCartPitch`: the steepest pitch; steeper ground leaves the shafts short of the donkey instead of tipping the pole and cargo further. |
 | `CartGroundMaxShift` | 0.8 | 0.8 | Largest shift the cart may get, in world units, either way. |
-| `HitchGapPx` | 0 | 0 | Cart style only: the whole cart (shafts, wheels, body, lantern, load) sits this much further behind the mount than the prefab puts it, in art pixels (negative: closer). 0 for the donkey; a longer mount sets its own in its mount file (`[Mount.Tuning.Cart]`, the dragon: 24), so its body isn't drawn inside the cart. A cart left standing stays where it was drawn, and a mount taking a cart stands its gap ahead of it. |
+| `HitchGapPx` | 0 | 0 | Cart style only: the whole cart (shafts, wheels, body, lantern, load) sits this much further behind the mount than the prefab puts it, in art pixels (negative: closer). 0 for the donkey; a longer body sets its own in its skin's `skin.cfg` (`[Tuning.Cart]`, the red dragon: 24; the skin owns its drawing's geometry), so its body isn't drawn inside the cart. A cart left standing stays where it was drawn, and a mount taking a cart stands its gap ahead of it. |
 | `CargoDrawCorpse` | true | true | Cart style only: the mod draws every corpse itself with the game's corpse mesh, so corpses go through the same packer as any item, and the game's loaded-cart body stays off. Off: the first corpse is the game's own loaded cart body with the shroud (not movable); further items ride on top of it. |
 | `CargoSwaysWithCart` | true | true | Cart style only: the cargo rocks with the cart while it rolls, as the game's own loaded corpse does. The game's corpse hangs under a cart node that the walk animation rotates about the axle by up to 3°; the mod's cargo holder copies that rotation about the same pivot every frame instead of being reparented, because the game's drawer switches those nodes on and off. Off: the cargo stays level. |
 | `CargoSetDownBehindCart` | true | true | Cart style only: the interact key sets the top cart item down behind the cart, with the game's own drop-spot search run from the cart's back end outwards (rings 0.75 to 1.95 out, fanning out 15° at a time; walls, water and other drops are avoided). The keeper's interaction box is in front of him, so the item is out of reach and a second press sets the next item down. Off: in front of the keeper, as the game drops a held item, where the next press picks it up again. No free spot behind the cart: in front. |
@@ -261,13 +262,13 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Skin` | (empty) | The skin by id (`rat`, `snail`, `worm`, `dragon`, `gerry`, `hellfire`, `royal-parade`; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
+| `Skin` | (empty) | The skin by id (`grey-rat`, `garden-snail`, `earth-worm`, `red-dragon`, `gerry`, `hellfire`, `royal-parade`; the mount is the skin's; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
-**A mount's sounds.** A mount's and a skin's own sounds live in `[Mount.Sounds]` and `[Sounds]`
+**A mount's sounds.** A mount's and a skin's own sounds live in the `[Sounds]` of its `mount.cfg` and its `skin.cfg`
 ([`docs/mount-sounds.md`](mount-sounds.md)); the keys above are the base they sit on. The donkey's own sounds (the
 bray, the lip smack, the chewing, the getting-on and getting-off snorts riding plain) never reach another mount: a
 creature without its own is silent there, and the log at the game's start says what each skin is missing. A mount
-may still pin a sound key in `[Mount.Tuning]` (a volume, a timing); none of the built-ins does any more.
+may still pin a sound key in its `mount.cfg`'s `[Tuning]` (a volume, a timing); none of the built-ins does any more.
 
 ### `[Effects]`: particle effects on the donkey
 

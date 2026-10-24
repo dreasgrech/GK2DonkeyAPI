@@ -12,16 +12,24 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
-- **A mount's sound files have a folder of their own: `sounds\mount\`** (the user, 2026-10-24: "make sure that the
-  sounds are structured properly as files ... a solid foundation before making more"). A skin's own files stay in
-  `sounds\` (its `[Sounds*]` lines and its name rule), the mount's are in `sounds\mount\` of the skin that declares
-  it (its `[Mount.Sounds*]` lines and the same name rule there), loaded once for every skin of the mount. Before, both
-  shared `sounds\`, so a mount's file named after its event was also the declaring skin's own: the dragon's take-off,
-  flap, glide and landing files loaded twice and the red dragon's copy won (the log called them the skin's own). A line
-  naming a file of the other folder is named in the log (and by `tests/SkinsScan`, which says which folder it is in) and
-  left out; `sounds\mount\` in a skin that declares no mount is reported. The dragon's 12 files moved to
-  `sounds\mount\`; their cache files sit under `...\dragon\mount\`. Self-tests: the pack scenario checks both folders,
-  the name rule kept to its folder and a line reading the wrong one; a new one checks the built-in dragon's files.
+- **Packs are sorted by mount: a folder per mount, its skins inside it** (the user, 2026-10-24: "i want to see things
+  sorted by mount ... a skin can only belong to one mount ... where are the sounds? Shouldn't we have some root mounts
+  folder"). A pack is now `gk2mounts\<mount>\` (players: under `BepInEx\plugins\` or a mod's folder there; Saddle Up:
+  `src\SaddleUp\assets\mounts\`): `mount.cfg` (the mount: `[Mount]`, `[Stats]`, `[Tuning]`, `[Tuning.Ride]`,
+  `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`, plain names), its `sounds\` (the
+  mount's files, for every skin of it) and `skins\<skin>\` (each look: `skin.cfg`, its pictures, `front\`, its own
+  `sounds\`). `[Mount] default_skin` names the look a new one wears. The donkey's folder holds skins only (Hellfire and
+  Royal Parade: `mounts\donkey\skins\`). Before, a mount was a `[Mount]` block inside its default skin's `skin.cfg`
+  (the "declaring skin", the joiner and Default rules) and its sounds sat in that skin's `sounds\mount\`: a mount's file
+  named after its event was also the skin's own, and the dragon's flight sounds loaded twice. Now a `skin.cfg` holds
+  no `[Mount*]` section (said in its report), a skin's mount is its folder's, a mount folder without `mount.cfg` adds
+  its skins to a mount registered elsewhere, two `mount.cfg` of one id meet the skins' version rule, and a pack mount
+  goes with its last skin. The Mounts tab (F11) saves the mount's rows into `mount.cfg`. The built-in looks have names of
+  their own: `red-dragon`, `grey-rat`, `garden-snail`, `earth-worm` (Gerry's stays `gerry`); the mount ids are unchanged.
+  Nothing a player has changes (mounts and packs were off in every release). Tools (`skinroots.py`, `canonical_cfg.py`
+  for both files, `new_skin.py --mount`, the generators, the preview page by mount), `tests/SkinsScan` (a pass per
+  mount folder) and the self-tests (the temp packs, the id rules for mount packs, the sound folders) follow the tree;
+  the embedded resources are `GK2SaddleUp.mounts.<mount>\...` and the dev write-back root `GK2MountsSourceDir`.
 - **The dragon walks like a heavy beast** (the user, 2026-10-24: "his legs ... too dinky", "walks like a lady", "like
   someone modelling stilettos on a catwalk", "a stick stuck up his arse"; the reference's Walking studied, docs/flying.md
   "The walk, studied"): thicker legs with no thin ankle, the forelegs built like the hind (a shoulder mass, a thick upper

@@ -23,3 +23,5 @@ tools/frames-out/
 release/
 
 *.un~
+# an editor's / SmartGit's copy of a file as last saved (~CHANGELOG.md.saved.bak): never part of the repo
+~*.saved.bak

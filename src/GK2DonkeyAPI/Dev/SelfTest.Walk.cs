@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI
             catch (Exception e) { Fail("the stick could not be patched: " + e.Message); yield break; }
 
             // the mounts: the plain donkey, then each built-in mount by its skin (mount id = skin id)
-            var mounts = new List<(string Skin, string Mount)> { (null, "donkey"), ("dragon", "dragon"), ("rat", "rat"), ("snail", "snail"), ("worm", "worm"), ("gerry", "gerry") };
+            var mounts = new List<(string Skin, string Mount)> { (null, "donkey"), ("red-dragon", "dragon"), ("grey-rat", "rat"), ("garden-snail", "snail"), ("earth-worm", "worm"), ("gerry", "gerry") };
             try
             {
                 foreach (var m in mounts)
@@ -90,8 +90,8 @@ namespace GK2DonkeyAPI
                 StrideProbe.Label = "standing";
                 MountHandle g = Spawn(Spot(home, 2.5f) ?? home, right: true);
                 MountHandle b = Spawn(Spot(home, 3.5f) ?? home, right: false, scale: 0.6f);
-                if (g != null) { yield return Until(() => g.IsReady, 6f); g.Tuning.Set(Owner, "Skin", "dragon"); }
-                if (b != null) { yield return Until(() => b.IsReady, 6f); b.Tuning.Set(Owner, "Skin", "dragon"); }
+                if (g != null) { yield return Until(() => g.IsReady, 6f); g.Tuning.Set(Owner, "Skin", "red-dragon"); }
+                if (b != null) { yield return Until(() => b.IsReady, 6f); b.Tuning.Set(Owner, "Skin", "red-dragon"); }
                 yield return Seconds(15f);
                 try { if (g != null && g.Exists) g.Remove(); } catch { }
                 try { if (b != null && b.Exists) b.Remove(); } catch { }

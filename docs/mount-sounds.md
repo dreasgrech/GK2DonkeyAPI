@@ -52,31 +52,34 @@ sound" row).
 
 ## A pack's sounds
 
-Two folders, as the cfg has two kinds of sound sections:
+Two folders, one for each cfg with sound sections:
 
 ```
-gk2skins\dragon\
-  skin.cfg            [Sounds*]        the skin's own: this look only
-                      [Mount.Sounds*]  the mount's: every skin of it (only in the skin that declares the mount)
-  sounds\             the skin's own files ([Sounds*] lines, and its name rule)
-    roar_1.ogg
-    mount\            the mount's files ([Mount.Sounds*] lines, and its name rule), for every skin of the mount
-      takeoff_1.ogg
-      flap_1.ogg
+gk2mounts\dragon\
+  mount.cfg           [Sounds*]   the mount's: every skin of it
+  sounds\             the mount's files (mount.cfg's [Sounds*] lines, and its name rule)
+    takeoff_1.ogg
+    flap_1.ogg
+  skins\
+    red-dragon\
+      skin.cfg        [Sounds*]   the skin's own: this look only
+      sounds\         the skin's own files (skin.cfg's [Sounds*] lines, and its name rule)
+        roar_1.ogg
 ```
 
 `.ogg` (Vorbis, the game's own format, small) or `.wav` (PCM 8/16/24/32-bit or float, mono or stereo, any rate); a
-few seconds each. A `[Sounds]` line reads `sounds\` only and a `[Mount.Sounds]` line `sounds\mount\` only: a line
-naming a file of the other folder is named in the log and left out, and the layer below applies. `sounds\mount\` in
-a skin that declares no mount is reported and never played. (Until 2026-10-24 a mount's files sat in `sounds\` too,
-and a file named after its event there was also the declaring skin's own by the name rule: the dragon's flight sounds
-loaded twice, and the red dragon's copy won over the mount's.)
+few seconds each. A `skin.cfg`'s `[Sounds]` line reads the skin folder's `sounds\` only and a `mount.cfg`'s the mount
+folder's `sounds\` only: a line naming a file of the other folder is named in the log and left out, and the layer
+below applies. A folder inside `sounds\` is never read. (Before the mount folders, 2026-10-24, a mount's files sat in
+the declaring skin's `sounds\mount\`, and earlier still in its `sounds\` with the skin's own: there a file named after
+its event was also the declaring skin's own by the name rule, the dragon's flight sounds loaded twice, and the red
+dragon's copy won over the mount's.)
 
-**By name, with no line in the cfg:** `sounds\<event>[.<variant>][_<n>].ogg|wav`. `voice_1.ogg`, `voice_2.ogg`
-and `voice_3.ogg` are the skin's `voice` (one at random per call, never the same twice in a row);
-`step.grass_1.wav` its step on grass; `graze.ogg` its grazing. The same rule in `sounds\mount\` gives the mount's:
-`sounds\mount\takeoff_1.ogg` is every skin of the mount's take-off. Each folder's rule reads its own files only. A
-file named like no event is listed in the log and never played.
+**By name, with no line in the cfg:** `sounds\<event>[.<variant>][_<n>].ogg|wav`. In a skin's folder,
+`voice_1.ogg`, `voice_2.ogg` and `voice_3.ogg` are the skin's `voice` (one at random per call, never the same twice in
+a row); `step.grass_1.wav` its step on grass; `graze.ogg` its grazing. The same rule in the mount folder's `sounds\`
+gives the mount's: `gk2mounts\dragon\sounds\takeoff_1.ogg` is every dragon skin's take-off. Each folder's rule reads
+its own files only. A file named like no event is listed in the log and never played.
 
 **Or in a `[Sounds]` block of skin.cfg**, which also takes a game sound id, silence, the ground, and the attributes:
 
@@ -108,35 +111,36 @@ The sections stand after the skin's `[Tuning]` sections and before `[Colors]` (t
 attributes are named in the skin's report in the log and ignored; a file a line names that is not in `sounds\` is
 named and left out; a line with none of its files left falls through to the layer below.
 
-**A mount's sounds**, shared by every skin of it, go in `[Mount.Sounds]` (and `[Mount.Sounds.Ride]`,
-`[Mount.Sounds.Cart]`, `[Mount.Sounds.Baby]`) of the skin that declares the mount (its `[Mount]` block), after `[Mount.Tuning*]`. Their
-files are that skin's `sounds\mount\` folder, loaded once for every skin of the mount. A second skin of the mount
+**A mount's sounds**, shared by every skin of it, go in the `[Sounds]` (and `[Sounds.Ride]`, `[Sounds.Cart]`,
+`[Sounds.Baby]`) of its `mount.cfg`, after its `[Tuning*]`: the same section names as a skin's, the file decides whose
+they are. Their files are the mount folder's `sounds\`, loaded once for every skin of the mount. A skin of the mount
 with no `[Sounds]` sounds like the mount; its own `[Sounds]` lines (files in its own `sounds\`) win over the mount's,
-event by event. The declaring skin is the mount's default look: it usually has no `[Sounds]` of its own, its sounds
-are the mount's.
+event by event. A mount's default look (its `default_skin`) usually has no `[Sounds]` of its own: its sounds are the
+mount's.
 
 ```
+# gk2mounts\dragon\mount.cfg
 [Mount]
 id = dragon
 ...
 
-[Mount.Sounds]
-voice = roar_1.ogg, roar_2.ogg
+[Sounds]
+voice = roar_1.ogg, roar_2.ogg   # files of gk2mounts\dragon\sounds\
 voice.idle_every = 60
 step = thud.ogg
 lips = none
 ```
 
-The snail's, the worm's and Gerry's older `[Mount.Tuning]` volume pins are gone: the rule above silences the
-donkey's own sounds on them by itself, and their `[Mount.Sounds]` lines say `none` where that is meant. (A pin still
-works: those keys are the base layer.)
+The snail's, the worm's and Gerry's older volume pins in the mount's tuning are gone: the rule above silences the
+donkey's own sounds on them by itself, and their `mount.cfg`'s `[Sounds]` lines say `none` where that is meant. (A pin
+still works: those keys, in a `mount.cfg`'s `[Tuning]`, are the base layer.)
 
 ## What a skin is missing
 
 Three places say it, for the same question ("which of its sounds has this skin still no sound for"):
 
-- **The log at the game's start** (once a session, when the game is ready): one line per skin, `Sounds: skin 'rat'
-  (mount rat): its own: ...; its mount's: voice (spitter_attack), step (by the ground), ...; MISSING (the donkey's
+- **The log at the game's start** (once a session, when the game is ready): one line per skin, `Sounds: skin
+  'grey-rat' (mount rat): its own: ...; its mount's: voice (spitter_attack), step (by the ground), ...; MISSING (the donkey's
   own, silent here): answer, mount, dismount; the donkey's neutral ones 6; silent by default 18.`
 - **The Mounts tab** (F11): the first line of "Sounds of this skin" lists the missing events in orange, or says
   nothing is missing.
@@ -153,11 +157,11 @@ For every event on every instance, the first layer that gives a **source** wins;
 1. a mod's `Mounts.Sounds.Set` on that instance (the session only);
 2. the skin's `[Sounds.Baby]` for a baby, then its `[Sounds.Ride]` or `[Sounds.Cart]` (the style the mount is in),
    then its `[Sounds]`;
-3. the mount's `[Mount.Sounds.Baby]` for a baby, then `[Mount.Sounds.Ride]` / `[Mount.Sounds.Cart]`, then its
-   `[Mount.Sounds]`;
+3. the mount's (its `mount.cfg`): `[Sounds.Baby]` for a baby, then `[Sounds.Ride]` / `[Sounds.Cart]`, then its
+   `[Sounds]`;
 4. the **base**: the player's `[Ride]` / `[Cart]` keys of the API cfg (reference.md "Sounds": `HoofSoundId`,
    `BraySoundId`, `GrazeSoundId`, ... with their volumes, pitches and numbers), which are the donkey's sounds as
-   shipped and as the player tuned them, and which a mount's `[Mount.Tuning]` may pin.
+   shipped and as the player tuned them, and which a mount's `[Tuning]` (in its `mount.cfg`) may pin.
 
 **The donkey's own sounds are the donkey's.** Its voice, its lip smack, its chewing, its getting-on and getting-off
 snorts riding plain (`voice`, `answer`, `lips`, `graze`, and `mount` / `dismount` riding plain) never reach another
@@ -178,10 +182,12 @@ by its size.
 
 ## How it plays
 
-A layer's files are registered as **game sounds** under an id of the API's own (`gk2.<owner>.<skin>.<section>:<event>`)
+A layer's files are registered as **game sounds** under an id of the API's own (`gk2.<owner>.<skin>.<section>:<event>`,
+`gk2.<owner>.mount-<mount>.<section>:<event>` for a mount's)
 with the game's `Default3D` preset (3D, 1 to 14 units) and the in-world sfx mixer group, so they play through the
 game's own pooled player, follow its Sounds slider and pause with it. The files are decoded when the event is first
-needed (an embedded pack's `.ogg` through a cache file under `BepInEx\cache\GK2DonkeyAPI\sounds\`); the event is
+needed (an embedded pack's `.ogg` through a cache file under `BepInEx\cache\GK2DonkeyAPI\sounds\<owner>\<skin>\` for a
+skin's, `...\<owner>\mount-<mount>\` for a mount's); the event is
 silent until they are in (one log line per line of files: "n file(s) loaded for ..."). A game id plays as the game
 plays it. The game's own clips are streamed and cannot be reshaped: a deeper bray on a game clip is a `pitch`, a
 different one is a file of your own.
@@ -193,9 +199,10 @@ shipping modified copies of them is a licensing question for whoever ships them.
 
 The F11 dev window's Sounds tab lists every event of the ridden mount with what plays and from which layer, a Play
 button each, and the standing switch; its Mounts tab has one row per event for the skin's block and the mount's
-(the line's source and its volume), with the auto-save writing the lines to the skin.cfg. The log says what the
-loader found for the pack ("n sound line(s)", the problems by name) and which files loaded. `tests/SkinsScan` checks
-a built-in pack's lines and files; the self-tests of group Sounds cover the system (self-tests.md).
+(the line's source and its volume), with the auto-save writing the skin's lines to its `skin.cfg` and the mount's to
+its `mount.cfg`. The log says what the loader found for the pack ("n sound line(s)", the problems by name) and which
+files loaded. `tests/SkinsScan` checks a built-in pack's lines and files (a skin's in its own `sounds\`, a mount's in
+the mount folder's); the self-tests of group Sounds cover the system (self-tests.md).
 
 ## From code
 

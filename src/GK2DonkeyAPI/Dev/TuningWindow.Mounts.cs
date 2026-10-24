@@ -159,7 +159,7 @@ namespace GK2DonkeyAPI
             }
             EffectRows(mount);
 
-            Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "[Mount.Tuning.Ride]" : "[Mount.Tuning.Cart]") + ")");
+            Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "mount.cfg [Tuning.Ride]" : "mount.cfg [Tuning.Cart]") + ")");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Each style has its own values; the other style's rows show after a style switch.", small);
             if (skin != null && skin.SeatFromPicture) GUILayout.Label("This skin says seat = picture: the rider sits on its own picture, this frame's top, and 'Torso down / up' adjusts from there. The torso height row is ignored on it.", small);
@@ -376,7 +376,7 @@ namespace GK2DonkeyAPI
         }
 
         // ---- the sounds (docs/mount-sounds-design.md): one row per event, the line's source as written in the
-        // skin.cfg block ([Sounds] / [Mount.Sounds], or the style's section when the key is there), set here and
+        // file's block (skin.cfg [Sounds] / mount.cfg [Sounds], or the style's section when the key is there), set here and
         // written back by the auto-save; the resolved result (what plays on the ridden instance, and its layer) next to it.
 
         private static readonly Dictionary<string, string> soundEdits = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -384,7 +384,7 @@ namespace GK2DonkeyAPI
         private static void DrawSoundRows(Looks.SkinDef skin, Catalog.Entry mount, bool ride, bool ofSkin)
         {
             bool code = ofSkin ? skin.Source == null && !skin.BuiltIn && skin.SourceAssembly == null : !mount.FromPack;
-            Header(ofSkin ? "Sounds of this skin  ([Sounds]" + (ride ? "" : ", [Sounds.Cart]") + ")" : "Sounds of the mount  ([Mount.Sounds]" + (ride ? "" : ", [Mount.Sounds.Cart]") + ", shared by its skins)");
+            Header(ofSkin ? "Sounds of this skin  ([Sounds]" + (ride ? "" : ", [Sounds.Cart]") + ")" : "Sounds of the mount  (mount.cfg [Sounds]" + (ride ? "" : ", [Mount.Sounds.Cart]") + ", shared by its skins)");
             if (ofSkin)
             {
                 var missing = new List<string>();
@@ -725,12 +725,7 @@ namespace GK2DonkeyAPI
                 return;
             }
             string path = Looks.CfgPathFor(skin);
-            var mountFiles = new List<Looks.SkinDef>();
-            if (mount != Catalog.Donkey && mount.FromPack && mount.DeclaredBy != null && !mount.DeclaredBy.Equals(skin.Id, StringComparison.OrdinalIgnoreCase))
-            {
-                Looks.SkinDef declaring = Looks.Find(mount.DeclaredBy); // the mount's rows go into the declaring skin's file (MountsSaveIfDue)
-                if (declaring != null && Looks.CfgPathFor(declaring) != null) mountFiles.Add(declaring);
-            }
+            string mountPath = mount != Catalog.Donkey ? Looks.CfgPathFor(mount.Pack) : null; // the mount's rows go into its mount.cfg (MountsSaveIfDue)
             if (path == null)
             {
                 GUILayout.Label(skin.BuiltIn || skin.SourceAssembly != null ? "Embedded in a DLL whose sources aren't on this machine (a release build): changes last this session." : "A code skin: its values live in its mod; changes last this session.", small);
@@ -738,8 +733,8 @@ namespace GK2DonkeyAPI
             else
             {
                 // Saved by itself, like the Cargo tab's layout: a moment after the last change, into the skin's file
-                // (the mount's rows into every file that declares the mount). Nothing to remember to press.
-                GUILayout.Label("Saved by itself a moment after each change: the skin's rows to " + path + (mountFiles.Count > 0 ? " and the mount's rows to the file(s) that declare the mount: " + string.Join(", ", mountFiles.ConvertAll(s => s.Id)) : mount != Catalog.Donkey && !mount.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments in the rewritten sections ([Tuning...], [Mount...]) stay above their header or key, and a remark at the end of a key's line stays on it. A rebuild ships a built-in's file." + (mountsLastSaved != null ? " Last saved " + mountsLastSaved + "." : ""), small);
+                // (the mount's rows into its mount.cfg). Nothing to remember to press.
+                GUILayout.Label("Saved by itself a moment after each change: the skin's rows to " + path + (mountPath != null ? " and the mount's rows to " + mountPath : mount != Catalog.Donkey && !mount.FromPack ? "; the mount's rows are the mod's (not saved)" : "") + ". The pictures are untouched; comments in the rewritten sections stay above their header or key, and a remark at the end of a key's line stays on it. A rebuild ships a built-in's files." + (mountsLastSaved != null ? " Last saved " + mountsLastSaved + "." : ""), small);
                 GUILayout.BeginHorizontal();
                 GUI.enabled = mountsUndo.Count > 0;
                 if (GUILayout.Button(Tip($"Undo the last change{(mountsUndo.Count > 0 ? " (" + mountsUndo.Count + ")" : "")}", "Puts the file back as it was before the last saved change and reads it again; again: the one before."), Wd(LabelW)))
@@ -747,9 +742,10 @@ namespace GK2DonkeyAPI
                     MountsUndo();
                 }
                 GUI.enabled = true;
-                if (GUILayout.Button(Tip("Reload from the file", "Reads skin.cfg again (a change you made outside the game, say)."), Wd(SliderW)))
+                if (GUILayout.Button(Tip("Reload from the files", "Reads skin.cfg and the mount's mount.cfg again (a change you made outside the game, say)."), Wd(SliderW)))
                 {
                     string e = Looks.ReloadCfg(skin);
+                    if (e == null && mountPath != null) e = Looks.ReloadMountCfg(mount);
                     Note(e == null ? "Reloaded: the pictures load again (a moment), then the file's values show." : "Not reloaded: " + e);
                     if (e != null) Plugin.Log.LogWarning($"Mounts tab: '{skin.Id}' not reloaded from its file: {e}");
                 }
@@ -776,7 +772,7 @@ namespace GK2DonkeyAPI
         private static bool mountsDirty;
         private static float mountsLastChange;
         private static string mountsLastSaved;         // "11:42:07 to gerry" for the label
-        private static readonly List<(Looks.SkinDef Skin, string Path, string Text)> mountsUndo = new List<(Looks.SkinDef, string, string)>();
+        private static readonly List<(string Label, string Path, string Text, Func<string> Reload)> mountsUndo = new List<(string, string, string, Func<string>)>();
         private static float mountsUndoAt = -100f; // when the last undo step was taken (saves close together share one)
 
         // Called every frame the panel draws (TuningWindow.Draw): a change on the Mounts tab (Catalog.Touch bumps
@@ -793,35 +789,34 @@ namespace GK2DonkeyAPI
             mountsDirty = false;
             Looks.SkinDef skin = string.IsNullOrEmpty(mountsSkinId) ? null : Looks.Find(mountsSkinId);
             if (skin == null) return;
-            var files = new List<Looks.SkinDef> { skin };
+            // the skin's rows into its skin.cfg, the mount's into its mount.cfg (a pack mount's folder)
             Catalog.Entry mount = skin.Mount;
-            if (mount != Catalog.Donkey && mount.FromPack && mount.DeclaredBy != null && !mount.DeclaredBy.Equals(skin.Id, StringComparison.OrdinalIgnoreCase))
+            var files = new List<(string Label, string Path, Func<(string Error, bool Changed)> Save, Func<string> Reload)>
             {
-                // the mount's rows live in the file of the skin that declares the mount (its Default); a joiner's own
-                // [Mount] block is not the mount's (docs/mounts-foundation-2.md 2.2)
-                Looks.SkinDef declaring = Looks.Find(mount.DeclaredBy);
-                if (declaring != null && Looks.CfgPathFor(declaring) != null) files.Add(declaring);
-            }
+                ("skin " + skin.Id, Looks.CfgPathFor(skin), () => (Looks.SaveCfg(skin, out bool c1), c1), () => Looks.ReloadCfg(skin)),
+            };
+            if (mount != Catalog.Donkey && mount.Pack != null)
+                files.Add(("mount " + mount.Id, Looks.CfgPathFor(mount.Pack), () => (Looks.SaveMountCfg(mount, out bool c2), c2), () => Looks.ReloadMountCfg(mount)));
             var written = new List<string>();
             var errors = new List<string>();
-            foreach (Looks.SkinDef s in files)
+            foreach (var f in files)
             {
-                string path = Looks.CfgPathFor(s);
+                string path = f.Path;
                 if (path == null) continue;
                 string before = System.IO.File.Exists(path) ? System.IO.File.ReadAllText(path) : null;
-                string e = Looks.SaveCfg(s, out bool changed);
-                if (e != null) { errors.Add(s.Id + ": " + e); continue; }
+                (string e, bool changed) = f.Save();
+                if (e != null) { errors.Add(f.Label + ": " + e); continue; }
                 if (!changed) continue;
                 // one undo step per gesture: a save within a few seconds of the last one on the same file keeps the
                 // earlier restore point (a slider dragged in two moves with a pause between was two steps, 2026-10-20)
                 bool sameGesture = mountsUndo.Count > 0 && mountsUndo[mountsUndo.Count - 1].Path == path && Time.unscaledTime - mountsUndoAt < 4f;
                 if (!sameGesture)
                 {
-                    mountsUndo.Add((s, path, before));
+                    mountsUndo.Add((f.Label, path, before, f.Reload));
                     if (mountsUndo.Count > 50) mountsUndo.RemoveAt(0);
                 }
                 mountsUndoAt = Time.unscaledTime;
-                written.Add(s.Id);
+                written.Add(f.Label);
             }
             if (errors.Count > 0) Note("Not saved: " + string.Join("; ", errors));
             if (written.Count > 0) mountsLastSaved = DateTime.Now.ToString("HH:mm:ss") + " to " + string.Join(", ", written);
@@ -830,23 +825,23 @@ namespace GK2DonkeyAPI
         private static void MountsUndo()
         {
             if (mountsUndo.Count == 0) return;
-            (Looks.SkinDef Skin, string Path, string Text) last = mountsUndo[mountsUndo.Count - 1];
+            (string Label, string Path, string Text, Func<string> Reload) last = mountsUndo[mountsUndo.Count - 1];
             mountsUndo.RemoveAt(mountsUndo.Count - 1);
             try
             {
                 if (last.Text == null) System.IO.File.Delete(last.Path);
                 else System.IO.File.WriteAllText(last.Path, last.Text, new System.Text.UTF8Encoding(false));
-                string e = Looks.ReloadCfg(last.Skin);
+                string e = last.Reload();
                 mountsSeenVersion = Catalog.Version; // the reload is not a change to save again
                 mountsDirty = false;
                 Note(e == null ? "Undone: the file is as before that change, and read again." : "Undone in the file, but not reloaded: " + e);
-                if (e == null) Plugin.Log.LogInfo($"Mounts tab: undo: '{last.Skin.Id}' put back as before the last save and read again ({mountsUndo.Count} more to undo).");
-                else Plugin.Log.LogWarning($"Mounts tab: undo: '{last.Skin.Id}' put back in the file, but not read again: {e}");
+                if (e == null) Plugin.Log.LogInfo($"Mounts tab: undo: {last.Label} put back as before the last save and read again ({mountsUndo.Count} more to undo).");
+                else Plugin.Log.LogWarning($"Mounts tab: undo: {last.Label} put back in the file, but not read again: {e}");
             }
             catch (Exception e)
             {
                 Note("Couldn't undo: " + e.Message);
-                Plugin.Log.LogWarning($"Mounts tab: undo of '{last.Skin.Id}' failed: {e.Message}");
+                Plugin.Log.LogWarning($"Mounts tab: undo of {last.Label} failed: {e.Message}");
             }
         }
 

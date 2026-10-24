@@ -26,10 +26,11 @@
          game's bundle; the mesh is not readable at runtime). LampHang.cs splits it into pole and hanging lamp. -->
     <EmbeddedResource Include="assets\lantern-vertices.bin" LogicalName="GK2DonkeyAPI.lantern-vertices.bin" />
     <EmbeddedResource Include="assets\lantern-indices.bin" LogicalName="GK2DonkeyAPI.lantern-indices.bin" />
-    <!-- the self-tests' embedded skin pack (an .ogg and a .wav: the route the built-in skins' sounds take); never registered at start -->
-    <EmbeddedResource Include="assets\testskin\**\*" LogicalName="GK2DonkeyAPI.testskins.%(RecursiveDir)%(Filename)%(Extension)" />
-    <!-- No skins here: the API is the backend and ships the donkey alone; every skin and mount, Hellfire and Royal
-         Parade included, is Saddle Up's (src/SaddleUp/assets/skins, embedded in its csproj; docs/mounts-as-mods.md). -->
+    <!-- the self-tests' embedded pack (a donkey skin with an .ogg and a .wav: the route the built-in packs' sounds
+         take); never registered at start -->
+    <EmbeddedResource Include="assets\testmounts\**\*" LogicalName="GK2DonkeyAPI.testmounts.%(RecursiveDir)%(Filename)%(Extension)" />
+    <!-- No mounts or skins here: the API is the backend and ships the donkey alone; every mount and skin, Hellfire and
+         Royal Parade included, is Saddle Up's (src/SaddleUp/assets/mounts, embedded in its csproj; docs/mounts-as-mods.md). -->
   </ItemGroup>
 
   <!-- The source folder, so the panel can read and write defaults.cfg / cargo-layout.cfg in place on this machine.

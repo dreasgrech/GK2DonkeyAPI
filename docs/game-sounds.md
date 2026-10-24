@@ -40,8 +40,8 @@ with no stray `.py` files (a helper named `snappy.py` next to it shadowed a modu
 The creature-like ids are few: `garry` (Gerry's voice), `voice_larry` (burps), `larry_steps`, `larry_chatterteeth`,
 `gerry_somersault`, `spitter_attack` / `spitter_hit`, `stinker_death`, `zombie_idle` / `zombie_attack` / `zombie_death`,
 `wolves_howl`, `plague_doctor_cough`, the `step_*` ids, `item_use_food`, `fishing_blop`, `bush_chop`,
-`conveyor_furnace_bellows`. The built-in mounts' first picks are in their skin.cfg `[Mount.Sounds]` blocks
-(docs/mount-sounds.md).
+`conveyor_furnace_bellows`. The built-in mounts' first picks are in their mount.cfg `[Sounds]` blocks
+(`src/SaddleUp/assets/mounts/<mount>/mount.cfg`, docs/mount-sounds.md).
 
 ## The donkey shortlist
 

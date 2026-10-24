@@ -12,11 +12,12 @@ Mounts panel, and abilities (code hooks). The donkey is the mount with no defini
 
 A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits on that drawing, and what the
 drawing's colours mean. Every mount has at least one skin. Hellfire and Royal Parade are skins of the donkey; the red
-scales are a skin of the dragon, and the dragon exists because that skin declares it.
+dragon (`red-dragon`) is a skin of the dragon.
 
-The rule that ties them: **a mount is declared by a skin's `[Mount]` block, and the skin whose id is the mount's id
-is its Default and owns the declaration.** Other skins say `mount = <id>` and join as another look of the same mount.
-A joiner's own `[Mount]` block holds only until the Default is registered.
+The rule that ties them: **a mount is a folder with a `mount.cfg`, and its skins are the folders under its
+`skins\`.** The mount's `default_skin` names the look a new instance of it wears (its Default in the Skin row). A
+mount folder without a `mount.cfg` adds its skins to a mount registered elsewhere (another mod's, a code mount, or the
+donkey's `donkey\skins\`).
 
 A skin's pictures come one of three ways: a **pack** (a folder of PNGs and a `skin.cfg`, on disk or embedded in a
 DLL; no code), a **recipe** (code that turns each donkey frame's pixels into new ones), or **code sprites** (a mod
@@ -30,42 +31,24 @@ The mount and its skin are a folder of files; the mod only hands the folder to t
 MyMountMod/
   MyMountMod.csproj
   Plugin.cs
-  assets/skins/giant-crab/
-    skin.cfg
-    bdy_static_left.png, bdy_walk_left_01.png, ...   the 44 frames on the canvas (skins.md "The pictures")
-    front/ ...                                        optional: parts drawn over the rider
-    portrait.png                                      optional: the panel's icon; else the standing picture is cut
+  assets/mounts/giant-crab/
+    mount.cfg                                           the mount (every key: skins.md "mount.cfg")
+    sounds/click_1.ogg, click_2.ogg                     optional: the mount's sounds, for every skin of it
+    portrait.png                                        optional: the panel's icon; else the default skin's standing picture is cut
+    skins/red-crab/
+      skin.cfg                                          the look (every key: skins.md "skin.cfg")
+      bdy_static_left.png, bdy_walk_left_01.png, ...    the 44 frames on the canvas (skins.md "The pictures")
+      front/ ...                                        optional: parts drawn over the rider
 ```
 
-`skin.cfg`, the Default skin declaring the mount (every key: skins.md "skin.cfg"):
+`mount.cfg`, the creature:
 
 ```ini
-[Skin]
-format = 1
-needs = 0.36
-id = giant-crab
-name = Giant Crab
-description = A crab the size of a cart, sideways at everything.
-author = you
-version = 1.0
-base = donkey          # the skeleton it animates on: the donkey's 44 frame keys
-colours = own          # drawn in its own colours (palette: drawn in the donkey's)
-layer = replace        # replaces the donkey's picture (over: drawn on top of it)
-canvas = 128 128       # the picture size; 96 is the donkey's
-seat = 70              # the canvas row the rider's hip sits on, from the top
-mount = giant-crab     # the mount this skin is a look of
-
-[Tuning.Cart]          # the skin's own geometry: where the cart meets this drawing
-HitchGapPx = 18
-
-[Colors]               # what the drawing's colours mean, by region, so the player's colour rows reach them
-Dark = 2A1008 3C1810
-Eye = F0E040
-
-[Mount]                # the creature: in the Default skin only
-id = giant-crab
+[Mount]
+id = giant-crab        # the same as the mount folder's name
 name = Giant Crab
 description = Pulls the cart, has young, scuttles a little faster than a donkey.
+default_skin = red-crab  # the look a new crab wears: a folder under skins\
 author = you
 version = 1.0
 cart = true
@@ -75,25 +58,56 @@ foal_scale = 0.4
 speed = 2.25           # riding, times walking speed (the donkey: 2); the panel says "Fast"
 cargo = 6              # items its cart carries, 1 to 6 (with the cart it goes at its speed x 0.75, as the donkey)
 
-[Mount.Tuning]         # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
+[Stats]                # free lines for the Mounts panel
+Legs = 8
+
+[Tuning]               # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0
 
-[Mount.Sounds]         # the creature's own sounds, shared by its skins (docs/mount-sounds.md): files of this skin's
-voice = click_1.ogg, click_2.ogg   # sounds\mount\ folder, a game sound id, none, or ground; <event>.volume etc.
+[Sounds]               # the creature's own sounds, shared by its skins (docs/mount-sounds.md): files of the mount
+voice = click_1.ogg, click_2.ogg   # folder's sounds\, a game sound id, none, or ground; <event>.volume etc.
 lips = none
-
-[Mount.Stats]          # free lines for the Mounts panel
-Legs = 8
 ```
+
+`skins/red-crab/skin.cfg`, its look:
+
+```ini
+[Skin]
+format = 1
+needs = 0.36
+id = red-crab
+name = Red Crab
+description = A crab the size of a cart, sideways at everything.
+author = you
+version = 1.0
+base = donkey          # the skeleton it animates on: the donkey's 44 frame keys
+colours = own          # drawn in its own colours (palette: drawn in the donkey's)
+layer = replace        # replaces the donkey's picture (over: drawn on top of it)
+canvas = 128 128       # the picture size; 96 is the donkey's
+seat = 70              # the canvas row the rider's hip sits on, from the top
+
+[Tuning.Cart]          # the skin's own geometry: where the cart meets this drawing
+HitchGapPx = 18
+
+[Colors]               # what the drawing's colours mean, by region, so the player's colour rows reach them
+Dark = 2A1008 3C1810
+Eye = F0E040
+```
+
+The skin's mount is the folder it sits in; a `[Mount]` section in a `skin.cfg` is ignored (the report says it goes in
+`mount.cfg`).
 
 The csproj embeds the folder under a predictable name:
 
 ```xml
 <ItemGroup>
-  <EmbeddedResource Include="assets\skins\**\*"
-                    LogicalName="MyMountMod.skins.%(RecursiveDir)%(Filename)%(Extension)" />
+  <EmbeddedResource Include="assets\mounts\**\*"
+                    LogicalName="MyMountMod.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
 </ItemGroup>
 ```
+
+The files come out as `MyMountMod.mounts.giant-crab\mount.cfg`, `MyMountMod.mounts.giant-crab\sounds\click_1.ogg`,
+`MyMountMod.mounts.giant-crab\skins\red-crab\bdy_walk_left_03.png` and so on.
 
 `Plugin.cs`, the whole mod:
 
@@ -108,24 +122,29 @@ public sealed class Plugin : BaseUnityPlugin
 {
     private void Awake()
     {
-        int n = Mounts.Looks.RegisterEmbedded(Info.Metadata.GUID, Assembly.GetExecutingAssembly(), "MyMountMod.skins");
+        int n = Mounts.Looks.RegisterEmbedded(Info.Metadata.GUID, Assembly.GetExecutingAssembly(), "MyMountMod.mounts.");
         Logger.LogInfo($"My Mount Mod: {n} skin pack(s) registered.");
     }
 }
 ```
 
 That is all. On the next start the Giant Crab is in Saddle Up's Mounts panel with its Skin, Colours and Effect
-rows, its icon cut from the standing picture, its speed pinned so the player's Speed row is left out for it. A
-second skin of the same mount is another folder with `mount = giant-crab` and no `[Mount]` block. Several packs in
-one DLL: several folders under the same prefix.
+rows, its icon cut from the default skin's standing picture, its speed pinned so the player's Speed row is left out
+for it. A second skin of the same mount is another folder under `assets/mounts/giant-crab/skins/`. Several mounts in
+one DLL: several mount folders under the same prefix. A new look for a mount that isn't yours (the donkey, or another
+mod's) is a mount folder with no `mount.cfg`: `assets/mounts/donkey/skins/<your skin>/`.
 
 A mod removed from the plugins folder needs nothing: the next start has no registration, and a player who had its
 mount chosen rides a donkey until it is back. A plugin destroyed while the game runs (a script reloader) loses its
 tuning and keys by itself, but its skins and mounts stay registered until withdrawn: `Mounts.Looks.Unregister(ownerId,
-skinId)` per skin in `OnDestroy` (a mount goes with its Default skin when no other skin of yours declares it).
+skinId)` per skin in `OnDestroy` (a pack's mount goes with the last of its skins registered by the same owner).
 
-The same folder also works loose, as `BepInEx\plugins\gk2skins\giant-crab\` with no DLL at all: the API scans the
-folder at start. A loose copy and a DLL's copy of the same id: the higher version wins, a tie goes to the DLL.
+The same folder also works loose, as `BepInEx\plugins\gk2mounts\giant-crab\` (or the same under any mod's
+folder, `BepInEx\plugins\<AnyFolder>\gk2mounts\giant-crab\`) with no DLL at all: the API scans for it at
+start. A loose copy and a DLL's copy of the same
+skin id: the higher version wins, a tie goes to the DLL. Two `mount.cfg` of the same mount id: the higher `[Mount]
+version` wins (its facts replace the other's, whose skins keep the mount), a tie goes to the DLL over a loose folder,
+otherwise the first stays and the later one is refused with a warning.
 
 ## Shape 2: a mount in code, with an ability
 
@@ -214,14 +233,16 @@ log), and its values are never saved (set again in play).
 
 - Lists the mount in the Mounts panel: its icon (a `portrait` if named, else its Default skin's standing picture),
   its description, and a line built from `cart`, `foals`, the speed, the effect it comes with, its skins, its
-  `[Mount.Stats]` and its abilities' names and descriptions.
+  `[Stats]` (`MountDef.Stats` in code) and its abilities' names and descriptions.
 - Makes Saddle Up's rows for it: Skin, the colours, the effect, kept per mount in the cfg (`Skin_giant-crab`,
   `Coat_giant-crab`, ...). A mount registered after the page was built is caught up the next frame.
 - Pins the mount's tuning on every instance of it under the API's own owner. A player's row for a pinned key is left
   out of the menus for that mount (Saddle Up's `TuningKey`); a mod's value still wins over the mount's. A mount may
   not pin a behaviour switch, a colour, a look key or the lantern's keys: refused with one warning.
-- Refuses a second mount with the same id from another owner. A pack skin of the same id from another place: the
-  higher version wins, a tie goes to the DLL; the log names the loser.
+- Refuses a second mount with the same id from another owner, except a pack's `mount.cfg` with a higher `[Mount]
+  version` (or the same version from a DLL over a loose folder), which takes over a pack's mount; a mount registered
+  in code is never replaced. A pack skin of the same id from another place: the higher version wins, a tie goes to
+  the DLL; the log names the loser.
 - Saves nothing of the mount itself. A player's kept donkey records the skin id; if the mod is gone it comes back
   as a donkey and keeps the choice for when the mod returns.
 - A game-source skin (`source = game`, another character's frames) is checked at game-ready; frames the game lacks
@@ -232,14 +253,20 @@ authors' names never meet.
 
 ## Building one from this repo (the shipped mounts' way)
 
-1. `python -I tools/skins/new_skin.py giant-crab --mount giant-crab --name "Giant Crab" --canvas 128 --seat 70`
-   writes `src/SaddleUp/assets/skins/giant-crab/skin.cfg` in the canonical layout with the `[Mount]` block, a
-   generator stub under `tools/skins/giant-crab/` drawing placeholder frames, and the Aseprite sidecar.
+1. `python -I tools/skins/new_skin.py red-crab --mount giant-crab --name "Giant Crab" --canvas 128 --seat 70`
+   writes `src/SaddleUp/assets/mounts/giant-crab/skins/red-crab/skin.cfg` in the canonical layout, and, the mount
+   being new, `src/SaddleUp/assets/mounts/giant-crab/mount.cfg` with `default_skin = red-crab`; a generator stub under
+   `tools/skins/red-crab/` drawing placeholder frames, and the Aseprite sidecar. A second look of the same mount is
+   the same command with another skin id (the mount's folder and `mount.cfg` are left as they are); without
+   `--mount` the skin is the donkey's (`assets/mounts/donkey/skins/<id>/`).
 2. Draw the 44 frames (Aseprite: `scripts/GK2 Export skin.lua` splits the sheet into the PNGs) or extend the
    generator. docs/skins.md "The pictures" names each key and what the rider does on it.
-3. Set `seat`, `[Tuning.Cart] HitchGapPx` if the body is longer than the donkey's, and the `[Colors]` regions.
-4. Check: `python -I tools/skins/check_skin.py giant-crab` (the pictures), `dotnet run --project tests/SkinsScan
-   -c Release` (the cfg), or `bash tools/release-scans.sh` (everything).
-5. Build Saddle Up: its csproj embeds everything under `assets/skins`; its Awake registers them.
-6. In the game: the F11 Mounts tab reloads the file as you edit it, nudges the seat and the geometry live and saves
-   back into the same cfg; the seat and cart readout scenarios check every shipped mount.
+3. Set `seat`, `[Tuning.Cart] HitchGapPx` if the body is longer than the donkey's, and the `[Colors]` regions in the
+   `skin.cfg`; the speed, the babies and the sounds in the `mount.cfg` (the mount's sound files in its `sounds\`).
+4. Check: `python -I tools/skins/check_skin.py src/SaddleUp/assets/mounts/giant-crab/skins/red-crab` (the
+   pictures), `dotnet run --project tests/SkinsScan -c Release` (both cfgs), or `bash tools/release-scans.sh`
+   (everything).
+5. Build Saddle Up: its csproj embeds everything under `assets/mounts`; its Awake registers them.
+6. In the game: the F11 Mounts tab reloads the files as you edit them, nudges the seat and the geometry live and
+   saves the skin's rows back into its `skin.cfg` and the mount's into its `mount.cfg`; the seat and cart readout
+   scenarios check every shipped mount.

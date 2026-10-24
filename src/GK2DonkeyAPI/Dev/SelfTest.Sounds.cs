@@ -214,9 +214,9 @@ namespace GK2DonkeyAPI
                 else Info("no foal could be spawned here: the foal's scaling not seen");
 
                 // 5. the snail on a standing wearer: silent by its [Mount.Sounds] and by the rule (the donkey's own sounds are not another mount's), through the bind in the rig
-                if (Mounts.Looks.Find("snail") != null)
+                if (Mounts.Looks.Find("garden-snail") != null)
                 {
-                    standing.Tuning.Set(Owner, "Skin", "snail");
+                    standing.Tuning.Set(Owner, "Skin", "garden-snail");
                     yield return Until(() => standing.Mount == "snail", 8f);
                     yield return Frames(2);
                     sr.Invalidate();
@@ -261,20 +261,20 @@ namespace GK2DonkeyAPI
                     "[Sounds.Cart]\nvoice = voice_cart.wav\n\n" +
                     "[Mount]\nid = sounds-beast\nname = Sounds Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\n\n" +
                     "[Mount.Sounds]\nvoice = mount_voice.wav\nbell.volume = 0.25\nhitch = voice_1.wav\n");
-                packDir = Path.Combine(tempRoot, Looks.PackDirName, "sounds-test");
+                packDir = TempSkinDir(tempRoot, "sounds-beast", "sounds-test");
                 string sdir = Path.Combine(packDir, "sounds");
                 Directory.CreateDirectory(sdir);
                 File.WriteAllBytes(Path.Combine(sdir, "voice_1.wav"), SoundBank.TestTone(0.3f, 440f));
                 File.WriteAllBytes(Path.Combine(sdir, "voice_2.wav"), SoundBank.TestTone(0.3f, 520f));
                 File.WriteAllBytes(Path.Combine(sdir, "voice_cart.wav"), SoundBank.TestTone(0.3f, 330f));
-                // the mount's files: sounds\mount\ (a line's, and one by convention); voice_1.wav is the skin's only, so
-                // the mount's hitch line naming it finds no file there
-                string mdir = Path.Combine(sdir, "mount");
+                // the mount's files: the mount folder's own sounds\ (a line's, and one by its name); voice_1.wav is the
+                // skin's only, so the mount's hitch line naming it finds no file there
+                string mdir = Path.Combine(TempMountDir(tempRoot, "sounds-beast"), "sounds");
                 Directory.CreateDirectory(mdir);
                 File.WriteAllBytes(Path.Combine(mdir, "mount_voice.wav"), SoundBank.TestTone(0.3f, 220f));
                 File.WriteAllBytes(Path.Combine(mdir, "stop_1.wav"), SoundBank.TestTone(0.3f, 260f));
                 File.WriteAllBytes(Path.Combine(sdir, "graze_1.wav"), SoundBank.TestTone(0.6f, 180f)); // the convention: no cfg line
-                string pack2 = Path.Combine(tempRoot, Looks.PackDirName, "sounds-test-2");
+                string pack2 = TempSkinDir(tempRoot, "sounds-beast", "sounds-test-2");
                 Directory.CreateDirectory(pack2);
                 File.Copy(Path.Combine(packDir, "bdy_static_left.png"), Path.Combine(pack2, "bdy_static_left.png"));
                 File.WriteAllText(Path.Combine(pack2, "skin.cfg"), "[Skin]\nformat = 1\nid = sounds-test-2\nname = Sounds Test Two\nmount = sounds-beast\n");
@@ -286,10 +286,11 @@ namespace GK2DonkeyAPI
                 Check(n == 2, $"two packs found ({n})");
                 Looks.SkinDef def = Looks.Find("sounds-test");
                 Check(def != null && def.Report.Contains("sound line(s)") && def.Report.Contains("no sound event 'bogus'"), "the loader counts the sound lines and names the bogus event: " + (def?.Report ?? "-"));
-                Check(def != null && def.FileNames.Contains("sounds/voice_1.wav") && def.FileNames.Contains("sounds/mount/mount_voice.wav") && def.FileNames.Contains("sounds/mount/stop_1.wav") && !def.FileNames.Contains("sounds/mount_voice.wav"),
-                    "the pack's files: sounds\\ the skin's, sounds\\mount\\ the mount's, each under its own key");
-                Check(def != null && def.Report.Contains("[Mount.Sounds] hitch: the pack has no sounds\\mount\\voice_1.wav"), "a [Mount.Sounds] line reads sounds\\mount\\ only: hitch = voice_1.wav (a file of the skin's sounds\\) is named and left out");
-                Check(def != null && Looks.SkinSoundBlock(def, Looks.SoundLayer.Both)?.Get("stop", null) == null, "the skin's name rule never reaches into sounds\\mount\\: stop_1.wav there is no line of the skin's");
+                Catalog.Entry beast = Catalog.Find("sounds-beast");
+                Check(def != null && def.FileNames.Contains("sounds/voice_1.wav") && !def.FileNames.Contains("sounds/mount_voice.wav") && beast?.Pack != null && beast.Pack.FileNames.Contains("sounds/mount_voice.wav") && beast.Pack.FileNames.Contains("sounds/stop_1.wav"),
+                    "the files: the skin's sounds\\ its own, the mount folder's sounds\\ the mount's");
+                Check(beast?.Pack != null && beast.Pack.Report.Contains("[Sounds] hitch: the pack has no sounds\\voice_1.wav"), "a mount.cfg line reads the mount folder's sounds\\ only: hitch = voice_1.wav (a file of the skin's) is named and left out: " + beast?.Pack?.Report);
+                Check(def != null && Looks.SkinSoundBlock(def, Looks.SoundLayer.Both)?.Get("stop", null) == null, "the skin's name rule reads its own sounds\\ only: the mount's stop_1.wav is no line of the skin's");
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null || def == null) { Fail("could not spawn, or the pack is missing"); yield break; }
                 yield return Until(() => h.IsReady, 6f);
@@ -318,8 +319,8 @@ namespace GK2DonkeyAPI
                 SoundSpec sgr = rig.Resolve("graze");
                 Check(sgr != null && sgr.Layer == "skin" && sgr.BankId != null && sgr.BankId.EndsWith("sounds:graze", StringComparison.Ordinal), $"graze_1.wav by convention, no cfg line ({sgr?.Describe()})");
                 SoundSpec st0 = rig.Resolve("stop"), hi0 = rig.Resolve("hitch");
-                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith("mount.sounds:stop", StringComparison.Ordinal), $"sounds\\mount\\stop_1.wav by the name rule: the mount's stop, under the declaring skin too ({st0?.Describe()})");
-                Check(hi0 != null && hi0.Layer == "base", $"the mount's hitch line with no file in sounds\\mount\\ falls through to the base ({hi0?.Describe()})");
+                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith(".mount-sounds-beast.sounds:stop", StringComparison.Ordinal), $"the mount folder's stop_1.wav by the name rule: the mount's stop ({st0?.Describe()})");
+                Check(hi0 != null && hi0.Layer == "base", $"the mount's hitch line with no file in its sounds\\ falls through to the base ({hi0?.Describe()})");
                 SoundSpec sb = rig.Resolve("bell");
                 float bellVol = Plugin.For(MountStyle.Ride).BellVolume.Value;
                 Check(sb != null && sb.Layer == "base" && Mathf.Abs(sb.Volume - 0.25f * bellVol) < 0.001f, $"bell.volume 0.25 from [Mount.Sounds] scales the base's bell, the source stays the base's ({sb?.Describe()})");
@@ -353,10 +354,10 @@ namespace GK2DonkeyAPI
                 yield return Until(() => h.I.LooksRig.DefNow != null && h.I.LooksRig.DefNow.Id == "sounds-test-2", 8f);
                 rig.Invalidate();
                 SoundSpec v2 = rig.Resolve("voice");
-                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith("mount.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
+                Check(v2 != null && v2.Layer == "mount" && v2.BankId != null && v2.BankId.EndsWith(".mount-sounds-beast.sounds:voice", StringComparison.Ordinal), $"the second skin (no [Sounds]) gets the mount's voice ({v2?.Describe()})");
                 string mountVoiceId = v2?.BankId;
                 yield return Until(() => SoundBank.StateOf(mountVoiceId) == SoundBank.State.Ready, 6f);
-                Check(waited, "the mount's file loaded (from the declaring skin's sounds\\mount\\)");
+                Check(waited, "the mount's file loaded (from the mount folder's sounds\\)");
                 SoundSpec st2 = rig.Resolve("stop");
                 Check(st2 != null && st2.Layer == "mount" && st0 != null && st2.BankId == st0.BankId, $"and the mount's stop by the name rule, the same bank entry as under the declaring skin: loaded once ({st2?.Describe()})");
                 // the donkey's own sounds are not another creature's: with no line for them, silent; the neutral ones stay the donkey's
@@ -372,11 +373,12 @@ namespace GK2DonkeyAPI
                 Info(Sounds.CoverageLine(Looks.Find("sounds-test-2")));
 
                 // the save round trip keeps the sound sections with their lines and comment
-                string err = Looks.SaveCfg(def);
+                string err = Looks.SaveCfg(def) ?? Looks.SaveMountCfg(beast);
                 string text = File.ReadAllText(Path.Combine(packDir, "skin.cfg")).Replace("\r\n", "\n");
-                Check(err == null && text.Contains("[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav") && text.Contains("voice.volume = 0.5") && text.Contains("[Sounds.Cart]\nvoice = voice_cart.wav")
-                    && text.Contains("[Mount.Sounds]\nvoice = mount_voice.wav") && text.Contains("bell.volume = 0.25") && text.IndexOf("[Sounds]") < text.IndexOf("[Mount]") && text.IndexOf("[Mount.Sounds]") > text.IndexOf("[Mount]"),
-                    "saved: [Sounds], [Sounds.Cart] and [Mount.Sounds] kept with their lines and comment, in their places" + (err != null ? " (" + err + ")" : ""));
+                string mtext = File.ReadAllText(TempMountCfg(tempRoot, "sounds-beast")).Replace("\r\n", "\n");
+                Check(err == null && text.Contains("[Sounds]\n# keep: the voice\nvoice = voice_1.wav, voice_2.wav") && text.Contains("voice.volume = 0.5") && text.Contains("[Sounds.Cart]\nvoice = voice_cart.wav") && text.IndexOf("[Mount", StringComparison.Ordinal) < 0
+                    && mtext.Contains("[Sounds]\nvoice = mount_voice.wav") && mtext.Contains("bell.volume = 0.25") && mtext.IndexOf("[Sounds]") > mtext.IndexOf("[Mount]"),
+                    "saved: the skin's [Sounds] and [Sounds.Cart] in skin.cfg, the mount's [Sounds] in mount.cfg, with their lines and comment" + (err != null ? " (" + err + ")" : ""));
 
                 // a changed file: the pack read again (the dev auto-reload does this by itself), the bank's entry
                 // forgotten and the new file decoded on the next play
@@ -521,7 +523,7 @@ namespace GK2DonkeyAPI
             MountHandle h = null;
             try
             {
-                int n = Looks.RegisterEmbedded(typeof(Plugin).Assembly, "GK2DonkeyAPI.testskins.", owner);
+                int n = Looks.RegisterEmbedded(typeof(Plugin).Assembly, "GK2DonkeyAPI.testmounts.", owner);
                 Looks.SkinDef def = Looks.Find("embedded-sound-test");
                 Check(n == 1 && def != null && def.FileNames.Contains("sounds/voice_1.ogg") && def.FileNames.Contains("sounds/step_1.wav"),
                     $"the API's embedded test pack registers with its two sound files ({n} pack(s); {(def != null ? string.Join(", ", def.FileNames) : "-")})");
@@ -573,18 +575,18 @@ namespace GK2DonkeyAPI
         // sound: the take-off, the launch's flaps and the beats airborne, the fly loop, the landing, the thud, landed;
         // a jump's own two; a jump plays none of the flight's.
         // The built-in dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as
-        // files ... a solid foundation"): its flight's files are the mount's, in Saddle Up's embedded sounds\mount\, for
-        // every skin of the dragon; none of them the red dragon skin's own by the name rule (they were, loaded twice).
+        // files ... a solid foundation"; the mount folders the same day): its flight's files are the mount's, in Saddle
+        // Up's embedded mounts\dragon\sounds\, for every skin of the dragon; the red dragon skin has none of its own.
         private static IEnumerator SoundsDragonFiles()
         {
             if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
-            Looks.SkinDef red = Looks.Find("dragon");
+            Looks.SkinDef red = Looks.Find("red-dragon");
             Catalog.Entry mount = Catalog.Find("dragon");
             if (red == null || mount == null) { Skip("Saddle Up's dragon is not loaded"); yield break; }
             var events = new[] { "takeoff", "flap", "glide", "land" };
-            int inMount = red.FileNames.FindAll(f => f.StartsWith(Looks.MountSoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
-            int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase) && f.IndexOf('/', Looks.SoundsKey.Length) < 0).Count;
-            Check(inMount >= 12 && inSkin == 0, $"the embedded pack's files: {inMount} in sounds\\mount\\ (the mount's), {inSkin} in sounds\\ (the red dragon's own)");
+            int inMount = mount.Pack != null ? mount.Pack.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count : 0;
+            int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
+            Check(inMount >= 12 && inSkin == 0 && mount.DefaultSkin == "red-dragon", $"the embedded mount folder: {inMount} sound file(s) in dragon\\sounds\\ (the mount's), {inSkin} in the red dragon's own; default look {mount.DefaultSkin}");
             var skinLines = new List<string>();
             foreach (string e in events) if (Looks.SkinSoundBlock(red, Looks.SoundLayer.Both)?.Get(e, null) != null) skinLines.Add(e);
             Check(skinLines.Count == 0, "no flight sound is the red dragon skin's own line" + (skinLines.Count > 0 ? ": " + string.Join(", ", skinLines) : ""));
@@ -600,16 +602,16 @@ namespace GK2DonkeyAPI
             foreach (string e in events)
             {
                 SoundLine l = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(e, null);
-                Check(l != null && l.Files != null && l.Folder == Looks.MountSoundsKey, $"[Mount.Sounds] {e}: {(l?.Files != null ? l.Files.Length + " file(s) in " + l.Folder : "no files")}");
+                Check(l != null && l.Files != null, $"mount.cfg [Sounds] {e}: {(l?.Files != null ? l.Files.Length + " file(s)" : "no files")}");
             }
-            // loaded from the embedded sounds\mount\ through the cache file, once, under the declaring skin's id
+            // loaded from the embedded mount folder through the cache file, once, under the mount's own name
             SoundLine tl = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get("takeoff", null);
-            string id = tl != null ? SoundBank.ForSkin(red, tl.BankKey, tl.Files, false, false, tl.Folder) : null;
+            string id = tl != null ? SoundBank.ForFiles(mount.Pack.SoundFiles, tl.BankKey, tl.Files, false, false, tl.Folder) : null;
             yield return Until(() => SoundBank.StateOf(id) == SoundBank.State.Ready, 8f);
             SoundBank.Entry te = SoundBank.Find(id);
-            Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the embedded sounds\\mount\\ ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
-            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", red.Owner, "dragon", "mount");
-            Check(Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")), "their cache files sit apart from the skin's own (" + cache + ")");
+            Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the embedded mount folder ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
+            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-dragon");
+            Check(Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")), "their cache files sit under the mount's own name (" + cache + ")");
         }
 
         private static IEnumerator SoundsFlying()

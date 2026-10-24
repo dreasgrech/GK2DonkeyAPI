@@ -472,6 +472,8 @@ namespace GK2DonkeyAPI.Api
             // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
             bool donkeyMount = mount.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(value) || (!donkeyMount && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(mount);
+            // a built-in look's id from before the mount folders (2026-10-24: "dragon" is "red-dragon" now): the new id, kept
+            if (Looks.Find(value) == null && Looks.RenamedTo(value) is string renamed && Looks.Find(renamed) != null) value = renamed;
             if (row != null && row.Value != value)
             {
                 row.Value = value; // SettingChanged runs Apply again with the healed value

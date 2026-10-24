@@ -12,10 +12,13 @@ namespace GK2DonkeyAPI.Api
     //
     // Registering: a skin is a picture per donkey frame (FrameKeys names the 44 frames: "bdy_walk_left_03", ...), 96x96
     // facing left with the donkey's anchor in the middle, or a bigger canvas with the same centre. Four ways:
-    //   - RegisterFolder: skin packs (gk2skins/<id>/skin.cfg and PNGs) under a folder of yours; packs anywhere under
-    //     BepInEx/plugins are found by the API itself at start, so most mods need nothing here;
-    //   - RegisterEmbedded: the same files embedded in your DLL (EmbeddedResource with logical names
-    //     "<prefix><skin dir>\<file>", e.g. "MyMod.skins.rat\bdy_walk_left_03.png");
+    //   - RegisterFolder: mount packs under a folder of yours, sorted by mount: gk2mounts/<mount>/mount.cfg (the mount,
+    //     its sounds/ beside it) and gk2mounts/<mount>/skins/<skin>/ (skin.cfg and PNGs; a folder without mount.cfg
+    //     adds skins to a mount registered elsewhere, gk2mounts/donkey/skins/ to the donkey); packs anywhere under
+    //     BepInEx/plugins are found by the API itself at start, so most mods need nothing here (docs/skins.md);
+    //   - RegisterEmbedded: the same tree embedded in your DLL (EmbeddedResource with logical names
+    //     "<prefix><mount>\mount.cfg", "<prefix><mount>\skins\<skin>\<file>", e.g.
+    //     "MyMod.mounts.rat\skins\grey-rat\bdy_walk_left_03.png");
     //   - Register: pictures from your own code (IMountSkinSource gives a Texture2D per frame key; the textures stay
     //     yours, the API never destroys them);
     //   - RegisterRecipe: a rule over the donkey's own frames (a function from the frame's pixels to new pixels), so the
@@ -118,7 +121,8 @@ namespace GK2DonkeyAPI.Api
             return new Handle(d.Id, ownerId);
         }
 
-        // Every skin pack under a folder: <folder>/gk2skins/<id>/ and <folder>/*/gk2skins/<id>/. Returns how many.
+        // Every mount pack under a folder: <folder>/gk2mounts/<mount>/ and <folder>/*/gk2mounts/<mount>/ (mount.cfg,
+        // sounds/, skins/<skin>/). Returns how many skins registered.
         public int RegisterFolder(string ownerId, string folder)
         {
             Owner(ownerId);
@@ -130,7 +134,8 @@ namespace GK2DonkeyAPI.Api
             return Looks.RegisterFolder(folder, ownerId);
         }
 
-        // Every skin embedded in an assembly under a resource-name prefix. Returns how many.
+        // Every mount and skin embedded in an assembly under a resource-name prefix (<prefix><mount>\mount.cfg,
+        // <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file>). Returns how many skins registered.
         public int RegisterEmbedded(string ownerId, Assembly assembly, string prefix)
         {
             Owner(ownerId);

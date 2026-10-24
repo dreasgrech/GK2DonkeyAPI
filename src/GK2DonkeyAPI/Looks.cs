@@ -44,7 +44,7 @@ namespace GK2DonkeyAPI
     // Colors.Frozen, which guards the same borrowed parts (docs/skins-design.md §11).
     internal static partial class Looks
     {
-        internal const string PackDirName = "gk2skins";
+        internal const string PackDirName = "gk2mounts"; // <root>\gk2mounts\<mount>\ (MountPacks.cs; docs/skins.md "What a pack is")
         internal const int MaxCanvas = 256; // a sheet is 44 cells (88 with a front layer) of RGBA32: 256 is 12 MB, the old 512 was 49 (docs/mounts-foundation-2.md 2.5)
         internal const string Section = "Look";
         internal const string OverlayPrefix = "gk2_skin_";
@@ -52,8 +52,7 @@ namespace GK2DonkeyAPI
         internal const string OverlayHead = OverlayPrefix + "hed";
         internal const string FrontSuffix = "_front";   // the second overlay per part: drawn in front of the rider
         internal const string FrontKey = "front/";
-        internal const string SoundsKey = "sounds/"; // a pack's sounds\ folder: the skin's own files, keyed "sounds/<file>" (SoundBank.ForSkin reads them)
-        internal const string MountSoundsKey = "sounds/mount/"; // its sounds\mount\ folder: the files of the mount the skin declares, for every skin of it (2026-10-24)      // a front picture's key: "front/bdy_walk_left_03"
+        internal const string SoundsKey = "sounds/"; // a pack's sounds\ folder (a skin's own, or a mount folder's: the mount's), keyed "sounds/<file>" (SoundBank.ForFiles reads them)
         internal const string TuningOwner = "dreas.gk2.donkeyapi.skin"; // the owner of the overrides a skin's tuning sets
 
         // The skin an instance wears, by id ("" or "donkey" = the game's own look). A look key (IsLook): an instance
@@ -124,7 +123,7 @@ namespace GK2DonkeyAPI
             try
             {
                 int packs = RegisterFolder(BepInEx.Paths.PluginPath, Plugin.Guid + ".packs");
-                if (packs > 0) Plugin.Log.LogInfo($"Looks: {packs} skin pack(s) found under plugins\\ (gk2skins\\<id>\\skin.cfg).");
+                if (packs > 0) Plugin.Log.LogInfo($"Looks: {packs} skin pack(s) found under plugins\\ (gk2mounts\\<mount>\\skins\\<skin>\\skin.cfg).");
             }
             catch (Exception e)
             {
@@ -178,8 +177,8 @@ namespace GK2DonkeyAPI
             // with the player's knobs (Brightness, Saturation, Colorize ...), applied before the player's settings
             // (Colors.Rebuild). An ash coat under Hellfire's horns, without a pixel of the game's art in the pack.
             internal Dictionary<string, Colors.RegionTweak> BaseRegions;
-            internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md)
-            internal Catalog.Entry DeclaredMount;       // a pack's [Mount] section: declared when the skin registers
+            internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md): a pack's is its mount folder's
+            internal string MountDirName;                // a pack's: the mount folder it sits in (gk2mounts\<this>\skins\<skin>), for its file's path
             private Catalog.Entry mount;
             private int mountVersion;
             private bool mountFallbackLogged;
@@ -214,7 +213,7 @@ namespace GK2DonkeyAPI
             internal bool BuiltIn;
             internal string Report = "";      // what the loader found (one block, logged once)
             internal string Source;           // a pack's folder, for the report
-            internal Assembly SourceAssembly; // an embedded skin's DLL (a mod's, or the API's own for a built-in): its GK2SkinsSourceDir says where its files are on this machine
+            internal Assembly SourceAssembly; // an embedded skin's DLL (a mod's): its GK2MountsSourceDir says where its files are on this machine
             internal long DiskStamp;          // a pack's files' newest write time as read (PackStamp): what the watch compares against
             internal string DirName;          // the skin directory's name (the id by default)
             internal Func<string, byte[]> ReadFile;    // the pack's files by name, for a reload
@@ -255,6 +254,9 @@ namespace GK2DonkeyAPI
             internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
 
             internal bool OwnsSheet => Sprites == null;
+
+            // its own sound files (sounds\ next to its skin.cfg) for the bank
+            internal SoundBank.FileSource SoundFiles => new SoundBank.FileSource(Owner, Id, Source, ReadFile, "skin '" + Id + "'");
         }
 
         private static readonly Dictionary<string, SkinDef> defs = new Dictionary<string, SkinDef>(StringComparer.OrdinalIgnoreCase);
@@ -264,6 +266,19 @@ namespace GK2DonkeyAPI
         {
             return !string.IsNullOrEmpty(id) && defs.TryGetValue(id.Trim(), out SkinDef d) ? d : null;
         }
+
+        // The built-in looks renamed with the mount folders (2026-10-24: the default looks got names of their own). An id
+        // saved before that (a mount's Skin in a save, a settings row; only a dev's own world: the mounts were off in
+        // every release) still finds its look, so a saved dragon stays a dragon. Not for new renames.
+        private static readonly Dictionary<string, string> renamedSkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dragon"] = "red-dragon", ["rat"] = "grey-rat", ["snail"] = "garden-snail", ["worm"] = "earth-worm",
+        };
+
+        internal static string RenamedTo(string id) => !string.IsNullOrEmpty(id) && renamedSkins.TryGetValue(id.Trim(), out string to) ? to : null;
+
+        // A wanted skin by its id, or by its id from before the rename.
+        internal static SkinDef FindWanted(string id) => Find(id) ?? (RenamedTo(id) is string to && Find(id) == null ? Find(to) : null);
 
         internal static void Register(SkinDef d)
         {
@@ -294,29 +309,8 @@ namespace GK2DonkeyAPI
             }
             if (old != null)
             {
-                ForgetPortraits(old.Id); // before its declaration moves or is cleared: a joiner mount's stand-in is reached through DeclaredBy
+                ForgetPortraits(old.Id);
                 SoundBank.ForgetSkin(old);
-            }
-            if (d.DeclaredMount != null)
-            {
-                d.DeclaredMount.Owner = d.Owner;
-                d.DeclaredMount.BuiltIn = d.BuiltIn;
-                Catalog.Entry declared = Catalog.Declare(d.DeclaredMount, "skin '" + d.Id + "'", d.Id);
-                if (!string.IsNullOrEmpty(d.MountId) && !d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && !d.MountId.Equals(declared.Id, StringComparison.OrdinalIgnoreCase))
-                {
-                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}' says mount = {d.MountId} but its [Mount] block declares '{declared.Id}': a skin with a [Mount] block is that mount's own skin, so mount = {declared.Id} here.");
-                }
-                d.MountId = declared.Id; // the declared mount, whatever the mount = line says (a renamed [Mount] id moves the skin with it)
-            }
-            else if (old != null && old.Owner != d.Owner)
-            {
-                // (a cross-owner replace by the version rule; a same-owner reload with the block removed is ReloadCfg's, which withdraws the mount)
-                // the replaced skin declared a mount and this one doesn't: the mount stays (its other skins wear it) but no
-                // skin declares it now, so nothing reads a portrait or a re-declaration through a skin that has no block
-                foreach (Catalog.Entry kd in Catalog.All)
-                {
-                    if (kd.FromPack && kd.DeclaredBy != null && kd.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)) kd.DeclaredBy = null;
-                }
             }
             if (d.CanvasW <= 0 || d.CanvasH <= 0)
             {
@@ -359,75 +353,89 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Every skin embedded in an assembly under a prefix: resources named <prefix><skin dir>[\/]<file>, one skin.cfg
-        // per skin directory (the csproj embeds assets\skins\**\* that way).
+        // Every mount and skin embedded in an assembly under a prefix: resources named <prefix><mount>\mount.cfg,
+        // <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file> (+ front\, sounds\): the csproj embeds
+        // assets\mounts\**\* that way. The mounts first, then their skins. The number of skins registered.
         internal static int RegisterEmbedded(Assembly asm, string prefix, string owner, bool builtIn = false)
         {
-            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // skin dir -> file -> resource
+            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("dragon", "dragon/skins/red-dragon/front") -> file -> resource
             foreach (string res in asm.GetManifestResourceNames())
             {
                 if (!res.StartsWith(prefix, StringComparison.Ordinal)) continue;
-                string rest = res.Substring(prefix.Length);
-                int sep = rest.LastIndexOfAny(new[] { '\\', '/' });
+                string rest = res.Substring(prefix.Length).Replace('\\', '/');
+                int sep = rest.LastIndexOf('/');
                 if (sep <= 0) continue;
-                string dir = rest.Substring(0, sep).Trim('\\', '/'), file = rest.Substring(sep + 1);
+                string dir = rest.Substring(0, sep).Trim('/'), file = rest.Substring(sep + 1);
                 if (!files.TryGetValue(dir, out var d)) files[dir] = d = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 d[file] = res;
             }
-            int n = 0;
-            foreach (var kv in files)
+            Func<string, byte[]> Reader(Dictionary<string, string> map) => file =>
             {
-                if (!kv.Value.TryGetValue("skin.cfg", out string cfgRes)) continue;
+                if (!map.TryGetValue(file, out string res)) return null;
+                using (Stream st = asm.GetManifestResourceStream(res))
+                using (var ms = new MemoryStream())
+                {
+                    st.CopyTo(ms);
+                    return ms.ToArray();
+                }
+            };
+            var dirs = new List<string>(files.Keys);
+            dirs.Sort(StringComparer.OrdinalIgnoreCase);
+            // the mounts: a top-level dir with a mount.cfg
+            foreach (string dir in dirs)
+            {
+                if (dir.IndexOf('/') >= 0 || !files[dir].ContainsKey(MountCfgName)) continue;
+                var map = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (var f in files[dir]) map[f.Key] = f.Value;
+                if (files.TryGetValue(dir + "/sounds", out var ms)) foreach (var f in ms) if (SoundBlock.IsSoundFile(f.Key)) map[SoundsKey + f.Key] = f.Value;
+                var p = new MountPack { Owner = owner, DirName = dir, SourceAssembly = asm, BuiltIn = builtIn, ReadFile = Reader(map), FileNames = new List<string>(map.Keys) };
+                RegisterMount(p, Encoding.UTF8.GetString(p.ReadFile(MountCfgName)), "embedded " + asm.GetName().Name + " " + dir);
+            }
+            // the skins: <mount>/skins/<skin> with a skin.cfg
+            int n = 0;
+            var mountsSeen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string dir in dirs)
+            {
+                if (!files[dir].ContainsKey("skin.cfg")) continue;
+                string[] parts = dir.Split('/');
+                if (parts.Length != 3 || !parts[1].Equals(SkinsDirName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Plugin.Log.LogWarning($"Looks: the embedded skin '{dir}' is not under <mount>/skins/<skin>/ (assets\\mounts\\<mount>\\skins\\<skin>\\): left out.");
+                    continue;
+                }
                 try
                 {
-                    var pics = kv.Value;
-                    // the front layer's pictures: the skin dir's "front" subdirectory, keyed "front/<file>"
-                    foreach (string sep in new[] { "\\", "/" })
-                    {
-                        if (files.TryGetValue(kv.Key + sep + "front", out var front))
-                        {
-                            foreach (var f in front) pics[FrontKey + f.Key] = f.Value;
-                        }
-                        // the skin's sounds: the "sounds" subdirectory, keyed "sounds/<file>"; its mount's: "sounds\mount",
-                        // keyed "sounds/mount/<file>"
-                        if (files.TryGetValue(kv.Key + sep + "sounds", out var sounds))
-                        {
-                            foreach (var f in sounds) if (SoundBlock.IsSoundFile(f.Key)) pics[SoundsKey + f.Key] = f.Value;
-                        }
-                        if (files.TryGetValue(kv.Key + sep + "sounds" + sep + "mount", out var mountSounds))
-                        {
-                            foreach (var f in mountSounds) if (SoundBlock.IsSoundFile(f.Key)) pics[MountSoundsKey + f.Key] = f.Value;
-                        }
-                    }
-                    byte[] Bytes(string file)
-                    {
-                        if (!pics.TryGetValue(file, out string res)) return null;
-                        using (Stream s = asm.GetManifestResourceStream(res))
-                        using (var ms = new MemoryStream())
-                        {
-                            s.CopyTo(ms);
-                            return ms.ToArray();
-                        }
-                    }
-                    string cfgText = Encoding.UTF8.GetString(Bytes("skin.cfg"));
-                    SkinDef def = FromCfg(cfgText, kv.Key, owner, "embedded " + asm.GetName().Name + " " + kv.Key, Bytes, pics.Keys);
+                    var pics = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    foreach (var f in files[dir]) pics[f.Key] = f.Value;
+                    if (files.TryGetValue(dir + "/front", out var front)) foreach (var f in front) pics[FrontKey + f.Key] = f.Value;
+                    if (files.TryGetValue(dir + "/sounds", out var sounds)) foreach (var f in sounds) if (SoundBlock.IsSoundFile(f.Key)) pics[SoundsKey + f.Key] = f.Value;
+                    Func<string, byte[]> bytes = Reader(pics);
+                    Catalog.Entry mount = Catalog.Find(parts[0]);
+                    string mountId = mount != null ? mount.Id : parts[0];
+                    SkinDef def = FromCfg(Encoding.UTF8.GetString(bytes("skin.cfg")), parts[2], owner, "embedded " + asm.GetName().Name + " " + dir, bytes, pics.Keys, mountId);
+                    def.MountDirName = parts[0];
                     def.BuiltIn = builtIn;
                     def.SourceAssembly = asm;
                     Register(def);
+                    mountsSeen.Add(mountId);
                     n++;
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Looks: the embedded skin '{kv.Key}' could not be registered: {e.Message}");
+                    Plugin.Log.LogWarning($"Looks: the embedded skin '{dir}' could not be registered: {e.Message}");
                 }
+            }
+            foreach (string dir in dirs)
+            {
+                if (dir.IndexOf('/') < 0 && files[dir].ContainsKey(MountCfgName)) NoSkinLeft(Catalog.Find(dir), owner);
             }
             return n;
         }
 
-        // Every skin pack under a folder: <root>/gk2skins/<id>/skin.cfg and <root>/*/gk2skins/<id>/skin.cfg (a pack
-        // inside a mod's own folder, or dropped straight into plugins). Pictures are read from disk when the skin is
-        // first worn, so an installed pack costs nothing until then.
-        // Each gk2skins folder is an owner of its own ("<owner>.<its parent folder>"), so two folders with one id meet
+        // Every mount and skin pack under a folder: <root>/gk2mounts/<mount>/ and <root>/*/gk2mounts/<mount>/ (a pack
+        // inside a mod's own folder, or dropped straight into plugins): its mount.cfg, then its skins\<skin>\ (MountPacks.cs).
+        // Pictures are read from disk when the skin is first worn, so an installed pack costs nothing until then.
+        // Each gk2mounts folder is an owner of its own ("<owner>.<its parent folder>"), so two folders with one id meet
         // the version rule instead of replacing each other silently; the folders and the packs in them are taken in
         // name order, so a start is the same every time (docs/mounts-foundation-2.md 2.2).
         internal static int RegisterFolder(string root, string owner)
@@ -446,27 +454,34 @@ namespace GK2DonkeyAPI
             int n = 0;
             foreach ((string packDir, string packOwner) in packDirs)
             {
-                string[] skinDirs = Directory.GetDirectories(packDir);
-                Array.Sort(skinDirs, StringComparer.OrdinalIgnoreCase);
-                foreach (string skinDir in skinDirs)
+                string[] mountDirs = Directory.GetDirectories(packDir);
+                Array.Sort(mountDirs, StringComparer.OrdinalIgnoreCase);
+                // the mounts declared here first, so a skin under one of them finds it whatever the folders' order
+                foreach (string mountDir in mountDirs)
                 {
-                    if (!File.Exists(Path.Combine(skinDir, "skin.cfg"))) continue;
+                    if (!File.Exists(Path.Combine(mountDir, MountCfgName)) && File.Exists(Path.Combine(mountDir, "skin.cfg")))
+                    {
+                        Plugin.Log.LogWarning($"Looks: '{mountDir}' holds a skin.cfg: a skin now sits in gk2mounts\\<mount>\\skins\\<skin>\\ (docs/skins.md); left out.");
+                    }
+                }
+                foreach (string mountDir in mountDirs)
+                {
                     try
                     {
-                        RegisterPack(skinDir, packOwner);
-                        n++;
+                        n += RegisterMountFolder(mountDir, packOwner);
                     }
                     catch (Exception e)
                     {
-                        Plugin.Log.LogWarning($"Looks: the skin pack '{skinDir}' could not be registered: {e.Message}");
+                        Plugin.Log.LogWarning($"Looks: the mount pack '{mountDir}' could not be registered: {e.Message}");
                     }
                 }
             }
             return n;
         }
 
-        // One pack folder: skin.cfg plus its pictures (a PNG per frame, or one sheet).
-        internal static SkinDef RegisterPack(string skinDir, string owner)
+        // One skin folder: skin.cfg plus its pictures (a PNG per frame, or one sheet) and its sounds\; mountId: the mount
+        // folder it sits in.
+        internal static SkinDef RegisterPack(string skinDir, string owner, string mountId)
         {
             string dir = skinDir;
             string cfgText = File.ReadAllText(Path.Combine(dir, "skin.cfg"), Encoding.UTF8);
@@ -481,18 +496,14 @@ namespace GK2DonkeyAPI
             if (Directory.Exists(soundsDir))
             {
                 foreach (string f in Directory.GetFiles(soundsDir)) if (SoundBlock.IsSoundFile(f)) names.Add(SoundsKey + Path.GetFileName(f));
-                string mountDir = Path.Combine(soundsDir, "mount");
-                if (Directory.Exists(mountDir))
-                {
-                    foreach (string f in Directory.GetFiles(mountDir)) if (SoundBlock.IsSoundFile(f)) names.Add(MountSoundsKey + Path.GetFileName(f));
-                }
             }
             byte[] Bytes(string file)
             {
                 string f = Path.Combine(dir, file.Replace('/', Path.DirectorySeparatorChar));
                 return File.Exists(f) ? File.ReadAllBytes(f) : null;
             }
-            SkinDef def = FromCfg(cfgText, Path.GetFileName(skinDir), owner, "pack " + skinDir, Bytes, names);
+            SkinDef def = FromCfg(cfgText, Path.GetFileName(skinDir), owner, "pack " + skinDir, Bytes, names, mountId);
+            def.MountDirName = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(skinDir.TrimEnd('\\', '/'))));
             def.Source = skinDir;
             def.DiskStamp = PackStamp(def);
             Register(def);
@@ -509,13 +520,10 @@ namespace GK2DonkeyAPI
             ForgetPortraits(d.Id);
             SoundBank.ForgetSkin(d); // its files' entries, so a pack put back is read anew
             SoundBank.UnregisterAll("skin/" + d.Id); // a code skin's clips (the entries only: the clips are the mod's)
-            if (d.DeclaredMount != null)
-            {
-                // the mount its [Mount] block declared goes with it unless another skin of this owner declares it (as a
-                // reload withdraws a renamed one); a code mount (not FromPack) is its mod's handle's to withdraw
-                Catalog.Entry live = Catalog.Find(d.DeclaredMount.Id);
-                if (live != null && live.FromPack && live.Owner == owner && !StillDeclared(live, d)) Catalog.Unregister(live.Id, owner);
-            }
+            // the pack mount of the same owner goes with its last skin (a mount with nothing to wear is not offered); a
+            // code mount (not FromPack) is its mod's handle's to withdraw
+            Catalog.Entry live = Catalog.Find(d.MountId);
+            if (live != null && live.FromPack && live.Owner == owner && Catalog.SkinsOf(live).Count == 0) UnregisterMount(live.Id, owner);
             MarkWearersDirty();
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' withdrawn by {owner}.");
             Mounts.Looks.RaiseChanged();
@@ -566,21 +574,20 @@ namespace GK2DonkeyAPI
 
         // skin.cfg: "key = value" lines, "#" comments, a section line ignored. bytes(file) reads a file of the pack;
         // fileNames lists its files (the PNGs are the frames, unless the cfg names a sheet).
-        internal static SkinDef FromCfg(string text, string dirName, string owner, string where, Func<string, byte[]> bytes, IEnumerable<string> fileNames)
+        internal static SkinDef FromCfg(string text, string dirName, string owner, string where, Func<string, byte[]> bytes, IEnumerable<string> fileNames, string folderMount = null)
         {
             var d = new SkinDef { Id = dirName, Name = dirName, Owner = owner, DirName = dirName, ReadFile = bytes, FileNames = new List<string>(fileNames) };
+            if (!string.IsNullOrEmpty(folderMount)) d.MountId = folderMount;
+            string mountLine = null;
             fileNames = d.FileNames;
             var unknown = new List<string>();
             int format = 1;
             string baseId = Donkey.Id, sheet = null, frontSheet = null, frames = null;
             bool pivotGiven = false, eraseGiven = false;
             string section = "skin";
-            var mount = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-            var stats = new List<KeyValuePair<string, string>>(); // [Mount.Stats]: lines for the panel, in file order
+            var mountSections = new List<string>(); // [Mount*] in a skin.cfg: the mount's own file says those now
             var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
             string source = null;
-            Dictionary<string, object> kt = null, ktRide = null, ktCart = null;
-            Dictionary<string, object> ks = null, ksRide = null, ksCart = null, ksBaby = null; // [Mount.Sounds*]: the raw lines
             var unknownSections = new List<string>();
             foreach (string raw in text.Split('\n'))
             {
@@ -593,7 +600,8 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "mount" && section != "mount.stats" && section != "mount.tuning" && section != "mount.tuning.ride" && section != "mount.tuning.cart" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "mount.sounds" && section != "mount.sounds.ride" && section != "mount.sounds.cart" && section != "mount.sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
+                    if (section == "mount" || section.StartsWith("mount.", StringComparison.Ordinal)) mountSections.Add(section);
+                    else if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
                 int eq = line.IndexOf('=');
@@ -621,18 +629,6 @@ namespace GK2DonkeyAPI
                     case "sounds.cart": (d.SoundsCart ?? (d.SoundsCart = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "sounds.baby": (d.SoundsBaby ?? (d.SoundsBaby = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "game": game[key] = value; continue;
-                    case "mount": mount[key] = value; continue;
-                    case "mount.stats":
-                        if (Catalog.ReservedStat(key)) d.Report += "[Mount.Stats] " + key + " left out: the speed and the cargo are the API's own lines (speed = and cargo = in [Mount]); ";
-                        else stats.Add(new KeyValuePair<string, string>(key, value));
-                        continue;
-                    case "mount.tuning": (kt ?? (kt = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.tuning.ride": (ktRide ?? (ktRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.tuning.cart": (ktCart ?? (ktCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.sounds": (ks ?? (ks = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.sounds.ride": (ksRide ?? (ksRide = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.sounds.cart": (ksCart ?? (ksCart = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
-                    case "mount.sounds.baby": (ksBaby ?? (ksBaby = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value; continue;
                     case "colors": ColorRegionLine(d, key, value, where); continue;
                     case "skin": break;
                     default: continue;
@@ -663,7 +659,7 @@ namespace GK2DonkeyAPI
                         else if (Colors.TryHex(value, out Color32 ec)) d.Erase = ec;
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
-                    case "mount": d.MountId = value; break;
+                    case "mount": mountLine = value; break;
                     case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); break;
                     case "effect_when":
                         if (Enum.TryParse(value.Trim(), true, out MountEffectWhen skinWhen)) d.EffectWhen = skinWhen;
@@ -715,64 +711,14 @@ namespace GK2DonkeyAPI
             if (unknownSections.Count > 0) d.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + "; ";
             int tuningKeys = (d.Tuning?.Count ?? 0) + (d.TuningRide?.Count ?? 0) + (d.TuningCart?.Count ?? 0);
             if (tuningKeys > 0) d.Report += tuningKeys + " tuning key(s)" + (d.TuningRide != null || d.TuningCart != null ? " (some per style)" : "") + "; ";
-            int soundLines = ReportSoundBlocks(d, ks, ksRide, ksCart, ksBaby, mount.TryGetValue("id", out string declaredId) && !string.IsNullOrEmpty(declaredId)); // every line checked, the problems named (LooksSounds.cs)
+            int soundLines = ReportSoundBlocks(d); // every line checked, the problems named (LooksSounds.cs)
             if (soundLines > 0) d.Report += soundLines + " sound line(s); ";
-            if (mount.TryGetValue("id", out string mountId) && !string.IsNullOrEmpty(mountId))
+            if (mountSections.Count > 0) d.Report += "[" + string.Join("], [", mountSections) + "] ignored: a mount's own values go in its mount.cfg (gk2mounts\\<mount>\\mount.cfg, docs/skins.md); ";
+            if (mountLine != null)
             {
-                // The [Mount] block (docs/skins.md, docs/mounts-foundation-audit.md §4): every key read here, the rest
-                // reported like the [Skin] section's unknown keys; a bad value is reported, never silently the default.
-                var k = new Catalog.Entry { Id = mountId.Trim(), Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby };
-                k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
-                if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
-                if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
-                if (mount.TryGetValue("portrait", out string mport) && !string.IsNullOrWhiteSpace(mport)) k.Portrait = mport.Trim();
-                k.Stats = stats;
-                if (mount.TryGetValue("author", out string ma)) k.Author = ma;
-                if (mount.TryGetValue("version", out string mv)) k.Version = mv;
-                if (mount.TryGetValue("cart", out string mc)) k.Cart = !mc.Equals("false", StringComparison.OrdinalIgnoreCase);
-                if (mount.TryGetValue("foals", out string mf)) k.Foals = !mf.Equals("false", StringComparison.OrdinalIgnoreCase);
-                if (mount.TryGetValue("flies", out string mfl)) k.Flies = mfl.Equals("true", StringComparison.OrdinalIgnoreCase);   // off unless said
-                if (mount.TryGetValue("jumps", out string mj)) k.Jumps = !mj.Equals("false", StringComparison.OrdinalIgnoreCase);   // on unless said
-                if (mount.TryGetValue("foal_scale", out string ms))
-                {
-                    if (float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
-                    else d.Report += "[Mount] foal_scale = " + ms + " is not a number (0.2 to 1), the babies stay 0.6; ";
-                }
-                float? ReadSpeed(string speedKey)
-                {
-                    if (!mount.TryGetValue(speedKey, out string speedText)) return null;
-                    if (float.TryParse(speedText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float speedValue) && speedValue > 0f)
-                    {
-                        if (speedValue < Catalog.SpeedMin || speedValue > Catalog.SpeedMax) d.Report += "[Mount] " + speedKey + " = " + speedText + " is outside 0.5 to 4, taken as " + Num(Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax)) + "; ";
-                        return Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax);
-                    }
-                    d.Report += "[Mount] " + speedKey + " = " + speedText + " is not a number (0.5 to 4, times walking speed), the donkey's applies; ";
-                    return null;
-                }
-                k.Speed = ReadSpeed("speed");
-                if (mount.TryGetValue("cargo", out string mcargo))
-                {
-                    if (int.TryParse(mcargo.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int cargo) && cargo >= 1 && cargo <= Catalog.CargoMax) k.Cargo = cargo;
-                    else d.Report += "[Mount] cargo = " + mcargo + " is not a whole number 1 to " + Catalog.CargoMax + ", taken as " + Catalog.CargoMax + "; ";
-                }
-                if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
-                if (mount.TryGetValue("effect_when", out string mw))
-                {
-                    if (Enum.TryParse(mw.Trim(), true, out MountEffectWhen when)) k.EffectWhen = when;
-                    else d.Report += "[Mount] effect_when = " + mw + " is not Off, Night or Always, taken as Always; ";
-                }
-                var mountUnknown = new List<string>();
-                foreach (string mk in mount.Keys)
-                {
-                    if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
-                }
-                if (mountUnknown.Count > 0) d.Report += "[Mount] unknown keys ignored: " + string.Join(", ", mountUnknown) + "; ";
-                d.DeclaredMount = k;
-                d.Report += "declares the mount '" + k.Id + "'; ";
-            }
-            else if (kt != null || ktRide != null || ktCart != null || ks != null || ksRide != null || ksCart != null || ksBaby != null || stats.Count > 0)
-            {
-                d.Report += "a [Mount.Tuning], [Mount.Sounds] or [Mount.Stats] section without a [Mount] id is ignored; ";
+                // the skin's mount is its folder's; a code-free cfg read elsewhere (a reload of an old file) takes the line
+                if (string.IsNullOrEmpty(folderMount)) d.MountId = mountLine;
+                else if (!mountLine.Equals(folderMount, StringComparison.OrdinalIgnoreCase)) d.Report += $"mount = {mountLine} ignored: the skin sits in the folder of the mount '{folderMount}', which is its mount; ";
             }
             if (source == "game")
             {
@@ -932,20 +878,17 @@ namespace GK2DonkeyAPI
         // ------------------------------------------------------------------ the skin's file: for the tuning panel
 
         // The skin.cfg a skin's values are kept in: a pack's own file, or an embedded skin's in its mod's sources on the
-        // machine that has them (the DLL's GK2SkinsSourceDir metadata, written by a dev build: the API's own
-        // assets\skins, Saddle Up's for its five mounts; docs/mounts-as-mods.md); null when there is none to write (a code skin, an
+        // machine that has them (the DLL's GK2MountsSourceDir metadata, written by a dev build: Saddle Up's
+        // assets\mounts\<mount>\skins\<skin>\; docs/mounts-as-mods.md); null when there is none to write (a code skin, an
         // embedded skin of a release build).
         internal static string CfgPathFor(SkinDef d)
         {
             if (d == null) return null;
             if (!string.IsNullOrEmpty(d.Source)) return Path.Combine(d.Source, "skin.cfg");
-            if (d.BuiltIn) return Defaults.RepoPath(Path.Combine("assets", "skins", d.DirName ?? d.Id, "skin.cfg"));
-            string dir = d.SourceAssembly != null ? Defaults.SourceDirOf(d.SourceAssembly, "GK2SkinsSourceDir") : null;
-            return dir != null ? Path.Combine(dir, d.DirName ?? d.Id, "skin.cfg") : null;
+            string dir = d.SourceAssembly != null ? Defaults.SourceDirOf(d.SourceAssembly, "GK2MountsSourceDir") : null;
+            return dir != null && d.MountDirName != null ? Path.Combine(dir, d.MountDirName, SkinsDirName, d.DirName ?? d.Id, "skin.cfg") : null;
         }
 
-        // The keys of a [Mount] block, in the order the file keeps them (docs/mounts-foundation-audit.md §4).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when" };
 
         // The portrait a pack names (a PNG next to its frames), read once; null when it has none or it can't be read.
         private static readonly Dictionary<string, Texture2D> portraits = new Dictionary<string, Texture2D>(StringComparer.OrdinalIgnoreCase);
@@ -971,12 +914,6 @@ namespace GK2DonkeyAPI
                 portraits.Remove(key);
             }
             portraitFailed.RemoveWhere(k => k.StartsWith(id + "|", StringComparison.OrdinalIgnoreCase) || k.StartsWith(id + "(mount)|", StringComparison.OrdinalIgnoreCase));
-            // a mount this skin declares under another id (a joiner's mount): its stand-in is cached under the mount's id
-            foreach (Catalog.Entry kd in Catalog.All)
-            {
-                if (kd.DeclaredBy == null || kd.Id.Equals(id, StringComparison.OrdinalIgnoreCase) || !kd.DeclaredBy.Equals(id, StringComparison.OrdinalIgnoreCase)) continue;
-                ForgetPortraits(kd.Id + "(mount)");
-            }
         }
 
         internal static Texture2D PortraitOf(SkinDef d)
@@ -1004,16 +941,15 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // A mount's portrait: its own (a code mount's texture, or the PNG its declaring skin's pack holds), else its
+        // A mount's portrait: its own (a code mount's texture, or the PNG of its mount folder), else its
         // Default skin's, else null (the panel draws the mount instead).
         internal static Texture2D PortraitOfMount(Catalog.Entry k)
         {
             if (k == null) return null;
             if (k.PortraitTexture != null) return k.PortraitTexture;
-            SkinDef declaring = k.DeclaredBy != null ? Find(k.DeclaredBy) : null;
-            if (!string.IsNullOrEmpty(k.Portrait) && declaring != null && declaring.ReadFile != null)
+            if (!string.IsNullOrEmpty(k.Portrait) && k.Pack?.ReadFile != null)
             {
-                var stand = new SkinDef { Id = k.Id + "(mount)", Portrait = k.Portrait, ReadFile = declaring.ReadFile };
+                var stand = new SkinDef { Id = k.Id + "(mount)", Portrait = k.Portrait, ReadFile = k.Pack.ReadFile }; // a PNG of the mount's own folder
                 Texture2D own = PortraitOf(stand);
                 if (own != null) return own;
             }
@@ -1021,7 +957,7 @@ namespace GK2DonkeyAPI
         }
 
         // The file rewritten with the live values: the [Skin] section's own lines kept (mount, offset and
-        // offset_cart replaced), [Tuning] and, where the file declares the mount, [Mount] and its tuning sections
+        // offset_cart replaced), [Tuning] and [Sounds] (a mount's values are its mount.cfg's: SaveMountCfg) and their sections
         // written anew from the mount, with the comments those sections held kept in place (a comment above a key
         // stays above it, one at the end of its line stays on it; the rest of a section's comments come first).
         // Returns null, or why not.
@@ -1075,8 +1011,7 @@ namespace GK2DonkeyAPI
                 var pending = new List<string>();                                // comment lines waiting for the next header or key
                 string seatNote = null;                                          // the remark on the [Skin] seat line (the key is regenerated)
                 string effectNote = null;                                        // the same for the effect line
-                bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec == "sounds" || sec.StartsWith("sounds.", StringComparison.Ordinal) || sec.StartsWith("mount", StringComparison.Ordinal));
-                bool declaresMount = false;
+                bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec == "sounds" || sec.StartsWith("sounds.", StringComparison.Ordinal) || sec == "mount" || sec.StartsWith("mount.", StringComparison.Ordinal)); // [Mount*]: dropped (the mount's own file)
                 string section = null;
                 string nl = "\n";
                 string existing = File.Exists(path) ? File.ReadAllText(path) : null;
@@ -1097,7 +1032,6 @@ namespace GK2DonkeyAPI
                         {
                             string header = line.Split('#')[0].Trim();
                             section = header.Trim('[', ']', ' ').ToLowerInvariant();
-                            if (section == "mount") declaresMount = true;
                             if (Rewritten(section))
                             {
                                 var n = new SectionNotes();
@@ -1158,7 +1092,6 @@ namespace GK2DonkeyAPI
                 foreach (string h in head) sb.Append(h).Append('\n');
                 sb.Append("[Skin]\n");
                 foreach (string l in skinLines) sb.Append(l).Append('\n');
-                Catalog.Entry k = d.Mount;
                 if (d.SeatFromPicture || d.SeatRow >= 0)
                 {
                     sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture));
@@ -1176,7 +1109,7 @@ namespace GK2DonkeyAPI
                     sb.Append("offset = ").Append(Num(d.OffsetRide.x)).Append(' ').Append(Num(d.OffsetRide.y)).Append('\n');
                     if (d.OffsetCart != d.OffsetRide) sb.Append("offset_cart = ").Append(Num(d.OffsetCart.x)).Append(' ').Append(Num(d.OffsetCart.y)).Append('\n');
                 }
-                sb.Append("mount = ").Append(d.DeclaredMount?.Id ?? d.MountId).Append('\n');
+                if (d.MountDirName == null && d.MountId != Catalog.DonkeyId) sb.Append("mount = ").Append(d.MountId).Append('\n'); // a pack's mount is its folder's
                 void WriteTuning()
                 {
                     // the skin's own geometry: [Tuning], then [Tuning.Ride], [Tuning.Cart], each with its comments
@@ -1209,48 +1142,6 @@ namespace GK2DonkeyAPI
                     }
                 }
                 if (!tuningWritten) WriteTuning();
-                if (declaresMount && k != Catalog.Donkey)
-                {
-                    // the canonical block (docs/mounts-foundation-audit.md §4): id, name, author, version, cart, foals
-                    // always; foal_scale, effect and effect_when when not the default; its comments where they were
-                    SectionNotes mn = NotesOf("mount");
-                    sb.Append('\n');
-                    foreach (string l in mn.Lead) sb.Append(l).Append('\n');
-                    sb.Append("[Mount]\n");
-                    mn.Key(sb, "id", k.Id);
-                    mn.Key(sb, "name", k.Label);
-                    if (!string.IsNullOrEmpty(k.Noun)) mn.Key(sb, "noun", k.Noun);
-                    if (!string.IsNullOrEmpty(k.Description)) mn.Key(sb, "description", k.Description);
-                    if (!string.IsNullOrEmpty(k.Portrait)) mn.Key(sb, "portrait", k.Portrait);
-                    mn.Key(sb, "author", k.Author ?? "");
-                    mn.Key(sb, "version", k.Version ?? "");
-                    mn.Key(sb, "cart", k.Cart ? "true" : "false");
-                    mn.Key(sb, "foals", k.Foals ? "true" : "false");
-                    if (k.Flies) mn.Key(sb, "flies", "true");    // written only when not the default
-                    if (!k.Jumps) mn.Key(sb, "jumps", "false");
-                    if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
-                    if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
-                    if (k.Cargo.HasValue) mn.Key(sb, "cargo", k.Cargo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                    if (!string.IsNullOrEmpty(k.Effect))
-                    {
-                        mn.Key(sb, "effect", k.Effect);
-                        mn.Key(sb, "effect_when", k.EffectWhen.ToString());
-                    }
-                    foreach (string l in mn.Trail) sb.Append(l).Append('\n');
-                    if (k.Stats != null && k.Stats.Count > 0)
-                    {
-                        var statLines = new Dictionary<string, object>(StringComparer.Ordinal);
-                        foreach (var st in k.Stats) statLines[st.Key] = st.Value;
-                        WriteSection(sb, "[Mount.Stats]", statLines, NotesOf("mount.stats"));
-                    }
-                    WriteSection(sb, "[Mount.Tuning]", k.Tuning, NotesOf("mount.tuning"));
-                    WriteSection(sb, "[Mount.Tuning.Ride]", k.TuningRide, NotesOf("mount.tuning.ride"));
-                    WriteSection(sb, "[Mount.Tuning.Cart]", k.TuningCart, NotesOf("mount.tuning.cart"));
-                    WriteSection(sb, "[Mount.Sounds]", k.Sounds, NotesOf("mount.sounds"));
-                    WriteSection(sb, "[Mount.Sounds.Ride]", k.SoundsRide, NotesOf("mount.sounds.ride"));
-                    WriteSection(sb, "[Mount.Sounds.Cart]", k.SoundsCart, NotesOf("mount.sounds.cart"));
-                    WriteSection(sb, "[Mount.Sounds.Baby]", k.SoundsBaby, NotesOf("mount.sounds.baby"));
-                }
                 string text = nl == "\n" ? sb.ToString() : sb.ToString().Replace("\n", nl);
                 if (File.Exists(path) && File.ReadAllText(path) == text) return null; // the same already: no write, no undo step
                 File.WriteAllText(path, text, new UTF8Encoding(false));
@@ -1304,39 +1195,15 @@ namespace GK2DonkeyAPI
             if (d.ReadFile == null || d.FileNames == null) return "a code skin: nothing to reload";
             try
             {
-                SkinDef fresh = FromCfg(File.ReadAllText(path, Encoding.UTF8), d.DirName ?? d.Id, d.Owner, "reload " + path, d.ReadFile, d.FileNames);
+                SkinDef fresh = FromCfg(File.ReadAllText(path, Encoding.UTF8), d.DirName ?? d.Id, d.Owner, "reload " + path, d.ReadFile, d.FileNames, d.MountDirName != null ? d.MountId : null);
+                fresh.MountDirName = d.MountDirName;
                 fresh.BuiltIn = d.BuiltIn;
                 fresh.Source = d.Source;
                 fresh.SourceAssembly = d.SourceAssembly; // an embedded skin keeps its DLL, so CfgPathFor still finds its sources after a reload
                 fresh.DiskStamp = PackStamp(fresh);
-                if (fresh.DeclaredMount != null)
-                {
-                    Catalog.Entry have = Catalog.Find(fresh.DeclaredMount.Id);
-                    // the mount's own skin (its declaring one) re-declares in place; a joiner's reload joins as at the start
-                    if (have != null && have.FromPack && have.Owner == d.Owner && (have.DeclaredBy == null || have.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)))
-                    {
-                        fresh.DeclaredMount.Owner = d.Owner;
-                        Catalog.Redeclare(have, fresh.DeclaredMount);
-                        fresh.DeclaredMount = have; // the live mount stays the def's (StillDeclared, DefaultSkinOf read it)
-                        fresh.MountId = have.Id;
-                    }
-                }
                 ForgetPortraits(d.Id);
                 SoundBank.ForgetSkin(d); // a changed sound file is read anew on the next play
                 Register(fresh);
-                // the mount the old file declared, when the new one doesn't (renamed, or the block gone): withdrawn unless
-                // another skin of this owner declares it; its other skins fall back to the donkey mount, said by Unregister
-                Catalog.Entry was = null;
-                foreach (Catalog.Entry kd in Catalog.All)
-                {
-                    if (!kd.FromPack || kd.DeclaredBy == null || !kd.DeclaredBy.Equals(d.Id, StringComparison.OrdinalIgnoreCase)) continue;
-                    if (fresh.DeclaredMount != null && kd.Id.Equals(fresh.MountId ?? "", StringComparison.OrdinalIgnoreCase)) continue; // the mount the new file declares (a renamed mount's new one carries this skin's id too); a file that only names a mount it no longer declares keeps nothing alive
-                    was = kd;
-                }
-                if (was != null && was.FromPack && was.Owner == d.Owner && !(fresh.MountId ?? "").Equals(was.Id, StringComparison.OrdinalIgnoreCase) && !StillDeclared(was, fresh))
-                {
-                    Catalog.Unregister(was.Id, d.Owner);
-                }
                 Catalog.Touch();
                 return null;
             }
@@ -1346,15 +1213,6 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Whether any registered skin but the one reloading still declares the mount.
-        private static bool StillDeclared(Catalog.Entry k, SkinDef except)
-        {
-            foreach (SkinDef s in defs.Values)
-            {
-                if (s != except && s.DeclaredMount != null && s.DeclaredMount.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return true;
-            }
-            return false;
-        }
 
         // Dev (Debug.SkinPackAutoReload, docs/sprite-tools.md): a pack in use whose files changed on disk is read again,
         // as the panel's "Reload from the file" does. Once a second, the loaded packs only (the skins being worn); a
@@ -1371,6 +1229,9 @@ namespace GK2DonkeyAPI
                 return;
             }
             nextPackCheck = Time.unscaledTime + 1f;
+            var mounts = new HashSet<Catalog.Entry>();
+            foreach (Loaded l in loaded.Values) if (l.Def.Mount?.Pack != null) mounts.Add(l.Def.Mount);
+            TickMountWatch(mounts);
             foreach (Loaded l in new List<Loaded>(loaded.Values))
             {
                 SkinDef d = l.Def;
@@ -1510,13 +1371,13 @@ namespace GK2DonkeyAPI
 
         // The skin a mount comes as, shown as "Default" in its Skin row (the user, 2026-10-18: every mount's default
         // skin is called Default): the donkey's own art for the donkey; for another mount the skin whose id is the
-        // mount's (dragon, rat, snail, worm, gerry), else the first that declares the mount, else its first by name.
+        // mount's default_skin (mount.cfg), else a skin whose id is the mount's, else its first by name.
         internal static string DefaultSkinOf(Catalog.Entry k)
         {
             if (k == Catalog.Donkey) return MountLooks.DonkeyId;
             List<SkinDef> skins = Catalog.SkinsOf(k);
+            if (!string.IsNullOrEmpty(k.DefaultSkin)) foreach (SkinDef s in skins) if (s.Id.Equals(k.DefaultSkin, StringComparison.OrdinalIgnoreCase)) return s.Id; // mount.cfg default_skin
             foreach (SkinDef s in skins) if (s.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
-            foreach (SkinDef s in skins) if (s.DeclaredMount != null && s.DeclaredMount.Id.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) return s.Id;
             skins.Sort((a, b) => string.Compare(a.Name ?? a.Id, b.Name ?? b.Id, StringComparison.OrdinalIgnoreCase));
             return skins.Count > 0 ? skins[0].Id : MountLooks.DonkeyId;
         }
@@ -2086,7 +1947,7 @@ namespace GK2DonkeyAPI
         {
             if (!Plugin.MountsOn) return;
             string id = (WarmWanted ?? "").Trim();
-            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
+            SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : FindWanted(id);
             if (d != null && d.Unavailable != null) d = null;
             if (warm != null && warm.Def == d) return;
             if (warm == null && d == null) return;
@@ -2244,7 +2105,7 @@ namespace GK2DonkeyAPI
                         want = (Skin.Value ?? "").Trim();
                     }
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
-                    SkinDef d = Find(want);
+                    SkinDef d = FindWanted(want);
                     if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
                     if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
                     return d;
@@ -2377,7 +2238,7 @@ namespace GK2DonkeyAPI
                 Loaded next = null;
                 if (want.Length > 0 && !want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
                 {
-                    SkinDef d = Find(want);
+                    SkinDef d = FindWanted(want);
                     if (d != null && d.Unavailable != null)
                     {
                         if (RecheckGameSource(d))
@@ -2541,7 +2402,7 @@ namespace GK2DonkeyAPI
                 if (any) tuning.ChangedByLooks();
             }
 
-            // The keys a mount's [Mount.Tuning] (or a code mount's Tuning) may set on its instances: a ride or cart key that is
+            // The keys a mount's mount.cfg [Tuning] (or a code mount's Tuning) may set on its instances: a ride or cart key that is
             // not the lantern's, or a shuffle key. Not a behaviour key (Mounts.Behaviour: the player's switches), not a
             // colour, not a look key (filtered before this), not the lantern's (the cart's own).
             internal static bool MountMayPin(string key)

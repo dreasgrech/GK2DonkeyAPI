@@ -58,7 +58,8 @@ and a colours window**. A window of 1060x600, centred, scaled down only on a sma
 - **The stage**: 440x236, a dark box with a faint edge; the live picture (PreviewStage) up to 3x inside it. One
   size on every mount: nothing moves.
 - **The stats card** beside it: Speed (the mount's own pin, else the Ride setting in effect), Cart, Babies, Skins
-  (the user's pick; a mount's `[Mount.Stats]` lines and its abilities are read into `Entry.Extra` for a later line).
+  (the user's pick; a mount's `[Stats]` lines (its mount.cfg; `[Mount.Stats]` in a skin.cfg before 2026-10-24)
+  and its abilities are read into `Entry.Extra` for a later line).
 - **The look rows** under them: the Mount section's rows (the Skin) and the Effect section's choices (Effect, Effect
   shown) as copied game rows in two groups, placed where they draw (MeasureRow). A row shown only with a preset is
   left out until the preset is chosen; a row greyed by a rule stays greyed.

@@ -1,16 +1,17 @@
-"""A new skin, started the one way (docs/sprite-tools.md "Making a skin: the one pipeline"): the built-in folder with a
-skin.cfg in the canonical layout, a generator folder with a stub that draws a placeholder for every frame, and the
+"""A new skin, started the one way (docs/sprite-tools.md "Making a skin: the one pipeline"): its folder under its mount
+(assets/mounts/<mount>/skins/<id>/, the mount's folder and mount.cfg made when the mount is new) with a skin.cfg in the
+canonical layout, a generator folder with a stub that draws a placeholder for every frame, and the
 Aseprite sidecar, then the scan. Everything else is drawing.
 
     python -I tools/skins/new_skin.py <id> [--mount <mount id> [--name "Giant Thing"]] [--canvas 96] [--seat 52] [--over] [--mod <project>]
 
   <id>        the skin's id and folder name (letters, digits, dashes): giant-crab
-  --mod       the project under src/ whose assets/skins gets the pack (default: SaddleUp, which ships every
+  --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, which ships every
               skin and mount; the API ships none; docs/mounts-as-mods.md). A mount mod of its own: a project whose
-              csproj embeds assets\\skins\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
+              csproj embeds assets\\mounts\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
               lines to copy), then --mod <its folder>
-  --mount     a creature of its own: the [Mount] block is written (id = the mount id; the skin is its Default when the ids
-              match); without it the skin is a skin of the donkey (mount = donkey)
+  --mount     the mount the skin is a look of (default: donkey). A mount with no folder yet is a creature of its own:
+              assets/mounts/<mount>/mount.cfg is written (default_skin = this skin)
   --over      drawn OVER the donkey (a cloth, a hat): layer = over with the erase colour, no [Mount]
   --canvas    the picture size (96; 128 for a bigger creature; the donkey's frame sits centred)
   --seat      the canvas row the rider's hip sits on (52 = the donkey's own seat on the 96 canvas; +16 on 128)
@@ -60,16 +61,20 @@ def main():
     name = arg("--name") or sid.replace("-", " ").title()
     project = arg("--mod") or skinroots.MOUNTS_PROJECT  # every shipped skin is Saddle Up's; the API ships none
     if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
-        print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/skins/** and registers them as src/SaddleUp does)"); return 2
+        print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/mounts/** and registers them as src/SaddleUp does)"); return 2
     if skinroots.find(sid):
         print("a skin with that id exists already:", skinroots.find(sid)); return 2
     assets_root = skinroots.root_of(project)
-    folder = os.path.join(assets_root, sid)
+    mount_id = mount or "donkey"
+    mount_dir = skinroots.find_mount(mount_id) or os.path.join(assets_root, mount_id)
+    new_mount = mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
+    folder = os.path.join(mount_dir, "skins", sid)
     gen_dir = os.path.join(HERE, sid)
     if os.path.exists(folder) or os.path.exists(gen_dir):
         print("exists already:", folder if os.path.exists(folder) else gen_dir); return 2
     os.makedirs(folder)
     os.makedirs(gen_dir)
+    # (the mount's folder and mount.cfg, when new, are written below with the skin's cfg)
     gen = f"make_{sid.replace('-', '_')}.py"
     # the cfg, in the canonical layout (tools/skins/canonical_cfg.py: [Skin], the colours, the mount block last)
     lines = [f"# {name}: a {'skin drawn over the donkey' if over else 'mount of its own' if mount else 'skin of the donkey'} (docs/skins.md). Our own art, drawn by tools/skins/{sid}/{gen}.",
@@ -80,15 +85,23 @@ def main():
     lines.append(f"canvas = {canvas} {canvas}")
     if not over:
         lines.append(f"seat = {seat}            # the canvas row the rider's hip sits on, every frame, for every player (52 = the donkey's own on 96)")
-    lines.append(f"mount = {mount or 'donkey'}")
     lines += ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is Coat.", "[Colors]",
               "Dark = 141E14        # the placeholder's outline: replace with the hexes your pictures use (tools/skins/skin_colors.py writes the section from a colors.json block)"]
-    if mount:
-        lines += ["", "# The mount this skin is the Default of (docs/mounts-design.md): what the player rides, shared by every skin of it.",
-                  "[Mount]", f"id = {mount}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).", "author = dreas", "version = 0.1", "cart = true", "foals = true",
+    if new_mount:
+        mlines = [f"# A mount of {project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
+                  "[Mount]", f"id = {mount}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
+                  f"default_skin = {sid}", "author = dreas", "version = 0.1", "cart = true", "foals = true",
                   "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)", "cargo = 6  # items its cart carries, 1 to 6",
-                  "", "# What the creature is: its sounds (docs/reference.md); the rider's seat and the cart are the skin's rows above.",
-                  "# [Mount.Tuning]", "# BrayVolume = 0", "# HoofVolume = 0"]
+                  "", "# The creature's sounds (docs/mount-sounds.md): files in sounds\\ next to this file, or the game's sound ids.",
+                  "[Sounds]", "lips = none  # the donkey's own lip smack is not this creature's"]
+        mcfg = os.path.join(mount_dir, "mount.cfg")
+        with open(mcfg, "w", encoding="utf-8", newline="\r\n") as f:
+            f.write("\n".join(mlines) + "\n")
+        sys.path.insert(0, HERE)
+        import canonical_cfg
+        mtext = canonical_cfg.canonical_mount(mcfg)
+        with open(mcfg, "w", encoding="utf-8", newline="") as f:
+            f.write(mtext)
     cfg_path = os.path.join(folder, "skin.cfg")
     with open(cfg_path, "w", encoding="utf-8", newline="\r\n") as f:
         f.write("\n".join(lines) + "\n")
@@ -101,7 +114,7 @@ def main():
     # the generator stub: a placeholder block per frame on the canvas, through the shared review pictures
     stub = f'''"""{name}: the generator (docs/sprite-tools.md "Making a skin"). Draws every frame of the skin on the {canvas}x{canvas}
 canvas (the donkey's frame sits centred; its back at row 41, feet on row 64 of the 96 canvas), writes a PNG per frame
-into src/{project}/assets/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
+into src/{project}/assets/mounts/{mount_id}/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
 
     python -I tools/skins/{sid}/{gen}            # the built-in's pictures + out\\\\
     python -I tools/skins/{sid}/{gen} --no-assets  # out\\\\ only
@@ -114,7 +127,7 @@ import review
 from gamedir import donkey_frames, game_dir  # donkey_frames: the base's pictures an over skin is drawn on
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-ASSETS = os.path.join(REPO, "src", "{project}", "assets", "skins", "{sid}")
+ASSETS = os.path.join(REPO, "src", "{project}", "assets", "mounts", "{mount_id}", "skins", "{sid}")
 OUT = os.path.join(HERE, "out")
 CANVAS = {canvas}
 OFF = (CANVAS - 96) // 2
@@ -169,7 +182,7 @@ if __name__ == "__main__":
         if sid in line or line.startswith(("ALL PASS", "FAILURES")):
             print("  " + line)
     print(f"Next: draw in tools/skins/{sid}/{gen} (or in Aseprite with the watcher), fill [Colors] (tools/skins/skin_colors.py),"
-          f" run the checks, build, and look in game. To remove it: delete {folder} and {gen_dir}.")
+          f" run the checks, build, and look in game. To remove it: delete {folder} and {gen_dir}" + (f" (and the new mount's {mount_dir})" if new_mount else "") + ".")
     return 0
 
 
