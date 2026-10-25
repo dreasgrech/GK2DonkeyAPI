@@ -66,17 +66,21 @@ namespace GK2DonkeyAPI
             // ground row, its centre column on the base's pivot column. Read once, on the first frame produced.
             int groundSrc = -1, centreSrc = -1;
             string restName = ResolveGameFrame("bdy_static_left", g, frames, b, null);
+            // The rest picture read and measured: the build's first step, a frame of its own (Prepare; a read-back through
+            // the graphics card, as each picture is), else before the first picture.
+            void Rest()
+            {
+                if (groundSrc >= 0) return;
+                SkinFrame rest = restName != null && frames.TryGetValue(restName, out CreatureFrame restFrame) ? ReadCreatureFrame(restFrame, restName, b) : null;
+                Measure(rest, out groundSrc, out centreSrc);
+                if (rest == null || groundSrc < 0) { groundSrc = b.GroundRow; centreSrc = Mathf.RoundToInt(b.PivotX); }
+                Plugin.Log.LogInfo($"Looks: skin '{d.Id}': the rest picture '{restName}' has its feet on row {groundSrc} and its centre on column {centreSrc} of the game's {b.CanvasW}x{b.CanvasH} canvas; they go to row {Mathf.RoundToInt(d.PivotY) - (Mathf.RoundToInt(b.PivotY) - b.GroundRow)} and column {Mathf.RoundToInt(d.PivotX)} of the {d.CanvasW}x{d.CanvasH} one, {scale}x.");
+            }
             Func<string, Pixels> produce = key =>
             {
                 string name = map[key];
                 if (name == null) return new Pixels { P = new Color32[d.CanvasW * d.CanvasH], W = d.CanvasW, H = d.CanvasH }; // empty on purpose
-                if (groundSrc < 0)
-                {
-                    SkinFrame rest = restName != null && frames.TryGetValue(restName, out CreatureFrame restFrame) ? ReadCreatureFrame(restFrame, restName, b) : null;
-                    Measure(rest, out groundSrc, out centreSrc);
-                    if (rest == null || groundSrc < 0) { groundSrc = b.GroundRow; centreSrc = Mathf.RoundToInt(b.PivotX); }
-                    Plugin.Log.LogInfo($"Looks: skin '{d.Id}': the rest picture '{restName}' has its feet on row {groundSrc} and its centre on column {centreSrc} of the game's {b.CanvasW}x{b.CanvasH} canvas; they go to row {Mathf.RoundToInt(d.PivotY) - (Mathf.RoundToInt(b.PivotY) - b.GroundRow)} and column {Mathf.RoundToInt(d.PivotX)} of the {d.CanvasW}x{d.CanvasH} one, {scale}x.");
-                }
+                Rest();
                 if (!frames.TryGetValue(name, out CreatureFrame get)) return new Pixels { Why = $"the game has no '{g.Prefix}{name}' sprite in memory" };
                 SkinFrame f = ReadCreatureFrame(get, name, b);
                 if (f == null) return new Pixels { Why = "the game's frame could not be read" };
@@ -94,7 +98,7 @@ namespace GK2DonkeyAPI
                 GameSourceOpaque[d.Id + "/" + key] = opaque; // for the self-test: the sheet itself is unreadable once uploaded
                 return new Pixels { P = px, W = d.CanvasW, H = d.CanvasH };
             };
-            return new Producer { Keys = new List<string>(b.Keys), Produce = produce };
+            return new Producer { Keys = new List<string>(b.Keys), Produce = produce, Prepare = Rest };
         }
 
         // The opaque pixels each produced picture had, by "<skin id>/<key>" (the self-test reads them; a key left empty
@@ -217,9 +221,43 @@ namespace GK2DonkeyAPI
         // The creature's frames: the sprites already in memory first (the game's own, never destroyed), then every
         // loaded sprite atlas for the needed names that memory lacks (a listing per atlas; its copies destroyed;
         // before 0.35.0 a partial set in memory stopped the search, docs/mounts-foundation-2.md 4.2).
+        // A complete set of a character's frames found in memory, kept for the session (by prefix and atlas): every sprite
+        // in memory is looked through to find them, 6 to 7 ms, and that was in the frame of Gerry's first pick in the
+        // Mounts panel (the trace of 2026-10-25 11:36). The game-ready check finds them first (VerifyGameSources). Used
+        // again while every sprite is still there; one gone (its scene unloaded): looked for again.
+        private static readonly Dictionary<string, Dictionary<string, CreatureFrame>> foundFrames = new Dictionary<string, Dictionary<string, CreatureFrame>>(StringComparer.Ordinal);
+        private static readonly Dictionary<string, Sprite[]> foundSprites = new Dictionary<string, Sprite[]>(StringComparer.Ordinal);
+
         private static Dictionary<string, CreatureFrame> FindCreatureFrames(string prefix, string atlasName, List<string> needed, out string how)
         {
+            string cacheKey = prefix + "|" + atlasName;
+            if (foundFrames.TryGetValue(cacheKey, out Dictionary<string, CreatureFrame> known) && foundSprites.TryGetValue(cacheKey, out Sprite[] sprites))
+            {
+                bool alive = true;
+                foreach (Sprite s in sprites) if (s == null) { alive = false; break; }
+                bool all = alive;
+                if (all && needed != null) foreach (string n in needed) if (!known.ContainsKey(n)) { all = false; break; }
+                if (all)
+                {
+                    how = "sprites in memory, found before";
+                    return known;
+                }
+                foundFrames.Remove(cacheKey);
+                foundSprites.Remove(cacheKey);
+            }
+            Dictionary<string, CreatureFrame> result = ScanCreatureFrames(prefix, atlasName, needed, out how, out List<Sprite> inMemory);
+            if (how == "sprites in memory")
+            {
+                foundFrames[cacheKey] = result;
+                foundSprites[cacheKey] = inMemory.ToArray();
+            }
+            return result;
+        }
+
+        private static Dictionary<string, CreatureFrame> ScanCreatureFrames(string prefix, string atlasName, List<string> needed, out string how, out List<Sprite> kept)
+        {
             var result = new Dictionary<string, CreatureFrame>(StringComparer.Ordinal);
+            kept = new List<Sprite>();
             foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())
             {
                 if (s == null || !s.name.StartsWith(prefix, StringComparison.Ordinal)) continue;
@@ -230,6 +268,7 @@ namespace GK2DonkeyAPI
                 {
                     Sprite keep = s; // the game's own (maybe on one of its renderers): read, never destroyed
                     result[name] = new CreatureFrame { Get = () => keep, Owned = false };
+                    kept.Add(keep);
                 }
             }
             bool complete = result.Count > 0;

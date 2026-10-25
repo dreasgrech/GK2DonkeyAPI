@@ -18,6 +18,18 @@ For players:
   to 60 ms and 19 to 26 MB a pick; the dragon's picture is the biggest). Now one photo a frame (the last picture stays
   until the new one is framed, so it never visibly resizes), each look's framing is remembered (picked again: framed at
   once), and one read-back buffer per picture replaces a new texture and array per photo.
+  After that a micro freeze stayed (the user, 2026-10-25: "its the dragon which is doing the micro freeze when
+  selecting it from the journal"), traced frame by frame: the click's frame took 13 to 20 ms against 8.3 (the cfg
+  file written whole, 3.5 to 4.7 ms; the dragon's 15.6 MB sheet made and its first six pictures, 4.5 to 5; the picture
+  re-posed, 2 to 4.5), the frame the dragon appeared up to 20 ms, and Gerry's and Hellfire's builds 17 to 44 ms a
+  frame for eight frames (their pictures are read back from the game's sprites through the graphics card). Now the cfg
+  file is written once the picking pauses or the panel closes; a look builds for 2 ms a frame, its sheet in a frame of
+  its own; a finished look is worn from the frame after its upload; and every look the panel showed stays ready while
+  it is open, so picking it again shows it at once. A first pick still had one slow frame (the dragon 25 ms: Unity
+  zero-filling its new 15.6 MB sheet, 14.7 ms; Gerry 16 to 19 ms: every sprite in memory looked through for his frames,
+  6.5 ms, and his first picture). The sheet is made without the fill (every cell is written anyway), Gerry's frames are
+  found once a session (the game-ready check finds them; looked for again only when one is gone), his rest picture is
+  measured in a frame of its own, and nothing of a build runs in the frame it was asked for.
 - **The babies of the mount you ride come through a door with it** (the user, 2026-10-24: "i selected gerry when
   inside the house and rode him out, and the babies didnt follow me outside"). They stayed: the house and the yard are
   one place to the game, so they waited for their parent to stand still out of reach, and a ridden parent never does.
@@ -704,6 +716,17 @@ For mod authors:
 
 Development:
 
+- **A skin's "loaded" line says what building it cost**, step by step: the sheet made, the pictures made (files read,
+  decoded), put in the sheet, uploaded, sprites, colours; the frames it took, the most work in one frame, the game's
+  slowest frame meanwhile, and the memory allocated. It was added to measure the hitch when the dragon is picked again
+  in the Mounts panel (the user, 2026-10-25) before choosing a cure.
+- **A pick in the Mounts panel is traced** (`[pick]` lines): the 120 frames after the click, every frame over 12 ms or
+  with the mod's work over 2 ms, with what the mod did in it and what happened then (a look's build started or done, the
+  picture showing the new look). The pick itself, the panel's rows built again, the panel's frame and its pictures are
+  measured parts now (Pick, PickRows, PanelTick, Preview), and the pick's own two halves (PickApply: the Mount row's
+  handlers; PickSave: the cfg file written). The once-a-second slow-frame line and the summary could not show these
+  frames. The click's work is counted in the frame it happened in (it ran before the frame's bookkeeping and was counted
+  in the frame before).
 - **The safe-spot self-test waits for the last return's arrival check** before it buries the keeper for "the watchdog
   off": the check runs two physics steps after a return and judges where he is then, so a step that moved him inside
   that window was sent to an older spot and counted as a watchdog return (1 of 1112 failed, 2026-10-24; timing only).

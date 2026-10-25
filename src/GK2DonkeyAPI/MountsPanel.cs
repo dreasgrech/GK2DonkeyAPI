@@ -422,9 +422,16 @@ namespace GK2DonkeyAPI
         private static void Select(string id)
         {
             if (page == null) return;
-            page.SelectMount(id);
-            BuildRight();
-            MarkList();
+            Perf.TracePick(id);
+            using (Perf.Measure(Perf.S.Pick))
+            {
+                page.SelectMount(id);
+                using (Perf.Measure(Perf.S.PickRows))
+                {
+                    BuildRight();
+                    MarkList();
+                }
+            }
         }
 
         // The right side for the chosen mount: the header, the stats card, the look rows; the colours window's groups
@@ -1296,8 +1303,11 @@ namespace GK2DonkeyAPI
             }
         }
 
+        internal static void SavePickedNow() => page?.SavePicked(now: true);
+
         internal static void Tick()
         {
+            page?.SavePicked(now: false); // a pick written to the cfg file once the picking pauses (MountSettingsPage.SelectMount)
             if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null)))
             {
                 Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (RestoreUnder is skipped)
@@ -1341,7 +1351,9 @@ namespace GK2DonkeyAPI
             try
             {
                 Mount.Instance paper = LookPreview.PaperOf(page);
-                Texture pic = PreviewStage.Picture(paper);
+                Texture pic;
+                using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper);
+                if (paper != null && !paper.LooksRig.Settling) Looks.HoldForPanel(paper.LooksRig.Wearing); // picked again: there at once
                 if (pic == null && PreviewStage.Failed)
                 {
                     pictureTex = paper != null ? Colors.BuildPreview(paper, pictureTex) : null;
@@ -1547,6 +1559,8 @@ namespace GK2DonkeyAPI
         {
             bool wasOpen = panel != null;
             MountSettingsPage closing = page;
+            closing?.SavePicked(now: true); // the picking is over: the chosen mount to the cfg file (put back below when not kept: written again by its set)
+            Looks.ReleasePanelHolds(); // the looks shown while it was open (the worn ones stay with their wearers)
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;
             if (colours != null) CloseColours(keep: true, reshow: false); // its rows are the journal's snapshot's too; the journal goes next

@@ -857,6 +857,13 @@ namespace GK2DonkeyAPI
         {
             try
             {
+                MountsPanel.SavePickedNow(); // a pick not yet written (the game quit with the panel open)
+            }
+            catch
+            {
+            }
+            try
+            {
                 Mount.ForceCleanup("plugin unloaded");
             }
             catch

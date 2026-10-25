@@ -852,7 +852,46 @@ namespace GK2DonkeyAPI.Api
         internal void SelectMount(string mountId)
         {
             if (mountRow == null || string.IsNullOrEmpty(mountId)) return;
-            if (!string.Equals(mountRow.Value, mountId, StringComparison.OrdinalIgnoreCase)) mountRow.Value = mountId;
+            if (string.Equals(mountRow.Value, mountId, StringComparison.OrdinalIgnoreCase)) return;
+            // The cfg file is written once the picking is over (SavePicked: the panel closed, or a moment after the last
+            // pick), not inside the set: BepInEx writes the whole file on every change, 3.5 to 4.7 ms in the click's frame
+            // of every pick (the trace of 2026-10-25 11:03; the user: "its the dragon which is doing the micro freeze").
+            bool save = Config.SaveOnConfigSet;
+            try
+            {
+                Config.SaveOnConfigSet = false;
+                using (Perf.Measure(Perf.S.PickApply)) mountRow.Value = mountId;
+            }
+            finally
+            {
+                Config.SaveOnConfigSet = save;
+            }
+            if (save)
+            {
+                pickedUnsaved = true;
+                saveAfter = UnityEngine.Time.unscaledTime + PickSaveDelay;
+            }
+        }
+
+        // A pick not yet written to the cfg file (SelectMount), and when it will be.
+        private bool pickedUnsaved;
+        private float saveAfter;
+        private const float PickSaveDelay = 2f;
+
+        // The picked mount written to the cfg file: now (the panel closing, the game quitting), or once the picking has
+        // paused (due). Its own frame, after the picking: a frame with nothing else of note.
+        internal void SavePicked(bool now)
+        {
+            if (!pickedUnsaved || (!now && UnityEngine.Time.unscaledTime < saveAfter)) return;
+            pickedUnsaved = false;
+            try
+            {
+                using (Perf.Measure(Perf.S.PickSave)) Config.Save();
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Settings: {Title}: the picked mount could not be written to its cfg file ({e.Message}); it is still chosen for this session.");
+            }
         }
 
         // The mod is done adding rows. The page is shown the frame after (Show): in the framework's Mods menu when it's

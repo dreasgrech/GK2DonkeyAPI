@@ -216,13 +216,14 @@ namespace GK2DonkeyAPI
                 }
                 if (newFrame)
                 {
-                    Pose(paper);
+                    using (Perf.Measure(Perf.S.PrevPose)) Pose(paper);
                     // Another skin worn (the Mount or Skin row changed; a sheet that finished building): framed again
                     // before this frame's picture, on the new pictures' own size, not a second later by the edge check
                     // with the new mount drawn inside the old one's frame.
                     string look = paper.LooksRig.Wearing;
                     if (look != framedLook)
                     {
+                        Perf.TraceNote("the picture shows " + look);
                         framedLook = look;
                         foreach (View each in views)
                         {
@@ -421,6 +422,7 @@ namespace GK2DonkeyAPI
             try
             {
                 if (v.Reframe)
+                using (Perf.Measure(Perf.S.PrevFrame))
                 {
                     v.Reframe = false;
                     TestReframes++;
@@ -439,10 +441,10 @@ namespace GK2DonkeyAPI
                 }
                 if (v.TightenStep >= 0)
                 {
-                    TightenStep(v);
+                    using (Perf.Measure(Perf.S.PrevFrame)) TightenStep(v);
                     if (v.TightenStep >= 0) return; // still measuring: the shown picture keeps its last photo
                 }
-                v.Cam.Render();
+                using (Perf.Measure(Perf.S.PrevRender)) v.Cam.Render();
                 if (Time.unscaledTime >= v.NextEdgeCheck)
                 {
                     v.NextEdgeCheck = Time.unscaledTime + 1f;

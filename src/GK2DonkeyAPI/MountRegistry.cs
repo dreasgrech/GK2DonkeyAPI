@@ -419,8 +419,8 @@ namespace GK2DonkeyAPI
                 MountCompanion.TickAll();
                 LookPreview.Tick();
                 MenuLabels.Tick();
-                PreviewStage.Tick();
-                MountsPanel.Tick();
+                using (Perf.Measure(Perf.S.Preview)) PreviewStage.Tick();
+                using (Perf.Measure(Perf.S.PanelTick)) MountsPanel.Tick();
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload

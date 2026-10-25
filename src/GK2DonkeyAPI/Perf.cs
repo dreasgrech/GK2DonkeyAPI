@@ -49,6 +49,15 @@ namespace GK2DonkeyAPI
             DrawnIndex, //   the drawn ground's index: a search for the terrains, only when none woke under the patch (DrawnGround.Index)
             SafeSpots,  // never lost: the safe-spot record and the fall watchdog (SafeSpots.Tick)
             Sounds,     // the mount sounds' rigs (Sounds.Rig.Tick: the ridden one's frame and every standing Active instance's)
+            Pick,       // a mount picked in the Mounts panel (MountsPanel.Select, a button's click, outside Tick): the choice applied
+            PickRows,   //   inside Pick: the panel's right side built again for it (BuildRight, MarkList)
+            PickApply,  //   inside Pick: the Mount row set, its handlers run (the companion re-dressed, the rows' conditions)
+            PickSave,   //   inside Pick: the mod's cfg file written (BepInEx writes it whole on every change)
+            PanelTick,  // the Mounts panel's frame (MountsPanel.Tick: input, the picture fitted)
+            Preview,    // the panel's pictures (PreviewStage: the walk drawn again each frame, a framing step, a photo)
+            PrevPose,   //   inside Preview: the copy posed (the rigs' tick: a new look's sprites put on, its colours)
+            PrevFrame,  //   inside Preview: a framing (the remembered one used, or a measuring step: a photo read back)
+            PrevRender, //   inside Preview: the photo itself (the stage camera's Render)
             Count,
         }
 
@@ -131,6 +140,8 @@ namespace GK2DonkeyAPI
         private static Func<long> allocatedFn;
         internal static bool AllocExact;
 
+        internal static long AllocatedBytes() => AllocatedNow();
+
         private static long AllocatedNow()
         {
             if (allocatedFn == null)
@@ -196,6 +207,70 @@ namespace GK2DonkeyAPI
         private const double SlowFrameMs = 20.0;
         private static float nextSlowLog;
 
+        // A pick's trace (the user, 2026-10-25: picking the dragon in the Mounts panel freezes the game for some frames; the
+        // summary and the once-a-second slow-frame line could not show which frames, nor the panel's own work): from a
+        // pick, TraceFrames frames, each over TraceSlowMs or with the mod's parts over 2 ms named with them, and notes (a
+        // look ready, a picture framed) on the frame they happened in; one line when done.
+        private const int TraceFrames = 120;
+        private const double TraceSlowMs = 12.0;
+        private static string traceWhat;
+        private static int traceLeft, traceSeen, traceSlow;
+        private static double traceWorst, traceSum;
+        private static readonly StringBuilder trace = new StringBuilder();
+        private static string traceNotes;
+
+        internal static void TracePick(string what)
+        {
+            // The click runs in the EventSystem's Update, maybe before this frame's BeginFrame (Plugin.Update): the previous
+            // frame is closed first, so the click's work is counted in the frame it happened in, #1 (it was counted in the
+            // frame before, and the frame it slowed showed the rest only; the 2026-10-25 01:31 log).
+            BeginFrame();
+            if (traceWhat != null) EndTrace("another pick");
+            traceWhat = what;
+            traceLeft = TraceFrames;
+            traceSeen = traceSlow = 0;
+            traceWorst = traceSum = 0;
+            trace.Length = 0;
+        }
+
+        // Something that happened in this frame, shown with it in a running pick trace.
+        internal static void TraceNote(string note)
+        {
+            if (traceWhat == null) return;
+            traceNotes = traceNotes == null ? note : traceNotes + "; " + note;
+        }
+
+        private static void TraceFrame(double frameMs)
+        {
+            if (traceWhat == null) return;
+            traceSeen++;
+            traceSum += frameMs;
+            if (frameMs > traceWorst) traceWorst = frameMs;
+            double mod = 0;
+            var parts = new StringBuilder();
+            for (int i = 0; i < (int)S.Count; i++)
+            {
+                double ms = frameTicks[i] * MsPerTick;
+                if (i != (int)S.Tick) mod = Math.Max(mod, ms);
+                if (ms >= 0.5) parts.Append($"{(parts.Length > 0 ? ", " : "")}{Names[i]} {ms:F1}");
+            }
+            if (frameMs > TraceSlowMs) traceSlow++;
+            if (frameMs > TraceSlowMs || mod >= 2.0 || traceNotes != null)
+            {
+                trace.Append($" #{traceSeen} {frameMs:F0} ms ({(parts.Length > 0 ? parts.ToString() : "the mod under 0.5")}{(traceNotes != null ? "; " + traceNotes : "")});");
+            }
+            traceNotes = null;
+            if (--traceLeft <= 0) EndTrace(null);
+        }
+
+        private static void EndTrace(string cut)
+        {
+            Plugin.Log.LogInfo($"[pick] {traceWhat}: {traceSeen} frames from the click, {traceSlow} over {TraceSlowMs:F0} ms, the worst {traceWorst:F0} ms, on average {(traceSeen > 0 ? traceSum / traceSeen : 0):F1} ms{(cut != null ? " (cut by " + cut + ")" : "")};{(trace.Length > 0 ? trace.ToString() : " no frame of note.")}");
+            traceWhat = null;
+            trace.Length = 0;
+            traceNotes = null;
+        }
+
         // A log line the mod wrote (counted for the panel: writing the log costs too).
         internal static void NoteLogLine() => logLines++;
 
@@ -230,6 +305,7 @@ namespace GK2DonkeyAPI
                 }
                 Plugin.Log.LogInfo($"[perf] slow frame {frameMs:F0} ms: the mod{(sb.Length > 0 ? sb.ToString() : " under 0.5 ms in every part")}; allocated {allocFrame / 1024.0:F0} KB; GC collections so far {GC.CollectionCount(0)}.");
             }
+            TraceFrame(frameMs);
             allocSum += allocFrame;
             allocMax = Math.Max(allocMax, allocFrame);
             allocFrame = 0;

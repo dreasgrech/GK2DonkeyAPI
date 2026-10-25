@@ -1632,16 +1632,44 @@ namespace GK2DonkeyAPI
             internal string Why; // P null: why (null when there is simply nothing for the key)
         }
 
+        // What building a skin's sheet cost, by step (the loaded line): the user, 2026-10-25: "everytime im selecting the
+        // dragon again in the mount journal, game is freezing for some frames"; measured before the cure is chosen.
+        internal sealed class BuildCost
+        {
+            internal static readonly double MsPerTick = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            internal long Sheet, Make, Read, Decode, Put, Upload, Sprites, Colours;
+            internal long FrameWork, WorstFrameWork, Alloc;
+            internal int Frames, LastFrame = -1;
+            internal float WorstGameFrame;
+            internal static long Now => System.Diagnostics.Stopwatch.GetTimestamp();
+            internal static string Ms(long ticks) => (ticks * MsPerTick).ToString("F1", System.Globalization.CultureInfo.InvariantCulture);
+            internal string Line(int pictures)
+            {
+                long work = Sheet + Make + Put + Upload + Sprites + Colours;
+                var ci = System.Globalization.CultureInfo.InvariantCulture;
+                return $"built over {Frames} frame(s), {Ms(work)} ms of work: the sheet made {Ms(Sheet)}; {pictures} pictures made {Ms(Make)}" +
+                    (Read + Decode > 0 ? $" (files read {Ms(Read)}, decoded {Ms(Decode)})" : "") +
+                    $", put in the sheet {Ms(Put)}; uploaded {Ms(Upload)}, sprites {Ms(Sprites)}, colours {Ms(Colours)}; " +
+                    $"the most in one frame {Ms(WorstFrameWork)} ms, the game's slowest frame meanwhile {(WorstGameFrame * 1000f).ToString("F0", ci)} ms; " +
+                    $"allocated {(Alloc / 1048576.0).ToString("F1", ci)} MB";
+            }
+        }
+
         internal sealed class Loaded
         {
             internal SkinDef Def;
+            internal readonly BuildCost Cost = new BuildCost();
             internal readonly Dictionary<string, Sprite> Frames = new Dictionary<string, Sprite>(StringComparer.Ordinal); // "front/..." too
             // the game's sprite instance -> our sprite (or null): one lookup per part per frame once seen; the front layer's apart
             internal readonly Dictionary<Sprite, Sprite> Resolved = new Dictionary<Sprite, Sprite>();
             internal readonly Dictionary<Sprite, Sprite> ResolvedFront = new Dictionary<Sprite, Sprite>();
             internal readonly HashSet<string> MissingLogged = new HashSet<string>(StringComparer.Ordinal);
             internal int Refs;
-            internal bool Ready;                // false until every frame is in the sheet (the switch is whole)
+            // False until every frame is in the sheet (the switch is whole); a sheet's from the frame after the one it was
+            // uploaded in: the picture switching to it took 5 to 12.5 ms in that frame (the trace of 2026-10-25 11:03).
+            private bool ready;
+            private int readyFrame;
+            internal bool Ready => ready && Time.frameCount >= readyFrame;
             internal Queue<string> ToBuild;     // the keys still to produce
             internal Func<string, Pixels> Produce;
             internal int Bad, NotInSheet;
@@ -1704,7 +1732,21 @@ namespace GK2DonkeyAPI
             private int cols, cellW, cellH, placed;
             private readonly List<(string Key, RectInt Cell)> cells = new List<(string, RectInt)>();
 
+            // The cells the sheet will have, until AdvanceBuilds makes it (-1: made, or none to make); the producers' step
+            // before the pictures (Producer.Prepare); the frame the build was asked for (nothing of it runs in that frame:
+            // the pick's own work is there; the trace of 2026-10-25 11:36, Gerry's first picture in the click's frame).
+            internal int SheetFor = -1;
+            internal Action Prepare;
+            internal int AskedFrame = -1;
+
             internal void MakeSheet(int count)
+            {
+                long t0 = BuildCost.Now;
+                try { MakeSheetNow(count); }
+                finally { Cost.Sheet += BuildCost.Now - t0; }
+            }
+
+            private void MakeSheetNow(int count)
             {
                 cellW = Def.CanvasW;
                 cellH = Def.CanvasH;
@@ -1713,7 +1755,9 @@ namespace GK2DonkeyAPI
                 int w = cols * (cellW + 1) + 1, h = rows * (cellH + 1) + 1;
                 int max = SystemInfo.maxTextureSize;
                 if (w > max || h > max) throw new InvalidOperationException($"the sheet would be {w}x{h}, over this machine's {max}");
-                Sheet = new Texture2D(w, h, TextureFormat.RGBA32, false) { name = "gk2skin " + Def.Id, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+                // Uninitialized: Unity would fill it with zeros first, 14.7 ms for the dragon's 15.6 MB in the frame of a
+                // first pick (the trace of 2026-10-25 11:36); the gutters are cleared below and every cell is overwritten.
+                Sheet = new Texture2D(w, h, TextureFormat.RGBA32, false, false, true) { name = "gk2skin " + Def.Id, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 // A new texture's memory is undefined: the gutter lines are cleared (the cells are overwritten by Put, and a
                 // cell never placed is never drawn). One zero buffer for every sheet, not a canvas-sized array per load.
                 int lines = Mathf.Max(w, h);
@@ -1782,9 +1826,13 @@ namespace GK2DonkeyAPI
             internal void Finish()
             {
                 pixelCache = null; // the colours are collected; the copies go
+                long t0 = BuildCost.Now;
                 if (Sheet != null)
                 {
                     Sheet.Apply(false, true);
+                    long t1 = BuildCost.Now;
+                    Cost.Upload += t1 - t0;
+                    t0 = t1;
                     var pivot = new Vector2(Def.PivotX / cellW, Def.PivotY / cellH);
                     foreach (var (key, cell) in cells)
                     {
@@ -1795,9 +1843,15 @@ namespace GK2DonkeyAPI
                         if (WholeKeys.Contains(key)) Whole.Add(sp);
                     }
                     cells.Clear();
+                    long t2 = BuildCost.Now;
+                    Cost.Sprites += t2 - t0;
+                    t0 = t2;
                 }
                 SortColours();
-                Ready = true;
+                Cost.Colours += BuildCost.Now - t0;
+                Perf.TraceNote(Def.Id + " built");
+                ready = true;
+                readyFrame = Sheet != null ? Time.frameCount + 1 : Time.frameCount; // a sheet: worn from the next frame on (below)
                 ToBuild = null;
                 Produce = null;
                 LoadedReady?.Invoke(Def.Id);
@@ -1939,17 +1993,20 @@ namespace GK2DonkeyAPI
                             return null;
                         }
                     }
+                    l.Prepare = (Action)Delegate.Combine(own.Prepare, parent?.Prepare);
+                    l.AskedFrame = Time.frameCount;
                     if (parent != null)
                     {
                         VariantProducer(l, own, parent);
                     }
                     else
                     {
-                        l.MakeSheet(own.Keys.Count);
+                        l.SheetFor = own.Keys.Count; // made by AdvanceBuilds, in a frame of its own
                         l.ToBuild = new Queue<string>(own.Keys);
                         l.Produce = own.Produce;
                     }
                     building.Add(l);
+                    Perf.TraceNote(d.Id + " build starts");
                 }
                 if (d.Over && d.Erase != null && l.Produce != null) WrapErase(l, gamePrefix);
                 else if (d.OverDefault && !l.Layered && d.Erase != null && l.Produce != null) WrapAlone(l);
@@ -1978,6 +2035,7 @@ namespace GK2DonkeyAPI
         {
             internal List<string> Keys;
             internal Func<string, Pixels> Produce;
+            internal Action Prepare; // optional: what the first picture would do first, run by AdvanceBuilds in a frame of its own
         }
 
         // The producer of a skin's pictures, by its source: another game character's frames (LooksGame.cs, throws when the
@@ -1995,6 +2053,7 @@ namespace GK2DonkeyAPI
                 Produce = key =>
                 {
                     byte[] png;
+                    long t0 = BuildCost.Now;
                     try
                     {
                         png = d.LoadPng(key);
@@ -2003,8 +2062,14 @@ namespace GK2DonkeyAPI
                     {
                         return new Pixels { Why = e.Message };
                     }
+                    long t1 = BuildCost.Now;
                     var px = new Pixels();
                     px.P = DecodePng(png, out px.W, out px.H, out px.Why);
+                    if (counts != null)
+                    {
+                        counts.Cost.Read += t1 - t0;
+                        counts.Cost.Decode += BuildCost.Now - t1;
+                    }
                     return px;
                 },
             };
@@ -2019,7 +2084,7 @@ namespace GK2DonkeyAPI
         private static void VariantProducer(Loaded l, Producer own, Producer parent)
         {
             Func<string, Pixels> produce = VariantProduce(l, own, parent, out List<string> keys);
-            l.MakeSheet(keys.Count);
+            l.SheetFor = keys.Count; // made by AdvanceBuilds, in a frame of its own
             l.ToBuild = new Queue<string>(keys);
             l.Produce = produce;
         }
@@ -2253,6 +2318,27 @@ namespace GK2DonkeyAPI
             };
         }
 
+        // The looks the Mounts panel has shown, held while it is open: picked again, a look is there at once instead of
+        // built again (the dragon's 237 pictures took 40 frames each time, and the panel's picture stood still meanwhile;
+        // the user, 2026-10-25). Only a look already built is held; closing the panel lets them go (unloaded when nothing
+        // else wears them), so the world's rule stands: a sheet nobody wears is freed.
+        private static readonly List<Loaded> panelHolds = new List<Loaded>();
+
+        internal static void HoldForPanel(string id)
+        {
+            if (string.IsNullOrEmpty(id) || !loaded.TryGetValue(id, out Loaded l) || !l.Ready || panelHolds.Contains(l)) return;
+            l.Refs++;
+            panelHolds.Add(l);
+        }
+
+        internal static void ReleasePanelHolds()
+        {
+            if (panelHolds.Count == 0) return;
+            var let = new List<Loaded>(panelHolds);
+            panelHolds.Clear();
+            foreach (Loaded l in let) Release(l);
+        }
+
         private static void Release(Loaded l)
         {
             if (l == null || --l.Refs > 0) return;
@@ -2277,7 +2363,7 @@ namespace GK2DonkeyAPI
         // ------------------------------------------------------------------ the next skin built ahead
 
         // The skin the player will most likely wear next (the companion's choice, MountCompanion.ApplyLook): its sheet is
-        // acquired ahead and built in the background with the others (BuildPerTick a frame), and held, so the first
+        // acquired ahead and built in the background with the others (BuildMsPerFrame a frame), and held, so the first
         // spawn wears it at once. Built on the first spawn, the mount showed as the game's donkey for the build's ~29
         // frames (the dragon's 173 pictures at 6 a frame) and then changed (the user, 2026-10-23: "the first time you
         // press h to spawn the mount, for a couple of frames i see the game donkey instead of my mount"). One skin held
@@ -2317,19 +2403,25 @@ namespace GK2DonkeyAPI
 
         // ------------------------------------------------------------------ building, a few frames a tick
 
-        private const int BuildPerTick = 6;
+        // The building's time a frame: pictures are made until it is spent (one at least). Six pictures a frame was 4 to 17
+        // ms: a game-source picture is read back through the graphics card, 2 to 3.5 ms each and more when it is busy, and
+        // the frame of the click took the sheet and six of them besides the pick (the trace of 2026-10-25 11:03).
+        private const double BuildMsPerFrame = 2.0;
+        private static readonly long buildTicks = (long)(BuildMsPerFrame / BuildCost.MsPerTick);
         private static readonly List<Loaded> building = new List<Loaded>();
         private static int builtFrame = -1;
 
-        // Called once per frame from the rigs' ticks: up to BuildPerTick frames of the skins being loaded or built.
+        // Called once per frame from the rigs' ticks: the skins being loaded or built, for BuildMsPerFrame. A new sheet is
+        // made in a frame of its own (2.4 ms for the dragon's 15.6 MB), its pictures from the next.
         internal static void AdvanceBuilds()
         {
             if (building.Count == 0 || Time.frameCount == builtFrame) return;
             builtFrame = Time.frameCount;
             using (Perf.Measure(Perf.S.LooksBuild))
             {
-                int budget = BuildPerTick;
-                for (int k = building.Count - 1; k >= 0 && budget > 0; k--)
+                long until = BuildCost.Now + buildTicks;
+                bool worked = false;
+                for (int k = building.Count - 1; k >= 0 && !(worked && BuildCost.Now >= until); k--)
                 {
                     Loaded l = building[k];
                     if (l.Refs <= 0 || l.ToBuild == null)
@@ -2337,13 +2429,69 @@ namespace GK2DonkeyAPI
                         building.RemoveAt(k); // nobody waits for it any more
                         continue;
                     }
-                    while (budget > 0 && l.ToBuild.Count > 0)
+                    if (l.AskedFrame == Time.frameCount) continue; // from the next frame
+                    BuildCost cost = l.Cost;
+                    long f0 = BuildCost.Now, a0 = Perf.AllocatedBytes();
+                    if (cost.LastFrame != Time.frameCount)
                     {
-                        string key = l.ToBuild.Dequeue();
-                        budget--;
+                        if (cost.Frames > 0 && Time.unscaledDeltaTime > cost.WorstGameFrame) cost.WorstGameFrame = Time.unscaledDeltaTime;
+                        cost.Frames++;
+                        cost.LastFrame = Time.frameCount;
+                        cost.FrameWork = 0;
+                    }
+                    if (l.SheetFor >= 0)
+                    {
+                        int count = l.SheetFor;
+                        l.SheetFor = -1;
                         try
                         {
-                            l.Put(key, l.Produce(key));
+                            l.MakeSheet(count);
+                        }
+                        catch (Exception e)
+                        {
+                            // too big for this machine: ready with nothing, the base shows (as Acquire's catch did when it was made there)
+                            Plugin.Log.LogWarning($"Looks: skin '{l.Def.Id}' could not be loaded: {e.Message}");
+                            l.ToBuild.Clear();
+                        }
+                        cost.FrameWork += BuildCost.Now - f0;
+                        if (cost.FrameWork > cost.WorstFrameWork) cost.WorstFrameWork = cost.FrameWork;
+                        cost.Alloc += Perf.AllocatedBytes() - a0;
+                        if (l.ToBuild.Count > 0) break; // its pictures from the next frame
+                        f0 = BuildCost.Now;
+                        a0 = Perf.AllocatedBytes();
+                    }
+                    if (l.Prepare != null)
+                    {
+                        Action prepare = l.Prepare;
+                        l.Prepare = null;
+                        try
+                        {
+                            prepare();
+                        }
+                        catch (Exception e)
+                        {
+                            Plugin.Log.LogWarning($"Looks: skin '{l.Def.Id}': getting ready to build failed ({e.Message}); its pictures do it themselves.");
+                        }
+                        cost.Make += BuildCost.Now - f0;
+                        cost.FrameWork += BuildCost.Now - f0;
+                        if (cost.FrameWork > cost.WorstFrameWork) cost.WorstFrameWork = cost.FrameWork;
+                        cost.Alloc += Perf.AllocatedBytes() - a0;
+                        if (l.ToBuild.Count > 0) break; // its pictures from the next frame
+                        f0 = BuildCost.Now;
+                        a0 = Perf.AllocatedBytes();
+                    }
+                    while (l.ToBuild.Count > 0 && !(worked && BuildCost.Now >= until))
+                    {
+                        string key = l.ToBuild.Dequeue();
+                        worked = true;
+                        try
+                        {
+                            long p0 = BuildCost.Now;
+                            Pixels made = l.Produce(key);
+                            long p1 = BuildCost.Now;
+                            l.Put(key, made);
+                            cost.Make += p1 - p0;
+                            cost.Put += BuildCost.Now - p1;
                         }
                         catch (Exception e)
                         {
@@ -2351,11 +2499,19 @@ namespace GK2DonkeyAPI
                             Plugin.Log.LogWarning($"Looks: skin '{l.Def.Id}', frame {key}: {e.Message}");
                         }
                     }
+                    bool finished = false;
                     if (l.ToBuild.Count == 0)
                     {
                         building.RemoveAt(k);
                         l.Finish();
-                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (" + (l.Layered ? "its default's" : "the " + l.Def.Base.Id) + " shows there)" : "")}{(l.Layered ? $", built on '{l.Parent.Id}': {l.OwnPictures} own, {l.Inherited} from it{(l.Composed > 0 ? $", {l.Composed} drawn over it ({l.Erased} pixels erased)" : "")}" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}).");
+                        finished = true;
+                    }
+                    cost.FrameWork += BuildCost.Now - f0;
+                    if (cost.FrameWork > cost.WorstFrameWork) cost.WorstFrameWork = cost.FrameWork;
+                    cost.Alloc += Perf.AllocatedBytes() - a0;
+                    if (finished)
+                    {
+                        Plugin.Log.LogInfo($"Looks: skin '{l.Def.Id}' loaded: {l.Frames.Count} pictures{(l.Bad > 0 ? ", " + l.Bad + " skipped" : "")}{(l.NotInSheet > 0 ? ", " + l.NotInSheet + " frames past the sheet's last cell (" + (l.Layered ? "its default's" : "the " + l.Def.Base.Id) + " shows there)" : "")}{(l.Layered ? $", built on '{l.Parent.Id}': {l.OwnPictures} own, {l.Inherited} from it{(l.Composed > 0 ? $", {l.Composed} drawn over it ({l.Erased} pixels erased)" : "")}" : "")}{(l.WholeKeys.Count > 0 ? $", {l.WholeKeys.Count} built whole over the {l.Def.Base.Id} ({l.Erased} pixels erased)" : "")} ({l.SizeNote}); {l.Cost.Line(l.Frames.Count)}.");
                     }
                 }
             }
