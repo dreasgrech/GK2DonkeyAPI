@@ -744,8 +744,8 @@ namespace GK2DonkeyAPI
                 yield return Until(() => Plays(ra, "voice") >= 1, 10f);
                 SoundSpec av = ra.Resolve("voice");
                 Check(waited, $"a standing grown one calls by itself within 10 s (idle_every {av?.Number("idle_every", -1f):0.##} x the standing factor {Sounds.StandingIdleFactor}; the rig: {ra.TestState}; voice {av?.Describe()})");
-                yield return Until(() => Plays(r1, "answer") >= 1 && Plays(r2, "answer") >= 1, 3f);
-                Check(waited, $"both babies answered within 3 s ({Plays(r1, "answer")}, {Plays(r2, "answer")})");
+                yield return Until(() => Plays(r1, "answer") >= 1 && Plays(r2, "answer") >= 1, Sounds.Rig.CallWaitMaxS + 3f);
+                Check(waited, $"both babies answered ({Plays(r1, "answer")}, {Plays(r2, "answer")})");
                 var times = new List<(float At, Mount.Instance Who, string Event)>(Sounds.TestVoiceTimes);
                 float call = -1f, first = -1f, second = -1f;
                 foreach (var t in times)
@@ -753,7 +753,9 @@ namespace GK2DonkeyAPI
                     if (t.Event == "voice" && call < 0f) call = t.At;
                     else if (t.Event == "answer" && call >= 0f && t.At >= call) { if (first < 0f) first = t.At; else if (second < 0f) second = t.At; }
                 }
-                Check(call >= 0f && first >= call + 0.45f && first <= call + 1.0f && second > first + 0.2f, $"the answers come half a second on and one after the other (call at {call:0.00}, answers at {first:0.00} and {second:0.00})");
+                float ended = ra.TestCallEndedAt;
+                Check(call >= 0f && ended >= call && first >= ended + Sounds.Rig.AnswerAfterS - 0.05f && first <= ended + 0.6f && second > first + 0.2f,
+                    $"the answers come after the call has ended and one after the other (call at {call:0.00}, ended {ended:0.00}, answers at {first:0.00} and {second:0.00})");
 
                 // one voice at a time: a second grown one standing by, calls at least the gap apart
                 Sounds.VoiceGapS = 4f;

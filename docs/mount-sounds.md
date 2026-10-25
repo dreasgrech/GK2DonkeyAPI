@@ -46,7 +46,8 @@ all silent unless a layer gives a sound:
 **The herd.** A grown mount standing near the keeper calls by itself, three times rarer than the ridden one
 (`voice.idle_every` times 3), never mid-step, and no standing call comes within four seconds of any other voice in
 the scene: one voice at a time, a yard of them is no racket. Babies never call by themselves; when their parent calls
-(ridden or standing, or `Mounts.Bray()`) each answers in turn, half a second on and a third of a second apart, with
+(ridden or standing, or `Mounts.Bray()`) each answers in turn once the call has ended (0.15 s on, then a third of a
+second apart; before 2026-10-25 half a second after the call began, under a long roar), with
 the `answer` event. All of it is under the player's `StandingSounds` switch (Saddle Up's "Standing mounts and babies
 sound" row).
 

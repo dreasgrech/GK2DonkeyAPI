@@ -12,6 +12,20 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The babies answer after their parent's call, so you hear them** (the user, 2026-10-25: "are we sure the foals
+  are replying at all?"). They did answer, every time, but half a second after the call began, and the dragon's
+  roars last two to four seconds: every answer played under the roar. Now they answer one after another once the
+  call has ended. Gerry's lines are level with the donkey's bray too (they were 7 dB under it).
+- **The new mount sounds sit at the game's own loudness** (the user, 2026-10-25: "the mouse squeaks sound so much
+  louder than the dragon ones ... we should use the ingame sounds obviously"). Measured as the ear hears it (LUFS),
+  every sound added today played about 10 dB over the game's donkey, and the rat's squeaks 3 dB over the dragon's
+  roar: the game plays its own sounds at a volume of their own (0.375 for the bray), ours went in at full. Now each
+  mount's cry is as loud as the donkey's bray, getting on and off as its lip smack, the babies' answers 6 dB under
+  the bray, and the dragon's flight sounds keep their place against its roar.
+- **New key: Call out (V)** (the user, 2026-10-25: "the donkey would bray, the dragon would roar"). While mounted,
+  your mount gives its own cry on demand: the donkey brays, the dragon roars, the rat squeaks, Gerry talks; its
+  babies answer. The snail and the worm have no voice and stay silent. The cries that come by themselves now and then
+  are unchanged (the Bray sounds row switches those off; the key still works).
 - **The dragon, the giant rat and the giant snail have sounds of their own** (the user's recordings, 2026-10-25:
   "can we fill some missing slots with our new sounds?"). The dragon roars with three growls (it used the zombie's
   cry pitched down), growls as you get on and off, thuds as it touches down after a flight, and its babies answer

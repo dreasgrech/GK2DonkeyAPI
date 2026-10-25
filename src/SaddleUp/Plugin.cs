@@ -81,6 +81,9 @@ namespace SaddleUp
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your mount comes with its cart and you drive; again: dismount. Riding: the cart comes and is hitched.",
                 pressed: () => me.Use(MountStyle.Cart));
             p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
+            // the mount's own cry on demand (the user, 2026-10-25): the voice event of the ridden mount, as its idle timer
+            // plays it, and its babies answer; V is unbound in the game (docs/api-design.md "Showcase keys")
+            p.Key("Keys", "CallOutKey", new KeyboardShortcut(KeyCode.V), "Call out", "While mounted, your mount calls out: the donkey brays, the dragon roars, the rat squeaks, Gerry talks; its babies answer. The snail and the worm are silent. None = no key.", pressed: Mounts.Bray);
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Your mount, its cart and its babies go (the cart's load is set down first); the next key brings a new one. None = no key.",
                 pressed: me.SendAway);
             // jumping and flying (on for everyone since API 0.38.0; the rows grey while a dev switched it off). One key for

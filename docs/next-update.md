@@ -188,6 +188,19 @@ and babies' answer. SkinsScan lists nothing missing for those three. Left: Gerry
 answer), the worm's babies' answer, the dragon's wind loop (`fly`), the sixth wing beat (not used: shorter and
 softer than the five), and the placeholders of steps and grazing.
 
+**Loudness, matched to the game** (2026-10-25; `C:\ClaudeCodeTemp\GK2-mount-sounds\loudness.py` and its
+`loudness.txt`): each sound's EBU R128 loudness times the game sound's own volume (the game's clips from its
+`sound_ids.csv`; ours register at 1), the cfg line's and a baby's 0.46. Before: the dragon's roar 9.7 dB and the
+rat's squeaks 12.4 dB over the donkey's bray. Now every `.volume` line puts a cry at the bray, getting on and off at
+the donkey's lip smack, an answer 6 dB under the bray. Gerry and the donkey are the game's own sounds and keep the
+game's level (Gerry's lines measure 7 dB under the bray, in the speech group).
+
+**Why the babies' answers were not heard** (the trace of 2026-10-25: four roars, 20 answers, all played): the
+answers start 0.5 to 2.1 s after the call (`ScheduleAnswers`), and the dragon's roars last 1.9 to 4.2 s, so they
+play under the parent's roar; they were also 10 dB under it and pitched up 2.3 times. Built the same day: the answers
+start 0.15 s after the parent's call has ended (the game's play handle says when), one after another; Gerry's voice
+levelled with the bray (2.25).
+
 ## 5. Built today: the dragon pulls no cart
 
 - `saddleup.dragon/mount.cfg`: `cart = false`, no `cargo` line, the description says so. The API's cart rule does the

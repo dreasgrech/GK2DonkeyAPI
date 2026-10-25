@@ -17,6 +17,7 @@ any mod ships a mount), switched off until the next update.
 | **G** | your donkey comes with its cart and you drive | the cart comes and is hitched | get off |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
 | Bell key (B) | – | ring the bell | ring the bell |
+| Call out key (V) | – | your mount calls out (the donkey brays, the dragon roars, the rat squeaks, Gerry talks); its babies answer | the same |
 | Send-away key (none by default) | your donkey, cart and foal go (the load is set down first) | the same | the same |
 
 - **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
@@ -45,7 +46,7 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Ride, Drive, Bell, Send away, Mounts panel, Jump, Fly, Climb, Descend | H, G, B, none, none, Space, Space, Left Shift, Left Ctrl | Jump and Fly on one key: a press jumps (hold for a higher jump), a second press in the air takes off a mount that flies (the dragon), a press while flying lands; Climb and Descend are held in the air (a lone modifier can't be set in the game's Settings window, only in the Mods menu or the cfg). No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
+| 1. Keys | Ride, Drive, Bell, Call out, Send away, Mounts panel, Jump, Fly, Climb, Descend | H, G, B, V, none, none, Space, Space, Left Shift, Left Ctrl | Call out: your mount's own cry on demand, and its babies answer (the cries now and then still come by themselves; Sound's Bray row switches those off, not the key). | Jump and Fly on one key: a press jumps (hold for a higher jump), a second press in the air takes off a mount that flies (the dragon), a press while flying lands; Climb and Descend are held in the air (a lone modifier can't be set in the game's Settings window, only in the Mods menu or the cfg). No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Mounts | | A button: closes the menu and opens the **Mounts panel** over the game: every mount you can ride on the left, the chosen one drawn on the right with what it is and does, and its skin and colour rows under it. Done keeps your choices, Cancel puts them back. The Mount, Skin and colour rows below are chosen there, not in this menu (0.12). |
 | | Mount | Donkey | (in the Mounts panel) What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row in the section says so. Its picture is at the top of the section. |

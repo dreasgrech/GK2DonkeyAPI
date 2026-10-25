@@ -591,6 +591,17 @@ namespace GK2DonkeyAPI
                 }
                 TestLastGate = "ran";
 
+                // The babies answer when the call has ended (the user, 2026-10-25: never heard; the trace showed every
+                // answer playing under the dragon's 1.9 to 4.2 s roar, which they followed by half a second). The game's
+                // handle is made for one play and goes inactive when that play ends (LazyBearTechnology.SoundHandler), so
+                // this holds for a game id and a pack's file at any pitch; CallWaitMaxS is the cap if it never says so.
+                if (callHandle != null && (!callHandle.IsActive || now - callAt > CallWaitMaxS))
+                {
+                    callHandle = null;
+                    TestCallEndedAt = now;
+                    ScheduleAnswers();
+                }
+
                 if (ridden)
                 {
                     SoundSpec bell = Resolve("bell");
@@ -774,6 +785,12 @@ namespace GK2DonkeyAPI
 
             // The parent called: its babies answer one after another, half a second on, each a third of a second after
             // the one before (docs/foal-sounds.md, calls made in code).
+            // the parent's last call still playing (its babies answer when it ends), and when it began
+            private SoundHandler callHandle;
+            private float callAt;
+            internal const float AnswerAfterS = 0.15f, CallWaitMaxS = 8f;
+            internal float TestCallEndedAt = -1f; // the self-test: when the last call's end scheduled the answers
+
             private void ScheduleAnswers()
             {
                 try
@@ -784,7 +801,7 @@ namespace GK2DonkeyAPI
                     foreach (Mount.Instance kid in kids)
                     {
                         if (kid == null || kid.SoundsRig == null || !kid.SoundsRig.IsBaby) continue;
-                        kid.SoundsRig.answerAt = Time.time + 0.5f + 0.35f * k + UnityEngine.Random.Range(0f, 0.2f);
+                        kid.SoundsRig.answerAt = Time.time + AnswerAfterS + 0.35f * k + UnityEngine.Random.Range(0f, 0.2f); // after the call, one after another
                         k++;
                     }
                 }
@@ -1021,7 +1038,7 @@ namespace GK2DonkeyAPI
                     {
                         nextVoiceAt = Time.time + VoiceGapS; // one voice at a time in the scene (the standing ones wait; the ridden one and the answers go anyway)
                         TestVoiceTimes.Add((Time.time, owner, d.Id));
-                        if (d.Id == "voice" && !IsBaby) ScheduleAnswers();
+                        if (d.Id == "voice" && !IsBaby) { callHandle = h; callAt = Time.time; } // the babies answer once it has ended (TickInner)
                     }
                     if (owner.Handle != null) Mounts.Sounds.RaisePlayed(owner.Handle, eventId);
                 }
