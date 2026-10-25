@@ -141,7 +141,7 @@ It costs nothing and holds if the game ever pools temp objects.
 2. **Spawning:** Instances tab: pick a mount and skin ("Mount and skin", the list Saddle Up offers), then Donkey
    (or Dragon, Giant Rat, ...), the same with its cart (greyed when the mount refuses the cart), Cart on its own, a
    family (greyed when the mount has no babies). Each appears in front of the keeper, facing his way, in that skin;
-   its row says so ("#3 dragon (Red Dragon) with cart"). `MountSpawn.Skin` does the same for mods. The donkey idles. The cart stands behind its donkey with the lantern lit. The free cart shows no
+   its row says so ("#3 rat (Giant Rat) with cart"). `MountSpawn.Skin` does the same for mods. The donkey idles. The cart stands behind its donkey with the lantern lit. The free cart shows no
    donkey (no body, head, shadow or grass bend), and its shafts rest on the ground (the log says how far they turned).
 3. **Riding:** walk up to a standing donkey with empty hands. "[E] Ride" (or "[E] Drive") shows over it. E puts you on
    it without a jump. Riding works as with the summon. The showcase's key (or any dismount) leaves it standing where

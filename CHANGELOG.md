@@ -12,6 +12,17 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The dragon flies, for everyone** (the user, 2026-10-25: "make flying not dev only"). Riding it plain, outdoors:
+  Space jumps, Space again in the air takes off, Left Shift climbs, Left Ctrl descends, Space while flying lands. It
+  flies over water, fences, cliffs and roofs and comes down only where you can stand ("Nowhere to land here." while it
+  can't); a save, H or a door lands it first. Every mount jumps with Space (hold for a higher jump, over what is lower
+  than the jump). Not in a fight, where Space is your attack. Four rows in Keys: Jump, Fly, Climb (hold) and Descend
+  (hold); Climb and Descend are new. Flying was built as a dev-only experiment since 2026-10-22; what is still to see in
+  game is listed in docs/open-items.md ("Flying for players").
+- **The dragon pulls no cart any more** (the user, 2026-10-25: "remove the ability for the dragon to haul the cart").
+  Its card in the Mounts panel says "Can't pull the cart" and its Cargo "no cart"; G on the dragon (or Drive the
+  cart in the panel) says "A dragon can't pull the cart.", and a cart hitched when your mount becomes the dragon is
+  left standing where it is. What each mount is for beyond that is being decided (docs/next-update.md).
 - **The Effect section is gone, and so is the effect in the Mounts panel** (the user, 2026-10-25: "remove all the
   stuff we're exposing regarding the effects"; particle effects will come back on specific skins, designed anew). The
   Effect, Effect shown and four toggle rows, the "Comes with" line and the effect half of the panel's
@@ -183,7 +194,7 @@ For players:
   you ride on inside; at the morgue you get off inside carrying the corpse, your mount in there with you. A door
   with a loading screen still ends the ride. The cart can get caught on furniture and door frames inside. Where the cart isn't
   allowed (indoors, in a fight), the cart key now says so without calling your mount over first.
-- **Fixed: a loaded cart crept back behind a long mount.** With the dragon (or the rat) hitched, every item put on
+- **Fixed: a loaded cart crept back behind a long mount.** With the rat (or the dragon, which pulled the cart then) hitched, every item put on
   the cart moved the whole cart one more hitch gap away; a loaded cart made again (through a door, switching from
   riding to the cart) came back too far as well. The cart keeps its place now. The donkey has no gap, so it never
   showed there.
@@ -268,6 +279,12 @@ For players:
 
 For mod authors:
 
+- **Flying and jumping are on for everyone (API 0.38.0)**: `Mounts.FlyingEnabled` is true unless the dev Flying tab
+  switched it off (before, it needed the dev tools unlocked). New Behaviour keys `ClimbKey` (Left Shift) and
+  `DescendKey` (Left Ctrl): `KeyboardShortcut`s held in the air, the main key alone counts (a modifier can be the key;
+  the game's Settings window can't capture a lone modifier, the Mods menu and the cfg can). The dragon's card says
+  "Flies". Saddle Up needs 0.38.0 (its Climb and Descend rows set the keys); its own version stays 0.12.0 (unreleased).
+  Dev-only still: the per-frame `[flight-probe]` lines (off) and the jump probe's files (the dev tools).
 - **Nothing picks or shows a particle effect any more (API 0.37.0)**; making one stays (the user, 2026-10-25:
   "the ability would be available from the api and then we will consume it from the skin consumer"; how a skin
   comes with its effect is being designed). Kept: `Mounts.Effects` (`Effects`, `Find`, `EffectsChanged`, `Register`,
@@ -279,7 +296,7 @@ For mod authors:
   drops them on load); the API cfg's `[Effects]` section; the pack keys `effect =` and `effect_when =` in skin.cfg
   and mount.cfg (an old file's lines are reported as unknown keys). This reverses, for choosing an effect, the
   2026-10-17 rule that the player's effect is chosen through the API (docs/mount-looks-design.md). Saddle Up needs
-  0.36.0 or newer as before (it calls nothing removed).
+  0.36.0 or newer as before (it calls nothing removed; 0.38.0 since the flying switch-on, above).
 - **Skins built on their mount's default** (see For players): `MountSkinInfo.BuiltOn` (the default's id, or `null`)
   and `MountSkinInfo.OverDefault` (drawn over that default; `Over` stays "over the game's donkey"). A code skin's
   sentinels now mean "the default's" on such a skin: `SeatRow` -1 with `SeatFromPicture` false, `Offset` zero and
@@ -747,6 +764,14 @@ For mod authors:
 
 Development:
 
+- **Investigated: what the next update still needs, how the mounts differ in play, and which sounds they lack**
+  (docs/next-update.md; the user, 2026-10-25: "see what is actually remaining ... every mount needs to have something
+  which makes it useful"). Nothing built but the dragon's cart: its dead `[Tuning.Cart]` and the generator's gap for
+  it are gone, and the five self-tests that hitched the dragon (the side-file round trip, the panel's card, the cart
+  readout, the preview gap, the walk survey) use the rat or check the refusal.
+- **Investigated: the donkey's two skins as a mod of their own** (docs/donkey-skins-pack.md; the user, 2026-10-25:
+  "investigate ... GK2 Saddle Up Donkey Skins Pack"). Nothing built: the runtime needs no change; the open
+  points are Hellfire's effect, the self-tests' sample picture and the release scripts.
 - **The API retires cfg keys too** (`Plugin.DropRetired`, the analogue of `MountSettingsPage.RetiredKey`): a
   released key this version no longer binds leaves the player's file at the start, saved once, and the upgrade
   self-test counts it as retired, not as a value lost (first use: the seven `[Effects]` keys of 0.10.0). The effect

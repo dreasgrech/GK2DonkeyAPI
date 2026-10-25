@@ -289,6 +289,15 @@ closed):
   tab on the dragon, "Reload from the file" twice; the save path under the rows stays the repo's
   `src/SaddleUp/assets/mounts/saddleup.dragon/skins/default/skin.cfg` (the mount's rows its `mount.cfg` two folders
   up) and a slider change still saves (before: "no file" after the first reload).
+- **Flying for players** (switched on 2026-10-25, API 0.38.0; docs/flying.md): the hand tests of step 2 (cross
+  water and come back; over a fence and a building; off a cliff and land below; a refused landing over water holds
+  and says why; a save in the air; H in the air lands first; a door while flying), the sections marked "not seen in
+  game" (the jump against things, the floor risen to, jump and fly on one key, the platformer jump, climbing and
+  diving shown), the open "through the ground on the high rock table" (nothing built; the fall guard catches it),
+  Saddle Up's four key rows (Jump, Fly, Climb, Descend) in the Mods menu and the Settings window (a lone modifier
+  can't be set in the latter: expected), the dragon's card says "Flies", a player's log holds event `[flight]` lines
+  only (no `[flight-probe]`, no `GK2-jumps` files without the dev marker), and the first take-off's walk-grid scan
+  time in the log.
 
 ## Undecided
 

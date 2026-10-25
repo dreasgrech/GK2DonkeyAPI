@@ -17,7 +17,7 @@ namespace SaddleUp
     // in Awake: the API is the backend, this mod ships the content, exactly as anyone else's mod ships a mount
     // (docs/mounts-as-mods.md: a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart).
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.36.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.38.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -25,14 +25,14 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.12.0";
 
-        // The API this mod is written against: 0.36 has CartIndoors (the indoors rows), Mounts.Catalog (the mount
+        // The API this mod is written against: 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
         // rename) and ships no skin (Hellfire's effect is registered here); 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
         // a mount registered in any plugin's Awake and a mod's embedded packs; 0.31 the page's Heading; 0.30 the skins, MountCompanion.Skin;
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 36, 0);
+        private static readonly Version NeedsApi = new Version(0, 38, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -83,14 +83,21 @@ namespace SaddleUp
             p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
             p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Your mount, its cart and its babies go (the cart's load is set down first); the next key brings a new one. None = no key.",
                 pressed: me.SendAway);
-            // jumping and flying (the Donkey API's experiment, dev only for now: the rows show only while it is on). One key for
-            // both: a press jumps, a second press in the air takes off on a mount that flies, a press while flying lands.
+            // jumping and flying (on for everyone since API 0.38.0; the rows grey while a dev switched it off). One key for
+            // both: a press jumps, a second press in the air takes off on a mount that flies, a press while flying lands;
+            // in the air, Climb and Descend are held.
             p.Key("Keys", "JumpKey", new KeyboardShortcut(KeyCode.Space), "Jump", "Riding, your mount jumps: hold the key for a higher jump. Over what is lower than the jump. Not in a fight, where Space attacks. None = no jumping.",
                 apply: v => Mounts.Behaviour.Set(Guid, "JumpKey", v));
             p.Key("Keys", "FlyKey", new KeyboardShortcut(KeyCode.Space), "Fly", "Riding a mount that flies, outdoors: take off, and land again. The same key as Jump: jump, then press again in the air to take off. None = no flying.",
                 apply: v => Mounts.Behaviour.Set(Guid, "FlyKey", v));
+            p.Key("Keys", "ClimbKey", new KeyboardShortcut(KeyCode.LeftShift), "Climb (hold)", "Flying: hold it to climb, up to the flight's highest. The key alone counts (a modifier can be it; the game's Settings window can't set a lone modifier, the Mods menu and the cfg can). None = no climbing.",
+                apply: v => Mounts.Behaviour.Set(Guid, "ClimbKey", v));
+            p.Key("Keys", "DescendKey", new KeyboardShortcut(KeyCode.LeftControl), "Descend (hold)", "Flying: hold it to come down; at the ground you have landed. The key alone counts. None = the Fly key lands.",
+                apply: v => Mounts.Behaviour.Set(Guid, "DescendKey", v));
             p.EnableWhen("Keys", "JumpKey", () => Mounts.FlyingEnabled);
             p.EnableWhen("Keys", "FlyKey", () => Mounts.FlyingEnabled);
+            p.EnableWhen("Keys", "ClimbKey", () => Mounts.FlyingEnabled);
+            p.EnableWhen("Keys", "DescendKey", () => Mounts.FlyingEnabled);
             // never lost (the API's safe spots, docs/never-lost.md): a key for "back to the last safe spot"; the API reads it
             // with its own gate (not during a door, a cutscene or a dialogue)
             p.Key("Keys", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Stuck, or fallen somewhere you shouldn't be: puts you back on the last ground you stood on in this scene. None = no key (the Behaviour section has a button).",

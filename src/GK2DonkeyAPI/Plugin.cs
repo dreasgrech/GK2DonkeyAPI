@@ -365,7 +365,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.37.0";
+        public const string Version = "0.38.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -402,7 +402,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<string> CorpseIntoMorguePlaces;
         internal static ConfigEntry<bool> InstanceControls;
         internal static Tuned<KeyCode> HitchKey;
-        internal static Tuned<KeyboardShortcut> JumpKey, FlyKey;
+        internal static Tuned<KeyboardShortcut> JumpKey, FlyKey, ClimbKey, DescendKey; // flying (Flight.cs): on for everyone since 0.38.0
         internal static Tuned<bool> FallGuard;              // never lost: the fall watchdog (SafeSpots.cs)
         internal static Tuned<KeyboardShortcut> ReturnKey;  // never lost: back to the last safe spot by a key
         internal static Tuned<bool> StandingSounds;         // standing mounts and babies make their sounds near the keeper (Sounds.cs)
@@ -584,9 +584,13 @@ namespace GK2DonkeyAPI
             HitchKey = Config.Bind("General", "HitchKey", Defaults.Get("General", "HitchKey", KeyCode.J),
                 "With InstanceControls, while riding: leave the cart standing where it is (a free cart with its cargo and settings), or take the free cart in reach. None: the key is off (the interact key still hitches).");
             JumpKey = Config.Bind("General", "JumpKey", Defaults.Get("General", "JumpKey", new KeyboardShortcut(KeyCode.Space)),
-                "Riding plain: the mount jumps (the flying experiment, dev only for now). The same key as FlyKey: a second press in the air takes off on a mount that flies. None: no jumping. In a fight (in armour) Space is the game's attack, and isn't read here.");
+                "Riding plain: the mount jumps. The same key as FlyKey: a second press in the air takes off on a mount that flies. None: no jumping. In a fight (in armour) Space is the game's attack, and isn't read here.");
             FlyKey = Config.Bind("General", "FlyKey", Defaults.Get("General", "FlyKey", new KeyboardShortcut(KeyCode.Space)),
-                "Riding plain a mount that flies: take off and land (the flying experiment, dev only for now). The same key as JumpKey: take off with a second press in the air during a jump. None: no flying by key.");
+                "Riding plain a mount that flies: take off and land. The same key as JumpKey: take off with a second press in the air during a jump. None: no flying by key.");
+            ClimbKey = Config.Bind("General", "ClimbKey", Defaults.Get("General", "ClimbKey", new KeyboardShortcut(KeyCode.LeftShift)),
+                "Flying: held, the mount climbs (up to the flight's highest). The main key alone counts, so a modifier (Left Shift) can be the key; the game's Settings window can't set a lone modifier (the cfg and the Mods menu can). None: no climbing by key.");
+            DescendKey = Config.Bind("General", "DescendKey", Defaults.Get("General", "DescendKey", new KeyboardShortcut(KeyCode.LeftControl)),
+                "Flying: held, the mount descends; at the ground it has landed. The main key alone counts (as ClimbKey). None: no descending by key (the fly key lands).");
             FallGuard = Config.Bind("General", "FallGuard", Defaults.Get("General", "FallGuard", true),
                 "If the keeper ever falls out of the world (under the ground, into nothing, far below it) he is put back on the last ground he stood on, with a warning in the log (docs/never-lost.md). Never during a door, a cutscene or a dialogue. Off: nothing watches (the record and the key still work).");
             ReturnKey = Config.Bind("General", "ReturnKey", Defaults.Get("General", "ReturnKey", KeyboardShortcut.Empty),

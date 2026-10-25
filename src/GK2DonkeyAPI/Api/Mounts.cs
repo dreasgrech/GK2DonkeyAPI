@@ -257,7 +257,10 @@ namespace GK2DonkeyAPI.Api
         //                            take-off indoors, and a flight through a building's door lands there
         //   JumpKey, FlyKey          (KeyboardShortcut, 0.36.0, Space both) riding plain: jump; take off and land a mount that
         //                            flies. The same key: a second press in the air during a jump takes off. None: off.
-        //                            Read only while FlyingEnabled; Space is left to the game's attack in a fight.
+        //                            Read only while FlyingEnabled (on unless the dev tab switched it off); Space is left to
+        //                            the game's attack in a fight.
+        //   ClimbKey, DescendKey     (KeyboardShortcut, 0.38.0, Left Shift and Left Ctrl) flying: held, climb and descend (at
+        //                            the ground, descending has landed). The main key alone counts: a modifier can be the key.
         //   FallGuard                (0.36.0, on) the keeper fallen out of the world (under the ground, into nothing, far
         //                            below it) is put back on the last ground he stood on (docs/never-lost.md)
         //   ReturnKey                (KeyboardShortcut, 0.36.0, None) a key for ReturnToSafeSpot
@@ -274,7 +277,7 @@ namespace GK2DonkeyAPI.Api
                 return behaviour ?? (behaviour = new MountTuning("General", new ITuned[]
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
-                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey,
+                    Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey, Plugin.ClimbKey, Plugin.DescendKey,
                     Plugin.FallGuard, Plugin.ReturnKey, Plugin.StandingSounds,
                 }));
             }
@@ -379,8 +382,9 @@ namespace GK2DonkeyAPI.Api
         // log line per owner. A mod that adds a mount can register in Awake as usual and check this to tell its player.
         public static bool MountsEnabled => Plugin.MountsOn;
 
-        // Whether jumping and flying are switched on (0.36.0): a dev-only experiment for now (docs/flying.md), off for
-        // players. A mod showing its own jump or fly key rows shows them only while this is true.
+        // Whether jumping and flying are switched on (0.36.0; docs/flying.md): on for everyone since 0.38.0 (a dev-only
+        // experiment before, off for players), false only when the dev tab switched it off. A mod showing its own jump
+        // or fly key rows shows them only while this is true.
         public static bool FlyingEnabled => Flight.Active;
 
         // The ridden mount off the ground (0.36.0; refused while FlyingEnabled is false): what the jump and fly keys do,

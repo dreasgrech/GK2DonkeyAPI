@@ -6,19 +6,12 @@ namespace GK2DonkeyAPI
     // experiment starts off with every game start.
     internal static partial class TuningWindow
     {
-        // the keys a row cycles through (none of them the game's walking keys)
-        private static readonly KeyCode[] FlightKeyChoices =
-        {
-            KeyCode.Space, KeyCode.R, KeyCode.F, KeyCode.J, KeyCode.T, KeyCode.Y, KeyCode.U, KeyCode.Z, KeyCode.X, KeyCode.C, KeyCode.V,
-            KeyCode.LeftShift, KeyCode.LeftControl, KeyCode.LeftAlt, // not PageUp/PageDown/Home (the Grave Zoom mod's zoom), not the keypad (the tuning keys)
-        };
-
         private static void DrawFlying()
         {
             Mount.Instance i = Mount.Ridden;
             Header("Flying (experiment)");
             Help("The ridden mount, its rider and its cart lift off the ground and fly at a height. From the clear height up (free flight) the keeper's body leaves the game's physics: over water, fences and roofs; it lands only where he can stand. Nothing here is saved.");
-            if (OnOffRow("Flying experiment", Flight.Enabled, tip: "On by default on this machine (the dev tools unlocked), never for players. Off: nothing changes. Switching it off while airborne drops to the ground at once.")) Flight.Enabled = !Flight.Enabled;
+            if (OnOffRow("Flying experiment", Flight.Enabled, tip: "On for everyone since 2026-10-25 (API 0.38.0); this switch is the session's, dev only. Off: nothing changes. Switching it off while airborne drops to the ground at once.")) Flight.Enabled = !Flight.Enabled;
             if (OnOffRow("Any mount flies (off: those whose [Mount] says flies)", Flight.AnyMount)) Flight.AnyMount = !Flight.AnyMount;
 
             string why;
@@ -122,21 +115,7 @@ namespace GK2DonkeyAPI
             Help("Read only while riding with the experiment on, never while the Mounts panel or a text box has the keys, the controls are taken or the game is paused.");
             GUILayout.Label($"Jump: {Flight.JumpKeyNow}, fly: {Flight.FlyKeyNow} (the Behaviour keys JumpKey and FlyKey: the API cfg, or Saddle Up's Keys rows). " +
                 (Flight.SameKey(Flight.JumpKeyNow, Flight.FlyKeyNow) ? "One key: a press jumps, a second press in the air takes off a mount that flies, a press while flying lands." : "Two keys: the jump key jumps, the fly key takes off and lands."), small);
-            Flight.UpKey = FlightKeyRow("Climb (hold)", Flight.UpKey);
-            Flight.DownKey = FlightKeyRow("Descend (hold; at the ground: landed)", Flight.DownKey);
-        }
-
-        private static KeyCode FlightKeyRow(string name, KeyCode key)
-        {
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(name, label, Wd(LabelW));
-            if (GUILayout.Button(key.ToString(), Wd(110f)))
-            {
-                int at = System.Array.IndexOf(FlightKeyChoices, key);
-                key = FlightKeyChoices[(at + (Event.current.button == 1 ? FlightKeyChoices.Length - 1 : 1)) % FlightKeyChoices.Length];
-            }
-            GUILayout.EndHorizontal();
-            return key;
+            GUILayout.Label($"Climb (hold): {Flight.UpKey}, descend (hold; at the ground: landed): {Flight.DownKey} (the Behaviour keys ClimbKey and DescendKey: the API cfg, or Saddle Up's Keys rows).", small);
         }
     }
 }

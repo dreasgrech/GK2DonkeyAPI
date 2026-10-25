@@ -182,7 +182,7 @@ namespace GK2DonkeyAPI.Api
         public bool Cart = true;
         // Foals (babies) may be drawn as it.
         public bool Foals = true;
-        // Takes off and flies, ridden plain (0.36.0; flying is a dev-only experiment for now, docs/flying.md). With the
+        // Takes off and flies, ridden plain (0.36.0; on for players since 0.38.0, docs/flying.md). With the
         // jump and fly keys the same, a second press in the air turns a jump into the take-off.
         public bool Flies;
         // Jumps, ridden plain (0.36.0; on by default; false: the jump key does nothing on it, or takes off if it flies).

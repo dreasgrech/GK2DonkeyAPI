@@ -1482,10 +1482,11 @@ def frames_for(fn):
 # rider's hip sits on for every player (docs/seat-investigation.md: 46 is the donkey's own seat on the 96 canvas, so a
 # creature drawn to the donkey's measures says 46; the 128 canvas adds 16; the snail sits 3 px lower on its shell)
 # ... and the hitch gap: how many px further behind the body the whole cart sits with the cart hitched ([Tuning.Cart]
-# HitchGapPx; the donkey's is 0; None = not measured yet: the "cart readout" self-test says what it is)
+# HitchGapPx; the donkey's is 0; None = none: the mount pulls no cart (the dragon, 2026-10-25), or not measured yet (the
+# "cart readout" self-test says what it is))
 CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 55, None),
              ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 52, 9),
-             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, 24))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
+             ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
@@ -1495,6 +1496,7 @@ PREFIX = "saddleup."  # a mount's id carries its mod's prefix (<mod>.<name>; doc
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
 FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the mount.cfg)
+NO_CART = {"dragon"}  # the mounts whose [Mount] block says cart = false (the dragon pulls no cart: the user, 2026-10-25)
 for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES:
     if only and name != only:
         continue
@@ -1509,9 +1511,10 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
         os.makedirs(os.path.dirname(mcfg), exist_ok=True)
         open(mcfg, "w", encoding="utf-8", newline="\r\n").write(
             "# A mount of GK2 Saddle Up (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.\n"
-            "[Mount]\nid = " + mid + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it pulls the cart and has young (edit me).\n"
-            "author = dreas\nversion = 1.0\ncart = true\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "")
-            + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\ncargo = 6  # items its cart carries, 1 to 6\n")
+            "[Mount]\nid = " + mid + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it "
+            + ("has young and pulls no cart" if mount in NO_CART else "pulls the cart and has young") + " (edit me).\n"
+            "author = dreas\nversion = 1.0\ncart = " + ("false" if mount in NO_CART else "true") + "\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "")
+            + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\n" + ("" if mount in NO_CART else "cargo = 6  # items its cart carries, 1 to 6\n"))
         import canonical_cfg
         mtext = canonical_cfg.canonical_mount(mcfg)
         open(mcfg, "w", encoding="utf-8", newline="").write(mtext)

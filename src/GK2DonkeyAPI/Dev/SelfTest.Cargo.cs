@@ -12,7 +12,7 @@ namespace GK2DonkeyAPI
     // setting that never goes below the load and follows once items come off.
     internal static partial class SelfTest
     {
-        // A cart with a hitch gap (a long mount: the dragon's 24 px) keeps its place as items go on it. Found in game
+        // A cart with a hitch gap (a long mount: the rat's 9 px; the dragon's 24 while it pulled the cart) keeps its place as items go on it. Found in game
         // 2026-10-21: each item moved the cart back by one more gap (a cargo change put the parts back to their gapped
         // place, then read that as the prefab's rest and added the gap again).
         private static IEnumerator CargoKeepsTheGap()

@@ -12,15 +12,16 @@ namespace GK2DonkeyAPI
     // game's unused ladder did; the edge walls down) and we move it from the input ourselves (FixedStep), over water,
     // fences and roofs. It comes down only where he can stand (WhyCannotLandAt); every way out lands first (a save, a
     // dismount or a style change by a key), or, forced (a door, a scene change), gives the body back as it is.
-    // Everything here is session-only, set on the Flying tab of the tuning window; nothing is saved, and with the
-    // experiment off LiftFor is 0, Free is false and nothing changes.
+    // The numbers here are session-only, set on the Flying tab of the tuning window (nothing is saved; the keys are
+    // Behaviour values); with the tab's switch off LiftFor is 0, Free is false and nothing changes.
     internal static class Flight
     {
         // the Flying tab's values (art pixels: one is a pixel of the picture on screen)
-        // the experiment on: by default where the dev tools are unlocked (the machine with the sources, the user
-        // 2026-10-22: the keys did nothing with it off); never for a player (Active)
+        // On for everyone since 2026-10-25 (the user: "make flying not dev only"; API 0.38.0): Enabled is the Flying tab's
+        // session switch (dev only; off drops to the ground at once). Until then Active also needed the dev tools
+        // unlocked (the machine with the sources), never a player's.
         internal static bool Enabled = true;
-        internal static bool Active => Enabled && DevTools.Unlocked;
+        internal static bool Active => Enabled;
         internal static bool AnyMount;             // off: the dragon only
         internal static float CruisePx = 200f;     // the height a take-off climbs to (48 until 2026-10-23, the user)
         internal static float MaxPx = 320f;        // the climb key stops here (above the take-off height)
@@ -96,7 +97,10 @@ namespace GK2DonkeyAPI
         // fast. A skin without the frames flies level.
         internal static bool PitchFrames = true;
         internal static float PitchPerS = 3f;      // how fast the pitch eases to its target (1: a full climb's)
-        internal static KeyCode UpKey = KeyCode.LeftShift, DownKey = KeyCode.LeftControl; // climb Left Shift, descend Left Ctrl (the user, 2026-10-23)
+        // Climb and descend, held: the Behaviour keys ClimbKey and DescendKey (Left Shift and Left Ctrl, the user 2026-10-23;
+        // Saddle Up's rows since 2026-10-25), their main key alone: a modifier can be the key, so none is asked for.
+        internal static KeyCode UpKey => Plugin.ClimbKey != null ? Plugin.ClimbKey.Value.MainKey : KeyCode.LeftShift;
+        internal static KeyCode DownKey => Plugin.DescendKey != null ? Plugin.DescendKey.Value.MainKey : KeyCode.LeftControl;
         // The jump and fly keys are the Behaviour values JumpKey and FlyKey (Space both; Saddle Up's Keys rows). The same
         // key (the user, 2026-10-23, the skyriding rule): a press jumps, a second press in the air takes off on a mount
         // that flies, a press while flying lands. Different keys: each its own (the fly key takes off from the ground).
@@ -528,7 +532,7 @@ namespace GK2DonkeyAPI
         internal static bool CanFly(Mount.Instance i, out string why)
         {
             why = null;
-            if (!Active) why = "the experiment is off";
+            if (!Active) why = "flying is switched off (the dev tab)";
             else if (i == null || !i.IsMounted) why = "not riding";
             else if (i.CurrentStyle != MountStyle.Ride) why = "drives the cart (flying is for riding plain)";
             // indoors only when a mod leaves flying indoors on (the Behaviour key FlyIndoors; Saddle Up sets it off); a
@@ -658,7 +662,7 @@ namespace GK2DonkeyAPI
         // byKey: the jump's key pressed (its release cuts the rise); the tab's button and the self-test jump held
         internal static string WhyNotJump(Mount.Instance i)
         {
-            if (!Active) return "jumping and flying are off (a dev-only experiment for now)";
+            if (!Active) return "jumping and flying are switched off (the dev tab)";
             if (i == null || !i.IsMounted) return "not riding";
             if (i.CurrentStyle != MountStyle.Ride) return "drives the cart (jumping is for riding plain)";
             if (Now != Phase.Ground) return Now == Phase.Jumping ? "already jumping" : "in the air";

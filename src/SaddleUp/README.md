@@ -4,7 +4,7 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.12.0, for GK2 Donkey API 0.36.0 or newer, and Steam game build 25910882 (game
+`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.12.0, for GK2 Donkey API 0.38.0 or newer, and Steam game build 25910882 (game
 1.010). Five more mounts come inside it (a dragon, a giant rat, a giant snail, a giant worm, Gerry: mount packs in
 `assets/mounts/saddleup.<mount>/`, each a `mount.cfg` with its own look in `skins/default/`, registered with the API at start the way
 any mod ships a mount), switched off until the next update.
@@ -24,6 +24,10 @@ any mod ships a mount), switched off until the next update.
 - **It's kept with the save:** after loading, it's where you left it, the load on the cart.
 - **The cart carries six items** in three layers of two (two or four with "Cart capacity"). Anything you pick up while driving goes onto it; piles, tables, graves and quest
   hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
+- **The dragon flies** (riding it plain, outdoors): Space jumps, Space again in the air takes off, Left Shift climbs,
+  Left Ctrl descends, Space while flying lands. Over water, fences, cliffs and roofs; it comes down only where you can
+  stand ("Nowhere to land here." while it can't), and a save, H or a door lands it first. Every mount jumps with Space.
+  Not in a fight, where Space is your attack.
 - **You're faster while mounted**, and you get off by yourself for work, ladders, building, fishing and sleep, and
   at building doors. Chests and the inventory keep you mounted. **Fights are ridden:** in your armour you swing the
   sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim (half
@@ -41,7 +45,7 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Ride, Drive, Bell, Send away, Mounts panel | H, G, B, none, none | No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
+| 1. Keys | Ride, Drive, Bell, Send away, Mounts panel, Jump, Fly, Climb, Descend | H, G, B, none, none, Space, Space, Left Shift, Left Ctrl | Jump and Fly on one key: a press jumps (hold for a higher jump), a second press in the air takes off a mount that flies (the dragon), a press while flying lands; Climb and Descend are held in the air (a lone modifier can't be set in the game's Settings window, only in the Mods menu or the cfg). No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
 | 2. Mount | Name | none | Shown when you walk up to it: "[E] Ride Bella". |
 | | Mounts | | A button: closes the menu and opens the **Mounts panel** over the game: every mount you can ride on the left, the chosen one drawn on the right with what it is and does, and its skin and colour rows under it. Done keeps your choices, Cancel puts them back. The Mount, Skin and colour rows below are chosen there, not in this menu (0.12). |
 | | Mount | Donkey | (in the Mounts panel) What you ride. In this version: the donkey only; the other mounts (Saddle Up's own Dragon, Giant Rat, Giant Snail, Giant Worm and Gerry; any mod's or skin pack's) are switched off until the next update, and a row in the section says so. Its picture is at the top of the section. |

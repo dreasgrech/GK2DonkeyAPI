@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.37.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.38.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -60,7 +60,7 @@ does.
 | `RingBell()`, `Bray()` | Sounds, subject to the `Sounds` and `Bell` features. |
 | `MountResult Jump()`, `TakeOff()`, `Land()` (0.36.0) | The ridden mount off the ground, as the jump and fly keys do it (for a mod's own button or a script). `Jump`: a full jump; refused in the air, with the cart, on a mount whose `Jumps` is false. `TakeOff`: from the ground, or from a jump in the air (the jump becomes the take-off); refused on a mount whose `Flies` is false, indoors (`FlyIndoors`), with the cart, already flying. `Land`: while taking off or flying; it comes down where the keeper can stand, else hovers. The reason is in the result; the bubble says nothing. All refused while `FlyingEnabled` is false. |
 | `MountResult ReturnToSafeSpot(reason = null)`, `LastSafeSpot`, event `ReturnedToSafeSpot` (0.36.0) | Never lost ([never-lost.md](never-lost.md)): the API keeps the spots the keeper stood on (the walkable ground under his feet, nothing over him, his body fitting; eight per scene, plus where the game put him at a load and after each door) and, with the Behaviour key `FallGuard` on, puts him back on the newest one that still holds when he has fallen out of the world (under the ground, into nothing, far below it). `ReturnToSafeSpot` does the same by hand (a mod's button or key; Saddle Up's "Back to the last safe spot"): refused with the reason while not in a game, while a door, a cutscene or a dialogue has the keeper, and in a scene with no spot yet; the bubble says the result. A flight or a jump is ended first, a ride goes on. `LastSafeSpot`: this scene's newest, or null. The event: where he was put, by whoever asked. Every return is a warning in the log with its facts. |
-| `FlightState`, `FlyingEnabled` (0.36.0) | `MountFlight`: `Ground`, `Jumping`, `TakingOff`, `Flying`, `Landing` (Ground while not riding). `FlyingEnabled`: jumping and flying are switched on (a dev-only experiment for now): show your own jump or fly rows only then. |
+| `FlightState`, `FlyingEnabled` (0.36.0) | `MountFlight`: `Ground`, `Jumping`, `TakingOff`, `Flying`, `Landing` (Ground while not riding). `FlyingEnabled`: jumping and flying are switched on (true for everyone since 0.38.0; false only when the dev tab switched them off): show your own jump or fly rows only then. |
 
 **While mounted, the keeper's hands stay empty.** Only the cart carries:
 - in Cart style, pickups land on the cart (`CartSlots` slots: 6 by default, 1 to 6, three and more in layers);
@@ -166,7 +166,7 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
   more keys held, such as the climb's Left Shift, don't stop a press): riding plain, the mount jumps; a mount that flies takes off
   and lands. One key for both: a press jumps, a second press in the air during the jump takes off a mount that
   flies, a press while flying lands. Two keys: each its own. `None`: off. Read only while `Mounts.FlyingEnabled`
-  (the dev-only experiment), never during a dialogue, a menu, a pause or while a key is being set in the Settings
+  (on unless the dev tab switched it off), never during a dialogue, a menu, a pause or while a key is being set in the Settings
   window, and Space not in a fight in armour (the game's attack); a key just changed counts once it has been let go.
   Saddle Up sets both from its Keys rows.
 - `CartIndoors` (0.36.0, off; counts only with `DismountIndoors` off): the cart comes indoors too, its load on it.
@@ -1033,6 +1033,12 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.38.0: **flying and jumping are on for everyone** (the user, 2026-10-25: "make flying not dev only"; docs/flying.md):
+  `Mounts.FlyingEnabled` is true unless the dev Flying tab switched it off (it needed the dev tools unlocked before, so
+  no player had it). New Behaviour keys `ClimbKey` (Left Shift) and `DescendKey` (Left Ctrl), `KeyboardShortcut`s held
+  in the air, the main key alone (a modifier can be the key); Saddle Up's Climb and Descend rows set them, and Saddle Up
+  needs 0.38.0. The dragon's card in the Mounts panel says "Flies". The per-frame flight probe and the jump probe's
+  files stay dev-only.
 - 0.36.0: **skin layering** ([skin-layering-plan.md](skin-layering-plan.md)): every skin of a mount but the donkey is
   built on that mount's `default` (pictures, settings, colours, tuning, sounds); `layer = over` on it draws it over the
   default. `MountSkinInfo.BuiltOn` (the default's id or `null`) and `MountSkinInfo.OverDefault`; a code skin's
@@ -1072,7 +1078,7 @@ History:
 - 0.36.0: `MountDef.Flies` (false) and `Jumps` (true), `MountInfo.Flies` / `Jumps` (`[Mount] flies`, `jumps`):
   whether a mount flies and jumps, ridden plain; the Behaviour keys `JumpKey` and `FlyKey` (Space both: one key, a
   second press in the air takes off; `KeyboardShortcut`s, modifiers kept); `Mounts.FlyingEnabled` (jumping and flying
-  switched on: dev only for now); `Mounts.Jump()`, `TakeOff()`, `Land()`, `Mounts.FlightState` and the event
+  switched on: dev only until 0.38.0); `Mounts.Jump()`, `TakeOff()`, `Land()`, `Mounts.FlightState` and the event
   `FlightChanged` (`MountFlight`: Ground, Jumping, TakingOff, Flying, Landing).
 - 0.36.0: the Behaviour key `FlyIndoors` (off): on, flying indoors is allowed, as a lift; off, no take-off indoors
   and a flight through a door lands. Saddle Up keeps it off.

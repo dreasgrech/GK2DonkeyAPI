@@ -925,8 +925,8 @@ namespace GK2DonkeyAPI
             string v2 = "tab\there, new\nline, back\\slash"; // a tab, a line break and a backslash in one value
             parent.SetData(Owner, "tricky", v2);
             parent.Tuning.Set(Owner, "CoatColorize", "00FF80");
-            cartDonkey.Tuning.Set(Owner, "Skin", Sk("dragon")); // a skin whose own [Tuning.Cart] sets a cart-style value (HitchGapPx): the skin id is kept, the merged value is not
-            if (Plugin.MountsOn) yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the dragon's cart-style values once the view is up
+            cartDonkey.Tuning.Set(Owner, "Skin", Sk("rat")); // a skin whose own [Tuning.Cart] sets a cart-style value (the rat's HitchGapPx 9; the dragon pulls no cart since 2026-10-25): the skin id is kept, the merged value is not
+            if (Plugin.MountsOn) yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the rat's cart-style values once the view is up
             yield return Frames(2);
             List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
             Check(kept.Count == (foal != null ? 4 : 3), $"the kept list has the test's {kept.Count} (parent, foal, donkey with cart, free cart)");
@@ -974,9 +974,9 @@ namespace GK2DonkeyAPI
             Mount.Record pr = records.Find(x => x.Key == "rt parent");
             Check(pr != null && pr.DataLines.Exists(x => x[1] == "tricky" && x[2] == v2), "a value with a tab, a line break and a backslash comes back exactly");
             Mount.Record cr = records.Find(x => x.Key == "rt cart");
-            Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == Sk("dragon")), $"the skin id is in the record (Skin = {Sk("dragon")})");
-            if (Plugin.MountsOn) Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the dragon's own hitch gap is on the wearer (cart style) but not in the record");
-            else Info("the mounts are off (Debug.MountsPreview): the dragon isn't registered, so its hitch gap on the wearer isn't checked (the id is kept all the same)");
+            Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == Sk("rat")), $"the skin id is in the record (Skin = {Sk("rat")})");
+            if (Plugin.MountsOn) Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the rat's own hitch gap is on the wearer (cart style) but not in the record");
+            else Info("the mounts are off (Debug.MountsPreview): the rat isn't registered, so its hitch gap on the wearer isn't checked (the id is kept all the same)");
         }
 
         // A donkey takes a free cart and leaves it again: one instance with the cart (the cart's data merged, its parts
@@ -1434,7 +1434,7 @@ namespace GK2DonkeyAPI
                     if (pickable) withSkins++;
                 }
                 Check(entries.Count == withSkins && entries[0].Id == MountCatalog.DonkeyId, $"the panel lists every mount with a skin, the donkey first ({entries.Count} of {withSkins} mounts)");
-                Check(dragonEntry != null && dragonEntry.Description.Length > 0 && dragonEntry.Lines.Exists(l => l.StartsWith("Pulls the cart")) && dragonEntry.Lines.Exists(l => l.StartsWith("Has babies")), $"the dragon's entry carries its description and what it does ({dragonEntry?.Lines.Count} lines)");
+                Check(dragonEntry != null && dragonEntry.Description.Length > 0 && dragonEntry.Lines.Exists(l => l.StartsWith("Can't pull the cart")) && dragonEntry.Lines.Exists(l => l.StartsWith("Has babies")), $"the dragon's entry carries its description and what it does: no cart, babies ({dragonEntry?.Lines.Count} lines)");
                 ConfigEntry<int> foals = Row<int>("Foals");
                 ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
                 Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null && Row<bool>("FoalsFollow") != null, "the four babies rows are bound");
@@ -1647,9 +1647,10 @@ namespace GK2DonkeyAPI
         }
 
         // The cart on every built-in mount (docs/mounts-parity-matrix.md 1.2, 6.2): the gap between the body's rear edge
-        // and the cart body, and the seat in the cart style, read back in art px. The rat's and the dragon's declared
-        // gaps must put the cart as far from their body as the donkey's cart is from the donkey's; the snail, worm and
-        // Gerry are read out, and their gaps declared from these numbers (M2b of the plan).
+        // and the cart body, and the seat in the cart style, read back in art px. The rat's declared gap must put the cart
+        // as far from its body as the donkey's cart is from the donkey's; the snail, worm and Gerry are read out, and
+        // their gaps declared from these numbers (M2b of the plan). The dragon pulls no cart (the user, 2026-10-25): a
+        // spawn with a cart wearing it is refused instead.
         private static IEnumerator CartReadout()
         {
             if (!Plugin.MountsOn)
@@ -1662,7 +1663,7 @@ namespace GK2DonkeyAPI
             var clearance = new Dictionary<string, float>(StringComparer.Ordinal);
             var seatsCart = new Dictionary<string, float>(StringComparer.Ordinal);
             var lines = new List<string>();
-            string[] skins = { "", "rat", "snail", "worm", "dragon", "gerry" };
+            string[] skins = { "", "rat", "snail", "worm", "gerry" };
             foreach (string id in skins)
             {
                 string name = id.Length == 0 ? "donkey" : id;
@@ -1721,11 +1722,12 @@ namespace GK2DonkeyAPI
             Check(lines.Count == skins.Length, $"{lines.Count} of {skins.Length} mounts read out with a cart (the lines above: docs/mounts-parity-matrix.md 1.2)");
             // The measure is the cart mesh's front edge (the shaft tips) past the body's rear edge, negative = the shafts
             // reach along the body, as they do on the donkey (-30 px). The rule (docs/seat-investigation.md 9): no mount's
-            // cart stands closer to its body than the donkey's; the declared gaps (rat 9, dragon 24, judged by eye) put
-            // theirs about 10 px further, the snail, worm and Gerry are narrower and stand further without a gap.
+            // cart stands closer to its body than the donkey's; the declared gap (the rat's 9, judged by eye; the dragon's 24
+            // until it stopped pulling the cart) puts it about 10 px further, the snail, worm and Gerry are narrower and
+            // stand further without a gap.
             if (clearance.TryGetValue("donkey", out float donkeyGap))
             {
-                foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
+                foreach (string id in new[] { "rat", "snail", "worm", "gerry" })
                     Check(clearance.TryGetValue(id, out float g) && g >= donkeyGap - 2f, $"{id}: the cart stands no closer to its body than the donkey's ({(clearance.TryGetValue(id, out float gg) ? gg.ToString("0.0") : "?")} vs {donkeyGap:0.0} px)");
             }
             // the cart-style seat: a declared row seats the rider the same as riding (the player's SeatAdjustPx, whose
@@ -1735,9 +1737,15 @@ namespace GK2DonkeyAPI
             {
                 foreach (string id in new[] { "rat", "worm" })
                     Check(seatsCart.TryGetValue(id, out float sp) && Math.Abs(sp - donkeySeat) < 0.8f, $"{id}: the cart-style seat is the donkey's ({(seatsCart.TryGetValue(id, out float s2) ? s2.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
-                Check(seatsCart.TryGetValue("dragon", out float sd) && Math.Abs(sd - (donkeySeat + DragonRaisePx)) < 0.8f, $"dragon: the cart-style seat is {DragonRaisePx:0} px above the donkey's, its raised body ({(seatsCart.TryGetValue("dragon", out float s5) ? s5.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
                 Check(seatsCart.TryGetValue("snail", out float ss) && Math.Abs(ss - (donkeySeat - 3f)) < 0.8f, $"snail: the cart-style seat is 3 px lower than the donkey's ({(seatsCart.TryGetValue("snail", out float s3) ? s3.ToString("0.0") : "?")} vs {donkeySeat:0.0} px)");
                 Check(seatsCart.TryGetValue("gerry", out float sg) && Math.Abs(sg - 25.5f) < 0.8f, $"gerry: the cart-style seat is the picture seat with the skin's -16 ({(seatsCart.TryGetValue("gerry", out float s4) ? s4.ToString("0.0") : "?")} px, 25.5 recorded)");
+            }
+            // the dragon pulls no cart (the user, 2026-10-25): a spawn with a cart wearing its skin is refused (the pack rule's door)
+            if (Looks.Find(Sk("dragon")) != null)
+            {
+                MountHandle dr = Mounts.Spawn(Owner, new MountSpawn { Position = Spot(home, 5f) ?? home, WithCart = true, Skin = Sk("dragon") });
+                Check(dr == null, "the dragon: a spawn with a cart wearing its skin is refused (it pulls no cart)");
+                dr?.Remove();
             }
         }
 
@@ -1888,38 +1896,39 @@ namespace GK2DonkeyAPI
         }
 
         // The settings picture after a mount switch: the user saw the cart take many frames to settle at the new
-        // mount's hitch gap (the video of 2026-10-20 16-24). Frame by frame after the switch, dragon to worm and back:
+        // mount's hitch gap (the video of 2026-10-20 16-24). Frame by frame after the switch, rat to worm and back (the
+        // dragon until it stopped pulling the cart, 2026-10-25):
         // the worn skin, the gap applied to the stage's cart parts, the picture's reframes (every change logged); the
         // gap must follow the worn skin within two frames.
         private static IEnumerator PreviewGap()
         {
             if (!Plugin.MountsOn)
             {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in dragon and worm");
+                Skip("the mounts are off (Debug.MountsPreview): needs the built-in rat and worm");
                 yield break;
             }
-            if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("dragon")) == null)
+            if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("rat")) == null)
             {
-                Warn("the built-in worm or dragon isn't registered: skipped");
+                Warn("the built-in worm or rat isn't registered: skipped");
                 yield break;
             }
             const string owner = Owner + ".previewgap";
             MountCompanion me = Mounts.Companion(owner);
-            me.Skin = Sk("dragon");
+            me.Skin = Sk("rat");
             Mount.Instance paper = me.Paper;
-            yield return Until(() => PreviewStage.Picture(paper, withCart: true) != null && paper.LooksRig.Wearing == Sk("dragon") && !paper.LooksRig.Building, 20f);
+            yield return Until(() => PreviewStage.Picture(paper, withCart: true) != null && paper.LooksRig.Wearing == Sk("rat") && !paper.LooksRig.Building, 20f);
             if (!waited)
             {
-                Warn($"no settings picture of the dragon within 20 s (stage failed: {PreviewStage.Failed}): skipped");
+                Warn($"no settings picture of the rat within 20 s (stage failed: {PreviewStage.Failed}): skipped");
                 yield break;
             }
             for (int i = 0; i < 6; i++) { PreviewStage.Picture(paper, withCart: true); yield return null; }
-            float dragonGap = PreviewStage.TestGapApplied;
-            Info($"the dragon's cart in the picture: hitch gap {dragonGap:0.###} world units (HitchGapPx 24)");
-            Check(dragonGap > 0.3f, $"the dragon's gap is on the picture's cart ({dragonGap:0.###})");
-            foreach (string to in new[] { "worm", "dragon" })
+            float ratGap = PreviewStage.TestGapApplied;
+            Info($"the rat's cart in the picture: hitch gap {ratGap:0.###} world units (HitchGapPx 9)");
+            Check(ratGap > 0.1f, $"the rat's gap is on the picture's cart ({ratGap:0.###})");
+            foreach (string to in new[] { "worm", "rat" })
             {
-                float want = to == "worm" ? 0f : dragonGap;
+                float want = to == "worm" ? 0f : ratGap;
                 me.Skin = Sk(to);
                 var log = new List<string>();
                 int wornAt = -1, settledAt = -1, lastReframe = -1, reframes0 = PreviewStage.TestReframes, rfPrev = 0;

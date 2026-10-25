@@ -113,7 +113,7 @@ namespace GK2DonkeyAPI
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
-                // jumping and flying: only while they are switched on (a dev-only experiment for now, Mounts.FlyingEnabled)
+                // jumping and flying: only while they are switched on (Mounts.FlyingEnabled: on unless the dev tab says otherwise)
                 if (Flight.Active && k.Flies) e.Lines.Add("Flies");
                 if (Flight.Active && !k.Jumps) e.Lines.Add("Doesn't jump");
                 // the mount's speed as a word against the donkey's (Catalog.SpeedWord), and what its cart carries (the user,

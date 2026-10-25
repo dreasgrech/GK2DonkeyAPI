@@ -1,8 +1,18 @@
-# Flying mounts (experiment)
+# Flying mounts
 
-Started 2026-10-22: the dragon lifts off, flies at a height, lands. The same height drives a jump. Dev-only: the
-tuning window's **Flying** tab, session values, nothing saved; on by default where the dev tools are unlocked
-(the keys did nothing with it off, the user 2026-10-22), never for players. A refused take-off or jump is logged.
+**2026-10-25: on for everyone (API 0.38.0).** The user: "make flying not dev only". `Flight.Active` no longer needs
+the dev tools; the Flying tab's switch is a dev session toggle (on), its numbers stay session-only, and the climb and
+descend keys are the Behaviour keys `ClimbKey` (Left Shift) and `DescendKey` (Left Ctrl) with Saddle Up's Keys rows
+(the tab's two key rows are gone). Dev-only still: the per-frame `[flight-probe]` lines (off) and the jump probe's
+files (`JumpProbe.On` needs the dev tools). The `[flight]` log lines a player gets are event lines (a take-off, a
+landing, a bump said once per thing every two seconds, a refused landing). **Still open for players, as below:** the
+"through the ground on the high rock table" question (studying, nothing built; the fall guard is what catches a fall
+there), the hand tests of step 2, and the sections marked "not seen in game".
+
+Started 2026-10-22 as an experiment: the dragon lifts off, flies at a height, lands. The same height drives a jump.
+The tuning window's **Flying** tab holds session values, nothing saved; until 2026-10-25 it was on only where the dev
+tools were unlocked (the keys did nothing with it off, the user 2026-10-22), never for players. A refused take-off or
+jump is logged.
 
 ## How the ride is drawn (what the lift builds on)
 

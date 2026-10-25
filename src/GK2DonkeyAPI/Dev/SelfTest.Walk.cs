@@ -48,6 +48,7 @@ namespace GK2DonkeyAPI
                     foreach (bool cart in new[] { false, true })
                     {
                         if (m.Mount != MountCatalog.DonkeyId && Catalog.Find(m.Mount) == null) { Info($"{m.Mount}: not loaded, skipped"); break; }
+                        if (cart && m.Mount != MountCatalog.DonkeyId && !Catalog.Find(m.Mount).Cart) { Info($"{m.Mount}: pulls no cart, the cart pass skipped"); continue; }
                         MountHandle h = null;
                         StrideProbe.Label = $"{m.Mount}{(cart ? "+cart" : "")}";
                         try
