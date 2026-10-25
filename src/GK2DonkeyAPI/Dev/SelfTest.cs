@@ -213,6 +213,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "the built-in dragon's sound files: the flight's in Saddle Up's embedded mounts\\dragon\\sounds\\ (the mount's, for every dragon skin), none the red dragon's own, decoded once through the cache file", Body = SoundsDragonFiles },
             new Scenario { Group = GroupSounds, Name = "the flying events: takeoff, the launch's flaps and the beats airborne, the fly loop, land, touchdown, landed, a jump's jump and jumpland; nothing of the flight on a jump", Body = SoundsFlying },
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off; Saddle Up's row drives the switch", Body = SoundsHerd },
+            new Scenario { Group = GroupGarbage, Name = "the garbage survey (measures only): on foot standing and walking, riding walking and still, the Mounts panel picking, the dev stride probe; the garbage by part in each", Body = GarbageSurvey, HidesPanel = true },
             new Scenario { Group = GroupWalk, Name = "the walk survey (measures only): every mount ridden and with the cart, steered right and left by the test, a standing one and a baby near; the stride probe's rows in BepInEx/GK2-strides", Body = WalkSurvey },
         };
 
@@ -568,6 +569,21 @@ namespace GK2DonkeyAPI
         // after it would run against a keeper who isn't where they think (moved false: the scenario skips).
         private static bool moved;
 
+        // A list holds the string (in place of LINQ's Contains: no LINQ in the mod, it allocates).
+        private static bool Has(IReadOnlyList<string> list, string s)
+        {
+            if (list == null) return false;
+            for (int i = 0; i < list.Count; i++) if (string.Equals(list[i], s, StringComparison.Ordinal)) return true;
+            return false;
+        }
+
+        // A method's patches hold a prefix of this Harmony id.
+        private static bool HasPrefixOf(HarmonyLib.Patches info, string owner)
+        {
+            foreach (HarmonyLib.Patch p in info.Prefixes) if (p.owner == owner) return true;
+            return false;
+        }
+
         private static IEnumerator MoveKeeper(Vector3 p, float facing)
         {
             PutKeeper(p, facing);
@@ -670,8 +686,10 @@ namespace GK2DonkeyAPI
             GameSceneData sd = MainGame.WorldData.GetGameSceneDataById(scene.Id);
             if (sd?.WorldZonesByProcessingPriority == null) return null;
             var xz = new Vector2(p.x, p.z);
-            foreach (var kv in System.Linq.Enumerable.Reverse(sd.WorldZonesByProcessingPriority))
+            var priorities = new List<int>(sd.WorldZonesByProcessingPriority.Keys);
+            for (int pi = priorities.Count - 1; pi >= 0; pi--)
             {
+                var kv = new KeyValuePair<int, List<WorldZoneData>>(priorities[pi], sd.WorldZonesByProcessingPriority[priorities[pi]]);
                 foreach (WorldZoneData z in kv.Value)
                 {
                     if (z.IsContainer && z.IsActive && z.wholeZoneRect.Contains(xz)) return z;
@@ -3094,7 +3112,7 @@ namespace GK2DonkeyAPI
             int n = Looks.RegisterFolder(tempRoot, owner);
             Check(n == 1, $"one pack found ({n})");
             MountInfo k = Mounts.Catalog.Find("selftest.test-beast");
-            Check(k != null && k.FromPack && !k.Cart && System.Linq.Enumerable.Contains(k.Skins, "selftest.test-beast/default"), "the pack declared the mount: listed, no cart, with its skin");
+            Check(k != null && k.FromPack && !k.Cart && Has(k.Skins, "selftest.test-beast/default"), "the pack declared the mount: listed, no cart, with its skin");
             Check(k != null && Math.Abs(k.FoalScale - 0.4f) < 0.001f, $"the pack's foal_scale is the mount's ({k?.FoalScale})");
             Check(k != null && !k.IsBuiltIn && k.Author == "the self-test" && k.Version == "0.1", $"a loose pack's mount is not built in and carries the file's author and version ({k?.Author} {k?.Version})");
             MountSkinInfo s = Mounts.Looks.Find("selftest.test-beast/default");

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using BepInEx;
@@ -224,7 +223,7 @@ namespace GK2DonkeyAPI
             var l = new List<string>();
             foreach (WorldZoneData z in sd?.worldZones ?? new List<WorldZoneData>())
             {
-                int c = z.wgoDataList.Count(g => g == d.UniqueId);
+                int c = CountOf(z.wgoDataList, d.UniqueId);
                 if (c > 0)
                 {
                     l.Add(z.id + (c > 1 ? " x" + c : ""));
@@ -239,7 +238,7 @@ namespace GK2DonkeyAPI
             int n = 0;
             foreach (WorldZoneData z in sd?.worldZones ?? new List<WorldZoneData>())
             {
-                n += z.wgoDataList.Count(g => g == d.UniqueId);
+                n += CountOf(z.wgoDataList, d.UniqueId);
             }
             return n;
         }
@@ -269,7 +268,7 @@ namespace GK2DonkeyAPI
                         {
                             continue;
                         }
-                        sb.AppendLine($"      build {b.id}: wgo={b.wgoId} mode={b.buildingMode} instantDestroy={b.deleteInstantly} startCraft='{b.startCraft}' tab='{b.tab}' needsUnlock={b.isNeedsUnlock} limitMax={b.limitMax} buildsIn=[{Join(b.buildsIn)}] needs=[{string.Join(", ", b.needItems.Select(x => x.id + " x" + x.count))}] out=[{string.Join(", ", b.outputItems.chanceOutputItems.Select(x => x.id + " x" + x.count + (x.chance != null && x.chance.HasExpression ? " @" + x.chance : "")))}]");
+                        sb.AppendLine($"      build {b.id}: wgo={b.wgoId} mode={b.buildingMode} instantDestroy={b.deleteInstantly} startCraft='{b.startCraft}' tab='{b.tab}' needsUnlock={b.isNeedsUnlock} limitMax={b.limitMax} buildsIn=[{Join(b.buildsIn)}] needs=[{string.Join(", ", b.needItems.ConvertAll(x => x.id + " x" + x.count))}] out=[{string.Join(", ", b.outputItems.chanceOutputItems.ConvertAll(x => x.id + " x" + x.count + (x.chance != null && x.chance.HasExpression ? " @" + x.chance : "")))}]");
                     }
                 }
                 sb.AppendLine($"  total {n}");
@@ -278,7 +277,7 @@ namespace GK2DonkeyAPI
                 GameSceneManager gsm = LazySingleton<GameSceneManager>.Instance;
                 foreach (GameSceneData sd in MainGame.WorldData.gameSceneDataList)
                 {
-                    sb.AppendLine($"  {sd.id}: {(gsm != null && gsm.DisabledUnloadOnTeleport(sd.id) ? "KEPT LOADED" : "unloaded")}; zones: {string.Join(", ", sd.worldZones.Select(z => z.id + (z.IsContainer ? "" : "(not a container)") + " p" + z.processingPriority))}");
+                    sb.AppendLine($"  {sd.id}: {(gsm != null && gsm.DisabledUnloadOnTeleport(sd.id) ? "KEPT LOADED" : "unloaded")}; zones: {string.Join(", ", sd.worldZones.ConvertAll(z => z.id + (z.IsContainer ? "" : "(not a container)") + " p" + z.processingPriority))}");
                 }
                 string path = System.IO.Path.Combine(Paths.BepInExRootPath, "GK2-chest-facts.txt");
                 File.WriteAllText(path, sb.ToString());
@@ -496,5 +495,12 @@ namespace GK2DonkeyAPI
         }
 
         private static string Join(IEnumerable<string> l) => l == null ? "" : string.Join(", ", l);
+
+        private static int CountOf(List<SGuid> list, SGuid id)
+        {
+            int n = 0;
+            foreach (SGuid g in list) if (g == id) n++;
+            return n;
+        }
     }
 }

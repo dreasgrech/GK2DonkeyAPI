@@ -277,6 +277,8 @@ namespace GK2DonkeyAPI
                 done?.Invoke(null, e.Message);
                 yield break;
             }
+            // Kept compressed in memory, decoded as it plays: the whole file was decoded in GetContent, on the main thread.
+            if (req.downloadHandler is DownloadHandlerAudioClip dh) dh.compressed = true;
             yield return req.SendWebRequest();
             AudioClip clip = null;
             string err = null;
@@ -285,7 +287,7 @@ namespace GK2DonkeyAPI
                 if (req.result != UnityWebRequest.Result.Success) err = req.error ?? "did not load";
                 else
                 {
-                    clip = DownloadHandlerAudioClip.GetContent(req);
+                    using (Perf.Measure(Perf.S.SndDecode)) clip = DownloadHandlerAudioClip.GetContent(req);
                     if (clip == null) err = "no audio in the file";
                     else clip.name = Path.GetFileName(path);
                 }
@@ -307,11 +309,17 @@ namespace GK2DonkeyAPI
         {
             string dir = Path.Combine(Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", SafeName(owner), SafeName(skin));
             if (!string.IsNullOrEmpty(sub)) dir = Path.Combine(dir, SafeName(sub)); // the mount's files apart from the skin's own
-            Directory.CreateDirectory(dir);
             string path = Path.Combine(dir, SafeName(file));
+            // checked on disk once a session per file and length (a reloaded pack's changed file has another length)
+            string seen = path + "|" + bytes.Length;
+            if (cacheChecked.Contains(seen)) return path;
+            Directory.CreateDirectory(dir);
             if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length) File.WriteAllBytes(path, bytes);
+            cacheChecked.Add(seen);
             return path;
         }
+
+        private static readonly HashSet<string> cacheChecked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static string SafeName(string s)
         {
@@ -379,8 +387,27 @@ namespace GK2DonkeyAPI
             if (entries.ContainsKey(id) || loading.ContainsKey(id) || failed.ContainsKey(id)) return id;
             var job = new Job { Id = id, Owner = src.BankOwner, Skin = src.Label, Src = src, Key = key, Folder = folder ?? Looks.SoundsKey, Speech = speech, Loop = loop, Left = files.Length };
             loading[id] = job;
-            foreach (string f in files) StartOne(job, f);
+            foreach (string f in files) toStart.Enqueue((job, f));
             return id;
+        }
+
+        // The files waiting to start, one a frame (Advance, from the API's tick): a mount's thirteen all started in one
+        // frame took 15.6 ms of the 60 ms frame the world's mount turned into the dragon (docs/mount-switching-performance.md 2.2).
+        private static readonly Queue<(Job Job, string File)> toStart = new Queue<(Job, string)>();
+        private static int startedFrame = -1;
+
+        internal static void Advance()
+        {
+            if (toStart.Count == 0 || Time.frameCount == startedFrame) return;
+            startedFrame = Time.frameCount;
+            (Job job, string file) = toStart.Dequeue();
+            if (job.Cancelled)
+            {
+                Done(job, file, null, null);
+                return;
+            }
+            Perf.TraceNote("a sound file started: " + file);
+            using (Perf.Measure(Perf.S.SndStart)) StartOne(job, file);
         }
 
         // A code skin's or mount's own clips as one game sound (the API).
@@ -434,6 +461,7 @@ namespace GK2DonkeyAPI
         {
             if (clip != null && !job.Cancelled) job.Clips.Add(clip);
             else if (clip != null) UnityEngine.Object.Destroy(clip);
+            else if (job.Cancelled) { } // withdrawn while waiting: nothing to say
             else Plugin.Log.LogWarning($"Sounds: {job.Skin}: {SoundBlock.FolderText(job.Folder)}{file} did not load ({err}); left out");
             if (--job.Left > 0) return;
             loading.Remove(job.Id);

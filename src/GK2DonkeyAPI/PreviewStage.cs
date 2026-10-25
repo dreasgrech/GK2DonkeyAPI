@@ -49,6 +49,10 @@ namespace GK2DonkeyAPI
             internal RenderTexture Rt;
             internal bool Reframe = true;
             internal float NextEdgeCheck, LastAsked = -10f;
+            // The edge check (a whole picture read back, 2 to 3.6 ms) runs once a second only for EdgeCheckSeconds after
+            // a framing or a tuning change, not as long as the picture shows.
+            internal float EdgeChecksUntil;
+            internal int EdgeStamp = -1;
             internal int LastRenderFrame = -1;
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
             // The framing measured over the walk a step a frame (Tighten): the camera renders into Scratch meanwhile and Rt
@@ -81,6 +85,95 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, Framing> framings = new Dictionary<string, Framing>(StringComparer.Ordinal);
 
         private static string FramingKey(View v) => (framedLook ?? "") + "|" + v.Name;
+
+        // The framings measured, kept on disk across sessions (docs/mount-switching-performance.md 2.1): a look is measured
+        // once ever, not once a session. Kept under what decides a framing: the look's pictures (their hash), its canvas
+        // and pivot, the hitch gap, the stage's pixel density, the game's version, and this file's version; any of them
+        // changed is another key, measured anew. A look with no hash (a code skin's own sprites) stays per session.
+        private const int FramingFileVersion = 1;
+        private static Dictionary<string, Framing> onDisk;
+        private static string FramingFile => System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "framings.txt");
+
+        private static string DiskKey(View v)
+        {
+            ulong hash = Looks.ContentHash(framedLook);
+            if (hash == 0UL) return null;
+            Looks.SkinDef d = Looks.Find(framedLook);
+            var ci = System.Globalization.CultureInfo.InvariantCulture;
+            float gap = dressedAs != null ? Looks.HitchGapWorldFor(dressedAs) : 0f;
+            return string.Join("|", FramingFileVersion.ToString(ci), Application.version, framedLook, v.Name, hash.ToString("x16"),
+                d != null ? $"{d.CanvasW}x{d.CanvasH}@{d.PivotX.ToString("0.###", ci)},{d.PivotY.ToString("0.###", ci)}" : "-",
+                gap.ToString("0.####", ci), (ppu * Detail).ToString("0.###", ci));
+        }
+
+        private static bool FromDisk(View v, out Framing f)
+        {
+            f = default;
+            string key = DiskKey(v);
+            if (key == null) return false;
+            if (onDisk == null) LoadFramings();
+            return onDisk.TryGetValue(key, out f);
+        }
+
+        private static void ToDisk(View v, Framing f)
+        {
+            string key = DiskKey(v);
+            if (key == null) return;
+            if (onDisk == null) LoadFramings();
+            onDisk[key] = f;
+            try
+            {
+                var ci = System.Globalization.CultureInfo.InvariantCulture;
+                var sb = new System.Text.StringBuilder();
+                sb.AppendLine("# GK2 Donkey API: the Mounts panel's picture framings, measured once per look (safe to delete)");
+                foreach (KeyValuePair<string, Framing> kv in onDisk)
+                {
+                    Framing x = kv.Value;
+                    float[] n = { x.CamFromStage.x, x.CamFromStage.y, x.CamFromStage.z, x.LampFromStage.x, x.LampFromStage.y, x.LampFromStage.z, x.Ortho, x.Aspect, x.Near, x.Far, x.LampRange };
+                    sb.Append(kv.Key).Append('\t');
+                    foreach (float one in n) sb.Append(one.ToString("R", ci)).Append(' ');
+                    sb.Append(x.W.ToString(ci)).Append(' ').Append(x.H.ToString(ci)).AppendLine();
+                }
+                System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(FramingFile));
+                System.IO.File.WriteAllText(FramingFile, sb.ToString());
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("[preview] the framings could not be written (" + e.Message + "); measured again next session.");
+            }
+        }
+
+        private static void LoadFramings()
+        {
+            onDisk = new Dictionary<string, Framing>(StringComparer.Ordinal);
+            try
+            {
+                if (!System.IO.File.Exists(FramingFile)) return;
+                var ci = System.Globalization.CultureInfo.InvariantCulture;
+                foreach (string line in System.IO.File.ReadAllLines(FramingFile))
+                {
+                    if (line.Length == 0 || line[0] == '#') continue;
+                    int tab = line.IndexOf('\t');
+                    if (tab <= 0) continue;
+                    string[] p = line.Substring(tab + 1).Trim().Split(' ');
+                    if (p.Length != 13) continue;
+                    var f = new float[11];
+                    bool ok = true;
+                    for (int i = 0; i < 11 && ok; i++) ok = float.TryParse(p[i], System.Globalization.NumberStyles.Float, ci, out f[i]);
+                    if (!ok || !int.TryParse(p[11], System.Globalization.NumberStyles.Integer, ci, out int w) || !int.TryParse(p[12], System.Globalization.NumberStyles.Integer, ci, out int h) || w < 16 || h < 16) continue;
+                    onDisk[line.Substring(0, tab)] = new Framing
+                    {
+                        CamFromStage = new Vector3(f[0], f[1], f[2]), LampFromStage = new Vector3(f[3], f[4], f[5]),
+                        Ortho = f[6], Aspect = f[7], Near = f[8], Far = f[9], LampRange = f[10], W = w, H = h,
+                    };
+                }
+                Plugin.Log.LogInfo($"[preview] {onDisk.Count} framing(s) read from {FramingFile}.");
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogInfo("[preview] the framings could not be read (" + e.Message + "); measured anew.");
+            }
+        }
         private static readonly View[] views = { cartView, donkeyView };
 
         private static GameObject stage, copy;
@@ -426,9 +519,10 @@ namespace GK2DonkeyAPI
                 {
                     v.Reframe = false;
                     TestReframes++;
-                    if (!v.EdgeReframe && framings.TryGetValue(FramingKey(v), out Framing known))
+                    if (!v.EdgeReframe && (framings.TryGetValue(FramingKey(v), out Framing known) || FromDisk(v, out known)))
                     {
-                        Use(v, known); // this look framed before: at once
+                        framings[FramingKey(v)] = known;
+                        Use(v, known); // this look framed before (this session, or on disk): at once
                         v.TightenStep = -1;
                     }
                     else
@@ -438,6 +532,7 @@ namespace GK2DonkeyAPI
                         StartTighten(v);
                     }
                     v.EdgeReframe = false;
+                    v.EdgeChecksUntil = Time.unscaledTime + EdgeCheckSeconds; // checked a while after each framing
                 }
                 if (v.TightenStep >= 0)
                 {
@@ -445,7 +540,12 @@ namespace GK2DonkeyAPI
                     if (v.TightenStep >= 0) return; // still measuring: the shown picture keeps its last photo
                 }
                 using (Perf.Measure(Perf.S.PrevRender)) v.Cam.Render();
-                if (Time.unscaledTime >= v.NextEdgeCheck)
+                if (gapStamp != v.EdgeStamp)
+                {
+                    v.EdgeStamp = gapStamp; // the paper's tuning re-merged (a setting changed): checked again a while
+                    v.EdgeChecksUntil = Time.unscaledTime + EdgeCheckSeconds;
+                }
+                if (Time.unscaledTime >= v.NextEdgeCheck && Time.unscaledTime < v.EdgeChecksUntil)
                 {
                     v.NextEdgeCheck = Time.unscaledTime + 1f;
                     if (TouchesEdge(v))
@@ -865,6 +965,7 @@ namespace GK2DonkeyAPI
         // the edge a moment later, the edge check reframed it, and the picture changed size two or three times in the
         // first second after a mount change (the video of 2026-10-18 21-07).
         private const float CycleSeconds = 2f, CycleStep = 0.1f;
+        private const float EdgeCheckSeconds = 5f;
 
         private static void StartTighten(View v)
         {
@@ -933,12 +1034,14 @@ namespace GK2DonkeyAPI
             v.Cam.targetTexture = v.Rt;
             v.Cam.orthographicSize = h * unitsPerPixel / 2f;
             v.Cam.aspect = (float)w / h;
-            framings[FramingKey(v)] = new Framing
+            var measured = new Framing
             {
                 CamFromStage = ct.position - stage.transform.position, Ortho = v.Cam.orthographicSize, Aspect = v.Cam.aspect,
                 Near = v.Cam.nearClipPlane, Far = v.Cam.farClipPlane, W = w, H = h,
                 LampFromStage = lamp.transform.position - stage.transform.position, LampRange = lamp.range,
             };
+            framings[FramingKey(v)] = measured;
+            ToDisk(v, measured);
             v.Cam.Render();
             Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {w} x {h} pixels (from {w0} x {h0}); remembered for this look.");
         }

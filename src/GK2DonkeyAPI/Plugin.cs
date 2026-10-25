@@ -806,8 +806,13 @@ namespace GK2DonkeyAPI
             }
             try
             {
-                SettingsRows.Tick(); // a key being set in the game's Settings window (before the keys act)
-                KeyActions.Poll(); // the mods' keys (MountSettingsPage.Key with pressed:), before this frame's update
+                Perf.BeginFrame(); // this frame's books opened here, so the keys' work is counted in it (Mount.Tick's call is then a no-op)
+                using (Perf.MeasureAlloc())
+                using (Perf.Measure(Perf.S.Keys))
+                {
+                    SettingsRows.Tick(); // a key being set in the game's Settings window (before the keys act)
+                    KeyActions.Poll(); // the mods' keys (MountSettingsPage.Key with pressed:), before this frame's update
+                }
             }
             catch (Exception e)
             {

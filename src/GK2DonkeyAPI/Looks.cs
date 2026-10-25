@@ -1789,6 +1789,7 @@ namespace GK2DonkeyAPI
                 var cell = new RectInt(1 + (i % cols) * (cellW + 1), 1 + (i / cols) * (cellH + 1), cellW, cellH);
                 Sheet.SetPixels32(cell.x, cell.y, cellW, cellH, px.P);
                 cells.Add((key, cell));
+                HashPicture(key, px.P);
                 foreach (Color32 c in px.P)
                 {
                     if (c.a != 0) colourSet.Add((c.r << 16) | (c.g << 8) | c.b);
@@ -1895,6 +1896,25 @@ namespace GK2DonkeyAPI
 
             // Whether a [Colors] line is the skin's own (not one of its default's it took).
             private bool OwnLine(string region, string hex) => Def.Parent == null || (Def.OwnColorRegions != null && Def.OwnColorRegions.TryGetValue(region, out HashSet<string> set) && set.Contains(hex));
+
+            internal long SheetBytes => Sheet != null ? (long)Sheet.width * Sheet.height * 4 : 0;
+
+            // Every picture put, in order, hashed (FNV-1a over its key and pixels): what the picture's framing on disk is
+            // kept under (PreviewStage), so a changed look is measured again. 0: nothing put.
+            internal ulong PixelHash;
+
+            private void HashPicture(string key, Color32[] p)
+            {
+                ulong h = PixelHash == 0 ? 14695981039346656037UL : PixelHash;
+                foreach (char c in key) { h ^= c; h *= 1099511628211UL; }
+                for (int i = 0; i < p.Length; i++)
+                {
+                    Color32 c = p[i];
+                    h ^= (uint)(c.r | c.g << 8 | c.b << 16 | c.a << 24);
+                    h *= 1099511628211UL;
+                }
+                PixelHash = h;
+            }
 
             internal string SizeNote => Sheet != null ? $"one sheet {Sheet.width}x{Sheet.height}, {Sheet.width * Sheet.height * 4 / 1024} KB" : "the mod's own sprites";
 
@@ -2322,14 +2342,32 @@ namespace GK2DonkeyAPI
         // built again (the dragon's 237 pictures took 40 frames each time, and the panel's picture stood still meanwhile;
         // the user, 2026-10-25). Only a look already built is held; closing the panel lets them go (unloaded when nothing
         // else wears them), so the world's rule stands: a sheet nobody wears is freed.
+        // At most PanelHoldBytes of sheets (other mods' mounts make the list unbounded): the least recently shown goes
+        // first, never the one shown now.
         private static readonly List<Loaded> panelHolds = new List<Loaded>();
+        private const long PanelHoldBytes = 64L * 1024 * 1024;
 
         internal static void HoldForPanel(string id)
         {
-            if (string.IsNullOrEmpty(id) || !loaded.TryGetValue(id, out Loaded l) || !l.Ready || panelHolds.Contains(l)) return;
-            l.Refs++;
+            if (string.IsNullOrEmpty(id) || !loaded.TryGetValue(id, out Loaded l) || !l.Ready) return;
+            int at = panelHolds.IndexOf(l);
+            if (at == panelHolds.Count - 1 && at >= 0) return; // the most recent already
+            if (at >= 0) panelHolds.RemoveAt(at);
+            else l.Refs++;
             panelHolds.Add(l);
+            long bytes = 0;
+            foreach (Loaded h in panelHolds) bytes += h.SheetBytes;
+            while (bytes > PanelHoldBytes && panelHolds.Count > 1)
+            {
+                Loaded oldest = panelHolds[0];
+                panelHolds.RemoveAt(0);
+                bytes -= oldest.SheetBytes;
+                Release(oldest);
+            }
         }
+
+        // A look's pictures as built, hashed (Loaded.PixelHash); 0 when it has none of its own (a code skin's sprites).
+        internal static ulong ContentHash(string id) => !string.IsNullOrEmpty(id) && loaded.TryGetValue(id, out Loaded l) && l.Ready ? l.PixelHash : 0UL;
 
         internal static void ReleasePanelHolds()
         {

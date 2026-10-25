@@ -242,11 +242,15 @@ namespace GK2DonkeyAPI
             }
             try
             {
-                AudioConfig cfg = LazySingletonSO<AudioConfig>.Instance;
                 int clip = SplitClip(ref id);
-                SoundBank.Entry own = SoundBank.Find(id);
-                if (own != null) SoundBank.Ensure(own);
-                Sound sound = cfg?.Get(id);
+                Sound sound;
+                using (Perf.Measure(Perf.S.SndLookup))
+                {
+                    AudioConfig cfg = LazySingletonSO<AudioConfig>.Instance;
+                    SoundBank.Entry own = SoundBank.Find(id);
+                    if (own != null) SoundBank.Ensure(own);
+                    sound = cfg?.Get(id);
+                }
                 if (sound == null || clip > sound.samples.Count)
                 {
                     if (warnedIds.Add(id + "#" + clip))
@@ -255,7 +259,8 @@ namespace GK2DonkeyAPI
                     }
                     return null;
                 }
-                SoundHandler h = clip > 0 ? PlayClip(sound, clip, id, at) : LazyAudio.PlayAtGameObject(id, at, SpatialType.sound3D, checkDelay: false);
+                SoundHandler h;
+                using (Perf.Measure(Perf.S.SndPlay)) h = clip > 0 ? PlayClip(sound, clip, id, at) : LazyAudio.PlayAtGameObject(id, at, SpatialType.sound3D, checkDelay: false);
                 if (h == null)
                 {
                     return null;
@@ -513,6 +518,17 @@ namespace GK2DonkeyAPI
                 if (donkey != null && donkey) anchor.position = donkey.transform.position - Vector3.up * Mathf.Max(0f, owner.TestLiftDrawn);
             }
 
+            // The files of the skin worn now started loading (as Tick does on a change), for an instance with no view: the
+            // Mounts panel's paper donkey, so a mount browsed there has its sounds by the time the world's mount turns
+            // into it (all thirteen of the dragon's started in that frame, 15.6 ms; docs/mount-switching-performance.md 2.2).
+            internal void Preload()
+            {
+                Looks.SkinDef wears = owner.LooksRig?.DefNow;
+                if (ReferenceEquals(wears, preloadedFor)) return;
+                preloadedFor = wears;
+                foreach (SoundEvents.Def pd in SoundEvents.All) Resolve(pd.Id);
+            }
+
             // A frame: the ridden instance's from Mount.Tick, a standing one's from StandTick (the Active tier only).
             internal void Tick(bool walking)
             {
@@ -679,7 +695,7 @@ namespace GK2DonkeyAPI
                 bool inAir = Flight.InAirFor(owner);
                 if (inAir && clip.StartsWith("walk", StringComparison.Ordinal)) TestAirFrames++;
                 bool walkClip = !inAir && clip.StartsWith("walk", StringComparison.Ordinal);
-                if (StrideProbe.On && clip.StartsWith("walk", StringComparison.Ordinal)) StrideProbe.Tick(owner, a, clip, t, inAir); // dev: the walk measured per cycle
+                if (StrideProbe.On && clip.StartsWith("walk", StringComparison.Ordinal)) using (Perf.Measure(Perf.S.DevProbe)) StrideProbe.Tick(owner, a, clip, t, inAir); // dev: the walk measured per cycle
                 if (walkClip)
                 {
                     SoundSpec step = Resolve("step");
@@ -710,7 +726,7 @@ namespace GK2DonkeyAPI
                         if (!IsBaby || (hk & 1) == 0)
                         {
                             Emit("step"); // a baby: every other footfall (its legs cycle 1.7x faster, and several follow at once)
-                            if (StrideProbe.On) StrideProbe.Step(owner, t, hk);
+                            if (StrideProbe.On) using (Perf.Measure(Perf.S.DevProbe)) StrideProbe.Step(owner, t, hk);
                         }
                     }
                     if (Math.Abs(wk - lastWheelK) > 1)
@@ -793,6 +809,7 @@ namespace GK2DonkeyAPI
                 // self-tests call Resolve directly; a standing snail read the global keys, 2026-10-24)
                 SoundSpec spec;
                 using (Mount.Bind(owner))
+                using (Perf.Measure(Perf.S.SndResolve))
                 {
                     spec = ResolveNow(d, eventId, variant);
                 }
@@ -930,6 +947,7 @@ namespace GK2DonkeyAPI
                 try
                 {
                     using (Mount.Bind(owner))
+                    using (Perf.Measure(Perf.S.SndEmit))
                     {
                         return EmitInner(eventId, variant, volumeScale, pitchScale);
                     }
@@ -967,6 +985,7 @@ namespace GK2DonkeyAPI
                 }
                 string id = s.BankId ?? s.GameId;
                 if (id == null && s.BySurface)
+                using (Perf.Measure(Perf.S.SndSurface))
                 {
                     SurfaceType surface = SurfaceType.Dirt;
                     if (variant != null && Enum.TryParse(variant, true, out SurfaceType asked)) surface = asked;

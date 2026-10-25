@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using BepInEx;
 using BepInEx.Configuration;
 
@@ -880,6 +879,13 @@ namespace GK2DonkeyAPI.Api
 
         // The picked mount written to the cfg file: now (the panel closing, the game quitting), or once the picking has
         // paused (due). Its own frame, after the picking: a frame with nothing else of note.
+        // The panel closed: written a moment later, in a frame of its own (in the closing frame, with the panel's own
+        // teardown, it made a 21 to 24 ms frame; the trace of 2026-10-25 15:00).
+        internal void SavePickedSoon()
+        {
+            if (pickedUnsaved) saveAfter = UnityEngine.Time.unscaledTime + 0.5f;
+        }
+
         internal void SavePicked(bool now)
         {
             if (!pickedUnsaved || (!now && UnityEngine.Time.unscaledTime < saveAfter)) return;
@@ -1047,7 +1053,9 @@ namespace GK2DonkeyAPI.Api
 
         internal static bool IsClearKey(KeyboardShortcut k)
         {
-            return k.MainKey == UnityEngine.KeyCode.Backspace && !k.Modifiers.Any();
+            if (k.MainKey != UnityEngine.KeyCode.Backspace) return false;
+            foreach (UnityEngine.KeyCode m in k.Modifiers) return false; // any modifier: not the clearing key
+            return true;
         }
 
         private void ClearIfBackspace(ConfigEntry<KeyboardShortcut> e)

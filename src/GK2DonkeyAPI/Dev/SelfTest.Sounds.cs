@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
@@ -427,7 +426,7 @@ namespace GK2DonkeyAPI
             try
             {
                 IReadOnlyList<MountSoundEvent> cat = Mounts.Sounds.Catalogue;
-                Check(cat.Count == SoundEvents.All.Length && Mounts.Sounds.Events.Contains("voice") && cat[0].Id == "step" && cat[0].Variants.Count == 4 && cat[0].Numbers.Contains("per_cycle"),
+                Check(cat.Count == SoundEvents.All.Length && Has(Mounts.Sounds.Events, "voice") && cat[0].Id == "step" && cat[0].Variants.Count == 4 && Has(cat[0].Numbers, "per_cycle"),
                     $"the catalogue: {cat.Count} events, step's four variants and its numbers");
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null) { Fail("could not spawn"); yield break; }
@@ -536,7 +535,11 @@ namespace GK2DonkeyAPI
                 Sounds.Rig rig = h.I.SoundsRig;
                 rig.Invalidate();
                 SoundSpec st = rig.Resolve("step");
-                Check(st != null && st.Layer == "skin" && st.BankId != null && SoundBank.StateOf(st.BankId) == SoundBank.State.Ready, $"step_1.wav by convention, parsed in place: ready at once ({st?.Describe()})");
+                // the pack's files start one a frame (SoundBank.Advance): the .wav is parsed in place when its turn comes,
+                // a frame or two later, not in the frame it was asked for
+                string sid = st?.BankId;
+                yield return Until(() => SoundBank.StateOf(sid) == SoundBank.State.Ready, 1f);
+                Check(st != null && st.Layer == "skin" && sid != null && waited, $"step_1.wav by convention, parsed in place: ready within a second, its turn in the queue ({st?.Describe()}; {SoundBank.StateOf(sid)})");
                 SoundBank.Entry se = SoundBank.Find(st?.BankId);
                 Check(se != null && se.Clips.Length == 1 && Mathf.Abs(se.Clips[0].length - 0.25f) < 0.03f, $"... a 0.25 s clip ({(se != null && se.Clips.Length > 0 ? se.Clips[0].length.ToString("0.00") : "-")})");
                 SoundSpec v = rig.Resolve("voice");

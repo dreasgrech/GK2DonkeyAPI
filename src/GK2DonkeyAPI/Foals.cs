@@ -78,7 +78,10 @@ namespace GK2DonkeyAPI
                 internal bool Moving;     // ridden (the keeper: going through a door), so not standing for a catch-up
                 internal float FacingX;
                 internal bool HasCart;
-                internal string Name;     // for the log and the panel
+                internal Instance Of;     // the parent it leads to (null: the keeper)
+                // For the log and the panel, made only when read: built in LeadNow it was about 1 KB of garbage a following
+                // foal a frame, 5 calls a frame each, and most of the mod's steady garbage (the garbage survey, 2026-10-25).
+                internal string Name => Of == null ? "the keeper" : "its parent " + Of.FullId;
             }
 
             private Lead LeadNow()
@@ -93,7 +96,7 @@ namespace GK2DonkeyAPI
                         return new Lead
                         {
                             Body = k, GroundY = k.y, SceneId = pd.currentGameSceneId, Here = true, Moving = !pc.IsControlsEnabled,
-                            FacingX = pd.Direction.x < -0.05f ? -1f : 1f, HasCart = false, Name = "the keeper",
+                            FacingX = pd.Direction.x < -0.05f ? -1f : 1f, HasCart = false, Of = null,
                         };
                     }
                 }
@@ -101,7 +104,7 @@ namespace GK2DonkeyAPI
                 return new Lead
                 {
                     Body = p.BodyPoint(), GroundY = p.Position.y, SceneId = p.SceneId, Here = p.HasView, Moving = p.IsRidden,
-                    FacingX = p.riderFacingX, HasCart = p.HasCart, Name = "its parent " + p.FullId,
+                    FacingX = p.riderFacingX, HasCart = p.HasCart, Of = p,
                 };
             }
 

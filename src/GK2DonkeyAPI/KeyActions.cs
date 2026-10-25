@@ -21,7 +21,10 @@ namespace GK2DonkeyAPI
             internal string Owner;
             internal ConfigEntry<KeyboardShortcut> Key;
             internal Action Pressed;
-            internal string Seen;        // the binding as last polled (KeyboardShortcut.Serialize)
+            // The binding changed (its SettingChanged: the Mods menu's key capture, the Settings window's, a cfg reload).
+            // Was a KeyboardShortcut.Serialize() of every key every frame, compared as text: about half the mod's steady
+            // garbage once the foals' names were gone (0.22 to 0.44 KB a frame, the garbage survey 2026-10-25 12:52).
+            internal volatile bool Changed;
             internal bool WaitRelease;   // the binding just changed: the key that set it is still down, not a press of it
             internal bool OverPanel;     // the Mounts panel's own key: it still works while the panel is open (it closes it)
         }
@@ -35,7 +38,9 @@ namespace GK2DonkeyAPI
         internal static void Add(string owner, ConfigEntry<KeyboardShortcut> key, Action pressed, bool overPanel = false)
         {
             Track(owner);
-            entries.Add(new Entry { Owner = owner, Key = key, Pressed = pressed, Seen = key.Value.Serialize(), OverPanel = overPanel });
+            var e = new Entry { Owner = owner, Key = key, Pressed = pressed, OverPanel = overPanel };
+            key.SettingChanged += (s, a) => e.Changed = true;
+            entries.Add(e);
         }
 
         // For the self-test: whether a mod's key still works while the Mounts panel is open (null: not a polled key).
@@ -77,10 +82,9 @@ namespace GK2DonkeyAPI
                 // The binding changed since the last poll (the Mods menu's key capture writes it on the key-down, the
                 // Settings window's too, or a cfg reload): the press that set it is not a press of it. Nothing fires until
                 // the new key has been let go (the user, 2026-10-21: binding the Mounts panel key opened the panel at once).
-                string now = e.Key.Value.Serialize();
-                if (!string.Equals(now, e.Seen, StringComparison.Ordinal))
+                if (e.Changed)
                 {
-                    e.Seen = now;
+                    e.Changed = false;
                     e.WaitRelease = e.Key.Value.MainKey != KeyCode.None;
                 }
                 if (e.WaitRelease)
@@ -113,13 +117,66 @@ namespace GK2DonkeyAPI
             {
                 return false;
             }
-            foreach (KeyCode m in k.Modifiers)
+            return ModifiersHeld(k);
+        }
+
+        // A shortcut's keys without garbage: its own array (BepInEx's KeyboardShortcut._allKeys, the main key first, its
+        // modifiers after), read in place. KeyboardShortcut.Modifiers is a LINQ Skip(1) over it, a new iterator per read,
+        // and the flight's key checks compared them with SequenceEqual three times a ridden frame. Null when the field
+        // isn't there (another BepInEx): the callers fall back to the public members.
+        private static readonly HarmonyLib.AccessTools.StructFieldRef<KeyboardShortcut, KeyCode[]> allKeys = AllKeysRef();
+
+        private static HarmonyLib.AccessTools.StructFieldRef<KeyboardShortcut, KeyCode[]> AllKeysRef()
+        {
+            try { return HarmonyLib.AccessTools.StructFieldRefAccess<KeyboardShortcut, KeyCode[]>("_allKeys"); }
+            catch { return null; }
+        }
+
+        private static KeyCode[] KeysOf(ref KeyboardShortcut k)
+        {
+            if (allKeys == null) return null;
+            try { return allKeys(ref k); }
+            catch { return null; }
+        }
+
+        // The modifiers of a shortcut all held now.
+        internal static bool ModifiersHeld(KeyboardShortcut k)
+        {
+            KeyCode[] keys = KeysOf(ref k);
+            if (keys == null)
             {
-                if (!UnityInput.Current.GetKey(m))
+                foreach (KeyCode m in k.Modifiers) if (!UnityInput.Current.GetKey(m)) return false;
+                return true;
+            }
+            for (int i = 1; i < keys.Length; i++) if (!UnityInput.Current.GetKey(keys[i])) return false;
+            return true;
+        }
+
+        // The fallback when the array can't be read: the public Modifiers walked side by side.
+        private static bool SameModifiers(KeyboardShortcut a, KeyboardShortcut b)
+        {
+            using (IEnumerator<KeyCode> x = a.Modifiers.GetEnumerator())
+            using (IEnumerator<KeyCode> y = b.Modifiers.GetEnumerator())
+            {
+                while (true)
                 {
-                    return false;
+                    bool mx = x.MoveNext(), my = y.MoveNext();
+                    if (mx != my) return false;
+                    if (!mx) return true;
+                    if (x.Current != y.Current) return false;
                 }
             }
+        }
+
+        // The same combination (its main key and its modifiers, in order).
+        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b)
+        {
+            if (a.MainKey != b.MainKey) return false;
+            KeyCode[] ka = KeysOf(ref a), kb = KeysOf(ref b);
+            if (ka == null || kb == null) return SameModifiers(a, b);
+            int na = ka.Length, nb = kb.Length;
+            if (na != nb) return na <= 1 && nb <= 1; // both without modifiers (an empty shortcut's array may be empty or hold None)
+            for (int i = 1; i < na; i++) if (ka[i] != kb[i]) return false;
             return true;
         }
 

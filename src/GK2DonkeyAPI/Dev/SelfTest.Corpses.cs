@@ -172,11 +172,11 @@ namespace GK2DonkeyAPI
                 Corpses.Tick();
                 Check(Corpses.Applied && Mounts.CorpsesActive, "switched on: the patches are in" + (Corpses.ApplyError != null ? " (" + Corpses.ApplyError + ")" : ""));
                 var info = HarmonyLib.Harmony.GetPatchInfo(pallet);
-                Check(info != null && System.Linq.Enumerable.Any(info.Prefixes, x => x.owner == Plugin.Guid + ".corpses"), "our prefix is on the pallet node");
+                Check(info != null && HasPrefixOf(info, Plugin.Guid + ".corpses"), "our prefix is on the pallet node");
                 Mounts.Corpses.Set(Owner, "CorpsesAtCrossroads", false);
                 Corpses.Tick();
                 info = HarmonyLib.Harmony.GetPatchInfo(pallet);
-                Check(!Corpses.Applied && (info == null || !System.Linq.Enumerable.Any(info.Prefixes, x => x.owner == Plugin.Guid + ".corpses")), "switched off: the patches are gone, the game's donkey code is as it was");
+                Check(!Corpses.Applied && (info == null || !HasPrefixOf(info, Plugin.Guid + ".corpses")), "switched off: the patches are gone, the game's donkey code is as it was");
             }
             finally
             {

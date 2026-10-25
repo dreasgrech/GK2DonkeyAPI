@@ -242,10 +242,15 @@ closed):
     starts (core stop with the mod-removed load and the force switch, features frozen, dev tools locked), and the
     plain start on the real manifest (nothing logged, "Compatible"). **Passed 2026-10-14**, all six starts; one
     finding (the chest left standing blocks its cart, under Undecided).
-- **The Mounts panel without the freeze** (fixed 2026-10-24, the user: picking the dragon froze the game for some
-  frames; the picture's framing was 20 photos and read-backs in one frame): flick through the mounts in the panel, the
-  dragon too, and back: no hitch; the log has "(20 photos, one a frame) ... remembered for this look" once per look,
-  and no 40-60 ms slow frames on a pick.
+- **Switching mounts, the rest** (docs/mount-switching-performance.md; the panel's picks seen clean 2026-10-25 15:00:
+  click frames 9 to 13 ms, framings from disk, the world's switch in three frames):
+  - the 2.5 ms in a sound rig's tick every few frames: the next log's SndResolve / SndEmit / SndSurface say where;
+  - hear the clips now kept compressed: the dragon's take-off, flaps, glide and landing, and a looping sound;
+  - F11 Sounds group again (its embedded-.wav check now waits for the queue);
+  - the panel-close trace: no PickSave in its first frame (written half a second later);
+  - the 55 ms frame at game load when the companion's mount spawns (Prepare 11.6, the session's first web request
+    10 ms);
+  - waiting on the above: trimmed sheet cells, non-blocking read-backs (lower priority since round 1).
 - **Babies of the ridden mount through a door** (fixed 2026-10-24, the user: Gerry's babies stayed in the house when
   he was ridden out): ride Gerry with his babies out of the house and back in; they come along each time (the log:
   "[indoors] N foal(s) came through the door with the mount he rides").

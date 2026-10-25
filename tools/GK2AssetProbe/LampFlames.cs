@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -32,7 +31,11 @@ namespace GK2AssetProbe
         // Our own hold on a game material (by its name), or null if it can't be loaded.
         private static Material Hold(string name)
         {
-            string key = MaterialKeys.FirstOrDefault(k => name.StartsWith(k.Key, StringComparison.Ordinal)).Value;
+            string key = null;
+            foreach (KeyValuePair<string, string> k in MaterialKeys)
+            {
+                if (name.StartsWith(k.Key, StringComparison.Ordinal)) { key = k.Value; break; }
+            }
             if (key == null) return null;
             var h = UnityEngine.AddressableAssets.Addressables.LoadAssetAsync<Material>(key);
             Material m = h.WaitForCompletion();
@@ -279,7 +282,9 @@ namespace GK2AssetProbe
             if ((p - lastStep).sqrMagnitude < 0.5f * 0.5f) return;
             lastStep = p;
             GameObject go = Spawn(flameT, p + Vector3.up * 0.05f);
-            float life = go.GetComponentsInChildren<ParticleSystem>().Max(ps => ps.main.startLifetime.constantMax);
+            ParticleSystem[] systems = go.GetComponentsInChildren<ParticleSystem>();
+            float life = systems[0].main.startLifetime.constantMax;
+            for (int i = 1; i < systems.Length; i++) life = Math.Max(life, systems[i].main.startLifetime.constantMax);
             bursts.Add(new Burst { Go = go, StopAt = now + 0.4f, GoneAt = now + 0.4f + life + 0.2f });
             if (bursts.Count > 30)
             {
@@ -300,7 +305,7 @@ namespace GK2AssetProbe
             if ((ring.Count > 0 || stepsOn) && Time.unscaledTime >= checkAt)
             {
                 checkAt = Time.unscaledTime + 1f;
-                if (ring.Any(Broken) || Broken(flameT))
+                if (ring.Exists(Broken) || Broken(flameT))
                 {
                     bool hadRing = ring.Count > 0, hadSteps = stepsOn;
                     Probe.Warn("lamp fire: a copy lost its material (its bundle was unloaded); copying the lamp again");

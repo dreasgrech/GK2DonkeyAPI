@@ -111,7 +111,70 @@ For scale:
 While the panel is open, every look it showed stays loaded. With Saddle Up's six that is about 30 MB, but with other
 mods' mounts it is unbounded. Add a cap (about 64 MB of sheets): beyond it, the least recently shown look is let go.
 
-## 3. Suggested order
+## 3. Done, round 1 (2026-10-25 12:04; seen in game, log 15:00)
+
+Seen: after a restart, the first picks of every look framed from disk (6 framings read; no measuring), click frames 9
+to 13 ms; closing the panel with the dragon chosen spread over three frames (9, 14, 18 ms) instead of one of 60 ms,
+the dragon's sounds already loaded while browsing. The sound play call itself (SndPlay) was under 0.5 ms in every
+frame, so the 2.5 ms in the sound tick is elsewhere. Self-tests 1112/2: one check, the embedded .wav expected ready in
+the frame it was asked for (it now waits its turn in the queue; the check fixed). Not yet heard: the clips kept
+compressed (`dh.compressed`) with their seeks (`SetTime`) and loops; the user listens to the dragon's flight and a
+looping sound.
+
+Round 2a (12:22, not yet seen): inside the sound tick, measured parts SndResolve, SndEmit and SndSurface (the next log
+says which one the 2.5 ms is); the chosen mount written half a second after the panel closes, not in its closing frame
+(21 to 24 ms with the 4 ms write).
+
+Left, and why it waits: trimmed cells and non-blocking read-backs lost most of their reason to round 1 (framings are
+measured once ever; Gerry's read-backs sit inside the 2 ms budget, no frame over 12 ms). Kept on the list for memory
+and for other mods' bigger looks, after the sound tick's cause is known. Trimming needs its shape decided first: the
+sheet's size isn't known until every picture is made, which conflicts with "the sheet first, its pictures after"; and
+every reader of a skin sprite's geometry (`rect`, `textureRect`, `bounds`, `pivot`), `LooksExport` (it writes the
+sheet back out per key) and `SeatTopBySprite` must be checked.
+
+Also seen: a 55 ms frame at game load when the companion's dragon spawned (Prepare 11.6, ColorBuild 4.9, SndStart
+10.0: the session's first `UnityWebRequest`). Not a switch, but it grows with other mods' mounts.
+
+A known gap of the framings on disk: a look whose pictures got smaller keeps its wide frame until its hash changes
+(the hash covers its pictures, so a repainted look is measured again; a tuning that shrinks it without new pictures is
+not).
+
+## 3b. Garbage (2026-10-25)
+
+Performance Hog put the API at about 21 KB of garbage a frame, most of the game's heap growth (one 18.9 ms collection
+in an 11 s recording). The garbage survey (F11, group Garbage) measured each case on its own (first run, the dev
+window open):
+
+| Phase | The mod | The dev window (dev only) | The rest |
+|---|---|---|---|
+| on foot, standing / walking | 48.7 / 49.3 KB a frame | 46.5 / 47.3 | 2.1: Stand > Shuffle 2.0 > Follow 1.2 |
+| riding, walking / still | 58.6 / 49.7 | 56.3 / 47.7 | 2.3 / 2.0, the same; Ride 0.14, Sounds 0.06 |
+| the stride probe on (dev only) | 64.6 | 61.2 | + DevProbe 0.95 KB and 0.18 ms (its log line and CSV write a cycle: the sound tick's 2.5 ms spikes) |
+| the Mounts panel, a pick every 0.5 s | 67.6 | 43.6 | 24: LooksBuild 11.8, the picture's pose 9.5, ColorBuild 6.7, the click 5.0 |
+
+What players get: about 2 KB a frame in steady play, nearly all from the foals building their leader's name string
+for log lines (fixed: made when read), and about 24 KB a frame for the seconds a look builds in the panel. The key
+polling ran before the tick and was not counted (a part of its own now, Keys). Sound resolving was 0.02 to 0.16 KB a
+frame, smaller than the code survey's estimate. The survey now hides the dev window.
+
+Code survey's other suspects, to be confirmed by the next run: the key polling (`KeyboardShortcut.Serialize` per key a
+frame), `Flight.SameKey` in the safe-spot tick (LINQ), skin lookups by a short name (`Looks.Find` building strings),
+the abilities' closure per instance per frame.
+
+## 3a. Round 1 as built
+
+- 2.1 A: framings on disk (`framings.txt`, keyed by the look's pixel hash `Loaded.PixelHash`, canvas, pivot, hitch gap,
+  stage density, game version, file version); the edge check only for 5 s after a framing or a tuning re-merge.
+- 2.2: sound files one a frame (`SoundBank.Advance`), the cache file checked once a session, clips kept compressed;
+  the panel's shown mount preloads its sounds (`Sounds.Rig.Preload`); the panel's close traced (`[pick] the panel
+  closed, <mount> chosen`).
+- 2.3: measured parts SndLookup and SndPlay round a sound's play; SndStart and SndDecode round a file's load.
+- 2.5: the panel's held looks capped at 64 MB of sheets.
+
+Round 2 (after the measurements): the world switch's unmeasured part, the play call, non-blocking read-backs
+(`AsyncGPUReadback`) for game-source pictures and the framing photos, trimmed cells (2.4).
+
+## 4. Suggested order
 
 1. 2.2 sounds ahead and spread, and the `[switch]` trace (the largest single frame left, paid on every mount change).
 2. 2.1 A, framings on disk (the first-pick jolt; small).

@@ -30,6 +30,15 @@ For players:
   6.5 ms, and his first picture). The sheet is made without the fill (every cell is written anyway), Gerry's frames are
   found once a session (the game-ready check finds them; looked for again only when one is gone), his rest picture is
   measured in a frame of its own, and nothing of a build runs in the frame it was asked for.
+- **Mounts scale better: switching, sounds and the panel's pictures** (docs/mount-switching-performance.md). The
+  panel's picture of a look is framed once ever, not once a session: the framings are kept in
+  `BepInEx\cache\GK2DonkeyAPI\framings.txt` under the look's pictures and the game's version, and a changed look is
+  measured again. The picture's edge check (a whole read-back) runs for 5 s after a framing or a setting change instead of
+  every second. A mount's own sound files load one a frame, are checked on disk once a session, and stay compressed in
+  memory (they were all decoded in the frame the world's mount turned into the dragon: 15.6 ms of a 60 ms frame); a
+  mount shown in the Mounts panel starts loading its sounds then. The looks the panel keeps ready are capped at 64 MB of
+  sheets, the least recently shown going first. Closing the panel writes the chosen mount half a second later, not in
+  the closing frame (that frame was 21 to 24 ms with the 4 ms write in it).
 - **The babies of the mount you ride come through a door with it** (the user, 2026-10-24: "i selected gerry when
   inside the house and rode him out, and the babies didnt follow me outside"). They stayed: the house and the yard are
   one place to the game, so they waited for their parent to stand still out of reach, and a ridden parent never does.
@@ -716,6 +725,13 @@ For mod authors:
 
 Development:
 
+- **No LINQ in anything that runs in the game** (the user, 2026-10-25: "get rid of ALL our LINQ usage ... and disallow
+  ALL LINQ usage going forward"; every call allocates garbage). The last uses are gone (the settings page's clearing
+  key, the chest's zone walk and dock check, the dependency manifest's sort and lookups, the dev chest probe and
+  self-tests). The build refuses it from now on: `Directory.Build.targets` adds the banned-API analyzer to every
+  netstandard2.1 project, with `BannedSymbols.txt` banning `System.Linq.Enumerable`, `Queryable` and
+  `ParallelEnumerable`, as error RS0030 at the line that uses it. `tests/NoLinqScan` checks every built DLL for any
+  reference into `System.Linq` and runs with the release scans. The .NET console tests and tools may still use it.
 - **A skin's "loaded" line says what building it cost**, step by step: the sheet made, the pictures made (files read,
   decoded), put in the sheet, uploaded, sprites, colours; the frames it took, the most work in one frame, the game's
   slowest frame meanwhile, and the memory allocated. It was added to measure the hitch when the dragon is picked again
@@ -726,7 +742,25 @@ Development:
   measured parts now (Pick, PickRows, PanelTick, Preview), and the pick's own two halves (PickApply: the Mount row's
   handlers; PickSave: the cfg file written). The once-a-second slow-frame line and the summary could not show these
   frames. The click's work is counted in the frame it happened in (it ran before the frame's bookkeeping and was counted
-  in the frame before).
+  in the frame before). Closing the panel is traced the same way (the world's mount turning into the chosen one), and
+  a sound's play (SndLookup, SndPlay) and a sound file's load (SndStart, SndDecode) are measured parts, and inside a
+  sound rig's tick an event's resolve (SndResolve), a whole emit (SndEmit) and the ground check (SndSurface). The play
+  call was under 0.5 ms; the 2.5 ms in the sound tick every few frames is elsewhere, these find it. The self-test of an
+  embedded pack's .wav waits for its turn in the one-a-frame queue instead of expecting it at once. The dev-only stride
+  probe inside the sound tick is a measured part (DevProbe), and every 10 s the log has the garbage each part made over
+  those 10 s (`[perf] garbage over the last N frames, KB a frame ...`; with the dev panel on), to find where the mod's
+  20 to 50 KB a frame comes from. A self-test, "the garbage survey" (group Garbage), runs the cases by itself: on foot
+  standing and walking, riding a dragon with two babies walking and standing, the dev stride probe on, the Mounts panel
+  picking; one `[garbage]` line per phase with the garbage and time by part. The mods' keys polled each frame (before
+  the API's tick, so its garbage went uncounted) are a measured part (Keys) and count in the mod's garbage. The survey
+  hides the dev window while it runs: its first run found the window itself made 43 to 61 KB of the 49 to 68 KB a frame.
+- **Less garbage from following babies**: a foal built its leader's name ("its parent dreas.gk2.saddleup#1") five times
+  a frame for log lines that rarely run; now made only when a line reads it, and a mount's full id is made once. It was
+  most of the mod's steady garbage (about 2 KB a frame of 2.1 with the dev window left out, the garbage survey).
+  Then the mods' keys: each key's binding was turned into text every frame to see whether it changed (0.22 to 0.44 KB
+  a frame, half of what was left); a key now hears its own setting change. Key combinations are compared and their
+  modifiers checked without LINQ (the flight's jump and fly keys three times a ridden frame, the safe-spot key every
+  frame).
 - **The safe-spot self-test waits for the last return's arrival check** before it buries the keeper for "the watchdog
   off": the check runs two physics steps after a return and judges where he is then, so a step that moved him inside
   that window was sent to an older spot and counted as a watchdog return (1 of 1112 failed, 2026-10-24; timing only).

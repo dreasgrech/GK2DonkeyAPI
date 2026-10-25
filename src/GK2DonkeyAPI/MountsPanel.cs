@@ -1303,11 +1303,14 @@ namespace GK2DonkeyAPI
             }
         }
 
-        internal static void SavePickedNow() => page?.SavePicked(now: true);
+        internal static void SavePickedNow() { page?.SavePicked(now: true); lastPage?.SavePicked(now: true); }
+
+        private static MountSettingsPage lastPage; // the page of the panel last closed: its pick written half a second on
 
         internal static void Tick()
         {
-            page?.SavePicked(now: false); // a pick written to the cfg file once the picking pauses (MountSettingsPage.SelectMount)
+            page?.SavePicked(now: false);
+            if (lastPage != null && lastPage != page) lastPage.SavePicked(now: false); // a pick written to the cfg file once the picking pauses (MountSettingsPage.SelectMount)
             if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null)))
             {
                 Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (RestoreUnder is skipped)
@@ -1353,7 +1356,11 @@ namespace GK2DonkeyAPI
                 Mount.Instance paper = LookPreview.PaperOf(page);
                 Texture pic;
                 using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper);
-                if (paper != null && !paper.LooksRig.Settling) Looks.HoldForPanel(paper.LooksRig.Wearing); // picked again: there at once
+                if (paper != null && !paper.LooksRig.Settling)
+                {
+                    Looks.HoldForPanel(paper.LooksRig.Wearing); // picked again: there at once
+                    paper.SoundsRig.Preload(); // its sounds loading meanwhile, one file a frame: ready when the world's mount turns into it
+                }
                 if (pic == null && PreviewStage.Failed)
                 {
                     pictureTex = paper != null ? Colors.BuildPreview(paper, pictureTex) : null;
@@ -1559,7 +1566,9 @@ namespace GK2DonkeyAPI
         {
             bool wasOpen = panel != null;
             MountSettingsPage closing = page;
-            closing?.SavePicked(now: true); // the picking is over: the chosen mount to the cfg file (put back below when not kept: written again by its set)
+            if (wasOpen) Perf.TracePick("the panel closed, " + (closing?.MountChosen ?? MountCatalog.DonkeyId) + " chosen"); // the world's mount turning into it
+            closing?.SavePickedSoon(); // the picking is over: the chosen mount to the cfg file half a second on (put back below when not kept: written again by its set)
+            if (closing != null) lastPage = closing; // its pending write is done by Tick after the panel is gone
             Looks.ReleasePanelHolds(); // the looks shown while it was open (the worn ones stay with their wearers)
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
             Mounts.Catalog.MountsChanged -= OnRegistryChanged;

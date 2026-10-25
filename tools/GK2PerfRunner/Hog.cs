@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using System.Reflection;
 
 namespace GK2PerfRunner
@@ -24,7 +23,7 @@ namespace GK2PerfRunner
         {
             if (looked) return Problem == null;
             looked = true;
-            Assembly a = AppDomain.CurrentDomain.GetAssemblies().FirstOrDefault(x => x.GetName().Name == "PerformanceHog");
+            Assembly a = Array.Find(AppDomain.CurrentDomain.GetAssemblies(), x =>x.GetName().Name == "PerformanceHog");
             if (a == null)
             {
                 Problem = "Performance Hog is not installed";

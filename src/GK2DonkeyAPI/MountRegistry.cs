@@ -423,6 +423,7 @@ namespace GK2DonkeyAPI
                 using (Perf.Measure(Perf.S.PanelTick)) MountsPanel.Tick();
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
+                SoundBank.Advance();   // a pack's sound file started, one a frame
                 Looks.TickPackWatch(); // dev only: Debug.SkinPackAutoReload
                 Looks.RecheckAsideSkins(); // a set-aside game-source skin nobody wears: offered again when its frames arrive (once a minute)
             }

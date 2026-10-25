@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using HarmonyLib;
@@ -86,8 +85,11 @@ namespace GK2DonkeyAPI
             Adding = d; // our own add of a riding chest passes WorldZoneData_TryAddWgoData_Patch
             try
             {
-                foreach (KeyValuePair<int, List<WorldZoneData>> kv in sd.WorldZonesByProcessingPriority.Reverse())
+                // the priorities from the highest down (the sorted dictionary's keys walked backwards)
+                var priorities = new List<int>(sd.WorldZonesByProcessingPriority.Keys);
+                for (int pi = priorities.Count - 1; pi >= 0; pi--)
                 {
+                    var kv = new KeyValuePair<int, List<WorldZoneData>>(priorities[pi], sd.WorldZonesByProcessingPriority[priorities[pi]]);
                     foreach (WorldZoneData z in kv.Value)
                     {
                         if (z.TryAddWgoData(d))
@@ -472,7 +474,7 @@ namespace GK2DonkeyAPI
                     return "Someone works at it.";
                 }
                 WgoPartData part = d.MainWgoPartData;
-                if (part?.DockPointDataList != null && part.DockPointDataList.Any(p => p != null && p.IsOccupied))
+                if (part?.DockPointDataList != null && part.DockPointDataList.Exists(p => p != null && p.IsOccupied))
                 {
                     return "Someone is using it right now.";
                 }

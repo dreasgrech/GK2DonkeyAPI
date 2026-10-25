@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Reflection;
 using System.Text;
 using BepInEx.Logging;
@@ -168,7 +167,8 @@ namespace GK2AssetProbe
                         if (k is string s && !IsHash(s)) keys.Add(s);
                     }
                 }
-                var sorted = keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+                var sorted = new List<string>(keys);
+                sorted.Sort(StringComparer.Ordinal);
                 File.WriteAllLines(System.IO.Path.Combine(outDir, "addressable-keys.txt"), sorted);
 
                 // the effects WorldFX.Spawn knows by name (the pool's start list), and every bare "<name>.prefab" key
@@ -181,21 +181,25 @@ namespace GK2AssetProbe
                 {
                     Info("the effects' start list could not be read: " + e.Message);
                 }
-                var bare = sorted.Where(k => k.EndsWith(".prefab", StringComparison.Ordinal) && k.IndexOf('/') < 0).ToList();
-                File.WriteAllLines(System.IO.Path.Combine(outDir, "effects.txt"),
-                    new[] { "# the pool's start list (WorldFXPoolInitialSizeConfig): " + fx.Count }.Concat(fx.OrderBy(x => x))
-                    .Concat(new[] { "", "# every bare <name>.prefab key (what WorldFX.Spawn can load): " + bare.Count }).Concat(bare));
+                var bare = sorted.FindAll(k => k.EndsWith(".prefab", StringComparison.Ordinal) && k.IndexOf('/') < 0);
+                List<string> fxSorted = Sorted(fx);
+                var lines = new List<string> { "# the pool's start list (WorldFXPoolInitialSizeConfig): " + fx.Count };
+                lines.AddRange(fxSorted);
+                lines.Add("");
+                lines.Add("# every bare <name>.prefab key (what WorldFX.Spawn can load): " + bare.Count);
+                lines.AddRange(bare);
+                File.WriteAllLines(System.IO.Path.Combine(outDir, "effects.txt"), lines);
 
                 Info($"{locators} locators, {sorted.Count} names (hashes left out) -> {outDir}\\addressable-keys.txt; effects: {fx.Count} in the start list, {bare.Count} bare prefab keys -> effects.txt");
-                Info("effects in the start list: " + string.Join(", ", fx.OrderBy(x => x)));
+                Info("effects in the start list: " + string.Join(", ", fxSorted));
                 string[] words = { "fire", "flame", "burn", "ember", "spark", "torch", "candle", "smoke", "glow", "lava", "step", "foot", "trail", "dust",
                                    "rat", "horse", "mule", "cow", "goat", "pig", "dog", "wolf", "bat", "spider", "sheep", "bear", "cat", "mount" };
                 foreach (string w in words)
                 {
-                    var hits = sorted.Where(k => Contains(k, w)).ToList();
+                    var hits = sorted.FindAll(k => Contains(k, w));
                     if (hits.Count > 0)
                     {
-                        Info($"'{w}': {hits.Count} names, e.g. {string.Join(", ", hits.Take(25))}");
+                        Info($"'{w}': {hits.Count} names, e.g. {string.Join(", ", hits.GetRange(0, Math.Min(25, hits.Count)))}");
                     }
                 }
                 Status = $"1: {sorted.Count} names written to BepInEx\\GK2-asset-probe\\.";
@@ -229,6 +233,13 @@ namespace GK2AssetProbe
             return true;
         }
 
+        private static List<string> Sorted(IEnumerable<string> items)
+        {
+            var list = new List<string>(items);
+            list.Sort();
+            return list;
+        }
+
         // ---------------------------------------------------------------- 2. shaders
 
         private static readonly string[] ShaderNames =
@@ -260,7 +271,9 @@ namespace GK2AssetProbe
             try
             {
                 Directory.CreateDirectory(outDir);
-                Info($"Unity {Application.unityVersion}, graphics {SystemInfo.graphicsDeviceType}, colour space {QualitySettings.activeColorSpace}, render pipeline {(GraphicsSettings.currentRenderPipeline == null ? "built-in" : GraphicsSettings.currentRenderPipeline.name)}, asset bundles loaded now {AssetBundle.GetAllLoadedAssetBundles().Count()}");
+                int bundles = 0;
+                foreach (AssetBundle b in AssetBundle.GetAllLoadedAssetBundles()) bundles++;
+                Info($"Unity {Application.unityVersion}, graphics {SystemInfo.graphicsDeviceType}, colour space {QualitySettings.activeColorSpace}, render pipeline {(GraphicsSettings.currentRenderPipeline == null ? "built-in" : GraphicsSettings.currentRenderPipeline.name)}, asset bundles loaded now {bundles}");
                 effectShaders.RemoveAll(c => !c.KeepTexture);
                 foreach (string n in ShaderNames)
                 {
@@ -273,7 +286,13 @@ namespace GK2AssetProbe
                     }
                 }
                 // every shader loaded right now (the game's own included), to a file
-                var all = Resources.FindObjectsOfTypeAll<Shader>().Select(s => s.name).Distinct().OrderBy(x => x).ToList();
+                var all = new List<string>();
+                var seenNames = new HashSet<string>();
+                foreach (Shader sh in Resources.FindObjectsOfTypeAll<Shader>())
+                {
+                    if (seenNames.Add(sh.name)) all.Add(sh.name);
+                }
+                all.Sort();
                 File.WriteAllLines(System.IO.Path.Combine(outDir, "shaders-loaded.txt"), all);
                 Info($"{all.Count} shaders loaded now -> shaders-loaded.txt");
 
@@ -286,7 +305,7 @@ namespace GK2AssetProbe
                     {
                         Material m = r.sharedMaterial;
                         Info($"puff_npc: {r.GetType().Name} '{r.name}', layer {r.gameObject.layer}, sorting {r.sortingLayerName}/{r.sortingOrder}, material {m?.name}, shader {m?.shader?.name}, texture {m?.mainTexture?.name}");
-                        if (m != null && !effectShaders.Any(e => e.Name.StartsWith("game puff")))
+                        if (m != null && !effectShaders.Exists(e => e.Name.StartsWith("game puff")))
                         {
                             Material copy = new Material(m) { name = "assetprobe puff copy" };
                             owned.Add(copy);
@@ -383,7 +402,7 @@ namespace GK2AssetProbe
             try
             {
                 if (effectShaders.Count == 0) Shaders();
-                if (effectShaders.Any(c => c.KeepTexture))
+                if (effectShaders.Exists(c => c.KeepTexture))
                 {
                     // loaded already: jump to the first of them
                     effectShader = effectShaders.FindIndex(c => c.KeepTexture);
@@ -477,8 +496,14 @@ namespace GK2AssetProbe
                     }
                     Info($"bdy material {m.name}, shader {s.name}, keywords [{string.Join(" ", m.shaderKeywords)}], render queue {m.renderQueue}; properties: {props}");
                 }
-                var clips = anim.runtimeAnimatorController.animationClips.GroupBy(c => c.name).Select(g => g.First()).OrderBy(c => c.name);
-                Info("clips: " + string.Join(", ", clips.Select(c => $"{c.name} {c.length:0.00}s@{c.frameRate:0}fps")));
+                var clips = new List<AnimationClip>();
+                var clipNames = new HashSet<string>();
+                foreach (AnimationClip c in anim.runtimeAnimatorController.animationClips)
+                {
+                    if (clipNames.Add(c.name)) clips.Add(c);
+                }
+                clips.Sort((x, y) => Comparer<string>.Default.Compare(x.name, y.name));
+                Info("clips: " + string.Join(", ", clips.ConvertAll(c => $"{c.name} {c.length:0.00}s@{c.frameRate:0}fps")));
                 Info($"animator layers {anim.layerCount}; the root {Path(Root)} scale {Root.lossyScale}, gfx rotation {body.transform.rotation.eulerAngles}");
                 perClip.Clear();
                 allBody.Clear();
@@ -573,7 +598,9 @@ namespace GK2AssetProbe
                 if (layer > 0 && anim.GetLayerWeight(layer) <= 0f) continue;
                 var infos = anim.GetCurrentAnimatorClipInfo(layer);
                 if (infos.Length == 0) continue;
-                playing.Add("L" + layer + ":" + infos.OrderByDescending(i => i.weight).First().clip.name);
+                AnimatorClipInfo top = infos[0];
+                for (int k = 1; k < infos.Length; k++) if (infos[k].weight.CompareTo(top.weight) > 0) top = infos[k];
+                playing.Add("L" + layer + ":" + top.clip.name);
             }
             string clip = playing.Count == 0 ? "(none)" : string.Join(" + ", playing);
             if (body.sprite != null && allBody.Add(body.sprite.name)) MyArt.ExportFrame(body.sprite);
@@ -589,10 +616,11 @@ namespace GK2AssetProbe
             {
                 sampleUntil = -1f;
                 int total = 0;
-                foreach (var kv in perClip.OrderBy(k => k.Key))
+                foreach (string key in Sorted(perClip.Keys))
                 {
-                    total += kv.Value.Body.Count + kv.Value.Head.Count;
-                    Info($"clip {kv.Key} ({kv.Value.Frames} frames seen): body {kv.Value.Body.Count} pictures [{string.Join(" ", kv.Value.Body.OrderBy(x => x))}], head {kv.Value.Head.Count} [{string.Join(" ", kv.Value.Head.OrderBy(x => x))}]");
+                    var v = perClip[key];
+                    total += v.Body.Count + v.Head.Count;
+                    Info($"clip {key} ({v.Frames} frames seen): body {v.Body.Count} pictures [{string.Join(" ", Sorted(v.Body))}], head {v.Head.Count} [{string.Join(" ", Sorted(v.Head))}]");
                 }
                 Info($"frame sampling done: {perClip.Count} clip combinations seen; distinct pictures overall: body {allBody.Count}, head {allHead.Count} (the art bill for one facing); each saved whole to donkey-frames\\ (templates to paint over)");
                 Status = $"3 done: body {allBody.Count} + head {allHead.Count} pictures; see the log.";
@@ -663,7 +691,7 @@ namespace GK2AssetProbe
                     Add("C card + white extras", WithExtras(card, sec, Color.white, ppu), new Material(body.sharedMaterial));
                     Add("D card + black extras", WithExtras(card, sec, Color.black, ppu), new Material(body.sharedMaterial));
                 }
-                Info($"test pictures: {pictures.Count} beside the donkey, left to right: {string.Join(" | ", pictures.Select(p => p.Label))}");
+                Info($"test pictures: {pictures.Count} beside the donkey, left to right: {string.Join(" | ", pictures.ConvertAll(p => p.Label))}");
                 Status = "4: compare the pictures by day and by night (the director's time hold).";
             }
             catch (Exception e)

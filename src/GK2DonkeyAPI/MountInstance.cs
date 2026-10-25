@@ -84,7 +84,8 @@ namespace GK2DonkeyAPI
             internal string Noun => HasDonkey ? (LooksRig?.MountNow?.NounText ?? "donkey") : "mount";
 
             // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.saddleup#1.
-            internal string FullId => FullIdOf(OwnerId, Id);
+            internal string FullId => fullId ?? (fullId = FullIdOf(OwnerId, Id)); // made once: the owner and the number never change
+            private string fullId;
 
             internal string Describe() => $"{FullId} {MountName}";
 

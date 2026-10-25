@@ -29,7 +29,7 @@ T="$REPO/tests"
 run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
 run "$REPO" "DepManifest verify GK2DonkeyAPI.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/GK2DonkeyAPI/bin/Release/netstandard2.1/GK2DonkeyAPI.dll" "$MANAGED"
 run "$REPO" "check-dist" python tools/check-dist.py
-for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan; do
+for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan NoLinqScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$REPO" "canonical skin.cfg layout" python -I tools/skins/canonical_cfg.py --check

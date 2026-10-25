@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 using Object = UnityEngine.Object;
@@ -40,7 +39,9 @@ namespace GK2AssetProbe
             string root = Path.Combine(Dir, "skins");
             Directory.CreateDirectory(root);
             var all = new List<string> { null };
-            all.AddRange(Directory.GetDirectories(root).Select(Path.GetFileName).OrderBy(n => n, StringComparer.OrdinalIgnoreCase));
+            string[] names = Array.ConvertAll(Directory.GetDirectories(root), Path.GetFileName);
+            Array.Sort(names, StringComparer.OrdinalIgnoreCase);
+            all.AddRange(names);
             int i = all.IndexOf(skin);
             skin = all[((i + step) % all.Count + all.Count) % all.Count];
             ForgetFrames();
@@ -79,7 +80,8 @@ namespace GK2AssetProbe
             try
             {
                 EnsureDirs();
-                string[] files = Directory.GetFiles(Dir, "*.png").OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
+                string[] files = Directory.GetFiles(Dir, "*.png");
+                Array.Sort(files, StringComparer.OrdinalIgnoreCase);
                 if (files.Length == 0)
                 {
                     Probe.Status = "9: put PNG files in BepInEx\\GK2-asset-probe\\test\\ first.";
@@ -133,7 +135,7 @@ namespace GK2AssetProbe
             if (Dress == Mode.Off)
             {
                 EnsureDirs();
-                if (!Directory.GetFiles(DonkeyDir, "*.png").Any())
+                if (Directory.GetFiles(DonkeyDir, "*.png").Length == 0)
                 {
                     Probe.Status = $"No pictures in {SkinName}: pick another skin, or put PNGs there (names: see donkey-frames\\).";
                     return;
@@ -300,7 +302,7 @@ namespace GK2AssetProbe
             string key = FrameKey(gameName);
             var tries = new List<string> { key };
             int us = key.LastIndexOf('_');
-            if (us > 0 && key.Substring(us + 1).All(char.IsDigit)) tries.Add(key.Substring(0, us));
+            if (us > 0 && AllDigits(key.Substring(us + 1))) tries.Add(key.Substring(0, us));
             tries.Add(part);
             Sprite found = null;
             string from = null;
@@ -320,7 +322,7 @@ namespace GK2AssetProbe
             used.Add(key);
             if (found == null && missing.Add(key))
             {
-                Probe.Info($"dressing: no picture for {key} (tried {string.Join(", ", tries.Select(t => t + ".png"))}); the donkey's own shows");
+                Probe.Info($"dressing: no picture for {key} (tried {string.Join(", ", tries.ConvertAll(t => t + ".png"))}); the donkey's own shows");
             }
             else if (found != null)
             {
@@ -334,8 +336,14 @@ namespace GK2AssetProbe
         {
             string n = spriteName.Replace("(Clone)", "").Trim();
             int us = n.IndexOf('_');
-            if (us > 0 && n.Substring(0, us).All(char.IsDigit)) n = n.Substring(us + 1);
+            if (us > 0 && AllDigits(n.Substring(0, us))) n = n.Substring(us + 1);
             return n;
+        }
+
+        private static bool AllDigits(string s)
+        {
+            foreach (char c in s) if (!char.IsDigit(c)) return false;
+            return true;
         }
 
         private static void RestoreHidden()
@@ -355,8 +363,10 @@ namespace GK2AssetProbe
                 {
                     try
                     {
-                        File.WriteAllLines(Path.Combine(Probe.OutDir, "donkey-frames-used.txt"),
-                            used.OrderBy(k => k).Select(k => k + (missing.Contains(k) ? "   (no picture)" : "")));
+                        var lines = new List<string>(used);
+                        lines.Sort();
+                        for (int i = 0; i < lines.Count; i++) if (missing.Contains(lines[i])) lines[i] += "   (no picture)";
+                        File.WriteAllLines(Path.Combine(Probe.OutDir, "donkey-frames-used.txt"), lines);
                     }
                     catch (Exception e)
                     {
@@ -391,8 +401,17 @@ namespace GK2AssetProbe
                     ExportFrame(sp);
                     if (!had) saved++;
                 }
-                var groups = seen.GroupBy(k => { int u = k.LastIndexOf('_'); return u > 0 && k.Substring(u + 1).All(char.IsDigit) ? k.Substring(0, u) : k; })
-                    .OrderBy(g => g.Key).Select(g => g.Key + " " + g.Count());
+                var perClip = new Dictionary<string, int>();
+                foreach (string k in seen)
+                {
+                    int u = k.LastIndexOf('_');
+                    string clip = u > 0 && AllDigits(k.Substring(u + 1)) ? k.Substring(0, u) : k;
+                    perClip.TryGetValue(clip, out int n);
+                    perClip[clip] = n + 1;
+                }
+                var groups = new List<string>(perClip.Keys);
+                groups.Sort();
+                for (int i = 0; i < groups.Count; i++) groups[i] += " " + perClip[groups[i]];
                 Probe.Info($"every donkey frame ('{prefix}*' in the character atlases): {seen.Count}, {saved} new in donkey-frames\\; by clip: {string.Join(", ", groups)}");
                 Probe.Status = $"{seen.Count} donkey frames in donkey-frames\\.";
             }
@@ -459,8 +478,8 @@ namespace GK2AssetProbe
             try
             {
                 EnsureDirs();
-                string[] files = Directory.GetFiles(Dir).Where(f => f.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))
-                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase).ToArray();
+                string[] files = Array.FindAll(Directory.GetFiles(Dir), f => f.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase) || f.EndsWith(".wav", StringComparison.OrdinalIgnoreCase));
+                Array.Sort(files, StringComparer.OrdinalIgnoreCase);
                 if (files.Length == 0)
                 {
                     Probe.Status = "11: put .ogg or .wav files in BepInEx\\GK2-asset-probe\\test\\ first.";
@@ -535,9 +554,9 @@ namespace GK2AssetProbe
                     return null;
                 }
                 var groups = mixer.FindMatchingGroups(string.Empty);
-                Probe.Info($"sounds: the game's mixer '{mixer.name}' has {groups.Length} groups: {string.Join(", ", groups.Select(g => g.name))}");
+                Probe.Info($"sounds: the game's mixer '{mixer.name}' has {groups.Length} groups: {string.Join(", ", Array.ConvertAll(groups, g => g.name))}");
                 string[] wanted = { "sfx", "sound", "effect" };
-                var pick = groups.FirstOrDefault(g => wanted.Any(w => g.name.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0));
+                var pick = Array.Find(groups, g => Array.Exists(wanted, w => g.name.IndexOf(w, StringComparison.OrdinalIgnoreCase) >= 0));
                 Probe.Info("sounds: played through " + (pick != null ? "the group '" + pick.name + "'" : "no group (none looks like sound effects): plain output"));
                 return pick;
             }

@@ -104,12 +104,11 @@ namespace GK2DonkeyAPI
         // climb's Left Shift, don't stop a press).
         internal static KeyboardShortcut JumpKeyNow => Plugin.JumpKey != null ? Plugin.JumpKey.Value : new KeyboardShortcut(KeyCode.Space);
         internal static KeyboardShortcut FlyKeyNow => Plugin.FlyKey != null ? Plugin.FlyKey.Value : new KeyboardShortcut(KeyCode.Space);
-        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b) => a.MainKey == b.MainKey && System.Linq.Enumerable.SequenceEqual(a.Modifiers, b.Modifiers);
+        internal static bool SameKey(KeyboardShortcut a, KeyboardShortcut b) => KeyActions.SameKey(a, b); // without garbage (KeyActions)
         private static bool Held(KeyboardShortcut k)
         {
             if (k.MainKey == KeyCode.None || !UnityInput.Current.GetKey(k.MainKey)) return false;
-            foreach (KeyCode m in k.Modifiers) if (!UnityInput.Current.GetKey(m)) return false;
-            return true;
+            return KeyActions.ModifiersHeld(k);
         }
         // a key just changed (a row rebound): it counts only once it has been let go (the press that set it, or the
         // key the Settings window was capturing, is not a jump)

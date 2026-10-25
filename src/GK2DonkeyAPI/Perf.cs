@@ -58,6 +58,15 @@ namespace GK2DonkeyAPI
             PrevPose,   //   inside Preview: the copy posed (the rigs' tick: a new look's sprites put on, its colours)
             PrevFrame,  //   inside Preview: a framing (the remembered one used, or a measuring step: a photo read back)
             PrevRender, //   inside Preview: the photo itself (the stage camera's Render)
+            SndLookup,  // a sound played: the game's sound found (SoundBank.Ensure, AudioConfig.Get)
+            SndPlay,    // a sound played: the game's play call (LazyAudio.PlayAtGameObject, with our clip pick round it)
+            SndStart,   // a pack's sound file started loading (its bytes read, the cache file, the request)
+            SndDecode,  // a pack's sound file made a clip (DownloadHandlerAudioClip.GetContent)
+            SndResolve, //   inside Sounds: an event's layers merged (Rig.ResolveNow; Resolve keeps it half a second)
+            SndEmit,    //   inside Sounds: a sound emitted, whole (its resolve, the ground under it, the play)
+            SndSurface, //   inside SndEmit: the ground's surface under the mount (a raycast) and its step sound
+            DevProbe,   //   inside Sounds: the dev-only stride probe (StrideProbe.Tick/Step: a log line and a CSV append a cycle)
+            Keys,       // the mods' keys polled and the Settings window's key capture (Plugin.Update, before Tick)
             Count,
         }
 
@@ -308,6 +317,9 @@ namespace GK2DonkeyAPI
             TraceFrame(frameMs);
             allocSum += allocFrame;
             allocMax = Math.Max(allocMax, allocFrame);
+            logAlloc += allocFrame;
+            logFrames++;
+            if (phaseOn) { phaseAlloc += allocFrame; phaseFrames++; phaseFrameMs += frameMs; }
             allocFrame = 0;
             frames++;
             frameSumMs += frameMs;
@@ -319,6 +331,8 @@ namespace GK2DonkeyAPI
                 maxMs[i] = Math.Max(maxMs[i], ms);
                 sumCalls[i] += frameCalls[i];
                 sumBytes[i] += frameBytes[i];
+                logBytes[i] += frameBytes[i];
+                if (phaseOn) { phaseBytes[i] += frameBytes[i]; phaseTicks[i] += frameTicks[i]; }
                 frameTicks[i] = 0;
                 frameCalls[i] = 0;
                 frameBytes[i] = 0;
@@ -354,8 +368,67 @@ namespace GK2DonkeyAPI
                 {
                     nextLog = now + 10f;
                     Plugin.Log.LogInfo("[perf] " + Summary(oneLine: true));
+                    if (AllocBySection && logFrames > 0) Plugin.Log.LogInfo("[perf] " + AllocByPart());
                 }
             }
+        }
+
+        // The garbage by part over the 10 s between two log lines (the 4 KB pages each part was in when the heap grew,
+        // averaged: per part it is only rough in a single frame, and fair over a thousand). Parts hold their inner parts;
+        // "outside the parts" is the mod's total (Tick and the panel window) less the parts at the top.
+        private static readonly long[] logBytes = new long[(int)S.Count];
+        private static long logAlloc;
+        private static int logFrames;
+
+        // A phase of a self-test measured on its own (SelfTest.Garbage.cs): its frames, the mod's time and garbage by part,
+        // and the collections in it.
+        private static bool phaseOn;
+        private static readonly long[] phaseBytes = new long[(int)S.Count], phaseTicks = new long[(int)S.Count];
+        private static long phaseAlloc;
+        private static int phaseFrames, phaseGc;
+        private static double phaseFrameMs;
+
+        internal static void PhaseStart()
+        {
+            BeginFrame(); // the frame so far belongs to before the phase
+            Array.Clear(phaseBytes, 0, phaseBytes.Length);
+            Array.Clear(phaseTicks, 0, phaseTicks.Length);
+            phaseAlloc = 0;
+            phaseFrames = 0;
+            phaseFrameMs = 0;
+            phaseGc = GC.CollectionCount(0);
+            phaseOn = true;
+        }
+
+        internal static void PhaseAbort() => phaseOn = false;
+
+        internal static string PhaseEnd(string label)
+        {
+            phaseOn = false;
+            int n = Math.Max(1, phaseFrames);
+            var order = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < (int)S.Count; i++) if (phaseBytes[i] > 0 || phaseTicks[i] * MsPerTick / n >= 0.05) order.Add(i);
+            order.Sort((a, b) => phaseBytes[b] != phaseBytes[a] ? phaseBytes[b].CompareTo(phaseBytes[a]) : phaseTicks[b].CompareTo(phaseTicks[a]));
+            var sb = new StringBuilder();
+            sb.Append($"[garbage] {label}: {phaseFrames} frames, {phaseFrameMs / n:F2} ms a frame, the mod {phaseTicks[(int)S.Tick] * MsPerTick / n:F2} ms; ");
+            sb.Append($"garbage the mod {phaseAlloc / 1024.0 / n:F2} KB a frame ({phaseAlloc / 1024.0 / Math.Max(0.001, phaseFrameMs / 1000.0):F0} KB a second), {GC.CollectionCount(0) - phaseGc} collection(s); by part (holding its inner parts), KB and ms a frame:");
+            foreach (int i in order) sb.Append($" {Names[i]} {phaseBytes[i] / 1024.0 / n:F2}/{phaseTicks[i] * MsPerTick / n:F2};");
+            return sb.ToString();
+        }
+
+        private static string AllocByPart()
+        {
+            var order = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < (int)S.Count; i++) if (logBytes[i] / (double)logFrames >= 205) order.Add(i); // 0.2 KB a frame or more
+            order.Sort((a, b) => logBytes[b].CompareTo(logBytes[a]));
+            var sb = new StringBuilder();
+            sb.Append($"garbage over the last {logFrames} frames, KB a frame (a part holds its inner parts): the mod {logAlloc / 1024.0 / logFrames:F1}");
+            foreach (int i in order) sb.Append($", {Names[i]} {logBytes[i] / 1024.0 / logFrames:F1}");
+            sb.Append('.');
+            Array.Clear(logBytes, 0, logBytes.Length);
+            logAlloc = 0;
+            logFrames = 0;
+            return sb.ToString();
         }
 
         private static void Clear()
