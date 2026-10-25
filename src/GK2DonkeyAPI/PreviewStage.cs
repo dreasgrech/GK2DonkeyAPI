@@ -1061,6 +1061,7 @@ namespace GK2DonkeyAPI
         // Everything the picture is made of (the log's [preview] lines): what draws, where, with what.
         private static void Describe(string when)
         {
+            if (!DevTools.Unlocked) return; // its renderers listed, some 45 lines: for the developer, not a player's log
             try
             {
                 Camera cam = cartView.Cam;

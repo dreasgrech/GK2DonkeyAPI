@@ -27,7 +27,7 @@ namespace GK2DonkeyAPI
         private static IEnumerator WalkSurvey()
         {
             if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
-            if (!StrideProbe.On) { Skip("the stride probe is off (dev tools locked)"); yield break; }
+            if (!DevTools.Unlocked) { Skip("the stride probe is dev only (dev tools locked)"); yield break; }
             if (!Plugin.For(MountStyle.Ride).SoundsOn.Value) Info("the mount sounds are off: the rig (and the probe in it) only ticks with them on; no rows will come");
             try
             {
@@ -36,6 +36,7 @@ namespace GK2DonkeyAPI
                     postfix: new HarmonyMethod(typeof(SelfTest), nameof(SurveyStickPostfix)));
             }
             catch (Exception e) { Fail("the stick could not be patched: " + e.Message); yield break; }
+            StrideProbe.On = true; // for this survey only (off again below)
 
             // the mounts: the plain donkey, then each built-in mount by its own look (saddleup.dragon/default)
             var mounts = new List<(string Skin, string Mount)> { (null, MountCatalog.DonkeyId) };
@@ -104,6 +105,7 @@ namespace GK2DonkeyAPI
             {
                 surveyStick = null;
                 StrideProbe.Label = "";
+                StrideProbe.On = false;
                 try { surveyHarmony?.UnpatchSelf(); } catch { }
                 surveyHarmony = null;
             }

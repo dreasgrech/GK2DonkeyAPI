@@ -18,7 +18,11 @@ namespace GK2DonkeyAPI
     // The log gets the file's name and the first rows of each mount. Dev only; no behaviour changes.
     internal static class StrideProbe
     {
-        internal static bool On = DevTools.Unlocked;
+        // Off until a survey turns it on (the walk survey; the garbage survey's probe phase), even with the dev tools: on
+        // all the time it appended a row to its file every walk cycle of every walking mount, each a file opened on the
+        // main thread, 1033 times in 17 s riding Gerry with his babies, 5 to 11 ms a time (Performance Hog,
+        // 2026-10-25 13:38), and every dev measurement carried it.
+        internal static bool On;
 
         private sealed class Track
         {

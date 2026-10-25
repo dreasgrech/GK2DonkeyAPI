@@ -22,6 +22,12 @@ namespace GK2DonkeyAPI
         private static float diagWindow;
         private static int diagInWindow, diagSkipped;
 
+        // The step-by-step lines (a shuffle's turns and frames, a pose, a wake, a foal's route search) only with the dev
+        // tools: every caller checks this first, so a player's game never builds them (the strings were made on every
+        // call, even when the budget below dropped the line; the probe audit of 2026-10-25). The lines of an event a
+        // player's report needs (a spawn, a foal stuck or caught up) stay.
+        internal static bool DevDiag => DevTools.Unlocked;
+
         internal static void DiagLog(string line)
         {
             float now = Time.unscaledTime;
@@ -564,7 +570,7 @@ namespace GK2DonkeyAPI
                     (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample));
                 if (routesLogged < 30)
                 {
-                    DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
+                    if (DevDiag) DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
                 }
             }
 
@@ -578,7 +584,7 @@ namespace GK2DonkeyAPI
                 string what = s.Result == FoalRouteSearch.State.Found
                     ? $"found, {s.Corners.Count} corner(s)"
                     : $"none ({s.Why})";
-                DiagLog($"[foal] {Describe()} route to {LeadNow().Name}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
+                if (DevDiag) DiagLog($"[foal] {Describe()} route to {LeadNow().Name}: {what}; {s.Tests} cell tests in {s.Frames} frame(s), {s.TestMs:F1} ms ({us:F0} µs per test).");
             }
 
             // One frame of trotting towards the slot: the body moves in a straight line, the root stays half a (scaled)

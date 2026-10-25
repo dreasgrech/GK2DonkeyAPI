@@ -2422,6 +2422,10 @@ namespace GK2DonkeyAPI
             // built at the main menu it lost its holes (2026-10-24 log: Hellfire "its erase colour can't clear the donkey
             // (the base's frame is not in memory)", 0 of 44 frames found), and the first spawn wore it so
             if (d != null && NeedsBaseFrames(d) && !BaseFramesInMemory(d.Base, d.Base.GamePrefix)) return;
+            // a game-source skin (Gerry) waits for the game: at the main menu its character's sprites aren't loaded, so it
+            // was looked for (every sprite in memory scanned), refused with an exception and set aside, then offered
+            // again after the load (Performance Hog, 2026-10-25 13:43: the exception at every start with Gerry chosen)
+            if (d != null && d.Game != null && !Mount.IsGameReady) return;
             Loaded prev = warm;
             warm = null;
             if (d != null)

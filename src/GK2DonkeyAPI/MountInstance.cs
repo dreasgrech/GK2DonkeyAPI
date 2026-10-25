@@ -222,7 +222,7 @@ namespace GK2DonkeyAPI
                     {
                         // The data was right but the view's transform wasn't: say where once, to see how the game places it.
                         loggedViewOff = true;
-                        DiagLog($"[pose] {Describe()}: the view stands at {donkey.transform.position:F3}, its data at {at:F3}.");
+                        if (DevDiag) DiagLog($"[pose] {Describe()}: the view stands at {donkey.transform.position:F3}, its data at {at:F3}.");
                     }
                 }
                 else

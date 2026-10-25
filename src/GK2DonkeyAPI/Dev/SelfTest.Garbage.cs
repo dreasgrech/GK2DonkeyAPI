@@ -99,7 +99,7 @@ namespace GK2DonkeyAPI
                     Info(Perf.PhaseEnd("riding the dragon, standing still"));
 
                     // 6. the dev stride probe on, riding and walking (its own cost)
-                    if (probe)
+                    if (DevTools.Unlocked)
                     {
                         StrideProbe.On = true;
                         Perf.PhaseStart();

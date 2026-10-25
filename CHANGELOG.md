@@ -732,6 +732,23 @@ Development:
   netstandard2.1 project, with `BannedSymbols.txt` banning `System.Linq.Enumerable`, `Queryable` and
   `ParallelEnumerable`, as error RS0030 at the line that uses it. `tests/NoLinqScan` checks every built DLL for any
   reference into `System.Linq` and runs with the release scans. The .NET console tests and tools may still use it.
+- **The probe audit** (the user, 2026-10-25: "check if we also have any hanging probes running which can skew our
+  performance or even worse, we ship them by mistake"). Every dev tool is behind the dev tools' lock (the sources on the
+  machine or the marker file; a player's [Debug] keys bind into a config that is never written), and the dev window
+  and the perf logging default to off. Three things still ran for a player and are dev only now: the step-by-step
+  diagnostic lines (a shuffle's turns and frames, a pose, a wake, a foal's route search: their strings were built on
+  every call even when the 4-a-second budget dropped them; the lines a player's report needs, a spawn or a foal stuck,
+  stay), the `[pick]` trace (only with the perf logging), and the Mounts panel picture's set-up dump (some 45 lines).
+  Saddle Up and the other mods were checked too: nothing runs for a player that shouldn't (Owned Count's item dump is
+  a Debug switch, off by default).
+- **A look built ahead for a mount made from the game's own character (Gerry) waits for the game to be loaded**: at
+  the main menu his sprites aren't in memory, so every sprite was scanned, the look refused with an exception and set
+  aside, then offered again after the load, at every start with Gerry chosen (Performance Hog, 2026-10-25 13:43).
+- **The dev stride probe is off until a survey turns it on** (the walk survey, the garbage survey's probe phase). On
+  whenever the dev tools were, it appended a row to its CSV every walk cycle of every walking mount, each a file opened
+  on the main thread: 1033 times in a 17 s ride on Gerry with his babies, 5 to 11 ms a time (Performance Hog,
+  2026-10-25 13:38: 84 frames of 5 ms or more, all marked "file write"). Every dev measurement carried it, and it was
+  the sound tick's 2.5 ms.
 - **A skin's "loaded" line says what building it cost**, step by step: the sheet made, the pictures made (files read,
   decoded), put in the sheet, uploaded, sprites, colours; the frames it took, the most work in one frame, the game's
   slowest frame meanwhile, and the memory allocated. It was added to measure the hitch when the dragon is picked again

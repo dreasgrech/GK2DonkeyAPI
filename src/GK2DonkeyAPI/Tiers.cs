@@ -195,7 +195,7 @@ namespace GK2DonkeyAPI
                         {
                             if (p.name == "Direction" && p.type == AnimatorControllerParameterType.Float)
                             {
-                                DiagLog($"[wake] {Describe()}{(mounted ? " (ridden)" : "")}: animator Direction {a.GetFloat(p.nameHash):F0}, wanted {(riderFacingX > 0f ? "right" : "left")} (data {donkey.Data.MovableDirection.x:F0}).");
+                                if (DevDiag) DiagLog($"[wake] {Describe()}{(mounted ? " (ridden)" : "")}: animator Direction {a.GetFloat(p.nameHash):F0}, wanted {(riderFacingX > 0f ? "right" : "left")} (data {donkey.Data.MovableDirection.x:F0}).");
                                 return;
                             }
                         }

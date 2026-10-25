@@ -230,6 +230,7 @@ namespace GK2DonkeyAPI
 
         internal static void TracePick(string what)
         {
+            if (!LogEvery10s) return; // dev only: the perf logging's switch (the dev panel), never a player's
             // The click runs in the EventSystem's Update, maybe before this frame's BeginFrame (Plugin.Update): the previous
             // frame is closed first, so the click's work is counted in the frame it happened in, #1 (it was counted in the
             // frame before, and the frame it slowed showed the rest only; the 2026-10-25 01:31 log).

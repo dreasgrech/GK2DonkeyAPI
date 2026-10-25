@@ -234,7 +234,7 @@ namespace GK2DonkeyAPI
                     if (!shuffleAnnounced && shuffleLateralKnown)
                     {
                         shuffleAnnounced = true;
-                        DiagLog($"[shuffle] {Describe()} shuffles around {shuffleHome:F2} in {SceneId} (body offset {shuffleLateral:F2}, navmesh {(MainGame.PlayerController?.SceneRecastGraph != null ? "yes" : "no")}, first step in {shuffleAt - Time.time:F1} s).");
+                        if (DevDiag) DiagLog($"[shuffle] {Describe()} shuffles around {shuffleHome:F2} in {SceneId} (body offset {shuffleLateral:F2}, navmesh {(MainGame.PlayerController?.SceneRecastGraph != null ? "yes" : "no")}, first step in {shuffleAt - Time.time:F1} s).");
                     }
                 }
                 if (parentHome && !followLost)
@@ -473,7 +473,7 @@ namespace GK2DonkeyAPI
                             if (Plugin.TuningWindowEnabled.Value)
                             {
                                 turnLogFrames = 3;
-                                DiagLog($"[shuffle] {Describe()} turns to face {(nf > 0f ? "right" : "left")}: body {BodyNowForLog()}, root {Position:F3} -> {root:F3}.");
+                                if (DevDiag) DiagLog($"[shuffle] {Describe()} turns to face {(nf > 0f ? "right" : "left")}: body {BodyNowForLog()}, root {Position:F3} -> {root:F3}.");
                             }
                         }
                         else
@@ -637,7 +637,7 @@ namespace GK2DonkeyAPI
                         }
                         followLost = wedged = false;
                         pickFailsInRow = 0;
-                        DiagLog($"[shuffle] {Describe()} stood inside {inside?.name} ({(inside != null ? LayerMask.LayerToName(inside.gameObject.layer) : "?")}); moved {r:F1} out to {p:F2}.");
+                        if (DevDiag) DiagLog($"[shuffle] {Describe()} stood inside {inside?.name} ({(inside != null ? LayerMask.LayerToName(inside.gameObject.layer) : "?")}); moved {r:F1} out to {p:F2}.");
                         return;
                     }
                 }
@@ -725,7 +725,7 @@ namespace GK2DonkeyAPI
                 }
                 shuffleFailLogAt = Time.time + 60f;
                 lastPickFail = $"outside the area {failBox}, near the keeper or another donkey {failNear}, ground {failGround}, no room to turn {failTurnRoom}, body offset not measured {failNoOffset}";
-                DiagLog($"[shuffle] {Describe()} found no step at {BodyAt(Position, riderFacingX):F2} (home {shuffleHome:F2}): rejected {lastPickFail}.{(groundFail != null ? " First ground failure: " + groundFail + "." : "")}");
+                if (DevDiag) DiagLog($"[shuffle] {Describe()} found no step at {BodyAt(Position, riderFacingX):F2} (home {shuffleHome:F2}): rejected {lastPickFail}.{(groundFail != null ? " First ground failure: " + groundFail + "." : "")}");
                 failBox = failGround = failNear = failTurnRoom = failNoOffset = 0;
                 groundFail = null;
             }
@@ -739,7 +739,7 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 turnLogFrames--;
-                DiagLog($"[shuffle] {Describe()} frame +{Time.frameCount - shuffleTurnFrame}: body {BodyNowForLog()}, root {Position:F3}, {shufflePhase}.");
+                if (DevDiag) DiagLog($"[shuffle] {Describe()} frame +{Time.frameCount - shuffleTurnFrame}: body {BodyNowForLog()}, root {Position:F3}, {shufflePhase}.");
             }
 
             private float lastPickFailAt = -1000f;
