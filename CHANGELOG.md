@@ -12,6 +12,12 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The dragon, the giant rat and the giant snail have sounds of their own** (the user's recordings, 2026-10-25:
+  "can we fill some missing slots with our new sounds?"). The dragon roars with three growls (it used the zombie's
+  cry pitched down), growls as you get on and off, thuds as it touches down after a flight, and its babies answer
+  with the growls pitched up. The rat squeaks (it used the spitter's cry pitched up), squeaks as you get on and off,
+  and its babies answer with small squeaks. The snail squelches as you get on and off (it used the fishing blop), its
+  babies with a small squelch. Gerry's getting on and off and the worm's and Gerry's babies are still silent.
 - **The dragon flies, for everyone** (the user, 2026-10-25: "make flying not dev only"). Riding it plain, outdoors:
   Space jumps, Space again in the air takes off, Left Shift climbs, Left Ctrl descends, Space while flying lands. It
   flies over water, fences, cliffs and roofs and comes down only where you can stand ("Nowhere to land here." while it
@@ -764,6 +770,15 @@ For mod authors:
 
 Development:
 
+- **The sound coverage counts a babies' answer** (`Sounds.Coverage`, `tests/SkinsScan`): `answer` plays on babies
+  only, so a `[Sounds.Baby]` line now covers it in the start-up log's line, the Mounts tab and the scan; before, every
+  mount that gave its babies an answer was still listed as missing it. The new files are named after their events in
+  each mount's `sounds\` (`voice_1.ogg`, `mount_1.ogg`, `answer_1.ogg`, ...), picked from the trimmed candidates in
+  `C:\ClaudeCodeTemp\GK2-mount-sounds\` (its OVERVIEW.md says which file is which).
+- **Surveyed: the user's new mount sounds** (docs/next-update.md section 4; trimmed candidates outside the repo in
+  `C:\ClaudeCodeTemp\GK2-mount-sounds\`, with `trim_whole.py`, which cuts only the silence at the ends, never a gap
+  inside a chatter). Three dragon growls, a landing thud, a wing beat, eleven rat squeaks, six snail squelches;
+  nothing wired in yet.
 - **Investigated: what the next update still needs, how the mounts differ in play, and which sounds they lack**
   (docs/next-update.md; the user, 2026-10-25: "see what is actually remaining ... every mount needs to have something
   which makes it useful"). Nothing built but the dragon's cart: its dead `[Tuning.Cart]` and the generator's gap for

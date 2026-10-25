@@ -174,6 +174,20 @@ entries can also be closed with `none` where silence is the character (the snail
 stops listing them. The dragon's flight clips the user supplied are kept compressed since the switching work; hearing
 them in game is still open (section 1.C).
 
+**The user's files of 2026-10-25** (`Downloads\MountSounds`, 17 files; surveyed and trimmed for listening in
+`C:\ClaudeCodeTemp\GK2-mount-sounds\`, its OVERVIEW.md; nothing in the mod yet). Ten are the dragon's sounds already
+shipped (take-off, landing, flaps, glide). New: three dragon growls (the roar, `voice`; one can be getting on, and
+pitched up the babies' answer), a landing thud (`touchdown`), a sixth wing beat; a 34 s rat recording with about a
+dozen distinct squeaks (its middle repeats), cut into eleven squeaks and a scrabble (voice, getting on and off, the
+babies' answer); a 40 s snail slime texture, cut into six squelches and a slither (getting on and off, the babies'
+answer). Still without a file: Gerry's getting on and off and babies, the worm's babies, the dragon's wind loop.
+
+**Filled the same day** (the user: "can we fill some missing slots"): the dragon's voice, getting on and off,
+touchdown and babies' answer; the rat's voice, getting on and off and babies' answer; the snail's getting on and off
+and babies' answer. SkinsScan lists nothing missing for those three. Left: Gerry (getting on and off, the babies'
+answer), the worm's babies' answer, the dragon's wind loop (`fly`), the sixth wing beat (not used: shorter and
+softer than the five), and the placeholders of steps and grazing.
+
 ## 5. Built today: the dragon pulls no cart
 
 - `saddleup.dragon/mount.cfg`: `cart = false`, no `cargo` line, the description says so. The API's cart rule does the

@@ -595,13 +595,14 @@ foreach (var dir in skinDirs)
     }
     if (!mount.Equals("donkey", StringComparison.OrdinalIgnoreCase))
     {
-        // what the skin lacks: the donkey's own events with no line in its own or its mount's blocks (riding plain)
+        // what the skin lacks: the donkey's own events with no line in its own or its mount's blocks (riding plain; the
+        // babies' answer, played by babies only, by a [Sounds.Baby] line too: Sounds.Coverage does the same)
         var covered = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         mountCfgs.TryGetValue(mount, out var mountCfg);
         foreach (var c in new[] { cfg, defaultCfg, mountCfg }) // a variant: its default's lines too
             if (c != null)
-                foreach (var sec in new[] { "Sounds", "Sounds.Ride" })
-                    if (c.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if (parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) covered.Add(parts[0]); }
+                foreach (var sec in new[] { "Sounds", "Sounds.Ride", "Sounds.Baby" })
+                    if (c.TryGetValue(sec, out var lines)) foreach (var key in lines.Keys) { var parts = key.Split('.'); if ((parts.Length == 1 || parts.Length == 2 && soundVariants.Contains(parts[1])) && (sec != "Sounds.Baby" || parts[0].Equals("answer", StringComparison.OrdinalIgnoreCase))) covered.Add(parts[0]); }
         var missing = donkeyOwn.Where(e => !covered.Contains(e)).OrderBy(e => e).ToList();
         Console.WriteLine(missing.Count == 0 ? $"INFO {id}: no sound missing (every one of the donkey's own events has a line)" : $"INFO {id}: sounds MISSING (the donkey's own, silent on this mount until given): {string.Join(", ", missing)}");
     }

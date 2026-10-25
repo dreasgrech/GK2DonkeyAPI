@@ -111,20 +111,22 @@ namespace GK2DonkeyAPI
             {
                 SoundLine l = null;
                 string from = null;
+                // a baby's answer is played by babies only: its [Sounds.Baby] line covers it for the grown one's list too
+                bool babyNow = baby || d.Id == "answer";
                 if (skin != null)
                 {
-                    l = (baby ? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    l = (babyNow ? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin, Looks.SoundLayer.Both)?.Get(d.Id, null);
                     if (l != null && l.HasSource) from = "skin";
                 }
                 if (from == null && skin?.Parent != null)
                 {
                     // built on its mount's default: the default's own lines next (LooksInherit.cs)
-                    l = (baby ? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    l = (babyNow ? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.SkinSoundBlock(skin.Parent, Looks.SoundLayer.Both)?.Get(d.Id, null);
                     if (l != null && l.HasSource) from = "default";
                 }
                 if (from == null)
                 {
-                    l = (baby ? Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(d.Id, null);
+                    l = (babyNow ? Looks.MountSoundBlock(mount, Looks.SoundLayer.Baby)?.Get(d.Id, null) : null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Ride)?.Get(d.Id, null) ?? Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(d.Id, null);
                     if (l != null && l.HasSource) from = "mount";
                 }
                 if (from != null) list.Add((d.Id, from, LineText(l)));
