@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The giant snail squelches as it slides along** (the user, 2026-10-25: "sound those slime sounds while walking"):
+  three more squelches from the slime recording, two a stride, as quiet as the donkey's hooves on grass. It was
+  silent while moving.
 - **The babies answer after their parent's call, so you hear them** (the user, 2026-10-25: "are we sure the foals
   are replying at all?"). They did answer, every time, but half a second after the call began, and the dragon's
   roars last two to four seconds: every answer played under the roar. Now they answer one after another once the
