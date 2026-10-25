@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The babies' answers are as loud as their parent's call** (the user, 2026-10-25: "i still cant hear the babies
+  ever replying"; the log showed every answer playing, about 10 dB under the call once the babies' smaller size and
+  their distance were counted). The dragon's babies answer with a lower growl too, not a chirp.
 - **The giant snail squelches as it slides along** (the user, 2026-10-25: "sound those slime sounds while walking"):
   three more squelches from the slime recording, two a stride, as quiet as the donkey's hooves on grass. It was
   silent while moving.
