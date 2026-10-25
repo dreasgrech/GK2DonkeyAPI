@@ -18,7 +18,7 @@ namespace GK2DonkeyAPI.Api
     // the framework's Mods menu sorts sections by name and has no other way to order them. The game's Settings window
     // shows the plain names.
     // Looks: Preview shows a picture of the mod's donkey in its current colours next to the settings (LookPreview.cs);
-    // the look rows (look: true; the Mount and Skin rows, the colours, the effect) are not in the menus at all: they
+    // the look rows (look: true; the Mount and Skin rows, the colours) are not in the menus at all: they
     // live in the Mounts panel (MountsPanel.cs: the mounts listed, the chosen one drawn with its words and its rows),
     // which PanelButton opens from the page and OpenPanel from a mod's key. Both are extras: if anything about them
     // fails, they don't show, and the settings work through the cfg as before.
@@ -405,7 +405,7 @@ namespace GK2DonkeyAPI.Api
         // The rows every player mod wants for choosing its mount, in one call (docs/mounts-design.md §6), meant for a
         // section of their own ("Mount"): a Mount dropdown (every mount), a Skin dropdown with that mount's skins, and
         // whether the foals are the same mount and skin. Cfg keys: Mount, Skin_<mount id>, FoalsWearSkin in the section
-        // given. The effect rows are EffectRows. Mounts and skins registered before the page is shown (the frame after
+        // given. Mounts and skins registered before the page is shown (the frame after
         // Publish: every plugin's Awake has run by then, CatchUp) appear here with no change to yours; later ones after
         // a restart.
         public void MountRows(string section, MountCompanion companion)
@@ -573,48 +573,6 @@ namespace GK2DonkeyAPI.Api
             Toggle(section, "FoalsFollow", me.FoalsFollowOnFoot, "Babies follow you on foot", "Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out.", v => me.FoalsFollowOnFoot = v);
             Toggle(section, "FoalsIndoors", true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
             Toggle(section, "FoalsWearSkin", me.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => me.FoalsWearSkin = v);
-        }
-
-        // The effect rows (docs/api.md "Effects"), for a section of their own ("Effect"): the effect (the mount's own,
-        // none, every registered one), when it shows, and how. Cfg keys: Effect, EffectWhen, EffectTrail, EffectWithCart,
-        // EffectInFights, EffectOnFoals in the section given.
-        public void EffectRows(string section, MountCompanion companion)
-        {
-            if (companion == null) throw new ArgumentNullException(nameof(companion));
-            MountCompanion me = companion;
-            ConfigEntry<string> effect = List(section, "Effect", MountEffects.FromMount, GK2DonkeyAPI.Effects.EffectChoices, "Effect",
-                Mounts.MountsEnabled
-                    ? "A particle effect on your mount: As the mount or skin (what the skin comes with, else what the creature comes with, if anything: Hellfire burns by itself), None, Hellfire (the game's lamp fire in a ring round it), or one a mod added. Never indoors."
-                    : "A particle effect on your mount. None in this version (the donkey comes with none); Hellfire and effects from mods come in the next update.",
-                v => me.Effect = v, look: true);
-            Func<bool> on = () => !MountEffects.IsNone(effect.Value);
-            var when = Choice(section, "EffectWhen", me.EffectWhen, "Effect shown", "", v => me.EffectWhen = v, new[] { "Never", "At night", "Always" }, look: true, visible: on);
-            // the four toggles hang on the Effect row (shown while an effect is chosen): the panel's with it, not the menus'
-            var trail = Toggle(section, "EffectTrail", true, "The effect leaves a trail", "Hellfire: flames left behind while it walks, burning out.", v => Mounts.EffectSettings.Set(OwnerId, "EffectTrail", v), on);
-            var withCart = Toggle(section, "EffectWithCart", false, "The effect goes round the cart too", "With the cart hitched, one wider ring round the mount and the cart.", v => Mounts.EffectSettings.Set(OwnerId, "EffectWithCart", v), on);
-            var inFights = Toggle(section, "EffectInFights", true, "The effect shows in fights", "Off: it goes out while you fight in armour.", v => Mounts.EffectSettings.Set(OwnerId, "EffectInFights", v), on);
-            var onFoals = Toggle(section, "EffectOnFoals", false, "Babies have it too", "A smaller one round each of your mount's babies.", v => Mounts.EffectSettings.Set(OwnerId, "EffectOnFoals", v), on);
-            foreach (ConfigEntryBase e in new ConfigEntryBase[] { trail, withCart, inFights, onFoals }) MarkLook(e);
-            if (!Mounts.MountsEnabled)
-            {
-                // the gate (Debug.MountsPreview): no effect exists to pick, so the six rows stay bound (the cfg keeps its
-                // values) but show nowhere, neither the menus (look rows) nor the panel (Shown false); the page's own Info
-                // row says effects come in the next update
-                foreach (ConfigEntryBase e in new ConfigEntryBase[] { effect, when, trail, withCart, inFights, onFoals }) HideRow(e);
-            }
-        }
-
-        private void HideRow(ConfigEntryBase e)
-        {
-            Row r = Rows.Find(x => ReferenceEquals(x.Entry, e));
-            if (r != null) r.Shown = () => false;
-        }
-
-        // A row of ours made the panel's (look) after the fact.
-        private void MarkLook(ConfigEntryBase e)
-        {
-            Row r = Rows.Find(x => ReferenceEquals(x.Entry, e));
-            if (r != null) r.IsLook = true;
         }
 
         // On or off.
@@ -823,7 +781,7 @@ namespace GK2DonkeyAPI.Api
 
         // A button that closes the menu and opens the Mounts panel over the game: every mount listed, the chosen one
         // drawn with its description, what it does and its abilities, and the page's look rows for it (its Skin, the
-        // effect, the colours), with Done (Escape too; both keep what was chosen). Only in a game; in the main menu it says so.
+        // colours), with Done (Escape too; both keep what was chosen). Only in a game; in the main menu it says so.
         public void PanelButton(string section, string label, string description)
         {
             Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false) });

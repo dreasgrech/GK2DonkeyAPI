@@ -51,15 +51,15 @@ if (knownKeys.Count != 44) Fail($"Looks.cs KnownKeys: {knownKeys.Count} keys rea
 if (skinTuningKeys.Count == 0) Fail("Looks.cs SkinTuningKeys not found"); else Pass($"Looks.cs SkinTuningKeys: {skinTuningKeys.Count} keys a skin may set");
 if (tuningKeys.Count < 50) Fail($"Plugin.cs StyleSettings: only {tuningKeys.Count} tuning keys read"); else Pass($"Plugin.cs StyleSettings: {tuningKeys.Count} tuning keys");
 
-var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase", "effect", "effect_when" };
+var skinKeysAllowed = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "format", "needs", "name", "description", "portrait", "author", "version", "base", "colours", "layer", "canvas", "pivot", "mount", "offset", "offset_cart", "sheet", "columns", "frames", "sheet_front", "source", "seat", "erase" };
 // The [Mount] block's keys as MountPacks.cs keeps them, and the knobs of a [Base.<Region>] section (Colors.RegionTweak)
 var mountPacksCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "MountPacks.cs"));
 var mountKeys = StringsIn(mountPacksCs, "MountKeys");
-if (mountKeys.Count < 16) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (16 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Count < 14) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (14 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
+if (mountKeys.Contains("effect") || mountKeys.Contains("effect_when")) Fail("MountPacks.cs MountKeys still has effect / effect_when (nothing picks an effect since 2026-10-25)");
 if (mountKeys.Contains("default_skin")) Fail("MountPacks.cs MountKeys still has default_skin (a mount's own look is its skins\\default\\ since 2026-10-24)");
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
-var effectWhen = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Off", "Night", "Always" };
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
@@ -322,17 +322,6 @@ foreach (var mdir in mountDirs)
         if (m.GetValueOrDefault("cart") == "false") BadM("[Mount] cargo on a mount that can't pull the cart");
     }
     else if (m.GetValueOrDefault("cart") != "false") BadM("[Mount] cargo missing: a built-in mount that pulls the cart says how much it carries (1 to 6)");
-    if (m.TryGetValue("effect", out var ef))
-    {
-        if (ef == "none" || ef.Length == 0) BadM("[Mount] effect = none is the default: leave it out");
-        else if (!effectIds.Contains(ef)) BadM($"[Mount] effect = {ef}: not a built-in effect ({string.Join(", ", effectIds)})");
-        if (!m.ContainsKey("effect_when")) BadM("[Mount] effect without effect_when (Off, Night or Always)");
-    }
-    if (m.TryGetValue("effect_when", out var ew))
-    {
-        if (!effectWhen.Contains(ew)) BadM($"[Mount] effect_when = {ew}: Off, Night or Always (Never is the menu's word, not a value)");
-        if (!m.ContainsKey("effect")) BadM("[Mount] effect_when without an effect");
-    }
     if (cfg.TryGetValue("Stats", out var stl)) foreach (var key in stl.Keys) if (key.Equals("Speed", StringComparison.OrdinalIgnoreCase) || key.Equals("Cargo", StringComparison.OrdinalIgnoreCase)) BadM($"[Stats] {key}: the API writes the speed and cargo lines itself (left out in the game)");
     if (cfg.TryGetValue("Tuning", out var both))
         foreach (var sec in new[] { "Tuning.Ride", "Tuning.Cart" })
@@ -400,20 +389,6 @@ foreach (var dir in skinDirs)
     int seatRow = -1;
     bool seatRowGiven = skin.TryGetValue("seat", out var seatRowText) && int.TryParse(seatRowText, out seatRow);
     if (skin.TryGetValue("source", out var srcv) && srcv != "pictures" && srcv != "game") Bad($"[Skin] source = {srcv}: pictures or game");
-    // the effect a skin comes with (shown under "As the mount or skin"): the mount block's rules
-    if (skin.TryGetValue("effect", out var skinEffect))
-    {
-        bool cancels = variant && skinEffect == "none" && defaultSkin != null && defaultSkin.ContainsKey("effect"); // a variant's "none": not its default's effect
-        if (cancels) { }
-        else if (skinEffect == "none" || skinEffect.Length == 0) Bad("[Skin] effect = none is the default: leave it out");
-        else if (!effectIds.Contains(skinEffect)) Bad($"[Skin] effect = {skinEffect}: not a built-in effect ({string.Join(", ", effectIds)})");
-        if (!cancels && !skin.ContainsKey("effect_when")) Bad("[Skin] effect without effect_when (Off, Night or Always)");
-    }
-    if (skin.TryGetValue("effect_when", out var skinWhen))
-    {
-        if (!effectWhen.Contains(skinWhen)) Bad($"[Skin] effect_when = {skinWhen}: Off, Night or Always");
-        if (!skin.ContainsKey("effect")) Bad("[Skin] effect_when without an effect");
-    }
     if (skin.TryGetValue("erase", out var erase))
     {
         if (erase != "none" && !Regex.IsMatch(erase, "^[0-9A-Fa-f]{6}$")) Bad($"[Skin] erase = {erase}: RRGGBB or none");

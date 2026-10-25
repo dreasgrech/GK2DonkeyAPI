@@ -20,7 +20,7 @@ namespace GK2DonkeyAPI
         // above it (x 30-37, y 54-57; [Colors] Dark = 101010).
         private static byte[] LayerDefaultPicture() => TempPng((30, 30, 36, 24, LayerRed), (30, 54, 8, 4, LayerDark));
 
-        // A variant built on its default: what it doesn't say is the default's (description, effect, offset, colours,
+        // A variant built on its default: what it doesn't say is the default's (description, offset, colours,
         // a picture, tuning, a sound), what it says is its own (seat = none, a picture, a tuning key), it wears so, an
         // edit to the default reaches it, and its file keeps its own lines only (the tab's set and taken back too).
         private static IEnumerator SkinVariant()
@@ -43,7 +43,7 @@ namespace GK2DonkeyAPI
                 File.WriteAllBytes(Path.Combine(dd, "bdy_static_left.png"), body);
                 File.WriteAllBytes(Path.Combine(dd, "bdy_walk_left_01.png"), body);
                 File.WriteAllBytes(Path.Combine(dd, "sounds", "voice_1.wav"), SoundBank.TestTone(0.3f, 440f));
-                File.WriteAllText(Path.Combine(dd, "skin.cfg"), "[Skin]\nformat = 1\nname = Layered Default\ndescription = The default's own words.\nseat = 50\neffect = hellfire\neffect_when = Night\noffset = 2 1\n\n[Tuning]\nRiderOffsetPx = 3\n\n[Sounds]\nvoice = voice_1.wav\n\n[Colors]\nDark = 101010\n");
+                File.WriteAllText(Path.Combine(dd, "skin.cfg"), "[Skin]\nformat = 1\nname = Layered Default\ndescription = The default's own words.\nseat = 50\noffset = 2 1\n\n[Tuning]\nRiderOffsetPx = 3\n\n[Sounds]\nvoice = voice_1.wav\n\n[Colors]\nDark = 101010\n");
                 string bd = TempSkinDir(root, mount, "blue");
                 Directory.CreateDirectory(bd);
                 File.WriteAllBytes(Path.Combine(bd, "bdy_walk_left_01.png"), TempPng((30, 30, 36, 24, LayerNavy)));
@@ -63,8 +63,8 @@ namespace GK2DonkeyAPI
                 MountSkinInfo bi = Mounts.Looks.Find(blue);
                 Check(bi != null && bi.BuiltOn == def && !bi.OverDefault && !bi.Over && Mounts.Looks.Find(def)?.BuiltOn == null, $"MountSkinInfo: BuiltOn {bi?.BuiltOn ?? "null"}, OverDefault {bi?.OverDefault}; the default's BuiltOn null");
                 if (dDef == null || bDef == null) yield break;
-                Check(bDef.Description == "The default's own words." && bDef.Effect == "hellfire" && bDef.EffectWhen == MountEffectWhen.Night && bDef.OffsetRide == new Vector2(2f, 1f) && bDef.OffsetCart == new Vector2(2f, 1f) && bDef.CanvasW == 96 && bDef.CanvasH == 96,
-                    $"what it doesn't say is the default's: the description, the effect at night, offset 2 1 riding and with the cart, the canvas ({bDef.Description}; {bDef.Effect} {bDef.EffectWhen}; {bDef.OffsetRide} {bDef.OffsetCart})");
+                Check(bDef.Description == "The default's own words." && bDef.OffsetRide == new Vector2(2f, 1f) && bDef.OffsetCart == new Vector2(2f, 1f) && bDef.CanvasW == 96 && bDef.CanvasH == 96,
+                    $"what it doesn't say is the default's: the description, offset 2 1 riding and with the cart, the canvas ({bDef.Description}; {bDef.OffsetRide} {bDef.OffsetCart})");
                 Check(bDef.SeatRow < 0 && !bDef.SeatFromPicture && dDef.SeatRow == 50, $"seat = none: no seat, not the default's 50 ({bDef.SeatRow})");
                 Check(bDef.ColorRegions != null && bDef.ColorRegions.TryGetValue("Dark", out HashSet<string> darks) && darks.Contains("101010"), "the default's [Colors] reach it (Dark 101010)");
                 (int own, int from) = Looks.PictureCounts(bDef);
@@ -102,8 +102,8 @@ namespace GK2DonkeyAPI
                 string cfgPath = Path.Combine(TempSkinDir(root, mount, "blue"), "skin.cfg");
                 string err = Looks.SaveCfg(bDef);
                 string text = File.ReadAllText(cfgPath).Replace("\r\n", "\n");
-                Check(err == null && text.Contains("seat = none") && text.Contains("# keep: the variant's own file") && text.Contains("SeatAdjustPx = 4") && !text.Contains("offset") && !text.Contains("effect") && !text.Contains("RiderOffsetPx") && !text.Contains("description"),
-                    "saved: its own lines (seat = none, its [Tuning]) and none of the default's (offset, effect, description, tuning)" + (err != null ? " (" + err + ")" : ""));
+                Check(err == null && text.Contains("seat = none") && text.Contains("# keep: the variant's own file") && text.Contains("SeatAdjustPx = 4") && !text.Contains("offset") && !text.Contains("RiderOffsetPx") && !text.Contains("description"),
+                    "saved: its own lines (seat = none, its [Tuning]) and none of the default's (offset, description, tuning)" + (err != null ? " (" + err + ")" : ""));
                 // the Mounts tab's path: a value set there is its own (Given), taken back (a right-click) the default's again
                 bDef.OffsetRide = bDef.OffsetCart = new Vector2(5f, 0f);
                 bDef.Given |= Looks.SkinGiven.Offset;
@@ -237,7 +237,7 @@ namespace GK2DonkeyAPI
                 Directory.CreateDirectory(dd);
                 File.WriteAllBytes(Path.Combine(dd, "bdy_static_left.png"), LayerDefaultPicture());
                 defCfg = Path.Combine(dd, "skin.cfg");
-                File.WriteAllText(defCfg, "[Skin]\nformat = 1\nname = Later Default\ndescription = First words.\nseat = 50\neffect = hellfire\neffect_when = Always\n");
+                File.WriteAllText(defCfg, "[Skin]\nformat = 1\nname = Later Default\ndescription = First words.\nseat = 50\n");
                 // another canvas: its settings are the default's, its pictures and its seat row not
                 AddTempSkin(root1, mount, "big", "[Skin]\nformat = 1\nname = Big\ncanvas = 128 128\n");
                 // another mod's look for the mount, in a folder without mount.cfg (named <mod>.<name>)
@@ -262,8 +262,8 @@ namespace GK2DonkeyAPI
                 Info("the next \"has a 128x128 canvas\" warning is this test's own: a variant of another canvas is not built on its default's pictures");
                 int n1 = Looks.RegisterFolder(root1, owner);
                 Looks.SkinDef dDef = Looks.Find(def), bDef = Looks.Find(big);
-                Check(n1 == 2 && eDef != null && eDef.Parent == dDef && dDef != null && eDef.Description == "First words." && eDef.SeatRow == 50 && eDef.Effect == "hellfire",
-                    $"its default came: built on it, its description, seat and effect ({eDef?.Parent?.Id ?? "none"}; {eDef?.Description}; {eDef?.SeatRow}; {eDef?.Effect})");
+                Check(n1 == 2 && eDef != null && eDef.Parent == dDef && dDef != null && eDef.Description == "First words." && eDef.SeatRow == 50,
+                    $"its default came: built on it, its description and seat ({eDef?.Parent?.Id ?? "none"}; {eDef?.Description}; {eDef?.SeatRow})");
                 Check(bDef != null && bDef.Parent == dDef && !Looks.InheritsPictures(bDef) && bDef.CanvasW == 128 && bDef.Description == "First words." && bDef.SeatRow < 0,
                     $"another canvas: the description is the default's, the pictures and the seat row not ({bDef?.CanvasW}; {bDef?.Description}; seat {bDef?.SeatRow})");
                 if (eDef == null || dDef == null) yield break;
@@ -273,7 +273,7 @@ namespace GK2DonkeyAPI
                 a?.Tuning.Set(Owner, "Skin", early);
                 yield return Until(() => a != null && a.IsReady && a.I.TestSkinWearing() == early && !a.I.LooksRig.Building, 10f);
                 Check(waited && Looks.TestLoaded(early)?.Parent == dDef && Looks.TestLoaded(early).Layered, "worn: its sheet built on the default");
-                File.WriteAllText(defCfg, "[Skin]\nformat = 1\nname = Later Default\ndescription = Second words.\nseat = 50\neffect = hellfire\neffect_when = Always\n");
+                File.WriteAllText(defCfg, "[Skin]\nformat = 1\nname = Later Default\ndescription = Second words.\nseat = 50\n");
                 string err = Looks.ReloadCfg(dDef);
                 Looks.SkinDef dNew = Looks.Find(def);
                 Check(err == null && dNew != null && dNew != dDef && eDef.Parent == dNew && eDef.Description == "Second words.", $"the default read again: the variant is built on the new one and takes its description ({eDef.Description})" + (err != null ? " (" + err + ")" : ""));
@@ -284,12 +284,12 @@ namespace GK2DonkeyAPI
                 try
                 {
                     code1 = Mounts.Looks.Register(owner, new MountSkinDef { Id = "codey", Name = "Codey", Mount = mount, Source = new NoPictures() });
-                    code2 = Mounts.Looks.Register(owner, new MountSkinDef { Id = "codey2", Name = "Codey Two", Mount = mount, Source = new NoPictures(), SeatRow = 10, Effect = "none", Over = true });
+                    code2 = Mounts.Looks.Register(owner, new MountSkinDef { Id = "codey2", Name = "Codey Two", Mount = mount, Source = new NoPictures(), SeatRow = 10, Over = true });
                 }
                 catch (Exception e) { Fail("a code skin was refused: " + e.Message); }
                 Looks.SkinDef c1 = Looks.Find(mount + "/codey"), c2 = Looks.Find(mount + "/codey2");
-                Check(c1 != null && c1.Parent == dNew && c1.SeatRow == 50 && c1.Effect == "hellfire" && c1.Description == "Second words.", $"a code skin with nothing said takes the default's seat, effect and description ({c1?.SeatRow}, {c1?.Effect}, {c1?.Description})");
-                Check(c2 != null && c2.SeatRow == 10 && c2.Effect == null && !c2.Over && c2.Report.Contains("not drawn over its default yet"), $"one that says them keeps its own (seat 10, effect none: not the default's); Over on it is refused and reported ({c2?.SeatRow}, {c2?.Effect ?? "null"}, over {c2?.Over})");
+                Check(c1 != null && c1.Parent == dNew && c1.SeatRow == 50 && c1.Description == "Second words.", $"a code skin with nothing said takes the default's seat and description ({c1?.SeatRow}, {c1?.Description})");
+                Check(c2 != null && c2.SeatRow == 10 && !c2.Over && c2.Report.Contains("not drawn over its default yet"), $"one that says its seat keeps its own (seat 10: not the default's); Over on it is refused and reported ({c2?.SeatRow}, over {c2?.Over})");
                 code1?.Dispose();
                 code2?.Dispose();
                 code1 = code2 = null;
@@ -306,7 +306,7 @@ namespace GK2DonkeyAPI
                 Info("the next \"was withdrawn by\" warning is this test's own: another mod's variant is left standing alone");
                 Looks.Unregister(big, owner);
                 Check(Looks.Unregister(def, owner), "the default withdrawn by its owner");
-                Check(eDef.Parent == null && eDef.Description == null && eDef.SeatRow < 0 && eDef.Effect == null && eDef.Unavailable == null, $"the variant stands alone: its own values only, still offered ({eDef.Description ?? "no description"}, seat {eDef.SeatRow}, effect {eDef.Effect ?? "none"})");
+                Check(eDef.Parent == null && eDef.Description == null && eDef.SeatRow < 0 && eDef.Unavailable == null, $"the variant stands alone: its own values only, still offered ({eDef.Description ?? "no description"}, seat {eDef.SeatRow})");
                 yield return Until(() => Looks.TestLoaded(early)?.Parent == null && Looks.TestLoaded(early).Ready && a != null && !a.I.LooksRig.Building, 10f);
                 Check(waited && Looks.TestLoaded(early)?.Layered == false, "its wearer rebuilt its sheet alone");
                 a?.Remove();

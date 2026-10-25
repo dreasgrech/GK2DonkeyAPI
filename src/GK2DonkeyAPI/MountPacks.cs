@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI
 
         // The keys of [Mount], in the order the file keeps them (docs/mounts-foundation-audit.md). No default_skin: a
         // mount's own look is its skins\default\ (2026-10-24).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo", "effect", "effect_when" };
+        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo" };
 
         private static readonly string[] MountSections = { "mount", "stats", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "sounds.baby" };
 
@@ -119,12 +119,6 @@ namespace GK2DonkeyAPI
             {
                 if (int.TryParse(mcargo.Trim(), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int cargo) && cargo >= 1 && cargo <= Catalog.CargoMax) k.Cargo = cargo;
                 else p.Report += "[Mount] cargo = " + mcargo + " is not a whole number 1 to " + Catalog.CargoMax + ", taken as " + Catalog.CargoMax + "; ";
-            }
-            if (mount.TryGetValue("effect", out string me) && !MountEffects.IsNone(me)) k.Effect = me.Trim();
-            if (mount.TryGetValue("effect_when", out string mw))
-            {
-                if (Enum.TryParse(mw.Trim(), true, out MountEffectWhen when)) k.EffectWhen = when;
-                else p.Report += "[Mount] effect_when = " + mw + " is not Off, Night or Always, taken as Always; ";
             }
             var mountUnknown = new List<string>();
             foreach (string mk in mount.Keys) if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
@@ -338,11 +332,6 @@ namespace GK2DonkeyAPI
                 if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
                 if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
                 if (k.Cargo.HasValue) mn.Key(sb, "cargo", k.Cargo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
-                if (!string.IsNullOrEmpty(k.Effect))
-                {
-                    mn.Key(sb, "effect", k.Effect);
-                    mn.Key(sb, "effect_when", k.EffectWhen.ToString());
-                }
                 foreach (string l in mn.Trail) sb.Append(l).Append('\n');
                 if (k.Stats != null && k.Stats.Count > 0)
                 {

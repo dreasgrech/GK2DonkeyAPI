@@ -1,5 +1,9 @@
 # The skinning system: design (2026-10-17)
 
+**Amended 2026-10-25 (API 0.37.0):** the effects system (step 6) is registration only: nothing picks or shows an
+effect on a mount, a skin names none, and the `[Effects]` cfg section and the instance keys `Effect` / `EffectWhen`
+are retired (docs/api.md "Effects", docs/open-items.md "Effects on skins").
+
 **Amended 2026-10-24 (the mount folders):** a mount is no longer a `[Mount]` block inside its default skin's
 skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `default_skin`, `[Stats]`, `[Tuning*]`,
 `[Sounds*]`: plain names), the mount's `sounds\`, and `skins\<skin>\` for each look (skin.cfg, pictures, `front\`,

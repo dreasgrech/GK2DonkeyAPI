@@ -70,7 +70,7 @@ namespace GK2DonkeyAPI.Api
             var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null, Effect = MountEffects.IsNone(def.Effect) ? null : def.Effect.Trim(), EffectWhen = def.EffectWhen,
+                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
@@ -198,10 +198,6 @@ namespace GK2DonkeyAPI.Api
         // How many items its cart carries, 1 to 6 (0.36.0). Null: 6. A stat for the Mounts panel for now: what a cart
         // holds is still the player's Cart capacity (CartSlots).
         public int? Cargo;
-        // The effect an instance of this mount shows when its own Effect key is MountEffects.FromMount ("mount"): an effect
-        // id, or null for none; and when.
-        public string Effect;
-        public MountEffectWhen EffectWhen = MountEffectWhen.Always;
         // Values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, SpeedMultiplier, ...), typed as the
         // key is: set on every instance of this mount as overrides owned by the skin system while it is of this mount.
         // Tuning: both styles; TuningRide / TuningCart: one style, over Tuning. A skin's own Tuning refines them.
@@ -227,8 +223,8 @@ namespace GK2DonkeyAPI.Api
     // Behaviour a mod attaches to a mount. One object per mount, shared by every instance of it: keep per-instance state
     // in a dictionary keyed by the handle, or in handle.SetData. The API calls the hooks for instances that have a
     // handle (not the settings picture's paper donkey, not a plain summon without one). An ability that throws is
-    // switched off for the session on that instance, with one warning. Keys, settings rows, sounds and effects are the
-    // mod's own calls from these hooks (the settings page, Mounts.Effects, ...).
+    // switched off for the session on that instance, with one warning. Keys, settings rows and sounds are the mod's own
+    // calls from these hooks (the settings page, ...).
     public abstract class MountAbility
     {
         public abstract string Id { get; }
@@ -293,8 +289,6 @@ namespace GK2DonkeyAPI.Api
             CartSpeed = GK2DonkeyAPI.Catalog.SpeedOf(d, MountStyle.Cart);
             SpeedWord = GK2DonkeyAPI.Catalog.SpeedWord(Speed, MountStyle.Ride);
             Cargo = d.Cart ? GK2DonkeyAPI.Catalog.CargoOf(d) : 0;
-            Effect = d.Effect ?? "";
-            EffectWhen = d.EffectWhen;
             Noun = (d.Noun ?? d.Label).ToLowerInvariant();
             Abilities = d.Abilities.Length;
             Description = d.Description ?? "";
@@ -348,8 +342,6 @@ namespace GK2DonkeyAPI.Api
         public float CartSpeed { get; }
         public string SpeedWord { get; }
         public int Cargo { get; }
-        public string Effect { get; }
-        public MountEffectWhen EffectWhen { get; }
         // The word the game's sentences use for one ("skull", "giant rat").
         public string Noun { get; }
         public int Abilities { get; }

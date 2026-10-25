@@ -1,5 +1,8 @@
 # Mounts and skins: the foundation audit (2026-10-20)
 
+**2026-10-25 (API 0.37.0):** the `effect` / `effect_when` keys of `[Mount]` (and of a skin's `[Skin]`) discussed
+below are no longer read (an old file's lines are reported as unknown keys); a mount has no default effect.
+
 The user, after Hellfire and Royal Parade went onto one pipeline: *"take a look at the mounts and how we're defining
 them so that we have the same parity between them, so that our foundation is perfect before we continue building"*,
 then *"another full investigation to make sure we get mount definitions right in conjunction with their skin system

@@ -13,10 +13,10 @@ namespace GK2DonkeyAPI
     // The Mounts panel (MountSettingsPage.PanelButton / OpenPanel; docs/mounts-panel-design.md): a journal of the mounts
     // a player can ride. A list on the left (an icon and the name each, scrolling), the chosen mount on the right: its
     // portrait, name and description; the live picture of it with its cart on a dark stage, a stats card beside it
-    // (speed, the cart, babies, skins); under them the rows that define its look at a glance, Skin and Effect, as the
-    // game's own rows. A "Colours and effect..." button opens a second window of the same make with the colour rows
-    // in two full columns and the effect's toggles (the user, 2026-10-21: the journal must not squash the
-    // customisation; the colours get a window of their own). Done and Escape keep what was chosen (no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
+    // (speed, the cart, babies, skins); under them the row that defines its look at a glance, the Skin, as the game's
+    // own rows. A "Colours..." button opens a second window of the same make with the colour rows in two full columns
+    // (the user, 2026-10-21: the journal must not squash the customisation; the colours get a window of their own; the
+    // effect rows went on 2026-10-25). Done and Escape keep what was chosen (no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
     // when the window opened). Only in a game.
     //
     // Built by hand at a fixed size (1060x600 on the game's 1280x720 canvas; scaled only on a smaller canvas), no
@@ -121,8 +121,6 @@ namespace GK2DonkeyAPI
                 float ride = Catalog.SpeedOf(k, MountStyle.Ride);
                 e.Lines.Add("Speed: " + SpeedText(ride, MountStyle.Ride));
                 if (k.Cart) e.Lines.Add("Cargo: " + Catalog.CargoOf(k) + " items");
-                if (!string.IsNullOrEmpty(k.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(k.Effect)?.Name ?? k.Effect) + (k.EffectWhen == MountEffectWhen.Night ? " (at night)" : ""));
-                else if (def != null && !string.IsNullOrEmpty(def.Effect)) e.Lines.Add("Comes with: " + (GK2DonkeyAPI.Effects.Find(def.Effect)?.Name ?? def.Effect));
                 int skins = (k == Catalog.Donkey ? 1 : 0);
                 foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
                 if (skins > 1) e.Lines.Add(skins + " skins");
@@ -219,7 +217,7 @@ namespace GK2DonkeyAPI
             focusTemplate = templateRow.GetComponentInChildren<GamepadNavigationItem>(true)?.focusFrame; // the game row's own focus frame, for the panel's buttons
 
             // What was set when the panel opened, for a put-back (the self-tests; no Cancel button since 2026-10-21): every look row of the page (the mount, every mount's
-            // skin and colours, the effect), not only the chosen mount's, so a put-back after choosing another mount puts
+            // skin and colours), not only the chosen mount's, so a put-back after choosing another mount puts
             // the first one back.
             before.Clear();
             foreach (MountSettingsPage.Row r in page.Rows)
@@ -283,10 +281,10 @@ namespace GK2DonkeyAPI
             contentScroll = ScrollView(rightArea, "content", 0f, y, rw, Mathf.Max(60f, rightArea.rect.height - y), out contentRoot, 2f, manual: true);
             AddScrollbar(contentScroll);
 
-            // the buttons: Colours and effect..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
+            // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
             GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
             Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject customise = OwnButton(panel.transform, "colours", "Colours and effect...", 200f, ButtonH, OpenColours);
+            GameObject customise = OwnButton(panel.transform, "colours", "Colours...", 200f, ButtonH, OpenColours);
             Rect(customise, W - Pad - ButtonW - 16f - 200f, H - Pad - ButtonH, 200f, ButtonH);
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
             GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
@@ -471,9 +469,8 @@ namespace GK2DonkeyAPI
                     : "It has no skin to wear. Your choice is kept; the donkey comes instead.";
             }
 
-            // the page's look rows for this mount, in groups: the journal takes the Mount section's rows (the Skin) and the
-            // Effect section's choices (Effect, Effect shown); the colours window takes every other look section (the
-            // colours, under its two headings) and the Effect section's toggles under an "Effect" heading
+            // the page's look rows for this mount, in groups: the journal takes the Mount section's rows (the Skin); the
+            // colours window takes every other look section (the colours, under its two headings)
             journalGroups.Clear();
             colourGroups.Clear();
             string heading = null, headingSection = null;
@@ -489,16 +486,14 @@ namespace GK2DonkeyAPI
                 if (r.Shown != null && !r.Shown()) continue; // another mount's row
                 if (page.IsMountRow(r)) continue; // the list is the picker
                 bool mountSection = string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase);
-                bool effectSection = string.Equals(r.ShownSection, "Effect", StringComparison.OrdinalIgnoreCase);
-                bool toggle = r.RowKind == MountSettingsPage.RowKind.Toggle;
                 string group = heading != null && r.ShownSection == headingSection ? heading : (mountSection ? "Skin" : r.ShownSection);
-                if (mountSection || (effectSection && !toggle)) AddTo(journalGroups, group, r); // the journal: the Skin, the effect's choices
-                if (!mountSection) AddTo(colourGroups, group, r);                           // the colours window: every colour row, every effect row
+                if (mountSection) AddTo(journalGroups, group, r); // the journal: the Skin
+                else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, rightArea.rect.width - ScrollbarW, rows, out _);
             if (colours != null)
             {
-                coloursTitle.text = "Colours and effect: " + headerName.text;
+                coloursTitle.text = "Colours: " + headerName.text;
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
             }
             Refresh();
@@ -540,7 +535,7 @@ namespace GK2DonkeyAPI
                     float cx = x0 + ci * (colW + colGap), cy = rowTop;
                     bool any = false;
                     foreach (MountSettingsPage.Row r in group.Rows) if (r.Visible == null || r.Visible()) { any = true; break; }
-                    if (group.Group != null && any) // a heading only over rows that show (the effect's toggles hide while the effect is None)
+                    if (group.Group != null && any) // a heading only over rows that show (a row hidden by its own condition)
                     {
                         GameObject h = SettingsRows.MakeHeading(templateRow, root, page, group.Group);
                         Place(h, cx - rowVisual.x, cy - rowVisual.y);
@@ -660,8 +655,8 @@ namespace GK2DonkeyAPI
 
         // ---- the colours window ----
 
-        // The colours and the effect's toggles for the chosen mount, in a window of their own over the journal (hidden
-        // meanwhile): the colour rows in two full columns under their headings, the toggles under "Effect". Done keeps,
+        // The colours of the chosen mount, in a window of their own over the journal (hidden meanwhile): the colour rows
+        // in two full columns under their headings. Done keeps,
         // Done or Escape goes back to the journal (no Cancel since 2026-10-21).
         private static void OpenColours()
         {
@@ -670,7 +665,7 @@ namespace GK2DonkeyAPI
             {
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
                 colours = Window("colours window", settings, CW, CH, 30001);
-                coloursTitle = Text(colours.transform, "title", "Colours and effect: " + headerName.text, 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, CW - 2f * Pad, TitleH);
+                coloursTitle = Text(colours.transform, "title", "Colours: " + headerName.text, 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, CW - 2f * Pad, TitleH);
                 float top = Pad + TitleH + Gap;
                 coloursStage = Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
                 coloursPicture = Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();

@@ -235,7 +235,7 @@ closed):
     only in an offline copy of the planner. With "Baby donkeys come indoors" (0.18.0), page 2 has 8 rows (10 with
     Custom colours), so still 3 pages. The 0.11 regroup (Keys, Mount, Colours, Effect, Behaviour, Cart, Sound; the
     Colours section's two heading rows count as rows) changes the cut points: look at the pages again without the
-    framework, nothing was re-planned.
+    framework, nothing was re-planned. (The Effect section is gone since 2026-10-25, which moves them again.)
 11. **Speed labels fit** the game's narrow value field ("Fastest (x2.5 walking speed)"); if they're cut off,
     shorten them for that window only.
 12. **The dependency check** (2026-10-14, `docs/dependency-check.md` §"Testing it"): the three tampered-manifest
@@ -261,8 +261,8 @@ closed):
 - **The Mounts panel with a gamepad** (built 2026-10-21): never tried with a real controller.
 - **The foundation build of 2026-10-20 night** (docs/mounts-foundation-2.md 8; API 0.35.0, Saddle Up 0.12.0):
   the **Mounts panel** (Esc, Mods, Saddle Up, the Mount section's Mounts button; or set the Mounts panel key):
-  the six mounts listed, the chosen one drawn with its description and lines, its Skin, Effect and colour rows
-  under it; pick the dragon: the picture follows and the rows change; Done keeps, Cancel after switching puts
+  the six mounts listed, the chosen one drawn with its description and lines, its Skin and colour rows
+  under it (the Effect rows are gone since 2026-10-25); pick the dragon: the picture follows and the rows change; Done keeps, Cancel after switching puts
   the first mount back; the Mods menu has no Mount, Skin, Effect (nor its toggles) or colour rows any more, and
   the Colours and Effect sections each say where they went; the Mounts button while the panel is open brings it
   forward with the menus closed, the key closes it; Gerry's portrait (if its pack names one) under its name; the
@@ -423,6 +423,13 @@ closed):
   recipes to painted overlay packs (`layer = over`, reload in game). To decide: the editor (Aseprite ~$20 or free
   Pixelorama), whether to build an "erase here" colour for overlays (the tail removal), and whether Hellfire moves
   to overlay plus a small recipe.
+- **Effects on skins** (2026-10-25, API 0.37.0): how a skin consumes a registered effect. The API keeps the
+  registration and the particle engine (`Mounts.Effects`, `MountEffectDef`, docs/api.md "Effects"); everything that
+  picked or showed an effect is gone (the instance keys, `MountDef` / `MountSkinDef.Effect`, `EffectRows`, the
+  `[Effects]` section, Saddle Up's Effect section, the pack keys). The user: "The ability would be available from the
+  api and then we will consume it from the skin consumer", and of the skin hook: "Remove it and we'll think about how
+  to implement properly". Until then nothing shows Hellfire (Saddle Up still registers it); only the self-tests light
+  it, through a test hook.
 
 ## Deferred
 

@@ -253,10 +253,6 @@ namespace GK2DonkeyAPI
             // frame, so he rides a hop), whatever the player's seat settings; else the base's back line / the seat height.
             internal bool SeatFromPicture;        // seat = picture: the rider sits on this frame's picture top (Gerry)
             internal int SeatRow = -1;             // seat = <row>: the canvas row (from the top) the rider's hip sits on, every frame, whatever the player's AutoSeat (docs/seat-investigation.md option A)
-            // The effect this skin comes with (effect = / effect_when =): shown when the player's Effect row says "As the
-            // mount" (the skin's first, else its mount's; docs/mounts-parity-matrix.md 9.5). Null: the mount's.
-            internal string Effect;
-            internal MountEffectWhen EffectWhen = MountEffectWhen.Always;
 
             internal bool OwnsSheet => Sprites == null;
 
@@ -784,11 +780,6 @@ namespace GK2DonkeyAPI
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
                     case "mount": mountLine = value; break;
-                    case "effect": d.Effect = MountEffects.IsNone(value) ? null : value.Trim(); d.Given |= SkinGiven.Effect; break; // none: no effect, not its default's either (the mount's)
-                    case "effect_when":
-                        if (Enum.TryParse(value.Trim(), true, out MountEffectWhen skinWhen)) d.EffectWhen = skinWhen;
-                        else d.Report += "effect_when = " + value + " is not Off, Night or Always, taken as Always; ";
-                        break;
                     case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); d.Given |= SkinGiven.Canvas; break;
                     case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; d.Given |= SkinGiven.Pivot; break;
                     case "offset": PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y); if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; d.Given |= SkinGiven.Offset; break; // "offset = 0 0" given: cancels a default's
@@ -1158,7 +1149,6 @@ namespace GK2DonkeyAPI
                 var notes = new Dictionary<string, SectionNotes>(StringComparer.OrdinalIgnoreCase);     // the rewritten sections: [Tuning*] and [Mount*]
                 var pending = new List<string>();                                // comment lines waiting for the next header or key
                 string seatNote = null;                                          // the remark on the [Skin] seat line (the key is regenerated)
-                string effectNote = null;                                        // the same for the effect line
                 bool Rewritten(string sec) => sec != null && (sec == "tuning" || sec.StartsWith("tuning.", StringComparison.Ordinal) || sec == "sounds" || sec.StartsWith("sounds.", StringComparison.Ordinal) || sec == "mount" || sec.StartsWith("mount.", StringComparison.Ordinal)); // [Mount*]: dropped (the mount's own file)
                 string section = null;
                 string nl = "\n";
@@ -1204,12 +1194,6 @@ namespace GK2DonkeyAPI
                                 seatNote = hash > 0 ? line.Substring(hash).Trim() : null;
                                 continue;
                             }
-                            if (key == "effect" || key == "effect_when")
-                            {
-                                int hash = line.IndexOf('#');
-                                if (key == "effect") effectNote = hash > 0 ? line.Substring(hash).Trim() : null;
-                                continue;
-                            }
                             if (key == "mount" || key == "offset" || key == "offset_cart") continue;
                             skinLines.Add(kept);
                         }
@@ -1248,18 +1232,6 @@ namespace GK2DonkeyAPI
                 {
                     sb.Append("seat = ").Append(d.SeatFromPicture ? "picture" : d.SeatRow >= 0 ? d.SeatRow.ToString(System.Globalization.CultureInfo.InvariantCulture) : "none");
                     if (seatNote != null) sb.Append("  ").Append(seatNote);
-                    sb.Append('\n');
-                }
-                if (!string.IsNullOrEmpty(d.Effect) && (!layered || d.Has(SkinGiven.Effect)))
-                {
-                    sb.Append("effect = ").Append(d.Effect);
-                    if (effectNote != null) sb.Append("  ").Append(effectNote);
-                    sb.Append('\n').Append("effect_when = ").Append(d.EffectWhen.ToString()).Append('\n');
-                }
-                else if (layered && d.Has(SkinGiven.Effect))
-                {
-                    sb.Append("effect = none");
-                    if (effectNote != null) sb.Append("  ").Append(effectNote);
                     sb.Append('\n');
                 }
                 if (layered)

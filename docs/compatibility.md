@@ -13,8 +13,8 @@ second copy of anything.
 
 | Store | Where | What's in it | Who writes it |
 |---|---|---|---|
-| Saddle Up's cfg | `BepInEx\config\dreas.gk2.saddleup.cfg` | keys, name, mount and skin, babies, the colour choices of the mount and the cart (`Coat = Custom` ...), effect, behaviour, the cart's rows, lantern, sounds | BepInEx, every bound key with its value, sections numbered by their place on the page (`[3. Colours]`; `[5. Donkey]` in 0.10.0, `[3. Donkey]` in 0.9.1) |
-| The API's cfg | `BepInEx\config\dreas.gk2.donkeyapi.cfg` | every tuning value, `[Colors]` and `[Colors.<Region>]` (the 24 custom colours a player mixed), `[Shuffle]`, `[Corpses]`, `[Look]`, `[Effects]`, `[Safety]` | BepInEx, every bound key with its value, sections unnumbered |
+| Saddle Up's cfg | `BepInEx\config\dreas.gk2.saddleup.cfg` | keys, name, mount and skin, babies, the colour choices of the mount and the cart (`Coat = Custom` ...), behaviour, the cart's rows, lantern, sounds | BepInEx, every bound key with its value, sections numbered by their place on the page (`[3. Colours]`; `[5. Donkey]` in 0.10.0, `[3. Donkey]` in 0.9.1) |
+| The API's cfg | `BepInEx\config\dreas.gk2.donkeyapi.cfg` | every tuning value, `[Colors]` and `[Colors.<Region>]` (the 24 custom colours a player mixed), `[Shuffle]`, `[Corpses]`, `[Look]`, `[Safety]` (`[Effects]` until 0.37.0, retired: 2.2) | BepInEx, every bound key with its value, sections unnumbered |
 | The side file | `<save>.gk2donkeyapi.dat` next to each save (Steam Cloud carries it) | the player's donkey, foals and carts: scene, position, facing, size, name, the cargo on each cart (item GUIDs), a chest aboard, per-instance settings and each mod's data lines | `Mount.WriteSideFile` after every save, format 2 (`docs/persistence.md`) |
 | The game's save | the game's own | nothing of ours: a save loads without the mod | the game |
 
@@ -50,15 +50,24 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
   its line leaves the player's file at Publish under any number of the section, `tools/page-carryover.py` and the
   upgrade self-test count it as retired, not lost. Saddle Up 0.12.0: RideSpeed and CartSpeed (Behaviour), the
   speeds being each mount's own now; the player's Faster / Fastest is dropped on purpose (the user, 2026-10-22).
+  Saddle Up, API 0.37.0 (2026-10-25): the six Effect rows' keys `Effect`, `EffectWhen`, `EffectTrail`,
+  `EffectWithCart`, `EffectInFights`, `EffectOnFoals` (section Effect), nothing picking an effect any more.
 - **A default may change**, but it reaches new players only: BepInEx writes every key with its value, so an existing
   player's file holds the old default as an explicit value. See 3.
 
-### 2.2 The API's cfg (`Tuned` binds, `Colors`, `Shuffle`, `Corpses`, `Look`, `Effects`)
+### 2.2 The API's cfg (`Tuned` binds, `Colors`, `Shuffle`, `Corpses`, `Look`; `Effects` until 0.37.0)
 
 - **Section and key names are permanent.** There is no carry-over here: `cfg.Bind` reads the file by (section, key)
   and a renamed key resets silently to its default. A rename, if ever, is a new key whose bind reads the old one the
   way `MovedKey` does; until then, don't rename. The upgrade self-test fails on any released key this build no longer
-  binds.
+  binds, unless it is retired.
+- **A key may be dropped** only when its value has nowhere to go, with `Plugin.DropRetired(section, keys)` at start
+  (0.37.0, the API's analogue of `RetiredKey`): the keys' lines are taken out of BepInEx's orphans, the file is saved
+  once when any was there, and the upgrade self-test counts them as retired, not lost (`Plugin.IsRetired`). API
+  0.37.0 (2026-10-25): the whole `[Effects]` section, `Effect`, `EffectWhen`, `EffectTrail`, `EffectWithCart`,
+  `EffectInFights`, `EffectOnFoals`, `EffectNightBelow` (the list is `Effects.RetiredKeys`); nothing picks an effect
+  any more. The side file's instance keys `Effect` and `EffectWhen` are not part of this: the instance tuning no
+  longer knows them, so a side file's lines for them are dropped on load without a word.
 - **The colour sections never change shape.** `[Colors]` and the fourteen `[Colors.<Region>]` sections with their ten
   keys each are what a player's custom colours are; no key there is renamed, retyped or re-scaled.
 - **New keys are free**: BepInEx adds them with their default on the next start.
@@ -128,7 +137,8 @@ changelog line that says it reaches new installs only.
   Red, Paint Blue, Lantern light Green, Cart capacity 4, Lantern off, Volume 120, Send away F6; quit; the log has the
   "carried over" lines and no warning; the cfg has `[2. Mount] Name = Bella`, `[3. Colours] Coat = Custom`,
   `[6. Cart] CartSlots = 4` and no Donkey section; put the real cfg back. The same with the 0.10.0 fixture's cfg
-  (keys R/T too, Effect None, Effect shown At night).
+  (keys R/T too, Effect None, Effect shown At night; since 0.37.0 the Effect rows are retired: the page shows none and
+  their lines leave the file).
 
 ## 5. When you change something
 
@@ -138,7 +148,7 @@ changelog line that says it reaches new installs only.
 | Move or rename a page key | `MovedKey` before the row; keep it; changelog |
 | Drop a page key on purpose | `RetiredKey` (any time before Publish); keep it; changelog For players |
 | Rename an enum member behind a `Choice` | don't; add a member instead |
-| Rename or drop an API cfg key | don't; a new key reads the old one once, the old stays bound until the next major |
+| Rename or drop an API cfg key | don't; a new key reads the old one once, the old stays bound until the next major; a key dropped on purpose: `Plugin.DropRetired` (2.2), changelog For players |
 | Change a default | changelog line "new installs only" until section 3 is built |
 | Add a side-file line | the writer adds it, the reader takes it, older files default |
 | Change a side-file line's meaning or the format | a reader for the old format first; bump `SideFileFormat`; the new reader also takes `<save>.gk2donkeyapi.format<new>.dat` left by an older version (2.3); a fixture of the old file; the self-test |

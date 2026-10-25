@@ -91,14 +91,12 @@ layer = replace     # replace: instead of the donkey. over: on top of the donkey
                     # horns); FF00FF unless set, "none" switches it off (see "A skin worn over the donkey")
 canvas = 96 96      # every picture is this size (see below)
 # pivot = 48 48     # where the base's pivot is on the canvas (default: its middle; a bigger canvas keeps the donkey centred)
-# effect = hellfire # the effect this skin comes with: shown when the player's Effect row says "As the mount or skin"
-# effect_when = Always  # (its default), the skin's first, else its mount's. Off, Night or Always. Hellfire burns by itself.
 # seat = 52         # the canvas row (from the top) the rider's hip sits on, every frame, for EVERY player (their AutoSeat
                     # and SeatAdjustPx stop mattering on this skin; only the skin's own [Tuning] SeatAdjustPx nudges from
                     # it); 52 is where the donkey's own seat is on the 96 canvas. Or
                     # "picture" for this frame's picture top (Gerry). Without it the seat is the player's own (docs/seat-investigation.md)
-                    # A skin built on its mount's default (see "Variants") takes the default's seat, effect, portrait,
-                    # offset, canvas and description when it leaves them out; seat = none, effect = none, portrait = none
+                    # A skin built on its mount's default (see "Variants") takes the default's seat, portrait,
+                    # offset, canvas and description when it leaves them out; seat = none, portrait = none
                     # say "not the default's"
 base = donkey       # what the skin is drawn on (the donkey is the only base today)
 # mount = me.giant-rat  # optional: the mount is the folder the skin sits in (gk2mounts\<mount>\skins\); a line that
@@ -111,12 +109,16 @@ base = donkey       # what the skin is drawn on (the donkey is the only base tod
 
 Unknown keys are ignored and named in the log, so a newer pack still loads in an older mod.
 
+Since API 0.37.0 (2026-10-25) a skin names no effect: `effect` and `effect_when` are no longer read, in `skin.cfg`
+nor in `mount.cfg`, and an old file's lines are named in the log as unknown keys. Effects are registered in the API
+(docs/api.md "Effects"); how a skin will use one is still to be designed (docs/open-items.md).
+
 A `skin.cfg` holds no `[Mount]` or `[Mount.*]` section: the loader ignores one and says in the skin's report that
 it goes in `mount.cfg`.
 
 **A creature of its own: `mount.cfg`.** A skin can be a look of a *mount* other than the donkey: the giant rat, the dragon,
 yours. The mount carries what is the creature's, not the picture's: whether it pulls the cart, whether baby donkeys
-can be it and how big they are, its speed, an effect it comes with, its own tuning and its sounds. It is its own
+can be it and how big they are, its speed, its own tuning and its sounds. It is its own
 folder, `gk2mounts\<mount id>\`, with a `mount.cfg` and its skins under `skins\`; every skin in there is a look of it
 (a second dragon colour is a second folder under `me.dragon\skins\`, beside its `default\`). The keys of `[Mount]`,
 in the order the file keeps them:
@@ -137,8 +139,6 @@ jumps = false         # ridden plain, it never jumps (on unless said); both writ
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33)
 speed = 2.5           # riding, times the keeper's walking speed (1 = walking; the donkey: 2), 0.5 to 4
 cargo = 6             # items its cart carries, 1 to 6 (a stat for now); only on a mount that pulls one
-effect = none         # an effect it comes with (hellfire, or one a mod added); players see it under "As the mount or skin" (a skin's own effect = wins)
-effect_when = Always  # Off, Night or Always (the menu says "Never" for Off)
 
 [Stats]               # lines the Mounts panel shows as given, in this order (optional; Speed and Cargo are the API's own lines)
 Diet = keepers
@@ -163,7 +163,7 @@ word, and the one a new instance of the mount wears; the others by their `name`.
 "Default" only, and a second dragon look (another folder under `saddleup.dragon\skins\`, from any pack) shows next
 to it by its name. There is no `default_skin` key: one in `[Mount]` is reported as ignored.
 Every mount a player can pick has at least one skin. Keys the loader doesn't know in `[Mount]` are ignored and named
-in the log; a bad `foal_scale`, `speed`, `cargo` or `effect_when` is named too and the default stands (a speed
+in the log; a bad `foal_scale`, `speed` or `cargo` is named too and the default stands (a speed
 outside 0.5 to 4 is taken to the nearest end).
 
 **Speed and cargo** (the user, 2026-10-22): a mount's `speed` is how fast the keeper rides it, times his walking
@@ -182,7 +182,7 @@ as the mod's cfg (docs/reference.md `[Ride]` and `[Cart]`); `[Tuning.Ride]` and 
 style only, on top of it. **The skin owns its drawing's geometry**: the seat row and these keys live here, on the
 skin, and `mount.cfg` keeps only what the creature is. Only the picture-dependent keys are taken: `SeatAdjustPx`,
 `SeatOffset`, `RiderOffsetPx`, `TorsoOffsetPx`, `LegAdjustXPx`, `LegAdjustYPx`, `LegHeightPx`, `BackSeatExtraPx`,
-`HitchGapPx`, `Depth`, `CenterOffset`. Anything about the creature itself (speed, the cart, foals, the effect,
+`HitchGapPx`, `Depth`, `CenterOffset`. Anything about the creature itself (speed, the cart, foals,
 abilities) belongs in `mount.cfg` and is refused here, said once in the log; a built-in with a picture key in its
 `mount.cfg`'s `[Tuning*]` fails the scan.
 
@@ -261,11 +261,11 @@ what it gives replaces the default's. A variant can be one picture and three lin
   log and the default's is drawn there. With `sheet =`, its sheet's cells are its own and loose PNGs beside it are
   not read; cells past the sheet's end are the default's. The `front\` layer the same, per frame.
 - **Settings.** What its `[Skin]` doesn't say comes from the default: `canvas` (and `pivot`), `colours`, `seat`,
-  `offset` / `offset_cart`, `effect` / `effect_when`, `description`, `portrait`. Its own `[Colors]` lines go over the
+  `offset` / `offset_cart`, `description`, `portrait`. Its own `[Colors]` lines go over the
   default's (a colour it names leaves the default's region). Its `[Tuning]`, `[Tuning.Ride]` and `[Tuning.Cart]` go
   over the default's key by key, and its `[Sounds*]` lines over the default's (which go over the mount's): a variant
   with no `[Sounds]` sounds like its default. A variant's file lines read its own `sounds\` only.
-- **Saying "not the default's".** `seat = none` (no seat: the player's own), `effect = none` (no effect),
+- **Saying "not the default's".** `seat = none` (no seat: the player's own),
   `portrait = none` (the mount drawn in the list), `offset = 0 0` (no offset). Never taken from the default: `name`,
   `author`, `version`, `format`, `needs`.
 - **`layer = over`** on a variant draws it **over the default**, as Hellfire is drawn over the game's donkey: per
@@ -284,7 +284,7 @@ what it gives replaces the default's. A variant can be one picture and three lin
   right-click on a row it sets takes the default's again; its save writes only what the variant says itself.
 - **Code skins.** A `MountSkinDef` on a mount other than the donkey, not that mount's `default`, takes the default's
   values for what it leaves at its "not said" value (`SeatRow` -1 with `SeatFromPicture` false, `Offset` zero and
-  `CartOffset` null, `Effect`, `Description`, `Portrait` and `Regions` null, the canvas 96x96 and pivot 48,48). Its
+  `CartOffset` null, `Description`, `Portrait` and `Regions` null, the canvas 96x96 and pivot 48,48). Its
   sprites are its own: pictures of or into code sprites are not layered yet, and `Over` on it is refused (drawn in
   the default's place, said in its report).
 - **The donkey** has no default skin (its own look is the game's art): its skins are exactly as before.
@@ -337,8 +337,8 @@ the key rules). A `skin.cfg`: `[Skin]`, then `[Game]` for a game creature, the s
 `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`), then the colour sections. A `mount.cfg`: `[Mount]`, `[Stats]`,
 `[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]` (the
 creature's facts), every key in one place. The donkey itself, the one mount that is not a file, would read
-`[Mount] id = donkey, name = Donkey, author = the game, version = 1.0, cart = true, foals = true` with no tuning and
-no effect; its folder holds skins only. A mount's sounds live in its `mount.cfg`'s `[Sounds]`, and the donkey's own
+`[Mount] id = donkey, name = Donkey, author = the game, version = 1.0, cart = true, foals = true` with no tuning;
+its folder holds skins only. A mount's sounds live in its `mount.cfg`'s `[Sounds]`, and the donkey's own
 sounds (the bray, the lip smack, the chewing, the snorts getting on and off) never reach another mount: a creature
 with no line for one is silent there, and the log at the game's start says what each skin is missing
 (docs/mount-sounds.md). A mount or a skin brings **sounds of its own**: files in the skin folder's `sounds\` (the

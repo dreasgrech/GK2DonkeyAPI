@@ -477,7 +477,7 @@ namespace GK2DonkeyAPI.Api
         // over the creature's, and the creature's returns when the mod clears, docs/mounts-design.md 2); nobody else.
         // A refused Set or Clear is said once in the log (Info: a mod conflict, nothing a player can fix) and leaves
         // the value as it is. Before 0.35.0 the last writer won silently, and an ability could take the player's own
-        // Effect choice and lose it on dismount.
+        // look choice and lose it on dismount.
         internal static bool MayReplace(string holder, string by) => holder == null || holder == by || holder == Looks.TuningOwner;
 
         private static readonly HashSet<string> refusedLogged = new HashSet<string>(StringComparer.Ordinal);
@@ -603,7 +603,7 @@ namespace GK2DonkeyAPI.Api
             MountStyle other = i.CurrentStyle == MountStyle.Cart ? MountStyle.Ride : MountStyle.Cart;
             if (Mounts.Tuning(i.CurrentStyle).TryFind(key, out ITuned t) || Mounts.Tuning(other).TryFind(key, out t)
                 || Mounts.Behaviour.TryFind(key, out t) || Mounts.Shuffle.TryFind(key, out t) || Mounts.Colors.TryFind(key, out t)
-                || Looks.Tuning.TryFind(key, out t) || GK2DonkeyAPI.Effects.Tuning.TryFind(key, out t))
+                || Looks.Tuning.TryFind(key, out t))
             {
                 return t;
             }

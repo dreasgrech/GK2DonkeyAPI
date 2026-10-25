@@ -1,5 +1,10 @@
 # Looks: skins, mounts, effects — where it stands (2026-10-17, 21:45)
 
+**2026-10-25 (API 0.37.0):** the effect selection described below is gone: no `Effect` / `EffectWhen` keys, no
+`[Effects]` cfg section (retired, its lines removed at start), no `Mounts.EffectSettings`, no Saddle Up Effect
+section. `Mounts.Effects` registration and the particle engine stay; nothing shows an effect until the skins' use of
+one is designed (docs/open-items.md "Effects on skins").
+
 Everything below is built, scans green (CecilScan, ApiSurface 481 lines, FrameworkScan, DefaultsScan) and deployed
 to the game folder as dev builds **GK2 Donkey API 0.30.0 / GK2 Saddle Up 0.10.0** (21:39). Nothing is committed and
 nothing is in `dist/` yet. In-game verification so far: skin steps 1 and 2 by hand (2026-10-17 afternoon), and one

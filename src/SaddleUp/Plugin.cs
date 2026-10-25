@@ -37,7 +37,8 @@ namespace SaddleUp
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
         // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind. The
-        // API keeps it out with the mounts off (this version), as every registration.
+        // API keeps it out with the mounts off (this version), as every registration. Registered and ready, shown nowhere
+        // yet: nothing picks an effect in this version (2026-10-25; how a skin comes with its effect is being designed).
         private void RegisterHellfire()
         {
             MountEffects api = Mounts.Effects;
@@ -73,7 +74,7 @@ namespace SaddleUp
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
                 Mounts.MountsEnabled
                     ? "Your own mount and cart: ride it (H), drive the cart (G), haul with it. A donkey, or any mount a skin pack or another mod adds (dragons, a giant rat...). Built on GK2 Donkey API."
-                    : "Your own donkey and cart: ride it (H), drive the cart (G), haul with it. Other mounts, skins and effects come in the next update. Built on GK2 Donkey API.");
+                    : "Your own donkey and cart: ride it (H), drive the cart (G), haul with it. Other mounts and skins come in the next update. Built on GK2 Donkey API.");
             p.Status("Keys");
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Your mount comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
@@ -94,12 +95,12 @@ namespace SaddleUp
             // with its own gate (not during a door, a cutscene or a dialogue)
             p.Key("Keys", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Stuck, or fallen somewhere you shouldn't be: puts you back on the last ground you stood on in this scene. None = no key (the Behaviour section has a button).",
                 apply: v => Mounts.Behaviour.Set(Guid, "ReturnKey", v));
-            p.Key("Keys", "MountsKey", KeyboardShortcut.Empty, "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins, effect and colours. None = no key (the Mount section's button opens it too).",
+            p.Key("Keys", "MountsKey", KeyboardShortcut.Empty, "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins and colours. None = no key (the Mount section's button opens it too).",
                 pressed: p.OpenPanel);
 
             // The page since 0.11: Keys; Mount (what you have: its picture, its name, what it is and how it is drawn,
-            // its babies, whether it is kept with the save); Colours (every colour of it and of the cart); Effect (the
-            // particle effect on it); Behaviour (what it does); Cart (what the cart does); Sound. A row that lived
+            // its babies, whether it is kept with the save); Colours (every colour of it and of the cart); Behaviour (what
+            // it does); Cart (what the cart does); Sound. (The Effect section went on 2026-10-25: its keys are retired below.) A row that lived
             // elsewhere in a released version names its old place with MovedKey before it, so a player's value carries
             // over; the call stays for good (docs/compatibility.md). Name and the babies were in Donkey before 0.10;
             // KeepWithSaves in Behaviour, the colours in Donkey and Cart, the cart's rows in Behaviour before 0.11.
@@ -113,16 +114,16 @@ namespace SaddleUp
             p.MovedKey("Babies", "FoalsWearSkin", "Mount");
             p.MovedKey("Mount", "KeepWithSaves", "Behaviour");
             p.Preview("Mount", me, "Your mount");
-            // The mount, its skins, the effect and every colour are chosen in the Mounts panel (the user, 2026-10-20: a
+            // The mount, its skins and every colour are chosen in the Mounts panel (the user, 2026-10-20: a
             // panel of its own, the mounts listed, the chosen one drawn with its stats and abilities; it stays the
             // same size however many mounts are installed). The rows below are bound as before (the same cfg keys)
             // and marked look: true, which keeps them out of the menu and in the panel.
-            p.PanelButton("Mount", "Mounts", "Closes this and opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins, its effect and its colours. Done keeps your choices, Cancel puts them back.");
+            p.PanelButton("Mount", "Mounts", "Closes this and opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins and its colours. Done keeps your choices.");
             p.Text("Mount", "Name", me.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
             p.MountRows("Mount", me);
             if (!Mounts.MountsEnabled)
             {
-                // This version ships the mounts, skins and effects switched off (Mounts.MountsEnabled; the next update
+                // This version ships the mounts and skins switched off (Mounts.MountsEnabled; the next update
                 // switches them on): the rows above hold the donkey alone, and these say why.
                 p.Info("Mount", "Other mounts and skins", () => "Coming in the next update",
                     "A dragon, a giant rat, a giant snail, a giant worm, Gerry, the Hellfire skin, skin packs and the mounts from other mods are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
@@ -185,12 +186,15 @@ namespace SaddleUp
                 p.Color("Colours", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
             });
 
-            if (!Mounts.MountsEnabled)
-            {
-                p.Info("Effect", "Particle effects", () => "Coming in the next update",
-                    "Hellfire (the game's lamp fire in a ring round your mount, with sparks and a trail) and effects from mods are built and switched off in this version; the next update switches them on.");
-            }
-            p.EffectRows("Effect", me);
+            // The Effect section (0.10.0 to 0.12: the effect, when it shows, and four toggles) went on 2026-10-25 (the user:
+            // "remove all the stuff we're exposing regarding the effects"; how a skin comes with its effect is being
+            // designed): a 0.10.0 player's file still has the six lines, which leave it.
+            p.RetiredKey("Effect", "Effect");
+            p.RetiredKey("Effect", "EffectWhen");
+            p.RetiredKey("Effect", "EffectTrail");
+            p.RetiredKey("Effect", "EffectWithCart");
+            p.RetiredKey("Effect", "EffectInFights");
+            p.RetiredKey("Effect", "EffectOnFoals");
 
             // Riding speed and Cart speed were rows here until 0.12: each mount has its own speed now ([Mount] speed; the
             // cart's follows it; the Mounts panel shows it), so the player's choice is dropped (the user, 2026-10-22) and the

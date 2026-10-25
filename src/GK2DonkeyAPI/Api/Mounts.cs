@@ -359,8 +359,9 @@ namespace GK2DonkeyAPI.Api
         // through its tuning key "Skin" or MountCompanion.Skin.
         public static MountLooks Looks { get; } = new MountLooks();
 
-        // Particle effects on donkeys (docs/mount-looks-design.md): the list, registering, the game's particles as a
-        // source. A donkey shows one through its tuning keys "Effect" and "EffectWhen", or MountCompanion.Effect.
+        // Particle effects (docs/api.md "Effects"): the list, registering one, the game's particles as a source. Nothing
+        // picks an effect for a mount in this version (2026-10-25: the player's rows, the Effect keys and the packs'
+        // effect = went; how a skin comes with one is being designed), so a registered effect shows nowhere yet.
         public static MountEffects Effects { get; } = new MountEffects();
 
         // The mount sounds (docs/mount-sounds-design.md): the catalogue of events, what plays for one on an instance,
@@ -437,21 +438,6 @@ namespace GK2DonkeyAPI.Api
         {
             internal static readonly NoHandle Instance = new NoHandle();
             public void Dispose() { }
-        }
-
-        // How effects show, everyone's values, overridable like tuning: EffectTrail, EffectWithCart, EffectInFights,
-        // EffectOnFoals (bool), EffectNightBelow (float); and the defaults Effect (string) and EffectWhen
-        // (MountEffectWhen) for donkeys without their own.
-        public static MountTuning EffectSettings
-        {
-            get
-            {
-                if (GK2DonkeyAPI.Effects.Effect == null)
-                {
-                    throw new InvalidOperationException("GK2 Donkey API has not loaded its settings yet.");
-                }
-                return GK2DonkeyAPI.Effects.Tuning;
-            }
         }
 
         // The colour regions, in panel order: Coat, Dark, Muzzle, Eye, Harness (the donkey), CartBody, Shafts, Straps,

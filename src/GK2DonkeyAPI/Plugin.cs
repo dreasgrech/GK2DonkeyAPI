@@ -365,7 +365,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.36.0";
+        public const string Version = "0.37.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -485,6 +485,24 @@ namespace GK2DonkeyAPI
         // True once every patch is in: the API (Mounts.IsAvailable) refuses everything before that and after a
         // game update disabled the mod.
         internal static bool Patched;
+
+        // Keys a released version wrote that this one no longer has, on purpose (the API's analogue of
+        // MountSettingsPage.RetiredKey): out of BepInEx's orphans, so the save leaves their lines out; saved once when any
+        // was there. The upgrade self-test counts them as retired (IsRetired), not as values lost.
+        private void DropRetired(string section, string[] keys)
+        {
+            foreach (string k in keys) retired.Add(section + "\n" + k);
+            System.Collections.Generic.Dictionary<ConfigDefinition, string> orphans = MountSettingsPage.OrphansOf(Config);
+            if (orphans == null) return;
+            int n = 0;
+            foreach (string k in keys) if (orphans.Remove(new ConfigDefinition(section, k))) n++;
+            if (n == 0) return;
+            Config.Save();
+            Log.LogInfo($"Settings: {n} retired [{section}] line(s) left the cfg file (keys this version no longer has).");
+        }
+
+        private readonly System.Collections.Generic.HashSet<string> retired = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+        internal bool IsRetired(string section, string key) => retired.Contains(section + "\n" + key);
 
         private void Awake()
         {
@@ -624,8 +642,9 @@ namespace GK2DonkeyAPI
             // [Look]: the skin a donkey wears (Looks.cs); the built-in skins are registered here too.
             Catalog.Bind(); // the donkey mount first: the skins name theirs
             Looks.Bind(Config);
-            // [Effects]: particle effects on donkeys (Effects.cs); Hellfire is registered here.
-            Effects.Bind(Config);
+            // [Effects]: retired (2026-10-25: nothing picks an effect in this version; Effects.cs). A 0.10.0 player's
+            // file still has the seven lines: they leave it here, once.
+            DropRetired(Effects.RetiredSection, Effects.RetiredKeys);
             // General.IdleShuffle and [Shuffle]: standing donkeys without a cart take a few slow steps (IdleShuffle.cs).
             IdleShuffle.Bind(Config);
 
@@ -670,7 +689,7 @@ namespace GK2DonkeyAPI
             // version (the next update switches them on; CHANGELOG "switched on in the next update"). A dev key, so a
             // player's cfg can't flip it: locked, it answers false. Nothing of it is registered when off, so every list
             // (the Mount and Skin rows, the colours per mount) holds the donkey alone and a mod's registrations are
-            // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind / Effects.Bind because
+            // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind because
             // the key binds after them.
             MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
                 "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's five: the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull; and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");

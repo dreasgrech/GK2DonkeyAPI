@@ -1,5 +1,11 @@
 # Mounts and skins as separate mods (2026-10-20)
 
+**2026-10-25 (API 0.37.0):** nothing picks or shows an effect any more: the effect rows, the instance keys `Effect` /
+`EffectWhen`, `MountDef` / `MountSkinDef.Effect` and the pack keys `effect` / `effect_when` are gone; effects are
+registered only (`Mounts.Effects`, Saddle Up still registers Hellfire). The scenario "settings: the Mount, Skin,
+babies and effect rows" below is now "settings: the Mount, Skin and babies rows". Open: docs/open-items.md "Effects
+on skins".
+
 **2026-10-21:** the donkey's two skins (Hellfire, Royal Parade) and the Hellfire effect moved to Saddle Up as well; the API ships no skin or effect of its own (the user: the backend, not bloated with skins). Paths below that say `src/GK2DonkeyAPI/assets/skins` are the state before the move.
 
 **2026-10-24:** the packs are sorted by mount (the mount folders). A mount is a folder `gk2mounts\<mount>\` with its

@@ -9,8 +9,8 @@ using Object = UnityEngine.Object;
 
 namespace GK2DonkeyAPI
 {
-    // Particle effects on a donkey (docs/mount-looks-design.md, docs/skins-design.md §12): a system any mod registers
-    // effects into, and the first effect, Hellfire, the donkey wreathed in the game's own lamp fire.
+    // Particle effects on a mount (docs/mount-looks-design.md, docs/api.md "Effects"): a system any mod registers
+    // effects into (Saddle Up's Hellfire: the mount wreathed in the game's own lamp fire).
     //
     // An effect is a definition (MountEffectDef): one or more sources of particles, each with emitters placed round the
     // donkey. A source is a template GameObject of particle systems: the game's own (a lamp's flame and sparks, found by
@@ -21,36 +21,27 @@ namespace GK2DonkeyAPI
     // follows the donkey's body point; nothing is attached to the pooled parts, so nothing needs undoing on them, and
     // it all goes with the view (Detach) or the instance (Release).
     //
-    // Per instance (look keys, kept with the save): Effect (the id, "" none) and EffectWhen (off, at night, always).
-    // Everyone's: EffectTrail, EffectWithCart, EffectInFights, EffectOnFoals, the night threshold. The night test is the
-    // game's sun value, the shader global "_SunLight" (what the lantern reads); no game member is used here.
+    // Which effect a mount shows is not chosen anywhere in this version: the player's rows, the per-instance Effect and
+    // EffectWhen keys, the [Effects] cfg and the packs' effect = went on 2026-10-25 (the user: "remove all the stuff
+    // we're exposing regarding the effects"; how a skin comes with its effect is being designed). The rig shows what
+    // TestWant names (the self-tests only), and how it shows is the fixed values below until that design says more.
+    // The night test (the self-tests' colour check) is the game's sun value, the shader global "_SunLight" (what the
+    // lantern reads); no game member is used here.
     internal static partial class Effects
     {
-        internal const string Section = "Effects";
         internal const string HolderName = "gk2_effect";
 
-        internal static Tuned<string> Effect;             // per instance (a look key): the effect's id
-        internal static Tuned<MountEffectWhen> When;      // per instance (a look key)
-        internal static Tuned<bool> Trail, WithCart, InFights, OnFoals;
-        internal static Tuned<float> NightBelow;
-        internal static MountTuning Tuning;
+        // How an effect shows, fixed for now (the values the [Effects] keys had by default): a trail left behind while
+        // walking, a ring round the mount only (not the cart), shown in fights, not on babies; night below this sun value.
+        private const bool Trail = true, WithCart = false, InFights = true, OnFoals = false;
+        private const float NightBelow = 0.35f;
+
+        // The [Effects] keys a released version wrote (0.10.0, API 0.30.0): retired, their lines leave the player's
+        // file at the start (Plugin.DropRetired) and the upgrade self-test counts them as retired, not lost.
+        internal const string RetiredSection = "Effects";
+        internal static readonly string[] RetiredKeys = { "Effect", "EffectWhen", "EffectTrail", "EffectWithCart", "EffectInFights", "EffectOnFoals", "EffectNightBelow" };
 
         private static readonly int IdSunLight = Shader.PropertyToID("_SunLight");
-
-        internal static void Bind(ConfigFile cfg)
-        {
-            Effect = cfg.Bind(Section, "Effect", Defaults.Get(Section, "Effect", ""),
-                "The particle effect on the donkey, by id (Mounts.Effects lists them; hellfire is built in; empty: none). Set per donkey by the mods that own them; this is the value for donkeys without one of their own.");
-            When = cfg.Bind(Section, "EffectWhen", Defaults.Get(Section, "EffectWhen", MountEffectWhen.Always), "When the effect shows: off, at night, or always. Never indoors.");
-            Tuned.MarkLook(Effect);
-            Tuned.MarkLook(When);
-            Trail = cfg.Bind(Section, "EffectTrail", Defaults.Get(Section, "EffectTrail", true), "An effect with a trail leaves it behind while the donkey walks.");
-            WithCart = cfg.Bind(Section, "EffectWithCart", Defaults.Get(Section, "EffectWithCart", false), "With the cart hitched, a ring goes round the donkey and the cart together (off: round the donkey only).");
-            InFights = cfg.Bind(Section, "EffectInFights", Defaults.Get(Section, "EffectInFights", true), "Shown while the rider fights in armour (off: hidden in fights).");
-            OnFoals = cfg.Bind(Section, "EffectOnFoals", Defaults.Get(Section, "EffectOnFoals", false), "Foals show it too (smaller), when their parent's mod puts it on them.");
-            NightBelow = cfg.Bind(Section, "EffectNightBelow", Defaults.Get(Section, "EffectNightBelow", 0.35f), new ConfigDescription("\"At night\" means the game's sun value is below this (0 deep night, 1 full day).", new AcceptableValueRange<float>(0f, 1f)));
-            Tuning = new MountTuning(Section, new ITuned[] { Effect, When, Trail, WithCart, InFights, OnFoals, NightBelow });
-        }
 
         internal static void Unbind()
         {
@@ -177,14 +168,6 @@ namespace GK2DonkeyAPI
             return true;
         }
 
-        // The effects to pick from in a settings list: the mount's own, none, then every registered effect.
-        internal static IReadOnlyList<(string Id, string Label)> EffectChoices()
-        {
-            var list = new List<(string, string)> { (MountEffects.FromMount, "As the mount or skin"), (MountEffects.NoneId, "None") };
-            foreach (MountEffectInfo e in Mounts.Effects.Effects) list.Add((e.Id, e.Name));
-            return list;
-        }
-
         // For the self-tests: every emitter of ours in the world (the rings' and the trails', parented or not).
         internal static int TestCountInWorld()
         {
@@ -309,7 +292,7 @@ namespace GK2DonkeyAPI
         {
             try
             {
-                return Shader.GetGlobalFloat(IdSunLight) < NightBelow.Value;
+                return Shader.GetGlobalFloat(IdSunLight) < NightBelow;
             }
             catch
             {
@@ -354,6 +337,8 @@ namespace GK2DonkeyAPI
             internal string Wearing => effect?.Id ?? "";
             internal string Note => failed ? "off (failed)" : holder != null ? effect.Id + " lit" : effect != null ? effect.Id + " (out)" : "none";
             internal void MarkDirty() => dirty = true;
+            // The effect this rig shows: set by the self-tests only (nothing in the game picks one in this version); null: none.
+            internal string TestWant;
 
             // Every tick of the instance (the plugin's LateUpdate): which effect, whether it shows, and where.
             internal void Tick()
@@ -373,44 +358,16 @@ namespace GK2DonkeyAPI
 
             private void TickInner()
             {
-                string want;
-                MountEffectWhen when;
-                bool onFoals, inFights, withCart, trailOn;
-                using (Mount.Bind(owner))
-                {
-                    want = MountEffects.IsNone(Effect.Value) ? "" : Effect.Value.Trim();
-                    when = When.Value;
-                    if (want.Equals(MountEffects.FromMount, StringComparison.OrdinalIgnoreCase))
-                    {
-                        // "As the mount": the wanted skin's own effect first (Hellfire comes with its fire), else the
-                        // mount's; none if neither has one (docs/mounts-parity-matrix.md 9.5)
-                        Looks.SkinDef sd = owner.LooksRig.DefNow;
-                        Catalog.Entry k = owner.LooksRig.MountNow;
-                        if (sd != null && !string.IsNullOrEmpty(sd.Effect))
-                        {
-                            want = sd.Effect;
-                            when = sd.EffectWhen;
-                        }
-                        else
-                        {
-                            want = k.Effect ?? "";
-                            if (want.Length > 0) when = k.EffectWhen;
-                        }
-                    }
-                    onFoals = OnFoals.Value;
-                    inFights = InFights.Value;
-                    withCart = WithCart.Value && owner.HasCart;
-                    trailOn = Trail.Value;
-                }
+                if (TestWant == null && effect == null && !dirty) return; // the usual case: nothing to show, nothing shown
+                string want = TestWant?.Trim() ?? "";
+                bool withCart = WithCart && owner.HasCart;
                 if (dirty || !string.Equals(want, effect?.Id ?? "", StringComparison.OrdinalIgnoreCase))
                 {
                     dirty = false;
                     EffectDef d = Find(want);
                     if (want.Length > 0 && d == null && missingLogged.Add(want))
                     {
-                        // an Info, as a missing skin: the mod that had the effect is gone, nothing here to fix
-                        if (Plugin.MountsOn) Plugin.Log.LogInfo($"Effects: no effect '{want}' is registered (its mod isn't loaded); the donkey shows none (the choice is kept and comes back with it).");
-                        else Plugin.Log.LogInfo($"Effects: the effect '{want}' is set, but the effects are off in this version (Debug.MountsPreview); the donkey shows none (the choice is kept)."); // expected while off: no warning
+                        Plugin.Log.LogInfo($"Effects: no effect '{want}' is registered{(Plugin.MountsOn ? "" : " (the effects are off in this version, Debug.MountsPreview)")}; {owner.Describe()} shows none.");
                     }
                     if (d != effect)
                     {
@@ -419,11 +376,10 @@ namespace GK2DonkeyAPI
                         effect = d;
                     }
                 }
-                bool show = effect != null && owner.HasDonkey && owner.HasView && when != MountEffectWhen.Off
-                    && (owner.ViewScale >= 1f || (onFoals && effect.Foals))
-                    && (when != MountEffectWhen.Night || Night())
+                bool show = effect != null && owner.HasDonkey && owner.HasView
+                    && (owner.ViewScale >= 1f || (OnFoals && effect.Foals))
                     && !Mount.Instance.IsIndoors()
-                    && (inFights || !owner.IsRidden || !Mount.Instance.RiderInArmour())
+                    && (InFights || !owner.IsRidden || !Mount.Instance.RiderInArmour())
                     && (effect.Show == null || ShowSays());
                 if (!show)
                 {
@@ -462,7 +418,7 @@ namespace GK2DonkeyAPI
                         }
                     }
                 }
-                TickTrail(true, trailOn);
+                TickTrail(true, Trail);
             }
 
             private static readonly HashSet<string> missingLogged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

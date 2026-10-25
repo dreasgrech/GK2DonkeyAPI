@@ -789,6 +789,7 @@ namespace GK2DonkeyAPI
         internal static void RestoreSetting(Instance i, string key, string by, string value) // internal for the self-test of the set-aside lines
         {
             if (by == Looks.TuningOwner || IsAbilityOwner(by)) return; // a creature's value, or an ability's, from an older side file: set again in play, never a fixed value
+            if (key == "Effect" || key == "EffectWhen") return; // retired (2026-10-25, Effects.cs): a side file written while Saddle Up's Effect row set them; dropped, not written back
             if (!OverrideOwnerLoaded(by))
             {
                 i.AsideSets.Add(new[] { key, by, value });

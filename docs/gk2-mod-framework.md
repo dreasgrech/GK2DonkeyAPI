@@ -256,3 +256,21 @@ reference, shows it too.
 **E. Release**
 15. Versions and `dist/`, both READMEs (install with or without the framework), a test-notes entry, and a note in
     the game-update routine that bridges depend on the framework's 0.x API too.
+
+## 0.1.24 (2026-10-21): two changes that reach our page (found 2026-10-25)
+
+Decompiled 0.1.23 and 0.1.24 (`ModsMenuSettingsPage`) side by side, after the user saw both in game.
+
+- **A row's field moved to the row's top.** `CreateSettingRow` places "Control" at anchor (1, 1), offsets
+  (-326, -30)..(-6 or -62, -4): the top 26 units of the row (0.1.23: anchor (1, 0.5), the row's middle). Our
+  picture rows (`LookPreview.ShowRows`) were centred on the field, so the mount stood over the section heading. Now
+  the picture is level with the row's middle, across from the field's middle (works with either version).
+- **The list jumps to the top after any change (the framework's bug, every mod's page).** 0.1.24 marks rows
+  changed from their default ("* " before the name) and shows key conflicts: every setting's `ValueChanged` sets
+  `annotationsDirty`, the page's update runs the refresh and `LayoutRows()`, which ends in
+  `FrameworkUi.SetContentHeight(content, ...)`, and that sets `content.anchoredPosition = Vector2.zero`: the scroll
+  goes back to the top. Not patched on our side (a private member of another mod; see the rule above about never
+  looking up framework members by name). To report to the author: keep the scroll position in `LayoutRows` (set the
+  height without resetting `anchoredPosition`, or restore `verticalNormalizedPosition` after).
+- The "* " marker is added to the row's Name text. `LookPreview.FindRows` finds picture rows by that text; picture
+  rows are read-only, which the marker skips (`SettingsDiagnostics.IsChanged`), so they are still found.

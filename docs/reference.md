@@ -270,20 +270,14 @@ bray, the lip smack, the chewing, the getting-on and getting-off snorts riding p
 creature without its own is silent there, and the log at the game's start says what each skin is missing. A mount
 may still pin a sound key in its `mount.cfg`'s `[Tuning]` (a volume, a timing); none of the built-ins does any more.
 
-### `[Effects]`: particle effects on the donkey
+### `[Effects]`: retired (0.37.0)
 
-`Effect` and `EffectWhen` are per instance (look keys); the rest is everyone's. Never shown indoors. Saddle Up's
-Mounts panel sets them (the Effect rows). Full story: [api.md](api.md) "Effects".
-
-| Key | Default | Meaning |
-|---|---|---|
-| `Effect` | none | The effect by id: `mount` ("As the mount or skin": the worn skin's own if it has one, else the mount's, if any), `hellfire` is built in (the game's lamp fire on a ring round the donkey, its sparks, a flame trail); mods add more. `none` or empty: none. |
-| `EffectWhen` | Always | `Off`, `Night` (the sun value below `EffectNightBelow`) or `Always`. |
-| `EffectTrail` | true | An effect with a trail leaves it behind while the donkey walks (flames that burn out). |
-| `EffectWithCart` | false | With the cart hitched, one wider ring round the donkey and the cart (off: round the donkey only). |
-| `EffectInFights` | true | Shown while the rider fights in armour (off: it goes out in fights). |
-| `EffectOnFoals` | false | Foals show it too, smaller. |
-| `EffectNightBelow` | 0.35 | "At night" means the game's sun value (the shader global the lantern reads) is below this; 0 deep night, 1 full day. |
+Since 0.37.0 (2026-10-25) the cfg has no `[Effects]` section: nothing picks or shows an effect on a mount (effects
+are registered only, [api.md](api.md) "Effects"). Its seven keys (`Effect`, `EffectWhen`, `EffectTrail`,
+`EffectWithCart`, `EffectInFights`, `EffectOnFoals`, `EffectNightBelow`) are retired: the API removes their lines
+from a player's `dreas.gk2.donkeyapi.cfg` at start (`Plugin.DropRetired`), and a side file's instance keys `Effect`
+and `EffectWhen` are dropped on load. How a shown effect behaves is fixed in `Effects.cs` for now: the trail on, the
+ring round the mount only, shown in fights, not on babies, never indoors.
 
 ### `[Debug]` and `[Safety]`
 
@@ -295,7 +289,7 @@ tuning and nudge keys and the perf log do nothing. The log says `Dev tools unloc
 
 | Key | Default | Meaning |
 |---|---|---|
-| `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Cargo / Lantern / Sounds / Colors / Instances / Debug / Tests (the self-tests: all, a group or one, with each scenario's progress) / Performance (the last second's frame costs) / Sources / Mounts (one creature at a time, what you ride by default: its mount's rider seat per style, cart, foals, effect, and its skin's picture offsets, saved into the creature's own skin.cfg; docs/mounts-design.md section 6). Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. Every row and button has a hover tooltip (rest the mouse on a row's label or a button for half a second): a settings row shows the setting's own cfg description, cut to whole sentences; buttons and the Cargo tab's controls carry their own short texts (`Tip(...)` in `TuningWindow*.cs`, drawn by `DrawTooltip` at the end of the window, outside the control order). `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
+| `TuningWindow` | false | **Dev tool for mod authors.** While mounted, a panel in the top-right corner with tabs General / Riding / Cargo / Lantern / Sounds / Colors / Instances / Debug / Tests (the self-tests: all, a group or one, with each scenario's progress) / Performance (the last second's frame costs) / Sources / Mounts (one creature at a time, what you ride by default: its mount's rider seat per style, cart, foals, and its skin's picture offsets, saved into the creature's own skin.cfg; docs/mounts-design.md section 6). Changes apply live and are saved as you make them; yellow rows differ from the mod default; right-click a row to put it back to the mod default. Every row and button has a hover tooltip (rest the mouse on a row's label or a button for half a second): a settings row shows the setting's own cfg description, cut to whole sentences; buttons and the Cargo tab's controls carry their own short texts (`Tip(...)` in `TuningWindow*.cs`, drawn by `DrawTooltip` at the end of the window, outside the control order). `TuningWindowScale` (1.5) sets its overall size, `TuningWindowFontScale` (1) the text size inside it, `TuningWindowWidth` (470) its width; all three have - / + steppers on the Debug tab and the rows scale with the width. Rows another mod overrides this session are cyan and locked. In a release build (`-p:ForDist=true`) there is no "Make these the mod defaults" button. |
 | `TuningWindowKey` | F11 | Hides / shows the panel (e.g. for screenshots). The game doesn't bind F-keys; Shift+F11 is left to its Workshop creator. `None` = no key. |
 | `SelfTestSpot` | (empty) | Where the self-tests start, `scene|x,y,z`; written by the runner after a full run (every scenario) with no failures and no warnings, used at the start of the next run in that scene (the keeper is moved there and put back afterwards). Empty: from where he stands (2026-10-10). |
 | `TuningWindowHidden` | false | Whether the panel is hidden right now; written as the key toggles it, so a panel left hidden stays hidden after a restart (2026-10-09). |

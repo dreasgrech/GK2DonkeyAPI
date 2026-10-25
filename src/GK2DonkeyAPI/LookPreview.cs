@@ -291,7 +291,7 @@ namespace GK2DonkeyAPI
             s.Go.SetActive(true);
         }
 
-        // One picture per row, centred on the row's field area: the framework's "Control" (ModsMenuSettingsPage.
+        // One picture per row, centred across from the row's field area: the framework's "Control" (ModsMenuSettingsPage.
         // CreateSettingRow: 320 units wide at the row's right for a read-only row, where other rows have their value
         // and Reset button), level with the row's middle. Without it (another framework version), right of the row's
         // middle. Each scrolls with the list.
@@ -334,12 +334,16 @@ namespace GK2DonkeyAPI
                         rowPics[i] = n;
                     }
                 }
-                RectTransform field = FieldOf(rows[i].Rect);
-                Place(rowPics[i], field ?? rows[i].Rect, pic, art, RowScale(rows[i].Rect, art));
+                // In the row, level with its middle, across from the field's middle: framework 0.1.24 moved the field to
+                // the row's top (26 units, for its "changed" marker's layout), and a picture centred on the field stood
+                // out of the row over the section's heading (seen 2026-10-25).
+                RectTransform row = rows[i].Rect, field = FieldOf(row);
+                Place(rowPics[i], row, pic, art, RowScale(row, art));
                 var rt = (RectTransform)rowPics[i].Go.transform;
-                rt.anchorMin = rt.anchorMax = new Vector2(field != null ? 0.5f : 0.62f, 0.5f);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
                 rt.pivot = new Vector2(0.5f, 0.5f);
-                rt.anchoredPosition = Vector2.zero;
+                float x = field != null ? row.InverseTransformPoint(field.TransformPoint(field.rect.center)).x - row.rect.center.x : row.rect.width * 0.12f;
+                rt.anchoredPosition = new Vector2(x, 0f);
             }
             for (int i = rows.Count; i < rowPics.Count; i++)
             {

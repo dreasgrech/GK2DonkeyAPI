@@ -20,6 +20,11 @@ The second cut (tabs under a tall stage) squashed the rows into a slit and left 
 2026-10-21: "a lot of empty space ... the customisation squashed"). Decided the same day, direction D: **the journal
 and a colours window**. A window of 1060x600, centred, scaled down only on a smaller canvas; laid out by hand.
 
+**2026-10-25 (API 0.37.0):** the effect rows are gone. The journal has no Effect group and no "Comes with: ..." line,
+the colours window has no Effect toggles, and its button and title are "Colours..." / "Colours: <mount>". The
+drawing below keeps the effect parts as built on 2026-10-21; nothing picks an effect until the skins' use of one is
+designed (docs/open-items.md "Effects on skins").
+
 ```
 +-- Mounts ------------------------------------------------------ 6 mounts --+
 | [list 260]        | [icon] Gerry                                           |
@@ -60,11 +65,12 @@ and a colours window**. A window of 1060x600, centred, scaled down only on a sma
 - **The stats card** beside it: Speed (the mount's own pin, else the Ride setting in effect), Cart, Babies, Skins
   (the user's pick; a mount's `[Stats]` lines (its mount.cfg; `[Mount.Stats]` in a skin.cfg before 2026-10-24)
   and its abilities are read into `Entry.Extra` for a later line).
-- **The look rows** under them: the Mount section's rows (the Skin) and the Effect section's choices (Effect, Effect
-  shown) as copied game rows in two groups, placed where they draw (MeasureRow). A row shown only with a preset is
+- **The look rows** under them: the Mount section's rows (the Skin) and, until 2026-10-25, the Effect section's
+  choices (Effect, Effect shown) as copied game rows in two groups, placed where they draw (MeasureRow). A row shown only with a preset is
   left out until the preset is chosen; a row greyed by a rule stays greyed.
-- **The colours window** ("Colours and effect..."): 800x560 over the journal, which waits hidden; every other look
-  section (the colours under their two headings) in two full columns, the Effect section's toggles under "Effect";
+- **The colours window** ("Colours...", "Colours and effect..." until 2026-10-25): 800x560 over the journal, which
+  waits hidden; every other look section (the colours under their two headings) in two full columns (until
+  2026-10-25 also the Effect section's toggles under "Effect");
   Done keeps, Cancel puts back what these rows held when it opened. The journal's own Cancel still covers everything.
 - **Done** bottom right, the panel's own button (the copied dialog button drew off its rectangle until its hover
   animation; a game row does too, which is why rows are measured). No Cancel (the user, 2026-10-21): Done and Escape

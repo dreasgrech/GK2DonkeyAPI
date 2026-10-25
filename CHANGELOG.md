@@ -12,6 +12,16 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The Effect section is gone, and so is the effect in the Mounts panel** (the user, 2026-10-25: "remove all the
+  stuff we're exposing regarding the effects"; particle effects will come back on specific skins, designed anew). The
+  Effect, Effect shown and four toggle rows, the "Comes with" line and the effect half of the panel's
+  "Colours and effect..." window (now "Colours...") are removed; the Hellfire skin no longer says it comes with its
+  fire. The six Effect lines and the GK2 Donkey API's seven `[Effects]` lines leave your cfg files at the first start
+  (no other setting changes).
+- **The mount's picture in the Mods menu sits in its row again** (the user, 2026-10-25: "the mount is being offsetted
+  out of the panel"). GK2 Mod Framework 0.1.24 moved a row's field from the row's middle to its top; the picture was
+  centred on the field, so it stood over the section's heading. It is now level with the row's middle, across from
+  the field.
 - **Picking a mount in the Mounts panel no longer freezes the game for a moment** (the user, 2026-10-24: "when
   selecting the dragon from the mount journal, the game freezes for some frames"). The picture is framed on what the
   mount draws over two seconds of its walk: twenty photos, each read back from the graphics card, all in one frame (40
@@ -258,6 +268,18 @@ For players:
 
 For mod authors:
 
+- **Nothing picks or shows a particle effect any more (API 0.37.0)**; making one stays (the user, 2026-10-25:
+  "the ability would be available from the api and then we will consume it from the skin consumer"; how a skin
+  comes with its effect is being designed). Kept: `Mounts.Effects` (`Effects`, `Find`, `EffectsChanged`, `Register`,
+  `Unregister`, `GameParticles`), `MountEffectDef`, `MountEffectPart`, `MountEffectEmitter`, `MountEffectPlacement`,
+  `IMountEffectSource`, `MountEffectInfo`: a registered effect is listed and ready, and shows nowhere yet. Removed:
+  `MountEffects.NoneId`, `FromMount`, `IsNone`; `MountEffectWhen`; `Mounts.EffectSettings`;
+  `MountSettingsPage.EffectRows`; `Effect` and `EffectWhen` on `MountCompanion`, `MountDef`, `MountInfo`,
+  `MountSkinDef` and `MountSkinInfo`; the instance tuning keys `Effect` and `EffectWhen` (a side file holding them
+  drops them on load); the API cfg's `[Effects]` section; the pack keys `effect =` and `effect_when =` in skin.cfg
+  and mount.cfg (an old file's lines are reported as unknown keys). This reverses, for choosing an effect, the
+  2026-10-17 rule that the player's effect is chosen through the API (docs/mount-looks-design.md). Saddle Up needs
+  0.36.0 or newer as before (it calls nothing removed).
 - **Skins built on their mount's default** (see For players): `MountSkinInfo.BuiltOn` (the default's id, or `null`)
   and `MountSkinInfo.OverDefault` (drawn over that default; `Over` stays "over the game's donkey"). A code skin's
   sentinels now mean "the default's" on such a skin: `SeatRow` -1 with `SeatFromPicture` false, `Offset` zero and
@@ -725,6 +747,13 @@ For mod authors:
 
 Development:
 
+- **The API retires cfg keys too** (`Plugin.DropRetired`, the analogue of `MountSettingsPage.RetiredKey`): a
+  released key this version no longer binds leaves the player's file at the start, saved once, and the upgrade
+  self-test counts it as retired, not as a value lost (first use: the seven `[Effects]` keys of 0.10.0). The effect
+  self-tests drive the rig through a test-only `Rig.TestWant`; how an effect shows (trail on, round the mount only,
+  in fights, not on babies, night below 0.35) is fixed in Effects.cs until the skin design. The dev panel's two
+  effect editors, SkinsScan's and canonical_cfg.py's effect keys and page-carryover.py's EffectRows went with them;
+  the public API snapshot updated (19 lines fewer).
 - **No LINQ in anything that runs in the game** (the user, 2026-10-25: "get rid of ALL our LINQ usage ... and disallow
   ALL LINQ usage going forward"; every call allocates garbage). The last uses are gone (the settings page's clearing
   key, the chest's zone walk and dock check, the dependency manifest's sort and lookups, the dev chest probe and

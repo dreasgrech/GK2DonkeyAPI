@@ -4,10 +4,14 @@ The one-page guide. The long forms: [skins.md](skins.md) for every key of a pack
 "Skins" for every member of the API, [mounts-as-mods.md](mounts-as-mods.md) for the rules between mods (ids, owners,
 versions, load order), [mounts-design.md](mounts-design.md) for why things are as they are.
 
+**2026-10-25 (API 0.37.0):** a mount and a skin no longer name an effect (`effect` / `effect_when` are not read,
+`MountDef.Effect` and `MountSkinDef.Effect` are gone); effects are registered only, and how a skin will use one is
+still to be designed (docs/open-items.md "Effects on skins").
+
 ## Two things, not one
 
 A **mount** is the creature: its id, name, description, whether it pulls the cart, whether it has babies and how big
-they are, an effect it comes with, its own tuning (speed, sounds, seat, cart geometry), free stat lines for the
+they are, its own tuning (speed, sounds, seat, cart geometry), free stat lines for the
 Mounts panel, and abilities (code hooks). The donkey is the mount with no definition: the game's own.
 
 A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits on that drawing, and what the
@@ -140,7 +144,7 @@ public sealed class Plugin : BaseUnityPlugin
 }
 ```
 
-That is all. On the next start the Giant Crab is in Saddle Up's Mounts panel with its Skin, Colours and Effect
+That is all. On the next start the Giant Crab is in Saddle Up's Mounts panel with its Skin and Colours
 rows, its icon cut from the default skin's standing picture, its speed pinned so the player's Speed row is left out
 for it. A second skin of the same mount is another folder under `assets/mounts/me.giant-crab/skins/`. Several mounts in
 one DLL: several mount folders under the same prefix. A new look for a mount that isn't yours (the donkey, or another
@@ -239,15 +243,15 @@ public sealed class Plugin : BaseUnityPlugin
 The other hooks: `Attached` and `Detached` (the instance becomes or stops being this mount), `Tick(mount, dt)`
 every frame while ridden, or while standing too with `TicksWhileStanding`. One ability object per mount. An
 ability may set the mount's speed, seat, sounds and cart geometry under its owner, and anything on the mount's own
-value replaces it (a sound of its own for an event: `Mounts.Sounds.Set` on the instance, docs/mount-sounds.md); it may never set the player's skin, effect or colours (such a Set is refused and said once in the
+value replaces it (a sound of its own for an event: `Mounts.Sounds.Set` on the instance, docs/mount-sounds.md); it may never set the player's skin or colours (such a Set is refused and said once in the
 log), and its values are never saved (set again in play).
 
 ## What the API does for either shape, unasked
 
 - Lists the mount in the Mounts panel: its icon (a `portrait` if named, else its Default skin's standing picture),
-  its description, and a line built from `cart`, `foals`, the speed, the effect it comes with, its skins, its
+  its description, and a line built from `cart`, `foals`, the speed, its skins, its
   `[Stats]` (`MountDef.Stats` in code) and its abilities' names and descriptions.
-- Makes Saddle Up's rows for it: Skin, the colours, the effect, kept per mount in the cfg (`Skin_me.giant-crab =
+- Makes Saddle Up's rows for it: Skin and the colours, kept per mount in the cfg (`Skin_me.giant-crab =
   me.giant-crab/default`, `Coat_me.giant-crab`, ...). A mount registered after the page was built is caught up the next frame.
 - Pins the mount's tuning on every instance of it under the API's own owner. A player's row for a pinned key is left
   out of the menus for that mount (Saddle Up's `TuningKey`); a mod's value still wins over the mount's. A mount may

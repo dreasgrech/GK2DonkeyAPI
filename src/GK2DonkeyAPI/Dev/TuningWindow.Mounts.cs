@@ -157,7 +157,6 @@ namespace GK2DonkeyAPI
                     Catalog.Touch(mount);
                 }
             }
-            EffectRows(mount);
 
             Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "mount.cfg [Tuning.Ride]" : "mount.cfg [Tuning.Cart]") + ")");
             GUILayout.BeginHorizontal();
@@ -198,37 +197,6 @@ namespace GK2DonkeyAPI
                 Catalog.Touch(mount);
             }
             GUILayout.EndHorizontal();
-        }
-
-        private static void EffectRows(Catalog.Entry mount)
-        {
-            IReadOnlyList<MountEffectInfo> effects = Mounts.Effects.Effects;
-            var ids = new List<string> { "" };
-            var labels = new List<string> { "none" };
-            foreach (MountEffectInfo e in effects)
-            {
-                ids.Add(e.Id);
-                labels.Add(e.Name);
-            }
-            int idx = Math.Max(0, ids.IndexOf(mount.Effect ?? ""));
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("Comes with the effect", "Shown on a donkey of this mount whose own Effect is 'As the mount' (the default row in Saddle Up)."), idx > 0 ? changed : label, Wd(LabelW));
-            if (GUILayout.Button("<", Wd(22f))) { idx = (idx - 1 + ids.Count) % ids.Count; mount.Effect = ids[idx].Length > 0 ? ids[idx] : null; Catalog.Touch(mount); }
-            GUILayout.Label(labels[idx], label, Wd(SliderW - 44f));
-            if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % ids.Count; mount.Effect = ids[idx].Length > 0 ? ids[idx] : null; Catalog.Touch(mount); }
-            GUILayout.EndHorizontal();
-            if (idx > 0)
-            {
-                MountEffectWhen[] whens = { MountEffectWhen.Off, MountEffectWhen.Night, MountEffectWhen.Always };
-                string[] whenNames = { "Never", "At night", "Always" };
-                int w = Math.Max(0, Array.IndexOf(whens, mount.EffectWhen));
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Shown", label, Wd(LabelW));
-                if (GUILayout.Button("<", Wd(22f))) { w = (w - 1 + whens.Length) % whens.Length; mount.EffectWhen = whens[w]; Catalog.Touch(mount); }
-                GUILayout.Label(whenNames[w], label, Wd(SliderW - 44f));
-                if (GUILayout.Button(">", Wd(22f))) { w = (w + 1) % whens.Length; mount.EffectWhen = whens[w]; Catalog.Touch(mount); }
-                GUILayout.EndHorizontal();
-            }
         }
 
         // What a row shows: the style's value, else the both-styles value, else the player's own (plain, not set).
@@ -370,7 +338,6 @@ namespace GK2DonkeyAPI
         {
             DrawSkinOffsets(skin, mount);
             DrawSkinSeat(skin, mount);
-            DrawSkinEffect(skin, mount);
             DrawSkinTuning(skin, mount, ride);
             DrawSoundRows(skin, mount, ride, ofSkin: true);
         }
@@ -495,42 +462,6 @@ namespace GK2DonkeyAPI
             if (mine != null && mine.ContainsKey(key)) mine[key] = value;
             else (mount.Sounds ?? (mount.Sounds = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase)))[key] = value;
             Catalog.Touch(mount);
-        }
-
-        // The effect the skin comes with (effect = / effect_when =): shown under "As the mount or skin" before the mount's own.
-        private static void DrawSkinEffect(Looks.SkinDef skin, Catalog.Entry mount)
-        {
-            IReadOnlyList<MountEffectInfo> effects = Mounts.Effects.Effects;
-            var ids = new List<string> { "" };
-            var labels = new List<string> { "none (the mount's, if any)" };
-            foreach (MountEffectInfo e in effects) { ids.Add(e.Id); labels.Add(e.Name); }
-            int idx = Math.Max(0, ids.IndexOf(skin.Effect ?? ""));
-            bool fromDefault = skin.Parent != null && !skin.Has(Looks.SkinGiven.Effect); // built on its default and not said: the default's (LooksInherit.cs)
-            GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("This skin comes with the effect" + (fromDefault ? "  (from the default)" : ""), "Shown on a wearer whose own Effect row is 'As the mount or skin' (Saddle Up's default): the skin's effect first, else the mount's. Hellfire says hellfire." + (skin.Parent != null ? " A skin built on its default takes the default's until it says its own (none included); right-click: the default's again." : "")), idx > 0 && !fromDefault ? changed : label, Wd(LabelW));
-            Rect effectLabel = GUILayoutUtility.GetLastRect();
-            if (skin.Parent != null && skin.Has(Looks.SkinGiven.Effect) && GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && effectLabel.Contains(Event.current.mousePosition))
-            {
-                Event.current.Use();
-                skin.Given &= ~Looks.SkinGiven.Effect;
-                Catalog.Touch(mount);
-            }
-            if (GUILayout.Button("<", Wd(22f))) { idx = (idx - 1 + ids.Count) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
-            GUILayout.Label(labels[idx], label, Wd(SliderW - 44f));
-            if (GUILayout.Button(">", Wd(22f))) { idx = (idx + 1) % ids.Count; skin.Effect = ids[idx].Length > 0 ? ids[idx] : null; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
-            GUILayout.EndHorizontal();
-            if (idx > 0)
-            {
-                MountEffectWhen[] whens = { MountEffectWhen.Off, MountEffectWhen.Night, MountEffectWhen.Always };
-                string[] whenNames = { "Never", "At night", "Always" };
-                int w = Math.Max(0, Array.IndexOf(whens, skin.EffectWhen));
-                GUILayout.BeginHorizontal();
-                GUILayout.Label("Shown", label, Wd(LabelW));
-                if (GUILayout.Button("<", Wd(22f))) { w = (w - 1 + whens.Length) % whens.Length; skin.EffectWhen = whens[w]; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
-                GUILayout.Label(whenNames[w], label, Wd(SliderW - 44f));
-                if (GUILayout.Button(">", Wd(22f))) { w = (w + 1) % whens.Length; skin.EffectWhen = whens[w]; skin.Given |= Looks.SkinGiven.Effect; Catalog.Touch(mount); }
-                GUILayout.EndHorizontal();
-            }
         }
 
         // Where the rider sits on this skin: a row of its picture (every player, whatever their AutoSeat), this

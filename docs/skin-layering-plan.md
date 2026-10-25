@@ -1,5 +1,9 @@
 # Skin layering: every skin of a mount is built on its default (plan, 2026-10-24)
 
+**2026-10-25 (API 0.37.0):** a skin no longer names an effect, so a variant inherits nothing about effects
+(`effect` / `effect_when`, `MountSkinDef.Effect` and `SkinGiven.Effect` are gone; the layering self-tests lost their
+effect clauses). Where the text below lists the effect among what a variant takes from its default, it is history.
+
 **Built 2026-10-24** (steps 1-15; not yet seen in game: the F11 scenarios "layering: ..." and the changed sounds
 scenario are written, not run). The code: `LooksInherit.cs` (Given, Parent, OverDefault, Resolve, RefreshInherited,
 SetAside/Healed, the game-ready check), `Looks.cs` (FromCfg's Given, Register/Unregister, MakeProducer and

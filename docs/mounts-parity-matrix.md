@@ -1,5 +1,10 @@
 # Mounts and skins: what is still not the same (2026-10-20)
 
+**2026-10-25 (API 0.37.0):** items 2.13 / 9.5 (a skin that comes with an effect, "As the mount or skin") are undone:
+the skin's and the mount's `effect =`, the Effect rows and the instance keys are gone, and nothing shows Hellfire's
+fire until the skins' use of an effect is designed (docs/open-items.md "Effects on skins"). The ring's size by the
+drawn width (2.4 / 9.3) stays in the engine.
+
 The second investigation after docs/mounts-foundation-audit.md (the definitions) and the seat row
 (docs/seat-investigation.md). The user: *"investigate to see exactly what is remaining to achieve what we want
 regarding parity where all mounts are built the same as much as possible. Once we are 100% on everything, we go

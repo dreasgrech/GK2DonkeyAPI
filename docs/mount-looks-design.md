@@ -365,6 +365,17 @@ The user's rule for it: *the fire is one effect of a particle effects system exp
 must be possible through the API.* So Hellfire is not a feature of its own: `Mounts.Effects` (Effects.cs) is the
 system, and Hellfire is registered through the public `MountEffectDef` exactly as a mod would register one.
 
+**2026-10-25 (API 0.37.0): the rule is reversed for picking and showing an effect.** The user: "Remove all the stuff
+we're exposing regarding the effects. Then we'll [add] some specific individual particle effects on specific skins
+after."; asked how far: "The ability would be available from the api and then we will consume it from the skin
+consumer"; and of the skin hook: "Remove it and we'll think about how to implement properly". Registration stays in
+the API (`Mounts.Effects`, `MountEffectDef` and its parts, the particle engine, Saddle Up's Hellfire); everything that
+picked or showed an effect is gone: the instance keys `Effect` / `EffectWhen`, `MountEffects.FromMount` / `NoneId`,
+`MountEffectWhen`, `Mounts.EffectSettings` and the `[Effects]` section (retired), `EffectRows` and Saddle Up's Effect
+section, `MountDef` / `MountSkinDef` / `MountCompanion.Effect`, the pack keys `effect` / `effect_when`, the panel's
+"Comes with" line. Nothing shows Hellfire's fire until the skins' use of an effect is designed (docs/open-items.md
+"Effects on skins"). The text below is the 2026-10-17 build.
+
 - **An effect** = parts; a part = a source of particles + emitters. Sources: the game's own particle systems found by
   material and copied (`GameParticles`; the lamp's `flame_fx` and `sparks_fx`, held through Addressables so the magenta
   squares of the probe days can't return), or a mod's prefab. Emitters: a ring (local space, follows), the body, a

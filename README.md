@@ -5,7 +5,7 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 | Mod | Version | For | What it is |
 |---|---|---|---|
 | [GK2 Saddle Up](src/SaddleUp/README.md) | 0.12.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Five more mounts come with it (the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry the skull), switched off until the next update. |
-| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.36.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
+| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.37.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
@@ -15,7 +15,7 @@ update, [`docs/skins.md`](docs/skins.md); a mod shipping a mount of its own: [`d
 
 | Mount | Skins | Notes |
 |---|---|---|
-| Donkey (the game's own) | the game's own look, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks, and its ring of fire), **Royal Parade** (a saddle cloth and a crown) | cart, babies |
+| Donkey (the game's own) | the game's own look, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire is registered but not shown since API 0.37.0), **Royal Parade** (a saddle cloth and a crown) | cart, babies |
 | Giant Rat, Giant Snail, Giant Worm, Dragon | their own look (our own art; the dragon's is called Red Dragon) | cart, babies; the snail and the worm are silent; the dragon's near wing is drawn in front of the rider |
 | Gerry (the game's talking skull) | the game's own frames, read at run time | cart, babies his own size; the keeper calls him a skull |
 

@@ -235,11 +235,6 @@ namespace GK2DonkeyAPI.Api
         // The babies' own sounds (an instance drawn smaller than the grown one), over the blocks above for them: a
         // squeak where the grown one roars; a pack's [Sounds.Baby]. Null: the grown one's, pitched up by the size.
         public Dictionary<string, MountSound> SoundsBaby;
-        // The effect this skin comes with, shown when the player's Effect row says "As the mount" (the skin's first,
-        // else its mount's). Null: the mount's (built on its mount's default: the default's); "none": none, not the
-        // default's either. A pack says the same with effect = / effect_when =.
-        public string Effect;
-        public MountEffectWhen EffectWhen = MountEffectWhen.Always;
         // The rider sits on this frame's picture top instead of a row (a game creature that hops: Gerry).
         public bool SeatFromPicture;
         // Which of the skin's own colours are Dark, Muzzle, Eye or Harness (hex RRGGBB per region; everything not
@@ -271,7 +266,6 @@ namespace GK2DonkeyAPI.Api
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
                 TuningRide = TuningRide != null && TuningRide.Count > 0 ? new Dictionary<string, object>(TuningRide, StringComparer.OrdinalIgnoreCase) : null,
                 TuningCart = TuningCart != null && TuningCart.Count > 0 ? new Dictionary<string, object>(TuningCart, StringComparer.OrdinalIgnoreCase) : null,
-                Effect = string.IsNullOrWhiteSpace(Effect) || MountEffects.IsNone(Effect) ? null : Effect.Trim(), EffectWhen = EffectWhen,
                 SeatFromPicture = SeatFromPicture, Erase = Over ? Erase : null,
                 Description = string.IsNullOrWhiteSpace(Description) ? null : Description.Trim(), PortraitTexture = Portrait,
                 Report = "from code" + ((Tuning?.Count ?? 0) + (TuningRide?.Count ?? 0) + (TuningCart?.Count ?? 0) is int n && n > 0 ? ", " + n + " tuning key(s)" : "")
@@ -285,7 +279,6 @@ namespace GK2DonkeyAPI.Api
             if (SeatRow >= 0 || SeatFromPicture) d.Given |= Looks.SkinGiven.Seat;
             if (Offset != Vector2.zero || CartOffset.HasValue) d.Given |= Looks.SkinGiven.Offset;
             if (CartOffset.HasValue) d.Given |= Looks.SkinGiven.OffsetCart;
-            if (!string.IsNullOrWhiteSpace(Effect)) d.Given |= Looks.SkinGiven.Effect; // "none" too: no effect, not the default's
             if (!string.IsNullOrWhiteSpace(Description)) d.Given |= Looks.SkinGiven.Description;
             if (Portrait != null) d.Given |= Looks.SkinGiven.Portrait;
             if (Over && Erase.HasValue) d.Given |= Looks.SkinGiven.Erase;
@@ -389,8 +382,6 @@ namespace GK2DonkeyAPI.Api
             IsRecipe = d.Recipe != null;
             SeatRow = d.SeatRow;
             SeatFromPicture = d.SeatFromPicture;
-            Effect = d.Effect;
-            EffectWhen = d.EffectWhen;
             FromGame = d.Game != null;
             Description = d.Description ?? "";
             HasPortrait = d.PortraitTexture != null || !string.IsNullOrEmpty(d.Portrait) || (d.Parent != null && !d.Has(Looks.SkinGiven.Portrait) && (d.Parent.PortraitTexture != null || !string.IsNullOrEmpty(d.Parent.Portrait)));
@@ -441,9 +432,6 @@ namespace GK2DonkeyAPI.Api
         // frame's picture top instead (Gerry).
         public int SeatRow { get; }
         public bool SeatFromPicture { get; }
-        // The effect the skin comes with (shown under "As the mount": the skin's first, else its mount's), or null.
-        public string Effect { get; }
-        public MountEffectWhen EffectWhen { get; }
         // Pictures drawn in front of the rider (a near wing).
         public bool HasFrontLayer { get; }
         // The colour regions the player's colours reach on this skin (Coat always on a skin in its own colours, then

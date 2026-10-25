@@ -4,10 +4,11 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Particle effects on donkeys (docs/mount-looks-design.md): the built-in Hellfire (the game's lamp fire on a ring
-    // round the donkey, with a trail) and the effects mods register here. A donkey shows one through its tuning keys
-    // "Effect" (the id; "" none) and "EffectWhen" (off, at night, always), or MountCompanion.Effect / EffectWhen;
-    // everyone's "EffectTrail", "EffectWithCart", "EffectInFights" and "EffectOnFoals" say how (Mounts.EffectSettings).
+    // Particle effects (docs/api.md "Effects"): the effects mods register here (Saddle Up's Hellfire: the game's lamp
+    // fire on a ring round the mount, with a trail). Nothing picks an effect for a mount in this version: the player's
+    // rows, the Effect tuning keys, MountCompanion.Effect, Mounts.EffectSettings and the packs' effect = went on
+    // 2026-10-25 (the user: "remove all the stuff we're exposing regarding the effects"); how a skin comes with one is
+    // being designed. So a registered effect is kept, listed and ready, and shows nowhere yet.
     //
     // An effect is a MountEffectDef: parts, each a source of particles (IMountEffectSource: a template GameObject of
     // particle systems, the game's own or your prefab's) with emitters placed on a ring round the body, at the body,
@@ -15,17 +16,9 @@ namespace GK2DonkeyAPI.Api
     // removes them when the view or the donkey goes. Dispose the handle to withdraw the effect.
     public sealed class MountEffects
     {
-        // The id for "no effect" in a settings list and the tuning key Effect ("" means the same; a dropdown can't hold an
-        // empty id).
-        public const string NoneId = "none";
-        // The id meaning "the mount's own effect" (MountDef.Effect / EffectWhen), the default of a settings list.
-        public const string FromMount = "mount";
-
         internal MountEffects()
         {
         }
-
-        public static bool IsNone(string id) => string.IsNullOrWhiteSpace(id) || id.Trim().Equals(NoneId, StringComparison.OrdinalIgnoreCase);
 
         // Every effect: the built-in ones first, then mods', each group by name.
         public IReadOnlyList<MountEffectInfo> Effects
@@ -117,8 +110,6 @@ namespace GK2DonkeyAPI.Api
         }
     }
 
-    public enum MountEffectWhen { Off, Night, Always }
-
     public enum MountEffectPlacement
     {
         Ring,   // Count emitters on a ring of Radius round the body, moving with it
@@ -152,8 +143,8 @@ namespace GK2DonkeyAPI.Api
         public string Author;
         public string Version;
         public bool Foals = true;
-        // Your own condition, asked every tick for each donkey showing the effect, on top of the built-in ones (the mode,
-        // indoors, fights, foals): false hides it. Keep it cheap. Null: none.
+        // Your own condition, asked every tick for each donkey showing the effect, on top of the built-in ones (indoors,
+        // fights, foals): false hides it. Keep it cheap. Null: none.
         public Func<MountHandle, bool> Show;
         public List<MountEffectPart> Parts = new List<MountEffectPart>();
     }

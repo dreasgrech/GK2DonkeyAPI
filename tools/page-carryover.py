@@ -3,7 +3,7 @@ GK2 Saddle Up cfg must land on a row of today's page, by its own (section, key),
 another number, or by a MovedKey alias. A key that lands nowhere is a player's value the update would lose.
 
 The rows and the aliases are read out of src/SaddleUp/Plugin.cs itself: p.X("Section", "Key"...) calls, the
-MovedKey and RetiredKey calls, Color (a colour key and its <key>Lightness), MountRows / FoalRows / EffectRows, and the PerMount
+MovedKey and RetiredKey calls, Color (a colour key and its <key>Lightness), MountRows / FoalRows, and the PerMount
 suffixes (the mounts below; a player's file holds the donkey's unsuffixed set only). The in-game upgrade self-test
 is the same check through the live page; run this one first, it needs no game.
 
@@ -22,7 +22,6 @@ PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
 KINDS = ["donkey", "saddleup.dragon", "saddleup.gerry", "saddleup.rat", "saddleup.snail", "saddleup.worm", "example.checker-beast"]
 MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"]
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
-EFFECT_ROWS = ["Effect", "EffectWhen", "EffectTrail", "EffectWithCart", "EffectInFights", "EffectOnFoals"]
 
 
 def plain(sec):
@@ -51,8 +50,6 @@ def page_rows(src):
         rows.update((m.group(1), "Skin_" + k) for k in KINDS)
     for m in re.finditer(r'p\.FoalRows\("(\w+)"', src):
         rows.update((m.group(1), k) for k in FOAL_ROWS)
-    for m in re.finditer(r'p\.EffectRows\("(\w+)"', src):
-        rows.update((m.group(1), k) for k in EFFECT_ROWS)
     return rows, aliases
 
 

@@ -1,5 +1,9 @@
 # Mounts and skins from many hands: the foundation, second look (2026-10-20, night)
 
+**2026-10-25 (API 0.37.0):** the effect parts below no longer hold: nothing picks or shows an effect (no Effect rows,
+no instance keys `Effect` / `EffectWhen`, no effect on a mount or a skin); effects are registered only. The ownership
+self-test's example look key is `HarnessColorize` instead of `Effect`. Open: docs/open-items.md "Effects on skins".
+
 **Amended 2026-10-24:** the packs are sorted by mount (`gk2mounts\<mount>\` with `mount.cfg`, its skins under
 `skins\`), and three id rules hold: a mount's id is `<mod>.<name>` (`saddleup.dragon`; only the game's `donkey` is
 plain; one without a dot is refused); a skin is named within its mount, full name `<mount id>/<skin>`

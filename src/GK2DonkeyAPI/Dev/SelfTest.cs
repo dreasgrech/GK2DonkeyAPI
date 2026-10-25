@@ -162,7 +162,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skins: no leaks over spawn and remove", Body = SkinLeaks },
             new Scenario { Group = GroupLooks, Name = "skin: kept through a hitch, freed asleep far away, worn again awake", Body = SkinSleep },
             new Scenario { Group = GroupLooks, Name = "recipe: built from the donkey's frames, worn whole", Body = SkinRecipe },
-            new Scenario { Group = GroupLooks, Name = "effect: hellfire lit, follows, out, gone with the donkey", Body = EffectOnOff },
+            new Scenario { Group = GroupLooks, Name = "effect: hellfire lit (the test hook), follows, out, gone with the donkey", Body = EffectOnOff },
             new Scenario { Group = GroupLooks, Name = "mount from a pack: declared, worn, no cart, its tuning, withdrawn", Body = MountFromPack },
             new Scenario { Group = GroupLooks, Name = "mount from code: the ability's hooks on spawn, ride, dismount, removal", Body = MountFromCode },
             new Scenario { Group = GroupLooks, Name = "tuning: a value belongs to the owner that set it; what a mount and an ability may pin", Body = TuningOwnership },
@@ -174,7 +174,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "layering: a variant before its default, the default read again and withdrawn, another canvas, a code skin's sentinels, the donkey's skins unchanged", Body = SkinLayerLifecycle },
             new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
-            new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin, babies and effect rows", Body = SettingsRows },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
@@ -183,7 +183,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "seat: the rider's height on every shipped mount, AutoSeat off and on (a readout)", Body = SeatReadout },
             new Scenario { Group = GroupLooks, Name = "cart: the hitch gap and the cart-style seat on every shipped mount (a readout)", Body = CartReadout },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
-            new Scenario { Group = GroupLooks, Name = "effect: the skin's own effect under 'As the mount or skin', and the ring's size by the drawn width", Body = SkinEffect },
+            new Scenario { Group = GroupLooks, Name = "effect: the ring's size by the worn skin's drawn width (the test hook)", Body = SkinEffect },
             new Scenario { Group = GroupLooks, Name = "front layer: the dragon's near wing stays in front of the rider (a readback)", Body = FrontLayer },
             new Scenario { Group = GroupLooks, Name = "preview: the cart sits at the new mount's hitch gap as soon as the mount is switched", Body = PreviewGap },
             new Scenario { Group = GroupLooks, Name = "colours: the Coat row reaches every body colour of every shipped mount, and no other", Body = CoatEveryBuiltIn },
@@ -1286,13 +1286,18 @@ namespace GK2DonkeyAPI
                     Dictionary<string, Dictionary<string, string>> file = MountSettingsPage.ReadSections(api);
                     var lost = new StringBuilder();
                     var bad = new StringBuilder();
-                    int n = 0, lostCount = 0, badCount = 0;
+                    int n = 0, lostCount = 0, badCount = 0, retiredCount = 0;
                     foreach (var s in file)
                     {
                         foreach (var kv in s.Value)
                         {
                             n++;
                             var def = new ConfigDefinition(s.Key, kv.Key);
+                            if (Plugin.Instance.IsRetired(s.Key, kv.Key))
+                            {
+                                retiredCount++; // dropped on purpose (Plugin.DropRetired: the [Effects] keys, 2026-10-25)
+                                continue;
+                            }
                             if (!Plugin.Instance.Config.ContainsKey(def))
                             {
                                 lostCount++;
@@ -1310,7 +1315,7 @@ namespace GK2DonkeyAPI
                             }
                         }
                     }
-                    Check(lostCount == 0, $"{version} {name}: every one of its {n} keys is still bound (a renamed or dropped key resets a player's value)" + (lostCount > 0 ? $"; not bound: {lost}" : ""));
+                    Check(lostCount == 0, $"{version} {name}: every one of its {n} keys is still bound or retired on purpose ({retiredCount} retired; a renamed or dropped key resets a player's value)" + (lostCount > 0 ? $"; not bound: {lost}" : ""));
                     Check(badCount == 0, $"{version} {name}: every value reads as its key's type" + (badCount > 0 ? $": {bad}" : ""));
                 }
 
@@ -1369,7 +1374,7 @@ namespace GK2DonkeyAPI
         // The settings rows every player mod gets (MountRows, FoalRows, EffectRows), on a throwaway page and a test
         // companion: the Mount dropdown picks a mount and its Skin dropdown that mount's skin; the companion's Skin
         // follows; one Skin row shows at a time; each mount remembers its own skin; the babies rows bind the companion's
-        // foal values; the effect row defaults to "As the mount". Then the mounts that come late (docs/mounts-as-mods.md
+        // foal values; there is no effect row. Then the mounts that come late (docs/mounts-as-mods.md
         // 4): every page shown this session has a Skin row for every mount with a skin, whatever order the plugins
         // loaded in; and a mount declared by a pack after the page's rows were built gets its Skin row and its
         // per-mount rows at CatchUp (what Show runs the frame after Publish).
@@ -1397,7 +1402,6 @@ namespace GK2DonkeyAPI
                 var page = new MountSettingsPage(owner, cfg, "Rows test", "test", "", null);
                 page.MountRows("Mount", me);
                 page.FoalRows("Mount", me);
-                page.EffectRows("Effect", me);
                 ConfigEntry<T> Row<T>(string key) => page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == key)?.Entry as ConfigEntry<T>;
                 ConfigEntry<string> mount = Row<string>("Mount"), skinDonkey = Row<string>("Skin_" + MountCatalog.DonkeyId), skinDragon = Row<string>("Skin_" + M("dragon"));
                 Check(mount != null && skinDonkey != null && skinDragon != null, "the Mount row and a Skin row per mount are bound");
@@ -1447,8 +1451,7 @@ namespace GK2DonkeyAPI
                     Check(!me.FoalsWearSkin, "Babies are the same mount and skin = off reaches the companion");
                     wear.Value = true;
                 }
-                ConfigEntry<string> effect = Row<string>("Effect");
-                Check(effect != null && effect.Value == MountEffects.FromMount, $"Effect defaults to As the mount (\"{effect?.Value}\")");
+                Check(Row<string>("Effect") == null, "no Effect row (the effect rows went, 2026-10-25)");
 
                 // the look per mount (PerMount, MountLook): a row set per mount, the donkey's keys plain, the others
                 // suffixed; the chosen mount's set is the one shown; a mount's look is kept while another is chosen
@@ -1760,9 +1763,8 @@ namespace GK2DonkeyAPI
             yield return new Vector3(mn.x, mx.y, mx.z); yield return new Vector3(mx.x, mx.y, mx.z);
         }
 
-        // A skin that comes with an effect (Hellfire: effect = hellfire) lights it when the wearer's Effect row says "As
-        // the mount or skin" (Saddle Up's default); a skin without one shows the mount's (the donkey has none); and the
-        // ring is the worn skin's drawn width against the donkey's (the rat: 85 of 46 px).
+        // The ring is the worn skin's drawn width against the donkey's (the rat: 85 of 46 px; an over skin keeps the
+        // donkey's). Nothing picks an effect in this version, so the rig is told through its test hook (TestWant).
         private static IEnumerator SkinEffect()
         {
             if (!Plugin.MountsOn)
@@ -1773,17 +1775,12 @@ namespace GK2DonkeyAPI
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
-            a.Tuning.Set(Owner, "Effect", MountEffects.FromMount);
-            a.Tuning.Set(Owner, "EffectWhen", MountEffectWhen.Always);
+            a.I.EffectsRig.TestWant = "hellfire";
             a.Tuning.Set(Owner, "Skin", Sk("hellfire"));
             yield return Until(() => a.IsReady && a.I.TestSkinWearing() == Sk("hellfire") && a.I.EffectsRig.Lit, 20f);
-            Check(waited, "Hellfire worn with Effect = As the mount or skin: its fire is lit");
+            Check(waited, "Hellfire worn, the effect asked for by the test hook: lit");
             float donkeyRing = a.I.EffectsRig.TestRingRadiusX;
             Check(donkeyRing > 0.6f && donkeyRing < 1.0f, $"the ring on the donkey-shaped Hellfire reaches {donkeyRing:0.00} along the body (0.8: an over skin keeps the donkey's size)");
-            a.Tuning.Set(Owner, "Skin", Sk("royal-parade"));
-            yield return Until(() => a.I.TestSkinWearing() == Sk("royal-parade") && !a.I.EffectsRig.Lit, 20f);
-            Check(waited, "Royal Parade worn (no effect of its own, the donkey mount has none): the fire is out");
-            a.Tuning.Set(Owner, "Effect", "hellfire");
             a.Tuning.Set(Owner, "Skin", Sk("rat"));
             yield return Until(() => a.IsReady && a.I.TestSkinWearing() == Sk("rat") && a.I.EffectsRig.Lit && a.I.EffectsRig.TestRingRadiusX > 1.2f, 20f);
             float ratRing = a.I.EffectsRig.TestRingRadiusX;
@@ -2816,7 +2813,7 @@ namespace GK2DonkeyAPI
         }
 
         // Debug.MountsPreview off (what players have in this version): the donkey is the only mount offered, its only
-        // skin the game's own, no effect to pick, nothing built in registered, and a mod's registrations are kept out:
+        // skin the game's own, no effect listed, nothing built in registered, and a mod's registrations are kept out:
         // a handle to nothing, nothing thrown, nothing in the lists.
         private static IEnumerator MountsOff()
         {
@@ -2829,8 +2826,7 @@ namespace GK2DonkeyAPI
             Check(mounts.Count == 1 && mounts[0].Id == MountCatalog.DonkeyId, $"the Mount list holds the donkey only ({mounts.Count})");
             IReadOnlyList<(string Id, string Label)> skins = Looks.SkinChoicesOf(MountCatalog.DonkeyId);
             Check(skins.Count == 1 && skins[0].Id == MountLooks.DonkeyId && skins[0].Label == Looks.DefaultLabel, $"the donkey's Skin list holds Default only ({skins.Count})");
-            IReadOnlyList<(string Id, string Label)> effects = GK2DonkeyAPI.Effects.EffectChoices();
-            Check(effects.Count == 2, $"the Effect list holds As the mount and None only ({effects.Count})");
+            Check(Mounts.Effects.Effects.Count == 0, $"no effect is listed ({Mounts.Effects.Effects.Count})");
             Check(Looks.Find(Sk("hellfire")) == null && Looks.Find(Sk("rat")) == null && Looks.Find(Sk("gerry")) == null && Catalog.Find(M("dragon")) == null && GK2DonkeyAPI.Effects.Find("hellfire") == null, "no built-in skin, mount or effect is registered");
             Check(!Mounts.MountsEnabled, "Mounts.MountsEnabled says so");
             int skinsBefore = Mounts.Looks.Skins.Count, mountsBefore = Mounts.Catalog.All.Count, effectsBefore = Mounts.Effects.Effects.Count;
@@ -3391,7 +3387,7 @@ namespace GK2DonkeyAPI
             m.Tuning.Clear(one, "SpeedMultiplier");
             yield return Frames(3);
             Check(m.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner, "cleared: the mount's value is back");
-            m.Tuning.Set(one, "Effect", "hellfire"); // a mod's (the player's mod's) look choice, which the ability will try to take
+            m.Tuning.Set(one, "HarnessColorize", "C040FF"); // a mod's (the player's mod's) look choice, which the ability will try to take
             MountResult rideRes = m.Ride(showMessage: false);
             Check(rideRes.Ok, $"ridden{(rideRes.Ok ? "" : " (" + rideRes.Reason + ")")}");
             if (rideRes.Ok)
@@ -3400,7 +3396,7 @@ namespace GK2DonkeyAPI
                 Check(waited, $"Mounted once ({ability.MountedCount})");
                 yield return Frames(2);
                 Check(m.Tuning.SetBy("HandsSwayPx") == ability.Owner, "ridden: the ability pins a mount key under its own owner");
-                Check(m.Tuning.SetBy("Effect") == one && m.Tuning.Get<string>("Effect") == "hellfire", "the ability's Set of the Effect, which a mod holds, is refused");
+                Check(m.Tuning.SetBy("HarnessColorize") == one && m.Tuning.Get<string>("HarnessColorize") == "C040FF", "the ability's Set of the harness colour, which a mod holds, is refused");
                 Mounts.Dismount("self-test");
                 yield return Until(() => !Mounts.IsMounted, 5f);
                 Check(m.Tuning.IsSet("HandsSwayPx"), "dismounted: the ability left its value behind on purpose");
@@ -3409,8 +3405,8 @@ namespace GK2DonkeyAPI
             yield return Until(() => m.Mount == MountCatalog.DonkeyId, 8f);
             yield return Frames(3);
             Check(waited && !m.Tuning.IsSet("HandsSwayPx"), "the mount gone: the ability's value is cleared by the API");
-            Check(m.Tuning.SetBy("Effect") == one, "the mod's own value is untouched by that");
-            m.Tuning.Clear(one, "Effect");
+            Check(m.Tuning.SetBy("HarnessColorize") == one, "the mod's own value is untouched by that");
+            m.Tuning.Clear(one, "HarnessColorize");
 
             // a page row that names its tuning key: disabled while the chosen mount pins the key
             string path = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-pin.cfg");
@@ -3821,7 +3817,7 @@ namespace GK2DonkeyAPI
             {
                 MountedCount++;
                 mount.Tuning.Set(Owner, "HandsSwayPx", 5f);
-                mount.Tuning.Set(Owner, "Effect", "");
+                mount.Tuning.Set(Owner, "HarnessColorize", "");
             }
         }
 
@@ -3942,8 +3938,9 @@ namespace GK2DonkeyAPI
             Check(Looks.Find("donkey/selftest.recipe-test") == null, "withdrawn: the recipe is gone from the list");
         }
 
-        // The built-in effect: lit on a spawned donkey (the game's lamp fire copied, its emitters on the ring), follows it,
-        // out when the mode is off, gone when the donkey is removed (nothing of it left in the world).
+        // Saddle Up's Hellfire: lit on a spawned donkey (the game's lamp fire copied, its emitters on the ring), follows
+        // it, out when no longer asked for, gone when the donkey is removed (nothing of it left in the world). Nothing
+        // picks an effect in this version: the rig is told through its test hook (TestWant).
         private static IEnumerator EffectOnOff()
         {
             if (!Plugin.MountsOn)
@@ -3954,8 +3951,7 @@ namespace GK2DonkeyAPI
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             yield return Until(() => a != null && a.IsReady, 6f);
-            a?.Tuning.Set(Owner, "Effect", "hellfire");
-            a?.Tuning.Set(Owner, "EffectWhen", MountEffectWhen.Always);
+            if (a != null) a.I.EffectsRig.TestWant = "hellfire";
             yield return Until(() => a != null && a.I.TestEffectLit(), 6f);
             if (!waited)
             {
@@ -3973,10 +3969,10 @@ namespace GK2DonkeyAPI
             yield return Seconds(1f);
             ringAt = a?.I.TestEffectRingPosition();
             Check(ringAt.HasValue && (ringAt.Value - before).sqrMagnitude > 0.25f, "the ring followed the donkey");
-            a?.Tuning.Set(Owner, "EffectWhen", MountEffectWhen.Off);
+            if (a != null) a.I.EffectsRig.TestWant = null;
             yield return Frames(3);
-            Check(a != null && !a.I.TestEffectLit(), "off: the fire is out");
-            a?.Tuning.Set(Owner, "EffectWhen", MountEffectWhen.Always);
+            Check(a != null && !a.I.TestEffectLit(), "no longer asked for: the fire is out");
+            if (a != null) a.I.EffectsRig.TestWant = "hellfire";
             yield return Until(() => a != null && a.I.TestEffectLit(), 4f);
             int lit = a != null ? a.I.TestEffectInWorld() : 0;
             a?.Remove();
@@ -4239,7 +4235,7 @@ namespace GK2DonkeyAPI
                 }
                 MountsPanel.TestOpenColours();
                 yield return Frames(2);
-                Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours, the effect)");
+                Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");
                 MountsPanel.TestCloseColours(keep: true);
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");

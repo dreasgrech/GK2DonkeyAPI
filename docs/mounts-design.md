@@ -1,5 +1,9 @@
 # Mounts: design (2026-10-17 evening)
 
+**Amended 2026-10-25 (API 0.37.0):** a mount no longer has a default effect (`MountDef.Effect` / `EffectWhen`,
+`MountInfo.Effect` / `EffectWhen`, `[Mount] effect` / `effect_when` and `MountEffects.FromMount` are gone); effects
+are registered only and nothing shows one (docs/api.md "Effects", docs/open-items.md "Effects on skins").
+
 **Amended 2026-10-24 (the mount folders):** a mount is no longer a `[Mount]` block inside its default skin's
 skin.cfg. A pack is `gk2mounts\<mount>\` with `mount.cfg` (`[Mount]` with `default_skin`, `[Stats]`, `[Tuning*]`,
 `[Sounds*]`: plain names), the mount's `sounds\`, and `skins\<skin>\` for each look (skin.cfg, pictures, `front\`,

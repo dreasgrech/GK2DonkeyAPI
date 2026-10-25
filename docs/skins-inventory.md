@@ -1,5 +1,9 @@
 # Where every skin lives
 
+**2026-10-25 (API 0.37.0):** no skin names an effect any more (Hellfire's skin.cfg lost its effect lines and its
+description no longer mentions its ring of fire); `Effects.cs` keeps the registration and the particle engine, and
+Saddle Up still registers the Hellfire effect, which nothing shows for now.
+
 Every skin the API knows, what it is made of, where its source and its tooling are, and what is read from outside
 the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo); the paths and ids as of 2026-10-24
 (the mount folders: `src/SaddleUp/assets/mounts/<mount>/` with `mount.cfg`, `sounds\` and `skins/<skin>/`). The review page

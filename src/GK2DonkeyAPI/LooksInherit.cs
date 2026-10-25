@@ -28,7 +28,6 @@ namespace GK2DonkeyAPI
             Seat = 1 << 5,
             Offset = 1 << 6,
             OffsetCart = 1 << 7,
-            Effect = 1 << 8,
             Description = 1 << 9,
             Portrait = 1 << 10,
             Base = 1 << 11,
@@ -58,8 +57,6 @@ namespace GK2DonkeyAPI
             internal int SeatRow;
             internal bool SeatFromPicture;
             internal Vector2 OffsetRide, OffsetCart;
-            internal string Effect;
-            internal MountEffectWhen EffectWhen;
             internal string Description;
         }
 
@@ -151,7 +148,6 @@ namespace GK2DonkeyAPI
                     // a value it gave is never read from here, unless the Mounts tab takes it back: then as if never said
                     SeatRow = d.Has(SkinGiven.Seat) ? -1 : d.SeatRow, SeatFromPicture = !d.Has(SkinGiven.Seat) && d.SeatFromPicture,
                     OffsetRide = d.Has(SkinGiven.Offset) ? Vector2.zero : d.OffsetRide, OffsetCart = d.Has(SkinGiven.Offset) || d.Has(SkinGiven.OffsetCart) ? Vector2.zero : d.OffsetCart,
-                    Effect = d.Has(SkinGiven.Effect) ? null : d.Effect, EffectWhen = d.Has(SkinGiven.Effect) ? MountEffectWhen.Always : d.EffectWhen,
                     Description = d.Description,
                 };
             }
@@ -184,11 +180,6 @@ namespace GK2DonkeyAPI
             }
             if (!d.Has(SkinGiven.Offset)) d.OffsetRide = p?.OffsetRide ?? a.OffsetRide;
             if (!d.Has(SkinGiven.OffsetCart)) d.OffsetCart = d.Has(SkinGiven.Offset) ? d.OffsetRide : p?.OffsetCart ?? a.OffsetCart; // offset without offset_cart: the cart's is the ride's, as in a file
-            if (!d.Has(SkinGiven.Effect))
-            {
-                d.Effect = p != null ? p.Effect : a.Effect;
-                d.EffectWhen = p != null ? p.EffectWhen : a.EffectWhen;
-            }
             if (!d.Has(SkinGiven.Description)) d.Description = p?.Description ?? a.Description;
             ResolveAside(d, was);
             if (p == null && was == null && layerSaid.Add(d.Id + "|alone"))
@@ -310,7 +301,6 @@ namespace GK2DonkeyAPI
             if (!d.Has(SkinGiven.Canvas)) names.Add("canvas");
             if (!d.Has(SkinGiven.Seat)) names.Add("seat");
             if (!d.Has(SkinGiven.Offset)) names.Add("offset");
-            if (!d.Has(SkinGiven.Effect)) names.Add("effect");
             if (!d.Has(SkinGiven.Colours)) names.Add("colours");
             if (!d.Has(SkinGiven.Description)) names.Add("description");
             if (!d.Has(SkinGiven.Portrait)) names.Add("portrait");
