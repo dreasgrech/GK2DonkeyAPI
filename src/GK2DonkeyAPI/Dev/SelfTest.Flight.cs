@@ -17,14 +17,15 @@ namespace GK2DonkeyAPI
         private static IEnumerator FlightJump()
         {
             const float never = float.PositiveInfinity;
-            float top = Flight.JumpPx, tap = Mathf.Min(Flight.JumpTapPx, Flight.JumpPx);
+            Flight.JumpShape js = Flight.DefaultJump; // the arc by itself: the default jump's (the donkey's; a mount's own: FlightJumpPerMount)
+            float top = js.Height, tap = Mathf.Min(js.Tap, js.Height);
             float Top(float letGo, float fps, out float doneAt, out int steps)
             {
                 float t = 0f, max = -99f, prev = 0f; doneAt = -1f; steps = 0;
                 for (int n = 0; n < 2000; n++)
                 {
                     t += 1f / fps;
-                    float h = Flight.JumpHeightAt(t, letGo, out bool done);
+                    float h = Flight.JumpHeightAt(js, t, letGo, out bool done);
                     steps = Mathf.Max(steps, Mathf.RoundToInt(Mathf.Abs(Mathf.Round(h) - Mathf.Round(prev))));
                     prev = h; max = Mathf.Max(max, h);
                     if (done) { doneAt = t; break; }
@@ -40,7 +41,7 @@ namespace GK2DonkeyAPI
             float worst = 0f;
             foreach (float letGo in new[] { never, 0f, 0.08f, 0.15f, 0.25f })
                 for (int k = 0; k < 8000; k++)
-                    worst = Mathf.Max(worst, Mathf.Abs(Flight.JumpHeightAt((k + 1) * 1e-4f, letGo, out _) - Flight.JumpHeightAt(k * 1e-4f, letGo, out _)));
+                    worst = Mathf.Max(worst, Mathf.Abs(Flight.JumpHeightAt(js, (k + 1) * 1e-4f, letGo, out _) - Flight.JumpHeightAt(js, k * 1e-4f, letGo, out _)));
             Check(worst < 0.05f, $"continuous: the biggest step in 0.1 ms is {worst:0.000} px (no break between the crouch, rise, hang, fall and squash)");
             float t30 = Top(never, 30f, out float end30, out int s30), t144 = Top(never, 144f, out float end144, out int s144);
             Check(Mathf.Abs(t30 - t144) < 0.6f && Mathf.Abs(end30 - end144) <= 1f / 30f + 0.001f,
@@ -49,14 +50,14 @@ namespace GK2DonkeyAPI
             float offT = -1f, topT = -1f, hangEnd = -1f, landT = -1f;
             for (int k = 1; k < 20000 && landT < 0f; k++)
             {
-                float tk = k * 1e-4f, h = Flight.JumpHeightAt(tk, never, out _);
+                float tk = k * 1e-4f, h = Flight.JumpHeightAt(js, tk, never, out _);
                 if (offT < 0f && h > 0f) offT = tk;                                  // leaves the ground (after the crouch)
                 if (topT < 0f && h >= top - 0.001f) topT = tk;                       // reaches the top
                 if (topT >= 0f && hangEnd < 0f && h < top - 0.001f) hangEnd = tk;    // the hang over
                 if (hangEnd >= 0f && h <= 0f) landT = tk;                            // touches the ground
             }
             float upS = topT - offT, fallS = landT - hangEnd;
-            Check(fallS > 0f && (fallS < upS || Flight.JumpRiseShare <= 0.5f), $"up from the ground to the top in {upS:0.000} s, down in {fallS:0.000} s (the rise's share {Flight.JumpRiseShare:0.00})");
+            Check(fallS > 0f && (fallS < upS || js.RiseShare <= 0.5f), $"up from the ground to the top in {upS:0.000} s, down in {fallS:0.000} s (the rise's share {js.RiseShare:0.00})");
 
             // live: a donkey of the test's own ridden plain (the experiment on), in place, then at two walls
             if (!Flight.Active || !Plugin.MountsOn)
@@ -114,7 +115,7 @@ namespace GK2DonkeyAPI
                         Flight.Jump(i);
                         if (Flight.Now != Flight.Phase.Jumping) { Fail("the jump didn't start: " + Flight.Why); yield break; }
                         int frame = 0;
-                        while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.JumpTimeS + Flight.JumpPerchS + 3f)
+                        while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.J.Time + Flight.JumpPerchS + 3f)
                         {
                             max = Mathf.Max(max, Flight.HeightPx);
                             camera |= Flight.TestCameraLifted;
@@ -329,7 +330,7 @@ namespace GK2DonkeyAPI
                     {
                         Flight.Jump(mi);
                         float t0 = Time.time;
-                        while (Time.time - t0 < Flight.JumpTimeS + 1.5f)
+                        while (Time.time - t0 < Flight.J.Time + 1.5f)
                         {
                             float drawn = mi.Position.y - Flight.LiftFor(mi);
                             if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > slopeWorst) { slopeWorst = Mathf.Abs(drawn - last); worstAt = Time.time - t0; }
@@ -376,7 +377,7 @@ namespace GK2DonkeyAPI
                     {
                         Flight.Jump(mi);
                         float t0 = Time.time;
-                        while (Time.time - t0 < Flight.JumpTimeS + 2f)
+                        while (Time.time - t0 < Flight.J.Time + 2f)
                         {
                             float drawn = mi.Position.y - Flight.LiftFor(mi);
                             if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worstDown) { worstDown = Mathf.Abs(drawn - last); worstAt = Time.time - t0; }

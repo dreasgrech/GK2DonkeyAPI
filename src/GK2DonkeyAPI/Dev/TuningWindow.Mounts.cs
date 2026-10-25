@@ -158,6 +158,8 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            DrawMountJump(mount);
+
             Header("Rider on this mount: " + (ride ? "riding" : "with the cart") + "  (" + (ride ? "mount.cfg [Tuning.Ride]" : "mount.cfg [Tuning.Cart]") + ")");
             GUILayout.BeginHorizontal();
             GUILayout.Label("Each style has its own values; the other style's rows show after a style switch.", small);
@@ -197,6 +199,75 @@ namespace GK2DonkeyAPI
                 Catalog.Touch(mount);
             }
             GUILayout.EndHorizontal();
+        }
+
+        // The mount's own jump (mount.cfg [Jump], JumpShapes.cs): a row per key, the default jump's value shown (plain)
+        // until dragged; a right-click on the slider takes the key back to the default's. The donkey's jump is the default
+        // jump: the Flying tab's rows.
+        private static void DrawMountJump(Catalog.Entry mount)
+        {
+            Header("Its jump  (mount.cfg [Jump]; riding plain)");
+            if (mount == Catalog.Donkey)
+            {
+                GUILayout.Label("The donkey's jump is the default jump: the Flying tab's rows (every mount without a [Jump] key of its own takes them).", small);
+                return;
+            }
+            GUILayout.Label("Not set: the default jump's value (the Flying tab's), plain. Drag to give this mount its own; right-click a slider to take it back to the default's. The next jump takes it.", small);
+            foreach (JumpShapes.Key k in JumpShapes.Keys)
+            {
+                bool set = mount.Jump != null && mount.Jump.TryGetValue(k.Name, out float own);
+                float value = set ? mount.Jump[k.Name] : JumpShapes.Default(k.Name);
+                if (k.Bool)
+                {
+                    GUILayout.BeginHorizontal();
+                    GUILayout.Label(Tip(k.Label, k.Tip + " Saved as " + k.Name + " in [Jump]." + (set ? " Right-click: back to the default's." : " Not set for the mount: the default jump's value is shown.")), set ? changed : label, Wd(LabelW));
+                    bool clicked = GUILayout.Button(value > 0.5f ? "On" : "Off", Wd(70f));
+                    Rect br = GUILayoutUtility.GetLastRect();
+                    bool unsetB = set && GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && br.Contains(Event.current.mousePosition);
+                    GUILayout.EndHorizontal();
+                    if (unsetB)
+                    {
+                        Event.current.Use();
+                        mount.Jump.Remove(k.Name);
+                        if (mount.Jump.Count == 0) mount.Jump = null;
+                        Catalog.Touch(mount);
+                    }
+                    else if (clicked)
+                    {
+                        (mount.Jump ?? (mount.Jump = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)))[k.Name] = value > 0.5f ? 0f : 1f;
+                        Catalog.Touch(mount);
+                    }
+                    continue;
+                }
+                GUILayout.BeginHorizontal();
+                GUILayout.Label(Tip(k.Label, k.Tip + " Saved as " + k.Name + " in [Jump]." + (set ? "" : " Not set for the mount: the default jump's value is shown.")), set ? changed : label, Wd(LabelW));
+                float v = GUILayout.HorizontalSlider(value, k.Min, k.Max, Wd(SliderW - 84f));
+                Rect r = GUILayoutUtility.GetLastRect();
+                bool unset = GUI.enabled && Event.current.type == EventType.MouseDown && Event.current.button == 1 && r.Contains(Event.current.mousePosition);
+                GUILayout.Label(value.ToString("0.00"), label, Wd(50f));
+                GUILayout.EndHorizontal();
+                if (unset)
+                {
+                    Event.current.Use();
+                    if (set)
+                    {
+                        mount.Jump.Remove(k.Name);
+                        if (mount.Jump.Count == 0) mount.Jump = null;
+                        Catalog.Touch(mount);
+                    }
+                    continue;
+                }
+                if (v == Mathf.Clamp(value, k.Min, k.Max)) continue; // only a drag is a change
+                v = (float)Math.Round(v, 2);
+                if (set && Mathf.Abs(v - value) <= 0.0001f) continue;
+                (mount.Jump ?? (mount.Jump = new Dictionary<string, float>(StringComparer.OrdinalIgnoreCase)))[k.Name] = v;
+                Catalog.Touch(mount);
+            }
+            if (mount.Jump != null && GUILayout.Button(Tip("Back to the default jump", "Every [Jump] key of this mount cleared: it jumps as the donkey does."), Wd(SliderW)))
+            {
+                mount.Jump = null;
+                Catalog.Touch(mount);
+            }
         }
 
         // What a row shows: the style's value, else the both-styles value, else the player's own (plain, not set).

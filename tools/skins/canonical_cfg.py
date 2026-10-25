@@ -6,8 +6,9 @@ geometry ([Tuning], [Tuning.Ride], [Tuning.Cart]), its sounds ([Sounds], [Sounds
 the colour sections ([Colors], [Base.*]). No [Mount*] section: a mount's values are its mount.cfg's (2026-10-24).
 
 mount.cfg (assets/mounts/<mount>/): [Mount] (MOUNT_ORDER; always id, name, author, version, cart and foals), then
-[Stats], [Tuning], [Tuning.Ride], [Tuning.Cart], [Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]: the order the
-Mounts tab's save writes (Looks.SaveMountCfg).
+[Stats], [Tuning], [Tuning.Ride], [Tuning.Cart], [Jump] (its keys in JUMP_ORDER), [Sounds], [Sounds.Ride],
+[Sounds.Cart], [Sounds.Baby]: the order the Mounts tab's save writes (Looks.SaveMountCfg). [Jump] is the mount's own
+(JumpShapes.cs): refused in a skin.cfg.
 
 A skin of a mount other than the donkey that isn't its "default" is built on that default (docs/skins.md "Variants:
 built on the default"): its layout is the same, and a [Skin] line that only repeats its default's value is noted
@@ -29,7 +30,10 @@ SKIN_ORDER = ["format", "needs", "name", "description", "portrait", "author", "v
 MOUNT_ORDER = ["id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo"]
 MOUNT_DEFAULTS = {"author": "dreas", "version": "1.0", "cart": "true", "foals": "true"}
 SKIN_SECTIONS = [("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
-MOUNT_SECTIONS = [("stats", "[Stats]"), ("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]"), ("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
+MOUNT_SECTIONS_BEFORE_JUMP = [("stats", "[Stats]"), ("tuning", "[Tuning]"), ("tuning.ride", "[Tuning.Ride]"), ("tuning.cart", "[Tuning.Cart]")]
+MOUNT_SECTIONS_AFTER_JUMP = [("sounds", "[Sounds]"), ("sounds.ride", "[Sounds.Ride]"), ("sounds.cart", "[Sounds.Cart]"), ("sounds.baby", "[Sounds.Baby]")]
+MOUNT_SECTIONS = MOUNT_SECTIONS_BEFORE_JUMP + [("jump", "[Jump]")] + MOUNT_SECTIONS_AFTER_JUMP
+JUMP_ORDER = ["height", "tap_height", "hold_min", "time", "rise_share", "hang", "crouch", "crouch_time", "squash", "fall_ease", "wings"]  # JumpShapes.Keys
 
 
 def parse(path):
@@ -112,7 +116,7 @@ def canonical(path):
     """skin.cfg"""
     secs, order = parse(path)
     for name in order:
-        if name == "mount" or name.startswith("mount."):
+        if name == "mount" or name.startswith("mount.") or name == "jump":
             raise SystemExit(f"{path}: [{secs[name]['header'].strip('[]')}] in a skin.cfg: a mount's values go in its mount.cfg (assets/mounts/<mount>/mount.cfg)")
     out = []
     out.extend(secs[""]["lines"])  # the head comment
@@ -149,11 +153,18 @@ def canonical_mount(path):
     out.append("[Mount]")
     items, trailing = keyed(secs["mount"]["lines"])
     emit_keyed(out, items, MOUNT_ORDER, defaults=MOUNT_DEFAULTS, trailing=trailing)
-    sections(out, secs, MOUNT_SECTIONS)
+    sections(out, secs, MOUNT_SECTIONS_BEFORE_JUMP)
+    if "jump" in secs and any("=" in l for l in secs["jump"]["lines"]):
+        out.append("")
+        out.extend(secs["jump"]["above"])
+        out.append("[Jump]")
+        jitems, jtrailing = keyed(secs["jump"]["lines"])
+        emit_keyed(out, jitems, JUMP_ORDER, trailing=jtrailing)
+    sections(out, secs, MOUNT_SECTIONS_AFTER_JUMP)
     known = {"", "mount"} | {n for n, _ in MOUNT_SECTIONS}
     for name in order:
         if name not in known:
-            raise SystemExit(f"{path}: section [{name}] is not one a mount.cfg has ([Mount], [Stats], [Tuning*], [Sounds*])")
+            raise SystemExit(f"{path}: section [{name}] is not one a mount.cfg has ([Mount], [Stats], [Tuning*], [Jump], [Sounds*])")
     return "\r\n".join(out) + "\r\n"
 
 

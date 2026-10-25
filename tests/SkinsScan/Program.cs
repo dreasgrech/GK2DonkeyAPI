@@ -64,7 +64,9 @@ var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.c
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
 if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
 var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors" };
-var mountSections = new[] { "Mount", "Stats", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // mount.cfg, in its canonical order
+var mountSections = new[] { "Mount", "Stats", "Tuning", "Tuning.Ride", "Tuning.Cart", "Jump", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // mount.cfg, in its canonical order
+// mount.cfg [Jump] (JumpShapes.Keys in the API): each key's range, in the file's order
+var jumpKeys = new (string Key, double Min, double Max)[] { ("height", 1, 120), ("tap_height", 1, 120), ("hold_min", 0, 0.3), ("time", 0.15, 2), ("rise_share", 0.2, 0.8), ("hang", 0, 0.5), ("crouch", 0, 12), ("crouch_time", 0, 0.3), ("squash", 0, 12), ("fall_ease", 0, 1), ("wings", 0, 1) }; // wings: true or false
 var skinTuningSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart" };
 var skinOwnSections = new[] { "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // the skin's own sections, in the canonical order, before the colour sections
 // The sound catalogue (docs/mount-sounds-design.md): the events, their numbers and variants (SoundEvents.cs), the line attributes (SoundBlock.cs)
@@ -340,6 +342,21 @@ foreach (var mdir in mountDirs)
             else if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out _) && kv.Value != "true" && kv.Value != "false" && !Regex.IsMatch(kv.Value, @"^[A-Za-z]\w*$")) BadM($"[{sec}] {kv.Key} = {kv.Value}: not a number, true/false or a name");
         }
     }
+    if (cfg.TryGetValue("Jump", out var jump))
+    {
+        if (jump.Count == 0) BadM("[Jump] is empty: leave it out");
+        int lastAt = -1;
+        foreach (var kv in jump)
+        {
+            int at = Array.FindIndex(jumpKeys, j => j.Key.Equals(kv.Key, StringComparison.OrdinalIgnoreCase));
+            if (at < 0) { BadM($"[Jump] {kv.Key}: not a jump key ({string.Join(", ", Array.ConvertAll(jumpKeys, j => j.Key))})"); continue; }
+            if (at < lastAt) BadM($"[Jump] {kv.Key} stands after a later key: the order is {string.Join(", ", Array.ConvertAll(jumpKeys, j => j.Key))}");
+            lastAt = Math.Max(lastAt, at);
+            if (jumpKeys[at].Key == "wings") { if (kv.Value != "true" && kv.Value != "false") BadM($"[Jump] wings = {kv.Value}: true or false"); continue; }
+            if (!double.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var jv) || jv < jumpKeys[at].Min || jv > jumpKeys[at].Max)
+                BadM($"[Jump] {kv.Key} = {kv.Value}: a number, {jumpKeys[at].Min} to {jumpKeys[at].Max} (the loader clamps it)");
+        }
+    }
     CheckSounds(cfg, mdir, BadM);
     if (mok) Pass($"mount {mid}: mount.cfg, own look skins\\default\\, {skinsHere.Count} skin(s){(Directory.Exists(Path.Combine(mdir, "sounds")) ? ", " + Directory.GetFiles(Path.Combine(mdir, "sounds")).Length + " sound file(s)" : "")}");
 }
@@ -380,7 +397,7 @@ foreach (var dir in skinDirs)
     foreach (var k in skin.Keys) if (!skinKeysAllowed.Contains(k) && !k.Equals("id", StringComparison.OrdinalIgnoreCase)) Bad($"[Skin] {k}: not a key the loader knows (a skin has no '{k}')");
     if (skin.TryGetValue("portrait", out var portrait) && !File.Exists(Path.Combine(dir, portrait))) Bad($"[Skin] portrait = {portrait}: no such file in the pack");
     if (!skin.ContainsKey("description") && !(variant && defaultSkin != null && defaultSkin.ContainsKey("description"))) Bad("[Skin] has no description (the Mounts panel shows it; a line or two)");
-    foreach (var sec in cfg.Keys.Where(k => k.Equals("Mount", StringComparison.OrdinalIgnoreCase) || k.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase)))
+    foreach (var sec in cfg.Keys.Where(k => k.Equals("Mount", StringComparison.OrdinalIgnoreCase) || k.StartsWith("Mount.", StringComparison.OrdinalIgnoreCase) || k.Equals("Jump", StringComparison.OrdinalIgnoreCase)))
         Bad($"[{sec}] in a skin.cfg: a mount's values go in its mount.cfg (the loader ignores it here)");
     // the values the loader reads by name (anything else silently means the default in the game)
     if (skin.TryGetValue("layer", out var layer) && layer != "replace" && layer != "over") Bad($"[Skin] layer = {layer}: replace or over");

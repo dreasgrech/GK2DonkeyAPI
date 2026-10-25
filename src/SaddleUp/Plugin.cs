@@ -17,7 +17,7 @@ namespace SaddleUp
     // in Awake: the API is the backend, this mod ships the content, exactly as anyone else's mod ships a mount
     // (docs/mounts-as-mods.md: a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart).
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.38.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.39.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -25,14 +25,14 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.12.0";
 
-        // The API this mod is written against: 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
+        // The API this mod is written against: 0.39 reads the dragon's [Jump] (its own jump, with wings); 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
         // rename) and ships no skin (Hellfire's effect is registered here); 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
         // a mount registered in any plugin's Awake and a mod's embedded packs; 0.31 the page's Heading; 0.30 the skins, MountCompanion.Skin;
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 38, 0);
+        private static readonly Version NeedsApi = new Version(0, 39, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 

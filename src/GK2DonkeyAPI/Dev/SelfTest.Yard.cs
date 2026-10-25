@@ -239,7 +239,7 @@ namespace GK2DonkeyAPI
                     {
                         Flight.Jump(mi);
                         float t0 = Time.time;
-                        while (Time.time - t0 < Flight.JumpTimeS + 2f)
+                        while (Time.time - t0 < Flight.J.Time + 2f)
                         {
                             float drawn = mi.Position.y - Flight.LiftFor(mi);
                             if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worst) worst = Mathf.Abs(drawn - last);
@@ -371,7 +371,7 @@ namespace GK2DonkeyAPI
             {
                 Flight.Jump(i);
                 float start = Time.time;
-                while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.JumpTimeS + Flight.JumpPerchS + 3f) yield return null;
+                while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.J.Time + Flight.JumpPerchS + 3f) yield return null;
             }
             finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
             yield return Frames(8);

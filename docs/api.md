@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.38.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.39.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -673,7 +673,8 @@ A mount (`Mounts.Catalog`, `MountDef`) owns the rider's seat for it (values for 
 styles, `TuningRide` / `TuningCart` for one), whether it pulls the cart (`Cart`) and has foals (`Foals`, their size
 against the grown mount in `FoalScale`, 0.2 to 1, 0.6 by default; a running foal is remade when its mount's value
 changes), whether it flies and jumps ridden plain (`Flies`, false by default, and `Jumps`, true; a pack's `flies = true`
-and `jumps = false`; 0.36.0: flying asks the mount's flag, never its id), and its
+and `jumps = false`; 0.36.0: flying asks the mount's flag, never its id), how it jumps (0.39.0: `Jump`, a `MountJump`
+of the values it sets, the rest the default jump's; a pack's `[Jump]`; `MountInfo.Jump` filled, `OwnJump`), and its
 **abilities** (0.37.0: a mount no longer names an effect; see [Effects](#effects-0300)). A skin names its mount (`MountSkinDef.Mount`; a pack's skin is a look of the mount folder it sits in;
 the donkey by default), so the red and
 a hypothetical blue dragon would be two skins of the dragon mount, and Hellfire is a skin of the donkey mount.
@@ -723,7 +724,9 @@ A **pack declares a mount without code** as a mount folder `gk2mounts\<mount>\` 
 `name`, `noun`, `description`, `portrait`, `author`, `version`, `cart`, `foals`, `flies`, `jumps`,
 `foal_scale`, `speed`, `cargo`; 0.37.0: `effect` and `effect_when` are no longer read and are reported as unknown
 keys), `[Stats]`, `[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]` for
-its values (each key in one of the three) and `[Sounds*]`; its skins are the folders under its `skins\`, and
+its values (each key in one of the three), `[Jump]` for its own jump (0.39.0: `height`, `tap_height`, `hold_min`,
+`time`, `rise_share`, `hang`, `crouch`, `crouch_time`, `squash`, `fall_ease`, `wings`; a key left out is the default jump's; in a
+`skin.cfg` it is ignored) and `[Sounds*]`; its skins are the folders under its `skins\`, and
 `skins\default\` is the one a new instance wears (the Skin row's Default); a `mount.cfg` without
 `skins\default\skin.cfg` is refused with its skins (one warning), and a `default_skin` line is reported as ignored.
 The folder's name is the mount's id (`gk2mounts\saddleup.dragon\`). A mount folder without `mount.cfg` adds its
@@ -1033,6 +1036,15 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.39.0: **each mount its own jump** (the user, 2026-10-25: "the arc the donkey makes while jumping looks silly for
+  a dragon ... first lets make sure that we have the ability to specify per mount"; docs/flying.md "Each mount its
+  own jump"): `MountJump` (`Height`, `TapHeight`, `HoldMin`, `Time`, `RiseShare`, `Hang`, `Crouch`, `CrouchTime`,
+  `Squash`, `FallEase`, all `float?`, and `Wings`, `bool?`: the skin's flying frames through the jump, a small take-off
+  and landing), `MountDef.Jump` (null: the default jump), `MountInfo.Jump` (every value filled: the mount's
+  own over the default's) and `MountInfo.OwnJump`; a pack's `mount.cfg` `[Jump]` with the same keys in snake case. The
+  default jump is the donkey's (height 28 px, tap 16, 0.45 s in the air, ...). A jump takes its mount's shape at the
+  press and keeps it to the landing; what a jump does (over things, on top of something, the steering) is the same
+  for every mount. Additions only.
 - 0.38.0: **flying and jumping are on for everyone** (the user, 2026-10-25: "make flying not dev only"; docs/flying.md):
   `Mounts.FlyingEnabled` is true unless the dev Flying tab switched it off (it needed the dev tools unlocked before, so
   no player had it). New Behaviour keys `ClimbKey` (Left Shift) and `DescendKey` (Left Ctrl), `KeyboardShortcut`s held

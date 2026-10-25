@@ -81,6 +81,10 @@ Legs = 8
 [Tuning]               # the mount's own values; a mount may pin its sounds, seat, cart geometry and shuffle
 BrayVolume = 0
 
+[Jump]                 # its own jump, ridden plain (optional; a key left out is the default jump's, the donkey's)
+height = 12            # a low scuttle-hop, px (the donkey: 28)
+time = 0.3             # seconds in the air (the donkey: 0.45)
+
 [Sounds]               # the creature's own sounds, shared by its skins (docs/mount-sounds.md): files of the mount
 voice = click_1.ogg, click_2.ogg   # folder's sounds\, a game sound id, none, or ground; <event>.volume etc.
 lips = none

@@ -10,7 +10,7 @@ namespace GK2DonkeyAPI
 {
     // Mount packs (the user, 2026-10-24: "i want to see things sorted by mount ... a skin can only belong to one mount";
     // docs/skins.md "What a pack is"): a mount is a folder of its own,
-    //   <root>\gk2mounts\<mount>\mount.cfg      the mount: [Mount] [Stats] [Tuning] [Tuning.Ride] [Tuning.Cart]
+    //   <root>\gk2mounts\<mount>\mount.cfg      the mount: [Mount] [Stats] [Tuning] [Tuning.Ride] [Tuning.Cart] [Jump]
     //                                           [Sounds] [Sounds.Ride] [Sounds.Cart] [Sounds.Baby]
     //   <root>\gk2mounts\<mount>\sounds\        the mount's sound files (every skin of it)
     //   <root>\gk2mounts\<mount>\skins\<skin>\  its looks: skin.cfg, the pictures, front\, sounds\ (that look's own)
@@ -40,7 +40,7 @@ namespace GK2DonkeyAPI
         // mount's own look is its skins\default\ (2026-10-24).
         internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo" };
 
-        private static readonly string[] MountSections = { "mount", "stats", "tuning", "tuning.ride", "tuning.cart", "sounds", "sounds.ride", "sounds.cart", "sounds.baby" };
+        private static readonly string[] MountSections = { "mount", "stats", "tuning", "tuning.ride", "tuning.cart", "jump", "sounds", "sounds.ride", "sounds.cart", "sounds.baby" };
 
         // mount.cfg read into a catalogue entry (not registered). dirName: the mount's folder, its id unless [Mount] id
         // says otherwise (a pack's id must equal its folder: said in the report).
@@ -49,6 +49,8 @@ namespace GK2DonkeyAPI
             var mount = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var stats = new List<KeyValuePair<string, string>>();
             Dictionary<string, object> kt = null, ktRide = null, ktCart = null, ks = null, ksRide = null, ksCart = null, ksBaby = null;
+            Dictionary<string, float> kj = null;
+            string jumpReport = "";
             var unknownSections = new List<string>();
             string section = "";
             foreach (string raw in text.Split('\n'))
@@ -78,6 +80,7 @@ namespace GK2DonkeyAPI
                     case "tuning": (kt ?? (kt = Dict()))[key] = value; break;
                     case "tuning.ride": (ktRide ?? (ktRide = Dict()))[key] = value; break;
                     case "tuning.cart": (ktCart ?? (ktCart = Dict()))[key] = value; break;
+                    case "jump": JumpShapes.Parse(ref kj, key, value, ref jumpReport); break;
                     case "sounds": (ks ?? (ks = Dict()))[key] = value; break;
                     case "sounds.ride": (ksRide ?? (ksRide = Dict()))[key] = value; break;
                     case "sounds.cart": (ksCart ?? (ksCart = Dict()))[key] = value; break;
@@ -87,7 +90,7 @@ namespace GK2DonkeyAPI
             if (!mount.TryGetValue("id", out string mountId) || string.IsNullOrWhiteSpace(mountId)) mountId = p.DirName;
             mountId = mountId.Trim();
             if (!mountId.Equals(p.DirName, StringComparison.OrdinalIgnoreCase)) p.Report += $"[Mount] id = {mountId} differs from its folder '{p.DirName}': the folder's name is the id by convention (its skins are found in it either way); ";
-            var k = new Catalog.Entry { Id = mountId, Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby, Pack = p, FromPack = true, BuiltIn = p.BuiltIn, Owner = p.Owner };
+            var k = new Catalog.Entry { Id = mountId, Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Jump = kj, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby, Pack = p, FromPack = true, BuiltIn = p.BuiltIn, Owner = p.Owner };
             k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
             if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
             if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
@@ -123,7 +126,9 @@ namespace GK2DonkeyAPI
             var mountUnknown = new List<string>();
             foreach (string mk in mount.Keys) if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
             if (mountUnknown.Count > 0) p.Report += "[Mount] unknown keys ignored: " + string.Join(", ", mountUnknown) + "; ";
-            if (unknownSections.Count > 0) p.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + " (mount.cfg has [Mount], [Stats], [Tuning*] and [Sounds*]); ";
+            if (unknownSections.Count > 0) p.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + " (mount.cfg has [Mount], [Stats], [Tuning*], [Jump] and [Sounds*]); ";
+            p.Report += jumpReport;
+            if (kj != null) p.Report += kj.Count + " jump key(s); ";
             int tuningKeys = (kt?.Count ?? 0) + (ktRide?.Count ?? 0) + (ktCart?.Count ?? 0);
             if (tuningKeys > 0) p.Report += tuningKeys + " tuning key(s); ";
             int soundLines = ReportMountSoundBlocks(k, p);
@@ -342,6 +347,12 @@ namespace GK2DonkeyAPI
                 WriteSection(sb, "[Tuning]", k.Tuning, NotesOf("tuning"));
                 WriteSection(sb, "[Tuning.Ride]", k.TuningRide, NotesOf("tuning.ride"));
                 WriteSection(sb, "[Tuning.Cart]", k.TuningCart, NotesOf("tuning.cart"));
+                if (k.Jump != null && k.Jump.Count > 0)
+                {
+                    var jumpLines = new Dictionary<string, object>(StringComparer.Ordinal); // the keys in JumpShapes' order
+                    foreach (JumpShapes.Key jk in JumpShapes.Keys) if (k.Jump.TryGetValue(jk.Name, out float jv)) jumpLines[jk.Name] = JumpShapes.Text(jk, jv);
+                    WriteSection(sb, "[Jump]", jumpLines, NotesOf("jump"));
+                }
                 WriteSection(sb, "[Sounds]", k.Sounds, NotesOf("sounds"));
                 WriteSection(sb, "[Sounds.Ride]", k.SoundsRide, NotesOf("sounds.ride"));
                 WriteSection(sb, "[Sounds.Cart]", k.SoundsCart, NotesOf("sounds.cart"));

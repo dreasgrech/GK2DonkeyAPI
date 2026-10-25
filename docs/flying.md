@@ -1406,6 +1406,83 @@ than the footsteps"), and its two footsteps a cycle (frames 1 and 5) missed two 
 5, 7). Every footstep sounded within 0.02 of a cycle of its frame. Now: no `WalkCycleSpeed` line (1.5), `step.per_cycle`
 4. A baby following at 7 units/s cycles its legs every 0.13 s (open).
 
+### Each mount its own jump (2026-10-25, built, not seen in game)
+
+The user: "Currently we are using the same jumping behaviour for all mounts but this doesnt translate well because the
+arc the donkey makes while jumping looks silly for a dragon. so first lets make sure that we have the ability to
+specify per mount." Until now the jump's shape was one set of values in `Flight` (the dev Flying tab's Jump rows), the
+same for the donkey, the rat, the snail and the dragon.
+
+- **The shape is the mount's** (`JumpShapes.cs`): `mount.cfg` `[Jump]` (between `[Tuning.Cart]` and `[Sounds]`),
+  `MountDef.Jump` (a `MountJump`), the keys `height` (the top held, px, 1 to 120), `tap_height` (the key let go at
+  once, 1 to 120), `hold_min` (0 to 0.3 s), `time` (in the air held, 0.15 to 2 s), `rise_share` (0.2 to 0.8), `hang`
+  (0 to 0.5 s), `crouch` and `squash` (0 to 12 px), `crouch_time` (0 to 0.3 s). A key the mount leaves out is the
+  **default jump's**: `Flight.JumpPx` and the rest, the donkey's (28 px, 16 tapped, 0.45 s, 0.55, 0.04 s, 2 px over
+  0.05 s, 2 px). `MountInfo.Jump` has every value filled, `OwnJump` says whether it has any of its own. API 0.39.0.
+- **What a jump does stays one for every mount**: over things (`JumpOver`), on top of something (`JumpPerchS`), the
+  steering (`JumpSteerS`), the let-go's brake (`JumpCut`), the squash's 0.1 s.
+- **Taken at the press** (`Flight.J`): `Jump()` resolves the ridden mount's shape (`Looks.MountWanted`, the creature
+  under the worn skin) and every part of the jump reads it (`JumpHeightAt`, the fall's gravity for a drop, the
+  squash, "in the air" for the one-key take-off). A row moved or a file reloaded mid-jump changes the next one. The
+  log's "jump:" line and the jump trace say whose shape it was ("Dragon's own (height 40, time 0.8; the rest the
+  default's)", or "the default jump").
+- **The files**: a bad number or an unknown key in `[Jump]` is named in the pack's report and the default's value
+  stands; out of range it is taken to the nearest end. `[Jump]` in a `skin.cfg` is ignored with the `[Mount*]`
+  sections ("a mount's own values go in its mount.cfg"): how high a creature jumps is not its look. The Mounts tab's
+  save writes `[Jump]` in its key order with its comments; `tools/skins/canonical_cfg.py` and `tests/SkinsScan` know
+  the section (its keys, their order and ranges; refused in a skin.cfg).
+- **The dev tools**: the Mounts tab has an "Its jump" block, a row per key (plain: the default's value; dragged: the
+  mount's own, saved into its `mount.cfg`; right-click: back to the default's) and "Back to the default jump". The
+  Flying tab's rows are now "The default jump" (every mount without its own key, the donkey), and it says the last
+  jump's shape and whether the ridden mount has its own.
+- **Self-test** (Flying group, "jump: each mount its own"): a temp pack's `[Jump]` read (a bad line, an unknown key
+  and a clamp in the report), the keys left out the default's, the donkey without its own; `[Jump]` in its skin.cfg
+  refused; its arc by itself (the top at 50, 0.9 s in the air); saved with its comments and read again; a code mount's
+  `MountDef.Jump`; then ridden and jumped live (the shape taken at the press, the top at its 50 px).
+- **No mount has its own jump yet**: the dragon's numbers are the next step, to choose with the user. The shape alone
+  may not be what looks silly: in the air the legs still walk or stand (no jump pictures; "Still open" in "The jump,
+  the platformer way" above), and a dragon's jump may want its wings (a flap or a glide frame) more than a new arc.
+
+**The dragon's jump with wings (the same day, built, not seen in game).** The user, on the default arc: "looks a bit
+too arcadey, the dragon feels like a plompling rock with the jump ... Let's also have the ability to flap the wing or
+something like that while jumping", then "maybe it can have something akin to takeoff and landing kinda thing so it
+doesnt look like a super mario thing". Two more `[Jump]` keys:
+
+- `wings` (true / false; the default jump's off): the jump plays the skin's flying frames as a small take-off and
+  landing (`Flight.JumpWingFrame`): the crouch on take-off 1; leaving the ground the push-off, take-off 2-4 (80 ms
+  each, as a flight's launch); still rising, the wing beat; from the top down the wings held open (the glide's loop,
+  else the beat's frame 5); the last third of the way down reaching for the ground (land 1, then land 2 under half
+  of that); the squash on land 3; after it the fold (land 4, 0.18 s, as after a flight). On top of something: wings
+  open; judged or dropping: land 2. A flap sound on the push-off and on each beat shown on the way up. A skin without
+  `bdy_fly_left_01` keeps its legs' frames (the key does nothing on it).
+- `fall_ease` (0 to 1; the default's 0): the fall from the top is blended towards an eased curve
+  (`P (1 - smoothstep)`): the same time down, slow at the top, sinking, slowing again to touch down softly, where the
+  stone's fall is fastest at the ground. The drop stage after a refused or judged touch-down keeps the plain gravity.
+- **The dragon's `[Jump]`** (a first pass, to judge in game): height 36 (tap 24), 1 s in the air, rise share 0.45 (a
+  quicker push up than the sink down), hang 0.12 s, a crouch of 4 px over 0.15 s (gathering itself), squash 3,
+  fall_ease 0.8, wings. Against the donkey's 28 px in 0.45 s with a 0.05 s crouch and a stone's fall. Saddle Up needs
+  API 0.39.0 for it (an older API ignores the section and the dragon jumps as the donkey).
+- The rows: the Mounts tab's "Its jump" (wings an On/Off button, right-click back to the default's), the Flying tab's
+  default jump has both too. The self-test checks the eased touch-down (under a quarter of the stone's speed), the
+  dragon's file (wings, eased), and a live dragon jump's frames in order (crouch, push-off, wings in the air,
+  reaching, never its walk; then the touch or the fold).
+- Open to judge: the push-off's beat is cut by the top (at 1 s and a 0.6 s beat the rise shows the push-off and about
+  a third of a stroke before the wings open); the wings held open is the glide's slow loop, which flexes; the jump's
+  own `jump` sound is silent on the dragon (it has none; the flap plays).
+
+**The wing flickering (the same night, fixed, not seen in game).** The user's video (2026-10-25 23-13-30, 120 fps):
+"not too bad but i think the wing is flickering sometimes". Measured, not guessed: the jump traces 015-017 replayed
+through the frame rule (every picture once, in order: nothing switched back and forth), every frame used has its
+front layer, and the video at 40 fps against a sheet of the dragon's flying frames with each wing's pose: take-off 2
+and 3 have the wing up, take-off 4 down (the push-off's downstroke), and the jump's beat then started at fly 1, wings
+up again: one picture (75 ms) of wings down between two ups. And at the top the beat's raised wings cut straight to
+the glide's low ones. Now (`JumpWingFrame`, `JumpWingClock`): the beat goes on from take-off 4's pose (fly 5, down,
+as a flight's launch hands over); past the top it runs to the end of its frame 7, then the glide's way in
+(`bdy_glidein_left_01-04`, drawn from that frame into the glide) and its loop; reaching for the ground, one rising
+in-between (fly 7) before land 1. Replayed on jumps 015 and 016: up, up, down, down, down, mid, way in, mid, up, mid,
+each next to the one before. The flap sounds on each beat's downstroke from fly 1 (the push-off's counts once). The
+self-test checks take-off 4 is followed by fly 5 and the glide is entered by its way in.
+
 ## Step 2: the investigation
 
 The keeper's `PlayerPhysicalBody` (decomp) keeps him on the ground:

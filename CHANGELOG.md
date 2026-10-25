@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The dragon jumps like a dragon** (the user, 2026-10-25: "the dragon feels like a plompling rock with the jump
+  ... maybe it can have something akin to takeoff and landing kinda thing so it doesnt look like a super mario
+  thing"): it gathers itself, pushes off on its wings, holds them open at the top and sinks onto the ground braking,
+  then folds them, on its own take-off and landing pictures, with a flap. Higher and slower than the donkey's hop
+  (36 px in a second against 28 px in under half). The other mounts jump as before.
 - **The babies' answers are as loud as their parent's call** (the user, 2026-10-25: "i still cant hear the babies
   ever replying"; the log showed every answer playing, about 10 dB under the call once the babies' smaller size and
   their distance were counted). The dragon's babies answer with a lower growl too, not a chirp.
@@ -305,6 +310,14 @@ For players:
 
 For mod authors:
 
+- **Each mount its own jump (API 0.39.0)** (the user, 2026-10-25: "the arc the donkey makes while jumping looks silly
+  for a dragon ... first lets make sure that we have the ability to specify per mount"): `mount.cfg` `[Jump]`
+  (`height`, `tap_height`, `hold_min`, `time`, `rise_share`, `hang`, `crouch`, `crouch_time`, `squash`) and
+  `MountDef.Jump` (`MountJump`, every value `float?`); a key left out is the default jump's (the donkey's: 28 px held,
+  16 tapped, 0.45 s in the air). `MountInfo.Jump` (filled) and `MountInfo.OwnJump`. `[Jump]` in a `skin.cfg` is
+  ignored and reported. A jump takes its mount's shape at the press. Two more keys: `fall_ease` (0 to 1: the fall
+  braked to a soft touch-down) and `wings` (`MountJump.Wings`: the skin's flying frames as a small take-off and
+  landing). The dragon's `mount.cfg` sets them; Saddle Up needs API 0.39.0.
 - **Flying and jumping are on for everyone (API 0.38.0)**: `Mounts.FlyingEnabled` is true unless the dev Flying tab
   switched it off (before, it needed the dev tools unlocked). New Behaviour keys `ClimbKey` (Left Shift) and
   `DescendKey` (Left Ctrl): `KeyboardShortcut`s held in the air, the main key alone counts (a modifier can be the key;
@@ -790,6 +803,11 @@ For mod authors:
 
 Development:
 
+- **Each mount's jump in the dev tools**: the Mounts tab's "Its jump" rows (saved into the mount's `mount.cfg`,
+  right-click back to the default's), the Flying tab's rows renamed "The default jump", the jump's log line and trace
+  say whose shape it was. A new self-test in the Flying group ("jump: each mount its own"); `canonical_cfg.py` and
+  `tests/SkinsScan` know `[Jump]` (its key order and ranges; refused in a skin.cfg); `tests/ApiSurface` snapshot
+  updated (additions only). docs/flying.md "Each mount its own jump".
 - **The sound coverage counts a babies' answer** (`Sounds.Coverage`, `tests/SkinsScan`): `answer` plays on babies
   only, so a `[Sounds.Baby]` line now covers it in the start-up log's line, the Mounts tab and the scan; before, every
   mount that gave its babies an answer was still listed as missing it. The new files are named after their events in

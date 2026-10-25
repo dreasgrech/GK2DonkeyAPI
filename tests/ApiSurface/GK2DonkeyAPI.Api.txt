@@ -152,6 +152,7 @@ class GK2DonkeyAPI.Api.MountDef
   field bool Foals
   field float FoalScale
   field string Id
+  field GK2DonkeyAPI.Api.MountJump Jump
   field bool Jumps
   field string Name
   field string Noun
@@ -281,10 +282,12 @@ class GK2DonkeyAPI.Api.MountInfo
   property bool HasPortrait { get; }
   property string Id { get; }
   property bool IsBuiltIn { get; }
+  property GK2DonkeyAPI.Api.MountJump Jump { get; }
   property bool Jumps { get; }
   property string Name { get; }
   property string Noun { get; }
   property string Owner { get; }
+  property bool OwnJump { get; }
   property System.Collections.Generic.IReadOnlyList<string> Skins { get; }
   property System.Collections.Generic.IReadOnlyDictionary<string, object> Sounds { get; }
   property System.Collections.Generic.IReadOnlyDictionary<string, object> SoundsBaby { get; }
@@ -298,6 +301,19 @@ class GK2DonkeyAPI.Api.MountInfo
   property System.Collections.Generic.IReadOnlyDictionary<string, object> TuningRide { get; }
   property string Version { get; }
   method string ToString()
+class GK2DonkeyAPI.Api.MountJump
+  field System.Nullable<float> Crouch
+  field System.Nullable<float> CrouchTime
+  field System.Nullable<float> FallEase
+  field System.Nullable<float> Hang
+  field System.Nullable<float> Height
+  field System.Nullable<float> HoldMin
+  field System.Nullable<float> RiseShare
+  field System.Nullable<float> Squash
+  field System.Nullable<float> TapHeight
+  field System.Nullable<float> Time
+  field System.Nullable<bool> Wings
+  method void .ctor()
 class GK2DonkeyAPI.Api.MountLook
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }

@@ -97,19 +97,27 @@ namespace GK2DonkeyAPI
             Flight.TouchSpeedPxPerS = SessionFloatRow("Touching down at (px per second)", Flight.TouchSpeedPxPerS, 5f, 200f);
             Flight.ThudPx = SessionFloatRow("Thud: squat on touching down (px)", Flight.ThudPx, 0f, 6f);
 
-            Header("Jump (the mount's, riding plain: a crouch, a fast rise, a hang, a heavier fall, a squash)");
+            Header("Jump (riding plain: a crouch, a fast rise, a hang, a heavier fall, a squash)");
             if (OnOffRow("Every mount jumps, also those that don't (off: as their [Mount] says)", Flight.JumpAnyMount)) Flight.JumpAnyMount = !Flight.JumpAnyMount;
+            Catalog.Entry ridden = Mount.IsMounted ? Looks.MountWanted(Mount.Ridden) : null;
+            if (ridden != null && ridden.Jump != null && ridden.Jump.Count > 0)
+                GUILayout.Label($"{ridden.Label} has a jump of its own (its [Jump]: {string.Join(", ", ridden.Jump.Keys)}): those keys are its rows on the Mounts tab; the rows below are the rest.", small);
+            Flight.JumpShape last = Flight.J;
+            GUILayout.Label($"The last jump: {last.From}.", small);
+            if (OnOffRow("Jump over things (the body leaves the ground)", Flight.JumpOver, tip: "On: the keeper's body passes over what is lower than the jump and lands where a flight could; a taller thing stops it. Off: the jump is drawn only.")) Flight.JumpOver = !Flight.JumpOver;
+            Flight.JumpPerchS = SessionFloatRow("Jump: on top of something, at most (seconds)", Flight.JumpPerchS, 0f, 2f, "Come down on a wall's top or a rock: ride off it within this, or he goes back to where he jumped from.");
+            Header("The default jump (every mount without a [Jump] key of its own; the donkey's)");
             Flight.JumpPx = SessionFloatRow("Jump height, the key held (px)", Flight.JumpPx, 2f, 60f);
             Flight.JumpTapPx = SessionFloatRow("Jump height, the key tapped (px)", Flight.JumpTapPx, 1f, 60f, "Let go of the key on the way up and the rise brakes hard, down to this at the least.");
             Flight.JumpHoldMinS = SessionFloatRow("Jump: a press counts as at least (seconds)", Flight.JumpHoldMinS, 0f, 0.3f, "A shorter press jumps as if held this long: an ordinary press is a jump, a flick a hop.");
-            if (OnOffRow("Jump over things (the body leaves the ground)", Flight.JumpOver, tip: "On: the keeper's body passes over what is lower than the jump and lands where a flight could; a taller thing stops it. Off: the jump is drawn only.")) Flight.JumpOver = !Flight.JumpOver;
-            Flight.JumpPerchS = SessionFloatRow("Jump: on top of something, at most (seconds)", Flight.JumpPerchS, 0f, 2f, "Come down on a wall's top or a rock: ride off it within this, or he goes back to where he jumped from.");
             Flight.JumpTimeS = SessionFloatRow("Jump time in the air, held (seconds)", Flight.JumpTimeS, 0.15f, 1.5f);
             Flight.JumpRiseShare = SessionFloatRow("Jump: the rise's share of that time", Flight.JumpRiseShare, 0.2f, 0.8f, "0.5: as fast down as up (floaty). Above 0.5: a slower rise and a heavier, quicker fall (the platformer feel).");
             Flight.JumpHangS = SessionFloatRow("Jump: held at the top (seconds)", Flight.JumpHangS, 0f, 0.2f);
             Flight.JumpCrouchPx = SessionFloatRow("Jump: crouch before (px)", Flight.JumpCrouchPx, 0f, 6f);
             Flight.JumpCrouchS = SessionFloatRow("Jump: crouch time (seconds)", Flight.JumpCrouchS, 0f, 0.2f);
             Flight.JumpSquashPx = SessionFloatRow("Jump: squash on landing (px)", Flight.JumpSquashPx, 0f, 6f);
+            Flight.JumpFallEase = SessionFloatRow("Jump: the fall eased (wings braking)", Flight.JumpFallEase, 0f, 1f, "0: the fall speeds up to the ground (a stone's). 1: slow at the top, sinking, slowing to a soft touch-down.");
+            if (OnOffRow("Jump: wings (the skin's take-off and landing frames)", Flight.JumpWings, tip: "On: a mount whose skin has flying frames jumps as a small take-off and landing. A mount's [Jump] wings = overrides it.")) Flight.JumpWings = !Flight.JumpWings;
 
             Header("Keys (click to change)");
             Help("Read only while riding with the experiment on, never while the Mounts panel or a text box has the keys, the controls are taken or the game is paused.");

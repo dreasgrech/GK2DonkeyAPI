@@ -68,6 +68,20 @@ namespace GK2DonkeyAPI
         internal static float JumpSquashPx = 2f;   // into the ground on landing, over JumpSquashS
         internal const float JumpSquashS = 0.1f;
         internal const float JumpCut = 3f;         // the key let go on the way up: the rise brakes this many times harder
+        internal static float JumpFallEase;        // 0: the fall speeds up to the ground; 1: eased in and out, a soft touch-down (wings braking)
+        internal static bool JumpWings;            // the skin's flying frames through the jump: a small take-off and landing (JumpWingFrame)
+        // The values above (height to squash, not the perch, the steering or JumpOver) are the default jump: each mount
+        // may have its own (mount.cfg [Jump], MountDef.Jump; JumpShapes.cs, the user 2026-10-25: "the arc the donkey makes
+        // while jumping looks silly for a dragon"). A jump takes its mount's shape at the press (J) and keeps it to the
+        // landing: a tab or a file changed mid-jump moves the next one.
+        internal struct JumpShape
+        {
+            internal float Height, Tap, HoldMin, Time, RiseShare, Hang, Crouch, CrouchTime, Squash, FallEase;
+            internal bool Wings;
+            internal string From;                  // for the log: "the default jump", "Dragon's own (...)"
+        }
+        internal static JumpShape J = JumpShapes.Of(null); // the jump in progress (else the last one's)
+        internal static JumpShape DefaultJump => JumpShapes.Of(null);
         internal static float CameraFollow = 1f;   // how much of the height the camera rises with (0: stays on the ground)
         internal static bool FreeFlight = true;    // step 2: from the clear height up, over everything (off: the lift only)
         internal static float ClearPx = 16f;       // the free flight's floor: below it he is on the ground's physics again
@@ -348,6 +362,8 @@ namespace GK2DonkeyAPI
                     return Beat();
                 case Phase.Airborne:
                     return Gliding ? GlideFrame() : Beat();
+                case Phase.Jumping:
+                    return J.Wings && HasFlightFrame(i) ? JumpWingFrame(out _) : null;   // the legs' own frames, unless the mount's jump has wings
                 case Phase.Landing:
                     if (thudT >= 0f) return "bdy_land_left_03";                         // touching down
                     if (AboveGroundPx <= FlarePx) return AboveGroundPx <= FlarePx * 0.5f ? "bdy_land_left_02" : "bdy_land_left_01";
@@ -356,6 +372,84 @@ namespace GK2DonkeyAPI
                     return null;
             }
         }
+
+        // A jump with wings ([Jump] wings = true; the user, 2026-10-25: "maybe it can have something akin to takeoff and
+        // landing kinda thing so it doesnt look like a super mario thing"): a small take-off and landing on the skin's
+        // flying frames, every change one the wing can make (the user's video 2026-10-25 23-13-30, "the wing is
+        // flickering": the push-off ended wings down on take-off 4 and the beat restarted at fly 1, wings up, a 75 ms
+        // flash down between two ups; and the top cut from the beat's raised wings straight into the glide's low ones).
+        // The crouch (take-off 1); the push-off (take-off 2-4, 80 ms each: up, up, the downstroke); the beat going on
+        // from that pose (fly 5, wings down, as a flight's launch hands over) while rising; past the top the beat runs
+        // on to the end of its frame 7, where a flight's glide starts, then the glide's way in and its loop (wings held
+        // open, sinking); reaching for the ground (JumpWingClock: the last third of the height), one rising in-between
+        // (fly 7) before land 1, then land 2 under half of that; the touch (land 3, the squash); the fold after it (land
+        // 4, as a landing's). On top of something: wings open; judged or dropping: reaching.
+        // flap: the downstroke shown (0 the push-off, 1.. each beat's from fly 1; -1 none), for the flap sound.
+        private static string JumpWingFrame(out int flap)
+        {
+            flap = -1;
+            switch (jumpStage)
+            {
+                case JumpStage.Squash: return "bdy_land_left_03";
+                case JumpStage.Judge:
+                case JumpStage.Drop: return "bdy_land_left_02";
+                case JumpStage.Perch: return OpenWings(jumpT);
+            }
+            float t = jumpT, cs = Mathf.Max(0f, J.CrouchTime);
+            if (t < cs) return "bdy_takeoff_left_01";
+            float u = t - cs, h = JumpHeightAt(J, t, jumpLetGo, out bool done);
+            if (done) return "bdy_land_left_03";
+            if (jumpReachU >= 0f)
+            {
+                if (u - jumpReachU < JumpReachUpS) return FlyNames[6];              // the wings coming up to brake
+                return h > JumpReach * 0.5f ? "bdy_land_left_01" : "bdy_land_left_02";
+            }
+            flap = 0;
+            if (u < PushOffS) return TakeoffNames[1 + Mathf.Min(2, Mathf.FloorToInt(u / (PushOffS / 3f)))];
+            float fs = Mathf.Max(0.1f, WingBeatS) / FlyNames.Length;                // one beat frame
+            float pos = 4f + (u - PushOffS) / fs;                                    // in beat frames, from fly 5 (take-off 4's pose)
+            float end = float.PositiveInfinity;
+            if (jumpTopU >= 0f)
+            {
+                float k = Mathf.Floor(4f + Mathf.Max(0f, jumpTopU - PushOffS) / fs); // the frame shown at the top
+                float toSeven = ((6 - (int)k % 8) + 8) % 8 + 1;                     // to the end of the next frame 7
+                end = k + (toSeven <= 4f ? toSeven : 1f);                            // a long way off: the glide from the next frame
+            }
+            if (pos < end)
+            {
+                flap = Mathf.FloorToInt(pos / FlyNames.Length);
+                return FlyNames[Mathf.FloorToInt(pos) % FlyNames.Length];
+            }
+            flap = Mathf.FloorToInt(end / FlyNames.Length);
+            if (owner == null || !HasGlideFrames(owner)) return FlyNames[4];
+            float g = (pos - end) * fs, inLen = StageLength(GlideInS);
+            if (g < inLen) return GlideInNames[StageFrame(GlideInS, g)];
+            return GlideNames[Mathf.FloorToInt((g - inLen) / LoopS * GlideNames.Length) % GlideNames.Length];
+        }
+
+        private const float PushOffS = 0.24f;    // take-off 2-4
+        private const float JumpReachUpS = 0.06f; // the one rising in-between before the reach
+        private static float JumpReach => Mathf.Max(6f, J.Height / 3f);
+        private static float jumpTopU = -1f, jumpReachU = -1f; // after the crouch: when the rise ended, when the reach began (-1: not yet)
+
+        // The wing clock's moments, once a tick before the frame is chosen: the top (the arc stops rising) and the reach
+        // (past the top, under the last third of the height).
+        private static void JumpWingClock()
+        {
+            float t = jumpT, cs = Mathf.Max(0f, J.CrouchTime);
+            if (t < cs || jumpStage != JumpStage.Arc) return;
+            float u = t - cs, h = JumpHeightAt(J, t, jumpLetGo, out _);
+            if (jumpTopU < 0f && u > 0.02f && JumpHeightAt(J, t + 0.01f, jumpLetGo, out _) <= h + 0.001f) jumpTopU = u;
+            if (jumpTopU >= 0f && jumpReachU < 0f && h <= JumpReach) jumpReachU = u;
+        }
+
+        // wings held open: the glide's slow loop when the skin has it, else the beat's frame with the wings spread (5)
+        private static string OpenWings(float t)
+        {
+            if (owner != null && HasGlideFrames(owner)) return GlideNames[Mathf.FloorToInt(t / LoopS * GlideNames.Length) % GlideNames.Length];
+            return FlyNames[4];
+        }
+        private static int jumpFlapN = -1; // the jump's wing stroke last sounded
 
         // The glide's stages (the frames: GlideFrame; the body's rise: GlideBob). It starts as the beat reaches its frame 7
         // (th 0.75, the wings coming up through the glide's pose) and the beat's clock stops there; the way in (4 frames,
@@ -627,7 +721,7 @@ namespace GK2DonkeyAPI
         private static string Cap(string s) => string.IsNullOrEmpty(s) ? "Refused." : char.ToUpperInvariant(s[0]) + s.Substring(1) + (s.EndsWith(".") ? "" : ".");
 
         // in the air during a jump: on the arc above the ground, or on top of something
-        private static bool JumpInAir => Now == Phase.Jumping && (jumpStage == JumpStage.Perch || (jumpStage == JumpStage.Arc && jumpT >= JumpCrouchS && heightPx > 0f));
+        private static bool JumpInAir => Now == Phase.Jumping && (jumpStage == JumpStage.Perch || (jumpStage == JumpStage.Arc && jumpT >= J.CrouchTime && heightPx > 0f));
 
         // The jump becomes the take-off: the launch carries on from the jump's height at the arc's speed (no crouch); the
         // body, if the jump took it, stays the mod's (free flight from here); the camera eases up to the height.
@@ -675,13 +769,15 @@ namespace GK2DonkeyAPI
             string no = WhyNotJump(i);
             if (no != null) { Why = "no jump: " + no; Plugin.Log.LogInfo("[flight] " + Why); return; }
             owner = i;
+            J = JumpShapes.Of(Looks.MountWanted(i));
             jumpT = 0f; jumpLetGo = float.PositiveInfinity; jumpByKey = byKey;
             jumpPath.Clear(); jumpVel = Vector3.zero; jumpAirDist = 0f; TestJumpTopAirSpeed = 0f; TestJumpWentBack = false; TestJumpPerched = false;
+            jumpFlapN = -1; jumpTopU = -1f; jumpReachU = -1f;
             jumpTook = false; jumpFreed = false; perchEdged = false; perchStuck = 0; perchThing = null; jumpFlySaid = false; jumpStage = JumpStage.Arc; jumpPrevArc = 0f; jumpStageT = 0f; jumpDropV = 0f; jumpOverPx = 0f;
-            Set(Phase.Jumping, $"jump: up to {JumpPx:0} px held, {JumpTapPx:0} px tapped, {JumpTimeS:0.##} s in the air");
+            Set(Phase.Jumping, $"jump: up to {J.Height:0} px held, {Mathf.Min(J.Tap, J.Height):0} px tapped, {J.Time:0.##} s in the air ({J.From})");
             Rigidbody rb0 = MainGame.PlayerController?.PhysicalBody?.Rb;
             JumpTrace.Begin($"mount {Looks.MountWanted(i).Label}; {(byKey ? "by the key" : "held (a button or a mod)")}; at {(rb0 != null ? rb0.position.ToString("F3") : "-")}, its speed {(rb0 != null ? new Vector3(rb0.linearVelocity.x, 0f, rb0.linearVelocity.z).magnitude.ToString("0.00") : "-")}; " +
-                $"JumpPx {JumpPx}, tap {JumpTapPx}, time {JumpTimeS}, rise share {JumpRiseShare}, hang {JumpHangS}, crouch {JumpCrouchPx}/{JumpCrouchS}, squash {JumpSquashPx}, perch {JumpPerchS}, steer {JumpSteerS}, over things {JumpOver}; " +
+                $"the shape: {J.From}: height {J.Height}, tap {J.Tap}, hold min {J.HoldMin}, time {J.Time}, rise share {J.RiseShare}, hang {J.Hang}, crouch {J.Crouch}/{J.CrouchTime}, squash {J.Squash}; perch {JumpPerchS}, steer {JumpSteerS}, over things {JumpOver}; " +
                 $"the ride's top {rideTopSpeed:0.00}, clearance {ClearancePx}, bump tall {BumpTall}, drawn ground {UseDrawnGround}; indoors {Mount.Instance.IsIndoors()}");
         }
 
@@ -690,20 +786,22 @@ namespace GK2DonkeyAPI
         // the rise from -C to H in Tr = T * share (v0 = 2D/Tr, g = 2D/Tr^2, D = H + C); let go before the top, the rest
         // of the rise brakes JumpCut times harder, never below the tap's height; the hang; the fall from the top P
         // under 2H/Tf^2 (Tf = T - Tr - hang: the full fall's time); the squash.
-        internal static float JumpHeightAt(float t, float letGo, out bool done)
+        internal static float JumpHeightAt(float t, float letGo, out bool done) => JumpHeightAt(J, t, letGo, out done);
+
+        internal static float JumpHeightAt(in JumpShape js, float t, float letGo, out bool done)
         {
             done = false;
-            float H = Mathf.Max(1f, JumpPx), C = Mathf.Max(0f, JumpCrouchPx), Cs = Mathf.Max(0f, JumpCrouchS);
-            float T = Mathf.Max(0.1f, JumpTimeS), hang = Mathf.Clamp(JumpHangS, 0f, 0.3f * T);
-            float Tr = T * Mathf.Clamp(JumpRiseShare, 0.2f, 0.8f), Tf = Mathf.Max(0.05f, T - Tr - hang);
+            float H = Mathf.Max(1f, js.Height), C = Mathf.Max(0f, js.Crouch), Cs = Mathf.Max(0f, js.CrouchTime);
+            float T = Mathf.Max(0.1f, js.Time), hang = Mathf.Clamp(js.Hang, 0f, 0.3f * T);
+            float Tr = T * Mathf.Clamp(js.RiseShare, 0.2f, 0.8f), Tf = Mathf.Max(0.05f, T - Tr - hang);
             if (t < Cs) return Cs > 0f ? -C * t / Cs : 0f;
-            float u = t - Cs, r = Mathf.Max(0f, Mathf.Max(letGo, Mathf.Max(0f, JumpHoldMinS)) - Cs);
+            float u = t - Cs, r = Mathf.Max(0f, Mathf.Max(letGo, Mathf.Max(0f, js.HoldMin)) - Cs);
             float D = H + C, v0 = 2f * D / Tr, g = 2f * D / (Tr * Tr);
             float P = H, topT = Tr;
             if (r < Tr)
             {
                 float h1 = -C + v0 * r - 0.5f * g * r * r, v1 = v0 - g * r;
-                P = Mathf.Min(H, Mathf.Max(Mathf.Min(JumpTapPx, H), h1 + v1 * v1 / (2f * g * JumpCut)));
+                P = Mathf.Min(H, Mathf.Max(Mathf.Min(js.Tap, H), h1 + v1 * v1 / (2f * g * JumpCut)));
                 if (P > h1 + 0.001f)
                 {
                     float g2 = v1 * v1 / (2f * (P - h1));
@@ -716,9 +814,18 @@ namespace GK2DonkeyAPI
             if (u < topT + hang) return P;
             float gf = 2f * H / (Tf * Tf), fallS = Mathf.Sqrt(2f * Mathf.Max(0f, P) / gf);
             float f = u - topT - hang;
-            if (f < fallS) return P - 0.5f * gf * f * f;
+            if (f < fallS)
+            {
+                float fallen = P - 0.5f * gf * f * f;
+                float e = Mathf.Clamp01(js.FallEase);
+                if (e <= 0f) return fallen;
+                // eased (the user, 2026-10-25: "the dragon feels like a plompling rock"): the same time down, slow at the
+                // top, sinking, slowing again to touch down softly, as wings braking would; blended with the stone's fall
+                float x = f / fallS;
+                return Mathf.Lerp(fallen, P * (1f - x * x * (3f - 2f * x)), e);
+            }
             float s = f - fallS;
-            if (s < JumpSquashS && JumpSquashPx > 0f) return -JumpSquashPx * Mathf.Sin(s / JumpSquashS * Mathf.PI);
+            if (s < JumpSquashS && js.Squash > 0f) return -js.Squash * Mathf.Sin(s / JumpSquashS * Mathf.PI);
             done = true;
             return 0f;
         }
@@ -960,6 +1067,12 @@ namespace GK2DonkeyAPI
                     jumpPath.Add(rb.position);
                 }
             }
+            if (J.Wings && FlyFrames && owner != null && HasFlightFrame(owner))
+            {
+                JumpWingClock();
+                JumpWingFrame(out int flap); // a downstroke shown: its flap (the push-off, each beat's)
+                if (flap > jumpFlapN) { jumpFlapN = flap; Sound("flap"); }
+            }
             if (!Free && jumpStage == JumpStage.Arc)
             {
                 // in place (indoors, JumpOver off, the body given back by a door or a save): the drawn arc alone
@@ -1069,7 +1182,7 @@ namespace GK2DonkeyAPI
                     if (heightPx <= 0f) { heightPx = 0f; Stage(JumpStage.Squash); }
                     return;
                 case JumpStage.Squash:
-                    heightPx = JumpSquashPx > 0f ? -JumpSquashPx * Mathf.Sin(Mathf.Clamp01(jumpStageT / JumpSquashS) * Mathf.PI) : 0f;
+                    heightPx = J.Squash > 0f ? -J.Squash * Mathf.Sin(Mathf.Clamp01(jumpStageT / JumpSquashS) * Mathf.PI) : 0f;
                     if (jumpStageT >= JumpSquashS) Land(JumpSaid("over things"));
                     return;
             }
@@ -1100,9 +1213,9 @@ namespace GK2DonkeyAPI
         // the jump's fall (its gravity when held: 2H/Tf^2)
         private static float FallG()
         {
-            float T = Mathf.Max(0.1f, JumpTimeS), hang = Mathf.Clamp(JumpHangS, 0f, 0.3f * T);
-            float Tf = Mathf.Max(0.05f, T - T * Mathf.Clamp(JumpRiseShare, 0.2f, 0.8f) - hang);
-            return 2f * Mathf.Max(1f, JumpPx) / (Tf * Tf);
+            float T = Mathf.Max(0.1f, J.Time), hang = Mathf.Clamp(J.Hang, 0f, 0.3f * T);
+            float Tf = Mathf.Max(0.05f, T - T * Mathf.Clamp(J.RiseShare, 0.2f, 0.8f) - hang);
+            return 2f * Mathf.Max(1f, J.Height) / (Tf * Tf);
         }
 
         // nowhere to touch down: back on the take-off spot (he stood there), then the squash
@@ -1647,7 +1760,7 @@ namespace GK2DonkeyAPI
             if (Now == Phase.Jumping && jumpStage != JumpStage.Squash && jumpTook) Sound("jumpland"); // a jump in place comes down here, without the squash stage
             if (Now == Phase.Jumping) JumpTrace.End(what);
             if (Free) ForceDown(MainGame.PlayerController, what, move: true);
-            if (owner != null && Now != Phase.Jumping) { lastOwner = owner; landedAt = Time.unscaledTime; }
+            if (owner != null && (Now != Phase.Jumping || (J.Wings && FlyFrames && HasFlightFrame(owner)))) { lastOwner = owner; landedAt = Time.unscaledTime; } // the wings fold (a jump with wings too)
             heightPx = 0f; jumpT = 0f; jumpLetGo = float.PositiveInfinity; cameraEase = 1f; bobT = 0f; beatT = 0f; vel = 0f; thudT = -1f;
             Set(Phase.Ground, what);
             FollowCamera();

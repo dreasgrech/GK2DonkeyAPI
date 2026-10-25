@@ -34,6 +34,8 @@ namespace GK2DonkeyAPI
             internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Shown only, for now
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
+            // its own jump (mount.cfg [Jump], MountDef.Jump; JumpShapes.cs): the keys it sets, the rest the default jump's; null: the default
+            internal Dictionary<string, float> Jump;
             // the mount's sounds (mount.cfg [Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]: a pack's text lines; a code
             // mount's MountSound objects), parsed in LooksSounds.cs; docs/mount-sounds-design.md
             internal Dictionary<string, object> Sounds, SoundsRide, SoundsCart, SoundsBaby;
@@ -241,7 +243,7 @@ namespace GK2DonkeyAPI
             }
             defs[d.Id] = d;
             Changed();
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.Jump != null && d.Jump.Count > 0 ? ", its own jump" : "")}.");
             return d;
         }
 
@@ -332,6 +334,7 @@ namespace GK2DonkeyAPI
             into.Tuning = from.Tuning;
             into.TuningRide = from.TuningRide;
             into.TuningCart = from.TuningCart;
+            into.Jump = from.Jump;
             into.Sounds = from.Sounds;
             into.SoundsRide = from.SoundsRide;
             into.SoundsCart = from.SoundsCart;

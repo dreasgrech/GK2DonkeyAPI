@@ -148,14 +148,22 @@ WalkCycleSpeed = 1.5  # the cart's place are the SKIN's rows (its skin.cfg's [Tu
 [Tuning.Ride]         # riding only
 [Tuning.Cart]         # with the cart only
 
+[Jump]                # its own jump, ridden plain (optional; a key left out is the default jump's, the donkey's)
+height = 40           # the top, the key held, px (1 to 120; the donkey: 28); tap_height: the key let go at once (16)
+time = 0.8            # seconds in the air, held (0.15 to 2; 0.45); rise_share (0.55), hang (0.04), hold_min (0.1),
+                      # crouch (2 px), crouch_time (0.05), squash (2 px), fall_ease (0: a stone's fall; 1: braked),
+                      # wings (false; true: its flying frames as a small take-off and landing): docs/flying.md "Each mount its own jump"
+
 [Sounds]              # the mount's sounds, for every skin of it: files of the mount folder's sounds\ (docs/mount-sounds.md)
 lips = none           # [Sounds.Ride], [Sounds.Cart] and [Sounds.Baby] as in a skin.cfg
 ```
 
 The sections of `mount.cfg` have the same plain names as a `skin.cfg`'s own (`[Tuning]`, `[Sounds]`, ...): the
 folder the file sits in decides whose they are. The file keeps them in this order: `[Mount]`, `[Stats]`, `[Tuning]`,
-`[Tuning.Ride]`, `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`. `id`, `name`,
-`author`, `version`, `cart` and `foals` are always written.
+`[Tuning.Ride]`, `[Tuning.Cart]`, `[Jump]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`. `id`, `name`,
+`author`, `version`, `cart` and `foals` are always written. `[Jump]` is the mount's alone (API 0.39.0): in a
+`skin.cfg` it is ignored and the report says it goes in `mount.cfg`; a bad number or an unknown key is named in the
+report and the default jump's value stands, a number out of its range is taken to the nearest end.
 
 The settings show a **Mount** list (Donkey, Dragon, Giant Rat, ...) and under it a **Skin** row with that mount's
 skins. The mount's `skins\default\` is its **Default** (the game's own art for the donkey), listed first by that
@@ -335,8 +343,8 @@ into it; its `--check` in the release scans refuses one that isn't, and `tests/S
 the key rules). A `skin.cfg`: `[Skin]`, then `[Game]` for a game creature, the skin's own geometry (`[Tuning]`,
 `[Tuning.Ride]`, `[Tuning.Cart]`: the seat and the pixel keys this drawing needs), the skin's sounds (`[Sounds]`,
 `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`), then the colour sections. A `mount.cfg`: `[Mount]`, `[Stats]`,
-`[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]` (the
-creature's facts), every key in one place. The donkey itself, the one mount that is not a file, would read
+`[Tuning]`, `[Tuning.Ride]`, `[Tuning.Cart]`, `[Jump]` (its keys in one order), `[Sounds]`, `[Sounds.Ride]`,
+`[Sounds.Cart]`, `[Sounds.Baby]` (the creature's facts), every key in one place. The donkey itself, the one mount that is not a file, would read
 `[Mount] id = donkey, name = Donkey, author = the game, version = 1.0, cart = true, foals = true` with no tuning;
 its folder holds skins only. A mount's sounds live in its `mount.cfg`'s `[Sounds]`, and the donkey's own
 sounds (the bray, the lip smack, the chewing, the snorts getting on and off) never reach another mount: a creature

@@ -71,7 +71,7 @@ namespace GK2DonkeyAPI.Api
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
                 Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
-                Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart),
+                Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart), Jump = JumpShapes.FromApi(def.Jump, def.Id),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
             };
@@ -170,6 +170,26 @@ namespace GK2DonkeyAPI.Api
         public string Description { get; }
     }
 
+    // A mount's jump, ridden plain (0.39.0; docs/flying.md "Each mount its own jump"): heights in art pixels, times in
+    // seconds. A value left null is the default jump's (the donkey's: height 28, tap 16, time 0.45, rise share 0.55, ...).
+    // The arc: a crouch, the rise, a hang at the top, the fall, a squash; the key let go on the way up cuts the rise short.
+    public sealed class MountJump
+    {
+        public float? Height;      // the top, the key held (1 to 120)
+        public float? TapHeight;   // the top, the key let go at once (1 to 120; never over Height)
+        public float? HoldMin;     // a shorter press counts as this long (0 to 0.3)
+        public float? Time;        // from leaving the ground to landing, the key held (0.15 to 2)
+        public float? RiseShare;   // of that time, the rise's (0.2 to 0.8): over 0.5 a heavier fall, under it a slow sink
+        public float? Hang;        // still at the top (0 to 0.5, at most 0.3 of Time)
+        public float? Crouch;      // down before leaving the ground (0 to 12)
+        public float? CrouchTime;  // how long the crouch takes (0 to 0.3)
+        public float? Squash;      // into the ground on landing (0 to 12)
+        public float? FallEase;    // 0: the fall speeds up to the ground (a stone's); 1: eased, a soft touch-down (wings braking)
+        // The skin's flying frames through the jump, a small take-off and landing (the crouch, the push-off, a flap up,
+        // wings open coming down, reaching for the ground, the touch, the fold); a skin without them walks in the air.
+        public bool? Wings;
+    }
+
     public sealed class MountDef
     {
         public string Id;
@@ -204,6 +224,9 @@ namespace GK2DonkeyAPI.Api
         public Dictionary<string, object> Tuning;
         public Dictionary<string, object> TuningRide;
         public Dictionary<string, object> TuningCart;
+        // Its own jump, ridden plain (0.39.0; a pack's mount.cfg [Jump]): the values it sets, the rest the default jump's
+        // (the donkey's). Null: the default jump.
+        public MountJump Jump;
         // The creature's sounds by event key ("voice", "step.grass": MountSound; a pack's [Mount.Sounds] block), shared by
         // every skin of the mount, under a skin's own; SoundsRide / SoundsCart for one style, over Sounds. Null: the
         // player's keys (the donkey's sounds). docs/mount-sounds-design.md.
@@ -302,6 +325,8 @@ namespace GK2DonkeyAPI.Api
             Tuning = CopyOf(d.Tuning);
             TuningRide = CopyOf(d.TuningRide);
             TuningCart = CopyOf(d.TuningCart);
+            Jump = GK2DonkeyAPI.JumpShapes.ToApi(d);
+            OwnJump = d.Jump != null && d.Jump.Count > 0;
             Sounds = CopyOf(d.Sounds);
             SoundsRide = CopyOf(d.SoundsRide);
             SoundsCart = CopyOf(d.SoundsCart);
@@ -333,6 +358,10 @@ namespace GK2DonkeyAPI.Api
         // Takes off and flies / jumps, ridden plain (MountDef.Flies, Jumps; [Mount] flies, jumps).
         public bool Flies { get; }
         public bool Jumps { get; }
+        // The jump it makes (0.39.0): every value filled, its own (MountDef.Jump, [Jump]) over the default jump's; and
+        // whether it has any of its own.
+        public MountJump Jump { get; }
+        public bool OwnJump { get; }
         // A baby's size as a fraction of the grown one.
         public float FoalScale { get; }
         // Its speeds, times the keeper's walking speed (its own, else the donkey's; with the cart its own times the

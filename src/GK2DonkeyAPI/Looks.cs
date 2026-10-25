@@ -719,7 +719,7 @@ namespace GK2DonkeyAPI
                     int c = line.IndexOf('#');
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
-                    if (section == "mount" || section.StartsWith("mount.", StringComparison.Ordinal)) mountSections.Add(section);
+                    if (section == "mount" || section.StartsWith("mount.", StringComparison.Ordinal) || section == "jump") mountSections.Add(section); // the jump is the creature's, not its look's
                     else if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
