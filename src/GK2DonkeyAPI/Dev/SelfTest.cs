@@ -1469,16 +1469,25 @@ namespace GK2DonkeyAPI
                 ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
                 Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null && Row<bool>("FoalsFollow") != null, "the four babies rows are bound");
                 Check(Row<bool>("FoalsFollow") != null && Equals(Row<bool>("FoalsFollow").DefaultValue, false), "a page whose companion is left as the core has it: \"follow you on foot\" starts off");
+                // per mount since 2026-10-26: the plain keys are the donkey's (its MountLook), the dragon's carry its id
                 if (foals != null)
                 {
                     foals.Value = 2;
-                    Check(me.FoalCount == 2, $"Babies = 2 reaches the companion ({me.FoalCount})");
+                    Check(me.LookOf(MountCatalog.DonkeyId).FoalCount == 2, $"Babies = 2 reaches the donkey's own ({me.LookOf(MountCatalog.DonkeyId).FoalCount})");
+                    ConfigEntry<int> dragonFoals = Row<int>("Foals_" + M("dragon"));
+                    if (dragonFoals != null)
+                    {
+                        dragonFoals.Value = 0;
+                        Check(me.LookOf(M("dragon")).FoalCount == 0 && me.LookOf(MountCatalog.DonkeyId).FoalCount == 2, "the dragon's babies are its own: 0 for it leaves the donkey's 2");
+                        Check(me.FoalCount == me.LookOf(me.MountId).FoalCount, $"the companion's count is the current mount's ({me.MountId}: {me.FoalCount})");
+                    }
+                    else Warn("no Foals row for the dragon (its pack not installed?): the per-mount babies not checked");
                     foals.Value = 0;
                 }
                 if (wear != null)
                 {
                     wear.Value = false;
-                    Check(!me.FoalsWearSkin, "Babies are the same mount and skin = off reaches the companion");
+                    Check(!me.LookOf(MountCatalog.DonkeyId).FoalsWearSkin, "Babies are the same mount and skin = off reaches the donkey's own");
                     wear.Value = true;
                 }
                 Check(Row<string>("Effect") == null, "no Effect row (the effect rows went, 2026-10-25)");
@@ -4239,6 +4248,32 @@ namespace GK2DonkeyAPI
             Check(LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI), "cleaned up: no window, the controls free");
         }
 
+        // The panel as drawn, into BepInEx\GK2-panel-shots\<name>.png (the self-tests are dev-only): what its layout looks
+        // like, read back after the frame (the overlay canvas included), for judging alignment from the picture rather
+        // than from the code (the user, 2026-10-26: "make sure everything is aligned in that page").
+        private static IEnumerator PanelShot(string name)
+        {
+            yield return new WaitForEndOfFrame();
+            try
+            {
+                var t = new Texture2D(Screen.width, Screen.height, TextureFormat.RGB24, false);
+                t.ReadPixels(new Rect(0, 0, Screen.width, Screen.height), 0, 0);
+                t.Apply();
+                string dir = System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "GK2-panel-shots");
+                System.IO.Directory.CreateDirectory(dir);
+                var safe = new System.Text.StringBuilder();
+                foreach (char c in name) safe.Append(char.IsLetterOrDigit(c) || c == '-' || c == '.' ? c : '_');
+                string file = System.IO.Path.Combine(dir, safe + ".png");
+                System.IO.File.WriteAllBytes(file, t.EncodeToPNG());
+                UnityEngine.Object.Destroy(t);
+                Info("the panel's picture: " + file);
+            }
+            catch (Exception e)
+            {
+                Info("the panel's picture could not be taken: " + e.Message);
+            }
+        }
+
         private static IEnumerator PanelSmoke()
         {
             if (!Plugin.MountsOn)
@@ -4264,8 +4299,19 @@ namespace GK2DonkeyAPI
                 var m = MountsPanel.TestMeasure();
                 Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
                 Check(MountsPanel.TestEntries >= 1 && MountsPanel.TestRows > 0 && string.Equals(MountsPanel.TestBuiltFor, was, StringComparison.OrdinalIgnoreCase), $"it lists {MountsPanel.TestEntries} mount(s) and built {MountsPanel.TestRows} rows for the chosen one ({was})");
+                string firstOrder = JournalChecks(was);
+                TMPro.TMP_InputField nameField = MountsPanel.TestNameField();
+                if (nameField == null) Info("no name row in this page's journal: the text box check skipped");
+                else
+                {
+                    nameField.ActivateInputField();
+                    yield return Frames(2);
+                    Check(nameField.isFocused, "the name's text box takes the typing (activated, it is focused)");
+                    nameField.DeactivateInputField();
+                    yield return Frames(1);
+                }
                 string other = null;
-                foreach (MountsPanel.Entry e in MountsPanel.Entries()) if (!e.Id.Equals(was, StringComparison.OrdinalIgnoreCase)) { other = e.Id; break; }
+                foreach (MountsPanel.Entry e in MountsPanel.Entries()) if (!e.Id.Equals(was, StringComparison.OrdinalIgnoreCase) && !e.Fake) { other = e.Id; break; }
                 if (other == null)
                 {
                     Warn("one mount only: the pick check skipped");
@@ -4280,6 +4326,8 @@ namespace GK2DonkeyAPI
                     // the user, 2026-10-22: a pick shows a mount, only Ride or Drive the cart makes it his
                     Check(me != null && me.Skin == hadSkin && string.Equals(Looks.MountOf(Looks.Find(me.Paper.LooksRig.DefNow?.Id ?? ""))?.Id ?? MountCatalog.DonkeyId, other, StringComparison.OrdinalIgnoreCase),
                         $"and his mount is not changed: the companion still wears \"{me?.Skin}\", the picture's paper wears {other}'s (\"{me?.Paper.LooksRig.DefNow?.Id}\")");
+                    string otherOrder = JournalChecks(other);
+                    Check(SameOrder(firstOrder, otherOrder), $"the journal's rows come in one order on {was} and {other} ({firstOrder} / {otherOrder})");
                     var m2 = MountsPanel.TestMeasure();
                     Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
                 }
@@ -4296,6 +4344,7 @@ namespace GK2DonkeyAPI
                     MountsPanel.TestSelect(noCart);
                     yield return Frames(2);
                     Info($"{noCart} picked: Drive the cart shown {MountsPanel.TestDriveShown}; the colour groups: {MountsPanel.TestColourGroups()}");
+                    Check(SameOrder(firstOrder, JournalChecks(noCart)), $"the journal's rows come in one order on {was} and {noCart}");
                     Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart colours") && MountsPanel.TestColourGroup("Mount colours"),
                         $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
                     // its picture finished (the alone view): waited for, not a fixed count (the dragon, a pack read from disk
@@ -4303,6 +4352,7 @@ namespace GK2DonkeyAPI
                     Mount.Instance paperBefore = LookPreview.PaperOf(page);
                     yield return Until(() => MountsPanel.TestPicture != null && PreviewStage.ShowsLookNow(MountsPanel.TestPicture, paperBefore), 15f);
                     Check(waited, $"{noCart}'s picture is shown whole before the switch (within 15 s)");
+                    yield return PanelShot("journal-" + noCart);
                     // from it to one that pulls the cart: every frame the picture is the cartless mount's last photo, or the new
                     // one whole in the cart view, never the new mount in the alone view (the user, 2026-10-25: "large and
                     // without a cart" for a few frames)
@@ -4323,12 +4373,22 @@ namespace GK2DonkeyAPI
                         $"from {noCart} to {withCart}: the last photo held {stale} frame(s), then {withCart} whole in its own view{(bad > 0 ? " (NOT: the new view not yet the new look)" : "")}");
                     yield return Frames(2);
                     Check(MountsPanel.TestDriveShown && MountsPanel.TestColourGroup("Cart colours"), $"{withCart}, which pulls the cart: Drive the cart and the Cart colours are back");
+                    yield return Seconds(1f);
+                    yield return PanelShot("journal-" + withCart);
+                    MountsPanel.TestOpenColours();
+                    yield return Frames(3);
+                    yield return PanelShot("colours-" + withCart);
+                    MountsPanel.TestCloseColours(keep: true);
+                    yield return Frames(2);
                     MountsPanel.TestSelect(was);
                     yield return Frames(2);
                 }
                 MountsPanel.TestOpenColours();
                 yield return Frames(2);
+                yield return PanelShot("colours-" + (page.MountChosen ?? "donkey"));
                 Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");
+                string narrowColours = MountsPanel.TestNarrowLabel(coloursWindow: true);
+                Check(narrowColours == null, $"the colours window: every label has room (100 or more){(narrowColours != null ? " (NOT: " + narrowColours + ")" : "")}");
                 MountsPanel.TestCloseColours(keep: true);
                 yield return Frames(2);
                 Check(!MountsPanel.IsColoursOpen && MountsPanel.IsOpen, "closed: the journal is back");
@@ -4371,6 +4431,36 @@ namespace GK2DonkeyAPI
             {
                 if (MountsPanel.IsOpen) MountsPanel.TestClose(keep: false);
             }
+        }
+
+        // The journal built for a mount (the user, 2026-10-26): the panel's own controls (no game "< >" row), the name
+        // first and the Skin second, the babies rows only for a mount with babies, nothing outside its column. Returns
+        // its rows' keys in order.
+        private static string JournalChecks(string mount)
+        {
+            string order = MountsPanel.TestJournalOrder();
+            Info($"the journal of {mount}: {order}");
+            var keys = new List<string>(order.Split(','));
+            bool named = keys.Contains("Name");
+            Check(keys.Count > 0 && (named ? keys.Count > 1 && keys[0] == "Name" && keys[1] == "Skin" : keys[0] == "Skin"), $"{mount}'s journal: {(named ? "the name first, the Skin second" : "the Skin first")} ({order})");
+            Check(MountsPanel.TestJournalGameRows() == 0, $"{mount}'s journal: every row is the panel's own control ({MountsPanel.TestJournalGameRows()} game rows)");
+            string narrow = MountsPanel.TestNarrowLabel(coloursWindow: false);
+            Check(narrow == null, $"{mount}'s journal: every label has room (100 or more){(narrow != null ? " (NOT: " + narrow + ")" : "")}");
+            string outside = MountsPanel.TestJournalOutside();
+            Check(outside == null, $"{mount}'s journal: every row inside its column{(outside != null ? " (NOT: " + outside + ")" : "")}");
+            bool babies = GK2DonkeyAPI.Catalog.Find(mount)?.Foals ?? true;
+            if (named) Check(babies == keys.Contains("Foals"), $"{mount}'s journal: the babies rows {(babies ? "shown (it has babies)" : "left out (it has none)")}");
+            return order;
+        }
+
+        // Two journals' orders agree on the rows both have.
+        private static bool SameOrder(string a, string b)
+        {
+            var x = new List<string>(a.Split(','));
+            var y = new List<string>(b.Split(','));
+            x.RemoveAll(k => !y.Contains(k));
+            y.RemoveAll(k => !x.Contains(k));
+            return string.Join(",", x) == string.Join(",", y);
         }
 
         // A game-source skin whose frames the game lacks: set aside the first time it is worn (not drawn as a blank sheet),

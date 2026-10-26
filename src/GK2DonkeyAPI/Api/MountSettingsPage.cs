@@ -590,18 +590,32 @@ namespace GK2DonkeyAPI.Api
         {
             if (companion == null) throw new ArgumentNullException(nameof(companion));
             MountCompanion me = companion;
-            Steps(section, "Foals", me.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "Little ones of your mount that stay with it and follow it around.", v => me.FoalCount = v, v => v == 0 ? "None" : v.ToString());
-            Toggle(section, "FoalsFollow", me.FoalsFollowOnFoot, "Babies follow you on foot", "Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out.", v => me.FoalsFollowOnFoot = v);
-            Toggle(section, "FoalsIndoors", true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => me.FoalsComeIndoors = v);
-            Toggle(section, "FoalsWearSkin", me.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => me.FoalsWearSkin = v);
+            // Per mount (the user, 2026-10-26: "make the amount of babies be saved per mount"), in the Mounts panel's journal
+            // (look rows of the section; the donkey's keys plain, the others' "_<mount id>"), only for a mount that has
+            // babies. A page without MountRows: the donkey's alone (PerMount).
+            PerMount((mountId, sfx, shown) =>
+            {
+                MountLook l = me.LookOf(mountId);
+                Func<bool> babies = () => Catalog.Find(mountId)?.Foals ?? true;
+                Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "Little ones of your mount that stay with it and follow it around. Kept for each mount.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
+                Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out.", v => l.FoalsFollowOnFoot = v, babies, look: true);
+                Toggle(section, "FoalsIndoors" + sfx, true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => l.FoalsComeIndoors = v, babies, look: true);
+                Toggle(section, "FoalsWearSkin" + sfx, l.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => l.FoalsWearSkin = v, babies, look: true);
+            });
         }
 
+        // The signature from before look (added in 0.40.0), kept for mods built against it (every parameter required:
+        // a call is never ambiguous between the two).
+        public ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, Action<bool> apply, Func<bool> visible)
+            => Toggle(section, key, value, label, description, apply, visible, look: false);
+
         // On or off.
-        public ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, Action<bool> apply = null, Func<bool> visible = null)
+        // look: the Mounts panel's row (not the menus'), as Choice's.
+        public ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, Action<bool> apply = null, Func<bool> visible = null, bool look = false)
         {
             string cfgSection = Sec(section);
             ConfigEntry<bool> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Toggle, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
+            Add(new Row { RowKind = RowKind.Toggle, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible, IsLook = look });
             Wire(e, apply);
             return e;
         }
@@ -707,12 +721,18 @@ namespace GK2DonkeyAPI.Api
             return e;
         }
 
+        // The signature from before look (added in 0.40.0), kept for mods built against it (every parameter required:
+        // a call is never ambiguous between the two).
+        public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply, Func<bool> visible)
+            => Text(section, key, value, label, description, apply, visible, look: false);
+
         // Free text. Read-only in the game's Settings window. visible: shown only while it says so.
-        public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply = null, Func<bool> visible = null)
+        // look: the Mounts panel's row (its own text box there; the menus show none).
+        public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply = null, Func<bool> visible = null, bool look = false)
         {
             string cfgSection = Sec(section);
             ConfigEntry<string> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Text, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible });
+            Add(new Row { RowKind = RowKind.Text, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, Visible = visible, IsLook = look });
             Wire(e, apply);
             return e;
         }

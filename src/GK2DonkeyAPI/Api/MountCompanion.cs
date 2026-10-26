@@ -55,6 +55,23 @@ namespace GK2DonkeyAPI.Api
         public string CustomWheels { get => customWheels; set { customWheels = value; owner.LookChanged(this); } }
         public string CustomHubs { get => customHubs; set { customHubs = value; owner.LookChanged(this); } }
         public string CustomLantern { get => customLantern; set { customLantern = value; owner.LookChanged(this); } }
+
+        // The mount's own settings beside its colours (the user, 2026-10-26: the babies, the name, the voice and the cart's
+        // lantern kept per mount, set in the Mounts panel's journal): set at once when this is the current mount's.
+        // A mount nobody set them for takes the companion's last values (MountCompanion.FoalCount etc.).
+        internal int foals;
+        internal bool foalsFollow, foalsIndoors, foalsWearSkin = true, lantern = true, lanternByDay = true;
+        internal string name;
+        internal float volume = 1f;
+
+        public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MountCompanion.MaxFoals); owner.OwnChanged(this); } }
+        public bool FoalsFollowOnFoot { get => foalsFollow; set { foalsFollow = value; owner.OwnChanged(this); } }
+        public bool FoalsComeIndoors { get => foalsIndoors; set { foalsIndoors = value; owner.OwnChanged(this); } }
+        public bool FoalsWearSkin { get => foalsWearSkin; set { foalsWearSkin = value; owner.OwnChanged(this); } }
+        public string Name { get => name; set { name = value; owner.OwnChanged(this); } }
+        public float SoundVolume { get => volume; set { volume = Mathf.Clamp(value, 0f, 1.5f); owner.OwnChanged(this); } }
+        public bool Lantern { get => lantern; set { lantern = value; owner.OwnChanged(this); } }
+        public bool LanternByDay { get => lanternByDay; set { lanternByDay = value; owner.OwnChanged(this); } }
     }
 
     // A mod's own donkey for the keeper, with its cart and up to MaxFoals foals: everything a player mod needs, so the mod
@@ -196,7 +213,11 @@ namespace GK2DonkeyAPI.Api
             string id = string.IsNullOrWhiteSpace(mountId) ? MountCatalog.DonkeyId : mountId.Trim();
             if (!looks.TryGetValue(id, out MountLook l))
             {
-                looks[id] = l = new MountLook(this, id);
+                looks[id] = l = new MountLook(this, id)
+                {
+                    foals = foals, foalsFollow = foalsFollow, foalsIndoors = foalsIndoors, foalsWearSkin = foalsWearSkin,
+                    name = name, volume = volume, lantern = lantern, lanternByDay = lanternByDay,
+                };
             }
             return l;
         }
@@ -212,6 +233,23 @@ namespace GK2DonkeyAPI.Api
         }
 
         private MountLook Current => LookOf(MountId);
+
+        // One of a mount's own settings changed: applied when it is the current mount's.
+        internal void OwnChanged(MountLook l)
+        {
+            if (string.Equals(l.MountId, MountId, StringComparison.OrdinalIgnoreCase)) ApplyMountOwn();
+        }
+
+        // The current mount's own settings onto its donkey, cart and foals (its name, voice, lantern, the babies): at every
+        // change of them and of the mount.
+        private void ApplyMountOwn()
+        {
+            nextFoalCheck = 0f;
+            ApplyName();
+            ApplyRide();
+            ApplyFoals();
+            ApplyLook();
+        }
 
         internal void LookChanged(MountLook l)
         {
@@ -229,21 +267,22 @@ namespace GK2DonkeyAPI.Api
         public bool CartStaysParked { get; set; } = true;
 
         // How many foals (size 0.6, not rideable) stay with the donkey: 0 to MaxFoals.
-        public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MaxFoals); nextFoalCheck = 0f; } }
+        // Per mount since 2026-10-26 (MountLook): the current mount's; setting it also gives a mount nobody set yet this value.
+        public int FoalCount { get => Current.FoalCount; set { foals = Mathf.Clamp(value, 0, MaxFoals); Current.FoalCount = foals; } }
 
         // The foals come through doors with the keeper (buildings, the church, dungeons), follow him inside and come back
         // out with him (the Shuffle key ShuffleFollowKeeperIndoors on each foal). Off to start with: they stay outside
         // with the donkey.
-        public bool FoalsComeIndoors { get => foalsIndoors; set { foalsIndoors = value; ApplyFoals(); } }
+        public bool FoalsComeIndoors { get => Current.FoalsComeIndoors; set { foalsIndoors = value; Current.FoalsComeIndoors = value; } }
 
         // The foals follow the keeper while he walks on foot outdoors, instead of staying with the mount (the Shuffle key
         // ShuffleFollowKeeperOnFoot on each of this companion's foals, never on another mod's); when he gets on a mount
         // they go back to it (following it when it's theirs). Into buildings only with FoalsComeIndoors. Off to start
         // with (0.36.0); FoalRows' row defaults to it (Saddle Up switches it on first).
-        public bool FoalsFollowOnFoot { get => foalsFollow; set { foalsFollow = value; ApplyFoals(); } }
+        public bool FoalsFollowOnFoot { get => Current.FoalsFollowOnFoot; set { foalsFollow = value; Current.FoalsFollowOnFoot = value; } }
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
-        public string Name { get => name; set { name = value; ApplyName(); } }
+        public string Name { get => Current.Name; set { name = value; Current.Name = value; } }
 
         // Brays at mounting and while standing.
         public bool Brays { get => brays; set { brays = value; ApplyRide(); } }
@@ -252,13 +291,13 @@ namespace GK2DonkeyAPI.Api
         public bool BellOnSetOff { get => bell; set { bell = value; ApplyRide(); } }
 
         // The mount's sounds, times the game's SFX volume: 0 to 1.5.
-        public float SoundVolume { get => volume; set { volume = Mathf.Clamp(value, 0f, 1.5f); ApplyRide(); } }
+        public float SoundVolume { get => Current.SoundVolume; set { volume = Mathf.Clamp(value, 0f, 1.5f); Current.SoundVolume = volume; } }
 
         // The lantern pole and lamp on the cart.
-        public bool Lantern { get => lantern; set { lantern = value; ApplyRide(); } }
+        public bool Lantern { get => Current.Lantern; set { lantern = value; Current.Lantern = value; } }
 
         // The lamp is lit by day too (the game's cart lamp is); off: it goes dark by day like the hand lantern.
-        public bool LanternByDay { get => lanternByDay; set { lanternByDay = value; ApplyRide(); } }
+        public bool LanternByDay { get => Current.LanternByDay; set { lanternByDay = value; Current.LanternByDay = value; } }
 
         // The current mount's look (LookOf(MountId)); a page's rows set each mount's own (MountSettingsPage.PerMount).
         public CoatColor Coat { get => Current.Coat; set => Current.Coat = value; }
@@ -285,7 +324,16 @@ namespace GK2DonkeyAPI.Api
         // The skin the donkey wears, by id (Mounts.Looks.Skins lists them; "donkey", "" or an unknown id: the donkey as the
         // game draws it, and an unknown id is kept, so the skin returns with its pack). Foals wear it too unless
         // FoalsWearSkin is off, or the skin says no foals.
-        public string Skin { get => skin; set { if (panelHeld) panelSkin = value ?? ""; else skin = value ?? ""; ApplyLook(); } }
+        public string Skin
+        {
+            get => skin;
+            set
+            {
+                if (panelHeld) { panelSkin = value ?? ""; ApplyLook(); return; }
+                skin = value ?? "";
+                ApplyMountOwn(); // another mount: its own name, voice, lantern and babies too (each mount keeps its own)
+            }
+        }
 
         // The Mounts panel's choice while it is open (the user, 2026-10-22: picking a row changed the mount he had):
         // the settings picture wears it, his donkey keeps its own until Ride or Drive the cart takes it (Commit).
@@ -306,11 +354,11 @@ namespace GK2DonkeyAPI.Api
             panelHeld = false;
             if (commit && panelSkin != null) skin = panelSkin;
             panelSkin = null;
-            ApplyLook();
+            ApplyMountOwn();
         }
 
         private string PaperSkin => panelHeld && panelSkin != null ? panelSkin : skin;
-        public bool FoalsWearSkin { get => foalsWearSkin; set { foalsWearSkin = value; ApplyLook(); } }
+        public bool FoalsWearSkin { get => Current.FoalsWearSkin; set { foalsWearSkin = value; Current.FoalsWearSkin = value; } }
 
         // ------------------------------------------------------------------ the keys
 
@@ -381,9 +429,10 @@ namespace GK2DonkeyAPI.Api
             }
             if (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _))
             {
-                // Asked before anyone is called: the cart refused here (indoors, in a fight) leaves the mount where it is,
-                // instead of bringing it in and refusing its cart after (BringCart asks the same).
-                string noCart = Mount.Instance.WhyNotCart(keeper);
+                // Asked before anyone is called: the cart refused here (indoors, in a fight) or by the mount (a dragon pulls
+                // none) leaves the mount and the cart where they are, instead of bringing them in and refusing the cart
+                // after (BringCart asks the same; the user, 2026-10-26: "although it cant pull it, it still brings it")
+                string noCart = Mount.Instance.WhyNotCart(keeper) ?? (Donkey != null && Donkey.Exists ? GK2DonkeyAPI.Looks.WhyNotCartByMount(Donkey.I) : null);
                 if (noCart != null)
                 {
                     Mount.Say(noCart);
@@ -474,10 +523,11 @@ namespace GK2DonkeyAPI.Api
         // Its cart (spawned the first time) comes to where the donkey stands or is ridden, and is hitched.
         private string BringCart(MountHandle to)
         {
-            // Asked before the cart is moved: refused, it stays where it is (in a fight the keeper's armour refuses it).
+            // Asked before the cart is moved: refused, it stays where it is (in a fight the keeper's armour refuses it; a
+            // mount that can't pull the cart, the dragon, refuses it too: it was brought over and the hitch refused it then)
             if (Mount.Instance.IsInGame(out PlayerController keeper, out _))
             {
-                string no = Mount.Instance.WhyNotCart(keeper);
+                string no = Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(to?.I);
                 if (no != null)
                 {
                     Mount.Say(no);
@@ -590,12 +640,12 @@ namespace GK2DonkeyAPI.Api
             // A baby's size is its mount's (MountDef.FoalScale: the donkey's 0.6, Gerry's 0.33): a baby of another
             // size (the mount changed under it) is made again at the right one.
             // ... and only when the babies are the same mount and skin: plain baby donkeys are 0.6 (the row's promise)
-            MountInfo babyMount = Donkey != null && Donkey.Exists && foalsWearSkin ? Mounts.Catalog.Find(Donkey.Mount) : null;
+            MountInfo babyMount = Donkey != null && Donkey.Exists && Current.FoalsWearSkin ? Mounts.Catalog.Find(Donkey.Mount) : null;
             float babySize = babyMount != null && babyMount.Foals ? babyMount.FoalScale : 0.6f; // a mount without babies of its own: plain donkeys
             for (int i = 0; i < MaxFoals; i++)
             {
                 MountHandle f = foalHandles[i];
-                bool wanted = i < foals;
+                bool wanted = i < Current.FoalCount;
                 // (the view's scale is kept in steps of 0.02: 0.33 comes back as 0.32, so a hundredth is no difference;
                 // seen 2026-10-18: a baby made again every second)
                 if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.015f && Donkey != null && Donkey.Exists)
@@ -713,7 +763,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (Donkey != null && Donkey.Exists)
             {
-                Donkey.SetDisplayName(OwnerId, name);
+                Donkey.SetDisplayName(OwnerId, Current.Name);
             }
         }
 
@@ -728,12 +778,12 @@ namespace GK2DonkeyAPI.Api
                 MountTuning t = Mounts.Tuning(style);
                 Session(t, "BrayOnMountChance", !brays, 0f);
                 Session(t, "BrayIdleEverySeconds", !brays, 0f);
-                Session(t, "SoundVolume", !Mathf.Approximately(volume, 1f), volume);
+                Session(t, "SoundVolume", !Mathf.Approximately(Current.SoundVolume, 1f), Current.SoundVolume);
             }
             MountTuning cart = Mounts.Tuning(MountStyle.Cart);
             Session(cart, "BellOnSetOff", !bell, false);
-            Session(cart, "LanternShow", !lantern, false);
-            Session(cart, "LanternLightDayDim", !lanternByDay, 0f);
+            Session(cart, "LanternShow", !Current.Lantern, false);
+            Session(cart, "LanternLightDayDim", !Current.LanternByDay, 0f);
         }
 
         // Each foal's own ShuffleFollowKeeperIndoors and ShuffleFollowKeeperOnFoot: set while on, cleared when off if
@@ -752,8 +802,8 @@ namespace GK2DonkeyAPI.Api
                 }
                 try
                 {
-                    FoalFlag(h, "ShuffleFollowKeeperIndoors", foalsIndoors);
-                    FoalFlag(h, "ShuffleFollowKeeperOnFoot", foalsFollow);
+                    FoalFlag(h, "ShuffleFollowKeeperIndoors", Current.FoalsComeIndoors);
+                    FoalFlag(h, "ShuffleFollowKeeperOnFoot", Current.FoalsFollowOnFoot);
                 }
                 catch (Exception e)
                 {
@@ -841,7 +891,7 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, CoatKeys, coatKeys);
                     Instance(h, HarnessKeys, harnessKeys);
                     Instance(h, MuzzleKeys, muzzleKeys);
-                    Instance(h, LookKeys, h == Donkey || foalsWearSkin ? skinKeys : noSkin);
+                    Instance(h, LookKeys, h == Donkey || Current.FoalsWearSkin ? skinKeys : noSkin);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);

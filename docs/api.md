@@ -1045,6 +1045,10 @@ History:
   docs/multi-mod-loading.md). Additions: `MountHandle.Remove(ownerId)` (refused for another mod's instance; the
   parameterless `Remove()` still works from the owner's own plugin, from another mod's code it does nothing and warns
   once) and `MountHandle.DataKeyMax` (64), `DataValueMax` (4096), `DataKeysMax` (64), past which `SetData` throws.
+  Per mount (2026-10-26): `MountLook.FoalCount`, `FoalsFollowOnFoot`, `FoalsComeIndoors`, `FoalsWearSkin`, `Name`,
+  `SoundVolume`, `Lantern`, `LanternByDay`; the companion's properties of those names are the current mount's, and a
+  mount change applies them. `MountSettingsPage.Toggle` and `Text` take `look` (a look `Text` row is a text box in the
+  Mounts panel); their old signatures stay as overloads. `FoalRows` makes its rows per mount, as look rows.
   Rules that changed, none of them for anything a player had:
   - an effect's id is `<mod>.<name>` like a mount's (Saddle Up's is `saddleup.hellfire`; `hellfire` still finds it),
     and another mod's effect of the same id meets the version rule instead of throwing;

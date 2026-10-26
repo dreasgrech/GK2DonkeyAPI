@@ -800,14 +800,14 @@ namespace GK2DonkeyAPI
             foreach (string k in keys)
             {
                 MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == k);
-                all &= row != null && row.ShownSection == "Babies";
+                all &= row != null && row.ShownSection == "Mount" && row.IsLook; // the mount's own, in the Mounts panel's journal (2026-10-26)
                 where.Add(k + " " + (row == null ? "missing" : row.ShownSection));
             }
-            Check(all, $"Saddle Up's babies rows are in a Babies section of their own ({string.Join(", ", where)})");
+            Check(all, $"Saddle Up's babies rows are the mount's, in the Mounts panel's journal ({string.Join(", ", where)})");
             MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
             MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
             bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;
-            Check(follow != null && me.FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the companion ({(on ? "on" : "off")})");
+            Check(follow != null && me.LookOf(MountCatalog.DonkeyId).FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the donkey's own ({(on ? "on" : "off")})");
             Check(follow?.Entry != null && Equals(follow.Entry.DefaultValue, true), $"and it is on by default in Saddle Up ({follow?.Entry?.DefaultValue})");
         }
     }

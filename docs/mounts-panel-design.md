@@ -109,6 +109,47 @@ designed (docs/open-items.md "Effects on skins").
   menu the same press opened is closed again in the same frame.
 - A dev switch, `Debug.MountsPanelFakeEntries`, pads the list with made-up entries to see it scroll.
 
+## The panel's own controls (2026-10-26)
+
+The user, 2026-10-26, on the journal with the babies, name and voice rows moved in: the labels were cut on the left
+("abies come indoors": the copied game row draws 354 wide in the 288 column, right-aligned, its label cell masked), the
+Name was read-only ("set in the cfg"), the "< >" arrows "way too limiting ... not scalable", and the rows came in a
+different order on each mount. Decided with the user ("mixed by kind"; the colours window "same controls"):
+
+| Row kind | Control |
+|---|---|
+| Toggle | a switch (40x20), its knob right and red when on |
+| Steps, up to 8 values (the babies, 0-5) | a row of number buttons, the chosen one red |
+| Steps, more values (a volume 0-150 in 10s) | a slider with the row's own words beside it ("80%"); Left/Right step it on the gamepad |
+| Choice, List (the Skin, every colour preset) | a dropdown: a click opens its list under it (over it near the window's bottom), 7 shown, then scrolling; a click outside, Escape or Back closes it |
+| Text (the name) | a text box (24 characters), written when the typing ends; the mods' keys wait while typing |
+
+Other kinds (a key, a button, an info line) still get the game's row. Code: `MountsPanel.Controls.cs` (`OwnRow`).
+
+- **One row**: its label left on the column's label edge, wrapping onto a second line when long (the row grows to
+  fit), its control ending on the column's value edge. Journal: labels at x 12 and controls ending at 276, the stats
+  card's own edges; the wide controls 140 wide. Colours window: columns of 369 (two side by side in 754), labels
+  0 to 150 (as the headings, on the column's start), the controls and the swatches from 160 to the column's end.
+  First built on the game row's measured value span (`rowCtrlLeft`): it measured 12 of 354 in game (the row's switch
+  covers the whole row now), the labels got 10 px and wrapped a letter a line under the dropdowns (the user's
+  screenshot, 2026-10-26); the panel's own numbers since. Nothing is drawn outside a column.
+- **The look** (the user, 2026-10-26: the switches and slider "need to match aesthetic more"): a switch is a dark box
+  with the faint edge (the stage's, the stats card's), its knob the game's dialog button face (red, right) when on,
+  greyed on the left when off; the slider a dark track with the edge, filled in the journal's red, its handle the
+  button face. The dropdown's arrow is two bars, a "v" (the first build drew a "^").
+- **The text box** is built switched off and switched on only once its text parts are set (as GK2 Tech Search's):
+  `TMP_InputField` sets itself up for typing when it is enabled, and switched on before it had a text part it never
+  took a key (the user: "the name field is currently read only"). The search box is the same `InputBox`.
+- **The journal's order** is the same on every mount: a text row (the name) first, the Skin second ("to show that the
+  name is per mount not per skin"), then the others in the order the page made the donkey's (`JournalOrder`; a mount
+  registered later had its rows, its Skin among them, made later).
+- **The gamepad**: every control is a stop of the rows' group; a dropdown's list is group 3 on its own while open (no
+  hand-over out of it), focus goes to the chosen choice and back to the dropdown when it closes.
+- The four buttons at the bottom have one gap (12) between them.
+- Self-test (`PanelSmoke`, `JournalChecks`): the name first and the Skin second, no game row left, every label 100 or
+  wider (journal and colours window), the name's box focused when activated, every part inside the column, the babies rows only for a mount with babies, the same order on each mount picked. The screenshots
+  (`PanelShot`) go to `BepInEx\GK2-panel-shots\`.
+
 ## Resolutions (measured 2026-10-21)
 
 The game's UI canvas is not a fixed 1280x720: its scaler keeps a factor of 2, so the canvas is the screen in half

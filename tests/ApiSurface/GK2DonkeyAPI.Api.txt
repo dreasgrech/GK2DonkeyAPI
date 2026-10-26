@@ -327,12 +327,20 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property string CustomMuzzle { get; set; }
   property string CustomPaint { get; set; }
   property string CustomWheels { get; set; }
+  property int FoalCount { get; set; }
+  property bool FoalsComeIndoors { get; set; }
+  property bool FoalsFollowOnFoot { get; set; }
+  property bool FoalsWearSkin { get; set; }
   property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
   property GK2DonkeyAPI.Api.HubColor Hubs { get; set; }
+  property bool Lantern { get; set; }
+  property bool LanternByDay { get; set; }
   property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
   property string MountId { get; }
   property GK2DonkeyAPI.Api.MuzzleColor Muzzle { get; set; }
+  property string Name { get; set; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
+  property float SoundVolume { get; set; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
 sealed class GK2DonkeyAPI.Api.MountLooks
   field static const string DonkeyId = donkey
@@ -450,8 +458,10 @@ sealed class GK2DonkeyAPI.Api.MountSettingsPage
   method void RetiredKey(string section, string key)
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
-  method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null)
-  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null, System.Func<bool> visible = null)
+  method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply, System.Func<bool> visible)
+  method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null, bool look = False)
+  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply, System.Func<bool> visible)
+  method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null, System.Func<bool> visible = null, bool look = False)
   method void TuningKey(string section, string key, string tuningKey, GK2DonkeyAPI.Api.MountCompanion companion)
 sealed class GK2DonkeyAPI.Api.MountSkinDef
   field string Author

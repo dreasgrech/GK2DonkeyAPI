@@ -17,7 +17,7 @@ namespace SaddleUp
     // worm), found by the API in BepInEx\plugins\<Pack>\gk2mounts\ like any mod's (docs/making-a-mount.md "Built in or
     // external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
-    [BepInDependency("dreas.gk2.donkeyapi", "0.39.0")] // at least the API it was written against (NeedsApi below)
+    [BepInDependency("dreas.gk2.donkeyapi", "0.40.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup";
@@ -25,14 +25,15 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.12.0";
 
-        // The API this mod is written against: 0.39 reads the dragon's [Jump] (its own jump, with wings); 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
+        // The API this mod is written against: 0.40 the per-mount name, babies, voice and lantern (MountLook) and the
+        // look Toggle and Text rows; 0.39 reads the dragon's [Jump] (its own jump, with wings); 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
         // rename) and ships no skin (Hellfire's effect is registered here); 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
         // a mount registered in any plugin's Awake and a mod's embedded packs; 0.31 the page's Heading; 0.30 the skins, MountCompanion.Skin;
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
         // is used, so an older API gets a clear message instead of a missing-method error. Keep it the same as the
         // BepInDependency minimum above.
-        private static readonly Version NeedsApi = new Version(0, 39, 0);
+        private static readonly Version NeedsApi = new Version(0, 40, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
 
@@ -116,12 +117,17 @@ namespace SaddleUp
             // KeepWithSaves in Behaviour, the colours in Donkey and Cart, the cart's rows in Behaviour before 0.11.
             // Moving a section renumbers it in the cfg; the page carries those values over by itself.
             p.MovedKey("Mount", "Name", "Donkey");
-            // The babies have a section of their own since 0.12 (the user, 2026-10-22): Mount from 0.10, Donkey before.
-            p.MovedKey("Babies", "Foals", "Mount");
-            p.MovedKey("Babies", "Foals", "Donkey");
-            p.MovedKey("Babies", "FoalsIndoors", "Mount");
-            p.MovedKey("Babies", "FoalsIndoors", "Donkey");
-            p.MovedKey("Babies", "FoalsWearSkin", "Mount");
+            // The babies are the mount's (per mount, in the Mounts panel's journal, 2026-10-26): Babies in 0.12's builds,
+            // Mount in 0.10, Donkey before. The voice volume and the lantern are the mount's too: Sound and Cart before.
+            p.MovedKey("Mount", "Foals", "Babies");
+            p.MovedKey("Mount", "Foals", "Donkey");
+            p.MovedKey("Mount", "FoalsIndoors", "Babies");
+            p.MovedKey("Mount", "FoalsIndoors", "Donkey");
+            p.MovedKey("Mount", "FoalsWearSkin", "Babies");
+            p.MovedKey("Mount", "FoalsFollow", "Babies");
+            p.MovedKey("Mount", "Volume", "Sound");
+            p.MovedKey("Colours", "Lantern", "Cart");
+            p.MovedKey("Colours", "LanternByDay", "Cart");
             p.MovedKey("Mount", "KeepWithSaves", "Behaviour");
             p.Preview("Mount", me, "Your mount");
             // The mount, its skins and every colour are chosen in the Mounts panel (the user, 2026-10-20: a
@@ -129,8 +135,16 @@ namespace SaddleUp
             // same size however many mounts are installed). The rows below are bound as before (the same cfg keys)
             // and marked look: true, which keeps them out of the menu and in the panel.
             p.PanelButton("Mount", "Mounts", "Closes this and opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins and its colours. Done keeps your choices.");
-            p.Text("Mount", "Name", me.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name.", v => me.Name = v);
+            // before any mount's own settings are made (each starts from the companion's): on in Saddle Up (the user,
+            // 2026-10-22); the API's stays off for other mods
+            me.FoalsFollowOnFoot = true;
             p.MountRows("Mount", me);
+            // Its name and its voice, per mount, in the Mounts panel's journal under the Skin (the user, 2026-10-26)
+            p.PerMount((mountId, sfx, shown) =>
+            {
+                MountLook own = me.LookOf(mountId);
+                p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name. Kept for each mount.", v => own.Name = v, look: true);
+            });
             if (!Mounts.MountsEnabled)
             {
                 // This version ships the mounts and skins switched off (Mounts.MountsEnabled; the next update
@@ -141,8 +155,12 @@ namespace SaddleUp
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After loading, your mount and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
 
             // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
-            me.FoalsFollowOnFoot = true; // the row's default: on in Saddle Up (the user, 2026-10-22); the API's stays off for other mods
-            p.FoalRows("Babies", me);
+            p.FoalRows("Mount", me);
+            p.PerMount((mountId, sfx, shown) =>
+            {
+                MountLook own = me.LookOf(mountId);
+                p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voice and steps", "Its sounds: steps, calls, wheels, the bell; on top of the game's SFX volume. Kept for each mount.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
+            });
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
             // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per mount (PerMount: the donkey's rows keep their keys, the dragon's are
@@ -194,8 +212,11 @@ namespace SaddleUp
                 p.Color("Colours", "CustomHubs" + sfx, "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => look.CustomHubs = v, () => hubs.Value == HubColor.Custom);
                 ConfigEntry<LanternColor> light = p.Choice("Colours", "LanternColor" + sfx, look.LanternLight, "Lantern light", "", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
                 p.Color("Colours", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
+                // the lantern itself, per mount with its light (the user, 2026-10-26: from the Cart options into the colours window)
+                p.Toggle("Colours", "Lantern" + sfx, look.Lantern, "Lantern", "The lantern on its pole.", v => look.Lantern = v, look: true);
+                p.Toggle("Colours", "LanternByDay" + sfx, look.LanternByDay, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => look.LanternByDay = v, look: true);
                 // a mount that can't pull the cart (the dragon) has no cart colours (the user, 2026-10-25); the values are kept
-                foreach (string key in new[] { "Paint", "CustomPaint", "Wheels", "CustomWheels", "Hubs", "CustomHubs", "LanternColor", "CustomLantern" }) p.CartRow("Colours", key + sfx);
+                foreach (string key in new[] { "Paint", "CustomPaint", "Wheels", "CustomWheels", "Hubs", "CustomHubs", "LanternColor", "CustomLantern", "Lantern", "LanternByDay" }) p.CartRow("Colours", key + sfx);
             });
 
             // The Effect section (0.10.0 to 0.12: the effect, when it shows, and four toggles) went on 2026-10-25 (the user:
@@ -240,14 +261,11 @@ namespace SaddleUp
             p.Toggle("Cart", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse (riding indoors allowed and the cart not: your mount comes in with you). Off: it stays on the cart.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));
             p.Toggle("Cart", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets. You carry them to the morgue yourself, or cart them. Off: the game's own delivery.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
             p.Toggle("Cart", "CartStaysParked", me.CartStaysParked, "Calling your mount leaves the cart parked", "Ride key while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you.", v => me.CartStaysParked = v);
-            p.Toggle("Cart", "Lantern", me.Lantern, "Lantern", "The lantern on its pole.", v => me.Lantern = v);
-            p.Toggle("Cart", "LanternByDay", me.LanternByDay, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => me.LanternByDay = v);
 
             p.Toggle("Sound", "Bell", me.BellOnSetOff, "Bell sound when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
             p.Toggle("Sound", "Brays", me.Brays, "Bray sounds", "Now and then, and when you get on.", v => me.Brays = v);
             p.TuningKey("Sound", "Bell", "BellOnSetOff", me);
             p.TuningKey("Sound", "Brays", "BrayOnMountChance", me);
-            p.Steps("Sound", "Volume", Mathf.RoundToInt(me.SoundVolume * 100f), 0, 150, 10, "Mount and cart sounds", "Hoofsteps, wheels, brays, the bell; on top of the game's SFX volume.", v => me.SoundVolume = v / 100f, v => v + "%");
             p.Toggle("Sound", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds: steps, grazing, the lip smack, a call now and then, the babies answering their parent. Off: only the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
             p.Publish();
             Logger.LogInfo($"GK2 Saddle Up {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");

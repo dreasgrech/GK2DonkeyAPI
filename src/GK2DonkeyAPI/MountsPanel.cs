@@ -24,7 +24,7 @@ namespace GK2DonkeyAPI
     // buttons), its font (read off one of its labels), and its "< value >" rows (SettingsRows), placed where they draw
     // (a game row draws wider than its rectangle: MeasureRow). If a part can't be found, the panel doesn't open and
     // the log says so.
-    internal static class MountsPanel
+    internal static partial class MountsPanel
     {
         private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
         private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
@@ -35,14 +35,11 @@ namespace GK2DonkeyAPI
         private const float IconPx = 36f, HeaderIconPx = 64f;
         private const float SearchH = 26f;
         private const int SearchFrom = 8; // a search box above the list once it has more mounts than this
-        // a custom colour's row: the 24 named colours as squares, two rows of twelve, laid on the game row's own lines
-        // (MeasureRow: its label ends at rowLabelRight, its "< value >" spans rowCtrlLeft to rowCtrlRight; the user,
-        // 2026-10-25: "the alignment of everything in here is also weird": the labels ended 10 px short, the squares
-        // ran past the switch)
+        // a custom colour's row: the 24 named colours as squares, two rows of twelve, across the controls' span of its
+        // column (SwatchRow; laid on the game row's measured lines until 2026-10-26, which stopped measuring true).
+        // MeasureRow still logs where the game row's label ends and its "< value >" spans (from its drawn left).
         private const float SwatchGap = 2f;
-        private static float rowLabelRight = 160f, rowCtrlLeft = 168f, rowCtrlRight = 168f + 12f * 16f; // from the row's drawn left
-        private static float SwatchPx => Mathf.Max(8f, Mathf.Floor((rowCtrlRight - rowCtrlLeft - 11f * SwatchGap) / 12f));
-        private static float SwatchRowH => 2f * SwatchPx + SwatchGap + 6f;
+        private static float rowLabelRight = 160f, rowCtrlLeft = 168f, rowCtrlRight = 168f + 12f * 16f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
         private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 236f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
         private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
@@ -105,7 +102,7 @@ namespace GK2DonkeyAPI
         }
 
         internal static bool IsOpen => panel != null && (panel.activeSelf || colours != null);
-        internal static bool SearchFocused => search != null && search.isFocused;
+        internal static bool SearchFocused => TypingField() != null; // the search box or a row's text box (the name)
         internal static bool IsColoursOpen => colours != null;
 
         // Every mount a player can pick (Looks.MountChoices: the mounts with a skin, the donkey first), with its words.
@@ -311,7 +308,7 @@ namespace GK2DonkeyAPI
             GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
             Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
             GameObject customise = OwnButton(panel.transform, "colours", "Colours...", 200f, ButtonH, OpenColours);
-            Rect(customise, W - Pad - ButtonW - 16f - 200f, H - Pad - ButtonH, 200f, ButtonH);
+            Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
             GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
             Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
@@ -520,6 +517,7 @@ namespace GK2DonkeyAPI
                 if (mountSection) AddTo(journalGroups, null, r);  // the journal: the Skin, no heading (the user, 2026-10-25)
                 else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
+            foreach (var g in journalGroups) JournalOrder(g.Rows, chosen); // the name, the Skin, then the rest: the same on every mount
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _);
             if (colours != null)
             {
@@ -546,10 +544,22 @@ namespace GK2DonkeyAPI
         private static string BuildRows(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, RectTransform root, ScrollRect scroll, float areaW,
             List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> into, out float needed)
         {
+            CloseDropdown(refocus: false); // its button goes with the rows
             foreach (Transform c in root) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
             into.Clear();
             var sig = new StringBuilder();
-            float colW = rowVisual.width, colGap = 16f, step = rowVisual.height + 4f;
+            // the journal: one column as wide as the stats card, the labels on its labels' edge, the controls ending on its
+            // values' edge (the scrollbar beyond); the colours window: columns as wide as a swatch row, the controls on
+            // the swatches' span
+            // the colours window's columns are the panel's own numbers: the game row's measured value span (rowCtrlLeft)
+            // came out at 12 of 354 on 2026-10-26 (its switch covers the whole row now), which left the labels 10 px
+            // (the user's screenshot: "Co / col" under the dropdowns)
+            bool journal = root == contentRoot;
+            float colGap = 16f, step = rowVisual.height + 4f;
+            float colW = journal ? areaW : Mathf.Floor(Math.Min(ColoursColW, (areaW - colGap) / 2f));
+            var lay = journal
+                ? new RowLayout { LabelX = 12f, CtrlRight = areaW + ScrollbarW - 12f, CtrlLeft = areaW + ScrollbarW - 12f - JournalCtrlW, ColW = colW }
+                : new RowLayout { LabelX = 0f, CtrlLeft = ColoursLabelW + 10f, CtrlRight = colW, ColW = colW };
             if (2f * colW + colGap > areaW) colGap = Math.Max(4f, areaW - 2f * colW); // the two columns as close as the area needs
             int perRow = groups.Count > 1 && 2f * colW + colGap <= areaW ? 2 : 1; // side by side only when both fit whole; else stacked
             float y = 4f;
@@ -587,13 +597,18 @@ namespace GK2DonkeyAPI
                         Action refresh;
                         if (IsPalette(r))
                         {
-                            go = SwatchRow(root, r, out refresh); // the named colours as squares, where the game's "< Chestnut >" row would be
+                            go = SwatchRow(root, r, lay, out refresh, out float sh); // the named colours as squares across the controls' span
                             Place(go, cx, cy);
-                            cy += SwatchRowH + 4f;
+                            cy += sh + 4f;
+                        }
+                        else if ((go = OwnRow(root, r, lay, out refresh, out float h)) != null)
+                        {
+                            Place(go, cx, cy); // the panel's own controls (MountsPanel.Controls.cs)
+                            cy += h + 4f;
                         }
                         else
                         {
-                            go = SettingsRows.MakeRow(templateRow, root, r, page, out refresh);
+                            go = SettingsRows.MakeRow(templateRow, root, r, page, out refresh); // a kind the panel has no control for
                             go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
                             Place(go, cx - rowVisual.x, cy - rowVisual.y);
                             cy += step;
@@ -618,30 +633,37 @@ namespace GK2DonkeyAPI
 
         // A custom colour's row: the label where a game row's label sits, then the 24 named colours as squares in two
         // rows of twelve; the chosen one framed; a click sets the row's value (the page applies it, the picture shows it).
-        private static GameObject SwatchRow(Transform parent, MountSettingsPage.Row r, out Action refresh)
+        private static GameObject SwatchRow(Transform parent, MountSettingsPage.Row r, RowLayout lay, out Action refresh, out float height)
         {
             var entry = (BepInEx.Configuration.ConfigEntry<PaletteColor>)r.Entry;
+            int perRow = 12;
+            // the squares across the controls' span, as the other rows' controls (2026-10-26)
+            float px = Mathf.Max(8f, Mathf.Floor((lay.CtrlRight - lay.CtrlLeft - (perRow - 1) * SwatchGap) / perRow));
+            float left = lay.CtrlRight - (perRow * px + (perRow - 1) * SwatchGap); // the rounding's slack on the left: they end on the value edge
             GameObject go = Node("swatches " + r.Entry.Definition.Key, parent);
-            Rect(go, 0f, 0f, rowVisual.width, SwatchRowH);
-            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Right, false, 0f, 0f, rowLabelRight, SwatchRowH);
-            label.overflowMode = TextOverflowModes.Ellipsis;
+            // left on the column's edge, as the own rows' labels and the headings (2026-10-26); wrapping, the row as tall as it needs
+            float labelW = Mathf.Max(40f, left - 10f - lay.LabelX);
+            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
+            height = Mathf.Max(2f * px + SwatchGap + 6f, Mathf.Ceil(label.GetPreferredValues(r.Label ?? "", labelW, 0f).y) + 8f);
+            Rect(go, 0f, 0f, lay.ColW, height);
+            Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
             var frames = new List<(PaletteColor Colour, GameObject Frame)>();
             Array values = Enum.GetValues(typeof(PaletteColor));
-            int perRow = 12;
+            float top = Mathf.Round((height - (2f * px + SwatchGap)) / 2f);
             for (int i = 0; i < values.Length; i++)
             {
                 var colour = (PaletteColor)values.GetValue(i);
-                float sx = rowCtrlLeft + (i % perRow) * (SwatchPx + SwatchGap);
-                float sy = 3f + (i / perRow) * (SwatchPx + SwatchGap);
+                float sx = left + (i % perRow) * (px + SwatchGap);
+                float sy = top + (i / perRow) * (px + SwatchGap);
                 GameObject frame = Node("frame " + colour, go.transform, typeof(Image));
-                Rect(frame, sx - 2f, sy - 2f, SwatchPx + 4f, SwatchPx + 4f);
+                Rect(frame, sx - 2f, sy - 2f, px + 4f, px + 4f);
                 frame.GetComponent<Image>().color = Color.white;
                 frame.GetComponent<Image>().raycastTarget = false;
                 frame.SetActive(false);
                 GameObject sw = Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
-                Rect(sw, sx, sy, SwatchPx, SwatchPx);
+                Rect(sw, sx, sy, px, px);
                 GameObject swFocus = Node("focus", sw.transform, typeof(Image), typeof(Outline));
-                Rect(swFocus, -3f, -3f, SwatchPx + 6f, SwatchPx + 6f);
+                Rect(swFocus, -3f, -3f, px + 6f, px + 6f);
                 swFocus.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
                 swFocus.GetComponent<Image>().raycastTarget = false;
                 var swo = swFocus.GetComponent<Outline>();
@@ -754,6 +776,7 @@ namespace GK2DonkeyAPI
             }
             coloursBefore.Clear();
             colourRows.Clear();
+            CloseDropdown(refocus: false);
             if (colours != null)
             {
                 UnityEngine.Object.Destroy(colours);
@@ -796,35 +819,7 @@ namespace GK2DonkeyAPI
         // A search box: typing filters the list by name; the mods' keys wait while it has focus (KeyActions).
         private static TMP_InputField SearchBox(Transform parent, float x, float y, float w, float h)
         {
-            GameObject go = Node("search", parent, typeof(Image), typeof(TMP_InputField));
-            Rect(go, x, y, w, h);
-            var bg = go.GetComponent<Image>();
-            bg.color = new Color(0f, 0f, 0f, 0.35f);
-            var edge = go.AddComponent<Outline>();
-            edge.effectColor = EdgeColor;
-            edge.effectDistance = new Vector2(1f, -1f);
-            GameObject area = Node("search text area", go.transform, typeof(RectMask2D));
-            var art = (RectTransform)area.transform;
-            art.anchorMin = Vector2.zero;
-            art.anchorMax = Vector2.one;
-            art.offsetMin = new Vector2(8f, 2f);
-            art.offsetMax = new Vector2(-8f, -2f);
-            TextMeshProUGUI text = Text(area.transform, "search text", "", 0.9f, TextAlignmentOptions.Left, false, 0f, 0f, w, h);
-            Stretch((RectTransform)text.transform);
-            text.richText = false;
-            TextMeshProUGUI hint = Text(area.transform, "search hint", "Search...", 0.9f, TextAlignmentOptions.Left, false, 0f, 0f, w, h);
-            Stretch((RectTransform)hint.transform);
-            hint.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.45f);
-            hint.fontStyle = FontStyles.Italic;
-            var field = go.GetComponent<TMP_InputField>();
-            field.targetGraphic = bg;
-            field.textViewport = art;
-            field.textComponent = text;
-            field.placeholder = hint;
-            field.characterLimit = 40;
-            field.richText = false;
-            field.caretColor = fontColor;
-            field.customCaretColor = true;
+            TMP_InputField field = InputBox(parent, "search", x, y, w, h, "Search...", 40);
             field.onValueChanged.AddListener(v =>
             {
                 filter = v ?? "";
@@ -1155,11 +1150,25 @@ namespace GK2DonkeyAPI
                 nav.Enable();
                 nav.ReinitItems(focusOnFirstActive: false);
                 navDirty = false;
-                if (was != null && was && was.isActiveAndEnabled) nav.SetFocusedItem(was);
+                if (focusNext != null && focusNext && focusNext.isActiveAndEnabled) { nav.SetFocusedItem(focusNext); KeepInView(focusNext); } // a dropdown opened or closed
+                else if (was != null && was && was.isActiveAndEnabled) nav.SetFocusedItem(was);
                 else FocusStart(nav, window);
+                focusNext = null;
             }
+            if (TypingField() != null) return; // typing a name: the keys are the text box's
             GamepadNavigationItem focused = nav.FocusedItem;
             bool onValueRow = focused != null && focused.GetComponentInParent<UISwitchButton>() != null; // a value row steps itself with Left/Right (UISwitchButton.Update)
+            if (focused != null && steppers.TryGetValue(focused, out Action<int> stepper)) // a slider: Left/Right move it
+            {
+                int d = Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft) ? -1 : Pressed(GameKey.Right) || Pressed(GameKey.DpadRight) ? 1 : 0;
+                if (d != 0)
+                {
+                    foreach (GameKey k in new[] { GameKey.Left, GameKey.DpadLeft, GameKey.Right, GameKey.DpadRight }) LazyInput.ClearKeyDown(k);
+                    stepper(d);
+                    return;
+                }
+                onValueRow = true; // no way left or right out of it: Up and Down
+            }
             if (Pressed(GameKey.Up) || Pressed(GameKey.DpadUp)) Move(nav, GUIDirection.Up);
             else if (Pressed(GameKey.Down) || Pressed(GameKey.DpadDown)) Move(nav, GUIDirection.Down);
             else if (!onValueRow && (Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft))) Move(nav, GUIDirection.Left);
@@ -1223,7 +1232,11 @@ namespace GK2DonkeyAPI
             if (Mathf.Approximately(d, 0f)) return;
             Vector2 at = UnityInput.Current.mousePosition;
             ScrollRect target = null;
-            if (colours != null && colours.activeSelf)
+            if (dropdown != null)
+            {
+                if (dropScroll != null && Over(dropScroll.gameObject, at)) target = dropScroll; // an open list takes the wheel alone
+            }
+            else if (colours != null && colours.activeSelf)
             {
                 if (Over(colours, at)) target = coloursScroll;
             }
@@ -1382,7 +1395,8 @@ namespace GK2DonkeyAPI
                 Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (RestoreUnder is skipped)
                 return;
             }
-            if (search != null && search.isFocused) searchFocusFrame = Time.frameCount;
+            TMP_InputField typing = TypingField();
+            if (typing != null) { typingIn = typing; typingFrame = Time.frameCount; }
             if (panel != null) Wheel();
             if (panel != null && controlsTaken) TakeControls(); // re-asserted: a game popup closing gives ByUI back
             if (panel != null && controlsTaken) TickGamepad();
@@ -1456,15 +1470,15 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static int searchFocusFrame = -10;
-
         private static bool controlsTaken;
 
-        // One step back (Escape): out of the search box, else the colours window to the journal, else the journal closed
-        // and the window under it shown again. The self-test walks it too (it can't press a key).
+        // One step back (Escape): out of a text box (the search, the name), else a dropdown's list closed, else the colours
+        // window to the journal, else the journal closed and the window under it shown again. The self-test walks it too
+        // (it can't press a key).
         private static void StepBack()
         {
-            if (search != null && searchFocusFrame >= Time.frameCount - 1) search.DeactivateInputField();
+            if (typingIn != null && typingFrame >= Time.frameCount - 1) typingIn.DeactivateInputField();
+            else if (dropdown != null) CloseDropdown(refocus: true);
             else if (colours != null) CloseColours(keep: true);
             else Close(keep: true); // and back to where it was opened from
         }
@@ -1643,6 +1657,8 @@ namespace GK2DonkeyAPI
         private static void Close(bool keep, bool back = true)
         {
             bool wasOpen = panel != null;
+            try { CommitFields(); } catch (Exception e) { Plugin.Log.LogWarning("Settings: a name being typed could not be kept: " + e.Message); } // a name still being typed is kept
+            CloseDropdown(refocus: false);
             MountSettingsPage closing = page;
             if (wasOpen) Perf.TracePick("the panel closed, " + (closing?.MountChosen ?? MountCatalog.DonkeyId) + " chosen"); // the world's mount turning into it
             closing?.SavePickedSoon(); // the picking is over: the chosen mount to the cfg file half a second on (put back below when not kept: written again by its set)

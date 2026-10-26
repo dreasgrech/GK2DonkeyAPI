@@ -49,7 +49,7 @@ def page_rows(src):
         rows.add((m.group(1), "Mount"))
         rows.update((m.group(1), "Skin_" + k) for k in KINDS)
     for m in re.finditer(r'p\.FoalRows\("(\w+)"', src):
-        rows.update((m.group(1), k) for k in FOAL_ROWS)
+        rows.update((m.group(1), k + sfx) for k in FOAL_ROWS for sfx in MOUNTS)  # per mount since 2026-10-26 (PerMount: the donkey's plain)
     return rows, aliases
 
 

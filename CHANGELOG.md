@@ -12,6 +12,25 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Each mount has its own name, babies and voice, set in the Mounts panel** (the user, 2026-10-26: "make the amount
+  of babies be saved per mount"; "users need to set their mount names from inside here"). The journal page lists, for
+  the mount picked: its Name (a text box: type it there, no more editing the cfg), its Skin, Babies (0 to 5), Babies
+  follow you on foot, Babies come indoors, Babies are the same mount and skin, and Voice and steps (its sounds'
+  volume); the babies rows only for a mount that has babies. They are in the same order on every mount. Lantern and
+  Lantern lit by day moved into the colours window's Cart colours, per mount too. These left the options pages (Sound
+  and Cart lose a row each; the Babies section is gone). What you had set carries over to the donkey; the other mounts
+  start from it.
+- **New controls in the Mounts panel** (the user, 2026-10-26: the "< >" arrows are "way too limiting"): a switch for
+  on/off, a row of number buttons for the babies, a slider with its % for the volume, a dropdown with a scrolling list
+  for the Skin and every colour preset, a text box for the name. The switches and the slider are drawn like the rest
+  of the panel (its dark boxes with the faint edge, the knob and handle the game's red button face). The labels line
+  up with the stats card's and are no longer cut off on the left; in the colours window each column has its labels
+  on the left and its controls and colour squares on the right; the four buttons at the bottom have one gap between
+  them.
+- **The cart key no longer brings the cart to a mount that can't pull it** (the user, 2026-10-26: "any mount that
+  doesnt have the ability to pull the cart shouldnt bring it with g"): with the dragon (or any mount whose `cart =
+  false`), G says it can't pull the cart and leaves the cart where it stands; before, the cart came to you and was
+  refused only then.
 - **The mounts are downloads of their own** (the user, 2026-10-26): GK2 Saddle Up itself ships the donkey, Gerry and
   the donkey's Hellfire and Royal Parade; the Dragon (GK2 Saddle Up: Dragon) and the giant rat, snail and worm (GK2
   Saddle Up: Critters) are mount packs to add, each a folder for `BepInEx\plugins\`, or all of them in one zip.
@@ -327,6 +346,13 @@ For players:
 
 For mod authors:
 
+- **Per-mount companion settings** (2026-10-26): `MountLook` (`companion.LookOf(mountId)`) has the mount's own
+  `FoalCount`, `FoalsFollowOnFoot`, `FoalsComeIndoors`, `FoalsWearSkin`, `Name`, `SoundVolume`, `Lantern` and
+  `LanternByDay`; the companion's properties of the same names read and set the current mount's (unchanged for a mod
+  with one mount). A mount change applies its own name, babies, volume and lantern. `MountSettingsPage.FoalRows` makes
+  its four rows per mount, as look rows (in the Mounts panel's journal, not the menus). `Toggle` and `Text` take
+  `look: true` like `Choice`: a look `Text` row is a text box in the panel. The panel's journal orders its rows the
+  same on every mount: a text row first, the Skin second, the rest in the order the page made them.
 - **A mount from a mod loaded after Saddle Up gets its colour rows in their place** (found with our own pack DLLs,
   which load after Saddle Up, 2026-10-26): the settings page's catch-up appended a late mount's rows at the end, so in
   the Mounts panel its Coat, Harness and Muzzle rows sat under "Cart colours" and it had no "Mount colours"; now each
