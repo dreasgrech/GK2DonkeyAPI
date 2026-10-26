@@ -756,7 +756,11 @@ A mod's **look rows are kept per mount** with `page.PerMount((mountId, suffix, s
 once per registered mount and builds the rows with the suffix on their cfg keys (`""` for the donkey,
 `"_saddleup.dragon"` for the dragon) against `companion.LookOf(mountId)` (a `MountLook`: `Coat`, `CustomCoat`, `Harness`, `Paint`,
 `Wheels`, `Hubs`, `LanternLight` and their custom colours); the chosen mount's rows are the ones shown. The
-companion's own `Coat`, `Harness`... read and write the current mount's look (`MountId`).
+companion's own `Coat`, `Harness`... read and write the current mount's look (`MountId`). A row about the cart (its
+paint, wheels, hubs, lantern) says so with `page.CartRow(section, key)` after it (0.39.0; each key, the custom colour
+rows too): it shows only while its mount pulls the cart (`MountSettingsPage.MountPullsCart(mountId)`: `[Mount]
+cart`, `MountDef.Cart`), so the dragon has no cart colours; the value is kept. The Mounts panel hides its
+**Drive the cart** button for such a mount the same way.
 
 A settings page gets the rows in two calls: `page.MountRows("Mount", companion)` adds a **Mount** dropdown (every
 mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
@@ -1036,6 +1040,10 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,
+  2026-10-25: "for mounts that cant pull the cart, the drive the cart button still appears in teh journal and there's
+  still cart customization"): a cart row shows only for a mount that pulls one; the Mounts panel's Drive the cart
+  button is hidden for a mount that doesn't. Additions only.
 - 0.39.0: **each mount its own jump** (the user, 2026-10-25: "the arc the donkey makes while jumping looks silly for
   a dragon ... first lets make sure that we have the ability to specify per mount"; docs/flying.md "Each mount its
   own jump"): `MountJump` (`Height`, `TapHeight`, `HoldMin`, `Time`, `RiseShare`, `Hang`, `Crouch`, `CrouchTime`,

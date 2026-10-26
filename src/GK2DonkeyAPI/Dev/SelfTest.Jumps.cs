@@ -59,7 +59,9 @@ namespace GK2DonkeyAPI
                     if (offT >= 0f && hgt <= 0f) landT = t;
                     if (done && landT < 0f) landT = t;
                 }
-                Check(Mathf.Abs(max - 50f) < 0.05f && Mathf.Abs(landT - offT - 0.9f) < 0.02f, $"its arc: the top at {max:0.00} px (50), {landT - offT:0.000} s in the air (0.9)");
+                // time counts from the crouch's end (the rise starts from its dip, under the ground: F11 2026-10-25 measured
+                // 0.863 s above the ground with this pack's 12 px crouch)
+                Check(Mathf.Abs(max - 50f) < 0.05f && Mathf.Abs(landT - s.CrouchTime - 0.9f) < 0.02f, $"its arc: the top at {max:0.00} px (50), {landT - s.CrouchTime:0.000} s from the crouch to the ground (its time 0.9), {landT - offT:0.000} s above the ground");
 
                 // the eased fall (wings braking): the same time down, touching down slowly where the stone's fall is fastest
                 Flight.JumpShape stone = s, eased = s;

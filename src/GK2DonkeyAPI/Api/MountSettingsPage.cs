@@ -45,6 +45,7 @@ namespace GK2DonkeyAPI.Api
             internal Action OnClick;         // RowKind.Button
             internal string ButtonText;      // RowKind.Button: the word on it ("Open", "Go")
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
+            internal string MountId;         // a PerMount row's mount (null: a row of no one mount)
         }
 
         internal readonly List<Row> Rows = new List<Row>();
@@ -906,6 +907,7 @@ namespace GK2DonkeyAPI.Api
             {
                 throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
             }
+            r.MountId = pendingMountId;
             if (pendingShown != null)
             {
                 Func<bool> shown = pendingShown, own = r.Visible;
@@ -917,6 +919,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         private Func<bool> pendingShown; // set while PerMount (or MountRows) builds one mount's rows
+        private string pendingMountId;   // set while PerMount builds one mount's rows
         private ConfigEntry<string> mountRow; // MountRows' Mount row: which mount is chosen
 
         // Rows kept per mount (the colour rows: a dragon's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
@@ -967,6 +970,33 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
+        // Says a row is about the cart (its paint, its wheels, its lantern; 0.39.0): shown only while its mount pulls one
+        // (a PerMount row's mount, else the chosen mount): a mount whose [Mount] says cart = false (MountDef.Cart false)
+        // has no cart to colour (the user, 2026-10-25: "for mounts that cant pull the cart ... there's still cart
+        // customization ... these shouldnt be available"). Left out of the Mounts panel, the Mods menu and the Settings
+        // window alike; its value is kept. Call it after the row, for each of its keys (a custom colour row too).
+        public void CartRow(string section, string key)
+        {
+            string cfgSection = Sec(section);
+            foreach (Row r in Rows)
+            {
+                if (r.Entry == null || r.Entry.Definition.Section != cfgSection || (r.Entry.Definition.Key != key && r.Entry.Definition.Key != LightnessKey(key))) continue;
+                string id = r.MountId;
+                Func<bool> pulls = () => MountPullsCart(id ?? mountRow?.Value);
+                Func<bool> shown = r.Shown, visible = r.Visible;
+                r.Shown = shown == null ? pulls : () => shown() && pulls();
+                r.Visible = visible == null ? pulls : () => visible() && pulls();
+            }
+        }
+
+        // Whether the mount may pull the cart (0.39.0; the donkey, an unknown or a missing mount: yes, the donkey comes for it).
+        public static bool MountPullsCart(string mountId)
+        {
+            if (string.IsNullOrEmpty(mountId) || mountId.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase)) return true;
+            Catalog.Entry k = Catalog.Find(mountId);
+            return k == null || k.Cart;
+        }
+
         // Whether any skin of the mount has the colour region (Coat, Dark, Muzzle, Eye, Harness), so a page can grey
         // the rows of a region the player's colour would never reach.
         public static bool MountHasRegion(string mountId, string region)
@@ -997,6 +1027,7 @@ namespace GK2DonkeyAPI.Api
             bool donkey = id.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
             pendingShown = isShown;
+            pendingMountId = id;
             try
             {
                 rows(id, donkey ? "" : "_" + id, isShown);
@@ -1004,6 +1035,7 @@ namespace GK2DonkeyAPI.Api
             finally
             {
                 pendingShown = null;
+                pendingMountId = null;
             }
         }
 

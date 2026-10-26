@@ -4243,6 +4243,44 @@ namespace GK2DonkeyAPI
                     var m2 = MountsPanel.TestMeasure();
                     Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
                 }
+                // a mount that can't pull the cart (the user, 2026-10-25): no Drive the cart, no cart colours; one that can: both
+                string noCart = null, withCart = null;
+                foreach (MountsPanel.Entry e in MountsPanel.Entries())
+                {
+                    if (noCart == null && !MountSettingsPage.MountPullsCart(e.Id)) noCart = e.Id;
+                    if (withCart == null && MountSettingsPage.MountPullsCart(e.Id)) withCart = e.Id;
+                }
+                if (noCart == null || withCart == null) Warn("no mount that can't pull the cart (or none that can) in the list: the cart check skipped");
+                else
+                {
+                    MountsPanel.TestSelect(noCart);
+                    yield return Frames(2);
+                    Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart colours") && MountsPanel.TestColourGroup("Mount colours"),
+                        $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
+                    yield return Frames(30); // its picture finished (the alone view)
+                    // from it to one that pulls the cart: every frame the picture is the cartless mount's last photo, or the new
+                    // one whole in the cart view, never the new mount in the alone view (the user, 2026-10-25: "large and
+                    // without a cart" for a few frames)
+                    Texture before = MountsPanel.TestPicture;
+                    Mount.Instance paperNow = LookPreview.PaperOf(page);
+                    MountsPanel.TestSelect(withCart);
+                    int stale = 0, bad = 0, frames = 0;
+                    Texture now = before;
+                    for (; frames < 240; frames++)
+                    {
+                        yield return null;
+                        now = MountsPanel.TestPicture;
+                        if (now == before) { stale++; continue; }
+                        if (now != null && !PreviewStage.ShowsLookNow(now, paperNow)) bad++;
+                        break;
+                    }
+                    Check(before != null && now != null && now != before && bad == 0,
+                        $"from {noCart} to {withCart}: the last photo held {stale} frame(s), then {withCart} whole in its own view{(bad > 0 ? " (NOT: the new view not yet the new look)" : "")}");
+                    yield return Frames(2);
+                    Check(MountsPanel.TestDriveShown && MountsPanel.TestColourGroup("Cart colours"), $"{withCart}, which pulls the cart: Drive the cart and the Cart colours are back");
+                    MountsPanel.TestSelect(was);
+                    yield return Frames(2);
+                }
                 MountsPanel.TestOpenColours();
                 yield return Frames(2);
                 Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");

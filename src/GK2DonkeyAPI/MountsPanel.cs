@@ -28,14 +28,23 @@ namespace GK2DonkeyAPI
     {
         private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
         private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
-        private const float StageW = 440f, StageH = 236f, PictureScale = 3f; // the stage is one size on every mount: nothing moves
+        // the stage fills the right side's height under the header (the user, 2026-10-25: "there's empty space"); one size
+        // on every mount: nothing moves
+        private const float StageW = 440f, StageH = H - (Pad + TitleH + Gap) - HeaderH - Gap - (Gap + ButtonsH + Pad), PictureScale = 3f;
         private const int StatCount = 3; private const float StatLineH = 30f, StatsCardH = 44f + StatCount * StatLineH + 8f; // the card is as tall as its lines, not as the stage
         private const float IconPx = 36f, HeaderIconPx = 64f;
         private const float SearchH = 26f;
         private const int SearchFrom = 8; // a search box above the list once it has more mounts than this
-        private const float SwatchPx = 14f, SwatchGap = 2f, SwatchRowH = 2f * SwatchPx + SwatchGap + 6f, SwatchLabelW = 160f; // a custom colour's row: the 24 named colours as squares, two rows of twelve
+        // a custom colour's row: the 24 named colours as squares, two rows of twelve, laid on the game row's own lines
+        // (MeasureRow: its label ends at rowLabelRight, its "< value >" spans rowCtrlLeft to rowCtrlRight; the user,
+        // 2026-10-25: "the alignment of everything in here is also weird": the labels ended 10 px short, the squares
+        // ran past the switch)
+        private const float SwatchGap = 2f;
+        private static float rowLabelRight = 160f, rowCtrlLeft = 168f, rowCtrlRight = 168f + 12f * 16f; // from the row's drawn left
+        private static float SwatchPx => Mathf.Max(8f, Mathf.Floor((rowCtrlRight - rowCtrlLeft - 11f * SwatchGap) / 12f));
+        private static float SwatchRowH => 2f * SwatchPx + SwatchGap + 6f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
-        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = StageH, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
+        private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 236f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
         private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
         private static readonly Color BoxColor = new Color(0f, 0f, 0f, 0.35f), EdgeColor = new Color(1f, 1f, 1f, 0.12f);
 
@@ -277,8 +286,11 @@ namespace GK2DonkeyAPI
                 v.color = buttonTextColor;
                 statLines.Add((l, v));
             }
-            y += StageH + Gap;
-            contentScroll = ScrollView(rightArea, "content", 0f, y, rw, Mathf.Max(60f, rightArea.rect.height - y), out contentRoot, 2f, manual: true);
+            // the look rows (the Skin): under the stats card, in its column (the user, 2026-10-25: centred under the stage,
+            // under a "Skin" heading, they sat off to the right with empty space round them)
+            float rowsTop = y + StatsCardH + Gap;
+            journalW = statsW;
+            contentScroll = ScrollView(rightArea, "content", statsX, rowsTop, statsW, Mathf.Max(40f, y + StageH - rowsTop), out contentRoot, 2f, manual: true);
             AddScrollbar(contentScroll);
 
             // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
@@ -289,7 +301,7 @@ namespace GK2DonkeyAPI
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
             GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
             Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject drive = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
+            GameObject drive = driveButton = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
             foreach (GameObject bgo in new[] { done, customise, ride, drive }) NavGroup(bgo, 2);
             var jnav = panel.GetComponent<GamepadNavigationController>();
             Hand(jnav, 0, GUIDirection.Right, 1); Hand(jnav, 0, GUIDirection.Down, 2);  // the list -> the rows, the buttons
@@ -424,6 +436,7 @@ namespace GK2DonkeyAPI
             using (Perf.Measure(Perf.S.Pick))
             {
                 page.SelectMount(id);
+                nextPicture = 0f; // the picture follows the pick at once (its view may change: cart or alone)
                 using (Perf.Measure(Perf.S.PickRows))
                 {
                     BuildRight();
@@ -441,6 +454,9 @@ namespace GK2DonkeyAPI
             Entry e = entries.Find(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
             Catalog.Entry k = Catalog.Find(chosen);
             MountIcons.Icon icon = MountIcons.Of(k);
+            // a mount that can't pull the cart has no Drive the cart (the user, 2026-10-25); one not installed: the donkey comes, it can
+            bool drives = MountSettingsPage.MountPullsCart(chosen) || e == null;
+            if (driveButton != null && driveButton.activeSelf != drives) { driveButton.SetActive(drives); navDirty = true; }
             headerIcon.gameObject.SetActive(icon.Any);
             if (icon.Any) Show(headerIcon, icon, HeaderIconPx);
             float textX = icon.Any ? HeaderIconPx + 12f : 0f;
@@ -487,10 +503,10 @@ namespace GK2DonkeyAPI
                 if (page.IsMountRow(r)) continue; // the list is the picker
                 bool mountSection = string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase);
                 string group = heading != null && r.ShownSection == headingSection ? heading : (mountSection ? "Skin" : r.ShownSection);
-                if (mountSection) AddTo(journalGroups, group, r); // the journal: the Skin
+                if (mountSection) AddTo(journalGroups, null, r);  // the journal: the Skin, no heading (the user, 2026-10-25)
                 else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
-            journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, rightArea.rect.width - ScrollbarW, rows, out _);
+            journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _);
             if (colours != null)
             {
                 coloursTitle.text = "Colours: " + headerName.text;
@@ -527,7 +543,9 @@ namespace GK2DonkeyAPI
             {
                 int cols = Math.Min(perRow, groups.Count - g0);
                 float totalW = cols * colW + (cols - 1) * colGap;
-                float x0 = Math.Max(0f, (areaW - totalW) / 2f);
+                // centred; wider than the area (the journal's Skin row in the stats column): its value's end on the area's right
+                // edge, only the label cell's empty left reaching out of it
+                float x0 = totalW <= areaW ? (areaW - totalW) / 2f : areaW - totalW;
                 float rowTop = y, tallest = 0f;
                 for (int ci = 0; ci < cols; ci++)
                 {
@@ -537,9 +555,14 @@ namespace GK2DonkeyAPI
                     foreach (MountSettingsPage.Row r in group.Rows) if (r.Visible == null || r.Visible()) { any = true; break; }
                     if (group.Group != null && any) // a heading only over rows that show (a row hidden by its own condition)
                     {
-                        GameObject h = SettingsRows.MakeHeading(templateRow, root, page, group.Group);
-                        Place(h, cx - rowVisual.x, cy - rowVisual.y);
-                        cy += step;
+                        // left on the column's start (a game heading row right-aligns on the labels' edge and floated mid-column)
+                        TextMeshProUGUI h = Text(root, "heading " + group.Group, group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
+                        h.fontStyle = FontStyles.Bold;
+                        GameObject line = Node("heading line", root, typeof(Image));
+                        Rect(line, cx, cy + step - 4f, colW, 1f);
+                        line.GetComponent<Image>().color = EdgeColor;
+                        line.GetComponent<Image>().raycastTarget = false;
+                        cy += step + 2f;
                     }
                     foreach (MountSettingsPage.Row r in group.Rows)
                     {
@@ -586,7 +609,7 @@ namespace GK2DonkeyAPI
             var entry = (BepInEx.Configuration.ConfigEntry<PaletteColor>)r.Entry;
             GameObject go = Node("swatches " + r.Entry.Definition.Key, parent);
             Rect(go, 0f, 0f, rowVisual.width, SwatchRowH);
-            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Right, false, 0f, 0f, SwatchLabelW, SwatchRowH);
+            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Right, false, 0f, 0f, rowLabelRight, SwatchRowH);
             label.overflowMode = TextOverflowModes.Ellipsis;
             var frames = new List<(PaletteColor Colour, GameObject Frame)>();
             Array values = Enum.GetValues(typeof(PaletteColor));
@@ -594,7 +617,7 @@ namespace GK2DonkeyAPI
             for (int i = 0; i < values.Length; i++)
             {
                 var colour = (PaletteColor)values.GetValue(i);
-                float sx = SwatchLabelW + 8f + (i % perRow) * (SwatchPx + SwatchGap);
+                float sx = rowCtrlLeft + (i % perRow) * (SwatchPx + SwatchGap);
                 float sy = 3f + (i / perRow) * (SwatchPx + SwatchGap);
                 GameObject frame = Node("frame " + colour, go.transform, typeof(Image));
                 Rect(frame, sx - 2f, sy - 2f, SwatchPx + 4f, SwatchPx + 4f);
@@ -737,6 +760,8 @@ namespace GK2DonkeyAPI
 
         // The panel closed (what was chosen kept) and the companion's mount called in the style, as the ride and cart keys do.
         private static bool committing; // Close from Ride / Drive the cart: the mount picked becomes his
+        private static GameObject driveButton; // hidden for a mount that can't pull the cart
+        private static float journalW = 280f;  // the journal's rows' column (the stats card's)
 
         private static void Call(MountStyle style)
         {
@@ -887,6 +912,29 @@ namespace GK2DonkeyAPI
                 root.GetWorldCorners(corners);
                 Vector3 topLeft = root.InverseTransformPoint(corners[1]);
                 rowVisual = new Rect(minX - topLeft.x, topLeft.y - maxY, maxX - minX, maxY - minY); // y down: a drawn part above the rectangle gives a negative y
+                // where its label ends and its "< value >" spans, from the drawn left (the swatch rows and headings line up on them)
+                UISwitchButton sw = templateRow.GetComponentInChildren<UISwitchButton>(true);
+                TextMeshProUGUI lab = null;
+                foreach (TextMeshProUGUI t in templateRow.GetComponentsInChildren<TextMeshProUGUI>(true))
+                {
+                    if (t.name.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0) { lab = t; break; }
+                    if (lab == null && sw != null && !t.transform.IsChildOf(sw.transform)) lab = t;
+                }
+                float XRange(RectTransform rt, bool right)
+                {
+                    rt.GetWorldCorners(corners);
+                    float a = root.InverseTransformPoint(corners[0]).x, b = root.InverseTransformPoint(corners[2]).x;
+                    return (right ? Math.Max(a, b) : Math.Min(a, b)) - minX;
+                }
+                if (sw != null && lab != null)
+                {
+                    var swRt = (RectTransform)sw.transform;
+                    rowLabelRight = XRange((RectTransform)lab.transform, true);
+                    rowCtrlLeft = XRange(swRt, false);
+                    rowCtrlRight = XRange(swRt, true);
+                    if (rowLabelRight > rowCtrlLeft) rowLabelRight = rowCtrlLeft - 8f;
+                }
+                Plugin.Log.LogInfo($"Settings: its label ends at {rowLabelRight:0}, its value spans {rowCtrlLeft:0} to {rowCtrlRight:0} (from its drawn left).");
                 Plugin.Log.LogInfo($"Settings: a game row draws {rowVisual.width:0}x{rowVisual.height:0} at {rowVisual.x:0},{rowVisual.y:0} from its rectangle's top left ({root.rect.width:0}x{root.rect.height:0}).");
             }
             catch (Exception e)
@@ -1237,6 +1285,9 @@ namespace GK2DonkeyAPI
         internal static int TestEntries => entries.Count;
         internal static string TestBuiltFor => builtFor;
         internal static void TestSelect(string id) => Select(id);
+        internal static bool TestDriveShown => driveButton != null && driveButton.activeSelf;
+        internal static Texture TestPicture => picture != null && picture.gameObject.activeSelf ? picture.texture : null;
+        internal static bool TestColourGroup(string heading) => colourGroups.Exists(g => g.Group == heading);
         internal static void TestClose(bool keep, bool commit = false)
         {
             committing = commit; // commit: as Ride and Drive the cart close it
@@ -1268,7 +1319,7 @@ namespace GK2DonkeyAPI
             }
             if (Signature(journalGroups) != journalSignature)
             {
-                journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, rightArea.rect.width - ScrollbarW, rows, out _); // a preset chosen or left: its rows come or go
+                journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _); // a preset chosen or left: its rows come or go
             }
             if (colours != null && Signature(colourGroups) != coloursSignature)
             {
@@ -1360,6 +1411,15 @@ namespace GK2DonkeyAPI
                 {
                     pictureTex = paper != null ? Colors.BuildPreview(paper, pictureTex) : null;
                     pic = pictureTex;
+                }
+                // switching between the two views (a mount that can't pull the cart and one that can): the photo shown stays
+                // until the other view has the new look whole (its stale photo is an older mount's), asked again each frame
+                // meanwhile (the user, 2026-10-25: the new mount "large and without a cart" for a few frames)
+                else if (!PreviewStage.Failed && picture != null && picture.texture != null && picture.texture != pic && picture.gameObject.activeSelf
+                    && !PreviewStage.ShowsLookNow(pic, paper))
+                {
+                    pic = picture.texture;
+                    nextPicture = 0f;
                 }
                 // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
                 if (panel.activeSelf) Fit(picture, stage, pic, PictureScale);

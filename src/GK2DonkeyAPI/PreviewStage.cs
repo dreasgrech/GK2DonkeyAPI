@@ -55,6 +55,8 @@ namespace GK2DonkeyAPI
             internal int EdgeStamp = -1;
             internal int LastRenderFrame = -1;
             internal bool Drawn;               // a finished photo is in Rt (what a look still settling holds on to)
+            internal string DrawnLook = "";    // the look that photo is of (LooksRig.Wearing when it was taken)
+            internal bool StandIn;             // the alone view last asked for in the cart view's place (a mount that can't pull the cart)
             // The framing measured over the walk a step a frame (Tighten): the camera renders into Scratch meanwhile and Rt
             // keeps the last photo. All twenty steps in one frame held the game 40 to 60 ms on every mount picked in the
             // Mounts panel (the user, 2026-10-24: "the game freezes for some frames" on the dragon; the log's slow frames).
@@ -215,10 +217,16 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
+            bool pulls = Looks.MountWanted(shownPaper).Cart;
             foreach (View v in views)
             {
                 if (Time.unscaledTime - v.LastAsked < 0.5f)
                 {
+                    // never a view the mount now wouldn't be shown in (the user, 2026-10-25: from the dragon to another
+                    // mount, "for a few frames, that mount appears large and without a cart"): the alone view, asked in
+                    // the cart view's place for the dragon, went on being drawn with the new mount until the panel's next
+                    // fetch; the cart view would draw a cartless mount with a cart. Its last photo stays as it was.
+                    if (v.WithCart ? !pulls : v.StandIn && pulls) continue;
                     Picture(shownPaper, v.WithCart, ask: false);
                 }
             }
@@ -232,12 +240,14 @@ namespace GK2DonkeyAPI
             {
                 return null;
             }
-            if (withCart && !Looks.MountWanted(paper).Cart) withCart = false; // a mount that can't pull the cart: the picture without it
+            bool standIn = withCart && !Looks.MountWanted(paper).Cart;
+            if (standIn) withCart = false; // a mount that can't pull the cart: the picture without it
             View v = withCart ? cartView : donkeyView;
             if (ask)
             {
                 v.LastAsked = Time.unscaledTime;
                 shownPaper = paper;
+                if (!withCart) v.StandIn = standIn;
             }
             try
             {
@@ -336,7 +346,7 @@ namespace GK2DonkeyAPI
                 {
                     v.LastRenderFrame = Time.frameCount;
                     Render(v);
-                    if (v.TightenStep < 0) v.Drawn = true;
+                    if (v.TightenStep < 0) { v.Drawn = true; v.DrawnLook = paper.LooksRig.Wearing ?? ""; }
                 }
                 // measuring the new framing (a step a frame): the last finished photo stays meanwhile, as for a look settling
                 if (v.TightenStep >= 0) return v.Drawn ? v.Rt : null;
@@ -347,6 +357,16 @@ namespace GK2DonkeyAPI
                 Fail(e.Message);
                 return null;
             }
+        }
+
+        // Whether this picture is a finished photo of the paper's look as it is now (not the last photo held while a new
+        // look settles or is framed): the Mounts panel keeps the photo it shows until the one it switches to is (a mount
+        // that can't pull the cart and one that can are shown in two views).
+        internal static bool ShowsLookNow(Texture pic, Mount.Instance paper)
+        {
+            if (pic == null || paper == null) return false;
+            View v = pic == cartView.Rt ? cartView : pic == donkeyView.Rt ? donkeyView : null;
+            return v != null && v.Drawn && v.TightenStep < 0 && !paper.LooksRig.Settling && v.DrawnLook == (paper.LooksRig.Wearing ?? "");
         }
 
         // One photo: for the donkey alone, everything but the donkey's sprites is off just for it (and on again after,

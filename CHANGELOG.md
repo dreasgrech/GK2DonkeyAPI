@@ -12,6 +12,16 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The Mounts panel lines up** (the user, 2026-10-25): no "Skin" heading over the Skin row, which sits under the
+  stats card now; the mount's picture uses the whole height; in the colours window the custom colour squares and
+  their labels line up with the other rows, and the headings sit on the left with a line under them.
+- **No flash of the new mount when leaving the dragon in the Mounts panel** (the user: "that mount appears large and
+  without a cart and then the cart appears"): the dragon's picture stays until the new mount's is ready, then it
+  shows whole with its cart.
+- **No cart options for a mount that can't pull one** (the user, 2026-10-25: "for mounts that cant pull the cart, the
+  drive the cart button still appears in teh journal and there's still cart customization"): with the dragon picked,
+  the Mounts panel has no Drive the cart button and its colours window no Cart colours. Your cart colours for it are
+  kept; every mount that pulls the cart shows both as before.
 - **The dragon jumps like a dragon** (the user, 2026-10-25: "the dragon feels like a plompling rock with the jump
   ... maybe it can have something akin to takeoff and landing kinda thing so it doesnt look like a super mario
   thing"): it gathers itself, pushes off on its wings, holds them open at the top and sinks onto the ground braking,
@@ -310,6 +320,9 @@ For players:
 
 For mod authors:
 
+- **Cart rows follow the mount (API 0.39.0)**: `MountSettingsPage.CartRow(section, key)` marks a row as the cart's: it
+  shows only while its mount pulls the cart (`MountSettingsPage.MountPullsCart`). Saddle Up's eight cart colour rows
+  use it. The Mounts panel hides Drive the cart for a mount that can't pull one.
 - **Each mount its own jump (API 0.39.0)** (the user, 2026-10-25: "the arc the donkey makes while jumping looks silly
   for a dragon ... first lets make sure that we have the ability to specify per mount"): `mount.cfg` `[Jump]`
   (`height`, `tap_height`, `hold_min`, `time`, `rise_share`, `hang`, `crouch`, `crouch_time`, `squash`) and

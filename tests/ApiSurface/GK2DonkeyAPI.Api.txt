@@ -423,6 +423,7 @@ static class GK2DonkeyAPI.Api.Mounts
   method static GK2DonkeyAPI.Api.MountHandle UnhitchRidden()
 class GK2DonkeyAPI.Api.MountSettingsPage
   method void Button(string section, string label, string description, System.Action onClick, string buttonText = Go, System.Func<bool> enabled = null)
+  method void CartRow(string section, string key)
   method BepInEx.Configuration.ConfigEntry<T> Choice(string section, string key, T value, string label, string description, System.Action<T> apply = null, System.String[] labels = null, bool look = False, System.Func<bool> visible = null)
   method void Color(string section, string key, string label, string description, GK2DonkeyAPI.Api.PaletteColor value, System.Action<string> apply, System.Func<bool> visible = null)
   method void EnableWhen(string section, string key, System.Func<bool> enabled)
@@ -433,6 +434,7 @@ class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<string> List(string section, string key, string value, System.Func<System.Collections.Generic.IReadOnlyList<System.ValueTuple<string, string>>> choices, string label, string description, System.Action<string> apply = null, bool look = False, System.Func<bool> visible = null)
   method void LookButton(string section, string label, string description)
   method static bool MountHasRegion(string mountId, string region)
+  method static bool MountPullsCart(string mountId)
   method void MountRows(string section, GK2DonkeyAPI.Api.MountCompanion companion)
   method void MovedKey(string section, string key, string oldSection, string oldKey = null)
   method void OpenPanel()

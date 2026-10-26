@@ -20,6 +20,37 @@ The second cut (tabs under a tall stage) squashed the rows into a slit and left 
 2026-10-21: "a lot of empty space ... the customisation squashed"). Decided the same day, direction D: **the journal
 and a colours window**. A window of 1060x600, centred, scaled down only on a smaller canvas; laid out by hand.
 
+**2026-10-25 evening, the alignment** (the user's screenshots: "remove that SKIN header above the skin dropdown ... it's
+aligned to the right and all over the place"; the colours window: "the alignment of everything in here is also
+weird"). The copied game row (354x25 drawn) right-aligns its label on its "< value >" and has a wide empty label cell:
+centred across the area it sat off to the right. Now:
+
+- The journal's rows have no heading, and stand in the stats card's column under the card (`journalW`, the card's
+  width). A row wider than its area is put with its value's end on the area's right edge (only the label cell's
+  empty left reaches out, clipped). The stage fills the height down to the buttons (`StageH` 392, was 236): no empty
+  band under it; the colours window keeps its own (`CStageH` 236).
+- `MeasureRow` also measures where the game row's label ends and where its value spans (`rowLabelRight`,
+  `rowCtrlLeft`, `rowCtrlRight`, logged). A custom colour's swatch row lays its label on that same end and its 24
+  squares across exactly the value's span (the square's size follows from it); they ended 10 px short and ran past
+  the switch.
+- Headings (Mount colours, Cart colours) are the panel's own text, bold, left on the column's start, with a faint line
+  under: a game heading row right-aligned on the labels' edge and floated mid-column.
+
+**2026-10-25 evening, the picture between the two views.** From the dragon to a mount that pulls the cart, the new
+mount showed large and cartless for a few frames, then the cart came (the user). The panel fetches its picture every
+0.2 s and shows the texture between; the stage re-renders every view asked within 0.5 s. The dragon is shown in the
+alone view, so that view went on being drawn with the new mount until the next fetch. Now the stage never re-renders a
+view the mount wouldn't be shown in (the cart view for a cartless mount, the alone view asked in the cart view's place
+for one that pulls a cart), a pick fetches at once, and while the view it switches to has no finished photo of the new
+look (`PreviewStage.ShowsLookNow`) the panel keeps the last photo, asking again each frame: the new mount comes whole,
+with its cart, in one frame. Self-test (the panel): every frame after the pick is the last photo or the new look whole.
+
+**2026-10-25 (API 0.39.0):** a mount that can't pull the cart (the dragon) has no **Drive the cart** button and no
+**Cart colours** in the colours window (the user: "for mounts that cant pull the cart, the drive the cart button
+still appears in teh journal and there's still cart customization"): `BuildRight` hides the button for the chosen
+mount (`MountSettingsPage.MountPullsCart`; a mount not installed keeps it, the donkey comes), and the page's cart
+rows are `CartRow`s, left out with their heading.
+
 **2026-10-25 (API 0.37.0):** the effect rows are gone. The journal has no Effect group and no "Comes with: ..." line,
 the colours window has no Effect toggles, and its button and title are "Colours..." / "Colours: <mount>". The
 drawing below keeps the effect parts as built on 2026-10-21; nothing picks an effect until the skins' use of one is

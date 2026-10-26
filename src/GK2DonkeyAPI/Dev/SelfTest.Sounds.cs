@@ -212,7 +212,8 @@ namespace GK2DonkeyAPI
                 }
                 else Info("no foal could be spawned here: the foal's scaling not seen");
 
-                // 5. the snail on a standing wearer: silent by its [Mount.Sounds] and by the rule (the donkey's own sounds are not another mount's), through the bind in the rig
+                // 5. the snail on a standing wearer: no voice and no lips by its [Sounds] and by the rule (the donkey's own sounds
+                // are not another mount's), its steps its own squelch since 2026-10-25 (not the donkey's hoof), through the bind in the rig
                 if (Mounts.Looks.Find(Sk("snail")) != null)
                 {
                     standing.Tuning.Set(Owner, "Skin", Sk("snail"));
@@ -221,8 +222,9 @@ namespace GK2DonkeyAPI
                     sr.Invalidate();
                     SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
                     bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f);
-                    Check(waited && Off(sv) && Off(sl) && Off(ss),
-                        $"a standing snail: silent by its [Mount.Sounds] and the rule (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
+                    bool ownStep = ss != null && !Off(ss) && (ss.Describe() ?? "").Contains("saddleup.snail");
+                    Check(waited && Off(sv) && Off(sl) && ownStep,
+                        $"a standing snail: no voice and no lips by its [Sounds] and the rule, its step its own squelch (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
                     Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
                     standing.Tuning.Set(Owner, "Skin", "");
                     yield return Until(() => standing.Mount == MountCatalog.DonkeyId, 8f);

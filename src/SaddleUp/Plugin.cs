@@ -194,6 +194,8 @@ namespace SaddleUp
                 p.Color("Colours", "CustomHubs" + sfx, "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => look.CustomHubs = v, () => hubs.Value == HubColor.Custom);
                 ConfigEntry<LanternColor> light = p.Choice("Colours", "LanternColor" + sfx, look.LanternLight, "Lantern light", "", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
                 p.Color("Colours", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
+                // a mount that can't pull the cart (the dragon) has no cart colours (the user, 2026-10-25); the values are kept
+                foreach (string key in new[] { "Paint", "CustomPaint", "Wheels", "CustomWheels", "Hubs", "CustomHubs", "LanternColor", "CustomLantern" }) p.CartRow("Colours", key + sfx);
             });
 
             // The Effect section (0.10.0 to 0.12: the effect, when it shows, and four toggles) went on 2026-10-25 (the user:
