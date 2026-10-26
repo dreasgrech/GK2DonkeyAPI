@@ -10,7 +10,7 @@ using Mono.Cecil.Cil;
 // Usage: dotnet run -c Release      (build the mods first; a project not built is said, not failed)
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
 int fails = 0, scanned = 0;
-foreach (string dir in new[] { "src", "tools" })
+foreach (string dir in new[] { "src", "tools", "packs" })
 {
     string root = Path.Combine(repo, dir);
     if (!Directory.Exists(root)) continue;

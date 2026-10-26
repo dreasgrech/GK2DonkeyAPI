@@ -2,11 +2,12 @@
 
     python tools/make-release-zip.py
 
-Besides Saddle Up's zip: one per external mount pack, release/GK2-Saddle-Up-<Pack without SaddleUp>-<version>.zip (GK2-Saddle-Up-Dragon-1.0.0.zip) holding
-BepInEx/plugins/<Pack>/... as packs/<Pack>/ has it (its version from its CHANGELOG.md's first heading), and
-release/GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip holding every pack, each in its own folder (a mount lives in
-exactly one pack: the bundle is the packs side by side). Stray files (Thumbs.db, editor backups) are left out; every
-zip is read back and each file compared with its source byte for byte.
+Besides Saddle Up's zip: one per external mount pack, release/GK2-Saddle-Up-<Pack without SaddleUp>-<version>.zip
+(GK2-Saddle-Up-Dragon-1.0.0.zip) holding BepInEx/plugins/<Pack>/<Pack>.dll (from dist/: its gk2mounts/ folder
+embedded, so an update replaces everything) with the pack's README.md and CHANGELOG.md beside it (the version is its
+Plugin.cs Version), and release/GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip holding every pack, each in its own
+folder (a mount lives in exactly one pack: the bundle is the packs side by side). Every zip is read back and each file
+compared with its source byte for byte.
 
 Runs tools/check-dist.py first and stops if it fails. Then writes release/GK2-Saddle-Up-<version>.zip holding
 BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll and BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll from dist/ (a folder per
@@ -79,25 +80,16 @@ def stray(name):
 
 
 def pack_version(pack):
-    text = open(os.path.join(PACKS, pack, "CHANGELOG.md"), encoding="utf-8").read()
-    m = re.search(r"(?m)^## (?:Unreleased \()?([0-9]+\.[0-9]+(?:\.[0-9]+)?)", text)
-    if not m:
-        sys.exit(f"packs/{pack}/CHANGELOG.md: no version heading (## 1.0.0, or ## Unreleased (1.0.0))")
-    return m.group(1)
+    return version(f"packs/{pack}/Plugin.cs")  # check-dist.py: the same as its CHANGELOG.md's first heading
 
 
 def pack_files(pack):
-    """(source path, zip name) of every file of a pack, in a stable order; folders as their own entries."""
-    root = os.path.join(PACKS, pack)
-    out = []
-    for dirpath, dirs, names in os.walk(root):
-        dirs.sort()
-        rel = os.path.relpath(dirpath, root).replace(os.sep, "/")
-        prefix = INNER + pack + "/" + ("" if rel == "." else rel + "/")
-        out.append((None, prefix))
-        for n in sorted(names):
-            if not stray(n):
-                out.append((os.path.join(dirpath, n), prefix + n))
+    """(source path, zip name) of a pack's files: its DLL from dist/ (the mounts embedded) and its README.md and
+    CHANGELOG.md; its folder as an entry of its own."""
+    prefix = INNER + pack + "/"
+    out = [(None, prefix), (os.path.join(DIST, pack + ".dll"), prefix + pack + ".dll")]
+    for doc in ("README.md", "CHANGELOG.md"):
+        out.append((os.path.join(PACKS, pack, doc), prefix + doc))
     return out
 
 
@@ -129,7 +121,7 @@ def main():
     saddle, api = version("src/SaddleUp/Plugin.cs"), version("src/GK2DonkeyAPI/Plugin.cs")
     os.makedirs(OUT, exist_ok=True)
     write_zip(os.path.join(OUT, f"GK2-Saddle-Up-{saddle}.zip"), FILES, f"GK2 Saddle Up {saddle} + GK2 Donkey API {api}")
-    packs = sorted(d for d in os.listdir(PACKS) if os.path.isdir(os.path.join(PACKS, d))) if os.path.isdir(PACKS) else []
+    packs = sorted(d for d in os.listdir(PACKS) if os.path.isfile(os.path.join(PACKS, d, d + ".csproj"))) if os.path.isdir(PACKS) else []
     for p in packs:
         v = pack_version(p)
         short = p[len("SaddleUp"):] if p.startswith("SaddleUp") and len(p) > len("SaddleUp") else p  # SaddleUpDragon: GK2-Saddle-Up-Dragon-1.0.0.zip

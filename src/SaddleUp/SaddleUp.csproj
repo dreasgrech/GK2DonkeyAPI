@@ -4,9 +4,8 @@
        with GK2DonkeyAPI.dll, which it needs (hard dependency). Its built-in content (Gerry, the donkey's Hellfire and
        Royal Parade) is mount packs in assets\mounts\ (mount.cfg, sounds\, skins\<skin>\ with skin.cfg and its
        pictures), embedded here and registered with the API at start (Plugin.cs). The other mounts are external packs
-       of their own in the repo's packs\<Pack>\ (the dragon; the rat, snail and worm), each its own download, found by
-       the API like any mod's pack (docs/making-a-mount.md "Built in or external"); a dev build links them into the
-       game (LinkPacks below). -->
+       of their own in the repo's packs\<Pack>\ (the dragon; the rat, snail and worm), each a small plugin of its own
+       with its folder embedded, its own download (docs/making-a-mount.md "Built in or external"). -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
     <AssemblyName>GK2SaddleUp</AssemblyName>
@@ -43,18 +42,5 @@
 
   <!-- Deploys into the game after every build, only while it is closed (-p:Deploy=false skips it). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
-
-  <!-- The external packs (the repo's packs\<Pack>\) linked into the game with the DLL, so the two never part: an old
-       DLL still holding a mount beside its pack would show it twice. A directory junction (no admin needed), made only
-       where there is nothing of that name: a real folder there (an unzipped copy) is left alone and said. The F11
-       Mounts tab then saves into the repo. tools/packs.py status | link | unlink does the same by hand; unlink removes
-       the links only (docs/release-checklist.md: before the zip rehearsal). -->
-  <Target Name="LinkPacks" AfterTargets="DeployToGame" Condition="'$(Deploy)' != 'false' And '$(GameRunning)' != 'true' And Exists('$(MSBuildThisFileDirectory)..\..\packs')">
-    <ItemGroup>
-      <PackDir Include="$([System.IO.Directory]::GetDirectories('$(MSBuildThisFileDirectory)..\..\packs'))" />
-    </ItemGroup>
-    <Exec Condition="!Exists('$(GameDir)\BepInEx\plugins\%(PackDir.Filename)%(PackDir.Extension)')" Command="mklink /J &quot;$(GameDir)\BepInEx\plugins\%(PackDir.Filename)%(PackDir.Extension)&quot; &quot;%(PackDir.FullPath)&quot;" StandardOutputImportance="low" />
-    <Message Importance="high" Text="Packs linked into $(GameDir)\BepInEx\plugins: @(PackDir->'%(Filename)%(Extension)', ', ') (tools/packs.py status)" />
-  </Target>
 
 </Project>

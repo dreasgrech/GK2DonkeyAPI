@@ -1,5 +1,6 @@
 #!/bin/bash
-# The release build (docs/release-checklist.md, section 3): GK2DonkeyAPI.dll and GK2SaddleUp.dll built with
+# The release build (docs/release-checklist.md, section 3): GK2DonkeyAPI.dll, GK2SaddleUp.dll and every external pack's
+# DLL (packs/<Pack>/<Pack>.csproj: SaddleUpDragon.dll, SaddleUpCritters.dll) built with
 # -p:ForDist=true (no debug directory, no source-folder marker) and -p:Deploy=false (the game may be running), copied
 # into dist/, then tools/check-dist.py. Stops at the first failure. Build output: release/logs/build-dist.log.
 #
@@ -13,12 +14,12 @@ LOG="$REPO/release/logs/build-dist.log"
 mkdir -p "$REPO/release/logs"
 : > "$LOG"
 
-build() { # project folder under src/, assembly name
+build() { # project folder under the repo (src/<project>, packs/<Pack>), assembly name
   local proj="$1" asm="$2"
   echo "== $asm"
   echo "===== $proj ($asm)" >> "$LOG"
   # --no-incremental: after a dev build, a ForDist build of unchanged sources would reuse the dev output (seen 2026-10-13)
-  if ! (cd "$REPO/src/$proj" && dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false >> "$LOG" 2>&1); then
+  if ! (cd "$REPO/$proj" && dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false >> "$LOG" 2>&1); then
     echo "BUILD FAILED: $asm (see $LOG)"
     exit 1
   fi
@@ -28,12 +29,16 @@ build() { # project folder under src/, assembly name
     echo "WARNINGS in $asm: $warn (see $LOG); no warning ships"
     exit 1
   fi
-  cp "$REPO/src/$proj/bin/Release/netstandard2.1/$asm.dll" "$REPO/dist/$asm.dll" || exit 1
+  cp "$REPO/$proj/bin/Release/netstandard2.1/$asm.dll" "$REPO/dist/$asm.dll" || exit 1
   echo "   built, 0 warnings, copied to dist/"
 }
 
-build GK2DonkeyAPI GK2DonkeyAPI
-build SaddleUp GK2SaddleUp
+build src/GK2DonkeyAPI GK2DonkeyAPI
+build src/SaddleUp GK2SaddleUp
+for pack in "$REPO"/packs/*/; do
+  name="$(basename "$pack")"
+  [ -f "$pack/$name.csproj" ] && build "packs/$name" "$name"
+done
 echo "== check-dist"
 python "$REPO/tools/check-dist.py" || { echo "check-dist FAILED"; exit 1; }
 echo "DIST BUILT"

@@ -7,9 +7,9 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 - **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the
   dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` and a save
-  writes the new ids; an F11 Mounts tab edit lands in `packs/` through the link; `tools/packs.py unlink` -> the four
-  "(not installed)", the choice kept, no warning; `link` -> back; a pack folder renamed to sort before `GK2SaddleUp`
-  (and after) loads the same; the release rehearsal with the packs unlinked and a pack zip extracted.
+  writes the new ids; an F11 Mounts tab edit lands in the repo's `packs/` (GK2MountsSourceDir); a pack's DLL moved out of
+  `plugins\` -> its mounts "(not installed)", the choice kept, no warning; back -> back; a pack's plugin folder renamed
+  to sort before `GK2SaddleUp` (and after) loads the same; the release rehearsal with the All Mounts zip.
 
 - **Content from many mods** (API 0.40.0, 2026-10-26): F11's new scenarios (Never lost: the held side file, records
   carried forward, handle ownership; Skins and effects: hostile files, no throw, order and identity, versions and ids)

@@ -53,6 +53,71 @@ def arg(name, default=None):
     return default
 
 
+PACK_CSPROJ = """<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- {pack}, an external mount pack (docs/making-a-mount.md "Built in or external"): gk2mounts\\ embedded in one DLL
+       and handed to the API in Awake (Plugin.cs). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <AssemblyName>{pack}</AssemblyName>
+    <RootNamespace>{pack}</RootNamespace>
+    <Version>1.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <DebugType Condition="'$(ForDist)' == 'true'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="gk2mounts\\**\\*" LogicalName="{pack}.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(ForDist)' != 'true'">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GK2MountsSourceDir</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)\\gk2mounts</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\\..\\src\\GK2DonkeyAPI\\GK2DonkeyAPI.csproj" Private="false" />
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\\BepInEx.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Import Project="$(MSBuildThisFileDirectory)..\\..\\DeployToGame.targets" />
+
+</Project>
+"""
+
+PACK_PLUGIN = """using System.Reflection;
+using System.Runtime.CompilerServices;
+using BepInEx;
+using GK2DonkeyAPI.Api;
+
+namespace {pack}
+{
+    // {pack}, an external mount pack (docs/making-a-mount.md "Built in or external"): its gk2mounts\\ folder embedded in
+    // this DLL and handed to the API in Awake.
+    [BepInPlugin(Guid, "{pack}", Version)]
+    [BepInDependency("dreas.gk2.donkeyapi", "0.40.0")]
+    [BepInDependency("dreas.gk2.saddleup", BepInDependency.DependencyFlags.SoftDependency)]
+    public sealed class Plugin : BaseUnityPlugin
+    {
+        public const string Guid = "{guid}";
+        public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading
+        private const string Prefix = "{pack}.mounts.";
+
+        private void Awake() => Logger.LogInfo($"{pack} {Version}: {Register()} skin(s) registered.");
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private int Register() => Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), Prefix);
+    }
+}
+"""
+
+
 VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod", "--prefix", "--pack"}  # the flags that take a value; --over stands alone
 
 
@@ -95,7 +160,16 @@ def main():
                               ("CHANGELOG.md", f"# {pack}, changes\n\n## Unreleased (1.0.0)\n\n- The pack.\n")):
                 with open(os.path.join(pack_dir, doc), "w", encoding="utf-8", newline="\r\n") as f:
                     f.write(text)
-            print("made the pack", pack_dir)
+            # its plugin: one DLL with the folder embedded, so an update replaces everything (docs/making-a-mount.md
+            # "Built in or external"); the same shape as packs/SaddleUpDragon
+            guid = "dreas.gk2." + pack.lower()
+            csproj = PACK_CSPROJ.replace("{pack}", pack)
+            plugin = PACK_PLUGIN.replace("{pack}", pack).replace("{guid}", guid)
+            with open(os.path.join(pack_dir, pack + ".csproj"), "w", encoding="utf-8", newline="\r\n") as f:
+                f.write(csproj)
+            with open(os.path.join(pack_dir, "Plugin.cs"), "w", encoding="utf-8", newline="\r\n") as f:
+                f.write(plugin)
+            print("made the pack", pack_dir, "(its plugin", guid + "; build it with dotnet build packs/" + pack + "/" + pack + ".csproj)")
     else:
         if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
             print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/mounts/** and registers them as src/SaddleUp does)"); return 2

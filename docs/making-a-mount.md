@@ -283,28 +283,32 @@ between inbuilt mounts/skins in saddle up vs ones which are 'external'"):
 ```
 src/SaddleUp/assets/mounts/            built in: embedded in GK2SaddleUp.dll, ships with Saddle Up
   saddleup.gerry/   donkey/skins/saddleup.hellfire/   donkey/skins/saddleup.royal-parade/
-packs/                                 external: each folder is one download, laid out as BepInEx\plugins\<Pack>\
-  SaddleUpDragon/      gk2mounts/saddleup-dragon.dragon/                 README.md, CHANGELOG.md
-  SaddleUpCritters/    gk2mounts/saddleup-critters.rat/ .snail/ .worm/   README.md, CHANGELOG.md
+packs/                                 external: each folder is one download, a small plugin with its mounts embedded
+  SaddleUpDragon/      gk2mounts/saddleup-dragon.dragon/                 SaddleUpDragon.csproj, Plugin.cs, README.md, CHANGELOG.md
+  SaddleUpCritters/    gk2mounts/saddleup-critters.rat/ .snail/ .worm/   SaddleUpCritters.csproj, Plugin.cs, README.md, CHANGELOG.md
 ```
 
 - **A pack's ids carry the pack's prefix:** its name in lower case, dashes where wanted (`SaddleUpDragon`:
   `saddleup-dragon.dragon`; `SaddleUpCritters`: `saddleup-critters.rat`). A mount lives in exactly one pack for good:
   saves keep the full id. Built-in ones keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
   `needs =` and `version =`.
-- **A pack is files only:** no DLL. The API finds it in `BepInEx\plugins\<Pack>\gk2mounts\` at its start, owner
-  `dreas.gk2.donkeyapi.packs.<Pack>`. Its version is its CHANGELOG.md's first heading.
-- **The dev build links the packs into the game** (SaddleUp.csproj `LinkPacks`: a directory junction
-  `plugins\<Pack>` -> `packs\<Pack>`, made where there is none). The game reads the repo's files, so the F11 Mounts
-  tab saves into `packs/` and the auto-reload works on them. `python -I tools/packs.py status | link | unlink` does
-  it by hand. `unlink` removes the links only; do it before unzipping a release zip into the game (the zip would
-  write into the repo through the link).
-- **A release** (`tools/make-release-zip.py`): Saddle Up's zip (the two DLLs), one zip per pack
-  (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\SaddleUpDragon\...`) and `GK2-Saddle-Up-All-Mounts-<v>.zip`
-  (every pack, each in its own folder). `check-dist.py` checks each pack: its docs, `needs`, `version`, its
-  `skins\default\`, no path of this machine, nothing stray.
-- **A new one:** `new_skin.py --mount <name> --pack <Pack> [--prefix <pack-prefix>.]` makes `packs/<Pack>/` (README,
-  CHANGELOG) and the mount in it; `--mod <project>` (or nothing) makes a built-in one.
+- **A pack is one DLL** (the user, 2026-10-26: a folder unzipped over an older one keeps the files the new version
+  dropped, and the loader would use them; one file is replaced whole). `packs/<Pack>/<Pack>.csproj` embeds
+  `gk2mounts\**` as `<Pack>.mounts.<mount>\...` and `Plugin.cs` hands it to `Mounts.Looks.RegisterEmbedded` in Awake:
+  a BepInEx plugin of its own (`dreas.gk2.saddleup.dragon`, `dreas.gk2.saddleup.critters`; its version in the log
+  and in mod managers), `[BepInDependency]` on the API 0.40.0 (an older one is refused by BepInEx) and a soft one on
+  Saddle Up (after it, which offers the mounts). Its version is `Plugin.Version`, the same as its CHANGELOG.md's first
+  heading (SkinsScan and check-dist check it).
+- **The dev build deploys it like any plugin** (`DeployToGame.targets`: `plugins\<Pack>\<Pack>.dll`, game closed),
+  and a dev build records `GK2MountsSourceDir` (the pack's `gk2mounts\`), so the F11 Mounts tab saves into the repo's
+  `packs/`. Not watched on disk while the game runs (embedded packs never are): after editing a file, build again.
+- **A release** (`tools/build-dist.sh` builds every pack's DLL into `dist/`; `tools/make-release-zip.py`): Saddle Up's
+  zip (the two DLLs), one zip per pack (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\SaddleUpDragon\` with
+  `SaddleUpDragon.dll`, `README.md`, `CHANGELOG.md`) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its
+  own folder). `check-dist.py` checks each pack's DLL (no manifest, no game assembly, no path) and its folder (its
+  docs, the version, `needs`, `version`, its `skins\default\`, nothing stray in `gk2mounts\`).
+- **A new one:** `new_skin.py --mount <name> --pack <Pack> [--prefix <pack-prefix>.]` makes `packs/<Pack>/` (its
+  csproj and Plugin.cs, README, CHANGELOG) and the mount in it; `--mod <project>` (or nothing) makes a built-in one.
 - **The old ids** (`saddleup.dragon`, `saddleup.rat`, `.snail`, `.worm`, never released) still find the packs' mounts
   in a dev's own world and cfg (`Catalog.renamedMounts`): the Mount row writes the new id back and per-mount keys
   (`Coat_saddleup.dragon`) carry over.

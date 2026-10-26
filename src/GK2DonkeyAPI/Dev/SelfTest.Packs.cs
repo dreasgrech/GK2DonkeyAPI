@@ -6,8 +6,8 @@ using GK2DonkeyAPI.Api;
 namespace GK2DonkeyAPI
 {
     // Built in or external (the user, 2026-10-26; docs/making-a-mount.md "Built in or external"): Saddle Up's Gerry and
-    // its donkey skins come from its DLL; the dragon, rat, snail and worm from their packs in the game's plugins folder
-    // (packs/SaddleUpDragon, packs/SaddleUpCritters, linked by the dev build), each under the pack's own owner and with
+    // its donkey skins come from its DLL; the dragon, rat, snail and worm from their packs' own DLLs (packs/SaddleUpDragon,
+    // packs/SaddleUpCritters: a small plugin each, its folder embedded), each under the pack's own plugin GUID and with
     // its ids by the pack; the old ids of a dev's own world find the new mounts (Catalog.renamedMounts).
     internal static partial class SelfTest
     {
@@ -18,21 +18,23 @@ namespace GK2DonkeyAPI
                 Skip("the mounts are off (Debug.MountsPreview)");
                 yield break;
             }
-            var packOf = new[] { ("dragon", "SaddleUpDragon"), ("rat", "SaddleUpCritters"), ("snail", "SaddleUpCritters"), ("worm", "SaddleUpCritters") };
-            foreach ((string name, string pack) in packOf)
+            var packOf = new[] { ("dragon", "SaddleUpDragon", "dreas.gk2.saddleup.dragon"), ("rat", "SaddleUpCritters", "dreas.gk2.saddleup.critters"),
+                ("snail", "SaddleUpCritters", "dreas.gk2.saddleup.critters"), ("worm", "SaddleUpCritters", "dreas.gk2.saddleup.critters") };
+            foreach ((string name, string pack, string guid) in packOf)
             {
                 Catalog.Entry k = Catalog.Find(M(name));
                 if (k == null)
                 {
-                    Skip($"the pack {pack} is not in the game ({M(name)} isn't registered): tools/packs.py link, or build Saddle Up with the game closed");
+                    Skip($"the pack {pack} is not installed ({M(name)} isn't registered): build packs/{pack}/{pack}.csproj with the game closed");
                     yield break;
                 }
-                string source = k.Pack?.Source ?? "";
-                Check(k.Owner == Plugin.Guid + ".packs." + pack && source.IndexOf(Path.Combine("plugins", pack, Looks.PackDirName), StringComparison.OrdinalIgnoreCase) >= 0 && k.Pack?.SourceAssembly == null,
-                    $"{M(name)}: from the pack {pack} in the game's plugins folder (owner {k.Owner}; {source})");
+                string asm = k.Pack?.SourceAssembly?.GetName().Name;
+                Check(k.Owner == guid && asm == pack && k.Pack?.Source == null,
+                    $"{M(name)}: from the pack's own DLL {pack}.dll (owner {k.Owner}; {asm ?? "no DLL"})");
                 Check(!string.IsNullOrEmpty(k.Needs), $"{M(name)}: its mount.cfg says the API it needs (needs = {k.Needs})");
                 Looks.SkinDef own = Looks.Find(Sk(name));
-                Check(own != null && own.Owner == k.Owner && own.Source != null, $"{Sk(name)}: its own look from the same pack ({own?.Owner})");
+                Check(own != null && own.Owner == k.Owner && own.SourceAssembly?.GetName().Name == pack, $"{Sk(name)}: its own look from the same DLL ({own?.Owner})");
+                Check(BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(guid), $"{pack} is a BepInEx plugin of its own ({guid})");
             }
             Catalog.Entry gerry = Catalog.Find(M("gerry"));
             Check(gerry != null && gerry.Pack?.Source == null && gerry.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUp",

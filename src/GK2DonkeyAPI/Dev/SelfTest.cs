@@ -177,7 +177,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "between mods: no throw (an effect and a code skin meet the version rule, a lost mount's own look left out, an effect id needs its prefix, a row's throwing function)", Body = NoThrowBetweenMods },
             new Scenario { Group = GroupLooks, Name = "between mods: order and identity (v2 beside v1 whole, an id not its folder's refused, a skin before its mount, a skin of a mount not installed, handles, one change per folder)", Body = OrderAndIdentity },
             new Scenario { Group = GroupLooks, Name = "between mods: versions and ids (needs in mount.cfg, ASCII ids, versions that aren't numbers, sound ids, one mod's sound for an event)", Body = VersionsAndIds },
-            new Scenario { Group = GroupLooks, Name = "built in or external: our mounts from their packs in the game (owner, folder, needs), Gerry and the donkey skins from Saddle Up's DLL, the old ids healed", Body = ExternalPacks },
+            new Scenario { Group = GroupLooks, Name = "built in or external: our mounts from their packs' own DLLs (owner, plugin, needs), Gerry and the donkey skins from Saddle Up's DLL, the old ids healed", Body = ExternalPacks },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
@@ -219,7 +219,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "a pack's own sounds: [Sounds] lines and the sounds folder loaded as game sounds, the convention name, the layers (skin over mount over the keys, a style block), the player's switch on top, a second skin of the mount, the save round trip, the clean-up", Body = SoundsPack },
             new Scenario { Group = GroupSounds, Name = "the API: Mounts.Sounds (the catalogue, Resolved with its layer, a mod's Set over everything and back, its own clips kept, Play and Stop, the Played event), a code mount's MountSound shared by a pack skin of it", Body = SoundsApi },
             new Scenario { Group = GroupSounds, Name = "an embedded pack's sounds (the built-in skins' route): the API's own test pack, its .ogg decoded through the cache file, its .wav parsed in place, a looping event stopped", Body = SoundsEmbedded },
-            new Scenario { Group = GroupSounds, Name = "the dragon's sound files: the flight's in its pack's mount folder (the mount's, for every dragon skin), none the red dragon's own, read from the pack in the game", Body = SoundsDragonFiles },
+            new Scenario { Group = GroupSounds, Name = "the dragon's sound files: the flight's in its pack's mount folder (the mount's, for every dragon skin), none the red dragon's own, decoded once through the cache from the pack's DLL", Body = SoundsDragonFiles },
             new Scenario { Group = GroupSounds, Name = "the flying events: takeoff, the launch's flaps and the beats airborne, the fly loop, land, touchdown, landed, a jump's jump and jumpland; nothing of the flight on a jump", Body = SoundsFlying },
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off; Saddle Up's row drives the switch", Body = SoundsHerd },
             new Scenario { Group = GroupGarbage, Name = "the garbage survey (measures only): on foot standing and walking, riding walking and still, the Mounts panel picking, the dev stride probe; the garbage by part in each", Body = GarbageSurvey, HidesPanel = true },
@@ -2529,6 +2529,9 @@ namespace GK2DonkeyAPI
             Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the over pack is found");
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
+            // its own colours only (Instance.OwnLook, as the companion's): the player's chosen mount's colours reached it
+            // too (a Red harness and a Black coat under the test's blue, 2026-10-26: the readbacks failed)
+            if (a != null) a.I.OwnLook = true;
             a?.Tuning.Set(Owner, "Skin", "donkey/selftest.over-test");
             yield return Until(() => a != null && a.IsReady && a.I.LooksRig.Wearing == "donkey/selftest.over-test" && !a.I.LooksRig.Building, 10f);
             if (!waited)
@@ -2695,6 +2698,7 @@ namespace GK2DonkeyAPI
             Check(Looks.RegisterFolder(tempRoot, owner) == 1, "the erase pack is found");
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
+            if (a != null) a.I.OwnLook = true; // its own colours only: never the player's chosen mount's (as above)
             a?.Tuning.Set(Owner, "Skin", "donkey/selftest.erase-test");
             yield return Until(() => a != null && a.IsReady && a.I.LooksRig.Wearing == "donkey/selftest.erase-test" && !a.I.LooksRig.Building, 10f);
             if (!waited)
@@ -4270,6 +4274,7 @@ namespace GK2DonkeyAPI
                 {
                     MountsPanel.TestSelect(noCart);
                     yield return Frames(2);
+                    Info($"{noCart} picked: Drive the cart shown {MountsPanel.TestDriveShown}; the colour groups: {MountsPanel.TestColourGroups()}");
                     Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart colours") && MountsPanel.TestColourGroup("Mount colours"),
                         $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
                     // its picture finished (the alone view): waited for, not a fixed count (the dragon, a pack read from disk

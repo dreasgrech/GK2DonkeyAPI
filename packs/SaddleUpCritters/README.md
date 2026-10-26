@@ -8,9 +8,8 @@ A mount pack for GK2 Saddle Up: three giant creatures to ride, each pulling the 
 
 - **Needs:** GK2 Donkey API 0.40.0 or newer and GK2 Saddle Up (it offers the mounts to ride).
 - **Install:** put the folder `SaddleUpCritters` into `BepInEx\plugins\` (the zip has it so):
-  `BepInEx\plugins\SaddleUpCritters\gk2mounts\saddleup-critters.rat\` and the others. No DLL: the API finds the pack
-  at start.
+  `BepInEx\plugins\SaddleUpCritters\SaddleUpCritters.dll`, a plugin with the pack's files inside. To update, replace it.
 - **In the game:** the Mounts panel (Saddle Up's settings) lists them; pick one and ride.
-- **Remove:** delete the folder. Saved ones wait as "not installed" and come back when the pack does.
+- **Remove:** delete the folder `SaddleUpCritters`. Saved ones wait as "not installed" and come back when the pack does.
 
-The pack format: docs/skins.md and docs/making-a-mount.md in the repo.
+Its files in the repo: `packs/SaddleUpCritters/gk2mounts/`; the pack format: docs/skins.md and docs/making-a-mount.md.

@@ -383,7 +383,7 @@ def main(argv):
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
         add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, source, p, skinroots.mount_of(p), mount_cfg_of(p))
     # 3. the packs in the game (plugins\gk2mounts\<mount>\ and plugins\<Pack>\gk2mounts\<mount>\), not the repo's own
-    #    packs linked there (a junction to packs/<Pack>: already shown above)
+    #    packs, already shown above (a copy linked or unzipped from packs/<Pack>)
     plugins = os.path.normpath(os.path.join(probe, "..", "plugins"))
     roots = [os.path.join(plugins, "gk2mounts")] + ([os.path.join(plugins, d, "gk2mounts") for d in sorted(os.listdir(plugins))] if os.path.isdir(plugins) else [])
     repo_packs = os.path.normcase(os.path.realpath(skinroots.PACKS))

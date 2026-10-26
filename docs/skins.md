@@ -463,5 +463,5 @@ Zip the `gk2mounts\<mount>\` folder (with `BepInEx\plugins\` above it, so it ext
 `gk2mounts\<mount>\skins\<mod>.<your skin>\` (no `mount.cfg`, no `default`, your prefix on the name;
 `gk2mounts\donkey\skins\<mod>.<skin>\` for the donkey). Only your
 own art, or art you may redistribute, goes in. A pack can also travel inside a mod's DLL with a version and a declared
-dependency on the API: Saddle Up's built-in Gerry and donkey skins travel that way; its dragon, rat, snail and worm are
-plain folders, its external packs (docs/making-a-mount.md "Built in or external").
+dependency on the API: Saddle Up's built-in Gerry and donkey skins travel that way; so do its dragon, rat, snail and worm,
+in small DLLs of their own: its external packs (docs/making-a-mount.md "Built in or external").

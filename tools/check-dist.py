@@ -5,17 +5,25 @@ no path into this machine and no source-folder marker, and the API's dependency 
 docs/dependency-check.md) must find every game member it names in the installed game, unchanged: a dist whose members
 changed or vanished needs a re-audit and a rebuild before it ships. GK2SaddleUp carries no manifest: it uses no game
 member of its own (only the API), which this checks too.
-The external mount packs (packs/<Pack>/, their own downloads, docs/making-a-mount.md "Built in or external") ship as
-files: each needs its README.md and CHANGELOG.md, a gk2mounts/ folder, and in every mount its mount.cfg with needs = and
-version = and its skins/default/skin.cfg; no file may name a path on this machine; nothing stray (Thumbs.db, editor
-backups) may be in it.
+The external mount packs (packs/<Pack>/, their own downloads, docs/making-a-mount.md "Built in or external") ship as a
+small DLL each with their gk2mounts/ folder embedded (dist/<Pack>.dll, checked as the others: no manifest, no game
+assembly) and their README.md and CHANGELOG.md beside it: each needs both, its Plugin.cs Version the CHANGELOG's first
+heading, and in every mount its mount.cfg with needs = and version = and its skins/default/skin.cfg; no file may name a
+path on this machine; nothing stray (Thumbs.db, editor backups) may be in gk2mounts/ (it would be embedded).
 Exit code 1 on any finding."""
 import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
 NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its built-in content (Gerry, two donkey skins) is embedded packs"}
-STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped (make-release-zip.py leaves them out too)
+STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped
+PACKS_DIR = os.path.join(REPO, "packs")
+for _p in (sorted(os.listdir(PACKS_DIR)) if os.path.isdir(PACKS_DIR) else []):
+    if os.path.isfile(os.path.join(PACKS_DIR, _p, _p + ".csproj")):
+        NO_MANIFEST[_p + ".dll"] = "no manifest: a mount pack's plugin, it uses the API only; its gk2mounts\\ folder is embedded"
+    if os.path.isfile(os.path.join(PACKS_DIR, _p, _p + ".csproj")) and not os.path.isfile(os.path.join(REPO, "dist", _p + ".dll")):
+        print(f"FAIL  {_p}.dll  not in dist/ (bash tools/build-dist.sh)")
+        NO_MANIFEST["__missing__" + _p] = ""  # counted below
 
 
 def stray(name):
@@ -82,11 +90,12 @@ for pack in sorted(os.listdir(PACKS)) if os.path.isdir(PACKS) else []:
     if not mounts:
         findings.append("no gk2mounts/<mount>/")
     files = 0
-    for dirpath, _, names in os.walk(root):
+    for dirpath, dirs, names in os.walk(root):
+        dirs[:] = [d for d in dirs if d not in ("bin", "obj")] if dirpath == root else dirs
         for n in names:
             files += 1
-            if stray(n):
-                findings.append("stray file (left out of the zip, delete it): " + os.path.relpath(os.path.join(dirpath, n), root))
+            if stray(n) and os.path.relpath(dirpath, root).startswith("gk2mounts"):
+                findings.append("stray file (it would be embedded, delete it): " + os.path.relpath(os.path.join(dirpath, n), root))
             elif n.lower().endswith((".cfg", ".md", ".txt")):
                 t = open(os.path.join(dirpath, n), encoding="utf-8", errors="replace").read()
                 if re.search(r"[A-Za-z]:\\(Users|Program Files)", t):
@@ -101,8 +110,15 @@ for pack in sorted(os.listdir(PACKS)) if os.path.isdir(PACKS) else []:
                 findings.append(f"{m}/mount.cfg: no {key} =")
         if not os.path.isfile(os.path.join(mounts_dir, m, "skins", "default", "skin.cfg")):
             findings.append(f"{m}: no skins/default/skin.cfg")
+    pc, cl = os.path.join(root, "Plugin.cs"), os.path.join(root, "CHANGELOG.md")
+    if os.path.isfile(pc) and os.path.isfile(cl):
+        pv = re.search(r'public const string Version = "([0-9.]+)"', open(pc, encoding="utf-8").read())
+        cv = re.search(r"(?m)^## (?:Unreleased \()?([0-9]+\.[0-9]+(?:\.[0-9]+)?)", open(cl, encoding="utf-8").read())
+        if not pv or not cv or pv.group(1) != cv.group(1):
+            findings.append(f"Plugin.cs Version {pv.group(1) if pv else '?'} and CHANGELOG.md's first heading {cv.group(1) if cv else '?'} differ")
     print(f"{'ok' if not findings else 'FAIL'}  pack {pack}  {len(mounts)} mount folder(s), {files} file(s)")
     for f in findings:
         print("      " + f)
     bad += len(findings)
+bad += sum(1 for k in NO_MANIFEST if k.startswith("__missing__"))
 sys.exit(1 if bad else 0)

@@ -1093,12 +1093,18 @@ namespace GK2DonkeyAPI.Api
             foreach (MountInfo k in Mounts.Catalog.All) RunPerMount(rows, k.Id);
         }
 
+        // Where each builder's rows end (its last row so far): a mount caught up later gets its rows put right after them,
+        // under the same heading. Appended at the end, a late mount's colour rows sat under the page's last heading (the
+        // dragon from its own pack, registered after Saddle Up: its Coat and Harness under "Cart colours", 2026-10-26).
+        private readonly Dictionary<Action<string, string, Func<bool>>, Row> lastRowOf = new Dictionary<Action<string, string, Func<bool>>, Row>();
+
         private void RunPerMount(Action<string, string, Func<bool>> rows, string id)
         {
             bool donkey = id.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, id, StringComparison.OrdinalIgnoreCase);
             pendingShown = isShown;
             pendingMountId = id;
+            int before = Rows.Count;
             try
             {
                 rows(id, donkey ? "" : "_" + id, isShown);
@@ -1108,6 +1114,19 @@ namespace GK2DonkeyAPI.Api
                 pendingShown = null;
                 pendingMountId = null;
             }
+            int made = Rows.Count - before;
+            if (made <= 0) return;
+            List<Row> mine = Rows.GetRange(before, made);
+            if (catchingUp && lastRowOf.TryGetValue(rows, out Row last))
+            {
+                int at = Rows.IndexOf(last);
+                if (at >= 0 && at < before - 1)
+                {
+                    Rows.RemoveRange(before, made);
+                    Rows.InsertRange(at + 1, mine);
+                }
+            }
+            lastRowOf[rows] = mine[mine.Count - 1];
         }
 
         internal const string KeyHelp = "While setting a key, Backspace clears it and Esc cancels.";

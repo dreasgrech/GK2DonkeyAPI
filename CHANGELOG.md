@@ -837,10 +837,12 @@ Development:
 
 - **Built in or external** (docs/making-a-mount.md): the repo's `packs/<Pack>/` laid out as `BepInEx\plugins\<Pack>\`
   (the dragon in `SaddleUpDragon`, the rat, snail and worm in `SaddleUpCritters`, ids by the pack:
-  `saddleup-dragon.dragon`, `saddleup-critters.rat`; moved out of `src/SaddleUp/assets/mounts/`); the dev build links
-  them into the game as junctions (`LinkPacks`; `tools/packs.py status | link | unlink`), so the Mounts tab saves into
-  the repo; `skinroots.py` and every tool and scan walk both kinds (`kind()`, `pack_of()`), SkinsScan checks a pack's
-  prefix, its `needs` and docs; `new_skin.py --pack`; `make-release-zip.py` writes a zip per pack and an All Mounts
+  `saddleup-dragon.dragon`, `saddleup-critters.rat`; moved out of `src/SaddleUp/assets/mounts/`), each a small plugin
+  of its own with its `gk2mounts\` embedded (`<Pack>.csproj`, `Plugin.cs`: `dreas.gk2.saddleup.dragon`,
+  `dreas.gk2.saddleup.critters`, needing the API 0.40.0; one file, so an update leaves no file of an older version
+  behind; first tried as plain folders linked into the game as junctions, the same day), deployed by its build,
+  built into `dist/` by `build-dist.sh` (the Mounts tab saves into the repo through `GK2MountsSourceDir`); `skinroots.py` and every tool and scan walk both kinds (`kind()`, `pack_of()`), SkinsScan checks a pack's
+  prefix, its `needs`, docs, project and version; `new_skin.py --pack` (with the plugin); NoLinqScan scans `packs/`; `make-release-zip.py` writes a zip per pack and an All Mounts
   bundle, `check-dist.py` checks the packs; a dev-only rename table (`Catalog.renamedMounts`) heals the old ids in a dev
   world and cfg; the self-tests' `M()`/`Sk()` map the new ids, the dragon's sound test reads its pack, and a new
   scenario "built in or external"; `.gitattributes` marks the art and sounds binary.
@@ -849,6 +851,9 @@ Development:
   its rooted path at run time (a `C:\...` literal sat in the DLL and check-dist refused it). dist/ rebuilt (the API
   0.40.0, Saddle Up 100 KB without the four mounts), the pack zips built and read back; the docs that still placed
   the four inside Saddle Up's DLL brought to the packs, dated notes on the design docs.
+  The over-skin colour tests (an over skin keeps the donkey's regions, the erase colour) take their own colours only
+  (`OwnLook`): the player's chosen mount's colours reached their test donkeys (a Red harness and a Black coat under the
+  test's blue, with the dragon chosen); the Mounts panel test says which of its cart checks failed.
 - **Content from many mods** (docs/multi-mod-loading.md, investigated and built 2026-10-26): five new self-tests
   (Never lost: the held and set-aside side file, records carried forward, handle ownership; Skins and effects: hostile
   files, no throw between mods, order and identity, versions and ids); the "ids" scenario follows the new replace

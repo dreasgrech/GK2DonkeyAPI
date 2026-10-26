@@ -1302,6 +1302,12 @@ namespace GK2DonkeyAPI
         internal static bool TestDriveShown => driveButton != null && driveButton.activeSelf;
         internal static Texture TestPicture => picture != null && picture.gameObject.activeSelf ? picture.texture : null;
         internal static bool TestColourGroup(string heading) => colourGroups.Exists(g => g.Group == heading);
+        internal static string TestColourGroups()
+        {
+            var names = new List<string>();
+            foreach (var g in colourGroups) names.Add((g.Group ?? "(none)") + " " + g.Rows.Count);
+            return names.Count == 0 ? "none" : string.Join(", ", names);
+        }
         internal static void TestClose(bool keep, bool commit = false)
         {
             committing = commit; // commit: as Ride and Drive the cart close it

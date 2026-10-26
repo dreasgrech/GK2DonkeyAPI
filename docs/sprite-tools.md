@@ -176,8 +176,9 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    has its `mount.cfg` with id, name, author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our
    pixels, nothing of the game's art. A built-in one: the DLL build embeds the folder (the project's csproj,
-   `assets\mounts\**`: `SaddleUp.csproj` for Gerry and the donkey's two skins). An external one: the dev build links
-   `plugins\<Pack>` to the repo's folder (`tools/packs.py`); nothing is copied into the game either way.
+   `assets\mounts\**`: `SaddleUp.csproj` for Gerry and the donkey's two skins). An external one: its own small DLL embeds
+   it (`packs/<Pack>/<Pack>.csproj`, `gk2mounts\**`); no file of the pack is copied into the game either way, the DLL
+   carries them.
 4. **Check before the game**: `python -I tools/skins/check_skin.py <the skin's folder>` (frames and
    the front layer present and the canvas size, every colour with its region, the erase marks, lone pixels judged
    over what the game draws under them, half-transparent pixels; an exit code for the scans, the warnings for the

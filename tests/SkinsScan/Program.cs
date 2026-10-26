@@ -37,8 +37,18 @@ if (Directory.Exists(packsDir))
     {
         string pn = Path.GetFileName(pack);
         if (!Directory.Exists(Path.Combine(pack, "gk2mounts"))) Console.WriteLine($"FAIL pack {pn}: no gk2mounts\\ folder (a pack is laid out as BepInEx\\plugins\\{pn}\\gk2mounts\\<mount>\\)");
-        foreach (var doc in new[] { "README.md", "CHANGELOG.md" }) if (!File.Exists(Path.Combine(pack, doc))) Console.WriteLine($"FAIL pack {pn}: no {doc} (each pack is its own download)");
-        foreach (var stray in Directory.GetDirectories(pack).Select(Path.GetFileName).Where(d => d != "gk2mounts")) Console.WriteLine($"FAIL pack {pn}: {stray}\\ (a pack holds gk2mounts\\, its README.md and CHANGELOG.md)");
+        foreach (var doc in new[] { "README.md", "CHANGELOG.md", pn + ".csproj", "Plugin.cs" }) if (!File.Exists(Path.Combine(pack, doc))) Console.WriteLine($"FAIL pack {pn}: no {doc} (each pack is its own download: a small plugin with its folder embedded)");
+        foreach (var stray in Directory.GetDirectories(pack).Select(Path.GetFileName).Where(d => d != "gk2mounts" && d != "bin" && d != "obj")) Console.WriteLine($"FAIL pack {pn}: {stray}\\ (a pack holds gk2mounts\\, its project, README.md and CHANGELOG.md)");
+        // the plugin's version is the CHANGELOG's first heading (the zip's name and the log carry it)
+        string pc = Path.Combine(pack, "Plugin.cs"), cl = Path.Combine(pack, "CHANGELOG.md");
+        if (File.Exists(pc) && File.Exists(cl))
+        {
+            var pv = Regex.Match(File.ReadAllText(pc), "public const string Version = \"([0-9.]+)\"");
+            var cv = Regex.Match(File.ReadAllText(cl), @"(?m)^## (?:Unreleased \()?([0-9]+\.[0-9]+(?:\.[0-9]+)?)");
+            if (!pv.Success || !cv.Success || pv.Groups[1].Value != cv.Groups[1].Value) Console.WriteLine($"FAIL pack {pn}: Plugin.cs Version {(pv.Success ? pv.Groups[1].Value : "?")} and CHANGELOG.md's first heading {(cv.Success ? cv.Groups[1].Value : "?")} differ");
+            var csproj = Path.Combine(pack, pn + ".csproj");
+            if (File.Exists(csproj) && !File.ReadAllText(csproj).Contains("LogicalName=\"" + pn + ".mounts.%(RecursiveDir)")) Console.WriteLine($"FAIL pack {pn}: its csproj embeds gk2mounts\\** as {pn}.mounts.%(RecursiveDir)... (the prefix Plugin.cs hands to RegisterEmbedded)");
+        }
     }
 }
 var skinDirs = mountDirs.Select(m => Path.Combine(m, "skins")).Where(Directory.Exists).SelectMany(Directory.GetDirectories)
