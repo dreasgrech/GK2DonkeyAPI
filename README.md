@@ -9,8 +9,8 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
 
-What you ride and how it is drawn (the donkey and its two skins in the API, the five mounts as Saddle Up's own
-packs; the mounts other than the donkey, the skins and the effects are switched off for players until the next
+What you ride and how it is drawn (the donkey in the API; Gerry and the donkey's two skins built into Saddle Up; the
+dragon, rat, snail and worm as Saddle Up's external packs, each its own download, in `packs/`; the mounts other than the donkey, the skins and the effects are switched off for players until the next
 update, [`docs/skins.md`](docs/skins.md); a mod shipping a mount of its own: [`docs/making-a-mount.md`](docs/making-a-mount.md)):
 
 | Mount | Skins | Notes |
@@ -54,7 +54,8 @@ a second mod keeping its own donkeys with the save.
 | Where | What |
 |---|---|
 | `src/GK2DonkeyAPI` | The API mod. Its README lists every feature; the settings and internals are in [`docs/reference.md`](docs/reference.md). |
-| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its five mounts and the donkey's two skins are packs in `assets/mounts/<mount>/` (`saddleup-dragon.dragon` and so on: `mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
+| `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its built-in Gerry and the donkey's two skins are packs in `assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
+| `packs` | Saddle Up's external mount packs, each its own download laid out as `BepInEx\plugins\<Pack>\`: `SaddleUpDragon` (`saddleup-dragon.dragon`), `SaddleUpCritters` (`saddleup-critters.rat`, `.snail`, `.worm`); files only, no DLL; the dev build links them into the game (`tools/packs.py`). [`docs/making-a-mount.md`](docs/making-a-mount.md) "Built in or external". |
 | `examples/` | `GK2DonkeyTechGate` (the cart and the lamp's light need techs) and `GK2DonkeyHerd` (a second mod with its own kept donkeys). Not shipped. |
 | `tools/` | `GK2DonkeyProbe` (the investigation plugin and its archived reports), `GK2DonkeyAPIProbe` (every API call on F-keys), `colors` (the shader and texture tools behind the colours), `GK2PerfRunner` (scripted profiling, [`docs/performance-hog.md`](docs/performance-hog.md)), `GK2AssetProbe` (art from outside the game, [`docs/external-assets.md`](docs/external-assets.md)). Not shipped. |
 | `tests/` | Checks run without the game: the public API snapshot, the game members the API uses, the optional framework link, and the game-update diff ([`tests/README.md`](tests/README.md)). |

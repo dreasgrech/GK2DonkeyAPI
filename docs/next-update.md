@@ -210,7 +210,7 @@ levelled with the bray (2.25).
 - Its skin's `[Tuning.Cart] HitchGapPx = 24` is gone (dead on a mount with no cart), and the generator
   (`make_creatures.py`) writes the dragon's `mount.cfg` with `cart = false` and no gap, so a `--cfg` rerun keeps it so.
 - Five self-tests hitched the dragon; they use the rat (its `HitchGapPx` 9) or check the refusal: the side-file
-  round trip, the Mounts panel's card ("Can't pull the cart"), the cart readout (five mounts read out; the dragon's
+  round trip, the Mounts panel's card ("Can't pull the cart"), the cart readout (the five mounts read out: four from their packs since 2026-10-26; the dragon's
   spawn with a cart must be refused), the preview gap (the rat to the worm and back; its gap 0.18 world units, the
   threshold 0.1), the walk survey (the cart pass skipped on a mount that pulls none).
 - `canonical_cfg.py --check` and `tests/SkinsScan` green (29); the dev build deployed with the game closed. To see:

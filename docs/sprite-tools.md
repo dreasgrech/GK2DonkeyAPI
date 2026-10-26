@@ -140,7 +140,8 @@ other mounts too"). Hellfire and Royal Parade (over the donkey), the four creatu
 are the worked examples; the next skin or mount is **scaffold, generate or draw, check, look, build, export**:
 
 1. **Scaffold**: `python -I tools/skins/new_skin.py <skin> [--mount <mount id> --name "..."] [--canvas 128] [--seat 62]
-   [--over] [--mod <project>]` makes `src/<project>/assets/mounts/<mount>/skins/<skin>/skin.cfg` in the canonical
+   [--over] [--mod <project> | --pack <Pack>]` makes `src/<project>/assets/mounts/<mount>/skins/<skin>/skin.cfg` (an
+   external pack: `packs/<Pack>/gk2mounts/<mount>/skins/<skin>/`, docs/making-a-mount.md "Built in or external") in the canonical
    layout (the mount is `donkey` without `--mount`; the project is `SaddleUp` by default, which ships every mount and
    skin, or a mount mod of its own that embeds and registers its packs as Saddle Up does; docs/mounts-as-mods.md)
    (`seat = <row>`, a `[Colors]` stub), and for a mount with no folder yet the mount folder and its `mount.cfg`
@@ -161,8 +162,9 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    into `front\`), runs the checker and writes previews with the front layer and the rider (the round below). A
    hand-drawn skin's sidecar names the built-in's folder; a generated skin's (Royal Parade) names its `out\pack`, so
    the generator stays the source and carries the fix (its next run would overwrite the folder anyway).
-3. **The pack** is `src/<project>/assets/mounts/<mount>/skins/<skin>/`, with the mount's `mount.cfg` and `sounds\` in
-   `assets/mounts/<mount>/` (`tools/skins/skinroots.py` knows every such root, mount and skin): `skin.cfg` (by
+3. **The pack** is `src/<project>/assets/mounts/<mount>/skins/<skin>/` (built in) or
+   `packs/<Pack>/gk2mounts/<mount>/skins/<skin>/` (external), with the mount's `mount.cfg` and `sounds\` in the mount's
+   folder (`tools/skins/skinroots.py` knows every such root, mount and skin): `skin.cfg` (by
    hand, commented, kept by the generator, in
    the layout `tools/skins/canonical_cfg.py` writes: `layer = over` for a skin drawn over the base, `erase` when it
    takes parts off, `[Base.<Region>]` to recolour the base under it, `[Colors]` for the regions the player's colours
@@ -173,9 +175,10 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    `RiderOffsetPx`); no `id =` line (the folder's name is the skin's) and no `[Mount]` section: a creature of its own
    has its `mount.cfg` with id, name, author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our
-   pixels, nothing of the game's art. The DLL build embeds the folder (the project's csproj, `assets\mounts\**`:
-   `SaddleUp.csproj` for the five mounts and the donkey's two skins); no file is copied into the game.
-4. **Check before the game**: `python -I tools/skins/check_skin.py src/<project>/assets/mounts/<mount>/skins/<skin>` (frames and
+   pixels, nothing of the game's art. A built-in one: the DLL build embeds the folder (the project's csproj,
+   `assets\mounts\**`: `SaddleUp.csproj` for Gerry and the donkey's two skins). An external one: the dev build links
+   `plugins\<Pack>` to the repo's folder (`tools/packs.py`); nothing is copied into the game either way.
+4. **Check before the game**: `python -I tools/skins/check_skin.py <the skin's folder>` (frames and
    the front layer present and the canvas size, every colour with its region, the erase marks, lone pixels judged
    over what the game draws under them, half-transparent pixels; an exit code for the scans, the warnings for the
    eye), `python -I tools/skins/canonical_cfg.py --check` (the layout) and the headless scan `dotnet run --project

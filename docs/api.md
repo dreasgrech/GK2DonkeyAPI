@@ -738,8 +738,9 @@ the higher `[Mount] version` wins and replaces the facts in place (the other's s
 the DLL over a loose folder, otherwise the first stays and the later one is refused with a warning; a mount
 registered in code meets the same rule (0.36.0: a newer `mount.cfg` replaces it, an older one is refused with its
 skins; before, a pack never replaced a code mount). A pack's mount is withdrawn with the last of its skins from the same
-owner, and a mount pack whose `default` doesn't register is withdrawn at once with its skins. Saddle Up's five mounts
-(`saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`, `saddleup-dragon.dragon`, `saddleup.gerry`) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
+owner, and a mount pack whose `default` doesn't register is withdrawn at once with its skins. Saddle Up's mounts
+(`saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`, `saddleup-dragon.dragon` in its external
+packs since 2026-10-26, `saddleup.gerry` built in) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
 packs, so `MountInfo.IsBuiltIn` is false for them (true only for the API's own). (Before the mount folders,
 2026-10-24, a skin's `[Mount]` block declared the mount and the skin with the mount's id owned the declaration.)
 
@@ -834,7 +835,7 @@ Where skins come from, in order of how little they need:
   `GK2SaddleUp.mounts.saddleup.dragon\skins\default\bdy_walk_left_03.png`; the csproj line `<EmbeddedResource
   Include="assets\mounts\**\*" LogicalName="<Prefix>.mounts.%(RecursiveDir)%(Filename)%(Extension)" />`), then
   `Mounts.Looks.RegisterEmbedded(owner, assembly, "<Prefix>.mounts.")`. The worked example is Saddle Up itself
-  (prefix `GK2SaddleUp.mounts.`; its five mounts and the donkey's two skins: the csproj's embed line, one call in its
+  (prefix `GK2SaddleUp.mounts.`; its built-in Gerry and the donkey's two skins: the csproj's embed line, one call in its
   Awake, nothing else; docs/mounts-as-mods.md). A dev build may record the packs' source folder as the assembly
   metadata `GK2MountsSourceDir` (`$(MSBuildProjectDirectory)\assets\mounts`); the F11 Mounts tab then writes a
   skin's tuned values back into its `skin.cfg` and the mount's into its `mount.cfg`.
@@ -1150,7 +1151,7 @@ History:
   meanwhile too, so a mount from a mod loaded after yours is in your Mount list, has its Skin row and its colour
   rows (docs/mounts-as-mods.md 4; before, it waited for a restart that never helped, BepInEx's order being fixed).
   A set skin or effect that isn't installed logs an Info, not a warning. The five mounts left the API for
-  Saddle Up, which ships them as embedded packs through `RegisterEmbedded` (and since 0.36.0 the donkey's two skins and
+  Saddle Up, which shipped them as embedded packs (since 2026-10-26 four of them are external packs of their own) through `RegisterEmbedded` (and since 0.36.0 the donkey's two skins and
   the Hellfire effect too: the API ships no skin or effect of its own).
 - 0.33.0: `MountSkinDef.Effect` / `EffectWhen` (the effect a skin comes with, shown under "As the mount or skin";
   `null` = the mount's; the effect ring scales by the worn skin's drawn width); `MountSkinDef.TuningRide` / `TuningCart`

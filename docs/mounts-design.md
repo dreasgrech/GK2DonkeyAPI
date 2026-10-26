@@ -1,5 +1,10 @@
 # Mounts: design (2026-10-17 evening)
 
+**2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
+packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids
+below are of their day; docs/making-a-mount.md "Built in or external" is current.
+
 **Amended 2026-10-25 (API 0.37.0):** a mount no longer has a default effect (`MountDef.Effect` / `EffectWhen`,
 `MountInfo.Effect` / `EffectWhen`, `[Mount] effect` / `effect_when` and `MountEffects.FromMount` are gone); effects
 are registered only and nothing shows one (docs/api.md "Effects", docs/open-items.md "Effects on skins").

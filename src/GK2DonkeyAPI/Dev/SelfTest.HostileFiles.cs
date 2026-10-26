@@ -44,7 +44,7 @@ namespace GK2DonkeyAPI
             // names inside the pack only
             string dir = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-hostile", "pack");
             Check(Numbers.InFolder(dir, @"..\outside.png") == null && Numbers.InFolder(dir, @"\\some-host\share\p.png") == null
-                && Numbers.InFolder(dir, @"C:\Windows\win.ini") == null && Numbers.InFolder(dir, "front/bdy_walk_left_01.png") != null,
+                && Numbers.InFolder(dir, Path.Combine(Path.GetPathRoot(Path.GetTempPath()), "x.png")) == null && Numbers.InFolder(dir, "front/bdy_walk_left_01.png") != null,
                 "a file name climbing out, rooted or on a network share is refused; one in a subfolder is found");
             Check(Numbers.CfgText(new byte[] { 0xEF, 0xBB, 0xBF, (byte)'[', (byte)'M', (byte)']' }) == "[M]", "an embedded cfg's byte-order mark is taken off");
 

@@ -6,7 +6,8 @@ Saddle Up still registers the Hellfire effect, which nothing shows for now.
 
 Every skin the API knows, what it is made of, where its source and its tooling are, and what is read from outside
 the repo. As of 2026-10-19 evening (after the skin tooling moved into the repo); the paths and ids as of 2026-10-24
-(the mount folders: `src/SaddleUp/assets/mounts/<mount>/` with `mount.cfg`, `sounds\` and `skins/<skin>/`). The review page
+(the mount folders: built in, `src/SaddleUp/assets/mounts/<mount>/`; external, `packs/<Pack>/gk2mounts/<mount>/`; each
+with `mount.cfg`, `sounds\` and `skins/<skin>/`). The review page
 (`tools/skins/skin_preview_html.py` -> `BepInEx\GK2-asset-probe\skins-preview.html`) shows them all, grouped like this.
 
 ## The three mounts of skin
@@ -68,7 +69,8 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - **Ids**: the mounts `saddleup-dragon.dragon`, `saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`; each one's look is its
   default skin, `saddleup-dragon.dragon/default` and so on (the skins were `red-dragon`, `grey-rat`, `garden-snail`,
   `earth-worm` earlier on 2026-10-24, and before that the mounts' plain ids).
-- **Pictures and cfg**: `src/SaddleUp/assets/mounts/saddleup.<dragon|rat|snail|worm>/`: the mount's `mount.cfg`
+- **Pictures and cfg**: `packs/SaddleUpDragon/gk2mounts/saddleup-dragon.dragon/` and
+  `packs/SaddleUpCritters/gk2mounts/saddleup-critters.<rat|snail|worm>/` (external packs since 2026-10-26): the mount's `mount.cfg`
   (`[Mount]`, its tuning and sounds; the dragon's `sounds\` holds its flight's twelve `.ogg`) and `skins/default/`
   (44 PNGs each, the dragon's more for its flight and a
   `front\` layer drawn above the rider, and a `skin.cfg` with the seat, the skin's geometry and its `[Colors]`).
@@ -108,9 +110,9 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 | `tools/GK2AssetProbe` (dev plugin, Shift+F7) | exports the donkey's frames to `donkey-frames\`, the rider, films to `captures\`; its `test\skins\` tester |
 | `tools/skins/skin_preview_html.py` | the review page, every skin by mount, frame strips, all 44 frames; shows the game's own export (`game-skins\`) when there is one and counts where its composite would differ |
 | `tools/skins/check_skin.py` | checks a pack folder (frames and the front layer, colours per region, lone pixels over what the game draws beneath, the layout; exit code = errors only); run by the watcher and the release scans on every built-in |
-| `tools/skins/new_skin.py` | scaffolds a new skin: `<skin> [--mount <mount>]` puts its `skin.cfg` in `assets/mounts/<mount>/skins/<skin>/` in the canonical layout (the donkey's without `--mount`; `default` for a new mount's own look), and a new mount's folder and `mount.cfg`; a generator stub, the Aseprite sidecar; runs the scan |
+| `tools/skins/new_skin.py` | scaffolds a new skin: `<skin> [--mount <mount>]` puts its `skin.cfg` in `assets/mounts/<mount>/skins/<skin>/` (`--pack <Pack>`: `packs/<Pack>/gk2mounts/<mount>/skins/<skin>/`) in the canonical layout (the donkey's without `--mount`; `default` for a new mount's own look), and a new mount's folder and `mount.cfg`; a generator stub, the Aseprite sidecar; runs the scan |
 | `tools/skins/review.py` | the review pictures every generator writes the same way (strips with the front layer and the rider on the seat row, preview, pack sheet) |
-| `tools/skins/skinroots.py` | where the mounts and skins are: every `src/<project>/assets/mounts/` (`roots()`), its mount folders (`mount_dirs()`) and their `skins/<skin>/` (`skin_dirs()`; `mount_of(dir)`, `find(skin_id)`, `find_mount(id)`, `root_of(project)`): Saddle Up's five mounts and the donkey's two skins; the API ships none; a mount mod of its own would be another root; every tool and scan below walks them through it |
+| `tools/skins/skinroots.py` | where the mounts and skins are: every `src/<project>/assets/mounts/` and `packs/<Pack>/gk2mounts/` (`roots()`; `kind()`, `pack_of()`), its mount folders (`mount_dirs()`) and their `skins/<skin>/` (`skin_dirs()`; `mount_of(dir)`, `find(skin_id)`, `find_mount(id)`, `root_of(project)`): Saddle Up's built-in Gerry and donkey skins and its two external packs; the API ships none; every tool and scan below walks them through it |
 | `tools/skins/canonical_cfg.py` | rewrites every shipped `skin.cfg` and `mount.cfg` into its one layout: a skin's `[Skin]`, `[Game]`, its `[Tuning]` / `[Tuning.Ride]` / `[Tuning.Cart]` (its geometry), its `[Sounds*]`, the colours; a mount's `[Mount]`, `[Stats]`, `[Tuning*]`, `[Sounds*]` (`--check` in the release scans) |
 | `tools/skins/creatures/make_creatures.py`, `tools/skins/skin_colors.py`, `tools/skins/creatures/colors.json` | the four drawn creatures into their folders (`mounts/<mount>/skins/<skin>/`, the `mount.cfg` once; strips per creature in `out\<name>\`); their `[Colors]` sections from the pixels (`front\` included, Gerry's from the game's export) by the rules in the json (a block per skin) |
 | `tools/skins/gerry/gerry_probe.py`, `gerry_sheet.py` | a game character's frames exported (the bundle found by content, the prefix an argument) and laid out for measuring |

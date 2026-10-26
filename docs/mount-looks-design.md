@@ -1,5 +1,10 @@
 # From proof of concept to features: looks, fire, sounds (design draft, 2026-10-17)
 
+**2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
+packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids
+below are of their day; docs/making-a-mount.md "Built in or external" is current.
+
 **The skinning system's full specification is [skins-design.md](skins-design.md)** (2026-10-17, designed against the
 code); this file keeps the player-facing proposals, the decisions and what the probe rounds found.
 

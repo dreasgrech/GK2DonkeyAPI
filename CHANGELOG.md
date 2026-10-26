@@ -844,6 +844,11 @@ Development:
   bundle, `check-dist.py` checks the packs; a dev-only rename table (`Catalog.renamedMounts`) heals the old ids in a dev
   world and cfg; the self-tests' `M()`/`Sk()` map the new ids, the dragon's sound test reads its pack, and a new
   scenario "built in or external"; `.gitattributes` marks the art and sounds binary.
+  After the first run with the packs (1222 of 1223): the Mounts panel test waits for the dragon's picture to be whole
+  before switching (read from its pack folder it took longer than the fixed 30 frames); the hostile-files test builds
+  its rooted path at run time (a `C:\...` literal sat in the DLL and check-dist refused it). dist/ rebuilt (the API
+  0.40.0, Saddle Up 100 KB without the four mounts), the pack zips built and read back; the docs that still placed
+  the four inside Saddle Up's DLL brought to the packs, dated notes on the design docs.
 - **Content from many mods** (docs/multi-mod-loading.md, investigated and built 2026-10-26): five new self-tests
   (Never lost: the held and set-aside side file, records carried forward, handle ownership; Skins and effects: hostile
   files, no throw between mods, order and identity, versions and ids); the "ids" scenario follows the new replace

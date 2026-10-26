@@ -5,6 +5,12 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the
+  dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` and a save
+  writes the new ids; an F11 Mounts tab edit lands in `packs/` through the link; `tools/packs.py unlink` -> the four
+  "(not installed)", the choice kept, no warning; `link` -> back; a pack folder renamed to sort before `GK2SaddleUp`
+  (and after) loads the same; the release rehearsal with the packs unlinked and a pack zip extracted.
+
 - **Content from many mods** (API 0.40.0, 2026-10-26): F11's new scenarios (Never lost: the held side file, records
   carried forward, handle ownership; Skins and effects: hostile files, no throw, order and identity, versions and ids)
   and the updated "ids" scenario; a normal load and save keep every parked cart (the log's "Persistence:" lines, a
@@ -291,8 +297,9 @@ closed):
   `<guid>` a loaded plugin) when an ability owner is ever logged for one.
 - **A reloaded embedded skin keeps its sources** (2026-10-20 night, docs/mounts-foundation-2.md 7): F11 Mounts
   tab on the dragon, "Reload from the file" twice; the save path under the rows stays the repo's
-  `src/SaddleUp/assets/mounts/saddleup.dragon/skins/default/skin.cfg` (the mount's rows its `mount.cfg` two folders
-  up) and a slider change still saves (before: "no file" after the first reload).
+  `src/SaddleUp/assets/mounts/saddleup.dragon/skins/default/skin.cfg` (since 2026-10-26 the dragon is an external
+  pack: through the link, `packs/SaddleUpDragon/gk2mounts/saddleup-dragon.dragon/skins/default/skin.cfg`; the mount's
+  rows its `mount.cfg` two folders up) and a slider change still saves (before: "no file" after the first reload).
 - **Flying for players** (switched on 2026-10-25, API 0.38.0; docs/flying.md): the hand tests of step 2 (cross
   water and come back; over a fence and a building; off a cliff and land below; a refused landing over water holds
   and says why; a save in the air; H in the air lands first; a door while flying), the sections marked "not seen in
