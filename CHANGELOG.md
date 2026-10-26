@@ -27,6 +27,23 @@ For players:
   up with the stats card's and are no longer cut off on the left; in the colours window each column has its labels
   on the left and its controls and colour squares on the right; the four buttons at the bottom have one gap between
   them.
+- **Babies hop** (the user, 2026-10-26: "make the babies jump occasionally as part of their movement"): now and then
+  in a step, every few seconds while they trot after you or their parent, and on the spot while they stand about. The
+  hop is their mount's own jump, small. Each hop "holds the key" for its own time: mostly little hops, now and then a
+  big jump. When you jump on their parent, the babies following it mostly jump too, each a moment after you, usually
+  a big one. `ShuffleFoalHopChance` (0.2; 0: no hops) and `ShuffleFoalJumpAlongChance` (0.75) in the API's cfg.
+- **The babies' answers to a call sound less mechanical** (the user, 2026-10-26: they answered "sequentially one after
+  the other with no variation at all"): a new order every call, uneven gaps (now and then two at once, sometimes a
+  pause), and each voice a touch higher or lower.
+- **Babies no longer stop following you for good** (the user, 2026-10-26: "sometimes they just stop following you
+  completely after a while"): a baby following you on foot that fell behind, with its parent left far off, was frozen
+  by the performance levels, and nothing woke it to follow again. A baby with you now always stays awake.
+- **Babies get stuck less** (docs/foals.md "Hops, getting stuck, and stopping for good"): a way round an obstacle is
+  now one the baby can really walk (it was planned through grid centres and then refused, and the baby gave up at
+  once); a refused way is planned again from where it stands; a lost baby looks for a way round from further off;
+  one wedged where it stands still tries to rejoin; one lost for 10 s out of sight is brought to you even while you
+  walk about. A baby that hasn't got nearer you for 20 s says why in the log (`[foal] ... has not got nearer`): send
+  that line if one still gets stuck.
 - **The cart key no longer brings the cart to a mount that can't pull it** (the user, 2026-10-26: "any mount that
   doesnt have the ability to pull the cart shouldnt bring it with g"): with the dragon (or any mount whose `cart =
   false`), G says it can't pull the cart and leaves the cart where it stands; before, the cart came to you and was

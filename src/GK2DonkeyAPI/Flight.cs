@@ -775,6 +775,7 @@ namespace GK2DonkeyAPI
             jumpFlapN = -1; jumpTopU = -1f; jumpReachU = -1f;
             jumpTook = false; jumpFreed = false; perchEdged = false; perchStuck = 0; perchThing = null; jumpFlySaid = false; jumpStage = JumpStage.Arc; jumpPrevArc = 0f; jumpStageT = 0f; jumpDropV = 0f; jumpOverPx = 0f;
             Set(Phase.Jumping, $"jump: up to {J.Height:0} px held, {Mathf.Min(J.Tap, J.Height):0} px tapped, {J.Time:0.##} s in the air ({J.From})");
+            Mount.Instance.KeeperJumped(i); // its babies jump along (FoalHops.cs)
             Rigidbody rb0 = MainGame.PlayerController?.PhysicalBody?.Rb;
             JumpTrace.Begin($"mount {Looks.MountWanted(i).Label}; {(byKey ? "by the key" : "held (a button or a mod)")}; at {(rb0 != null ? rb0.position.ToString("F3") : "-")}, its speed {(rb0 != null ? new Vector3(rb0.linearVelocity.x, 0f, rb0.linearVelocity.z).magnitude.ToString("0.00") : "-")}; " +
                 $"the shape: {J.From}: height {J.Height}, tap {J.Tap}, hold min {J.HoldMin}, time {J.Time}, rise share {J.RiseShare}, hang {J.Hang}, crouch {J.Crouch}/{J.CrouchTime}, squash {J.Squash}; perch {JumpPerchS}, steer {JumpSteerS}, over things {JumpOver}; " +

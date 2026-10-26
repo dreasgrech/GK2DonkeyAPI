@@ -104,6 +104,7 @@ namespace GK2DonkeyAPI
             {
                 Tier t = UpdateTier(pc); // Tiers.cs: active, idle (frozen view) or asleep (no view)
                 CheckWake();
+                WatchFollowing(); // a baby that stopped getting nearer its lead, said once (FoalHops.cs)
                 if (donkey == null || !donkey)
                 {
                     if (donkey != null)
@@ -173,6 +174,7 @@ namespace GK2DonkeyAPI
                 ApplyPerfExperiment();
                 using (Perf.Measure(Perf.S.Pose))
                 {
+                    HopTick(); // a baby's hop, drawn by Stand (FoalHops.cs)
                     Stand();
                     RevealDonkeyIfDue();
                 }
@@ -215,6 +217,7 @@ namespace GK2DonkeyAPI
                     Perf.FacingWrites++;
                 }
                 Vector3 at = VisualConsts.GetRoundedPosXYZ(Position, PixelSize());
+                at.y += hopLiftY; // a baby's hop, whole art pixels: drawn only, its Position stays on the ground
                 bool dataOff = donkey.Data.Position != at, viewOff = donkey.transform.position != at;
                 if (dataOff || viewOff)
                 {

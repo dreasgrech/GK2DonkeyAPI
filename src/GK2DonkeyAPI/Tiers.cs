@@ -240,6 +240,13 @@ namespace GK2DonkeyAPI
                 {
                     return Tier.Active;
                 }
+                // ... nor below the keeper while it is with him (on foot, indoors): he is always active. Left to its own
+                // distance, a baby that fell behind him was frozen or put to sleep, and nothing woke it to follow (its
+                // parent standing far off was idle itself; the sleeping tick looks only for the parent; 2026-10-26).
+                if (withKeeper && p != null)
+                {
+                    return Tier.Active;
+                }
                 Vector3 k = pc.PlayerData.position.Value;
                 float dx = Position.x - k.x, dz = Position.z - k.z;
                 float d = Mathf.Sqrt(dx * dx + dz * dz);
@@ -270,6 +277,7 @@ namespace GK2DonkeyAPI
                             : ReferenceEquals(this, TuningWindow.Editing) ? "edited on the panel"
                             : pd != null && SceneId != pd.currentGameSceneId ? "in another scene: its scene decides"
                             : p != null && p.tier == Tier.Active && p.SceneId == SceneId ? $"its parent {p.FullId} is active"
+                            : withKeeper && p != null ? "with the keeper"
                             : $"within {Lod.ActiveRadius:F0} of the keeper or on screen";
                         break;
                     case Tier.Idle:

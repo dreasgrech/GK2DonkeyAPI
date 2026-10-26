@@ -679,7 +679,7 @@ namespace GK2DonkeyAPI
                 if (answerAt > 0f && now >= answerAt)
                 {
                     answerAt = -1f;
-                    Emit("answer");
+                    Emit("answer", pitchScale: answerPitch);
                 }
 
                 Animator a = ac.Animator;
@@ -792,19 +792,56 @@ namespace GK2DonkeyAPI
             internal const float AnswerAfterS = 0.15f, CallWaitMaxS = 8f;
             internal float TestCallEndedAt = -1f; // the self-test: when the last call's end scheduled the answers
 
+            // The babies' answers, varied each call (the user, 2026-10-26: they always answered "sequentially one after
+            // the other with no variation at all": in spawn order, 0.35 s apart, give or take 0.2): a fresh order each
+            // time, the first a little after the call, then uneven gaps: now and then two at once (one cutting in), mostly
+            // a beat, sometimes a pause; each one's voice a touch higher or lower. Every baby still answers.
+            // order[k]: which baby (0..n-1) answers k-th; delays[k]: when, seconds after the call ended.
+            internal static void PlanAnswers(int n, List<int> order, List<float> delays)
+            {
+                order.Clear();
+                delays.Clear();
+                for (int i = 0; i < n; i++) order.Add(i);
+                for (int i = n - 1; i > 0; i--)
+                {
+                    int j = UnityEngine.Random.Range(0, i + 1);
+                    (order[i], order[j]) = (order[j], order[i]);
+                }
+                float t = AnswerAfterS + UnityEngine.Random.Range(0f, 0.35f);
+                for (int k = 0; k < n; k++)
+                {
+                    delays.Add(t);
+                    float r = UnityEngine.Random.value;
+                    t += r < 0.25f ? UnityEngine.Random.Range(0.04f, 0.18f)   // cuts in over the last one
+                        : r < 0.85f ? UnityEngine.Random.Range(0.25f, 0.6f)   // a beat after
+                        : UnityEngine.Random.Range(0.7f, 1.2f);               // a pause, then one more
+                }
+            }
+
+            private static readonly List<Mount.Instance> answering = new List<Mount.Instance>();
+            private static readonly List<int> answerOrder = new List<int>();
+            private static readonly List<float> answerDelays = new List<float>();
+            private float answerPitch = 1f;
+
             private void ScheduleAnswers()
             {
                 try
                 {
                     List<Mount.Instance> kids = owner.Children();
                     if (kids == null) return;
-                    int k = 0;
+                    answering.Clear();
                     foreach (Mount.Instance kid in kids)
                     {
-                        if (kid == null || kid.SoundsRig == null || !kid.SoundsRig.IsBaby) continue;
-                        kid.SoundsRig.answerAt = Time.time + AnswerAfterS + 0.35f * k + UnityEngine.Random.Range(0f, 0.2f); // after the call, one after another
-                        k++;
+                        if (kid != null && kid.SoundsRig != null && kid.SoundsRig.IsBaby) answering.Add(kid);
                     }
+                    PlanAnswers(answering.Count, answerOrder, answerDelays);
+                    for (int k = 0; k < answering.Count; k++)
+                    {
+                        Rig r = answering[answerOrder[k]].SoundsRig;
+                        r.answerAt = Time.time + answerDelays[k];
+                        r.answerPitch = UnityEngine.Random.Range(0.94f, 1.07f);
+                    }
+                    answering.Clear();
                 }
                 catch (Exception e)
                 {

@@ -37,6 +37,8 @@ namespace GK2DonkeyAPI
         private readonly Func<Vector3, float> groundAt;       // NaN: no ground
         private readonly Func<Vector3, bool> freeAt;
         private readonly Func<Vector3, float, Vector3, float, bool> stepFits; // a big step judged again from one source
+        private readonly Func<Vector3, Vector3, bool> legClear; // the trot's own test of a leg (null: the grid's only)
+        private readonly Vector3 startPoint;                  // where the foal's body stands: the first leg starts here
         private readonly float maxRise;
         private readonly Vector3 origin;                      // world position of cell (0, 0)'s corner
         private readonly int w, h;
@@ -54,8 +56,11 @@ namespace GK2DonkeyAPI
 
         // start and goal are body points; range: how far from the start the grid may reach (either way).
         internal FoalRouteSearch(Vector3 startPoint, Vector3 goalPoint, float range, float maxRise,
-            Func<Vector3, float> groundAt, Func<Vector3, bool> freeAt, Func<Vector3, float, Vector3, float, bool> stepFits)
+            Func<Vector3, float> groundAt, Func<Vector3, bool> freeAt, Func<Vector3, float, Vector3, float, bool> stepFits,
+            Func<Vector3, Vector3, bool> legClear = null)
         {
+            this.legClear = legClear;
+            this.startPoint = startPoint;
             this.groundAt = groundAt;
             this.freeAt = freeAt;
             this.stepFits = stepFits;
@@ -253,17 +258,23 @@ namespace GK2DonkeyAPI
                 cells.Add(i);
             }
             cells.Reverse();
-            // String-pulling on the grid: from each corner, the furthest later cell in a clear line of known free cells.
+            // String-pulling on the grid: from each corner, the furthest later cell in a clear line of known free cells,
+            // and a line the trot itself would walk (legClear), from where the foal really is (the first leg from its
+            // body, not its cell's centre). The grid alone ran lines through cell centres, which the trot's body capsule
+            // every 0.2 refused at a corner: "found, 2 corner(s)", then lost in the same second (log 2026-10-26).
             var corners = new List<Vector3>();
+            Vector3 legFrom = startPoint;
             int a = 0;
             while (a < cells.Count - 1)
             {
                 int b = cells.Count - 1;
-                while (b > a + 1 && !ClearLine(cells[a], cells[b]))
+                while (b > a + 1 && !(ClearLine(cells[a], cells[b]) && LegClear(legFrom, Center(cells[b]))))
                 {
                     b--;
                 }
-                corners.Add(Center(cells[b]));
+                Vector3 c = Center(cells[b]);
+                corners.Add(c);
+                legFrom = c;
                 a = b;
             }
             if (corners.Count == 0)
@@ -309,6 +320,21 @@ namespace GK2DonkeyAPI
             }
             return true;
         }
+
+        private bool LegClear(Vector3 a, Vector3 b)
+        {
+            if (legClear == null)
+            {
+                return true;
+            }
+            watch.Start();
+            bool ok = legClear(a, b);
+            watch.Stop();
+            LegTests++;
+            return ok;
+        }
+
+        internal int LegTests { get; private set; }
 
         private bool FreeUnbudgeted(int i)
         {

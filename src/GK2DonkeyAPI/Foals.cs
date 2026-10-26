@@ -195,6 +195,8 @@ namespace GK2DonkeyAPI
                 return at;
             }
             private bool followLost;            // could not follow (blocked or too far): shuffles where it is until caught up
+            private float lostSince;            // when it last got lost
+            private const float LongLostS = 10f; // lost this long and out of sight: caught up even while the lead walks
             private bool wedged;                // no step fits where it stands (spawned against a wall): caught up like a lost one
             private int pickFailsInRow;
             private float firstPickFailAt;
@@ -362,6 +364,7 @@ namespace GK2DonkeyAPI
                         StopFollowing();
                         EndStep(firstPause: true);
                         rejoinBackoff = 0; // it got there: the next rejoin is quick again
+                        quickReplans = 0;
                         return false;
                     }
                     if (dHome > maxFollow)
@@ -385,7 +388,16 @@ namespace GK2DonkeyAPI
                     {
                         followLost = false; // the parent came back to it
                     }
-                    else if (!wedged && (maxFollow == float.MaxValue || dHome <= maxFollow * 0.8f) && Time.time >= nextRejoinCheck)
+                    // Out of sight and lost for a while, the lead walking about: next to it now, without waiting for it to
+                    // stand (a keeper on foot often never stands 1.5 s; the baby waited where it got stuck).
+                    else if (!l.Moving && Time.time - lostSince >= LongLostS && OffScreen(body))
+                    {
+                        CatchUp("lost for a while, out of sight");
+                        return true;
+                    }
+                    // Wedged too: a way to the lead may well be clear though no shuffle step fits where it stands (both ways
+                    // back were off for a wedged foal: it stood there in view until the lead stood still 6 s).
+                    else if ((maxFollow == float.MaxValue || dHome <= maxFollow * 0.8f) && Time.time >= nextRejoinCheck)
                     {
                         // The parent is back in reach (ridden or not): follow again if a place next to it can be reached in a
                         // straight line (the same test the trot uses; testing only the line to the parent itself sent a
@@ -398,6 +410,7 @@ namespace GK2DonkeyAPI
                         if (k != NoSlot)
                         {
                             followLost = false;
+                            wedged = false;
                             followTargetSlot = k;
                             nextTargetPick = Time.time + 0.5f;
                             shufflePhase = ShufflePhase.Following;
@@ -406,11 +419,13 @@ namespace GK2DonkeyAPI
                             DiagLog($"[foal] {Describe()} follows {l.Name} again ({dHome:F1} away, to {(k == NearSide ? "its near side" : "slot " + k)}).");
                             return true;
                         }
-                        // No straight way to any place next to it: a route around, when the parent is within the route's
-                        // reach (further away, the catch-up out of sight does it).
-                        if (RoutesOn && dHome <= RouteRange && Time.time >= nextRouteAt)
+                        // No straight way to any place next to it: a route around, when the parent is within a few routes'
+                        // reach (a route ends at its area's edge towards a target further out, and the next goes on from
+                        // there; only within one route's reach, 8, a lost baby further out waited for the catch-up).
+                        if (RoutesOn && dHome <= RouteRange * 3f && Time.time >= nextRouteAt)
                         {
                             followLost = false;
+                            wedged = false;
                             followTargetSlot = SiblingIndex();
                             nextTargetPick = Time.time + 0.5f;
                             shufflePhase = ShufflePhase.Following;
@@ -512,6 +527,7 @@ namespace GK2DonkeyAPI
                 {
                     if (FlatDistance(body, route[routeIndex]) < 0.2f)
                     {
+                        quickReplans = 0;
                         routeIndex++;
                         routeBestDist = float.MaxValue;
                         routeProgressAt = Time.time;
@@ -533,7 +549,7 @@ namespace GK2DonkeyAPI
                     else if (Time.time - routeProgressAt > 2f)
                     {
                         // No headway for 2 s: plan again, or give up when it just did.
-                        if (Time.time >= nextRouteAt)
+                        if (Time.time >= nextRouteAt || QuickReplan())
                         {
                             StartRoute(body, slot, "no headway");
                         }
@@ -547,7 +563,9 @@ namespace GK2DonkeyAPI
                 }
                 if (!FollowStep(aim, body, FlatDistance(body, aim), dFinal, dt))
                 {
-                    if (RoutesOn && Time.time >= nextRouteAt)
+                    // Blocked: a new plan from where it stands. Within a second of the last one too, twice (a leg refused
+                    // right after its plan lost the parent at once, log 2026-10-26); a dead end still ends in "lost".
+                    if (RoutesOn && (Time.time >= nextRouteAt || QuickReplan()))
                     {
                         StartRoute(body, slot, route != null ? "the route is blocked" : "the straight way is blocked");
                         return;
@@ -555,6 +573,20 @@ namespace GK2DonkeyAPI
                     LoseParent(body, "the way is blocked");
                     EndStep(firstPause: false);
                 }
+            }
+
+            // Plans made within a second of the one before, since it last got somewhere (a corner reached, its slot, a
+            // catch-up): at most two, then the once-a-second rule holds.
+            private int quickReplans;
+
+            private bool QuickReplan()
+            {
+                if (quickReplans >= 2)
+                {
+                    return false;
+                }
+                quickReplans++;
+                return true;
             }
 
             private void StartRoute(Vector3 body, Vector3 slot, string why)
@@ -567,7 +599,14 @@ namespace GK2DonkeyAPI
                 nextRouteAt = Time.time + 1f; // at most one plan a second
                 routeSearch = new FoalRouteSearch(body, slot, RouteRange, MaxRisePerSample,
                     pt => GroundHeight(pt, out _), foot => FreeAt(foot, out _),
-                    (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample));
+                    (a, ga, b, gb) => StepFits(a, ga, b, gb, MaxRisePerSample),
+                    (a, b) =>
+                    {
+                        // the trot's own test of each leg, so the route found is one it walks (FoalRouteSearch.Finish)
+                        bool ok = LineWalkable(a, b, "route leg");
+                        groundFail = null;
+                        return ok;
+                    });
                 if (routesLogged < 30)
                 {
                     if (DevDiag) DiagLog($"[foal] {Describe()} works out a way round ({why}), {FlatDistance(body, slot):F1} to go.");
@@ -664,6 +703,7 @@ namespace GK2DonkeyAPI
                 if (!followLost)
                 {
                     followLost = true;
+                    lostSince = Time.time;
                     shuffleHome = body;
                     DiagLog($"[foal] {Describe()} can't follow {LeadNow().Name} ({why}{(groundFail != null ? ": " + groundFail : "")}); it waits, follows again when the parent comes back in reach, or catches up out of sight once it stands.");
                     groundFail = null;
@@ -749,6 +789,7 @@ namespace GK2DonkeyAPI
                 followLost = false;
                 wedged = false;
                 pickFailsInRow = 0;
+                quickReplans = 0;
                 shufflePhase = ShufflePhase.Waiting;
                 EndStep(firstPause: true);
                 DiagLog($"[foal] {Describe()} caught up with {p.Name} ({why}) at {root:F2} in {SceneId}{(clear ? "" : "; no slot with a clear line (first failure: " + fail + "), placed on a free one anyway")}.");

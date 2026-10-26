@@ -124,6 +124,75 @@ foal.Tuning.Set("you.gk2.mymod", "CoatBrightness", 0.15f);   // its own look, as
 - **Keeper close:** foals don't hold still for the keeper, since nobody rides them. Maybe they should keep a little
   distance instead. That's a decision.
 
+## Hops, getting stuck, and stopping for good (studied and built 2026-10-26, API 0.40.0, not seen in game)
+
+**As built** (the user's answers: hops moving and standing, "now and then", a cfg key only; and "No, it stayed stuck":
+walking back to a stopped baby did **not** wake it, so the level cause below is real but not the whole story):
+- `FoalHops.cs`: `ShuffleFoalHopChance` (0.2) per lively step; every 4-10 s trotting, 8-20 s standing (scaled by
+  0.2 / the chance). `HopTick` before `Stand()`, `ResetHop` in `StopShuffle`.
+- Hop sizes (the user: "sometimes they do little hops and sometimes they do big jumps"): each hop's let-go time is
+  picked from a flick to past the rise (`StartHop`; `u²`, mostly small), so the mount's own jump goes from its tap
+  height to its full height (donkey foal 10 to 17 px).
+- Jumping along: `Flight.Jump` calls `KeeperJumped`. The ridden mount's lively babies following it (not lost, within
+  10) each jump with `ShuffleFoalJumpAlongChance` (0.75), 0.05-0.4 s later, leaning big (`√u`). On foot the keeper
+  never jumps, so there is nothing to answer there.
+- The babies' answers to a call (Sounds.cs `PlanAnswers`): a shuffled order, gaps 0.04-0.18 (a quarter), 0.25-0.6 or
+  0.7-1.2 (15 %), pitch 0.94-1.07 each; they were in spawn order, 0.35 s apart.
+- Levels: `WantTier` keeps a baby with the keeper Active (Tiers.cs); the Details row says "with the keeper".
+- Routes: `FoalRouteSearch` takes the trot's `LineWalkable` as `legClear` for its pulled legs, the first from the
+  foal's body; up to two quick re-plans within a second (`QuickReplan`, reset at a corner, its slot, a catch-up).
+- Rejoin: routes within 3 x `ShuffleRouteRange` (24); `wedged` no longer stops a rejoin; lost 10 s and out of sight:
+  caught up even while the lead walks (`LongLostS`).
+- **The measurement for the cause still unknown:** `WatchFollowing` (every level, once a second): a baby that hasn't
+  got 0.5 nearer its lead for 20 s, the lead in its scene and not riding away, writes one `[foal] ... has not got
+  nearer` line with its level, view, shuffle status, phase, lost / wedged / with the keeper, picks failed, route and
+  rejoin state, once until it is near again. The next stuck baby's line says which path held it.
+- Self-test: "foals: follow the keeper on foot outdoors" checks the level rule and a hop (docs/self-tests.md).
+
+**The user (2026-10-26):** "make the babies jump occasionally as part of their movement", and the babies "are getting
+stuck a lot and sometimes they just stop following you completely after a while of playing".
+
+### Stopping for good: the levels freeze a baby that follows the keeper (code read, not measured in game)
+
+- `WantTier` (Tiers.cs) keeps a foal Active only while its **parent** is Active. A baby following the keeper on foot
+  has no such rule: once the keeper has walked away from the parent (the parent goes idle or asleep), the baby's
+  level is its own distance to the keeper.
+- Fallen behind (over 15 away, 18 to leave Active) and off screen, it goes **Idle**: frozen, and `StandTick` returns
+  before `ShuffleTick`, so it never follows or catches up again.
+- Beyond 35 it goes **Asleep** (no view). `AsleepTick` only catches up with the **parent**, and only one that is not
+  ridden and has its view. The keeper is never looked at, so the baby stays wherever it fell asleep.
+- It wakes only when the keeper comes back within 15 of it, or it comes on screen. **The check that tells this cause
+  apart:** a baby stopped this way moves again as soon as you walk back near it.
+
+### Getting stuck (the log of 2026-10-26, lines 637-666, and the code)
+
+1. **A route the trot refuses.** The route's corners are pulled straight on the grid: the line through cell
+   **centres** (`FoalRouteSearch.ClearLine`), starting from the start cell's centre, not from the foal's body. The
+   trot checks each leg with `LineWalkable`, a body capsule every 0.2 along the real line, which can clip a corner
+   the cell centres miss. In the log: "route ... found, 2 corner(s)" and in the same second "can't follow ... follow
+   sample 3 ... blocked by Obstacle".
+2. **No second try.** A leg refused within a second of the plan (`nextRouteAt`, one plan a second) loses the parent
+   at once (`FollowWithRoute`), instead of planning again from where the foal stands.
+3. **Rejoining only within 8.** A lost foal plans a way round only when the lead is within `ShuffleRouteRange` (8),
+   though the search already makes a partial route towards a target further away. Beyond that it waits for the
+   out-of-sight catch-up.
+4. **Wedged stays wedged in view.** `wedged` (three world-blocked picks in 8 s) turns off both ways back
+   (`!wedged`). The only way out is the catch-up, which needs the lead to stand 1.5 s with the foal off screen, or
+   6 s. A keeper walking about in view leaves it standing there.
+
+The log is lossy here: `DiagLog` drops lines past 4 a second (line 532: "27 more line(s) skipped"), so a missing line
+proves nothing. `ShuffleFollowAlways` is on (the user's cfg), so the distance limits don't apply.
+
+### Hops (the design)
+
+- **The arc** is the mount's own jump (`JumpShapes.Of`, mount.cfg `[Jump]`) through `Flight.JumpHeightAt`, tapped
+  (the tap height, 16 px by default), times the foal's size: about 10 px for a 0.6 donkey foal. A mount whose jumps
+  are off: no hops.
+- **Drawn only:** the lift is added in `Stand()` where the view's place is written (pixel-snapped). `Position` stays
+  on the ground: the shuffle re-homes whenever `Position` changes behind its back (`shuffleWrote`), and
+  `BodyPoint()`, the slots and the spacing use `Position.y`.
+- The dragon's take-off frames are not used for a hop: the walk or idle pose goes on in the air.
+
 ## Following the keeper on foot (API 0.36.0, built 2026-10-22)
 
 The user asked for babies that follow the keeper on foot outdoors too, not only indoors or when he rides their

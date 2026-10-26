@@ -117,7 +117,7 @@ namespace GK2DonkeyAPI
             },
             new Def
             {
-                Id = "answer", Description = "a baby's reply to its parent's call, once the call has ended, siblings one after another (the donkey's voice pitched up unless [Sounds.Baby] gives one)",
+                Id = "answer", Description = "a baby's reply to its parent's call, once the call has ended, siblings in a new order each time with uneven gaps (the donkey's voice pitched up unless [Sounds.Baby] gives one)",
                 DonkeyOwn = true, StandingGated = true, Variants = None, Numbers = None,
                 Base = s => new SoundSpec { GameId = s.BraySoundId.Value, Volume = s.BrayVolume.Value, Pitch = s.BrayPitch.Value, Speech = !s.BrayInSfxChannel.Value },
             },

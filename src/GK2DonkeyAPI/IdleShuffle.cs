@@ -27,7 +27,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<float> AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax,
             MaxAngle, TurnChance, KeeperDistance, FollowSpeed, FollowMaxDistance, FollowGap, RouteRange,
             FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin, FoalPauseMax,
-            FoalChainChance, FoalBurstChance, FoalBurstSpeed;
+            FoalChainChance, FoalBurstChance, FoalBurstSpeed, FoalHopChance, FoalJumpAlongChance;
         internal static Tuned<bool> FollowAlways, FollowRoutes, FollowKeeperIndoors, FollowKeeperOnFoot, FoalLively;
 
         internal static void Bind(ConfigFile cfg)
@@ -96,6 +96,10 @@ namespace GK2DonkeyAPI
                 "A lively foal: chance that a step is a quick trot (ShuffleFoalBurstSpeed), longer than a walk.");
             FoalBurstSpeed = F(cfg, "ShuffleFoalBurstSpeed", 2.5f, 0.5f, 5f,
                 "A lively foal: speed of a quick trot, world units per second.");
+            FoalHopChance = F(cfg, "ShuffleFoalHopChance", 0.2f, 0f, 1f,
+                "A lively foal: chance that a step has a little hop in it (its mount's own jump, tapped, at the foal's size). It also hops now and then while it trots after its parent or the keeper (every 4-10 s at 0.2) and on the spot while it stands about (every 8-20 s at 0.2); a higher chance hops more often. 0: no hops. A mount that doesn't jump ([Mount] jumps = false) never hops.");
+            FoalJumpAlongChance = F(cfg, "ShuffleFoalJumpAlongChance", 0.75f, 0f, 1f,
+                "A lively foal following the mount the keeper rides: chance that it jumps too when he jumps (Space), a moment after him, usually a big one. 0: never.");
         }
 
         private static ConfigEntry<float> F(ConfigFile cfg, string key, float def, float min, float max, string desc)
@@ -109,7 +113,7 @@ namespace GK2DonkeyAPI
             AreaWidth, AreaDepth, StepMin, StepMax, Speed, AnimSpeed, PauseMin, PauseMax, MaxAngle, TurnChance, KeeperDistance,
             FollowSpeed, FollowMaxDistance, FollowGap, FollowAlways, FollowRoutes, RouteRange, FollowKeeperIndoors, FollowKeeperOnFoot,
             FoalLively, FoalAreaWidth, FoalAreaDepth, FoalStepMin, FoalStepMax, FoalSpeedMin, FoalSpeedMax, FoalPauseMin,
-            FoalPauseMax, FoalChainChance, FoalBurstChance, FoalBurstSpeed,
+            FoalPauseMax, FoalChainChance, FoalBurstChance, FoalBurstSpeed, FoalHopChance, FoalJumpAlongChance,
         };
 
         internal static ConfigEntryBase[] Entries
@@ -309,6 +313,7 @@ namespace GK2DonkeyAPI
                 FinishTurn(); // not if something else just moved it (a hitch): its place wins
                 route = null;
                 routeSearch = null; // its tests use the view, which may be gone
+                ResetHop();
                 shufflePhase = ShufflePhase.Off;
                 shuffleHomeSet = false;
             }
@@ -463,6 +468,7 @@ namespace GK2DonkeyAPI
                         stepsTaken++;
                         lastStepAt = Time.time;
                         NotePickOk();
+                        PlanStepHop(len / Mathf.Max(0.1f, speed)); // FoalHops.cs
                         if (turn)
                         {
                             riderFacingX = nf; // Stand() shows the new facing this frame; the view flips in the next

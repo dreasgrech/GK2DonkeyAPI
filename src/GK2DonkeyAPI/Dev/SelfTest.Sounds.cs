@@ -757,8 +757,25 @@ namespace GK2DonkeyAPI
                     else if (t.Event == "answer" && call >= 0f && t.At >= call) { if (first < 0f) first = t.At; else if (second < 0f) second = t.At; }
                 }
                 float ended = ra.TestCallEndedAt;
-                Check(call >= 0f && ended >= call && first >= ended + Sounds.Rig.AnswerAfterS - 0.05f && first <= ended + 0.6f && second > first + 0.2f,
-                    $"the answers come after the call has ended and one after the other (call at {call:0.00}, ended {ended:0.00}, answers at {first:0.00} and {second:0.00})");
+                Check(call >= 0f && ended >= call && first >= ended + Sounds.Rig.AnswerAfterS - 0.05f && first <= ended + 0.6f && second >= first,
+                    $"the answers come after the call has ended (call at {call:0.00}, ended {ended:0.00}, answers at {first:0.00} and {second:0.00})");
+                // ... and not the same every time (2026-10-26: always in spawn order, on one even beat): 40 plans of three
+                var order = new List<int>();
+                var delays = new List<float>();
+                var firsts = new HashSet<int>();
+                float gapMin = float.MaxValue, gapMax = 0f;
+                for (int n = 0; n < 40; n++)
+                {
+                    Sounds.Rig.PlanAnswers(3, order, delays);
+                    firsts.Add(order[0]);
+                    for (int k = 1; k < delays.Count; k++)
+                    {
+                        gapMin = Mathf.Min(gapMin, delays[k] - delays[k - 1]);
+                        gapMax = Mathf.Max(gapMax, delays[k] - delays[k - 1]);
+                    }
+                }
+                Check(firsts.Count == 3 && gapMin < 0.2f && gapMax > 0.65f,
+                    $"the answers vary: each of three babies answers first sometimes ({firsts.Count} of 3), the gaps {gapMin:0.00} to {gapMax:0.00} s over 40 calls");
 
                 // one voice at a time: a second grown one standing by, calls at least the gap apart
                 Sounds.VoiceGapS = 4f;

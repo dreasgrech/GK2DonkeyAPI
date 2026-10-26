@@ -733,6 +733,65 @@ namespace GK2DonkeyAPI
                     Info("no ground 7 units off to walk to: the walk part skipped");
                 }
 
+                // A baby with the keeper is never put to sleep or frozen by its own distance (2026-10-26: one that fell
+                // behind him froze, its parent idle far off, and nothing woke it). The levels made tiny for a second:
+                // nothing counts as near or on screen, so the parent and the other foal go idle, this one stays active.
+                float wasActive = Lod.ActiveRadius, wasMargin = Lod.ScreenMargin;
+                try
+                {
+                    Lod.ActiveRadius = 0.1f;
+                    Lod.ScreenMargin = -0.6f;
+                    yield return Seconds(1f);
+                    Check(follows.I.tier == Mount.Tier.Active && p.I.tier != Mount.Tier.Active,
+                        $"levels: the baby with the keeper stays active ({follows.I.tier}) while its parent is {p.I.tier} and the other baby {stays.I.tier}");
+                }
+                finally
+                {
+                    Lod.ActiveRadius = wasActive;
+                    Lod.ScreenMargin = wasMargin;
+                }
+                yield return Seconds(0.5f);
+
+                // A hop: drawn above its place, its place on the ground, over within a second or so (FoalHops.cs).
+                bool hopped;
+                float holdMin = float.MaxValue, holdMax = 0f;
+                using (Mount.Bind(follows.I))
+                {
+                    // the key "held" for its own time each hop: little hops and big jumps (each start replaces the last)
+                    for (int n = 0; n < 24 && follows.I.TestHopNow(); n++)
+                    {
+                        holdMin = Mathf.Min(holdMin, follows.I.LastHopLetGo);
+                        holdMax = Mathf.Max(holdMax, follows.I.LastHopLetGo);
+                    }
+                    hopped = follows.I.TestHopNow();
+                }
+                Check(hopped && holdMax - holdMin > 0.08f, $"the hops hold the key for different times: {holdMin:F2} to {holdMax:F2} s over 24 (a flick a hop, held a full jump)");
+                Check(hopped, "a baby can hop (a lively foal of a mount that jumps)");
+                if (hopped)
+                {
+                    float y0 = follows.Position.y, maxLift = 0f, drift = 0f, t0 = Time.time;
+                    while (Time.time - t0 < 2f && (follows.I.Hopping || maxLift == 0f))
+                    {
+                        maxLift = Mathf.Max(maxLift, follows.I.HopLiftY);
+                        drift = Mathf.Max(drift, Mathf.Abs(follows.Position.y - y0));
+                        yield return null;
+                    }
+                    Check(maxLift >= 0.1f && !follows.I.Hopping && follows.I.HopLiftY == 0f,
+                        $"the hop rose {maxLift / 0.0333f:F0} art px and landed within {Time.time - t0:F2} s");
+                    Check(drift < 0.05f, $"and only its picture rose: its place stayed on the ground (moved {drift:F3} in y)");
+                }
+
+                // The keeper jumps on their parent: the baby keeping to it jumps along (its chance made sure for the test;
+                // the one with the keeper, on foot, doesn't: he isn't riding it).
+                stays.Tuning.Set(Owner, "ShuffleFoalJumpAlongChance", 1f);
+                yield return Until(() => !stays.I.Hopping, 2f);
+                int before = stays.I.HopsStarted;
+                Mount.Instance.KeeperJumped(p.I);
+                yield return Until(() => stays.I.HopsStarted > before, 1f);
+                Check(stays.I.HopsStarted > before || Flat(stays.Position, p.Position) > 10f,
+                    $"the keeper jumps on their parent: the baby by it jumps along within a second ({(stays.I.HopsStarted > before ? "it did" : "it didn't, too far")}, {Flat(stays.Position, p.Position):F1} from the parent)");
+                stays.Tuning.Clear(Owner, "ShuffleFoalJumpAlongChance");
+
                 // on their parent, off again, on another mount (from where the run stands, by them)
                 yield return MoveKeeper(home, homeFacing);
                 MountResult r = p.Ride(showMessage: false);
