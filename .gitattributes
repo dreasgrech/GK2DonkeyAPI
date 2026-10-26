@@ -1,0 +1,5 @@
+# The art and the sounds are binary: never a line-ending conversion or a text diff.
+*.png binary
+*.ogg binary
+*.wav binary
+*.aseprite binary

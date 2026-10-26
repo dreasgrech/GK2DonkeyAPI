@@ -365,7 +365,8 @@ def main(argv):
                   "frames": {k: data_url(v) for k, v in donkey.items()}, "note": "the donkey as the game draws it: the reference", "missing": 0, "folder": donkey_dir,
                   "seat": 52, "rider_dx": 0, "seat_adj": 0, "facts": "seat row 52 · colours: Coat, Dark, Muzzle, Eye, Harness"})
     seen.add("donkey")
-    # 2. the built-in packs (every src/*/assets/mounts/<mount>/skins/<skin>: Saddle Up's, skinroots.py)
+    # 2. the repo's packs: built in (src/*/assets/mounts/<mount>/skins/<skin>: Saddle Up's) and external
+    #    (packs/<Pack>/gk2mounts/<mount>/skins/<skin>), skinroots.py
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
     import skinroots
 
@@ -375,13 +376,20 @@ def main(argv):
 
     for p in skinroots.skin_dirs():
         d = os.path.basename(p)
+        pack = skinroots.pack_of(p)
         project = os.path.basename(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(p))))))  # src/<project>/assets/mounts/<mount>/skins/<skin>
+        source = "the pack " + pack + " (external)" if pack else "the " + project + " mod (built in)"
         cfg = read_cfg(os.path.join(p, "skin.cfg"))
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
-        add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, "the " + project + " mod", p, skinroots.mount_of(p), mount_cfg_of(p))
-    # 3. the packs in the game (plugins\gk2mounts\<mount>\skins\<skin>)
-    packs = os.path.normpath(os.path.join(probe, "..", "plugins", "gk2mounts"))
-    if os.path.isdir(packs):
+        add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, source, p, skinroots.mount_of(p), mount_cfg_of(p))
+    # 3. the packs in the game (plugins\gk2mounts\<mount>\ and plugins\<Pack>\gk2mounts\<mount>\), not the repo's own
+    #    packs linked there (a junction to packs/<Pack>: already shown above)
+    plugins = os.path.normpath(os.path.join(probe, "..", "plugins"))
+    roots = [os.path.join(plugins, "gk2mounts")] + ([os.path.join(plugins, d, "gk2mounts") for d in sorted(os.listdir(plugins))] if os.path.isdir(plugins) else [])
+    repo_packs = os.path.normcase(os.path.realpath(skinroots.PACKS))
+    for packs in roots:
+        if not os.path.isdir(packs) or os.path.normcase(os.path.realpath(packs)).startswith(repo_packs):
+            continue
         for m in sorted(os.listdir(packs)):
             sk = os.path.join(packs, m, "skins")
             if not os.path.isdir(sk):

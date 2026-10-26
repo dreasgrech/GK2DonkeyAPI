@@ -5,12 +5,22 @@ no path into this machine and no source-folder marker, and the API's dependency 
 docs/dependency-check.md) must find every game member it names in the installed game, unchanged: a dist whose members
 changed or vanished needs a re-audit and a rebuild before it ships. GK2SaddleUp carries no manifest: it uses no game
 member of its own (only the API), which this checks too.
+The external mount packs (packs/<Pack>/, their own downloads, docs/making-a-mount.md "Built in or external") ship as
+files: each needs its README.md and CHANGELOG.md, a gk2mounts/ folder, and in every mount its mount.cfg with needs = and
+version = and its skins/default/skin.cfg; no file may name a path on this machine; nothing stray (Thumbs.db, editor
+backups) may be in it.
 Exit code 1 on any finding."""
 import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
-NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its five mounts are embedded packs"}
+NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its built-in content (Gerry, two donkey skins) is embedded packs"}
+STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped (make-release-zip.py leaves them out too)
+
+
+def stray(name):
+    n = name.lower()
+    return n in STRAY or n.startswith("~") or n.endswith((".un~", ".bak", ".tmp", ".swp"))
 
 props = open(os.path.join(REPO, "Directory.Build.props"), encoding="utf-8").read()
 GAME = re.search(r"<GameDir[^>]*>([^<]+)</GameDir>", props).group(1).strip()
@@ -54,6 +64,44 @@ for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
     print(f"{status}  {name}  {len(b):,} bytes")
     if note:
         print("      " + note)
+    for f in findings:
+        print("      " + f)
+    bad += len(findings)
+# the external packs
+PACKS = os.path.join(REPO, "packs")
+for pack in sorted(os.listdir(PACKS)) if os.path.isdir(PACKS) else []:
+    root = os.path.join(PACKS, pack)
+    if not os.path.isdir(root):
+        continue
+    findings = []
+    for doc in ("README.md", "CHANGELOG.md"):
+        if not os.path.isfile(os.path.join(root, doc)):
+            findings.append("no " + doc)
+    mounts_dir = os.path.join(root, "gk2mounts")
+    mounts = sorted(os.listdir(mounts_dir)) if os.path.isdir(mounts_dir) else []
+    if not mounts:
+        findings.append("no gk2mounts/<mount>/")
+    files = 0
+    for dirpath, _, names in os.walk(root):
+        for n in names:
+            files += 1
+            if stray(n):
+                findings.append("stray file (left out of the zip, delete it): " + os.path.relpath(os.path.join(dirpath, n), root))
+            elif n.lower().endswith((".cfg", ".md", ".txt")):
+                t = open(os.path.join(dirpath, n), encoding="utf-8", errors="replace").read()
+                if re.search(r"[A-Za-z]:\\(Users|Program Files)", t):
+                    findings.append("a path on this machine in " + os.path.relpath(os.path.join(dirpath, n), root))
+    for m in mounts:
+        cfg = os.path.join(mounts_dir, m, "mount.cfg")
+        if not os.path.isfile(cfg):
+            continue  # a folder adding skins to another's mount
+        t = open(cfg, encoding="utf-8").read()
+        for key in ("needs", "version"):
+            if not re.search(r"(?m)^" + key + r"\s*=\s*\S", t):
+                findings.append(f"{m}/mount.cfg: no {key} =")
+        if not os.path.isfile(os.path.join(mounts_dir, m, "skins", "default", "skin.cfg")):
+            findings.append(f"{m}: no skins/default/skin.cfg")
+    print(f"{'ok' if not findings else 'FAIL'}  pack {pack}  {len(mounts)} mount folder(s), {files} file(s)")
     for f in findings:
         print("      " + f)
     bad += len(findings)

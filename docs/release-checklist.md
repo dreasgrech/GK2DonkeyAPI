@@ -71,8 +71,11 @@ property change doesn't invalidate the compile), and the check then fails on the
 
 `make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
 `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod;
-Saddle Up's five mounts are packs inside its DLL), read back and compared with `dist/`; this zip is
-the Nexus upload (extracts into the game folder). `release/` is not kept in git.
+Saddle Up's built-in Gerry and donkey skins are packs inside its DLL), read back and compared with `dist/`; this zip is
+the Nexus upload (extracts into the game folder). Besides it, one zip per external pack (`packs/<Pack>/`:
+`GK2-Saddle-Up-Dragon-<v>.zip`, `GK2-Saddle-Up-Critters-<v>.zip`, the version from the pack's CHANGELOG.md, raised
+there when the pack changed) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its own folder): their own
+Nexus files. `release/` is not kept in git.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
 again; `bin/` holds whichever was built last.
@@ -88,6 +91,9 @@ again; `bin/` holds whichever was built last.
 
 Rehearse the first start on a clean config, with the game closed:
 
+0. **Unlink the packs first:** `python -I tools/packs.py unlink` (a release zip extracted into a linked
+   `plugins\<Pack>\` writes into the repo's `packs/`). Link them again afterwards (`tools/packs.py link`, or a dev
+   build).
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
    Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\`,
    `plugins\GK2AssetProbe\` and the dev marker `BepInEx\config\dreas.gk2.dev`.

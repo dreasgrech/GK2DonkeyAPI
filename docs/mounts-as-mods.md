@@ -1,5 +1,11 @@
 # Mounts and skins as separate mods (2026-10-20)
 
+**2026-10-26, later: built in or external.** The dragon, rat, snail and worm left Saddle Up's DLL for external packs
+of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), their ids by the pack
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. The earlier
+plans for moving the mounts out (sections 3, 7, 9 here) are superseded by that: docs/making-a-mount.md "Built in or
+external".
+
 **2026-10-26 (API 0.40.0):** what the API does with many mods' content side by side (errors, order, versions, the side
 file, other people's files) is docs/multi-mod-loading.md.
 

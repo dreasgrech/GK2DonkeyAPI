@@ -177,6 +177,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "between mods: no throw (an effect and a code skin meet the version rule, a lost mount's own look left out, an effect id needs its prefix, a row's throwing function)", Body = NoThrowBetweenMods },
             new Scenario { Group = GroupLooks, Name = "between mods: order and identity (v2 beside v1 whole, an id not its folder's refused, a skin before its mount, a skin of a mount not installed, handles, one change per folder)", Body = OrderAndIdentity },
             new Scenario { Group = GroupLooks, Name = "between mods: versions and ids (needs in mount.cfg, ASCII ids, versions that aren't numbers, sound ids, one mod's sound for an event)", Body = VersionsAndIds },
+            new Scenario { Group = GroupLooks, Name = "built in or external: our mounts from their packs in the game (owner, folder, needs), Gerry and the donkey skins from Saddle Up's DLL, the old ids healed", Body = ExternalPacks },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
@@ -218,7 +219,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "a pack's own sounds: [Sounds] lines and the sounds folder loaded as game sounds, the convention name, the layers (skin over mount over the keys, a style block), the player's switch on top, a second skin of the mount, the save round trip, the clean-up", Body = SoundsPack },
             new Scenario { Group = GroupSounds, Name = "the API: Mounts.Sounds (the catalogue, Resolved with its layer, a mod's Set over everything and back, its own clips kept, Play and Stop, the Played event), a code mount's MountSound shared by a pack skin of it", Body = SoundsApi },
             new Scenario { Group = GroupSounds, Name = "an embedded pack's sounds (the built-in skins' route): the API's own test pack, its .ogg decoded through the cache file, its .wav parsed in place, a looping event stopped", Body = SoundsEmbedded },
-            new Scenario { Group = GroupSounds, Name = "the built-in dragon's sound files: the flight's in Saddle Up's embedded mounts\\dragon\\sounds\\ (the mount's, for every dragon skin), none the red dragon's own, decoded once through the cache file", Body = SoundsDragonFiles },
+            new Scenario { Group = GroupSounds, Name = "the dragon's sound files: the flight's in its pack's mount folder (the mount's, for every dragon skin), none the red dragon's own, read from the pack in the game", Body = SoundsDragonFiles },
             new Scenario { Group = GroupSounds, Name = "the flying events: takeoff, the launch's flaps and the beats airborne, the fly loop, land, touchdown, landed, a jump's jump and jumpland; nothing of the flight on a jump", Body = SoundsFlying },
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off; Saddle Up's row drives the switch", Body = SoundsHerd },
             new Scenario { Group = GroupGarbage, Name = "the garbage survey (measures only): on foot standing and walking, riding walking and still, the Mounts panel picking, the dev stride probe; the garbage by part in each", Body = GarbageSurvey, HidesPanel = true },
@@ -1813,7 +1814,7 @@ namespace GK2DonkeyAPI
         {
             if (!Plugin.MountsOn)
             {
-                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's five mounts");
+                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's mounts and its packs' (the dragon, rat, snail, worm)");
                 yield break;
             }
             Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon and the donkey have a second tone: the row is live for them");
@@ -1856,7 +1857,7 @@ namespace GK2DonkeyAPI
         {
             if (!Plugin.MountsOn)
             {
-                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's five mounts");
+                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's mounts and its packs' (the dragon, rat, snail, worm)");
                 yield break;
             }
             Vector3 near = Spot(home, 4f) ?? home;
@@ -2963,17 +2964,20 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Saddle Up's five mounts, by the name after their prefix (saddleup.dragon: mount ids carry their mod's prefix
-        // since 2026-10-24).
-        private static readonly string[] BuiltInMounts = { "dragon", "rat", "snail", "worm", "gerry" };
+        // Our shipped mounts by the name after their prefix: Saddle Up's built-in Gerry, and the four of its external packs
+        // (packs/: the ids by the pack since 2026-10-26, saddleup-dragon.dragon, saddleup-critters.rat ...).
+        private static readonly Dictionary<string, string> ShippedMounts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["dragon"] = "saddleup-dragon.dragon", ["rat"] = "saddleup-critters.rat", ["snail"] = "saddleup-critters.snail",
+            ["worm"] = "saddleup-critters.worm", ["gerry"] = "saddleup.gerry",
+        };
         private const string SaddleUpPrefix = "saddleup.";
 
-        // A built-in mount's id by its short name: "dragon" -> "saddleup.dragon"; "donkey" and any other id as it is.
+        // A shipped mount's id by its short name: "dragon" -> "saddleup-dragon.dragon"; "donkey" and any other id as it is.
         internal static string M(string name)
         {
             if (string.IsNullOrEmpty(name)) return name;
-            string n = name.Trim().ToLowerInvariant();
-            return Array.IndexOf(BuiltInMounts, n) >= 0 ? SaddleUpPrefix + n : name;
+            return ShippedMounts.TryGetValue(name.Trim(), out string id) ? id : name;
         }
 
         // A built-in skin's full name (a skin is named within its mount since 2026-10-24, every mount's own look is its
@@ -2998,8 +3002,9 @@ namespace GK2DonkeyAPI
                 case "saddleup.royal-parade":
                     return Looks.SkinKey(Catalog.DonkeyId, n);
             }
-            if (n.StartsWith(SaddleUpPrefix, StringComparison.Ordinal)) n = n.Substring(SaddleUpPrefix.Length);
-            return Array.IndexOf(BuiltInMounts, n) >= 0 ? Looks.SkinKey(SaddleUpPrefix + n, Looks.DefaultSkinName) : name;
+            int dot = n.IndexOf('.');
+            if (dot > 0 && ShippedMounts.ContainsKey(n.Substring(dot + 1))) n = n.Substring(dot + 1); // saddleup.dragon, saddleup-dragon.dragon
+            return ShippedMounts.TryGetValue(n, out string id) ? Looks.SkinKey(id, Looks.DefaultSkinName) : name;
         }
 
         // One more skin in a temp pack: gk2mounts\<mount>\skins\<id>\ with its skin.cfg and one picture (Royal Parade's
@@ -4267,7 +4272,11 @@ namespace GK2DonkeyAPI
                     yield return Frames(2);
                     Check(!MountsPanel.TestDriveShown && !MountsPanel.TestColourGroup("Cart colours") && MountsPanel.TestColourGroup("Mount colours"),
                         $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
-                    yield return Frames(30); // its picture finished (the alone view)
+                    // its picture finished (the alone view): waited for, not a fixed count (the dragon, a pack read from disk
+                    // since 2026-10-26, was still building after 30 frames: the "last photo" was another mount's)
+                    Mount.Instance paperBefore = LookPreview.PaperOf(page);
+                    yield return Until(() => MountsPanel.TestPicture != null && PreviewStage.ShowsLookNow(MountsPanel.TestPicture, paperBefore), 15f);
+                    Check(waited, $"{noCart}'s picture is shown whole before the switch (within 15 s)");
                     // from it to one that pulls the cart: every frame the picture is the cartless mount's last photo, or the new
                     // one whole in the cart view, never the new mount in the alone view (the user, 2026-10-25: "large and
                     // without a cart" for a few frames)

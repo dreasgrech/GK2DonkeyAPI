@@ -696,7 +696,7 @@ namespace GK2DonkeyAPI
             // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind because
             // the key binds after them.
             MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
-                "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's five: the red dragon, the giant rat, the giant snail, the giant worm, Gerry the skull; and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
+                "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's Gerry the skull, its packs' dragon, giant rat, giant snail and giant worm, and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
             PanelFakeEntries = dbg.Bind("Debug", "MountsPanelFakeEntries", 0,
                 "Dev only: this many made-up entries padded onto the Mounts panel's list (\"Test mount 1\"...), to see it scroll with a long list; they can't be picked. 0 = none. The settings self-test counts them as a failure: 0 for a run.");
             MountsOn = MountsPreview.Value;

@@ -4,8 +4,8 @@ colours are Dark, Muzzle, Eye or Harness; everything else is Coat. The rules are
 rest is Coat), so a new creature adds a block there, never code here. The hex lists come from the PNGs (front/ too),
 so they are exact; a skin with "source": "game-export" (Gerry) reads the in-game export folder instead. Re-runnable
 (replaces the section, then the canonical layout): run it after the art changes, then tests/SkinsScan. colors.json is
-keyed by the skin's full name (saddleup.dragon/default); a skin on the command line is any name skinroots.find
-takes (saddleup.dragon/default, dragon, donkey/saddleup.hellfire, hellfire).
+keyed by the skin's full name (saddleup-dragon.dragon/default); a skin on the command line is any name skinroots.find
+takes (saddleup-dragon.dragon/default, dragon, donkey/saddleup.hellfire, hellfire).
 
     python -I tools/skins/skin_colors.py [skin ...]
 """
@@ -118,14 +118,14 @@ def write_section(skin, regions):
 
 for skin in RULES:
     if "/" not in skin:
-        raise SystemExit(f"colors.json: '{skin}' is not a skin's full name (<mount id>/<skin>, as saddleup.dragon/default)")
+        raise SystemExit(f"colors.json: '{skin}' is not a skin's full name (<mount id>/<skin>, as saddleup-dragon.dragon/default)")
 WANTED = None
 if len(sys.argv) > 1:
     WANTED = set()
     for a in sys.argv[1:]:
         d = skinroots.find(a)
         if d is None and a not in RULES:
-            raise SystemExit(f"{a}: no such skin (a full name like saddleup.dragon/default, a mount's name, or a skin's folder name)")
+            raise SystemExit(f"{a}: no such skin (a full name like saddleup-dragon.dragon/default, a mount's name, or a skin's folder name)")
         WANTED.add(skinroots.full_name(d) if d else a)
 for skin in sorted(RULES):
     if WANTED is not None and skin not in WANTED:

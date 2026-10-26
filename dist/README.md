@@ -19,7 +19,8 @@ What is new since 0.10.0 is CHANGELOG.md's Unreleased section. The other mounts,
 DLL and switched off for players (`Mounts.MountsEnabled` false; a dev key no player has).
 
 Sizes 2026-10-25 (`release/GK2-Saddle-Up-0.12.0.zip`, 1.5 MB; 0.10.0 was 0.75 MB): the API DLL 2,540 KB (820 KB zipped;
-its embedded files are 258 KB, the rest is code), Saddle Up 1,026 KB (670 KB zipped): its five mounts' files are
+its embedded files are 258 KB, the rest is code), Saddle Up 1,026 KB (670 KB zipped; before the dragon, rat, snail and
+worm became packs of their own, 2026-10-26: dist/ is rebuilt at the next release): its five mounts' files were
 947 KB, the dragon 567 KB of them (its 16 sounds 324 KB), all sounds 438 KB, all pictures 491 KB. Release scans
 22 of 22 green on this build.
 

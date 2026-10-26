@@ -16,7 +16,7 @@ carries one already. A skin of your own mod's mount takes any name.
     python -I tools/skins/new_skin.py <skin> --mount <mount>       one more skin for a mount that exists (saddleup.rat or rat)
     python -I tools/skins/new_skin.py --mount <name> [--name "Giant Thing"] [--prefix <mod>.]
                                                                    a new mount, <prefix><name>, its look in skins\\default\\
-    common: [--canvas 96] [--seat 52] [--mod <project>]
+    common: [--canvas 96] [--seat 52] [--mod <project> | --pack <Pack>]
 
   <skin>      the skin's folder name, its name within the mount (letters, digits, dashes): giant-crab; on a mount your
               mod doesn't own (the donkey, another project's) --prefix goes in front (saddleup.giant-crab), or give it
@@ -28,6 +28,10 @@ carries one already. A skin of your own mod's mount takes any name.
   --mount     the mount the skin is a look of (default: donkey), by its id (saddleup.rat) or the name after the prefix
               (rat). A mount with no folder yet is a creature of its own: assets/mounts/<prefix><name>/mount.cfg is
               written and the skin goes to its skins\\default\\ (leave <skin> out, or say default)
+  --pack      an external pack instead (packs/<Pack>/gk2mounts/, its own download: docs/making-a-mount.md "Built in or
+              external"): its ids carry the pack's prefix, the pack's name in lower case (--prefix may add dashes:
+              --pack SaddleUpDragon --prefix saddleup-dragon.); the pack folder, its README.md and CHANGELOG.md are
+              made when new
   --prefix    your mod's prefix, for a new mount's id and for a skin added to a mount another mod owns (default:
               saddleup. for Saddle Up's assets; another --mod needs its own)
   --over      drawn OVER the donkey (a cloth, a hat): layer = over with the erase colour, no [Mount]
@@ -49,7 +53,7 @@ def arg(name, default=None):
     return default
 
 
-VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod", "--prefix"}  # the flags that take a value; --over stands alone
+VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod", "--prefix", "--pack"}  # the flags that take a value; --over stands alone
 
 
 def main():
@@ -71,13 +75,34 @@ def main():
     over = "--over" in sys.argv
     if over and mount:
         print("--over is a skin drawn over the donkey: it has no mount of its own (drop --mount)"); return 2
-    project = arg("--mod") or skinroots.MOUNTS_PROJECT  # every shipped skin is Saddle Up's; the API ships none
-    if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
-        print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/mounts/** and registers them as src/SaddleUp does)"); return 2
-    assets_root = skinroots.root_of(project)
-    prefix = arg("--prefix") or ("saddleup." if project == skinroots.MOUNTS_PROJECT else None)
-    if prefix and not prefix.endswith("."):
-        prefix += "."
+    pack = arg("--pack")
+    if pack and arg("--mod"):
+        print("--pack (an external pack) or --mod (a project's built-in packs), not both"); return 2
+    project = pack or arg("--mod") or skinroots.MOUNTS_PROJECT  # built in: Saddle Up's; the API ships none
+    if pack:
+        if not pack.isidentifier():
+            print("a pack's name is one word of letters and digits (SaddleUpDragon):", pack); return 2
+        assets_root = skinroots.pack_root(pack)
+        prefix = arg("--prefix") or pack.lower() + "."
+        if not prefix.endswith("."):
+            prefix += "."
+        if not skinroots.pack_prefix_ok(pack, prefix + "x"):
+            print(f"the pack {pack}'s ids carry its prefix: its name in lower case, dashes where wanted ({pack.lower()}.): {prefix}"); return 2
+        pack_dir = os.path.dirname(assets_root)
+        if not os.path.isdir(pack_dir):
+            os.makedirs(assets_root)
+            for doc, text in (("README.md", f"# {pack}\n\nA mount pack for GK2 Saddle Up (needs GK2 Donkey API 0.40.0 or newer). Install: the folder {pack} into BepInEx\\plugins\\.\n"),
+                              ("CHANGELOG.md", f"# {pack}, changes\n\n## Unreleased (1.0.0)\n\n- The pack.\n")):
+                with open(os.path.join(pack_dir, doc), "w", encoding="utf-8", newline="\r\n") as f:
+                    f.write(text)
+            print("made the pack", pack_dir)
+    else:
+        if not os.path.isfile(os.path.join(REPO, "src", project, project + ".csproj")):
+            print("no project src/" + project + "/" + project + ".csproj (a mount mod embeds assets/mounts/** and registers them as src/SaddleUp does)"); return 2
+        assets_root = skinroots.root_of(project)
+        prefix = arg("--prefix") or ("saddleup." if project == skinroots.MOUNTS_PROJECT else None)
+        if prefix and not prefix.endswith("."):
+            prefix += "."
     if mount and mount.lower() == "donkey":
         mount = None  # the game's own mount: the default
     mount_dir = skinroots.find_mount(mount) if mount else None
@@ -145,8 +170,8 @@ def main():
     lines += ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is Coat.", "[Colors]",
               "Dark = 141E14        # the placeholder's outline: replace with the hexes your pictures use (tools/skins/skin_colors.py writes the section from a colors.json block)"]
     if new_mount:
-        mlines = [f"# A mount of {project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
-                  "[Mount]", f"id = {mount_id}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
+        mlines = [f"# A mount of {('the pack ' + pack) if pack else project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
+                  "[Mount]"] + (["needs = 0.40"] if pack else []) + [f"id = {mount_id}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
                   "author = dreas", "version = 0.1", "cart = true", "foals = true",
                   "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)", "cargo = 6  # items its cart carries, 1 to 6",
                   "", "# The creature's sounds (docs/mount-sounds.md): files in sounds\\ next to this file, or the game's sound ids.",
@@ -170,9 +195,11 @@ def main():
     with open(cfg_path, "w", encoding="utf-8", newline="") as f:
         f.write(text)
     # the generator stub: a placeholder block per frame on the canvas, through the shared review pictures
+    rel_assets = f"packs/{pack}/gk2mounts" if pack else f"src/{project}/assets/mounts"
+    where = ", ".join(f'"{x}"' for x in rel_assets.split("/"))
     stub = f'''"""{name} ({full}): the generator (docs/sprite-tools.md "Making a skin"). Draws every frame of the skin on the {canvas}x{canvas}
 canvas (the donkey's frame sits centred; its back at row 41, feet on row 64 of the 96 canvas), writes a PNG per frame
-into src/{project}/assets/mounts/{mount_id}/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
+into {rel_assets}/{mount_id}/skins/{sid}/ and the review pictures into out\\\\ (look at every strip before the game).
 
     python -I tools/skins/{gen_name}/{gen}            # the built-in's pictures + out\\\\
     python -I tools/skins/{gen_name}/{gen} --no-assets  # out\\\\ only
@@ -185,7 +212,7 @@ import review
 from gamedir import donkey_frames, game_dir  # donkey_frames: the base's pictures an over skin is drawn on
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-ASSETS = os.path.join(REPO, "src", "{project}", "assets", "mounts", "{mount_id}", "skins", "{sid}")
+ASSETS = os.path.join(REPO, {where}, "{mount_id}", "skins", "{sid}")
 OUT = os.path.join(HERE, "out")
 CANVAS = {canvas}
 OFF = (CANVAS - 96) // 2

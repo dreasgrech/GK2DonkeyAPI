@@ -18,7 +18,7 @@ A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits
 drawing's colours mean. Every mount but the donkey has exactly one default skin, named `default`; its other skins
 are built on it and draw only what they change (docs/skins.md "Variants: built on the default"). Hellfire and Royal
 Parade are skins of the donkey (`donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`); the red dragon is the
-dragon's default (`saddleup.dragon/default`).
+dragon's default (`saddleup-dragon.dragon/default`).
 
 The rule that ties them: **a mount is a folder with a `mount.cfg`, and its skins are the folders under its
 `skins\`.** The folder `skins\default\` is the mount's own look: the one a new instance of it wears (its Default in
@@ -31,9 +31,9 @@ registered, and every donkey skin and recipe (`Mounts.Looks.RegisterRecipe(Guid,
 `donkey/me.sepia`), throws an `ArgumentException` without it. Your own mount's skins take any name.
 
 **Ids.** A mount's id is `<mod>.<name>`: your mod's prefix, a dot, the mount's name (`me.giant-crab`; Saddle Up's
-dragon is `saddleup.dragon`). One without a dot is refused; only the game's `donkey` is plain. A skin is named within
+dragon is `saddleup-dragon.dragon`). One without a dot is refused; only the game's `donkey` is plain. A skin is named within
 its mount: its folder's name, and its full name `<mount id>/<skin>` (`me.giant-crab/default`). A skin you add to a
-mount another mod owns (the donkey too) must carry your prefix, `<mod>.<name>` (`saddleup.dragon\skins\me.frost\`,
+mount another mod owns (the donkey too) must carry your prefix, `<mod>.<name>` (`saddleup-dragon.dragon\skins\me.frost\`,
 `donkey/me.sepia`), so two authors' additions don't meet; without it the skin is refused. Why: a saved mount or skin
 must never turn into another mod's of the same name (docs/mount-id-collisions.md).
 
@@ -275,9 +275,44 @@ Ids: a mount's id is `<mod>.<name>` (refused without a dot); a skin is named wit
 another mod's mount carries your name (`me.frost`). A code mount should register a skin named `default`; if it
 doesn't, its first skin by name is its default.
 
+## Built in or external (this repo, 2026-10-26)
+
+The repo keeps two kinds of mount pack apart by their folders (the user: "make a distinction in the directories
+between inbuilt mounts/skins in saddle up vs ones which are 'external'"):
+
+```
+src/SaddleUp/assets/mounts/            built in: embedded in GK2SaddleUp.dll, ships with Saddle Up
+  saddleup.gerry/   donkey/skins/saddleup.hellfire/   donkey/skins/saddleup.royal-parade/
+packs/                                 external: each folder is one download, laid out as BepInEx\plugins\<Pack>\
+  SaddleUpDragon/      gk2mounts/saddleup-dragon.dragon/                 README.md, CHANGELOG.md
+  SaddleUpCritters/    gk2mounts/saddleup-critters.rat/ .snail/ .worm/   README.md, CHANGELOG.md
+```
+
+- **A pack's ids carry the pack's prefix:** its name in lower case, dashes where wanted (`SaddleUpDragon`:
+  `saddleup-dragon.dragon`; `SaddleUpCritters`: `saddleup-critters.rat`). A mount lives in exactly one pack for good:
+  saves keep the full id. Built-in ones keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
+  `needs =` and `version =`.
+- **A pack is files only:** no DLL. The API finds it in `BepInEx\plugins\<Pack>\gk2mounts\` at its start, owner
+  `dreas.gk2.donkeyapi.packs.<Pack>`. Its version is its CHANGELOG.md's first heading.
+- **The dev build links the packs into the game** (SaddleUp.csproj `LinkPacks`: a directory junction
+  `plugins\<Pack>` -> `packs\<Pack>`, made where there is none). The game reads the repo's files, so the F11 Mounts
+  tab saves into `packs/` and the auto-reload works on them. `python -I tools/packs.py status | link | unlink` does
+  it by hand. `unlink` removes the links only; do it before unzipping a release zip into the game (the zip would
+  write into the repo through the link).
+- **A release** (`tools/make-release-zip.py`): Saddle Up's zip (the two DLLs), one zip per pack
+  (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\SaddleUpDragon\...`) and `GK2-Saddle-Up-All-Mounts-<v>.zip`
+  (every pack, each in its own folder). `check-dist.py` checks each pack: its docs, `needs`, `version`, its
+  `skins\default\`, no path of this machine, nothing stray.
+- **A new one:** `new_skin.py --mount <name> --pack <Pack> [--prefix <pack-prefix>.]` makes `packs/<Pack>/` (README,
+  CHANGELOG) and the mount in it; `--mod <project>` (or nothing) makes a built-in one.
+- **The old ids** (`saddleup.dragon`, `saddleup.rat`, `.snail`, `.worm`, never released) still find the packs' mounts
+  in a dev's own world and cfg (`Catalog.renamedMounts`): the Mount row writes the new id back and per-mount keys
+  (`Coat_saddleup.dragon`) carry over.
+
 ## Building one from this repo (the shipped mounts' way)
 
 1. `python -I tools/skins/new_skin.py default --mount me.giant-crab --name "Giant Crab" --canvas 128 --seat 70`
+   (built in; `--pack <Pack>` for an external pack, above)
    writes `src/SaddleUp/assets/mounts/me.giant-crab/skins/default/skin.cfg` in the canonical layout, and, the mount
    being new, `src/SaddleUp/assets/mounts/me.giant-crab/mount.cfg`; a generator stub drawing placeholder frames, and
    the Aseprite sidecar. A second look of the same mount is the same command with another skin name (the mount's
@@ -291,7 +326,8 @@ doesn't, its first skin by name is its default.
 4. Check: `python -I tools/skins/check_skin.py src/SaddleUp/assets/mounts/me.giant-crab/skins/default` (the
    pictures), `dotnet run --project tests/SkinsScan -c Release` (both cfgs), or `bash tools/release-scans.sh`
    (everything).
-5. Build Saddle Up: its csproj embeds everything under `assets/mounts`; its Awake registers them.
+5. Build Saddle Up: its csproj embeds everything under `assets/mounts`; its Awake registers them (an external pack:
+   the build links it into the game, the API finds it).
 6. In the game: the F11 Mounts tab reloads the files as you edit them, nudges the seat and the geometry live and
    saves the skin's rows back into its `skin.cfg` and the mount's into its `mount.cfg`; the seat and cart readout
    scenarios check every shipped mount.

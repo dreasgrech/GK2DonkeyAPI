@@ -56,7 +56,7 @@ sound" row).
 Two folders, one for each cfg with sound sections:
 
 ```
-gk2mounts\saddleup.dragon\
+gk2mounts\saddleup-dragon.dragon\
   mount.cfg           [Sounds*]   the mount's: every skin of it
   sounds\             the mount's files (mount.cfg's [Sounds*] lines, and its name rule)
     takeoff_1.ogg
@@ -79,7 +79,7 @@ dragon's copy won over the mount's.)
 **By name, with no line in the cfg:** `sounds\<event>[.<variant>][_<n>].ogg|wav`. In a skin's folder,
 `voice_1.ogg`, `voice_2.ogg` and `voice_3.ogg` are the skin's `voice` (one at random per call, never the same twice in
 a row); `step.grass_1.wav` its step on grass; `graze.ogg` its grazing. The same rule in the mount folder's `sounds\`
-gives the mount's: `gk2mounts\saddleup.dragon\sounds\takeoff_1.ogg` is every dragon skin's take-off. Each folder's rule reads
+gives the mount's: `gk2mounts\saddleup-dragon.dragon\sounds\takeoff_1.ogg` is every dragon skin's take-off. Each folder's rule reads
 its own files only. A file named like no event is listed in the log and never played.
 
 **Or in a `[Sounds]` block of skin.cfg**, which also takes a game sound id, silence, the ground, and the attributes:
@@ -120,13 +120,13 @@ event by event. A mount's default look (its `skins\default\`) usually has no `[S
 the mount's.
 
 ```
-# gk2mounts\saddleup.dragon\mount.cfg
+# gk2mounts\saddleup-dragon.dragon\mount.cfg
 [Mount]
-id = saddleup.dragon
+id = saddleup-dragon.dragon
 ...
 
 [Sounds]
-voice = roar_1.ogg, roar_2.ogg   # files of gk2mounts\saddleup.dragon\sounds\
+voice = roar_1.ogg, roar_2.ogg   # files of gk2mounts\saddleup-dragon.dragon\sounds\
 voice.idle_every = 60
 step = thud.ogg
 lips = none
@@ -141,7 +141,7 @@ still works: those keys, in a `mount.cfg`'s `[Tuning]`, are the base layer.)
 Three places say it, for the same question ("which of its sounds has this skin still no sound for"):
 
 - **The log at the game's start** (once a session, when the game is ready): one line per skin, `Sounds: skin
-  'saddleup.rat/default' (mount saddleup.rat): its own: ...; its mount's: voice (spitter_attack), step (by the ground), ...; MISSING (the donkey's
+  'saddleup-critters.rat/default' (mount saddleup-critters.rat): its own: ...; its mount's: voice (spitter_attack), step (by the ground), ...; MISSING (the donkey's
   own, silent here): answer, mount, dismount; the donkey's neutral ones 6; silent by default 18.`
 - **The Mounts tab** (F11): the first line of "Sounds of this skin" lists the missing events in orange, or says
   nothing is missing.

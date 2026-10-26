@@ -1,5 +1,5 @@
 """Mounts drawn from nothing (docs/mount-looks-design.md): a giant worm, a giant snail, a giant rat and a dragon, as
-Saddle Up's mount packs src/SaddleUp/assets/mounts/<mount>/ (mount.cfg) with their default look in
+Saddle Up's external mount packs packs/<Pack>/gk2mounts/<mount>/ (mount.cfg; HOMES below) with their default look in
 skins/<skin>/ (the one pipeline, docs/sprite-tools.md "Making a skin": a PNG per frame, skin.cfg and mount.cfg kept as
 written by hand once they exist). Our own art, made by code: no game pixels.
 
@@ -8,7 +8,7 @@ every clip: the 8 walk frames are one crawl cycle; standing, ear, lips, chew, tu
 the head down). The donkey's head layer gets empty pictures, so "Instead of it" hides the donkey completely.
 Fitted to the donkey's measures so the rider sits right without tuning: the back (the seat) at row 41 around columns
 47-63, the ground at row 64, the front (where the cart's shafts and the harness are) around column 33.
-    python tools/skins/creatures/make_creatures.py                 # every creature into the repo's assets\\mounts\\saddleup.<mount>\\skins\\default\\
+    python tools/skins/creatures/make_creatures.py                 # every creature into its pack: packs\\<Pack>\\gk2mounts\\<mount id>\\skins\\default\\
     python tools/skins/creatures/make_creatures.py rat             # one creature
     python tools/skins/creatures/make_creatures.py rat <folder>    # the pictures into <folder>\\rat\\ (a preview, never the game's plugins)
 Then tools/skins/skin_colors.py when the art's colours changed, and tests/SkinsScan."""
@@ -1491,8 +1491,12 @@ CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None),
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo
 only = sys.argv[1] if len(sys.argv) > 1 else None     # one creature's name, to redraw just that one
 custom = len(sys.argv) > 2                            # a folder of its own: the pictures flat in <folder>\<name>\ (the previews)
-assets = sys.argv[2] if custom else os.path.join(REPO, "src", "SaddleUp", "assets", "mounts")  # Saddle Up ships the five mounts (docs/mounts-as-mods.md)
-PREFIX = "saddleup."  # a mount's id carries its mod's prefix (<mod>.<name>; docs/making-a-mount.md): the folder is the id
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import skinroots  # noqa: E402
+# each creature's pack and its id there (2026-10-26: the mounts are external packs, their ids by the pack: packs/,
+# tools/skins/skinroots.py); the folder is the id
+HOMES = {"dragon": ("SaddleUpDragon", "saddleup-dragon.dragon"), "rat": ("SaddleUpCritters", "saddleup-critters.rat"),
+         "snail": ("SaddleUpCritters", "saddleup-critters.snail"), "worm": ("SaddleUpCritters", "saddleup-critters.worm")}
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
 FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the mount.cfg)
@@ -1503,15 +1507,17 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
     W = H = size
     OX = OY = (size - 96) // 2
     fr = frames_for(fn)
-    mid = PREFIX + mount  # saddleup.dragon
+    pack, mid = HOMES[mount]  # SaddleUpDragon, saddleup-dragon.dragon
+    assets = sys.argv[2] if custom else skinroots.pack_root(pack)
     outs = [os.path.join(assets, name) if custom else os.path.join(assets, mid, "skins", "default")]  # each mount's own look: skins\default\
     if not custom and not os.path.isfile(os.path.join(assets, mid, "mount.cfg")):
         # the mount, written once (the Mounts tab saves its values here afterwards)
         mcfg = os.path.join(assets, mid, "mount.cfg")
         os.makedirs(os.path.dirname(mcfg), exist_ok=True)
         open(mcfg, "w", encoding="utf-8", newline="\r\n").write(
-            "# A mount of GK2 Saddle Up (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.\n"
-            "[Mount]\nid = " + mid + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it "
+            "# A mount of the pack " + pack + ", an external pack of GK2 Saddle Up (packs/, docs/making-a-mount.md): what the\n"
+            "# player rides, shared by every skin in skins\\.\n"
+            "[Mount]\nneeds = 0.40\nid = " + mid + "\nname = " + mount_name + "\ndescription = A " + mount_name.lower() + " of the keeper's own: it "
             + ("has young and pulls no cart" if mount in NO_CART else "pulls the cart and has young") + " (edit me).\n"
             "author = dreas\nversion = 1.0\ncart = " + ("false" if mount in NO_CART else "true") + "\nfoals = true\n" + ("flies = true\n" if mount in FLYING else "")
             + "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)\n" + ("" if mount in NO_CART else "cargo = 6  # items its cart carries, 1 to 6\n"))

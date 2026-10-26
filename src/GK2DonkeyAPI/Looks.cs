@@ -275,7 +275,7 @@ namespace GK2DonkeyAPI
             if (defs.TryGetValue(t, out SkinDef d)) return d;
             if (oldDonkeySkins.TryGetValue(t, out string renamed) && defs.TryGetValue(renamed, out d)) return d; // "donkey/hellfire"
             int slash = t.IndexOf('/');
-            if (slash >= 0) return Catalog.FindShort(t.Substring(0, slash)) is Catalog.Entry m && defs.TryGetValue(SkinKey(m.Id, t.Substring(slash + 1)), out d) ? d : null; // "dragon/default": saddleup.dragon's
+            if (slash >= 0) return (Catalog.Find(t.Substring(0, slash)) ?? Catalog.FindShort(t.Substring(0, slash))) is Catalog.Entry m && defs.TryGetValue(SkinKey(m.Id, t.Substring(slash + 1)), out d) ? d : null; // "dragon/default": the dragon's; "saddleup.dragon/default": a renamed mount's (Catalog.renamedMounts)
             if (t.Length == 0) return null;
             if (oldLookNames.TryGetValue(t, out string mountShort)) t = mountShort; // "red-dragon": the dragon's default
             if (defs.TryGetValue(SkinKey(t, DefaultSkinName), out d)) return d;

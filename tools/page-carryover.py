@@ -19,7 +19,7 @@ PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
 # the per-mount sets a cfg may hold: the built-in kinds and the example mod's (example.checker-beast); a player's is ""
 # only. The keys carry the mount's id (MountSettingsPage.PerMount "_<id>", MountRows "Skin_<id>"): "<mod>.<name>" since
 # 2026-10-24, the donkey's plain
-KINDS = ["donkey", "saddleup.dragon", "saddleup.gerry", "saddleup.rat", "saddleup.snail", "saddleup.worm", "example.checker-beast"]
+KINDS = ["donkey", "saddleup-dragon.dragon", "saddleup.gerry", "saddleup-critters.rat", "saddleup-critters.snail", "saddleup-critters.worm", "example.checker-beast"]  # the four by their packs' ids since 2026-10-26
 MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"]
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
 

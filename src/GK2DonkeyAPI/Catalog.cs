@@ -141,7 +141,25 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        internal static Entry Find(string id) => !string.IsNullOrEmpty(id) && defs.TryGetValue(id.Trim(), out Entry d) ? d : null;
+        internal static Entry Find(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            string t = id.Trim();
+            if (defs.TryGetValue(t, out Entry d)) return d;
+            return renamedMounts.TryGetValue(t, out string now) && defs.TryGetValue(now, out d) ? d : null;
+        }
+
+        // Saddle Up's four mounts before they became packs of their own, their ids by the pack (2026-10-26, packs/; the
+        // user: "ids need to be depending on pack"). Never released: what a dev's own world, cfg and side file held. The
+        // old id finds the new mount (Find, Looks.Find's "<mount>/<skin>"), the Mount row writes the new one back, and a
+        // per-mount cfg key of the old id carries its value over (MountSettingsPage.OldPlaces, RenamedMountKey).
+        internal static readonly Dictionary<string, string> renamedMounts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["saddleup.dragon"] = "saddleup-dragon.dragon",
+            ["saddleup.rat"] = "saddleup-critters.rat",
+            ["saddleup.snail"] = "saddleup-critters.snail",
+            ["saddleup.worm"] = "saddleup-critters.worm",
+        };
 
         // A mount by the name after its prefix ("dragon" -> saddleup.dragon) when exactly one mount has it: what a dev's
         // own cfg and saves held before the prefixes (2026-10-24). Null when none or several.

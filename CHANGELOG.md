@@ -12,6 +12,9 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The mounts are downloads of their own** (the user, 2026-10-26): GK2 Saddle Up itself ships the donkey, Gerry and
+  the donkey's Hellfire and Royal Parade; the Dragon (GK2 Saddle Up: Dragon) and the giant rat, snail and worm (GK2
+  Saddle Up: Critters) are mount packs to add, each a folder for `BepInEx\plugins\`, or all of them in one zip.
 - **Kept donkeys and carts are never lost because something went wrong** (docs/multi-mod-loading.md): after an error
   took them away, the side file is left as it was instead of being rewritten or deleted by the next save; a side file
   older than its save is kept aside instead of being overwritten; the last one is kept as a backup; one that can't
@@ -324,6 +327,10 @@ For players:
 
 For mod authors:
 
+- **Our mounts are worked examples of a pack without a DLL**: `packs/SaddleUpDragon/` and `packs/SaddleUpCritters/` in
+  the repo, each exactly the folder a player puts into `BepInEx\plugins\` (docs/making-a-mount.md "Built in or
+  external"). Their ids changed with the move (`saddleup-dragon.dragon`, `saddleup-critters.rat/.snail/.worm`; never
+  released).
 - **GK2 Donkey API 0.40.0: content from many mods** (docs/multi-mod-loading.md, docs/making-a-mount.md "Living next to
   other mods"). `MountHandle.Remove(ownerId)` (another mod's instance is refused) and limits on `SetData`. An effect's
   id is `<mod>.<name>` (Saddle Up's Hellfire is `saddleup.hellfire`) and meets the version rule; a code skin or effect
@@ -828,6 +835,15 @@ For mod authors:
 
 Development:
 
+- **Built in or external** (docs/making-a-mount.md): the repo's `packs/<Pack>/` laid out as `BepInEx\plugins\<Pack>\`
+  (the dragon in `SaddleUpDragon`, the rat, snail and worm in `SaddleUpCritters`, ids by the pack:
+  `saddleup-dragon.dragon`, `saddleup-critters.rat`; moved out of `src/SaddleUp/assets/mounts/`); the dev build links
+  them into the game as junctions (`LinkPacks`; `tools/packs.py status | link | unlink`), so the Mounts tab saves into
+  the repo; `skinroots.py` and every tool and scan walk both kinds (`kind()`, `pack_of()`), SkinsScan checks a pack's
+  prefix, its `needs` and docs; `new_skin.py --pack`; `make-release-zip.py` writes a zip per pack and an All Mounts
+  bundle, `check-dist.py` checks the packs; a dev-only rename table (`Catalog.renamedMounts`) heals the old ids in a dev
+  world and cfg; the self-tests' `M()`/`Sk()` map the new ids, the dragon's sound test reads its pack, and a new
+  scenario "built in or external"; `.gitattributes` marks the art and sounds binary.
 - **Content from many mods** (docs/multi-mod-loading.md, investigated and built 2026-10-26): five new self-tests
   (Never lost: the held and set-aside side file, records carried forward, handle ownership; Skins and effects: hostile
   files, no throw between mods, order and identity, versions and ids); the "ids" scenario follows the new replace

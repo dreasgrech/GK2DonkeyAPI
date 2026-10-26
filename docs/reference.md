@@ -266,7 +266,7 @@ section sets the player's mount and skin. Full story: [skins-design.md](skins-de
 
 | Key | Default | Meaning |
 |---|---|---|
-| `Skin` | (empty) | The skin by its full name, `<mount id>/<skin>` (`saddleup.rat/default`, `saddleup.snail/default`, `saddleup.worm/default`, `saddleup.dragon/default`, `saddleup.gerry/default`, `donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`; a clear short name such as a mount's id finds its default too, `hellfire` the donkey's); the mount is the skin's; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
+| `Skin` | (empty) | The skin by its full name, `<mount id>/<skin>` (`saddleup-critters.rat/default`, `saddleup-critters.snail/default`, `saddleup-critters.worm/default`, `saddleup-dragon.dragon/default`, `saddleup.gerry/default`, `donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`; a clear short name such as a mount's id finds its default too, `hellfire` the donkey's); the mount is the skin's; shown in Saddle Up as the Mount list and the mount's Skin row, docs/mounts-design.md; any pack or mod skin). Empty or `donkey`: the game's own look. A skin that isn't installed leaves the donkey as drawn and keeps the choice. |
 
 **A mount's sounds.** A mount's and a skin's own sounds live in the `[Sounds]` of its `mount.cfg` and its `skin.cfg`
 ([`docs/mount-sounds.md`](mount-sounds.md)); the keys above are the base they sit on. The donkey's own sounds (the

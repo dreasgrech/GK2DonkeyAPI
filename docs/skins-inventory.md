@@ -65,8 +65,8 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Docs: `docs/sprite-tools.md` ("Generated, no drawing", "The canvas, found wrong", "The crown"), `docs/open-items.md`.
 
 ### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts; Saddle Up's packs since 2026-10-20)
-- **Ids**: the mounts `saddleup.dragon`, `saddleup.rat`, `saddleup.snail`, `saddleup.worm`; each one's look is its
-  default skin, `saddleup.dragon/default` and so on (the skins were `red-dragon`, `grey-rat`, `garden-snail`,
+- **Ids**: the mounts `saddleup-dragon.dragon`, `saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`; each one's look is its
+  default skin, `saddleup-dragon.dragon/default` and so on (the skins were `red-dragon`, `grey-rat`, `garden-snail`,
   `earth-worm` earlier on 2026-10-24, and before that the mounts' plain ids).
 - **Pictures and cfg**: `src/SaddleUp/assets/mounts/saddleup.<dragon|rat|snail|worm>/`: the mount's `mount.cfg`
   (`[Mount]`, its tuning and sounds; the dragon's `sounds\` holds its flight's twelve `.ogg`) and `skins/default/`

@@ -679,10 +679,10 @@ of the values it sets, the rest the default jump's; a pack's `[Jump]`; `MountInf
 the donkey by default), so the red and
 a hypothetical blue dragon would be two skins of the dragon mount, and Hellfire is a skin of the donkey mount.
 
-**Ids.** A mount's id is `<mod>.<name>` (`saddleup.dragon`, `acme.dragon`): a code or pack mount without a dot in its
+**Ids.** A mount's id is `<mod>.<name>` (`saddleup-dragon.dragon`, `acme.dragon`): a code or pack mount without a dot in its
 id is refused; only the game's `donkey` is plain. A skin is named within its mount: `MountSkinDef.Id` is its name
 (`default`, `frost`) or its full name, `MountSkinDef.Mount` the mount's id, and the registered id is
-`<Mount>/<Id>` (`saddleup.dragon/default`, `donkey/saddleup.hellfire`). Every mount but the donkey has one default look, the
+`<Mount>/<Id>` (`saddleup-dragon.dragon/default`, `donkey/saddleup.hellfire`). Every mount but the donkey has one default look, the
 skin named `default` (a pack's `skins\default\`): what a new instance wears, the Skin row's Default. A code mount
 should register one; if it doesn't, its first skin by name is its default. The donkey's own look is the game's art;
 its skins have names of their own. A skin added to a mount another mod owns is named `<mod>.<name>` (`Id =
@@ -729,17 +729,17 @@ its values (each key in one of the three), `[Jump]` for its own jump (0.39.0: `h
 `skin.cfg` it is ignored) and `[Sounds*]`; its skins are the folders under its `skins\`, and
 `skins\default\` is the one a new instance wears (the Skin row's Default); a `mount.cfg` without
 `skins\default\skin.cfg` is refused with its skins (one warning), and a `default_skin` line is reported as ignored.
-The folder's name is the mount's id (`gk2mounts\saddleup.dragon\`). A mount folder without `mount.cfg` adds its
+The folder's name is the mount's id (`gk2mounts\saddleup-dragon.dragon\`). A mount folder without `mount.cfg` adds its
 skins to a mount registered elsewhere (`gk2mounts\donkey\skins\` for the donkey's) and may not bring a `default`
 (left out, with a warning); its skins carry their author in the name, `<mod>.<name>`
-(`gk2mounts\saddleup.dragon\skins\acme.frost\` is `saddleup.dragon/acme.frost`), and one without the prefix is left
+(`gk2mounts\saddleup-dragon.dragon\skins\acme.frost\` is `saddleup-dragon.dragon/acme.frost`), and one without the prefix is left
 out with a warning. The same mount from two packs:
 the higher `[Mount] version` wins and replaces the facts in place (the other's skins keep the mount), a tie goes to
 the DLL over a loose folder, otherwise the first stays and the later one is refused with a warning; a mount
 registered in code meets the same rule (0.36.0: a newer `mount.cfg` replaces it, an older one is refused with its
 skins; before, a pack never replaced a code mount). A pack's mount is withdrawn with the last of its skins from the same
 owner, and a mount pack whose `default` doesn't register is withdrawn at once with its skins. Saddle Up's five mounts
-(`saddleup.rat`, `saddleup.snail`, `saddleup.worm`, `saddleup.dragon`, `saddleup.gerry`) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
+(`saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`, `saddleup-dragon.dragon`, `saddleup.gerry`) are packs of this kind, all in one layout (docs/skins.md "Worked examples"); they are Saddle Up's
 packs, so `MountInfo.IsBuiltIn` is false for them (true only for the API's own). (Before the mount folders,
 2026-10-24, a skin's `[Mount]` block declared the mount and the skin with the mount's id owned the declaration.)
 
@@ -764,8 +764,8 @@ cart`, `MountDef.Cart`), so the dragon has no cart colours; the value is kept. T
 
 A settings page gets the rows in two calls: `page.MountRows("Mount", companion)` adds a **Mount** dropdown (every
 mount) and a **Skin** dropdown with the chosen mount's skins (one row per mount, shown for the chosen one only: a
-dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>` (`Mount = saddleup.dragon`,
-`Skin_saddleup.dragon = saddleup.dragon/default`: full names); `page.FoalRows("Babies",
+dropdown's choices are fixed once built), on the cfg keys `Mount`, `Skin_<mount id>` (`Mount = saddleup-dragon.dragon`,
+`Skin_saddleup.dragon = saddleup-dragon.dragon/default`: full names); `page.FoalRows("Babies",
 companion)` adds the babies rows (how many, follow you on foot, come indoors, the same mount and skin) on `Foals`,
 `FoalsFollow`, `FoalsIndoors`, `FoalsWearSkin`, for a section of their own (Saddle Up's since 0.12; the count,
 `FoalsFollow` and `FoalsWearSkin` default to the companion's values when it is called: Saddle Up sets
@@ -817,7 +817,7 @@ recoloured by the colour settings when drawn in the donkey's palette colours.
 
 ```csharp
 foreach (MountSkinInfo s in Mounts.Looks.Skins) Log(s.Id + ": " + s.Name);   // "donkey" first, then the rest
-handle.Tuning.Set(Guid, "Skin", "saddleup.rat/default");                       // this donkey wears the giant rat's look
+handle.Tuning.Set(Guid, "Skin", "saddleup-critters.rat/default");                       // this donkey wears the giant rat's look
 handle.Tuning.Set(Guid, "Skin", MountLooks.DonkeyId);                          // the game's own look ("" does the same)
 companion.Skin = "donkey/saddleup.hellfire"; companion.FoalsWearSkin = false;     // the player's donkey, foals left plain
 ```
@@ -894,7 +894,7 @@ riding and hitched. Whether foals wear a skin follows its mount (`MountDef.Foals
 
 Every registration returns an `IDisposable`: dispose it to withdraw the skin; `Unregister(owner, id)` with the
 skin's full name does the same. `Find(id)` takes the full name, and a clear short one too: a mount's id or its unique
-name after the prefix gives its default (`saddleup.dragon`, `dragon`), a skin name only one mount has gives that skin
+name after the prefix gives its default (`saddleup-dragon.dragon`, `dragon`), a skin name only one mount has gives that skin
 (`hellfire` finds `donkey/saddleup.hellfire`: the name after a skin's prefix too, as the dev names from before it).
 Wearers show the game's own look from their next frame and keep their choice, so the skin returns with its provider.
 `Report(id)` says what the loader found (pictures, names that match no frame, frames still to draw);

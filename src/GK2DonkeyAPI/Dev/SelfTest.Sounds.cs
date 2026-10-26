@@ -222,7 +222,7 @@ namespace GK2DonkeyAPI
                     sr.Invalidate();
                     SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
                     bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f);
-                    bool ownStep = ss != null && !Off(ss) && (ss.Describe() ?? "").Contains("saddleup.snail");
+                    bool ownStep = ss != null && !Off(ss) && (ss.Describe() ?? "").Contains(M("snail"));
                     Check(waited && Off(sv) && Off(sl) && ownStep,
                         $"a standing snail: no voice and no lips by its [Sounds] and the rule, its step its own squelch (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
                     Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
@@ -579,20 +579,20 @@ namespace GK2DonkeyAPI
         // The flying events (docs/mount-sounds-design.md 3.2) on a flier of the test's own, every event given a game
         // sound: the take-off, the launch's flaps and the beats airborne, the fly loop, the landing, the thud, landed;
         // a jump's own two; a jump plays none of the flight's.
-        // The built-in dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as
-        // files ... a solid foundation"; the mount folders the same day): its flight's files are the mount's, in Saddle
-        // Up's embedded mounts\saddleup.dragon\sounds\, for every skin of the dragon; its own look (skins\default\)
-        // has none of its own.
+        // The dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as files ... a
+        // solid foundation"; the mount folders the same day): its flight's files are the mount's, in its pack's mount
+        // folder's sounds\ (packs/SaddleUpDragon, an external pack since 2026-10-26: read from the folder, no cache),
+        // for every skin of the dragon; its own look (skins\default\) has none of its own.
         private static IEnumerator SoundsDragonFiles()
         {
             if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             Looks.SkinDef red = Looks.Find(Sk("dragon"));
             Catalog.Entry mount = Catalog.Find(M("dragon"));
-            if (red == null || mount == null) { Skip("Saddle Up's dragon is not loaded"); yield break; }
+            if (red == null || mount == null) { Skip("the dragon's pack is not in the game (tools/packs.py link)"); yield break; }
             var events = new[] { "takeoff", "flap", "glide", "land" };
             int inMount = mount.Pack != null ? mount.Pack.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count : 0;
             int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
-            Check(inMount >= 12 && inSkin == 0 && Looks.DefaultSkinOf(mount) == "saddleup.dragon/default", $"the embedded mount folder: {inMount} sound file(s) in saddleup.dragon\\sounds\\ (the mount's), {inSkin} in its own look's (skins\\default\\); default look {Looks.DefaultSkinOf(mount)}");
+            Check(inMount >= 12 && inSkin == 0 && Looks.DefaultSkinOf(mount) == Sk("dragon"), $"the pack's mount folder: {inMount} sound file(s) in {M("dragon")}\\sounds\\ (the mount's), {inSkin} in its own look's (skins\\default\\); default look {Looks.DefaultSkinOf(mount)}");
             var skinLines = new List<string>();
             foreach (string e in events) if (Looks.SkinSoundBlock(red, Looks.SoundLayer.Both)?.Get(e, null) != null) skinLines.Add(e);
             Check(skinLines.Count == 0, "no flight sound is the red dragon skin's own line" + (skinLines.Count > 0 ? ": " + string.Join(", ", skinLines) : ""));
@@ -610,14 +610,15 @@ namespace GK2DonkeyAPI
                 SoundLine l = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(e, null);
                 Check(l != null && l.Files != null, $"mount.cfg [Sounds] {e}: {(l?.Files != null ? l.Files.Length + " file(s)" : "no files")}");
             }
-            // loaded from the embedded mount folder through the cache file, once, under the mount's own name
+            // loaded from the pack's own folder on disk (a loose pack: no cache file), once, under the mount's own name
             SoundLine tl = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get("takeoff", null);
             string id = tl != null ? SoundBank.ForFiles(mount.Pack.SoundFiles, tl.BankKey, tl.Files, false, false, tl.Folder) : null;
             yield return Until(() => SoundBank.StateOf(id) == SoundBank.State.Ready, 8f);
             SoundBank.Entry te = SoundBank.Find(id);
-            Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the embedded mount folder ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
-            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-" + M("dragon"));
-            Check(Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")), "their cache files sit under the mount's own name (" + cache + ")");
+            Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the pack's folder ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
+            string folder = mount.Pack?.Source ?? "";
+            Check(folder.IndexOf(Path.Combine("plugins", "SaddleUpDragon"), StringComparison.OrdinalIgnoreCase) >= 0 && File.Exists(Path.Combine(folder, "sounds", "takeoff_1.ogg")),
+                $"read from the pack in the game, plugins\\SaddleUpDragon\\ ({folder})");
         }
 
         private static IEnumerator SoundsFlying()

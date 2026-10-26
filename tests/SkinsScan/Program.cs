@@ -16,8 +16,31 @@
 using System.Text.RegularExpressions;
 
 var repo = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", "..")); // tests/X/bin/Release/net8.0 -> repo root
-var mountDirs = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "mounts")).Where(Directory.Exists)
-    .SelectMany(Directory.GetDirectories).OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+// two kinds (2026-10-26, tools/skins/skinroots.py): built in, src/<project>/assets/mounts/<mount>/ (embedded in its DLL);
+// external, packs/<Pack>/gk2mounts/<mount>/ (each pack its own download, laid out as BepInEx/plugins/<Pack>/)
+var packsDir = Path.Combine(repo, "packs");
+var mountRoots = Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "mounts"))
+    .Concat(Directory.Exists(packsDir) ? Directory.GetDirectories(packsDir).Select(p => Path.Combine(p, "gk2mounts")) : Enumerable.Empty<string>())
+    .Where(Directory.Exists).ToList();
+var mountDirs = mountRoots.SelectMany(Directory.GetDirectories).OrderBy(d => Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList();
+// the pack a mount folder is in (null: built in)
+string? PackOf(string dir)
+{
+    string rel = Path.GetRelativePath(packsDir, dir);
+    return rel.StartsWith("..") || Path.IsPathRooted(rel) ? null : rel.Split(Path.DirectorySeparatorChar)[0];
+}
+// a pack's ids carry its prefix: the pack's name in lower case, dashes free (SaddleUpDragon: saddleup-dragon.dragon)
+bool PrefixOk(string pack, string id) => id.IndexOf('.') > 0 && id.Substring(0, id.IndexOf('.')).Replace("-", "").Equals(pack, StringComparison.OrdinalIgnoreCase);
+if (Directory.Exists(packsDir))
+{
+    foreach (var pack in Directory.GetDirectories(packsDir))
+    {
+        string pn = Path.GetFileName(pack);
+        if (!Directory.Exists(Path.Combine(pack, "gk2mounts"))) Console.WriteLine($"FAIL pack {pn}: no gk2mounts\\ folder (a pack is laid out as BepInEx\\plugins\\{pn}\\gk2mounts\\<mount>\\)");
+        foreach (var doc in new[] { "README.md", "CHANGELOG.md" }) if (!File.Exists(Path.Combine(pack, doc))) Console.WriteLine($"FAIL pack {pn}: no {doc} (each pack is its own download)");
+        foreach (var stray in Directory.GetDirectories(pack).Select(Path.GetFileName).Where(d => d != "gk2mounts")) Console.WriteLine($"FAIL pack {pn}: {stray}\\ (a pack holds gk2mounts\\, its README.md and CHANGELOG.md)");
+    }
+}
 var skinDirs = mountDirs.Select(m => Path.Combine(m, "skins")).Where(Directory.Exists).SelectMany(Directory.GetDirectories)
     .OrderBy(d => Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(d))) + "/" + Path.GetFileName(d), StringComparer.OrdinalIgnoreCase).ToList(); // by full name, <mount>/<skin>
 foreach (var stray in Directory.GetDirectories(Path.Combine(repo, "src")).Select(p => Path.Combine(p, "assets", "skins")).Where(Directory.Exists))
@@ -286,6 +309,22 @@ foreach (var mdir in mountDirs)
     string mcfgPath = Path.Combine(mdir, "mount.cfg");
     bool mok = true;
     void BadM(string what) { Fail($"mount {mid}: {what}"); mok = false; }
+    string? inPack = PackOf(mdir);
+    if (inPack != null)
+    {
+        // an external pack (the user, 2026-10-26: "ids need to be depending on pack"): its mounts carry its prefix, a
+        // skin it adds to another's mount too; its mount.cfg says the API it needs and its version
+        if (File.Exists(mcfgPath) && !PrefixOk(inPack, mid)) BadM($"in the pack {inPack}: its id carries the pack's prefix ({inPack.ToLowerInvariant()}.<name>, dashes where wanted: saddleup-dragon.dragon)");
+        if (!File.Exists(mcfgPath))
+            foreach (var sk in Directory.Exists(Path.Combine(mdir, "skins")) ? Directory.GetDirectories(Path.Combine(mdir, "skins")).Select(Path.GetFileName) : Enumerable.Empty<string?>())
+                if (!PrefixOk(inPack, sk!)) BadM($"skins\\{sk}\\ in the pack {inPack}: a skin it adds to another's mount carries the pack's prefix");
+        if (File.Exists(mcfgPath))
+        {
+            var pm = ReadCfg(mcfgPath).GetValueOrDefault("Mount");
+            if (pm == null || string.IsNullOrWhiteSpace(pm.GetValueOrDefault("needs"))) BadM($"in the pack {inPack}: [Mount] needs = <the API version> (an older API refuses the pack instead of loading it half)");
+        }
+    }
+    else if (mid.StartsWith("saddleup-", StringComparison.OrdinalIgnoreCase)) BadM("a pack's id among the built-in mounts: an external mount sits in packs\\<Pack>\\gk2mounts\\");
     var skinsHere = Directory.Exists(Path.Combine(mdir, "skins")) ? Directory.GetDirectories(Path.Combine(mdir, "skins")).Select(Path.GetFileName).ToList() : new List<string?>();
     if (skinsHere.Count == 0) BadM("no skins\\<skin>\\ folder: a mount with nothing to wear is withdrawn at the start");
     // a folder without mount.cfg adds its skins to a mount another mod owns (the donkey is the game's): each is named
@@ -654,5 +693,6 @@ foreach (var dir in skinDirs)
     if (ok) Pass($"{id}: skin.cfg, {(sheet ? "a sheet" : game ? "the game's own frames (source = game)" : variant ? "built on its default" : "44 pictures")}{(Directory.Exists(Path.Combine(dir, "front")) ? " + a front layer" : "")}, mount '{mount}'");
 }
 Console.WriteLine($"INFO {skins} shipped skins in {mountDirs.Count} mount folders, {mountCfgs.Count} mounts declared ({string.Join(", ", mountCfgs.Keys.OrderBy(k => k))}), {pictures} pictures");
+Console.WriteLine($"INFO built in: {string.Join(", ", mountDirs.Where(d => PackOf(d) == null).Select(Path.GetFileName))}; external: {string.Join("; ", mountDirs.Where(d => PackOf(d) != null).GroupBy(d => PackOf(d)).Select(g => g.Key + " (" + string.Join(", ", g.Select(Path.GetFileName)) + ")"))}");
 Console.WriteLine(fails == 0 ? $"ALL PASS ({passes})" : $"FAILURES: {fails}");
 return fails;

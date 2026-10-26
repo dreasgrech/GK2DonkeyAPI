@@ -11,11 +11,11 @@ namespace SaddleUp
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
     // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
-    // the example of how little a player mod needs. Its five mounts (the Red Dragon, the Giant Rat, the Giant Snail,
-    // the Giant Worm, Gerry) are mount packs embedded in this DLL (the csproj's assets\mounts\**: each mount's
-    // mount.cfg and sounds\, its skins under skins\; the donkey's Hellfire and Royal Parade under donkey\skins\) and handed to the API
-    // in Awake: the API is the backend, this mod ships the content, exactly as anyone else's mod ships a mount
-    // (docs/mounts-as-mods.md: a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart).
+    // the example of how little a player mod needs. Its built-in content (Gerry; the donkey's Hellfire and Royal Parade)
+    // is mount packs embedded in this DLL (the csproj's assets\mounts\**) and handed to the API in Awake; the other
+    // mounts are external packs, each its own download (the repo's packs\: the Dragon; the Critters, the rat, snail and
+    // worm), found by the API in BepInEx\plugins\<Pack>\gk2mounts\ like any mod's (docs/making-a-mount.md "Built in or
+    // external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
     [BepInDependency("dreas.gk2.donkeyapi", "0.39.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
@@ -60,11 +60,11 @@ namespace SaddleUp
                 Logger.LogError($"GK2 Donkey API {Mounts.ApiVersion} is too old (this mod needs {NeedsApi} or newer). Update GK2 Donkey API. The mount is off.");
                 return;
             }
-            // The five mounts: registered before the page is built, so their rows are made with it (any other mod's
-            // mounts are caught up the frame after Publish). With the mounts off for players (Mounts.MountsEnabled,
+            // The built-in content: registered before the page is built, so its rows are made with it (the packs' mounts
+            // are registered before, at the API's start; any other mod's are caught up the frame after Publish). With the mounts off for players (Mounts.MountsEnabled,
             // this version) the API keeps them out and says so, and the donkey stays the only mount.
             int skins = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
-            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} skin pack(s) registered (the five mounts: the Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm, Gerry; the donkey's Hellfire and Royal Parade).");
+            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Gerry; the donkey's Hellfire and Royal Parade). The Dragon and the Critters are packs of their own.");
             RegisterHellfire(); // the effect Hellfire comes with: Saddle Up's too, defined through the API as any mod's
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested

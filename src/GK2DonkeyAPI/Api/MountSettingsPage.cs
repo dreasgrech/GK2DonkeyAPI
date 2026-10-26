@@ -158,6 +158,8 @@ namespace GK2DonkeyAPI.Api
             movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out List<(string Section, string Key)> aliases);
             string unprefixed = UnprefixedMountKey(key);
             if (unprefixed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, unprefixed);
+            string renamed = RenamedMountKey(key);
+            if (renamed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, renamed);
             foreach (string s in file.Keys)
             {
                 if (s == cfgSection) continue;
@@ -166,6 +168,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     yield return (s, key);
                     if (unprefixed != null) yield return (s, unprefixed);
+                    if (renamed != null) yield return (s, renamed);
                 }
                 else if (aliases != null)
                 {
@@ -175,6 +178,17 @@ namespace GK2DonkeyAPI.Api
                     }
                 }
             }
+        }
+
+        // A per-mount key of a mount whose id changed (Catalog.renamedMounts: "Coat_saddleup-dragon.dragon" ->
+        // "Coat_saddleup.dragon"): its old name, so the dev's value carries over; null for any other key.
+        internal static string RenamedMountKey(string key)
+        {
+            foreach (var kv in GK2DonkeyAPI.Catalog.renamedMounts)
+            {
+                if (key.EndsWith("_" + kv.Value, StringComparison.OrdinalIgnoreCase)) return key.Substring(0, key.Length - kv.Value.Length) + kv.Key;
+            }
+            return null;
         }
 
         // A per-mount key with its mount's id from before the prefixes ("Coat_saddleup.dragon" -> "Coat_dragon": a dev's
@@ -482,6 +496,12 @@ namespace GK2DonkeyAPI.Api
         {
             if (mountRow == null) return;
             string mount = mountRow.Value ?? MountCatalog.DonkeyId;
+            // a mount's id from before it became a pack of its own ("saddleup.dragon", Catalog.renamedMounts): its id now, kept
+            if (GK2DonkeyAPI.Catalog.Find(mount) is GK2DonkeyAPI.Catalog.Entry renamedTo && !renamedTo.Id.Equals(mount, StringComparison.OrdinalIgnoreCase))
+            {
+                mountRow.Value = renamedTo.Id; // SettingChanged runs Apply again
+                return;
+            }
             // a mount's id from before the prefixes ("dragon": a dev's cfg, 2026-10-24): its full id (saddleup.dragon), kept
             if (GK2DonkeyAPI.Catalog.Find(mount) == null && GK2DonkeyAPI.Catalog.FindShort(mount) is GK2DonkeyAPI.Catalog.Entry full)
             {
