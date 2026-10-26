@@ -38,7 +38,7 @@ namespace GK2DonkeyAPI
 
         // The keys of [Mount], in the order the file keeps them (docs/mounts-foundation-audit.md). No default_skin: a
         // mount's own look is its skins\default\ (2026-10-24).
-        internal static readonly string[] MountKeys = { "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo" };
+        internal static readonly string[] MountKeys = { "format", "needs", "id", "name", "noun", "description", "portrait", "author", "version", "cart", "foals", "flies", "jumps", "foal_scale", "speed", "cargo" };
 
         private static readonly string[] MountSections = { "mount", "stats", "tuning", "tuning.ride", "tuning.cart", "jump", "sounds", "sounds.ride", "sounds.cart", "sounds.baby" };
 
@@ -89,8 +89,23 @@ namespace GK2DonkeyAPI
             }
             if (!mount.TryGetValue("id", out string mountId) || string.IsNullOrWhiteSpace(mountId)) mountId = p.DirName;
             mountId = mountId.Trim();
-            if (!mountId.Equals(p.DirName, StringComparison.OrdinalIgnoreCase)) p.Report += $"[Mount] id = {mountId} differs from its folder '{p.DirName}': the folder's name is the id by convention (its skins are found in it either way); ";
-            var k = new Catalog.Entry { Id = mountId, Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Jump = kj, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby, Pack = p, FromPack = true, BuiltIn = p.BuiltIn, Owner = p.Owner };
+            // the folder's name is the id (docs/mount-id-collisions.md): a DLL's skins were looked up by the folder and
+            // hung on a mount nobody registered while the mount had nothing to wear (docs/multi-mod-loading.md 4.2)
+            if (!mountId.Equals(p.DirName, StringComparison.OrdinalIgnoreCase)) throw new FormatException($"[Mount] id = {mountId} differs from its folder's name '{p.DirName}': a mount's folder is named by its id; rename the folder or the id");
+            // the API the pack was written for, as a skin.cfg says it (docs/multi-mod-loading.md 5.1): an older API refuses
+            // the mount with the reason instead of loading it without the keys it doesn't know ([Jump] before 0.39)
+            int format = 1;
+            if (mount.TryGetValue("format", out string mformat) && (!int.TryParse(mformat, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out format) || format < 1))
+                throw new FormatException($"[Mount] format = {mformat} is not a number (this version knows 1)");
+            if (format > 1) throw new FormatException($"[Mount] format = {format}: this version of GK2 Donkey API reads format 1; update GK2 Donkey API");
+            string needsText = null;
+            if (mount.TryGetValue("needs", out string mneeds))
+            {
+                needsText = mneeds.Trim();
+                if (!System.Version.TryParse(needsText.IndexOf('.') < 0 ? needsText + ".0" : needsText, out System.Version needs)) throw new FormatException($"[Mount] needs = {mneeds} is not a version (like 0.39)");
+                if (needs > Mounts.ApiVersion) throw new FormatException($"needs GK2 Donkey API {needs}, this is {Mounts.ApiVersion}; update GK2 Donkey API");
+            }
+            var k = new Catalog.Entry { Id = mountId, Needs = needsText, Format = mount.ContainsKey("format") ? format : 0, Tuning = kt, TuningRide = ktRide, TuningCart = ktCart, Jump = kj, Sounds = ks, SoundsRide = ksRide, SoundsCart = ksCart, SoundsBaby = ksBaby, Pack = p, FromPack = true, BuiltIn = p.BuiltIn, Owner = p.Owner };
             k.Name = mount.TryGetValue("name", out string mn) && !string.IsNullOrWhiteSpace(mn) ? mn.Trim() : k.Id;
             if (mount.TryGetValue("noun", out string mnoun) && !string.IsNullOrWhiteSpace(mnoun)) k.Noun = mnoun.Trim();
             if (mount.TryGetValue("description", out string mdesc) && !string.IsNullOrWhiteSpace(mdesc)) k.Description = mdesc.Trim();
@@ -106,12 +121,12 @@ namespace GK2DonkeyAPI
             if (mount.TryGetValue("jumps", out string mj)) k.Jumps = !mj.Equals("false", StringComparison.OrdinalIgnoreCase);   // on unless said
             if (mount.TryGetValue("foal_scale", out string ms))
             {
-                if (float.TryParse(ms, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
+                if (Numbers.TryFloat(ms, out float fs)) k.FoalScale = Mathf.Clamp(fs, 0.2f, 1f);
                 else p.Report += "[Mount] foal_scale = " + ms + " is not a number (0.2 to 1), the babies stay 0.6; ";
             }
             if (mount.TryGetValue("speed", out string speedText))
             {
-                if (float.TryParse(speedText, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float speedValue) && speedValue > 0f)
+                if (Numbers.TryFloat(speedText, out float speedValue) && speedValue > 0f)
                 {
                     if (speedValue < Catalog.SpeedMin || speedValue > Catalog.SpeedMax) p.Report += "[Mount] speed = " + speedText + " is outside 0.5 to 4, taken as " + Num(Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax)) + "; ";
                     k.Speed = Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax);
@@ -126,7 +141,13 @@ namespace GK2DonkeyAPI
             var mountUnknown = new List<string>();
             foreach (string mk in mount.Keys) if (Array.IndexOf(MountKeys, mk.ToLowerInvariant()) < 0) mountUnknown.Add(mk);
             if (mountUnknown.Count > 0) p.Report += "[Mount] unknown keys ignored: " + string.Join(", ", mountUnknown) + "; ";
-            if (unknownSections.Count > 0) p.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + " (mount.cfg has [Mount], [Stats], [Tuning*], [Jump] and [Sounds*]); ";
+            if (unknownSections.Count > 0)
+            {
+                // a section this version doesn't know is most often a newer version's: said as a warning (a mount without it is
+                // not the mount its author made); needs = in [Mount] refuses it instead
+                p.Report += "unknown sections ignored: " + string.Join(", ", unknownSections) + " (mount.cfg has [Mount], [Stats], [Tuning*], [Jump] and [Sounds*]); ";
+                Plugin.Log.LogWarning($"Looks: {where}: mount.cfg has section(s) this version of GK2 Donkey API ({Mounts.ApiVersion}) doesn't know: {string.Join(", ", unknownSections)}; left out. A pack written for a newer version says needs = <version> in [Mount].");
+            }
             p.Report += jumpReport;
             if (kj != null) p.Report += kj.Count + " jump key(s); ";
             int tuningKeys = (kt?.Count ?? 0) + (ktRide?.Count ?? 0) + (ktCart?.Count ?? 0);
@@ -163,8 +184,8 @@ namespace GK2DonkeyAPI
                 foreach (string f in Directory.GetFiles(mountDir, "*.png")) p.FileNames.Add(Path.GetFileName(f));
                 p.ReadFile = file =>
                 {
-                    string full = Path.Combine(mountDir, file.Replace('/', Path.DirectorySeparatorChar));
-                    return File.Exists(full) ? File.ReadAllBytes(full) : null;
+                    string full = Numbers.InFolder(mountDir, file); // never outside the pack (docs/multi-mod-loading.md 2.5)
+                    return full != null && File.Exists(full) ? File.ReadAllBytes(full) : null;
                 };
                 declared = RegisterMount(p, File.ReadAllText(cfgPath, Encoding.UTF8), "the folder " + mountDir);
                 if (declared == null) return 0;
@@ -175,7 +196,17 @@ namespace GK2DonkeyAPI
             string skinsDir = Path.Combine(mountDir, SkinsDirName);
             if (Directory.Exists(skinsDir))
             {
-                string[] skinDirs = Directory.GetDirectories(skinsDir);
+                string[] skinDirs;
+                try
+                {
+                    skinDirs = Directory.GetDirectories(skinsDir);
+                }
+                catch (Exception e)
+                {
+                    // the mount stays only with a default that registered (NoSkinLeft below)
+                    Plugin.Log.LogWarning($"Looks: the skins of '{mountDir}' could not be listed ({e.Message}).");
+                    skinDirs = new string[0];
+                }
                 // the mount's own look first, then by name: its other skins are built on it from their registration
                 bool IsDefault(string dir) => Path.GetFileName(dir).Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase);
                 Array.Sort(skinDirs, (a, b) => IsDefault(a) != IsDefault(b) ? (IsDefault(a) ? -1 : 1) : StringComparer.OrdinalIgnoreCase.Compare(a, b));
@@ -323,6 +354,8 @@ namespace GK2DonkeyAPI
                 SectionNotes mn = NotesOf("mount");
                 foreach (string l in mn.Lead) sb.Append(l).Append('\n');
                 sb.Append("[Mount]\n");
+                if (k.Format > 0) mn.Key(sb, "format", k.Format.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                if (!string.IsNullOrEmpty(k.Needs)) mn.Key(sb, "needs", k.Needs);
                 mn.Key(sb, "id", k.Id);
                 mn.Key(sb, "name", k.Label);
                 if (!string.IsNullOrEmpty(k.Noun)) mn.Key(sb, "noun", k.Noun);

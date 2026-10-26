@@ -146,6 +146,20 @@ namespace GK2DonkeyAPI
                 e.Stats.Add(("Skins", skins.ToString()));
                 list.Add(e);
             }
+            // a mount whose skins are installed but not the mount (its mod is missing): listed, not pickable (the user,
+            // 2026-10-26: listed as unavailable); its skins are offered nowhere else (never as the donkey's)
+            foreach (var kv in Catalog.WaitingSkins())
+            {
+                var names = new List<string>();
+                foreach (Looks.SkinDef s in kv.Value) names.Add(string.IsNullOrEmpty(s.Name) ? s.LocalId : s.Name);
+                list.Add(new Entry
+                {
+                    Id = kv.Key,
+                    Label = kv.Key + " (not installed)",
+                    Description = $"{(names.Count == 1 ? "A skin" : names.Count + " skins")} for this mount {(names.Count == 1 ? "is" : "are")} installed ({string.Join(", ", names)}), but not the mount itself: install the mod that adds it to ride it.",
+                    Fake = true,
+                });
+            }
             int fakes = Plugin.PanelFakeEntries != null ? Mathf.Clamp(Plugin.PanelFakeEntries.Value, 0, 200) : 0;
             for (int i = 1; i <= fakes; i++)
             {
@@ -1605,6 +1619,9 @@ namespace GK2DonkeyAPI
                 if (!IsOpen) return;
                 try
                 {
+                    // the panel's own lists (the Skin rows: never in the Mods menu or the game's Settings, InMenu) are read
+                    // again, so a skin added or withdrawn shows as it is now
+                    if (page != null) foreach (MountSettingsPage.Row r in page.Rows) if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
                     entries = Entries();
                     BuildList();
                     BuildRight();

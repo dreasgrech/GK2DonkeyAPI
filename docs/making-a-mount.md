@@ -63,7 +63,8 @@ MyMountMod/
 
 ```ini
 [Mount]
-id = me.giant-crab     # the same as the mount folder's name: "<mod>.<name>"
+needs = 0.40           # the GK2 Donkey API it was written for: an older one refuses it instead of loading it without [Jump]
+id = me.giant-crab     # the same as the mount folder's name: "<mod>.<name>" (a different id is refused)
 name = Giant Crab
 description = Pulls the cart, has young, scuttles a little faster than a donkey.
 author = you
@@ -95,7 +96,7 @@ lips = none
 ```ini
 [Skin]
 format = 1
-needs = 0.36
+needs = 0.40
 name = Red Crab
 description = A crab the size of a cart, sideways at everything.
 author = you
@@ -137,7 +138,7 @@ using BepInEx;
 using GK2DonkeyAPI.Api;
 
 [BepInPlugin("you.gk2.mymountmod", "My Mount Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.36.0")]
+[BepInDependency("dreas.gk2.donkeyapi", "0.40.0")]
 public sealed class Plugin : BaseUnityPlugin
 {
     private void Awake()
@@ -179,7 +180,7 @@ using BepInEx;
 using GK2DonkeyAPI.Api;
 
 [BepInPlugin("you.gk2.crabmod", "Crab Mod", "1.0.0")]
-[BepInDependency("dreas.gk2.donkeyapi", "0.36.0")]
+[BepInDependency("dreas.gk2.donkeyapi", "0.40.0")]
 public sealed class Plugin : BaseUnityPlugin
 {
     private readonly List<IDisposable> registered = new List<IDisposable>();
@@ -294,3 +295,27 @@ doesn't, its first skin by name is its default.
 6. In the game: the F11 Mounts tab reloads the files as you edit them, nudges the seat and the geometry live and
    saves the skin's rows back into its `skin.cfg` and the mount's into its `mount.cfg`; the seat and cart readout
    scenarios check every shipped mount.
+
+## Living next to other mods
+
+The API loads many mods' mounts and skins side by side (docs/multi-mod-loading.md). What that asks of yours:
+
+- **Register in your plugin's Awake or Start.** The settings page reads every list the frame after Saddle Up's Awake.
+  A mount or skin registered later (from `GameReady`, a coroutine) works in the world but has no Skin or colour rows
+  until the next start; the log says so once.
+- **Your prefix on every id.** Mounts, skins on another mod's mount, and effects are `<mod>.<name>`. Ids are ASCII
+  letters and digits, dots, dashes and underscores, at most 64 characters, no dot at either end.
+- **Your own GUID as the owner.** Two mods with one owner id replace and withdraw each other's things; the log warns
+  when it sees one id from two DLLs.
+- **Versions as numbers** (`1.2`, `1.2.0`): between two mods' mounts, skins or effects of one id the higher version
+  wins, without a throw (the other is left out with a warning, its handle doing nothing). One that isn't a number
+  ranks below any that is. A newer pack of a mount brings its facts and its pictures together: the older pack's skins
+  go with it.
+- **`needs =` in `[Mount]`** names the API your pack needs: an older API refuses it with the reason, instead of
+  loading it without the keys it doesn't know.
+- **What the loader refuses** (before anything is decoded): a frame larger than its canvas, a sheet larger than its
+  cells, a portrait over 512x512, a sound file over 16 MB, NaN or Infinity anywhere a number goes, a file name outside
+  the pack's own folder.
+- **Other mods' instances are theirs:** `Remove(ownerId)` refuses another mod's; your data on an instance is at most
+  64 keys of 64 characters, values of 4096.
+- **Without Saddle Up** nothing offers your mount to ride; the log says so at game ready.

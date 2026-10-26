@@ -374,6 +374,7 @@ namespace GK2DonkeyAPI
             }
             nextIds.Clear();
             ClearDormant();
+            ReleaseSideFile(); // another game: its own side file
             SafeSpots.NewGame(); // the spots of the game before are not this game's
             Flight.NewGame();    // its interaction pause is for the keeper before
             Sounds.LogCoverageOnce(); // what each skin's sounds are and which it lacks, once a session (docs/mount-sounds.md)
@@ -385,6 +386,7 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 Plugin.Log.LogWarning("Persistence: restoring the kept donkeys and carts failed: " + e);
+                HoldSideFile("the restore failed"); // what wasn't read must not be overwritten by the next save
             }
             try
             {
@@ -402,11 +404,26 @@ namespace GK2DonkeyAPI
             }
             Looks.VerifyGameSources(); // game-source skins: their frames checked now that the game is up (the sprite manifest)
             Looks.CheckParentsAtReady(); // a skin built on a default that never came: said once (docs/skin-layering-plan.md 3)
+            NoOffererOnce();
             Flight.WarmUp();          // the flying experiment: the game's walk grid scanned once now, not at the first landing
             Mounts.RaiseGameReady();
         }
 
         internal static void ClearDormant() => dormant.Clear();
+
+        // Mounts registered but no mod that offers them (only a settings page or a companion does: Saddle Up's): a mount
+        // mod installed without Saddle Up does nothing, and this says why, once (docs/multi-mod-loading.md 5.5).
+        private static bool noOffererSaid;
+
+        private static void NoOffererOnce()
+        {
+            if (noOffererSaid) return;
+            noOffererSaid = true;
+            if (MountSettingsPage.All.Count > 0 || MountCompanion.Count > 0) return;
+            var ids = new List<string>();
+            foreach (Catalog.Entry k in Catalog.All) if (k != Catalog.Donkey) ids.Add(k.Id);
+            if (ids.Count > 0) Plugin.Log.LogInfo($"Mounts: {ids.Count} mount(s) are registered ({string.Join(", ", ids)}), but no mod offers mounts to ride (GK2 Saddle Up does): install it to pick them.");
+        }
 
         public static void Tick()
         {

@@ -12,6 +12,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Kept donkeys and carts are never lost because something went wrong** (docs/multi-mod-loading.md): after an error
+  took them away, the side file is left as it was instead of being rewritten or deleted by the next save; a side file
+  older than its save is kept aside instead of being overwritten; the last one is kept as a backup; one that can't
+  be read whole no longer loses the rest.
 - **The Mounts panel lines up** (the user, 2026-10-25): no "Skin" heading over the Skin row, which sits under the
   stats card now; the mount's picture uses the whole height; in the colours window the custom colour squares and
   their labels line up with the other rows, and the headings sit on the left with a line under them.
@@ -320,6 +324,14 @@ For players:
 
 For mod authors:
 
+- **GK2 Donkey API 0.40.0: content from many mods** (docs/multi-mod-loading.md, docs/making-a-mount.md "Living next to
+  other mods"). `MountHandle.Remove(ownerId)` (another mod's instance is refused) and limits on `SetData`. An effect's
+  id is `<mod>.<name>` (Saddle Up's Hellfire is `saddleup.hellfire`) and meets the version rule; a code skin or effect
+  that loses it no longer throws into your Awake; a handle withdraws only what it registered; the first mod's sound for
+  an event stays. A mount.cfg may say `needs =` / `format =`; one whose id isn't its folder's is refused; ids are ASCII,
+  at most 64, no dot at an end. A newer pack of a mount brings its pictures with its facts (the old pack's skins go).
+  Skins of a mount that isn't installed are offered nowhere. Pictures are checked from their header (a frame at most
+  its canvas, a portrait 512x512), sounds at most 16 MB, no NaN, no file outside the pack. Register in Awake or Start.
 - **Cart rows follow the mount (API 0.39.0)**: `MountSettingsPage.CartRow(section, key)` marks a row as the cart's: it
   shows only while its mount pulls the cart (`MountSettingsPage.MountPullsCart`). Saddle Up's eight cart colour rows
   use it. The Mounts panel hides Drive the cart for a mount that can't pull one.
@@ -816,6 +828,16 @@ For mod authors:
 
 Development:
 
+- **Content from many mods** (docs/multi-mod-loading.md, investigated and built 2026-10-26): five new self-tests
+  (Never lost: the held and set-aside side file, records carried forward, handle ownership; Skins and effects: hostile
+  files, no throw between mods, order and identity, versions and ids); the "ids" scenario follows the new replace
+  rule; SkinsScan refuses NaN and Infinity, file names outside a pack and an effect id without its prefix;
+  `canonical_cfg.py` knows `needs` and `format` in `[Mount]`; tests/ApiSurface records sealed, abstract, virtual, base
+  types, interfaces and nested types and marks a breaking addition.
+  After the first run (1202 passed, 3 failed): the pack-sounds test expects the new `|`-joined file sound id; the
+  dragon's jump waits for its pictures to be built (the jump began while they built, its first frame the walk); the
+  herd test waits up to 30 s for a second standing call (1.5 to 4.5 s apart, put off by a step, never within 4 s: one
+  call in 12 s happened). `Plugin.Version` is 0.40.0 (the csproj alone had it).
 - **Each mount's jump in the dev tools**: the Mounts tab's "Its jump" rows (saved into the mount's `mount.cfg`,
   right-click back to the default's), the Flying tab's rows renamed "The default jump", the jump's log line and trace
   say whose shape it was. A new self-test in the Flying group ("jump: each mount its own"); `canonical_cfg.py` and

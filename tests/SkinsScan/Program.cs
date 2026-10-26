@@ -62,7 +62,8 @@ var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
 var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
-if (!effectIds.Contains("hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), hellfire among them");
+if (!effectIds.Contains("saddleup.hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; saddleup.hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), saddleup.hellfire among them");
+foreach (string fx in effectIds) { int dot = fx.IndexOf('.'); if (dot <= 0 || dot == fx.Length - 1) Fail($"SaddleUp/Plugin.cs: effect id '{fx}' has no mod prefix (<mod>.<name>; Effects.Register refuses it)"); }
 var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors" };
 var mountSections = new[] { "Mount", "Stats", "Tuning", "Tuning.Ride", "Tuning.Cart", "Jump", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // mount.cfg, in its canonical order
 // mount.cfg [Jump] (JumpShapes.Keys in the API): each key's range, in the file's order
@@ -93,6 +94,31 @@ static List<string> SectionOrder(string path)
         if (line.StartsWith("[")) order.Add(line.Split('#')[0].Trim().TrimStart('[').TrimEnd(']').Trim());
     }
     return order;
+}
+
+// The runtime's rules for what another mod's file may hold (docs/multi-mod-loading.md section 2): no number that is
+// NaN or Infinity, no file name outside its folder (rooted, a network share, "..").
+static IEnumerable<string> HostileValues(Dictionary<string, Dictionary<string, string>> cfg)
+{
+    foreach (var sec in cfg)
+    {
+        foreach (var kv in sec.Value)
+        {
+            bool words = kv.Key.Equals("name", StringComparison.OrdinalIgnoreCase) || kv.Key.Equals("description", StringComparison.OrdinalIgnoreCase) || kv.Key.Equals("author", StringComparison.OrdinalIgnoreCase) || kv.Key.Equals("noun", StringComparison.OrdinalIgnoreCase);
+            if (!words) foreach (string tok in kv.Value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string t = tok.TrimStart('+', '-');
+                if (t.Equals("NaN", StringComparison.OrdinalIgnoreCase) || t.StartsWith("Infinity", StringComparison.OrdinalIgnoreCase) || t == "\u221E")
+                    yield return $"[{sec.Key}] {kv.Key} = {kv.Value}: NaN and Infinity are not numbers";
+            }
+            if (kv.Key.Equals("portrait", StringComparison.OrdinalIgnoreCase) || kv.Key.Equals("sheet", StringComparison.OrdinalIgnoreCase) || kv.Key.Equals("sheet_front", StringComparison.OrdinalIgnoreCase))
+            {
+                string v = kv.Value.Replace('/', '\\');
+                if (Path.IsPathRooted(v) || v.Contains(':') || v.Split('\\').Contains(".."))
+                    yield return $"[{sec.Key}] {kv.Key} = {kv.Value}: a file of the pack's own folder (the runtime refuses a name outside it)";
+            }
+        }
+    }
 }
 
 static Dictionary<string, Dictionary<string, string>> ReadCfg(string path)
@@ -281,6 +307,7 @@ foreach (var mdir in mountDirs)
     if (!File.Exists(mcfgPath)) { BadM("no mount.cfg (a mount folder of this repo declares its mount)"); continue; }
     var cfg = ReadCfg(mcfgPath);
     mountCfgs[mid] = cfg;
+    foreach (string h in HostileValues(cfg)) BadM(h);
     var order = SectionOrder(mcfgPath);
     foreach (var sec in order) if (!mountSections.Contains(sec, StringComparer.OrdinalIgnoreCase)) BadM($"[{sec}]: not a section of mount.cfg ({string.Join(", ", mountSections)})");
     {
@@ -373,6 +400,7 @@ foreach (var dir in skinDirs)
     if (!cfg.TryGetValue("Skin", out var skin)) { Fail($"{id}: no [Skin] section"); continue; }
     bool ok = true;
     void Bad(string what) { Fail($"{id}: {what}"); ok = false; }
+    foreach (string h in HostileValues(cfg)) Bad(h);
     // built on the mount's default: a skin of a mount folder with mount.cfg (not the donkey's) that isn't "default"
     string mountDir = Path.GetDirectoryName(Path.GetDirectoryName(dir))!;
     string defaultDir = Path.Combine(mountDir, "skins", "default");

@@ -59,6 +59,8 @@ namespace GK2DonkeyAPI
             // Overrides read from the side file whose owner isn't loaded (a removed mod's, an ability's of a gone mount):
             // not applied, written back as they were, so they return with the mod (key, owner, value as text).
             internal readonly List<string[]> AsideSets = new List<string[]>();
+            // Its side-file record's lines of a kind this version doesn't read (a newer version's), written back as read.
+            internal readonly List<string> ExtraLines = new List<string>();
 
             internal Instance(int id, string ownerId, bool ephemeral, bool hasDonkey, bool hasCart)
             {
@@ -966,6 +968,14 @@ namespace GK2DonkeyAPI
                     if (o != null) to.OverrideOwners[kv.Key] = o;
                     from.Overrides.Remove(kv.Key);
                     from.OverrideOwners.Remove(kv.Key);
+                }
+                // a removed mod's cart values, kept as read, go with the cart too (they were lost at the hitch)
+                to.AsideSets.RemoveAll(a => IsCartKey(a[0]));
+                foreach (string[] a in from.AsideSets.ToArray())
+                {
+                    if (!IsCartKey(a[0])) continue;
+                    to.AsideSets.Add(a);
+                    from.AsideSets.Remove(a);
                 }
                 from.LooksRig.RetuneNow();
                 to.LooksRig.RetuneNow();

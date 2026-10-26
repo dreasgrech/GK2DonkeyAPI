@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.39.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.40.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -1040,6 +1040,30 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.40.0: **content from many mods** (the user, 2026-10-26: "make sure our foundation is solid first";
+  docs/multi-mod-loading.md). Additions: `MountHandle.Remove(ownerId)` (refused for another mod's instance; the
+  parameterless `Remove()` still works from the owner's own plugin, from another mod's code it does nothing and warns
+  once) and `MountHandle.DataKeyMax` (64), `DataValueMax` (4096), `DataKeysMax` (64), past which `SetData` throws.
+  Rules that changed, none of them for anything a player had:
+  - an effect's id is `<mod>.<name>` like a mount's (Saddle Up's is `saddleup.hellfire`; `hellfire` still finds it),
+    and another mod's effect of the same id meets the version rule instead of throwing;
+  - a code skin that loses the version rule, or a mod's own look of a mount that lost its id, is left out with a
+    warning and a handle that does nothing (it threw into the mod's Awake);
+  - a handle withdraws exactly what it registered (an older handle disposed after the mod registered again took the
+    new one with it);
+  - `Mounts.Sounds.Set`: the first mod's sound for an event on an instance stays until it takes it back (another's is
+    refused with a warning, as session tuning is);
+  - a code skin registered before its mount is checked again when the mount comes (another mod's `default`, or a
+    name without the mod's prefix: withdrawn);
+  - a mount.cfg may say `needs =` and `format =` in `[Mount]` (a newer one refuses the mount with its skins), and one
+    whose `id` isn't its folder's name is refused;
+  - ids (mounts, skins, effects) are ASCII letters and digits, dots, dashes and underscores, at most 64, with no dot at
+    either end; a version that isn't a number ranks below any that is;
+  - register in your plugin's Awake or Start: a mount or skin that comes after the settings were shown works in the
+    world but has no Skin or colour rows until the next start (said once in the log).
+  What a pack may hold is checked before it costs anything: a picture's size from its PNG header (a frame at most its
+  canvas, a sheet its cells, a portrait 512x512), sound files at most 16 MB (a WAV chunk with a bad length is refused),
+  no NaN or Infinity, file names inside the pack's own folder (no `..`, no drive, no network share).
 - 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,
   2026-10-25: "for mounts that cant pull the cart, the drive the cart button still appears in teh journal and there's
   still cart customization"): a cart row shows only for a mount that pulls one; the Mounts panel's Drive the cart

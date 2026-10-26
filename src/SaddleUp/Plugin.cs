@@ -42,7 +42,7 @@ namespace SaddleUp
         private void RegisterHellfire()
         {
             MountEffects api = Mounts.Effects;
-            var d = new MountEffectDef { Id = "hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" };
+            var d = new MountEffectDef { Id = "saddleup.hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" }; // "hellfire" until 2026-10-26: effect ids carry their mod's prefix
             var flame = new MountEffectPart { Source = api.GameParticles("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat") };
             flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 6, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
             flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Trail, Size = 1.2f, Height = 0.05f, Every = 0.5f, Burst = 0.4f });

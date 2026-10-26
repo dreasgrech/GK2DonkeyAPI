@@ -166,50 +166,61 @@ namespace GK2DonkeyAPI.Api
             if (d == null || variant != null && !SoundEvents.IsVariant(d, variant)) throw new ArgumentException($"No sound event '{eventId}'.", nameof(eventId));
             string key = variant != null ? d.Id + "." + variant.ToLowerInvariant() : d.Id;
             string bankKey = "mod:" + key;
-            mount.I.SoundsRig.SetOverride(key, sound.ToLine(key, bankKey, ownerId));
-            return new Override(mount.I, key, "gk2.mod." + ownerId + "." + bankKey);
+            string bankId = "gk2.mod." + ownerId + "." + bankKey;
+            if (!mount.I.SoundsRig.SetOverride(key, sound.ToLine(key, bankKey, ownerId), ownerId))
+            {
+                // another mod's sound holds the event on this instance: the first stays (as a session tuning value does)
+                try { SoundBank.Unregister(bankId); } catch { }
+                Mounts.WarnOnce("sound " + ownerId + " " + key, $"Sounds: {ownerId}'s sound for '{key}' on {mount.I.Describe()} is refused: {mount.I.SoundsRig.OverrideOwner(key)} set one first (until it takes it back).");
+                return new Override(mount.I, key, null, ownerId, refused: true);
+            }
+            return new Override(mount.I, key, bankId, ownerId);
         }
 
         private sealed class Override : IDisposable
         {
             private readonly GK2DonkeyAPI.Mount.Instance i;
-            private readonly string key, bankId;
+            private readonly string key, bankId, owner;
             private bool done;
 
-            internal Override(GK2DonkeyAPI.Mount.Instance i, string key, string bankId)
+            internal Override(GK2DonkeyAPI.Mount.Instance i, string key, string bankId, string owner, bool refused = false)
             {
                 this.i = i;
                 this.key = key;
                 this.bankId = bankId;
+                this.owner = owner;
+                done = refused; // a refused one has nothing to take back
             }
 
             public void Dispose()
             {
                 if (done) return;
                 done = true;
-                try { i.SoundsRig?.SetOverride(key, null); } catch { }
-                try { SoundBank.Unregister(bankId); } catch { }
+                try { i.SoundsRig?.SetOverride(key, null, owner); } catch { } // only its own: another mod's line set since stays
+                try { if (bankId != null) SoundBank.Unregister(bankId); } catch { }
             }
         }
 
         // After an event played on an instance (through its rig: the ride, a standing one, a mod's Play).
         public event Action<MountHandle, string> Played;
 
-        private static bool playedWarned;
+        // Each handler on its own: one mod's that throws never silences another's (it was one multicast call), said once
+        // per handler with its mod.
+        private static readonly HashSet<Delegate> playedWarned = new HashSet<Delegate>();
 
         internal void RaisePlayed(MountHandle h, string eventId)
         {
-            if (Played == null || h == null) return;
-            try
+            Action<MountHandle, string> all = Played;
+            if (all == null || h == null) return;
+            foreach (Delegate d in all.GetInvocationList())
             {
-                Played(h, eventId);
-            }
-            catch (Exception e)
-            {
-                if (!playedWarned)
+                try
                 {
-                    playedWarned = true;
-                    Plugin.Log.LogWarning("Sounds: a Played handler threw: " + e.Message);
+                    ((Action<MountHandle, string>)d)(h, eventId);
+                }
+                catch (Exception e)
+                {
+                    if (playedWarned.Add(d)) Plugin.Log.LogWarning($"Sounds: a Played handler of {Said.ModOf(d)} threw (said once): {e.Message}");
                 }
             }
         }

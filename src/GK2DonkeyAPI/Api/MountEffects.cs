@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
@@ -52,15 +53,19 @@ namespace GK2DonkeyAPI.Api
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Effects: an EffectsChanged handler threw: " + e.Message);
+                    Plugin.Log.LogWarning($"Effects: an EffectsChanged handler of {Said.ModOf(d)} threw: {e.Message}");
                 }
             }
         }
 
-        // An effect of your own. The id must be new (or yours already: then it replaces). Dispose to withdraw.
+        // An effect of your own, its id "<mod>.<name>". Yours already: it replaces. Another mod's of the same id: the
+        // newer version wins, the other is left out with a warning (never a throw; its handle then does nothing).
+        // Dispose to withdraw.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] // the calling mod's assembly (Mounts.NoteOwner)
         public IDisposable Register(string ownerId, MountEffectDef def)
         {
             if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("An owner id (your plugin GUID) is required.");
+            Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (def == null) throw new ArgumentNullException(nameof(def));
             var d = new GK2DonkeyAPI.Effects.EffectDef { Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Author = def.Author, Version = def.Version, Owner = ownerId, Foals = def.Foals, Show = def.Show };
             foreach (MountEffectPart p in def.Parts)

@@ -132,13 +132,22 @@ namespace GK2DonkeyAPI
         // when its frames arrive with a scene, so a player can choose it without restarting.
         private static float nextAsideSweep;
 
+        // One skin a call: each check reads every sprite the game has loaded, so N packs with a wrong prefix were N full
+        // scans in one frame every minute (docs/multi-mod-loading.md 6).
+        private static readonly Queue<string> asideQueue = new Queue<string>();
+
         internal static void RecheckAsideSkins()
         {
+            if (asideQueue.Count > 0)
+            {
+                if (defs.TryGetValue(asideQueue.Dequeue(), out SkinDef q) && q.Unavailable != null) RecheckGameSource(q);
+                return;
+            }
             if (Time.unscaledTime < nextAsideSweep) return;
             nextAsideSweep = Time.unscaledTime + 60f;
-            foreach (SkinDef d in new List<SkinDef>(defs.Values))
+            foreach (SkinDef d in defs.Values)
             {
-                if ((d.Game != null || d.AsideBy == "build") && d.Unavailable != null) RecheckGameSource(d); // a skin whose default's frames failed its build too
+                if ((d.Game != null || d.AsideBy == "build") && d.Unavailable != null) asideQueue.Enqueue(d.Id); // a skin whose default's frames failed its build too
             }
         }
 

@@ -88,6 +88,7 @@ namespace GK2DonkeyAPI.Api
         internal static string FoalKeyOf(int i) => i == 0 ? FoalKey : FoalKey + (i + 1);
 
         private static readonly Dictionary<string, MountCompanion> all = new Dictionary<string, MountCompanion>(StringComparer.Ordinal);
+        internal static int Count => all.Count;
 
         internal static MountCompanion For(string ownerId)
         {
@@ -121,7 +122,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning($"Companion of {c.OwnerId}: {e.Message}");
+                    Said.Warn("companion " + c.OwnerId + " " + e.Message, $"Companion of {c.OwnerId}: {e.Message}");
                 }
             }
         }

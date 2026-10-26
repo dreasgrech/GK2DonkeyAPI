@@ -72,7 +72,9 @@ namespace GK2DonkeyAPI
                     if (comp != null) return Whole(comp);
                 }
             }
-            if (d.Sprites != null && d.Sprites.TryGetFrame(RestKey, out Sprite s) && s != null && s) return FromSprite(s);
+            Sprite s = null;
+            try { if (d.Sprites != null && !d.Sprites.TryGetFrame(RestKey, out s)) s = null; } catch { s = null; } // a mod's source that throws: no icon from it
+            if (s != null && s) return FromSprite(s);
             if (d.Game != null)
             {
                 string name = d.Game.Map.TryGetValue(RestKey, out string mapped) && !string.IsNullOrEmpty(mapped) && !mapped.Equals("none", StringComparison.OrdinalIgnoreCase) ? mapped : RestKey;
@@ -101,7 +103,7 @@ namespace GK2DonkeyAPI
         {
             byte[] png = d.LoadPng(RestKey);
             if (png == null) return null;
-            Color32[] px = Looks.DecodePng(png, out int w, out int h, out string why);
+            Color32[] px = Looks.DecodePng(png, out int w, out int h, out string why, d.CanvasW, d.CanvasH);
             return Cropped(px, w, h, d.Id);
         }
 

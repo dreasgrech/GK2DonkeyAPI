@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
@@ -170,6 +171,10 @@ namespace GK2DonkeyAPI.Api
             return ownerId != null && key != null && I.Data.TryGetValue(ownerId, out Dictionary<string, string> d) && d.TryGetValue(key, out string v) ? v : null;
         }
 
+        // The most a mod keeps on one instance (the side file is synced to Steam Cloud with the save): keys up to
+        // DataKeyMax characters, values up to DataValueMax, DataKeysMax keys.
+        public const int DataKeyMax = 64, DataValueMax = 4096, DataKeysMax = 64;
+
         // null clears it.
         public void SetData(string ownerId, string key, string value)
         {
@@ -180,6 +185,18 @@ namespace GK2DonkeyAPI.Api
             if (string.IsNullOrEmpty(key))
             {
                 throw new ArgumentException("A key is required.", nameof(key));
+            }
+            if (key.Length > DataKeyMax)
+            {
+                throw new ArgumentException($"A data key is at most {DataKeyMax} characters ('{key.Substring(0, 20)}...').", nameof(key));
+            }
+            if (value != null && value.Length > DataValueMax)
+            {
+                throw new ArgumentException($"A data value is at most {DataValueMax} characters ({key}: {value.Length}).", nameof(value));
+            }
+            if (value != null && I.Data.TryGetValue(ownerId, out Dictionary<string, string> have) && !have.ContainsKey(key) && have.Count >= DataKeysMax)
+            {
+                throw new ArgumentException($"{ownerId} keeps {DataKeysMax} keys on {I.Describe()} already; that is the most.", nameof(key));
             }
             if (!I.Data.TryGetValue(ownerId, out Dictionary<string, string> d))
             {
@@ -376,8 +393,38 @@ namespace GK2DonkeyAPI.Api
         }
 
         // Gone for good, with anything on its cart (SetDownCargo first to keep it). A ridden one is dismounted first.
+        // Only its owner removes it (and the API's panel): another mod's donkeys and their load are not yours to take
+        // away (docs/multi-mod-loading.md 1.6). ownerId: your plugin GUID.
+        public MountResult Remove(string ownerId)
+        {
+            string why = Mounts.WhyNotOwner(this, ownerId);
+            if (why != null)
+            {
+                return MountResult.Refused(why);
+            }
+            GK2DonkeyAPI.Mount.Remove(I, "removed");
+            return MountResult.Success;
+        }
+
+        // The same without naming yourself: done when the call comes from its owner's own plugin (or the API);
+        // another mod's call does nothing, with one warning. Remove(ownerId) says why.
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Remove()
         {
+            System.Reflection.Assembly caller = null;
+            try
+            {
+                caller = new System.Diagnostics.StackFrame(1, false).GetMethod()?.DeclaringType?.Assembly;
+            }
+            catch
+            {
+            }
+            string why = Mounts.WhyNotCaller(this, caller);
+            if (why != null)
+            {
+                Mounts.WarnOnce("remove " + caller?.GetName().Name + " " + I.OwnerId, $"Mounts: {caller?.GetName().Name ?? "a mod"} asked to remove {I.Describe()}; refused: {why}");
+                return;
+            }
             GK2DonkeyAPI.Mount.Remove(I, "removed");
         }
 

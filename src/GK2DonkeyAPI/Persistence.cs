@@ -81,6 +81,26 @@ namespace GK2DonkeyAPI
 
         internal static string SideFile(string slotName) => Path.Combine(SaveSystem.SaveFolder, slotName + ".gk2donkeyapi.dat");
 
+        // The side file is held: left on disk as it is, neither rewritten nor deleted by a save, after the kept instances
+        // were taken away by something other than the player (an error in the update, ForceCleanup "error"; the API
+        // switched off mid-game; a restore that failed). A save then would have written the file without them, or deleted
+        // it (docs/multi-mod-loading.md 1.1). Released when the next game is loaded; that load finds the file older than
+        // its save and sets it aside (".stale-day<N>.dat"), so nothing in it is lost.
+        private static string sideFileHeld;
+        internal static string SideFileHeld => sideFileHeld;
+
+        internal static void HoldSideFile(string why)
+        {
+            if (sideFileHeld != null) return;
+            sideFileHeld = why;
+            Plugin.Log.LogWarning($"Persistence: the side file is left as it is until another game is loaded ({why}): a save now would write it without the donkeys and carts that were taken away.");
+        }
+
+        internal static void ReleaseSideFile() => sideFileHeld = null;
+
+        // A failed restore of one record (the self-tests' hook): its full id, or null.
+        internal static string TestFailRestore;
+
         // ------------------------------------------------------------------ owners
 
         // The core and its panel: always there, and allowed to change any instance (the panel is the player's tool).
@@ -301,6 +321,10 @@ namespace GK2DonkeyAPI
                         Line(sb, "data", mod.Key, kv.Key, kv.Value);
                     }
                 }
+                foreach (string l in i.ExtraLines)
+                {
+                    sb.Append(l).Append('\n'); // a newer version's, as read
+                }
                 sb.Append("end\n");
             }
             foreach (DormantRecord d in withDormant ? dormant : new List<DormantRecord>())
@@ -320,36 +344,74 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            string path = SideFile(slot.slotName);
+            WriteSideFileAt(SideFile(slot.slotName), slot.slotName, slot.saveDateTime, slot.day);
+        }
+
+        // The write itself, at a path (the self-tests write into a temp folder). The file before is kept as
+        // "<file>.bak" (not synced: Steam takes *.dat only); a locked file is tried again three times.
+        internal static void WriteSideFileAt(string path, string slotName, string saved, int day)
+        {
+            if (sideFileHeld != null)
+            {
+                PersistenceNote = $"Last save ({slotName}): the side file was left as it was ({sideFileHeld}).";
+                Plugin.Log.LogInfo($"Persistence: {slotName} saved; its side file is left as it was ({sideFileHeld}).");
+                return;
+            }
 
             List<Instance> kept = KeptInstances(i => true, log: true);
+            string bak = path + ".bak";
 
             if (kept.Count == 0 && dormant.Count == 0)
             {
                 if (File.Exists(path))
                 {
-                    File.Delete(path);
-                    Plugin.Log.LogInfo($"Persistence: nothing to keep with {slot.slotName}; its side file was removed.");
+                    Retry(() =>
+                    {
+                        if (File.Exists(bak)) File.Delete(bak);
+                        File.Move(path, bak);
+                    }, path);
+                    Plugin.Log.LogInfo($"Persistence: nothing to keep with {slotName}; its side file was removed (the last one is {Path.GetFileName(bak)}).");
                 }
-                PersistenceNote = $"Last save ({slot.slotName}): nothing kept.";
+                PersistenceNote = $"Last save ({slotName}): nothing kept.";
                 return;
             }
 
-            string text = BuildSideText(slot.slotName, slot.saveDateTime, slot.day, kept, withDormant: true, out int items);
+            string text = BuildSideText(slotName, saved, day, kept, withDormant: true, out int items);
 
             string tmp = path + ".tmp";
             File.WriteAllText(tmp, text, new UTF8Encoding(false));
-            if (File.Exists(path))
+            Retry(() =>
             {
-                File.Replace(tmp, path, null);
-            }
-            else
-            {
-                File.Move(tmp, path);
-            }
+                if (File.Exists(path))
+                {
+                    File.Replace(tmp, path, bak, true);
+                }
+                else
+                {
+                    File.Move(tmp, path);
+                }
+            }, path);
             string dormantNote = dormant.Count > 0 ? $", {dormant.Count} dormant carried over" : "";
-            PersistenceNote = $"Last save ({slot.slotName}): {kept.Count} kept, {items} cargo item(s){dormantNote}.";
-            Plugin.Log.LogInfo($"Persistence: {kept.Count} donkey(s)/cart(s) with {items} cargo item(s) kept with {slot.slotName}{dormantNote} ({path}).");
+            PersistenceNote = $"Last save ({slotName}): {kept.Count} kept, {items} cargo item(s){dormantNote}.";
+            Plugin.Log.LogInfo($"Persistence: {kept.Count} donkey(s)/cart(s) with {items} cargo item(s) kept with {slotName}{dormantNote} ({path}).");
+        }
+
+        // A file another program holds for a moment (Steam Cloud, an antivirus): tried again, three times in all.
+        private static void Retry(Action act, string path)
+        {
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    act();
+                    return;
+                }
+                catch (Exception e) when (attempt < 3 && (e is IOException || e is UnauthorizedAccessException))
+                {
+                    Plugin.Log.LogInfo($"Persistence: {Path.GetFileName(path)} is busy ({e.Message}); trying again.");
+                    System.Threading.Thread.Sleep(100 * attempt);
+                }
+            }
         }
 
         // A side file of a format this version can't read, moved to "<slot>.gk2donkeyapi.format<N>.dat" next to it, so
@@ -357,11 +419,17 @@ namespace GK2DonkeyAPI
         // name is replaced: the one set aside now is the newer. The new path, or null when the move failed.
         internal static string SetAside(string path, string format)
         {
+            var tag = new StringBuilder();
+            foreach (char c in format ?? "") if (char.IsLetterOrDigit(c)) tag.Append(c);
+            return SetAsideAs(path, "format" + (tag.Length > 0 ? tag.ToString() : "unknown"));
+        }
+
+        // The side file moved to "<slot>.gk2donkeyapi.<what>.dat" (a format's, a stale one's: "stale-day<N>").
+        internal static string SetAsideAs(string path, string what)
+        {
             try
             {
-                var tag = new StringBuilder();
-                foreach (char c in format ?? "") if (char.IsLetterOrDigit(c)) tag.Append(c);
-                string aside = Path.ChangeExtension(path, null) + ".format" + (tag.Length > 0 ? tag.ToString() : "unknown") + ".dat";
+                string aside = Path.ChangeExtension(path, null) + "." + what + ".dat";
                 if (File.Exists(aside)) File.Delete(aside);
                 File.Move(path, aside);
                 return aside;
@@ -385,6 +453,20 @@ namespace GK2DonkeyAPI
                 File.Delete(path);
                 Plugin.Log.LogInfo($"Persistence: save {slot.slotName} was deleted; so was its side file ({Path.GetFileName(path)}).");
             }
+            // its last one and the ones set aside go with it
+            try
+            {
+                if (File.Exists(path + ".bak")) File.Delete(path + ".bak");
+                foreach (string f in Directory.GetFiles(Path.GetDirectoryName(path), Path.GetFileNameWithoutExtension(path) + ".*.dat"))
+                {
+                    File.Delete(f);
+                    Plugin.Log.LogInfo($"Persistence: ... and {Path.GetFileName(f)}, set aside for it.");
+                }
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Persistence: the files set aside for {slot.slotName} could not be removed: {e.Message}");
+            }
         }
 
         // ------------------------------------------------------------------ restoring (a save was loaded)
@@ -401,6 +483,7 @@ namespace GK2DonkeyAPI
             internal string Chest; // the GUID of the chest that rode on this cart (standing at the cart in the save)
             internal readonly List<string[]> Sets = new List<string[]>();
             internal readonly List<string[]> DataLines = new List<string[]>();
+            internal readonly List<string> Extra = new List<string>(); // lines of a kind this version doesn't read (a newer version's): written back as they are
             internal readonly List<string> Lines = new List<string>();
             internal string FullId => FullIdOf(Owner, Id);
             internal string ParentFull => ParentOwner != null ? FullIdOf(ParentOwner, ParentId) : null;
@@ -508,6 +591,9 @@ namespace GK2DonkeyAPI
                             cur.DataLines.Add(new[] { f[1], f[2], f[3] });
                         }
                         break;
+                    default:
+                        cur.Extra.Add(raw);
+                        break;
                 }
             }
 
@@ -524,10 +610,15 @@ namespace GK2DonkeyAPI
                 PersistenceNote = "A new game: nothing to restore.";
                 return restored;
             }
-            string path = SideFile(slot.slotName);
+            return RestoreFromFile(SideFile(slot.slotName), slot.slotName, slot.saveDateTime, slot.day);
+        }
+
+        internal static List<MountHandle> RestoreFromFile(string path, string slotName, string saveTime, int saveDay)
+        {
+            var restored = new List<MountHandle>();
             if (!File.Exists(path))
             {
-                PersistenceNote = $"Loaded {slot.slotName}: no side file, nothing to restore.";
+                PersistenceNote = $"Loaded {slotName}: no side file, nothing to restore.";
                 return restored;
             }
 
@@ -547,15 +638,20 @@ namespace GK2DonkeyAPI
                 string aside = SetAside(path, format);
                 Plugin.Log.LogWarning($"Persistence: {path} has format {format ?? "(none)"}, this version reads {SideFileFormat}; nothing restored. " +
                     (aside != null ? $"The file is kept as {Path.GetFileName(aside)}: a version that reads that format brings the donkeys and their load back." : "The file could not be set aside; the next save overwrites it."));
-                PersistenceNote = $"Loaded {slot.slotName}: side file of another format, ignored" + (aside != null ? " and kept aside." : ".");
+                PersistenceNote = $"Loaded {slotName}: side file of another format, ignored" + (aside != null ? " and kept aside." : ".");
                 return restored;
             }
-            if (saved != (slot.saveDateTime ?? "") || day != slot.day.ToString(CultureInfo.InvariantCulture))
+            if (saved != (saveTime ?? "") || day != saveDay.ToString(CultureInfo.InvariantCulture))
             {
-                // The slot was saved again without the side file being written (the mod was off), or the save came
-                // back from a backup or the cloud: what the file holds is from another point in time.
-                Plugin.Log.LogWarning($"Persistence: {path} belongs to the save of {saved} (day {day}), but {slot.slotName} was saved {slot.saveDateTime} (day {slot.day}); ignored, nothing restored. Any cargo lies on the ground where the carts stood.");
-                PersistenceNote = $"Loaded {slot.slotName}: the side file is from another save time, ignored.";
+                // The slot was saved again without the side file being written (the mod was off, the write failed, the
+                // file was held), or the save came back from a backup or the cloud: what the file holds is from another
+                // point in time. Not restored, and not left for the next save to replace: set aside (docs/multi-mod-loading.md 1.2).
+                var tag = new StringBuilder();
+                foreach (char c in day ?? "") if (char.IsDigit(c)) tag.Append(c);
+                string aside = SetAsideAs(path, "stale-day" + (tag.Length > 0 ? tag.ToString() : "unknown"));
+                Plugin.Log.LogWarning($"Persistence: {path} belongs to the save of {saved} (day {day}), but {slotName} was saved {saveTime} (day {saveDay}); nothing restored. Any cargo lies on the ground where the carts stood. " +
+                    (aside != null ? $"The file is kept as {Path.GetFileName(aside)}." : "The file could not be set aside; the next save overwrites it."));
+                PersistenceNote = $"Loaded {slotName}: the side file is from another save time, ignored" + (aside != null ? " and kept aside." : ".");
                 return restored;
             }
 
@@ -669,13 +765,19 @@ namespace GK2DonkeyAPI
                     {
                         if (r.RemoveWithParent)
                         {
-                            Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label}: its parent {r.ParentFull} didn't come back; neither did it.");
+                            Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label}: its parent {r.ParentFull} didn't come back; neither did it (its record is kept for the next load).");
                             failed++;
+                            CarryForward(r, $"its parent {r.ParentFull} didn't come back");
                             continue;
                         }
                         parent = null;
                     }
-                    Instance i = Spawn(new SpawnArgs
+                    Instance i = null;
+                    var carried = new List<Item>();
+                    try
+                    {
+                    if (TestFailRestore != null && TestFailRestore == r.FullId) throw new InvalidOperationException("the self-test's failure");
+                    i = Spawn(new SpawnArgs
                     {
                         Owner = r.Owner,
                         Id = r.Id,
@@ -696,8 +798,9 @@ namespace GK2DonkeyAPI
                     }, out string why);
                     if (i == null)
                     {
-                        Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label} ({r.Scene}) could not be spawned again: {why}");
+                        Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label} ({r.Scene}) could not be spawned again: {why} (its record is kept for the next load)");
                         failed++;
+                        CarryForward(r, "it could not be spawned: " + why);
                         continue;
                     }
                     made[r.FullId] = i;
@@ -714,8 +817,8 @@ namespace GK2DonkeyAPI
                         }
                         m[d[1]] = d[2];
                     }
+                    i.ExtraLines.AddRange(r.Extra);
                     i.ColorsRig.MarkDirty(); // its own colours, built with its view
-                    var carried = new List<Item>();
                     foreach (string guid in r.Cargo)
                     {
                         Item it = TakeDropBack(i.SceneId, guid, r.Position);
@@ -750,6 +853,30 @@ namespace GK2DonkeyAPI
                     }
                     Register(i); // InstanceSpawned, now that it is complete
                     restored.Add(i.Handle);
+                    }
+                    catch (Exception e)
+                    {
+                        if (i != null && instances.Contains(i))
+                        {
+                            Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label}: part of its restore failed ({e.Message}); it is back.");
+                            if (!restored.Contains(i.Handle)) restored.Add(i.Handle);
+                            continue;
+                        }
+                        // One record's failure is its own (docs/multi-mod-loading.md 1.3): the items it took off the ground
+                        // go back down where it stood, its view goes, and its record is written back as read.
+                        Plugin.Log.LogWarning($"Persistence: {r.FullId} {r.Label} could not be restored ({e.Message}); its record is kept as it was and tried again at the next load. {e}");
+                        failed++;
+                        made.Remove(r.FullId);
+                        foreach (Item it in carried)
+                        {
+                            try { MainGame.Instance.dropSystem.DropItem(it, r.Scene, r.Position); } catch (Exception e2) { Plugin.Log.LogWarning($"Persistence: {it.id} could not be set down again: {e2.Message}"); }
+                        }
+                        if (i != null)
+                        {
+                            try { i.Discard(); } catch (Exception e2) { Plugin.Log.LogWarning("Persistence: " + e2.Message); }
+                        }
+                        CarryForward(r, "its restore failed: " + e.Message);
+                    }
                 }
             }
             total += dropped.Count; // every record that wasn't dormant: back, dropped with its parent, or failed
@@ -759,9 +886,29 @@ namespace GK2DonkeyAPI
                 + (missing > 0 ? $", {missing} not found on the ground" : "")
                 + (dormant.Count > 0 ? $", {dormant.Count} dormant" : "")
                 + (dropped.Count + failed > 0 ? $", {dropped.Count + failed} not back (see above)" : "");
-            PersistenceNote = $"Loaded {slot.slotName}: {note}.";
-            Plugin.Log.LogInfo($"Persistence: {slot.slotName}: {note}.");
+            PersistenceNote = $"Loaded {slotName}: {note}.";
+            Plugin.Log.LogInfo($"Persistence: {slotName}: {note}.");
             return restored;
+        }
+
+        // A record that didn't come back though its owner is here (spawn refused, an error, its parent missing): kept
+        // as read, like a dormant one, so the next save writes it again and the next load tries again; never lost
+        // because one load went wrong (docs/multi-mod-loading.md 1.4).
+        private static void CarryForward(Record r, string why)
+        {
+            dormant.Add(new DormantRecord
+            {
+                Owner = r.Owner,
+                Id = r.Id,
+                Key = r.Key,
+                Scene = r.Scene,
+                Label = r.Label,
+                Parent = r.ParentFull,
+                Position = r.Position,
+                Cargo = r.Cargo.Count,
+                Why = why,
+                Lines = r.Lines,
+            });
         }
 
         private static readonly HashSet<string> asideLogged = new HashSet<string>(StringComparer.Ordinal);
@@ -784,7 +931,17 @@ namespace GK2DonkeyAPI
         }
 
         internal const string AbilityOwnerMark = ".ability."; // MountCatalog.Register: an ability's owner is "<the mount's owner>.ability.<mount id>"
-        internal static bool IsAbilityOwner(string by) => by != null && by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal) > 0;
+        // Exactly "<owner>.ability.<mount id>": a mount of a mod always has a dot in its id (Catalog.CheckId), so a mod's
+        // own GUID that happens to hold ".ability." ("com.x.ability.tweaks") is not taken for one (its values were dropped).
+        internal static bool IsAbilityOwner(string by)
+        {
+            if (by == null) return false;
+            int ab = by.IndexOf(AbilityOwnerMark, StringComparison.Ordinal);
+            if (ab <= 0) return false;
+            string mount = by.Substring(ab + AbilityOwnerMark.Length);
+            int dot = mount.IndexOf('.');
+            return dot > 0 && dot < mount.Length - 1;
+        }
 
         internal static void RestoreSetting(Instance i, string key, string by, string value) // internal for the self-test of the set-aside lines
         {
@@ -805,7 +962,10 @@ namespace GK2DonkeyAPI
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning($"Persistence: {i.Describe()}'s setting {key} = {value} wasn't restored: {e.Message}");
+                // a key this version doesn't know (a newer one's), or a value it can't read: kept as read and written
+                // back, never dropped (docs/multi-mod-loading.md 1.5)
+                i.AsideSets.Add(new[] { key, by, value });
+                Plugin.Log.LogWarning($"Persistence: {i.Describe()}'s setting {key} = {value} wasn't applied ({e.Message}); kept as it is in the side file.");
             }
         }
 
@@ -992,6 +1152,6 @@ namespace GK2DonkeyAPI
 
         private static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
 
-        private static float P(string s) => float.TryParse(s, NumberStyles.Float, CultureInfo.InvariantCulture, out float v) ? v : 0f;
+        private static float P(string s) => Numbers.TryFloat(s, out float v) ? v : 0f; // never NaN: a donkey at NaN would be nowhere
     }
 }

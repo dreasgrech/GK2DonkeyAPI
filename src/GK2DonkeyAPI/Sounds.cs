@@ -485,6 +485,7 @@ namespace GK2DonkeyAPI
                 StrideProbe.Forget(owner);
                 Detach();
                 overrides.Clear();
+                overrideOwners.Clear();
                 cache.Clear();
                 if (anchor != null) { UnityEngine.Object.Destroy(anchor.gameObject); anchor = null; }
             }
@@ -919,10 +920,31 @@ namespace GK2DonkeyAPI
             internal void Invalidate() => cache.Clear();
 
             // A mod's line for an event (or event.variant) on this instance, session-only; null takes it away.
-            internal void SetOverride(string key, SoundLine line)
+            internal void SetOverride(string key, SoundLine line) => SetOverride(key, line, null);
+
+            // By owner (docs/multi-mod-loading.md 6): the first mod's sound for an event stays until it takes it back, as a
+            // session tuning value does; another's is refused (false), and taking back clears only one's own.
+            private readonly Dictionary<string, string> overrideOwners = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
+            internal string OverrideOwner(string key) => overrideOwners.TryGetValue(key, out string o) ? o : null;
+
+            internal bool SetOverride(string key, SoundLine line, string owner)
             {
-                if (line == null) overrides.Remove(key); else overrides[key] = line;
+                overrideOwners.TryGetValue(key, out string have);
+                if (line == null)
+                {
+                    if (owner != null && have != null && have != owner) return false;
+                    overrides.Remove(key);
+                    overrideOwners.Remove(key);
+                }
+                else
+                {
+                    if (owner != null && have != null && have != owner) return false;
+                    overrides[key] = line;
+                    if (owner != null) overrideOwners[key] = owner; else overrideOwners.Remove(key);
+                }
                 cache.Clear();
+                return true;
             }
 
             // The gates: the player's switches, the feature rules, the dev sheet, the standing switch.

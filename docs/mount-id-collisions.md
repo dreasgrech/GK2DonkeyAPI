@@ -1,5 +1,10 @@
 # Mount id collisions: two mods, one id
 
+**2026-10-26 (API 0.40.0, docs/multi-mod-loading.md):** effect ids follow the same `<mod>.<name>` and version rule
+(`saddleup.hellfire`); a code skin that loses no longer throws; a newer pack of a mount takes the old pack's skins out
+with it; a mount.cfg whose id isn't its folder's is refused; ids are ASCII, at most 64. The author stamp (section 4's
+add-on) is still not built.
+
 ## Decided (2026-10-24)
 
 The user decided, and the code follows it (the rest of this page is the investigation that led there):

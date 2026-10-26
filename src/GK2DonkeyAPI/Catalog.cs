@@ -18,6 +18,8 @@ namespace GK2DonkeyAPI
         internal sealed class Entry
         {
             internal string Id, Name, Author, Version, Owner;
+            internal string Needs;     // a pack's [Mount] needs = (the API version it was written for), kept for its Save
+            internal int Format;       // a pack's [Mount] format = (0: not given)
             internal string Noun;                      // the word a sentence uses ("a skull can't pull the cart"); null: the name in lower case
             internal string Description;               // for the Mounts panel: a line or two about the creature
             internal string Portrait;                  // a pack's: a PNG of the mount's folder for the panel's list; null: the mount drawn
@@ -124,10 +126,14 @@ namespace GK2DonkeyAPI
 
         internal static float? AsFloat(object v)
         {
-            if (v is string s && float.TryParse(s, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float f)) return f;
+            if (v is string s) return Numbers.TryFloat(s, out float f) ? f : (float?)null;
             try
             {
-                if (v is IConvertible && !(v is string)) return Convert.ToSingle(v, System.Globalization.CultureInfo.InvariantCulture); // a code mount's int or double
+                if (v is IConvertible && !(v is string))
+                {
+                    float c = Convert.ToSingle(v, System.Globalization.CultureInfo.InvariantCulture); // a code mount's int or double
+                    return Numbers.IsFinite(c) ? c : (float?)null;
+                }
             }
             catch
             {
@@ -155,15 +161,31 @@ namespace GK2DonkeyAPI
         private static void CheckId(string id)
         {
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("A mount needs an id.");
-            foreach (char c in id)
-            {
-                if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Mount id '{id}': letters, digits, dots, dashes and underscores only.");
-            }
+            string why = IdRule(id, "Mount id");
+            if (why != null) throw new ArgumentException(why);
             // a mount's id carries its mod's prefix, "<mod>.<name>" (saddleup.dragon, acme.dragon): two mods' dragons are
             // two mounts, and a saved one never turns into another mod's (docs/mount-id-collisions.md; the user,
             // 2026-10-24). Only the game's own donkey is plain.
             int dot = id.IndexOf('.');
             if (!id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && (dot <= 0 || dot == id.Length - 1)) throw new ArgumentException($"Mount id '{id}': a mount's id is '<mod>.<name>', your mod's prefix and the mount's name (Saddle Up's dragon is saddleup.dragon; docs/making-a-mount.md).");
+        }
+
+        // An id's characters (a mount's, a skin's name, an effect's; docs/multi-mod-loading.md 5.6): ASCII letters and
+        // digits, dots, dashes and underscores, at most IdMax long, no dot at either end (Windows drops a trailing dot from
+        // a folder's name: the sound cache's), no two dots in a row. ASCII only: "saddleup.drаgon" with a Cyrillic "а"
+        // looked like the dragon and was a second mount. Null when it is fine, else why not.
+        internal const int IdMax = 64;
+
+        internal static string IdRule(string id, string what)
+        {
+            if (string.IsNullOrEmpty(id)) return $"{what}: empty.";
+            if (id.Length > IdMax) return $"{what} '{id.Substring(0, 24)}...': at most {IdMax} characters.";
+            foreach (char c in id)
+            {
+                if (!(c < 128 && (char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_'))) return $"{what} '{id}': letters (a-z, A-Z), digits, dots, dashes and underscores only.";
+            }
+            if (id[0] == '.' || id[id.Length - 1] == '.' || id.Contains("..")) return $"{what} '{id}': no dot at the start or the end, nor two in a row.";
+            return null;
         }
 
         // Code: the same owner replaces (its instances re-apply); another owner's mount of the same id (code or pack)
@@ -181,15 +203,73 @@ namespace GK2DonkeyAPI
                 if (!Outranks(d, old))
                 {
                     Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) is left out: {Where(old)} has it (version {old.Version ?? "none"}) and this one is not newer. Remove the one you don't want, or raise the version of the one you do.");
+                    NoteLost(d);
                     return false;
                 }
                 Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) replaces the one from {Where(old)} (version {old.Version ?? "none"}): the newer wins. Remove the old one.");
                 Retire(old);
+                NoteLost(old);
             }
+            lost.RemoveAll(l => l.Id.Equals(d.Id, StringComparison.OrdinalIgnoreCase) && l.Owner == d.Owner);
             defs[d.Id] = d;
             Changed();
+            Looks.MountArrived(d);
+            Late(d.Owner, "the mount '" + d.Id + "'");
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}, {d.Abilities.Length} abilit{(d.Abilities.Length == 1 ? "y" : "ies")}.");
             return true;
+        }
+
+        // The mounts that lost their id to another owner's this session (the version rule), by id and owner: their own
+        // looks are left out with them (Looks.Register), never put on the winner. Back at the next start.
+        private static readonly List<Entry> lost = new List<Entry>();
+
+        private static void NoteLost(Entry k)
+        {
+            if (!Lost(k.Id, k.Owner)) lost.Add(k);
+        }
+
+        private static void NoteLost(string id, string owner) => NoteLost(new Entry { Id = id, Owner = owner });
+
+        // The window for registering (the user, 2026-10-26: Awake or Start): the settings page reads every list the frame
+        // after its Publish (MountSettingsPage.Show). A mount or skin that comes after a page was shown works in the world
+        // but has no Skin or colour rows this session: said once per mod, so its author knows.
+        private static readonly HashSet<string> lateLogged = new HashSet<string>(StringComparer.Ordinal);
+
+        internal static void Late(string owner, string what)
+        {
+            if (!Api.MountSettingsPage.AnyShown || owner == null || owner.StartsWith(Plugin.Guid, StringComparison.Ordinal)) return; // the API's own: its packs' reloads, the panel, the self-tests
+            if (lateLogged.Add(owner)) Plugin.Log.LogInfo($"Catalog: {owner} registered {what} after the settings were shown: it works in the world, but has no Skin or colour rows until the next start. Register mounts and skins in your plugin's Awake or Start (docs/making-a-mount.md).");
+        }
+
+        // Several registrations as one change (a pack folder, a DLL's embedded packs): MountsChanged once at the end.
+        private static int batch;
+        private static bool batchChanged;
+
+        internal static IDisposable Batch()
+        {
+            batch++;
+            return new BatchEnd();
+        }
+
+        private sealed class BatchEnd : IDisposable
+        {
+            private bool done;
+
+            public void Dispose()
+            {
+                if (done) return;
+                done = true;
+                if (--batch > 0 || !batchChanged) return;
+                batchChanged = false;
+                Mounts.Catalog.RaiseChanged();
+            }
+        }
+
+        internal static bool Lost(string id, string owner)
+        {
+            if (string.IsNullOrEmpty(id) || owner == null) return false;
+            foreach (Entry l in lost) if (l.Owner == owner && l.Id.Equals(id, StringComparison.OrdinalIgnoreCase)) return true;
+            return false;
         }
 
         // Where a mount came from, for the log: a loose folder, a mod's DLL, or a mod's code.
@@ -232,17 +312,38 @@ namespace GK2DonkeyAPI
                 if (have.Owner == d.Owner && Same(have, d)) return have;
                 if (have.Owner == d.Owner || Outranks(d, have))
                 {
-                    if (have.Owner != d.Owner) Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {where} (version {d.Version ?? "none"}) replaces the one of {have.Owner} (version {have.Version ?? "none"}): the newer wins. Delete the old one.");
+                    string oldOwner = have.Owner;
+                    bool newOwner = oldOwner != d.Owner;
+                    if (newOwner) Plugin.Log.LogWarning($"Catalog: mount '{d.Id}' from {where} (version {d.Version ?? "none"}) replaces the one of {have.Owner} (version {have.Version ?? "none"}): the newer wins. Delete the old one.");
+                    // the old pack's sound files and portrait go: a new pack's are read anew (they stayed in the bank)
+                    if (have.Pack != null && have.Pack != d.Pack)
+                    {
+                        SoundBank.ForgetFiles(have.Pack.SoundFiles);
+                        Looks.ForgetPortraits(have.Id + "(mount)");
+                    }
                     have.Owner = d.Owner;
                     have.BuiltIn = d.BuiltIn;
                     have.Pack = d.Pack;
                     Redeclare(have, d);
+                    if (newOwner)
+                    {
+                        // the old pack's own skins go with it (the owner is swapped first, so its last skin doesn't take the
+                        // mount along): the new pack's skins\default\ registers next, never the old pictures on the new
+                        // facts (docs/multi-mod-loading.md 4.1); another mod's skins of the mount stay
+                        NoteLost(d.Id, oldOwner);
+                        int gone = 0;
+                        foreach (Looks.SkinDef sd in SkinsOf(have)) if (sd.Owner == oldOwner && Looks.Unregister(sd.Id, oldOwner)) gone++;
+                        if (gone > 0) Plugin.Log.LogInfo($"Catalog: mount '{d.Id}': the {gone} skin(s) of the pack it replaced are withdrawn with it.");
+                        Changed();
+                    }
                     return have;
                 }
                 throw new ArgumentException($"mount '{d.Id}' is already defined by {have.Owner} (version {have.Version ?? "none"}); this one (version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
             }
             defs[d.Id] = d;
             Changed();
+            Looks.MountArrived(d);
+            Late(d.Owner, "the mount '" + d.Id + "'");
             Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.Jump != null && d.Jump.Count > 0 ? ", its own jump" : "")}.");
             return d;
         }
@@ -298,7 +399,8 @@ namespace GK2DonkeyAPI
         {
             Version++;
             Looks.MarkWearersDirty();
-            Mounts.Catalog.RaiseChanged();
+            if (batch > 0) batchChanged = true;
+            else Mounts.Catalog.RaiseChanged();
         }
 
         // A mount's or a skin's values changed in place (the tuning panel): the instances of that mount (every instance
@@ -324,6 +426,8 @@ namespace GK2DonkeyAPI
             into.Stats = from.Stats ?? new List<KeyValuePair<string, string>>();
             into.Author = from.Author;
             into.Version = from.Version;
+            into.Needs = from.Needs;
+            into.Format = from.Format;
             into.Cart = from.Cart;
             into.Foals = from.Foals;
             into.Flies = from.Flies;
@@ -349,9 +453,23 @@ namespace GK2DonkeyAPI
             var list = new List<Looks.SkinDef>();
             foreach (Looks.SkinDef s in Looks.All)
             {
-                if (Looks.MountOf(s) == k) list.Add(s);
+                if (Looks.MountOf(s) == k && (k != Donkey || s.MountId.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase))) list.Add(s);
             }
             return list;
+        }
+
+        // The skins installed for a mount that isn't (its mod is missing): by the mount's id, for the panel's "not
+        // installed" cards. They are no donkey's skins and are offered nowhere until their mount comes.
+        internal static Dictionary<string, List<Looks.SkinDef>> WaitingSkins()
+        {
+            var by = new Dictionary<string, List<Looks.SkinDef>>(StringComparer.OrdinalIgnoreCase);
+            foreach (Looks.SkinDef s in Looks.All)
+            {
+                if (s.MountId.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) || Find(s.MountId) != null) continue;
+                if (!by.TryGetValue(s.MountId, out List<Looks.SkinDef> l)) by[s.MountId] = l = new List<Looks.SkinDef>();
+                l.Add(s);
+            }
+            return by;
         }
     }
 }

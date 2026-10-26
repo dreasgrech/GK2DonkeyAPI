@@ -95,7 +95,11 @@ namespace GK2DonkeyAPI
         internal static bool HasOwnKey(SkinDef d, string key)
         {
             if (d.Game != null || d.Recipe != null) return true;
-            if (d.Sprites != null) return d.Sprites.TryGetFrame(key, out Sprite s) && s != null;
+            if (d.Sprites != null)
+            {
+                try { return d.Sprites.TryGetFrame(key, out Sprite s) && s != null; }
+                catch { return false; } // a mod's source that throws has no picture for it (Acquire says why)
+            }
             if (d.LoadSheetPng != null) return d.SheetKeys != null && Array.IndexOf(d.SheetKeys, key) >= 0;
             if (d.Keys == null) return false;
             foreach (string k in d.Keys()) if (k == key) return true;

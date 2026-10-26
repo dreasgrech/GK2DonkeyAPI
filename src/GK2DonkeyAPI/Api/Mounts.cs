@@ -431,6 +431,9 @@ namespace GK2DonkeyAPI.Api
         // A registration refused by the switch above: said once per owner and sort of thing.
         internal static IDisposable KeptOut(string ownerId, string what, string id)
         {
+            // called before the API's own Awake (a mod without [BepInDependency] that BepInEx loaded first): nothing of
+            // the API is up yet, and its log isn't either
+            if (Plugin.Log == null) throw new InvalidOperationException($"GK2 Donkey API has not started yet ({ownerId}'s {what} '{id}'): add [BepInDependency(\"{Plugin.Guid}\")] to your plugin.");
             if (keptOutLogged.Add(ownerId + "|" + what))
             {
                 Plugin.Log.LogInfo($"{what} '{id}' from {ownerId}: kept out of this version (mounts, skins and effects come in the next update; Mounts.MountsEnabled is false).");
@@ -716,6 +719,44 @@ namespace GK2DonkeyAPI.Api
         private static readonly Dictionary<string, List<MountHandle>> ofOwner = new Dictionary<string, List<MountHandle>>(StringComparer.Ordinal);
 
         // Owner-only changes (MountHandle.SetPersist, SetKey): its owner, or the core and its panel.
+        // The owner's own code, by its assembly: the API's, or the plugin whose GUID owns the instance. An owner that
+        // isn't a loaded plugin's GUID (a mod's own sub-owner) can't be told apart: allowed.
+        internal static string WhyNotCaller(MountHandle h, System.Reflection.Assembly caller)
+        {
+            if (!h.Exists || caller == null || caller == typeof(Mounts).Assembly || Mount.IsCoreOwner(h.I.OwnerId)) return null;
+            try
+            {
+                if (!BepInEx.Bootstrap.Chainloader.PluginInfos.TryGetValue(h.I.OwnerId, out BepInEx.PluginInfo p) || p?.Instance == null) return null;
+                return p.Instance.GetType().Assembly == caller ? null : $"it belongs to {h.I.OwnerId}; only its owner removes it (Remove(ownerId)).";
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static readonly HashSet<string> warnedOnce = new HashSet<string>(StringComparer.Ordinal);
+
+        // Which mod's code uses an owner id: two mods built from one example with its GUID kept replace and withdraw
+        // each other's mounts and skins without a word (docs/multi-mod-loading.md 4.6); said once.
+        private static readonly Dictionary<string, System.Reflection.Assembly> ownerAssemblies = new Dictionary<string, System.Reflection.Assembly>(StringComparer.Ordinal);
+
+        internal static void NoteOwner(string ownerId, System.Reflection.Assembly asm)
+        {
+            if (string.IsNullOrEmpty(ownerId) || asm == null || asm == typeof(Mounts).Assembly) return;
+            if (!ownerAssemblies.TryGetValue(ownerId, out System.Reflection.Assembly first))
+            {
+                ownerAssemblies[ownerId] = asm;
+                return;
+            }
+            if (first != asm) WarnOnce("owner " + ownerId, $"Mounts: the owner id '{ownerId}' is used by two mods ({first.GetName().Name} and {asm.GetName().Name}): each replaces and withdraws the other's mounts and skins. Give each mod its own plugin GUID.");
+        }
+
+        internal static void WarnOnce(string key, string text)
+        {
+            if (warnedOnce.Add(key)) Plugin.Log.LogWarning(text);
+        }
+
         internal static string WhyNotOwner(MountHandle h, string ownerId)
         {
             if (string.IsNullOrEmpty(ownerId))

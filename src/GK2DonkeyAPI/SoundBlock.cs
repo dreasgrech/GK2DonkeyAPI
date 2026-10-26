@@ -163,7 +163,7 @@ namespace GK2DonkeyAPI
         {
             if (value.Equals("true", StringComparison.OrdinalIgnoreCase)) return 1f;
             if (value.Equals("false", StringComparison.OrdinalIgnoreCase)) return 0f;
-            if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out float f)) return Mathf.Clamp(f, min, max);
+            if (Numbers.TryFloat(value, out float f)) return Mathf.Clamp(f, min, max);
             report?.Invoke($"[{section}] {key} = {value}: not a number");
             return null;
         }

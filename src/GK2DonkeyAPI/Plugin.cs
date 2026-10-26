@@ -365,7 +365,7 @@ namespace GK2DonkeyAPI
         public const string Guid = "dreas.gk2.donkeyapi";
         // The one version of this mod: the plugin's and the API's (Mounts.ApiVersion is read from it). Minor for additions
         // to the API, major for breaking changes; the public and the internal number never differ (decided 2026-10-13).
-        public const string Version = "0.39.0";
+        public const string Version = "0.40.0";
 
         // No pinned game build: at start GameCode compares every game member this DLL uses (the gk2deps.txt manifest
         // tools/DepManifest embedded after the build) with the installed game, feature by feature; docs/dependency-check.md.
@@ -773,7 +773,7 @@ namespace GK2DonkeyAPI
         private void FixedUpdate()
         {
             try { Flight.FixedStep(); }
-            catch (Exception e) { Log.LogWarning("[flight] the free flight's step failed: " + e.Message); }
+            catch (Exception e) { Said.Warn("flight step " + e.Message, "[flight] the free flight's step failed: " + e.Message); }
         }
 
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
@@ -810,6 +810,7 @@ namespace GK2DonkeyAPI
                 // donkey, a raised speed and the cart reroute behind (the patches stay installed until restart).
                 if (Mount.IsMounted || Mount.All.Count > 0)
                 {
+                    if (Mount.All.Count > 0) Mount.HoldSideFile("the API was switched off in the game");
                     Mount.ForceCleanup("disabled in the config");
                 }
                 return;
@@ -848,6 +849,7 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 Log.LogError($"Mount update failed; dismounting. {e}");
+                if (Mount.All.Count > 0) Mount.HoldSideFile("an error in the update took the donkeys and carts away");
                 Mount.ForceCleanup("error");
             }
         }

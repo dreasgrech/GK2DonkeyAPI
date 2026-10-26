@@ -184,6 +184,7 @@ namespace GK2DonkeyAPI
             internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md): a pack's is its mount folder's
             internal string MountDirName;                // a pack's: the mount folder it sits in (gk2mounts\<this>\skins\<skin>), for its file's path
             internal bool AddedToOthers;                 // a pack's from a mount folder without mount.cfg: a look added to a mount another mod owns (its name carries its mod's prefix)
+            internal bool MountMissingAtRegister;        // a code skin registered before its mount: checked again when the mount comes (MountArrived)
             private Catalog.Entry mount;
             private int mountVersion;
             private bool mountFallbackLogged;
@@ -347,10 +348,8 @@ namespace GK2DonkeyAPI
             }
             if (d.LocalId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) && d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException("'donkey' is the game's own look, not a skin id.");
             if (d.LocalId.Length == 0) throw new ArgumentException("A skin needs an id.");
-            foreach (char c in d.LocalId)
-            {
-                if (!(char.IsLetterOrDigit(c) || c == '.' || c == '-' || c == '_')) throw new ArgumentException($"Skin id '{d.LocalId}': letters, digits, dots, dashes and underscores only.");
-            }
+            string idWhy = Catalog.IdRule(d.LocalId, "Skin id");
+            if (idWhy != null) throw new ArgumentException(idWhy);
             // the donkey's own look is the game's art: no skin of it is its default
             if (d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && d.LocalId.Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException($"'{DefaultSkinName}' is the donkey's own look (the game's art): a donkey skin needs a name of its own.");
             d.Id = SkinKey(d.MountId, d.LocalId);
@@ -358,12 +357,23 @@ namespace GK2DonkeyAPI
             // "frost" for one mount are two skins, and a saved one never turns into the other mod's (the user,
             // 2026-10-24; docs/mount-id-collisions.md). On your own mount any name. A pack's: a folder without mount.cfg;
             // a code skin's: a mount registered by another owner; every donkey skin (the donkey is the game's).
+            // a mod's own look of its own mount, which lost its id to another mod's (the version rule): left out with it,
+            // never put on the winner's mount (where it read as a missing prefix)
+            if (d.ReadFile == null && Catalog.Lost(d.MountId, d.Owner))
+            {
+                throw new LeftOut($"Skin '{d.Id}': its mount '{d.MountId}' from {d.Owner} is left out (another mod's of that id is newer), so it is left out with it.");
+            }
+            // a code skin of a mount not registered yet: whether it is its own mount's or another mod's is known when the
+            // mount comes (MountArrived); the name rule is checked again then
+            d.MountMissingAtRegister = d.ReadFile == null && !d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && Catalog.Find(d.MountId) == null;
             if (AddsToOthers(d))
             {
                 int dot = d.LocalId.IndexOf('.');
                 if (dot <= 0 || dot == d.LocalId.Length - 1) throw new ArgumentException($"Skin '{d.Id}': a skin added to a mount another mod owns is named '<mod>.<name>', your mod's prefix and the skin's name ({SkinKey(d.MountId, "saddleup." + d.LocalId)}; docs/skins.md).");
             }
             if (d.Base == null) throw new ArgumentException($"Skin '{d.Id}' names no base.");
+            if (d.CanvasW > MaxCanvas || d.CanvasH > MaxCanvas || d.CanvasW > 0 && d.CanvasW < 8 || d.CanvasH > 0 && d.CanvasH < 8)
+                throw new ArgumentException($"Skin '{d.Id}': canvas {d.CanvasW}x{d.CanvasH} is out of range (8..{MaxCanvas}; a sheet is 44 cells of it).");
             // Everything that can refuse the skin comes before its mount is declared: a mount with no skin would be
             // offered with nothing to wear (seen 2026-10-18: Gerry listed, "donkey (not installed)" for its skin).
             if (d.Sprites == null && d.Recipe == null && d.Game == null && d.LoadSheetPng == null && (d.Keys == null || d.LoadPng == null)) throw new ArgumentException($"Skin '{d.Id}' has no source of pictures.");
@@ -374,7 +384,7 @@ namespace GK2DonkeyAPI
                 // one that lost and where it is. The loser's wearers take the winner at once.
                 if (!Outranks(d, old))
                 {
-                    throw new ArgumentException($"Skin id '{d.Id}' is already registered by {old.Owner} ({Where(old)}, version {old.Version ?? "none"}); this one ({Where(d)}, version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
+                    throw new LeftOut($"Skin id '{d.Id}' is already registered by {old.Owner} ({Where(old)}, version {old.Version ?? "none"}); this one ({Where(d)}, version {d.Version ?? "none"}) is not newer, so it is left out. Delete the one you don't want, or raise the version of the one you do.");
                 }
                 Plugin.Log.LogWarning($"Looks: skin '{d.Id}' from {Where(d)} (version {d.Version ?? "none"}) replaces the one from {Where(old)} (version {old.Version ?? "none"}, registered by {old.Owner}): the newer wins. Delete the old one.");
             }
@@ -400,6 +410,7 @@ namespace GK2DonkeyAPI
             }
             Resolve(d); // built on its mount's default (LooksInherit.cs): what it doesn't say, the default's
             defs[d.Id] = d;
+            Catalog.Late(d.Owner, "the skin '" + d.Id + "'");
             Plugin.Log.LogInfo($"Looks: skin '{d.Id}' ({d.Name}) registered by {d.Owner}{(d.BuiltIn ? ", built in" : "")}{(d.Parent != null ? ", built on '" + d.Parent.Id + "'" + (d.OverDefault ? " (drawn over it)" : "") : "")}{(d.Report.Length > 0 ? ": " + d.Report : "")}.");
             if (IsDefaultSlot(d))
             {
@@ -409,6 +420,33 @@ namespace GK2DonkeyAPI
             }
             MarkWearersDirty(); // replaced: its wearers take the new one; new: an instance whose Skin already names it wears it now (its tick gave up on the missing id)
             Mounts.Looks.RaiseChanged();
+        }
+
+        // A mount came: the code skins of it registered before it (a skin mod that BepInEx loaded first) meet the rules they
+        // couldn't before (docs/multi-mod-loading.md 4.3). On another mod's mount a skin is named "<mod>.<name>", and its
+        // own look ("default") is never another mod's: one that breaks either is withdrawn with a warning.
+        internal static void MountArrived(Catalog.Entry k)
+        {
+            if (k == null) return;
+            foreach (SkinDef d in new List<SkinDef>(defs.Values))
+            {
+                if (!d.MountMissingAtRegister || !d.MountId.Equals(k.Id, StringComparison.OrdinalIgnoreCase)) continue;
+                d.MountMissingAtRegister = false;
+                if (d.Owner == k.Owner) continue;
+                int dot = d.LocalId.IndexOf('.');
+                string why = d.LocalId.Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase) ? $"'{DefaultSkinName}' is the own look of the mount, which {k.Owner} registered"
+                    : dot <= 0 || dot == d.LocalId.Length - 1 ? $"a skin added to a mount another mod owns is named '<mod>.<name>' ({SkinKey(d.MountId, "yourmod." + d.LocalId)})" : null;
+                if (why == null) continue;
+                Plugin.Log.LogWarning($"Looks: skin '{d.Id}' of {d.Owner}, registered before its mount: {why}; withdrawn.");
+                Unregister(d.Id, d.Owner);
+            }
+        }
+
+        // A skin that is left out by the rules between mods (another's of the same id is newer; its mount lost), not by a
+        // mistake in it: the code API says it in a warning instead of throwing into the mod's Awake.
+        internal sealed class LeftOut : ArgumentException
+        {
+            internal LeftOut(string message) : base(message) { }
         }
 
         // Our own mods (the API, Saddle Up, the self-tests) ship the plain ids; everyone else's carry an author prefix.
@@ -425,9 +463,13 @@ namespace GK2DonkeyAPI
             return d.Source == null && old.Source != null; // a DLL (or code) over a loose folder
         }
 
+        // Two versions as numbers (1.10 > 1.9; 1.0 = 1; none = 0). One that isn't a number ("1.0-beta") ranks below any
+        // that is (an ordinal compare had "9" beat "10" against it); two that aren't compare as text.
         internal static int CompareVersions(string a, string b)
         {
-            if (System.Version.TryParse(Pad(a), out System.Version va) && System.Version.TryParse(Pad(b), out System.Version vb)) return va.CompareTo(vb);
+            bool pa = System.Version.TryParse(Pad(a), out System.Version va), pb = System.Version.TryParse(Pad(b), out System.Version vb);
+            if (pa && pb) return va.CompareTo(vb);
+            if (pa != pb) return pa ? 1 : -1;
             return string.Compare(a ?? "", b ?? "", StringComparison.OrdinalIgnoreCase);
             string Pad(string v)
             {
@@ -444,6 +486,11 @@ namespace GK2DonkeyAPI
         // <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file> (+ front\, sounds\): the csproj embeds
         // assets\mounts\**\* that way. The mounts first, then their skins. The number of skins registered.
         internal static int RegisterEmbedded(Assembly asm, string prefix, string owner, bool builtIn = false)
+        {
+            using (Catalog.Batch()) return RegisterEmbeddedNow(asm, prefix, owner, builtIn);
+        }
+
+        private static int RegisterEmbeddedNow(Assembly asm, string prefix, string owner, bool builtIn)
         {
             var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("saddleup.dragon", "saddleup.dragon/skins/default/front") -> file -> resource
             foreach (string res in asm.GetManifestResourceNames())
@@ -485,7 +532,7 @@ namespace GK2DonkeyAPI
                 var p = new MountPack { Owner = owner, DirName = dir, SourceAssembly = asm, BuiltIn = builtIn, ReadFile = Reader(map), FileNames = new List<string>(map.Keys) };
                 // refused (another's of the same id is newer, the id has no prefix): its skins are left out with it, as a
                 // loose folder's are (MountPacks.RegisterMountFolder; the two differed before 2026-10-24)
-                if (RegisterMount(p, Encoding.UTF8.GetString(p.ReadFile(MountCfgName)), "embedded " + asm.GetName().Name + " " + dir) == null) refusedMounts.Add(dir);
+                if (RegisterMount(p, Numbers.CfgText(p.ReadFile(MountCfgName)), "embedded " + asm.GetName().Name + " " + dir) == null) refusedMounts.Add(dir);
             }
             // the skins: <mount>/skins/<skin> with a skin.cfg; each mount's own look first, so its other skins are built on
             // it from their registration ("black" sorts before "default"; docs/skin-layering-plan.md 2.1)
@@ -523,7 +570,7 @@ namespace GK2DonkeyAPI
                     }
                     Catalog.Entry mount = Catalog.Find(parts[0]);
                     string mountId = mount != null ? mount.Id : parts[0];
-                    SkinDef def = FromCfg(Encoding.UTF8.GetString(bytes("skin.cfg")), parts[2], owner, "embedded " + asm.GetName().Name + " " + dir, bytes, pics.Keys, mountId);
+                    SkinDef def = FromCfg(Numbers.CfgText(bytes("skin.cfg")), parts[2], owner, "embedded " + asm.GetName().Name + " " + dir, bytes, pics.Keys, mountId);
                     def.MountDirName = parts[0];
                     def.AddedToOthers = !MountCfgIn(files, parts[0]);
                     def.BuiltIn = builtIn;
@@ -553,25 +600,59 @@ namespace GK2DonkeyAPI
         internal static int RegisterFolder(string root, string owner)
         {
             if (string.IsNullOrEmpty(root) || !Directory.Exists(root)) return 0;
+            using (Catalog.Batch()) return RegisterFolderNow(root, owner);
+        }
+
+        private static int RegisterFolderNow(string root, string owner)
+        {
             var packDirs = new List<(string Dir, string Owner)>();
             string direct = Path.Combine(root, PackDirName);
             if (Directory.Exists(direct)) packDirs.Add((direct, owner));
-            string[] subs = Directory.GetDirectories(root);
+            string[] subs;
+            try
+            {
+                subs = Directory.GetDirectories(root);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Looks: the folders in '{root}' could not be listed ({e.Message}); only {Path.Combine(root, PackDirName)} is read.");
+                subs = new string[0];
+            }
             Array.Sort(subs, StringComparer.OrdinalIgnoreCase);
             foreach (string sub in subs)
             {
-                string nested = Path.Combine(sub, PackDirName);
-                if (Directory.Exists(nested)) packDirs.Add((nested, owner + "." + Path.GetFileName(sub)));
+                // one folder that can't be read (its rights, a broken link) is left out on its own, never every pack after it
+                try
+                {
+                    string nested = Path.Combine(sub, PackDirName);
+                    if (Directory.Exists(nested)) packDirs.Add((nested, owner + "." + Path.GetFileName(sub)));
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Looks: '{sub}' could not be read ({e.Message}); left out.");
+                }
             }
             int n = 0;
             foreach ((string packDir, string packOwner) in packDirs)
             {
-                string[] mountDirs = Directory.GetDirectories(packDir);
+                string[] mountDirs;
+                try
+                {
+                    mountDirs = Directory.GetDirectories(packDir);
+                }
+                catch (Exception e)
+                {
+                    Plugin.Log.LogWarning($"Looks: the packs in '{packDir}' could not be listed ({e.Message}); left out.");
+                    continue;
+                }
                 Array.Sort(mountDirs, StringComparer.OrdinalIgnoreCase);
                 // the mounts declared here first, so a skin under one of them finds it whatever the folders' order
                 foreach (string mountDir in mountDirs)
                 {
-                    if (!File.Exists(Path.Combine(mountDir, MountCfgName)) && File.Exists(Path.Combine(mountDir, "skin.cfg")))
+                    bool oldShape;
+                    try { oldShape = !File.Exists(Path.Combine(mountDir, MountCfgName)) && File.Exists(Path.Combine(mountDir, "skin.cfg")); }
+                    catch { oldShape = false; }
+                    if (oldShape)
                     {
                         Plugin.Log.LogWarning($"Looks: '{mountDir}' holds a skin.cfg: a skin now sits in gk2mounts\\<mount>\\skins\\<skin>\\ (docs/skins.md); left out.");
                     }
@@ -611,8 +692,8 @@ namespace GK2DonkeyAPI
             }
             byte[] Bytes(string file)
             {
-                string f = Path.Combine(dir, file.Replace('/', Path.DirectorySeparatorChar));
-                return File.Exists(f) ? File.ReadAllBytes(f) : null;
+                string f = Numbers.InFolder(dir, file); // never outside the pack (docs/multi-mod-loading.md 2.5)
+                return f != null && File.Exists(f) ? File.ReadAllBytes(f) : null;
             }
             SkinDef def = FromCfg(cfgText, Path.GetFileName(skinDir), owner, "pack " + skinDir, Bytes, names, mountId);
             def.MountDirName = Path.GetFileName(Path.GetDirectoryName(Path.GetDirectoryName(skinDir.TrimEnd('\\', '/'))));
@@ -780,13 +861,13 @@ namespace GK2DonkeyAPI
                         else throw new FormatException($"{where}: erase = {value} is not a hex colour (RRGGBB) or none");
                         break;
                     case "mount": mountLine = value; break;
-                    case "canvas": Pair(value, ref d.CanvasW, ref d.CanvasH); d.Given |= SkinGiven.Canvas; break;
-                    case "pivot": PairF(value, ref d.PivotX, ref d.PivotY); pivotGiven = true; d.Given |= SkinGiven.Pivot; break;
-                    case "offset": PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y); if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; d.Given |= SkinGiven.Offset; break; // "offset = 0 0" given: cancels a default's
-                    case "offset_cart": PairF(value, ref d.OffsetCart.x, ref d.OffsetCart.y); d.Given |= SkinGiven.OffsetCart; break;
+                    case "canvas": if (!Pair(value, ref d.CanvasW, ref d.CanvasH)) d.Report += "canvas = " + value + " is not two whole numbers, ignored; "; d.Given |= SkinGiven.Canvas; break;
+                    case "pivot": if (!PairF(value, ref d.PivotX, ref d.PivotY, -MaxCanvas, 2 * MaxCanvas)) d.Report += "pivot = " + value + " is not two numbers, ignored; "; pivotGiven = true; d.Given |= SkinGiven.Pivot; break;
+                    case "offset": if (!PairF(value, ref d.OffsetRide.x, ref d.OffsetRide.y, -MaxCanvas, MaxCanvas)) d.Report += "offset = " + value + " is not two numbers, ignored; "; if (!text.Contains("offset_cart")) d.OffsetCart = d.OffsetRide; d.Given |= SkinGiven.Offset; break; // "offset = 0 0" given: cancels a default's
+                    case "offset_cart": if (!PairF(value, ref d.OffsetCart.x, ref d.OffsetCart.y, -MaxCanvas, MaxCanvas)) d.Report += "offset_cart = " + value + " is not two numbers, ignored; "; d.Given |= SkinGiven.OffsetCart; break;
                     case "sheet": sheet = value; break;
                     case "sheet_front": frontSheet = value; break;
-                    case "columns": int.TryParse(value, out d.SheetColumns); break;
+                    case "columns": if (!int.TryParse(value, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out d.SheetColumns) || d.SheetColumns < 0 || d.SheetColumns > 256) { d.SheetColumns = 0; d.Report += "columns = " + value + " is not a whole number from 1 to 256, ignored; "; } break;
                     case "frames": frames = value; break;
                     case "source": source = value.ToLowerInvariant(); break;
                     case "seat":
@@ -859,8 +940,8 @@ namespace GK2DonkeyAPI
                     switch (kv.Key.ToLowerInvariant())
                     {
                         case "prefix": g.Prefix = kv.Value; break;
-                        case "scale": float.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out g.Scale); break;
-                        case "lift": if (float.TryParse(kv.Value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float lift)) g.Lift = Mathf.Clamp01(lift); break;
+                        case "scale": if (!Numbers.TryFloat(kv.Value, out g.Scale)) g.Scale = 0f; break; // refused below
+                        case "lift": if (Numbers.TryFloat(kv.Value, out float lift)) g.Lift = Mathf.Clamp01(lift); else d.Report += "[Game] lift = " + kv.Value + " is not a number, ignored; "; break;
                         default: g.Map[kv.Key] = kv.Value; break;
                     }
                 }
@@ -884,6 +965,19 @@ namespace GK2DonkeyAPI
                 d.LoadSheetPng = () => bytes(file);
                 if (frontFile != null) d.LoadFrontSheetPng = () => bytes(frontFile);
                 d.SheetKeys = frames != null ? frames.Split(new[] { ',', ' ', ';' }, StringSplitOptions.RemoveEmptyEntries) : d.Base.Keys;
+                if (frames != null)
+                {
+                    // a frame's name is a key (bdy_walk_left_03): letters, digits, _ and -; anything else (a path) is left out
+                    var ok = new List<string>();
+                    foreach (string fk in d.SheetKeys)
+                    {
+                        bool good = fk.Length <= 64;
+                        foreach (char c in fk) if (!(c < 128 && (char.IsLetterOrDigit(c) || c == '_' || c == '-'))) good = false;
+                        if (good) ok.Add(fk);
+                        else d.Report += "frames: '" + fk + "' is not a frame name, its cell is skipped; ";
+                    }
+                    if (ok.Count != d.SheetKeys.Length) d.SheetKeys = ok.ToArray();
+                }
                 if (IsVariantSlot(d))
                 {
                     // a variant's own pictures are its sheet's: loose PNGs beside it are not read (its default gives the rest)
@@ -903,17 +997,20 @@ namespace GK2DonkeyAPI
             return d;
         }
 
-        private static void Pair(string v, ref int a, ref int b)
+        // Two numbers, "64 48" (a comma may stand for the space; a decimal comma, "1,5 2", is three tokens and refused).
+        private static bool Pair(string v, ref int a, ref int b)
         {
             string[] p = v.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
-            if (p.Length == 2 && int.TryParse(p[0], out int x) && int.TryParse(p[1], out int y)) { a = x; b = y; }
+            if (p.Length == 2 && int.TryParse(p[0], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int x)
+                && int.TryParse(p[1], System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out int y)) { a = x; b = y; return true; }
+            return false;
         }
 
-        private static void PairF(string v, ref float a, ref float b)
+        private static bool PairF(string v, ref float a, ref float b, float min, float max)
         {
             string[] p = v.Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
-            if (p.Length == 2 && float.TryParse(p[0], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float x)
-                && float.TryParse(p[1], System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float y)) { a = x; b = y; }
+            if (p.Length == 2 && Numbers.TryFloat(p[0], out float x) && Numbers.TryFloat(p[1], out float y)) { a = Mathf.Clamp(x, min, max); b = Mathf.Clamp(y, min, max); return true; }
+            return false;
         }
 
         // What the names say before any picture is decoded: typos, a head drawn in walks, what is still to draw.
@@ -985,14 +1082,31 @@ namespace GK2DonkeyAPI
             return us <= 0 ? key : key.Substring(0, us);
         }
 
-        // A PNG's pixels (bottom row first), or null with the reason.
-        internal static Color32[] DecodePng(byte[] png, out int w, out int h, out string why)
+        // The largest picture side decoded at all (a sheet of 44 cells of the largest canvas fits well inside).
+        internal const int MaxPictureSide = 4096;
+
+        // A PNG's pixels (bottom row first), or null with the reason. Its size is read from its header first: a picture
+        // larger than maxW x maxH (a frame: its canvas) is refused before anything is decoded (one 16k x 16k PNG in a
+        // pack was a gigabyte on the main thread, docs/multi-mod-loading.md 2.2).
+        internal static Color32[] DecodePng(byte[] png, out int w, out int h, out string why, int maxW = MaxPictureSide, int maxH = MaxPictureSide, long maxPixels = (long)MaxPictureSide * MaxPictureSide)
         {
             w = h = 0;
             why = null;
             if (png == null)
             {
                 why = "no file";
+                return null;
+            }
+            if (!Numbers.PngSize(png, out int hw, out int hh))
+            {
+                why = "not a PNG file";
+                return null;
+            }
+            if (hw > maxW || hh > maxH || (long)hw * hh > maxPixels)
+            {
+                w = hw;
+                h = hh;
+                why = $"it is {hw}x{hh}, larger than {Math.Min(maxW, MaxPictureSide)}x{Math.Min(maxH, MaxPictureSide)}";
                 return null;
             }
             var t = new Texture2D(2, 2, TextureFormat.RGBA32, false);
@@ -1054,6 +1168,8 @@ namespace GK2DonkeyAPI
             portraitFailed.RemoveWhere(k => k.StartsWith(id + "|", StringComparison.OrdinalIgnoreCase) || k.StartsWith(id + "(mount)|", StringComparison.OrdinalIgnoreCase));
         }
 
+        internal const int MaxPortraitSide = 512;
+
         internal static Texture2D PortraitOf(SkinDef d)
         {
             if (d == null) return null;
@@ -1067,8 +1183,14 @@ namespace GK2DonkeyAPI
             {
                 byte[] png = d.ReadFile(d.Portrait);
                 if (png == null) { Plugin.Log.LogWarning($"Looks: skin '{d.Id}': portrait = {d.Portrait} is not in the pack."); portraitFailed.Add(key); return null; }
+                if (!Numbers.PngSize(png, out int pw, out int ph) || pw > MaxPortraitSide || ph > MaxPortraitSide)
+                {
+                    Plugin.Log.LogWarning($"Looks: skin '{d.Id}': portrait = {d.Portrait} is {(pw > 0 ? pw + "x" + ph : "not a PNG")}; a portrait is a PNG of at most {MaxPortraitSide}x{MaxPortraitSide}. None shown.");
+                    portraitFailed.Add(key);
+                    return null;
+                }
                 var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = "portrait " + d.Id, filterMode = FilterMode.Point };
-                if (!ImageConversion.LoadImage(tex, png)) { UnityEngine.Object.Destroy(tex); portraitFailed.Add(key); return null; }
+                if (!ImageConversion.LoadImage(tex, png, true)) { UnityEngine.Object.Destroy(tex); Plugin.Log.LogWarning($"Looks: skin '{d.Id}': portrait {d.Portrait} is not a picture Unity can read."); portraitFailed.Add(key); return null; }
                 portraits[key] = tex;
                 return tex;
             }
@@ -1739,7 +1861,17 @@ namespace GK2DonkeyAPI
                 Live.TextureMade(Sheet);
             }
 
-            // A frame into its cell: the canvas size exactly, or it is skipped (reported).
+            // A frame into its cell: the canvas size exactly, or it is skipped (reported). One reason is said once per skin
+            // (a missing sheet was a warning for each of its 44 frames, 88 with a front layer); the count is in the
+            // skin's loaded line (Bad).
+            private HashSet<string> saidWhy;
+
+            private void SaySkipped(string key, string why)
+            {
+                if ((saidWhy ?? (saidWhy = new HashSet<string>(StringComparer.Ordinal))).Add(why))
+                    Plugin.Log.LogWarning($"Looks: skin '{Def.Id}', picture {key}: skipped ({why}).{(saidWhy.Count == 1 ? " Other pictures skipped for the same reason are counted, not said again." : "")}");
+            }
+
             internal bool Put(string key, Pixels px)
             {
                 if (px.P == null)
@@ -1747,14 +1879,14 @@ namespace GK2DonkeyAPI
                     if (px.Why != null)
                     {
                         Bad++;
-                        Plugin.Log.LogWarning($"Looks: skin '{Def.Id}', picture {key}: skipped ({px.Why}).");
+                        SaySkipped(key, px.Why);
                     }
                     return false;
                 }
                 if (px.W != cellW || px.H != cellH || px.P.Length != px.W * px.H)
                 {
                     Bad++;
-                    Plugin.Log.LogWarning($"Looks: skin '{Def.Id}', picture {key}: skipped ({px.W}x{px.H}, the skin's canvas is {cellW}x{cellH}).");
+                    SaySkipped(key, $"{px.W}x{px.H}, the skin's canvas is {cellW}x{cellH}");
                     return false;
                 }
                 int i = placed++;
@@ -2056,7 +2188,7 @@ namespace GK2DonkeyAPI
                     }
                     long t1 = BuildCost.Now;
                     var px = new Pixels();
-                    px.P = DecodePng(png, out px.W, out px.H, out px.Why);
+                    px.P = DecodePng(png, out px.W, out px.H, out px.Why, d.CanvasW, d.CanvasH);
                     if (counts != null)
                     {
                         counts.Cost.Read += t1 - t0;
@@ -2212,7 +2344,7 @@ namespace GK2DonkeyAPI
                         png = null;
                         s.Why = e.Message;
                     }
-                    if (s.Why == null) s.Pixels = DecodePng(png, out s.W, out s.H, out s.Why);
+                    if (s.Why == null) s.Pixels = DecodePng(png, out s.W, out s.H, out s.Why, d.CanvasW * keys.Length, d.CanvasH * keys.Length, 2L * d.CanvasW * d.CanvasH * keys.Length);
                     if (s.Pixels != null)
                     {
                         s.Columns = d.SheetColumns > 0 ? d.SheetColumns : Mathf.Max(1, s.W / d.CanvasW);
@@ -2624,6 +2756,7 @@ namespace GK2DonkeyAPI
                     if (want.Length == 0 || want.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return null;
                     SkinDef d = Find(want);
                     if (d == null || d.Unavailable != null || d.Base != viewBase) return null; // set aside (its game frames gone): the donkey comes instead, in mount too, not only in the drawing
+                    if (Catalog.Find(d.MountId) == null) return null; // a skin whose mount isn't installed: the donkey as it is, never the skin on the donkey's facts (the choice is kept)
                     if (owner.ViewScale != 1f && !d.Mount.Foals) return null;
                     return d;
                 }
@@ -2971,9 +3104,9 @@ namespace GK2DonkeyAPI
                 {
                     if (abilityOff[i]) continue;
                     MountAbility a = k.Abilities[i];
-                    if (!ridden && !a.TicksWhileStanding) continue;
                     try
                     {
+                        if (!ridden && !a.TicksWhileStanding) continue; // a mod's getter: in the try, as its Tick
                         a.Tick(h, dt);
                     }
                     catch (Exception e)

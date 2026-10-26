@@ -424,6 +424,23 @@ prefix).
   frame", `BepInEx\GK2-asset-probe\donkey-frames\`). The game's pictures belong to the game: paint your own over them,
   don't ship them.
 
+## What the loader refuses
+
+A pack is someone else's files loaded into a player's game, so the loader checks them before they cost anything
+(docs/multi-mod-loading.md, API 0.40.0), and says what it left out in the log:
+
+- a picture is read from its PNG header first: a frame larger than the skin's canvas, a sheet larger than its cells,
+  a portrait over 512x512 are refused without being decoded; a file that isn't a PNG too;
+- a sound file over 16 MB, and a WAV with a chunk whose length doesn't fit the file;
+- `NaN` and `Infinity` (and a number with a decimal comma: `1,5`) wherever a number goes; `pivot`, `offset` and
+  `offset_cart` are kept within the canvas range;
+- a file name (`sheet =`, `sheet_front =`, `portrait =`, a sound) outside the pack's own folder: `..`, a drive, a
+  network share;
+- a sheet's `frames =` name that isn't a frame key (letters, digits, `_`, `-`);
+- a `mount.cfg` whose `[Mount] id` isn't its folder's name, or whose `needs =` is newer than the API;
+- a skin of a mount that isn't installed is kept, but offered nowhere (the Mounts panel lists its mount as not
+  installed); it is worn once its mount comes.
+
 ## Trying it
 
 **In Saddle Up 0.10.0's download the skin packs are switched off**, with every mount and skin: they come in the next

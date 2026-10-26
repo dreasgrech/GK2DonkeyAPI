@@ -1,5 +1,8 @@
 # Mounts and skins as separate mods (2026-10-20)
 
+**2026-10-26 (API 0.40.0):** what the API does with many mods' content side by side (errors, order, versions, the side
+file, other people's files) is docs/multi-mod-loading.md.
+
 **2026-10-25 (API 0.37.0):** nothing picks or shows an effect any more: the effect rows, the instance keys `Effect` /
 `EffectWhen`, `MountDef` / `MountSkinDef.Effect` and the pack keys `effect` / `effect_when` are gone; effects are
 registered only (`Mounts.Effects`, Saddle Up still registers Hellfire). The scenario "settings: the Mount, Skin,

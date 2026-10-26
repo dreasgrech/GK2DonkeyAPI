@@ -3,6 +3,19 @@
 This was investigated on 2026-10-01 against the Steam build 25601286 (decompiled `SaveSystem`, `SaveSlotData`,
 `GameSave`, `EnergySystem`, `Item`, `DropData`).
 
+**API 0.40.0 (2026-10-26, never lost; docs/multi-mod-loading.md section 1):** nothing a save does can lose the side
+file's data because something else went wrong. After an error in the update took the instances away
+(`ForceCleanup("error")`), the API switched off mid-game, or a restore that failed, the file is **held**: saves leave
+it exactly as it is, neither rewritten nor deleted, until another game is loaded. A load whose file is older than its
+save (a held file, a failed write, a session without the API, a cloud or backup copy) **sets it aside** as
+`<slot>.gk2donkeyapi.stale-day<N>.dat` instead of leaving it for the next save. Every write keeps the file before it as
+`<slot>.gk2donkeyapi.dat.bak` (not synced), and a file another program holds is tried three times. Each record is
+restored on its own: one that fails (spawn refused, an error, its parent missing) is **carried forward** as read and
+tried again at the next load. Lines of a kind this version doesn't read, and settings on keys it doesn't know, are
+written back as they were. An ability's owner is exactly `<owner>.ability.<mount id>`; a removed mod's cart values go
+with the cart at a hitch. Deleting a save deletes its `.bak` and its set-aside files. Self-tests in the group Never
+lost.
+
 **API 0.10.0 (several mods, per-mod ids, GameReady, dormant records, per-mod data) is described in "Several mods:
 what was decided and built" below.** The rest of this block describes 0.9.0.
 

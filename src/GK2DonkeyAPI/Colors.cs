@@ -463,7 +463,7 @@ namespace GK2DonkeyAPI
             // Overlay, OverlayAmount) and its value; false for a key or value it doesn't take.
             public bool Set(string key, string value)
             {
-                bool Num(out float f) => float.TryParse(value, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out f);
+                bool Num(out float f) => Numbers.TryFloat(value, out f);
                 float v;
                 switch (key.ToLowerInvariant())
                 {

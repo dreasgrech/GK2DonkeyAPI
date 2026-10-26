@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
@@ -55,7 +56,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Catalog: a MountsChanged handler threw: " + e.Message);
+                    Plugin.Log.LogWarning($"Catalog: a MountsChanged handler of {Said.ModOf(d)} threw: {e.Message}");
                 }
             }
         }
@@ -63,14 +64,16 @@ namespace GK2DonkeyAPI.Api
         // A mount of your own. Yours already: it replaces, and every instance of it re-applies. Another mod's of the same
         // id: the version rule decides (the higher Version; at a tie the first stays), never a throw; the one left out is
         // said in the log and its handle does nothing. Dispose to withdraw: its skins fall back to the donkey mount.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] // the calling mod's assembly (Mounts.NoteOwner)
         public IDisposable Register(string ownerId, MountDef def)
         {
             if (string.IsNullOrWhiteSpace(ownerId)) throw new ArgumentException("An owner id (your plugin GUID) is required.");
+            Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (def == null) throw new ArgumentNullException(nameof(def));
             var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Math.Max(0.2f, Math.Min(1f, def.FoalScale)), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
+                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Numbers.Finite(def.FoalScale, 0.2f, 1f, 0.6f), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart), Jump = JumpShapes.FromApi(def.Jump, def.Id),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
@@ -105,7 +108,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
             GK2DonkeyAPI.Catalog.Register(d); // false: another mod's of the same id stays (the version rule, a warning said why); the handle then does nothing
-            return new Handle(d.Id, ownerId);
+            return new Handle(d);
         }
 
         public bool Unregister(string ownerId, string id)
@@ -114,7 +117,7 @@ namespace GK2DonkeyAPI.Api
             return GK2DonkeyAPI.Catalog.Unregister(id, ownerId);
         }
 
-        private static float? ClampSpeed(float? v) => v.HasValue ? Math.Max(GK2DonkeyAPI.Catalog.SpeedMin, Math.Min(GK2DonkeyAPI.Catalog.SpeedMax, v.Value)) : (float?)null;
+        private static float? ClampSpeed(float? v) => v.HasValue && Numbers.IsFinite(v.Value) ? Math.Max(GK2DonkeyAPI.Catalog.SpeedMin, Math.Min(GK2DonkeyAPI.Catalog.SpeedMax, v.Value)) : (float?)null;
 
         private static Dictionary<string, object> Copy(Dictionary<string, object> d)
         {
@@ -129,22 +132,23 @@ namespace GK2DonkeyAPI.Api
             return o;
         }
 
+        // Withdraws exactly what it registered: a registration of the same mount since (the mod registered it again, or
+        // another mod's newer one took the id) is not its to take away (docs/multi-mod-loading.md 4.6).
         private sealed class Handle : IDisposable
         {
-            private readonly string id, owner;
+            private readonly GK2DonkeyAPI.Catalog.Entry entry;
             private bool done;
 
-            internal Handle(string id, string owner)
+            internal Handle(GK2DonkeyAPI.Catalog.Entry entry)
             {
-                this.id = id;
-                this.owner = owner;
+                this.entry = entry;
             }
 
             public void Dispose()
             {
                 if (done) return;
                 done = true;
-                GK2DonkeyAPI.Catalog.Unregister(id, owner);
+                if (GK2DonkeyAPI.Catalog.Find(entry.Id) == entry) GK2DonkeyAPI.Catalog.Unregister(entry.Id, entry.Owner);
             }
         }
     }

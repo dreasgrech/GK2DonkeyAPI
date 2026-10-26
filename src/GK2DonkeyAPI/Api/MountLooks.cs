@@ -89,31 +89,43 @@ namespace GK2DonkeyAPI.Api
                 }
                 catch (Exception e)
                 {
-                    Plugin.Log.LogWarning("Looks: a SkinsChanged handler threw: " + e.Message);
+                    Plugin.Log.LogWarning($"Looks: a SkinsChanged handler of {Said.ModOf(d)} threw: {e.Message}");
                 }
             }
         }
 
         // A skin from your own code, a look of def.Mount named def.Id within it ("default" for your mount's own look).
         // The name must be new for that mount (or yours already: then it replaces). Dispose to withdraw.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] // the calling mod's assembly (Mounts.NoteOwner)
         public IDisposable Register(string ownerId, MountSkinDef def)
         {
             Owner(ownerId);
+            Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (def == null) throw new ArgumentNullException(nameof(def));
             if (def.Source == null) throw new ArgumentException("A MountSkinDef needs a Source (IMountSkinSource).", nameof(def));
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the skin", def.Id);
             Looks.SkinDef d = def.ToDef(ownerId);
             d.Sprites = def.Source; // the mod's sprites stay the mod's
             d.FrontSprites = def.FrontSource;
-            Looks.Register(d);
-            return new Handle(d.Id, ownerId);
+            try
+            {
+                Looks.Register(d);
+            }
+            catch (Looks.LeftOut e)
+            {
+                // the rules between mods, not a mistake in the call: a warning, and a handle that does nothing
+                Plugin.Log.LogWarning("Looks: " + e.Message);
+            }
+            return new Handle(d);
         }
 
         // A rule over the donkey's own frames: pixels(frame) returns the new pixels (the same size as frame.Pixels, the
         // same layout). Built when first worn, a few frames a tick, and worn once complete.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)] // the calling mod's assembly (Mounts.NoteOwner)
         public IDisposable RegisterRecipe(string ownerId, string id, string name, Func<MountSkinFrame, Color32[]> pixels, string author = null, string version = null)
         {
             Owner(ownerId);
+            Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (pixels == null) throw new ArgumentNullException(nameof(pixels));
             if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the recipe skin", id);
             var d = new Looks.SkinDef
@@ -122,8 +134,15 @@ namespace GK2DonkeyAPI.Api
                 Recipe = f => pixels(new MountSkinFrame(f)),
                 Report = "a recipe: drawn from the donkey's own frames when first worn",
             };
-            Looks.Register(d);
-            return new Handle(d.Id, ownerId);
+            try
+            {
+                Looks.Register(d);
+            }
+            catch (Looks.LeftOut e)
+            {
+                Plugin.Log.LogWarning("Looks: " + e.Message);
+            }
+            return new Handle(d);
         }
 
         // Every mount pack under a folder: <folder>/gk2mounts/<mount>/ and <folder>/*/gk2mounts/<mount>/ (mount.cfg,
@@ -169,22 +188,22 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
+        // Withdraws exactly the skin it registered, never one registered since under the same name.
         private sealed class Handle : IDisposable
         {
-            private readonly string id, owner;
+            private readonly Looks.SkinDef skin;
             private bool done;
 
-            internal Handle(string id, string owner)
+            internal Handle(Looks.SkinDef skin)
             {
-                this.id = id;
-                this.owner = owner;
+                this.skin = skin;
             }
 
             public void Dispose()
             {
                 if (done) return;
                 done = true;
-                Looks.Unregister(id, owner);
+                if (skin.Id != null && Looks.Find(skin.Id) == skin) Looks.Unregister(skin.Id, skin.Owner);
             }
         }
     }
@@ -255,14 +274,17 @@ namespace GK2DonkeyAPI.Api
         public string Description;
         public Texture2D Portrait;
 
+        private static Vector2 FiniteOffset(Vector2 v) => new Vector2(Numbers.Finite(v.x, -Looks.MaxCanvas, Looks.MaxCanvas, 0f), Numbers.Finite(v.y, -Looks.MaxCanvas, Looks.MaxCanvas, 0f));
+
         internal Looks.SkinDef ToDef(string owner)
         {
             var d = new Looks.SkinDef
             {
                 Id = Id, Name = string.IsNullOrEmpty(Name) ? Id : Name, Author = Author, Version = Version, Owner = owner,
-                OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight, PivotX = PivotX, PivotY = PivotY,
+                OwnColours = !PaletteColours, Over = Over, CanvasW = CanvasWidth, CanvasH = CanvasHeight,
+                PivotX = Numbers.Finite(PivotX, -Looks.MaxCanvas, 2 * Looks.MaxCanvas, 48f), PivotY = Numbers.Finite(PivotY, -Looks.MaxCanvas, 2 * Looks.MaxCanvas, 48f),
                 MountId = string.IsNullOrWhiteSpace(Mount) ? MountCatalog.DonkeyId : Mount.Trim(),
-                OffsetRide = Offset, OffsetCart = CartOffset ?? Offset, SeatRow = SeatRow,
+                OffsetRide = FiniteOffset(Offset), OffsetCart = FiniteOffset(CartOffset ?? Offset), SeatRow = SeatRow,
                 TuningValues = Tuning != null && Tuning.Count > 0 ? new Dictionary<string, object>(Tuning, StringComparer.OrdinalIgnoreCase) : null,
                 TuningRide = TuningRide != null && TuningRide.Count > 0 ? new Dictionary<string, object>(TuningRide, StringComparer.OrdinalIgnoreCase) : null,
                 TuningCart = TuningCart != null && TuningCart.Count > 0 ? new Dictionary<string, object>(TuningCart, StringComparer.OrdinalIgnoreCase) : null,

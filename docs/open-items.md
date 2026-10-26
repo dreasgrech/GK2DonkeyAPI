@@ -5,6 +5,10 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **Content from many mods** (API 0.40.0, 2026-10-26): F11's new scenarios (Never lost: the held side file, records
+  carried forward, handle ownership; Skins and effects: hostile files, no throw, order and identity, versions and ids)
+  and the updated "ids" scenario; a normal load and save keep every parked cart (the log's "Persistence:" lines, a
+  `.bak` next to the side file after the second save).
 
 With GK2 Mod Framework installed:
 
@@ -442,6 +446,11 @@ closed):
 
 ## Deferred
 
+- **Content from many mods, what is left** (docs/multi-mod-loading.md section 10, 2026-10-26): D3 (1.0 when the
+  mounts switch opens), D5 (the author stamp), D7 (how the mounts ship); `for_canvas` in skin.cfg for a skin pack of a
+  mount whose canvas changed; a version-rule loser brought back when the winner is withdrawn (now: at the next start);
+  pruning the sound cache and `framings.txt`; `PackStamp` only with the auto-reload on; mod data back to the cart at an
+  unhitch; forgetting a dormant record outside the dev tab.
 - **The doorstep bug:** found and fixed 2026-10-03 (see 9a above). The donkey is still parked on the doorstep after
   "Dismounted (indoors)". That's harmless now it no longer blocks the way, but it could be parked a little off the
   door if it looks odd.

@@ -320,7 +320,7 @@ namespace GK2DonkeyAPI
                 SoundSpec sgr = rig.Resolve("graze");
                 Check(sgr != null && sgr.Layer == "skin" && sgr.BankId != null && sgr.BankId.EndsWith("sounds:graze", StringComparison.Ordinal), $"graze_1.wav by convention, no cfg line ({sgr?.Describe()})");
                 SoundSpec st0 = rig.Resolve("stop"), hi0 = rig.Resolve("hitch");
-                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith(".mount-selftest.sounds-beast.sounds:stop", StringComparison.Ordinal), $"the mount folder's stop_1.wav by the name rule: the mount's stop ({st0?.Describe()})");
+                Check(st0 != null && st0.Layer == "mount" && st0.BankId != null && st0.BankId.EndsWith("|mount-selftest.sounds-beast|sounds:stop", StringComparison.Ordinal), $"the mount folder's stop_1.wav by the name rule: the mount's stop ({st0?.Describe()})");
                 Check(hi0 != null && hi0.Layer == "base", $"the mount's hitch line with no file in its sounds\\ falls through to the base ({hi0?.Describe()})");
                 SoundSpec sb = rig.Resolve("bell");
                 float bellVol = Plugin.For(MountStyle.Ride).BellVolume.Value;
@@ -768,12 +768,21 @@ namespace GK2DonkeyAPI
                     b.Tuning.Set(Owner, "Skin", "selftest.herd-beast/default");
                     yield return Until(() => b.Mount == "selftest.herd-beast", 8f);
                     Sounds.TestResetHerd();
-                    yield return Seconds(12f);
+                    // a standing call comes 1.5 to 4.5 s after the last (idle_every 1 x StandingIdleFactor 3, x 0.5..1.5), a
+                    // step puts it off 2 to 6 s, and no two are nearer than VoiceGapS: a second one can take past 12 s
+                    // (one call in 12 s, 2026-10-26); waited for up to 30
                     var calls = new List<float>();
-                    foreach (var t in Sounds.TestVoiceTimes) if (t.Event == "voice") calls.Add(t.At);
+                    float waitFrom = Time.time;
+                    while (Time.time - waitFrom < 30f)
+                    {
+                        calls.Clear();
+                        foreach (var t in Sounds.TestVoiceTimes) if (t.Event == "voice") calls.Add(t.At);
+                        if (calls.Count >= 2 && Time.time - waitFrom >= 12f) break;
+                        yield return null;
+                    }
                     float minGap = float.MaxValue;
                     for (int i = 1; i < calls.Count; i++) minGap = Mathf.Min(minGap, calls[i] - calls[i - 1]);
-                    Check(calls.Count >= 2 && minGap >= Sounds.VoiceGapS - 0.1f, $"two standing grown ones: {calls.Count} call(s) in 12 s, the nearest two {(calls.Count >= 2 ? minGap.ToString("0.00") : "-")} s apart (at least {Sounds.VoiceGapS})");
+                    Check(calls.Count >= 2 && minGap >= Sounds.VoiceGapS - 0.1f, $"two standing grown ones: {calls.Count} call(s) in {Time.time - waitFrom:0} s, the nearest two {(calls.Count >= 2 ? minGap.ToString("0.00") : "-")} s apart (at least {Sounds.VoiceGapS})");
                 }
                 else Info("no room for a second grown one: the voice gap not seen");
 

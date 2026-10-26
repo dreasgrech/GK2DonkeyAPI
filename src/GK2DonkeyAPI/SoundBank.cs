@@ -201,6 +201,7 @@ namespace GK2DonkeyAPI
         internal static AudioClip FromWav(byte[] bytes, string name)
         {
             if (bytes == null || bytes.Length < 44) throw new FormatException("not a WAV file (too short)");
+            if (bytes.Length > MaxSoundBytes) throw new FormatException($"{bytes.Length / (1024 * 1024)} MB; a sound file is at most {MaxSoundBytes / (1024 * 1024)} MB");
             if (Ascii(bytes, 0) != "RIFF" || Ascii(bytes, 8) != "WAVE") throw new FormatException("not a WAV file (no RIFF/WAVE header)");
             int pos = 12;
             int format = 0, channels = 0, rate = 0, bits = 0;
@@ -210,6 +211,9 @@ namespace GK2DonkeyAPI
                 string chunk = Ascii(bytes, pos);
                 int len = BitConverter.ToInt32(bytes, pos + 4);
                 int body = pos + 8;
+                // a chunk's length from the file: a negative one never moved on (an endless loop on the main thread), one
+                // past the end leaves nothing to read; only the data chunk may be cut short (a truncated file still plays)
+                if (len < 0 || chunk != "data" && len > bytes.Length - body) throw new FormatException($"WAV: the '{chunk}' chunk's length {len} is not in the file");
                 if (chunk == "fmt " && len >= 16)
                 {
                     format = BitConverter.ToUInt16(bytes, body);
@@ -310,16 +314,31 @@ namespace GK2DonkeyAPI
             string dir = Path.Combine(Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", SafeName(owner), SafeName(skin));
             if (!string.IsNullOrEmpty(sub)) dir = Path.Combine(dir, SafeName(sub)); // the mount's files apart from the skin's own
             string path = Path.Combine(dir, SafeName(file));
-            // checked on disk once a session per file and length (a reloaded pack's changed file has another length)
-            string seen = path + "|" + bytes.Length;
+            // checked on disk once a session per file and content: a mod's update with a changed file of the same length
+            // played the old copy (the length was all that was compared; docs/multi-mod-loading.md 6)
+            string seen = path + "|" + bytes.Length + "|" + Fnv(bytes).ToString("x16");
             if (cacheChecked.Contains(seen)) return path;
             Directory.CreateDirectory(dir);
-            if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length) File.WriteAllBytes(path, bytes);
+            if (!File.Exists(path) || new FileInfo(path).Length != bytes.Length || !SameBytes(File.ReadAllBytes(path), bytes)) File.WriteAllBytes(path, bytes);
             cacheChecked.Add(seen);
             return path;
         }
 
         private static readonly HashSet<string> cacheChecked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        private static ulong Fnv(byte[] b)
+        {
+            ulong h = 14695981039346656037UL;
+            foreach (byte x in b) { h ^= x; h *= 1099511628211UL; }
+            return h;
+        }
+
+        private static bool SameBytes(byte[] a, byte[] b)
+        {
+            if (a.Length != b.Length) return false;
+            for (int i = 0; i < a.Length; i++) if (a[i] != b[i]) return false;
+            return true;
+        }
 
         private static string SafeName(string s)
         {
@@ -372,7 +391,9 @@ namespace GK2DonkeyAPI
 
         internal static string BankOwner(Looks.SkinDef d) => d.Owner + "/" + d.Id;
 
-        internal static string IdFor(FileSource src, string key) => "gk2." + src.Owner + "." + src.Name + "." + key;
+        // Joined with '|', which no owner, skin or key holds: with dots, "acme" + "x.dragon/s" and "acme.x" + "dragon/s"
+        // were one id, the second pack playing the first's sounds (docs/multi-mod-loading.md 5.6).
+        internal static string IdFor(FileSource src, string key) => "gk2." + src.Owner + "|" + src.Name + "|" + key;
 
         // The files a layer's line names (the pack's sounds\ folder, or sounds\mount\ for its mount's: folder),
         // registered once as one game sound under the skin's id for that key; the id at once, the clips a few frames later (a pack on disk and an embedded .ogg
@@ -427,6 +448,9 @@ namespace GK2DonkeyAPI
             return id;
         }
 
+        // The largest sound file a pack may bring (decoded whole on the main thread; a pack's sounds are seconds long).
+        internal const int MaxSoundBytes = 16 * 1024 * 1024;
+
         private static void StartOne(Job job, string file)
         {
             FileSource d = job.Src;
@@ -435,13 +459,30 @@ namespace GK2DonkeyAPI
                 string rel = job.Folder + file; // "sounds/x.ogg", "sounds/mount/x.ogg"
                 if (!string.IsNullOrEmpty(d.Source))
                 {
-                    LoadFile(Path.Combine(d.Source, rel.Replace('/', Path.DirectorySeparatorChar)), (c, e) => Done(job, file, c, e));
+                    string full = Numbers.InFolder(d.Source, rel);
+                    if (full == null || !File.Exists(full))
+                    {
+                        Done(job, file, null, "not in the pack");
+                        return;
+                    }
+                    long size = new FileInfo(full).Length;
+                    if (size > MaxSoundBytes)
+                    {
+                        Done(job, file, null, $"{size / (1024 * 1024)} MB; a sound file is at most {MaxSoundBytes / (1024 * 1024)} MB");
+                        return;
+                    }
+                    LoadFile(full, (c, e) => Done(job, file, c, e));
                     return;
                 }
                 byte[] bytes = d.ReadFile?.Invoke(rel);
                 if (bytes == null)
                 {
                     Done(job, file, null, "not in the pack");
+                    return;
+                }
+                if (bytes.Length > MaxSoundBytes)
+                {
+                    Done(job, file, null, $"{bytes.Length / (1024 * 1024)} MB; a sound file is at most {MaxSoundBytes / (1024 * 1024)} MB");
                     return;
                 }
                 if (file.EndsWith(".wav", StringComparison.OrdinalIgnoreCase))

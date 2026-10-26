@@ -874,6 +874,9 @@ namespace GK2DonkeyAPI.Api
 
         private bool shown, catchingUp;
 
+        // A page has been shown: its lists are read (the window for registering mounts and skins is over, Catalog.Late).
+        internal static bool AnyShown { get; private set; }
+
         private void Show()
         {
             if (shown)
@@ -883,8 +886,10 @@ namespace GK2DonkeyAPI.Api
             int late = CatchUp();
             if (late > 0) Plugin.Log.LogInfo($"Settings: {Title}: {late} mount(s) registered after the page was built (a mod loaded after {OwnerId}) got their rows before the page was shown.");
             shown = true;
+            AnyShown = true;
             AddKeyHelp();
             FinishBinding();
+            GuardCallbacks();
             LookPreview.Watch(this);
             if (FrameworkLink.TryRegister(this))
             {
@@ -893,6 +898,52 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             SettingsRows.Add(this);
+        }
+
+        // The mod's own functions on its rows (shown, enabled, an info line, a value's words) run in shared windows: the
+        // game's Settings, the Mods menu, the Mounts panel with every mod's rows. One that throws would close the panel
+        // or stop the page for every mod (docs/multi-mod-loading.md 3): each is wrapped once, a throw logged once with
+        // the page's mod and the row, and the row then shown, enabled, "-" or the plain number.
+        private void GuardCallbacks()
+        {
+            foreach (Row r in Rows)
+            {
+                string where = $"{OwnerId}'s row '{r.Label}'";
+                r.Visible = Guard(r.Visible, true, where, "Visible");
+                r.Shown = Guard(r.Shown, true, where, "Shown");
+                r.Enabled = Guard(r.Enabled, true, where, "Enabled");
+                if (r.InfoValue != null)
+                {
+                    Func<string> info = r.InfoValue;
+                    bool said = false;
+                    r.InfoValue = () =>
+                    {
+                        try { return info(); }
+                        catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its info line threw ({e.Message}); it says '-'."); } return "-"; }
+                    };
+                }
+                if (r.Format != null)
+                {
+                    Func<int, string> format = r.Format;
+                    bool said = false;
+                    r.Format = v =>
+                    {
+                        try { return format(v); }
+                        catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its words for a value threw ({e.Message}); the number is shown."); } return v.ToString(System.Globalization.CultureInfo.InvariantCulture); }
+                    };
+                }
+            }
+        }
+
+        internal static Func<bool> Guard(Func<bool> f, bool fallback, string where, string what)
+        {
+            if (f == null) return null;
+            bool said = false;
+            return () =>
+            {
+                try { return f(); }
+                catch (Exception e) { if (!said) { said = true; Plugin.Log.LogWarning($"Settings: {where}: its {what} threw ({e.Message}); taken as {fallback.ToString().ToLowerInvariant()}."); } return fallback; }
+            };
         }
 
         private void Add(Row r)

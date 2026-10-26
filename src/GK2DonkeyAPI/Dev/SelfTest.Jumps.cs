@@ -138,6 +138,8 @@ namespace GK2DonkeyAPI
                 yield return Frames(10);
                 h.Tuning.Set(Owner, "Skin", M("dragon") + "/default");
                 yield return Until(() => h.Mount == M("dragon"), 8f);
+                // its pictures built before the jump (they take about 20 frames: a jump begun earlier drew the walk, 2026-10-26)
+                yield return Until(() => h.I.TestSkinWearing() == M("dragon") + "/default" && !h.I.LooksRig.Building, 15f);
                 yield return Frames(10);
                 i = Mount.Ridden;
                 var seen = new System.Collections.Generic.List<string>();

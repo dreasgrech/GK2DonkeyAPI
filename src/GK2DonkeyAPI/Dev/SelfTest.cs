@@ -173,6 +173,10 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "layering: a variant drawn over its default (the erase colour's holes, its pixels on top, the colours by where they came from)", Body = SkinOverDefault },
             new Scenario { Group = GroupLooks, Name = "layering: a variant before its default, the default read again and withdrawn, another canvas, a code skin's sentinels, the donkey's skins unchanged", Body = SkinLayerLifecycle },
             new Scenario { Group = GroupLooks, Name = "format: description, portrait, stats, ability names, needs, a bad format, unknown [Game] keys", Body = PackFormat },
+            new Scenario { Group = GroupLooks, Name = "hostile files: a picture refused from its header, a bad WAV chunk, NaN and Infinity, names outside the pack, a BOM", Body = HostileFiles },
+            new Scenario { Group = GroupLooks, Name = "between mods: no throw (an effect and a code skin meet the version rule, a lost mount's own look left out, an effect id needs its prefix, a row's throwing function)", Body = NoThrowBetweenMods },
+            new Scenario { Group = GroupLooks, Name = "between mods: order and identity (v2 beside v1 whole, an id not its folder's refused, a skin before its mount, a skin of a mount not installed, handles, one change per folder)", Body = OrderAndIdentity },
+            new Scenario { Group = GroupLooks, Name = "between mods: versions and ids (needs in mount.cfg, ASCII ids, versions that aren't numbers, sound ids, one mod's sound for an event)", Body = VersionsAndIds },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
@@ -206,6 +210,9 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSafety, Name = "safe spots: standing records one, under the ground never; a seed after the load", Body = SafeRecord },
             new Scenario { Group = GroupSafety, Name = "the fall watchdog: under the ground, far below the world, caught; a drop onto the ground and standing under a bridge, left alone", Body = SafeWatchdog },
             new Scenario { Group = GroupSafety, Name = "back to the last safe spot: the API call (on foot, riding), refused with the reason (controls taken, no spot), Saddle Up's rows and button, the watchdog off", Body = SafeReturn },
+            new Scenario { Group = GroupSafety, Name = "side file: held after an error (a save leaves it, never deletes it), the last one kept as .bak, a stale one set aside", Body = SideFileHeldAndAside },
+            new Scenario { Group = GroupSafety, Name = "side file: a record that fails to come back is carried forward; a newer version's keys and lines written back", Body = SideFileCarriedForward },
+            new Scenario { Group = GroupSafety, Name = "handles: another mod's Remove refused; a mod's data capped", Body = HandleOwnership },
             new Scenario { Group = GroupSounds, Name = "the probe: own clips as game sounds (a tone from WAV bytes and from a file, registered in AudioConfig, played by the game's player with its 3D preset and mixer group, taken out again)", Body = SoundsProbe },
             new Scenario { Group = GroupSounds, Name = "the donkey unchanged: every event of the rig resolves to the [Ride] and [Cart] keys, the API's voice and bell play the game's sounds, a standing one and a foal sound under the standing switch, the lips event taken only when played, a standing snail silent by its mount's pins", Body = SoundsDonkeyUnchanged },
             new Scenario { Group = GroupSounds, Name = "a pack's own sounds: [Sounds] lines and the sounds folder loaded as game sounds, the convention name, the layers (skin over mount over the keys, a style block), the player's switch on top, a second skin of the mount, the save round trip, the clean-up", Body = SoundsPack },
@@ -1784,7 +1791,7 @@ namespace GK2DonkeyAPI
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
-            a.I.EffectsRig.TestWant = "hellfire";
+            a.I.EffectsRig.TestWant = "saddleup.hellfire";
             a.Tuning.Set(Owner, "Skin", Sk("hellfire"));
             yield return Until(() => a.IsReady && a.I.TestSkinWearing() == Sk("hellfire") && a.I.EffectsRig.Lit, 20f);
             Check(waited, "Hellfire worn, the effect asked for by the test hook: lit");
@@ -2837,7 +2844,7 @@ namespace GK2DonkeyAPI
             IReadOnlyList<(string Id, string Label)> skins = Looks.SkinChoicesOf(MountCatalog.DonkeyId);
             Check(skins.Count == 1 && skins[0].Id == MountLooks.DonkeyId && skins[0].Label == Looks.DefaultLabel, $"the donkey's Skin list holds Default only ({skins.Count})");
             Check(Mounts.Effects.Effects.Count == 0, $"no effect is listed ({Mounts.Effects.Effects.Count})");
-            Check(Looks.Find(Sk("hellfire")) == null && Looks.Find(Sk("rat")) == null && Looks.Find(Sk("gerry")) == null && Catalog.Find(M("dragon")) == null && GK2DonkeyAPI.Effects.Find("hellfire") == null, "no built-in skin, mount or effect is registered");
+            Check(Looks.Find(Sk("hellfire")) == null && Looks.Find(Sk("rat")) == null && Looks.Find(Sk("gerry")) == null && Catalog.Find(M("dragon")) == null && GK2DonkeyAPI.Effects.Find("saddleup.hellfire") == null, "no built-in skin, mount or effect is registered");
             Check(!Mounts.MountsEnabled, "Mounts.MountsEnabled says so");
             int skinsBefore = Mounts.Looks.Skins.Count, mountsBefore = Mounts.Catalog.All.Count, effectsBefore = Mounts.Effects.Effects.Count;
             IDisposable a = Mounts.Looks.RegisterRecipe(Owner, "selftest.off-skin", "Off Skin", f => f.Pixels);
@@ -3479,7 +3486,7 @@ namespace GK2DonkeyAPI
                 Looks.RegisterFolder(r2, o2);
                 k = Mounts.Catalog.Find(beast);
                 Check(k != null && k.Cart && k.Name == "Id Beast" && k.Owner == o2, $"a newer mount.cfg (1.0) of the same id takes over: cart on, its name, its owner ({k?.Name}, {k?.Owner})");
-                Check(Mounts.Looks.Find(joiner)?.Mount == beast, "the first pack's other skin keeps the mount");
+                Check(Mounts.Looks.Find(joiner) == null, "the first pack's other skin is withdrawn with its pack: never the old pack's pictures on the new facts (docs/multi-mod-loading.md 4.1)");
                 Looks.SkinDef ownDef = Looks.Find(own);
                 Check(Catalog.Find(beast)?.Pack?.Source != null && Catalog.Find(beast).Pack.Source.StartsWith(r2, StringComparison.OrdinalIgnoreCase) && Looks.DefaultSkinOf(Catalog.Find(beast)) == own && ownDef != null && ownDef.Owner == o2 && ownDef.Name == "Id Beast",
                     $"the mount's files and its own look are the newer pack's ({Looks.DefaultSkinOf(Catalog.Find(beast))}, \"{ownDef?.Name}\" of {ownDef?.Owner})");
@@ -3490,15 +3497,18 @@ namespace GK2DonkeyAPI
                 k = Mounts.Catalog.Find(beast);
                 Check(k != null && k.Name == "Id Beast" && k.Cart, $"an older mount.cfg (0.5) changes nothing ({k?.Name})");
                 Check(Mounts.Looks.Find(oldLook) == null && Looks.Find(own)?.Owner == o2, "and the skins under it are not registered, its own look neither (their mount pack was refused)");
-                r3 = WriteTempPack("gk2donkeyapi-selftest-ids3", "selftest.joiner-test", "[Skin]\nformat = 1\nname = Joiner Older\nversion = 0.9\nmount = selftest.idbeast\n");
-                Info("the next \"could not be registered\" warning is this test's own: an older copy of a registered skin is refused");
+                r3 = WriteTempPack("gk2donkeyapi-selftest-ids3", "selftest.joiner-test", "[Skin]\nformat = 1\nname = Joiner\nversion = 1.0\nmount = selftest.idbeast\n");
                 int n = Looks.RegisterFolder(r3, o1 + ".old");
+                Check(n == 1 && Mounts.Looks.Find(joiner)?.Mount == beast, $"a mount folder without mount.cfg: its skin joins the mount ({n} registered)");
+                System.IO.File.WriteAllText(TempSkinCfg(r3, "selftest.joiner-test"), "[Skin]\nformat = 1\nname = Joiner Older\nversion = 0.9\nmount = selftest.idbeast\n");
+                Info("the next \"could not be registered\" warning is this test's own: an older copy of a registered skin is refused");
+                n = Looks.RegisterFolder(r3, o1 + ".older");
                 Check(n == 0 && Mounts.Looks.Find(joiner)?.Name == "Joiner", $"an older copy (0.9) of a registered skin (1.0) is refused ({n} registered)");
                 System.IO.File.WriteAllText(TempSkinCfg(r3, "selftest.joiner-test"), "[Skin]\nformat = 1\nname = Joiner Newer\nversion = 2.0\nmount = selftest.idbeast\n");
                 Info("the next \"replaces the one from\" warning is this test's own: a newer copy replaces the registered skin");
-                n = Looks.RegisterFolder(r3, o1 + ".old");
+                n = Looks.RegisterFolder(r3, o1 + ".newer");
                 MountSkinInfo sk = Mounts.Looks.Find(joiner);
-                Check(n == 1 && sk != null && sk.Id == joiner && sk.Name == "Joiner Newer" && sk.Owner == o1 + ".old" && sk.Mount == beast, $"a newer copy (2.0) replaces it, from a mount folder without mount.cfg: it joins the mount (\"{sk?.Name}\", {sk?.Owner}, {sk?.Mount})");
+                Check(n == 1 && sk != null && sk.Id == joiner && sk.Name == "Joiner Newer" && sk.Owner == o1 + ".newer" && sk.Mount == beast, $"a newer copy (2.0) replaces it, from a mount folder without mount.cfg: it joins the mount (\"{sk?.Name}\", {sk?.Owner}, {sk?.Mount})");
                 Check(Looks.CompareVersions("1.10", "1.9") > 0 && Looks.CompareVersions("1.0", "1") == 0 && Looks.CompareVersions(null, "0.1") < 0, "versions compare as numbers (1.10 > 1.9; 1.0 = 1; none < 0.1)");
             }
             finally
@@ -3961,7 +3971,7 @@ namespace GK2DonkeyAPI
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             yield return Until(() => a != null && a.IsReady, 6f);
-            if (a != null) a.I.EffectsRig.TestWant = "hellfire";
+            if (a != null) a.I.EffectsRig.TestWant = "saddleup.hellfire";
             yield return Until(() => a != null && a.I.TestEffectLit(), 6f);
             if (!waited)
             {
@@ -3982,7 +3992,7 @@ namespace GK2DonkeyAPI
             if (a != null) a.I.EffectsRig.TestWant = null;
             yield return Frames(3);
             Check(a != null && !a.I.TestEffectLit(), "no longer asked for: the fire is out");
-            if (a != null) a.I.EffectsRig.TestWant = "hellfire";
+            if (a != null) a.I.EffectsRig.TestWant = "saddleup.hellfire";
             yield return Until(() => a != null && a.I.TestEffectLit(), 4f);
             int lit = a != null ? a.I.TestEffectInWorld() : 0;
             a?.Remove();
