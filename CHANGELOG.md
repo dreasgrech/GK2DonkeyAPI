@@ -327,6 +327,10 @@ For players:
 
 For mod authors:
 
+- **A mount from a mod loaded after Saddle Up gets its colour rows in their place** (found with our own pack DLLs,
+  which load after Saddle Up, 2026-10-26): the settings page's catch-up appended a late mount's rows at the end, so in
+  the Mounts panel its Coat, Harness and Muzzle rows sat under "Cart colours" and it had no "Mount colours"; now each
+  builder's rows for it follow that builder's rows for the mounts before it (`MountSettingsPage.RunPerMount`).
 - **Our mounts are worked examples of a pack without a DLL**: `packs/SaddleUpDragon/` and `packs/SaddleUpCritters/` in
   the repo, each exactly the folder a player puts into `BepInEx\plugins\` (docs/making-a-mount.md "Built in or
   external"). Their ids changed with the move (`saddleup-dragon.dragon`, `saddleup-critters.rat/.snail/.worm`; never
@@ -854,6 +858,8 @@ Development:
   The over-skin colour tests (an over skin keeps the donkey's regions, the erase colour) take their own colours only
   (`OwnLook`): the player's chosen mount's colours reached their test donkeys (a Red harness and a Black coat under the
   test's blue, with the dragon chosen); the Mounts panel test says which of its cart checks failed.
+  The run's own checks (the world's own donkeys unchanged, no test donkey left behind) are a scenario of their own in
+  a group "After the run", the last of every run, so a failure there has a red header (it showed under all-green ones).
 - **Content from many mods** (docs/multi-mod-loading.md, investigated and built 2026-10-26): five new self-tests
   (Never lost: the held and set-aside side file, records carried forward, handle ownership; Skins and effects: hostile
   files, no throw between mods, order and identity, versions and ids); the "ids" scenario follows the new replace

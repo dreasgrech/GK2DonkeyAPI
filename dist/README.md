@@ -6,7 +6,7 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.40.0 (not released yet; the last release is 0.30.0) | 25910882 (1.010), built 2026-10-26 18:40 on commit 1038ae2 (content from many mods; the dragon and the critters as packs of their own; the mounts, skins and effects still switched off for players) plus the self-tests' fixes after it |
+| `GK2DonkeyAPI.dll` | 0.40.0 (not released yet; the last release is 0.30.0) | 25910882 (1.010), built 2026-10-26 on the committed pack DLLs plus the late-mount row fix (content from many mods; the dragon and the critters as packs of their own; the mounts, skins and effects still switched off for players) |
 | `GK2SaddleUp.dll` | 0.12.0 (needs GK2 Donkey API 0.39.0 or newer; not released yet; the last release is 0.10.0) | 25910882 (1.010), built 2026-10-26 18:40 |
 | `SaddleUpDragon.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the dragon embedded, built 2026-10-26 |
 | `SaddleUpCritters.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the rat, snail and worm embedded, built 2026-10-26 |
@@ -31,7 +31,8 @@ Sizes 2026-10-26 18:40:
   (`SaddleUpCritters.dll` 344 KB), `GK2-Saddle-Up-All-Mounts-0.12.0.zip` 637 KB.
 
 Release scans 22 of 22 green on this build; check-dist checks the four DLLs and both packs' folders. Self-tests on the dev build
-(2026-10-26): 1222 of 1223, the one a timing wait in the Mounts panel test (the dragon then read from its pack folder),
-fixed, its re-run pending. Before an upload: the "mounts off" gate and the "upgrade" self-test once more, the zip
+(2026-10-26, the pack DLLs): 1226 of 1228 in the last full run, the two the Mounts panel's late-mount rows (fixed in
+this build; the Skins and effects group re-run 496 of 496) and "the world's own donkeys" (the dev world's companion
+leaving its cart as the dragon during the run: save once after it has). Before an upload: the "mounts off" gate and the "upgrade" self-test once more, the zip
 rehearsal with the All Mounts zip and the dev tools locked (release-checklist.md section 5),
 the version numbers and the CHANGELOG heading (section 6); `docs/open-items.md` has what is still unseen in game.

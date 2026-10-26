@@ -107,6 +107,11 @@ namespace GK2DonkeyAPI
         private const string GroupIndoors = "Indoors";
         private const string GroupFlying = "Flying";
         private const string GroupSafety = "Never lost";
+        // The checks of the whole run, last in every run (a group's or one scenario's too): the world's own donkeys came
+        // through as they were, no test donkey left behind. A scenario of its own so its tally has a header like every
+        // other check (the user, 2026-10-26: a failure there showed under all-green headers).
+        private const string GroupAfter = "After the run";
+        private const string AfterRunName = "the world's own donkeys came through unchanged, no test donkey left behind";
         private const float DragonRaisePx = 6f; // the dragon's body raised on longer legs (make_creatures.py RAISE): its seat 6 px above the donkey's
 
         // Every scenario, in run order (docs/self-tests.md). The panel's Tests tab lists them from here.
@@ -224,6 +229,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupSounds, Name = "herds and babies: a standing grown one calls on its own (rarer, one voice at a time in the scene), its babies answer one after another with [Sounds.Baby]'s sound, no call with the standing switch off; Saddle Up's row drives the switch", Body = SoundsHerd },
             new Scenario { Group = GroupGarbage, Name = "the garbage survey (measures only): on foot standing and walking, riding walking and still, the Mounts panel picking, the dev stride probe; the garbage by part in each", Body = GarbageSurvey, HidesPanel = true },
             new Scenario { Group = GroupWalk, Name = "the walk survey (measures only): every mount ridden and with the cart, steered right and left by the test, a standing one and a baby near; the stride probe's rows in BepInEx/GK2-strides", Body = WalkSurvey },
+            new Scenario { Group = GroupAfter, Name = AfterRunName, Body = AfterTheRun },
         };
 
         // The groups in the order they first appear in the catalog (after Scenarios: static fields initialise in order).
@@ -349,11 +355,11 @@ namespace GK2DonkeyAPI
                 Warn("this spot is in no container zone and none could be reached: the chest scenarios will skip. Start the run inside a built-up area with chests (the yard).");
             }
 
-            // The world's own instances (not the tests'): all must come through the run as they were.
-            var before = new Dictionary<string, string>();
+            // The world's own instances (not the tests'): all must come through the run as they were (AfterTheRun).
+            worldBefore = new Dictionary<string, string>();
             foreach (Mount.Instance i in Mount.All)
             {
-                if (!IsTestOwner(i.OwnerId) && !i.Ephemeral) before[i.FullId] = Sig(i);
+                if (!IsTestOwner(i.OwnerId) && !i.Ephemeral) worldBefore[i.FullId] = Sig(i);
             }
 
             // The scenarios of this run (all, one group, or one): their last results are cleared, the others' stand.
@@ -363,6 +369,10 @@ namespace GK2DonkeyAPI
                 if (pick == null || pick(c)) scenarios.Add(c);
             }
             pick = null;
+            // the run's own checks, always last (a group or one scenario too), never twice
+            scenarios.RemoveAll(c => c.Group == GroupAfter);
+            Scenario afterRun = Array.Find(Scenarios, c => c.Group == GroupAfter);
+            if (afterRun != null) scenarios.Add(afterRun);
             bool full = scenarios.Count == Scenarios.Length;
             foreach (Scenario c in scenarios)
             {
@@ -413,31 +423,6 @@ namespace GK2DonkeyAPI
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
             Cargo.SlotFloor = slotFloorWas;
-            current = "the world's own donkeys";
-            var after = new Dictionary<string, string>();
-            foreach (Mount.Instance i in Mount.All)
-            {
-                if (!IsTestOwner(i.OwnerId) && !i.Ephemeral) after[i.FullId] = Sig(i);
-            }
-            var changed = new List<string>();
-            foreach (var kv in before)
-            {
-                if (!after.TryGetValue(kv.Key, out string now)) changed.Add(kv.Key + " gone");
-                else if (now != kv.Value) changed.Add($"{kv.Key} {kv.Value} -> {now}");
-            }
-            foreach (string k in after.Keys)
-            {
-                if (!before.ContainsKey(k)) changed.Add(k + " new");
-            }
-            Check(changed.Count == 0, changed.Count == 0
-                ? $"all {before.Count} came through unchanged (owner, number, scene, mount, kept)"
-                : $"{changed.Count} changed: {string.Join("; ", changed.GetRange(0, Math.Min(8, changed.Count)))}");
-            int leftover = 0;
-            foreach (Mount.Instance i in Mount.All)
-            {
-                if (IsTestOwner(i.OwnerId)) leftover++;
-            }
-            Check(leftover == 0, $"no test donkey left behind ({leftover})");
             if (corpseDrops.Count > 0)
             {
                 // A corpse scenario that threw after its drop: its bodies are real, so they go now, not at the next load.
@@ -1377,6 +1362,42 @@ namespace GK2DonkeyAPI
             {
                 try { System.IO.Directory.Delete(tmp, true); } catch { }
             }
+            yield break;
+        }
+
+        // The world's own instances at the run's start (owner, number, scene, mount, kept), for AfterTheRun.
+        private static Dictionary<string, string> worldBefore;
+
+        // After every other scenario of the run (and its clean-up): the world's own donkeys as they were at the start, no
+        // test donkey left. A world's donkey that changed on its own (the player's companion taking a mount chosen since
+        // the save, out of view until a test came near) shows here too.
+        private static IEnumerator AfterTheRun()
+        {
+            var before = worldBefore ?? new Dictionary<string, string>();
+            var after = new Dictionary<string, string>();
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (!IsTestOwner(i.OwnerId) && !i.Ephemeral) after[i.FullId] = Sig(i);
+            }
+            var changed = new List<string>();
+            foreach (var kv in before)
+            {
+                if (!after.TryGetValue(kv.Key, out string now)) changed.Add(kv.Key + " gone");
+                else if (now != kv.Value) changed.Add($"{kv.Key} {kv.Value} -> {now}");
+            }
+            foreach (string k in after.Keys)
+            {
+                if (!before.ContainsKey(k)) changed.Add(k + " new");
+            }
+            Check(changed.Count == 0, changed.Count == 0
+                ? $"all {before.Count} came through unchanged (owner, number, scene, mount, kept)"
+                : $"{changed.Count} changed: {string.Join("; ", changed.GetRange(0, Math.Min(8, changed.Count)))}");
+            int leftover = 0;
+            foreach (Mount.Instance i in Mount.All)
+            {
+                if (IsTestOwner(i.OwnerId)) leftover++;
+            }
+            Check(leftover == 0, $"no test donkey left behind ({leftover})");
             yield break;
         }
 

@@ -192,8 +192,11 @@ and its cart parts match whether it has a cart. That covers reused views taken b
 | Handles: another mod's Remove refused, a mod's data capped (group Never lost) | a donkey of the test's own | `Remove("some.other.mod")` refused, the donkey still there; a data key over 64 characters, a value over 4096 and a 65th key refused, a kept key still changing; its owner's `Remove(ownerId)` removes it |
 | Back to the last safe spot (group Never lost) | open ground 7-10 from the keeper (SKIP otherwise); a donkey of the test's own | on foot, put 10 away: `Mounts.ReturnToSafeSpot` brings him back within 0.5; riding: back, still riding, the mount within 2.5; refused with the reason with the controls taken (ByUI) and in a scene with no spot (the ring taken out and given back); Saddle Up's toggle off drives `FallGuard` (and back), the Button row ("Go") brings him back from 10 away, the ReturnKey row set to Ctrl+K reaches the Behaviour key; the watchdog held off: a unit under the ground is not caught in 2.5 s, and the return by hand works |
 
-**At the end of the run:** every one of the world's own donkeys (not the tests') is still there, with the same owner,
-number, scene, mount, keep setting and key. No test donkey is left behind.
+**At the end of the run** (group "After the run", one scenario, the last of every run: a full one, a group's, a single
+scenario's; since 2026-10-26 a scenario of its own, so its tally has a header like the others): every one of the
+world's own donkeys (not the tests') is still there, with the same owner, number, scene, mount, keep setting and key.
+No test donkey is left behind. A world's donkey that changed on its own shows here too: the player's companion taking a
+mount chosen since the save (a dragon leaving its cart) the first time a test brings it into view.
 
 ## Not automated
 
