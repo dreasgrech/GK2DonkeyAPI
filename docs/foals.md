@@ -124,6 +124,50 @@ foal.Tuning.Set("you.gk2.mymod", "CoatBrightness", 0.15f);   // its own look, as
 - **Keeper close:** foals don't hold still for the keeper, since nobody rides them. Maybe they should keep a little
   distance instead. That's a decision.
 
+## Babies of their own (built 2026-10-26, API 0.40.0, not seen in game)
+
+The user: "they all look alike and all have the same size, same colors ... Persisted randomness though so that they
+wont constantly change". Chosen: size, colours, personality and voice, "noticeable", a cfg key only.
+
+- **The seed** (`FoalVariety.cs`, `FoalLooks.For`): FNV-1a of the family's salt, the baby's mount and its index among
+  its siblings. The salt is 12 hex digits made once and kept in the parent's data (`foalsalt`, saved with it), so
+  nothing else is saved: a baby is worked out again the same way after every load, the dragon's babies differ from
+  the donkey's, and the donkey's come back the same. Draws are mostly middling (two averaged), so it reads as a
+  family.
+- **First look in game (the user's screenshot, 2026-10-26): five dragon babies alike.** Measured: the sizes were
+  0.57-0.66 (two draws averaged kept most near the middle); the dragon's coat is the Black preset (brightness 0.35,
+  saturation 0.2), so ±15 % of it moved a charcoal by about 0.03 and a hue turn did nothing on a near-grey; the
+  wings are the Dark region, which wasn't shaded. Changed (the user chose "visible on every coat"): sizes evenly
+  over ±12 %; the shade a step of at least 0.7 of a full one however dark; a near-grey coat gets some of the art's
+  colour back by the baby's tinge (simulated on the dragon's pixels: `2A2929` charcoal to `674A41` wine-brown, against
+  `3A3334` to `584C49` before); the Dark region shaded with the coat.
+- **F11 of 2026-10-26 (1261 passed, 1 failed):** "the world's own donkeys came through unchanged" failed: the player's
+  four babies came out of the run new. With the mount in the size's seed, every mount switch gave every baby another
+  size and remade it (30 remakes in the run). The size's factor is now its own draw from the salt and the index only:
+  the same on every mount, so a switch between mounts of one baby size (the donkey, the dragon) keeps the babies, as
+  before; shade and temper still differ per mount (they remake nothing).
+- **F11 again (1263 passed, 1 failed), the same check:** the run began on Gerry (babies 0.33) and the panel test picks
+  the donkey (0.6) and back. A size change removed each baby and spawned a new one (older than the variety; any
+  mount switch between baby sizes did it, the babies popping into fresh spots). Now `Instance.Rescale`: the same
+  instance, its view made again at the new size where it stands (as after a scene change).
+- **The stuck report's first catch (the same run):** five babies 44 from their parent for 20 s, "waiting for its
+  parent (somewhere else)", "the lead has no view": the parent was asleep in their own scene, and the following took
+  a parent without a view for one in another place, caught up only once that view was back. `Lead.Here` is now its
+  view or its scene loaded: they follow it, or catch up with it out of sight. A likely cause of "stopped following
+  for good, walking back to it didn't help".
+- **Size:** the mount's baby size times 1 ± 0.12 (k = 1, even, the same factor on every mount), made at that size (`MountCompanion.UpdateFoal`
+  compares with each baby's own size, so a strength change remakes them).
+- **Colours:** `Shade` on the parent's coat and second-tone keys: a colorize colour has its hue turned (a hue key
+  would be painted over), else `CoatHue`; brightness and saturation times its own. A baby on the game's art gets
+  overrides too (a one-off colour build, about 4 ms).
+- **Temper** (`Mount.FoalTemper` on the instance, not saved, set every second from the seed): one energy (-1 calm to
+  1 lively) scales the lively foal's step speed (±25 %), pauses (∓40 %), hops (±70 %), chained steps (±50 %) and area
+  (±30 %); its own trot (±10 %), walk rate (±8 %) and voice pitch (±7 %, on top of the size's).
+- **Only a companion's babies** (Saddle Up's): another mod's `SpawnFoal` babies have the plain temper and their
+  spawn size.
+- `ShuffleFoalVariety` (0-2, 1): 0 all alike.
+- Self-test "foals: each baby its own size, shade and temperament, the same every load".
+
 ## Hops, getting stuck, and stopping for good (studied and built 2026-10-26, API 0.40.0, not seen in game)
 
 **As built** (the user's answers: hops moving and standing, "now and then", a cfg key only; and "No, it stayed stuck":

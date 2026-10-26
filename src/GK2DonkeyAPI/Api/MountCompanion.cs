@@ -178,6 +178,45 @@ namespace GK2DonkeyAPI.Api
 
         private readonly MountHandle[] foalHandles = new MountHandle[MaxFoals];
 
+        // Each baby its own (FoalVariety.cs): its size, shade and temperament from the family's salt (kept in the
+        // parent's data, made once, saved with it), the mount it is a baby of and its place among its siblings.
+        private const string FoalSaltKey = "foalsalt";
+        private string foalSalt;
+        private MountHandle foalSaltOf;
+        private float varietyApplied = -1f;
+
+        private string FoalSalt()
+        {
+            if (Donkey == null || !Donkey.Exists)
+            {
+                return "";
+            }
+            if (!ReferenceEquals(foalSaltOf, Donkey) || foalSalt == null)
+            {
+                foalSaltOf = Donkey;
+                foalSalt = Donkey.GetData(OwnerId, FoalSaltKey);
+                if (string.IsNullOrEmpty(foalSalt))
+                {
+                    foalSalt = Guid.NewGuid().ToString("N").Substring(0, 12);
+                    Donkey.SetData(OwnerId, FoalSaltKey, foalSalt);
+                }
+            }
+            return foalSalt;
+        }
+
+        private static float VarietyNow => IdleShuffle.FoalVariety != null ? IdleShuffle.FoalVariety.Value : 1f;
+
+        // The mount a baby is a baby of: the parent's own when they wear its skin (and it has babies), else the donkey.
+        private string BabyMountId()
+        {
+            MountInfo m = Donkey != null && Donkey.Exists && Current.FoalsWearSkin ? Mounts.Catalog.Find(Donkey.Mount) : null;
+            return m != null && m.Foals ? m.Id : MountCatalog.DonkeyId;
+        }
+
+        private FoalLooks LooksOfFoal(int i) => FoalLooks.For(FoalSalt(), BabyMountId(), i, VarietyNow);
+
+        internal FoalLooks TestLooksOfFoal(int i) => LooksOfFoal(i); // the self-test
+
         private MountCompanion(string ownerId)
         {
             OwnerId = ownerId;
@@ -646,18 +685,18 @@ namespace GK2DonkeyAPI.Api
             {
                 MountHandle f = foalHandles[i];
                 bool wanted = i < Current.FoalCount;
+                FoalLooks own = wanted ? LooksOfFoal(i) : FoalLooks.Alike;
+                float size = babySize * own.Size; // its own size (FoalVariety.cs)
                 // (the view's scale is kept in steps of 0.02: 0.33 comes back as 0.32, so a hundredth is no difference;
                 // seen 2026-10-18: a baby made again every second)
-                if (wanted && f != null && f.Exists && Math.Abs(f.Scale - babySize) > 0.015f && Donkey != null && Donkey.Exists)
+                if (wanted && f != null && f.Exists && Math.Abs(f.Scale - size) > 0.015f && Donkey != null && Donkey.Exists)
                 {
-                    Plugin.Log.LogInfo($"Companion: {OwnerId}: baby {f.FullId} is {f.Scale:F2} of the grown one, the mount '{Donkey.Mount}' wants {babySize:F2}: made again at that size.");
-                    f.Remove();
-                    foalHandles[i] = null;
-                    f = null;
+                    Plugin.Log.LogInfo($"Companion: {OwnerId}: baby {f.FullId} is {f.Scale:F2} of the grown one, the mount '{Donkey.Mount}' wants {size:F2} for it: its view made again at that size.");
+                    f.I.Rescale(size); // the same baby, where it stands (not removed and spawned anew)
                 }
                 if (wanted && (f == null || !f.Exists) && Donkey != null && Donkey.Exists)
                 {
-                    foalHandles[i] = Mounts.SpawnFoal(OwnerId, Donkey, babySize, key: FoalKeyOf(i), persist: keep);
+                    foalHandles[i] = Mounts.SpawnFoal(OwnerId, Donkey, size, key: FoalKeyOf(i), persist: keep);
                     spawned |= foalHandles[i] != null;
                 }
                 else if (!wanted && f != null && f.Exists)
@@ -665,9 +704,16 @@ namespace GK2DonkeyAPI.Api
                     f.Remove();
                     foalHandles[i] = null;
                 }
+                f = foalHandles[i];
+                if (wanted && f != null && f.Exists)
+                {
+                    f.I.Temper = own.Temper; // not saved: from the seed again (cheap: a few numbers)
+                }
             }
-            if (spawned)
+            float variety = VarietyNow;
+            if (spawned || Math.Abs(variety - varietyApplied) > 0.001f)
             {
+                varietyApplied = variety; // a new strength reaches the shades at once (the sizes above)
                 ApplyLook();
                 ApplyFoals();
             }
@@ -883,15 +929,26 @@ namespace GK2DonkeyAPI.Api
             }
             var paintKeys = Look(PaintPreset(l.Paint, l.CustomPaint, "cart paint"));
             var lanternKeys = Look(LanternPreset(l.LanternLight, l.CustomLantern, "lantern"));
-            var dressed = new List<MountHandle>(foalHandles) { Donkey };
-            foreach (MountHandle h in dressed)
+            if (Donkey != null && Donkey.Exists)
             {
+                Instance(Donkey, CoatKeys, coatKeys);
+                Instance(Donkey, HarnessKeys, harnessKeys);
+                Instance(Donkey, MuzzleKeys, muzzleKeys);
+                Instance(Donkey, LookKeys, skinKeys);
+            }
+            for (int i = 0; i < foalHandles.Length; i++)
+            {
+                MountHandle h = foalHandles[i];
                 if (h != null && h.Exists)
                 {
-                    Instance(h, CoatKeys, coatKeys);
+                    // its own shade of the parent's (FoalVariety.cs)
+                    FoalLooks own = LooksOfFoal(i);
+                    Instance(h, FoalCoatKeys, Shade(coatKeys, "Coat", own.Hue, own.Brightness, own.Saturation, own.Tinge));
                     Instance(h, HarnessKeys, harnessKeys);
-                    Instance(h, MuzzleKeys, muzzleKeys);
-                    Instance(h, LookKeys, h == Donkey || Current.FoalsWearSkin ? skinKeys : noSkin);
+                    Instance(h, FoalMuzzleKeys, Shade(muzzleKeys, "Muzzle", own.MuzzleHue, own.MuzzleBrightness, 1f, 0f));
+                    // the dark parts (the dragon's wings, the donkey's mane and legs) with the coat: the whole baby its shade
+                    Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
+                    Instance(h, LookKeys, Current.FoalsWearSkin ? skinKeys : noSkin);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);
@@ -907,6 +964,44 @@ namespace GK2DonkeyAPI.Api
         }
 
         private static Dictionary<string, object> Look(Dictionary<string, object> d) => d ?? new Dictionary<string, object>();
+
+        private static readonly string[] FoalCoatKeys = { "CoatColorize", "CoatColorizeAmount", "CoatBrightness", "CoatSaturation", "CoatHue" };
+        private static readonly string[] FoalMuzzleKeys = { "MuzzleColorize", "MuzzleColorizeAmount", "MuzzleBrightness", "MuzzleSaturation", "MuzzleHue" };
+
+        private static readonly string[] FoalDarkKeys = { "DarkHue", "DarkBrightness", "DarkSaturation" };
+        private static readonly Dictionary<string, object> NoKeys = new Dictionary<string, object>();
+
+        // A baby's shade of the parent's colours of a region: a colorize colour turned in hue (its hue key would be
+        // painted over), else the art's own hue turned; brightness and saturation moved by a step of their own.
+        // The step is a visible one on any coat, not a share of it: the Black preset (brightness 0.35, saturation 0.2)
+        // took ±15 % of an almost grey charcoal and five dragon babies looked alike (the user's screenshot, 2026-10-26).
+        // So it is at least 0.7 of a full step however dark, and a near-grey coat gets some of the art's own colour
+        // back by the baby's tinge (one charcoal, one with a red or wine cast). All 1 and 0: the same as the parent.
+        private static Dictionary<string, object> Shade(Dictionary<string, object> parent, string region, float hue, float bri, float sat, float tinge)
+        {
+            var d = new Dictionary<string, object>(parent);
+            if (Math.Abs(hue) < 0.01f && Math.Abs(bri - 1f) < 0.001f && Math.Abs(sat - 1f) < 0.001f && tinge < 0.001f)
+            {
+                return d;
+            }
+            if (d.TryGetValue(region + "Colorize", out object c) && c is string hex && hex.Length > 0)
+            {
+                d[region + "Colorize"] = FoalLooks.ShiftHex(hex, hue, sat);
+            }
+            else
+            {
+                d[region + "Hue"] = hue;
+            }
+            float b = d.TryGetValue(region + "Brightness", out object bv) && bv is float bf ? bf : 1f;
+            d[region + "Brightness"] = Mathf.Clamp(b + (bri - 1f) * Mathf.Max(b, 0.7f), 0.05f, 3f);
+            float s = d.TryGetValue(region + "Saturation", out object sv) && sv is float sf ? sf : 1f;
+            float s2 = s + (sat - 1f) * Mathf.Max(s, 0.7f) + Mathf.Max(0f, 0.5f - s) * 0.6f * tinge;
+            d[region + "Saturation"] = Mathf.Clamp(s2, 0f, 3f);
+            return d;
+        }
+
+        internal static Dictionary<string, object> TestShade(Dictionary<string, object> parent, string region, FoalLooks v)
+            => Shade(parent, region, v.Hue, v.Brightness, v.Saturation, v.Tinge);
 
         private static Dictionary<string, object> SkinKeys(string skinId)
         {

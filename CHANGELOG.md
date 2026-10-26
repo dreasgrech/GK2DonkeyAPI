@@ -32,12 +32,24 @@ For players:
   hop is their mount's own jump, small. Each hop "holds the key" for its own time: mostly little hops, now and then a
   big jump. When you jump on their parent, the babies following it mostly jump too, each a moment after you, usually
   a big one. `ShuffleFoalHopChance` (0.2; 0: no hops) and `ShuffleFoalJumpAlongChance` (0.75) in the API's cfg.
+- **Each baby is its own** (the user, 2026-10-26: "they all look alike ... Persisted randomness though so that they
+  wont constantly change"): its own size (a little bigger or smaller than its mount's babies), its own shade of the
+  parent's colours (lighter or darker, warmer or cooler, more or less saturated, the second tone and the dark parts
+  such as the dragon's wings too; on a near-black coat some are charcoal and some have a red or wine cast), its own
+  temperament (lively ones roam further, step faster, rest less and hop more; calm ones stay close and rest), its own
+  trot, walk and voice. The same baby after every load; the donkey's babies come back the same after a while on the
+  dragon. `ShuffleFoalVariety` in the API's cfg (1; 0.5 subtle, 2 strong, 0 all alike).
 - **The babies' answers to a call sound less mechanical** (the user, 2026-10-26: they answered "sequentially one after
   the other with no variation at all"): a new order every call, uneven gaps (now and then two at once, sometimes a
   pause), and each voice a touch higher or lower.
 - **Babies no longer stop following you for good** (the user, 2026-10-26: "sometimes they just stop following you
   completely after a while"): a baby following you on foot that fell behind, with its parent left far off, was frozen
   by the performance levels, and nothing woke it to follow again. A baby with you now always stays awake.
+- **Babies left with a parent far away no longer wait there for good**: when their parent stood so far off that it
+  was put to sleep (no picture), the babies took it for somewhere else and waited where they were until it woke.
+  They now go to it, or catch up with it out of sight.
+- **Switching to a mount with another baby size keeps the babies** (Gerry's are a third the size of the donkey's):
+  they change size where they stand instead of vanishing and new ones appearing beside the parent.
 - **Babies get stuck less** (docs/foals.md "Hops, getting stuck, and stopping for good"): a way round an obstacle is
   now one the baby can really walk (it was planned through grid centres and then refused, and the baby gave up at
   once); a refused way is planned again from where it stands; a lost baby looks for a way round from further off;

@@ -28,7 +28,8 @@ namespace GK2DonkeyAPI
             internal float HopLiftY => hopLiftY;
             internal bool Hopping => hopT >= 0f;
 
-            private static float HopChance => IdleShuffle.FoalHopChance != null ? IdleShuffle.FoalHopChance.Value : 0f;
+            // times its temperament (FoalVariety.cs): a lively one hops more
+            private float HopChance => IdleShuffle.FoalHopChance != null ? Mathf.Min(1f, IdleShuffle.FoalHopChance.Value * Temper.Hop) : 0f;
 
             // A lively foal of a mount that jumps. Read while bound.
             private bool CanHop => Lively && HopChance > 0f && Looks.MountWanted(this).Jumps;

@@ -844,6 +844,101 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // Each baby its own (FoalVariety.cs, the user 2026-10-26): the same seed gives the same baby (every load), its
+        // siblings and another family differ, strength 0 makes them alike, the ranges hold, and a shade turns a colorize
+        // colour. Then Saddle Up's own babies, when it has some out: their sizes and temperaments differ.
+        private static IEnumerator FoalVarietyChecks()
+        {
+            FoalLooks a = FoalLooks.For("salt1", "donkey", 0, 1f), again = FoalLooks.For("salt1", "donkey", 0, 1f);
+            FoalLooks sib = FoalLooks.For("salt1", "donkey", 1, 1f), other = FoalLooks.For("salt2", "donkey", 0, 1f);
+            Check(a.Size == again.Size && a.Hue == again.Hue && a.Temper.Energy == again.Temper.Energy,
+                $"the same baby every time: size {a.Size:0.000}, hue {a.Hue:0.0}, energy {a.Temper.Energy:0.00}, twice");
+            FoalLooks dragon0 = FoalLooks.For("salt1", "dragon", 0, 1f);
+            Check(a.Size != sib.Size && a.Size != other.Size && dragon0.Hue != a.Hue && dragon0.Temper.Energy != a.Temper.Energy,
+                $"its sibling and another family differ in size ({a.Size:0.000}, {sib.Size:0.000}, {other.Size:0.000}); the dragon's first baby in shade and temper");
+            Check(dragon0.Size == a.Size, $"but a baby's size factor is the same on every mount ({a.Size:0.000}, {dragon0.Size:0.000}): a mount switch doesn't remake it");
+            FoalLooks plain = FoalLooks.For("salt1", "donkey", 0, 0f);
+            Check(plain.Size == 1f && plain.Hue == 0f && plain.Brightness == 1f && plain.Temper.IsPlain, "variety 0: all alike");
+            float sMin = 9f, sMax = 0f, bMin = 9f, bMax = 0f, hMax = 0f, eMin = 9f, eMax = -9f;
+            for (int n = 0; n < 300; n++)
+            {
+                FoalLooks v = FoalLooks.For("range", "donkey", n, 1f);
+                sMin = Mathf.Min(sMin, v.Size); sMax = Mathf.Max(sMax, v.Size);
+                bMin = Mathf.Min(bMin, v.Brightness); bMax = Mathf.Max(bMax, v.Brightness);
+                hMax = Mathf.Max(hMax, Mathf.Abs(v.Hue));
+                eMin = Mathf.Min(eMin, v.Temper.Energy); eMax = Mathf.Max(eMax, v.Temper.Energy);
+            }
+            Check(sMin < 0.92f && sMax > 1.08f && sMin >= 0.8f && sMax <= 1.2f && bMin < 0.9f && bMax > 1.1f && hMax > 6f && eMin < -0.6f && eMax > 0.6f,
+                $"noticeable over 300 babies: size {sMin:0.00}-{sMax:0.00}, brightness {bMin:0.00}-{bMax:0.00}, hue up to {hMax:0.0} degrees, energy {eMin:0.00} to {eMax:0.00}");
+            // visible on the Black coat preset too (brightness 0.35, saturation 0.2: five dragon babies looked alike,
+            // 2026-10-26): the darkest and the lightest, most tinged baby a clear step apart
+            var black = new Dictionary<string, object> { ["CoatBrightness"] = 0.35f, ["CoatSaturation"] = 0.2f };
+            FoalLooks lo = FoalLooks.Alike, hi = FoalLooks.Alike;
+            lo.Brightness = 0.79f; lo.Saturation = 0.79f; lo.Tinge = 0f;
+            hi.Brightness = 1.21f; hi.Saturation = 1.21f; hi.Tinge = 1f;
+            var dl = MountCompanion.TestShade(black, "Coat", lo);
+            var dh = MountCompanion.TestShade(black, "Coat", hi);
+            float bl = (float)dl["CoatBrightness"], bh = (float)dh["CoatBrightness"], sl = (float)dl["CoatSaturation"], sh = (float)dh["CoatSaturation"];
+            Check(bh - bl >= 0.25f && sh >= 0.45f && sl <= 0.1f,
+                $"on the Black coat the shades show: brightness {bl:0.00} to {bh:0.00}, saturation {sl:0.00} (charcoal) to {sh:0.00} (a red cast)");
+            string shifted = FoalLooks.ShiftHex("8A5A36", 10f, 1f);
+            Check(shifted != "8A5A36" && shifted.Length == 6, $"a shade turns a colorize colour (8A5A36 -> {shifted})");
+
+            MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
+            var sizes = new List<string>();
+            var mine = new HashSet<float>();
+            var tempers = new HashSet<float>();
+            for (int i = 0; me != null && i < me.Foals.Count; i++)
+            {
+                MountHandle f = me.Foals[i];
+                if (f == null || !f.Exists) continue;
+                sizes.Add($"{f.Scale:0.00} ({f.I.Temper.Energy:+0.00;-0.00})");
+                mine.Add(f.Scale);
+                tempers.Add(f.I.Temper.Energy);
+            }
+            if (sizes.Count >= 2)
+            {
+                Check(tempers.Count == sizes.Count, $"Saddle Up's babies: each its own temperament; sizes and energy {string.Join(", ", sizes)} ({mine.Count} different sizes; two can share one in 0.02 steps)");
+            }
+            else
+            {
+                Info($"Saddle Up has {sizes.Count} baby out: its own babies not compared");
+            }
+
+            // Another size in place (a mount switch between baby sizes, Gerry's 0.33 and the donkey's 0.6): the same baby,
+            // where it stood, its view made again at the new size (it used to be removed and spawned anew)
+            if (WhyNotFromHere() != null)
+            {
+                yield break;
+            }
+            MountHandle p = Spawn(Spot(home, 3f) ?? home, right: true);
+            if (p == null)
+            {
+                Fail("could not spawn a parent");
+                yield break;
+            }
+            try
+            {
+                yield return Until(() => p.IsReady, 6f);
+                MountHandle baby = Mounts.SpawnFoal(Owner, p, 0.6f, persist: false);
+                yield return Until(() => baby != null && baby.IsReady, 6f);
+                if (baby == null || !baby.IsReady)
+                {
+                    Fail("could not spawn the baby");
+                    yield break;
+                }
+                Vector3 at = baby.Position;
+                baby.I.Rescale(0.34f);
+                yield return Until(() => baby.IsReady && baby.I.HasView, 4f);
+                Check(baby.Exists && Math.Abs(baby.Scale - 0.34f) < 0.001f && baby.I.HasView && Flat(baby.Position, at) < 1.5f,
+                    $"resized in place: the same baby ({baby.FullId}, {(baby.Exists ? "there" : "gone")}), {baby.Scale:0.00}, its view {(baby.I.HasView ? "back" : "not back")}, {Flat(baby.Position, at):0.0} from where it stood");
+            }
+            finally
+            {
+                foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists) h.Remove();
+            }
+        }
+
         // Saddle Up's babies rows in a section of their own, the new one among them, each reaching the companion.
         private static void SaddleUpBabiesRows()
         {

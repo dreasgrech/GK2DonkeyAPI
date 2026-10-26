@@ -54,6 +54,29 @@ namespace GK2DonkeyAPI
         {
             internal float ViewScale = 1f;
             internal bool Rideable = true;
+
+            // Another size for a baby (its mount changed: Gerry's 0.33 against the donkey's 0.6): the same instance, its
+            // view made again at the new size on its next frame, as after a scene change. A companion used to remove the
+            // baby and spawn a new one, so each such switch put new babies in fresh spots, and the player's own came out
+            // of the self-test's mount switches new ("the world's own donkeys came through unchanged", 2026-10-26).
+            internal void Rescale(float scale)
+            {
+                if (Mathf.Abs(scale - ViewScale) < 0.001f || Rideable || HasCart)
+                {
+                    return; // a size other than 1 only for a baby (Mount.Spawn's rule)
+                }
+                ViewScale = Mathf.Clamp(scale, 0.2f, 2f);
+                StopShuffle();
+                if (donkey != null && donkey)
+                {
+                    DestroyDonkey();
+                }
+                shuffleLateralKnown = false; // measured again on the new view
+                nextSpawnTry = 0f;
+                nextViewlessTick = 0f;
+                spawnFailures = 0;
+                TierNow();
+            }
             // The parent: a property so every change empties the families cache (Children, SiblingIndex).
             private Instance parent;
 
@@ -109,7 +132,10 @@ namespace GK2DonkeyAPI
                 Instance p = Parent;
                 return new Lead
                 {
-                    Body = p.BodyPoint(), GroundY = p.Position.y, SceneId = p.SceneId, Here = p.HasView, Moving = p.IsRidden,
+                    // Here: its view is up, or its scene is loaded (asleep there, Tiers.cs: its place is known all the
+                    // same). Only the view counted: babies whose parent was asleep 44 away in their own scene waited
+                    // there for good, "waiting for its parent (somewhere else)" (the stuck report, self-test 2026-10-26).
+                    Body = p.BodyPoint(), GroundY = p.Position.y, SceneId = p.SceneId, Here = p.HasView || LoadedScene(p.SceneId) != null, Moving = p.IsRidden,
                     FacingX = p.riderFacingX, HasCart = p.HasCart, Of = p,
                 };
             }
@@ -657,7 +683,7 @@ namespace GK2DonkeyAPI
                     const float AheadInterval = 0.2f;
                     nextAheadCheck = Time.time + AheadInterval;
                     groundFail = null;
-                    float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * 1.75f * AheadInterval + 0.4f);
+                    float ahead = Mathf.Min(dist, IdleShuffle.FollowSpeed.Value * Temper.Trot * 1.75f * AheadInterval + 0.4f);
                     if (!LineWalkable(body, body + dir * ahead, "follow"))
                     {
                         return false;
@@ -669,7 +695,7 @@ namespace GK2DonkeyAPI
                 // Close by it walks: within a unit of its spot about 1 unit/s, the full trot only from 4 units out. Its
                 // spot moves a unit or so whenever the parent turns or a sibling moves, and trotting that at 4 u/s looked
                 // like sprinting among the slow shuffling (the user, 2026-10-01).
-                float trot = IdleShuffle.FollowSpeed.Value;
+                float trot = IdleShuffle.FollowSpeed.Value * Temper.Trot; // its own (FoalVariety.cs)
                 float walk = Mathf.Min(trot, 1f);
                 followSpeedNow = Mathf.Lerp(walk, trot, Mathf.Clamp01((dFinal - 1f) / 3f))
                     * Mathf.Lerp(0.35f, 1f, Mathf.Clamp01(dFinal / 0.6f))

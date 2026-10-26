@@ -132,6 +132,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLevels, Name = "reused views", Body = Reuse },
             new Scenario { Group = GroupLevels, Name = "foals keep up off screen", Body = FoalsFollow },
             new Scenario { Group = GroupLevels, Name = "foals: follow the keeper on foot outdoors, with the other babies settings", Body = FoalsOnFoot },
+            new Scenario { Group = GroupLevels, Name = "foals: each baby its own size, shade and temperament, the same every load", Body = FoalVarietyChecks },
             new Scenario { Group = GroupLevels, Name = "no leaks over spawn and remove", Body = Leaks },
             new Scenario { Group = GroupLevels, Name = "frame time by mode", Body = FrameTimes, HidesPanel = true },
             new Scenario { Group = GroupChest, Name = "chest: hide, move, show (and off screen)", Body = ChestHideMoveShow },

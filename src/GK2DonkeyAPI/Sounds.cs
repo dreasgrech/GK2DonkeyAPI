@@ -1114,7 +1114,7 @@ namespace GK2DonkeyAPI
                 get
                 {
                     float sc = owner.ViewScale;
-                    return sc > 0.01f && Math.Abs(sc - 1f) > 0.01f ? Mathf.Pow(1f / sc, 0.7f) : 1f;
+                    return (sc > 0.01f && Math.Abs(sc - 1f) > 0.01f ? Mathf.Pow(1f / sc, 0.7f) : 1f) * owner.Temper.Pitch; // a baby's own voice (FoalVariety.cs)
                 }
             }
 
