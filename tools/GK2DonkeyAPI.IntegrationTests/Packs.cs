@@ -1,18 +1,18 @@
+using GK2DonkeyAPI.Api;
 using System.Collections.Generic;
-using System;
 using System.Collections;
 using System.IO;
-using GK2DonkeyAPI.Api;
+using System;
+using UnityEngine;
+using static GK2DonkeyAPI.SelfTest;
 
-namespace GK2DonkeyAPI
+namespace GK2DonkeyAPI.IntegrationTests
 {
-    // Built in or external (the user, 2026-10-26; docs/making-a-mount.md "Built in or external"): Saddle Up's Gerry and
-    // its donkey skins come from its DLL; the dragon, rat, snail and worm from their packs' own DLLs (packs/SaddleUpDragon,
-    // packs/SaddleUpCritters: a small plugin each, its folder embedded), each under the pack's own plugin GUID and with
-    // its ids by the pack; the old ids of a dev's own world find the new mounts (Catalog.renamedMounts).
-    internal static partial class SelfTest
+    // Moved from the API's Dev/SelfTest.Packs.cs (2026-10-27): the scenarios that need GK2 Saddle Up or
+    // one of its packs, run by the API's self-test runner through its helpers (using static SelfTest).
+    internal static partial class Tests
     {
-        private static IEnumerator ExternalPacks()
+        internal static IEnumerator ExternalPacks()
         {
             var packOf = new[] { ("dragon", "SaddleUpDragon", "dreas.gk2.saddleup.dragon"), ("rat", "SaddleUpCritters", "dreas.gk2.saddleup.critters"),
                 ("snail", "SaddleUpCritters", "dreas.gk2.saddleup.critters"), ("worm", "SaddleUpCritters", "dreas.gk2.saddleup.critters") };
@@ -54,16 +54,42 @@ namespace GK2DonkeyAPI
                 $"Gerry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
             if (dragonEntry != null) Check(dragonEntry.Abilities.Exists(x => x.Name == "Flying") != !Flight.Active && !dragonEntry.Abilities.Exists(x => x.Name == "Cargo cart"),
                 $"the dragon's abilities: flying, no cargo cart ({string.Join(", ", dragonEntry.Abilities.ConvertAll(x => x.Name))})");
-            foreach (string skin in new[] { Sk("hellfire"), Sk("royal-parade") })
+            // the donkey's two skins are a pack of their own since 2026-10-27 (packs/SaddleUpDonkeySkins): Saddle Up's DLL
+            // holds no donkey skin
+            bool suDonkeySkin = false;
+            foreach (Looks.SkinDef d in Looks.All) if (d.MountId == Catalog.DonkeyId && d.SourceAssembly?.GetName().Name == "GK2SaddleUp") suDonkeySkin = true;
+            Check(!suDonkeySkin, "Saddle Up's DLL brings no donkey skin (they are the Donkey Skins pack's)");
+            string noSkins = MissingPack("hellfire", "royal-parade");
+            if (noSkins != null) Info(noSkins + ": its skins not checked");
+            else
             {
-                Looks.SkinDef d = Looks.Find(skin);
-                Check(d != null && d.Source == null && d.SourceAssembly?.GetName().Name == "GK2SaddleUp", $"{skin}: built into Saddle Up's DLL");
+                const string skinsGuid = "dreas.gk2.saddleup.donkeyskins", skinsDll = "GK2SaddleUpDonkeySkins";
+                foreach (string skin in new[] { Sk("hellfire"), Sk("royal-parade") })
+                {
+                    Looks.SkinDef d = Looks.Find(skin);
+                    Check(d != null && d.Source == null && d.Owner == skinsGuid && d.SourceAssembly?.GetName().Name == skinsDll,
+                        $"{skin}: from the Donkey Skins pack's own DLL {skinsDll}.dll (owner {d?.Owner}; {d?.SourceAssembly?.GetName().Name ?? "no DLL"})");
+                }
+                Check(BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(skinsGuid), $"the Donkey Skins pack is a BepInEx plugin of its own ({skinsGuid})");
+                var fire = GK2DonkeyAPI.Effects.Find("saddleup-donkey-skins.hellfire");
+                Check(fire != null && fire.Owner == skinsGuid, $"Hellfire's effect comes with its skin, the pack's (saddleup-donkey-skins.hellfire, owner {fire?.Owner})");
+                // the late skins: the pack loads after Saddle Up (its soft dependency), so its skins come after Saddle Up's page
+                // was built; its donkey Skin row reads its choices when it is shown, and offers both
+                MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
+                MountSettingsPage.Row skinRow = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "Skin_" + Catalog.DonkeyId);
+                if (skinRow == null) Info("Saddle Up's page isn't shown: its donkey Skin row not checked");
+                else
+                {
+                    MountSettingsPage.FillList(skinRow);
+                    var offered = new List<string>();
+                    if (skinRow.ChoiceValues != null) foreach (object v in skinRow.ChoiceValues) offered.Add(v as string);
+                    Check(offered.Contains(Sk("hellfire")) && offered.Contains(Sk("royal-parade")), $"Saddle Up's donkey Skin row offers both, registered after its page was built ({string.Join(", ", offered)})");
+                }
             }
-            // the dev's own world from before (never released): the old ids find the new mounts and looks
-            Check(Catalog.Find("saddleup.dragon") == Catalog.Find(M("dragon")) && Catalog.Find("saddleup.worm") == Catalog.Find(M("worm")), "the old mount ids find the packs' mounts (saddleup.dragon -> " + M("dragon") + ")");
-            Check(Looks.Find("saddleup.rat/default") == Looks.Find(Sk("rat")) && Looks.Find("dragon") == Looks.Find(Sk("dragon")), "the old skin ids and the short names find their looks");
-            Check(MountSettingsPage.RenamedMountKey("Coat_" + M("dragon")) == "Coat_saddleup.dragon" && MountSettingsPage.RenamedMountKey("Coat_" + M("gerry")) == null,
-                "a per-mount cfg key of a renamed mount carries the old key's value over (Coat_saddleup.dragon); Gerry's kept its id");
+            // the ids the mounts had inside Saddle Up (never released) are no one's now: the API keeps no table of a mod's
+            // old ids (2026-10-27, the API knows nothing of Saddle Up); a short name still finds the one mount that has it
+            Check(Catalog.Find("saddleup.dragon") == null && Catalog.Find("saddleup.worm") == null, "the old mount ids (saddleup.dragon) find nothing: no rename table in the API");
+            Check(Looks.Find("dragon") == Looks.Find(Sk("dragon")), "a short name finds its look (dragon -> " + Sk("dragon") + ")");
             yield break;
         }
     }

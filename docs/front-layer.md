@@ -125,7 +125,8 @@ small for the dragon, and growing it backwards keeps it off the ground).
   the rider's pixels under the front picture; name every remaining difference from the reference.
 - **Self-test** "Front layer: the dragon's near wing stays in front of the rider (a readback)" (docs/self-tests.md,
   group Looks): the dragon worn and ridden; the front picture, the body overlay and the keeper's body rendered alone
-  and in pairs through the game's own camera (`RenderAlone`), the overlap judged by colour; the depths of every sprite
+  and in pairs through the game's own camera (`RenderAlone`, lit at noon since 2026-10-27: by night the keeper's dark
+  colours collapsed into the wing's and the probe failed), the overlap judged by colour; the depths of every sprite
   of his and the front picture's in the body part's space (INFO); then 40 frames with him moved a little each
   frame, the wing read back with him, alternating the shipped lift and the old fifth of a pixel, failing on any
   overlapping pixel that shows him at the shipped lift. It is the only check that sees the world's drawing.

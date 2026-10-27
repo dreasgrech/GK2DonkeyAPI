@@ -15,7 +15,7 @@ import glob, os, re, subprocess, sys
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "DepManifest.dll")
-NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its built-in content (Gerry, two donkey skins) is embedded packs"}
+NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its built-in content (Gerry) is an embedded pack"}
 STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped
 PACKS_DIR = os.path.join(REPO, "packs")
 def assembly_of(pack_dir):

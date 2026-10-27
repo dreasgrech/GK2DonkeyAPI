@@ -130,7 +130,7 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | The checker, the watcher, the .aseprite writer, the game-folder helper | `tools/skins/check_skin.py`, `watch_skin.py`, `ase_write.py`, `gamedir.py` (the game folder from Directory.Build.props) |
 | The donkey's 44 frames as the game places them | `BepInEx\GK2-asset-probe\donkey-frames\` (the asset probe writes them) |
 | Royal Parade: the generator, its measurements, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `contact.py`, `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
-| Royal Parade: the pack | `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), a built-in like Hellfire since 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24) |
+| Royal Parade: the pack | `packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), in the Donkey Skins pack with Hellfire since 2026-10-27, a built-in like Hellfire from 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24 to 2026-10-27) |
 
 ### Making a skin: the one pipeline (2026-10-19 23:00; the tools finished 2026-10-20, the plan's M6)
 
@@ -176,7 +176,8 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    has its `mount.cfg` with id, name, author, version, cart, foals, the creature's facts and its sounds) and **a PNG per frame key**
    (`bdy_static_left.png` ... `hed_static_down_03.png`, `front\` for the layer drawn in front of the rider), only our
    pixels, nothing of the game's art. A built-in one: the DLL build embeds the folder (the project's csproj,
-   `assets\mounts\**`: `SaddleUp.csproj` for Gerry and the donkey's two skins). An external one: its own small DLL embeds
+   `assets\mounts\**`: `SaddleUp.csproj` for Gerry). An external one (the dragon, the critters, the donkey's two skins
+   in `packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/`): its own small DLL embeds
    it (`packs/<Pack>/<Pack>.csproj`, `gk2mounts\**`); no file of the pack is copied into the game either way, the DLL
    carries them.
 4. **Check before the game**: `python -I tools/skins/check_skin.py <the skin's folder>` (frames and
@@ -238,8 +239,8 @@ A round:
 So a round is: draw, Ctrl+S, look at the game (or the GIFs). Nothing else to press.
 
 **Generated, no drawing (2026-10-19 18:10, the user: "automate as much as possible, I'm not a sprite designer"):**
-`tools/skins/royal-parade/make_royal.py` makes the whole skin from the donkey's own frames and writes a PNG per frame into the built-in
-pack `src/SaddleUp/assets/mounts/donkey/skins/saddleup.royal-parade/` (`--no-assets` writes them to `out\pack` instead), plus `royal.aseprite` for a by-hand touch, `preview.png` (all
+`tools/skins/royal-parade/make_royal.py` makes the whole skin from the donkey's own frames and writes a PNG per frame into the
+pack `packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (Saddle Up's built-in until 2026-10-27; `--no-assets` writes them to `out\pack` instead), plus `royal.aseprite` for a by-hand touch, `preview.png` (all
 frames, 4x), `zoom.png` (six frames, 8x, the grid) and **`strips\<animation>.png`, every animation as a strip of
 its frames over the donkey: look at every strip before the game does.** The cloth is one shape measured on the
 standing frame (its width the back from the collar strap to the hip plus `FRONT`, its depth per column the back to

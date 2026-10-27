@@ -69,9 +69,8 @@ namespace GK2DonkeyAPI
         private static void RegisterRecipes()
         {
             // No built-in recipe is left: the earlier five (zebra, ghost, ember, golden, shadow) were recolours and
-            // patterns, which the colour settings cover (gone 2026-10-18); Hellfire changed the drawing itself and was
-            // code (LooksHellfire.cs) until 2026-10-19, when it became a pack drawn over the donkey (Saddle Up's assets/mounts/donkey/skins/saddleup.hellfire,
-            // made by tools/skins/hellfire/make_hellfire.py from the same prototype), the erase colour and the [Base.Coat]
+            // patterns, which the colour settings cover (gone 2026-10-18); the last one changed the drawing itself and was
+            // code until 2026-10-19, when it became a skin pack drawn over the donkey, the erase colour and the [Base.Coat]
             // recolour doing what only code could before. Recipes stay for mods (Mounts.Looks.RegisterRecipe).
         }
 

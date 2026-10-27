@@ -555,7 +555,7 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        // A row's key without its mount's part: "Foals_saddleup-dragon.dragon" and "Foals" are both "Foals", every
+        // A row's key without its mount's part: "Foals_acme-pack.crab" and "Foals" are both "Foals", every
         // "Skin_<mount>" is "Skin".
         private static string BaseKey(MountSettingsPage.Row r, string mountId)
         {

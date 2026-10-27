@@ -62,7 +62,7 @@ namespace GK2DonkeyAPI
             Flight.BobPeriodS = SessionFloatRow("Hover: one up and down (seconds)", Flight.BobPeriodS, 0.2f, 4f);
             Flight.CameraFollow = SessionFloatRow("Camera rises with the height (0 none, 1 all)", Flight.CameraFollow, 0f, 1f, "The view goes up with the mount, so it stays in the middle of the screen. The hover's bob is left out.");
 
-            if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "The dragon's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
+            if (OnOffRow("Flying frames (the skin's own, when it has them)", Flight.FlyFrames, tip: "A flying mount's spread wings while airborne, its take-off and landing poses. Off: its walk and idle frames in the air.")) Flight.FlyFrames = !Flight.FlyFrames;
             Flight.WingBeatS = SessionFloatRow("One wing beat (seconds)", Flight.WingBeatS, 0.2f, 2f, "The eight flying frames once round.");
             Flight.BubbleS = SessionFloatRow("Bubble time (seconds)", Flight.BubbleS, 0.5f, 6f, "How long \"Nowhere to land here.\" and \"Land first.\" stay over the rider (the game's own time for them was about 5 s).");
             Flight.BeatBobPx = SessionFloatRow("Rise on each downstroke (px)", Flight.BeatBobPx, 0f, 8f, "With the flying frames: the body and the rider rise as the wings come down, sink on the upstroke (in place of the hover).");
@@ -79,7 +79,7 @@ namespace GK2DonkeyAPI
             Flight.GlideLoopS = SessionFloatRow("Glide: its slow loop (seconds)", Flight.GlideLoopS, 0.4f, 4f, "The eight glide frames once round: the wings flexing, the tail's wave and the legs.");
             Flight.GlideBobPx = SessionFloatRow("Glide: the body's swell (px)", Flight.GlideBobPx, 0f, 4f, "Gliding, the body rises and sinks this much with the wings' flex.");
             if (OnOffRow("Climbing and diving shown (the pitched beats)", Flight.PitchFrames, tip: "Climbing, the neck arches up and the tail hangs low; descending (or a landing coming down fast), the neck reaches down and the tail rises. Off: level.")) Flight.PitchFrames = !Flight.PitchFrames;
-            Flight.PitchPerS = SessionFloatRow("Pitch: easing in and out (per second)", Flight.PitchPerS, 0.5f, 10f, "How fast the dragon tilts into a climb or a dive and back: 3 = a full tilt in a third of a second.");
+            Flight.PitchPerS = SessionFloatRow("Pitch: easing in and out (per second)", Flight.PitchPerS, 0.5f, 10f, "How fast a flying mount tilts into a climb or a dive and back: 3 = a full tilt in a third of a second.");
 
             Header("Take-off (a launch, not a lift)");
             Flight.CrouchPx = SessionFloatRow("Crouch before the launch (px)", Flight.CrouchPx, 0f, 8f);
@@ -121,9 +121,9 @@ namespace GK2DonkeyAPI
 
             Header("Keys (click to change)");
             Help("Read only while riding with the experiment on, never while the Mounts panel or a text box has the keys, the controls are taken or the game is paused.");
-            GUILayout.Label($"Jump: {Flight.JumpKeyNow}, fly: {Flight.FlyKeyNow} (the Behaviour keys JumpKey and FlyKey: the API cfg, or Saddle Up's Keys rows). " +
+            GUILayout.Label($"Jump: {Flight.JumpKeyNow}, fly: {Flight.FlyKeyNow} (the Behaviour keys JumpKey and FlyKey: the API cfg, or a mod's key rows). " +
                 (Flight.SameKey(Flight.JumpKeyNow, Flight.FlyKeyNow) ? "One key: a press jumps, a second press in the air takes off a mount that flies, a press while flying lands." : "Two keys: the jump key jumps, the fly key takes off and lands."), small);
-            GUILayout.Label($"Climb (hold): {Flight.UpKey}, descend (hold; at the ground: landed): {Flight.DownKey} (the Behaviour keys ClimbKey and DescendKey: the API cfg, or Saddle Up's Keys rows).", small);
+            GUILayout.Label($"Climb (hold): {Flight.UpKey}, descend (hold; at the ground: landed): {Flight.DownKey} (the Behaviour keys ClimbKey and DescendKey: the API cfg, or a mod's key rows).", small);
         }
     }
 }

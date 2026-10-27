@@ -7,10 +7,10 @@ namespace GK2DonkeyAPI.Api
     // Look presets (MountCompanion): Game is the game's own art, Custom uses the matching Custom* hex colour.
     public enum CoatColor { Game, Brown, Dark, Cream, Black, Custom }
     public enum HarnessColor { Game, Black, Red, Blue, Green, Custom }
-    // The second body tone (the API's Muzzle region): the donkey's muzzle, the rat's tail, ears and nose, the snail's
-    // shell, Hellfire's lava. A mount whose look has no such region ignores it (MountSettingsPage.MountHasRegion greys
-    // the row). The presets are chosen to differ from every part's own hue (a rose on the rat's pink and a brown on
-    // the snail's shell were invisible at first, the user 2026-10-20): each moves every part by a clear step.
+    // The second body tone (the API's Muzzle region): the donkey's muzzle, another mount's tail, ears and nose, or
+    // shell, a skin's glow. A mount whose look has no such region ignores it (MountSettingsPage.MountHasRegion greys
+    // the row). The presets are chosen to differ from every part's own hue (a rose on a pink part and a brown on
+    // a brown shell were invisible at first, the user 2026-10-20): each moves every part by a clear step.
     public enum MuzzleColor { Game, Pale, Rose, Brown, Green, Blue, Dark, Custom }
     public enum CartPaint { Game, DarkWood, Red, Green, Blue, Custom }
     public enum LanternColor { Game, White, Green, Blue, Custom }
@@ -80,7 +80,7 @@ namespace GK2DonkeyAPI.Api
     }
 
     // A mod's own donkey for the keeper, with its cart and up to MaxFoals foals: everything a player mod needs, so the mod
-    // itself only maps its keys and settings onto this (Saddle Up is the example). One per owner (Mounts.Companion).
+    // itself only maps its keys and settings onto this. One per owner (Mounts.Companion).
     //
     // - Use(Ride / Cart), for the ride and cart keys: on foot the donkey (spawned the first time) comes to the keeper
     //   and he gets on, the cart brought and hitched (Cart) or, when the donkey stands hitched to it somewhere, left
@@ -246,7 +246,7 @@ namespace GK2DonkeyAPI.Api
         private int foals;
         private string name;
         private float volume = 1f;
-        // The look (the colour rows) per mount: the dragon stays green when the donkey is brown (docs/mount-colours.md;
+        // The look (the colour rows) per mount: another mount stays green when the donkey is brown (docs/mount-colours.md;
         // the user, 2026-10-18). Coat, Harness... below are the current mount's (MountId): what a page's rows set is
         // the look of the mount they were built for (MountSettingsPage.PerMount).
         private readonly Dictionary<string, MountLook> looks = new Dictionary<string, MountLook>(StringComparer.OrdinalIgnoreCase);
@@ -322,7 +322,7 @@ namespace GK2DonkeyAPI.Api
         // The foals follow the keeper while he walks on foot outdoors, instead of staying with the mount (the Shuffle key
         // ShuffleFollowKeeperOnFoot on each of this companion's foals, never on another mod's); when he gets on a mount
         // they go back to it (following it when it's theirs). Into buildings only with FoalsComeIndoors. Off to start
-        // with (0.36.0); FoalRows' row defaults to it (Saddle Up switches it on first).
+        // with (0.36.0); FoalRows' row defaults to it (a mod may switch it on first).
         public bool FoalsFollowOnFoot { get => Current.FoalsFollowOnFoot; set { foalsFollow = value; Current.FoalsFollowOnFoot = value; } }
 
         // Shown in the donkey's prompt ("Ride Bella"); empty for none.
@@ -473,7 +473,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _))
             {
-                // Asked before anyone is called: the cart refused here (indoors, in a fight) or by the mount (a dragon pulls
+                // Asked before anyone is called: the cart refused here (indoors, in a fight) or by the mount (one that pulls
                 // none) leaves the mount and the cart where they are, instead of bringing them in and refusing the cart
                 // after (BringCart asks the same; the user, 2026-10-26: "although it cant pull it, it still brings it")
                 // (a cart holding more than the mount pulls is not refused here: it is brought over and left unhitched, BringCart)
@@ -569,7 +569,7 @@ namespace GK2DonkeyAPI.Api
         private string BringCart(MountHandle to)
         {
             // Asked before the cart is moved: refused, it stays where it is (in a fight the keeper's armour refuses it; a
-            // mount that can't pull the cart, the dragon, refuses it too: it was brought over and the hitch refused it then)
+            // mount that can't pull the cart refuses it too: it was brought over and the hitch refused it then)
             if (Mount.Instance.IsInGame(out PlayerController keeper, out _))
             {
                 string no = Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(to?.I);
@@ -593,7 +593,7 @@ namespace GK2DonkeyAPI.Api
             {
                 return come.Reason;
             }
-            // more on it than this mount pulls (Gerry, 4, and the donkey's six): the cart comes over all the same and stands
+            // more on it than this mount pulls (a mount that pulls 4, and the donkey's six): the cart comes over all the same and stands
             // there unhitched, so the extra can be taken off it on foot (the user, 2026-10-27: "still bring the cart to him but
             // dont hitch it")
             string tooMuch = GK2DonkeyAPI.Looks.WhyNotCartByLoad(to.I, Cart.I);
@@ -692,7 +692,7 @@ namespace GK2DonkeyAPI.Api
                 return;
             }
             bool spawned = false;
-            // A baby's size is its mount's (MountDef.FoalScale: the donkey's 0.6, Gerry's 0.33): a baby of another
+            // A baby's size is its mount's (MountDef.FoalScale: the donkey's 0.6, a larger-drawn mount's 0.33): a baby of another
             // size (the mount changed under it) is made again at the right one.
             // ... and only when the babies are the same mount and skin: plain baby donkeys are 0.6 (the row's promise)
             MountInfo babyMount = Donkey != null && Donkey.Exists && Current.FoalsWearSkin ? Mounts.Catalog.Find(Donkey.Mount) : null;
@@ -964,7 +964,7 @@ namespace GK2DonkeyAPI.Api
                     Instance(h, FoalCoatKeys, Shade(coatKeys, "Coat", own.Hue, own.Brightness, own.Saturation, own.Tinge));
                     Instance(h, HarnessKeys, harnessKeys);
                     Instance(h, FoalMuzzleKeys, Shade(muzzleKeys, "Muzzle", own.MuzzleHue, own.MuzzleBrightness, 1f, 0f));
-                    // the dark parts (the dragon's wings, the donkey's mane and legs) with the coat: the whole baby its shade
+                    // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade
                     Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
                     Instance(h, LookKeys, Current.FoalsWearSkin ? skinKeys : noSkin);
                 }
@@ -992,7 +992,7 @@ namespace GK2DonkeyAPI.Api
         // A baby's shade of the parent's colours of a region: a colorize colour turned in hue (its hue key would be
         // painted over), else the art's own hue turned; brightness and saturation moved by a step of their own.
         // The step is a visible one on any coat, not a share of it: the Black preset (brightness 0.35, saturation 0.2)
-        // took ±15 % of an almost grey charcoal and five dragon babies looked alike (the user's screenshot, 2026-10-26).
+        // took ±15 % of an almost grey charcoal and five babies of one mount looked alike (the user's screenshot, 2026-10-26).
         // So it is at least 0.7 of a full step however dark, and a near-grey coat gets some of the art's own colour
         // back by the baby's tinge (one charcoal, one with a red or wine cast). All 1 and 0: the same as the parent.
         private static Dictionary<string, object> Shade(Dictionary<string, object> parent, string region, float hue, float bri, float sat, float tinge)
@@ -1245,7 +1245,7 @@ namespace GK2DonkeyAPI.Api
 
         // RRGGBB, upper case, or null. A bad value is logged once; an empty one is not: it means no colour given yet. Each
         // setter applies the look at once, so a mod setting Coat = Custom and then CustomCoat passes through Custom with
-        // no colour for a moment (Saddle Up at every start: three false warnings, 2026-10-03).
+        // no colour for a moment (a mod at every start: three false warnings, 2026-10-03).
         private static string Hex(string value, string what)
         {
             string v = (value ?? "").Trim().TrimStart('#');

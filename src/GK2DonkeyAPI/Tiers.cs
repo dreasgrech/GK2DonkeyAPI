@@ -208,7 +208,7 @@ namespace GK2DonkeyAPI
 
             // The ridden one, every frame (MountRegistry.Tick): fully awake. Riding never goes through StandTick, where the
             // level is checked, so a donkey mounted while idle kept its frozen, undrawn view: the keeper rode an invisible
-            // donkey (found 2026-10-01, Saddle Up's H on a donkey standing off screen).
+            // donkey (found 2026-10-01, a mod's ride key on a donkey standing off screen).
             internal void WakeForRide()
             {
                 CheckWake();
@@ -455,7 +455,7 @@ namespace GK2DonkeyAPI
                     {
                         lastMirrored = (AnimationState)(-1); // the stand pose is sent again on its next frame
                         lastWalkMultiplier = 0f;
-                        // The facing too, straight to the animation: one set while the animator was off (Saddle Up's H
+                        // The facing too, straight to the animation: one set while the animator was off (a mod's ride key
                         // turning a frozen donkey towards the keeper) never reached it, and the data, already holding the
                         // new facing, doesn't tell it again: mounted, the donkey faced away until the first turn
                         // (2026-10-01).

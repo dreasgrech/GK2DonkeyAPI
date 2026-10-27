@@ -28,7 +28,8 @@ Hellfire is a pack); `ISkinSource` with textures (it is `IMountSkinSource` with 
 (`GK2DonkeyAPI.skins.<id>\<file>`, in the API's DLL, not Saddle Up's); "one section" in skin.cfg (there are
 `[Skin]`, `[Tuning]`, `[Game]`, `[Colors]`, `[Base.*]`, `[Mount]` and its tuning sections); a skin `foals` flag (none);
 packs scanned under `gk2skins\` of the plugins root and one folder down, not `plugins/**`; a missing skin shows
-"<id> (not installed)"; the self-test group is "Skins and effects"; per-skin offsets are built (§12).
+"<id> (not installed)" (since 2026-10-27 a name made from the id, "Hellfire (not installed)", MountsPanel.NameFromId);
+the self-test group is "Skins and effects"; per-skin offsets are built (§12).
 
 Status (2026-10-17 evening): **all six steps built (API 0.30.0 / Saddle Up 0.10.0)**; step 6 is the particle effects
 system with Hellfire as its first effect (`Mounts.Effects`, Effects.cs, api.md "Effects"), not a skin attachment. The

@@ -29,7 +29,7 @@ namespace GK2DonkeyAPI
         // How light a region's own art is on average (HSV value, 0..1): a custom colour's own lightness is set against
         // it (MountCompanion), since Colorize keeps each pixel's brightness (Black would stay a mid grey).
         // For a mount region on a skin drawn in its own colours (skinId, loaded and whole), the average of that
-        // look's colours in the region, so a picked colour comes out as light on the worm as on the donkey; the
+        // look's colours in the region, so a picked colour comes out as light on a mount of its own colours as on the donkey; the
         // donkey's otherwise (and for a region the look has no colours in, where nothing maps anyway; and for a skin
         // worn over the donkey, whose regions are still mostly the donkey's own colours).
         internal static float ArtLightness(string regionKey, string skinId = null)

@@ -216,7 +216,7 @@ namespace GK2DonkeyAPI
         private const double SlowFrameMs = 20.0;
         private static float nextSlowLog;
 
-        // A pick's trace (the user, 2026-10-25: picking the dragon in the Mounts panel freezes the game for some frames; the
+        // A pick's trace (the user, 2026-10-25: picking a mount in the Mounts panel freezes the game for some frames; the
         // summary and the once-a-second slow-frame line could not show which frames, nor the panel's own work): from a
         // pick, TraceFrames frames, each over TraceSlowMs or with the mod's parts over 2 ms named with them, and notes (a
         // look ready, a picture framed) on the frame they happened in; one line when done.

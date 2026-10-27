@@ -17,7 +17,7 @@ namespace GK2DonkeyAPI
     //  - a watchdog: under the ground (ground over him and none at his feet), falling into nothing (off the ground, going
     //    down, no ground within 30 under him) or far below the world (5 under this scene's lowest spot, no ground near
     //    under him), each held for a moment, puts him back on the newest spot that still holds (FallGuard, on);
-    //  - the same by hand: Mounts.ReturnToSafeSpot (Saddle Up's button and ReturnKey).
+    //  - the same by hand: Mounts.ReturnToSafeSpot (a mod's button, and ReturnKey).
     // Never while a door, a cutscene, a dialogue or a load has the keeper (IsControlsEnabled is false through all of
     // them), never for a moment after any placement (ours or the game's: PlayerController.SetPosition is patched to say),
     // never while the flight has the body (its own guards). Standing under a bridge is legal (the NPCs' mesh runs under

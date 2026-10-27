@@ -421,7 +421,7 @@ namespace GK2DonkeyAPI
                     : "";
         }
 
-        // Who set the session values, e.g. "dreas.gk2.saddleup: 7".
+        // Who set the session values, e.g. "acme.mymod: 7".
         private static string OwnersOfSessionValues()
         {
             var by = new SortedDictionary<string, int>(StringComparer.Ordinal);
@@ -603,7 +603,7 @@ namespace GK2DonkeyAPI
             Toggle("The cart indoors too (only with the row above off)", Plugin.CartIndoors, null);
             Toggle("Zombies ride on the cart", Plugin.CargoZombies, null);
             IntSlider("Cart capacity (items)", Plugin.CartSlots, 1, 6, () => Mount.ApplyCartSlots("the panel"));
-            GUILayout.Label("How many items the cart carries (1-6). Three and more ride in layers of up to two. Lowering it never drops anything: a fuller cart stays full until unloaded. Saddle Up's own 'Cart capacity' (2 / 4 / 6) overrides this row while it is installed; editing one donkey on the Instances tab gives that cart its own number.", small);
+            GUILayout.Label("How many items the cart carries (1-6). Three and more ride in layers of up to two. Lowering it never drops anything: a fuller cart stays full until unloaded. A mod's own cart capacity setting overrides this row while that mod is installed; editing one donkey on the Instances tab gives that cart its own number.", small);
             Toggle("A storage chest rides on the cart (alone; F on it while driving, E with nothing in front sets it down)", Plugin.CargoChest, null);
             if (CartChest.Locked)
             {
@@ -614,7 +614,7 @@ namespace GK2DonkeyAPI
             GUILayout.Label("You always dismount for work, ladders, building, fishing, fighting, sleep and co-op; chests and inventory keep you mounted.", small);
 
             Header("Corpses at the crossroads (docs/corpse-delivery.md)");
-            Toggle("The game's delivery donkey leaves its bodies at the crossroads by the nun, for you to haul (Saddle Up: \"Donkey leaves corpses at the crossroads\")", Corpses.AtCrossroads, null);
+            Toggle("The game's delivery donkey leaves its bodies at the crossroads by the nun, for you to haul", Corpses.AtCrossroads, null);
             GUILayout.Label(Corpses.Applied ? "Hooked right now: the pallet step, the graph's two fallback drops, the delivery walk and the New Body notification."
                 : Corpses.ApplyError != null ? "Not hooked: patching failed (" + Corpses.ApplyError + "); switch off and on to retry." : "Not hooked: the game's donkey code is untouched while this is off.", small);
             Toggle("It walks out from behind its tree to the stand point, unloads there and walks back (off: it walks to the morgue as in the game; the bodies still appear at the drop point)", Corpses.UnloadAtCrossroads, null);
@@ -1095,7 +1095,7 @@ namespace GK2DonkeyAPI
         private static void DrawColors()
         {
             Header("Colours");
-            GUILayout.Label("These colours are your settings only (your cfg). They are never made mod defaults: every player starts with the game's own art. A donkey with its own look (Saddle Up's, set by its coat, harness, paint and light choices) ignores them; Sources tab.", small);
+            GUILayout.Label("These colours are your settings only (your cfg). They are never made mod defaults: every player starts with the game's own art. A donkey with its own look (set by a mod, e.g. from its coat, harness, paint and light choices) ignores them; Sources tab.", small);
             GUILayout.Label("Recolours the donkey, the cart and the lantern through the game's own colour paths: an exact colour swap for the donkey's sprites, the game's colour cube for the 3D cart. Each region below is a set of the art's own colours; the same settings apply in both styles. Nothing is touched while a region is at its defaults.", small);
             Toggle("Colours on", Colors.Enabled, Colors.MarkDirty);
             EnumCycler("Donkey sprites recoloured with", Colors.SpriteMethod, Colors.MarkDirty);
@@ -1750,14 +1750,14 @@ namespace GK2DonkeyAPI
         {
             Header("Where a value comes from (the first that has one wins)");
             Mount.Instance r = Mount.Ridden;
-            GUILayout.Label("1. The donkey's own values: set on one donkey by a mod (Saddle Up's looks and name) or on the Instances tab. Kept with the save when the donkey is. "
+            GUILayout.Label("1. The donkey's own values: set on one donkey by a mod (e.g. its looks and name) or on the Instances tab. Kept with the save when the donkey is. "
                 + (r == null ? "You aren't riding one now." : $"The donkey you ride ({r.FullId}): {r.Overrides.Count} value(s){(r.Overrides.Count > 0 ? ", set by " + OwnersOf(r) : "")}{(r.OwnLook ? "; its own look: it ignores the colours of rows 3 to 5 (they are yours, not its)" : "")}."), small);
             GUILayout.Label("2. Another mod, for this session only: cyan, locked rows. Never saved; gone when the mod clears them or the game closes. "
                 + (overrideSnapshot > 0 ? $"Now: {overrideSnapshot} ({OwnersOfSessionValues()})." : "Now: none."), small);
             GUILayout.Label($"3. Your settings: {CfgPath}. Every row of this panel reads and writes this file; a change is saved the moment you make it. Yellow: differs from its mod default ({diffSnapshot.Count} now).", small);
             GUILayout.Label("4. Mod defaults: what a fresh install starts with, and what right-click and the reset buttons go back to. Read from " + Defaults.SourceShort + ".", small);
             GUILayout.Label("5. The code's own values: for anything the mod defaults leave out. All colours are left out on purpose, so every player starts with the game's own art.", small);
-            GUILayout.Label("Other mods keep their own settings in their own cfg (e.g. dreas.gk2.saddleup.cfg for Saddle Up's coat or speed): they reach this mod as 1 or 2, never as rows of this panel.", small);
+            GUILayout.Label("Other mods keep their own settings in their own cfg (e.g. a coat or a speed in the mod's own <GUID>.cfg): they reach this mod as 1 or 2, never as rows of this panel.", small);
 
             Header("Where a change is saved");
             GUILayout.Label("A row of this panel: your settings (3). Right-click: back to the mod default, saved the same way.", small);

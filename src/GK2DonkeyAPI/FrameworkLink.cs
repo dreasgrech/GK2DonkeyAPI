@@ -75,8 +75,8 @@ namespace GK2DonkeyAPI
         private sealed class ApiMod : Gk2ModBase
         {
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(Plugin.Guid, "GK2 Donkey API", "dreas", Plugin.Version,
-                $"The mounts (donkeys, dragons, rats...), their skins, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
-                + "install a mod that uses it, like GK2 Saddle Up.",
+                $"The mounts, their skins, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
+                + "install a mod that uses it.",
                 supportsRuntimeToggle: false, requiresKnownBuild: true, frameworkManagesEnabledState: false);
 
             public override Gk2ModMetadata Metadata => metadata;
@@ -190,7 +190,7 @@ namespace GK2DonkeyAPI
                     }
                     // The Mods menu knows only visibility, so a row the Mounts panel greys (EnableWhen: a colour region none of
                     // the mount's skins has) is left out of the menu for that mount; it stays in the cfg with its value
-                    // (the dragon's Second tone rows showed in the menu and did nothing, the user 2026-10-20).
+                    // (a mount's Second tone rows showed in the menu and did nothing, the user 2026-10-20).
                     Func<bool> visible = r.Visible, enabled = r.Enabled;
                     Func<bool> inMenu = enabled == null ? visible : visible == null ? enabled : () => visible() && enabled();
                     if (inMenu != null)
@@ -206,7 +206,7 @@ namespace GK2DonkeyAPI
             // helper is made for the type, and its call is bound by the compiler to the (section, key, value, ...)
             // overload. Looking AddEnum up by name broke when framework 0.1.19 added a second overload (it adopts an
             // existing ConfigEntry): AmbiguousMatchException, the page "Faulted" in the Mods menu (a player's report,
-            // 2026-10-19; Saddle Up 0.9.1).
+            // 2026-10-19).
             private static void AddChoice(Gk2Settings s, MountSettingsPage.Row r, int order)
             {
                 var m = typeof(PageMod).GetMethod(nameof(AddEnumOf), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)

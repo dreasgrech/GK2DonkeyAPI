@@ -6,8 +6,8 @@ namespace GK2DonkeyAPI
     // Each baby its own (the user, 2026-10-26: "they all look alike and all have the same size, same colors ... Persisted
     // randomness though so that they wont constantly change"; docs/foals.md "Babies of their own"). Everything comes from
     // one seed: the family's salt (a number kept on the parent, made once), the mount it is a baby of and its place
-    // among its siblings. So a baby is the same after every load, the dragon's babies are not the donkey's, and the
-    // donkey's come back the same after a while on the dragon; nothing of it is saved but the salt.
+    // among its siblings. So a baby is the same after every load, another mount's babies are not the donkey's, and the
+    // donkey's come back the same after a while on another mount; nothing of it is saved but the salt.
     //   Size     its mount's baby size, a bit up or down (made at that size: never changes in view)
     //   Colours  its own shade of the parent's: hue, brightness, saturation (MountCompanion.ApplyLook)
     //   Temper   one "energy" (lively and roaming, or calm and staying close) and its own trot, walk rate and voice
@@ -41,7 +41,7 @@ namespace GK2DonkeyAPI
             var v = new FoalLooks
             {
                 // evenly over the whole ±12 %: two averaged kept most of them at the mount's own size (seen 2026-10-26:
-                // five dragon babies at 0.57 to 0.66, alike to the eye). Its own draw, without the mount: a size is made
+                // five babies of one mount at 0.57 to 0.66, alike to the eye). Its own draw, without the mount: a size is made
                 // at spawn, and with the mount in its seed every mount switch remade every baby (30 in one self-test
                 // run, and the player's own babies came out of it new); the same factor on every mount keeps them
                 // through a switch between mounts of one baby size, as before.

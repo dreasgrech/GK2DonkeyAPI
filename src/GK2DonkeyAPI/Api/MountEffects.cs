@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Particle effects (docs/api.md "Effects"): the effects mods register here (Saddle Up's Hellfire: the game's lamp
+    // Particle effects (docs/api.md "Effects"): the effects mods register here (for one, the game's lamp
     // fire on a ring round the mount, with a trail). Nothing picks an effect for a mount in this version: the player's
     // rows, the Effect tuning keys, MountCompanion.Effect, Mounts.EffectSettings and the packs' effect = went on
     // 2026-10-25 (the user: "remove all the stuff we're exposing regarding the effects"); how a skin comes with one is

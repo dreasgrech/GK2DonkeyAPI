@@ -199,7 +199,7 @@ namespace GK2DonkeyAPI
 
         internal static Rig RiddenRig => Mount.Ridden?.SoundsRig;
 
-        // The call key (Mounts.Bray; Saddle Up's V): not while the last call or its babies' answers are still sounding, and
+        // The call key (Mounts.Bray; a mod's key): not while the last call or its babies' answers are still sounding, and
         // never closer than ManualCallGapS (the user, 2026-10-27: pressed fast it made "cacophony").
         internal const float ManualCallGapS = 0.5f;
         internal static bool TestEveryBabyAnswers; // the self-tests: every baby answers (else each by its chance)
@@ -415,7 +415,7 @@ namespace GK2DonkeyAPI
 
         // One instance's sounds: its timers, its reading of its animator, what plays for each event. Every entry
         // point binds the owner (Mount.Bind) before reading a setting: Tuned<T>.Value serves an instance's own
-        // overrides (a mount's mount.cfg [Tuning] pins: the snail's BrayVolume = 0) only for the bound instance, and the
+        // overrides (a mount's mount.cfg [Tuning] pins: a silent mount's BrayVolume = 0) only for the bound instance, and the
         // hitch, the cargo thump, the API and the animation-event prefix are not bound to the emitting instance.
         internal sealed class Rig
         {
@@ -552,7 +552,7 @@ namespace GK2DonkeyAPI
 
             // The files of the skin worn now started loading (as Tick does on a change), for an instance with no view: the
             // Mounts panel's paper donkey, so a mount browsed there has its sounds by the time the world's mount turns
-            // into it (all thirteen of the dragon's started in that frame, 15.6 ms; docs/mount-switching-performance.md 2.2).
+            // into it (all thirteen of one mount's started in that frame, 15.6 ms; docs/mount-switching-performance.md 2.2).
             internal void Preload()
             {
                 Looks.SkinDef wears = owner.LooksRig?.DefNow;
@@ -622,7 +622,7 @@ namespace GK2DonkeyAPI
                 TestLastGate = "ran";
 
                 // The babies answer when the call has ended (the user, 2026-10-25: never heard; the trace showed every
-                // answer playing under the dragon's 1.9 to 4.2 s roar, which they followed by half a second). The game's
+                // answer playing under a mount's 1.9 to 4.2 s roar, which they followed by half a second). The game's
                 // handle is made for one play and goes inactive when that play ends (LazyBearTechnology.SoundHandler), so
                 // this holds for a game id and a pack's file at any pitch; CallWaitMaxS is the cap if it never says so.
                 if (callHandle != null && (!callHandle.IsActive || now - callAt > CallWaitMaxS))
@@ -899,7 +899,7 @@ namespace GK2DonkeyAPI
                 if (cache.TryGetValue(key, out (SoundSpec Spec, float At) c) && now - c.At < 0.5f) return c.Spec;
                 // bound here too (not only in Emit and Tick): the base reads Tuned values, which serve this instance's
                 // pins only while it is bound, and the cache must never hold an unbound reading (the dev tab and the
-                // self-tests call Resolve directly; a standing snail read the global keys, 2026-10-24)
+                // self-tests call Resolve directly; a standing mount read the global keys, 2026-10-24)
                 SoundSpec spec;
                 using (Mount.Bind(owner))
                 using (Perf.Measure(Perf.S.SndResolve))
@@ -954,8 +954,8 @@ namespace GK2DonkeyAPI
                 r.Volume *= vol;
                 r.Pitch *= pitch;
                 // a baby's answer on a mount that gives none: its mount's own voice, pitched up by the baby's size as every
-                // baby sound is (PitchScale), not silence (the user, 2026-10-27: Gerry's babies never answered him). A mount
-                // whose voice is silent (the worm) stays silent.
+                // baby sound is (PitchScale), not silence (the user, 2026-10-27: one mount's babies never answered it). A mount
+                // whose voice is silent stays silent.
                 if (eventId == "answer" && r.Missing && baby)
                 {
                     SoundEvents.Def v = SoundEvents.Find("voice");

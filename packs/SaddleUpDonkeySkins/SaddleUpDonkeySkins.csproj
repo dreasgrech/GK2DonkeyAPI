@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GK2 Saddle Up: Donkey Skins, an external skins pack of GK2 Saddle Up (docs/making-a-mount.md "Built in or
+       external"): the folder gk2mounts\donkey\skins\ (Hellfire and Royal Parade, no mount.cfg: skins for the game's
+       donkey) embedded in one DLL and handed to the API in Awake with Hellfire's effect (Plugin.cs). One file, so an
+       update replaces everything: a folder unzipped over an older one kept the files the new version had dropped, and
+       the loader used them (the user, 2026-10-26). -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <!-- GK2-prefixed like GK2DonkeyAPI.dll and GK2SaddleUp.dll (the user, 2026-10-27); the folder, the namespace,
+         the resource prefix and the skin ids keep the pack's name -->
+    <AssemblyName>GK2SaddleUpDonkeySkins</AssemblyName>
+    <RootNamespace>SaddleUpDonkeySkins</RootNamespace>
+    <Version>1.0.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDependencyFile>false</GenerateDependencyFile>
+    <!-- A release build (-p:ForDist=true) carries no debug directory: the PDB path would bake this machine's user
+         folder into the shipped DLL. -->
+    <DebugType Condition="'$(ForDist)' == 'true'">none</DebugType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The pack, by the name pattern Mounts.Looks.RegisterEmbedded reads: <prefix><mount>\skins\<skin>\<file>. -->
+    <EmbeddedResource Include="gk2mounts\**\*" LogicalName="SaddleUpDonkeySkins.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- The pack's source folder, so the API's F11 Mounts tab writes tuned values back into the repo's skin.cfg on this
+       machine. Left out of a release build. -->
+  <ItemGroup Condition="'$(ForDist)' != 'true'">
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadataAttribute">
+      <_Parameter1>GK2MountsSourceDir</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)\gk2mounts</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\GK2DonkeyAPI\GK2DonkeyAPI.csproj" Private="false" />
+    <Reference Include="UnityEngine"><HintPath>$(Managed)\UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(Managed)\UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <!-- Deploys into the game (plugins\GK2SaddleUpDonkeySkins\) after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
+
+</Project>

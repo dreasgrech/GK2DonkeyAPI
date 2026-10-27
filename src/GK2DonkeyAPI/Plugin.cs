@@ -392,7 +392,7 @@ namespace GK2DonkeyAPI
         // [General]: behaviour
         internal static ConfigEntry<bool> Enabled;
         internal static ConfigEntry<string> MountWgoId;
-        // Ride behaviour: the core's defaults, overridable per session through Mounts.Behaviour (Saddle Up sets
+        // Ride behaviour: the core's defaults, overridable per session through Mounts.Behaviour (a mod sets
         // them from its own settings). No keys here: the core mounts only when a mod asks (Mounts.TryMount).
         internal static Tuned<bool> StayMountedThroughDoors;
         internal static Tuned<bool> DismountIndoors;
@@ -559,7 +559,7 @@ namespace GK2DonkeyAPI
                 }
             };
             Enabled = Config.Bind("General", "Enabled", true,
-                "Master switch for the mount. GK2 Donkey API does nothing on its own: a mod built on it (such as Saddle Up) summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");
+                "Master switch for the mount. GK2 Donkey API does nothing on its own: a mod built on it summons and dismounts the donkey. Off: no mod can mount (the kill switch if one misbehaves).");
             MountWgoId = Config.Bind("General", "MountWgoId", "npc_donkey",
                 "World object id used for the mount's looks. Only npc_donkey has been tested.");
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
@@ -607,7 +607,7 @@ namespace GK2DonkeyAPI
                 "A key that puts the keeper back on the last safe spot of this scene by hand (stuck somewhere). None: no key. Not during a door, a cutscene or a dialogue.");
             StandingSounds = Config.Bind("General", "StandingSounds", Defaults.Get("General", "StandingSounds", true),
                 "Standing mounts and babies near you make their sounds: steps, grazing, the lip smack (at the mount sounds' volume). Off: only the mount you ride sounds, and a standing one's lip smack is the game's own.");
-            // Freeplay (0.40.0; Saddle Up's section of that name): a player who doesn't want the mounts' differences.
+            // Freeplay (0.40.0; a mod's section of that name): a player who doesn't want the mounts' differences.
             FreeplayMaxCargo = Config.Bind("General", "FreeplayMaxCargo", Defaults.Get("General", "FreeplayMaxCargo", false),
                 "Every mount that pulls a cart carries the most items a cart holds, whatever its own cargo. Off: each mount's own ([Mount] cargo).");
             FreeplaySameSpeed = Config.Bind("General", "FreeplaySameSpeed", Defaults.Get("General", "FreeplaySameSpeed", false),
@@ -720,7 +720,7 @@ namespace GK2DonkeyAPI
             // since 0.12.0 they are always on and which mounts a player has is which packs they installed. A dev
             // machine's line leaves the cfg here, once.
             DropRetired("Debug", new[] { "MountsPreview" });
-            Looks.RegisterBuiltIns(); // the loose packs; the Hellfire effect is Saddle Up's too (its Awake registers it through the API)
+            Looks.RegisterBuiltIns(); // the loose packs; a mod's own effects come through the API from its Awake
 
             if (DevTools.Unlocked)
             {

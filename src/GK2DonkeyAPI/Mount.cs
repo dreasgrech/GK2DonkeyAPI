@@ -105,7 +105,7 @@ namespace GK2DonkeyAPI
             // Cargo was added or removed: the prefab's own drawer may have swapped the empty and the loaded cart body, so
             // the list of lifted parts is rebuilt from the parts active now. Every part goes back to its prefab position
             // first (Rest: not Base, which carries the hitch gap: reading that back as the new rest added the gap once more
-            // per item, the dragon's cart creeping back as it was loaded, found in game 2026-10-21), so neither the lift nor
+            // per item, a long mount's cart creeping back as it was loaded, found in game 2026-10-21), so neither the lift nor
             // the gap is baked into the new base positions.
             internal void OnCargoChanged()
             {
@@ -180,6 +180,9 @@ namespace GK2DonkeyAPI
             private bool seatPending;
             private float groundDelta; // donkey ground height minus the keeper's, world units (slopes)
             private float liftDrawn;   // the flight's lift in the last Follow: a ride ended in the air parks under it (Park)
+            // The self-test's ground probe (2026-10-27, the hillside jump's 4.5 px steps): while it holds a list, every Follow of
+            // the ridden mount appends one line of its ground sampling. Null for everyone else; never set by the mod.
+            internal static System.Collections.Generic.List<string> TestGroundProbe;
             internal float TestLiftDrawn => liftDrawn;
             private float lastGoodGroundDelta;
             private const float RideGroundStepLimit = 0.5f; // world units between the donkey's and the keeper's sample
@@ -1161,7 +1164,7 @@ namespace GK2DonkeyAPI
             }
 
             // A ride ended in the air (a state change, a save, a cleanup): where the mount stands is the ground under where
-            // it flew, not the drawn height (the dragon stood parked at 16.77 over ground at 6 after the work state ended a
+            // it flew, not the drawn height (a flying mount stood parked at 16.77 over ground at 6 after the work state ended a
             // flight, the user's log 2026-10-24; a parked place is judged against the keeper's by KeepOnGround and would
             // have been "a door" there).
             private void Grounded(string reason)
@@ -1460,7 +1463,7 @@ namespace GK2DonkeyAPI
             }
 
             // The hitch gap (HitchGapPx, docs/reference.md [Cart]): the whole cart, shafts included, sits this much
-            // further behind the mount than the prefab puts it, so a longer mount (the dragon) isn't drawn inside the
+            // further behind the mount than the prefab puts it, so a longer mount isn't drawn inside the
             // cart. Every part's Base and Sample are the prefab's rest plus the gap in the part's parent space; the
             // shafts and the pitch pivots are measured from the moved Base, so every style draws from the same geometry.
             // Called at collection and whenever the value changes (FollowCartParts checks it every frame: a creature's
@@ -1837,7 +1840,7 @@ namespace GK2DonkeyAPI
             // the previous target is kept. So is a target that jumps by more than CartJumpLimit from one frame to the
             // next without the cart having changed sides: walking moves the sample by at most 0.12 a frame, which on
             // any walkable surface changes the ground by less than that, so a jump means the sample crossed a ledge
-            // onto another level (the dragon's cart, 1.3 units behind its root, sank 0.77 into the hill by the
+            // onto another level (a long mount's cart, 1.3 units behind its root, sank 0.77 into the hill by the
             // Inquisition Base rocks: the ground under it was that much lower, within the slope limit, and the jump
             // was only logged; the user's video, 2026-10-20). The held target is kept until the sample agrees with it
             // again, which happens by itself once the mount has walked down (or up) the same step. The applied shift
@@ -2455,6 +2458,7 @@ namespace GK2DonkeyAPI
                 // objects (our temp donkey never moves through that system). Without it the donkey and cart take the
                 // keeper's height and dig into slopes. The rider follows the donkey's height through groundDelta.
                 groundDelta = 0f;
+                float pSD = float.NaN, pSK = float.NaN, pGd = float.NaN, pGk = float.NaN; string pBr = "nosnap"; Vector3 pOff = Vector3.zero; // the probe's
                 // Flying free (the flying experiment) the body is in the air: the ground under the mount says nothing about
                 // where to draw it, the flight's height does (the body plus the lift). Snapped, the mount took the step
                 // limit's last good difference near slopes and jumped up (the user's video 2026-10-22 15-31-34).
@@ -2473,6 +2477,7 @@ namespace GK2DonkeyAPI
                     // under it, where the slope in front then occludes its legs.
                     Vector3 bodyOffset = (bodySprite != null && bodySprite) ? bodySprite.position - donkey.transform.position : right * lateral;
                     bodyOffset.y = 0f;
+                    pOff = bodyOffset;
                     // Both points from one source, as the cart does (GroundHeightPair): the navmesh for both, else the
                     // raycast for both. Sampled one by one, one point could get the navmesh and the other the raycast,
                     // two different levels where they lie stacked: at the bridge's ends the navmesh under the deck (6.0)
@@ -2489,12 +2494,14 @@ namespace GK2DonkeyAPI
                     // checked against the step limit; failing that, or with no surface, the pair difference below as before.
                     float surfDonkey = HighestHitUnder(target + bodyOffset, basePos.y, CartRiseWindow, out Collider surfCollider);
                     float surfKeeper = HighestHitUnder(basePos, basePos.y, CartRiseWindow, out _);
+                    pSD = surfDonkey; pSK = surfKeeper; pGd = gd; pGk = gk;
                     if (!float.IsNaN(surfDonkey) && !float.IsNaN(surfKeeper) && Mathf.Abs(surfDonkey - surfKeeper) <= RideGroundStepLimit)
                     {
                         lastDonkeyGroundSource = RaycastSource(surfCollider);
                         groundDelta = surfDonkey - basePos.y;
                         lastGoodGroundDelta = surfDonkey - surfKeeper;
                         target.y = surfDonkey;
+                        pBr = "surf";
                     }
                     else if (!float.IsNaN(gd) && !float.IsNaN(gk))
                     {
@@ -2507,10 +2514,12 @@ namespace GK2DonkeyAPI
                             // 2026-10-01). The last good difference is kept.
                             d = lastGoodGroundDelta;
                             NoteRejectedGround(gd, lastDonkeyGroundSource, gk, lastKeeperGroundSource, basePos);
+                            pBr = "pair-rejected";
                         }
                         else
                         {
                             lastGoodGroundDelta = d;
+                            pBr = "pair";
                         }
                         groundDelta = d;
                         target.y = basePos.y + groundDelta;
@@ -2521,6 +2530,10 @@ namespace GK2DonkeyAPI
                 target.y += liftDrawn;
                 donkey.Data.Position = VisualConsts.GetRoundedPosXYZ(target, PixelSize());
                 Position = donkey.Data.Position;
+                if (TestGroundProbe != null && this == Ridden)
+                {
+                    TestGroundProbe.Add($"f{Time.frameCount} t{Time.time:0.0000} fx{Time.fixedTime:0.0000} dt{Time.unscaledDeltaTime * 1000f:0.0} rb{(rb != null ? rb.position.y.ToString("0.0000") : "-")} tf{basePos.y:0.0000} {(rb != null ? rb.interpolation.ToString().Substring(0, 1) : "-")} bx{basePos.x:0.000} off{pOff.x:0.000},{pOff.z:0.000} tx{target.x:0.000} sD{pSD:0.0000} sK{pSK:0.0000} gd{pGd:0.0000} gk{pGk:0.0000} {pBr} delta{groundDelta:0.0000} lift{liftDrawn:0.0000} ty{target.y:0.0000} P{Position.y:0.0000} px{PixelSize():0.0000}");
+                }
                 if (cartParts.Count > 0)
                 {
                     FollowCartParts(Position.y);
@@ -3140,7 +3153,7 @@ namespace GK2DonkeyAPI
                 float? seat;
                 if (LooksRig.TrySeatTop(out Vector3 pictureTop, out bool fixedRow))
                 {
-                    // A skin that says "seat = picture" (Gerry): the rider sits on its own picture, this frame's top at
+                    // A skin that says "seat = picture" (a creature that hops): the rider sits on its own picture, this frame's top at
                     // the pivot column; or "seat = <row>": a fixed row of its canvas, plus the walk bob as the manual
                     // seat has it. Both whatever the player's seat settings: only the skin's (or a mod's) SeatAdjustPx
                     // nudges from them, never the player's own (SeatOn).

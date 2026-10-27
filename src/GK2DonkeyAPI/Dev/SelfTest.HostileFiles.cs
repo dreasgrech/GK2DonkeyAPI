@@ -11,7 +11,7 @@ namespace GK2DonkeyAPI
     // refused, a byte-order mark taken off an embedded cfg, a sheet's frame names checked.
     internal static partial class SelfTest
     {
-        private static IEnumerator HostileFiles()
+        internal static IEnumerator HostileFiles()
         {
             // pictures: the header first
             byte[] png = TempPicture();

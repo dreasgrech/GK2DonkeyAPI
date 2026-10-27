@@ -7,7 +7,7 @@ every frame turned into pack pixels by comparing the result with the frame it ca
     the colour knobs (hue 7 degrees, saturation about 0.5, brightness 0.42), so the player's coat colour still works.
 So the pack holds nothing of the game's art, and the recipe code (LooksHellfire.cs) is not needed any more.
 
-    python tools/skins/hellfire/make_hellfire.py            # src/SaddleUp/assets/mounts/donkey/skins/saddleup.hellfire/ (the built-in pack:
+    python tools/skins/hellfire/make_hellfire.py            # packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/saddleup-donkey-skins.hellfire/ (the pack:
                                                              # skin.cfg + a PNG per frame) and out\\ (strips, preview, a sheet)
     python tools/skins/hellfire/make_hellfire.py --no-assets # out\\ only
     python tools/skins/hellfire/make_hellfire.py --cfg       # rewrite the built-in's skin.cfg too (it is by hand otherwise)
@@ -25,7 +25,7 @@ from gamedir import donkey_frames
 import hellfire_proto as HP
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
-ASSETS = os.path.join(REPO, "src", "SaddleUp", "assets", "mounts", "donkey", "skins", "saddleup.hellfire")  # a donkey skin carries its mod's prefix (docs/skins.md)
+ASSETS = os.path.join(REPO, "packs", "SaddleUpDonkeySkins", "gk2mounts", "donkey", "skins", "saddleup-donkey-skins.hellfire")  # a donkey skin carries its mod's prefix (docs/skins.md)
 OUT = os.path.join(HERE, "out")
 FRAMES = donkey_frames()
 ERASE = (255, 0, 255, 255)
@@ -146,7 +146,7 @@ def skin_cfg():
         "# reviewed prototype: the pictures hold only our pixels and the erase marks (magenta) that take the ears and the\n"
         "# tail off the donkey; the ash coat is the [Base.Coat] recolour below. Our own art; nothing of the game's.\n"
         "[Skin]\nformat = 1\nname = Hellfire\ndescription = Horns, a devil's tail, glowing eyes and lava cracks over an ash coat.\nauthor = dreas\nversion = 2.0\nbase = donkey\ncolours = own\n"
-        "layer = over\nerase = FF00FF\ncanvas = 96 96\n\n"  # no id = and no mount =: the folder donkey/skins/saddleup.hellfire/ names it (donkey/saddleup.hellfire)
+        "layer = over\nerase = FF00FF\ncanvas = 96 96\n\n"  # no id = and no mount =: the folder donkey/skins/saddleup-donkey-skins.hellfire/ names it (donkey/saddleup-donkey-skins.hellfire)
         "# The cracks follow the player's muzzle colour, the horns and the tail's dark its dark parts, the glow its eye\n"
         "# colour, as the recipe had it; everything else is kept as drawn.\n"
         f"[Colors]\nMuzzle = {hexes(lava)}\nDark = {hexes(dark)}\nEye = {hexes(eye)}\n\n"

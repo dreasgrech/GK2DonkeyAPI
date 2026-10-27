@@ -11,10 +11,8 @@ namespace GK2DonkeyAPI
     // the jump takes its mount's shape at the press and tops out at its height.
     internal static partial class SelfTest
     {
-        private static IEnumerator FlightJumpPerMount()
+        internal static IEnumerator FlightJumpPerMount()
         {
-            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
-            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".jumpshape";
             const string id = "selftest.jump-beast";
             string tempRoot;
@@ -81,9 +79,6 @@ namespace GK2DonkeyAPI
                 float vStone = TouchSpeed(stone), vEased = TouchSpeed(eased);
                 Check(vStone > 0f && vEased >= 0f && vEased < vStone * 0.25f, $"fall_ease 1 touches down softly: {vEased:0} px/s against the stone's {vStone:0}");
 
-                // the dragon's own: wings and a braked fall (its mount.cfg [Jump])
-                MountInfo dragonInfo = Mounts.Catalog.Find(M("dragon"));
-                Check(dragonInfo != null && dragonInfo.OwnJump && dragonInfo.Jump.Wings == true && dragonInfo.Jump.FallEase > 0.5f, $"the dragon has its own jump with wings ({dragonInfo?.Jump.Height} px, {dragonInfo?.Jump.Time} s, fall ease {dragonInfo?.Jump.FallEase}, wings {dragonInfo?.Jump.Wings})");
                 Check(donkey != null && donkey.Jump.Wings == false, "the donkey's jump has no wings");
 
                 // saved and read again, the comments kept
@@ -129,43 +124,6 @@ namespace GK2DonkeyAPI
                         yield return null;
                     }
                     Check(Flight.Now == Flight.Phase.Ground && top > 48f && top < 51f, $"jumped live: the top at {top:0.0} px (its 50; the default's {def.Height:0}), down after {Time.time - start:0.00} s ({Flight.Now})");
-                }
-                finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
-                if (Flight.Now != Flight.Phase.Ground) Flight.Release(i, "self-test");
-
-                // the dragon: its jump a small take-off and landing on its flying frames
-                yield return Frames(10);
-                h.Tuning.Set(Owner, "Skin", M("dragon") + "/default");
-                yield return Until(() => h.Mount == M("dragon"), 8f);
-                // its pictures built before the jump (they take about 20 frames: a jump begun earlier drew the walk, 2026-10-26)
-                yield return Until(() => h.I.TestSkinWearing() == M("dragon") + "/default" && !h.I.LooksRig.Building, 15f);
-                yield return Frames(10);
-                i = Mount.Ridden;
-                var seen = new System.Collections.Generic.List<string>();
-                Flight.TestJumpHeld = true;
-                Flight.TestMoveDir = Vector2.zero;
-                try
-                {
-                    float start = Time.time;
-                    Flight.Jump(i);
-                    while (Flight.Now == Flight.Phase.Jumping && Time.time - start < Flight.J.Time + Flight.JumpPerchS + 3f)
-                    {
-                        string f = Flight.FrameFor(i) ?? "walk";
-                        if (seen.Count == 0 || seen[seen.Count - 1] != f) seen.Add(f);
-                        yield return null;
-                    }
-                    string fold = Flight.FrameFor(i);
-                    string said = string.Join(" ", seen).Replace("bdy_", "").Replace("_left_", "");
-                    int crouchAt = seen.IndexOf("bdy_takeoff_left_01"), push = seen.FindIndex(x => x == "bdy_takeoff_left_02" || x == "bdy_takeoff_left_03" || x == "bdy_takeoff_left_04");
-                    int open = seen.FindIndex(x => x.StartsWith("bdy_glide_left_") || x.StartsWith("bdy_fly_left_")), reach = seen.FindIndex(x => x == "bdy_land_left_01" || x == "bdy_land_left_02"), touch = seen.LastIndexOf("bdy_land_left_03");
-                    Check(crouchAt == 0 && push > crouchAt && open > push && reach > open && !seen.Contains("walk"),
-                        $"the dragon's jump: the crouch, the push-off, wings in the air, reaching for the ground, never its walk ({said})");
-                    Check(touch > reach || fold == "bdy_land_left_04", $"then the touch and the fold ({said}; after: {fold ?? "walk"})");
-                    // the wing never flashes (the user's video 2026-10-25: take-off 4, wings down, then fly 1, wings up): the
-                    // beat goes on from the push-off's pose, and the top goes into the glide by its way in
-                    int off4 = seen.IndexOf("bdy_takeoff_left_04"), glideAt = seen.FindIndex(x => x.StartsWith("bdy_glide_left_"));
-                    Check(off4 >= 0 && off4 + 1 < seen.Count && seen[off4 + 1] == "bdy_fly_left_05", $"after the push-off the beat goes on from its pose (take-off 4, then fly 5): {said}");
-                    Check(glideAt < 0 || (glideAt > 0 && seen[glideAt - 1].StartsWith("bdy_glidein_left_")), $"the wings open into the glide by its way in, never straight from the beat: {said}");
                 }
                 finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
                 if (Flight.Now != Flight.Phase.Ground) Flight.Release(i, "self-test");

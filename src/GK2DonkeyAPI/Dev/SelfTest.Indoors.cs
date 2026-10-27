@@ -14,10 +14,10 @@ namespace GK2DonkeyAPI
     // of this scene, riding and driving, and back out.
     internal static partial class SelfTest
     {
-        private const string IndoorPreset = "indoor"; // the game's houses (its log: "SetTimeOfDayPreset: [indoor]")
+        internal const string IndoorPreset = "indoor"; // the game's houses (its log: "SetTimeOfDayPreset: [indoor]")
 
-        // The two switches taken over from whoever holds them (Saddle Up), given back in the finally.
-        private sealed class IndoorSwitches
+        // The two switches taken over from whoever holds them (a mod), given back in the finally.
+        internal sealed class IndoorSwitches
         {
             private readonly string rideOwner, cartOwner;
             private readonly object rideWas, cartWas;
@@ -49,10 +49,10 @@ namespace GK2DonkeyAPI
 
         // The light preset where the run started ("outdoor", or the area's own): put back by its name, which the
         // game writes into the save (EnvironmentData.timeOfDayPresetName), never a guessed "outdoor".
-        private static string startPreset;
+        internal static string startPreset;
 
         // Why these scenarios don't run from here (null: they do), with the start's preset read.
-        private static string WhyNotFromHere()
+        internal static string WhyNotFromHere()
         {
             if (Mount.Instance.IsCoop()) return "a co-op game: the light preset is the other player's too";
             if (!PC.IsControlsEnabled || !(PC.Ssm?.CurState is FreePlayerState)) return "the keeper is busy (a script, a conversation, work): run the tests where he walks freely";
@@ -67,34 +67,23 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        private static IEnumerator LightIndoors(bool indoors)
+        internal static IEnumerator LightIndoors(bool indoors)
         {
             EnvironmentEngine.Instance.SetTimeOfDayPreset(indoors ? IndoorPreset : startPreset);
             yield return Until(() => Mount.Instance.IsIndoors() == indoors, 3f);
             yield return Frames(2); // the ride's tick has read it
         }
 
-        private static string Said(MountResult r) => r.Ok ? "ok" : r.Reason;
+        internal static string Said(MountResult r) => r.Ok ? "ok" : r.Reason;
 
         // The rules: refusals and ends of a ride with each setting, under the game's indoor light where the keeper stands.
-        private static IEnumerator IndoorsRules()
+        internal static IEnumerator IndoorsRules()
         {
             string notHere = WhyNotFromHere();
             if (notHere != null)
             {
                 Skip(notHere);
                 yield break;
-            }
-            // Saddle Up's two rows (read, not changed: they are the player's): the second greys while the first is off
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            if (saddle != null)
-            {
-                MountSettingsPage.Row ride = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "MountIndoors");
-                MountSettingsPage.Row cartRow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "CartIndoors");
-                bool rideOn = ride?.Entry is BepInEx.Configuration.ConfigEntry<bool> re && re.Value;
-                Check(ride != null && cartRow != null && cartRow.Enabled != null && cartRow.Enabled() == rideOn,
-                    $"Saddle Up's rows: \"Allow mounting indoors\" ({(ride == null ? "missing" : rideOn ? "on" : "off")}) and \"... with the cart\" ({(cartRow == null ? "missing" : cartRow.Enabled != null && cartRow.Enabled() ? "live" : "greyed")})");
-                Check(Mounts.Behaviour.Get<bool>("DismountIndoors") == !rideOn, $"the first row reaches the API (DismountIndoors {Mounts.Behaviour.Get<bool>("DismountIndoors")})");
             }
             Vector3 near = Spot(home, 3f) ?? home;
             MountHandle plain = Spawn(near, right: homeFacing > 0f);
@@ -116,7 +105,7 @@ namespace GK2DonkeyAPI
             {
                 yield return Until(() => plain.IsReady && carted.IsReady && freeCart.IsReady && carted2.IsReady, 6f);
 
-                // 1. both off (Saddle Up's default, as before 0.36.0)
+                // 1. both off (as before 0.36.0)
                 sw.Set(false, false);
                 MountResult r = plain.Ride(showMessage: false);
                 Check(r.Ok, $"outdoors: ridden ({Said(r)})");
@@ -203,14 +192,14 @@ namespace GK2DonkeyAPI
         }
 
         // The test's free carts now, and the one that appeared since (a cart left standing).
-        private static HashSet<string> Carts()
+        internal static HashSet<string> Carts()
         {
             var s = new HashSet<string>();
             foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists && !h.I.HasDonkey && h.HasCart) s.Add(h.FullId);
             return s;
         }
 
-        private static MountHandle NewCart(HashSet<string> had)
+        internal static MountHandle NewCart(HashSet<string> had)
         {
             foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists && !h.I.HasDonkey && h.HasCart && !had.Contains(h.FullId)) return h;
             return null;
@@ -221,7 +210,7 @@ namespace GK2DonkeyAPI
         // A door as the game's are (WgoTeleportData, GDPointTeleportData): a point and a light preset. No scene data:
         // the game's same-scene path (a house's inside is elsewhere in the same scene). Its id is heard by nothing
         // (the game's teleport triggers fire only for ids a quest waits for).
-        private sealed class SelfTestDoor : TeleportDataBase
+        internal sealed class SelfTestDoor : TeleportDataBase
         {
             private readonly Vector3 to;
 
@@ -237,9 +226,9 @@ namespace GK2DonkeyAPI
             public override Vector3 GetPosition() => to;
         }
 
-        private static bool doorOk;
+        internal static bool doorOk;
 
-        private static IEnumerator ThroughDoor(Vector3 to, bool indoors, bool riddenFoals = false)
+        internal static IEnumerator ThroughDoor(Vector3 to, bool indoors, bool riddenFoals = false)
         {
             doorOk = false;
             Mount.TestDoorQuiet = true; // the player's own foals stay put, the morgue's door note isn't taken
@@ -263,7 +252,7 @@ namespace GK2DonkeyAPI
 
         // The door's fade and control back, at most 12 s; not cut short by Abort (a second teleport while one runs
         // would leave the keeper between the two).
-        private static IEnumerator ControlBack()
+        internal static IEnumerator ControlBack()
         {
             float end = Time.unscaledTime + 1f;
             while (PC.IsControlsEnabled && Time.unscaledTime < end) yield return null; // taken (ByTeleport) at once, normally
@@ -271,14 +260,14 @@ namespace GK2DonkeyAPI
             while (!PC.IsControlsEnabled && Time.unscaledTime < end) yield return null;
         }
 
-        private static float Flat(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).magnitude;
+        internal static float Flat(Vector3 a, Vector3 b) => new Vector2(a.x - b.x, a.z - b.z).magnitude;
 
-        private static readonly RaycastHit[] zoneHits = new RaycastHit[16];
+        internal static readonly RaycastHit[] zoneHits = new RaycastHit[16];
 
         // Why standing at p would tell the game something (null: nothing), as its own zone check would read it there
         // (PlayerPhysicalBody.UpdateWorldZone: world-zone colliders, layer 17, from 50 above): a zone the player hasn't
         // visited (the save's list would gain it), or one a quest waits to be walked into (WalkIntoWorldZone).
-        private static string ZoneNotQuiet(Vector3 p)
+        internal static string ZoneNotQuiet(Vector3 p)
         {
             List<string> visited = MainGame.Instance?.GameSave?.knowledgeSystem?.visitedWorldZones;
             System.Collections.IDictionary walkInto = null;
@@ -309,7 +298,7 @@ namespace GK2DonkeyAPI
         // A floor inside one of this scene's buildings (the game's IndoorArea boxes, kept under a switched-off
         // collection: read from their colliders' own geometry) on the keeper's walkable floor with room to stand, where
         // landing tells the game nothing (ZoneNotQuiet), the nearest to the keeper.
-        private static Vector3? InsideABuilding(out string area, out string why)
+        internal static Vector3? InsideABuilding(out string area, out string why)
         {
             area = null;
             why = null;
@@ -360,7 +349,7 @@ namespace GK2DonkeyAPI
 
         // Inside the box seen from above, from the collider's own geometry (its bounds are empty while it is switched
         // off, as the game keeps them), a margin in from the walls; as IndoorAreaBoundData.ContainsXZ.
-        private static bool InBoxXZ(BoxCollider b, Vector3 p, float margin = 0.75f)
+        internal static bool InBoxXZ(BoxCollider b, Vector3 p, float margin = 0.75f)
         {
             Vector3 local = b.transform.InverseTransformPoint(p) - b.center;
             Vector3 half = b.size * 0.5f;
@@ -370,7 +359,7 @@ namespace GK2DonkeyAPI
         }
 
         // Whether p is inside any of the scene's buildings (its IndoorArea boxes, to the walls).
-        private static bool InAnyBuilding(Vector3 p, GameScene gs)
+        internal static bool InAnyBuilding(Vector3 p, GameScene gs)
         {
             if (gs == null) return false;
             foreach (IndoorArea a in Resources.FindObjectsOfTypeAll<IndoorArea>())
@@ -387,7 +376,7 @@ namespace GK2DonkeyAPI
         // Through a building's door riding, then driving with the cart refused, then with it allowed, and back out each
         // time: where the mount and the cart are, on which floor. Whatever happens inside, the keeper is brought back to
         // where he started, by a door, once control is his again.
-        private static IEnumerator IndoorsThroughADoor()
+        internal static IEnumerator IndoorsThroughADoor()
         {
             string notHere = WhyNotFromHere();
             if (notHere != null)
@@ -438,7 +427,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static IEnumerator DoorRounds(Vector3 inside, IndoorSwitches sw)
+        internal static IEnumerator DoorRounds(Vector3 inside, IndoorSwitches sw)
         {
             Vector3 near = Spot(home, 3f) ?? home;
             MountHandle plain = Spawn(near, right: homeFacing > 0f);
@@ -464,7 +453,7 @@ namespace GK2DonkeyAPI
                 }
 
                 // riding allowed, the cart not: riding in and out, with a foal of the ridden mount, which comes along
-                // through both doors (the user, 2026-10-24: Gerry's babies stayed in the house when he was ridden out)
+                // through both doors (the user, 2026-10-24: a mount's babies stayed in the house when it was ridden out)
                 MountHandle baby = Mounts.SpawnFoal(Owner, plain, 0.6f, persist: false);
                 if (baby != null) yield return Until(() => baby.IsReady, 6f);
                 string ByParent()
@@ -563,7 +552,7 @@ namespace GK2DonkeyAPI
         // 2026-10-21). Then a door that isn't the morgue: the ride goes on and the corpse stays on the cart. The door
         // is the indoor light plus the door note the morgue's door would leave (MorgueHandover.LastDoorId): the real
         // door's id would reach the game's quest triggers.
-        private static IEnumerator IndoorsMorgue()
+        internal static IEnumerator IndoorsMorgue()
         {
             string notHere = WhyNotFromHere();
             if (notHere != null)
@@ -681,7 +670,7 @@ namespace GK2DonkeyAPI
         // all along. He gets on their parent: they keep to it (ridden); off again: with him. He gets on another mount:
         // back to their parent. Into the indoor light with "come indoors" off: back to the parent, with him again
         // outside; with it on: they stay with him. The switch off: back to the parent.
-        private static IEnumerator FoalsOnFoot()
+        internal static IEnumerator FoalsOnFoot()
         {
             string notHere = WhyNotFromHere();
             if (notHere != null)
@@ -689,7 +678,6 @@ namespace GK2DonkeyAPI
                 Skip(notHere);
                 yield break;
             }
-            SaddleUpBabiesRows();
             Vector3 near = Spot(home, 3f) ?? home;
             MountHandle p = Spawn(near, right: true);
             MountHandle other = Spawn(near + new Vector3(0f, 0f, 3f), right: true);
@@ -850,17 +838,17 @@ namespace GK2DonkeyAPI
 
         // Each baby its own (FoalVariety.cs, the user 2026-10-26): the same seed gives the same baby (every load), its
         // siblings and another family differ, strength 0 makes them alike, the ranges hold, and a shade turns a colorize
-        // colour. Then Saddle Up's own babies, when it has some out: their sizes and temperaments differ.
-        private static IEnumerator FoalVarietyChecks()
+        // colour. Then a baby made a new size in place.
+        internal static IEnumerator FoalVarietyChecks()
         {
             FoalLooks a = FoalLooks.For("salt1", "donkey", 0, 1f), again = FoalLooks.For("salt1", "donkey", 0, 1f);
             FoalLooks sib = FoalLooks.For("salt1", "donkey", 1, 1f), other = FoalLooks.For("salt2", "donkey", 0, 1f);
             Check(a.Size == again.Size && a.Hue == again.Hue && a.Temper.Energy == again.Temper.Energy,
                 $"the same baby every time: size {a.Size:0.000}, hue {a.Hue:0.0}, energy {a.Temper.Energy:0.00}, twice");
-            FoalLooks dragon0 = FoalLooks.For("salt1", "dragon", 0, 1f);
-            Check(a.Size != sib.Size && a.Size != other.Size && dragon0.Hue != a.Hue && dragon0.Temper.Energy != a.Temper.Energy,
-                $"its sibling and another family differ in size ({a.Size:0.000}, {sib.Size:0.000}, {other.Size:0.000}); the dragon's first baby in shade and temper");
-            Check(dragon0.Size == a.Size, $"but a baby's size factor is the same on every mount ({a.Size:0.000}, {dragon0.Size:0.000}): a mount switch doesn't remake it");
+            FoalLooks crab0 = FoalLooks.For("salt1", "crab", 0, 1f);
+            Check(a.Size != sib.Size && a.Size != other.Size && crab0.Hue != a.Hue && crab0.Temper.Energy != a.Temper.Energy,
+                $"its sibling and another family differ in size ({a.Size:0.000}, {sib.Size:0.000}, {other.Size:0.000}); another mount's first baby in shade and temper");
+            Check(crab0.Size == a.Size, $"but a baby's size factor is the same on every mount ({a.Size:0.000}, {crab0.Size:0.000}): a mount switch doesn't remake it");
             FoalLooks plain = FoalLooks.For("salt1", "donkey", 0, 0f);
             Check(plain.Size == 1f && plain.Hue == 0f && plain.Brightness == 1f && plain.Temper.IsPlain, "variety 0: all alike");
             float sMin = 9f, sMax = 0f, bMin = 9f, bMax = 0f, hMax = 0f, eMin = 9f, eMax = -9f;
@@ -874,7 +862,7 @@ namespace GK2DonkeyAPI
             }
             Check(sMin < 0.92f && sMax > 1.08f && sMin >= 0.8f && sMax <= 1.2f && bMin < 0.9f && bMax > 1.1f && hMax > 6f && eMin < -0.6f && eMax > 0.6f,
                 $"noticeable over 300 babies: size {sMin:0.00}-{sMax:0.00}, brightness {bMin:0.00}-{bMax:0.00}, hue up to {hMax:0.0} degrees, energy {eMin:0.00} to {eMax:0.00}");
-            // visible on the Black coat preset too (brightness 0.35, saturation 0.2: five dragon babies looked alike,
+            // visible on the Black coat preset too (brightness 0.35, saturation 0.2: five babies of one mount looked alike,
             // 2026-10-26): the darkest and the lightest, most tinged baby a clear step apart
             var black = new Dictionary<string, object> { ["CoatBrightness"] = 0.35f, ["CoatSaturation"] = 0.2f };
             FoalLooks lo = FoalLooks.Alike, hi = FoalLooks.Alike;
@@ -888,28 +876,7 @@ namespace GK2DonkeyAPI
             string shifted = FoalLooks.ShiftHex("8A5A36", 10f, 1f);
             Check(shifted != "8A5A36" && shifted.Length == 6, $"a shade turns a colorize colour (8A5A36 -> {shifted})");
 
-            MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
-            var sizes = new List<string>();
-            var mine = new HashSet<float>();
-            var tempers = new HashSet<float>();
-            for (int i = 0; me != null && i < me.Foals.Count; i++)
-            {
-                MountHandle f = me.Foals[i];
-                if (f == null || !f.Exists) continue;
-                sizes.Add($"{f.Scale:0.00} ({f.I.Temper.Energy:+0.00;-0.00})");
-                mine.Add(f.Scale);
-                tempers.Add(f.I.Temper.Energy);
-            }
-            if (sizes.Count >= 2)
-            {
-                Check(tempers.Count == sizes.Count, $"Saddle Up's babies: each its own temperament; sizes and energy {string.Join(", ", sizes)} ({mine.Count} different sizes; two can share one in 0.02 steps)");
-            }
-            else
-            {
-                Info($"Saddle Up has {sizes.Count} baby out: its own babies not compared");
-            }
-
-            // Another size in place (a mount switch between baby sizes, Gerry's 0.33 and the donkey's 0.6): the same baby,
+            // Another size in place (a mount switch between baby sizes, a large-drawn mount's 0.33 and the donkey's 0.6): the same baby,
             // where it stood, its view made again at the new size (it used to be removed and spawned anew)
             if (WhyNotFromHere() != null)
             {
@@ -941,34 +908,6 @@ namespace GK2DonkeyAPI
             {
                 foreach (MountHandle h in Mounts.InstancesOf(Owner)) if (h.Exists) h.Remove();
             }
-        }
-
-        // Saddle Up's babies rows in a section of their own, the new one among them, each reaching the companion.
-        private static void SaddleUpBabiesRows()
-        {
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            if (saddle == null)
-            {
-                Info("Saddle Up's page isn't shown: its babies rows not checked");
-                return;
-            }
-            var keys = new[] { "Foals", "FoalsFollow", "FoalsIndoors" }; // "FoalsWearSkin" retired 2026-10-27: babies always look like their parent
-            var where = new List<string>();
-            bool all = true;
-            foreach (string k in keys)
-            {
-                MountSettingsPage.Row row = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == k);
-                all &= row != null && row.ShownSection == "Mount" && row.IsLook; // the mount's own, in the Mounts panel's journal (2026-10-26)
-                where.Add(k + " " + (row == null ? "missing" : row.ShownSection));
-            }
-            Check(all, $"Saddle Up's babies rows are the mount's, in the Mounts panel's journal ({string.Join(", ", where)})");
-            Check(!saddle.Rows.Exists(x => x.Entry != null && x.Entry.Definition.Key.StartsWith("FoalsWearSkin", System.StringComparison.Ordinal)) && saddle.IsRetired("Mount", "FoalsWearSkin"),
-                "no \"Babies are the same mount and skin\" row; its key is retired (the babies always look like their parent)");
-            MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
-            MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
-            bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;
-            Check(follow != null && me.LookOf(MountCatalog.DonkeyId).FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the donkey's own ({(on ? "on" : "off")})");
-            Check(follow?.Entry != null && Equals(follow.Entry.DefaultValue, true), $"and it is on by default in Saddle Up ({follow?.Entry?.DefaultValue})");
         }
     }
 }

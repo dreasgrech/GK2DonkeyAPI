@@ -11,7 +11,7 @@ namespace GK2DonkeyAPI
     // donkey the companion's mount comes and is ridden.
     internal static partial class SelfTest
     {
-        private static IEnumerator PanelRideButtons()
+        internal static IEnumerator PanelRideButtons()
         {
             string notHere = WhyNotFromHere();
             if (notHere != null)
@@ -19,10 +19,6 @@ namespace GK2DonkeyAPI
                 Skip(notHere);
                 yield break;
             }
-            // the keys while the panel is open: only the panel's own key works there (the user, 2026-10-22: H in the panel got him on and off)
-            bool? ride = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "RideKey"), cart = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "CartKey"), panelKey = KeyActions.WorksOverPanel("dreas.gk2.saddleup", "MountsKey");
-            if (ride == null) Info("Saddle Up's keys aren't polled: the over-the-panel check skipped");
-            else Check(ride == false && cart == false && panelKey == true, $"with the panel open the ride and cart keys wait, the panel key works (ride {ride}, cart {cart}, panel {panelKey})");
             MountCompanion c = Mounts.Companion(Owner); // the run's own GUID: a made-up one is warned about as a typo at every spawn
             c.KeepWithSaves = false;
             c.FoalCount = 0;

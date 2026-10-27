@@ -52,7 +52,7 @@ namespace GK2DonkeyAPI
 
             Header("Tuning: " + title);
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("Mount and skin", "Whose values the rows below are: a mount (Donkey, Dragon, ...) and one of its skins. It follows what you ride until you pick one here; 'Follow my ride' goes back to that."), label, Wd(LabelW));
+            GUILayout.Label(Tip("Mount and skin", "Whose values the rows below are: a mount (Donkey, ...) and one of its skins. It follows what you ride until you pick one here; 'Follow my ride' goes back to that."), label, Wd(LabelW));
             IReadOnlyList<(string Id, string Label)> choices = Looks.SkinChoices();
             int idx = 0;
             for (int i = 0; i < choices.Count; i++)
@@ -69,18 +69,18 @@ namespace GK2DonkeyAPI
             }
             GUILayout.Label(ridingIt
                 ? "You ride this mount and skin now: every change shows on it at once."
-                : r != null ? $"You ride a {MountLabel(Looks.Find(r.LooksRig.Wearing), r.LooksRig.MountNow)}; ride this one to see these changes live (Saddle Up: Mount, Skin)."
-                : "Nothing is ridden: pick this skin in Saddle Up (Mount, Skin) and ride it to see the changes live.", small);
+                : r != null ? $"You ride a {MountLabel(Looks.Find(r.LooksRig.Wearing), r.LooksRig.MountNow)}; ride this one to see these changes live (your mod's settings: Mount, Skin)."
+                : "Nothing is ridden: pick this skin in your mod's settings (Mount, Skin) and ride it to see the changes live.", small);
             if (EditingNow)
             {
                 GUILayout.Label($"Note: {editing.Describe()} is being edited on the Instances tab. This tab never changes that one donkey: it changes the mount and skin, and a value that donkey has of its own (magenta there) still wins on it.", small);
             }
-            GUILayout.Label("A mount (Donkey, Giant Rat, Dragon) has skins (the donkey: Default, Hellfire). The mount's rows are shared by all its skins; the skin's rows are that look's only. They belong to the mount and skin, not to you: every donkey that is them uses these values, in every save and for every player who has the file. Your own settings on the other tabs are untouched; a value set here replaces yours only while a donkey is this mount. Yellow = set here; right-click a row = not set (yours applies).", small);
+            GUILayout.Label("A mount (the Donkey, or one a mod adds) has skins (the donkey: Default and any a mod draws over it). The mount's rows are shared by all its skins; the skin's rows are that look's only. They belong to the mount and skin, not to you: every donkey that is them uses these values, in every save and for every player who has the file. Your own settings on the other tabs are untouched; a value set here replaces yours only while a donkey is this mount. Yellow = set here; right-click a row = not set (yours applies).", small);
 
             if (mount == Catalog.Donkey)
             {
                 Header("The mount: Donkey (the game's own)");
-                GUILayout.Label("The donkey mount has no values of its own: the Riding tab is where it is tuned. Its skins (Hellfire, ...) can still move their pictures below.", small);
+                GUILayout.Label("The donkey mount has no values of its own: the Riding tab is where it is tuned. Its skins (a mod's, drawn over it) can still move their pictures below.", small);
             }
             else
             {
@@ -103,7 +103,7 @@ namespace GK2DonkeyAPI
             return string.IsNullOrEmpty(mountsSkinId) ? null : Looks.Find(mountsSkinId);
         }
 
-        // "Dragon (skin: Red Dragon)", "Donkey (the game's own skin)": the mount, then its skin, in every sentence.
+        // "Crab (skin: Red Crab)", "Donkey (the game's own skin)": the mount, then its skin, in every sentence.
         private static string MountLabel(Looks.SkinDef skin, Catalog.Entry mount)
         {
             if (skin == null) return "Donkey (the game's own skin)";
@@ -146,7 +146,7 @@ namespace GK2DonkeyAPI
             if (mount.Foals)
             {
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(Tip("Babies' size (x the grown one)", "The view's scale of a baby: the donkey's foals are 0.60; a mount drawn three times its creature's size (Gerry) wants 0.33 so its babies are the creature's own size. Saddle Up's babies take the new size within a second. Saved as foal_scale in the mount's file."), Mathf.Abs(mount.FoalScale - 0.6f) > 0.001f ? changed : label, Wd(LabelW));
+                GUILayout.Label(Tip("Babies' size (x the grown one)", "The view's scale of a baby: the donkey's foals are 0.60; a mount drawn three times its creature's size wants 0.33 so its babies are the creature's own size. Babies out in the world take the new size within a second. Saved as foal_scale in the mount's file."), Mathf.Abs(mount.FoalScale - 0.6f) > 0.001f ? changed : label, Wd(LabelW));
                 float size = GUILayout.HorizontalSlider(mount.FoalScale, 0.2f, 1f, Wd(SliderW - 50f));
                 GUILayout.Label(mount.FoalScale.ToString("0.00"), label, Wd(50f));
                 GUILayout.EndHorizontal();
@@ -537,7 +537,7 @@ namespace GK2DonkeyAPI
         }
 
         // Where the rider sits on this skin: a row of its picture (every player, whatever their AutoSeat), this
-        // frame's picture top (Gerry), or none (the player's own seat keys).
+        // frame's picture top (a mount drawn from the game's own character frames), or none (the player's own seat keys).
         private static void DrawSkinSeat(Looks.SkinDef skin, Catalog.Entry mount)
         {
             Header("The rider's seat on this skin  (seat = <row> | picture)");
@@ -809,7 +809,7 @@ namespace GK2DonkeyAPI
         private static int mountsSeenVersion = -1;     // Catalog.Version last seen: a change bumps it (Catalog.Touch)
         private static bool mountsDirty;
         private static float mountsLastChange;
-        private static string mountsLastSaved;         // "11:42:07 to gerry" for the label
+        private static string mountsLastSaved;         // "11:42:07 to crab" for the label
         private static readonly List<(string Label, string Path, string Text, Func<string> Reload)> mountsUndo = new List<(string, string, string, Func<string>)>();
         private static float mountsUndoAt = -100f; // when the last undo step was taken (saves close together share one)
 

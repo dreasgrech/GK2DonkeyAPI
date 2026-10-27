@@ -1,5 +1,12 @@
 # Mounts and skins as separate mods (2026-10-20)
 
+**2026-10-27: the donkey's skins are a pack too, and the API keeps no old ids.** Hellfire and Royal Parade left
+Saddle Up for the external pack GK2 Saddle Up: Donkey Skins (`packs/SaddleUpDonkeySkins/`, ids
+`donkey/saddleup-donkey-skins.hellfire` and `.royal-parade`, Hellfire's effect `saddleup-donkey-skins.hellfire`);
+Saddle Up's built-in content is Gerry alone. The API's rename tables are gone (it knows nothing of Saddle Up): the old
+names below (`hellfire`, `saddleup.dragon`, `red-dragon` ...) no longer find anything. docs/making-a-mount.md "Built
+in or external" is current.
+
 **2026-10-26, later: built in or external.** The dragon, rat, snail and worm left Saddle Up's DLL for external packs
 of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), their ids by the pack
 (`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. The earlier
@@ -125,7 +132,8 @@ tunes it, the side file keeps `Skin = saddleup.dragon/default` (the skin's full 
 every instance that is one.
 
 **When the mod is gone again** (uninstalled, or the API loaded without it): the cfg keeps `Mount = dragon` and the
-row shows "dragon (not installed)" and is left alone (MountSettingsPage.cs:465, 503); the companion's `MountId`
+row shows "Dragon (not installed)" (a name made from the id, since 2026-10-27; the id itself before) and is left
+alone (MountSettingsPage.cs:465, 503); the companion's `MountId`
 falls back to the donkey (MountCompanion.cs:227), so the player rides a donkey; the per-mount colour rows vanish from
 the page but their cfg lines stay (BepInEx keeps orphaned entries on save); every kept instance with
 `Skin = saddleup.dragon/default` loads as a donkey wearing a missing skin, its cart and babies with it, the record's label says

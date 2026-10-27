@@ -340,7 +340,7 @@ namespace GK2DonkeyAPI
         }
 
         // Colours are never mod defaults. Every player starts with the game's own art; colours are chosen by a mod
-        // (Saddle Up's presets, Mounts.Colors) or by the player. Found 2026-10-02: a colour test on the panel was
+        // (a mod's presets, Mounts.Colors) or by the player. Found 2026-10-02: a colour test on the panel was
         // still set when this button was pressed, and the shipped defaults gave every player a green donkey.
         // tests/DefaultsScan fails if a colour ever gets into defaults.cfg again.
         public static bool IsColor(string group) => group != null && group.StartsWith("Colors", StringComparison.OrdinalIgnoreCase);

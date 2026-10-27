@@ -12,18 +12,18 @@ namespace GK2DonkeyAPI
     // it came from: the default's red, the variant's navy, its erase colour's hole.
     internal static partial class SelfTest
     {
-        private static bool SameRgb(Color32 a, Color32 b) => a.a != 0 && a.r == b.r && a.g == b.g && a.b == b.b;
+        internal static bool SameRgb(Color32 a, Color32 b) => a.a != 0 && a.r == b.r && a.g == b.g && a.b == b.b;
 
-        private static readonly Color32 LayerRed = new Color32(170, 0, 0, 255), LayerDark = new Color32(16, 16, 16, 255), LayerNavy = new Color32(0, 0, 170, 255);
+        internal static readonly Color32 LayerRed = new Color32(170, 0, 0, 255), LayerDark = new Color32(16, 16, 16, 255), LayerNavy = new Color32(0, 0, 170, 255);
 
         // The default's picture of the layering scenarios: a red body (x 30-65, y 30-53 from the bottom) and a dark patch
         // above it (x 30-37, y 54-57; [Colors] Dark = 101010).
-        private static byte[] LayerDefaultPicture() => TempPng((30, 30, 36, 24, LayerRed), (30, 54, 8, 4, LayerDark));
+        internal static byte[] LayerDefaultPicture() => TempPng((30, 30, 36, 24, LayerRed), (30, 54, 8, 4, LayerDark));
 
         // A variant built on its default: what it doesn't say is the default's (description, offset, colours,
         // a picture, tuning, a sound), what it says is its own (seat = none, a picture, a tuning key), it wears so, an
         // edit to the default reaches it, and its file keeps its own lines only (the tab's set and taken back too).
-        private static IEnumerator SkinVariant()
+        internal static IEnumerator SkinVariant()
         {
             const string owner = Owner + ".layer";
             const string mount = "selftest.layered", def = mount + "/default", blue = mount + "/blue";
@@ -130,7 +130,7 @@ namespace GK2DonkeyAPI
         // picture with the variant's erase colour cleared and its other pixels on top, built as one plain frame; the
         // default's colours are Coat (or what the default names), the variant's named ones their region, a colour only
         // in its own pixels and unnamed kept as drawn.
-        private static IEnumerator SkinOverDefault()
+        internal static IEnumerator SkinOverDefault()
         {
             const string owner = Owner + ".layerover";
             const string mount = "selftest.overbeast", def = mount + "/default", horns = mount + "/horns";
@@ -207,7 +207,7 @@ namespace GK2DonkeyAPI
         // again from its file (its wearer rebuilds on the new one), then withdrawn (another mod's variant stands alone,
         // said); a variant of another canvas takes the settings, not the pictures nor the seat; a code skin takes the
         // default's values by its sentinels and gives its own; the donkey's skins have no default and are as before.
-        private static IEnumerator SkinLayerLifecycle()
+        internal static IEnumerator SkinLayerLifecycle()
         {
             const string owner = Owner + ".layerlife", joinerOwner = Owner + ".layerjoin";
             const string mount = "selftest.later", def = mount + "/default", early = mount + "/selftest.early", big = mount + "/big";
@@ -279,13 +279,6 @@ namespace GK2DonkeyAPI
                 code2?.Dispose();
                 code1 = code2 = null;
 
-                // (d) the donkey's skins: no default, nothing rewritten
-                foreach (string id in new[] { Sk("hellfire"), Sk("royal-parade") })
-                {
-                    Looks.SkinDef s = Looks.Find(id);
-                    if (s == null) { Warn($"{id} is not registered (Saddle Up not loaded?)"); continue; }
-                    Check(s.Parent == null && s.AloneValues == null && !s.OverDefault && !Looks.IsVariantSlot(s) && Mounts.Looks.Find(id)?.BuiltOn == null && Looks.TestLoaded(id)?.Layered != true, $"{id}: no default, nothing resolved, as before (over {s.Over})");
-                }
 
                 // (e) the default withdrawn: another mod's variant stands alone again, its wearer rebuilds
                 Info("the next \"was withdrawn by\" warning is this test's own: another mod's variant is left standing alone");

@@ -15,11 +15,11 @@ namespace GK2DonkeyAPI
     // hit, death, the fight's end, the strafe (docs/self-tests.md, "Not automated").
     internal static partial class SelfTest
     {
-        private const string GroupFight = "Fights from the saddle";
-        private const string NotTheCart = "Not the cart in a fight.";
-        private const float WeaponRestAboveBody = 0.632f; // main_character at 0.6 + Weapon Container at 0.032, the probe's dump
+        internal const string GroupFight = "Fights from the saddle";
+        internal const string NotTheCart = "Not the cart in a fight.";
+        internal const float WeaponRestAboveBody = 0.632f; // main_character at 0.6 + Weapon Container at 0.032, the probe's dump
 
-        private static bool ArmourOnBelt()
+        internal static bool ArmourOnBelt()
         {
             try
             {
@@ -31,23 +31,23 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static Animator KeeperAnimator() => PC?.View?.PlayerAnimation?.Animator;
+        internal static Animator KeeperAnimator() => PC?.View?.PlayerAnimation?.Animator;
 
-        private static int KeeperState()
+        internal static int KeeperState()
         {
             Animator a = KeeperAnimator();
             return a != null ? a.GetInteger(AnimationComponentBase.idStateAnimator) : -1;
         }
 
-        private static SpriteRenderer KeeperLayer(string path)
+        internal static SpriteRenderer KeeperLayer(string path)
         {
             Transform t = KeeperAnimator()?.transform.Find(path);
             return t != null ? t.GetComponent<SpriteRenderer>() : null;
         }
 
-        private static string SpriteName(SpriteRenderer r) => r != null && r.sprite != null ? r.sprite.name : "none";
+        internal static string SpriteName(SpriteRenderer r) => r != null && r.sprite != null ? r.sprite.name : "none";
 
-        private static void ArmourView(bool on)
+        internal static void ArmourView(bool on)
         {
             try
             {
@@ -61,7 +61,7 @@ namespace GK2DonkeyAPI
 
         // The checks shared by the armour scenarios: the pose the armour has frames for, the body drawn with an armour
         // sprite, the rod gone, the weapons at their rest height over the physical body.
-        private static void CheckArmouredRider(string when)
+        internal static void CheckArmouredRider(string when)
         {
             int state = KeeperState();
             Check(state == (int)AnimationState.Idle || state == (int)AnimationState.Walk, $"{when}: the animator's State is Idle or Walk ({state})");
@@ -84,7 +84,7 @@ namespace GK2DonkeyAPI
 
         // The armour goes on and off while riding (the quest's talk, the fight's end): the ride goes on, the pose
         // follows the armour, the body is never a blue shape.
-        private static IEnumerator FightArmourWhileRiding()
+        internal static IEnumerator FightArmourWhileRiding()
         {
             if (!ArmourOnBelt())
             {
@@ -125,7 +125,7 @@ namespace GK2DonkeyAPI
 
         // Mounting in armour: the ride works, every way to a cart is refused with the same words (a donkey with its
         // cart, the style switch, a hitch from the saddle, a hitch on foot).
-        private static IEnumerator FightMountInArmour()
+        internal static IEnumerator FightMountInArmour()
         {
             if (!ArmourOnBelt())
             {
@@ -175,7 +175,7 @@ namespace GK2DonkeyAPI
 
         // The armour goes on while driving (the quest's talk with the cart hitched): the cart is left standing by the
         // keeper, the ride goes on without it.
-        private static IEnumerator FightArmourWhileDriving()
+        internal static IEnumerator FightArmourWhileDriving()
         {
             if (!ArmourOnBelt())
             {
@@ -221,7 +221,7 @@ namespace GK2DonkeyAPI
 
         // A sword attack from the saddle: the attack state does not end the ride, and the ride is still on when the
         // free state is back.
-        private static IEnumerator FightAttackRides()
+        internal static IEnumerator FightAttackRides()
         {
             if (!ArmourOnBelt())
             {
@@ -271,7 +271,7 @@ namespace GK2DonkeyAPI
 
         // Build mode (placing a barricade from the command post in a pre-fight) takes control ByBuilding: the ride ends
         // with that reason, as the rules say, and nothing else breaks.
-        private static IEnumerator FightBuildModeDismounts()
+        internal static IEnumerator FightBuildModeDismounts()
         {
             MountHandle h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
             if (h == null)

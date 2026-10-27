@@ -125,8 +125,8 @@ namespace GK2DonkeyAPI
         internal static readonly string[] MountRegionKeys = { "Coat", "Dark", "Muzzle", "Eye", "Harness" };
 
         // The swap palette's size limit for a look: up to this many colours the exact swap (the keeper's own palette
-        // is 32 wide; the donkey 41, the dragons 21, the rat 17); over it the colour cube, one lookup for any number
-        // (the snail 300, the worm 720: a 720-wide swap is 720 texture samples per pixel).
+        // is 32 wide; the donkey 41, smaller mounts 17 to 21); over it the colour cube, one lookup for any number
+        // (hand-painted mounts 300 or 720: a 720-wide swap is 720 texture samples per pixel).
         internal const int PaletteMaxColours = 48;
 
         // The donkey's own colours of a mount region, packed RGB (for the recipes: the coat to darken, the outline to keep).

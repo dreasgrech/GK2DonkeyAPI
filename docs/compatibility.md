@@ -127,10 +127,12 @@ changelog line that says it reaches new installs only.
   to be replaced by one with a parked loaded cart saved by the 0.40.0 build. Every value in a cfg fixture differs from its default, so
   a lost value shows.
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
-  for every version folder, Saddle Up's cfg through the live page's own carry-over (`MountSettingsPage.Upgrade`:
-  each old line lands on a row and reads as its type), the API's cfg key by key against what this build binds, the
-  side file through the real reader (every record whole), and the set-aside of a format-99 file. Run it before every
-  release and after any change to a page, a bind, an enum or the side file.
+  for every version folder, the API's cfg key by key against what this build binds, the side file through the real
+  reader (every record whole), and the set-aside of a format-99 file. Saddle Up's cfg through the live page's own
+  carry-over (`MountSettingsPage.Upgrade`: each old line lands on a row and reads as its type) is the integration
+  tests' "upgrade: Saddle Up's cfg as every released version wrote it ..." since 2026-10-27 (the dev plugin
+  `tools/GK2DonkeyAPI.IntegrationTests`, same group; docs/self-tests.md). Run both before every release and after any
+  change to a page, a bind, an enum or the side file.
 - **`tests/ApiSurface`** for the mod-author API.
 - **The in-game upgrade rehearsal** (checklist 5): the release zip over a config written by the previous release, the
   parked loaded cart from before the update still there with its load, the colours as they were.

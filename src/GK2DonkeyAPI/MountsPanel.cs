@@ -189,8 +189,8 @@ namespace GK2DonkeyAPI
             return list;
         }
 
-        // The chosen mount whose mod or pack is gone (the user, 2026-10-27: Saddle Up alone with the Dragon chosen showed the
-        // dragon's raw id on the right and no entry for it in the list): a greyed entry at the end, named from its id, so the
+        // The chosen mount whose mod or pack is gone (the user, 2026-10-27: a mod alone, a mount of a missing pack chosen, showed the
+        // mount's raw id on the right and no entry for it in the list): a greyed entry at the end, named from its id, so the
         // choice shows and another one can be picked. The choice itself is kept (the donkey comes instead).
         private static void AddMissingChosen(List<Entry> list)
         {
@@ -239,11 +239,12 @@ namespace GK2DonkeyAPI
             Rect(contentScroll.gameObject, statsColX, rowsTop, statsColW, Mathf.Max(40f, statsColTop + StageH - rowsTop));
         }
 
-        // A mount's name from its id when nothing else knows it: "saddleup-dragon.dragon" -> "Dragon", "my-mod.big-crab" -> "Big crab".
+        // A mount's or skin's name from its id when nothing else knows it (its pack not installed): "acme-pack.crab"
+        // -> "Crab", "my-mod.big-crab" -> "Big crab", "donkey/acme-pack.blaze" -> "Blaze", "donkey/frost" -> "Frost".
         internal static string NameFromId(string id)
         {
             if (string.IsNullOrEmpty(id)) return "?";
-            string s = id.Substring(id.LastIndexOf('.') + 1).Replace('-', ' ').Replace('_', ' ').Trim();
+            string s = id.Substring(Mathf.Max(id.LastIndexOf('.'), id.LastIndexOf('/')) + 1).Replace('-', ' ').Replace('_', ' ').Trim();
             return s.Length == 0 ? id : char.ToUpperInvariant(s[0]) + s.Substring(1);
         }
 
@@ -372,7 +373,7 @@ namespace GK2DonkeyAPI
             pic.anchorMin = pic.anchorMax = new Vector2(0.5f, 0.5f);
             pic.pivot = new Vector2(0.5f, 0.5f);
             picture.gameObject.SetActive(false);
-            // a chosen mount that isn't installed: no picture (the donkey drawn under the dragon's name read as a mix-up,
+            // a chosen mount that isn't installed: no picture (the donkey drawn under another mount's name read as a mix-up,
             // the user 2026-10-27), this line in its place
             stageNote = Text(stage, "not installed note", "Not installed", 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
             stageNote.gameObject.SetActive(false);
@@ -1269,7 +1270,7 @@ namespace GK2DonkeyAPI
             ((RectTransform)img.transform).sizeDelta = new Vector2(Mathf.Round(icon.W * k), Mathf.Round(icon.H * k));
         }
 
-        // The same, centred in its px box whose top left is (x, y) (the user, 2026-10-27: the rat sat up by the name: a wide
+        // The same, centred in its px box whose top left is (x, y) (the user, 2026-10-27: a mount sat up by the name: a wide
         // short picture kept the box's top left)
         private static void ShowCentred(RawImage img, MountIcons.Icon icon, float px, float x, float y)
         {
@@ -1839,7 +1840,7 @@ namespace GK2DonkeyAPI
 
         // The stage frames a new mount's picture in the same frame the mount changes and resizes its texture in place
         // (PreviewStage.NewTexture): the picture's box, fitted only on the 0.2 s picture timer, showed the new mount in
-        // the old one's box for a few frames, squeezed smaller (the user's video, 2026-10-22: the dragon and its cart
+        // the old one's box for a few frames, squeezed smaller (the user's video, 2026-10-22: a mount and its cart
         // small for 4 frames, then their size). So every frame, just before the canvases draw, a picture whose texture
         // is no longer the size it was fitted at is fitted again.
         private static readonly Dictionary<RawImage, (int W, int H)> fitted = new Dictionary<RawImage, (int, int)>();

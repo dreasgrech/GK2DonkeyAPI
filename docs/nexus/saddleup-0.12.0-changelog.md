@@ -9,11 +9,12 @@ For players. GK2 Donkey API 0.40.0 is in the download. Your donkey, cart, colour
   abilities and its skins. Ride and Drive the cart call it from there; Customize opens its colours. Picking a mount
   in the list only shows it: Ride or Drive the cart makes it yours.
 - **Saddle Up comes with two mounts:**
-  - **The Donkey**: normal speed, a cart of 6 items. It has two new skins: **Hellfire** (horns, a devil's tail,
-    glowing eyes, lava cracks) and **Royal Parade** (a saddle cloth that follows your harness colour, and a crown).
+  - **The Donkey**: normal speed, a cart of 6 items.
   - **Gerry**: the game's talking skull, three times his size. He's fast and pulls a cart of 4, and he talks.
-- **More mounts are separate downloads:** GK2 Saddle Up: Dragon, GK2 Saddle Up: Critters, or the All Mounts zip with
-  both. Other mods can add mounts and skins too.
+- **More mounts and skins are separate downloads**, each on its own: **GK2 Saddle Up: Dragon** (a dragon that
+  flies), **GK2 Saddle Up: Critters** (the rat, the snail and the worm) and **GK2 Saddle Up: Donkey Skins** (two new
+  skins for the donkey: **Hellfire**, with horns, a devil's tail, glowing eyes and lava cracks, and **Royal Parade**,
+  a saddle cloth that follows your harness colour, and a crown). Other mods can add mounts and skins too.
 - **Each mount has its own speed and its own load:** the faster it is, the less its cart holds. If you switch to a
   mount that pulls fewer items than the cart has on it, the cart is left standing with its load. Take the extra off,
   and it hitches again.

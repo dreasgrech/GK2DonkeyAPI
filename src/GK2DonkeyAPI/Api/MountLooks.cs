@@ -7,7 +7,7 @@ namespace GK2DonkeyAPI.Api
 {
     // The skins the donkey can wear (docs/skins-design.md; docs/skins.md for pack authors): the game's own look
     // ("donkey"), the built-in skins, every skin pack found on disk, and the skins mods register here. A skin is named
-    // within its mount: its Id is "<mount id>/<skin>" ("saddleup.dragon/default", "donkey/hellfire"), and every mount
+    // within its mount: its Id is "<mount id>/<skin>" ("acme.crab/default", "donkey/acme.fire"), and every mount
     // but the donkey has one skin called "default", its own look. A donkey wears one through its instance tuning key
     // "Skin" (handle.Tuning.Set(owner, "Skin", info.Id); "donkey" or "" is the game's own look), or through
     // MountCompanion.Skin.
@@ -20,13 +20,13 @@ namespace GK2DonkeyAPI.Api
     //     BepInEx/plugins are found by the API itself at start, so most mods need nothing here (docs/skins.md);
     //   - RegisterEmbedded: the same tree embedded in your DLL (EmbeddedResource with logical names
     //     "<prefix><mount>\mount.cfg", "<prefix><mount>\skins\<skin>\<file>", e.g.
-    //     "MyMod.mounts.me.rat\skins\default\bdy_walk_left_03.png");
+    //     "MyMod.mounts.me.crab\skins\default\bdy_walk_left_03.png");
     //   - Register: pictures from your own code (IMountSkinSource gives a Texture2D per frame key; the textures stay
     //     yours, the API never destroys them);
     //   - RegisterRecipe: a rule over the donkey's own frames (a function from the frame's pixels to new pixels), so the
     //     result covers every clip and nothing of the game's art is shipped. Built a few frames a tick when first worn.
     // Every registration returns a handle: dispose it to withdraw the skin (the donkeys wearing it show the game's own
-    // look from their next frame and keep their choice). Register in Awake: a skin registered after Saddle Up's settings
+    // look from their next frame and keep their choice). Register in Awake: a skin registered after a mod's settings
     // page is made works at once through the cfg and is in its list from the page's catch-up (MountSettingsPage.CatchUp).
     public sealed class MountLooks
     {
@@ -54,7 +54,7 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // A skin by its full name ("saddleup.dragon/default"; case doesn't matter), or null. "donkey" and "" give the
+        // A skin by its full name ("acme.crab/default"; case doesn't matter), or null. "donkey" and "" give the
         // game's own look. A short name finds one when it is clear: a mount's id gives its default, a skin's own name
         // the skin when only one mount has a skin of that name.
         public MountSkinInfo Find(string id)
@@ -204,7 +204,7 @@ namespace GK2DonkeyAPI.Api
     public sealed class MountSkinDef
     {
         // The skin's name within its mount ("default": the mount's own look, one per mount; "frost"), or its full
-        // name ("me.dragon/frost"). The registered skin's Id is "<Mount>/<name>".
+        // name ("me.crab/frost"). The registered skin's Id is "<Mount>/<name>".
         public string Id;
         public string Name;
         public string Author;
@@ -246,7 +246,7 @@ namespace GK2DonkeyAPI.Api
         // The babies' own sounds (an instance drawn smaller than the grown one), over the blocks above for them: a
         // squeak where the grown one roars; a pack's [Sounds.Baby]. Null: the grown one's, pitched up by the size.
         public Dictionary<string, MountSound> SoundsBaby;
-        // The rider sits on this frame's picture top instead of a row (a game creature that hops: Gerry).
+        // The rider sits on this frame's picture top instead of a row (a game creature that hops).
         public bool SeatFromPicture;
         // Which of the skin's own colours are Dark, Muzzle, Eye or Harness (hex RRGGBB per region; everything not
         // named is Coat), as a pack's [Colors]; the player's colours then reach them. Null: all Coat.
@@ -443,7 +443,7 @@ namespace GK2DonkeyAPI.Api
         public string Source { get; }
         // Where the rider sits on this skin (docs/seat-investigation.md): the canvas row (from the top) its hip is
         // on, or -1 when the skin declares none (the player's own seat keys apply); SeatFromPicture: on this
-        // frame's picture top instead (Gerry).
+        // frame's picture top instead (a creature that hops).
         public int SeatRow { get; }
         public bool SeatFromPicture { get; }
         // Pictures drawn in front of the rider (a near wing).

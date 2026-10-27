@@ -7,7 +7,9 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 - Every warning in the game's log is fixed (`BepInEx\LogOutput.log` of the last session: no `[Warning` or `[Error`
   lines from our plugins).
 - Nothing a player has on disk from a released version is lost: `docs/compatibility.md` (the four stores and the
-  rules per store). The self-test "upgrade: a released version's player files are all read" is green against every
+  rules per store). The self-test "upgrade: a released version's player files are all read" (the API's files) and the
+  integration tests' "upgrade: Saddle Up's cfg as every released version wrote it ..." (since 2026-10-27,
+  `tools/GK2DonkeyAPI.IntegrationTests`, deployed for the run with `-p:Deploy=true`) are green against every
   folder in `tests/fixtures/released/`, and any `MovedKey` a released layout needs is still in place. (Pre-release
   migration code was removed 2026-10-13; compatibility code is for released data only.)
 - `Plugin.Version` is the mod's one version (the plugin's and `Mounts.ApiVersion`, which reads it); bump it with every
@@ -36,7 +38,9 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
 
 `bash tools/release-scans.sh` (after the release build of section 3: the manifest check reads its DLL) runs them
 all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/logs/release-scans.log`: the dependency
-manifest verified against the installed game (`tools/DepManifest`), `check-dist.py`, and in `tests/`
+manifest verified against the installed game (`tools/DepManifest`), `check-dist.py`, the layering scan
+(`tools/layering-scan.py --dist`, since 2026-10-27: no name of Saddle Up or its packs in `src/GK2DonkeyAPI`, Dev
+included, or in the API DLL's strings, and no pack's name in `src/SaddleUp`), and in `tests/`
 `CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
 `--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game). All must
 end green; `FrameworkScan`
@@ -68,11 +72,11 @@ property change doesn't invalidate the compile), and the check then fails on the
 
 `make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
 `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod;
-Saddle Up's built-in Gerry and donkey skins are packs inside its DLL), read back and compared with `dist/`; this zip is
-the Nexus upload (extracts into the game folder). Besides it, one zip per external pack (`packs/<Pack>/`:
-`GK2-Saddle-Up-Dragon-<v>.zip`, `GK2-Saddle-Up-Critters-<v>.zip`, the version from the pack's CHANGELOG.md, raised
-there when the pack changed) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its own folder): their own
-Nexus files. `release/` is not kept in git.
+Saddle Up's built-in Gerry is a pack inside its DLL), read back and compared with `dist/`; this zip is
+the Nexus upload (extracts into the game folder). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's
+name after `SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragon-<v>.zip`, `GK2-Saddle-Up-Critters-<v>.zip`,
+`GK2-Saddle-Up-Donkey-Skins-<v>.zip`, the version from the pack's CHANGELOG.md, raised there when the pack changed):
+each its own Nexus file. There is no bundle of the packs (the user, 2026-10-27: "ill ship individuals"). `release/` is not kept in git.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
 again; `bin/` holds whichever was built last.
@@ -90,11 +94,12 @@ Rehearse the first start on a clean config, with the game closed:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
    Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\`,
-   `plugins\GK2AssetProbe\` and the dev marker `BepInEx\config\dreas.gk2.dev`.
+   `plugins\GK2AssetProbe\`, `plugins\GK2DonkeyAPI.IntegrationTests\` (the integration tests, when deployed) and the
+   dev marker `BepInEx\config\dreas.gk2.dev`.
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
-   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then the All Mounts zip (or each pack's):
-   `GK2SaddleUpDragon.dll` and `GK2SaddleUpCritters.dll` replace theirs in `plugins\GK2SaddleUpDragon\` and
-   `plugins\GK2SaddleUpCritters\`, with their README and CHANGELOG.
+   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then each pack's zip: `GK2SaddleUpDragon.dll`,
+   `GK2SaddleUpCritters.dll` and `GK2SaddleUpDonkeySkins.dll` replace theirs in `plugins\GK2SaddleUpDragon\`,
+   `plugins\GK2SaddleUpCritters\` and `plugins\GK2SaddleUpDonkeySkins\`, with their README and CHANGELOG.
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
@@ -105,8 +110,13 @@ Rehearse the first start on a clean config, with the game closed:
    are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
    loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
    log's "Settings: ... carried over" lines and no warning; quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`, `Mounts, skins and effects: on.`
-   (since 0.12.0; the Mounts panel lists the donkey, Gerry and every installed pack's mounts),
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded (GK2 Donkey API x.y.z): ride H,
+   cart G`, each installed pack's own line (`GK2 Saddle Up: Dragon 1.0.0: 1 skin(s) registered (the mount
+   saddleup-dragon.dragon)`, `GK2 Saddle Up: Critters 1.0.0: 3 skin(s) registered (the mounts ...)`, `GK2 Saddle Up:
+   Donkey Skins 1.0.0: 2 skin(s) registered for the donkey, and the effect saddleup-donkey-skins.hellfire`; the former
+   `Mounts, skins and effects: on.` went with the 0.10.0 gate on 2026-10-27: the mounts are always on, which ones a
+   player has is which packs they installed; the Mounts panel lists the donkey, Gerry and every installed pack's
+   mounts, and the donkey's Skin list Hellfire and Royal Parade with the Donkey Skins pack),
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).
@@ -176,7 +186,7 @@ with the upgrade scenario green over the 0.9.1 and the 0.10.0 fixtures; no warni
 in that run: a heading with a picture row's label got a picture of its own (the headings are "Mount colours" and
 "Cart colours" now; the page refuses such a row).
 
-Run 2026-10-27 with the release zips of 0.12.0 / API 0.40.0 (`GK2-Saddle-Up-0.12.0.zip` and the All Mounts zip), the dev
+Run 2026-10-27 with the release zips of 0.12.0 / API 0.40.0 (`GK2-Saddle-Up-0.12.0.zip` and the combined packs zip of that day, since dropped), the dev
 marker, the dev DLLs and the dev-only plugins aside (staged by a script: stage-a, capture-a, stage-b, restore).
 **A, a first start** (no cfgs): 392 log lines, no warning, error or exception, no `Dev tools unlocked`, the four pack
 mounts and Gerry declared with their cargo (Gerry 4, rat 2, snail 6, worm 4, the dragon no cart), layout from embedded;
@@ -208,6 +218,22 @@ speed dropdown shown with the switch on; no `[Debug]` in the API cfg. Its cfgs a
 carried over, the old keys kept ("ride R, cart T"); key by key 38 of 38 Saddle Up values and 452 of 452 API values
 kept, the 20 others the rows retired on purpose. The ride on R is in the log, a drive on T is not (the fixture's T is
 the game's Tech Tree too). Saves byte-identical; everything restored.
+
+Run 2026-10-28 00:00-00:40 with the four zips of 2026-10-27 23:56 (the 23:55 dist: Saddle Up with Gerry alone, the
+Donkey Skins pack's zip of its own, 23 of 23 scans green): A on fresh cfgs with all three packs: API 0.40.0 and
+Saddle Up 0.12.0 loaded (ride H, cart G), each pack's own line, cargo layout embedded, no `[Debug]` section, no
+`Dev tools` line, 0 warnings in 472 lines; H, G, items, H leaves the cart, G brings the same cart back (four
+times, the last with 5 items); the Skin list Default / Hellfire / Royal Parade, Hellfire picked; a restart: the skin
+"built ahead (the companion's choice)" at load and worn on the spawn, 0 warnings in 325 lines. The fixture
+`tests/fixtures/released/0.12.0/` remade from A's cfgs (213 + 476 values, the same values as the 15:50 one: the
+skins' move changed no key); its `Steam_1.gk2donkeyapi.dat` is still the 2026-10-22 file (no save in either
+rehearsal, so step 3b's side file with a parked loaded cart written by 0.12.0 wasn't captured). B with the 0.10.0 fixture cfgs over the same DLLs: every moved key "carried over"
+(KeepWithSaves, Volume, the Donkey and Cart colours into Colours), 1 retired General and 7 retired Effects lines
+left in the file, ride R, cart T, the cart left and hitched back, 0 warnings in 474 lines; the saves byte-identical
+after both. Earlier that night the full F11 without the Donkey Skins folder: 1293 passed, 0 failed, its five
+scenarios skipped with the reason, the donkey's Skin list Default only (the kept choice shown as "Hellfire (not
+installed)" since that run: the raw id showed). Not rehearsed: Saddle Up with no pack at all as a zip install (its
+F11 equivalent, the pack-less setups, ran 2026-10-27 14:04).
 
 ## 6. Versions, changelog and hand-off
 

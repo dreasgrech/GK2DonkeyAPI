@@ -1248,6 +1248,20 @@ Every remaining kind of jump will name its cause there.
     so the drop and the lift's equal growth cancel and the trail stays. It is logged as "the camera moved with it
     (following <target>)". The API now references the game's Cinemachine.dll; the call sits in a method of its own
     so that a missing Cinemachine falls back to the old snap with a warning.
+  - **The touch-down's own put, measured 2026-10-27** (the self-test "jump: a real hillside" read the drawn ground
+    stepping 4.0-4.5 px in one frame on three runs of the day and 2.0-2.5 on others; a per-frame probe of the mount's
+    ground sampling, `Mount.Instance.TestGroundProbe`, caught it at frames 12149-12152 of one run). A jump's
+    touch-down puts the body where it already is (the mover walked it onto the ground step by step; the put differs
+    by 0.02), under the 0.05 that switches the smoothing off, but `GiveBack` still called
+    `PlayerPhysicalBody.SetPosition`, which writes `rb.position`, `transform.position` and `playerData.position`
+    outright (the game's code): the drawn body was teleported past the smoothing's lag, up to a physics step ahead
+    (0.27 along the slope, 3.5 px up it), and the next frame the smoothing blended from the old pose again and pulled
+    it back 0.07. A cut forward and back at every touch-down that fell late in a 20 ms step, on the flat too (there
+    sideways only, so the drawn-ground check never saw it); how big depended on the step's phase at the landing, so it
+    came and went between runs. Fixed: a put within 0.05 of the body calls no `SetPosition` at all; the body is where
+    `MovePosition` put it and `playerData.position` was written every step, and the smoothing finishes the last step
+    by itself. Measured after: the smoothed body advancing 0.045 a frame straight through the landing, 1.5 px steps,
+    the yard's twelve landings unchanged. A bigger move keeps the teleport with the smoothing off (above).
 - The flight's bubbles stay `Flight.BubbleS`, 1.5 s (the Flying tab's "Bubble time"; the user: "way too long"). The
   game's own time for a bubble is 2.5 s plus 0.085 s a letter, counted after the letters type in
   (`SpeechBubbleSettings.CalculateBubbleShowingTime`): about 5 s for "Nowhere to land here.". `Mount.Say(text,

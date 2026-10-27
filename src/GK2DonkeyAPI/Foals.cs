@@ -55,7 +55,7 @@ namespace GK2DonkeyAPI
             internal float ViewScale = 1f;
             internal bool Rideable = true;
 
-            // Another size for a baby (its mount changed: Gerry's 0.33 against the donkey's 0.6): the same instance, its
+            // Another size for a baby (its mount changed: a FoalScale of 0.33 against the donkey's 0.6): the same instance, its
             // view made again at the new size on its next frame, as after a scene change. A companion used to remove the
             // baby and spawn a new one, so each such switch put new babies in fresh spots, and the player's own came out
             // of the self-test's mount switches new ("the world's own donkeys came through unchanged", 2026-10-26).

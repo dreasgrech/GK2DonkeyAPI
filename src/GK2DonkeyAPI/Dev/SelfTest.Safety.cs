@@ -6,23 +6,23 @@ namespace GK2DonkeyAPI
 {
     // Never lost (docs/never-lost.md): the safe-spot record, the fall watchdog and the return by hand, each put through
     // what it is for: the keeper placed under the ground and far below the world is back on the last ground he stood
-    // on within moments; a drop onto the ground and standing under a bridge are left alone; the API call, Saddle Up's
-    // rows and button, the refusals with their reasons.
+    // on within moments; a drop onto the ground and standing under a bridge are left alone; the API call (on foot and
+    // riding), the refusals with their reasons.
     internal static partial class SelfTest
     {
-        private const int GroundLayersMask = 6144;
+        internal const int GroundLayersMask = 6144;
 
         // the test's own narration in the keeper's bubble ("Jumping at ..."): not counted as the mod talking (the jump
         // scenario's "no bubble" check counts every Say)
-        private static void TestSay(string text)
+        internal static void TestSay(string text)
         {
             Mount.Say(text, 2f);
             Mount.Instance.TestSaidCount--;
         }
 
-        private static bool SurfaceAtFeet(Vector3 p, float within = 0.3f) => Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, within + 0.05f, GroundLayersMask, QueryTriggerInteraction.Ignore);
+        internal static bool SurfaceAtFeet(Vector3 p, float within = 0.3f) => Physics.Raycast(p + Vector3.up * 0.05f, Vector3.down, within + 0.05f, GroundLayersMask, QueryTriggerInteraction.Ignore);
 
-        private static IEnumerator SafeRecord()
+        internal static IEnumerator SafeRecord()
         {
             Check(Mounts.LastSafeSpot.HasValue, $"a safe spot exists after the load (the game's own place is a seed): {(Mounts.LastSafeSpot is Vector3 s0 ? s0.ToString("F2") : "none")}");
             Vector3 me = Keeper();
@@ -51,7 +51,7 @@ namespace GK2DonkeyAPI
             Check(SurfaceAtFeet(Keeper()), "put back on the ground by the test");
         }
 
-        private static IEnumerator SafeWatchdog()
+        internal static IEnumerator SafeWatchdog()
         {
             if (Plugin.FallGuard != null && !Plugin.FallGuard.Value) { Skip("FallGuard is off in the cfg"); yield break; }
             Vector3 me = Keeper();
@@ -106,7 +106,7 @@ namespace GK2DonkeyAPI
         }
 
         // a spot within 'radius' with the walkable ground at his feet and the ground's layers over him within 3 (a bridge's deck)
-        private static bool FindUnderBridge(Vector3 me, float radius, out Vector3 spot, out string what)
+        internal static bool FindUnderBridge(Vector3 me, float radius, out Vector3 spot, out string what)
         {
             spot = default; what = null;
             bool bf = Physics.queriesHitBackfaces;
@@ -133,7 +133,7 @@ namespace GK2DonkeyAPI
             return false;
         }
 
-        private static IEnumerator SafeReturn()
+        internal static IEnumerator SafeReturn()
         {
             Vector3 me = Keeper();
             yield return Seconds(1.2f); // this spot recorded
@@ -202,54 +202,6 @@ namespace GK2DonkeyAPI
                 Check(!r.Ok && r.Reason.StartsWith("No safe spot", System.StringComparison.Ordinal), $"in a scene with no spot yet: refused ({Said(r)})");
             }
             finally { SafeSpots.TestGiveRing(ring); }
-
-            // 5. Saddle Up's rows: the toggle, the button, the key, in a section of their own at the end ("Safe spot", 2026-10-27)
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            if (saddle == null) Info("Saddle Up's page isn't shown: its rows not checked");
-            else
-            {
-                MountSettingsPage.Row guard = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FallGuard" && x.ShownSection == "Safe spot");
-                MountSettingsPage.Row button = saddle.Rows.Find(x => x.RowKind == MountSettingsPage.RowKind.Button && x.ShownSection == "Safe spot" && x.Label == "Back to the last safe spot");
-                MountSettingsPage.Row key = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "ReturnKey" && x.ShownSection == "Safe spot");
-                Check(guard != null && button != null && key != null, $"Saddle Up has the FallGuard toggle, the button and the ReturnKey row ({(guard != null ? "toggle" : "no toggle")}, {(button != null ? "button \"" + button.ButtonText + "\"" : "no button")}, {(key != null ? "key" : "no key")})");
-                if (guard != null)
-                {
-                    var ge = (BepInEx.Configuration.ConfigEntry<bool>)guard.Entry;
-                    bool was = ge.Value;
-                    try
-                    {
-                        ge.Value = false;
-                        yield return null;
-                        Check(Plugin.FallGuard != null && !Plugin.FallGuard.Value, "the toggle off: the Behaviour key FallGuard follows");
-                    }
-                    finally { ge.Value = was; }
-                    yield return null;
-                    Check(Plugin.FallGuard != null && Plugin.FallGuard.Value == was, "and back");
-                }
-                if (button != null)
-                {
-                    returns = SafeSpots.TestReturns;
-                    PutKeeper(away.Value, homeFacing);
-                    yield return Frames(3);
-                    button.OnClick();
-                    yield return Frames(3);
-                    now = Keeper();
-                    Check(SafeSpots.TestReturns == returns + 1 && Vector3.Distance(now, Mounts.LastSafeSpot ?? me) < 0.5f, $"the button brings him back from 10 away ({Vector3.Distance(now, Mounts.LastSafeSpot ?? me):0.00} from the spot)");
-                }
-                if (key != null)
-                {
-                    var ke = (BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)key.Entry;
-                    var was = ke.Value;
-                    try
-                    {
-                        var ctrlK = new BepInEx.Configuration.KeyboardShortcut(KeyCode.K, KeyCode.LeftControl);
-                        ke.Value = ctrlK;
-                        yield return null;
-                        Check(Plugin.ReturnKey != null && Flight.SameKey(Plugin.ReturnKey.Value, ctrlK), $"the ReturnKey row set to Ctrl+K: the Behaviour key follows ({Plugin.ReturnKey?.Value})");
-                    }
-                    finally { ke.Value = was; }
-                }
-            }
 
             // 6. the watchdog off: under the ground stays (then back by hand). The button's arrival check runs first: it
             // judges where he is when it runs, and moved under the ground before it, he was sent to an older spot

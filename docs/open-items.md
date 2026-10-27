@@ -6,10 +6,17 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 ## To check in game (built and deployed, not yet seen)
 
 - **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the
-  dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` and a save
-  writes the new ids; an F11 Mounts tab edit lands in the repo's `packs/` (GK2MountsSourceDir); a pack's DLL moved out of
+  dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` (gone
+  since 2026-10-27: an old id finds nothing now) and a save writes the new ids; an F11 Mounts tab edit lands in the repo's `packs/` (GK2MountsSourceDir); a pack's DLL moved out of
   `plugins\` -> its mounts "(not installed)", the choice kept, no warning; back -> back; a pack's plugin folder renamed
-  to sort before `GK2SaddleUp` (and after) loads the same; the release rehearsal with the All Mounts zip.
+  to sort before `GK2SaddleUp` (and after) loads the same; the release rehearsal with each pack's own zip.
+
+- **The Donkey Skins pack and the integration tests** (2026-10-27, docs/making-a-mount.md, docs/self-tests.md): an F11
+  run with `tools/GK2DonkeyAPI.IntegrationTests` deployed (`-p:Deploy=true`), all groups, the API's 95 and the plugin's
+  33; a run without the plugin (the API's alone); a run with `GK2SaddleUpDonkeySkins` left out (its scenarios skip
+  with the reason); in game, the donkey's Skin list offers Hellfire and Royal Parade from the pack, and without it a
+  donkey that wore one shows the game's donkey with the choice kept; `dist/` rebuilt with the fifth DLL, the release
+  scans with the layering scan, and the zip rehearsal.
 
 - **Content from many mods** (API 0.40.0, 2026-10-26): F11's new scenarios (Never lost: the held side file, records
   carried forward, handle ownership; Skins and effects: hostile files, no throw, order and identity, versions and ids)

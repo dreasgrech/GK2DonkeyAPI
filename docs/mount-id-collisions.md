@@ -1,5 +1,10 @@
 # Mount id collisions: two mods, one id
 
+**2026-10-27:** the donkey's skins are the Donkey Skins pack's, `donkey/saddleup-donkey-skins.hellfire` and
+`.royal-parade`, and Hellfire's effect `saddleup-donkey-skins.hellfire` (the pack's prefix, as every pack's ids). The
+API keeps no table of any mod's old ids: `Looks.Find` no longer takes `hellfire` or `donkey/hellfire`, and an old
+mount id finds nothing; a short name (the name after a mount's prefix, when only one mount has it) still finds it.
+
 **2026-10-26 (API 0.40.0, docs/multi-mod-loading.md):** effect ids follow the same `<mod>.<name>` and version rule
 (`saddleup.hellfire`); a code skin that loses no longer throws; a newer pack of a mount takes the old pack's skins out
 with it; a mount.cfg whose id isn't its folder's is refused; ids are ASCII, at most 64. The author stamp (section 4's

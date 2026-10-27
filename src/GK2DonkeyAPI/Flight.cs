@@ -22,10 +22,10 @@ namespace GK2DonkeyAPI
         // unlocked (the machine with the sources), never a player's.
         internal static bool Enabled = true;
         internal static bool Active => Enabled;
-        internal static bool AnyMount;             // off: the dragon only
+        internal static bool AnyMount;             // off: the mounts whose [Mount] says flies
         internal static float CruisePx = 200f;     // the height a take-off climbs to (48 until 2026-10-23, the user)
         internal static float MaxPx = 320f;        // the climb key stops here (above the take-off height)
-        // The take-off and the landing as a dragon's, not an elevator's (the user, 2026-10-22: "it feels like a slow
+        // The take-off and the landing as a winged creature's, not an elevator's (the user, 2026-10-22: "it feels like a slow
         // elevator"): a crouch, then a spring launch with wing-beat surges that overshoots a little and settles; down, a
         // dive that speeds up, a flare near the ground and a thud on touching it.
         internal static float CrouchPx = 3f;       // the crouch before the launch
@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
         internal static float BeatS = 0.16f;
         internal static float DiveSpeedPxPerS = 200f; // the landing's fastest fall
         internal static float DiveAccelPxPerS2 = 700f;
-        internal static float FlarePx = 18f;       // from here down the dragon brakes
+        internal static float FlarePx = 18f;       // from here down the mount brakes
         internal static float TouchSpeedPxPerS = 40f; // its speed when it touches the ground
         internal static float ThudPx = 2f;         // the squat on touching the ground
         internal static float ClimbPxPerS = 60f;   // the climb and descend keys
@@ -71,14 +71,14 @@ namespace GK2DonkeyAPI
         internal static float JumpFallEase;        // 0: the fall speeds up to the ground; 1: eased in and out, a soft touch-down (wings braking)
         internal static bool JumpWings;            // the skin's flying frames through the jump: a small take-off and landing (JumpWingFrame)
         // The values above (height to squash, not the perch, the steering or JumpOver) are the default jump: each mount
-        // may have its own (mount.cfg [Jump], MountDef.Jump; JumpShapes.cs, the user 2026-10-25: "the arc the donkey makes
-        // while jumping looks silly for a dragon"). A jump takes its mount's shape at the press (J) and keeps it to the
+        // may have its own (mount.cfg [Jump], MountDef.Jump; JumpShapes.cs, the user 2026-10-25: the donkey's arc
+        // doesn't suit every mount). A jump takes its mount's shape at the press (J) and keeps it to the
         // landing: a tab or a file changed mid-jump moves the next one.
         internal struct JumpShape
         {
             internal float Height, Tap, HoldMin, Time, RiseShare, Hang, Crouch, CrouchTime, Squash, FallEase;
             internal bool Wings;
-            internal string From;                  // for the log: "the default jump", "Dragon's own (...)"
+            internal string From;                  // for the log: "the default jump", "Crab's own (...)"
         }
         internal static JumpShape J = JumpShapes.Of(null); // the jump in progress (else the last one's)
         internal static JumpShape DefaultJump => JumpShapes.Of(null);
@@ -112,13 +112,13 @@ namespace GK2DonkeyAPI
         internal static bool PitchFrames = true;
         internal static float PitchPerS = 3f;      // how fast the pitch eases to its target (1: a full climb's)
         // Climb and descend, held: the Behaviour keys ClimbKey and DescendKey (Left Shift and Left Ctrl, the user 2026-10-23;
-        // Saddle Up's rows since 2026-10-25), their main key alone: a modifier can be the key, so none is asked for.
+        // a mod's rows since 2026-10-25), their main key alone: a modifier can be the key, so none is asked for.
         internal static KeyCode UpKey => Plugin.ClimbKey != null ? Plugin.ClimbKey.Value.MainKey : KeyCode.LeftShift;
         internal static KeyCode DownKey => Plugin.DescendKey != null ? Plugin.DescendKey.Value.MainKey : KeyCode.LeftControl;
-        // The jump and fly keys are the Behaviour values JumpKey and FlyKey (Space both; Saddle Up's Keys rows). The same
+        // The jump and fly keys are the Behaviour values JumpKey and FlyKey (Space both; a mod's Keys rows). The same
         // key (the user, 2026-10-23, the skyriding rule): a press jumps, a second press in the air takes off on a mount
         // that flies, a press while flying lands. Different keys: each its own (the fly key takes off from the ground).
-        // Whole key combinations, as Saddle Up's rows set them (Ctrl+Space is Ctrl+Space; extra keys held, such as the
+        // Whole key combinations, as a mod's rows set them (Ctrl+Space is Ctrl+Space; extra keys held, such as the
         // climb's Left Shift, don't stop a press).
         internal static KeyboardShortcut JumpKeyNow => Plugin.JumpKey != null ? Plugin.JumpKey.Value : new KeyboardShortcut(KeyCode.Space);
         internal static KeyboardShortcut FlyKeyNow => Plugin.FlyKey != null ? Plugin.FlyKey.Value : new KeyboardShortcut(KeyCode.Space);
@@ -221,10 +221,10 @@ namespace GK2DonkeyAPI
         internal static bool Gliding => glide != GlideStage.None;
 
         // The flight's height above the real ground under it: above the body, plus how far the ground lies under the
-        // body. The flare and the landing frames go by it: by the height above the body, a dragon 87 px over the ground
+        // body. The flare and the landing frames go by it: by the height above the body, a flying mount 87 px over the ground
         // (2.4 under the plateau it took off from) flared and showed its landing legs, then flew on down with the wings
         // beating again (the user's cut, 2026-10-23: "frame bdy_land_left_01 -> bdy_fly_left_04" in the jump lines).
-        // Both ways: a plateau higher than the body (landing on it from lower ground) counts too, or the dragon dove at
+        // Both ways: a plateau higher than the body (landing on it from lower ground) counts too, or the mount dove at
         // full speed to the floor 16 px over the plateau, was set down there, and touched down at once from its dive
         // (the user's second cut, 2026-10-23: "the body down -2.40", frame fly_04 -> land_01, landed the same moment).
         internal static float AboveGroundPx => Mathf.Max(0f, heightPx + (Free ? groundBelowPx : 0f));
@@ -265,7 +265,7 @@ namespace GK2DonkeyAPI
             // highest as the wings come down (frame 4), sinking on the upstroke (the reference's beat; the frames
             // themselves can't move the body, the seat being a fixed row of the picture)
             // Every flying frame the skin has (the beat, the take-off, the landing) takes the beat's rise, never the hover:
-            // the landing's first frame switched from the beat's +3 px to the hover's -2 in one frame, the dragon dropping
+            // the landing's first frame switched from the beat's +3 px to the hover's -2 in one frame, the mount dropping
             // 7 px with the height's own 2 (the log 2026-10-23: "jump of -7 px ... frame bdy_fly_left_04 -> bdy_land_left_01",
             // lift 0.733 -> 0.500), and back up 3 px when a refused landing went back to the beat. Through the landing's
             // frames the beat's clock stands still (Tick), so the rise holds and fades with the height.
@@ -276,7 +276,7 @@ namespace GK2DonkeyAPI
             // the height and the hover rounded each on its own: the camera follows the rounded height (FollowCamera), and
             // a mount rounded as height + hover stepped a frame or two before or after the camera while climbing, so it
             // shook a pixel against the screen once the hover had eased in (the user's video 2026-10-22 14-05-15: the
-            // world moving smoothly, the dragon flipping 1 px back and forth on the screen, from about 8 px up)
+            // world moving smoothly, the mount flipping 1 px back and forth on the screen, from about 8 px up)
             // below 0: the crouch before a launch and the thud of a landing (a few pixels into the ground: a squat)
             return Mathf.Max(-8f, Mathf.Round(heightPx) + Mathf.Round(bob)) * PxWorldY;
         }
@@ -622,14 +622,14 @@ namespace GK2DonkeyAPI
         // The tab's "Glide now": the next time the beat reaches its frame 7.
         internal static void GlideNow() { if (Now == Phase.Airborne) glideAsked = true; }
 
-        // This mount may fly: the experiment on, riding plain (not the cart), the dragon or any mount.
+        // This mount may fly: the experiment on, riding plain (not the cart), any mount.
         internal static bool CanFly(Mount.Instance i, out string why)
         {
             why = null;
             if (!Active) why = "flying is switched off (the dev tab)";
             else if (i == null || !i.IsMounted) why = "not riding";
             else if (i.CurrentStyle != MountStyle.Ride) why = "drives the cart (flying is for riding plain)";
-            // indoors only when a mod leaves flying indoors on (the Behaviour key FlyIndoors; Saddle Up sets it off); a
+            // indoors only when a mod leaves flying indoors on (the Behaviour key FlyIndoors; a mod may set it off); a
             // flight that goes in through a door then lands there (Tick: no longer CanFly)
             else if (Plugin.FlyIndoors != null && !Plugin.FlyIndoors.Value && Mount.Instance.IsIndoors()) why = "indoors (flying indoors is off)";
             else if (!Flies(i)) why = $"rides {Looks.MountWanted(i).Label}, which doesn't fly ([Mount] flies; or \"any mount\")";
@@ -820,7 +820,7 @@ namespace GK2DonkeyAPI
                 float fallen = P - 0.5f * gf * f * f;
                 float e = Mathf.Clamp01(js.FallEase);
                 if (e <= 0f) return fallen;
-                // eased (the user, 2026-10-25: "the dragon feels like a plompling rock"): the same time down, slow at the
+                // eased (the user, 2026-10-25: the landing fell like a rock): the same time down, slow at the
                 // top, sinking, slowing again to touch down softly, as wings braking would; blended with the stone's fall
                 float x = f / fallS;
                 return Mathf.Lerp(fallen, P * (1f - x * x * (3f - 2f * x)), e);
@@ -940,7 +940,7 @@ namespace GK2DonkeyAPI
                 // frames: the view jumped up 2.3 and came back down (the user's cut while landing, 2026-10-23: "on the
                 // screen 972 -> 684, camera y 14.583 -> 16.841"). Snapping the camera to the body (UpdateTargetPosInstant,
                 // CancelDamping) fixed that but threw away the camera's trail behind a moving flight too: x 3.50 -> 5.31
-                // in one frame, the dragon 367 px across the screen (the user's cut, the same day). So the camera is told
+                // in one frame, the mount 367 px across the screen (the user's cut, the same day). So the camera is told
                 // the body moved by exactly this much (Cinemachine's OnTargetObjectWarped: its smoothed position shifts
                 // with the follow target), keeping any trail it had. Up and down by the camera's share of the height
                 // (CameraFollow): the height that made up for the move moved the camera by that share, the rest of the
@@ -1289,8 +1289,8 @@ namespace GK2DonkeyAPI
             if (!float.IsNaN(under)) spot.y = under; // judged at the ground under the flight, not at the body's height
             // Something drawn stands under the flight higher than the ground the landing would put him on (a rock, a
             // roof, a cart): no landing through it. Seen 2026-10-23 at 40.62, 19.68: the floor found a thing drawn up to
-            // 6.72 over ground at 3.60, the landing went on, put the body on the ground under it and the dragon came
-            // down through it. The dragon stays on top of it instead ("Nowhere to land here."). Asked first: the
+            // 6.72 over ground at 3.60, the landing went on, put the body on the ground under it and the mount came
+            // down through it. The mount stays on top of it instead ("Nowhere to land here."). Asked first: the
             // walk-away test (up to 30 ms over a few frames) ran for a spot under a tree and was refused after it anyway.
             string why = !float.IsNaN(thingTop) && thingTop > spot.y + 0.6f ? $"something drawn stands there, up to {thingTop:F2}, over the ground at {spot.y:F2}" : null;
             if (why == null) why = Mount.Instance.WhyCannotLandAt(pc, ref spot, grid: true, connectedTo: takeOffSpot, walkOut: true);
@@ -1306,7 +1306,7 @@ namespace GK2DonkeyAPI
                     lastRefusal = why; lastRefusalSaid = Time.unscaledTime;
                     Plugin.Log.LogInfo("[flight] " + Why + (Now == Phase.Landing ? " (the landing is called off: hovering here)" : " (holding the clear height)"));
                 }
-                // A landing refused is called off: the dragon hovers where it was refused, at the floor's height, and waits
+                // A landing refused is called off: the mount hovers where it was refused, at the floor's height, and waits
                 // for the next Land (the user, 2026-10-22: after one refusal it kept trying everywhere it went until a spot
                 // took it; 2026-10-23: pulled back up to the flying height it "shoots back up" instead of hovering there).
                 // The descend key held down stays at the floor: letting go of it is the player's call.
@@ -1362,7 +1362,7 @@ namespace GK2DonkeyAPI
                     {
                         bodyMove += move; // with a step-up of the same frame's physics (FixedStep)
                         // The game smooths the drawn body between physics steps from the pose before; after a move the
-                        // next frames blended from the old spot: the dragon showed 4.80, then 3.75, with the body at
+                        // next frames blended from the old spot: the mount showed 4.80, then 3.75, with the body at
                         // 3.60 (put down 2.54 off a plateau; a 34 px flash up and back), and a 6 px dip landing up
                         // onto one (the user's cuts, 2026-10-23). The smoothing is off until two physics steps have
                         // run from the new spot, then back as it was.
@@ -1370,8 +1370,15 @@ namespace GK2DonkeyAPI
                         if (smoothOffSteps == 0) smoothWas = rb.interpolation;
                         rb.interpolation = RigidbodyInterpolation.None;
                         smoothOffSteps = 2;
+                        pb.SetPosition(put.Value);
                     }
-                    pb.SetPosition(put.Value);
+                    // Put where it already is (within 0.05: a jump's touch-down, the mover having walked the body onto the ground
+                    // step by step): no SetPosition. It writes the transform outright (PlayerPhysicalBody.SetPosition: rb.position,
+                    // transform.position, playerData.position), which teleports the drawn body past the smoothing's lag, up to a
+                    // physics step ahead (0.27 along, 3.5 px up a hillside), and the next frame the smoothing blends from the old
+                    // pose again and pulls it back: a cut forward and back at every touch-down that falls late in a step (the
+                    // self-test's ground probe, 2026-10-27, frames 12149-12152). The body is where MovePosition put it and
+                    // playerData.position was written every step (FixedStep): the smoothing finishes the last step on its own.
                 }
                 pb.SetNonKinematicFlag(PlayerDynamicType.ByLadder, true);
             }
@@ -1521,7 +1528,7 @@ namespace GK2DonkeyAPI
             // The flight keeps its place in the world as the body steps up under it: its height above the body shrinks by
             // the step (the floor still holds it the clear height above the new ground), the camera is told the body
             // moved, and the body's smoothing is off for two physics steps, as for a landing's move (GiveBack). Without
-            // that the whole dragon rose with the body: 0.39 onto BigDropTopSurface, 12 art px in three frames, 88
+            // that the whole mount rose with the body: 0.39 onto BigDropTopSurface, 12 art px in three frames, 88
             // screen px, and it stayed that much higher until it landed (the log 2026-10-23, "jump of +4/+5/+3 px").
             // A jump's body follows the ground down as well as up (a flight keeps its height over a cliff on purpose; a jump
             // is the ground's): running downhill the body stayed at the take-off height while the ground fell away, the
@@ -1694,7 +1701,7 @@ namespace GK2DonkeyAPI
         }
 
         // The keeper's speech bubble (the game puts it at PlayerView's BubblePoint, over his body on the ground) rises
-        // with the flight, so "Nowhere to land here." shows over the rider, not under the dragon (the user's video
+        // with the flight, so "Nowhere to land here." shows over the rider, not under the mount (the user's video
         // 2026-10-22 15-32-47). Put back once on the ground.
         private static Transform bubblePoint;
         private static Vector3 bubbleRest;
@@ -1836,7 +1843,7 @@ namespace GK2DonkeyAPI
         // In the air the game's E and F prompts are off. Its interaction box sits on the body, at the ground's level,
         // while the mount is drawn far above it: a flight over the smelter showed its F and its contents (the user's
         // screenshot, 2026-10-24), and F held there entered the work state: the ride ended as a state change, the keeper
-        // was put down on that spot from 320 px up and the dragon parked in the air ("the rider teleports to the F
+        // was put down on that spot from 320 px up and the mount parked in the air ("the rider teleports to the F
         // location"). The pause is the game's own (PlayerInteractionComponent.SetPauseState, its ladder state's slot:
         // the one the body borrows too, and never the game's while mounted): the box disabled, the target left, every
         // prompt and bubble gone, nothing to press. Not for a jump (half a second: the prompt would blink at every hop);

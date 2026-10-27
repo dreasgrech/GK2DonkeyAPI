@@ -14,9 +14,9 @@ namespace GK2DonkeyAPI
     // the jump did (over it, stopped by it, down beside it, carried off its top, slid along it) is said, not judged.
     internal static partial class SelfTest
     {
-        private const int MaxYardThings = 12;
+        internal const int MaxYardThings = 12;
 
-        private sealed class YardThing
+        internal sealed class YardThing
         {
             internal string Name;
             internal Bounds B;
@@ -27,7 +27,7 @@ namespace GK2DonkeyAPI
 
         // the thing a collider belongs to: the nearest parent whose name ends in "(Clone)" (a built thing's prefab), else
         // the nearest with a Wgo, else the collider's parent (a fence piece), else itself
-        private static Transform ThingRoot(Collider c)
+        internal static Transform ThingRoot(Collider c)
         {
             for (Transform t = c.transform; t != null; t = t.parent) if (t.name.EndsWith("(Clone)", System.StringComparison.Ordinal)) return t;
             Wgo w = c.GetComponentInParent<Wgo>();
@@ -35,7 +35,7 @@ namespace GK2DonkeyAPI
             return c.transform.parent != null ? c.transform.parent : c.transform;
         }
 
-        private static IEnumerator FlightJumpYard()
+        internal static IEnumerator FlightJumpYard()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             GameObject yard = GameObject.Find("World/yard(Clone)");
@@ -139,7 +139,7 @@ namespace GK2DonkeyAPI
                     else if (along > far) over++;
                     else if (along < near - 0.1f) stopped++;
                     else beside++;
-                    string line = $"{t.Name} ({t.TopPx:0} px tall, {t.B.size.x:0.0}x{t.B.size.z:0.0}): {what}, {along:0.00} along the run{(Flight.TestJumpWentBack ? ", SENT BACK" : "")}{(grounded ? "" : ", NOT ON THE GROUND")}{(under ? ", UNDERGROUND" : "")}{(SafeSpots.TestReturns != returns0 ? ", THE WATCHDOG FIRED" : "")}";
+                    string line = $"{t.Name} ({t.TopPx:0} px tall, {t.B.size.x:0.0}x{t.B.size.z:0.0}): {what}, {along:0.00} along the run, body {rb.interpolation}{(Flight.TestJumpWentBack ? ", SENT BACK" : "")}{(grounded ? "" : ", NOT ON THE GROUND")}{(under ? ", UNDERGROUND" : "")}{(SafeSpots.TestReturns != returns0 ? ", THE WATCHDOG FIRED" : "")}";
                     Info(line);
                     if (!ok) bad.Add(line);
                     returns0 = SafeSpots.TestReturns;
@@ -178,7 +178,7 @@ namespace GK2DonkeyAPI
         // wall"): a hillside between two terrain levels near the keeper (the drawn ground's levels are flat, so only the
         // real terrain shows the fault; a test ramp never could), a running jump up it and one down it: the body moves
         // in the air (not held), lands on the ground, never sent back; the ground the mount is drawn on never steps.
-        private static IEnumerator FlightJumpSlope()
+        internal static IEnumerator FlightJumpSlope()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors"); yield break; }
@@ -229,10 +229,15 @@ namespace GK2DonkeyAPI
                     Vector3 dir = uphill ? up : -up;
                     PutKeeper(start, dir.x >= 0f ? 1f : -1f);
                     TestSay(uphill ? "Jumping up the slope" : "Jumping down the slope");
+                    Vector3 placed = rb.position;
                     yield return Frames(12);
                     Vector3 before = rb.position;
+                    // the probe (2026-10-27, the hillside's 4.5 px steps): what the body did after being placed, and every frame of the jump
+                    if (Plugin.JumpTraceOn != null && Plugin.JumpTraceOn.Value) Info($"{(uphill ? "uphill" : "downhill")} probe: placed at {placed:F3}, after 12 frames at {before:F3} (moved {(before - placed).magnitude * 30f:0.0} px), body {rb.interpolation}, kinematic {rb.isKinematic}, speed {rb.linearVelocity.magnitude:0.00}, Flight {Flight.Now}, fixed step {Time.fixedDeltaTime * 1000f:0.0} ms, mount at {mi.Position:F3}, lift {Flight.LiftFor(mi) * 30f:0.0} px");
+                    var probe = new System.Collections.Generic.List<string>();
+                    Mount.Instance.TestGroundProbe = new System.Collections.Generic.List<string>(); // the deep probe: every Follow's ground sampling (Mount.cs)
                     int returns = SafeSpots.TestReturns;
-                    float last = float.NaN, worst = 0f;
+                    float last = float.NaN, worst = 0f, worstDt = 0f, slowest = 0f; // the biggest step, the frame it came in, the slowest frame
                     Flight.TestJumpHeld = true;
                     Flight.TestMoveDir = new Vector2(dir.x, dir.z);
                     try
@@ -242,13 +247,24 @@ namespace GK2DonkeyAPI
                         while (Time.time - t0 < Flight.J.Time + 2f)
                         {
                             float drawn = mi.Position.y - Flight.LiftFor(mi);
-                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worst) worst = Mathf.Abs(drawn - last);
+                            probe.Add($"f{Time.frameCount} {Time.unscaledDeltaTime * 1000f:0}ms {Flight.Now} m{mi.Position.y:0.000} L{Flight.LiftFor(mi) * 30f:0.0} rb{rb.position.y:0.000} tf{rb.transform.position.y:0.000} {(rb.interpolation == RigidbodyInterpolation.None ? "N" : "I")} s{(float.IsNaN(last) ? 0f : (drawn - last) * 30f):+0.0;-0.0}");
+                            if (!float.IsNaN(last) && Mathf.Abs(drawn - last) > worst) { worst = Mathf.Abs(drawn - last); worstDt = Time.unscaledDeltaTime; }
+                            slowest = Mathf.Max(slowest, Time.unscaledDeltaTime);
                             last = drawn;
                             if (Flight.Now != Flight.Phase.Jumping && Time.time - t0 > 0.2f) break;
                             yield return null;
                         }
                     }
                     finally { Flight.TestJumpHeld = null; Flight.TestMoveDir = null; }
+                    System.Collections.Generic.List<string> deep = Mount.Instance.TestGroundProbe;
+                    Mount.Instance.TestGroundProbe = null;
+                    // the frames, written out only when a step went past 2.5 px (a normal jump's biggest, a 14 ms frame's): the
+                    // touch-down's cut of 2026-10-27 was found in them (docs/flying.md "The landing cuts")
+                    if (worst > 2.5f * px)
+                    {
+                        Info($"{(uphill ? "uphill" : "downhill")} frames (dt, phase, mount y, lift px, body y, body transform y, interpolation, the drawn ground's step px): {string.Join(" | ", probe)}");
+                        for (int di = 0; deep != null && di < deep.Count; di += 12) Info($"{(uphill ? "uphill" : "downhill")} ground sampling {di / 12 + 1}: {string.Join(" | ", deep.GetRange(di, Mathf.Min(12, deep.Count - di)))}");
+                    }
                     yield return Frames(6);
                     Vector3 at = rb.position;
                     float along = Vector3.Dot(at - before, dir);
@@ -256,7 +272,7 @@ namespace GK2DonkeyAPI
                     // the step cap is the ramp rule's 4 px (docs/flying.md "running downhill"): a 24-degree hillside at the
                     // mover's speed climbs 0.11 a physics step, 3.2 px, by itself; the flat yard's 2 px can't hold here
                     Check(along > 1.0f && grounded && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && !Flight.Free && SafeSpots.TestReturns == returns && worst <= 4f * px,
-                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it (held in place: a fault), {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame (4 allowed on a slope){(Flight.TestJumpWentBack ? ", SENT BACK" : "")}");
+                        $"a running jump {(uphill ? "up" : "down")} the slope: {along:0.00} along it{(along > 1.0f ? "" : " (HELD in place: over 1 wanted)")}, {at.y - before.y:+0.00;-0.00} in height, on the ground{(grounded ? "" : " NOT")}, the drawn ground stepping at most {worst / px:0.0} px a frame{(worst <= 4f * px ? "" : " (OVER the 4 allowed on a slope)")}, in a frame of {worstDt * 1000f:0} ms (the slowest {slowest * 1000f:0} ms){(Flight.TestJumpWentBack ? ", SENT BACK" : "")}{(Flight.Now == Flight.Phase.Ground ? "" : ", not back on the ground (" + Flight.Now + ")")}{(SafeSpots.TestReturns == returns ? "" : ", the watchdog put him back")}");
                 }
             }
             finally
@@ -269,9 +285,9 @@ namespace GK2DonkeyAPI
 
         // A hillside near 'me': walkable ground (the ground layers' raycast) rising 0.4 to 1.3 over 2.5 along one of
         // eight directions, with ground at both ends and no obstacle in the way; 'foot' its lower end, 'up' the way up.
-        private static string slopeSeen = "none";
+        internal static string slopeSeen = "none";
 
-        private static bool FindSlope(Vector3 me, float radius, out Vector3 foot, out Vector3 up, out float rise, out float run)
+        internal static bool FindSlope(Vector3 me, float radius, out Vector3 foot, out Vector3 up, out float rise, out float run)
         {
             foot = default; up = default; rise = 0f; run = 2.5f;
             // what the finder saw, for the INFO when nothing is taken: how many runs rose within the window, and why the
@@ -320,14 +336,14 @@ namespace GK2DonkeyAPI
         // x 21.4, 4.75 at 20.0, 5.35 at 18.5, z 15.3, rising towards -x): the fallback when the finder takes nothing near the
         // runner's spot, checked live (the ground there must still rise within the window).
         // Next to the known road (RuinedTemple), where the finder is run again with the ground loaded.
-        private static bool KnownSlopeNear(out Vector3 near)
+        internal static bool KnownSlopeNear(out Vector3 near)
         {
             near = new Vector3(24.5f, 3.6f, 15.7f);
             string scene = PC?.PlayerData?.currentGameSceneId;
             return scene != null && scene.IndexOf("RuinedTemple", System.StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
-        private static bool KnownSlope(out Vector3 foot, out Vector3 up, out float rise, out float run)
+        internal static bool KnownSlope(out Vector3 foot, out Vector3 up, out float rise, out float run)
         {
             foot = default; up = Vector3.left; rise = 0f; run = 2.5f;
             string scene = PC?.PlayerData?.currentGameSceneId;
@@ -342,7 +358,7 @@ namespace GK2DonkeyAPI
         }
 
         // the ground's height every unit along +x, -x, +z and -z from p, for the INFO when no slope is found
-        private static string Profiles(Vector3 p, int units)
+        internal static string Profiles(Vector3 p, int units)
         {
             var sb = new System.Text.StringBuilder();
             foreach (var (name, dir) in new[] { ("+x", Vector3.right), ("-x", Vector3.left), ("+z", Vector3.forward), ("-z", Vector3.back) })
@@ -354,7 +370,7 @@ namespace GK2DonkeyAPI
             return sb.ToString();
         }
 
-        private static bool GroundAt(Vector3 p, out float y)
+        internal static bool GroundAt(Vector3 p, out float y)
         {
             y = 0f;
             if (!Physics.Raycast(p + Vector3.up * 6f, Vector3.down, out RaycastHit hit, 12f, GroundLayersMask, QueryTriggerInteraction.Ignore)) return false;
@@ -363,7 +379,7 @@ namespace GK2DonkeyAPI
         }
 
         // one jump of the ridden mount: held, the stick pushed 'push' (as the keys would), waited out
-        private static IEnumerator JumpWith(Mount.Instance i, Vector2 push, bool held)
+        internal static IEnumerator JumpWith(Mount.Instance i, Vector2 push, bool held)
         {
             Flight.TestJumpHeld = held;
             Flight.TestMoveDir = push;
@@ -378,14 +394,14 @@ namespace GK2DonkeyAPI
         }
 
         // a spot in the yard the keeper can stand on, away from every thing (the first of YardFreeSpots)
-        private static Vector3? YardFreeSpot(Bounds area, List<YardThing> things)
+        internal static Vector3? YardFreeSpot(Bounds area, List<YardThing> things)
         {
             foreach (Vector3 p in YardFreeSpots(area, things, 1)) return p;
             return null;
         }
 
         // up to 'count' spots in the yard the keeper can stand on, away from every thing, the middle first, spread out
-        private static List<Vector3> YardFreeSpots(Bounds area, List<YardThing> things, int count)
+        internal static List<Vector3> YardFreeSpots(Bounds area, List<YardThing> things, int count)
         {
             var found = new List<Vector3>();
             for (float r = 0f; r < Mathf.Max(area.extents.x, area.extents.z) && found.Count < count; r += 0.9f)
@@ -403,7 +419,7 @@ namespace GK2DonkeyAPI
         }
 
         // p put on the ground and judged: ground at his level, his body fitting, no thing within 'clear'
-        private static bool StandSpot(ref Vector3 p, List<YardThing> things, float clear)
+        internal static bool StandSpot(ref Vector3 p, List<YardThing> things, float clear)
         {
             if (!Physics.Raycast(p + Vector3.up * 3f, Vector3.down, out RaycastHit hit, 8f, GroundLayersMask, QueryTriggerInteraction.Ignore)) return false;
             p.y = hit.point.y;
@@ -417,7 +433,7 @@ namespace GK2DonkeyAPI
         }
 
         // the side of a thing with room to run at it from: 1.7 before its face, the run straight at its middle
-        private static bool ApproachTo(YardThing t, List<YardThing> things, out Vector3 start, out Vector3 dir, bool longSide = false)
+        internal static bool ApproachTo(YardThing t, List<YardThing> things, out Vector3 start, out Vector3 dir, bool longSide = false)
         {
             start = default; dir = default;
             // longSide: run at its long side (across its short axis), for a slide along it

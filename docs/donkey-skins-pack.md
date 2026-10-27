@@ -1,5 +1,20 @@
 # The donkey's skins as a mod of their own (2026-10-25)
 
+**2026-10-27 (built):** the pack exists as **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkins.dll` in
+`BepInEx\plugins\GK2SaddleUpDonkeySkins\`, `dreas.gk2.saddleup.donkeyskins`, 1.0.0, needs the API 0.40.0; its zip
+`GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`), and Saddle Up's built-in content is Gerry alone. Where it differs from the
+investigation below: it lives in the repo's `packs/SaddleUpDonkeySkins/` (`gk2mounts/donkey/skins/<skin>/`, no
+`mount.cfg`), an external pack like the Dragon and the Critters, not a project under `src/`; its ids carry the pack's
+prefix (`donkey/saddleup-donkey-skins.hellfire`, `donkey/saddleup-donkey-skins.royal-parade`) instead of keeping
+`saddleup.` (never released, so no player had the old ones, and the API keeps no table of old ids); Hellfire's effect
+moved with the skin, as section 4 recommends, and took the pack's prefix too (`saddleup-donkey-skins.hellfire`,
+registered by the pack, still shown nowhere); it has a soft dependency on Saddle Up (it loads after it), like the other packs, not a hard one; and
+the in-game tests that need Saddle Up or its packs moved out of the API into the dev plugin
+`tools/GK2DonkeyAPI.IntegrationTests` (docs/self-tests.md), where "built in or external" checks the skins come from
+the pack's DLL, the effect is the pack's, Saddle Up's DLL has no donkey skin, and Saddle Up's Skin row offers both
+though they registered after its page was built; the API's own tests use its own test picture. There is no combined
+packs zip. Current: docs/making-a-mount.md "Built in or external" and the CHANGELOG.
+
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
 packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
 (`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids

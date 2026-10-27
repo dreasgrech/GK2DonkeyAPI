@@ -14,7 +14,7 @@ namespace GK2DonkeyAPI
         // tab's values (the top held and tapped, a let-go between, continuous, the same top and landing at 30, 60 and 144
         // fps, a heavier fall than rise); then, riding plain with the experiment on, one held and one tapped jump live:
         // their tops, back on the ground, the camera left down, a second press refused mid-jump.
-        private static IEnumerator FlightJump()
+        internal static IEnumerator FlightJump()
         {
             const float never = float.PositiveInfinity;
             Flight.JumpShape js = Flight.DefaultJump; // the arc by itself: the default jump's (the donkey's; a mount's own: FlightJumpPerMount)
@@ -414,27 +414,14 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
+        internal static float Flat(Vector3 v) => new Vector2(v.x, v.z).magnitude;
 
-        // The [Mount] flags flies and jumps (docs/flying.md "Jump and fly on one key"): the shipped mounts' (the dragon
-        // flies, the rest don't, all jump), a pack's own read and listed, written back only when not the default.
-        private static IEnumerator FlightFlags()
+        // The [Mount] flags flies and jumps (docs/flying.md "Jump and fly on one key"): the donkey's (it jumps and
+        // doesn't fly), a pack's own read and listed, written back only when not the default.
+        internal static IEnumerator FlightFlags()
         {
-            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
-            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".flags";
-            MountInfo dragon = Mounts.Catalog.Find(M("dragon")), rat = Mounts.Catalog.Find(M("rat"));
-            Check(dragon != null && dragon.Flies && dragon.Jumps, $"the dragon flies and jumps (its [Mount] says flies = true): {dragon?.Flies} {dragon?.Jumps}");
-            var grounded = new System.Collections.Generic.List<string>();
-            foreach (string id in new[] { "rat", "snail", "worm", "gerry" })
-            {
-                MountInfo k = Mounts.Catalog.Find(M(id));
-                if (k == null) grounded.Add(id + " not loaded");
-                else if (k.Flies || !k.Jumps) grounded.Add($"{id} flies {k.Flies}, jumps {k.Jumps}");
-            }
-            Check(grounded.Count == 0, "the other built-in mounts jump and don't fly" + (grounded.Count > 0 ? ": " + string.Join("; ", grounded) : ""));
             Check(!Catalog.Donkey.Flies && Catalog.Donkey.Jumps, "the donkey jumps and doesn't fly");
-            Check(rat != null && !rat.Flies, "the rat's flag is its own, not the dragon's (no mount id decides it)");
 
             string tempRoot;
             try
@@ -477,11 +464,11 @@ namespace GK2DonkeyAPI
         }
 
         // One key for jump and fly (the skyriding rule): a press jumps; a second press in the air takes off a mount that
-        // flies (by its flag: a pack's mount, not the dragon), the height and the body carried on, the camera easing up;
+        // flies (by its flag: a pack's mount, not a shipped one), the height and the body carried on, the camera easing up;
         // a press while flying lands. The donkey: the second press does nothing. Two keys: the fly key takes off from
         // the ground, the jump key only jumps. A flier that doesn't jump: one press takes off. Driven through
         // Flight.Press, as the keys would.
-        private static IEnumerator FlightOneKey()
+        internal static IEnumerator FlightOneKey()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
@@ -629,7 +616,7 @@ namespace GK2DonkeyAPI
         // interaction component is paused through a flight (its prompts and bubbles gone), not through a jump; its work
         // state (F held) is refused while flying (the patched CanEnter); a ride ended in the air (the mod's dismount,
         // as a state change would) parks the mount on the ground under where it flew, the prompts back, nothing fallen.
-        private static IEnumerator FlightInTheAir()
+        internal static IEnumerator FlightInTheAir()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
@@ -719,45 +706,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Saddle Up's Jump and Fly rows: in Keys, Space both, shown only while flying is on, and the Behaviour values
-        // follow the rows.
-        private static IEnumerator FlightKeyRows()
-        {
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            if (saddle == null) { Skip("Saddle Up's page isn't shown"); yield break; }
-            MountSettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Keys");
-            MountSettingsPage.Row jump = Row("JumpKey"), fly = Row("FlyKey");
-            Check(jump != null && fly != null, "Saddle Up has Jump and Fly rows in its Keys section");
-            if (jump == null || fly == null) yield break;
-            // flying for players (0.38.0): the Climb and Descend rows, their keys the flight's (Left Shift and Left Ctrl as shipped)
-            MountSettingsPage.Row climb = Row("ClimbKey"), descend = Row("DescendKey");
-            Check(climb != null && descend != null && climb.Enabled != null && descend.Enabled != null, "and Climb and Descend rows (0.38.0), shown with the others");
-            Check(Plugin.ClimbKey != null && Plugin.DescendKey != null && Flight.UpKey == Plugin.ClimbKey.Value.MainKey && Flight.DownKey == Plugin.DescendKey.Value.MainKey,
-                $"the flight's climb and descend keys are the Behaviour keys' main keys ({Flight.UpKey}, {Flight.DownKey})");
-            bool on = Mounts.FlyingEnabled;
-            Check((jump.Enabled == null || jump.Enabled() == on) && (fly.Enabled == null || fly.Enabled() == on) && jump.Enabled != null && fly.Enabled != null,
-                $"both shown only while flying is on (flying {(on ? "on" : "off")}: rows {(jump.Enabled?.Invoke() ?? true ? "shown" : "hidden")})");
-            var je = (BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)jump.Entry;
-            Check(Flight.SameKey(Plugin.JumpKey.Value, je.Value) && Flight.SameKey(Plugin.FlyKey.Value, ((BepInEx.Configuration.ConfigEntry<BepInEx.Configuration.KeyboardShortcut>)fly.Entry).Value),
-                $"the Behaviour keys are the rows' ({Plugin.JumpKey.Value}, {Plugin.FlyKey.Value})");
-            var was = je.Value;
-            try
-            {
-                var ctrlK = new BepInEx.Configuration.KeyboardShortcut(KeyCode.K, KeyCode.LeftControl);
-                je.Value = ctrlK;
-                yield return null;
-                Check(Flight.SameKey(Plugin.JumpKey.Value, ctrlK), $"the Jump row set to Ctrl+K: the Behaviour JumpKey is Ctrl+K, the modifier kept ({Plugin.JumpKey.Value})");
-                Check(!Flight.SameKey(Flight.JumpKeyNow, Flight.FlyKeyNow), "and the two keys are no longer one");
-            }
-            finally { je.Value = was; }
-            yield return null;
-            Check(Flight.SameKey(Plugin.JumpKey.Value, was), $"and back ({Plugin.JumpKey.Value})");
-        }
-
         // A jump beside a real thing (the user's yard, 2026-10-24: every jump sent back was beside a workbench, refused
         // "no walkable ground" where he stood): a spot beside a built or placed thing near the keeper where the flight's
         // rule refuses the ground (Mount.Instance.FindBesideSpot); a jump in place there lands in place.
-        private static IEnumerator FlightJumpBeside()
+        internal static IEnumerator FlightJumpBeside()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: the jump stays in place there"); yield break; }
@@ -829,7 +781,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static IEnumerator FlightWalkAway()
+        internal static IEnumerator FlightWalkAway()
         {
             Rigidbody rb = PC?.PhysicalBody?.Rb;
             Collider body = PC?.PhysicalBody?.MeshCollider;
@@ -915,7 +867,7 @@ namespace GK2DonkeyAPI
         }
 
         // "... (536 steps, 18.7 ms over 1 frame(s))" -> 536
-        private static int Steps(string how)
+        internal static int Steps(string how)
         {
             if (how == null) return -1;
             int at = how.LastIndexOf(" steps, ", System.StringComparison.Ordinal);

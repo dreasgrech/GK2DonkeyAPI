@@ -2,12 +2,11 @@
 
     python tools/make-release-zip.py
 
-Besides Saddle Up's zip: one per external mount pack, release/GK2-Saddle-Up-<Pack without SaddleUp>-<version>.zip
-(GK2-Saddle-Up-Dragon-1.0.0.zip) holding BepInEx/plugins/GK2<Pack>/GK2<Pack>.dll (the csproj's AssemblyName) (from dist/: its gk2mounts/ folder
+Besides Saddle Up's zip: one per external pack, release/GK2-Saddle-Up-<Pack without SaddleUp, words dashed>-<version>.zip
+(GK2-Saddle-Up-Dragon-1.0.0.zip, GK2-Saddle-Up-Donkey-Skins-1.0.0.zip) holding BepInEx/plugins/GK2<Pack>/GK2<Pack>.dll (the csproj's AssemblyName) (from dist/: its gk2mounts/ folder
 embedded, so an update replaces everything) with the pack's README.md and CHANGELOG.md beside it (the version is its
-Plugin.cs Version), and release/GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip holding every pack, each in its own
-folder (a mount lives in exactly one pack: the bundle is the packs side by side). Every zip is read back and each file
-compared with its source byte for byte.
+Plugin.cs Version). Each pack ships on its own; there is no bundle of them (the user, 2026-10-27). Every zip is read
+back and each file compared with its source byte for byte.
 
 Runs tools/check-dist.py first and stops if it fails. Then writes release/GK2-Saddle-Up-<version>.zip holding
 BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll and BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll from dist/ (a folder per
@@ -136,10 +135,9 @@ def main():
     packs = sorted(d for d in os.listdir(PACKS) if os.path.isfile(os.path.join(PACKS, d, d + ".csproj"))) if os.path.isdir(PACKS) else []
     for p in packs:
         v = pack_version(p)
-        short = p[len("SaddleUp"):] if p.startswith("SaddleUp") and len(p) > len("SaddleUp") else p  # SaddleUpDragon: GK2-Saddle-Up-Dragon-1.0.0.zip
+        short = p[len("SaddleUp"):] if p.startswith("SaddleUp") and len(p) > len("SaddleUp") else p
+        short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", short)  # SaddleUpDonkeySkins: GK2-Saddle-Up-Donkey-Skins-1.0.0.zip
         write_pack_zip(os.path.join(OUT, f"GK2-Saddle-Up-{short}-{v}.zip"), [p], f"the pack {p} {v}")
-    if len(packs) > 1:
-        write_pack_zip(os.path.join(OUT, f"GK2-Saddle-Up-All-Mounts-{saddle}.zip"), packs, "every pack: " + ", ".join(f"{p} {pack_version(p)}" for p in packs))
 
 
 if __name__ == "__main__":

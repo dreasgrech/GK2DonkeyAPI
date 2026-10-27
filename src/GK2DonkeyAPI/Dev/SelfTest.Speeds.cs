@@ -8,13 +8,11 @@ namespace GK2DonkeyAPI
 {
     // Each mount's own speed (the user, 2026-10-22; docs/skins.md "Speeds"): MountDef.Speed and a pack's [Mount] speed,
     // times the keeper's walking speed, with the cart times the donkey's cart-to-riding ratio; its cargo stat. Riding and
-    // driving at the mount's values, the donkey at the API cfg's, the panel's card, Saddle Up's retired speed rows.
+    // driving at the mount's values, the donkey at the API cfg's, the panel's card.
     internal static partial class SelfTest
     {
-        private static IEnumerator MountSpeeds()
+        internal static IEnumerator MountSpeeds()
         {
-            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
-            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".speeds";
 
             // the words, at the band edges (against the donkey's 2 riding, 1.5 with the cart)
@@ -28,35 +26,6 @@ namespace GK2DonkeyAPI
             foreach (var e in edges) if (Catalog.SpeedWord(e.V, e.S) != e.W) wrong.Add($"{e.V} {e.S}: {Catalog.SpeedWord(e.V, e.S)}, not {e.W}");
             Check(wrong.Count == 0, "the panel's words at the band edges" + (wrong.Count > 0 ? ": " + string.Join("; ", wrong) : ""));
             Check(Catalog.SpeedWord(Catalog.DonkeyRideSpeed, MountStyle.Ride) == "Normal" && Catalog.SpeedWord(Catalog.DonkeyCartSpeed, MountStyle.Cart) == "Normal", "the donkey reads Normal both ways");
-
-            // the built-in mounts each say their own (the shipped skins' [Mount] blocks)
-            var said = new List<string>();
-            bool allOwn = true;
-            // the cargo against the speed (docs/next-update.md section 3): the faster, the lighter; the dragon pulls no cart
-            var cargo = new Dictionary<string, int> { ["rat"] = 2, ["snail"] = 6, ["worm"] = 4, ["dragon"] = 0, ["gerry"] = 4 };
-            // each names one of the API's words; the number is the API's (2026-10-27)
-            var word = new Dictionary<string, SpeedBand> { ["rat"] = SpeedBand.VeryFast, ["snail"] = SpeedBand.VerySlow, ["worm"] = SpeedBand.Slow, ["dragon"] = SpeedBand.Slow, ["gerry"] = SpeedBand.Fast };
-            foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
-            {
-                Catalog.Entry k = Catalog.Find(M(id));
-                if (k == null) { said.Add(id + " not loaded"); continue; }
-                allOwn &= k.Speed == word[id] && Mathf.Approximately(Catalog.SpeedOf(k, MountStyle.Ride), Catalog.SpeedOfBand(word[id], MountStyle.Ride)) && (k.Cart ? Catalog.CargoOf(k) : 0) == cargo[id];
-                said.Add($"{id} {(k.Speed.HasValue ? Catalog.WordOf(k.Speed.Value) : "-")} {Catalog.SpeedOf(k, MountStyle.Ride):0.##}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
-            }
-            Check(allOwn, "every built-in mount names its word and has its cargo (rat Very fast 2, snail Very slow 6, worm Slow 4, dragon Slow no cart, Gerry Fast 4), at the API's speed for it (" + string.Join(", ", said) + ")");
-            Check(!Catalog.Donkey.Speed.HasValue && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax, "the donkey says none: it rides at the API cfg's speeds, as it always did");
-
-            // Saddle Up: the two rows are gone, their lines retired (out of the file)
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            if (saddle == null) Info("Saddle Up's page isn't shown: its speed rows not checked");
-            else
-            {
-                bool rows = saddle.Rows.Exists(x => x.Entry != null && (x.Entry.Definition.Key == "RideSpeed" || x.Entry.Definition.Key == "CartSpeed"));
-                Check(!rows && saddle.IsRetired("Behaviour", "RideSpeed") && saddle.IsRetired("7. Behaviour", "CartSpeed"), "Saddle Up has no Riding speed / Cart speed rows; both keys are retired (under any section number)");
-                string text = "";
-                try { text = System.IO.File.ReadAllText(saddle.Config.ConfigFilePath); } catch (Exception x) { Info("its cfg can't be read: " + x.Message); }
-                Check(text.Length > 0 && text.IndexOf("\nRideSpeed =", StringComparison.Ordinal) < 0 && text.IndexOf("\nCartSpeed =", StringComparison.Ordinal) < 0, "and its cfg file holds no RideSpeed / CartSpeed line");
-            }
 
             // a mount of its own: ridden at its speed, driven at its cart speed; the donkey at the cfg's
             IDisposable reg = null;

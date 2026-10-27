@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
     {
         internal const string Section = "Corpses";
 
-        // [Corpses] (Plugin binds them; overridable per session through Mounts.Corpses, Saddle Up sets the first).
+        // [Corpses] (Plugin binds them; overridable per session through Mounts.Corpses, a mod may set the first).
         internal static Tuned<bool> AtCrossroads;      // the feature: off = the game's own delivery, nothing patched
         internal static Tuned<bool> UnloadAtCrossroads; // the donkey walks out beside the nun and unloads there; off: it walks to the morgue, the bodies still appear at the drop point
         internal static Tuned<string> StandPoint;      // GD point it walks to and unloads at

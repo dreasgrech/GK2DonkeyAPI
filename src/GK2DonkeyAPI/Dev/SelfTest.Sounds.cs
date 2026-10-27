@@ -17,22 +17,20 @@ namespace GK2DonkeyAPI
     // under the standing switch, a mount's pins still silence (the bind in the rig).
     internal static partial class SelfTest
     {
-        private const string GroupSounds = "Sounds";
+        internal const string GroupSounds = "Sounds";
 
         // The pooled player behind a handler (a private field of the game's; Access.Verify requires it).
-        private static readonly AccessTools.FieldRef<SoundHandler, SoundController> HandlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
+        internal static readonly AccessTools.FieldRef<SoundHandler, SoundController> HandlerSource = AccessTools.FieldRefAccess<SoundHandler, SoundController>("sourceHolder");
 
-        // The standing switch for a test: through Saddle Up's row when its page is up (its apply sets the Behaviour
-        // override Saddle Up holds, which masks the cfg entry: Tuned.Value answers the override first), else the entry.
-        private static void SetStandingSounds(bool on)
+        // The standing switch for a test: the test's own Behaviour override (whoever held it, a mod's settings page, has
+        // its value back at the run's end: Run holds the key), so the switch is the test's whatever a mod set.
+        internal static void SetStandingSounds(bool on)
         {
-            MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-            MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Sound");
-            if (row != null && row.Entry is BepInEx.Configuration.ConfigEntry<bool> e) e.Value = on;
-            else Plugin.StandingSounds.Value = on;
+            Mounts.Behaviour.ClearAny("StandingSounds");
+            Mounts.Behaviour.Set(Owner, "StandingSounds", on);
         }
 
-        private static string ClipOf(SoundHandler h)
+        internal static string ClipOf(SoundHandler h)
         {
             try
             {
@@ -45,7 +43,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static IEnumerator SoundsProbe()
+        internal static IEnumerator SoundsProbe()
         {
             const string id = "gk2.selftest.probe";
             string tempRoot = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-sounds");
@@ -116,7 +114,7 @@ namespace GK2DonkeyAPI
         // style (ids, volumes, pitches, starts, the numbers), the API's bray and bell still play the game's sounds, a
         // standing one and a foal sound under the standing switch, the lips event is taken only when the rig plays it,
         // and a mount's pins silence a standing wearer too (the bind inside the rig).
-        private static IEnumerator SoundsDonkeyUnchanged()
+        internal static IEnumerator SoundsDonkeyUnchanged()
         {
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             MountHandle h = null, cartH = null, standing = null, foal = null;
@@ -210,25 +208,6 @@ namespace GK2DonkeyAPI
                     Check(fs != null, $"the foal's step plays ({ClipOf(fs)})");
                 }
                 else Info("no foal could be spawned here: the foal's scaling not seen");
-
-                // 5. the snail on a standing wearer: no voice and no lips by its [Sounds] and by the rule (the donkey's own sounds
-                // are not another mount's), its steps its own squelch since 2026-10-25 (not the donkey's hoof), through the bind in the rig
-                if (Mounts.Looks.Find(Sk("snail")) != null)
-                {
-                    standing.Tuning.Set(Owner, "Skin", Sk("snail"));
-                    yield return Until(() => standing.Mount == M("snail"), 8f);
-                    yield return Frames(2);
-                    sr.Invalidate();
-                    SoundSpec sv = sr.Resolve("voice"), sl = sr.Resolve("lips"), ss = sr.Resolve("step");
-                    bool Off(SoundSpec sp) => sp != null && (sp.Silent || sp.Volume < 0.001f);
-                    bool ownStep = ss != null && !Off(ss) && (ss.Describe() ?? "").Contains(M("snail"));
-                    Check(waited && Off(sv) && Off(sl) && ownStep,
-                        $"a standing snail: no voice and no lips by its [Sounds] and the rule, its step its own squelch (voice {sv?.Describe()}; lips {sl?.Describe()}; step {ss?.Describe()}; {(waited ? "the snail mount on the wearer" : "NOT the snail mount within 8 s")})");
-                    Check(sr.Emit("voice") == null && sr.Emit("lips") == null && sr.Takes("lips"), "... so nothing plays for them, and the lips event is still taken (silent, not the game's)");
-                    standing.Tuning.Set(Owner, "Skin", "");
-                    yield return Until(() => standing.Mount == MountCatalog.DonkeyId, 8f);
-                }
-                else Info("the snail skin is not installed: the mount pins on a standing wearer not seen");
             }
             finally
             {
@@ -244,7 +223,7 @@ namespace GK2DonkeyAPI
         // A pack's own sounds (docs/mount-sounds-design.md section 4): [Sounds] lines, the sounds\ folder's files loaded
         // as game sounds, the convention name, the layers (the skin's over the mount's over the player's keys, a style
         // block over both), the player's switches on top, a second skin of the mount, the save round trip, the clean-up.
-        private static IEnumerator SoundsPack()
+        internal static IEnumerator SoundsPack()
         {
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".sounds";
@@ -411,7 +390,7 @@ namespace GK2DonkeyAPI
         // The public API (docs/mount-sounds-design.md section 9): the catalogue, what plays and from which layer, a mod's
         // own sound over everything (a game id, its own clip kept by the mod, silence) and back on Dispose, Play and
         // Stop with their reasons, the Played event; a code mount's MountSound shared by a pack skin that joins it.
-        private static IEnumerator SoundsApi()
+        internal static IEnumerator SoundsApi()
         {
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string modOwner = Owner + ".soundmod";
@@ -510,10 +489,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // An embedded pack's sounds, the route the built-in skins' sounds take (Saddle Up's are embedded in its DLL):
+        // An embedded pack's sounds, the route the built-in skins' sounds take (a mod's own, embedded in its DLL):
         // the API's own test pack (assets\testskin, never registered at start), its .ogg decoded through the cache
         // file under BepInEx\cache, its .wav parsed in place by the convention name, a looping event stopped.
-        private static IEnumerator SoundsEmbedded()
+        internal static IEnumerator SoundsEmbedded()
         {
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".embedded";
@@ -572,53 +551,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // The flying events (docs/mount-sounds-design.md 3.2) on a flier of the test's own, every event given a game
-        // sound: the take-off, the launch's flaps and the beats airborne, the fly loop, the landing, the thud, landed;
-        // a jump's own two; a jump plays none of the flight's.
-        // The dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as files ... a
-        // solid foundation"; the mount folders the same day): its flight's files are the mount's, in its pack's mount
-        // folder's sounds\ (packs/SaddleUpDragon, an external pack since 2026-10-26, embedded in its own DLL), for every
-        // skin of the dragon; its own look (skins\default\) has none of its own.
-        private static IEnumerator SoundsDragonFiles()
-        {
-            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
-            if (noPack != null) { Skip(noPack); yield break; }
-            Looks.SkinDef red = Looks.Find(Sk("dragon"));
-            Catalog.Entry mount = Catalog.Find(M("dragon"));
-            if (red == null || mount == null) { Skip("the dragon's pack is not installed (build packs/SaddleUpDragon with the game closed)"); yield break; }
-            var events = new[] { "takeoff", "flap", "glide", "land" };
-            int inMount = mount.Pack != null ? mount.Pack.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count : 0;
-            int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
-            Check(inMount >= 12 && inSkin == 0 && Looks.DefaultSkinOf(mount) == Sk("dragon"), $"the pack's mount folder: {inMount} sound file(s) in {M("dragon")}\\sounds\\ (the mount's), {inSkin} in its own look's (skins\\default\\); default look {Looks.DefaultSkinOf(mount)}");
-            var skinLines = new List<string>();
-            foreach (string e in events) if (Looks.SkinSoundBlock(red, Looks.SoundLayer.Both)?.Get(e, null) != null) skinLines.Add(e);
-            Check(skinLines.Count == 0, "no flight sound is the red dragon skin's own line" + (skinLines.Count > 0 ? ": " + string.Join(", ", skinLines) : ""));
-            var from = new List<string>();
-            bool allMount = true;
-            foreach (var c in Sounds.Coverage(red, mount))
-            {
-                if (Array.IndexOf(events, c.Event) < 0) continue;
-                from.Add(c.Event + " " + c.From);
-                allMount &= c.From == "mount";
-            }
-            Check(allMount && from.Count == events.Length, "the coverage report: the flight's sounds are the mount's (" + string.Join(", ", from) + ")");
-            foreach (string e in events)
-            {
-                SoundLine l = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get(e, null);
-                Check(l != null && l.Files != null, $"mount.cfg [Sounds] {e}: {(l?.Files != null ? l.Files.Length + " file(s)" : "no files")}");
-            }
-            // loaded from the pack's DLL through the cache file, once, under the mount's own name
-            SoundLine tl = Looks.MountSoundBlock(mount, Looks.SoundLayer.Both)?.Get("takeoff", null);
-            string id = tl != null ? SoundBank.ForFiles(mount.Pack.SoundFiles, tl.BankKey, tl.Files, false, false, tl.Folder) : null;
-            yield return Until(() => SoundBank.StateOf(id) == SoundBank.State.Ready, 8f);
-            SoundBank.Entry te = SoundBank.Find(id);
-            Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the pack's DLL ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
-            string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-" + M("dragon"));
-            Check(mount.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUpDragon" && Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")),
-                "embedded in GK2SaddleUpDragon.dll, its cache files under the mount's own name (" + cache + ")");
-        }
-
-        private static IEnumerator SoundsFlying()
+        internal static IEnumerator SoundsFlying()
         {
             if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
@@ -694,8 +627,8 @@ namespace GK2DonkeyAPI
 
         // The herd (docs/mount-sounds-design.md 3.3): a standing grown one calls by itself, rarer than ridden and never
         // within the scene's voice gap of another; its babies answer one after another, with [Sounds.Baby]'s sound
-        // where the pack gives one; nothing of it with the standing switch off; Saddle Up's row drives the switch.
-        private static IEnumerator SoundsHerd()
+        // where the pack gives one; nothing of it with the standing switch off.
+        internal static IEnumerator SoundsHerd()
         {
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".herd";
@@ -809,28 +742,6 @@ namespace GK2DonkeyAPI
                 yield return Seconds(6f);
                 Check(Sounds.TestVoiceTimes.Count == 0, $"StandingSounds off: no call and no answer in 6 s ({Sounds.TestVoiceTimes.Count})");
                 SetStandingSounds(true);
-
-                // Saddle Up's row
-                MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-                MountSettingsPage.Row row = saddle?.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "StandingSounds" && x.ShownSection == "Sound");
-                if (saddle == null) Info("Saddle Up's page isn't shown: its row not checked");
-                else
-                {
-                    Check(row != null, "Saddle Up has the StandingSounds row in its Sound section");
-                    if (row != null)
-                    {
-                        var re = (BepInEx.Configuration.ConfigEntry<bool>)row.Entry;
-                        bool was = re.Value;
-                        try
-                        {
-                            re.Value = false;
-                            yield return null;
-                            Check(!Plugin.StandingSounds.Value, "the row off: the Behaviour key StandingSounds follows");
-                        }
-                        finally { re.Value = was; }
-                        yield return null;
-                    }
-                }
             }
             finally
             {
@@ -845,7 +756,7 @@ namespace GK2DonkeyAPI
         }
 
         // Every event with a base: the resolved spec equals the style's keys. Returns how many matched.
-        private static int CheckBase(Sounds.Rig rig, StyleSettings s, MountStyle style)
+        internal static int CheckBase(Sounds.Rig rig, StyleSettings s, MountStyle style)
         {
             int ok = 0;
             bool Near(float a, float b) => Math.Abs(a - b) < 0.0005f;

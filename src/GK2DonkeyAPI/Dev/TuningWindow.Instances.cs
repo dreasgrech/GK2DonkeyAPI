@@ -333,7 +333,7 @@ namespace GK2DonkeyAPI
         private static void DrawInstances()
         {
             Header("Mounts and carts standing in the world");
-            GUILayout.Label("Each is its own mount (a donkey, a dragon, ... with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a mount with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a mount without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). The ones marked kept with saves (the panel's spawns are) come back when that save is loaded, with their cargo and own settings; the game's save itself is never changed (a side file next to it). The others are gone after a reload, with their cargo on the ground where they stood.", small);
+            GUILayout.Label("Each is its own mount (a donkey, a mod's mount, ... with or without its cart) or a cart on its own, with its own settings on top of everyone's. Walk up to a mount with empty hands and press E to ride it; a dismount leaves it where it is, with its cart and cargo. Riding a mount without its cart, ride up to a free cart's shafts and press E (or the hitch key) to take it; with the cart, the hitch key leaves it standing. Mods do the same through the API (Mounts.SpawnDonkey, SpawnCart, Hitch, Unhitch, MountHandle.Tuning). The ones marked kept with saves (the panel's spawns are) come back when that save is loaded, with their cargo and own settings; the game's save itself is never changed (a side file next to it). The others are gone after a reload, with their cargo on the ground where they stood.", small);
             GUILayout.Label("Saves: " + Mount.PersistenceNote, small);
             Toggle("Controls in the game (the interact key rides and hitches, the label shows)", Plugin.InstanceControls, null);
             HitchKeyRow();
@@ -370,10 +370,10 @@ namespace GK2DonkeyAPI
             FloatSlider("Foals: a way round may reach this far", IdleShuffle.RouteRange, 2f, 8f, 1, null);
 
             Header("Spawn one in front of the keeper");
-            // Any mount with any of its skins (the same list Saddle Up offers, by mount): the buttons spawn that, and
+            // Any mount with any of its skins (the same list a mod's settings page offers, by mount): the buttons spawn that, and
             // the ones a mount refuses (the cart, babies) are greyed with the reason.
             GUILayout.BeginHorizontal();
-            GUILayout.Label(Tip("Mount and skin", "What the buttons below spawn: a mount (Donkey, Dragon, ...) and one of its skins, as Saddle Up's Mount and Skin rows offer them."), label, Wd(LabelW));
+            GUILayout.Label(Tip("Mount and skin", "What the buttons below spawn: a mount (Donkey, ...) and one of its skins, as a mod's Mount and Skin rows offer them."), label, Wd(LabelW));
             IReadOnlyList<(string Id, string Label)> choices = Looks.SkinChoices();
             int idx = 0;
             for (int k = 0; k < choices.Count; k++)
@@ -509,7 +509,7 @@ namespace GK2DonkeyAPI
         private static string spawnMountId; // the mount the babies' size row was last set from
         private static string SpawnSkin => string.IsNullOrEmpty(spawnSkinId) || spawnSkinId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : spawnSkinId;
 
-        // " (Red Dragon)" after an instance's mount in its row; nothing for the donkey's own art.
+        // " (Winter Coat)" after an instance's mount in its row; nothing for the donkey's own art.
         private static string SkinText(Mount.Instance i)
         {
             string w = i.LooksRig?.Wearing;

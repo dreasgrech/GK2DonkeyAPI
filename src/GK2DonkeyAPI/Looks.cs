@@ -107,14 +107,14 @@ namespace GK2DonkeyAPI
         internal static void Bind(ConfigFile cfg)
         {
             Skin = cfg.Bind(Section, "Skin", Defaults.Get(Section, "Skin", ""),
-                "The skin the donkey wears, by id (empty: the donkey as the game draws it). Set per donkey by the mods that own them (Saddle Up's Donkey settings); this is the value for donkeys without one of their own.");
+                "The skin the donkey wears, by id (empty: the donkey as the game draws it). Set per donkey by the mods that own them; this is the value for donkeys without one of their own.");
             Tuned.MarkLook(Skin);
             Tuning = new MountTuning(Section, new ITuned[] { Skin });
             Camera.onPreCull += OnPreCull;
         }
 
         // The API ships no skin of its own since 2026-10-21 (the user: the backend, the donkey alone; every skin and mount,
-        // Hellfire and Royal Parade included, is Saddle Up's and comes through RegisterEmbedded like any mod's). What
+        // the donkey's skins included, is a mod's and comes through RegisterEmbedded like any other). What
         // is left here: the recipes (none shipped) and the loose skin packs under plugins\. Called after the dev keys
         // bind.
         internal static void RegisterBuiltIns()
@@ -157,7 +157,7 @@ namespace GK2DonkeyAPI
         // it is built on (its mount's default) and what it said itself: LooksInherit.cs.
         internal sealed partial class SkinDef
         {
-            // Id: the skin's full name, "<mount>/<skin>" (dragon/default, donkey/hellfire): a skin is named within its mount,
+            // Id: the skin's full name, "<mount>/<skin>" (crab/default, donkey/acme.fire): a skin is named within its mount,
             // so two mods' "fire" for two mounts never meet (the user, 2026-10-24). LocalId: the "<skin>" part, its folder's
             // name; "default" is the mount's own look (DefaultSkinName).
             internal string Id, LocalId, Name, Author, Version, Owner;
@@ -179,7 +179,7 @@ namespace GK2DonkeyAPI
             internal Color32? Erase;
             // A skin over the base may recolour the base's own regions under it: skin.cfg [Base.Coat], [Base.Eye] ...
             // with the player's knobs (Brightness, Saturation, Colorize ...), applied before the player's settings
-            // (Colors.Rebuild). An ash coat under Hellfire's horns, without a pixel of the game's art in the pack.
+            // (Colors.Rebuild). An ash coat under a skin's horns, without a pixel of the game's art in the pack.
             internal Dictionary<string, Colors.RegionTweak> BaseRegions;
             internal string MountId = Catalog.DonkeyId;   // the mount this skin is a look of (docs/mounts-design.md): a pack's is its mount folder's
             internal string MountDirName;                // a pack's: the mount folder it sits in (gk2mounts\<this>\skins\<skin>), for its file's path
@@ -252,7 +252,7 @@ namespace GK2DonkeyAPI
             internal GameSource Game;                         // another game character's frames, mapped and scaled (LooksGame.cs)
             // skin.cfg "seat = picture": the rider sits on this skin's own picture (its top at the pivot column, per
             // frame, so he rides a hop), whatever the player's seat settings; else the base's back line / the seat height.
-            internal bool SeatFromPicture;        // seat = picture: the rider sits on this frame's picture top (Gerry)
+            internal bool SeatFromPicture;        // seat = picture: the rider sits on this frame's picture top (a creature that hops)
             internal int SeatRow = -1;             // seat = <row>: the canvas row (from the top) the rider's hip sits on, every frame, whatever the player's AutoSeat (docs/seat-investigation.md option A)
 
             internal bool OwnsSheet => Sprites == null;
@@ -264,39 +264,29 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, SkinDef> defs = new Dictionary<string, SkinDef>(StringComparer.OrdinalIgnoreCase);
         internal static IEnumerable<SkinDef> All => defs.Values;
 
-        // A skin by its full name ("saddleup.dragon/default"). A short name finds one too: a mount's id, or the name
-        // after its prefix when only one mount has it, is that mount's default look ("dragon", "dragon/default": what a
-        // dev's own world saved before the names, 2026-10-24); a skin's own name ("hellfire") the skin when only one
+        // A skin by its full name ("acme.crab/default"). A short name finds one too: a mount's id, or the name
+        // after its prefix when only one mount has it, is that mount's default look ("crab", "crab/default": what a
+        // dev's own world saved before the names, 2026-10-24); a skin's own name ("frost") the skin when only one
         // mount has a skin of that name.
         internal static SkinDef Find(string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
             string t = id.Trim();
             if (defs.TryGetValue(t, out SkinDef d)) return d;
-            if (oldDonkeySkins.TryGetValue(t, out string renamed) && defs.TryGetValue(renamed, out d)) return d; // "donkey/hellfire"
             int slash = t.IndexOf('/');
-            if (slash >= 0) return (Catalog.Find(t.Substring(0, slash)) ?? Catalog.FindShort(t.Substring(0, slash))) is Catalog.Entry m && defs.TryGetValue(SkinKey(m.Id, t.Substring(slash + 1)), out d) ? d : null; // "dragon/default": the dragon's; "saddleup.dragon/default": a renamed mount's (Catalog.renamedMounts)
+            if (slash >= 0) return (Catalog.Find(t.Substring(0, slash)) ?? Catalog.FindShort(t.Substring(0, slash))) is Catalog.Entry m && defs.TryGetValue(SkinKey(m.Id, t.Substring(slash + 1)), out d) ? d : null; // "crab/default": the crab's
             if (t.Length == 0) return null;
-            if (oldLookNames.TryGetValue(t, out string mountShort)) t = mountShort; // "red-dragon": the dragon's default
             if (defs.TryGetValue(SkinKey(t, DefaultSkinName), out d)) return d;
             if (Catalog.FindShort(t) is Catalog.Entry byName && defs.TryGetValue(SkinKey(byName.Id, DefaultSkinName), out d)) return d;
             SkinDef only = null;
             foreach (SkinDef s in defs.Values)
             {
                 if (!string.Equals(s.LocalId, t, StringComparison.OrdinalIgnoreCase)) continue;
-                if (only != null) return null; // two mounts have a skin of that name: say which (dragon/fire)
+                if (only != null) return null; // two mounts have a skin of that name: say which (crab/fire)
                 only = s;
             }
             return only;
         }
-
-        // The names the built-in looks had for a few hours on 2026-10-24 (the mount folders, before skins\default\): a
-        // dev's world and cfg saved then still find the look (the user: "also fix in the old names thing"). Each is its
-        // mount's default; never released.
-        private static readonly Dictionary<string, string> oldLookNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["red-dragon"] = "dragon", ["grey-rat"] = "rat", ["garden-snail"] = "snail", ["earth-worm"] = "worm",
-        };
 
         // Whether a skin is a look added to a mount it doesn't own (Register: its name needs its mod's prefix).
         internal static bool AddsToOthers(SkinDef d)
@@ -307,12 +297,8 @@ namespace GK2DonkeyAPI
             return k != null && k.Owner != d.Owner;
         }
 
-        // Saddle Up's donkey skins before they carried its prefix (2026-10-24, a few hours; never released).
-        private static readonly Dictionary<string, string> oldDonkeySkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["donkey/hellfire"] = "donkey/saddleup.hellfire", ["hellfire"] = "donkey/saddleup.hellfire",
-            ["donkey/royal-parade"] = "donkey/saddleup.royal-parade", ["royal-parade"] = "donkey/saddleup.royal-parade",
-        };
+        // No table of any mod's old skin names here (the user, 2026-10-27: the API knows nothing of the mods
+        // built on it or their packs): a skin a mod renames is that mod's to carry over. The renames of 2026-10-24/27 were never released.
 
         // A mount's own look: the folder skins\default\ of its pack, the skin a new one of it wears (one per mount; the
         // user, 2026-10-24: every other skin is built on top of it).
@@ -321,7 +307,7 @@ namespace GK2DonkeyAPI
         // A skin's full name: its mount's id and its own name.
         internal static string SkinKey(string mountId, string localId) => (string.IsNullOrWhiteSpace(mountId) ? Catalog.DonkeyId : mountId.Trim()) + "/" + localId;
 
-        // The "<skin>" part of a full name ("dragon/default" -> "default"); a short name as it is.
+        // The "<skin>" part of a full name ("crab/default" -> "default"); a short name as it is.
         internal static string LocalOf(string id)
         {
             if (string.IsNullOrEmpty(id)) return id;
@@ -336,7 +322,7 @@ namespace GK2DonkeyAPI
             d.MountId = d.MountId.Trim();
             if (d.LocalId == null)
             {
-                // a code skin's Id: its own name ("fire"), or the full name of its mount ("dragon/fire")
+                // a code skin's Id: its own name ("fire"), or the full name of its mount ("crab/fire")
                 string given = d.Id.Trim();
                 int slash = given.IndexOf('/');
                 if (slash >= 0)
@@ -353,7 +339,7 @@ namespace GK2DonkeyAPI
             // the donkey's own look is the game's art: no skin of it is its default
             if (d.MountId.Equals(Catalog.DonkeyId, StringComparison.OrdinalIgnoreCase) && d.LocalId.Equals(DefaultSkinName, StringComparison.OrdinalIgnoreCase)) throw new ArgumentException($"'{DefaultSkinName}' is the donkey's own look (the game's art): a donkey skin needs a name of its own.");
             d.Id = SkinKey(d.MountId, d.LocalId);
-            // a look added to a mount another mod owns is named "<mod>.<name>" (donkey/saddleup.hellfire): two mods'
+            // a look added to a mount another mod owns is named "<mod>.<name>" (donkey/acme.fire): two mods'
             // "frost" for one mount are two skins, and a saved one never turns into the other mod's (the user,
             // 2026-10-24; docs/mount-id-collisions.md). On your own mount any name. A pack's: a folder without mount.cfg;
             // a code skin's: a mount registered by another owner; every donkey skin (the donkey is the game's).
@@ -369,13 +355,13 @@ namespace GK2DonkeyAPI
             if (AddsToOthers(d))
             {
                 int dot = d.LocalId.IndexOf('.');
-                if (dot <= 0 || dot == d.LocalId.Length - 1) throw new ArgumentException($"Skin '{d.Id}': a skin added to a mount another mod owns is named '<mod>.<name>', your mod's prefix and the skin's name ({SkinKey(d.MountId, "saddleup." + d.LocalId)}; docs/skins.md).");
+                if (dot <= 0 || dot == d.LocalId.Length - 1) throw new ArgumentException($"Skin '{d.Id}': a skin added to a mount another mod owns is named '<mod>.<name>', your mod's prefix and the skin's name ({SkinKey(d.MountId, "yourmod." + d.LocalId)}; docs/skins.md).");
             }
             if (d.Base == null) throw new ArgumentException($"Skin '{d.Id}' names no base.");
             if (d.CanvasW > MaxCanvas || d.CanvasH > MaxCanvas || d.CanvasW > 0 && d.CanvasW < 8 || d.CanvasH > 0 && d.CanvasH < 8)
                 throw new ArgumentException($"Skin '{d.Id}': canvas {d.CanvasW}x{d.CanvasH} is out of range (8..{MaxCanvas}; a sheet is 44 cells of it).");
             // Everything that can refuse the skin comes before its mount is declared: a mount with no skin would be
-            // offered with nothing to wear (seen 2026-10-18: Gerry listed, "donkey (not installed)" for its skin).
+            // offered with nothing to wear (seen 2026-10-18: a mount listed, "donkey (not installed)" for its skin).
             if (d.Sprites == null && d.Recipe == null && d.Game == null && d.LoadSheetPng == null && (d.Keys == null || d.LoadPng == null)) throw new ArgumentException($"Skin '{d.Id}' has no source of pictures.");
             if (defs.TryGetValue(d.Id, out SkinDef old) && old.Owner != d.Owner)
             {
@@ -449,7 +435,7 @@ namespace GK2DonkeyAPI
             internal LeftOut(string message) : base(message) { }
         }
 
-        // Our own mods (the API, Saddle Up, the self-tests) ship the plain ids; everyone else's carry an author prefix.
+        // Our own mods (the API, its author's other mods, the self-tests) ship the plain ids; everyone else's carry an author prefix.
         internal static bool FirstParty(string owner) => owner != null && owner.StartsWith("dreas.gk2.", StringComparison.Ordinal) && !owner.StartsWith(Plugin.Guid + ".packs", StringComparison.Ordinal);
 
         internal static string Where(SkinDef d) => d.Source != null ? "the folder " + d.Source : d.SourceAssembly != null ? d.SourceAssembly.GetName().Name + ".dll" : "code (" + d.Owner + ")";
@@ -492,7 +478,7 @@ namespace GK2DonkeyAPI
 
         private static int RegisterEmbeddedNow(Assembly asm, string prefix, string owner, bool builtIn)
         {
-            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("saddleup.dragon", "saddleup.dragon/skins/default/front") -> file -> resource
+            var files = new Dictionary<string, Dictionary<string, string>>(StringComparer.OrdinalIgnoreCase); // dir ("acme.crab", "acme.crab/skins/default/front") -> file -> resource
             foreach (string res in asm.GetManifestResourceNames())
             {
                 if (!res.StartsWith(prefix, StringComparison.Ordinal)) continue;
@@ -1130,7 +1116,7 @@ namespace GK2DonkeyAPI
         // ------------------------------------------------------------------ the skin's file: for the tuning panel
 
         // The skin.cfg a skin's values are kept in: a pack's own file, or an embedded skin's in its mod's sources on the
-        // machine that has them (the DLL's GK2MountsSourceDir metadata, written by a dev build: Saddle Up's
+        // machine that has them (the DLL's GK2MountsSourceDir metadata, written by a dev build: for one, a mod's
         // assets\mounts\<mount>\skins\<skin>\; docs/mounts-as-mods.md); null when there is none to write (a code skin, an
         // embedded skin of a release build).
         internal static string CfgPathFor(SkinDef d)
@@ -1569,11 +1555,11 @@ namespace GK2DonkeyAPI
             return k.Cart ? null : $"{Who(i, k)} can't pull the cart.";
         }
 
-        // Who a refusal names (the user, 2026-10-27: "it should say the mount name if available or Gerry (mount type) if
-        // not"): the player's name for it ("Bella"), else its mount's (Gerry, Rat, Dragon), never "a skull".
+        // Who a refusal names (the user, 2026-10-27: its own name if it has one, else its mount type's): the
+        // player's name for it ("Bella"), else its mount's name (the Mounts panel's), never its noun ("a crab").
         internal static string Who(Mount.Instance i, Catalog.Entry k) => !string.IsNullOrEmpty(i?.DisplayName) ? i.DisplayName : k.Label;
 
-        // A mount that pulls the cart, but fewer items than this cart holds (0.40.0; the user, 2026-10-27: Gerry, who pulls
+        // A mount that pulls the cart, but fewer items than this cart holds (0.40.0; the user, 2026-10-27: a mount that pulls
         // 4, hitched to the six the donkey had loaded): why not, else null. The mount's own cargo only: a mod's session cap
         // (CartSlots) lowers the slots and never refuses; a dev tool's slot floor (the cargo sheet, test loads) never either.
         internal static string WhyNotCartByLoad(Mount.Instance mount, Mount.Instance cart)
@@ -1742,8 +1728,8 @@ namespace GK2DonkeyAPI
             internal string Why; // P null: why (null when there is simply nothing for the key)
         }
 
-        // What building a skin's sheet cost, by step (the loaded line): the user, 2026-10-25: "everytime im selecting the
-        // dragon again in the mount journal, game is freezing for some frames"; measured before the cure is chosen.
+        // What building a skin's sheet cost, by step (the loaded line): the user, 2026-10-25: picking a
+        // mount again in the mount journal froze the game for some frames; measured before the cure is chosen.
         internal sealed class BuildCost
         {
             internal static readonly double MsPerTick = 1000.0 / System.Diagnostics.Stopwatch.Frequency;
@@ -1844,7 +1830,7 @@ namespace GK2DonkeyAPI
 
             // The cells the sheet will have, until AdvanceBuilds makes it (-1: made, or none to make); the producers' step
             // before the pictures (Producer.Prepare); the frame the build was asked for (nothing of it runs in that frame:
-            // the pick's own work is there; the trace of 2026-10-25 11:36, Gerry's first picture in the click's frame).
+            // the pick's own work is there; the trace of 2026-10-25 11:36, a game-source skin's first picture in the click's frame).
             internal int SheetFor = -1;
             internal Action Prepare;
             internal int AskedFrame = -1;
@@ -1865,7 +1851,7 @@ namespace GK2DonkeyAPI
                 int w = cols * (cellW + 1) + 1, h = rows * (cellH + 1) + 1;
                 int max = SystemInfo.maxTextureSize;
                 if (w > max || h > max) throw new InvalidOperationException($"the sheet would be {w}x{h}, over this machine's {max}");
-                // Uninitialized: Unity would fill it with zeros first, 14.7 ms for the dragon's 15.6 MB in the frame of a
+                // Uninitialized: Unity would fill it with zeros first, 14.7 ms for a 15.6 MB sheet in the frame of a
                 // first pick (the trace of 2026-10-25 11:36); the gutters are cleared below and every cell is overwritten.
                 Sheet = new Texture2D(w, h, TextureFormat.RGBA32, false, false, true) { name = "gk2skin " + Def.Id, filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
                 // A new texture's memory is undefined: the gutter lines are cleared (the cells are overwritten by Put, and a
@@ -2219,7 +2205,7 @@ namespace GK2DonkeyAPI
         // own keys the default lacks (its flight frames, a front picture of its own). Per key its own picture when it has
         // one (an all-transparent one too: a frame blanked on purpose), else the default's; an own picture that can't be
         // used is said and the default's drawn. Drawn over the default (layer = over): the default's picture with the
-        // erase colour's pixels cleared and the variant's other pixels on top, as Hellfire over the game's donkey; every
+        // erase colour's pixels cleared and the variant's other pixels on top, as a skin over the game's donkey; every
         // frame is then a plain picture of its own (no second layer to draw).
         private static void VariantProducer(Loaded l, Producer own, Producer parent)
         {
@@ -2459,7 +2445,7 @@ namespace GK2DonkeyAPI
         }
 
         // The looks the Mounts panel has shown, held while it is open: picked again, a look is there at once instead of
-        // built again (the dragon's 237 pictures took 40 frames each time, and the panel's picture stood still meanwhile;
+        // built again (one mount's 237 pictures took 40 frames each time, and the panel's picture stood still meanwhile;
         // the user, 2026-10-25). Only a look already built is held; closing the panel lets them go (unloaded when nothing
         // else wears them), so the world's rule stands: a sheet nobody wears is freed.
         // At most PanelHoldBytes of sheets (other mods' mounts make the list unbounded): the least recently shown goes
@@ -2523,8 +2509,8 @@ namespace GK2DonkeyAPI
         // The skin the player will most likely wear next (the companion's choice, MountCompanion.ApplyLook): its sheet is
         // acquired ahead and built in the background with the others (BuildMsPerFrame a frame), and held, so the first
         // spawn wears it at once. Built on the first spawn, the mount showed as the game's donkey for the build's ~29
-        // frames (the dragon's 173 pictures at 6 a frame) and then changed (the user, 2026-10-23: "the first time you
-        // press h to spawn the mount, for a couple of frames i see the game donkey instead of my mount"). One skin held
+        // frames (one mount's 173 pictures at 6 a frame) and then changed (the user, 2026-10-23: the first spawn
+        // showed the game's donkey for a couple of frames). One skin held
         // at a time: a new choice releases the old one (unloaded when no mount wears it). A reloaded pack's new
         // definition is acquired again.
         internal static string WarmWanted = "";
@@ -2538,12 +2524,12 @@ namespace GK2DonkeyAPI
             if (warm != null && warm.Def == d && warm.Parent == d.Parent) return; // a new default is a new sheet
             if (warm == null && d == null) return;
             // a skin built from the base's own frames (an over skin that erases, a recipe) waits until they are in memory:
-            // built at the main menu it lost its holes (2026-10-24 log: Hellfire "its erase colour can't clear the donkey
+            // built at the main menu it lost its holes (2026-10-24 log: "its erase colour can't clear the donkey
             // (the base's frame is not in memory)", 0 of 44 frames found), and the first spawn wore it so
             if (d != null && NeedsBaseFrames(d) && !BaseFramesInMemory(d.Base, d.Base.GamePrefix)) return;
-            // a game-source skin (Gerry) waits for the game: at the main menu its character's sprites aren't loaded, so it
+            // a game-source skin waits for the game: at the main menu its character's sprites aren't loaded, so it
             // was looked for (every sprite in memory scanned), refused with an exception and set aside, then offered
-            // again after the load (Performance Hog, 2026-10-25 13:43: the exception at every start with Gerry chosen)
+            // again after the load (Performance Hog, 2026-10-25 13:43: the exception at every start with such a skin chosen)
             if (d != null && d.Game != null && !Mount.IsGameReady) return;
             Loaded prev = warm;
             warm = null;
@@ -2573,7 +2559,7 @@ namespace GK2DonkeyAPI
         private static int builtFrame = -1;
 
         // Called once per frame from the rigs' ticks: the skins being loaded or built, for BuildMsPerFrame. A new sheet is
-        // made in a frame of its own (2.4 ms for the dragon's 15.6 MB), its pictures from the next.
+        // made in a frame of its own (2.4 ms for a 15.6 MB sheet), its pictures from the next.
         internal static void AdvanceBuilds()
         {
             if (building.Count == 0 || Time.frameCount == builtFrame) return;
@@ -2726,7 +2712,7 @@ namespace GK2DonkeyAPI
 
             // The mount this instance is now: its skin's (the donkey's while it has none). The skin it wears when it
             // has a view, else the one its "Skin" key names (WantedDef): an instance asleep far from the keeper, with
-            // no view to draw on, is still a Gerry. Seen 2026-10-18: the parent asleep outside counted as a donkey, so
+            // no view to draw on, is still its mount. Seen 2026-10-18: the parent asleep outside counted as a donkey, so
             // the companion kept its babies at 0.6 until the parent was called and woke.
             // Creature facts (the mount: cart, babies, effect, abilities) follow the WANTED skin at once (a sheet still
             // building, or no view at all); the drawing's geometry (the tuning merge) follows the WORN skin, so a rider
@@ -3217,9 +3203,13 @@ namespace GK2DonkeyAPI
             internal void TestClearDirty() => dirty = false;
             internal void RetuneNow() => tunedMount = null; // the mount's or skin's values changed in place: ApplyTuning re-merges on the next tick
 
-            // The cart rule while hitched (docs/mounts-design.md §3, the user's decision of 2026-10-20): a mount with a
-            // view whose (wanted) mount can't pull the cart leaves it standing where it is. Done once per mount; a refused
-            // unhitch (ridden over water, say) is tried again once a second and said once, not every tick.
+            // The cart rule while hitched (docs/mounts-design.md §3, the user's decision of 2026-10-20): a mount whose
+            // (wanted) mount can't pull the cart leaves it standing where it is. With a view (Tick) and, since 2026-10-27,
+            // without one (TickWithoutView, from the stand tick's view-less paths): an instance asleep far away is its
+            // chosen mount too (MountNow), so its cart is left where it stands the moment the choice says so, not when it
+            // is next seen (the self-test's world check saw a parked donkey with its cart become a mount without one and leave the
+            // cart mid-run). The split is data only (Instance.Unhitch); the free cart gets its view when that is due. Done
+            // once per mount; a refused unhitch (ridden over water, say) is tried again once a second and said once.
             private Catalog.Entry cartCheckedFor, cartRefusalSaid;
             private float cartRetryAt;
             private bool DropCartIfRefused(Catalog.Entry k)
@@ -3249,6 +3239,12 @@ namespace GK2DonkeyAPI
                 }
                 return false;
             }
+            // The cart rule for an instance without a view (above): nothing else of a tick applies to it.
+            internal void TickWithoutView()
+            {
+                if (failed || owner == null || !owner.HasCart) return;
+                DropCartIfRefused(MountNow);
+            }
             internal string Wearing => skin?.Def.Id ?? "";
             internal bool HasFrame(string key) => skin != null && skin.Frames.ContainsKey(key); // the worn skin has this picture (the flight's glide frames)
             internal bool Building => pending != null;
@@ -3256,7 +3252,7 @@ namespace GK2DonkeyAPI
             // in the donkey's palette colours, which take the donkey's map).
             internal Loaded WornOwnColours => skin != null && skin.Ready && skin.Def.OwnColours ? skin : null;
             // The effect ring's size against the donkey's: the worn skin's standing frame width over the donkey's 46 px
-            // (the rat 85 wide gets a ring almost twice the donkey's; an over skin or a code-sprite skin keeps 1.0;
+            // (a mount 85 wide gets a ring almost twice the donkey's; an over skin or a code-sprite skin keeps 1.0;
             // docs/mounts-parity-matrix.md 9.3).
             internal const float DonkeyStandWidthPx = 46f;
             internal float EffectScale => skin != null && skin.Ready && !skin.Def.Over && skin.StandWidthPx > 0 ? Mathf.Max(0.5f, skin.StandWidthPx / DonkeyStandWidthPx) : 1f;
@@ -3298,7 +3294,7 @@ namespace GK2DonkeyAPI
             // column, this frame, in the world (the overlay's transform carries the trim and the skin's offset, and the
             // view's scale and stretch). False when the skin doesn't say so, isn't shown, or draws nothing there.
             // The skin's own seat, if it declares one: seat = picture (this frame's picture top at the pivot column,
-            // Gerry) or seat = <row> (a fixed canvas row, from the top: the rider's hip sits on it in every frame, so
+            // for a creature that hops) or seat = <row> (a fixed canvas row, from the top: the rider's hip sits on it in every frame, so
             // the mount's seat is the same for every player whatever their AutoSeat; docs/seat-investigation.md).
             // fixedRow says which, so the caller adds the walk bob to a fixed row as the manual seat does.
             internal bool TrySeatTop(out Vector3 world) => TrySeatTop(out world, out _);
@@ -3344,7 +3340,7 @@ namespace GK2DonkeyAPI
                     // A skin drawn over the body (layer = over) sorts one above the part and sits OverLift towards
                     // the camera: the two sprites are coplanar, and when the game draws them by distance (the sprite
                     // material's queue, not the sorting order) a tie in the depth test flickered the overlay in and
-                    // out of the body while the donkey moved (Royal Parade, 2026-10-19; steady while idle, the tie
+                    // out of the body while the donkey moved (a skin over the donkey, 2026-10-19; steady while idle, the tie
                     // breaking the same way every frame). A replacing skin's part isn't drawn at all.
                     bool over = skin.Def.Over;
                     Follow(ov, part, game, part.sortingLayerID, part.sortingOrder + (over ? 1 : 0), over ? OverLift : 0f);
@@ -3377,8 +3373,8 @@ namespace GK2DonkeyAPI
                             // outline registered on the frames at 8 screen px an art px), so the near wing's halves in the
                             // two layers no longer met and the hole round the rider's head sat 3 px low ("there are still
                             // problems with the wing occlusion"). On the ground too since the readout measured it there
-                            // (2.7 art px lower, both facings, 2026-10-23): the dragon's fold is drawn that much lower in
-                            // its picture instead (make_creatures.py), so it looks the same ridden and unridden, on the
+                            // (2.7 art px lower, both facings, 2026-10-23): a flying mount's wing fold is drawn that much lower in
+                            // its picture instead, so it looks the same ridden and unridden, on the
                             // ground and at the take-off and landing, and where it was judged.
                             Follow(fr, part, game, keeper.sortingLayerID, keeper.sortingOrder + 2, FrontLift + Mathf.Max(0f, -keeperDepth), alongView: true);
                         }
@@ -3406,7 +3402,7 @@ namespace GK2DonkeyAPI
 
             // How far a skin's front layer sits in front of the nearest of the rider's sprites, world units along the
             // part's facing: 2.5 art pixels, well past the depth buffer's step at the camera's distance (OverLift's fifth
-            // of a pixel tied there: the dragon's wing flickered with the rider's shirt while he moved, 2026-10-20);
+            // of a pixel tied there: a flying mount's wing flickered with the rider's shirt while he moved, 2026-10-20);
             // along the view axis, so nothing moves on screen. The front-layer self-test compares both.
             internal static float FrontLift = 0.05f;
 

@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI
 {
-    // Each mount's own jump (the user, 2026-10-25: "the arc the donkey makes while jumping looks silly for a dragon ...
-    // first lets make sure that we have the ability to specify per mount"; docs/flying.md "Each mount its own jump").
+    // Each mount's own jump (the user, 2026-10-25: the donkey's arc doesn't suit every mount, so each may say its
+    // own; docs/flying.md "Each mount its own jump").
     // The jump's shape (its height, its time in the air, how it rises and falls, the crouch and the squash) is the
     // mount's: mount.cfg [Jump], MountDef.Jump. A key the mount doesn't set is the default jump's (Flight's values, the
     // dev Flying tab's Jump rows; the donkey's). What a jump does (over things, the perch, the steering) stays one for

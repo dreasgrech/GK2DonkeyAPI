@@ -10,7 +10,7 @@ using Object = UnityEngine.Object;
 namespace GK2DonkeyAPI
 {
     // Particle effects on a mount (docs/mount-looks-design.md, docs/api.md "Effects"): a system any mod registers
-    // effects into (Saddle Up's Hellfire: the mount wreathed in the game's own lamp fire).
+    // effects into (for one, the mount wreathed in the game's own lamp fire).
     //
     // An effect is a definition (MountEffectDef): one or more sources of particles, each with emitters placed round the
     // donkey. A source is a template GameObject of particle systems: the game's own (a lamp's flame and sparks, found by
@@ -131,21 +131,13 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, EffectDef> defs = new Dictionary<string, EffectDef>(StringComparer.OrdinalIgnoreCase);
         internal static IEnumerable<EffectDef> All => defs.Values;
 
-        // Saddle Up's Hellfire before effect ids carried their mod's prefix (2026-10-26; never picked or saved by a player).
-        private static readonly Dictionary<string, string> oldNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["hellfire"] = "saddleup.hellfire",
-        };
-
         internal static EffectDef Find(string id)
         {
             if (string.IsNullOrEmpty(id)) return null;
-            id = id.Trim();
-            if (defs.TryGetValue(id, out EffectDef d)) return d;
-            return oldNames.TryGetValue(id, out string now) && defs.TryGetValue(now, out d) ? d : null;
+            return defs.TryGetValue(id.Trim(), out EffectDef d) ? d : null;
         }
 
-        // An effect's id carries its mod's prefix, "<mod>.<name>" (saddleup.hellfire), as a mount's does
+        // An effect's id carries its mod's prefix, "<mod>.<name>" (acme.fire), as a mount's does
         // (docs/multi-mod-loading.md D1): two mods' "fire" are two effects. A mistake in the call itself throws; another
         // owner's effect of the same id meets the version rule, without a throw: the newer wins, at a tie the first stays,
         // the loser is left out with one warning and false (its handle does nothing).
@@ -155,7 +147,7 @@ namespace GK2DonkeyAPI
             string idWhy = Catalog.IdRule(d.Id, "Effect id");
             if (idWhy != null) throw new ArgumentException(idWhy);
             int dot = d.Id.IndexOf('.');
-            if (dot <= 0 || dot == d.Id.Length - 1) throw new ArgumentException($"Effect id '{d.Id}': an effect's id is '<mod>.<name>', your mod's prefix and the effect's name (Saddle Up's is saddleup.hellfire).");
+            if (dot <= 0 || dot == d.Id.Length - 1) throw new ArgumentException($"Effect id '{d.Id}': an effect's id is '<mod>.<name>', your mod's prefix and the effect's name (yourmod.fire).");
             if (d.Parts.Count == 0) throw new ArgumentException($"Effect '{d.Id}' has no part (a source with emitters).");
             if (defs.TryGetValue(d.Id, out EffectDef old) && old.Owner != d.Owner)
             {

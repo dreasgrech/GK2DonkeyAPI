@@ -8,7 +8,7 @@ namespace GK2DonkeyAPI
     // hands, the bodies' count). The door itself is a hand test: drive the cart into the morgue with a body aboard.
     internal static partial class SelfTest
     {
-        private static IEnumerator MorgueDecisions()
+        internal static IEnumerator MorgueDecisions()
         {
             string places = "morgue, tp_RT_morgue_exit, tp_morgue_to_graveyard";
             Check(Mount.MorgueHandover.Decide("morgue", null, places, out string w1) && w1 == "the morgue area", "the morgue area decides");
@@ -21,7 +21,7 @@ namespace GK2DonkeyAPI
             yield break;
         }
 
-        private static IEnumerator MorgueHandOver()
+        internal static IEnumerator MorgueHandOver()
         {
             PlayerData pd = PC.PlayerData;
             if (pd.HasOverheadItem)
@@ -60,7 +60,7 @@ namespace GK2DonkeyAPI
                 yield return Frames(1);
                 g1 = CorpseOnCart(null);
                 Check(g1 != null && Mount.MorgueHandover.HasCorpse(i), "the cart reports a corpse aboard");
-                Mounts.Behaviour.ClearAny("CorpseIntoMorgue"); // Saddle Up holds it: taken over for the test, given back in the finally
+                Mounts.Behaviour.ClearAny("CorpseIntoMorgue"); // a mod may hold it: taken over for the test, given back in the finally
                 Mounts.Behaviour.Set(Owner, "CorpseIntoMorgue", false);
                 int n0 = Mount.MorgueHandover.HandOver(i, pd, "the test");
                 Check(n0 == 0 && i.CargoRig.Count == 1 && !pd.HasOverheadItem, "switched off: the body stays on the cart");

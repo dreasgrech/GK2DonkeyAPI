@@ -67,7 +67,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // Every row's cfg entry comes through here. A section's number is its place on the page, so when a mod moves a
-        // section (Saddle Up 0.11 put Mount right after Keys: Donkey went from "3. Donkey" to "5. Donkey"), a cfg from
+        // section (a mod put Mount right after Keys: Donkey went from "3. Donkey" to "5. Donkey"), a cfg from
         // before has the values under the old number, and BepInEx would bind the defaults and leave the old lines as
         // orphans: every player's settings reset on an update. So a key the file doesn't have under its section takes
         // the value the file has for it under the same name with another number, or under a place the mod says the
@@ -116,7 +116,7 @@ namespace GK2DonkeyAPI.Api
 
         private readonly Dictionary<string, List<(string Section, string Key)>> movedKeys = new Dictionary<string, List<(string, string)>>(StringComparer.Ordinal);
 
-        // A setting the mod no longer has, on purpose (0.36.0; Saddle Up's Riding speed and Cart speed, now each mount's
+        // A setting the mod no longer has, on purpose (0.36.0; a mod's Riding speed and Cart speed, now each mount's
         // own): its line leaves the player's file (under any number of the section) at Publish, and the upgrade
         // self-test counts it as retired, not as a value lost. Call it once per key, any time before Publish.
         public void RetiredKey(string section, string key)
@@ -158,8 +158,6 @@ namespace GK2DonkeyAPI.Api
             movedKeys.TryGetValue(PlainName(cfgSection) + "\n" + key, out List<(string Section, string Key)> aliases);
             string unprefixed = UnprefixedMountKey(key);
             if (unprefixed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, unprefixed);
-            string renamed = RenamedMountKey(key);
-            if (renamed != null && file.ContainsKey(cfgSection)) yield return (cfgSection, renamed);
             foreach (string s in file.Keys)
             {
                 if (s == cfgSection) continue;
@@ -168,7 +166,6 @@ namespace GK2DonkeyAPI.Api
                 {
                     yield return (s, key);
                     if (unprefixed != null) yield return (s, unprefixed);
-                    if (renamed != null) yield return (s, renamed);
                 }
                 else if (aliases != null)
                 {
@@ -180,18 +177,7 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // A per-mount key of a mount whose id changed (Catalog.renamedMounts: "Coat_saddleup-dragon.dragon" ->
-        // "Coat_saddleup.dragon"): its old name, so the dev's value carries over; null for any other key.
-        internal static string RenamedMountKey(string key)
-        {
-            foreach (var kv in GK2DonkeyAPI.Catalog.renamedMounts)
-            {
-                if (key.EndsWith("_" + kv.Value, StringComparison.OrdinalIgnoreCase)) return key.Substring(0, key.Length - kv.Value.Length) + kv.Key;
-            }
-            return null;
-        }
-
-        // A per-mount key with its mount's id from before the prefixes ("Coat_saddleup.dragon" -> "Coat_dragon": a dev's
+        // A per-mount key with its mount's id from before the prefixes ("Coat_acme.crab" -> "Coat_crab": a dev's
         // cfg of 2026-10-24, mounts never released): its old name, so the value carries over; null for any other key.
         internal static string UnprefixedMountKey(string key)
         {
@@ -429,7 +415,7 @@ namespace GK2DonkeyAPI.Api
             if (mountRow != null) throw new InvalidOperationException("MountRows is called once per page.");
             mountCompanion = companion;
             mountSection = section;
-            // A mount (Donkey, Giant Rat, Dragon) has skins (the donkey: Default, Hellfire): a Mount
+            // A mount (Donkey, Crab, ...) has skins (the donkey: Default, Frost): a Mount
             // dropdown, then a Skin dropdown with that mount's skins. A dropdown's choices are fixed once built, so there
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
@@ -492,13 +478,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (mountRow == null) return;
             string mount = mountRow.Value ?? MountCatalog.DonkeyId;
-            // a mount's id from before it became a pack of its own ("saddleup.dragon", Catalog.renamedMounts): its id now, kept
-            if (GK2DonkeyAPI.Catalog.Find(mount) is GK2DonkeyAPI.Catalog.Entry renamedTo && !renamedTo.Id.Equals(mount, StringComparison.OrdinalIgnoreCase))
-            {
-                mountRow.Value = renamedTo.Id; // SettingChanged runs Apply again
-                return;
-            }
-            // a mount's id from before the prefixes ("dragon": a dev's cfg, 2026-10-24): its full id (saddleup.dragon), kept
+            // a mount's id from before the prefixes ("crab": a dev's cfg, 2026-10-24): its full id (acme.crab), kept
             if (GK2DonkeyAPI.Catalog.Find(mount) == null && GK2DonkeyAPI.Catalog.FindShort(mount) is GK2DonkeyAPI.Catalog.Entry full)
             {
                 mountRow.Value = full.Id; // SettingChanged runs Apply again
@@ -510,8 +490,8 @@ namespace GK2DonkeyAPI.Api
             // mount's skin was missing, seen 2026-10-18) takes the mount's first skin instead, and keeps it.
             bool donkeyMount = mount.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
             if (string.IsNullOrEmpty(value) || (!donkeyMount && value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))) value = Looks.FirstSkinOf(mount);
-            // a short name ("dragon", "hellfire": a dev's cfg from before skins were named within their mount, 2026-10-24):
-            // the skin's full name ("dragon/default"), kept
+            // a short name ("crab", "frost": a dev's cfg from before skins were named within their mount, 2026-10-24):
+            // the skin's full name ("crab/default"), kept
             if (!donkeyMount || !value.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase))
             {
                 Looks.SkinDef named = Looks.Find(value);
@@ -596,7 +576,7 @@ namespace GK2DonkeyAPI.Api
                 Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
                 Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
                 Toggle(section, "FoalsIndoors" + sfx, true, "Babies come indoors", "The babies follow you into buildings and back out.", v => l.FoalsComeIndoors = v, babies, look: true);
-                // "Babies are the same mount and skin" is gone (the user, 2026-10-27): off made a dragon's babies plain
+                // "Babies are the same mount and skin" is gone (the user, 2026-10-27): off made another mount's babies plain
                 // donkeys. Babies always look like their parent (MountLook.FoalsWearSkin stays true unless a mod sets it); the
                 // old lines leave the file.
                 RetiredKey(section, "FoalsWearSkin" + sfx);
@@ -637,8 +617,9 @@ namespace GK2DonkeyAPI.Api
         }
 
         // One of a list of ids read when the row is first shown (the skins installed, say): choices gives (id, label)
-        // pairs; the id is what the cfg holds, from every menu alike. A stored id that isn't in the list is shown as
-        // "<id> (not installed)" and left alone, so it returns with what provides it. The list is read once per
+        // pairs; the id is what the cfg holds, from every menu alike. A stored id that isn't in the list is shown by
+        // a name made from the id, "Blaze (not installed)" (MountsPanel.NameFromId; the id itself showed until
+        // 2026-10-27), and left alone, so it returns with what provides it. The list is read once per
         // session, when the page is shown (the frame after Publish): anything registered after that appears after a
         // restart. look: the Mounts panel's row, not the menus'.
         public ConfigEntry<string> List(string section, string key, string value, Func<IReadOnlyList<(string Id, string Label)>> choices, string label, string description, Action<string> apply = null, bool look = false, Func<bool> visible = null)
@@ -677,7 +658,7 @@ namespace GK2DonkeyAPI.Api
             if (now.Length > 0 && !ids.Contains(now))
             {
                 ids.Add(now);
-                labels.Add(now + (Looks.Find(now)?.Unavailable != null ? " (set aside)" : " (not installed)"));
+                labels.Add(MountsPanel.NameFromId(now) + (Looks.Find(now)?.Unavailable != null ? " (set aside)" : " (not installed)"));
             }
             if (ids.Count == 0)
             {
@@ -764,7 +745,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // The lightness key of a Color row's key: "CustomCoatLightness", and with a per-mount suffix
-        // "CustomCoatLightness_dragon".
+        // "CustomCoatLightness_crab".
         internal static string LightnessKey(string key)
         {
             int suffix = key.IndexOf('_');
@@ -785,7 +766,7 @@ namespace GK2DonkeyAPI.Api
 
         // A heading inside a section: a line with the label and no value, before the rows it names ("Mount colours",
         // "Cart colours" in a Colours section). In the Mounts panel the look rows after it, in its section, stand under
-        // this heading in a column of their own instead of under the section's name (MountsPanel; Saddle Up: the mount's
+        // this heading in a column of their own instead of under the section's name (MountsPanel; for one, the mount's
         // colours left, the cart's right). Not a picture row's label (Add).
         public void Heading(string section, string label, string description = "")
         {
@@ -852,7 +833,7 @@ namespace GK2DonkeyAPI.Api
             if (string.Equals(mountRow.Value, mountId, StringComparison.OrdinalIgnoreCase)) return;
             // The cfg file is written once the picking is over (SavePicked: the panel closed, or a moment after the last
             // pick), not inside the set: BepInEx writes the whole file on every change, 3.5 to 4.7 ms in the click's frame
-            // of every pick (the trace of 2026-10-25 11:03; the user: "its the dragon which is doing the micro freeze").
+            // of every pick (the trace of 2026-10-25 11:03; the user saw a micro freeze at each pick).
             bool save = Config.SaveOnConfigSet;
             try
             {
@@ -1012,14 +993,14 @@ namespace GK2DonkeyAPI.Api
         private string pendingMountId;   // set while PerMount builds one mount's rows
         private ConfigEntry<string> mountRow; // MountRows' Mount row: which mount is chosen
 
-        // Rows kept per mount (the colour rows: a dragon's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
+        // Rows kept per mount (the colour rows: another mount's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
         // called once per registered mount with the mount's id, the suffix for the cfg keys ("" for the donkey, so a cfg
-        // from before keeps its values under the same keys; "_dragon" for the dragon) and whether that mount is the one
+        // from before keeps its values under the same keys; "_crab" for a crab) and whether that mount is the one
         // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
         // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel leaves such a row out until it holds, the menus hide it).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
-        // (a Harness row on the worm). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu
+        // (a Harness row on a mount without one). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu
         // (which knows only visibility) leaves it out for that mount.
         // The mount a companion's chosen skin is a look of pins this tuning key (its [Mount.Tuning] or a code mount's
         // Tuning, either style): its label, else null. A player's row for such a key does nothing on that mount.
@@ -1114,7 +1095,7 @@ namespace GK2DonkeyAPI.Api
 
         // Where each builder's rows end (its last row so far): a mount caught up later gets its rows put right after them,
         // under the same heading. Appended at the end, a late mount's colour rows sat under the page's last heading (the
-        // dragon from its own pack, registered after Saddle Up: its Coat and Harness under "Cart colours", 2026-10-26).
+        // mount from its own pack, registered after the page was built: its Coat and Harness under "Cart colours", 2026-10-26).
         private readonly Dictionary<Action<string, string, Func<bool>>, Row> lastRowOf = new Dictionary<Action<string, string, Func<bool>>, Row>();
 
         private void RunPerMount(Action<string, string, Func<bool>> rows, string id)

@@ -2,7 +2,7 @@
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
 packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
-(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids
+(`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Gerry alone). Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 
 **Amended 2026-10-25 (API 0.37.0):** a mount no longer has a default effect (`MountDef.Effect` / `EffectWhen`,
@@ -120,8 +120,10 @@ sections. The override mechanism is per key, so the rig re-applies the merged se
 - `Cart` (true): false refuses the cart style for a creature of this mount: `Mounts.TryMount(Cart)`, `Hitch`,
   `MountCompanion.Use(Cart)` and `Mounts.Spawn(WithCart)` say "A giant snail can't pull the cart." A cart already
   hitched when the skin changes to such a mount is **left standing where it is** (the user's decision of 2026-10-20): the
-  rig unhitches it on the next tick when the mount has a view; a mount asleep far away keeps it as data until it
-  wakes, then the same; nothing is destroyed.
+  rig unhitches it on the next tick, with a view or (since 2026-10-27) without one: a mount asleep far away is its
+  chosen mount too, so its cart is left where it stands as data the moment the choice says so, and the free cart
+  gets its view when that is due (before, it kept the cart until it woke, so a parked donkey turned into a mount
+  without a cart the first time it was seen, mid-walk or mid-test); nothing is destroyed.
 - `Foals` (true): false means no foal is drawn as this mount (the foals stay donkeys, as `FoalsWearSkin` off). The
   player's FoalsWearSkin is the only other say; a skin has no foals key of its own (removed 2026-10-18).
 - `Effect` / `EffectWhen`: the effect a creature of this mount shows when its own `Effect` key says "the mount's"

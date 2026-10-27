@@ -143,7 +143,7 @@ namespace GK2DonkeyAPI
             // WalkOpenCells (60 square units: open ground, no pocket; a take-off spot on another level far away is never
             // reached by a short spread: the user's home refused from a plateau 35 away, 2026-10-23). No when the spread ends
             // first: a rock top, a ledge (one seen: 69 cells), a closed pocket. Being a stranded keeper there is no worse than
-            // a walk he can make: the ground is his, and the dragon lands with him.
+            // a walk he can make: the ground is his, and the mount lands with him.
             // On the main thread (physics queries), so sliced: WalkSliceMs a frame, the landing hovering meanwhile
             // (WalkPending); all at once only for a forced landing (budget 0). The first build ran 6000 cells in one frame,
             // 280-330 ms, a freeze on every Land pressed over open ground (the user, 2026-10-23). Answers kept 5 s per spot.
@@ -420,7 +420,7 @@ namespace GK2DonkeyAPI
             // What the flight may come down to under 'at' from 'alt' (the mount's feet): the highest of the ground's
             // surface, the see-through shapes' (drawn) surfaces and the drawn tops of the obstacles under it. The floor
             // is the clear height above this, so hovering over a cliff's rim or a rock the mount stays on top of what is
-            // drawn there (the user, 2026-10-22: hovering over a cliff after a refused landing, the dragon was inside the
+            // drawn there (the user, 2026-10-22: hovering over a cliff after a refused landing, the mount was inside the
             // rim's rocks: the floor counted the ground only). NaN: nothing under it (water).
             private static readonly RaycastHit[] downHits = new RaycastHit[32];
 
@@ -460,7 +460,7 @@ namespace GK2DonkeyAPI
                     else if (Blocks(rb, c, Vector3.up)) y = Mathf.Max(h.point.y, ObjectTop(c, out _));
                     else continue;
                     // Only what is under the mount's feet: a thing drawn higher than them (a tree whose trunk the cast met
-                    // while the dragon flew low past its crown) is beside or around the flight, not a floor; taken as one, it
+                    // while the mount flew low past its crown) is beside or around the flight, not a floor; taken as one, it
                     // lifted the flight 134 px in one frame to the tree's top (the log, 2026-10-23: "drawn things up to
                     // 9.77, now 185 px up" over ground at 3.6). The bumping keeps the flight out of such things sideways.
                     if (y > alt + 0.05f) continue;

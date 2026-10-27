@@ -411,8 +411,8 @@ namespace GK2DonkeyAPI
 
         internal static void ClearDormant() => dormant.Clear();
 
-        // Mounts registered but no mod that offers them (only a settings page or a companion does: Saddle Up's): a mount
-        // mod installed without Saddle Up does nothing, and this says why, once (docs/multi-mod-loading.md 5.5).
+        // Mounts registered but no mod that offers them (only a settings page or a companion does): a mount
+        // mod installed without a mod that offers mounts does nothing, and this says why, once (docs/multi-mod-loading.md 5.5).
         private static bool noOffererSaid;
 
         private static void NoOffererOnce()
@@ -422,7 +422,7 @@ namespace GK2DonkeyAPI
             if (MountSettingsPage.All.Count > 0 || MountCompanion.Count > 0) return;
             var ids = new List<string>();
             foreach (Catalog.Entry k in Catalog.All) if (k != Catalog.Donkey) ids.Add(k.Id);
-            if (ids.Count > 0) Plugin.Log.LogInfo($"Mounts: {ids.Count} mount(s) are registered ({string.Join(", ", ids)}), but no mod offers mounts to ride (GK2 Saddle Up does): install it to pick them.");
+            if (ids.Count > 0) Plugin.Log.LogInfo($"Mounts: {ids.Count} mount(s) are registered ({string.Join(", ", ids)}), but no mod offers mounts to ride: install one that does to pick them.");
         }
 
         public static void Tick()

@@ -7,12 +7,13 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 `GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.12.0, for GK2 Donkey API 0.40.0 or newer, and Steam game build 25910882 (game
 1.010).
 
-**Mounts and skins.** Saddle Up itself brings the donkey (skins: Default, Hellfire, Royal Parade) and Gerry, the
-game's talking skull (packs in `assets/mounts/`: `donkey/skins/`, `saddleup.gerry/`, registered with the API at start
-the way any mod ships a mount). More mounts are downloads of their own, each a folder for `BepInEx\plugins\`:
+**Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Gerry, the game's talking skull
+(a pack in `assets/mounts/saddleup.gerry/`, registered with the API at start the way any mod ships a mount). More
+mounts and skins are downloads of their own, each a folder for `BepInEx\plugins\`:
 - **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`): the dragon, which flies;
 - **GK2 Saddle Up: Critters** (`GK2SaddleUpCritters\GK2SaddleUpCritters.dll`): the rat, the snail and the worm;
-- or both in one, the **All Mounts** zip.
+- **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkins\GK2SaddleUpDonkeySkins.dll`): the donkey's skins Hellfire
+  and Royal Parade.
 
 | Mount | Download | Riding | Cart |
 |---|---|---|---|
@@ -24,7 +25,7 @@ the way any mod ships a mount). More mounts are downloads of their own, each a f
 | Dragon | GK2 Saddle Up: Dragon | Slow | no cart (it flies) |
 
 Each mount's cart carries its own number of items, the table above. Switching to a mount that carries less never
-drops what the cart already holds. The donkey's skins: Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring
+drops what the cart already holds. The donkey's skins (GK2 Saddle Up: Donkey Skins): Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring
 of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour).
 
 ## Playing
@@ -80,7 +81,7 @@ All of these apply at once:
 | 2. Mount | Your mount (the picture) | | Your mount, drawn in its colours. |
 | | Mounts | | A button. Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
 | | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Gerry. Packs and other mods add more. |
-| | Skin | Default | (in the Mounts panel) How your mount looks. The donkey also has Hellfire and Royal Parade. |
+| | Skin | Default | (in the Mounts panel) How your mount looks. With GK2 Saddle Up: Donkey Skins the donkey also has Hellfire and Royal Parade. |
 | | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |
 | | Keep your mount with the save | on | After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs. |
 | | Babies | none | (in the Mounts panel) How many little ones follow your mount around, up to 5. They always look like their parent. Only for a mount that has babies. |

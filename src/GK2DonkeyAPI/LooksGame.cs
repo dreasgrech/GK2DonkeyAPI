@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 namespace GK2DonkeyAPI
 {
     // Game-creature skins (docs/skins.md "source = game"; docs/gerry-mount.md): the pictures are another character's
-    // frames out of the game's character atlas (Gerry's 0901_*), each base frame key mapped to one of them (by hand in
+    // frames out of the game's character atlas (a preset's, like 0901_*), each base frame key mapped to one of them (by hand in
     // the skin's [Game] section, else by rule), scaled by whole pixels onto the skin's canvas with the creature's feet
     // on the base's ground row and its centre on the base's pivot. Nothing of the game's art is shipped: the frames
     // are read back at run time like the recipes' (ReadFrame), a few per tick (AdvanceBuilds), into the skin's sheet.
@@ -54,7 +54,7 @@ namespace GK2DonkeyAPI
             {
                 // nothing to draw: refused here, so Acquire finishes the sheet with nothing and the base shows (before
                 // 0.35.0 the sheet was built of 44 empty cells and the mount was invisible, docs/mounts-foundation-2.md 4.1)
-                throw new InvalidOperationException($"no '{g.Prefix}*' sprite is in memory and no sprite atlas hands them out; the {b.Id} shows. Is the prefix right (the character's preset number, like 0901_ for Gerry)?");
+                throw new InvalidOperationException($"no '{g.Prefix}*' sprite is in memory and no sprite atlas hands them out; the {b.Id} shows. Is the prefix right (the character's preset number, like 0901_)?");
             }
             // every base key to a frame name, or null (an empty picture)
             var map = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -109,7 +109,7 @@ namespace GK2DonkeyAPI
         // per call, destroyed after the read). First the sprites already in memory (the character has been on screen),
         // else every loaded sprite atlas asked by name.
         // The frame names a skin's [Game] section asks for by name (its map's values but "none"): what the skin needs the
-        // game to have (its sprite manifest). Not the rest picture: a map may name it (Gerry: bdy_static_left =
+        // game to have (its sprite manifest). Not the rest picture: a map may name it (as in bdy_static_left =
         // bdy_walk_left_01, the game has no 0901_bdy_static_left) and the build falls back on three rest names itself;
         // demanding the name set every such skin aside at game-ready (the F11 run of 2026-10-21).
         internal static List<string> NeededFrames(GameSource g)
@@ -231,7 +231,7 @@ namespace GK2DonkeyAPI
         // loaded sprite atlas for the needed names that memory lacks (a listing per atlas; its copies destroyed;
         // before 0.35.0 a partial set in memory stopped the search, docs/mounts-foundation-2.md 4.2).
         // A complete set of a character's frames found in memory, kept for the session (by prefix and atlas): every sprite
-        // in memory is looked through to find them, 6 to 7 ms, and that was in the frame of Gerry's first pick in the
+        // in memory is looked through to find them, 6 to 7 ms, and that was in the frame of such a mount's first pick in the
         // Mounts panel (the trace of 2026-10-25 11:36). The game-ready check finds them first (VerifyGameSources). Used
         // again while every sprite is still there; one gone (its scene unloaded): looked for again.
         private static readonly Dictionary<string, Dictionary<string, CreatureFrame>> foundFrames = new Dictionary<string, Dictionary<string, CreatureFrame>>(StringComparer.Ordinal);

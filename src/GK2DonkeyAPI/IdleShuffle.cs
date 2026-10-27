@@ -33,7 +33,7 @@ namespace GK2DonkeyAPI
         internal static void Bind(ConfigFile cfg)
         {
             On = cfg.Bind("General", "IdleShuffle", Defaults.Get("General", "IdleShuffle", false),
-                "Donkeys standing in the world without a cart (Mounts.SpawnDonkey, or left by a dismount) take a few slow steps now and then, inside a small area around where they were left, so they do not stand perfectly still. Never with a cart, never while ridden, and not while the keeper is close. Off in GK2 Donkey API itself; a mod switches it on (Saddle Up does).");
+                "Donkeys standing in the world without a cart (Mounts.SpawnDonkey, or left by a dismount) take a few slow steps now and then, inside a small area around where they were left, so they do not stand perfectly still. Never with a cart, never while ridden, and not while the keeper is close. Off in GK2 Donkey API itself; a mod switches it on.");
             AreaWidth = F(cfg, "ShuffleAreaWidth", 1f, 0.1f, 4f,
                 "How far the donkey may wander from its home spot sideways (along the screen's horizontal), either way, world units. Its home is where it was left, spawned or moved to.");
             AreaDepth = F(cfg, "ShuffleAreaDepth", 0.5f, 0f, 2f,
@@ -101,7 +101,7 @@ namespace GK2DonkeyAPI
             FoalJumpAlongChance = F(cfg, "ShuffleFoalJumpAlongChance", 0.75f, 0f, 1f,
                 "A lively foal following the mount the keeper rides: chance that it jumps too when he jumps (Space), a moment after him, usually a big one. 0: never.");
             FoalVariety = F(cfg, "ShuffleFoalVariety", 1f, 0f, 2f,
-                "How different a mount's babies are from each other (a companion's babies: Saddle Up's): each its own size, its own shade of the parent's colours, its own temperament (lively and roaming, or calm and staying close), trot, walk and voice. The same baby every load (from a number kept with its parent). 1: noticeable (size about 12 % up or down, brightness 15 %, hue 10 degrees); 0.5 subtle; 2 strong; 0: all alike.");
+                "How different a mount's babies are from each other (a companion's babies): each its own size, its own shade of the parent's colours, its own temperament (lively and roaming, or calm and staying close), trot, walk and voice. The same baby every load (from a number kept with its parent). 1: noticeable (size about 12 % up or down, brightness 15 %, hue 10 degrees); 0.5 subtle; 2 strong; 0: all alike.");
         }
 
         private static ConfigEntry<float> F(ConfigFile cfg, string key, float def, float min, float max, string desc)
@@ -828,7 +828,7 @@ namespace GK2DonkeyAPI
             private AnimationState StandState => shufflePhase == ShufflePhase.Stepping || shufflePhase == ShufflePhase.Following && !RoutePlanning ? AnimationState.Walk : AnimationState.Idle;
 
             // The walk cycle's rate for the speed it moves at: shorter legs (ViewScale) step faster for the same ground,
-            // and a mount's own stride (WalkCycleSpeed against the donkey's 1.5: the dragon's longer steps, 2026-10-24)
+            // and a mount's own stride (WalkCycleSpeed against the donkey's 1.5: a long mount's longer steps, 2026-10-24)
             // plays its cycle slower for the same ground, as it does ridden (the donkey: x 1, unchanged)
             private float StandWalkSpeed => (shufflePhase == ShufflePhase.Following ? followSpeedNow : stepSpeed)
                 * IdleShuffle.AnimSpeed.Value / Mathf.Max(0.1f, ViewScale) * (S.WalkCycleSpeed.Value / DonkeyWalkCycleSpeed) * Temper.Walk;

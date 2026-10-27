@@ -59,7 +59,7 @@ namespace GK2DonkeyAPI
             internal bool StandIn;             // the alone view last asked for in the cart view's place (a mount that can't pull the cart)
             // The framing measured over the walk a step a frame (Tighten): the camera renders into Scratch meanwhile and Rt
             // keeps the last photo. All twenty steps in one frame held the game 40 to 60 ms on every mount picked in the
-            // Mounts panel (the user, 2026-10-24: "the game freezes for some frames" on the dragon; the log's slow frames).
+            // Mounts panel (the user, 2026-10-24: "the game freezes for some frames" on one mount; the log's slow frames).
             internal int TightenStep = -1;     // -1: not measuring
             internal int MinX, MinY, MaxX, MaxY;
             internal bool EdgeReframe;         // framed again because something reached the edge: measured anew, not taken from memory
@@ -222,9 +222,9 @@ namespace GK2DonkeyAPI
             {
                 if (Time.unscaledTime - v.LastAsked < 0.5f)
                 {
-                    // never a view the mount now wouldn't be shown in (the user, 2026-10-25: from the dragon to another
+                    // never a view the mount now wouldn't be shown in (the user, 2026-10-25: from a cartless mount to another
                     // mount, "for a few frames, that mount appears large and without a cart"): the alone view, asked in
-                    // the cart view's place for the dragon, went on being drawn with the new mount until the panel's next
+                    // the cart view's place for the cartless one, went on being drawn with the new mount until the panel's next
                     // fetch; the cart view would draw a cartless mount with a cart. Its last photo stays as it was.
                     if (v.WithCart ? !pulls : v.StandIn && pulls) continue;
                     Picture(shownPaper, v.WithCart, ask: false);
@@ -261,7 +261,7 @@ namespace GK2DonkeyAPI
                     // The previous paper donkey's rigs come off the copy first: they put back what they changed on it
                     // (the lantern's split mesh above all: attached on top of it, the next LampHang saw a mesh it
                     // didn't know and gave up with a warning, 2026-10-18, the colours self-test dressing the stage
-                    // before Saddle Up's page did).
+                    // before a mod's page did).
                     if (dressedAs != null)
                     {
                         using (Mount.Bind(dressedAs))
@@ -390,7 +390,9 @@ namespace GK2DonkeyAPI
         // still at times with the midday light), the light texture (the lamps and fires, sampled by screen place: off
         // the game's screen the stage took its edge) and the clouds' shadows (the same): off for the stage's renders,
         // as each of them switches itself off (VerticalFog, LightRTManager.ClearGlobals, CloudsController), put back after.
-        private sealed class Midday : IDisposable
+        // Internal since 2026-10-27: the self-test's RenderAlone holds it too, so its colour read-backs are the same by
+        // day and by night (two of them failed at night: the lit red read as blue, the keeper's colours collapsed).
+        internal sealed class Midday : IDisposable
         {
             private static readonly int idVertFog = Shader.PropertyToID("_VertFog");
             private static readonly int idFogIntensity = Shader.PropertyToID("_FogIntensity");
@@ -614,7 +616,7 @@ namespace GK2DonkeyAPI
             // cart sits that much further behind the body in the picture, as Mount.ApplyHitchGap moves it in the world.
             // The animator writes the sway parts' positions every frame, so a non-zero gap is put back after it every
             // frame; the value itself is read from the layers every frame too (read on the rig's re-merge stamp before,
-            // a new mount's gap came frames after its picture: the donkey drawn with the dragon's long shafts, 2026-10-22).
+            // a new mount's gap came frames after its picture: the donkey drawn with a long mount's long shafts, 2026-10-22).
             gapStamp = paper.LooksRig.TuneStamp;
             gapWanted = Looks.HitchGapWorldFor(paper);
             float gap = gapWanted;
@@ -952,7 +954,7 @@ namespace GK2DonkeyAPI
                 y += Math.Sin(h * 2 * Math.PI);
             }
             // the five most drawn colours, as read back: the channel order is checked here (a readback with red and
-            // blue swapped would turn the worm's pink into violet)
+            // blue swapped would turn a pink mount violet)
             var top = new List<KeyValuePair<int, int>>(counts);
             top.Sort((a, b) => b.Value.CompareTo(a.Value));
             var sb = new System.Text.StringBuilder();
@@ -981,7 +983,7 @@ namespace GK2DonkeyAPI
 
         // Onto what is drawn over a whole walk cycle: the animator is stepped by hand through CycleSeconds of its
         // walk, the picture taken at each step, and the camera moved and narrowed onto the union of the non-empty
-        // pixels, a margin round. One frame's pixels were not enough: a mount that hops (Gerry) or chatters reached
+        // pixels, a margin round. One frame's pixels were not enough: a mount that hops or chatters reached
         // the edge a moment later, the edge check reframed it, and the picture changed size two or three times in the
         // first second after a mount change (the video of 2026-10-18 21-07).
         private const float CycleSeconds = 2f, CycleStep = 0.1f;

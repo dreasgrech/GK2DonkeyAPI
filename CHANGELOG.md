@@ -18,7 +18,7 @@ For players:
 
   | Mount | Download | Riding | Cart | Its thing |
   |---|---|---|---|---|
-  | Donkey | GK2 Saddle Up | Normal | 6 items | the all-rounder; skins Hellfire and Royal Parade |
+  | Donkey | GK2 Saddle Up | Normal | 6 items | the all-rounder; skins Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) |
   | Gerry | GK2 Saddle Up | Fast | 4 items | the game's talking skull, three times his size; he talks |
   | Rat | GK2 Saddle Up: Critters | Very fast | 2 items | the courier: quick, a light cart |
   | Worm | GK2 Saddle Up: Critters | Slow | 4 items | a quiet hauler |
@@ -30,7 +30,8 @@ For players:
   standing with its load, and it can't be hitched until you take the extra off ("Gerry pulls 4 items at most. Take 2
   off the cart first."). The cart key still brings it over to your mount, unhitched, so you can unload it there. The Mounts panel shows each mount's speed and cargo.
 - **Skins:** the donkey has Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire comes in a
-  later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour). Other mods and
+  later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour), a download of
+  their own: **GK2 Saddle Up: Donkey Skins**. Other mods and
   skin packs can add mounts and skins (a folder `gk2mounts\<mount>\` with a `mount.cfg` and `skins\<skin>\`;
   docs/making-a-mount.md).
 - **Everything is kept per mount:** its colours (coat, harness, second tone, the cart's paint, wheels, hubs and
@@ -44,6 +45,12 @@ For players:
 
 Everything else in this version, in detail:
 
+- **The donkey's skins are a download of their own** (the user, 2026-10-27): Hellfire and Royal Parade are **GK2 Saddle
+  Up: Donkey Skins** (`GK2SaddleUpDonkeySkins.dll` in `BepInEx\plugins\GK2SaddleUpDonkeySkins\`, the zip
+  `GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`), a pack like the Dragon and the Critters, which needs GK2 Saddle Up. Saddle Up
+  itself brings the donkey and Gerry. Every pack is its own download: there is no "All Mounts" zip. Without the pack, a
+  donkey that wore one of its skins shows the game's donkey, and the choice comes back with the pack. (The skins were
+  inside Saddle Up only in versions never released, so nothing a player has changes.)
 - **Freeplay, a section at the end of the settings** (the user, 2026-10-27: for players who don't want the mounts'
   differences): "All mounts carry max cargo" (every cart holds 6 items, whatever mount pulls it) and "All mounts have
   the same speed" (every mount, the donkey too, at the speed you pick: Very slow, Slow, Normal, Fast or Very fast, the
@@ -51,6 +58,16 @@ Everything else in this version, in detail:
   ride, and the Mounts panel's cards show what your mounts carry and how fast they go with them on.
 - **The worm is a touch slower** (1.6 times walking speed, was 1.75): every mount's speed is now one of five set
   speeds, the ones the Mounts panel names (the worm was already called Slow, and Slow is the dragon's 1.6).
+- **A mount or skin whose pack is gone is listed by its name** (2026-10-27; seen with the Donkey Skins pack removed): the
+  Skin and Mount dropdowns show "Hellfire (not installed)" for a choice nothing installed provides, not its id
+  ("donkey/saddleup-do..." cut short in the journal). The choice is kept and comes back with the pack, as before.
+- **A parked mount leaves its cart as soon as your choice says so** (2026-10-27): choose a mount that can't pull the cart
+  (the dragon) while your mount stands parked with its cart far away, and the cart is left standing there at once,
+  where the mount stands. Before, the mount kept the cart until you next came near, and changed in front of you.
+- **No cut at a jump's touch-down any more** (2026-10-27; the self-test caught it on a hillside): landing from a running
+  jump, the mount and rider could be drawn a step ahead for one frame and pulled back the next, up to about 5 px
+  along and 3.5 px up a slope, on roughly a third of landings. The body was put down where it already was, and the
+  game's put teleports the drawn body past its smoothing. A put within a hair of where the body is no longer happens.
 - **The babies react, not mirror** (the user, 2026-10-27): when you jump on their parent they jump a quarter of a second
   to about a second later (the lively ones sooner), never in the same moment; and when it calls, each baby answers by
   its own chance (the lively more often), so it isn't always the whole family.
@@ -151,9 +168,10 @@ Everything else in this version, in detail:
   doesnt have the ability to pull the cart shouldnt bring it with g"): with the dragon (or any mount whose `cart =
   false`), G says it can't pull the cart and leaves the cart where it stands; before, the cart came to you and was
   refused only then.
-- **The mounts are downloads of their own** (the user, 2026-10-26): GK2 Saddle Up itself ships the donkey, Gerry and
-  the donkey's Hellfire and Royal Parade; the Dragon (GK2 Saddle Up: Dragon) and the rat, snail and worm (GK2
-  Saddle Up: Critters) are mount packs to add, each a folder for `BepInEx\plugins\`, or all of them in one zip.
+- **The mounts are downloads of their own** (the user, 2026-10-26): GK2 Saddle Up itself ships the donkey and Gerry;
+  the Dragon (GK2 Saddle Up: Dragon), the rat, snail and worm (GK2 Saddle Up: Critters) and, since 2026-10-27, the
+  donkey's Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) are packs to add, each a folder for
+  `BepInEx\plugins\` and a download of its own.
 - **Kept donkeys and carts are never lost because something went wrong** (docs/multi-mod-loading.md): after an error
   took them away, the side file is left as it was instead of being rewritten or deleted by the next save; a side file
   older than its save is kept aside instead of being overwritten; the last one is kept as a backup; one that can't
@@ -268,7 +286,7 @@ Everything else in this version, in detail:
   `src\SaddleUp\assets\mounts\`): `mount.cfg` (the mount: `[Mount]`, `[Stats]`, `[Tuning]`, `[Tuning.Ride]`,
   `[Tuning.Cart]`, `[Sounds]`, `[Sounds.Ride]`, `[Sounds.Cart]`, `[Sounds.Baby]`, plain names), its `sounds\` (the
   mount's files, for every skin of it) and `skins\<skin>\` (each look: `skin.cfg`, its pictures, `front\`, its own
-  `sounds\`). The donkey's folder holds skins only (Hellfire and Royal Parade: `mounts\donkey\skins\`). Before, a mount was a `[Mount]` block inside its default skin's `skin.cfg`
+  `sounds\`). The donkey's folder holds skins only (Hellfire and Royal Parade: `mounts\donkey\skins\`; since 2026-10-27 the Donkey Skins pack's `gk2mounts\donkey\skins\`). Before, a mount was a `[Mount]` block inside its default skin's `skin.cfg`
   (the "declaring skin", the joiner and Default rules) and its sounds sat in that skin's `sounds\mount\`: a mount's file
   named after its event was also the skin's own, and the dragon's flight sounds loaded twice. Now a `skin.cfg` holds
   no `[Mount*]` section (said in its report), a skin's mount is its folder's, a mount folder without `mount.cfg` adds
@@ -289,12 +307,15 @@ Everything else in this version, in detail:
   pack `mount.cfg` without one is refused with its skins, a folder adding skins to another mod's mount may not bring a
   `default`, the donkey has none (its own look is the game's). A skin added to a mount another mod owns (every
   donkey skin, a folder without `mount.cfg`, a code skin on another's mount) is named `<mod>.<name>` or refused, on
-  your own mount any name: Saddle Up's donkey skins are `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`
-  (the old names `hellfire` and `royal-parade` still find them). The settings rows hold the full names (`Mount =
+  your own mount any name: Saddle Up's donkey skins were `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`
+  (since 2026-10-27 the Donkey Skins pack's `donkey/saddleup-donkey-skins.hellfire` and `.royal-parade`; the old names
+  `hellfire` and `royal-parade` find nothing now). The settings rows hold the full names (`Mount =
   saddleup.dragon`, `Skin_saddleup.dragon = saddleup.dragon/default`); a dev's cfg or save from before that names a mount (`dragon`) finds its mount's default and is rewritten; the
   looks' names of the mount folders (`red-dragon`, `grey-rat`, `garden-snail`, `earth-worm`: a few hours old, never
   released) still find their mount's default (the user: "also fix in the old names thing"), and a per-mount settings row
   under the mount's old id (`Coat_dragon`) carries its value to the new one (`Coat_saddleup.dragon`) when that has none.
+  (2026-10-27: those old looks' names and the rows' carry-over went with the API's rename tables, below for mod
+  authors; a mount's short name, `dragon`, still finds its default.)
 - **Hellfire's first spawn after a start has its holes again**: the companion's skin is built ahead at the main menu,
   before the game has the donkey's own frames (0 of 44 found), and Hellfire (drawn over the donkey, erasing its ears
   under the horns) was built without them ("its erase colour can't clear the donkey", 2026-10-24 log). A skin built
@@ -390,7 +411,8 @@ Everything else in this version, in detail:
   many skins it has, and its Skin and Effect rows. "Colours and effect..." opens a second window with the mount's
   picture and every colour row, a custom colour picked from 24 coloured squares. Ride and Drive the cart call the
   mount straight from the panel; a search box appears when you have more than eight mounts; Escape steps back and
-  never opens the pause menu. Hellfire and Royal Parade now come with Saddle Up (nothing changes for you).
+  never opens the pause menu. Hellfire and Royal Parade now come with Saddle Up (nothing changes for you; since
+  2026-10-27 they are a download of their own, GK2 Saddle Up: Donkey Skins).
 - **Binding a key no longer presses it.** Setting the Mounts panel key in the Mods menu opened the panel on the
   spot, and the ride and cart keys had the same flaw (binding G hitched): the key you pressed to set the binding
   counted as a press of it. A key just bound now waits until it has been let go.
@@ -419,7 +441,7 @@ Everything else in this version, in detail:
   moved out of GK2 Donkey API into GK2 Saddle Up (five skin packs in its DLL, registered with the API at start,
   the same way anyone else's mod ships a mount). Nothing changes for you: the same download, still switched
   off until the next update. Since the same night the donkey's two skins, Hellfire and Royal Parade, and the Hellfire
-  effect are Saddle Up's as well: the API ships the donkey alone, as the backend. A mount from any
+  effect are Saddle Up's as well (since 2026-10-27 the Donkey Skins pack's): the API ships the donkey alone, as the backend. A mount from any
   mod now shows in Saddle Up's settings whatever order the mods loaded in (below, for mod authors).
 - **The dragon's belly has its own colour**: the Second tone row (below). A green coat had left a gold belly that
   no row could reach; for an afternoon the belly followed the Coat, now it
@@ -460,6 +482,22 @@ Everything else in this version, in detail:
 
 For mod authors:
 
+- **Saddle Up's donkey skins are the worked example of a skins-only pack** (`packs/SaddleUpDonkeySkins/`, 2026-10-27;
+  docs/making-a-mount.md "Built in or external"): a folder `gk2mounts\donkey\skins\<skin>\` with no `mount.cfg` (skins
+  added to a mount another mod owns, here the game's donkey), embedded in a small plugin of its own,
+  `GK2SaddleUpDonkeySkins.dll` ("GK2 Saddle Up: Donkey Skins", `dreas.gk2.saddleup.donkeyskins`, 1.0.0), needing the
+  API 0.40.0 and with a soft dependency on Saddle Up (it loads after it), like the Dragon and the Critters. Its ids
+  carry the pack's prefix (its name in lower case, dashes free): `donkey/saddleup-donkey-skins.hellfire` and
+  `donkey/saddleup-donkey-skins.royal-parade` (were `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`,
+  never released). Hellfire's particle effect moved with the skin: `saddleup-donkey-skins.hellfire`, registered by the
+  pack (was `saddleup.hellfire`, registered by Saddle Up); still shown nowhere until effects on skins are designed.
+  Skins registered after Saddle Up's settings page was built are still offered in its donkey Skin row.
+- **The API keeps no table of any mod's old ids** (the user, 2026-10-27: the API knows nothing of Saddle Up, and Saddle
+  Up knows nothing of its packs): the rename tables `Catalog.renamedMounts`, `Looks.oldDonkeySkins` and `oldLookNames`,
+  `Effects.oldNames` and `MountSettingsPage.RenamedMountKey` are gone, so the never-released ids `saddleup.dragon`,
+  `saddleup.rat`, `donkey/hellfire`, the effect `hellfire` and the like find nothing now. An id a mod renames is that
+  mod's to carry over. A short name still finds a mount's default (the name after its prefix when only one mount has
+  it: `dragon`). The API's comments, log lines and messages name no mod (an effect id's example is `yourmod.fire`).
 - **Freeplay's Behaviour keys** (`[General]`, all off/Normal): `FreeplayMaxCargo` (every cart the most cargo,
   `Mounts.Catalog.MostCargo`, 6), `FreeplaySameSpeed` with `FreeplaySpeed` (a new `SpeedBand`: every mount, the donkey
   too, at that band's speed, the cart's times the donkey's ratio). `MountInfo.Cargo`, `Speed`, `CartSpeed` and
@@ -496,7 +534,7 @@ For mod authors:
   released).
 - **GK2 Donkey API 0.40.0: content from many mods** (docs/multi-mod-loading.md, docs/making-a-mount.md "Living next to
   other mods"). `MountHandle.Remove(ownerId)` (another mod's instance is refused) and limits on `SetData`. An effect's
-  id is `<mod>.<name>` (Saddle Up's Hellfire is `saddleup.hellfire`) and meets the version rule; a code skin or effect
+  id is `<mod>.<name>` (Hellfire's is `saddleup-donkey-skins.hellfire`, the Donkey Skins pack's) and meets the version rule; a code skin or effect
   that loses it no longer throws into your Awake; a handle withdraws only what it registered; the first mod's sound for
   an event stays. A mount.cfg may say `needs =` / `format =`; one whose id isn't its folder's is refused; ids are ASCII,
   at most 64, no dot at an end. A newer pack of a mount brings its pictures with its facts (the old pack's skins go).
@@ -658,7 +696,9 @@ For mod authors:
   Saddle Up's Awake through the public API, the same definition). Same ids, so a player's `Skin_donkey = hellfire`
   still resolves; the owner is Saddle Up's GUID now. The self-tests borrow Royal Parade's pictures from Saddle Up's
   DLL; the skins scan reads the shipped effect ids from Saddle Up; the generators write into Saddle Up's folder; a
-  new skin goes to Saddle Up by default (`new_skin.py`).
+  new skin goes to Saddle Up by default (`new_skin.py`). (2026-10-27: the two skins and the effect moved on into the
+  Donkey Skins pack under its prefix; `hellfire` no longer resolves; the generators and `new_skin.py --pack` write
+  there, Development below.)
 - **docs/making-a-mount.md**: the one-page guide to a mod's own mount, both shapes (a pack embedded in a DLL with
   one line in Awake; a mount in code with an ability), what the API does for it unasked, and the repo's own build
   steps; linked from the READMEs, api.md, skins.md and mounts-as-mods.md.
@@ -998,8 +1038,53 @@ For mod authors:
 
 Development:
 
+- **The self-test's colour read-backs are lit at noon, and its panel scenario keeps the player's cart** (2026-10-27,
+  a group run at night with the donkey and cart chosen): `RenderAlone` holds `PreviewStage.Midday` (now internal) for
+  its render, so the over-skin colours and the front-layer probe read the same by night (the lit red read as blue, the
+  keeper's dark colours collapsed into the wing's); the panel scenario's two-frame commit of another mount picks one
+  that pulls the cart when the companion's does (the cart rule would leave the player's cart at the parked spot);
+  the end-of-run world comparison counts a mod's foals per owner instead of by id (a mount switch remakes the extra
+  ones).
+- **The integration tests are a plugin of their own** (the user, 2026-10-27: the API knows nothing of Saddle Up):
+  `tools/GK2DonkeyAPI.IntegrationTests/` (`GK2DonkeyAPI.IntegrationTests.dll`, `dreas.gk2.donkeyapi.integrationtests`)
+  holds the in-game self-tests of Saddle Up and its packs. Dev-only and never shipped: its build doesn't deploy unless
+  given `-p:Deploy=true` (game closed). At its start its scenarios join the API's runner (`SelfTest.AddScenarios`) and
+  run from F11's Tests tab in the same groups, under the same start and finish; the API grants it its internals by
+  name only (`src/GK2DonkeyAPI/Dev/AssemblyInfo.cs`, `InternalsVisibleTo("GK2DonkeyAPI.IntegrationTests")`). The API
+  keeps 95 scenarios of its own; the plugin holds 33: 20 moved whole (the shipped skins and mounts: on, off, leaks,
+  asleep, Gerry, the seat and cart readouts, the colours, the over skins, the effect hook, the front layer, the
+  preview gap, "built in or external", cargo per mount, Saddle Up's Jump and Fly rows, the dragon's sound files, the
+  garbage and walk surveys) and 13 split off mixed scenarios (Saddle Up's rows for babies, indoors, Freeplay, the safe
+  spot and standing sounds, its keys over the panel, the upgrade of Saddle Up's released cfg; our mounts' speeds and
+  flags, the dragon's jump, a standing snail's sounds, Saddle Up's babies' temperaments; the Donkey Skins pack's skins
+  unlayered). The API's own use temp mounts and skins instead of our packs (the round trip a temp skin with a hitch
+  gap, the settings rows a temp mount with babies and no cart, the skin pack the API's own test picture). The helpers
+  `M`, `Sk`, `MissingPack` (which knows the Donkey Skins pack too) and `ShippedMounts` are the plugin's. The run holds
+  `StandingSounds` (like Freeplay) and gives it back at the end. The plugin's "built in or external" checks the skins
+  come from `GK2SaddleUpDonkeySkins.dll`, the effect is the pack's, Saddle Up's DLL has no donkey skin, Saddle Up's
+  donkey Skin row offers both though they registered after its page was built, and the old ids find nothing.
+  docs/self-tests.md.
+- **The layering scan** (`tools/layering-scan.py`, in `tools/release-scans.sh` with `--dist`): fails on any name of
+  Saddle Up or its packs in `src/GK2DonkeyAPI` (Dev included), on any pack's name in `src/SaddleUp`, and on such names
+  in the API DLL's strings. The API's rename tables, comments and texts that named Saddle Up's content are gone or
+  made generic for it.
+- **The donkey's skins as the Donkey Skins pack** (`packs/SaddleUpDonkeySkins/`: `gk2mounts/donkey/skins/<skin>/`, no
+  `mount.cfg`; the study was docs/donkey-skins-pack.md): `tools/skins/new_skin.py` refuses a skin for a mount Saddle Up
+  doesn't own (the donkey) into Saddle Up and asks for `--pack` (`SaddleUpDonkeySkins`, or a new pack); a pack that
+  exists gives its own prefix (read from its ids). The generators (`tools/skins/hellfire/make_hellfire.py`,
+  `compare_hellfire.py`, `tools/skins/royal-parade/horn_bases.py`, `make_royal.py`) write into
+  `packs/SaddleUpDonkeySkins`. SkinsScan reads the shipped effect ids from every `src/*/Plugin.cs` and
+  `packs/*/Plugin.cs` and checks a pack's effect carries the pack's prefix. `make-release-zip.py` names a pack's zip
+  with dashed words (`GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`) and writes no bundle: the All Mounts zip is gone (the user:
+  "We dont need this combined packs files, wont be shipping them. ill ship individuals"). `check-dist.py`: Saddle Up's
+  built-in content is Gerry.
 - **SkinsScan reads the speed words from the API's table** (Catalog.cs `SpeedBands`) and fails a pack whose `speed` is
   not one of them; the shipped `mount.cfg`s and `new_skin.py`'s template say a word.
+- **The hillside jump's probe** (Dev/SelfTest.Yard.cs, `Mount.Instance.TestGroundProbe`): the test records every frame
+  of the jump (the body raw and smoothed, the smoothing mode, the sprite offset, the sample point, every measured height
+  and the branch taken, the lift, the position before and after rounding) and writes them to the log when a step went
+  past 2.5 px; its message names which condition failed and the frame's time. The yard's lines say the body's
+  smoothing after each landing. The probe is a static the test alone sets; the mod never does.
 - **Self-test "freeplay: max cargo and one speed for every mount"**: the words' one table (each band's speed reads back
   as its own word, riding and with the cart, the five numbers the shipped mounts', a word read in any case and a number
   refused), max cargo on the catalog, MountInfo, the panel's card and a hitched cart's
@@ -1039,9 +1124,10 @@ Development:
   `dreas.gk2.saddleup.critters`, needing the API 0.40.0; one file, so an update leaves no file of an older version
   behind; first tried as plain folders linked into the game as junctions, the same day), deployed by its build,
   built into `dist/` by `build-dist.sh` (the Mounts tab saves into the repo through `GK2MountsSourceDir`); `skinroots.py` and every tool and scan walk both kinds (`kind()`, `pack_of()`), SkinsScan checks a pack's
-  prefix, its `needs`, docs, project and version; `new_skin.py --pack` (with the plugin); NoLinqScan scans `packs/`; `make-release-zip.py` writes a zip per pack and an All Mounts
-  bundle, `check-dist.py` checks the packs; a dev-only rename table (`Catalog.renamedMounts`) heals the old ids in a dev
-  world and cfg; the self-tests' `M()`/`Sk()` map the new ids, the dragon's sound test reads its pack, and a new
+  prefix, its `needs`, docs, project and version; `new_skin.py --pack` (with the plugin); NoLinqScan scans `packs/`; `make-release-zip.py` writes a zip per pack (and,
+  until 2026-10-27, an All Mounts bundle), `check-dist.py` checks the packs; a dev-only rename table
+  (`Catalog.renamedMounts`, gone 2026-10-27) healed the old ids in a dev world and cfg; the self-tests' `M()`/`Sk()`
+  (the integration tests' since 2026-10-27) map the new ids, the dragon's sound test reads its pack, and a new
   scenario "built in or external"; `.gitattributes` marks the art and sounds binary.
   After the first run with the packs (1222 of 1223): the Mounts panel test waits for the dragon's picture to be whole
   before switching (read from its pack folder it took longer than the fixed 30 frames); the hostile-files test builds
@@ -1084,7 +1170,8 @@ Development:
   readout, the preview gap, the walk survey) use the rat or check the refusal.
 - **Investigated: the donkey's two skins as a mod of their own** (docs/donkey-skins-pack.md; the user, 2026-10-25:
   "investigate ... GK2 Saddle Up Donkey Skins Pack"). Nothing built: the runtime needs no change; the open
-  points are Hellfire's effect, the self-tests' sample picture and the release scripts.
+  points are Hellfire's effect, the self-tests' sample picture and the release scripts. (Built 2026-10-27: the Donkey
+  Skins pack, above.)
 - **The API retires cfg keys too** (`Plugin.DropRetired`, the analogue of `MountSettingsPage.RetiredKey`): a
   released key this version no longer binds leaves the player's file at the start, saved once, and the upgrade
   self-test counts it as retired, not as a value lost (first use: the seven `[Effects]` keys of 0.10.0). The effect

@@ -29,12 +29,13 @@ T="$REPO/tests"
 run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
 run "$REPO" "DepManifest verify GK2DonkeyAPI.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/GK2DonkeyAPI/bin/Release/netstandard2.1/GK2DonkeyAPI.dll" "$MANAGED"
 run "$REPO" "check-dist" python tools/check-dist.py
+run "$REPO" "layering (the API names no mod, Saddle Up no pack; the dist DLL too)" python -I tools/layering-scan.py --dist
 for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan NoLinqScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$REPO" "canonical skin.cfg layout" python -I tools/skins/canonical_cfg.py --check
 for d in "$REPO"/src/*/assets/mounts/*/skins/*/ "$REPO"/packs/*/gk2mounts/*/skins/*/; do  # built in, then the external packs (tools/skins/skinroots.py)
-  run "$REPO" "check_skin $(basename "$(dirname "$(dirname "$d")")")/$(basename "$d")" python -I tools/skins/check_skin.py "$d"  # <mount id>/<skin>: every mount's own look is "default", a donkey skin "<mod>.<name>" (donkey/saddleup.hellfire)
+  run "$REPO" "check_skin $(basename "$(dirname "$(dirname "$d")")")/$(basename "$d")" python -I tools/skins/check_skin.py "$d"  # <mount id>/<skin>: every mount's own look is "default", a donkey skin "<mod>.<name>" (donkey/saddleup-donkey-skins.hellfire)
 done
 run "$T/PackerScan" "PackerScan" dotnet run -c Release
 run "$T/PackerScan" "PackerScan --shapes" dotnet run -c Release -- --shapes

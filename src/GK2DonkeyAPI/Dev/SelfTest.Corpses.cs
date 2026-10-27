@@ -12,11 +12,11 @@ namespace GK2DonkeyAPI
     // follow; the notification scenario needs it on and turns it off again. Nothing is saved.
     internal static partial class SelfTest
     {
-        private static readonly List<DropData> corpseDrops = new List<DropData>();
+        internal static readonly List<DropData> corpseDrops = new List<DropData>();
 
         // A key's override as it was before a test set its own (one slot per key: setting ours would replace, say,
-        // Saddle Up's switch), so it can be put back exactly.
-        private readonly struct Override
+        // another mod's switch), so it can be put back exactly.
+        internal readonly struct Override
         {
             public readonly string Key, Owner;
             public readonly object Value;
@@ -28,10 +28,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static GDPointData GdPoint(string id) => MainGame.Instance.GameSave.worldData.gdPointsData.GetGDPointDataById(id);
+        internal static GDPointData GdPoint(string id) => MainGame.Instance.GameSave.worldData.gdPointsData.GetGDPointDataById(id);
 
         // A body the way the game's "Generate Body" node makes one for the player's tier.
-        private static Item NewBody()
+        internal static Item NewBody()
         {
             int tier = MainGame.PlayerData.GetResInt("bodies_tier");
             BodyDef pick = null;
@@ -43,7 +43,7 @@ namespace GK2DonkeyAPI
             return pick.GenerateItem();
         }
 
-        private static DropData FindDrop(Item item)
+        internal static DropData FindDrop(Item item)
         {
             foreach (GameSceneData scene in MainGame.Instance.GameSave.worldData.gameSceneDataList)
             {
@@ -53,7 +53,7 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        private static DropView FindDropView(Item item)
+        internal static DropView FindDropView(Item item)
         {
             foreach (GameScene scene in LazySingleton<GameSceneManager>.Instance.LoadedGameScenes)
             {
@@ -62,14 +62,14 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        private static int CountAllDrops()
+        internal static int CountAllDrops()
         {
             int n = 0;
             foreach (GameSceneData scene in MainGame.Instance.GameSave.worldData.gameSceneDataList) n += scene.droppedItems.Count + scene.queuedDrops.Count;
             return n;
         }
 
-        private static int CountNotifications<T>(string text) where T : UIBaseNotification
+        internal static int CountNotifications<T>(string text) where T : UIBaseNotification
         {
             int n = 0;
             foreach (UIBaseNotification note in LazySingleton<UINotificator>.Instance.DisplayingItems)
@@ -80,7 +80,7 @@ namespace GK2DonkeyAPI
         }
 
         // Every test body out of the world again (the game's own removal), the count checked.
-        private static IEnumerator RemoveCorpseDrops(int countBefore)
+        internal static IEnumerator RemoveCorpseDrops(int countBefore)
         {
             foreach (DropData d in corpseDrops)
             {
@@ -96,7 +96,7 @@ namespace GK2DonkeyAPI
             Corpses.ResetWarnings();
         }
 
-        private static IEnumerator CorpsePoints()
+        internal static IEnumerator CorpsePoints()
         {
             GDPointData drop = GdPoint(Corpses.DropPoint.Value);
             Check(drop != null, $"drop point {Corpses.DropPoint.Value} exists{(drop == null ? "" : $" at {drop.Position:F1} in {drop.GameSceneDataId}")}");
@@ -115,7 +115,7 @@ namespace GK2DonkeyAPI
             yield break;
         }
 
-        private static IEnumerator CorpseOneBody()
+        internal static IEnumerator CorpseOneBody()
         {
             int countBefore = MainGame.PlayerData.GetResInt("cur_bodies_count");
             GDPointData point = GdPoint(Corpses.DropPoint.Value);
@@ -158,7 +158,7 @@ namespace GK2DonkeyAPI
             yield return RemoveCorpseDrops(countBefore);
         }
 
-        private static IEnumerator CorpseSwitch()
+        internal static IEnumerator CorpseSwitch()
         {
             bool wasOn = Corpses.AtCrossroads.Value;
             Check(!Corpses.Applied || wasOn, $"patched only while on (on {wasOn}, patched {Corpses.Applied})");
@@ -167,7 +167,7 @@ namespace GK2DonkeyAPI
             var pallet = HarmonyLib.AccessTools.DeclaredMethod(typeof(GK2.FlowCanvasNodes.Flow_TryToAddCorpseToPallet), "TryToAddCorpseToPallet");
             try
             {
-                Mounts.Corpses.ClearAny("CorpsesAtCrossroads"); // Saddle Up holds it: taken over, put back by before.Restore()
+                Mounts.Corpses.ClearAny("CorpsesAtCrossroads"); // a mod may hold it: taken over, put back by before.Restore()
                 Mounts.Corpses.Set(Owner, "CorpsesAtCrossroads", true);
                 Corpses.Tick();
                 Check(Corpses.Applied && Mounts.CorpsesActive, "switched on: the patches are in" + (Corpses.ApplyError != null ? " (" + Corpses.ApplyError + ")" : ""));
@@ -187,7 +187,7 @@ namespace GK2DonkeyAPI
             yield break;
         }
 
-        private static IEnumerator CorpseNotification()
+        internal static IEnumerator CorpseNotification()
         {
             int countBefore = MainGame.PlayerData.GetResInt("cur_bodies_count");
             UINotificator notificator = LazySingleton<UINotificator>.Instance;
@@ -230,7 +230,7 @@ namespace GK2DonkeyAPI
             yield return RemoveCorpseDrops(countBefore);
         }
 
-        private static IEnumerator CorpseManyBodies()
+        internal static IEnumerator CorpseManyBodies()
         {
             const int n = 12;
             int countBefore = MainGame.PlayerData.GetResInt("cur_bodies_count");
@@ -290,7 +290,7 @@ namespace GK2DonkeyAPI
             yield return RemoveCorpseDrops(countBefore);
         }
 
-        private static IEnumerator CorpseNeverRot()
+        internal static IEnumerator CorpseNeverRot()
         {
             int countBefore = MainGame.PlayerData.GetResInt("cur_bodies_count");
             var before = new Override("CorpsesNeverRot");
@@ -328,7 +328,7 @@ namespace GK2DonkeyAPI
             yield return RemoveCorpseDrops(countBefore);
         }
 
-        private static IEnumerator CorpseUnknownPoint()
+        internal static IEnumerator CorpseUnknownPoint()
         {
             Item body = NewBody();
             int dropsBefore = CountAllDrops();
@@ -341,7 +341,7 @@ namespace GK2DonkeyAPI
             yield break;
         }
 
-        private static IEnumerator CorpseWalkDecisions()
+        internal static IEnumerator CorpseWalkDecisions()
         {
             Vector3 start = new Vector3(77.6f, 3.6f, 14.65f), morgue = new Vector3(24.96f, 3.6f, 15.6f), stand = new Vector3(74.64f, 3.6f, 15.6f);
             Check(Corpses.Decide("full_cycle_back", true, start, null, null) == Corpses.WalkAction.UnloadHere, "delivery walk, no quest talk: unload at the crossroads");

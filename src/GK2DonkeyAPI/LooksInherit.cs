@@ -11,7 +11,7 @@ namespace GK2DonkeyAPI
     // doesn't say comes from the default: its settings are resolved in place into the skin's own fields (Resolve), so
     // every reader stays as it is, and its pictures are taken from the default's frame by frame as the sheet is built
     // (Acquire, VariantProducer). layer = over on such a skin draws it over the default (holes from the erase colour),
-    // the way Hellfire is drawn over the game's donkey. The donkey's skins have no parent: the game's art is the
+    // the way a skin is drawn over the game's donkey. The donkey's skins have no parent: the game's art is the
     // donkey's default, and they stay exactly as they were.
     internal static partial class Looks
     {

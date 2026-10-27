@@ -16,14 +16,14 @@ namespace GK2DonkeyAPI
     // saved, and removes the chest again (empty, so the game's plain removal loses nothing). Nothing is saved.
     internal static partial class SelfTest
     {
-        private const string TestChestId = "chest_rough";
-        private const string TestItemId = "nails_bronze";
+        internal const string TestChestId = "chest_rough";
+        internal const string TestItemId = "nails_bronze";
 
-        private static WgoData chest;
-        private static Wgo chestView;
+        internal static WgoData chest;
+        internal static Wgo chestView;
 
         // A chest at a free spot near the keeper, with its view. False (and the reason logged) when it can't be made.
-        private static IEnumerator MakeChest()
+        internal static IEnumerator MakeChest()
         {
             chest = null;
             chestView = null;
@@ -65,7 +65,7 @@ namespace GK2DonkeyAPI
             Info($"test chest {d.UniqueId} at {d.Position:F2} in zone '{d.WorldZoneData.id}', {d.Inventory.Data.InventorySize} slots");
         }
 
-        private static void RemoveChest()
+        internal static void RemoveChest()
         {
             if (chest == null)
             {
@@ -96,7 +96,7 @@ namespace GK2DonkeyAPI
 
         // The view's private state, for a failed drawn check (docs/measure-before-visual-fixes): what the game's own
         // visibility pass left it in.
-        private static string ViewState(Wgo v)
+        internal static string ViewState(Wgo v)
         {
             if (v == null || !v)
             {
@@ -129,7 +129,7 @@ namespace GK2DonkeyAPI
         // What the camera and the chunk system make of a view: the camera (position, angles), where the view's spot
         // lands on screen (viewport 0..1 is on screen), whether the view's chunk bounds pass Unity's frustum test
         // against that camera, and the verdict of each chunk holding it.
-        private static string CameraFacts(Wgo v)
+        internal static string CameraFacts(Wgo v)
         {
             try
             {
@@ -150,7 +150,7 @@ namespace GK2DonkeyAPI
         }
 
         // Inside the camera's viewport with a margin (the chunk system culls what is outside it).
-        private static bool OnScreen(Vector3 p)
+        internal static bool OnScreen(Vector3 p)
         {
             Camera cam = CameraSystem.Instance?.MainCamera?.Camera ?? Camera.main;
             if (cam == null)
@@ -161,7 +161,7 @@ namespace GK2DonkeyAPI
             return vp.x > 0.15f && vp.x < 0.85f && vp.y > 0.15f && vp.y < 0.85f;
         }
 
-        private static bool Drawn(Wgo v)
+        internal static bool Drawn(Wgo v)
         {
             if (v == null || !v.gameObject.activeSelf || v.MainWgoPart == null)
             {
@@ -179,7 +179,7 @@ namespace GK2DonkeyAPI
 
         // Hide, move 4 m, show, chunk re-registration: the view drawn at the new spot and held by a chunk around it;
         // then the keeper far away and back (chunk culling), and the chest moved back.
-        private static IEnumerator ChestHideMoveShow()
+        internal static IEnumerator ChestHideMoveShow()
         {
             yield return MakeChest();
             if (chest == null)
@@ -269,7 +269,7 @@ namespace GK2DonkeyAPI
 
         // Out of every zone and back in through the game's own order: the lists, the crafting source and the
         // navigation hole follow, with no duplicate entry, and an item inside stays the same object.
-        private static IEnumerator ChestZoneRoundTrip()
+        internal static IEnumerator ChestZoneRoundTrip()
         {
             yield return MakeChest();
             if (chest == null)
@@ -316,7 +316,7 @@ namespace GK2DonkeyAPI
         // Ten stand-ins made and destroyed: never in the scene, no collider active, not interactable, drawn; the town
         // quality and the pool's idle parts unchanged. The pool's borrowed count is reported, not judged: a temp
         // object's parts are destroyed, not returned, by the game's own build preview too.
-        private static IEnumerator ChestStandIns()
+        internal static IEnumerator ChestStandIns()
         {
             yield return MakeChest();
             if (chest == null)
@@ -391,7 +391,7 @@ namespace GK2DonkeyAPI
         // contents untouched; refusals for cargo aboard and for a chest that isn't a plain storage chest; set down where
         // cargo goes, shown and zoned, the cart open again; the chest follows the cart through unhitch and hitch, stays
         // on a parked cart, is set down at the cart by the save hook and when the cart is removed.
-        private static IEnumerator ChestRide()
+        internal static IEnumerator ChestRide()
         {
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle h = Spawn(near, true, withCart: true);
@@ -584,7 +584,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static bool Same(Inventory inv, int count, int total)
+        internal static bool Same(Inventory inv, int count, int total)
         {
             if (inv.Data.Inventory.Count != count)
             {
@@ -598,7 +598,7 @@ namespace GK2DonkeyAPI
         // The backstops (docs/portable-chest.md §4, "a hidden chest in a save is the one unrecoverable state"): a chest
         // left hidden and zone-less with no cart owning it, as some failure the code didn't foresee would leave it, is
         // shown and zoned again by the pre-save pass and by the after-load repair. In normal play neither ever runs.
-        private static IEnumerator ChestBackstops()
+        internal static IEnumerator ChestBackstops()
         {
             yield return MakeChest();
             if (chest == null)
@@ -664,7 +664,7 @@ namespace GK2DonkeyAPI
         // copy is what a game WITHOUT the mod would load: visible, zoned, interactable, standing by the cart, the same
         // items. Then the take-back, and the chest rides again. Also the fail-safe: locking the feature with a chest
         // aboard sets it down at the cart and refuses further pickups; the lock is undone for the session afterwards.
-        private static IEnumerator ChestSaveImage()
+        internal static IEnumerator ChestSaveImage()
         {
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle h = Spawn(near, true, withCart: true);
@@ -818,7 +818,7 @@ namespace GK2DonkeyAPI
         // ZombieWgoData that exists only in the zombie system's lookup (never in a scene, never saved), typed Caretaker
         // with the test chest as its target, for a few synchronous checks; then as a conveyor transporter. It is gone
         // again before the frame ends, so no save can ever see it.
-        private static IEnumerator ChestZombieGuard()
+        internal static IEnumerator ChestZombieGuard()
         {
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle h = Spawn(near, true, withCart: true);

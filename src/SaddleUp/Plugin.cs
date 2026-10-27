@@ -11,11 +11,11 @@ namespace SaddleUp
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
     // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
-    // the example of how little a player mod needs. Its built-in content (Gerry; the donkey's Hellfire and Royal Parade)
-    // is mount packs embedded in this DLL (the csproj's assets\mounts\**) and handed to the API in Awake; the other
-    // mounts are external packs, each its own download (the repo's packs\: the Dragon; the Critters, the rat, snail and
-    // worm), found by the API in BepInEx\plugins\<Pack>\gk2mounts\ like any mod's (docs/making-a-mount.md "Built in or
-    // external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it, hitches its cart.
+    // the example of how little a player mod needs. Its built-in content (Gerry) is a mount pack embedded in this DLL
+    // (the csproj's assets\mounts\**) and handed to the API in Awake. Every other mount and skin comes from a mod or a
+    // pack of its own, registered with the API, never with this mod: it offers whatever the API has (docs/making-a-mount.md
+    // "Built in or external"). The API is the backend; a mount is a pack; the API draws it, seats the rider, colours it,
+    // hitches its cart.
     [BepInPlugin(Guid, "GK2 Saddle Up", Version)]
     [BepInDependency("dreas.gk2.donkeyapi", "0.40.0")] // at least the API it was written against (NeedsApi below)
     public class Plugin : BaseUnityPlugin
@@ -26,8 +26,8 @@ namespace SaddleUp
         public const string Version = "0.12.0";
 
         // The API this mod is written against: 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
-        // look Toggle and Text rows; 0.39 reads the dragon's [Jump] (its own jump, with wings); 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
-        // rename) and ships no skin (Hellfire's effect is registered here); 0.35 the Mounts panel (PanelButton,
+        // look Toggle and Text rows; 0.39 reads a mount's own [Jump]; 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
+        // rename) and ships no skin; 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
         // a mount registered in any plugin's Awake and a mod's embedded packs; 0.31 the page's Heading; 0.30 the skins, MountCompanion.Skin;
         // 0.28 CartSlots, 0.27 CorpseIntoMorgue, 0.23 CargoChest, 0.22 CargoZombies). Checked before anything of the API
@@ -36,23 +36,6 @@ namespace SaddleUp
         private static readonly Version NeedsApi = new Version(0, 40, 0);
 
         private const string SkinsPrefix = "GK2SaddleUp.mounts."; // the embedded packs' resource names (the csproj: assets\mounts\**)
-
-        // Hellfire: the lamps' flame on a ring of six and their sparks on three of those spots, a flame left behind. The
-        // API keeps it out with the mounts off (this version), as every registration. Registered and ready, shown nowhere
-        // yet: nothing picks an effect in this version (2026-10-25; how a skin comes with its effect is being designed).
-        private void RegisterHellfire()
-        {
-            MountEffects api = Mounts.Effects;
-            var d = new MountEffectDef { Id = "saddleup.hellfire", Name = "Hellfire", Author = "dreas", Version = "1.0" }; // "hellfire" until 2026-10-26: effect ids carry their mod's prefix
-            var flame = new MountEffectPart { Source = api.GameParticles("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat") };
-            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 6, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
-            flame.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Trail, Size = 1.2f, Height = 0.05f, Every = 0.5f, Burst = 0.4f });
-            var sparks = new MountEffectPart { Source = api.GameParticles("sparks_fx", "Assets/AddressableAssets/Materials/sparks_fx.mat") };
-            sparks.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 3, Radius = 0.8f, Size = 1.5f, Height = 0.05f });
-            d.Parts.Add(flame);
-            d.Parts.Add(sparks);
-            api.Register(Guid, d);
-        }
 
         private void Awake()
         {
@@ -64,8 +47,7 @@ namespace SaddleUp
             // The built-in content: registered before the page is built, so its rows are made with it (the packs' mounts
             // are registered before, at the API's start; any other mod's are caught up the frame after Publish).
             int skins = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
-            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Gerry; the donkey's Hellfire and Royal Parade). The Dragon and the Critters are packs of their own.");
-            RegisterHellfire(); // the effect Hellfire comes with: Saddle Up's too, defined through the API as any mod's
+            if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Gerry).");
             MountCompanion me = Mounts.Companion(Guid);
             Mounts.Behaviour.Set(Guid, "StayMountedThroughDoors", false); // not offered until it's tested
             Mounts.Behaviour.Set(Guid, "FlyIndoors", false); // never offered: no flying inside buildings with Saddle Up (the user, 2026-10-23)
@@ -158,9 +140,9 @@ namespace SaddleUp
             });
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
-            // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per mount (PerMount: the donkey's rows keep their keys, the dragon's are
-            // Coat_dragon and so on; docs/mount-colours.md). Coat is the body (the donkey's coat, a dragon's scales,
-            // the worm's skin); Harness its tack, on the mounts whose look has any. A Color row's lightness key moves
+            // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per mount (PerMount: the donkey's rows keep their keys, another mount's
+            // carry its id, Coat_<mount>; docs/mount-colours.md). Coat is the body (the donkey's coat, another mount's
+            // scales or skin); Harness its tack, on the mounts whose look has any. A Color row's lightness key moves
             // with its colour key (Color registers it).
             // no picture or pointer line here (2026-10-21): every row of the section is the Mounts panel's, the menus leave the
             // section out; the rows below still make "3. Colours" in the cfg, so players' files keep their section
@@ -175,14 +157,14 @@ namespace SaddleUp
                 ConfigEntry<CoatColor> coat = p.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "The colour of your mount's body.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
                 p.Color("Colours", "CustomCoat" + sfx, "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coat.Value == CoatColor.Custom);
                 ConfigEntry<HarnessColor> harness = p.Choice("Colours", "Harness" + sfx, look.Harness, "Harness colour", "The colour of your mount's harness. Mounts without one ignore it.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
-                // a mount whose skins have no tack (the worm): the harness rows grey, the value is kept
+                // a mount whose skins have no tack: the harness rows grey, the value is kept
                 p.EnableWhen("Colours", "Harness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
                 p.Color("Colours", "CustomHarness" + sfx, "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => look.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
                 p.EnableWhen("Colours", "CustomHarness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
-                // the second body tone (the API's Muzzle region): the donkey's muzzle, the rat's tail, ears and nose, the
-                // snail's shell, the dragon's belly; a mount whose look has none (the worm) greys the rows (the user, 2026-10-20:
+                // the second body tone (the API's Muzzle region): the donkey's muzzle, another mount's belly, shell or tail;
+                // a mount whose look has none greys the rows (the user, 2026-10-20:
                 // every part of every skin reachable from the page)
-                ConfigEntry<MuzzleColor> muzzle = p.Choice("Colours", "Muzzle" + sfx, look.Muzzle, "Second tone", "Your mount's second colour, such as the donkey's muzzle or the dragon's belly. Mounts without one ignore it.", v => look.Muzzle = v, new[] { "Game default", "Pale", "Rose", "Brown", "Green", "Blue", "Dark", "Custom" }, look: true);
+                ConfigEntry<MuzzleColor> muzzle = p.Choice("Colours", "Muzzle" + sfx, look.Muzzle, "Second tone", "Your mount's second colour, such as the donkey's muzzle. Mounts without one ignore it.", v => look.Muzzle = v, new[] { "Game default", "Pale", "Rose", "Brown", "Green", "Blue", "Dark", "Custom" }, look: true);
                 p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
                 p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
@@ -210,7 +192,7 @@ namespace SaddleUp
                 // the lantern itself, per mount with its light (the user, 2026-10-26: from the Cart options into the colours window)
                 p.Toggle("Colours", "Lantern" + sfx, look.Lantern, "Lantern", "Shows the lantern on its pole.", v => look.Lantern = v, look: true);
                 p.Toggle("Colours", "LanternByDay" + sfx, look.LanternByDay, "Lantern lit by day", "Keeps the lantern lit in daylight. Turn it off to light it only at night.", v => look.LanternByDay = v, look: true);
-                // a mount that can't pull the cart (the dragon) has no cart colours (the user, 2026-10-25); the values are kept
+                // a mount that can't pull the cart has no cart colours (the user, 2026-10-25); the values are kept
                 foreach (string key in new[] { "Paint", "CustomPaint", "Wheels", "CustomWheels", "Hubs", "CustomHubs", "LanternColor", "CustomLantern", "Lantern", "LanternByDay" }) p.CartRow("Colours", key + sfx);
             });
 

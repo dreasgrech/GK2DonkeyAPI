@@ -12,7 +12,7 @@ namespace GK2DonkeyAPI
     // registered; a pack folder is one MountsChanged.
     internal static partial class SelfTest
     {
-        private static IEnumerator OrderAndIdentity()
+        internal static IEnumerator OrderAndIdentity()
         {
             const string oA = Owner + ".order-a", oB = Owner + ".order-b", oC = Owner + ".order-c";
             const string beast = "selftest.order-beast", other = "selftest.order-other", codeMount = "selftest.order-code", absent = "selftest.order-absent";

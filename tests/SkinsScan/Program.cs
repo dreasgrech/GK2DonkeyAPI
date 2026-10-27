@@ -1,5 +1,6 @@
 // The mounts and skins this repo ships, sorted by mount (every src/*/assets/mounts/<mount>/: its mount.cfg and sounds\,
-// and skins/<skin>/ with each skin.cfg; Saddle Up's five mounts and the donkey's two skins, embedded into its DLL;
+// and skins/<skin>/ with each skin.cfg; Saddle Up's Gerry, and every packs/<Pack>/gk2mounts/ (the Dragon, the Critters,
+// the Donkey Skins), each embedded into its DLL;
 // docs/skins.md "What a pack is", docs/mounts-as-mods.md): every mount.cfg and skin.cfg must parse the way the loader
 // reads them (MountPacks.cs, Looks.cs), every picture the donkey base needs must be there at the canvas size, a
 // skin's [Tuning] may only hold the picture keys (a skin is the drawing, the mount the creature: docs/mounts-design.md
@@ -7,7 +8,7 @@
 // (saddleup.dragon; only the donkey's is plain), its own look is skins\default\ (no default_skin; the donkey has none),
 // and a skin is named by its folder, its full name "<mount id>/<skin>" (no id = in skin.cfg). A skin added to a mount
 // another mod owns (a mount folder without mount.cfg, so every donkey skin) is named "<mod>.<name>"
-// (donkey/saddleup.hellfire; Looks.Register refuses it otherwise); on its own mount any name. The frame keys
+// (donkey/saddleup-donkey-skins.hellfire; Looks.Register refuses it otherwise); on its own mount any name. The frame keys
 // and the allowed skin tuning keys are read from Looks.cs, the tuning keys from Plugin.cs, so this stays in step.
 // A skin of a mount other than the donkey that isn't its "default" is built on that default (docs/skins.md "Variants:
 // built on the default", LooksInherit.cs): it is read against ../default, whose pictures, canvas, description and
@@ -98,10 +99,25 @@ var speedWords = new HashSet<string>(Regex.Matches(speedTable.Groups[1].Value, @
 if (speedWords.Count != 5) Fail($"Catalog.cs SpeedBands: {speedWords.Count} speed words read (5 expected)"); else Pass("Catalog.cs SpeedBands: " + string.Join(", ", speedWords));
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
-var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
-var effectIds = new HashSet<string>(Regex.Matches(effectsCs, @"Id\s*=\s*""([\w.-]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
-if (!effectIds.Contains("saddleup.hellfire")) Fail($"SaddleUp/Plugin.cs: the shipped effect ids could not be read ({effectIds.Count} found; saddleup.hellfire expected)"); else Pass($"SaddleUp/Plugin.cs: {effectIds.Count} shipped effect id(s), saddleup.hellfire among them");
-foreach (string fx in effectIds) { int dot = fx.IndexOf('.'); if (dot <= 0 || dot == fx.Length - 1) Fail($"SaddleUp/Plugin.cs: effect id '{fx}' has no mod prefix (<mod>.<name>; Effects.Register refuses it)"); }
+// The shipped effects: every `new MountEffectDef { Id = "..." }` in a mod's or a pack's Plugin.cs (the Donkey Skins pack's
+// Hellfire since 2026-10-27). Each id carries a mod prefix; a pack's, the pack's own (as its skins and mounts).
+var effectIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+foreach (string pc in Directory.GetFiles(Path.Combine(repo, "src"), "Plugin.cs", SearchOption.AllDirectories).Concat(Directory.Exists(Path.Combine(repo, "packs")) ? Directory.GetFiles(Path.Combine(repo, "packs"), "Plugin.cs", SearchOption.AllDirectories) : Array.Empty<string>()))
+{
+    if (pc.Contains(Path.DirectorySeparatorChar + "bin" + Path.DirectorySeparatorChar) || pc.Contains(Path.DirectorySeparatorChar + "obj" + Path.DirectorySeparatorChar)) continue;
+    string rel = Path.GetRelativePath(repo, pc).Replace('\\', '/');
+    string? pack = rel.StartsWith("packs/") ? rel.Split('/')[1] : null;
+    foreach (Match fm in Regex.Matches(File.ReadAllText(pc), @"new\s+MountEffectDef\s*\{\s*Id\s*=\s*""([\w.-]+)"""))
+    {
+        string fx = fm.Groups[1].Value;
+        effectIds.Add(fx);
+        int dot = fx.IndexOf('.');
+        if (dot <= 0 || dot == fx.Length - 1) Fail($"{rel}: effect id '{fx}' has no mod prefix (<mod>.<name>; Effects.Register refuses it)");
+        else if (pack != null && !PrefixOk(pack, fx)) Fail($"{rel}: effect id '{fx}' doesn't carry the pack's prefix ({pack} in lower case, dashes free)");
+        else Pass($"{rel}: shipped effect {fx}");
+    }
+}
+if (effectIds.Count == 0) Fail("no shipped effect found in any Plugin.cs (Hellfire's is the Donkey Skins pack's)");
 var knownSections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Skin", "Tuning", "Tuning.Ride", "Tuning.Cart", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby", "Game", "Colors" };
 var mountSections = new[] { "Mount", "Stats", "Tuning", "Tuning.Ride", "Tuning.Cart", "Jump", "Sounds", "Sounds.Ride", "Sounds.Cart", "Sounds.Baby" }; // mount.cfg, in its canonical order
 // mount.cfg [Jump] (JumpShapes.Keys in the API): each key's range, in the file's order
@@ -346,7 +362,7 @@ foreach (var mdir in mountDirs)
     // "<mod>.<name>", a dot neither first nor last (Looks.AddsToOthers; the loader leaves the others out)
     if (!File.Exists(mcfgPath))
         foreach (var s in skinsHere.Where(s => s!.IndexOf('.') <= 0 || s.IndexOf('.') == s.Length - 1))
-            if (!s!.Equals("default", StringComparison.OrdinalIgnoreCase)) BadM($"skins\\{s}\\: a skin added to a mount another mod owns is named '<mod>.<name>' ({mid}/saddleup.{s}); the loader leaves it out");
+            if (!s!.Equals("default", StringComparison.OrdinalIgnoreCase)) BadM($"skins\\{s}\\: a skin added to a mount another mod owns is named '<mod>.<name>' ({mid}/yourmod.{s}); the loader leaves it out");
     foreach (var stray in Directory.GetFiles(mdir).Select(Path.GetFileName).Where(f => !f!.Equals("mount.cfg", StringComparison.OrdinalIgnoreCase) && !f.EndsWith(".png", StringComparison.OrdinalIgnoreCase)))
         BadM($"{stray}: a mount folder holds mount.cfg, sounds\\, skins\\ and its portrait PNG");
     foreach (var sub in Directory.GetDirectories(mdir).Select(Path.GetFileName).Where(d => d != "skins" && d != "sounds")) BadM($"{sub}\\: a mount folder holds sounds\\ and skins\\ only");

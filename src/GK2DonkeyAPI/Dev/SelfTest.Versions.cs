@@ -10,15 +10,15 @@ namespace GK2DonkeyAPI
     // below one that is; a sound bank id can't be two packs'; a mod's sound for an event isn't another's to replace.
     internal static partial class SelfTest
     {
-        private static IEnumerator VersionsAndIds()
+        internal static IEnumerator VersionsAndIds()
         {
-            Check(Catalog.IdRule("saddleup.dragon", "id") == null && Catalog.IdRule("saddleup.drаgon", "id") != null, "ids: ASCII only (a Cyrillic letter that looks Latin is refused)");
-            Check(Catalog.IdRule("acme.dragon.", "id") != null && Catalog.IdRule(".acme", "id") != null && Catalog.IdRule("acme..dragon", "id") != null && Catalog.IdRule(new string('a', Catalog.IdMax + 1), "id") != null,
+            Check(Catalog.IdRule("acme.crab", "id") == null && Catalog.IdRule("acme.crаb", "id") != null, "ids: ASCII only (a Cyrillic letter that looks Latin is refused)");
+            Check(Catalog.IdRule("acme.crab.", "id") != null && Catalog.IdRule(".acme", "id") != null && Catalog.IdRule("acme..crab", "id") != null && Catalog.IdRule(new string('a', Catalog.IdMax + 1), "id") != null,
                 "ids: no dot at an end or two in a row, at most " + Catalog.IdMax + " characters");
             Check(Looks.CompareVersions("10", "9") > 0 && Looks.CompareVersions("1.0", "1.0-beta") > 0 && Looks.CompareVersions("1.0-beta", "1.0") < 0 && Looks.CompareVersions("1.10", "1.9") > 0,
                 "versions: numbers compare as numbers; one that isn't a number ranks below one that is");
-            var a = new SoundBank.FileSource("acme", "x.dragon/s", null, null, "a");
-            var b = new SoundBank.FileSource("acme.x", "dragon/s", null, null, "b");
+            var a = new SoundBank.FileSource("acme", "x.crab/s", null, null, "a");
+            var b = new SoundBank.FileSource("acme.x", "crab/s", null, null, "b");
             Check(SoundBank.IdFor(a, "voice") != SoundBank.IdFor(b, "voice"), $"two packs' sound ids never meet ({SoundBank.IdFor(a, "voice")} / {SoundBank.IdFor(b, "voice")})");
 
             const string owner = Owner + ".versions";

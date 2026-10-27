@@ -189,7 +189,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // Both respect the Sounds feature (and RingBell the Bell feature). The bell is the cart's (0.40.0; the user,
-        // 2026-10-27): it rings only while the keeper drives the cart, never riding plain (a dragon has no cart).
+        // 2026-10-27): it rings only while the keeper drives the cart, never riding plain (a mount that pulls no cart has none).
         public static void RingBell()
         {
             if (Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && MountRules.Allowed(MountFeature.Sounds) && MountRules.Allowed(MountFeature.Bell))
@@ -283,7 +283,7 @@ namespace GK2DonkeyAPI.Api
         //                            its own cargo; MountInfo.Cargo and the panel's card say so too
         //   FreeplaySameSpeed        (0.40.0, off) every mount, the donkey too, goes at FreeplaySpeed's speed (a SpeedBand,
         //   FreeplaySpeed            Normal: the donkey's as shipped; with the cart times the donkey's ratio); MountInfo's
-        //                            speeds and the panel say so too. Both Saddle Up's Freeplay section.
+        //                            speeds and the panel say so too. Both in a mod's Freeplay section.
         public static MountTuning Behaviour
         {
             get
@@ -319,8 +319,8 @@ namespace GK2DonkeyAPI.Api
         }
 
         // Corpses at the crossroads (docs/corpse-delivery.md), overridable like tuning (keys = their [Corpses] cfg
-        // names). Off in the core; a mod turns it on for its player (Saddle Up's "Donkey leaves corpses at the
-        // crossroads"), and while it is on the game's own donkey leaves the bodies it brings where it appears, by the
+        // names). Off in the core; a mod turns it on for its player (a row on its
+        // page), and while it is on the game's own donkey leaves the bodies it brings where it appears, by the
         // nun, instead of putting them on the morgue pallets; the keeper hauls them himself (the cart takes them).
         //   CorpsesAtCrossroads        the switch (off). Off: nothing of the game's delivery is hooked at all.
         //   CorpsesUnloadAtCrossroads  the donkey walks out from behind its tree to CorpsesStandPoint, unloads there and
@@ -394,7 +394,7 @@ namespace GK2DonkeyAPI.Api
         public static MountCatalog Catalog { get; } = new MountCatalog();
 
         // Always true since 0.40.0. In 0.30.0 to 0.39.0 the mounts other than the donkey, the skins and the effects could
-        // be switched off (Saddle Up 0.10.0 shipped them so, by the dev key Debug.MountsPreview): the lists held the
+        // be switched off (a release shipped them so, by the dev key Debug.MountsPreview): the lists held the
         // donkey alone and a registration was kept out. Since then mounts are mods of their own (packs), and which ones
         // a player has is which they installed; the property stays for mods written against 0.10.0.
         public static bool MountsEnabled => true;
@@ -425,8 +425,8 @@ namespace GK2DonkeyAPI.Api
         // Never lost (0.36.0, docs/never-lost.md). The API records the spots the keeper stood on (the walkable ground
         // under his feet, nothing over him, his body fitting; a ring of eight per scene, plus where the game put him at
         // a load and after each door) and, with the Behaviour key FallGuard on, puts him back on the newest one that
-        // still holds when he has fallen out of the world. ReturnToSafeSpot does the same by hand (a mod's button or key;
-        // Saddle Up's "Back to the last safe spot"): refused, with the reason, while not in a game, while a door, a
+        // still holds when he has fallen out of the world. ReturnToSafeSpot does the same by hand (a mod's button or
+        // key): refused, with the reason, while not in a game, while a door, a
         // cutscene or a dialogue has the keeper, and in a scene with no spot yet. A flight or a jump is ended first; a
         // ride goes on (the mount follows). Every return is a warning in the log with its facts.
         public static MountResult ReturnToSafeSpot(string reason = null)
@@ -439,7 +439,7 @@ namespace GK2DonkeyAPI.Api
         // The newest safe spot of the keeper's scene, or null (none recorded yet).
         public static Vector3? LastSafeSpot => SafeSpots.Newest(out Vector3 p) ? p : (Vector3?)null;
 
-        // The keeper was put back on a safe spot (argument: where), by the watchdog, a key, a mod or Saddle Up's button.
+        // The keeper was put back on a safe spot (argument: where), by the watchdog, a key, a mod or a mod's button.
         public static event Action<Vector3> ReturnedToSafeSpot;
         internal static void RaiseReturnedToSafeSpot(Vector3 p) => Raise(ReturnedToSafeSpot, p, "ReturnedToSafeSpot");
 
@@ -569,7 +569,7 @@ namespace GK2DonkeyAPI.Api
         // own settings, owned by ownerId, changeable through MountHandle.Tuning). It trots after the parent when the
         // parent moves, and goes when the parent is removed. Null when refused (see Mounts.Spawn).
         // id, key: as MountSpawn. persist: kept with the save; null: as its parent is. scale: the baby's size as a fraction
-        // of the grown one; 0 (the default) is the parent's mount's own (MountDef.FoalScale: the donkey's 0.6, Gerry's 0.33).
+        // of the grown one; 0 (the default) is the parent's mount's own (MountDef.FoalScale: the donkey's 0.6, a larger-drawn mount's 0.33).
         public static MountHandle SpawnFoal(string ownerId, MountHandle parent, float scale = 0f, int id = 0, string key = null, bool? persist = null)
         {
             if (parent == null)

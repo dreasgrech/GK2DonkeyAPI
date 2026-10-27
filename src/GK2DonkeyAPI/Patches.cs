@@ -371,7 +371,7 @@ namespace GK2DonkeyAPI
     // The work state (F held: a tool at a thing) while the mount flies: never. Its CanEnter finds a thing to work at
     // round the body by itself (PlayerWorkComponent.FindWgoToWorkWith, with or without a prompt), at the ground's
     // level far under the drawn mount; entered, the ride ends as a state change and the keeper is put down on that
-    // spot from the air with the dragon parked up there (the user, 2026-10-24: "the rider teleports to the F
+    // spot from the air with the mount parked up there (the user, 2026-10-24: "the rider teleports to the F
     // location"). The prompts are off in the air already (Flight.InteractionPause); this refuses the state itself.
     // A jump is left alone (half a second, near the ground: the work state there ends the jump where it is).
     [HarmonyPatch(typeof(WorkPlayerState), nameof(WorkPlayerState.CanEnter), MethodType.Getter)]

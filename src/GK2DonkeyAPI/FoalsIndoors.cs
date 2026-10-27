@@ -118,8 +118,8 @@ namespace GK2DonkeyAPI
                 if (Ridden != null && i.Parent == Ridden && !i.IsRidden && !i.withKeeper && near)
                 {
                     // a foal of the mount he rides through the door: it comes along with its parent, placed by it while the
-                    // screen is black, in or out. It stayed behind (the user, 2026-10-24: "i selected gerry when inside the
-                    // house and rode him out, and the babies didnt follow me outside"): the house and the yard are one
+                    // screen is black, in or out. It stayed behind (the user, 2026-10-24: a mount chosen inside the
+                    // house and ridden out left its babies inside): the house and the yard are one
                     // scene, so it waited for its parent to stand still out of reach, and a ridden parent never does.
                     i.FollowParentThroughDoor("came through the door with its parent");
                     rode++;

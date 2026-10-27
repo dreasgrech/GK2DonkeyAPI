@@ -4,15 +4,16 @@ the canonical layout, a generator folder with a stub that draws a placeholder fo
 Aseprite sidecar, then the scan. Everything else is drawing.
 
 The names (2026-10-24): a mount's id is "<mod>.<name>" and its folder's name (saddleup.dragon; only the game's donkey is
-plain); a skin is named by its folder within its mount, its full name "<mount id>/<skin>" (saddleup.dragon/default,
-donkey/saddleup.hellfire). A mount's own look, the one a new one wears, is its skins\\default\\: a new mount gets its
+plain); a skin is named by its folder within its mount, its full name "<mount id>/<skin>" (saddleup.gerry/default,
+donkey/saddleup-donkey-skins.hellfire). A mount's own look, the one a new one wears, is its skins\\default\\: a new mount gets its
 first skin there. No id = in skin.cfg, no default_skin = in mount.cfg. A skin added to a mount another mod owns (every
 donkey skin: the donkey is the game's; a mount of another project) sits in a mount folder of your mod's without
 mount.cfg and is named "<mod>.<name>" (the loader leaves it out otherwise): <skin> gets the --prefix in front unless it
 carries one already. A skin of your own mod's mount takes any name.
 
-    python -I tools/skins/new_skin.py <skin>                       a skin of the donkey: skins\\<prefix><skin>\\ (never "default")
-    python -I tools/skins/new_skin.py <skin> --over                a skin drawn over the donkey
+    python -I tools/skins/new_skin.py <skin> --pack <Pack>         a skin of the donkey in a skins pack: skins\\<prefix><skin>\\
+                                                                   (never "default"; --pack SaddleUpDonkeySkins: ours)
+    python -I tools/skins/new_skin.py <skin> --over --pack <Pack>  a skin drawn over the donkey
     python -I tools/skins/new_skin.py <skin> --mount <mount>       one more skin for a mount that exists (saddleup.rat or rat)
     python -I tools/skins/new_skin.py --mount <name> [--name "Giant Thing"] [--prefix <mod>.]
                                                                    a new mount, <prefix><name>, its look in skins\\default\\
@@ -21,8 +22,9 @@ carries one already. A skin of your own mod's mount takes any name.
   <skin>      the skin's folder name, its name within the mount (letters, digits, dashes): giant-crab; on a mount your
               mod doesn't own (the donkey, another project's) --prefix goes in front (saddleup.giant-crab), or give it
               whole
-  --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, which ships every
-              skin and mount; the API ships none; docs/mounts-as-mods.md). A mount mod of its own: a project whose
+  --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, whose built-in mount is
+              Gerry; the API ships none; docs/mounts-as-mods.md). A skin for a mount Saddle Up doesn't own (the donkey)
+              goes to a skins pack instead (--pack; 2026-10-27: Hellfire and Royal Parade are the SaddleUpDonkeySkins pack). A mount mod of its own: a project whose
               csproj embeds assets\\mounts\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
               lines to copy), then --mod <its folder> and --prefix
   --mount     the mount the skin is a look of (default: donkey), by its id (saddleup.rat) or the name after the prefix
@@ -30,8 +32,8 @@ carries one already. A skin of your own mod's mount takes any name.
               written and the skin goes to its skins\\default\\ (leave <skin> out, or say default)
   --pack      an external pack instead (packs/<Pack>/gk2mounts/, its own download: docs/making-a-mount.md "Built in or
               external"): its ids carry the pack's prefix, the pack's name in lower case (--prefix may add dashes:
-              --pack SaddleUpDragon --prefix saddleup-dragon.); the pack folder, its README.md and CHANGELOG.md are
-              made when new
+              --pack SaddleUpDragon --prefix saddleup-dragon.; a pack that exists gives its own: the prefix of its
+              ids); the pack folder, its README.md and CHANGELOG.md are made when new
   --prefix    your mod's prefix, for a new mount's id and for a skin added to a mount another mod owns (default:
               saddleup. for Saddle Up's assets; another --mod needs its own)
   --over      drawn OVER the donkey (a cloth, a hat): layer = over with the erase colour, no [Mount]
@@ -121,6 +123,18 @@ namespace {pack}
 VALUED = {"--mount", "--name", "--canvas", "--seat", "--mod", "--prefix", "--pack"}  # the flags that take a value; --over stands alone
 
 
+def existing_prefix(pack):
+    """The prefix a pack's ids already carry (the first id under its gk2mounts\\ with the pack's prefix), or None."""
+    root = skinroots.pack_root(pack)
+    if not os.path.isdir(root):
+        return None
+    for dirpath, dirs, _ in os.walk(root):
+        for d in sorted(dirs):
+            if "." in d and skinroots.pack_prefix_ok(pack, d):
+                return d.split(".", 1)[0] + "."
+    return None
+
+
 def main():
     ids, skip = [], False
     for a in sys.argv[1:]:
@@ -148,7 +162,7 @@ def main():
         if not pack.isidentifier():
             print("a pack's name is one word of letters and digits (SaddleUpDragon):", pack); return 2
         assets_root = skinroots.pack_root(pack)
-        prefix = arg("--prefix") or pack.lower() + "."
+        prefix = arg("--prefix") or existing_prefix(pack) or pack.lower() + "."
         if not prefix.endswith("."):
             prefix += "."
         if not skinroots.pack_prefix_ok(pack, prefix + "x"):
@@ -209,6 +223,9 @@ def main():
     # a skin added to a mount another mod owns (a mount folder without mount.cfg: every donkey skin) is "<mod>.<name>"
     # (Looks.AddsToOthers; docs/skins.md); on the mod's own mount any name
     added = not new_mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
+    if added and not pack and project == skinroots.MOUNTS_PROJECT:
+        # Saddle Up ships its own mount (Gerry) only; a skin for a mount it doesn't own is a skins pack's (2026-10-27)
+        print(f"a skin for {mount_id}, a mount Saddle Up doesn't own, goes into a skins pack: --pack SaddleUpDonkeySkins (ours) or --pack <a new one>"); return 2
     if added:
         if "." not in sid:
             if prefix is None:

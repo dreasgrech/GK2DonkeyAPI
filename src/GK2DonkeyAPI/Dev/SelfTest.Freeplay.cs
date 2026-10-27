@@ -8,13 +8,13 @@ namespace GK2DonkeyAPI
 {
     // Freeplay (the user, 2026-10-27: a "cheats" section for players who don't want the mounts' differences): the
     // Behaviour keys FreeplayMaxCargo, FreeplaySameSpeed and FreeplaySpeed, the speed words' one table (Catalog.SpeedBands),
-    // the cart's slots, the speeds ridden and driven, the panel's card, MountInfo, and Saddle Up's Freeplay rows.
+    // the cart's slots, the speeds ridden and driven, the panel's card, MountInfo (a mod's rows: the integration tests).
     internal static partial class SelfTest
     {
-        private static readonly string[] FreeplayKeys = { "FreeplayMaxCargo", "FreeplaySameSpeed", "FreeplaySpeed" };
+        internal static readonly string[] FreeplayKeys = { "FreeplayMaxCargo", "FreeplaySameSpeed", "FreeplaySpeed" };
 
         // A Behaviour key's override as it was before a test set its own (one slot per key), put back exactly.
-        private readonly struct BehaviourHeld
+        internal readonly struct BehaviourHeld
         {
             public readonly string Key, Owner;
             public readonly object Value;
@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI
 
         // The run holds Freeplay off (a player's Freeplay would change every cargo and speed the other scenarios check);
         // the Freeplay scenario sets its own and puts this back.
-        private static BehaviourHeld[] HoldFreeplayOff()
+        internal static BehaviourHeld[] HoldFreeplayOff()
         {
             var held = new BehaviourHeld[FreeplayKeys.Length];
             for (int i = 0; i < held.Length; i++) held[i] = new BehaviourHeld(FreeplayKeys[i]);
@@ -43,7 +43,7 @@ namespace GK2DonkeyAPI
             return held;
         }
 
-        private static IEnumerator Freeplay()
+        internal static IEnumerator Freeplay()
         {
             const string owner = Owner + ".freeplay";
             const string beast = "selftest.freeplay-beast", skin = beast + "/selftest.freeplay-test";
@@ -70,7 +70,7 @@ namespace GK2DonkeyAPI
             // the numbers are the shipped mounts' (the user, 2026-10-27: the speeds were already defined by them)
             string five = "";
             foreach (SpeedBand b in bands) five += (five.Length > 0 ? " " : "") + Catalog.SpeedOfBand(b, MountStyle.Ride).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture);
-            Check(five == "1.25 1.6 2 2.25 2.75", $"the five speeds are the snail's, the dragon's, the donkey's, Gerry's and the rat's ({five})");
+            Check(five == "1.25 1.6 2 2.25 2.75", $"the five speeds, slowest to fastest, are the shipped mounts' ({five})");
             Check(Catalog.ParseBand("Very fast") == SpeedBand.VeryFast && Catalog.ParseBand(" very SLOW ") == SpeedBand.VerySlow && Catalog.ParseBand("VeryFast") == SpeedBand.VeryFast && Catalog.ParseBand("2.75") == null && Catalog.ParseBand("") == null,
                 "a pack's word is read in any case, as the word or the name; a number is not a speed");
             if (!cartShipped) Info($"the cart-to-riding ratio is the player's {Catalog.CartFactor:0.###}, not the shipped 0.75: the cart words not compared");
@@ -200,60 +200,6 @@ namespace GK2DonkeyAPI
                     yield return Until(() => !Mounts.IsMounted, 5f);
                 }
                 Check(Mathf.Approximately(pc.PhysicalBody.SpeedMultiplier, 1f), $"off the mount: the keeper walks at 1 ({pc.PhysicalBody.SpeedMultiplier:0.##})");
-
-                // 4. Saddle Up's rows: a section of their own at the end, the dropdown's words the API's, shown only with the
-                // switch on, and each row driving its Behaviour key
-                MountSettingsPage saddle = MountSettingsPage.All.Find(pg => pg.OwnerId == "dreas.gk2.saddleup" && pg.Shown);
-                if (saddle == null) Info("Saddle Up's page isn't shown: its Freeplay rows not checked");
-                else
-                {
-                    MountSettingsPage.Row Row(string key) => saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == key && x.ShownSection == "Freeplay");
-                    MountSettingsPage.Row cargoRow = Row("MaxCargo"), sameRow = Row("SameSpeed"), speedRow = Row("Speed");
-                    Check(cargoRow != null && sameRow != null && speedRow != null && cargoRow.RowKind == MountSettingsPage.RowKind.Toggle && sameRow.RowKind == MountSettingsPage.RowKind.Toggle && speedRow.RowKind == MountSettingsPage.RowKind.Choice,
-                        $"Saddle Up's Freeplay section has the two switches and the speed dropdown ({(cargoRow != null ? "max cargo" : "no max cargo")}, {(sameRow != null ? "same speed" : "no same speed")}, {(speedRow != null ? "speed " + speedRow.RowKind : "no speed")})");
-                    MountSettingsPage.Row lastRow = null;
-                    foreach (MountSettingsPage.Row x in saddle.Rows) if (!x.IsLook && !string.IsNullOrEmpty(x.ShownSection)) lastRow = x;
-                    Check(lastRow != null && lastRow.ShownSection == "Freeplay", $"Freeplay is the page's last section ({lastRow?.ShownSection})");
-                    if (cargoRow != null && sameRow != null && speedRow != null)
-                    {
-                        Check(speedRow.ChoiceLabels != null && speedRow.ChoiceLabels.Length == words.Count && string.Join("|", speedRow.ChoiceLabels) == string.Join("|", words),
-                            $"the dropdown's words are the API's ({(speedRow.ChoiceLabels == null ? "none" : string.Join(", ", speedRow.ChoiceLabels))})");
-                        var ce = (BepInEx.Configuration.ConfigEntry<bool>)cargoRow.Entry;
-                        var se = (BepInEx.Configuration.ConfigEntry<bool>)sameRow.Entry;
-                        var be = (BepInEx.Configuration.ConfigEntry<SpeedBand>)speedRow.Entry;
-                        bool ceWas = ce.Value, seWas = se.Value;
-                        SpeedBand beWas = be.Value;
-                        try
-                        {
-                            foreach (string k in FreeplayKeys) Mounts.Behaviour.ClearAny(k); // the rows' own values from here
-                            // each set to the other value first, so the row's apply runs whatever the player had
-                            se.Value = true;
-                            se.Value = false;
-                            yield return null;
-                            Check(speedRow.Visible != null && !speedRow.Visible(), "the speed dropdown is hidden while \"All mounts have the same speed\" is off");
-                            ce.Value = false;
-                            ce.Value = true;
-                            se.Value = true;
-                            be.Value = SpeedBand.Normal;
-                            be.Value = SpeedBand.Fast;
-                            yield return null;
-                            Check(speedRow.Visible == null || speedRow.Visible(), "and shown with it on");
-                            Check(Plugin.FreeplayMaxCargo.Value && Plugin.FreeplaySameSpeed.Value && Plugin.FreeplaySpeed.Value == SpeedBand.Fast && Mounts.Behaviour.OverriddenBy("FreeplaySpeed") == "dreas.gk2.saddleup",
-                                $"the rows drive the Behaviour keys (max cargo {Plugin.FreeplayMaxCargo.Value}, same speed {Plugin.FreeplaySameSpeed.Value}, {Plugin.FreeplaySpeed.Value}, held by {Mounts.Behaviour.OverriddenBy("FreeplaySpeed")})");
-                            Check(Catalog.CargoOf(k0) == Catalog.CargoMax && Mathf.Approximately(Catalog.SpeedOf(k0, MountStyle.Ride), Catalog.SpeedOfBand(SpeedBand.Fast, MountStyle.Ride)), "and the mounts follow them");
-                            ce.Value = false;
-                            se.Value = false;
-                            yield return null;
-                            Check(!Plugin.FreeplayMaxCargo.Value && !Plugin.FreeplaySameSpeed.Value && Catalog.CargoOf(k0) == 2 && Mathf.Approximately(Catalog.SpeedOf(k0, MountStyle.Ride), 1.25f), "both off: the beast's own cargo and speed again");
-                        }
-                        finally
-                        {
-                            ce.Value = ceWas;
-                            se.Value = seWas;
-                            be.Value = beWas;
-                        }
-                    }
-                }
             }
             finally
             {

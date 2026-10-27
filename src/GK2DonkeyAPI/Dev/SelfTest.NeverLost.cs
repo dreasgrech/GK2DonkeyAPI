@@ -14,7 +14,7 @@ namespace GK2DonkeyAPI
     // a mod's data capped. Everything is written into a temp folder; the player's own side file is never touched.
     internal static partial class SelfTest
     {
-        private static IEnumerator SideFileHeldAndAside()
+        internal static IEnumerator SideFileHeldAndAside()
         {
             if (Mount.SideFileHeld != null)
             {
@@ -59,7 +59,7 @@ namespace GK2DonkeyAPI
                 Check(got.Count == 0 && !File.Exists(path) && File.Exists(stale) && File.ReadAllText(stale) == before,
                     $"a file older than its save: nothing restored, kept as {Path.GetFileName(stale)}");
 
-                Check(!Mount.IsAbilityOwner("com.x.ability.tweaks") && Mount.IsAbilityOwner("acme.mod.ability.acme.dragon"),
+                Check(!Mount.IsAbilityOwner("com.x.ability.tweaks") && Mount.IsAbilityOwner("acme.mod.ability.acme.crab"),
                     "an ability's owner is exactly <owner>.ability.<mount id>; a GUID holding '.ability.' is not one");
             }
             finally
@@ -70,7 +70,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static IEnumerator SideFileCarriedForward()
+        internal static IEnumerator SideFileCarriedForward()
         {
             MountHandle probe = Spawn(home + new Vector3(3f, 0f, 0f), true);
             if (probe == null)
@@ -124,7 +124,7 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static IEnumerator HandleOwnership()
+        internal static IEnumerator HandleOwnership()
         {
             MountHandle a = Spawn(home + new Vector3(3f, 0f, 0f), true);
             if (a == null)

@@ -375,7 +375,7 @@ namespace GK2DonkeyAPI
         }
 
         // Where a pack's sound files come from: a skin's own folder, or a mount folder's (MountPacks.cs). Name is the
-        // bank's name for it ("saddleup.dragon/default", "mount-saddleup.dragon"), Label the log's ("skin '...'", "mount '...'").
+        // bank's name for it ("acme.crab/default", "mount-acme.crab"), Label the log's ("skin '...'", "mount '...'").
         internal sealed class FileSource
         {
             internal readonly string Owner, Name, Source, Label;
@@ -391,7 +391,7 @@ namespace GK2DonkeyAPI
 
         internal static string BankOwner(Looks.SkinDef d) => d.Owner + "/" + d.Id;
 
-        // Joined with '|', which no owner, skin or key holds: with dots, "acme" + "x.dragon/s" and "acme.x" + "dragon/s"
+        // Joined with '|', which no owner, skin or key holds: with dots, "acme" + "x.crab/s" and "acme.x" + "crab/s"
         // were one id, the second pack playing the first's sounds (docs/multi-mod-loading.md 5.6).
         internal static string IdFor(FileSource src, string key) => "gk2." + src.Owner + "|" + src.Name + "|" + key;
 
@@ -413,7 +413,7 @@ namespace GK2DonkeyAPI
         }
 
         // The files waiting to start, one a frame (Advance, from the API's tick): a mount's thirteen all started in one
-        // frame took 15.6 ms of the 60 ms frame the world's mount turned into the dragon (docs/mount-switching-performance.md 2.2).
+        // frame took 15.6 ms of the 60 ms frame the world's mount turned into another one (docs/mount-switching-performance.md 2.2).
         private static readonly Queue<(Job Job, string File)> toStart = new Queue<(Job, string)>();
         private static int startedFrame = -1;
 

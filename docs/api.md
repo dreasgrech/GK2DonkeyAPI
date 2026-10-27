@@ -688,7 +688,7 @@ a hypothetical blue dragon would be two skins of the dragon mount, and Hellfire 
 **Ids.** A mount's id is `<mod>.<name>` (`saddleup-dragon.dragon`, `acme.dragon`): a code or pack mount without a dot in its
 id is refused; only the game's `donkey` is plain. A skin is named within its mount: `MountSkinDef.Id` is its name
 (`default`, `frost`) or its full name, `MountSkinDef.Mount` the mount's id, and the registered id is
-`<Mount>/<Id>` (`saddleup-dragon.dragon/default`, `donkey/saddleup.hellfire`). Every mount but the donkey has one default look, the
+`<Mount>/<Id>` (`saddleup-dragon.dragon/default`, `donkey/saddleup-donkey-skins.hellfire`). Every mount but the donkey has one default look, the
 skin named `default` (a pack's `skins\default\`): what a new instance wears, the Skin row's Default. A code mount
 should register one; if it doesn't, its first skin by name is its default. The donkey's own look is the game's art;
 its skins have names of their own. A skin added to a mount another mod owns is named `<mod>.<name>` (`Id =
@@ -826,7 +826,7 @@ recoloured by the colour settings when drawn in the donkey's palette colours.
 foreach (MountSkinInfo s in Mounts.Looks.Skins) Log(s.Id + ": " + s.Name);   // "donkey" first, then the rest
 handle.Tuning.Set(Guid, "Skin", "saddleup-critters.rat/default");                       // this donkey wears the giant rat's look
 handle.Tuning.Set(Guid, "Skin", MountLooks.DonkeyId);                          // the game's own look ("" does the same)
-companion.Skin = "donkey/saddleup.hellfire"; companion.FoalsWearSkin = false;     // the player's donkey, foals left plain
+companion.Skin = "donkey/saddleup-donkey-skins.hellfire"; companion.FoalsWearSkin = false;     // the player's donkey, foals left plain
 ```
 
 Where skins come from, in order of how little they need:
@@ -841,8 +841,9 @@ Where skins come from, in order of how little they need:
   `GK2SaddleUp.mounts.saddleup.dragon\skins\default\bdy_walk_left_03.png`; the csproj line `<EmbeddedResource
   Include="assets\mounts\**\*" LogicalName="<Prefix>.mounts.%(RecursiveDir)%(Filename)%(Extension)" />`), then
   `Mounts.Looks.RegisterEmbedded(owner, assembly, "<Prefix>.mounts.")`. The worked example is Saddle Up itself
-  (prefix `GK2SaddleUp.mounts.`; its built-in Gerry and the donkey's two skins: the csproj's embed line, one call in its
-  Awake, nothing else; docs/mounts-as-mods.md). A dev build may record the packs' source folder as the assembly
+  (prefix `GK2SaddleUp.mounts.`; its built-in Gerry: the csproj's embed line, one call in its Awake, nothing else;
+  docs/mounts-as-mods.md), and each of its packs in the same way (`packs/<Pack>/`: the Dragon, the Critters, and the
+  Donkey Skins, a skins-only pack: `gk2mounts\donkey\skins\<skin>\` with no `mount.cfg`; docs/making-a-mount.md). A dev build may record the packs' source folder as the assembly
   metadata `GK2MountsSourceDir` (`$(MSBuildProjectDirectory)\assets\mounts`); the F11 Mounts tab then writes a
   skin's tuned values back into its `skin.cfg` and the mount's into its `mount.cfg`.
 - **A sheet instead of 44 files:** the same pack with one PNG (`sheet = sheet.png` in `skin.cfg`, cells of the
@@ -902,7 +903,9 @@ riding and hitched. Whether foals wear a skin follows its mount (`MountDef.Foals
 Every registration returns an `IDisposable`: dispose it to withdraw the skin; `Unregister(owner, id)` with the
 skin's full name does the same. `Find(id)` takes the full name, and a clear short one too: a mount's id or its unique
 name after the prefix gives its default (`saddleup-dragon.dragon`, `dragon`), a skin name only one mount has gives that skin
-(`hellfire` finds `donkey/saddleup.hellfire`: the name after a skin's prefix too, as the dev names from before it).
+(`saddleup-donkey-skins.hellfire` finds `donkey/saddleup-donkey-skins.hellfire`). The API keeps no table of any mod's old names (since 0.40.0,
+2026-10-27): `hellfire` and `donkey/saddleup.hellfire`, never released, find nothing; a mod that renames a skin
+carries its players' choice over itself.
 Wearers show the game's own look from their next frame and keep their choice, so the skin returns with its provider.
 `Report(id)` says what the loader found (pictures, names that match no frame, frames still to draw);
 `SkinsChanged` fires after a registration or withdrawal. Register in `Awake`: a skin registered after Saddle Up's
@@ -1056,7 +1059,8 @@ History:
   mount change applies them. `MountSettingsPage.Toggle` and `Text` take `look` (a look `Text` row is a text box in the
   Mounts panel); their old signatures stay as overloads. `FoalRows` makes its rows per mount, as look rows.
   Rules that changed, none of them for anything a player had:
-  - an effect's id is `<mod>.<name>` like a mount's (Saddle Up's is `saddleup.hellfire`; `hellfire` still finds it),
+  - an effect's id is `<mod>.<name>` like a mount's (Hellfire's is `saddleup-donkey-skins.hellfire`, the Donkey Skins
+    pack's),
     and another mod's effect of the same id meets the version rule instead of throwing;
   - a code skin that loses the version rule, or a mod's own look of a mount that lost its id, is left out with a
     warning and a handle that does nothing (it threw into the mod's Awake);
@@ -1075,6 +1079,14 @@ History:
   What a pack may hold is checked before it costs anything: a picture's size from its PNG header (a frame at most its
   canvas, a sheet its cells, a portrait 512x512), sound files at most 16 MB (a WAV chunk with a bad length is refused),
   no NaN or Infinity, file names inside the pack's own folder (no `..`, no drive, no network share).
+- 0.40.0 (2026-10-27): **no rename tables**: the API keeps no table of any mod's old ids (it knows nothing of the mods
+  built on it). The never-released ids `saddleup.dragon`, `saddleup.rat` (and the other mounts' old ids), the looks'
+  folder names of 2026-10-24 (`red-dragon` ...), `donkey/hellfire`, `hellfire` and the effect `hellfire` find nothing,
+  and a per-mount settings key under a mount's old id no longer carries over (`MountSettingsPage`'s internal
+  `RenamedMountKey` is gone). An id a mod renames is that mod's to carry over. A short name still finds a mount (the
+  name after its prefix, when only one mount has it). Saddle Up's donkey skins and Hellfire's effect are a pack of
+  their own now, GK2 Saddle Up: Donkey Skins: `donkey/saddleup-donkey-skins.hellfire`,
+  `donkey/saddleup-donkey-skins.royal-parade`, the effect `saddleup-donkey-skins.hellfire` (docs/making-a-mount.md).
 - 0.40.0: `MountLook.StepsVolume` and `BabyStepsVolume` (0 to 1.5) beside `SoundVolume`, which is the voices only now;
   the style keys `VoicesVolume`, `StepsVolume`, `BabyStepsVolume` (times `SoundVolume`: the calls, answers, lip smack
   and chewing; everything else of a grown mount; everything but the answer of a baby).
@@ -1183,7 +1195,8 @@ History:
   rows (docs/mounts-as-mods.md 4; before, it waited for a restart that never helped, BepInEx's order being fixed).
   A set skin or effect that isn't installed logs an Info, not a warning. The five mounts left the API for
   Saddle Up, which shipped them as embedded packs (since 2026-10-26 four of them are external packs of their own) through `RegisterEmbedded` (and since 0.36.0 the donkey's two skins and
-  the Hellfire effect too: the API ships no skin or effect of its own).
+  the Hellfire effect too: the API ships no skin or effect of its own; since 2026-10-27 those are the Donkey Skins
+  pack's).
 - 0.33.0: `MountSkinDef.Effect` / `EffectWhen` (the effect a skin comes with, shown under "As the mount or skin";
   `null` = the mount's; the effect ring scales by the worn skin's drawn width); `MountSkinDef.TuningRide` / `TuningCart`
   (a skin's per-style geometry, `null` = none: the skin owns its drawing's geometry, docs/mounts-parity-matrix.md 9.1);

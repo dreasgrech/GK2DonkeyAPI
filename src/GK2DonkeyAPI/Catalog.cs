@@ -9,7 +9,7 @@ namespace GK2DonkeyAPI
     // it (values for existing tuning keys, per style), its rules (the cart, foals), a default effect and its abilities
     // (code hooks, MountAbility). A skin names its mount; an instance's mount is its skin's, so nothing new is saved.
     // The donkey mount is the base the game gives us; the built-in creatures come as mount packs (a folder per mount:
-    // mount.cfg, its sounds and its skins; MountPacks.cs, exercised by Saddle Up's every start); mods register mounts
+    // mount.cfg, its sounds and its skins; MountPacks.cs, exercised at every start of a mod that ships packs); mods register mounts
     // with abilities in code.
     internal static class Catalog
     {
@@ -20,7 +20,7 @@ namespace GK2DonkeyAPI
             internal string Id, Name, Author, Version, Owner;
             internal string Needs;     // a pack's [Mount] needs = (the API version it was written for), kept for its Save
             internal int Format;       // a pack's [Mount] format = (0: not given)
-            internal string Noun;                      // the word a sentence uses ("a skull can't pull the cart"); null: the name in lower case
+            internal string Noun;                      // the word a sentence uses ("a crab can't pull the cart"); null: the name in lower case
             internal string Description;               // for the Mounts panel: a line or two about the creature
             internal string Portrait;                  // a pack's: a PNG of the mount's folder for the panel's list; null: the mount drawn
             internal Texture2D PortraitTexture;        // a code mount's portrait, the mod's own texture
@@ -111,7 +111,7 @@ namespace GK2DonkeyAPI
         }
 
         // The speeds, the API's one table (in SpeedBand's order): each word's speed riding (times the keeper's walking
-        // speed; the shipped mounts': the snail, the dragon, the donkey, Gerry, the rat), and the band the Mounts panel
+        // speed; one per word, slowest first), and the band the Mounts panel
         // reads a speed into, against the donkey's for that style (so the donkey reads Normal both ways, and a cart's word
         // compares carts): under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above Very fast. A
         // mount names its word (MountDef.Speed, [Mount] speed), Freeplay picks one, the panel shows them; the self-test
@@ -164,7 +164,7 @@ namespace GK2DonkeyAPI
             return style == MountStyle.Cart ? ride * CartFactor : ride;
         }
 
-        // The words in SpeedBand's order: Saddle Up's Freeplay dropdown reads them (Mounts.Catalog.SpeedWords).
+        // The words in SpeedBand's order: a mod's Freeplay dropdown reads them (Mounts.Catalog.SpeedWords).
         internal static string[] SpeedWords()
         {
             var words = new string[SpeedBands.Length];
@@ -218,23 +218,13 @@ namespace GK2DonkeyAPI
         {
             if (string.IsNullOrEmpty(id)) return null;
             string t = id.Trim();
-            if (defs.TryGetValue(t, out Entry d)) return d;
-            return renamedMounts.TryGetValue(t, out string now) && defs.TryGetValue(now, out d) ? d : null;
+            return defs.TryGetValue(t, out Entry d) ? d : null;
         }
 
-        // Saddle Up's four mounts before they became packs of their own, their ids by the pack (2026-10-26, packs/; the
-        // user: "ids need to be depending on pack"). Never released: what a dev's own world, cfg and side file held. The
-        // old id finds the new mount (Find, Looks.Find's "<mount>/<skin>"), the Mount row writes the new one back, and a
-        // per-mount cfg key of the old id carries its value over (MountSettingsPage.OldPlaces, RenamedMountKey).
-        internal static readonly Dictionary<string, string> renamedMounts = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["saddleup.dragon"] = "saddleup-dragon.dragon",
-            ["saddleup.rat"] = "saddleup-critters.rat",
-            ["saddleup.snail"] = "saddleup-critters.snail",
-            ["saddleup.worm"] = "saddleup-critters.worm",
-        };
+        // No table of any mod's old mount ids here (the user, 2026-10-27: the API knows nothing of the mods
+        // built on it or their packs): an id a mod renames is that mod's to carry over. The renames of 2026-10-26 were never released.
 
-        // A mount by the name after its prefix ("dragon" -> saddleup.dragon) when exactly one mount has it: what a dev's
+        // A mount by the name after its prefix ("crab" -> acme.crab) when exactly one mount has it: what a dev's
         // own cfg and saves held before the prefixes (2026-10-24). Null when none or several.
         internal static Entry FindShort(string name)
         {
@@ -254,17 +244,17 @@ namespace GK2DonkeyAPI
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("A mount needs an id.");
             string why = IdRule(id, "Mount id");
             if (why != null) throw new ArgumentException(why);
-            // a mount's id carries its mod's prefix, "<mod>.<name>" (saddleup.dragon, acme.dragon): two mods' dragons are
+            // a mount's id carries its mod's prefix, "<mod>.<name>" (acme.crab, bmod.crab): two mods' crabs are
             // two mounts, and a saved one never turns into another mod's (docs/mount-id-collisions.md; the user,
             // 2026-10-24). Only the game's own donkey is plain.
             int dot = id.IndexOf('.');
-            if (!id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && (dot <= 0 || dot == id.Length - 1)) throw new ArgumentException($"Mount id '{id}': a mount's id is '<mod>.<name>', your mod's prefix and the mount's name (Saddle Up's dragon is saddleup.dragon; docs/making-a-mount.md).");
+            if (!id.Equals(DonkeyId, StringComparison.OrdinalIgnoreCase) && (dot <= 0 || dot == id.Length - 1)) throw new ArgumentException($"Mount id '{id}': a mount's id is '<mod>.<name>', your mod's prefix and the mount's name (yourmod.crab; docs/making-a-mount.md).");
         }
 
         // An id's characters (a mount's, a skin's name, an effect's; docs/multi-mod-loading.md 5.6): ASCII letters and
         // digits, dots, dashes and underscores, at most IdMax long, no dot at either end (Windows drops a trailing dot from
-        // a folder's name: the sound cache's), no two dots in a row. ASCII only: "saddleup.drаgon" with a Cyrillic "а"
-        // looked like the dragon and was a second mount. Null when it is fine, else why not.
+        // a folder's name: the sound cache's), no two dots in a row. ASCII only: "acme.crаb" with a Cyrillic "а"
+        // looked like acme.crab and was a second mount. Null when it is fine, else why not.
         internal const int IdMax = 64;
 
         internal static string IdRule(string id, string what)

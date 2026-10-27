@@ -29,8 +29,8 @@
     <!-- the self-tests' embedded pack (a donkey skin with an .ogg and a .wav: the route the built-in packs' sounds
          take); never registered at start -->
     <EmbeddedResource Include="assets\testmounts\**\*" LogicalName="GK2DonkeyAPI.testmounts.%(RecursiveDir)%(Filename)%(Extension)" />
-    <!-- No mounts or skins here: the API is the backend and ships the donkey alone; every mount and skin, Hellfire and
-         Royal Parade included, is Saddle Up's (src/SaddleUp/assets/mounts, embedded in its csproj; docs/mounts-as-mods.md). -->
+    <!-- No mounts or skins here: the API is the backend and ships the donkey alone; every mount and skin is a
+         mod's own (embedded in that mod's csproj; docs/mounts-as-mods.md). -->
   </ItemGroup>
 
   <!-- The source folder, so the panel can read and write defaults.cfg / cargo-layout.cfg in place on this machine.

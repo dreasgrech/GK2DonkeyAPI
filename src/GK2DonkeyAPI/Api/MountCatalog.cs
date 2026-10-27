@@ -5,8 +5,8 @@ using UnityEngine;
 
 namespace GK2DonkeyAPI.Api
 {
-    // Mounts (docs/mounts-design.md): what the player rides as a creature type (the donkey, the giant rat, the
-    // dragon, ...), against a skin, which is how it is drawn (the red and the blue dragon are two skins of the dragon
+    // Mounts (docs/mounts-design.md): what the player rides as a creature type (the donkey, a crab, a
+    // bird, ...), against a skin, which is how it is drawn (a red and a blue crab are two skins of the crab
     // mount). A mount owns the rider's seat for it (values for existing tuning keys, per style), whether it pulls the
     // cart and has foals, a default effect, and its abilities (MountAbility: code the API calls at the instance's
     // lifecycle points). A skin names its mount (MountSkinDef.Mount, a pack's `mount =`; the default is the donkey);
@@ -42,7 +42,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // The panel's speed words in SpeedBand's order, slowest first ("Very slow" ... "Very fast", 0.40.0): labels for a
-        // SpeedBand choice (Saddle Up's Freeplay speed), the same words MountInfo.SpeedWord uses.
+        // SpeedBand choice (a mod's Freeplay speed), the same words MountInfo.SpeedWord uses.
         public IReadOnlyList<string> SpeedWords => GK2DonkeyAPI.Catalog.SpeedWords();
 
         // The most items a cart holds (6; 0.40.0): a mount's cargo is 1 to this, and every cart's with FreeplayMaxCargo.
@@ -211,7 +211,7 @@ namespace GK2DonkeyAPI.Api
     {
         public string Id;
         public string Name;
-        // The word the game's sentences use for one ("a skull can't pull the cart"); null: the name in lower case.
+        // The word the game's sentences use for one ("a crab can't pull the cart"); null: the name in lower case.
         public string Noun;
         public string Author;
         public string Version;
@@ -225,7 +225,7 @@ namespace GK2DonkeyAPI.Api
         // Jumps, ridden plain (0.36.0; on by default; false: the jump key does nothing on it, or takes off if it flies).
         public bool Jumps = true;
         // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
-        // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
+        // times its creature's size (a game character's frames scaled up) sets 0.33 so its babies are the creature's own size.
         public float FoalScale = 0.6f;
         // How fast the keeper rides it (0.36.0; a word since 0.40.0): one of the API's speeds, whose numbers are the API's
         // (Very slow 1.25, Slow 1.6, Normal 2, Fast 2.25, Very fast 2.75 times his walking speed; MountInfo.Speed reads
@@ -391,7 +391,7 @@ namespace GK2DonkeyAPI.Api
         public float CartSpeed { get; }
         public string SpeedWord { get; }
         public int Cargo { get; }
-        // The word the game's sentences use for one ("skull", "giant rat").
+        // The word the game's sentences use for one ("crab", "giant crab").
         public string Noun { get; }
         public int Abilities { get; }
         // For the Mounts panel: the description, whether a portrait exists, the stat lines, the abilities by name.

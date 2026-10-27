@@ -10,7 +10,7 @@ namespace GK2DonkeyAPI
     // throws), and a row's function that throws is taken as its fallback.
     internal static partial class SelfTest
     {
-        private static IEnumerator NoThrowBetweenMods()
+        internal static IEnumerator NoThrowBetweenMods()
         {
             const string oA = Owner + ".nothrow-a", oB = Owner + ".nothrow-b", oC = Owner + ".nothrow-c";
             const string fx = "selftest.nothrow-fx", mount = "selftest.nothrow-mount", skin = "donkey/selftest.nothrow-skin";
@@ -42,8 +42,6 @@ namespace GK2DonkeyAPI
                 bare.Id = "nothrow-fx";
                 e = Try(() => Mounts.Effects.Register(oA, bare), out _);
                 Check(e is ArgumentException, $"an effect id without its mod's prefix is a mistake in the call: refused ({e?.Message})");
-                if (GK2DonkeyAPI.Effects.Find("saddleup.hellfire") != null)
-                    Check(GK2DonkeyAPI.Effects.Find("hellfire") == GK2DonkeyAPI.Effects.Find("saddleup.hellfire"), "Hellfire's old id still finds it");
 
                 Check(Try(() => Mounts.Looks.Register(oA, new MountSkinDef { Id = "selftest.nothrow-skin", Name = "A", Version = "1.0", Source = new NoPictures() }), out skA) == null, "a code skin of a mod registered");
                 Info("the next \"is already registered\" warning is this test's own: another mod's code skin of the same id");

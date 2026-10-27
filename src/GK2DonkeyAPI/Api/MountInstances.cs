@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI.Api
         // The mod that spawned it (a cart left standing by unhitching: the donkey's owner; the core's GUID after the summon).
         public string Owner => I.OwnerId;
 
-        // Its identity: owner#id, e.g. dreas.gk2.saddleup#1.
+        // Its identity: owner#id, e.g. com.acme.mymod#1.
         public string FullId => I.FullId;
 
         public bool Exists => GK2DonkeyAPI.Mount.IsRegistered(I);

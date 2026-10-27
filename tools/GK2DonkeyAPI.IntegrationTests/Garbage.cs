@@ -1,25 +1,22 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
+using GK2DonkeyAPI.Api;
 using HarmonyLib;
 using LazyBearTechnology;
+using System.Collections.Generic;
+using System.Collections;
+using System;
 using UnityEngine;
-using GK2DonkeyAPI.Api;
+using static GK2DonkeyAPI.SelfTest;
 
-namespace GK2DonkeyAPI
+namespace GK2DonkeyAPI.IntegrationTests
 {
-    // The garbage survey (the user, 2026-10-25: "start looking into the allocations and see where we're allocating
-    // garbage"; "automate the test"; docs/mount-switching-performance.md): the mod made 20 to 50 KB of garbage a frame
-    // (Performance Hog: most of the heap's growth). Each phase is measured on its own (Perf.PhaseStart/PhaseEnd: the
-    // frames, the mod's time, its garbage by measured part, the collections): standing near mounts on foot, walking on
-    // foot, riding a dragon with two babies steered right and left (the keeper's stick answered as the walk survey
-    // does), riding standing still, the Mounts panel picking a mount every half second, and riding again with the dev
-    // stride probe on. The probe is off in the other phases. Measures only: nothing is judged.
-    internal static partial class SelfTest
+    // Moved from the API's Dev/SelfTest.Garbage.cs (2026-10-27): the scenarios that need GK2 Saddle Up or
+    // one of its packs, run by the API's self-test runner through its helpers (using static SelfTest).
+    internal static partial class Tests
     {
-        private const string GroupGarbage = "Garbage";
+        // the garbage survey's own group in the Tests tab
+        internal const string GroupGarbage = "Garbage";
 
-        private static IEnumerator GarbageSurvey()
+        internal static IEnumerator GarbageSurvey()
         {
             string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
             if (noPack != null) { Skip(noPack); yield break; }

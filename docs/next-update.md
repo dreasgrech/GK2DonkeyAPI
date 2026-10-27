@@ -46,7 +46,7 @@ the decisions in B.
    the game's attack, so no jump or take-off during a fight, logged once a fight: as designed, to be said in the
    texts).
 2. **The donkey's two skins as a mod of their own** (docs/donkey-skins-pack.md): in Saddle Up or a pack mod; if the
-   latter, before or after the gate flip.
+   latter, before or after the gate flip. (Built 2026-10-27: the pack GK2 Saddle Up: Donkey Skins, `packs/SaddleUpDonkeySkins/`.)
 3. **How a skin comes with an effect** (open-items.md "Effects on skins"): Hellfire ships without its fire until this
    is designed; fine for the release if the texts say so.
 4. **The mounts' gameplay** (section 3): the cheap trade (speed against cargo) can be in this update; the rest is a

@@ -17,7 +17,8 @@ Mounts panel, and abilities (code hooks). The donkey is the mount with no defini
 A **skin** is a drawing for a mount: 44 frames on a canvas, where the rider sits on that drawing, and what the
 drawing's colours mean. Every mount but the donkey has exactly one default skin, named `default`; its other skins
 are built on it and draw only what they change (docs/skins.md "Variants: built on the default"). Hellfire and Royal
-Parade are skins of the donkey (`donkey/saddleup.hellfire`, `donkey/saddleup.royal-parade`); the red dragon is the
+Parade are skins of the donkey (`donkey/saddleup-donkey-skins.hellfire`, `donkey/saddleup-donkey-skins.royal-parade`,
+the Donkey Skins pack's); the red dragon is the
 dragon's default (`saddleup-dragon.dragon/default`).
 
 The rule that ties them: **a mount is a folder with a `mount.cfg`, and its skins are the folders under its
@@ -275,27 +276,36 @@ Ids: a mount's id is `<mod>.<name>` (refused without a dot); a skin is named wit
 another mod's mount carries your name (`me.frost`). A code mount should register a skin named `default`; if it
 doesn't, its first skin by name is its default.
 
-## Built in or external (this repo, 2026-10-26)
+## Built in or external (this repo, 2026-10-26; the Donkey Skins pack 2026-10-27)
 
 The repo keeps two kinds of mount pack apart by their folders (the user: "make a distinction in the directories
 between inbuilt mounts/skins in saddle up vs ones which are 'external'"):
 
 ```
 src/SaddleUp/assets/mounts/            built in: embedded in GK2SaddleUp.dll, ships with Saddle Up
-  saddleup.gerry/   donkey/skins/saddleup.hellfire/   donkey/skins/saddleup.royal-parade/
-packs/                                 external: each folder is one download, a small plugin with its mounts embedded
+  saddleup.gerry/
+packs/                                 external: each folder is one download, a small plugin with its mounts or skins embedded
   SaddleUpDragon/      gk2mounts/saddleup-dragon.dragon/                 SaddleUpDragon.csproj, Plugin.cs, README.md, CHANGELOG.md
   SaddleUpCritters/    gk2mounts/saddleup-critters.rat/ .snail/ .worm/   SaddleUpCritters.csproj, Plugin.cs, README.md, CHANGELOG.md
+  SaddleUpDonkeySkins/ gk2mounts/donkey/skins/saddleup-donkey-skins.hellfire/ .royal-parade/
+                                                                         SaddleUpDonkeySkins.csproj, Plugin.cs, README.md, CHANGELOG.md
 ```
 
+Saddle Up's built-in content is Gerry alone (the user, 2026-10-27): a skin for a mount Saddle Up doesn't own, such as
+the donkey, belongs in a skins pack. `SaddleUpDonkeySkins` is the worked example of one: a mount folder with no
+`mount.cfg` (`gk2mounts\donkey\skins\<skin>\`, skins added to the game's donkey), and in its `Plugin.cs` Hellfire's
+particle effect (`saddleup-donkey-skins.hellfire`), which moved with the skin.
+
 - **A pack's ids carry the pack's prefix:** its name in lower case, dashes where wanted (`SaddleUpDragon`:
-  `saddleup-dragon.dragon`; `SaddleUpCritters`: `saddleup-critters.rat`). A mount lives in exactly one pack for good:
-  saves keep the full id. Built-in ones keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
+  `saddleup-dragon.dragon`; `SaddleUpCritters`: `saddleup-critters.rat`; `SaddleUpDonkeySkins`: the skin
+  `donkey/saddleup-donkey-skins.hellfire` and the effect `saddleup-donkey-skins.hellfire`). A mount or skin lives in
+  exactly one pack for good: saves keep the full id. Built-in ones (Gerry) keep `saddleup.`. SkinsScan checks both, and that a pack's `mount.cfg` says
   `needs =` and `version =`.
 - **A pack is one DLL** (the user, 2026-10-26: a folder unzipped over an older one keeps the files the new version
   dropped, and the loader would use them; one file is replaced whole). `packs/<Pack>/<Pack>.csproj` embeds
   `gk2mounts\**` as `<Pack>.mounts.<mount>\...` and `Plugin.cs` hands it to `Mounts.Looks.RegisterEmbedded` in Awake:
-  a BepInEx plugin of its own (`dreas.gk2.saddleup.dragon`, `dreas.gk2.saddleup.critters`; its version in the log
+  a BepInEx plugin of its own (`dreas.gk2.saddleup.dragon`, `dreas.gk2.saddleup.critters`,
+  `dreas.gk2.saddleup.donkeyskins`; its version in the log
   and in mod managers), `[BepInDependency]` on the API 0.40.0 (an older one is refused by BepInEx) and a soft one on
   Saddle Up (after it, which offers the mounts). Its version is `Plugin.Version`, the same as its CHANGELOG.md's first
   heading (SkinsScan and check-dist check it).
@@ -303,15 +313,20 @@ packs/                                 external: each folder is one download, a 
   and a dev build records `GK2MountsSourceDir` (the pack's `gk2mounts\`), so the F11 Mounts tab saves into the repo's
   `packs/`. Not watched on disk while the game runs (embedded packs never are): after editing a file, build again.
 - **A release** (`tools/build-dist.sh` builds every pack's DLL into `dist/`; `tools/make-release-zip.py`): Saddle Up's
-  zip (the two DLLs), one zip per pack (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\GK2SaddleUpDragon\` with
-  `GK2SaddleUpDragon.dll`, `README.md`, `CHANGELOG.md`) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its
-  own folder). `check-dist.py` checks each pack's DLL (no manifest, no game assembly, no path) and its folder (its
+  zip (the two DLLs) and one zip per pack, named by the pack's words dashed (`GK2-Saddle-Up-Dragon-1.0.0.zip`:
+  `BepInEx\plugins\GK2SaddleUpDragon\` with `GK2SaddleUpDragon.dll`, `README.md`, `CHANGELOG.md`;
+  `GK2-Saddle-Up-Critters-1.0.0.zip`, `GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`). Each pack ships on its own: there is no
+  bundle of them (the user, 2026-10-27). `check-dist.py` checks each pack's DLL (no manifest, no game assembly, no path) and its folder (its
   docs, the version, `needs`, `version`, its `skins\default\`, nothing stray in `gk2mounts\`).
 - **A new one:** `new_skin.py --mount <name> --pack <Pack> [--prefix <pack-prefix>.]` makes `packs/<Pack>/` (its
   csproj and Plugin.cs, README, CHANGELOG) and the mount in it; `--mod <project>` (or nothing) makes a built-in one.
-- **The old ids** (`saddleup.dragon`, `saddleup.rat`, `.snail`, `.worm`, never released) still find the packs' mounts
-  in a dev's own world and cfg (`Catalog.renamedMounts`): the Mount row writes the new id back and per-mount keys
-  (`Coat_saddleup.dragon`) carry over.
+  A donkey skin: `new_skin.py <skin> --pack SaddleUpDonkeySkins` (ours) or `--pack <a new pack>`; `new_skin.py`
+  refuses a skin for a mount Saddle Up doesn't own into Saddle Up. A pack that exists gives its own prefix (read
+  from its ids), so `--prefix` is needed only for a new one.
+- **No old ids** (2026-10-27): the ids the mounts and skins had inside Saddle Up (`saddleup.dragon`, `saddleup.rat`,
+  `donkey/saddleup.hellfire`, never released) find nothing now. The API keeps no table of any mod's old ids (it
+  knows nothing of Saddle Up, and Saddle Up nothing of its packs; `tools/layering-scan.py` checks it): an id a mod
+  renames is that mod's to carry over.
 
 ## Building one from this repo (the shipped mounts' way)
 
@@ -320,9 +335,9 @@ packs/                                 external: each folder is one download, a 
    writes `src/SaddleUp/assets/mounts/me.giant-crab/skins/default/skin.cfg` in the canonical layout, and, the mount
    being new, `src/SaddleUp/assets/mounts/me.giant-crab/mount.cfg`; a generator stub drawing placeholder frames, and
    the Aseprite sidecar. A second look of the same mount is the same command with another skin name (the mount's
-   folder and `mount.cfg` are left as they are); without `--mount` the skin is the donkey's
-   (`assets/mounts/donkey/skins/<prefix><skin>/`: `--prefix me.`, Saddle Up's `saddleup.` by default, goes in front of
-   a skin added to a mount your mod doesn't own).
+   folder and `mount.cfg` are left as they are); without `--mount` the skin is the donkey's, which goes into a skins
+   pack, not into Saddle Up: `--pack <Pack>` (`packs/<Pack>/gk2mounts/donkey/skins/<prefix><skin>/`; the prefix, the
+   pack's own, goes in front of a skin added to a mount your mod doesn't own; `--pack SaddleUpDonkeySkins` is ours).
 2. Draw the 44 frames (Aseprite: `scripts/GK2 Export skin.lua` splits the sheet into the PNGs) or extend the
    generator. docs/skins.md "The pictures" names each key and what the rider does on it.
 3. Set `seat`, `[Tuning.Cart] HitchGapPx` if the body is longer than the donkey's, and the `[Colors]` regions in the

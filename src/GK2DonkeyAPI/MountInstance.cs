@@ -11,7 +11,7 @@ namespace GK2DonkeyAPI
     // An instance is one donkey prefab view with everything the mod does to it: the cart parts, the cargo on it
     // (Cargo.Rig), the lantern (Lantern.Rig with its hanging lamp) and the colours (Colors.Rig), plus its own setting
     // overrides. It is either ridden (Mount.Ridden: it follows the keeper, the old code path) or standing where it was
-    // left (StandTick). The old summon (Mounts.TryMount, Saddle Up's keys) is an ephemeral instance: made at mount,
+    // left (StandTick). The old summon (Mounts.TryMount, a mod's keys) is an ephemeral instance: made at mount,
     // gone at dismount with its cargo handed back, as before. Every other one stays in the world until removed.
     internal static partial class Mount
     {
@@ -78,14 +78,14 @@ namespace GK2DonkeyAPI
                 SoundsRig = new Sounds.Rig(this);
             }
 
-            // "dragon with cart", "free cart", "foal", "donkey": the mount's name (Noun) where there is one.
+            // "crab with cart", "free cart", "foal", "donkey": the mount's name (Noun) where there is one.
             internal string MountName => !HasDonkey ? "free cart" : HasCart ? Noun + " with cart" : !Rideable && ViewScale < 1f ? "foal" : Noun;
 
-            // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "dragon",
-            // "giant rat"); a free cart has no mount, so "mount".
+            // What to call this one in a sentence a player reads: its mount's name in lower case ("donkey", "crab",
+            // "giant crab"); a free cart has no mount, so "mount".
             internal string Noun => HasDonkey ? (LooksRig?.MountNow?.NounText ?? "donkey") : "mount";
 
-            // The identity: the owner's GUID and its own number (Mount.NextId), e.g. dreas.gk2.saddleup#1.
+            // The identity: the owner's GUID and its own number (Mount.NextId), e.g. com.acme.mymod#1.
             internal string FullId => fullId ?? (fullId = FullIdOf(OwnerId, Id)); // made once: the owner and the number never change
             private string fullId;
 
@@ -116,6 +116,7 @@ namespace GK2DonkeyAPI
                     }
                     if (t == Tier.Asleep)
                     {
+                        LooksRig.TickWithoutView(); // the cart rule holds asleep too: its chosen mount may not pull the cart
                         AsleepTick();
                         return;
                     }
@@ -128,6 +129,7 @@ namespace GK2DonkeyAPI
                     nextViewlessTick = Time.unscaledTime + 0.5f;
                     StopShuffle(); // a step in progress ends where it is; home is taken again with the new view
                     FollowWithoutView(); // a foal goes to its parent's place when that is somewhere else (Foals.cs)
+                    LooksRig.TickWithoutView(); // the cart rule (Looks.cs)
                     GameScene scene = LoadedScene(SceneId);
                     if (scene == null || Time.unscaledTime < nextSpawnTry)
                     {
@@ -509,7 +511,7 @@ namespace GK2DonkeyAPI
             // taken over as it is (cargo, lantern, colours stay), and the keeper is put on its seat so it does not jump.
             // What a ride would refuse whatever the place it stands: asked before it is brought to the keeper for a ride
             // (MountHandle.ComeToKeeper), so a refused ride doesn't leave it standing next to him indoors (found
-            // 2026-10-01: Saddle Up's H in a building said "Not indoors." and the donkey came in anyway). Logged and
+            // 2026-10-01: a mod's ride key in a building said "Not indoors." and the donkey came in anyway). Logged and
             // said the way a refused ride is.
             // asStyle: the mods' rules are asked for that style instead of the current one (the companion's H judges
             // Ride while the donkey still stands hitched to the cart it is about to leave).
@@ -571,7 +573,7 @@ namespace GK2DonkeyAPI
                     return reason;
                 }
                 MountRules.Poll(force: true);
-                // Called to the keeper and not moved since (ComeToKeeper, Saddle Up's keys): he stays where he is,
+                // Called to the keeper and not moved since (ComeToKeeper, a mod's keys): he stays where he is,
                 // which is where its place was worked out from. Otherwise the spot on its seat, from its place (not its
                 // view's transform: the view follows a move only in the next StandTick, and riding in the same frame put
                 // the keeper at the old spot, found 2026-09-30).
@@ -883,7 +885,7 @@ namespace GK2DonkeyAPI
             // This donkey leaves its cart standing where it is (a new free cart with the cargo and the cart settings) and
             // goes on without it. Returns the new cart. A standing donkey without a view (asleep far away, or in a
             // scene that isn't loaded) leaves its cart too: the split is data only, and each gets its view in its new
-            // style when that is next due (StandTick, ComeTo). Saddle Up's H leaves a parked cart where it is this way.
+            // style when that is next due (StandTick, ComeTo). A mod's ride key leaves a parked cart where it is this way.
             // atTheDoor: the keeper went through a door and is elsewhere (another floor): the cart's ground is judged at
             // its own level, not his (LeaveCartAtTheDoor).
             internal Instance Unhitch(PlayerController pc, out string why, bool atTheDoor = false)
