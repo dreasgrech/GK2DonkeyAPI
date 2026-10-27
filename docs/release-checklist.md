@@ -199,6 +199,16 @@ purpose (Cart capacity in both, the babies' look, the parked cart, the bell, the
 nothing (that file predates Allow mounting indoors and says no messages) and T opened the game's Tech Tree too (the
 fixture binds the cart key to the game's own T on purpose). Saves byte-identical; everything restored.
 
+Run 2026-10-27 15:50, with the zips rebuilt at 15:44 (after Freeplay and the speed words: a mount's speed is one of the
+API's words). **A**: 392 lines, no warning, error or exception, no `Dev tools unlocked`; every mount declared with its
+word (Gerry Fast, the rat Very fast, the snail Very slow, the worm and the dragon Slow); H, G, two items, H, G: the same
+cart hitched again with both; L the Mount Journal with six mounts; Freeplay the Saddle Up page's last section, its
+speed dropdown shown with the switch on; no `[Debug]` in the API cfg. Its cfgs are the `0.12.0` fixture again (476 +
+213 values off their defaults; only the Freeplay lines are new). **B** over the 0.10.0 cfgs: 427 lines, 0 warnings, 29
+carried over, the old keys kept ("ride R, cart T"); key by key 38 of 38 Saddle Up values and 452 of 452 API values
+kept, the 20 others the rows retired on purpose. The ride on R is in the log, a drive on T is not (the fixture's T is
+the game's Tech Tree too). Saves byte-identical; everything restored.
+
 ## 6. Versions, changelog and hand-off
 
 Released versions are never reused (0.9.0 went public 2026-10-16): a release with any change gets new numbers.
