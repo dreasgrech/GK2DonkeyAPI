@@ -12,7 +12,7 @@ mount.cfg and is named "<mod>.<name>" (the loader leaves it out otherwise): <ski
 carries one already. A skin of your own mod's mount takes any name.
 
     python -I tools/skins/new_skin.py <skin> --pack <Pack>         a skin of the donkey in a skins pack: skins\\<prefix><skin>\\
-                                                                   (never "default"; --pack SaddleUpDonkeySkins: ours)
+                                                                   (never "default"; --pack GK2SaddleUpDonkeySkinPack: ours)
     python -I tools/skins/new_skin.py <skin> --over --pack <Pack>  a skin drawn over the donkey
     python -I tools/skins/new_skin.py <skin> --mount <mount>       one more skin for a mount that exists (saddleup.rat or rat)
     python -I tools/skins/new_skin.py --mount <name> [--name "Giant Thing"] [--prefix <mod>.]
@@ -24,7 +24,7 @@ carries one already. A skin of your own mod's mount takes any name.
               whole
   --mod       the project under src/ whose assets/mounts gets the pack (default: SaddleUp, whose built-in mount is
               Gerry; the API ships none; docs/mounts-as-mods.md). A skin for a mount Saddle Up doesn't own (the donkey)
-              goes to a skins pack instead (--pack; 2026-10-27: Hellfire and Royal Parade are the SaddleUpDonkeySkins pack). A mount mod of its own: a project whose
+              goes to a skins pack instead (--pack; 2026-10-27: Hellfire and Royal Parade are the GK2SaddleUpDonkeySkinPack pack). A mount mod of its own: a project whose
               csproj embeds assets\\mounts\\** and whose Awake calls Mounts.Looks.RegisterEmbedded (Saddle Up's are the
               lines to copy), then --mod <its folder> and --prefix
   --mount     the mount the skin is a look of (default: donkey), by its id (saddleup.rat) or the name after the prefix
@@ -32,7 +32,7 @@ carries one already. A skin of your own mod's mount takes any name.
               written and the skin goes to its skins\\default\\ (leave <skin> out, or say default)
   --pack      an external pack instead (packs/<Pack>/gk2mounts/, its own download: docs/making-a-mount.md "Built in or
               external"): its ids carry the pack's prefix, the pack's name in lower case (--prefix may add dashes:
-              --pack SaddleUpDragon --prefix saddleup-dragon.; a pack that exists gives its own: the prefix of its
+              --pack GK2SaddleUpDragonsMountPack --prefix saddleup-dragon.; a pack that exists gives its own: the prefix of its
               ids); the pack folder, its README.md and CHANGELOG.md are made when new
   --prefix    your mod's prefix, for a new mount's id and for a skin added to a mount another mod owns (default:
               saddleup. for Saddle Up's assets; another --mod needs its own)
@@ -160,13 +160,13 @@ def main():
     project = pack or arg("--mod") or skinroots.MOUNTS_PROJECT  # built in: Saddle Up's; the API ships none
     if pack:
         if not pack.isidentifier():
-            print("a pack's name is one word of letters and digits (SaddleUpDragon):", pack); return 2
+            print("a pack's name is one word of letters and digits (GK2SaddleUpDragonsMountPack):", pack); return 2
         assets_root = skinroots.pack_root(pack)
-        prefix = arg("--prefix") or existing_prefix(pack) or pack.lower() + "."
+        prefix = arg("--prefix") or existing_prefix(pack) or skinroots.pack_key(pack) + "."
         if not prefix.endswith("."):
             prefix += "."
         if not skinroots.pack_prefix_ok(pack, prefix + "x"):
-            print(f"the pack {pack}'s ids carry its prefix: its name in lower case, dashes where wanted ({pack.lower()}.): {prefix}"); return 2
+            print(f"the pack {pack}'s ids carry its prefix: its GUID's part after dreas.gk2., dashes where wanted ({skinroots.pack_key(pack)}.): {prefix}"); return 2
         pack_dir = os.path.dirname(assets_root)
         if not os.path.isdir(pack_dir):
             os.makedirs(assets_root)
@@ -175,7 +175,7 @@ def main():
                 with open(os.path.join(pack_dir, doc), "w", encoding="utf-8", newline="\r\n") as f:
                     f.write(text)
             # its plugin: one DLL with the folder embedded, so an update replaces everything (docs/making-a-mount.md
-            # "Built in or external"); the same shape as packs/SaddleUpDragon
+            # "Built in or external"); the same shape as packs/GK2SaddleUpDragonsMountPack
             guid = "dreas.gk2." + pack.lower()
             csproj = PACK_CSPROJ.replace("{pack}", pack)
             plugin = PACK_PLUGIN.replace("{pack}", pack).replace("{guid}", guid)
@@ -225,7 +225,7 @@ def main():
     added = not new_mount and not os.path.isfile(os.path.join(mount_dir, "mount.cfg"))
     if added and not pack and project == skinroots.MOUNTS_PROJECT:
         # Saddle Up ships its own mount (Gerry) only; a skin for a mount it doesn't own is a skins pack's (2026-10-27)
-        print(f"a skin for {mount_id}, a mount Saddle Up doesn't own, goes into a skins pack: --pack SaddleUpDonkeySkins (ours) or --pack <a new one>"); return 2
+        print(f"a skin for {mount_id}, a mount Saddle Up doesn't own, goes into a skins pack: --pack GK2SaddleUpDonkeySkinPack (ours) or --pack <a new one>"); return 2
     if added:
         if "." not in sid:
             if prefix is None:

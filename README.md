@@ -29,8 +29,8 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
    `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
 3. Optional: the packs, each a download and a folder of its own for `BepInEx\plugins\`
-   (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`, `GK2SaddleUpCritters\GK2SaddleUpCritters.dll`,
-   `GK2SaddleUpDonkeySkins\GK2SaddleUpDonkeySkins.dll`).
+   (`GK2SaddleUpDragonsMountPack\GK2SaddleUpDragonsMountPack.dll`, `GK2SaddleUpCrittersMountPack\GK2SaddleUpCrittersMountPack.dll`,
+   `GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`).
 4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.40.0 loaded` and `GK2 Saddle Up 0.12.0
    loaded`.
 5. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
@@ -57,7 +57,7 @@ a second mod keeping its own donkeys with the save.
 |---|---|
 | `src/GK2DonkeyAPI` | The API mod. Its README lists every feature; the settings and internals are in [`docs/reference.md`](docs/reference.md). |
 | `src/SaddleUp` | The player mod. What it offers and why: [`docs/saddleup-scope.md`](docs/saddleup-scope.md). Its built-in Gerry is a pack in `assets/mounts/<mount>/` (`mount.cfg`, `sounds/`, `skins/default/` and any other `skins/<skin>/`), embedded and registered with the API: how any mod ships a mount, [`docs/mounts-as-mods.md`](docs/mounts-as-mods.md). |
-| `packs` | Saddle Up's external packs, each its own download laid out as `BepInEx\plugins\<Pack>\`: `SaddleUpDragon` (`saddleup-dragon.dragon`), `SaddleUpCritters` (`saddleup-critters.rat`, `.snail`, `.worm`), `SaddleUpDonkeySkins` (skins only: `donkey/saddleup-donkey-skins.hellfire`, `.royal-parade`, and Hellfire's effect); each a small plugin (`<Pack>.csproj`, `Plugin.cs`) with its `gk2mounts\` embedded, deployed by its build like any plugin. [`docs/making-a-mount.md`](docs/making-a-mount.md) "Built in or external". |
+| `packs` | Saddle Up's external packs, each its own download laid out as `BepInEx\plugins\<Pack>\`: `GK2SaddleUpDragonsMountPack` (`saddleup-dragon.dragon`), `GK2SaddleUpCrittersMountPack` (`saddleup-critters.rat`, `.snail`, `.worm`), `GK2SaddleUpDonkeySkinPack` (skins only: `donkey/saddleup-donkey-skins.hellfire`, `.royal-parade`, and Hellfire's effect); each a small plugin (`<Pack>.csproj`, `Plugin.cs`) with its `gk2mounts\` embedded, deployed by its build like any plugin. [`docs/making-a-mount.md`](docs/making-a-mount.md) "Built in or external". |
 | `examples/` | `GK2DonkeyTechGate` (the cart and the lamp's light need techs) and `GK2DonkeyHerd` (a second mod with its own kept donkeys). Not shipped. |
 | `tools/` | `GK2DonkeyProbe` (the investigation plugin and its archived reports), `GK2DonkeyAPIProbe` (every API call on F-keys), `colors` (the shader and texture tools behind the colours), `GK2PerfRunner` (scripted profiling, [`docs/performance-hog.md`](docs/performance-hog.md)), `GK2AssetProbe` (art from outside the game, [`docs/external-assets.md`](docs/external-assets.md)), `GK2DonkeyAPI.IntegrationTests` (the in-game tests of Saddle Up and its packs, joining the API's self-tests, [`docs/self-tests.md`](docs/self-tests.md)), `layering-scan.py` (the API names no mod, Saddle Up no pack). Not shipped. |
 | `tests/` | Checks run without the game: the public API snapshot, the game members the API uses, the optional framework link, and the game-update diff ([`tests/README.md`](tests/README.md)). |

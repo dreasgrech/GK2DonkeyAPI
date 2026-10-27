@@ -10,9 +10,9 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 **Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Gerry, the game's talking skull
 (a pack in `assets/mounts/saddleup.gerry/`, registered with the API at start the way any mod ships a mount). More
 mounts and skins are downloads of their own, each a folder for `BepInEx\plugins\`:
-- **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`): the dragon, which flies;
-- **GK2 Saddle Up: Critters** (`GK2SaddleUpCritters\GK2SaddleUpCritters.dll`): the rat, the snail and the worm;
-- **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkins\GK2SaddleUpDonkeySkins.dll`): the donkey's skins Hellfire
+- **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragonsMountPack\GK2SaddleUpDragonsMountPack.dll`): the dragon, which flies;
+- **GK2 Saddle Up: Critters** (`GK2SaddleUpCrittersMountPack\GK2SaddleUpCrittersMountPack.dll`): the rat, the snail and the worm;
+- **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`): the donkey's skins Hellfire
   and Royal Parade.
 
 | Mount | Download | Riding | Cart |

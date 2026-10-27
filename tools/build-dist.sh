@@ -1,6 +1,6 @@
 #!/bin/bash
 # The release build (docs/release-checklist.md, section 3): GK2DonkeyAPI.dll, GK2SaddleUp.dll and every external pack's
-# DLL (packs/<Pack>/<Pack>.csproj, named by its AssemblyName: GK2SaddleUpDragon.dll, GK2SaddleUpCritters.dll) built with
+# DLL (packs/<Pack>/<Pack>.csproj, named by its AssemblyName: GK2SaddleUpDragonsMountPack.dll, GK2SaddleUpCrittersMountPack.dll) built with
 # -p:ForDist=true (no debug directory, no source-folder marker) and -p:Deploy=false (the game may be running), copied
 # into dist/, then tools/check-dist.py. Stops at the first failure. Build output: release/logs/build-dist.log.
 #

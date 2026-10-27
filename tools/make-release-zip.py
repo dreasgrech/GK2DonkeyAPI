@@ -2,8 +2,8 @@
 
     python tools/make-release-zip.py
 
-Besides Saddle Up's zip: one per external pack, release/GK2-Saddle-Up-<Pack without SaddleUp, words dashed>-<version>.zip
-(GK2-Saddle-Up-Dragon-1.0.0.zip, GK2-Saddle-Up-Donkey-Skins-1.0.0.zip) holding BepInEx/plugins/GK2<Pack>/GK2<Pack>.dll (the csproj's AssemblyName) (from dist/: its gk2mounts/ folder
+Besides Saddle Up's zip: one per external pack, release/GK2-Saddle-Up-<Pack without GK2SaddleUp, words dashed>-<version>.zip
+(GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip, GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip) holding BepInEx/plugins/<Pack>/<Pack>.dll (the csproj's AssemblyName, the folder's name) (from dist/: its gk2mounts/ folder
 embedded, so an update replaces everything) with the pack's README.md and CHANGELOG.md beside it (the version is its
 Plugin.cs Version). Each pack ships on its own; there is no bundle of them (the user, 2026-10-27). Every zip is read
 back and each file compared with its source byte for byte.
@@ -83,7 +83,7 @@ def pack_version(pack):
 
 
 def assembly_of(pack_dir):
-    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragon for packs/SaddleUpDragon)."""
+    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragonsMountPack for packs/GK2SaddleUpDragonsMountPack)."""
     name = os.path.basename(pack_dir.rstrip("/\\"))
     try:
         text = open(os.path.join(pack_dir, name + ".csproj"), encoding="utf-8").read()
@@ -96,7 +96,7 @@ def assembly_of(pack_dir):
 def pack_files(pack):
     """(source path, zip name) of a pack's files: its DLL from dist/ (the mounts embedded) and its README.md and
     CHANGELOG.md; its folder as an entry of its own."""
-    dll = assembly_of(os.path.join(PACKS, pack))  # GK2SaddleUpDragon: its plugin folder and DLL, as the main mods'
+    dll = assembly_of(os.path.join(PACKS, pack))  # GK2SaddleUpDragonsMountPack: its plugin folder and DLL, as the main mods'
     prefix = INNER + dll + "/"
     out = [(None, prefix), (os.path.join(DIST, dll + ".dll"), prefix + dll + ".dll")]
     for doc in ("README.md", "CHANGELOG.md"):
@@ -135,8 +135,8 @@ def main():
     packs = sorted(d for d in os.listdir(PACKS) if os.path.isfile(os.path.join(PACKS, d, d + ".csproj"))) if os.path.isdir(PACKS) else []
     for p in packs:
         v = pack_version(p)
-        short = p[len("SaddleUp"):] if p.startswith("SaddleUp") and len(p) > len("SaddleUp") else p
-        short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", short)  # SaddleUpDonkeySkins: GK2-Saddle-Up-Donkey-Skins-1.0.0.zip
+        short = p[len("GK2SaddleUp"):] if p.startswith("GK2SaddleUp") and len(p) > len("GK2SaddleUp") else p  # the pack folder, the DLL name
+        short = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "-", short)  # GK2SaddleUpDonkeySkinPack: GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip
         write_pack_zip(os.path.join(OUT, f"GK2-Saddle-Up-{short}-{v}.zip"), [p], f"the pack {p} {v}")
 
 

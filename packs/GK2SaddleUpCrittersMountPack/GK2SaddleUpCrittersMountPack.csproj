@@ -8,8 +8,8 @@
     <TargetFramework>netstandard2.1</TargetFramework>
     <!-- GK2-prefixed like GK2DonkeyAPI.dll and GK2SaddleUp.dll (the user, 2026-10-27); the folder, the namespace,
          the resource prefix and the mount ids keep the pack's name -->
-    <AssemblyName>GK2SaddleUpCritters</AssemblyName>
-    <RootNamespace>SaddleUpCritters</RootNamespace>
+    <AssemblyName>GK2SaddleUpCrittersMountPack</AssemblyName>
+    <RootNamespace>GK2SaddleUpCrittersMountPack</RootNamespace>
     <Version>1.0.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>disable</Nullable>
@@ -22,7 +22,7 @@
   <ItemGroup>
     <!-- The pack, by the name pattern Mounts.Looks.RegisterEmbedded reads: <prefix><mount>\mount.cfg,
          <prefix><mount>\sounds\<file>, <prefix><mount>\skins\<skin>\<file>. -->
-    <EmbeddedResource Include="gk2mounts\**\*" LogicalName="SaddleUpCritters.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
+    <EmbeddedResource Include="gk2mounts\**\*" LogicalName="GK2SaddleUpCrittersMountPack.mounts.%(RecursiveDir)%(Filename)%(Extension)" />
   </ItemGroup>
 
   <!-- The pack's source folder, so the API's F11 Mounts tab writes tuned values back into the repo's skin.cfg and
@@ -41,7 +41,7 @@
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- Deploys into the game (plugins\GK2SaddleUpCritters\) after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <!-- Deploys into the game (plugins\GK2SaddleUpCrittersMountPack\) after every build, only while it is closed (-p:Deploy=false skips it). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
 
 </Project>

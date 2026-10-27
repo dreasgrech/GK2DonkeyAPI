@@ -16,7 +16,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             ["worm"] = "saddleup-critters.worm", ["gerry"] = "saddleup.gerry",
         };
 
-        // The donkey's skins of the Donkey Skins pack (packs/SaddleUpDonkeySkins, 2026-10-27; Saddle Up's before), by name.
+        // The donkey's skins of the Donkey Skins pack (packs/GK2SaddleUpDonkeySkinPack, 2026-10-27; Saddle Up's before), by name.
         internal static readonly Dictionary<string, string> ShippedDonkeySkins = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["hellfire"] = "saddleup-donkey-skins.hellfire", ["royal-parade"] = "saddleup-donkey-skins.royal-parade",

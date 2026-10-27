@@ -74,8 +74,8 @@ property change doesn't invalidate the compile), and the check then fails on the
 `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod;
 Saddle Up's built-in Gerry is a pack inside its DLL), read back and compared with `dist/`; this zip is
 the Nexus upload (extracts into the game folder). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's
-name after `SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragon-<v>.zip`, `GK2-Saddle-Up-Critters-<v>.zip`,
-`GK2-Saddle-Up-Donkey-Skins-<v>.zip`, the version from the pack's CHANGELOG.md, raised there when the pack changed):
+name after `GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
+`GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, the version from the pack's CHANGELOG.md, raised there when the pack changed):
 each its own Nexus file. There is no bundle of the packs (the user, 2026-10-27: "ill ship individuals"). `release/` is not kept in git.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
@@ -97,9 +97,9 @@ Rehearse the first start on a clean config, with the game closed:
    `plugins\GK2AssetProbe\`, `plugins\GK2DonkeyAPI.IntegrationTests\` (the integration tests, when deployed) and the
    dev marker `BepInEx\config\dreas.gk2.dev`.
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
-   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then each pack's zip: `GK2SaddleUpDragon.dll`,
-   `GK2SaddleUpCritters.dll` and `GK2SaddleUpDonkeySkins.dll` replace theirs in `plugins\GK2SaddleUpDragon\`,
-   `plugins\GK2SaddleUpCritters\` and `plugins\GK2SaddleUpDonkeySkins\`, with their README and CHANGELOG.
+   (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then each pack's zip: `GK2SaddleUpDragonsMountPack.dll`,
+   `GK2SaddleUpCrittersMountPack.dll` and `GK2SaddleUpDonkeySkinPack.dll` replace theirs in `plugins\GK2SaddleUpDragonsMountPack\`,
+   `plugins\GK2SaddleUpCrittersMountPack\` and `plugins\GK2SaddleUpDonkeySkinPack\`, with their README and CHANGELOG.
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
@@ -200,7 +200,7 @@ before and after; everything restored and the dev builds redeployed (`--no-incre
 
 Run 2026-10-27 14:20, again with the zips rebuilt at 14:08 (after the day's changes: Cart capacity retired, the Safe spot
 section, the bell and the parked cart rows retired, the babies' look row retired, three volume sliders, the Mount Journal's
-title bar, the pack DLLs named GK2SaddleUpDragon and GK2SaddleUpCritters). **A**: 377 lines, no warning, error or
+title bar, the pack DLLs named GK2SaddleUpDragonsMountPack and GK2SaddleUpCrittersMountPack). **A**: 377 lines, no warning, error or
 exception, no `Dev tools unlocked`; the five pack and built-in mounts declared; H, G, two items, H, G: the same cart with
 both; L the Mount Journal with six mounts; F11 nothing; no `[Debug]`, no `CartSlots` in either cfg. Its cfgs are the
 `0.12.0` fixture again (210 + 473 values off their defaults). **B** over the 0.10.0 cfgs: 431 lines, 0 warnings, 29
@@ -234,6 +234,14 @@ after both. Earlier that night the full F11 without the Donkey Skins folder: 129
 scenarios skipped with the reason, the donkey's Skin list Default only (the kept choice shown as "Hellfire (not
 installed)" since that run: the raw id showed). Not rehearsed: Saddle Up with no pack at all as a zip install (its
 F11 equivalent, the pack-less setups, ran 2026-10-27 14:04).
+Then the full F11 with all three packs on that code: 1331 passed, 0 failed, 0 skipped. At 00:29 the pack DLLs were
+renamed (`GK2SaddleUpDragonsMountPack.dll`, `GK2SaddleUpCrittersMountPack.dll`, `GK2SaddleUpDonkeySkinPack.dll`; the
+user), at 00:35 their source folders, namespaces, resource prefixes and zip names too (`packs/<DLL name>/`,
+`GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip` and so on; the ids and GUIDs unchanged, the id-prefix rule keyed on the
+GUID now), and the dist, the scans (23 of 23) and the four zips remade from otherwise unchanged sources; the zips were
+not rehearsed again (the same layout, a folder named after each DLL). The full F11 on the renamed build (01:10, night,
+the donkey and cart chosen): 1331 passed, 0 failed, 0 skipped, every pack's content from its renamed DLL; the one
+fault on the way was the integration test's own ("built in or external" prepended GK2 to the folder name).
 
 ## 6. Versions, changelog and hand-off
 

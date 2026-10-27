@@ -30,8 +30,16 @@ string? PackOf(string dir)
     string rel = Path.GetRelativePath(packsDir, dir);
     return rel.StartsWith("..") || Path.IsPathRooted(rel) ? null : rel.Split(Path.DirectorySeparatorChar)[0];
 }
-// a pack's ids carry its prefix: the pack's name in lower case, dashes free (SaddleUpDragon: saddleup-dragon.dragon)
-bool PrefixOk(string pack, string id) => id.IndexOf('.') > 0 && id.Substring(0, id.IndexOf('.')).Replace("-", "").Equals(pack, StringComparison.OrdinalIgnoreCase);
+// a pack's ids carry its prefix: its plugin GUID's part after dreas.gk2. with the dots out, dashes free (the GUID
+// dreas.gk2.saddleup.dragon: saddleup-dragon.dragon; the folder and DLL names are the user's, GK2SaddleUpDragonsMountPack
+// since 2026-10-28, and say nothing about the ids)
+string PackKey(string pack)
+{
+    string pc = Path.Combine(packsDir, pack, "Plugin.cs");
+    Match g = File.Exists(pc) ? Regex.Match(File.ReadAllText(pc), @"Guid\s*=\s*""dreas\.gk2\.([\w.]+)""") : Match.Empty;
+    return g.Success ? g.Groups[1].Value.Replace(".", "") : pack.ToLowerInvariant();
+}
+bool PrefixOk(string pack, string id) => id.IndexOf('.') > 0 && id.Substring(0, id.IndexOf('.')).Replace("-", "").Equals(PackKey(pack), StringComparison.OrdinalIgnoreCase);
 if (Directory.Exists(packsDir))
 {
     foreach (var pack in Directory.GetDirectories(packsDir))
@@ -113,7 +121,7 @@ foreach (string pc in Directory.GetFiles(Path.Combine(repo, "src"), "Plugin.cs",
         effectIds.Add(fx);
         int dot = fx.IndexOf('.');
         if (dot <= 0 || dot == fx.Length - 1) Fail($"{rel}: effect id '{fx}' has no mod prefix (<mod>.<name>; Effects.Register refuses it)");
-        else if (pack != null && !PrefixOk(pack, fx)) Fail($"{rel}: effect id '{fx}' doesn't carry the pack's prefix ({pack} in lower case, dashes free)");
+        else if (pack != null && !PrefixOk(pack, fx)) Fail($"{rel}: effect id '{fx}' doesn't carry the pack's prefix ({PackKey(pack)}, its GUID's part after dreas.gk2., dashes free)");
         else Pass($"{rel}: shipped effect {fx}");
     }
 }
@@ -345,7 +353,7 @@ foreach (var mdir in mountDirs)
     {
         // an external pack (the user, 2026-10-26: "ids need to be depending on pack"): its mounts carry its prefix, a
         // skin it adds to another's mount too; its mount.cfg says the API it needs and its version
-        if (File.Exists(mcfgPath) && !PrefixOk(inPack, mid)) BadM($"in the pack {inPack}: its id carries the pack's prefix ({inPack.ToLowerInvariant()}.<name>, dashes where wanted: saddleup-dragon.dragon)");
+        if (File.Exists(mcfgPath) && !PrefixOk(inPack, mid)) BadM($"in the pack {inPack}: its id carries the pack's prefix ({PackKey(inPack)}.<name>, its GUID's part after dreas.gk2., dashes where wanted: saddleup-dragon.dragon)");
         if (!File.Exists(mcfgPath))
             foreach (var sk in Directory.Exists(Path.Combine(mdir, "skins")) ? Directory.GetDirectories(Path.Combine(mdir, "skins")).Select(Path.GetFileName) : Enumerable.Empty<string?>())
                 if (!PrefixOk(inPack, sk!)) BadM($"skins\\{sk}\\ in the pack {inPack}: a skin it adds to another's mount carries the pack's prefix");

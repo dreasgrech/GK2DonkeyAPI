@@ -19,7 +19,7 @@ NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its ow
 STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped
 PACKS_DIR = os.path.join(REPO, "packs")
 def assembly_of(pack_dir):
-    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragon for packs/SaddleUpDragon)."""
+    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragonsMountPack for packs/GK2SaddleUpDragonsMountPack)."""
     name = os.path.basename(pack_dir.rstrip("/\\"))
     try:
         text = open(os.path.join(pack_dir, name + ".csproj"), encoding="utf-8").read()

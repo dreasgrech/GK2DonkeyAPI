@@ -4,8 +4,8 @@ directories between inbuilt mounts/skins in saddle up vs ones which are 'externa
 - built in: src/<project>/assets/mounts/<mount>/, embedded in the project's DLL (Saddle Up's: Gerry, and the donkey's
   Hellfire and Royal Parade under mounts/donkey/skins/; the API ships none);
 - external: packs/<Pack>/gk2mounts/<mount>/, each pack its own download, laid out as BepInEx/plugins/<Pack>/ (the
-  Dragon: packs/SaddleUpDragon/; the rat, snail and worm: packs/SaddleUpCritters/). A pack's ids carry its own
-  prefix, the pack's name in lower case with dashes where wanted (SaddleUpDragon: saddleup-dragon.dragon); pack_prefix
+  Dragon: packs/GK2SaddleUpDragonsMountPack/; the rat, snail and worm: packs/GK2SaddleUpCrittersMountPack/). A pack's ids carry its own
+  prefix, the pack's name in lower case with dashes where wanted (GK2SaddleUpDragonsMountPack: saddleup-dragon.dragon); pack_prefix
   and the scans check it.
 
 Each mount folder holds its mount.cfg and sounds/, its skins in skins/<skin>/skin.cfg (docs/skins.md "What a pack is").
@@ -19,7 +19,7 @@ name.
 
     roots()             every <repo>/src/<project>/assets/mounts and <repo>/packs/<Pack>/gk2mounts that exists, sorted
     kind(path)          "built in" or "external <Pack>" for a mount or skin folder (or any path under one)
-    pack_of(path)       the pack's name a path is under (SaddleUpDragon), or None for a built-in one
+    pack_of(path)       the pack's name a path is under (GK2SaddleUpDragonsMountPack), or None for a built-in one
     pack_prefix_ok(pack, mount_id)  whether a mount id carries its pack's prefix (its dashes left out, the pack's name)
     mount_dirs()        every mount folder under them (donkey/ included: it holds skins only), sorted by name
     skin_dirs()         every skin folder (<mount>/skins/<skin>/ holding a skin.cfg), sorted by full name
@@ -36,7 +36,7 @@ name.
     root_of(project)    <repo>/src/<project>/assets/mounts (made on demand by the caller)
     pack_root(pack)     <repo>/packs/<Pack>/gk2mounts (made on demand by the caller)
 """
-import glob, os
+import glob, os, re
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))  # tools/skins -> the repo
 API_PROJECT = "GK2DonkeyAPI"
@@ -65,12 +65,25 @@ def kind(path):
     return "built in" if pack is None else "external " + pack
 
 
+def pack_key(pack):
+    """The prefix a pack's ids carry, dashes free: its plugin GUID's part after dreas.gk2. with the dots out
+    (dreas.gk2.saddleup.dragon -> saddleupdragon); the pack's name in lower case when it has no Plugin.cs yet. The
+    folder and DLL names (GK2SaddleUpDragonsMountPack, the user, 2026-10-28) say nothing about the ids."""
+    pc = os.path.join(PACKS, pack, "Plugin.cs")
+    if os.path.isfile(pc):
+        with open(pc, encoding="utf-8") as f:
+            m = re.search(r'Guid\s*=\s*"dreas\.gk2\.([\w.]+)"', f.read())
+        if m:
+            return m.group(1).replace(".", "")
+    return pack.lower()
+
+
 def pack_prefix_ok(pack, mount_id):
-    """A pack's mount ids are "<prefix>.<name>" with the prefix the pack's name in lower case, dashes free:
-    SaddleUpDragon -> saddleup-dragon.dragon (the user, 2026-10-26: "ids need to be depending on pack")."""
+    """A pack's mount ids are "<prefix>.<name>" with the prefix its pack_key, dashes where wanted:
+    dreas.gk2.saddleup.dragon -> saddleup-dragon.dragon (the user, 2026-10-26: "ids need to be depending on pack")."""
     if "." not in mount_id:
         return False
-    return mount_id.split(".", 1)[0].replace("-", "").lower() == pack.lower()
+    return mount_id.split(".", 1)[0].replace("-", "").lower() == pack_key(pack)
 
 
 def mount_dirs():

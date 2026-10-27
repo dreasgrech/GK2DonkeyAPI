@@ -1,9 +1,9 @@
 # The donkey's skins as a mod of their own (2026-10-25)
 
-**2026-10-27 (built):** the pack exists as **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkins.dll` in
-`BepInEx\plugins\GK2SaddleUpDonkeySkins\`, `dreas.gk2.saddleup.donkeyskins`, 1.0.0, needs the API 0.40.0; its zip
-`GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`), and Saddle Up's built-in content is Gerry alone. Where it differs from the
-investigation below: it lives in the repo's `packs/SaddleUpDonkeySkins/` (`gk2mounts/donkey/skins/<skin>/`, no
+**2026-10-27 (built):** the pack exists as **GK2 Saddle Up: Donkey Skins** (`GK2SaddleUpDonkeySkinPack.dll` in
+`BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`, `dreas.gk2.saddleup.donkeyskins`, 1.0.0, needs the API 0.40.0; its zip
+`GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`), and Saddle Up's built-in content is Gerry alone. Where it differs from the
+investigation below: it lives in the repo's `packs/GK2SaddleUpDonkeySkinPack/` (`gk2mounts/donkey/skins/<skin>/`, no
 `mount.cfg`), an external pack like the Dragon and the Critters, not a project under `src/`; its ids carry the pack's
 prefix (`donkey/saddleup-donkey-skins.hellfire`, `donkey/saddleup-donkey-skins.royal-parade`) instead of keeping
 `saddleup.` (never released, so no player had the old ones, and the API keeps no table of old ids); Hellfire's effect
@@ -16,7 +16,7 @@ though they registered after its page was built; the API's own tests use its own
 packs zip. Current: docs/making-a-mount.md "Built in or external" and the CHANGELOG.
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
-packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
+packs of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), ids by the pack
 (`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 
@@ -93,11 +93,11 @@ The work is all around the runtime:
 |---|---|
 | Name | GK2 Saddle Up Donkey Skins Pack (the user's working name) |
 | GUID | `dreas.gk2.saddleup.donkeyskins` (the `dreas.gk2.<feature>` rule) |
-| Assembly / folder | `GK2SaddleUpDonkeySkins.dll` in `BepInEx\plugins\GK2SaddleUpDonkeySkins\` |
-| Project | `src/SaddleUpDonkeySkins/` in this repo (why `src/`: section 5) |
+| Assembly / folder | `GK2SaddleUpDonkeySkinPack.dll` in `BepInEx\plugins\GK2SaddleUpDonkeySkinPack\` |
+| Project | `src/GK2SaddleUpDonkeySkinPack/` in this repo (why `src/`: section 5) |
 | Content | `assets/mounts/donkey/skins/saddleup.hellfire/` and `saddleup.royal-parade/`, moved (not copied) from Saddle Up |
-| csproj | Saddle Up's, cut down: the `EmbeddedResource` line with `LogicalName="GK2SaddleUpDonkeySkins.mounts.%(RecursiveDir)%(Filename)%(Extension)"`, the dev-only `GK2MountsSourceDir` attribute (the F11 Mounts tab saves tuned values back into the repo's `skin.cfg` through it, `Looks.CfgPathFor`), the API project reference, `BepInEx.dll`, `DeployToGame.targets` |
-| Awake | the API version check (as Saddle Up's `NeedsApi`), `Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), "GK2SaddleUpDonkeySkins.mounts.")`, one log line; and Hellfire's effect if it moves (section 4) |
+| csproj | Saddle Up's, cut down: the `EmbeddedResource` line with `LogicalName="GK2SaddleUpDonkeySkinPack.mounts.%(RecursiveDir)%(Filename)%(Extension)"`, the dev-only `GK2MountsSourceDir` attribute (the F11 Mounts tab saves tuned values back into the repo's `skin.cfg` through it, `Looks.CfgPathFor`), the API project reference, `BepInEx.dll`, `DeployToGame.targets` |
+| Awake | the API version check (as Saddle Up's `NeedsApi`), `Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), "GK2SaddleUpDonkeySkinPack.mounts.")`, one log line; and Hellfire's effect if it moves (section 4) |
 | Dependencies | `[BepInDependency("dreas.gk2.donkeyapi", "0.36.0")]` and `[BepInDependency("dreas.gk2.saddleup", "<the Saddle Up version without the skins>")]` |
 | Game references | none; the effect, if it moves, names the game's particles by string, as Saddle Up does today. So, like Saddle Up, no dependency manifest, and `check-dist.py`'s "references no game assembly" rule holds. Without the effect it needs no `UnityEngine` reference either. |
 
@@ -134,7 +134,7 @@ effect (open-items.md "Effects on skins").
 ## 5. What moves, file by file
 
 **Assets and project:**
-- `src/SaddleUp/assets/mounts/donkey/` → `src/SaddleUpDonkeySkins/assets/mounts/donkey/` (git mv; Saddle Up's
+- `src/SaddleUp/assets/mounts/donkey/` → `src/GK2SaddleUpDonkeySkinPack/assets/mounts/donkey/` (git mv; Saddle Up's
   `donkey\` folder is then gone).
 - A new csproj and Plugin.cs as in section 3.
 - `SaddleUp.csproj`: the header comment only (the embed line `assets\mounts\**` simply finds no `donkey\` any more).
@@ -185,10 +185,10 @@ effect (open-items.md "Effects on skins").
 
 **The release:**
 - `tools/build-dist.sh`: a third `build` line.
-- `tools/check-dist.py`: a `NO_MANIFEST` entry for `GK2SaddleUpDonkeySkins.dll` (it checks every DLL in `dist/`, and
+- `tools/check-dist.py`: a `NO_MANIFEST` entry for `GK2SaddleUpDonkeySkinPack.dll` (it checks every DLL in `dist/`, and
   a DLL without a manifest needs a stated reason).
-- `tools/make-release-zip.py`: a second zip, `GK2-Saddle-Up-Donkey-Skins-<version>.zip` with
-  `BepInEx/plugins/GK2SaddleUpDonkeySkins/`. Its version is read from the pack's Plugin.cs; it gets the same
+- `tools/make-release-zip.py`: a second zip, `GK2-Saddle-Up-Donkey-Skin-Pack-<version>.zip` with
+  `BepInEx/plugins/GK2SaddleUpDonkeySkinPack/`. Its version is read from the pack's Plugin.cs; it gets the same
   read-back check.
 - `docs/release-checklist.md`: the pack's steps, its own Nexus page and the requirements Saddle Up + API.
 - `dist/README.md` and `release/`: at the release.
@@ -221,14 +221,14 @@ effect (open-items.md "Effects on skins").
 ## 7. Open points and decisions for the user
 
 1. **Hellfire's effect: with the skin (recommended) or left in Saddle Up** (section 4).
-2. **Where the project lives:** `src/SaddleUpDonkeySkins/` in this repo (recommended: the tools find it as they are,
+2. **Where the project lives:** `src/GK2SaddleUpDonkeySkinPack/` in this repo (recommended: the tools find it as they are,
    and it shares the build, the deploy and the self-tests), or a repo of its own (every tool copied). You said no
    new repo yet; this repo needs none.
 3. **The dependency's strength:** a hard `BepInDependency` on Saddle Up (recommended: it is what "you get the skins in
    Saddle Up" means, and the player gets BepInEx's clear message without it), or only the API (the skins would then
    also serve any other mod's donkey without Saddle Up installed).
 4. **The name and the GUID:** "GK2 Saddle Up Donkey Skins Pack", `dreas.gk2.saddleup.donkeyskins`,
-   `GK2SaddleUpDonkeySkins.dll` (proposed), and whether the skins keep their `saddleup.` prefix (recommended: yes, ids
+   `GK2SaddleUpDonkeySkinPack.dll` (proposed), and whether the skins keep their `saddleup.` prefix (recommended: yes, ids
    never change).
 5. **One proof to add when building:**
    - a self-test that registers a skin for an existing mount after a page is built, and finds it in that mount's Skin

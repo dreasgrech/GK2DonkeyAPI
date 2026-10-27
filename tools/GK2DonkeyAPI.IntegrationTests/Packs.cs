@@ -14,8 +14,8 @@ namespace GK2DonkeyAPI.IntegrationTests
     {
         internal static IEnumerator ExternalPacks()
         {
-            var packOf = new[] { ("dragon", "SaddleUpDragon", "dreas.gk2.saddleup.dragon"), ("rat", "SaddleUpCritters", "dreas.gk2.saddleup.critters"),
-                ("snail", "SaddleUpCritters", "dreas.gk2.saddleup.critters"), ("worm", "SaddleUpCritters", "dreas.gk2.saddleup.critters") };
+            var packOf = new[] { ("dragon", "GK2SaddleUpDragonsMountPack", "dreas.gk2.saddleup.dragon"), ("rat", "GK2SaddleUpCrittersMountPack", "dreas.gk2.saddleup.critters"),
+                ("snail", "GK2SaddleUpCrittersMountPack", "dreas.gk2.saddleup.critters"), ("worm", "GK2SaddleUpCrittersMountPack", "dreas.gk2.saddleup.critters") };
             int missing = 0;
             foreach ((string name, string pack, string guid) in packOf)
             {
@@ -27,7 +27,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                     missing++;
                     continue;
                 }
-                string asm = k.Pack?.SourceAssembly?.GetName().Name, dll = "GK2" + pack; // the DLL GK2-prefixed since 2026-10-27, the folder packs/<pack>
+                string asm = k.Pack?.SourceAssembly?.GetName().Name, dll = pack; // one name for the DLL and the folder packs/<pack> since 2026-10-28 (GK2-prefixed, the user)
                 Check(k.Owner == guid && asm == dll && k.Pack?.Source == null,
                     $"{M(name)}: from the pack's own DLL {dll}.dll (owner {k.Owner}; {asm ?? "no DLL"})");
                 Check(!string.IsNullOrEmpty(k.Needs), $"{M(name)}: its mount.cfg says the API it needs (needs = {k.Needs})");
@@ -54,7 +54,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 $"Gerry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
             if (dragonEntry != null) Check(dragonEntry.Abilities.Exists(x => x.Name == "Flying") != !Flight.Active && !dragonEntry.Abilities.Exists(x => x.Name == "Cargo cart"),
                 $"the dragon's abilities: flying, no cargo cart ({string.Join(", ", dragonEntry.Abilities.ConvertAll(x => x.Name))})");
-            // the donkey's two skins are a pack of their own since 2026-10-27 (packs/SaddleUpDonkeySkins): Saddle Up's DLL
+            // the donkey's two skins are a pack of their own since 2026-10-27 (packs/GK2SaddleUpDonkeySkinPack): Saddle Up's DLL
             // holds no donkey skin
             bool suDonkeySkin = false;
             foreach (Looks.SkinDef d in Looks.All) if (d.MountId == Catalog.DonkeyId && d.SourceAssembly?.GetName().Name == "GK2SaddleUp") suDonkeySkin = true;
@@ -63,7 +63,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (noSkins != null) Info(noSkins + ": its skins not checked");
             else
             {
-                const string skinsGuid = "dreas.gk2.saddleup.donkeyskins", skinsDll = "GK2SaddleUpDonkeySkins";
+                const string skinsGuid = "dreas.gk2.saddleup.donkeyskins", skinsDll = "GK2SaddleUpDonkeySkinPack";
                 foreach (string skin in new[] { Sk("hellfire"), Sk("royal-parade") })
                 {
                     Looks.SkinDef d = Looks.Find(skin);

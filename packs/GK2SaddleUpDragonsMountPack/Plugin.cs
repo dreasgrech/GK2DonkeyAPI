@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using BepInEx;
 using GK2DonkeyAPI.Api;
 
-namespace SaddleUpDragon
+namespace GK2SaddleUpDragonsMountPack
 {
     // GK2 Saddle Up: Dragon (docs/making-a-mount.md "Built in or external"): the dragon, a mount of its own, embedded in
     // this DLL as its pack folder (gk2mounts\saddleup-dragon.dragon\) and handed to the API in Awake. Nothing else: the API
@@ -16,7 +16,7 @@ namespace SaddleUpDragon
     {
         public const string Guid = "dreas.gk2.saddleup.dragon";
         public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
-        private const string Prefix = "SaddleUpDragon.mounts.";
+        private const string Prefix = "GK2SaddleUpDragonsMountPack.mounts.";
 
         private void Awake()
         {

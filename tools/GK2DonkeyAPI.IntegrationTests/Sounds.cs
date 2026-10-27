@@ -20,7 +20,7 @@ namespace GK2DonkeyAPI.IntegrationTests
         // a jump's own two; a jump plays none of the flight's.
         // The dragon's sound files (the user, 2026-10-24: "make sure that the sounds are structured properly as files ... a
         // solid foundation"; the mount folders the same day): its flight's files are the mount's, in its pack's mount
-        // folder's sounds\ (packs/SaddleUpDragon, an external pack since 2026-10-26, embedded in its own DLL), for every
+        // folder's sounds\ (packs/GK2SaddleUpDragonsMountPack, an external pack since 2026-10-26, embedded in its own DLL), for every
         // skin of the dragon; its own look (skins\default\) has none of its own.
         internal static IEnumerator SoundsDragonFiles()
         {
@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             if (noPack != null) { Skip(noPack); yield break; }
             Looks.SkinDef red = Looks.Find(Sk("dragon"));
             Catalog.Entry mount = Catalog.Find(M("dragon"));
-            if (red == null || mount == null) { Skip("the dragon's pack is not installed (build packs/SaddleUpDragon with the game closed)"); yield break; }
+            if (red == null || mount == null) { Skip("the dragon's pack is not installed (build packs/GK2SaddleUpDragonsMountPack with the game closed)"); yield break; }
             var events = new[] { "takeoff", "flap", "glide", "land" };
             int inMount = mount.Pack != null ? mount.Pack.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count : 0;
             int inSkin = red.FileNames.FindAll(f => f.StartsWith(Looks.SoundsKey, StringComparison.OrdinalIgnoreCase)).Count;
@@ -57,8 +57,8 @@ namespace GK2DonkeyAPI.IntegrationTests
             SoundBank.Entry te = SoundBank.Find(id);
             Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the pack's DLL ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
             string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-" + M("dragon"));
-            Check(mount.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUpDragon" && Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")),
-                "embedded in GK2SaddleUpDragon.dll, its cache files under the mount's own name (" + cache + ")");
+            Check(mount.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUpDragonsMountPack" && Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")),
+                "embedded in GK2SaddleUpDragonsMountPack.dll, its cache files under the mount's own name (" + cache + ")");
         }
 
         // The snail on a standing wearer: no voice and no lips by its [Sounds] and by the rule (the donkey's own sounds are

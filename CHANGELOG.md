@@ -46,8 +46,8 @@ For players:
 Everything else in this version, in detail:
 
 - **The donkey's skins are a download of their own** (the user, 2026-10-27): Hellfire and Royal Parade are **GK2 Saddle
-  Up: Donkey Skins** (`GK2SaddleUpDonkeySkins.dll` in `BepInEx\plugins\GK2SaddleUpDonkeySkins\`, the zip
-  `GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`), a pack like the Dragon and the Critters, which needs GK2 Saddle Up. Saddle Up
+  Up: Donkey Skins** (`GK2SaddleUpDonkeySkinPack.dll` in `BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`, the zip
+  `GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`), a pack like the Dragon and the Critters, which needs GK2 Saddle Up. Saddle Up
   itself brings the donkey and Gerry. Every pack is its own download: there is no "All Mounts" zip. Without the pack, a
   donkey that wore one of its skins shows the game's donkey, and the choice comes back with the pack. (The skins were
   inside Saddle Up only in versions never released, so nothing a player has changes.)
@@ -114,8 +114,8 @@ Everything else in this version, in detail:
 - **Every setting's text is short and plain** (the user, 2026-10-27: "keep them simple ... read with a skim"): whole
   sentences, no "None = no key". "Bray sounds" is "Mount calls" and "Say why mounting is refused" is "Say why you can't
   get on" (the cfg keys are the same).
-- **The mount packs' files are named like the rest** (the user, 2026-10-27): `GK2SaddleUpDragon.dll` in
-  `BepInEx\plugins\GK2SaddleUpDragon\` and `GK2SaddleUpCritters.dll` in `BepInEx\plugins\GK2SaddleUpCritters\`, beside
+- **The mount packs' files are named like the rest** (the user, 2026-10-27): `GK2SaddleUpDragonsMountPack.dll` in
+  `BepInEx\plugins\GK2SaddleUpDragonsMountPack\` and `GK2SaddleUpCrittersMountPack.dll` in `BepInEx\plugins\GK2SaddleUpCrittersMountPack\`, beside
   `GK2DonkeyAPI` and `GK2SaddleUp` (never released under the old names; the mounts' ids are unchanged).
 - **L opens the Mounts panel** (the user, 2026-10-27: "we cant not have a default hotkey for this"): the Mounts
   panel key is the first row of Keys and is L by default (it had no key; the Mount section's button still opens it). L
@@ -482,10 +482,10 @@ Everything else in this version, in detail:
 
 For mod authors:
 
-- **Saddle Up's donkey skins are the worked example of a skins-only pack** (`packs/SaddleUpDonkeySkins/`, 2026-10-27;
+- **Saddle Up's donkey skins are the worked example of a skins-only pack** (`packs/GK2SaddleUpDonkeySkinPack/`, 2026-10-27;
   docs/making-a-mount.md "Built in or external"): a folder `gk2mounts\donkey\skins\<skin>\` with no `mount.cfg` (skins
   added to a mount another mod owns, here the game's donkey), embedded in a small plugin of its own,
-  `GK2SaddleUpDonkeySkins.dll` ("GK2 Saddle Up: Donkey Skins", `dreas.gk2.saddleup.donkeyskins`, 1.0.0), needing the
+  `GK2SaddleUpDonkeySkinPack.dll` ("GK2 Saddle Up: Donkey Skins", `dreas.gk2.saddleup.donkeyskins`, 1.0.0), needing the
   API 0.40.0 and with a soft dependency on Saddle Up (it loads after it), like the Dragon and the Critters. Its ids
   carry the pack's prefix (its name in lower case, dashes free): `donkey/saddleup-donkey-skins.hellfire` and
   `donkey/saddleup-donkey-skins.royal-parade` (were `donkey/saddleup.hellfire` and `donkey/saddleup.royal-parade`,
@@ -528,7 +528,7 @@ For mod authors:
   which load after Saddle Up, 2026-10-26): the settings page's catch-up appended a late mount's rows at the end, so in
   the Mounts panel its Coat, Harness and Muzzle rows sat under "Cart colours" and it had no "Mount colours"; now each
   builder's rows for it follow that builder's rows for the mounts before it (`MountSettingsPage.RunPerMount`).
-- **Our mounts are worked examples of a pack without a DLL**: `packs/SaddleUpDragon/` and `packs/SaddleUpCritters/` in
+- **Our mounts are worked examples of a pack without a DLL**: `packs/GK2SaddleUpDragonsMountPack/` and `packs/GK2SaddleUpCrittersMountPack/` in
   the repo, each exactly the folder a player puts into `BepInEx\plugins\` (docs/making-a-mount.md "Built in or
   external"). Their ids changed with the move (`saddleup-dragon.dragon`, `saddleup-critters.rat/.snail/.worm`; never
   released).
@@ -1038,6 +1038,12 @@ For mod authors:
 
 Development:
 
+- **The packs are `GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack` and `GK2SaddleUpDonkeySkinPack`**
+  (the user, 2026-10-28): one name each for the DLL, its plugin folder, its source folder under `packs/`, its csproj,
+  namespace and resource prefix, and its zip (`GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `...-Critters-Mount-Pack-`,
+  `...-Donkey-Skin-Pack-`). The packs' GUIDs, display names and mount, skin and effect ids are unchanged: a pack's id
+  prefix is its GUID's part after `dreas.gk2.` (`saddleup-dragon.`), which SkinsScan and `tools/skins/skinroots.py`
+  now read from its Plugin.cs instead of taking the folder's name.
 - **The self-test's colour read-backs are lit at noon, and its panel scenario keeps the player's cart** (2026-10-27,
   a group run at night with the donkey and cart chosen): `RenderAlone` holds `PreviewStage.Midday` (now internal) for
   its render, so the over-skin colours and the front-layer probe read the same by night (the lit red read as blue, the
@@ -1061,21 +1067,21 @@ Development:
   gap, the settings rows a temp mount with babies and no cart, the skin pack the API's own test picture). The helpers
   `M`, `Sk`, `MissingPack` (which knows the Donkey Skins pack too) and `ShippedMounts` are the plugin's. The run holds
   `StandingSounds` (like Freeplay) and gives it back at the end. The plugin's "built in or external" checks the skins
-  come from `GK2SaddleUpDonkeySkins.dll`, the effect is the pack's, Saddle Up's DLL has no donkey skin, Saddle Up's
+  come from `GK2SaddleUpDonkeySkinPack.dll`, the effect is the pack's, Saddle Up's DLL has no donkey skin, Saddle Up's
   donkey Skin row offers both though they registered after its page was built, and the old ids find nothing.
   docs/self-tests.md.
 - **The layering scan** (`tools/layering-scan.py`, in `tools/release-scans.sh` with `--dist`): fails on any name of
   Saddle Up or its packs in `src/GK2DonkeyAPI` (Dev included), on any pack's name in `src/SaddleUp`, and on such names
   in the API DLL's strings. The API's rename tables, comments and texts that named Saddle Up's content are gone or
   made generic for it.
-- **The donkey's skins as the Donkey Skins pack** (`packs/SaddleUpDonkeySkins/`: `gk2mounts/donkey/skins/<skin>/`, no
+- **The donkey's skins as the Donkey Skins pack** (`packs/GK2SaddleUpDonkeySkinPack/`: `gk2mounts/donkey/skins/<skin>/`, no
   `mount.cfg`; the study was docs/donkey-skins-pack.md): `tools/skins/new_skin.py` refuses a skin for a mount Saddle Up
-  doesn't own (the donkey) into Saddle Up and asks for `--pack` (`SaddleUpDonkeySkins`, or a new pack); a pack that
+  doesn't own (the donkey) into Saddle Up and asks for `--pack` (`GK2SaddleUpDonkeySkinPack`, or a new pack); a pack that
   exists gives its own prefix (read from its ids). The generators (`tools/skins/hellfire/make_hellfire.py`,
   `compare_hellfire.py`, `tools/skins/royal-parade/horn_bases.py`, `make_royal.py`) write into
-  `packs/SaddleUpDonkeySkins`. SkinsScan reads the shipped effect ids from every `src/*/Plugin.cs` and
+  `packs/GK2SaddleUpDonkeySkinPack`. SkinsScan reads the shipped effect ids from every `src/*/Plugin.cs` and
   `packs/*/Plugin.cs` and checks a pack's effect carries the pack's prefix. `make-release-zip.py` names a pack's zip
-  with dashed words (`GK2-Saddle-Up-Donkey-Skins-1.0.0.zip`) and writes no bundle: the All Mounts zip is gone (the user:
+  with dashed words (`GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`) and writes no bundle: the All Mounts zip is gone (the user:
   "We dont need this combined packs files, wont be shipping them. ill ship individuals"). `check-dist.py`: Saddle Up's
   built-in content is Gerry.
 - **SkinsScan reads the speed words from the API's table** (Catalog.cs `SpeedBands`) and fails a pack whose `speed` is
@@ -1118,7 +1124,7 @@ Development:
 - **Self-tests:** "cargo: each mount carries its own" (a cart switched donkey, rat, Gerry, donkey: 6, held at 4 with
   four aboard, 2, 4, Cart capacity 2 wins, 6, nothing dropped); the speeds test checks each built-in's cargo.
 - **Built in or external** (docs/making-a-mount.md): the repo's `packs/<Pack>/` laid out as `BepInEx\plugins\<Pack>\`
-  (the dragon in `SaddleUpDragon`, the rat, snail and worm in `SaddleUpCritters`, ids by the pack:
+  (the dragon in `GK2SaddleUpDragonsMountPack`, the rat, snail and worm in `GK2SaddleUpCrittersMountPack`, ids by the pack:
   `saddleup-dragon.dragon`, `saddleup-critters.rat`; moved out of `src/SaddleUp/assets/mounts/`), each a small plugin
   of its own with its `gk2mounts\` embedded (`<Pack>.csproj`, `Plugin.cs`: `dreas.gk2.saddleup.dragon`,
   `dreas.gk2.saddleup.critters`, needing the API 0.40.0; one file, so an update leaves no file of an older version

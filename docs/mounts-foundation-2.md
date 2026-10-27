@@ -1,7 +1,7 @@
 # Mounts and skins from many hands: the foundation, second look (2026-10-20, night)
 
 **2026-10-26 (built in or external):** the dragon, rat, snail and worm are no longer in Saddle Up's DLL but external
-packs of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), ids by the pack
+packs of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), ids by the pack
 (`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins (2026-10-27: the skins too are a pack now, GK2 Saddle Up: Donkey Skins, ids `donkey/saddleup-donkey-skins.<skin>`; Saddle Up keeps Gerry alone). Paths and ids
 below are of their day; docs/making-a-mount.md "Built in or external" is current.
 

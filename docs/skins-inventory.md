@@ -35,7 +35,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   were retired 2026-10-19 23:30).
 
 ### Hellfire (donkey, pack drawn over the donkey; a recipe in code until 2026-10-19 evening)
-- **Pack**: `packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/saddleup-donkey-skins.hellfire/` (`donkey/saddleup-donkey-skins.hellfire`; GK2 Saddle Up: Donkey Skins since 2026-10-27, Saddle Up's `donkey/saddleup.hellfire` before) (`skin.cfg` + a PNG per frame), embedded in the pack's DLL like the
+- **Pack**: `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.hellfire/` (`donkey/saddleup-donkey-skins.hellfire`; GK2 Saddle Up: Donkey Skins since 2026-10-27, Saddle Up's `donkey/saddleup.hellfire` before) (`skin.cfg` + a PNG per frame), embedded in the pack's DLL like the
   creatures. The pictures hold only our pixels (horns, the devil's tail, the rump fill, the cracks, the glowing
   eyes) and erase marks (magenta) where the ears and the tail come off; the ash coat is the cfg's `[Base.Coat]`
   recolour. Nothing of the game's art.
@@ -52,7 +52,7 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - Docs: `docs/sprite-tools.md`, `docs/skins.md` ("Erasing from the donkey", "Recolouring the donkey under the skin").
 
 ### Royal Parade (donkey, pack drawn over the donkey; a built-in since 2026-10-19 23:00)
-- **Pack**: `packs/SaddleUpDonkeySkins/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (`donkey/saddleup-donkey-skins.royal-parade`; the Donkey Skins pack's since 2026-10-27, Saddle Up's `donkey/saddleup.royal-parade` before) (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...`
+- **Pack**: `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (`donkey/saddleup-donkey-skins.royal-parade`; the Donkey Skins pack's since 2026-10-27, Saddle Up's `donkey/saddleup.royal-parade` before) (`skin.cfg` by hand: `layer = over`, `[Colors] Harness = ...`
   so the cloth's reds follow the harness colour; a PNG per frame generated), embedded in the DLL exactly like
   Hellfire (before: `packs/royal-parade/` as one sheet, copied into the game's `gk2skins\` by the generator).
 - **Generator**: `tools/skins/royal-parade/make_royal.py` (the saddle cloth cut from the standing frame and hung from
@@ -69,8 +69,8 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
 - **Ids**: the mounts `saddleup-dragon.dragon`, `saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`; each one's look is its
   default skin, `saddleup-dragon.dragon/default` and so on (the skins were `red-dragon`, `grey-rat`, `garden-snail`,
   `earth-worm` earlier on 2026-10-24, and before that the mounts' plain ids).
-- **Pictures and cfg**: `packs/SaddleUpDragon/gk2mounts/saddleup-dragon.dragon/` and
-  `packs/SaddleUpCritters/gk2mounts/saddleup-critters.<rat|snail|worm>/` (external packs since 2026-10-26): the mount's `mount.cfg`
+- **Pictures and cfg**: `packs/GK2SaddleUpDragonsMountPack/gk2mounts/saddleup-dragon.dragon/` and
+  `packs/GK2SaddleUpCrittersMountPack/gk2mounts/saddleup-critters.<rat|snail|worm>/` (external packs since 2026-10-26): the mount's `mount.cfg`
   (`[Mount]`, its tuning and sounds; the dragon's `sounds\` holds its flight's twelve `.ogg`) and `skins/default/`
   (44 PNGs each, the dragon's more for its flight and a
   `front\` layer drawn above the rider, and a `skin.cfg` with the seat, the skin's geometry and its `[Colors]`).

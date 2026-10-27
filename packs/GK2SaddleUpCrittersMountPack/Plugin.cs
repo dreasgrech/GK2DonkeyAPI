@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using BepInEx;
 using GK2DonkeyAPI.Api;
 
-namespace SaddleUpCritters
+namespace GK2SaddleUpCrittersMountPack
 {
     // GK2 Saddle Up: Critters (docs/making-a-mount.md "Built in or external"): the rat, snail and worm, mounts of their
     // own, embedded in this DLL as their pack folders (gk2mounts\saddleup-critters.rat\, .snail\, .worm\) and handed to the API in Awake. Nothing else: the API
@@ -16,7 +16,7 @@ namespace SaddleUpCritters
     {
         public const string Guid = "dreas.gk2.saddleup.critters";
         public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
-        private const string Prefix = "SaddleUpCritters.mounts.";
+        private const string Prefix = "GK2SaddleUpCrittersMountPack.mounts.";
 
         private void Awake()
         {

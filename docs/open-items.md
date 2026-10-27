@@ -13,7 +13,7 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 - **The Donkey Skins pack and the integration tests** (2026-10-27, docs/making-a-mount.md, docs/self-tests.md): an F11
   run with `tools/GK2DonkeyAPI.IntegrationTests` deployed (`-p:Deploy=true`), all groups, the API's 95 and the plugin's
-  33; a run without the plugin (the API's alone); a run with `GK2SaddleUpDonkeySkins` left out (its scenarios skip
+  33; a run without the plugin (the API's alone); a run with `GK2SaddleUpDonkeySkinPack` left out (its scenarios skip
   with the reason); in game, the donkey's Skin list offers Hellfire and Royal Parade from the pack, and without it a
   donkey that wore one shows the game's donkey with the choice kept; `dist/` rebuilt with the fifth DLL, the release
   scans with the layering scan, and the zip rehearsal.
@@ -305,7 +305,7 @@ closed):
 - **A reloaded embedded skin keeps its sources** (2026-10-20 night, docs/mounts-foundation-2.md 7): F11 Mounts
   tab on the dragon, "Reload from the file" twice; the save path under the rows stays the repo's
   `src/SaddleUp/assets/mounts/saddleup.dragon/skins/default/skin.cfg` (since 2026-10-26 the dragon is an external
-  pack: through the link, `packs/SaddleUpDragon/gk2mounts/saddleup-dragon.dragon/skins/default/skin.cfg`; the mount's
+  pack: through the link, `packs/GK2SaddleUpDragonsMountPack/gk2mounts/saddleup-dragon.dragon/skins/default/skin.cfg`; the mount's
   rows its `mount.cfg` two folders up) and a slider change still saves (before: "no file" after the first reload).
 - **Flying for players** (switched on 2026-10-25, API 0.38.0; docs/flying.md): the hand tests of step 2 (cross
   water and come back; over a fence and a building; off a cliff and land below; a refused landing over water holds

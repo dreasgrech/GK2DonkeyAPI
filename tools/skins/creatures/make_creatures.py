@@ -1495,8 +1495,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import skinroots  # noqa: E402
 # each creature's pack and its id there (2026-10-26: the mounts are external packs, their ids by the pack: packs/,
 # tools/skins/skinroots.py); the folder is the id
-HOMES = {"dragon": ("SaddleUpDragon", "saddleup-dragon.dragon"), "rat": ("SaddleUpCritters", "saddleup-critters.rat"),
-         "snail": ("SaddleUpCritters", "saddleup-critters.snail"), "worm": ("SaddleUpCritters", "saddleup-critters.worm")}
+HOMES = {"dragon": ("GK2SaddleUpDragonsMountPack", "saddleup-dragon.dragon"), "rat": ("GK2SaddleUpCrittersMountPack", "saddleup-critters.rat"),
+         "snail": ("GK2SaddleUpCrittersMountPack", "saddleup-critters.snail"), "worm": ("GK2SaddleUpCrittersMountPack", "saddleup-critters.worm")}
 if only and only not in {c[0] for c in CREATURES}:
     sys.exit("no creature called " + only + "; one of " + ", ".join(c[0] for c in CREATURES))
 FLYING = {"dragon"}  # the mounts whose [Mount] block says flies = true (written once, with the mount.cfg)
@@ -1507,7 +1507,7 @@ for name, fn, title, size, (mount, mount_name), seat_row, hitch_gap in CREATURES
     W = H = size
     OX = OY = (size - 96) // 2
     fr = frames_for(fn)
-    pack, mid = HOMES[mount]  # SaddleUpDragon, saddleup-dragon.dragon
+    pack, mid = HOMES[mount]  # GK2SaddleUpDragonsMountPack, saddleup-dragon.dragon
     assets = sys.argv[2] if custom else skinroots.pack_root(pack)
     outs = [os.path.join(assets, name) if custom else os.path.join(assets, mid, "skins", "default")]  # each mount's own look: skins\default\
     if not custom and not os.path.isfile(os.path.join(assets, mid, "mount.cfg")):

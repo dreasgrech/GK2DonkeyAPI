@@ -1,14 +1,14 @@
 # Mounts and skins as separate mods (2026-10-20)
 
 **2026-10-27: the donkey's skins are a pack too, and the API keeps no old ids.** Hellfire and Royal Parade left
-Saddle Up for the external pack GK2 Saddle Up: Donkey Skins (`packs/SaddleUpDonkeySkins/`, ids
+Saddle Up for the external pack GK2 Saddle Up: Donkey Skins (`packs/GK2SaddleUpDonkeySkinPack/`, ids
 `donkey/saddleup-donkey-skins.hellfire` and `.royal-parade`, Hellfire's effect `saddleup-donkey-skins.hellfire`);
 Saddle Up's built-in content is Gerry alone. The API's rename tables are gone (it knows nothing of Saddle Up): the old
 names below (`hellfire`, `saddleup.dragon`, `red-dragon` ...) no longer find anything. docs/making-a-mount.md "Built
 in or external" is current.
 
 **2026-10-26, later: built in or external.** The dragon, rat, snail and worm left Saddle Up's DLL for external packs
-of their own in the repo's `packs/` (`SaddleUpDragon`, `SaddleUpCritters`), their ids by the pack
+of their own in the repo's `packs/` (`GK2SaddleUpDragonsMountPack`, `GK2SaddleUpCrittersMountPack`), their ids by the pack
 (`saddleup-dragon.dragon`, `saddleup-critters.rat` ...); Saddle Up keeps Gerry and the donkey's two skins. The earlier
 plans for moving the mounts out (sections 3, 7, 9 here) are superseded by that: docs/making-a-mount.md "Built in or
 external".
@@ -107,14 +107,14 @@ embedded loader uses. Nothing of the dragon lives outside that folder except the
 
 Two shapes, both valid today; the recommendation is the second.
 
-**(a) A zip of a folder.** `BepInEx\plugins\GK2SaddleUpDragon\gk2mounts\saddleup.dragon\...` (`gk2skins\dragon\`
+**(a) A zip of a folder.** `BepInEx\plugins\GK2SaddleUpDragonsMountPack\gk2mounts\saddleup.dragon\...` (`gk2skins\dragon\`
 before 2026-10-24): the dragon's folder as it is in the repo (or its skin's sheet form: `sheet = sheet.png`,
 `sheet_front = front.png`, two PNGs instead of 85). No DLL, no version, no dependency declaration: a mod manager sees files, not a plugin. The API finds it at its own Awake, before
 Saddle Up's (hard dependency), so every list has it. The cheapest route and the one an artist takes
 (docs/skins.md "Sharing it").
 
 **(b) A plugin DLL with the folder embedded** (recommended for anything we publish; since the evening it is how Saddle
-Up itself ships its five mounts, section 10): `GK2SaddleUpDragon.dll` with
+Up itself ships its five mounts, section 10): `GK2SaddleUpDragonsMountPack.dll` with
 `[BepInPlugin("dreas.gk2.saddleup.dragon", "GK2 Saddle Up: Dragon", "1.0.0")]`, `[BepInDependency("dreas.gk2.donkeyapi",
 "0.33.0")]`, the `assets\mounts\saddleup.dragon\**` embedded with the csproj line above (`assets\skins\dragon\**`
 before 2026-10-24), and an Awake of five lines: the API
@@ -229,7 +229,7 @@ The API cannot carry a built-in `dragon` *and* a mod ship one: a second skin wit
 - **The tooling of section 5** (five scripts, two scans, the loop in `release-scans.sh`): a root per mod.
 - **The tests of section 6**: deploy the mods for the suite, or loop over the installed mounts.
 - **The release**: `tools/build-dist.sh`, `check-dist.py`, `make-release-zip.py` build two DLLs (`FILES` in
-  make-release-zip.py:21); each mount mod needs its own zip (`GK2-Saddle-Up-Dragon-<version>.zip`) and a Nexus page,
+  make-release-zip.py:21); each mount mod needs its own zip (`GK2-Saddle-Up-Dragons-Mount-Pack-<version>.zip`) and a Nexus page,
   with the API's minimum version in its README. `docs/release-checklist.md` gets the mount mods' steps.
 - **Texts**: Saddle Up's descriptions name the dragon and the rat as examples ("A donkey, or any mount a skin pack or
   another mod adds (dragons, a giant rat...)", Plugin.cs:42, 72, 92-102), the `Debug.MountsPreview` description

@@ -4,7 +4,7 @@ using System.Runtime.CompilerServices;
 using BepInEx;
 using GK2DonkeyAPI.Api;
 
-namespace SaddleUpDonkeySkins
+namespace GK2SaddleUpDonkeySkinPack
 {
     // GK2 Saddle Up: Donkey Skins (docs/making-a-mount.md "Built in or external"): two skins for the game's donkey,
     // Hellfire and Royal Parade, embedded in this DLL as a mount folder without a mount.cfg (gk2mounts\donkey\skins\:
@@ -18,7 +18,7 @@ namespace SaddleUpDonkeySkins
     {
         public const string Guid = "dreas.gk2.saddleup.donkeyskins";
         public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
-        private const string Prefix = "SaddleUpDonkeySkins.mounts.";
+        private const string Prefix = "GK2SaddleUpDonkeySkinPack.mounts.";
 
         private void Awake()
         {
