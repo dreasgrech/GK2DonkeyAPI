@@ -86,9 +86,9 @@ All of these apply at once:
 | | Babies | none | (in the Mounts panel) How many little ones follow your mount around, up to 5. They always look like their parent. Only for a mount that has babies. |
 | | Babies follow you on foot | on | (in the Mounts panel) When you get off, the babies follow you instead of staying with your mount. |
 | | Babies come indoors | on | (in the Mounts panel) The babies follow you into buildings and back out. |
-| | Voices | 100% | (in the Mounts panel) How loud your mount's calls are, and its babies' answers. 0 to 150%. |
-| | Steps | 100% | (in the Mounts panel) How loud its steps are, with the cart, the bell and its wings. |
-| | Baby steps | 100% | (in the Mounts panel) How loud its babies' steps are. Only for a mount with babies. |
+| | Voices volume | 100% | (in the Mounts panel) How loud your mount's calls are, and its babies' answers. 0 to 150%. |
+| | Steps volume | 100% | (in the Mounts panel) How loud its steps are, with the cart, the bell and its wings. |
+| | Baby steps volume | 100% | (in the Mounts panel) How loud its babies' steps are. Only for a mount with babies. |
 | 3. Colours | | | All of these are in the Mounts panel's colours window and kept per mount. A mount that pulls no cart (the dragon) has no cart colours. |
 | | *Mount colours:* Coat colour | Game default | (in the Mounts panel) The colour of your mount's body. Brown, Dark, Cream, Black or Custom. |
 | | Harness colour | Game default | (in the Mounts panel) The colour of your mount's harness. Black, Red, Blue, Green or Custom. Mounts without one ignore it. |
@@ -123,7 +123,7 @@ All of these apply at once:
   Mustard, Gold) and its lightness. The picture shows the result.
 - **The Mounts panel** (the Mount section's Mounts button, or the Mounts panel key) closes the menu and opens over the
   game: every mount you can ride listed on the left, the chosen one drawn on the right with what it is and does, and
-  under it its journal page (Name, Skin, the babies, Voice and steps). **Colours...** opens the colours window (your
+  under it its journal page (Name, Skin, the babies, Voices, Steps and Baby steps volume). **Customize** opens the colours window (your
   mount's colours and the cart's under their two headings, the lantern with the cart's). You see
   your real donkey, cart and lantern change as you click. **Done** keeps them, **Cancel** puts them back.
   Only in a game. Everything

@@ -1,0 +1,154 @@
+# GK2 Donkey API: the donkeys and carts kept with this save, written after each save (docs/persistence.md).
+# The game's own save does not need this file; without it the donkeys simply don't come back.
+format	2
+slot	Steam_1
+saved	10/17/2026 5:47:30 PM
+day	109
+next	dreas.gk2.saddleup	70
+next	dreas.gk2.donkeyapi.example.herd	151
+instance
+owner	dreas.gk2.saddleup
+id	1
+key	donkey
+name	Balthazar
+donkey	true
+cart	true
+scene	RuinedTemple
+position	-4.08	6.000001	23.5500011
+facing	left
+scale	1
+rideable	true
+removeWithParent	true
+set	HarnessBrightness	dreas.gk2.saddleup	2.198953
+set	CoatBrightness	dreas.gk2.saddleup	0.9589041
+set	HarnessColorize	dreas.gk2.saddleup	C4A23A
+set	CoatColorize	dreas.gk2.saddleup	424B24
+set	HubsBrightness	dreas.gk2.saddleup	1.784387
+set	HubsColorize	dreas.gk2.saddleup	A0461E
+set	WheelsColorizeAmount	dreas.gk2.saddleup	1
+set	WheelsColorize	dreas.gk2.saddleup	C05424
+set	LitGlassTint	dreas.gk2.saddleup	F0C280
+set	GlowColor	dreas.gk2.saddleup	F0C280
+set	LanternLightColor	dreas.gk2.saddleup	F0C280
+set	ShaftsBrightness	dreas.gk2.saddleup	0.475817
+set	ShaftsColorizeAmount	dreas.gk2.saddleup	1
+set	ShaftsColorize	dreas.gk2.saddleup	343434
+set	CartBodyBrightness	dreas.gk2.saddleup	0.5190563
+set	CartBodyColorizeAmount	dreas.gk2.saddleup	1
+set	CartBodyColorize	dreas.gk2.saddleup	343434
+set	WheelsBrightness	dreas.gk2.saddleup	1.635847
+data	dreas.gk2.donkeyapi.example.herd	seen	1
+data	dreas.gk2.saddleup	cart	own
+end
+instance
+owner	dreas.gk2.saddleup
+id	61
+key	foal
+donkey	true
+cart	false
+scene	RuinedTemple
+position	-97.6840057	-0.004999995	-79.06283
+facing	right
+scale	0.6
+rideable	false
+parent	dreas.gk2.saddleup	1
+removeWithParent	true
+set	IdleShuffle	dreas.gk2.saddleup	true
+set	ShuffleAreaWidth	dreas.gk2.saddleup	0.9
+set	ShuffleAreaDepth	dreas.gk2.saddleup	0.45
+set	ShuffleStepMin	dreas.gk2.saddleup	0.2
+set	ShuffleStepMax	dreas.gk2.saddleup	0.6
+set	ShuffleSpeed	dreas.gk2.saddleup	0.45
+set	ShufflePauseMin	dreas.gk2.saddleup	2.5
+set	ShufflePauseMax	dreas.gk2.saddleup	8
+set	ShuffleTurnChance	dreas.gk2.saddleup	0.35
+set	HarnessBrightness	dreas.gk2.saddleup	2.198953
+set	CoatBrightness	dreas.gk2.saddleup	0.9589041
+set	HarnessColorize	dreas.gk2.saddleup	C4A23A
+set	ShuffleFollowKeeperIndoors	dreas.gk2.saddleup	true
+set	CoatColorize	dreas.gk2.saddleup	424B24
+end
+instance
+owner	dreas.gk2.saddleup
+id	62
+key	foal2
+donkey	true
+cart	false
+scene	RuinedTemple
+position	-97.70516	-0.004999995	-79.73072
+facing	right
+scale	0.6
+rideable	false
+parent	dreas.gk2.saddleup	1
+removeWithParent	true
+set	IdleShuffle	dreas.gk2.saddleup	true
+set	ShuffleAreaWidth	dreas.gk2.saddleup	0.9
+set	ShuffleAreaDepth	dreas.gk2.saddleup	0.45
+set	ShuffleStepMin	dreas.gk2.saddleup	0.2
+set	ShuffleStepMax	dreas.gk2.saddleup	0.6
+set	ShuffleSpeed	dreas.gk2.saddleup	0.45
+set	ShufflePauseMin	dreas.gk2.saddleup	2.5
+set	ShufflePauseMax	dreas.gk2.saddleup	8
+set	ShuffleTurnChance	dreas.gk2.saddleup	0.35
+set	HarnessBrightness	dreas.gk2.saddleup	2.198953
+set	CoatBrightness	dreas.gk2.saddleup	0.9589041
+set	HarnessColorize	dreas.gk2.saddleup	C4A23A
+set	ShuffleFollowKeeperIndoors	dreas.gk2.saddleup	true
+set	CoatColorize	dreas.gk2.saddleup	424B24
+end
+instance
+owner	dreas.gk2.saddleup
+id	63
+key	foal3
+donkey	true
+cart	false
+scene	RuinedTemple
+position	-98.2538452	-0.004999995	-79.24401
+facing	right
+scale	0.6
+rideable	false
+parent	dreas.gk2.saddleup	1
+removeWithParent	true
+set	IdleShuffle	dreas.gk2.saddleup	true
+set	ShuffleAreaWidth	dreas.gk2.saddleup	0.9
+set	ShuffleAreaDepth	dreas.gk2.saddleup	0.45
+set	ShuffleStepMin	dreas.gk2.saddleup	0.2
+set	ShuffleStepMax	dreas.gk2.saddleup	0.6
+set	ShuffleSpeed	dreas.gk2.saddleup	0.45
+set	ShufflePauseMin	dreas.gk2.saddleup	2.5
+set	ShufflePauseMax	dreas.gk2.saddleup	8
+set	ShuffleTurnChance	dreas.gk2.saddleup	0.35
+set	HarnessBrightness	dreas.gk2.saddleup	2.198953
+set	CoatBrightness	dreas.gk2.saddleup	0.9589041
+set	HarnessColorize	dreas.gk2.saddleup	C4A23A
+set	ShuffleFollowKeeperIndoors	dreas.gk2.saddleup	true
+set	CoatColorize	dreas.gk2.saddleup	424B24
+end
+instance
+owner	dreas.gk2.saddleup
+id	64
+key	foal4
+donkey	true
+cart	false
+scene	RuinedTemple
+position	-98.29729	-0.004999995	-79.58997
+facing	right
+scale	0.6
+rideable	false
+parent	dreas.gk2.saddleup	1
+removeWithParent	true
+set	IdleShuffle	dreas.gk2.saddleup	true
+set	ShuffleAreaWidth	dreas.gk2.saddleup	0.9
+set	ShuffleAreaDepth	dreas.gk2.saddleup	0.45
+set	ShuffleStepMin	dreas.gk2.saddleup	0.2
+set	ShuffleStepMax	dreas.gk2.saddleup	0.6
+set	ShuffleSpeed	dreas.gk2.saddleup	0.45
+set	ShufflePauseMin	dreas.gk2.saddleup	2.5
+set	ShufflePauseMax	dreas.gk2.saddleup	8
+set	ShuffleTurnChance	dreas.gk2.saddleup	0.35
+set	HarnessBrightness	dreas.gk2.saddleup	2.198953
+set	CoatBrightness	dreas.gk2.saddleup	0.9589041
+set	HarnessColorize	dreas.gk2.saddleup	C4A23A
+set	ShuffleFollowKeeperIndoors	dreas.gk2.saddleup	true
+set	CoatColorize	dreas.gk2.saddleup	424B24
+end

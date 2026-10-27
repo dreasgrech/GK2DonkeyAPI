@@ -787,9 +787,13 @@ namespace GK2DonkeyAPI
                 yield return Until(() => !stays.I.Hopping, 2f);
                 int before = stays.I.HopsStarted;
                 Mount.Instance.KeeperJumped(p.I);
-                yield return Until(() => stays.I.HopsStarted > before, 1f);
+                float jumpedAt = Time.time;
+                yield return Until(() => stays.I.HopsStarted > before, 1.5f);
+                float reacted = Time.time - jumpedAt;
+                // a reaction, not the same frame (2026-10-27): a quarter of a second to about a second
+                if (stays.I.HopsStarted > before) Check(reacted >= 0.18f, $"and not in the same moment: {reacted:F2} s after the keeper");
                 Check(stays.I.HopsStarted > before || Flat(stays.Position, p.Position) > 10f,
-                    $"the keeper jumps on their parent: the baby by it jumps along within a second ({(stays.I.HopsStarted > before ? "it did" : "it didn't, too far")}, {Flat(stays.Position, p.Position):F1} from the parent)");
+                    $"the keeper jumps on their parent: the baby by it jumps along within a second and a half ({(stays.I.HopsStarted > before ? "it did" : "it didn't, too far")}, {Flat(stays.Position, p.Position):F1} from the parent)");
                 stays.Tuning.Clear(Owner, "ShuffleFoalJumpAlongChance");
 
                 // on their parent, off again, on another mount (from where the run stands, by them)

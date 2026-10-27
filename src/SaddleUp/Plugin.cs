@@ -151,9 +151,9 @@ namespace SaddleUp
                 MountLook own = me.LookOf(mountId);
                 // three sliders since 0.12 (the user, 2026-10-27): "Volume" (the one "Voice and steps" row before) is the voices
                 // now, so a player's value carries over there; Steps and Baby steps start at 100%
-                p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voices", "How loud your mount's calls are, and its babies' answers.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
-                p.Steps("Mount", "StepsVolume" + sfx, Mathf.RoundToInt(own.StepsVolume * 100f), 0, 150, 10, "Steps", "How loud its steps are, with the cart, the bell and its wings.", v => own.StepsVolume = v / 100f, v => v + "%", look: true);
-                p.Steps("Mount", "BabyStepsVolume" + sfx, Mathf.RoundToInt(own.BabyStepsVolume * 100f), 0, 150, 10, "Baby steps", "How loud its babies' steps are.", v => own.BabyStepsVolume = v / 100f, v => v + "%", look: true,
+                p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voices volume", "How loud your mount's calls are, and its babies' answers.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
+                p.Steps("Mount", "StepsVolume" + sfx, Mathf.RoundToInt(own.StepsVolume * 100f), 0, 150, 10, "Steps volume", "How loud its steps are, with the cart, the bell and its wings.", v => own.StepsVolume = v / 100f, v => v + "%", look: true);
+                p.Steps("Mount", "BabyStepsVolume" + sfx, Mathf.RoundToInt(own.BabyStepsVolume * 100f), 0, 150, 10, "Baby steps volume", "How loud its babies' steps are.", v => own.BabyStepsVolume = v / 100f, v => v + "%", look: true,
                     visible: () => Mounts.Catalog.Find(mountId)?.Foals ?? true);
             });
 

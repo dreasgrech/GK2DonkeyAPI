@@ -367,7 +367,7 @@ namespace GK2DonkeyAPI
                 var missing = new List<string>();
                 string voiceFrom = "-", grazeFrom = "-";
                 foreach (var c in cover) { if (c.From == "missing") missing.Add(c.Event); if (c.Event == "voice") voiceFrom = c.From; if (c.Event == "graze") grazeFrom = c.From; }
-                Check(voiceFrom == "default" && grazeFrom == "default" && missing.Contains("mount") && missing.Contains("dismount") && missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("lips") && !missing.Contains("graze") && !missing.Contains("step"),
+                Check(voiceFrom == "default" && grazeFrom == "default" && missing.Contains("mount") && missing.Contains("dismount") && !missing.Contains("answer") && !missing.Contains("voice") && !missing.Contains("lips") && !missing.Contains("graze") && !missing.Contains("step"),
                     $"the coverage report: voice and graze from the default; missing: {string.Join(", ", missing)}");
                 Info(Sounds.CoverageLine(Looks.Find("selftest.sounds-beast/sounds-test-2")));
 
@@ -743,7 +743,9 @@ namespace GK2DonkeyAPI
                 yield return Until(() => Plays(ra, "voice") >= 1, 10f);
                 SoundSpec av = ra.Resolve("voice");
                 Check(waited, $"a standing grown one calls by itself within 10 s (idle_every {av?.Number("idle_every", -1f):0.##} x the standing factor {Sounds.StandingIdleFactor}; the rig: {ra.TestState}; voice {av?.Describe()})");
+                Sounds.TestEveryBabyAnswers = true; // each baby answers by its chance in play (2026-10-27): both here
                 yield return Until(() => Plays(r1, "answer") >= 1 && Plays(r2, "answer") >= 1, Sounds.Rig.CallWaitMaxS + 3f);
+                Sounds.TestEveryBabyAnswers = false;
                 Check(waited, $"both babies answered ({Plays(r1, "answer")}, {Plays(r2, "answer")})");
                 var times = new List<(float At, Mount.Instance Who, string Event)>(Sounds.TestVoiceTimes);
                 float call = -1f, first = -1f, second = -1f;

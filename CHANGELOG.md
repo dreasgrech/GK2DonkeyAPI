@@ -44,8 +44,22 @@ For players:
 
 Everything else in this version, in detail:
 
-- **Three sound sliders per mount** (the user, 2026-10-27): Voices (its calls and its babies' answers), Steps (its steps,
-  the cart, the bell, its wings) and Baby steps, in place of one "Voice and steps". Your old value is the Voices one now.
+- **The babies react, not mirror** (the user, 2026-10-27): when you jump on their parent they jump a quarter of a second
+  to about a second later (the lively ones sooner), never in the same moment; and when it calls, each baby answers by
+  its own chance (the lively more often), so it isn't always the whole family.
+- **A mount picked in the Mount Journal calls out** (the user, 2026-10-27): its own voice, as a reaction to the click;
+  picking another cuts the last one short. The window is called "Mount Journal" now, its colours button "Customize", and
+  the mounts' pictures sit centred in their boxes (the rat sat up by its name).
+- **The call key waits its turn** (the user, 2026-10-27: pressed fast it made a cacophony): V does nothing while your
+  mount's call or its babies' answers are still sounding, and presses are at least half a second apart.
+- **The colours window's right column is whole** again: its dropdowns and last colour square ended under the scrollbar.
+- **The Mounts panel looks like one of the game's own windows** (the user, 2026-10-27: "make it look more official"):
+  the game's tan title bar with its ornaments and a close button carries "Mounts" (the count of mounts and the band it
+  took are gone), the frame's corners sit on the window's edge with no margin of ours past them, and the buttons, titles
+  and headings are in the game's bold font (`small_font_bold`, as its buttons; ours were the plain one). The gap under
+  the description and the one beside the list are closed. The colours window has the same title bar.
+- **Three sound sliders per mount** (the user, 2026-10-27): Voices volume (its calls and its babies' answers), Steps volume (its steps,
+  the cart, the bell, its wings) and Baby steps volume, in place of one "Voice and steps". Your old value is the Voices one now.
 - **An Abilities card in the Mounts panel** (the user, 2026-10-27): under Stats, each ability with its icon and a line
   about it: Flying (the mount's own picture in the air) and Cargo cart (the game's own cart wheel, in your colours, with
   how many items it holds), and any a mod adds. The Stats card is tighter, with a rule under its heading.
@@ -967,6 +981,9 @@ For mod authors:
 
 Development:
 
+- **The UI probe** (`Debug.UiProbe`, off by default; Dev/UiProbe.cs): when the Mounts panel is built it writes
+  `BepInEx\GK2-ui-probe.txt`, the game's Settings window tree (rects, sprites and their slicing, fonts), the dialog
+  button and the loaded buttons' fonts. It found the panel's face under the frame and the plain font on its buttons.
 - **`General.CartSlots` is session-only**: bound in a config that is never written (`Plugin.sessionOnly`), its line
   retired from `dreas.gk2.donkeyapi.cfg`; a mod's `Mounts.Behaviour.Set("CartSlots", n)` still lowers every cart for
   its session (the Mounts panel then reads "2 of 6 items (a mod limits the cart to 2)"). Saddle Up retires its

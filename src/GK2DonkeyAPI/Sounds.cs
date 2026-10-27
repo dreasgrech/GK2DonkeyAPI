@@ -199,7 +199,34 @@ namespace GK2DonkeyAPI
 
         internal static Rig RiddenRig => Mount.Ridden?.SoundsRig;
 
-        public static void Bray() => RiddenRig?.Emit("voice");
+        // The call key (Mounts.Bray; Saddle Up's V): not while the last call or its babies' answers are still sounding, and
+        // never closer than ManualCallGapS (the user, 2026-10-27: pressed fast it made "cacophony").
+        internal const float ManualCallGapS = 0.5f;
+        internal static bool TestEveryBabyAnswers; // the self-tests: every baby answers (else each by its chance)
+        private static float nextManualCall;
+
+        public static void Bray()
+        {
+            Rig r = RiddenRig;
+            if (r == null) return;
+            if (r.CallBusy || Time.unscaledTime < nextManualCall) return;
+            nextManualCall = Time.unscaledTime + ManualCallGapS;
+            r.Emit("voice");
+        }
+
+        // A mount picked in the Mounts panel calls out (the user, 2026-10-27: "trigger its voice so there's a reaction"):
+        // its picture's own voice, heard at the keeper (the picture stands off the stage), its standing switch not asked;
+        // a new pick cuts the last one's call short, and clicks closer than 0.35 s make one.
+        private static float nextAudition;
+
+        internal static void Audition(Mount.Instance paper)
+        {
+            if (paper == null || paper.SoundsRig == null || Time.unscaledTime < nextAudition) return;
+            if (!Mount.Instance.IsInGame(out PlayerController pc, out _) || pc == null) return;
+            nextAudition = Time.unscaledTime + 0.35f;
+            paper.SoundsRig.Stop("voice");
+            paper.SoundsRig.Audition("voice", pc.transform);
+        }
 
         public static void RingBell() => RiddenRig?.Emit("bell");
 
@@ -834,9 +861,16 @@ namespace GK2DonkeyAPI
                     answering.Clear();
                     foreach (Mount.Instance kid in kids)
                     {
-                        if (kid != null && kid.SoundsRig != null && kid.SoundsRig.IsBaby) answering.Add(kid);
+                        if (kid == null || kid.SoundsRig == null || !kid.SoundsRig.IsBaby) continue;
+                        // not every baby answers every call (the user, 2026-10-27): each one by its own chance, the lively
+                        // more often than the calm (FoalVariety)
+                        float chance = TestEveryBabyAnswers ? 1f : Mathf.Clamp(0.65f + 0.25f * kid.Temper.Energy, 0.3f, 0.95f);
+                        if (UnityEngine.Random.value < chance) answering.Add(kid);
                     }
                     PlanAnswers(answering.Count, answerOrder, answerDelays);
+                    float last = 0f;
+                    foreach (float dl in answerDelays) if (dl > last) last = dl;
+                    answersUntil = answering.Count > 0 ? Time.time + last + 1.5f : 0f; // the last answer's start and about its length
                     for (int k = 0; k < answering.Count; k++)
                     {
                         Rig r = answering[answerOrder[k]].SoundsRig;
@@ -922,7 +956,7 @@ namespace GK2DonkeyAPI
                 // a baby's answer on a mount that gives none: its mount's own voice, pitched up by the baby's size as every
                 // baby sound is (PitchScale), not silence (the user, 2026-10-27: Gerry's babies never answered him). A mount
                 // whose voice is silent (the worm) stays silent.
-                if (eventId == "answer" && r.Missing)
+                if (eventId == "answer" && r.Missing && baby)
                 {
                     SoundEvents.Def v = SoundEvents.Find("voice");
                     SoundSpec voice = v != null ? ResolveNow(v, "voice", null) : null;
@@ -1006,7 +1040,7 @@ namespace GK2DonkeyAPI
                 if (!owner.S.SoundsOn.Value || !MountRules.Allowed(MountFeature.Sounds)) return false;
                 if (d.Id == "bell" && !MountRules.Allowed(MountFeature.Bell)) return false;
                 if (CargoSheet.Running) return false;
-                if (!owner.IsRidden && d.StandingGated && !StandingOn) return false;
+                if (!owner.IsRidden && d.StandingGated && !StandingOn && auditionAt == null) return false;
                 return true;
             }
 
@@ -1052,6 +1086,20 @@ namespace GK2DonkeyAPI
                 }
             }
 
+            // Played at that spot instead of the mount's, past the standing switch: the Mounts panel's pick (Sounds.Audition).
+            private Transform auditionAt;
+
+            internal SoundHandler Audition(string eventId, Transform at)
+            {
+                auditionAt = at;
+                try { return Emit(eventId); }
+                finally { auditionAt = null; }
+            }
+
+            // Its call or its babies' answers still sounding (the call key waits for them).
+            internal bool CallBusy => callHandle != null || Time.time < answersUntil;
+            private float answersUntil;
+
             private SoundHandler EmitInner(string eventId, string variant, float volumeScale, float pitchScale)
             {
                 SoundEvents.Def d = SoundEvents.Find(eventId);
@@ -1063,7 +1111,7 @@ namespace GK2DonkeyAPI
                 SoundSpec s = Resolve(eventId, variant);
                 if (!May(d, s)) return null;
                 Wgo donkey = owner.Donkey;
-                Transform at = PlayAt(donkey != null && donkey ? donkey.transform : null);
+                Transform at = auditionAt != null ? auditionAt : PlayAt(donkey != null && donkey ? donkey.transform : null);
                 if (at == null) return null;
                 if (d.Stoppable) Stop(eventId);
                 if (s.Silent)

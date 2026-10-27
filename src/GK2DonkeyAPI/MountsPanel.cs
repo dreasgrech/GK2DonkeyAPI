@@ -14,7 +14,7 @@ namespace GK2DonkeyAPI
     // a player can ride. A list on the left (an icon and the name each, scrolling), the chosen mount on the right: its
     // portrait, name and description; the live picture of it with its cart on a dark stage, a stats card beside it
     // (speed, the cart, babies, skins); under them the row that defines its look at a glance, the Skin, as the game's
-    // own rows. A "Colours..." button opens a second window of the same make with the colour rows in two full columns
+    // own rows. A "Customize" button opens a second window of the same make with the colour rows in two full columns
     // (the user, 2026-10-21: the journal must not squash the customisation; the colours get a window of their own; the
     // effect rows went on 2026-10-25). Done and Escape keep what was chosen (no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
     // when the window opened). Only in a game.
@@ -26,8 +26,10 @@ namespace GK2DonkeyAPI
     // the log says so.
     internal static partial class MountsPanel
     {
-        private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f;
-        private const float TitleH = 28f, ListW = 260f, HeaderH = 76f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
+        private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f, FaceInset = 13f; // FaceInset: the game's BackMask inside its frame
+        // TitleH: from the window's top to the content: the game's title bar (11 in, 26 high: its windows' HeaderGroup, read
+        // 2026-10-27 by Dev/UiProbe.cs) and a gap, less Pad and Gap, which the layout adds; HeaderH fits the name and one line
+        private const float TitleH = 11f + 26f + 6f - 20f, ListW = 260f, HeaderH = 60f, ButtonsH = 40f, CardH = 44f, ScrollbarW = 6f, ButtonW = 130f, ButtonH = 34f;
         // the stage fills the right side's height under the header (the user, 2026-10-25: "there's empty space"); one size
         // on every mount: nothing moves
         private const float StageW = 440f, StageH = H - (Pad + TitleH + Gap) - HeaderH - Gap - (Gap + ButtonsH + Pad), PictureScale = 3f;
@@ -43,6 +45,9 @@ namespace GK2DonkeyAPI
         // column (SwatchRow; laid on the game row's measured lines until 2026-10-26, which stopped measuring true).
         // MeasureRow still logs where the game row's label ends and its "< value >" spans (from its drawn left).
         private const float SwatchGap = 2f;
+        // the colours window's columns end this far before its scrollbar (the user, 2026-10-27: the right column's dropdowns and
+        // last swatch ran under it)
+        private const float ColoursScrollGap = 10f;
         private static float rowLabelRight = 160f, rowCtrlLeft = 168f, rowCtrlRight = 168f + 12f * 16f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
         private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 236f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
@@ -55,7 +60,8 @@ namespace GK2DonkeyAPI
         private static UIDialogWindowButton dialogTemplate;
         private static Sprite buttonSprite;      // the game's dialog button face, for the panel's own buttons
         private static Color buttonTextColor = Color.white;
-        private static TMP_FontAsset font;
+        private static TMP_FontAsset font, boldFont; // the labels' (small_font) and the game's buttons' and titles' (small_font_bold)
+        private static Material boldMaterial;
         private static Material fontMaterial;
         private static Color fontColor = Color.white;
         private static float fontSize = 18f;
@@ -120,7 +126,7 @@ namespace GK2DonkeyAPI
                 if (k == null) continue;
                 var e = new Entry { Id = id, Label = label };
                 Looks.SkinDef def = Looks.Find(Looks.DefaultSkinOf(k));
-                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The graveyard's most patient worker. It has carried more corpses than anyone in the village, and it still has opinions about every one." : "");
+                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each." : "");
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
@@ -152,7 +158,7 @@ namespace GK2DonkeyAPI
                 e.Stats.Add(("Skins", skins.ToString()));
                 // what it can do (the user, 2026-10-27: "an abilities section ... Flying is an ability and Cargo Cart is another"),
                 // each with its icon and a line in the players' words; a mod's own abilities after ours
-                if (Flight.Active && k.Flies) e.Abilities.Add(("Flying", "Over fences, rivers and roofs. It lands wherever you can stand.", "fly"));
+                if (Flight.Active && k.Flies) e.Abilities.Add(("Flying", "It lands wherever you can stand.", "fly"));
                 if (k.Cart) e.Abilities.Add(("Cargo cart", $"Pulls a cart that holds {ownCargo} items.", "cart"));
                 foreach (MountAbility a in k.Abilities)
                 {
@@ -219,11 +225,11 @@ namespace GK2DonkeyAPI
                 var ab = e.Abilities[i];
                 line.Name.text = ab.Name;
                 line.Line.text = ab.Line;
-                MountIcons.Icon icon = ab.Icon == "fly" ? MountIcons.FrameOf(k, "bdy_glide_left_01") : ab.Icon == "cart" ? MountIcons.CartWheel() : MountIcons.Of(k);
+                MountIcons.Icon icon = ab.Icon == "fly" ? MountIcons.FrameOf(k, "bdy_glide_left_01") : ab.Icon == "cart" ? MountIcons.CartWheel(page?.MountPaper) : MountIcons.Of(k);
                 if (icon.Any)
                 {
                     line.Icon.gameObject.SetActive(true);
-                    Show(line.Icon, icon, AbilityIconPx);
+                    ShowCentred(line.Icon, icon, AbilityIconPx, 12f, StatsTitleH + 4f + i * AbilityLineH + (AbilityLineH - AbilityIconPx) / 2f - 2f);
                 }
             }
             float h = n > 0 ? StatsTitleH + 4f + n * AbilityLineH + 6f : 0f;
@@ -308,7 +314,8 @@ namespace GK2DonkeyAPI
                 if (img.sprite != null) { buttonSprite = img.sprite; break; }
             }
             TextMeshProUGUI bt = dialogTemplate.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (bt != null) buttonTextColor = bt.color;
+            if (bt != null) { buttonTextColor = bt.color; boldFont = bt.font; boldMaterial = bt.fontSharedMaterial; }
+            UiProbe.Dump(settings, dialogTemplate, font, fontMaterial, fontSize); // dev only, Debug.UiProbe (2026-10-27)
             MeasureRow();
             focusTemplate = templateRow.GetComponentInChildren<GamepadNavigationItem>(true)?.focusFrame; // the game row's own focus frame, for the panel's buttons
 
@@ -322,8 +329,9 @@ namespace GK2DonkeyAPI
             }
 
             // the title line
-            Text(panel.transform, "title", "Mounts", 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, 400f, TitleH);
-            titleCount = Text(panel.transform, "count", "", 0.9f, TextAlignmentOptions.Right, false, W - Pad - 300f, Pad + 2f, 300f, TitleH);
+            // the title in the game's own title bar, with its close button (the user, 2026-10-27: "all that gap for just the word
+            // Mounts is not worth it"; the count of mounts is gone)
+            TitleBar(panel, settings, W, "Mount Journal", () => Close(keep: true));
 
             // the list, scrolling; a search box above it once it is long
             entries = Entries();
@@ -341,16 +349,20 @@ namespace GK2DonkeyAPI
             AddScrollbar(listScroll);
 
             // the right side: the header, the stage and the stats card beside it, the look rows under them
-            float x0 = Pad + ListW + 2f * Gap, rw = W - Pad - x0;
+            float x0 = Pad + ListW + Gap, rw = W - Pad - x0;
             float rightTop = Pad + TitleH + Gap;
             rightArea = Rect(Node("right", panel.transform), x0, rightTop, rw, H - rightTop - Gap - ButtonsH - Pad);
             headerIcon = Node("portrait", rightArea, typeof(RawImage)).GetComponent<RawImage>();
             headerIcon.raycastTarget = false;
             Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
             headerIcon.gameObject.SetActive(false);
-            headerName = Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f);
+            headerName = Bold(Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f));
             headerDesc = Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
             headerDesc.overflowMode = TextOverflowModes.Ellipsis;
+            // one line under the name (HeaderH): a longer line shrinks a little to fit, down to 80%, before it is cut
+            headerDesc.enableAutoSizing = true;
+            headerDesc.fontSizeMax = headerDesc.fontSize;
+            headerDesc.fontSizeMin = headerDesc.fontSize * 0.8f;
 
             float y = HeaderH + Gap;
             stage = Box(rightArea, "stage", 0f, y, StageW, StageH);
@@ -367,7 +379,7 @@ namespace GK2DonkeyAPI
 
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
             RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
-            Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f).fontStyle = FontStyles.Bold;
+            Bold(Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
             GameObject rule = Node("stats rule", statsCard, typeof(Image));
             Rect(rule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
             rule.GetComponent<Image>().color = EdgeColor;
@@ -391,7 +403,7 @@ namespace GK2DonkeyAPI
             }
             // the abilities card: built with room for AbilityMax lines, sized and filled for the mount picked (BuildRight)
             abilitiesCard = Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
-            Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f).fontStyle = FontStyles.Bold;
+            Bold(Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
             GameObject arule = Node("abilities rule", abilitiesCard, typeof(Image));
             Rect(arule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
             arule.GetComponent<Image>().color = EdgeColor;
@@ -404,7 +416,7 @@ namespace GK2DonkeyAPI
                 ai.raycastTarget = false;
                 Rect(ai.gameObject, 12f, ly + (AbilityLineH - AbilityIconPx) / 2f - 2f, AbilityIconPx, AbilityIconPx);
                 TextMeshProUGUI an = Text(abilitiesCard, "ability name " + i, "", 0.95f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
-                an.fontStyle = FontStyles.Bold;
+                Bold(an);
                 an.color = buttonTextColor;
                 TextMeshProUGUI al = Text(abilitiesCard, "ability line " + i, "", 0.78f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
                 al.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.75f);
@@ -423,7 +435,7 @@ namespace GK2DonkeyAPI
             // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
             GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
             Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject customise = coloursButton = OwnButton(panel.transform, "colours", "Colours...", 200f, ButtonH, OpenColours);
+            GameObject customise = coloursButton = OwnButton(panel.transform, "colours", "Customize", 200f, ButtonH, OpenColours);
             Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
             GameObject ride = rideButton = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
@@ -457,12 +469,24 @@ namespace GK2DonkeyAPI
             var canvas = go.GetComponent<Canvas>();
             canvas.overrideSorting = true;
             canvas.sortingOrder = sorting;
-            go.GetComponent<Image>().color = new Color(0.11f, 0.12f, 0.15f, 0.97f);
+            // no face of our own: the game's frame sprite (sliced) is the window's face and its corners; a dark face under it
+            // showed past the frame's rounded corners as a margin the game's windows don't have (the user, 2026-10-27).
+            // Transparent, it still takes the clicks (the window blocks the world under it).
+            go.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
             var rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = Vector2.zero;
             rt.sizeDelta = new Vector2(w, h);
+            // the face: the frame sprite's centre is see-through (the game draws its window face apart, inside the frame:
+            // BackMask, 13 in), so a face of ours inset as far, under the frame, never past its corners (2026-10-27)
+            Image face = Node("face", go.transform, typeof(Image)).GetComponent<Image>();
+            face.color = new Color(0.11f, 0.12f, 0.15f, 0.97f);
+            face.raycastTarget = false;
+            var frt = (RectTransform)face.transform;
+            Stretch(frt);
+            frt.offsetMin = new Vector2(FaceInset, FaceInset);
+            frt.offsetMax = new Vector2(-FaceInset, -FaceInset);
             Image frame = settings.transform.Find("GenericWIndowLayout/Frame")?.GetComponent<Image>();
             if (frame != null && frame.sprite != null)
             {
@@ -506,9 +530,9 @@ namespace GK2DonkeyAPI
                 shown++;
                 string id = e.Id;
                 bool fake = e.Fake;
-                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 16f - ScrollbarW, CardH, () => { if (!fake) Select(id); }, textLeft: IconPx + 14f, flat: true);
+                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 8f - ScrollbarW, CardH, () => { if (!fake) { Select(id); Sounds.Audition(page?.MountPaper); } }, textLeft: IconPx + 14f, flat: true);
                 var le = go.AddComponent<LayoutElement>();
-                le.preferredWidth = ListW - 16f - ScrollbarW;
+                le.preferredWidth = ListW - 8f - ScrollbarW;
                 le.preferredHeight = CardH;
                 le.minHeight = CardH;
                 if (fake)
@@ -532,7 +556,6 @@ namespace GK2DonkeyAPI
                 if (fake) { var fi = go.GetComponent<GamepadNavigationItem>(); if (fi != null) fi.Active = false; }
                 if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = shown - 1;
             }
-            titleCount.text = filter.Length > 0 ? $"{shown} of {entries.Count} mounts" : entries.Count == 1 ? "1 mount" : entries.Count + " mounts";
             navDirty = true;
             MarkList();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
@@ -591,7 +614,7 @@ namespace GK2DonkeyAPI
             if (stageNote != null) stageNote.gameObject.SetActive(missing);
             if (missing && picture != null) picture.gameObject.SetActive(false);
             headerIcon.gameObject.SetActive(icon.Any);
-            if (icon.Any) Show(headerIcon, icon, HeaderIconPx);
+            if (icon.Any) ShowCentred(headerIcon, icon, HeaderIconPx, 0f, Mathf.Max(0f, (HeaderH - HeaderIconPx) / 2f));
             float textX = icon.Any ? HeaderIconPx + 12f : 0f;
             Rect(headerName.gameObject, textX, 0f, rightArea.rect.width - textX, 32f);
             Rect(headerDesc.gameObject, textX, 32f, rightArea.rect.width - textX, HeaderH - 32f);
@@ -645,7 +668,7 @@ namespace GK2DonkeyAPI
             if (colours != null)
             {
                 coloursTitle.text = "Colours: " + headerName.text;
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
+                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
             }
             Refresh();
         }
@@ -704,7 +727,7 @@ namespace GK2DonkeyAPI
                     {
                         // left on the column's start (a game heading row right-aligns on the labels' edge and floated mid-column)
                         TextMeshProUGUI h = Text(root, "heading " + group.Group, group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
-                        h.fontStyle = FontStyles.Bold;
+                        Bold(h);
                         GameObject line = Node("heading line", root, typeof(Image));
                         Rect(line, cx, cy + step - 4f, colW, 1f);
                         line.GetComponent<Image>().color = EdgeColor;
@@ -847,7 +870,7 @@ namespace GK2DonkeyAPI
             {
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
                 colours = Window("colours window", settings, CW, CH, 30001);
-                coloursTitle = Text(colours.transform, "title", "Colours: " + headerName.text, 1.25f, TextAlignmentOptions.Left, false, Pad, Pad, CW - 2f * Pad, TitleH);
+                coloursTitle = TitleBar(colours, settings, CW, "Colours: " + headerName.text, () => CloseColours(keep: true));
                 float top = Pad + TitleH + Gap;
                 coloursStage = Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
                 coloursPicture = Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();
@@ -866,7 +889,7 @@ namespace GK2DonkeyAPI
                 Hand(cnav, 0, GUIDirection.Down, 1); Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
                 coloursBefore.Clear();
                 foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
+                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
                 panel.SetActive(false); // the journal waits underneath
                 navDirty = true;
                 colours.SetActive(true);
@@ -1098,6 +1121,86 @@ namespace GK2DonkeyAPI
             rt.offsetMin = rt.offsetMax = Vector2.zero;
         }
 
+        // The game's bold font on a text (its buttons', titles' and tabs'), else a faux bold of the labels' font.
+        private static TextMeshProUGUI Bold(TextMeshProUGUI t)
+        {
+            if (t == null) return t;
+            if (boldFont != null)
+            {
+                t.font = boldFont;
+                if (boldMaterial != null) t.fontSharedMaterial = boldMaterial;
+                t.fontStyle = FontStyles.Normal;
+            }
+            else t.fontStyle = FontStyles.Bold;
+            return t;
+        }
+
+        // The game's window title bar (its HeaderGroup, read from the Settings window: the tan bar sliced, an ornament at
+        // each end, the title in its font, its close button), 11 in from the top and the sides, 26 high, on a window of
+        // ours; null pieces are left out. Returns the title's text.
+        private static TextMeshProUGUI TitleBar(GameObject win, UIGameSettingsWindow settings, float w, string title, Action onClose)
+        {
+            Transform hg = settings != null ? settings.transform.Find("GenericWIndowLayout/Frame/HeaderGroup") : null;
+            const float inset = 11f, barH = 26f;
+            float bw = w - 2f * inset;
+            GameObject bar = Node("title bar", win.transform);
+            Rect(bar, inset, inset, bw, barH);
+            Image bgSrc = hg != null ? hg.Find("Background")?.GetComponent<Image>() : null;
+            if (bgSrc != null && bgSrc.sprite != null)
+            {
+                Image bg = Node("title back", bar.transform, typeof(Image)).GetComponent<Image>();
+                bg.sprite = bgSrc.sprite;
+                bg.type = Image.Type.Sliced;
+                bg.raycastTarget = false;
+                Stretch((RectTransform)bg.transform);
+            }
+            Image decor = hg != null ? hg.Find("DecorCommonLeft")?.GetComponent<Image>() : null;
+            if (decor != null && decor.sprite != null)
+            {
+                for (int side = 0; side < 2; side++)
+                {
+                    Image d = Node(side == 0 ? "title decor left" : "title decor right", bar.transform, typeof(Image)).GetComponent<Image>();
+                    d.sprite = decor.sprite;
+                    d.raycastTarget = false;
+                    Rect(d.gameObject, side == 0 ? 0f : bw - 28f, 0f, 28f, barH);
+                    if (side == 1) d.transform.localScale = new Vector3(-1f, 1f, 1f); // mirrored on the right
+                }
+            }
+            TextMeshProUGUI head = hg != null ? hg.Find("Header")?.GetComponent<TextMeshProUGUI>() : null;
+            TextMeshProUGUI tt = Text(bar.transform, "title", title, 1f, TextAlignmentOptions.Center, false, 34f, 0f, bw - 68f, barH);
+            Bold(tt);
+            if (head != null) { tt.font = head.font; tt.fontSize = head.fontSize; tt.color = head.color; }
+            Image closeBack = hg != null ? hg.Find("CloseButton/Background")?.GetComponent<Image>() : null;
+            Image closeIcon = hg != null ? hg.Find("CloseButton/BtnImage")?.GetComponent<Image>() : null;
+            if (closeIcon != null && closeIcon.sprite != null && onClose != null)
+            {
+                float bx = bw - 26f + 1f;
+                if (closeBack != null && closeBack.sprite != null)
+                {
+                    Image cb = Node("close back", bar.transform, typeof(Image)).GetComponent<Image>();
+                    cb.sprite = closeBack.sprite;
+                    cb.raycastTarget = false;
+                    Rect(cb.gameObject, bx - 24f, 0f, 50f, barH);
+                }
+                GameObject btn = Node("close", bar.transform, typeof(Image), typeof(UnityEngine.UI.Button));
+                Image ci = btn.GetComponent<Image>();
+                ci.sprite = closeIcon.sprite;
+                Rect(btn, bx, 0f, 26f, barH);
+                var b = btn.GetComponent<UnityEngine.UI.Button>();
+                b.targetGraphic = ci;
+                ColorBlock xc = b.colors; // lit under the mouse and darker pressed, as the game's own close button
+                xc.normalColor = new Color(0.85f, 0.85f, 0.85f, 1f);
+                xc.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
+                xc.selectedColor = xc.normalColor;
+                xc.pressedColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+                xc.colorMultiplier = 1f;
+                xc.fadeDuration = 0.05f;
+                b.colors = xc;
+                b.onClick.AddListener(() => onClose());
+            }
+            return tt;
+        }
+
         private static TextMeshProUGUI Text(Transform parent, string name, string text, float sizeMul, TextAlignmentOptions align, bool wrap, float x, float y, float w, float h)
         {
             var t = Node(name, parent, typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
@@ -1166,6 +1269,15 @@ namespace GK2DonkeyAPI
             ((RectTransform)img.transform).sizeDelta = new Vector2(Mathf.Round(icon.W * k), Mathf.Round(icon.H * k));
         }
 
+        // The same, centred in its px box whose top left is (x, y) (the user, 2026-10-27: the rat sat up by the name: a wide
+        // short picture kept the box's top left)
+        private static void ShowCentred(RawImage img, MountIcons.Icon icon, float px, float x, float y)
+        {
+            Show(img, icon, px);
+            Vector2 size = ((RectTransform)img.transform).sizeDelta;
+            Rect(img.gameObject, Mathf.Round(x + (px - size.x) / 2f), Mathf.Round(y + (px - size.y) / 2f), size.x, size.y);
+        }
+
         // A button of the panel's own: flat (a journal's row: a dark face with a faint edge, hover brightens, the chosen
         // one coloured by MarkList) or the game's dialog button face sliced to the size (a touch dark at rest so the
         // hover shows), with the game's font.
@@ -1211,7 +1323,7 @@ namespace GK2DonkeyAPI
             TextMeshProUGUI t = Text(go.transform, "label", text, 1f, textLeft > 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center, false, textLeft, 0f, w - textLeft - 6f, h);
             t.color = flat ? fontColor : buttonTextColor;
             t.overflowMode = TextOverflowModes.Ellipsis;
-            t.fontStyle = flat ? FontStyles.Normal : FontStyles.Bold;
+            if (flat) t.fontStyle = FontStyles.Normal; else Bold(t);
             // the gamepad: an item whose select presses the button (as LazyButton.SetCallbacksIntoGamepadNavigationItem),
             // framed while focused with the game row's own focus frame
             var item = go.AddComponent<GamepadNavigationItem>();
@@ -1486,7 +1598,7 @@ namespace GK2DonkeyAPI
             }
             if (colours != null && Signature(colourGroups) != coloursSignature)
             {
-                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW, colourRows, out _);
+                coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
             }
             RefreshRows(rows);
             if (colours != null) RefreshRows(colourRows);
@@ -1862,6 +1974,8 @@ namespace GK2DonkeyAPI
             dialogTemplate = null;
             font = null;
             fontMaterial = null;
+            boldFont = null;
+            boldMaterial = null;
             nextPicture = 0f;
             fitted.Clear(); // the pictures go with the windows
             page = null;

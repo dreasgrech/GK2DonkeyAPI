@@ -188,6 +188,17 @@ key by key 42 of 42 Saddle Up values and 453 of 453 API values kept (the 15 othe
 in the panel Bella, 3 babies, the 0.10.0 colours, the lantern off (the fixture's `Lantern = false`). Saves byte-identical
 before and after; everything restored and the dev builds redeployed (`--no-incremental`).
 
+Run 2026-10-27 14:20, again with the zips rebuilt at 14:08 (after the day's changes: Cart capacity retired, the Safe spot
+section, the bell and the parked cart rows retired, the babies' look row retired, three volume sliders, the Mount Journal's
+title bar, the pack DLLs named GK2SaddleUpDragon and GK2SaddleUpCritters). **A**: 377 lines, no warning, error or
+exception, no `Dev tools unlocked`; the five pack and built-in mounts declared; H, G, two items, H, G: the same cart with
+both; L the Mount Journal with six mounts; F11 nothing; no `[Debug]`, no `CartSlots` in either cfg. Its cfgs are the
+`0.12.0` fixture again (210 + 473 values off their defaults). **B** over the 0.10.0 cfgs: 431 lines, 0 warnings, 29
+carried over; key by key 38 of 38 Saddle Up values and 452 of 452 API values kept, the 20 others the rows retired on
+purpose (Cart capacity in both, the babies' look, the parked cart, the bell, the speed and Effect rows). R indoors did
+nothing (that file predates Allow mounting indoors and says no messages) and T opened the game's Tech Tree too (the
+fixture binds the cart key to the game's own T on purpose). Saves byte-identical; everything restored.
+
 ## 6. Versions, changelog and hand-off
 
 Released versions are never reused (0.9.0 went public 2026-10-16): a release with any change gets new numbers.

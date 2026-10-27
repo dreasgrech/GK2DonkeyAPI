@@ -133,12 +133,21 @@ namespace GK2DonkeyAPI
 
         private static Sprite wheel;
 
-        internal static Icon CartWheel()
+        private static bool wheelMissSaid;
+
+        // first: the panel's own picture of the mount and its cart (its paper; the world's mounts may have no cart drawn,
+        // seen 2026-10-27: no icon), then any mount whose cart is drawn
+        internal static Icon CartWheel(Mount.Instance paper = null)
         {
             if (wheel == null || !wheel)
             {
-                wheel = null;
-                Mount.ForEachInstance(i => { if (wheel == null && i.HasCart && i.ColorsRig != null) wheel = i.ColorsRig.WheelSprite; }, bind: false);
+                wheel = paper != null && paper.ColorsRig != null ? paper.ColorsRig.WheelSprite : null;
+                if (wheel == null) Mount.ForEachInstance(i => { if (wheel == null && i.HasCart && i.ColorsRig != null) wheel = i.ColorsRig.WheelSprite; }, bind: false);
+                if (wheel == null && !wheelMissSaid)
+                {
+                    wheelMissSaid = true;
+                    Plugin.Log.LogInfo($"Settings: no cart wheel drawn anywhere yet for the Cargo cart icon (the picture {(paper == null ? "none" : paper.HasCart ? "with its cart" : "alone")}); it comes once one is.");
+                }
             }
             return wheel != null ? FromSprite(wheel) : default;
         }

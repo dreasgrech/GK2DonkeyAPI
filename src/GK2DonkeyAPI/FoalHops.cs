@@ -173,7 +173,10 @@ namespace GK2DonkeyAPI
                     }
                     if (i.hopT < 0f && i.answerAt < 0f && Random.value < AlongChance)
                     {
-                        i.answerAt = Time.time + Random.Range(0.05f, 0.4f);
+                        // a reaction, not the same frame (the user, 2026-10-27: "the foals literally jump with me in the same
+                        // frame almost"): a quarter of a second to most of a second, the lively sooner, the calm later
+                        float react = Mathf.Lerp(0.25f, 0.9f, Random.value) * (1f - 0.25f * i.Temper.Energy);
+                        i.answerAt = Time.time + Mathf.Max(0.2f, react);
                     }
                 });
             }
