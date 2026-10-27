@@ -86,7 +86,9 @@ All of these apply at once:
 | | Babies | none | (in the Mounts panel) How many little ones follow your mount around, up to 5. They always look like their parent. Only for a mount that has babies. |
 | | Babies follow you on foot | on | (in the Mounts panel) When you get off, the babies follow you instead of staying with your mount. |
 | | Babies come indoors | on | (in the Mounts panel) The babies follow you into buildings and back out. |
-| | Voice and steps | 100% | (in the Mounts panel) How loud your mount is. This adds to the game's sound volume. |
+| | Voices | 100% | (in the Mounts panel) How loud your mount's calls are, and its babies' answers. 0 to 150%. |
+| | Steps | 100% | (in the Mounts panel) How loud its steps are, with the cart, the bell and its wings. |
+| | Baby steps | 100% | (in the Mounts panel) How loud its babies' steps are. Only for a mount with babies. |
 | 3. Colours | | | All of these are in the Mounts panel's colours window and kept per mount. A mount that pulls no cart (the dragon) has no cart colours. |
 | | *Mount colours:* Coat colour | Game default | (in the Mounts panel) The colour of your mount's body. Brown, Dark, Cream, Black or Custom. |
 | | Harness colour | Game default | (in the Mounts panel) The colour of your mount's harness. Black, Red, Blue, Green or Custom. Mounts without one ignore it. |

@@ -31,7 +31,11 @@ namespace GK2DonkeyAPI
         // the stage fills the right side's height under the header (the user, 2026-10-25: "there's empty space"); one size
         // on every mount: nothing moves
         private const float StageW = 440f, StageH = H - (Pad + TitleH + Gap) - HeaderH - Gap - (Gap + ButtonsH + Pad), PictureScale = 3f;
-        private const int StatCount = 3; private const float StatLineH = 30f, StatsCardH = 44f + StatCount * StatLineH + 8f; // the card is as tall as its lines, not as the stage
+        // the card is as tall as its lines, not as the stage: a heading with a rule under it (as the colours window's), then
+        // the lines close together with a faint divider between them (the user, 2026-10-27: "a lot of empty space and gaps")
+        private const int StatCount = 3; private const float StatLineH = 26f, StatsTitleH = 32f, StatsCardH = StatsTitleH + StatCount * StatLineH + 8f;
+        // the abilities card under it: one line each, an icon, the name and a line about it (as tall as the mount's abilities)
+        private const int AbilityMax = 3; private const float AbilityLineH = 44f, AbilityIconPx = 32f;
         private const float IconPx = 36f, HeaderIconPx = 64f;
         private const float SearchH = 26f;
         private const int SearchFrom = 8; // a search box above the list once it has more mounts than this
@@ -97,6 +101,7 @@ namespace GK2DonkeyAPI
             internal readonly List<string> Lines = new List<string>();  // what it does, in words: the cart, babies, speed, what it comes with, its skins
             internal readonly List<string> Extra = new List<string>();  // its own stats and abilities
             internal readonly List<(string Label, string Value)> Stats = new List<(string, string)>(); // the stats card: Speed, Cargo, Skins
+            internal readonly List<(string Name, string Line, string Icon)> Abilities = new List<(string, string, string)>(); // the abilities card: Flying, Cargo cart, a mod's
             internal bool HasPortrait;
             internal bool Fake; // a made-up entry (Debug.MountsPanelFakeEntries): listed, not pickable
         }
@@ -115,7 +120,7 @@ namespace GK2DonkeyAPI
                 if (k == null) continue;
                 var e = new Entry { Id = id, Label = label };
                 Looks.SkinDef def = Looks.Find(Looks.DefaultSkinOf(k));
-                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The game's own donkey, as it draws it." : "");
+                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The graveyard's most patient worker. It has carried more corpses than anyone in the village, and it still has opinions about every one." : "");
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
@@ -143,8 +148,17 @@ namespace GK2DonkeyAPI
                 // the stats card (the user's pick, 2026-10-21; cargo for the cart's speed and no babies line, 2026-10-22): speed,
                 // what its cart carries (or no cart), skins
                 e.Stats.Add(("Speed", Catalog.SpeedWord(ride, MountStyle.Ride)));
-                e.Stats.Add(("Cargo", k.Cart ? cargoText : "no cart"));
+                e.Stats.Add(("Cargo", k.Cart ? cargoText : "No cart"));
                 e.Stats.Add(("Skins", skins.ToString()));
+                // what it can do (the user, 2026-10-27: "an abilities section ... Flying is an ability and Cargo Cart is another"),
+                // each with its icon and a line in the players' words; a mod's own abilities after ours
+                if (Flight.Active && k.Flies) e.Abilities.Add(("Flying", "Over fences, rivers and roofs. It lands wherever you can stand.", "fly"));
+                if (k.Cart) e.Abilities.Add(("Cargo cart", $"Pulls a cart that holds {ownCargo} items.", "cart"));
+                foreach (MountAbility a in k.Abilities)
+                {
+                    string an = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
+                    e.Abilities.Add((an, a.Description ?? "", "mount"));
+                }
                 list.Add(e);
             }
             // a mount whose skins are installed but not the mount (its mod is missing): listed, not pickable (the user,
@@ -156,7 +170,7 @@ namespace GK2DonkeyAPI
                 list.Add(new Entry
                 {
                     Id = kv.Key,
-                    Label = kv.Key + " (not installed)",
+                    Label = NameFromId(kv.Key) + " (not installed)",
                     Description = $"{(names.Count == 1 ? "A skin" : names.Count + " skins")} for this mount {(names.Count == 1 ? "is" : "are")} installed ({string.Join(", ", names)}), but not the mount itself: install the mod that adds it to ride it.",
                     Fake = true,
                 });
@@ -167,6 +181,64 @@ namespace GK2DonkeyAPI
                 list.Add(new Entry { Id = "fake-" + i, Label = "Test mount " + i, Description = "A made-up entry (Debug.MountsPanelFakeEntries), to see the list scroll.", Fake = true });
             }
             return list;
+        }
+
+        // The chosen mount whose mod or pack is gone (the user, 2026-10-27: Saddle Up alone with the Dragon chosen showed the
+        // dragon's raw id on the right and no entry for it in the list): a greyed entry at the end, named from its id, so the
+        // choice shows and another one can be picked. The choice itself is kept (the donkey comes instead).
+        private static void AddMissingChosen(List<Entry> list)
+        {
+            string chosen = page?.MountChosen;
+            if (string.IsNullOrEmpty(chosen) || Catalog.Find(chosen) != null) return;
+            if (list.Exists(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase))) return;
+            var e = new Entry
+            {
+                Id = chosen,
+                Label = NameFromId(chosen) + " (not installed)",
+                Description = "The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+                Fake = true,
+            };
+            e.Stats.Add(("Status", "Not installed"));
+            list.Add(e);
+        }
+
+        // The abilities card for the mount picked: its lines filled, the card as tall as they are (hidden with none), the
+        // journal's rows starting under it.
+        private static void ShowAbilities(Entry e, Catalog.Entry k)
+        {
+            if (abilitiesCard == null || contentScroll == null) return;
+            int n = e != null ? Mathf.Min(AbilityMax, e.Abilities.Count) : 0;
+            for (int i = 0; i < abilityLines.Count; i++)
+            {
+                var line = abilityLines[i];
+                bool on = i < n;
+                line.Icon.gameObject.SetActive(false);
+                line.Name.gameObject.SetActive(on);
+                line.Line.gameObject.SetActive(on);
+                if (!on) continue;
+                var ab = e.Abilities[i];
+                line.Name.text = ab.Name;
+                line.Line.text = ab.Line;
+                MountIcons.Icon icon = ab.Icon == "fly" ? MountIcons.FrameOf(k, "bdy_glide_left_01") : ab.Icon == "cart" ? MountIcons.CartWheel() : MountIcons.Of(k);
+                if (icon.Any)
+                {
+                    line.Icon.gameObject.SetActive(true);
+                    Show(line.Icon, icon, AbilityIconPx);
+                }
+            }
+            float h = n > 0 ? StatsTitleH + 4f + n * AbilityLineH + 6f : 0f;
+            abilitiesCard.gameObject.SetActive(n > 0);
+            if (n > 0) Rect(abilitiesCard.gameObject, statsColX, statsColTop + StatsCardH + Gap, statsColW, h);
+            float rowsTop = statsColTop + StatsCardH + Gap + (n > 0 ? h + Gap : 0f);
+            Rect(contentScroll.gameObject, statsColX, rowsTop, statsColW, Mathf.Max(40f, statsColTop + StageH - rowsTop));
+        }
+
+        // A mount's name from its id when nothing else knows it: "saddleup-dragon.dragon" -> "Dragon", "my-mod.big-crab" -> "Big crab".
+        internal static string NameFromId(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return "?";
+            string s = id.Substring(id.LastIndexOf('.') + 1).Replace('-', ' ').Replace('_', ' ').Trim();
+            return s.Length == 0 ? id : char.ToUpperInvariant(s[0]) + s.Substring(1);
         }
 
         // "Fast (2.25x walking speed)": SpeedMultiplier is times the keeper's walking speed (docs/reference.md).
@@ -255,6 +327,7 @@ namespace GK2DonkeyAPI
 
             // the list, scrolling; a search box above it once it is long
             entries = Entries();
+            AddMissingChosen(entries);
             filter = "";
             float listTop = Pad + TitleH + Gap;
             search = null;
@@ -287,20 +360,59 @@ namespace GK2DonkeyAPI
             pic.anchorMin = pic.anchorMax = new Vector2(0.5f, 0.5f);
             pic.pivot = new Vector2(0.5f, 0.5f);
             picture.gameObject.SetActive(false);
+            // a chosen mount that isn't installed: no picture (the donkey drawn under the dragon's name read as a mix-up,
+            // the user 2026-10-27), this line in its place
+            stageNote = Text(stage, "not installed note", "Not installed", 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
+            stageNote.gameObject.SetActive(false);
 
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
             RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
-            Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.Left, false, 12f, 8f, statsW - 24f, 26f).fontStyle = FontStyles.Bold;
+            Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f).fontStyle = FontStyles.Bold;
+            GameObject rule = Node("stats rule", statsCard, typeof(Image));
+            Rect(rule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
+            rule.GetComponent<Image>().color = EdgeColor;
+            rule.GetComponent<Image>().raycastTarget = false;
             statLines.Clear();
             for (int i = 0; i < StatCount; i++)
             {
-                float ly = 44f + i * StatLineH;
+                float ly = StatsTitleH + i * StatLineH;
+                if (i > 0)
+                {
+                    GameObject div = Node("stat divider " + i, statsCard, typeof(Image));
+                    Rect(div, 12f, ly, statsW - 24f, 1f);
+                    div.GetComponent<Image>().color = new Color(EdgeColor.r, EdgeColor.g, EdgeColor.b, EdgeColor.a * 0.5f);
+                    div.GetComponent<Image>().raycastTarget = false;
+                }
                 TextMeshProUGUI l = Text(statsCard, "stat label " + i, "", 0.9f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
                 l.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.7f);
                 TextMeshProUGUI v = Text(statsCard, "stat value " + i, "", 0.95f, TextAlignmentOptions.Right, false, statsW * 0.42f, ly, statsW * 0.58f - 12f, StatLineH);
                 v.color = buttonTextColor;
                 statLines.Add((l, v));
             }
+            // the abilities card: built with room for AbilityMax lines, sized and filled for the mount picked (BuildRight)
+            abilitiesCard = Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
+            Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f).fontStyle = FontStyles.Bold;
+            GameObject arule = Node("abilities rule", abilitiesCard, typeof(Image));
+            Rect(arule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
+            arule.GetComponent<Image>().color = EdgeColor;
+            arule.GetComponent<Image>().raycastTarget = false;
+            abilityLines.Clear();
+            for (int i = 0; i < AbilityMax; i++)
+            {
+                float ly = StatsTitleH + 4f + i * AbilityLineH;
+                RawImage ai = Node("ability icon " + i, abilitiesCard, typeof(RawImage)).GetComponent<RawImage>();
+                ai.raycastTarget = false;
+                Rect(ai.gameObject, 12f, ly + (AbilityLineH - AbilityIconPx) / 2f - 2f, AbilityIconPx, AbilityIconPx);
+                TextMeshProUGUI an = Text(abilitiesCard, "ability name " + i, "", 0.95f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
+                an.fontStyle = FontStyles.Bold;
+                an.color = buttonTextColor;
+                TextMeshProUGUI al = Text(abilitiesCard, "ability line " + i, "", 0.78f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
+                al.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.75f);
+                al.overflowMode = TextOverflowModes.Ellipsis;
+                abilityLines.Add((ai, an, al));
+            }
+            statsColX = statsX; statsColW = statsW; statsColTop = y;
+
             // the look rows (the Skin): under the stats card, in its column (the user, 2026-10-25: centred under the stage,
             // under a "Skin" heading, they sat off to the right with empty space round them)
             float rowsTop = y + StatsCardH + Gap;
@@ -311,10 +423,10 @@ namespace GK2DonkeyAPI
             // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
             GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
             Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject customise = OwnButton(panel.transform, "colours", "Colours...", 200f, ButtonH, OpenColours);
+            GameObject customise = coloursButton = OwnButton(panel.transform, "colours", "Colours...", 200f, ButtonH, OpenColours);
             Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
-            GameObject ride = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
+            GameObject ride = rideButton = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
             Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
             GameObject drive = driveButton = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
             foreach (GameObject bgo in new[] { done, customise, ride, drive }) NavGroup(bgo, 2);
@@ -470,8 +582,14 @@ namespace GK2DonkeyAPI
             Catalog.Entry k = Catalog.Find(chosen);
             MountIcons.Icon icon = MountIcons.Of(k);
             // a mount that can't pull the cart has no Drive the cart (the user, 2026-10-25); one not installed: the donkey comes, it can
-            bool drives = MountSettingsPage.MountPullsCart(chosen) || e == null;
+            bool drives = MountSettingsPage.MountPullsCart(chosen);
+            bool missing = k == null;
+            drives = drives && !missing;
             if (driveButton != null && driveButton.activeSelf != drives) { driveButton.SetActive(drives); navDirty = true; }
+            if (rideButton != null && rideButton.activeSelf == missing) { rideButton.SetActive(!missing); navDirty = true; }
+            if (coloursButton != null && coloursButton.activeSelf == missing) { coloursButton.SetActive(!missing); navDirty = true; }
+            if (stageNote != null) stageNote.gameObject.SetActive(missing);
+            if (missing && picture != null) picture.gameObject.SetActive(false);
             headerIcon.gameObject.SetActive(icon.Any);
             if (icon.Any) Show(headerIcon, icon, HeaderIconPx);
             float textX = icon.Any ? HeaderIconPx + 12f : 0f;
@@ -483,6 +601,7 @@ namespace GK2DonkeyAPI
                 statLines[i].Label.text = label;
                 statLines[i].Value.text = value;
             }
+            ShowAbilities(e, k);
             if (e != null)
             {
                 headerName.text = e.Label;
@@ -494,7 +613,7 @@ namespace GK2DonkeyAPI
                 // skin whose frames the game lacks); the choice is kept, the donkey comes instead, and the panel says so
                 string why = null;
                 if (k != null) foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable != null) { why = sd.Unavailable; break; }
-                headerName.text = k?.Label ?? chosen;
+                headerName.text = k?.Label ?? NameFromId(chosen) + " (not installed)";
                 headerDesc.text = k == null ? "Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
                     : why != null ? "Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead."
                     : "It has no skin to wear. Your choice is kept; the donkey comes instead.";
@@ -802,6 +921,13 @@ namespace GK2DonkeyAPI
         // The panel closed (what was chosen kept) and the companion's mount called in the style, as the ride and cart keys do.
         private static bool committing; // Close from Ride / Drive the cart: the mount picked becomes his
         private static GameObject driveButton; // hidden for a mount that can't pull the cart
+        private static RectTransform abilitiesCard;
+        private static readonly List<(RawImage Icon, TextMeshProUGUI Name, TextMeshProUGUI Line)> abilityLines = new List<(RawImage, TextMeshProUGUI, TextMeshProUGUI)>();
+        private static float statsColX, statsColW, statsColTop;
+        private static GameObject rideButton, coloursButton; // hidden, with Drive, while the chosen mount isn't installed
+        private static TextMeshProUGUI stageNote; // "Not installed" on the empty stage
+        // The chosen mount's mod or pack is gone: nothing to draw, ride or colour here; pick another (the choice is kept).
+        private static bool ChosenMissing => page != null && Catalog.Find(page.MountChosen ?? MountCatalog.DonkeyId) == null;
         private static float journalW = 280f;  // the journal's rows' column (the stats card's)
 
         private static void Call(MountStyle style)
@@ -1460,7 +1586,7 @@ namespace GK2DonkeyAPI
                     nextPicture = 0f;
                 }
                 // as large as the stage allows, up to the scale, centred in it (the stage renders at 3x detail: a fraction of that is a smooth downscale)
-                if (panel.activeSelf) Fit(picture, stage, pic, PictureScale);
+                if (panel.activeSelf && !ChosenMissing) Fit(picture, stage, pic, PictureScale);
                 if (colours != null && coloursPicture != null) Fit(coloursPicture, coloursStage, pic, CPictureScale);
             }
             catch (Exception e)
@@ -1647,6 +1773,7 @@ namespace GK2DonkeyAPI
                     // again, so a skin added or withdrawn shows as it is now
                     if (page != null) foreach (MountSettingsPage.Row r in page.Rows) if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
                     entries = Entries();
+                    AddMissingChosen(entries);
                     BuildList();
                     BuildRight();
                 }
@@ -1721,6 +1848,10 @@ namespace GK2DonkeyAPI
                 pictureTex = null;
             }
             picture = null;
+            stageNote = null;
+            abilitiesCard = null;
+            abilityLines.Clear();
+            rideButton = coloursButton = null;
             headerIcon = null;
             listContent = rightArea = stage = contentRoot = null;
             listScroll = contentScroll = null;

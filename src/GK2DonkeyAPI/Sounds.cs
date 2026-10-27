@@ -131,6 +131,8 @@ namespace GK2DonkeyAPI
                 }
                 if (from != null) list.Add((d.Id, from, LineText(l)));
                 else if (d.Base == null) list.Add((d.Id, "none", "no sound (no layer gives one, the donkey has none)"));
+                else if (d.Id == "answer" && list.Exists(x => x.Item1 == "voice" && x.Item2 != "none" && x.Item2 != "missing" && x.Item3.IndexOf("silent", StringComparison.OrdinalIgnoreCase) < 0))
+                    list.Add((d.Id, list.Find(x => x.Item1 == "voice").Item2, "its voice, pitched up by the baby's size (no answer of its own)"));
                 else if (DonkeyOwnFor(d, mount, false)) list.Add((d.Id, "missing", "the donkey's own: silent on this mount until a pack gives one"));
                 else list.Add((d.Id, "donkey", "the donkey's (the player's keys)"));
             }
@@ -917,6 +919,19 @@ namespace GK2DonkeyAPI
                 touched |= Apply(ov, "mod", null, ov?.Owner ?? "mod", r, ref vol, ref pitch);
                 r.Volume *= vol;
                 r.Pitch *= pitch;
+                // a baby's answer on a mount that gives none: its mount's own voice, pitched up by the baby's size as every
+                // baby sound is (PitchScale), not silence (the user, 2026-10-27: Gerry's babies never answered him). A mount
+                // whose voice is silent (the worm) stays silent.
+                if (eventId == "answer" && r.Missing)
+                {
+                    SoundEvents.Def v = SoundEvents.Find("voice");
+                    SoundSpec voice = v != null ? ResolveNow(v, "voice", null) : null;
+                    if (voice != null && !voice.Silent && !voice.Missing)
+                    {
+                        voice.Layer += " (its voice: no answer of its own)";
+                        return voice;
+                    }
+                }
                 return touched ? r : null;
             }
 
@@ -1075,7 +1090,8 @@ namespace GK2DonkeyAPI
                     id = StepIdFor(surface);
                 }
                 if (id == null) return null;
-                float v = s.Volume * owner.S.SoundVolume.Value * volumeScale * VolumeScale;
+                float group = VoiceEvent(eventId) ? owner.S.VoicesVolume.Value : IsBaby ? owner.S.BabyStepsVolume.Value : owner.S.StepsVolume.Value; // the three sliders (2026-10-27)
+                float v = s.Volume * owner.S.SoundVolume.Value * group * volumeScale * VolumeScale;
                 float var = s.PitchVariation;
                 float p = s.Pitch * pitchScale * PitchScale * (var > 0f ? 1f + UnityEngine.Random.Range(-var, var) : 1f);
                 SoundHandler h = PlayId(id, at, v, p, s.Start);
@@ -1107,6 +1123,10 @@ namespace GK2DonkeyAPI
 
             // Drawn smaller than the grown one: a baby (the [Sounds.Baby] blocks apply, the answers are its).
             internal bool IsBaby => owner.ViewScale > 0.01f && owner.ViewScale < 0.99f;
+
+            // The voice group (VoicesVolume): the calls and answers, and the mouth's other sounds; everything else is Steps
+            // (StepsVolume) on a grown mount and Baby steps (BabyStepsVolume) on a baby.
+            internal static bool VoiceEvent(string eventId) => eventId == "voice" || eventId == "answer" || eventId == "lips" || eventId == "graze";
 
             // A smaller creature (a foal, ViewScale 0.6) is higher and softer; a grown one is as it is.
             internal float PitchScale

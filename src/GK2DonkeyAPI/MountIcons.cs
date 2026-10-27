@@ -98,10 +98,55 @@ namespace GK2DonkeyAPI
             return default;
         }
 
-        // A pack's standing picture, cropped to its opaque pixels, as a small texture of its own (a few KB).
-        private static Texture2D Decode(Looks.SkinDef d)
+        // The Mounts panel's ability icons (2026-10-27): a frame of the mount's own look by its key (bdy_glide_left_01 for
+        // Flying: the mount in the air), else its standing picture; and the cart's wheel as the game draws it, found on any
+        // mount whose cart is drawn (the first found is kept).
+        internal static Icon FrameOf(Catalog.Entry k, string key)
         {
-            byte[] png = d.LoadPng(RestKey);
+            if (k == null) return default;
+            try
+            {
+                Looks.SkinDef d = Looks.Find(Looks.DefaultSkinOf(k));
+                if (d != null)
+                {
+                    Sprite s = null;
+                    try { if (d.Sprites != null && !d.Sprites.TryGetFrame(key, out s)) s = null; } catch { s = null; }
+                    if (s != null && s) return FromSprite(s);
+                    if (d.LoadPng != null && Looks.HasOwnKey(d, key))
+                    {
+                        string cacheKey = d.Id + "|" + key;
+                        if (!decoded.TryGetValue(cacheKey, out Texture2D tex) || (tex != null && !tex))
+                        {
+                            tex = Decode(d, key);
+                            decoded[cacheKey] = tex;
+                        }
+                        if (tex != null) return Whole(tex);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                if (failedLogged.Add(k.Id + "|" + key)) Plugin.Log.LogInfo($"Settings: no '{key}' picture for the mount '{k.Id}' ({e.Message}); its standing one instead.");
+            }
+            return Of(k);
+        }
+
+        private static Sprite wheel;
+
+        internal static Icon CartWheel()
+        {
+            if (wheel == null || !wheel)
+            {
+                wheel = null;
+                Mount.ForEachInstance(i => { if (wheel == null && i.HasCart && i.ColorsRig != null) wheel = i.ColorsRig.WheelSprite; }, bind: false);
+            }
+            return wheel != null ? FromSprite(wheel) : default;
+        }
+
+        // A pack's standing picture, cropped to its opaque pixels, as a small texture of its own (a few KB).
+        private static Texture2D Decode(Looks.SkinDef d, string key = RestKey)
+        {
+            byte[] png = d.LoadPng(key);
             if (png == null) return null;
             Color32[] px = Looks.DecodePng(png, out int w, out int h, out string why, d.CanvasW, d.CanvasH);
             return Cropped(px, w, h, d.Id);

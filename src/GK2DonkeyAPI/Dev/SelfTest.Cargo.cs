@@ -211,9 +211,11 @@ namespace GK2DonkeyAPI
 
         // Cargo per mount (docs/next-update.md section 3, the user's go of 2026-10-27): the cart holds the smaller of the
         // player's Cart capacity and its mount's [Mount] cargo (the rat 2, Gerry 4, the donkey 6), re-applied when the
-        // mount changes under a hitched cart, and never below the load (a lighter mount sheds nothing).
+        // mount changes under a hitched cart; a lighter mount with more aboard leaves the cart standing (2026-10-27).
         private static IEnumerator CargoPerMount()
         {
+            string noPack = MissingPack("rat"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Catalog.Entry rat = Catalog.Find(M("rat")), gerry = Catalog.Find(M("gerry"));
             if (rat == null || gerry == null || Looks.Find(Sk("rat")) == null || Looks.Find(Sk("gerry")) == null)
             {
@@ -230,6 +232,7 @@ namespace GK2DonkeyAPI
             var guids = new HashSet<string>();
             Inventory Inv() => h.I.CargoRig.Inv;
             int Size() => Inv() != null ? Inv().Data.InventorySize : -1;
+            MountHandle left = null;
             try
             {
                 Mounts.Behaviour.ClearAny("CartSlots"); // Saddle Up holds it: taken over for the test, given back in the finally
@@ -239,18 +242,28 @@ namespace GK2DonkeyAPI
                 foreach (Item it in h.I.CargoRig.ItemsNow()) guids.Add(it.UniqueId.ToString());
                 Check(h.I.CargoRig.Count == 4, $"four items on the donkey's cart ({h.I.CargoRig.Count})");
 
+                // a lighter mount with more aboard than it pulls (the user, 2026-10-27: Gerry hitched to the donkey's six): the
+                // cart is left standing with its load, and hitching it is refused until it holds no more than the mount pulls
                 h.Tuning.Set(Owner, "Skin", Sk("rat"));
-                yield return Until(() => Looks.MountWanted(h.I) == rat, 10f);
+                yield return Until(() => Looks.MountWanted(h.I) == rat && !h.HasCart, 10f);
                 yield return Frames(2);
-                Check(Looks.MountWanted(h.I) == rat && h.I.CargoRig.Count == 4 && Size() == 4, $"switched to the rat with four aboard: all four kept, the size at the load ({h.I.CargoRig.Count} on it, {Size()} slots)");
-                Check(Inv() != null && !Inv().AddItemToInventory(new Item("wood")), "and a fifth is refused");
+                foreach (MountHandle x in Mounts.InstancesOf(Owner)) if (x.Exists && x.HasCart && !x.HasDonkey) left = x;
+                Check(Looks.MountWanted(h.I) == rat && !h.HasCart && left != null && left.I.CargoRig.Count == 4,
+                    $"switched to the rat with four aboard: the cart is left standing with all four ({(h.HasCart ? "still hitched" : "unhitched")}, the free cart {(left == null ? "missing" : left.I.CargoRig.Count + " on it")})");
+                if (left == null) yield break;
+                yield return Until(() => h.IsReady && left.IsReady, 6f);
+                MountResult refused = Mounts.Hitch(h, left);
+                Check(!refused.Ok && (refused.Reason ?? "").Contains("2 items at most") && (refused.Reason ?? "").Contains("Take 2 off"), $"hitching it to the rat is refused with why (\"{refused.Reason}\")");
                 int removed = 0;
-                foreach (Item it in new List<Item>(Inv().Data.Inventory))
+                foreach (Item it in new List<Item>(left.I.CargoRig.Inv.Data.Inventory))
                 {
-                    if (removed < 2 && guids.Contains(it.UniqueId.ToString())) { Inv().RemoveItemFromInventoryByUID(it); removed++; }
+                    if (removed < 2 && guids.Contains(it.UniqueId.ToString())) { left.I.CargoRig.Inv.RemoveItemFromInventoryByUID(it); removed++; }
                 }
                 yield return Frames(1);
-                Check(h.I.CargoRig.Count == 2 && Size() == 2, $"two off: the rat's two ({h.I.CargoRig.Count} on it, {Size()} slots)");
+                MountResult back = Mounts.Hitch(h, left);
+                Check(back.Ok, $"two off the standing cart: the rat takes it ({(back.Ok ? "hitched" : back.Reason)})");
+                yield return Until(() => h.IsReady && h.HasCart && h.I.CargoRig.Inv != null, 6f);
+                Check(h.HasCart && h.I.CargoRig.Count == 2 && Size() == 2, $"the rat's two ({h.I.CargoRig.Count} on it, {Size()} slots)");
                 Check(Inv() != null && !Inv().AddItemToInventory(new Item("wood")), "the rat's cart full at two");
 
                 h.Tuning.Set(Owner, "Skin", Sk("gerry"));
@@ -274,6 +287,14 @@ namespace GK2DonkeyAPI
                     {
                         if (guids.Contains(it.UniqueId.ToString())) h.I.CargoRig.Inv.RemoveItemFromInventoryByUID(it);
                     }
+                }
+                if (left != null && left.Exists && left.I.CargoRig.Inv != null)
+                {
+                    foreach (Item it in new List<Item>(left.I.CargoRig.Inv.Data.Inventory))
+                    {
+                        if (guids.Contains(it.UniqueId.ToString())) left.I.CargoRig.Inv.RemoveItemFromInventoryByUID(it);
+                    }
+                    left.Remove();
                 }
                 if (h.Exists) h.Remove();
             }

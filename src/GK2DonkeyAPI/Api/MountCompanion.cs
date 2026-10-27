@@ -62,14 +62,19 @@ namespace GK2DonkeyAPI.Api
         internal int foals;
         internal bool foalsFollow, foalsIndoors, foalsWearSkin = true, lantern = true, lanternByDay = true;
         internal string name;
-        internal float volume = 1f;
+        internal float volume = 1f, stepsVolume = 1f, babyStepsVolume = 1f;
 
         public int FoalCount { get => foals; set { foals = Mathf.Clamp(value, 0, MountCompanion.MaxFoals); owner.OwnChanged(this); } }
         public bool FoalsFollowOnFoot { get => foalsFollow; set { foalsFollow = value; owner.OwnChanged(this); } }
         public bool FoalsComeIndoors { get => foalsIndoors; set { foalsIndoors = value; owner.OwnChanged(this); } }
         public bool FoalsWearSkin { get => foalsWearSkin; set { foalsWearSkin = value; owner.OwnChanged(this); } }
         public string Name { get => name; set { name = value; owner.OwnChanged(this); } }
+        // Its voices (calls, its babies' answers; 0.40.0: the voices only, before every sound), its steps and the rest, its
+        // babies' steps: 0 to 1.5 each, times the player's SoundVolume (the API cfg's VoicesVolume, StepsVolume,
+        // BabyStepsVolume while this is the current mount's).
         public float SoundVolume { get => volume; set { volume = Mathf.Clamp(value, 0f, 1.5f); owner.OwnChanged(this); } }
+        public float StepsVolume { get => stepsVolume; set { stepsVolume = Mathf.Clamp(value, 0f, 1.5f); owner.OwnChanged(this); } }
+        public float BabyStepsVolume { get => babyStepsVolume; set { babyStepsVolume = Mathf.Clamp(value, 0f, 1.5f); owner.OwnChanged(this); } }
         public bool Lantern { get => lantern; set { lantern = value; owner.OwnChanged(this); } }
         public bool LanternByDay { get => lanternByDay; set { lanternByDay = value; owner.OwnChanged(this); } }
     }
@@ -471,6 +476,7 @@ namespace GK2DonkeyAPI.Api
                 // Asked before anyone is called: the cart refused here (indoors, in a fight) or by the mount (a dragon pulls
                 // none) leaves the mount and the cart where they are, instead of bringing them in and refusing the cart
                 // after (BringCart asks the same; the user, 2026-10-26: "although it cant pull it, it still brings it")
+                // (a cart holding more than the mount pulls is not refused here: it is brought over and left unhitched, BringCart)
                 string noCart = Mount.Instance.WhyNotCart(keeper) ?? (Donkey != null && Donkey.Exists ? GK2DonkeyAPI.Looks.WhyNotCartByMount(Donkey.I) : null);
                 if (noCart != null)
                 {
@@ -586,6 +592,16 @@ namespace GK2DonkeyAPI.Api
             if (!come.Ok)
             {
                 return come.Reason;
+            }
+            // more on it than this mount pulls (Gerry, 4, and the donkey's six): the cart comes over all the same and stands
+            // there unhitched, so the extra can be taken off it on foot (the user, 2026-10-27: "still bring the cart to him but
+            // dont hitch it")
+            string tooMuch = GK2DonkeyAPI.Looks.WhyNotCartByLoad(to.I, Cart.I);
+            if (tooMuch != null)
+            {
+                Mount.Say(tooMuch);
+                Plugin.Log.LogInfo($"Companion: the cart came over with {Cart.I.CargoRig.Count} item(s) but stays unhitched: {tooMuch}");
+                return tooMuch;
             }
             MountResult hitched = Mounts.Hitch(to, Cart);
             return hitched.Ok ? null : hitched.Reason;
@@ -824,7 +840,9 @@ namespace GK2DonkeyAPI.Api
                 MountTuning t = Mounts.Tuning(style);
                 Session(t, "BrayOnMountChance", !brays, 0f);
                 Session(t, "BrayIdleEverySeconds", !brays, 0f);
-                Session(t, "SoundVolume", !Mathf.Approximately(Current.SoundVolume, 1f), Current.SoundVolume);
+                Session(t, "VoicesVolume", !Mathf.Approximately(Current.SoundVolume, 1f), Current.SoundVolume);
+                Session(t, "StepsVolume", !Mathf.Approximately(Current.StepsVolume, 1f), Current.StepsVolume);
+                Session(t, "BabyStepsVolume", !Mathf.Approximately(Current.BabyStepsVolume, 1f), Current.BabyStepsVolume);
             }
             MountTuning cart = Mounts.Tuning(MountStyle.Cart);
             Session(cart, "BellOnSetOff", !bell, false);

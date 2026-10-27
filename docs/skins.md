@@ -181,7 +181,7 @@ donkey's: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast
 (`MountInfo.SpeedWord`; the number is `MountInfo.Speed`). A mount without one rides at the donkey's, the API cfg's
 `[Ride]` / `[Cart]` `SpeedMultiplier`. Tested in game up to 2.5 riding. `cargo` is how many items its cart carries,
 1 to 6, shown as "Cargo: 6 items": its cart holds that many, or the player's Cart capacity when that is smaller (since
-API 0.40.0; a lighter mount never drops what a cart already holds). The built-in cargo: the giant rat 2, Gerry and the
+API 0.40.0; a mount that pulls fewer than a cart holds leaves it standing with its load and can't hitch it until the extra is off). The built-in cargo: the giant rat 2, Gerry and the
 giant worm 4, the donkey and the giant snail 6 (the faster, the lighter; docs/next-update.md section 3). The built-in speeds: donkey 2, rat 2.75 (above the 2.5 seen in game so far), Gerry 2.25, dragon 1.6, worm 1.75, snail 1.25.
 
 Back in `skin.cfg`: two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up):

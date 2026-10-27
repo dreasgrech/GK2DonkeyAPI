@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System;
 using System.Collections;
 using System.IO;
@@ -15,13 +16,16 @@ namespace GK2DonkeyAPI
         {
             var packOf = new[] { ("dragon", "SaddleUpDragon", "dreas.gk2.saddleup.dragon"), ("rat", "SaddleUpCritters", "dreas.gk2.saddleup.critters"),
                 ("snail", "SaddleUpCritters", "dreas.gk2.saddleup.critters"), ("worm", "SaddleUpCritters", "dreas.gk2.saddleup.critters") };
+            int missing = 0;
             foreach ((string name, string pack, string guid) in packOf)
             {
                 Catalog.Entry k = Catalog.Find(M(name));
                 if (k == null)
                 {
-                    Skip($"the pack {pack} is not installed ({M(name)} isn't registered): build packs/{pack}/{pack}.csproj with the game closed");
-                    yield break;
+                    // a pack left out (Saddle Up alone, or one pack; the user, 2026-10-27): the others are still checked
+                    Info($"GK2 Saddle Up's {pack} pack isn't installed ({M(name)} isn't registered): not checked");
+                    missing++;
+                    continue;
                 }
                 string asm = k.Pack?.SourceAssembly?.GetName().Name, dll = "GK2" + pack; // the DLL GK2-prefixed since 2026-10-27, the folder packs/<pack>
                 Check(k.Owner == guid && asm == dll && k.Pack?.Source == null,
@@ -31,9 +35,25 @@ namespace GK2DonkeyAPI
                 Check(own != null && own.Owner == k.Owner && own.SourceAssembly?.GetName().Name == dll,$"{Sk(name)}: its own look from the same DLL ({own?.Owner})");
                 Check(BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(guid), $"{pack} is a BepInEx plugin of its own ({guid})");
             }
+            if (missing > 0) Info($"{missing} of {packOf.Length} pack mounts not installed: Saddle Up's own content below is checked all the same");
+            // a chosen mount whose pack is gone shows in the Mounts panel by a name made from its id (2026-10-27)
+            Check(MountsPanel.NameFromId("saddleup-dragon.dragon") == "Dragon" && MountsPanel.NameFromId("my-mod.big-crab") == "Big crab" && MountsPanel.NameFromId("plain") == "Plain",
+                $"a missing mount's name from its id: {MountsPanel.NameFromId("saddleup-dragon.dragon")}, {MountsPanel.NameFromId("my-mod.big-crab")}");
             Catalog.Entry gerry = Catalog.Find(M("gerry"));
             Check(gerry != null && gerry.Pack?.Source == null && gerry.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUp",
                 $"Gerry: built into Saddle Up's DLL ({gerry?.Pack?.SourceAssembly?.GetName().Name ?? "none"})");
+            // a mount with a voice and no answer of its own: its babies answer with its voice, pitched up (the user, 2026-10-27:
+            // Gerry's babies never answered him)
+            var gerrySounds = Sounds.Coverage(Looks.Find(Sk("gerry")), gerry, baby: true);
+            var answer = gerrySounds.Find(x => x.Event == "answer");
+            Check(answer.What != null && answer.What.Contains("its voice") && answer.From != "missing", $"Gerry's babies answer with his voice ({answer.From}: {answer.What})");
+            // the Mounts panel's abilities card (2026-10-27): Gerry's cart with his cargo; the dragon flies and pulls none
+            List<MountsPanel.Entry> panelEntries = MountsPanel.Entries();
+            MountsPanel.Entry gerryEntry = panelEntries.Find(x => x.Id == M("gerry")), dragonEntry = panelEntries.Find(x => x.Id == M("dragon"));
+            Check(gerryEntry != null && gerryEntry.Abilities.Exists(x => x.Name == "Cargo cart" && x.Line.Contains("4 items")) && !gerryEntry.Abilities.Exists(x => x.Name == "Flying"),
+                $"Gerry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
+            if (dragonEntry != null) Check(dragonEntry.Abilities.Exists(x => x.Name == "Flying") != !Flight.Active && !dragonEntry.Abilities.Exists(x => x.Name == "Cargo cart"),
+                $"the dragon's abilities: flying, no cargo cart ({string.Join(", ", dragonEntry.Abilities.ConvertAll(x => x.Name))})");
             foreach (string skin in new[] { Sk("hellfire"), Sk("royal-parade") })
             {
                 Looks.SkinDef d = Looks.Find(skin);

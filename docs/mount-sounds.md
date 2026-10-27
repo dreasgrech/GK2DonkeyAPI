@@ -18,7 +18,7 @@ authors; the player-facing keys are in [reference.md](reference.md) "Sounds".
 | `lips` | the game's lip-smack animation event | the game's `donkey_lips` by default |
 | `ear`, `turn` | the ear clip / the turning-head clip starts | silent unless a layer gives a sound |
 | `voice` | the creature's call | the idle timer (`idle_every` seconds, 0 = never; `while_walking`), a chance at mounting (`mount_chance`), `Mounts.Bray()`; the donkey's `voice_donkey` |
-| `answer` | a baby's reply to its parent's call: once it has ended, siblings in a new order each call with uneven gaps (now and then two at once, sometimes a pause), each a touch higher or lower | the donkey's voice pitched up by the baby's size unless `[Sounds.Baby]` gives one |
+| `answer` | a baby's reply to its parent's call: once it has ended, siblings in a new order each call with uneven gaps (now and then two at once, sometimes a pause), each a touch higher or lower | the mount's own voice pitched up by the baby's size unless `[Sounds.Baby]` gives one (the donkey's bray for the donkey; silent only when its voice is) |
 | `refused` | a ride or a hitch refused at the mount | silent unless a layer gives a sound (the game's `donkey_default_nope` is a fit) |
 | `mount`, `dismount` | the keeper gets on / off | not at doors, scene changes, failed re-summons, style changes |
 | `hitch`, `unhitch` | a cart hitched / left standing | |

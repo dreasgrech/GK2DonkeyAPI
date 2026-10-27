@@ -144,7 +144,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
             new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
             new Scenario { Group = GroupCargo, Name = "cargo: a cart with a hitch gap keeps its place as items go on", Body = CargoKeepsTheGap },
-            new Scenario { Group = GroupCargo, Name = "cargo: each mount carries its own (the smaller of it and Cart capacity, nothing dropped)", Body = CargoPerMount },
+            new Scenario { Group = GroupCargo, Name = "cargo: each mount carries its own (a lighter mount leaves an over-full cart standing)", Body = CargoPerMount },
             new Scenario { Group = GroupIndoors, Name = "indoors: the two switches (refused, ended, allowed) under the indoor light", Body = IndoorsRules },
             new Scenario { Group = GroupIndoors, Name = "indoors: through a building's door riding and driving, and back out", Body = IndoorsThroughADoor },
             new Scenario { Group = GroupIndoors, Name = "indoors: the cart left at the morgue door, the corpse into the hands, the mount inside", Body = IndoorsMorgue },
@@ -921,7 +921,8 @@ namespace GK2DonkeyAPI
             parent.SetData(Owner, "tricky", v2);
             parent.Tuning.Set(Owner, "CoatColorize", "00FF80");
             cartDonkey.Tuning.Set(Owner, "Skin", Sk("rat")); // a skin whose own [Tuning.Cart] sets a cart-style value (the rat's HitchGapPx 9; the dragon pulls no cart since 2026-10-25): the skin id is kept, the merged value is not
-            yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the rat's cart-style values once the view is up
+            bool ratThere = MissingPack("rat") == null; // the rat's pack may be left out: its skin id is kept all the same
+            if (ratThere) yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the rat's cart-style values once the view is up
             yield return Frames(2);
             List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
             Check(kept.Count == (foal != null ? 4 : 3), $"the kept list has the test's {kept.Count} (parent, foal, donkey with cart, free cart)");
@@ -970,7 +971,8 @@ namespace GK2DonkeyAPI
             Check(pr != null && pr.DataLines.Exists(x => x[1] == "tricky" && x[2] == v2), "a value with a tab, a line break and a backslash comes back exactly");
             Mount.Record cr = records.Find(x => x.Key == "rt cart");
             Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == Sk("rat")), $"the skin id is in the record (Skin = {Sk("rat")})");
-            Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the rat's own hitch gap is on the wearer (cart style) but not in the record");
+            if (ratThere) Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the rat's own hitch gap is on the wearer (cart style) but not in the record");
+            else Info("GK2 Saddle Up: Critters isn't installed: the rat's own hitch gap on the wearer isn't checked (its skin id is kept all the same)");
         }
 
         // A donkey takes a free cart and leaves it again: one instance with the cart (the cart's data merged, its parts
@@ -1410,6 +1412,8 @@ namespace GK2DonkeyAPI
         // per-mount rows at CatchUp (what Show runs the frame after Publish).
         private static IEnumerator SettingsRows()
         {
+            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             foreach (MountSettingsPage live in MountSettingsPage.All)
             {
                 if (!live.Shown || !live.HasMountRow) continue;
@@ -1582,6 +1586,8 @@ namespace GK2DonkeyAPI
         // when a mount can't be ridden. The player's AutoSeat value is put back at the end.
         private static IEnumerator SeatReadout()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             StyleSettings ride = Plugin.For(MountStyle.Ride);
             bool autoWas = ride.AutoSeat.Entry.Value;
             const float px = 0.02f * 1.6667f; // Mount.PxWorldY: one art pixel along the seat's axis
@@ -1671,6 +1677,8 @@ namespace GK2DonkeyAPI
         // spawn with a cart wearing it is refused instead.
         private static IEnumerator CartReadout()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             const float pxX = 0.02f;            // Mount.PxWorld: one art pixel along the ground
             const float pxY = 0.02f * 1.6667f;  // Mount.PxWorldY: one art pixel along the seat's axis
             var clearance = new Dictionary<string, float>(StringComparer.Ordinal);
@@ -1788,6 +1796,8 @@ namespace GK2DonkeyAPI
         // donkey's). Nothing picks an effect in this version, so the rig is told through its test hook (TestWant).
         private static IEnumerator SkinEffect()
         {
+            string noPack = MissingPack("rat"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -1811,6 +1821,8 @@ namespace GK2DonkeyAPI
         // region (the worm) and live on the rat, the snail, the dragon (its belly) and the donkey.
         private static IEnumerator SecondTone()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon and the donkey have a second tone: the row is live for them");
             Check(!MountSettingsPage.MountHasRegion(M("worm"), "Muzzle"), "the worm has none: the row is left out for it");
             const string owner = Owner + ".secondtone";
@@ -1849,6 +1861,8 @@ namespace GK2DonkeyAPI
         // the worm's 720 are all paired, the first run showed, 2026-10-20).
         private static IEnumerator CoatEveryBuiltIn()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -1900,6 +1914,8 @@ namespace GK2DonkeyAPI
         // gap must follow the worn skin within two frames.
         private static IEnumerator PreviewGap()
         {
+            string noPack = MissingPack("rat", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("rat")) == null)
             {
                 Warn("the built-in worm or rat isn't registered: skipped");
@@ -1956,6 +1972,8 @@ namespace GK2DonkeyAPI
         // pixels show whose colour is in front: the keeper's over the body, the wing's over the keeper.
         private static IEnumerator FrontLayer()
         {
+            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -2047,6 +2065,8 @@ namespace GK2DonkeyAPI
         // reds under the harness colour and its cloth drawn in the walk; the snail's own rider offset on its wearer.
         private static IEnumerator OverBuiltIns()
         {
+            string noPack = MissingPack("snail"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -2225,6 +2245,8 @@ namespace GK2DonkeyAPI
         // Muzzle setting changes the belly's colours only (its [Colors]).
         private static IEnumerator SkinColours()
         {
+            string noPack = MissingPack("dragon", "rat", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("dragon")) == null)
             {
                 Warn("the built-in worm or dragon isn't registered: skipped");
@@ -2802,6 +2824,8 @@ namespace GK2DonkeyAPI
         // its pictures loaded; cleared: the donkey's own body again; removed: the pictures freed.
         private static IEnumerator SkinOnOff()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             // a built-in nobody wears at the moment: a skin's sheet is one texture shared by its wearers (refcounted), so
             // the counts below only move for a skin that is not loaded yet (the player's own mount may be the rat)
             string id = null;
@@ -2898,6 +2922,20 @@ namespace GK2DonkeyAPI
             ["worm"] = "saddleup-critters.worm", ["gerry"] = "saddleup.gerry",
         };
         private const string SaddleUpPrefix = "saddleup.";
+
+        // Which of our mount packs a scenario needs is not installed (the user, 2026-10-27: "have we done tests without
+        // loading the extra mounts dlls"): a player may have Saddle Up alone, or one pack. Null: all there; else the
+        // skip line naming the pack.
+        internal static string MissingPack(params string[] mounts)
+        {
+            foreach (string m in mounts)
+            {
+                if (Catalog.Find(M(m)) != null) continue;
+                string pack = m == "dragon" ? "GK2 Saddle Up: Dragon" : "GK2 Saddle Up: Critters";
+                return $"{pack} isn't installed (no {m}): this needs it";
+            }
+            return null;
+        }
 
         // A shipped mount's id by its short name: "dragon" -> "saddleup-dragon.dragon"; "donkey" and any other id as it is.
         internal static string M(string name)
@@ -3895,6 +3933,8 @@ namespace GK2DonkeyAPI
         // Many skinned donkeys spawned and removed, twice: the skin loads once, and everything is freed at the end.
         private static IEnumerator SkinLeaks()
         {
+            string noPack = MissingPack("rat", "snail"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             if (Looks.Find(Sk("rat")) == null)
             {
                 Warn("no built-in skin 'rat': skipped");
@@ -3936,6 +3976,8 @@ namespace GK2DonkeyAPI
         // sleep tier: Sleep), and is built again when it wakes (docs/mounts-foundation-2.md 2.5).
         private static IEnumerator SkinSleep()
         {
+            string noPack = MissingPack("rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             string skin = null;
             foreach (string id in new[] { "rat", "snail", "worm" }) if (Looks.Find(Sk(id)) != null && !Looks.IsLoaded(Sk(id))) { skin = Sk(id); break; }
             if (skin == null)
@@ -4130,8 +4172,17 @@ namespace GK2DonkeyAPI
                 if (!MountsPanel.IsOpen) yield break;
                 var m = MountsPanel.TestMeasure();
                 Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
-                Check(MountsPanel.TestEntries >= 1 && MountsPanel.TestRows > 0 && string.Equals(MountsPanel.TestBuiltFor, was, StringComparison.OrdinalIgnoreCase), $"it lists {MountsPanel.TestEntries} mount(s) and built {MountsPanel.TestRows} rows for the chosen one ({was})");
-                string firstOrder = JournalChecks(was);
+                // the chosen mount's pack may be left out (Saddle Up alone, one pack; 2026-10-27): it is listed greyed, with no
+                // rows, no picture and no Ride, Drive or Colours; the rest of the test runs from the mounts that are there
+                bool wasMissing = Catalog.Find(was) == null;
+                if (wasMissing)
+                {
+                    Check(MountsPanel.TestEntries >= 2 && MountsPanel.TestRows == 0 && string.Equals(MountsPanel.TestBuiltFor, was, StringComparison.OrdinalIgnoreCase) && !MountsPanel.TestDriveShown && MountsPanel.TestPicture == null
+                        && MountsPanel.Entries().Count < MountsPanel.TestEntries,
+                        $"the chosen {was} isn't installed: listed greyed (the panel {MountsPanel.TestEntries} entries), no rows ({MountsPanel.TestRows}), no picture, no Drive the cart");
+                }
+                else Check(MountsPanel.TestEntries >= 1 && MountsPanel.TestRows > 0 && string.Equals(MountsPanel.TestBuiltFor, was, StringComparison.OrdinalIgnoreCase), $"it lists {MountsPanel.TestEntries} mount(s) and built {MountsPanel.TestRows} rows for the chosen one ({was})");
+                string firstOrder = wasMissing ? null : JournalChecks(was);
                 TMPro.TMP_InputField nameField = MountsPanel.TestNameField();
                 if (nameField == null) Info("no name row in this page's journal: the text box check skipped");
                 else
@@ -4159,6 +4210,7 @@ namespace GK2DonkeyAPI
                     Check(me != null && me.Skin == hadSkin && string.Equals(Looks.MountOf(Looks.Find(me.Paper.LooksRig.DefNow?.Id ?? ""))?.Id ?? MountCatalog.DonkeyId, other, StringComparison.OrdinalIgnoreCase),
                         $"and his mount is not changed: the companion still wears \"{me?.Skin}\", the picture's paper wears {other}'s (\"{me?.Paper.LooksRig.DefNow?.Id}\")");
                     string otherOrder = JournalChecks(other);
+                    if (firstOrder == null) firstOrder = otherOrder; // the chosen one not installed: the first installed one sets the order
                     Check(SameOrder(firstOrder, otherOrder), $"the journal's rows come in one order on {was} and {other} ({firstOrder} / {otherOrder})");
                     var m2 = MountsPanel.TestMeasure();
                     Check(m2.W * m2.Scale <= m2.RoomW + 1f && m2.H * m2.Scale <= m2.RoomH + 1f, $"still on the screen ({m2.W:0}x{m2.H:0} at {m2.Scale:0.##})");
@@ -4170,7 +4222,8 @@ namespace GK2DonkeyAPI
                     if (noCart == null && !MountSettingsPage.MountPullsCart(e.Id)) noCart = e.Id;
                     if (withCart == null && MountSettingsPage.MountPullsCart(e.Id)) withCart = e.Id;
                 }
-                if (noCart == null || withCart == null) Warn("no mount that can't pull the cart (or none that can) in the list: the cart check skipped");
+                if ((noCart == null || withCart == null) && MissingPack("dragon") != null) Info("GK2 Saddle Up: Dragon isn't installed (no mount without a cart): the cart check skipped");
+                else if (noCart == null || withCart == null) Warn("no mount that can't pull the cart (or none that can) in the list: the cart check skipped");
                 else
                 {
                     MountsPanel.TestSelect(noCart);
@@ -4247,7 +4300,9 @@ namespace GK2DonkeyAPI
                     Check(string.Equals(page.MountChosen, other, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, other, StringComparison.OrdinalIgnoreCase), $"closed as Ride and Drive close it: {other} is his (the companion's mount {meNow.MountId}, \"{meNow.Skin}\")");
                     page.SelectMount(was); // put back, outside the panel: at once
                     yield return Frames(2);
-                    Check(string.Equals(meNow.MountId, was, StringComparison.OrdinalIgnoreCase), $"and back to {was} outside the panel, at once (\"{meNow.Skin}\")");
+                    // a chosen mount that isn't installed: the page keeps the choice, the companion rides the donkey meanwhile
+                    Check(wasMissing ? string.Equals(page.MountChosen, was, StringComparison.OrdinalIgnoreCase) && string.Equals(meNow.MountId, MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase)
+                        : string.Equals(meNow.MountId, was, StringComparison.OrdinalIgnoreCase), $"and back to {was} outside the panel, at once (\"{meNow.Skin}\"{(wasMissing ? ", the donkey until it is installed" : "")})");
                 }
                 MountsPanel.Open(page, toggle: true);
                 yield return Frames(2);
@@ -4596,6 +4651,9 @@ namespace GK2DonkeyAPI
                 yield break;
             }
             int parked0 = Lod.ParkedTotal, poolBefore = ViewPool.Count;
+            // reuses counted from before the keeper goes: a world's mount waking near the far spot takes a parked view as
+            // soon as it is in the pool (2026-10-27: the player's cart left standing out there took one, pool 0 -> 1)
+            int reused0 = Lod.ReusedTotal;
             yield return MoveKeeper(far.Value, homeFacing);
             if (!moved) yield break;
             yield return Until(() => d1.I.tier == Mount.Tier.Asleep && f1.I.tier == Mount.Tier.Asleep, 6f);
@@ -4606,7 +4664,6 @@ namespace GK2DonkeyAPI
             }
             yield return Frames(2);
             Check(Lod.ParkedTotal - parked0 >= 2, $"both views parked ({Lod.ParkedTotal - parked0} parked; pool {poolBefore} -> {ViewPool.Count})");
-            int reused0 = Lod.ReusedTotal; // from before the keeper comes back: the world's donkeys wake with him
             d1.Remove();
             f1.Remove();
             PutKeeper(home, homeFacing);

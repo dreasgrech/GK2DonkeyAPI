@@ -59,7 +59,7 @@ namespace GK2DonkeyAPI
         // Sounds tab (Sounds.cs: the base layer of every mount's sounds). Volumes multiply the game's own volume for that sound (1 = as the game plays it).
         public readonly Tuned<bool> SoundsOn, HoofOn, HoofSurfaceAware, GrazeOn, BrayWhileWalking, BrayInSfxChannel,
             CargoThumpOn, WheelOn, WheelPitchFollowsSpeed, BellOnSetOff, BellOnlyWithCargo, MountOn, DismountOn, HitchOn, UnhitchOn;
-        public readonly Tuned<float> SoundVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
+        public readonly Tuned<float> SoundVolume, VoicesVolume, StepsVolume, BabyStepsVolume, HoofVolume, HoofPitch, HoofPitchVariation, HoofPhase, GrazeVolume, LipsVolume,
             BrayOnMountChance, BrayIdleEverySeconds, BrayVolume, BrayPitch, CargoThumpVolume, CargoThumpPitch,
             WheelVolume, WheelPitch, WheelPhase, BellVolume, BellPitch, BellSetOffIdleSeconds,
             MountVolume, MountPitch, MountSoundStart, DismountVolume, DismountPitch, DismountSoundStart, HitchVolume, HitchPitch, UnhitchVolume, UnhitchPitch;
@@ -217,6 +217,10 @@ namespace GK2DonkeyAPI
             bool cart = section == "Cart";
             SoundsOn = B(cfg, section, "SoundsOn", true, "Master switch for all mount sounds added by the mod " + who + ".");
             SoundVolume = F(cfg, section, "SoundVolume", 1f, 0f, 3f, "Master volume multiplier for all mount sounds " + who + ".");
+            // three groups under it (the user, 2026-10-27: "split the sound slider into Voices, Steps and Baby steps")
+            VoicesVolume = F(cfg, section, "VoicesVolume", 1f, 0f, 3f, "Times SoundVolume, for the voices " + who + ": the mount's calls, its babies' answers, the lip smack and the chewing.");
+            StepsVolume = F(cfg, section, "StepsVolume", 1f, 0f, 3f, "Times SoundVolume, for everything else a grown mount makes " + who + ": its steps, the wheels, the cart, the bell, its wings.");
+            BabyStepsVolume = F(cfg, section, "BabyStepsVolume", 1f, 0f, 3f, "Times SoundVolume, for everything a baby makes but its answer " + who + ": its steps above all.");
             HoofOn = B(cfg, section, "HoofOn", true, "Hoofsteps: the game's donkey walks silently; this plays a step sound on each footfall of its walk cycle.");
             HoofSoundId = S(cfg, section, "HoofSoundId", "", "Sound id for the hoofsteps. Empty = by the ground under the donkey (step_grass/step_dirt/step_wood/step_stone, as the game's footsteps).");
             HoofSurfaceAware = B(cfg, section, "HoofSurfaceAware", true, "With an empty HoofSoundId: pick the step sound by the surface under the donkey. Off: always step_dirt.");
@@ -301,7 +305,7 @@ namespace GK2DonkeyAPI
         // Every sound entry, for the Sounds tab's reset and the defaults export.
         public ConfigEntryBase[] SoundEntries => new ConfigEntryBase[]
         {
-            SoundsOn, SoundVolume, HoofOn, HoofSoundId, HoofSurfaceAware, HoofVolume, HoofPitch, HoofPitchVariation, HoofStepsPerCycle, HoofPhase,
+            SoundsOn, SoundVolume, VoicesVolume, StepsVolume, BabyStepsVolume, HoofOn, HoofSoundId, HoofSurfaceAware, HoofVolume, HoofPitch, HoofPitchVariation, HoofStepsPerCycle, HoofPhase,
             GrazeOn, GrazeSoundId, GrazeVolume, LipsVolume,
             BraySoundId, BrayOnMountChance, BrayIdleEverySeconds, BrayWhileWalking, BrayVolume, BrayPitch, BrayInSfxChannel,
             CargoThumpOn, CargoThumpSoundId, CargoThumpVolume, CargoThumpPitch,

@@ -613,6 +613,21 @@ namespace GK2DonkeyAPI
             }
 
             private readonly List<SpriteTarget> sprites = new List<SpriteTarget>();
+
+            // A wheel of its cart as the game draws it (in this rig's colours): the Mounts panel's Cargo cart icon. Null:
+            // no cart drawn on this one.
+            internal Sprite WheelSprite
+            {
+                get
+                {
+                    for (int i = 0; i < sprites.Count; i++)
+                    {
+                        SpriteTarget t = sprites[i];
+                        if (t.G == Group.WheelSprites && t.R != null && t.R && t.R.sprite != null) return t.R.sprite;
+                    }
+                    return null;
+                }
+            }
             private readonly List<MeshTarget> meshes = new List<MeshTarget>();
             private readonly Texture2D[] palettes = new Texture2D[GroupCount];
             private readonly Texture2D[] luts = new Texture2D[GroupCount];

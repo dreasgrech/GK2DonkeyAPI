@@ -1069,10 +1069,15 @@ History:
   What a pack may hold is checked before it costs anything: a picture's size from its PNG header (a frame at most its
   canvas, a sheet its cells, a portrait 512x512), sound files at most 16 MB (a WAV chunk with a bad length is refused),
   no NaN or Infinity, file names inside the pack's own folder (no `..`, no drive, no network share).
+- 0.40.0: `MountLook.StepsVolume` and `BabyStepsVolume` (0 to 1.5) beside `SoundVolume`, which is the voices only now;
+  the style keys `VoicesVolume`, `StepsVolume`, `BabyStepsVolume` (times `SoundVolume`: the calls, answers, lip smack
+  and chewing; everything else of a grown mount; everything but the answer of a baby).
 - 0.40.0: **cargo enforced per mount** (the user, 2026-10-27; docs/next-update.md section 3): `MountDef.Cargo` /
   `[Mount] cargo` is no longer a stat only: a cart holds the smaller of the player's `CartSlots` and the cargo of the
-  mount pulling it, re-applied when the mount under a hitched cart changes, never fewer slots than it holds (a lighter
-  mount drops nothing; the size follows as items come off). The shipped mounts: the giant rat 2, Gerry and the giant
+  mount pulling it, re-applied when the mount under a hitched cart changes. A mount that pulls fewer items than a cart
+  holds leaves it standing with its load (a hitched cart, when the mount under it changes) and is refused it (the cart
+  key, `Mounts.Hitch`, mounting in Cart style): "Gerry pulls 4 items at most. Take 2 off the cart first." A mod's
+  session `CartSlots` only lowers the slots, never refuses (the size follows as items come off). The shipped mounts: the giant rat 2, Gerry and the giant
   worm 4, the donkey and the giant snail 6. No change to the public surface.
 - 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,
   2026-10-25: "for mounts that cant pull the cart, the drive the cart button still appears in teh journal and there's

@@ -302,7 +302,12 @@ boxes), `docs/zombies-on-cart.md` 53, 120-124, and the "two items" mentions acro
 ## 10. Each mount its own cargo (2026-10-27, API 0.40.0)
 
 The cart holds the smaller of `CartSlots` and the cargo of the mount pulling it (`[Mount] cargo`, 1 to 6, null: 6;
-`Cargo.Rig.WantedSlots`), never fewer slots than it holds or carries over. A mount change under a hitched cart
+`Cargo.Rig.WantedSlots`), never fewer slots than it holds or carries over. A mount that pulls fewer items than the cart
+holds doesn't take it (the user, 2026-10-27: Gerry hitched to the donkey's six): a hitched cart is left standing with its
+load when the mount under it changes (`Looks.Rig.DropCartIfRefused`, as for a mount with no cart), and the cart key,
+`Mounts.Hitch` and mounting in Cart style refuse it (`Looks.WhyNotCartByLoad`: "Gerry pulls 4 items at most. Take 2 off
+the cart first.") until it holds no more; the companion's cart key still brings it over and leaves it standing
+unhitched next to the mount (MountCompanion.BringCart; the user, 2026-10-27). A mount change under a hitched cart
 re-applies it when the looks re-merge their tuning (`Looks.Rig.ApplyTuning`, once per mount, skin or style change;
 logged `Cargo: the cart's slot count follows <mount>'s cargo`); a hitch re-applies it through `Attach`. The shipped
 cargo: the giant rat 2, Gerry and the giant worm 4, the donkey and the giant snail 6 (docs/next-update.md section 3:

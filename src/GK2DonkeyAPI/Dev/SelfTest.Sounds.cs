@@ -581,6 +581,8 @@ namespace GK2DonkeyAPI
         // skin of the dragon; its own look (skins\default\) has none of its own.
         private static IEnumerator SoundsDragonFiles()
         {
+            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             Looks.SkinDef red = Looks.Find(Sk("dragon"));
             Catalog.Entry mount = Catalog.Find(M("dragon"));
             if (red == null || mount == null) { Skip("the dragon's pack is not installed (build packs/SaddleUpDragon with the game closed)"); yield break; }

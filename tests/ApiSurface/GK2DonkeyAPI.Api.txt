@@ -319,6 +319,7 @@ sealed class GK2DonkeyAPI.Api.MountJump
   field System.Nullable<bool> Wings
   method void .ctor()
 sealed class GK2DonkeyAPI.Api.MountLook
+  property float BabyStepsVolume { get; set; }
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }
   property string CustomHarness { get; set; }
@@ -341,6 +342,7 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property string Name { get; set; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
   property float SoundVolume { get; set; }
+  property float StepsVolume { get; set; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
 sealed class GK2DonkeyAPI.Api.MountLooks
   field static const string DonkeyId = donkey

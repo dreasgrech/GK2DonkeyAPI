@@ -1566,7 +1566,23 @@ namespace GK2DonkeyAPI
         {
             if (i == null) return null;
             Catalog.Entry k = MountWanted(i);
-            return k.Cart ? null : $"A {k.NounText} can't pull the cart.";
+            return k.Cart ? null : $"{Who(i, k)} can't pull the cart.";
+        }
+
+        // Who a refusal names (the user, 2026-10-27: "it should say the mount name if available or Gerry (mount type) if
+        // not"): the player's name for it ("Bella"), else its mount's (Gerry, Rat, Dragon), never "a skull".
+        internal static string Who(Mount.Instance i, Catalog.Entry k) => !string.IsNullOrEmpty(i?.DisplayName) ? i.DisplayName : k.Label;
+
+        // A mount that pulls the cart, but fewer items than this cart holds (0.40.0; the user, 2026-10-27: Gerry, who pulls
+        // 4, hitched to the six the donkey had loaded): why not, else null. The mount's own cargo only: a mod's session cap
+        // (CartSlots) lowers the slots and never refuses; a dev tool's slot floor (the cargo sheet, test loads) never either.
+        internal static string WhyNotCartByLoad(Mount.Instance mount, Mount.Instance cart)
+        {
+            if (mount == null || cart == null || Cargo.SlotFloor > 0) return null;
+            Catalog.Entry k = MountWanted(mount);
+            if (!k.Cart) return null;
+            int n = cart.CargoRig != null ? cart.CargoRig.Count : 0, cap = Catalog.CargoOf(k);
+            return n > cap ? $"{Who(mount, k)} pulls {cap} items at most. Take {n - cap} off the cart first." : null;
         }
 
         // The tuning keys a skin's [Tuning] may set: the ones that exist because of how the pictures are drawn (where
@@ -3203,14 +3219,20 @@ namespace GK2DonkeyAPI
             private bool DropCartIfRefused(Catalog.Entry k)
             {
                 if (owner == null || !owner.HasCart || owner.Handle == null) return false;
-                if (k.Cart || k == cartCheckedFor) return false;
+                // the mount pulls the cart but fewer items than it holds: left standing too, with its load (2026-10-27)
+                string overload = k.Cart ? WhyNotCartByLoad(owner, owner) : null;
+                if ((k.Cart && overload == null) || (!k.Cart && k == cartCheckedFor)) return false;
                 if (Time.unscaledTime < cartRetryAt) return false;
+                bool ridden = owner.IsRidden;
                 MountHandle left = Mounts.Unhitch(owner.Handle);
                 if (left != null)
                 {
                     cartCheckedFor = k;
                     cartRefusalSaid = null;
-                    Plugin.Log.LogInfo($"Looks: {owner.Describe()} became a {k.NounText}, which can't pull the cart: the cart is left standing where it was.");
+                    Plugin.Log.LogInfo(overload != null
+                        ? $"Looks: {owner.Describe()} became a {k.NounText}, which pulls {Catalog.CargoOf(k)} items at most, and the cart holds {left.I.CargoRig.Count}: the cart is left standing where it was, with its load."
+                        : $"Looks: {owner.Describe()} became a {k.NounText}, which can't pull the cart: the cart is left standing where it was.");
+                    if (overload != null && ridden) Mount.Say(overload);
                     return true;
                 }
                 cartRetryAt = Time.unscaledTime + 1f;

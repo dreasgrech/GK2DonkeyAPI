@@ -13,6 +13,8 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator FlightJumpPerMount()
         {
+            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".jumpshape";
             const string id = "selftest.jump-beast";
             string tempRoot;

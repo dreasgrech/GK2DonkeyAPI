@@ -13,6 +13,8 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator MountSpeeds()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".speeds";
 
             // the words, at the band edges (against the donkey's 2 riding, 1.5 with the cart)

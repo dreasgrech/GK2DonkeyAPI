@@ -753,7 +753,7 @@ namespace GK2DonkeyAPI
             private string TryMount(PlayerController pc, GameScene scene, MountStyle style, bool showMessage)
             {
                 // The core's own checks first (safety); other mods' rules can only add refusals on top.
-                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) ?? Looks.WhyNotCartByMount(this) : null) ?? MountRules.WhyCannotMount(style);
+                string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) ?? Looks.WhyNotCartByMount(this) ?? (HasCart ? Looks.WhyNotCartByLoad(this, this) : null) : null) ?? MountRules.WhyCannotMount(style);
                 if (reason != null)
                 {
                     Plugin.Log.LogInfo("Mount refused: " + reason);

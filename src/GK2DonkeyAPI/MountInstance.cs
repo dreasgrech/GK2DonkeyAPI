@@ -800,7 +800,7 @@ namespace GK2DonkeyAPI
                 {
                     return "This one can't pull a cart.";
                 }
-                string byMount = Looks.WhyNotCartByMount(this);
+                string byMount = Looks.WhyNotCartByMount(this) ?? Looks.WhyNotCartByLoad(this, cart);
                 if (byMount != null)
                 {
                     return byMount;

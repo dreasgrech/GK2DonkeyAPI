@@ -220,7 +220,7 @@ namespace GK2DonkeyAPI.Api
         // a word against the donkey's ("Fast").
         public float? Speed;
         // How many items its cart carries, 1 to 6 (0.36.0; enforced since 0.40.0). Null: 6. The cart holds the smaller of
-        // this and the player's Cart capacity (CartSlots), never fewer than it holds (a lighter mount drops nothing).
+        // this and a mod's session CartSlots; a mount that pulls fewer than a cart holds leaves it standing and can't hitch it.
         public int? Cargo;
         // Values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, SpeedMultiplier, ...), typed as the
         // key is: set on every instance of this mount as overrides owned by the skin system while it is of this mount.

@@ -21,6 +21,8 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator GarbageSurvey()
         {
+            string noPack = MissingPack("dragon"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             bool bySection = Perf.AllocBySection, probe = StrideProbe.On;
             var made = new List<MountHandle>();
             try

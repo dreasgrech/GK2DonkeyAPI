@@ -420,6 +420,8 @@ namespace GK2DonkeyAPI
         // flies, the rest don't, all jump), a pack's own read and listed, written back only when not the default.
         private static IEnumerator FlightFlags()
         {
+            string noPack = MissingPack("dragon", "rat", "snail", "worm"); // our mount packs may be left out: Saddle Up alone, or one pack
+            if (noPack != null) { Skip(noPack); yield break; }
             const string owner = Owner + ".flags";
             MountInfo dragon = Mounts.Catalog.Find(M("dragon")), rat = Mounts.Catalog.Find(M("rat"));
             Check(dragon != null && dragon.Flies && dragon.Jumps, $"the dragon flies and jumps (its [Mount] says flies = true): {dragon?.Flies} {dragon?.Jumps}");

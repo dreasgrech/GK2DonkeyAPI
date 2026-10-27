@@ -26,8 +26,9 @@ For players:
   | Dragon | GK2 Saddle Up: Dragon | Slow | no cart | **flies**: over water, fences, cliffs and roofs |
 
 - **Each mount pulls its own load** (the user, 2026-10-27): the faster it is, the less its cart holds. A cart holds
-  as many items as its mount carries; switching to a lighter mount never drops anything
-  (the cart stays full until you unload it). The Mounts panel shows each mount's speed and cargo.
+  as many items as its mount carries. Switching to a mount that pulls fewer than the cart holds leaves the cart
+  standing with its load, and it can't be hitched until you take the extra off ("Gerry pulls 4 items at most. Take 2
+  off the cart first."). The cart key still brings it over to your mount, unhitched, so you can unload it there. The Mounts panel shows each mount's speed and cargo.
 - **Skins:** the donkey has Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire comes in a
   later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour). Other mods and
   skin packs can add mounts and skins (a folder `gk2mounts\<mount>\` with a `mount.cfg` and `skins\<skin>\`;
@@ -43,6 +44,18 @@ For players:
 
 Everything else in this version, in detail:
 
+- **Three sound sliders per mount** (the user, 2026-10-27): Voices (its calls and its babies' answers), Steps (its steps,
+  the cart, the bell, its wings) and Baby steps, in place of one "Voice and steps". Your old value is the Voices one now.
+- **An Abilities card in the Mounts panel** (the user, 2026-10-27): under Stats, each ability with its icon and a line
+  about it: Flying (the mount's own picture in the air) and Cargo cart (the game's own cart wheel, in your colours, with
+  how many items it holds), and any a mod adds. The Stats card is tighter, with a rule under its heading.
+- **Every mount and skin has a line of its own in the Mounts panel** (the user, 2026-10-27: "an interesting 'lore'
+  sentence or something funny"), in place of notes about its pixels, its cart and its colour regions.
+- **Gerry's babies answer him** (the user, 2026-10-27): a baby whose mount has no answer sound of its own answers with
+  its mount's voice, higher by its size and a little different for each baby (before, Gerry's were silent). The
+  worm, which has no voice, stays quiet.
+- **The keeper names your mount when it refuses** (the user, 2026-10-27): "Bella pulls 4 items at most" with a name
+  given, else the mount's own ("Gerry pulls 4 items at most", "Dragon can't pull the cart."); before, "a skull", "a dragon".
 - **The Critters are the Rat, the Snail and the Worm** (the user, 2026-10-27: no "Giant" in their names; their ids are
   the same, so nothing in a save changes).
 - **"Behaviour" is "Mount Behaviour"** in the settings, and the "Status: Active" line at the top of Keys is gone (the Mods
