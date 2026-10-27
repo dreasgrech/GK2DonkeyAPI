@@ -6,8 +6,8 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.40.0 (not released yet; the last release is 0.30.0) | 25910882 (1.010), built 2026-10-26 on the committed pack DLLs plus the late-mount row fix (content from many mods; the dragon and the critters as packs of their own; the mounts, skins and effects still switched off for players) |
-| `GK2SaddleUp.dll` | 0.12.0 (needs GK2 Donkey API 0.39.0 or newer; not released yet; the last release is 0.10.0) | 25910882 (1.010), built 2026-10-26 18:40 |
+| `GK2DonkeyAPI.dll` | 0.40.0 (not released yet; the last release is 0.30.0) | 25910882 (1.010), built 2026-10-26 on the committed pack DLLs plus the late-mount row fix (content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players) |
+| `GK2SaddleUp.dll` | 0.12.0 (needs GK2 Donkey API 0.40.0 or newer; not released yet; the last release is 0.10.0) | 25910882 (1.010), built 2026-10-26 18:40 |
 | `SaddleUpDragon.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the dragon embedded, built 2026-10-26 |
 | `SaddleUpCritters.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the rat, snail and worm embedded, built 2026-10-26 |
 
@@ -21,8 +21,12 @@ The two pack DLLs ship as zips of their own (`make-release-zip.py`, each with th
 `GK2-Saddle-Up-Dragon-1.0.0.zip` (`BepInEx\plugins\SaddleUpDragon\`), `GK2-Saddle-Up-Critters-1.0.0.zip`
 (`BepInEx\plugins\SaddleUpCritters\`), and `GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip` with both.
 
-What is new since 0.10.0 is CHANGELOG.md's Unreleased section. The other mounts, the skins and the effects are
-switched off for players (`Mounts.MountsEnabled` false; a dev key no player has): with them off, the packs are ignored.
+Players download GK2 Saddle Up (the donkey with its skins Hellfire and Royal Parade, and Gerry) and, if they want
+more mounts, the packs: GK2 Saddle Up: Dragon (the dragon), GK2 Saddle Up: Critters (the giant rat, snail and worm),
+or the All Mounts zip with both.
+
+What is new since 0.10.0 is CHANGELOG.md's Unreleased section (as of 2026-10-27). The mounts and skins are on for
+players since this version (0.10.0 shipped them off); which mounts a player has is which packs they installed.
 
 Sizes 2026-10-26 18:40:
 - `GK2-Saddle-Up-0.12.0.zip` 0.9 MB (1.5 MB with the five mounts inside Saddle Up): the API DLL 2,634 KB (851 KB

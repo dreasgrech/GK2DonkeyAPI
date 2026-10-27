@@ -12,11 +12,6 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator NoThrowBetweenMods()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps every registration out");
-                yield break;
-            }
             const string oA = Owner + ".nothrow-a", oB = Owner + ".nothrow-b", oC = Owner + ".nothrow-c";
             const string fx = "selftest.nothrow-fx", mount = "selftest.nothrow-mount", skin = "donkey/selftest.nothrow-skin";
             IDisposable fxA = null, fxB = null, fxC = null, skA = null, skB = null, mA = null, mB = null, lookB = null;

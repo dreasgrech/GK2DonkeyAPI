@@ -33,7 +33,7 @@ namespace GK2DonkeyAPI
             internal bool Jumps = true;                // jumps, riding plain ([Mount] jumps = false: never)
             internal float FoalScale = 0.6f;           // a baby's size as a fraction of the grown one (the view's scale)
             internal float? Speed;                     // riding, times the keeper's walking speed ([Mount] speed); null: the donkey's. With the cart: times CartFactor
-            internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Shown only, for now
+            internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Caps its cart's slots under the player's Cart capacity (Cargo.Rig.WantedSlots)
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
             // its own jump (mount.cfg [Jump], MountDef.Jump; JumpShapes.cs): the keys it sets, the rest the default jump's; null: the default

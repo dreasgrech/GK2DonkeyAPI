@@ -62,8 +62,7 @@ namespace SaddleUp
                 return;
             }
             // The built-in content: registered before the page is built, so its rows are made with it (the packs' mounts
-            // are registered before, at the API's start; any other mod's are caught up the frame after Publish). With the mounts off for players (Mounts.MountsEnabled,
-            // this version) the API keeps them out and says so, and the donkey stays the only mount.
+            // are registered before, at the API's start; any other mod's are caught up the frame after Publish).
             int skins = Mounts.Looks.RegisterEmbedded(Guid, Assembly.GetExecutingAssembly(), SkinsPrefix);
             if (skins > 0) Logger.LogInfo($"GK2 Saddle Up: {skins} built-in skin(s) registered (Gerry; the donkey's Hellfire and Royal Parade). The Dragon and the Critters are packs of their own.");
             RegisterHellfire(); // the effect Hellfire comes with: Saddle Up's too, defined through the API as any mod's
@@ -73,9 +72,7 @@ namespace SaddleUp
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
-                Mounts.MountsEnabled
-                    ? "Your own mount and cart: ride it (H), drive the cart (G), haul with it. A donkey, or any mount a skin pack or another mod adds (dragons, a giant rat...). Built on GK2 Donkey API."
-                    : "Your own donkey and cart: ride it (H), drive the cart (G), haul with it. Other mounts and skins come in the next update. Built on GK2 Donkey API.");
+                "Your own mount and cart: ride it (H), drive the cart (G), haul with it. The donkey or Gerry, or any mount a pack or another mod adds (the Dragon, the Critters...). Built on GK2 Donkey API.");
             p.Status("Keys");
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Your mount comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
@@ -145,13 +142,6 @@ namespace SaddleUp
                 MountLook own = me.LookOf(mountId);
                 p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name. Kept for each mount.", v => own.Name = v, look: true);
             });
-            if (!Mounts.MountsEnabled)
-            {
-                // This version ships the mounts and skins switched off (Mounts.MountsEnabled; the next update
-                // switches them on): the rows above hold the donkey alone, and these say why.
-                p.Info("Mount", "Other mounts and skins", () => "Coming in the next update",
-                    "A dragon, a giant rat, a giant snail, a giant worm, Gerry, the Hellfire skin, skin packs and the mounts from other mods are built and switched off in this version; the next update switches them on. Until then your mount is the donkey, as before.");
-            }
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After loading, your mount and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
 
             // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
@@ -255,7 +245,7 @@ namespace SaddleUp
             p.MovedKey("Cart", "CorpseIntoMorgue", "Behaviour");
             p.MovedKey("Cart", "CorpsesAtCrossroads", "Behaviour");
             p.MovedKey("Cart", "CartStaysParked", "Behaviour");
-            p.Steps("Cart", "CartSlots", 6, 2, 6, 2, "Cart capacity", "How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded.", v => Mounts.Behaviour.Set(Guid, "CartSlots", v), v => v + " items");
+            p.Steps("Cart", "CartSlots", 6, 2, 6, 2, "Cart capacity", "How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. A mount that carries less pulls less (the giant rat 2, Gerry and the giant worm 4; the Mounts panel shows each one's cargo). Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded.", v => Mounts.Behaviour.Set(Guid, "CartSlots", v), v => v + " items");
             p.Toggle("Cart", "CargoZombies", true, "Zombies ride on the cart", "Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies.", v => Mounts.Behaviour.Set(Guid, "CargoZombies", v));
             p.Toggle("Cart", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a plain storage chest (rough, normal or good) and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
             p.Toggle("Cart", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse (riding indoors allowed and the cart not: your mount comes in with you). Off: it stays on the cart.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));

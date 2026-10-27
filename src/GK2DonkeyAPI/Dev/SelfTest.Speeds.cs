@@ -13,11 +13,6 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator MountSpeeds()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps mounts out");
-                yield break;
-            }
             const string owner = Owner + ".speeds";
 
             // the words, at the band edges (against the donkey's 2 riding, 1.5 with the cart)
@@ -35,14 +30,16 @@ namespace GK2DonkeyAPI
             // the built-in mounts each say their own (the shipped skins' [Mount] blocks)
             var said = new List<string>();
             bool allOwn = true;
+            // the cargo against the speed (docs/next-update.md section 3): the faster, the lighter; the dragon pulls no cart
+            var cargo = new Dictionary<string, int> { ["rat"] = 2, ["snail"] = 6, ["worm"] = 4, ["dragon"] = 0, ["gerry"] = 4 };
             foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
             {
                 Catalog.Entry k = Catalog.Find(M(id));
                 if (k == null) { said.Add(id + " not loaded"); continue; }
-                allOwn &= k.Speed.HasValue && Catalog.CargoOf(k) == Catalog.CargoMax;
+                allOwn &= k.Speed.HasValue && (k.Cart ? Catalog.CargoOf(k) : 0) == cargo[id];
                 said.Add($"{id} {k.Speed?.ToString("0.##") ?? "-"} {Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Ride), MountStyle.Ride)}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
             }
-            Check(allOwn, "every built-in mount says its own speed and carries the most (for now) (" + string.Join(", ", said) + ")");
+            Check(allOwn, "every built-in mount says its own speed and cargo (rat 2, snail 6, worm 4, dragon no cart, Gerry 4) (" + string.Join(", ", said) + ")");
             Check(!Catalog.Donkey.Speed.HasValue && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax, "the donkey says none: it rides at the API cfg's speeds, as it always did");
 
             // Saddle Up: the two rows are gone, their lines retired (out of the file)

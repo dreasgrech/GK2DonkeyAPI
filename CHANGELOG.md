@@ -12,6 +12,37 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+**The mounts are here.** 0.10.0 had them built in but switched off; this version switches them on. In short:
+
+- **Six mounts to ride**, picked in the Mounts panel (the Mount section's Mounts button, or its key):
+
+  | Mount | Download | Riding | Cart | Its thing |
+  |---|---|---|---|---|
+  | Donkey | GK2 Saddle Up | Normal | 6 items | the all-rounder; skins Hellfire and Royal Parade |
+  | Gerry | GK2 Saddle Up | Fast | 4 items | the game's talking skull, three times his size; he talks |
+  | Giant Rat | GK2 Saddle Up: Critters | Very fast | 2 items | the courier: quick, a light cart |
+  | Giant Worm | GK2 Saddle Up: Critters | Slow | 4 items | a quiet hauler |
+  | Giant Snail | GK2 Saddle Up: Critters | Very slow | 6 items | a slow, full cart |
+  | Dragon | GK2 Saddle Up: Dragon | Slow | no cart | **flies**: over water, fences, cliffs and roofs |
+
+- **Each mount pulls its own load** (the user, 2026-10-27): the faster it is, the less its cart holds. A cart holds
+  the mount's number or your Cart capacity, whichever is smaller; switching to a lighter mount never drops anything
+  (the cart stays full until you unload it). The Mounts panel shows each mount's speed and cargo.
+- **Skins:** the donkey has Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire comes in a
+  later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour). Other mods and
+  skin packs can add mounts and skins (a folder `gk2mounts\<mount>\` with a `mount.cfg` and `skins\<skin>\`;
+  docs/making-a-mount.md).
+- **Everything is kept per mount:** its colours (coat, harness, second tone, the cart's paint, wheels, hubs and
+  lantern), its name, its babies and its voice, all set in the Mounts panel. Your 0.10.0 donkey keeps everything it
+  had.
+- **Babies are the same mount and skin** (a setting): a dragon's young are little dragons, Gerry's are skulls their
+  own size, each baby a little different from its siblings.
+- **Every mount jumps** (Space); the dragon takes off with a second press in the air. Not in a fight, where Space is
+  your attack. The silent ones (the snail, the worm) are silent by choice; the dragon's, the rat's and Gerry's own
+  get-on, get-off and answer sounds come later.
+
+Everything else in this version, in detail:
+
 - **Each mount has its own name, babies and voice, set in the Mounts panel** (the user, 2026-10-26: "make the amount
   of babies be saved per mount"; "users need to set their mount names from inside here"). The journal page lists, for
   the mount picked: its Name (a text box: type it there, no more editing the cfg), its Skin, Babies (0 to 5), Babies
@@ -366,15 +397,18 @@ For players:
   reads its old place on the first start (the log says which) and the old lines are cleaned out of the cfg.
 - **The Mounts panel** puts the colour rows under the same two headings, "Mount colours" in the left column and "Cart
   colours" in the right, with the Skin row above the first and Effect below the second (0.12; 0.11's colours window did the same with the Mount row too).
-- **What the next update brings, corrected** (the 0.10.0 notes below previewed it; still switched off in this
-  version): one dragon, red (a blue one is the red one with a custom coat); Hellfire is a skin pack like any other,
-  built in (nothing drawn at run time) and comes with its ring of fire; **Royal Parade** is a third donkey skin (a
-  saddle cloth and a crown; the cloth's reds follow your harness colour); Gerry is "a skull" in the keeper's words
-  and his babies are his own size; the giant snail and the giant worm are silent; a colour row for a part your mount
-  hasn't got is greyed.
 
 For mod authors:
 
+- **`Mounts.MountsEnabled` is always true** (it was false in 0.10.0's download): your mounts, skins and effects
+  register and are offered to players. The switch behind it, the dev key `Debug.MountsPreview`, is gone (the user,
+  2026-10-27: the mounts are mods of their own now, so which ones a player has is which packs they installed). The
+  property stays for mods written against 0.10.0. A registration before the API has started still throws, saying to
+  add `[BepInDependency]`.
+- **A mount's `cargo` is enforced** (`MountDef.Cargo`, `[Mount] cargo`, 1 to 6, `MountInfo.Cargo`): its cart holds
+  that many, or the player's `CartSlots` when smaller, re-applied when the mount under a hitched cart changes; never
+  fewer slots than the cart holds. Until now it was shown in the Mounts panel only. A mount that leaves `cargo` out
+  carries 6, as before.
 - **Per-mount companion settings** (2026-10-26): `MountLook` (`companion.LookOf(mountId)`) has the mount's own
   `FoalCount`, `FoalsFollowOnFoot`, `FoalsComeIndoors`, `FoalsWearSkin`, `Name`, `SoundVolume`, `Lantern` and
   `LanternByDay`; the companion's properties of the same names read and set the current mount's (unchanged for a mod
@@ -894,6 +928,12 @@ For mod authors:
 
 Development:
 
+- **The mounts gate is removed:** `Debug.MountsPreview`, `Plugin.MountsOn`, `Mounts.KeptOut` and every "switched off"
+  text (Saddle Up's description, its "Other mounts and skins" row, the Mount and Skin rows' descriptions, the log
+  lines) are gone; the built-ins always register. A dev cfg's `MountsPreview` line leaves the file at start (one
+  "retired [Debug] line" log line). The self-test "mounts off" is gone, and the skips "the mounts are off" with it.
+- **Self-tests:** "cargo: each mount carries its own" (a cart switched donkey, rat, Gerry, donkey: 6, held at 4 with
+  four aboard, 2, 4, Cart capacity 2 wins, 6, nothing dropped); the speeds test checks each built-in's cargo.
 - **Built in or external** (docs/making-a-mount.md): the repo's `packs/<Pack>/` laid out as `BepInEx\plugins\<Pack>\`
   (the dragon in `SaddleUpDragon`, the rat, snail and worm in `SaddleUpCritters`, ids by the pack:
   `saddleup-dragon.dragon`, `saddleup-critters.rat`; moved out of `src/SaddleUp/assets/mounts/`), each a small plugin

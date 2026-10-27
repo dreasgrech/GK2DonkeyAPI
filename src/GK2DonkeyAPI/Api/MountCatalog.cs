@@ -106,7 +106,7 @@ namespace GK2DonkeyAPI.Api
                 if (a.Owner != null && a.Owner != d.AbilityOwner) throw new ArgumentException($"Mount '{def.Id}': the ability '{a.Id}' already belongs to another mount ({a.Owner}); one ability object per mount.", nameof(def));
                 a.Owner = d.AbilityOwner;
             }
-            if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the mount", def.Id);
+            Mounts.RequireStarted(ownerId, "the mount", def.Id);
             GK2DonkeyAPI.Catalog.Register(d); // false: another mod's of the same id stays (the version rule, a warning said why); the handle then does nothing
             return new Handle(d);
         }
@@ -219,8 +219,8 @@ namespace GK2DonkeyAPI.Api
         // (1.5 / 2 as shipped). Over a SpeedMultiplier in Tuning / TuningRide / TuningCart. The Mounts panel shows it as
         // a word against the donkey's ("Fast").
         public float? Speed;
-        // How many items its cart carries, 1 to 6 (0.36.0). Null: 6. A stat for the Mounts panel for now: what a cart
-        // holds is still the player's Cart capacity (CartSlots).
+        // How many items its cart carries, 1 to 6 (0.36.0; enforced since 0.40.0). Null: 6. The cart holds the smaller of
+        // this and the player's Cart capacity (CartSlots), never fewer than it holds (a lighter mount drops nothing).
         public int? Cargo;
         // Values for existing tuning keys (SeatAdjustPx, RiderOffsetPx, LegAdjustYPx, SpeedMultiplier, ...), typed as the
         // key is: set on every instance of this mount as overrides owned by the skin system while it is of this mount.

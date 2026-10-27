@@ -28,12 +28,9 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   `GK2-*-facts.txt` files are written by panel buttons only.
 - The first start writes the cfg once (`Plugin.Load` switches `SaveOnConfigSet` off while binding), not once per
   key.
-- **The mounts, skins and effects are switched off for players** (0.10.0; CHANGELOG "Only the donkey, for now"):
-  the dev key `Debug.MountsPreview` is off by default and absent from a player's cfg, so the download offers the
-  donkey alone. The self-test "mounts off: only the donkey offered, registrations kept out" is green with the key
-  off, and the full suite with it on (the skin scenarios skip while off). The next release that switches them on
-  flips the key's default (or removes it) and moves the CHANGELOG's "Built in this version, switched on in the next
-  update" block up into "For players".
+- **The mounts, skins and effects are on for players** since 0.12.0 (0.10.0 shipped them off by the dev key
+  `Debug.MountsPreview`, removed 2026-10-27): which mounts a player has is which packs they installed. The release
+  rehearsal runs with and without the pack zips.
 
 ## 2. The offline checks (no game launch)
 
@@ -108,8 +105,8 @@ Rehearse the first start on a clean config, with the game closed:
    are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
    loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
    log's "Settings: ... carried over" lines and no warning; quit.
-4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`, `Mounts, skins and effects: off
-   in this version` (and in the Mods menu the Mount row holds Donkey alone, with the two "Coming in the next update" rows),
+4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded`, `Mounts, skins and effects: on.`
+   (since 0.12.0; the Mounts panel lists the donkey, Gerry and every installed pack's mounts),
    `Cargo layout: ... embedded`, no `Dev tools unlocked` line, and no `[Warning` or `[Error` from either plugin. The
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).

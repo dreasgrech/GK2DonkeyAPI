@@ -21,11 +21,6 @@ namespace GK2DonkeyAPI
             var b = new SoundBank.FileSource("acme.x", "dragon/s", null, null, "b");
             Check(SoundBank.IdFor(a, "voice") != SoundBank.IdFor(b, "voice"), $"two packs' sound ids never meet ({SoundBank.IdFor(a, "voice")} / {SoundBank.IdFor(b, "voice")})");
 
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the pack part needs them");
-                yield break;
-            }
             const string owner = Owner + ".versions";
             string r1 = null, r2 = null;
             MountHandle h = null;

@@ -25,11 +25,6 @@ namespace GK2DonkeyAPI
         // edit to the default reaches it, and its file keeps its own lines only (the tab's set and taken back too).
         private static IEnumerator SkinVariant()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string owner = Owner + ".layer";
             const string mount = "selftest.layered", def = mount + "/default", blue = mount + "/blue";
             string root = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-layer");
@@ -137,11 +132,6 @@ namespace GK2DonkeyAPI
         // in its own pixels and unnamed kept as drawn.
         private static IEnumerator SkinOverDefault()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string owner = Owner + ".layerover";
             const string mount = "selftest.overbeast", def = mount + "/default", horns = mount + "/horns";
             Color32 erase = new Color32(255, 0, 255, 255), gold = new Color32(224, 192, 0, 255), green = new Color32(0, 192, 0, 255);
@@ -219,11 +209,6 @@ namespace GK2DonkeyAPI
         // default's values by its sentinels and gives its own; the donkey's skins have no default and are as before.
         private static IEnumerator SkinLayerLifecycle()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string owner = Owner + ".layerlife", joinerOwner = Owner + ".layerjoin";
             const string mount = "selftest.later", def = mount + "/default", early = mount + "/selftest.early", big = mount + "/big";
             string root1 = Path.Combine(Path.GetTempPath(), "gk2donkeyapi-selftest-layerlife1");

@@ -519,14 +519,17 @@ namespace GK2DonkeyAPI
             internal static readonly Predicate<Item> AllowedItem = Allowed;
 
             // Whether the topmost item the cart takes would fit (the controls' label), without moving anything.
-            // How many slots this cart should have: General.CartSlots (an instance's own override first), never below
-            // what it holds or carries over, so a lowered setting cannot shed items (at a door the carried-over items
-            // go back on before anything else). The number only: a chest aboard keeps 0 (CartChest), see ApplySlots.
+            // How many slots this cart should have: General.CartSlots (an instance's own override first), at most what
+            // the mount pulling it carries ([Mount] cargo; the smaller wins, so the player's setting keeps its meaning),
+            // never below what it holds or carries over, so a lowered setting or a lighter mount cannot shed items (at a
+            // door the carried-over items go back on before anything else). The number only: a chest aboard keeps 0
+            // (CartChest), see ApplySlots.
             internal static int SlotFloor;
 
             internal int WantedSlots()
             {
                 int slots = owner.Overrides.TryGetValue("CartSlots", out object o) && o is int n ? n : Plugin.CartSlots.GlobalValue;
+                slots = Mathf.Min(slots, Catalog.CargoOf(Looks.MountWanted(owner)));
                 slots = Mathf.Max(slots, SlotFloor);
                 int held = Mathf.Max(mirror.Count, inv != null ? inv.Data.Inventory.Count : 0);
                 return Mathf.Max(1, Mathf.Max(slots, held));

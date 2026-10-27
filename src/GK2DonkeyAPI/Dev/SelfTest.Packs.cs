@@ -13,11 +13,6 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator ExternalPacks()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview)");
-                yield break;
-            }
             var packOf = new[] { ("dragon", "SaddleUpDragon", "dreas.gk2.saddleup.dragon"), ("rat", "SaddleUpCritters", "dreas.gk2.saddleup.critters"),
                 ("snail", "SaddleUpCritters", "dreas.gk2.saddleup.critters"), ("worm", "SaddleUpCritters", "dreas.gk2.saddleup.critters") };
             foreach ((string name, string pack, string guid) in packOf)

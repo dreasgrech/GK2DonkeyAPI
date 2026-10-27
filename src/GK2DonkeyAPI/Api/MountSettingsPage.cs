@@ -434,9 +434,7 @@ namespace GK2DonkeyAPI.Api
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
             mountRow = List(section, "Mount", MountCatalog.DonkeyId, Looks.MountChoices, "Mount",
-                Mounts.MountsEnabled
-                    ? "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: its Skin row in the Mounts panel."
-                    : "What you ride. The donkey, in this version; other mounts (the dragon, the giant rat, ...) come in the next update.",
+                "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: its Skin row in the Mounts panel.",
                 v => ApplyMountRows(), look: true);
             foreach (MountInfo k in Mounts.Catalog.All) AddSkinRow(k);
             ApplyMountRows();
@@ -481,9 +479,7 @@ namespace GK2DonkeyAPI.Api
             try
             {
                 skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
-                    Mounts.MountsEnabled
-                        ? $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins."
-                        : $"How the {k.Name.ToLowerInvariant()} is drawn. As the game draws it, in this version; skins (Hellfire, skin packs) come in the next update.",
+                    $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins.",
                     v => ApplyMountRows(), look: true);
             }
             finally

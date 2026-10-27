@@ -201,7 +201,15 @@ play under the parent's roar; they were also 10 dB under it and pitched up 2.3 t
 start 0.15 s after the parent's call has ended (the game's play handle says when), one after another; Gerry's voice
 levelled with the bray (2.25).
 
-## 5. Built today: the dragon pulls no cart
+## 5. Built: the dragon pulls no cart; cargo per mount
+
+- **Cargo enforced per mount** (2026-10-27, the user's go: "ok lets do it"): bin 2 of section 3 with the numbers of
+  its table (rat 2, Gerry 4, donkey 6, worm 4, snail 6); docs/cart-capacity.md section 10. The worm and the snail stay
+  behind Gerry and the donkey on both speed and load (cargo can't fix that: the cart's top is 6); their own use is a
+  bin-3 ability, later. Mounts switched on for players the same day: `Debug.MountsPreview` removed (the user: the mounts are other mods now).
+
+The dragon (2026-10-25):
+
 
 - `saddleup.dragon/mount.cfg`: `cart = false`, no `cargo` line, the description says so. The API's cart rule does the
   rest (docs/mounts-design.md section 3): G and the panel's Drive the cart say "A dragon can't pull the cart.", a

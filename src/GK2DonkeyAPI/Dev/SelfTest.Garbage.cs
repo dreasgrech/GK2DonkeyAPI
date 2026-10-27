@@ -21,7 +21,6 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator GarbageSurvey()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             bool bySection = Perf.AllocBySection, probe = StrideProbe.On;
             var made = new List<MountHandle>();
             try

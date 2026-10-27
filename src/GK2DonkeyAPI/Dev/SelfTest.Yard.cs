@@ -37,7 +37,7 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator FlightJumpYard()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             GameObject yard = GameObject.Find("World/yard(Clone)");
             if (yard == null) { Skip("no \"World/yard(Clone)\" in this scene: the player's yard is elsewhere (run this one from its scene)"); yield break; }
             Bounds area = default;
@@ -180,7 +180,7 @@ namespace GK2DonkeyAPI
         // in the air (not held), lands on the ground, never sent back; the ground the mount is drawn on never steps.
         private static IEnumerator FlightJumpSlope()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors"); yield break; }
             Vector3 me = Keeper();
             bool found = FindSlope(me, 30f, out Vector3 foot, out Vector3 up, out float rise, out float run);

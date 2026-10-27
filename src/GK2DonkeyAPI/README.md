@@ -10,7 +10,7 @@ any number of them, and be kept with the save.
 - **For mod authors:** the C# API is in [`docs/api.md`](../../docs/api.md); a mount of your own in one page: [`docs/making-a-mount.md`](../../docs/making-a-mount.md). Tie the mount into the
   story, gate it on the tech tree, quests or story flags, spawn herds, keep your own data on each donkey.
 
-Version 0.38.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
+Version 0.40.0 (one number: the mod's and the API's, `Mounts.ApiVersion`), built and audited against Steam game build 25910882, game 1.010
 (re-audit in [`docs/game-update-25910882.md`](../../docs/game-update-25910882.md)). At start the mod compares every
 game member it uses with the installed game ([`docs/dependency-check.md`](../../docs/dependency-check.md)).
 
@@ -59,7 +59,7 @@ Every feature the library has, grouped by area. **Reached by** says how a player
 | Feature | Reached by | Status |
 |---|---|---|
 | **The cart is the keeper's hands:** anything he picks up while driving goes onto the cart: logs, stone, ore, crates, sacks, corpses, from the ground, piles, pallets and tables. | always (feature `Cargo`) | tested |
-| **Six items** in layers of two, or four, or two like the game's own delivery cart (`CartSlots`, 6 by default since 2026-10-13; [`docs/cart-capacity.md`](../../docs/cart-capacity.md)). A full cart puts a ground pickup back ("The cart is full."). | cfg `CartSlots` | two items tested; the layers self-tested, their look in game pending |
+| **Six items** in layers of two, or four, or two like the game's own delivery cart (`CartSlots`, 6 by default since 2026-10-13; [`docs/cart-capacity.md`](../../docs/cart-capacity.md)); a mount's own `[Mount] cargo` (1 to 6), when smaller, wins, and a lighter mount never drops what the cart already holds. A full cart puts a ground pickup back ("The cart is full."). | cfg `CartSlots` | two items tested; the layers self-tested, their look in game pending |
 | **The game takes from the cart:** piles, pallets, tables, graves and quest hand-ins take their items from the cart as if he held them. | always | tested |
 | **Setting down:** the interact key with nothing in front sets the top item down, behind the cart (the game's own drop-spot search, avoiding walls, water and other drops), so the next press sets the next one down. | cfg, API | tested |
 | **Hands stay empty while mounted:** what he holds when mounting goes onto the cart or is set down first; in Ride style the game refuses pickups and ground items show no outline. | always | tested |
@@ -191,17 +191,17 @@ the marker file `BepInEx\config\dreas.gk2.dev`, `Debug.TuningWindow = true`, the
 
 ### 14. Mounts, skins and effects
 
-One rig (the donkey's, `MountWgoId`); another mount is a creature of its own (a pack's `mount.cfg`, or code) worn
-through a skin that replaces the drawing ([`docs/skins.md`](../../docs/skins.md), [`docs/mounts-design.md`](../../docs/mounts-design.md)). Switched off for
-players in this version (`Debug.MountsPreview`). Built; the skins, mounts, effects and colours were seen in game as
+One rig (the donkey's, `MountWgoId`); another mount is a mount of its own (a pack's `mount.cfg`, or code) worn
+through a skin that replaces the drawing ([`docs/skins.md`](../../docs/skins.md), [`docs/mounts-design.md`](../../docs/mounts-design.md)). On for
+players since 0.40.0 with Saddle Up 0.12.0 (0.10.0 shipped them off by a switch that is gone now). Built; the skins, mounts, effects and colours were seen in game as
 they were first built (docs/mount-looks-design.md); the parity work's new self-tests (docs/self-tests.md, "Skins and
 effects") are written and not yet run in game.
 
 | Feature | Reached by | Status |
 |---|---|---|
 | **Skins:** a pack (`skin.cfg` + a PNG per frame, or a sheet; over the donkey with an erase colour and a recolour of the base, or replacing it on its own canvas with a front layer), a code skin, a recipe, or another character of the game (`source = game`); the skin owns its drawing's geometry (`seat = <row>` or `picture`, the pixel keys per style). | cfg, API (`Mounts.Looks`), packs | built; the seat rows seen in game, the per-style keys self-tested (run pending) |
-| **Mounts:** a pack's mount folder declares the creature in its `mount.cfg` (cart, babies and their size, noun, sounds; abilities through the API), its skins under `skins\`; the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Catalog`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
-| **Effects:** particle effects from the game's own systems or a mod's prefab, registered through `Mounts.Effects` (Saddle Up's Hellfire = lamp flames and sparks in a ring, a trail); the ring fits the creature's drawn width. Since 0.37.0 (2026-10-25) registration only: nothing picks or shows an effect on a mount (no instance keys, no `[Effects]` cfg section, no rows) until the skins' use of one is designed (docs/open-items.md). | API | built; Hellfire seen in game before 0.37.0; the engine self-tested through a test hook |
+| **Mounts:** a pack's mount folder declares the mount in its `mount.cfg` (cart, babies and their size, noun, sounds; abilities through the API), its skins under `skins\`; the Mount and Skin rows, kept with the save; the cart rule (a no-cart mount is refused a cart and leaves one standing). | cfg, API (`Mounts.Catalog`) | built; mounts and babies seen in game, the cart rule's doors, the noun and the sounds self-tested (run pending) |
+| **Effects:** particle effects from the game's own systems or a mod's prefab, registered through `Mounts.Effects` (Saddle Up's Hellfire = lamp flames and sparks in a ring, a trail); the ring fits the mount's drawn width. Since 0.37.0 (2026-10-25) registration only: nothing picks or shows an effect on a mount (no instance keys, no `[Effects]` cfg section, no rows) until the skins' use of one is designed (docs/open-items.md). | API | built; Hellfire seen in game before 0.37.0; the engine self-tested through a test hook |
 | **The Mounts panel:** every mount a player can ride listed on the left, the chosen one drawn on the right with its description, what it does (the cart, babies, speed), its stat lines and its abilities, and that mount's skin and colour rows under it; Done keeps, Cancel puts back. A page's look rows live here, not in the menus (`MountSettingsPage.PanelButton`, `OpenPanel`; docs/mounts-foundation-2.md 3). | API | built 2026-10-20 night; to see in game |
 | **Rules between mods:** a value on an instance belongs to the owner that set it; a mount may pin its speed, seat, sounds and the like, never the player's switches or look; the same skin from two places, the newer wins, and the same mount from two packs, the higher `[Mount] version` wins (docs/mounts-foundation-2.md 2; the mount folders since 2026-10-24). A mount's id is `<mod>.<name>` (refused without a dot; only `donkey` is plain), a skin is named within its mount (`saddleup-dragon.dragon/default`), and a mount's one default look is its `skins\default\` (docs/mount-id-collisions.md). | API | built 2026-10-20 night, self-tested; run pending |
 | **Colours on every mount:** a skin names which of its colours are Dark, Muzzle, Eye or Harness (`[Colors]`), the rest is Coat; the player's five colour rows reach them; a row for a region the mount lacks is greyed. | cfg, API | built; the regions self-tested with a readback, the greyed row not yet seen in game |
@@ -209,12 +209,10 @@ effects") are written and not yet run in game.
 | Built in | What |
 |---|---|
 | Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`) |
-| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs (`src/SaddleUp/assets/mounts/saddleup.<mount>/`, each look in its `skins/default/`, the donkey's skins in `mounts/donkey/skins/`; our own art from `tools/skins/creatures/`, Gerry's frames read from the game), registered through the API like any mod's (`docs/mounts-as-mods.md`) |
+| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs, registered through the API like any mod's (`docs/mounts-as-mods.md`): Gerry and the donkey's skins built into Saddle Up (`src/SaddleUp/assets/mounts/saddleup.gerry/`, `mounts/donkey/skins/`), the dragon and the rat, snail and worm as external packs, downloads of their own (`packs/SaddleUpDragon`, `packs/SaddleUpCritters`); our own art from `tools/skins/creatures/`, Gerry's frames read from the game |
 
 ## Not built
 
-- Standing donkeys make no sounds (only the ridden one does).
-- A skin drawn over one of our own creatures (the loader has one base, the donkey).
 - No co-op.
 
 ## Install
@@ -222,7 +220,7 @@ effects") are written and not yet run in game.
 1. BepInEx 5 in the Steam game folder.
 2. `GK2DonkeyAPI.dll` and a mod built on it (Saddle Up) in `BepInEx\plugins`, each in its own folder
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`).
-3. Start the game once; the log says `GK2 Donkey API 0.38.0 loaded; nothing happens until a mod uses it.`
+3. Start the game once; the log says `GK2 Donkey API 0.40.0 loaded; nothing happens until a mod uses it.`
 
 The full settings, the internals and the in-game test list are in
 [`docs/reference.md`](../../docs/reference.md).

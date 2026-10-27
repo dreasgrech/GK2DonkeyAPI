@@ -103,7 +103,7 @@ namespace GK2DonkeyAPI.Api
             Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (def == null) throw new ArgumentNullException(nameof(def));
             if (def.Source == null) throw new ArgumentException("A MountSkinDef needs a Source (IMountSkinSource).", nameof(def));
-            if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the skin", def.Id);
+            Mounts.RequireStarted(ownerId, "the skin", def.Id);
             Looks.SkinDef d = def.ToDef(ownerId);
             d.Sprites = def.Source; // the mod's sprites stay the mod's
             d.FrontSprites = def.FrontSource;
@@ -127,7 +127,7 @@ namespace GK2DonkeyAPI.Api
             Owner(ownerId);
             Mounts.NoteOwner(ownerId, Assembly.GetCallingAssembly());
             if (pixels == null) throw new ArgumentNullException(nameof(pixels));
-            if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the recipe skin", id);
+            Mounts.RequireStarted(ownerId, "the recipe skin", id);
             var d = new Looks.SkinDef
             {
                 Id = id, Name = name, Author = author, Version = version, Owner = ownerId, OwnColours = true,
@@ -150,11 +150,7 @@ namespace GK2DonkeyAPI.Api
         public int RegisterFolder(string ownerId, string folder)
         {
             Owner(ownerId);
-            if (!Mounts.MountsEnabled)
-            {
-                Mounts.KeptOut(ownerId, "the skin packs under", folder);
-                return 0;
-            }
+            Mounts.RequireStarted(ownerId, "the skin packs under", folder);
             return Looks.RegisterFolder(folder, ownerId);
         }
 
@@ -165,11 +161,7 @@ namespace GK2DonkeyAPI.Api
             Owner(ownerId);
             if (assembly == null) throw new ArgumentNullException(nameof(assembly));
             if (string.IsNullOrEmpty(prefix)) throw new ArgumentException("A resource-name prefix is required.", nameof(prefix));
-            if (!Mounts.MountsEnabled)
-            {
-                Mounts.KeptOut(ownerId, "the embedded skins under", prefix);
-                return 0;
-            }
+            Mounts.RequireStarted(ownerId, "the embedded skins under", prefix);
             return Looks.RegisterEmbedded(assembly, prefix, ownerId);
         }
 

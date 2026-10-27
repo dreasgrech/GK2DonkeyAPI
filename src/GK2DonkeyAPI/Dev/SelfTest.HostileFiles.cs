@@ -48,11 +48,6 @@ namespace GK2DonkeyAPI
                 "a file name climbing out, rooted or on a network share is refused; one in a subfolder is found");
             Check(Numbers.CfgText(new byte[] { 0xEF, 0xBB, 0xBF, (byte)'[', (byte)'M', (byte)']' }) == "[M]", "an embedded cfg's byte-order mark is taken off");
 
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the pack part needs them");
-                yield break;
-            }
             const string owner = Owner + ".hostile";
             const string id = "selftest.hostile";
             string root = null, root2 = null;

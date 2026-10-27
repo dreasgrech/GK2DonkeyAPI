@@ -2,9 +2,11 @@
 
 A mount pack for GK2 Saddle Up: three giant creatures to ride, each pulling the cart and having young.
 
-- **The Giant Rat** (`saddleup-critters.rat`): very fast, squeaks.
-- **The Giant Snail** (`saddleup-critters.snail`): slow and silent but for a wet squelch.
-- **The Giant Worm** (`saddleup-critters.worm`): slow, rustles along.
+- **The Giant Rat** (`saddleup-critters.rat`): very fast, squeaks; a light cart (2 items).
+- **The Giant Snail** (`saddleup-critters.snail`): very slow and silent but for a wet squelch; a full cart (6 items).
+- **The Giant Worm** (`saddleup-critters.worm`): slow, rustles along; a two-layer cart (4 items).
+
+A cart holds the mount's own number or the player's Cart capacity, whichever is smaller.
 
 - **Needs:** GK2 Donkey API 0.40.0 or newer and GK2 Saddle Up (it offers the mounts to ride).
 - **Install:** put the folder `SaddleUpCritters` into `BepInEx\plugins\` (the zip has it so):

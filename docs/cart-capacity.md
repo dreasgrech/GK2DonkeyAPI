@@ -298,3 +298,12 @@ boxes), `docs/zombies-on-cart.md` 53, 120-124, and the "two items" mentions acro
 - **Still open:** the look in game (four crates, four logs, two bodies and two logs, four zombies; the lantern pole;
   the sheet's two-item pictures unchanged), a door with four aboard, a save with a full cart, and the shipped default
   (2 for now). Option B (follow the hands) is not built; it would be one more choice in the same row.
+
+## 10. Each mount its own cargo (2026-10-27, API 0.40.0)
+
+The cart holds the smaller of `CartSlots` and the cargo of the mount pulling it (`[Mount] cargo`, 1 to 6, null: 6;
+`Cargo.Rig.WantedSlots`), never fewer slots than it holds or carries over. A mount change under a hitched cart
+re-applies it when the looks re-merge their tuning (`Looks.Rig.ApplyTuning`, once per mount, skin or style change;
+logged `Cargo: the cart's slot count follows <mount>'s cargo`); a hitch re-applies it through `Attach`. The shipped
+cargo: the giant rat 2, Gerry and the giant worm 4, the donkey and the giant snail 6 (docs/next-update.md section 3:
+the faster, the lighter). Self-test "cargo: each mount carries its own".

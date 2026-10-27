@@ -118,7 +118,6 @@ namespace GK2DonkeyAPI
         // and a mount's pins silence a standing wearer too (the bind inside the rig).
         private static IEnumerator SoundsDonkeyUnchanged()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             MountHandle h = null, cartH = null, standing = null, foal = null;
             bool standingWas = Plugin.StandingSounds.Value;
@@ -247,7 +246,6 @@ namespace GK2DonkeyAPI
         // block over both), the player's switches on top, a second skin of the mount, the save round trip, the clean-up.
         private static IEnumerator SoundsPack()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".sounds";
             string tempRoot = null, packDir = null;
@@ -415,7 +413,6 @@ namespace GK2DonkeyAPI
         // Stop with their reasons, the Played event; a code mount's MountSound shared by a pack skin that joins it.
         private static IEnumerator SoundsApi()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string modOwner = Owner + ".soundmod";
             MountHandle h = null;
@@ -518,7 +515,6 @@ namespace GK2DonkeyAPI
         // file under BepInEx\cache, its .wav parsed in place by the convention name, a looping event stopped.
         private static IEnumerator SoundsEmbedded()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".embedded";
             MountHandle h = null;
@@ -585,7 +581,6 @@ namespace GK2DonkeyAPI
         // skin of the dragon; its own look (skins\default\) has none of its own.
         private static IEnumerator SoundsDragonFiles()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             Looks.SkinDef red = Looks.Find(Sk("dragon"));
             Catalog.Entry mount = Catalog.Find(M("dragon"));
             if (red == null || mount == null) { Skip("the dragon's pack is not installed (build packs/SaddleUpDragon with the game closed)"); yield break; }
@@ -623,7 +618,7 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator SoundsFlying()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".flysounds";
@@ -700,7 +695,6 @@ namespace GK2DonkeyAPI
         // where the pack gives one; nothing of it with the standing switch off; Saddle Up's row drives the switch.
         private static IEnumerator SoundsHerd()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
             const string owner = Owner + ".herd";
             string tempRoot;

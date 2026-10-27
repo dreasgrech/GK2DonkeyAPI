@@ -386,7 +386,7 @@ namespace GK2DonkeyAPI
                     EffectDef d = Find(want);
                     if (want.Length > 0 && d == null && missingLogged.Add(want))
                     {
-                        Plugin.Log.LogInfo($"Effects: no effect '{want}' is registered{(Plugin.MountsOn ? "" : " (the effects are off in this version, Debug.MountsPreview)")}; {owner.Describe()} shows none.");
+                        Plugin.Log.LogInfo($"Effects: no effect '{want}' is registered; {owner.Describe()} shows none.");
                     }
                     if (d != effect)
                     {

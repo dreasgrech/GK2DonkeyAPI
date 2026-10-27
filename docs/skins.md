@@ -138,7 +138,7 @@ flies = true          # ridden plain, it takes off and flies (off unless said; f
 jumps = false         # ridden plain, it never jumps (on unless said); both written only when not the default
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33)
 speed = 2.5           # riding, times the keeper's walking speed (1 = walking; the donkey: 2), 0.5 to 4
-cargo = 6             # items its cart carries, 1 to 6 (a stat for now); only on a mount that pulls one
+cargo = 6             # items its cart carries, 1 to 6 (under the player's Cart capacity); only on a mount that pulls one
 
 [Stats]               # lines the Mounts panel shows as given, in this order (optional; Speed and Cargo are the API's own lines)
 Diet = keepers
@@ -180,8 +180,9 @@ one (1.5 / 2 as shipped): the cart slows every mount alike. The Mounts panel sho
 donkey's: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above that Very fast
 (`MountInfo.SpeedWord`; the number is `MountInfo.Speed`). A mount without one rides at the donkey's, the API cfg's
 `[Ride]` / `[Cart]` `SpeedMultiplier`. Tested in game up to 2.5 riding. `cargo` is how many items its cart carries,
-1 to 6, shown as "Cargo: 6 items"; a stat only for now (what a cart holds is the player's Cart capacity), and every
-built-in mount says 6. The built-in speeds: donkey 2, rat 2.75 (above the 2.5 seen in game so far), Gerry 2.25, dragon 1.6, worm 1.75, snail 1.25.
+1 to 6, shown as "Cargo: 6 items": its cart holds that many, or the player's Cart capacity when that is smaller (since
+API 0.40.0; a lighter mount never drops what a cart already holds). The built-in cargo: the giant rat 2, Gerry and the
+giant worm 4, the donkey and the giant snail 6 (the faster, the lighter; docs/next-update.md section 3). The built-in speeds: donkey 2, rat 2.75 (above the 2.5 seen in game so far), Gerry 2.25, dragon 1.6, worm 1.75, snail 1.25.
 
 Back in `skin.cfg`: two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up):
 `offset = 0 0` while riding and `offset_cart = 0 0` with the cart hitched (a skin that should stand closer to the
@@ -443,9 +444,8 @@ A pack is someone else's files loaded into a player's game, so the loader checks
 
 ## Trying it
 
-**In Saddle Up 0.10.0's download the skin packs are switched off**, with every mount and skin: they come in the next
-update, and the log says so at start ("Mounts, skins and effects: off in this version"). On a machine with the
-sources, the dev key `Debug.MountsPreview` switches them on; the rest of this section is for that state. A mount
+**Saddle Up 0.10.0's download had the skin packs switched off**, with every mount and skin; they are on since 0.12.0
+(API 0.40.0), and the switch (`Debug.MountsPreview`) is gone. A mount
 from a mod loaded in any order is in Saddle Up's lists (API 0.34.0: the page is shown the frame after Publish).
 
 Start the game and look at `BepInEx\LogOutput.log` for your skin's line: it says how many pictures it found, any

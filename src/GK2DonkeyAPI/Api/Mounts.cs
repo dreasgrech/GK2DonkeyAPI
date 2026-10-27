@@ -375,12 +375,11 @@ namespace GK2DonkeyAPI.Api
         // a skin is a look of one mount.
         public static MountCatalog Catalog { get; } = new MountCatalog();
 
-        // Whether the mounts other than the donkey, the skins and the effects are switched on in this build. They are
-        // in the DLL since 0.30.0 but off for players in Saddle Up 0.10.0 (the next update switches them on): off,
-        // Catalog lists the donkey alone, Looks and Effects list nothing, and a registration (Looks.Register,
-        // Catalog.Register, Effects.Register and the rest) is kept out: nothing thrown, a handle that does nothing, one
-        // log line per owner. A mod that adds a mount can register in Awake as usual and check this to tell its player.
-        public static bool MountsEnabled => Plugin.MountsOn;
+        // Always true since 0.40.0. In 0.30.0 to 0.39.0 the mounts other than the donkey, the skins and the effects could
+        // be switched off (Saddle Up 0.10.0 shipped them so, by the dev key Debug.MountsPreview): the lists held the
+        // donkey alone and a registration was kept out. Since then mounts are mods of their own (packs), and which ones
+        // a player has is which they installed; the property stays for mods written against 0.10.0.
+        public static bool MountsEnabled => true;
 
         // Whether jumping and flying are switched on (0.36.0; docs/flying.md): on for everyone since 0.38.0 (a dev-only
         // experiment before, off for players), false only when the dev tab switched it off. A mod showing its own jump
@@ -426,25 +425,11 @@ namespace GK2DonkeyAPI.Api
         public static event Action<Vector3> ReturnedToSafeSpot;
         internal static void RaiseReturnedToSafeSpot(Vector3 p) => Raise(ReturnedToSafeSpot, p, "ReturnedToSafeSpot");
 
-        private static readonly HashSet<string> keptOutLogged = new HashSet<string>(StringComparer.Ordinal);
-
-        // A registration refused by the switch above: said once per owner and sort of thing.
-        internal static IDisposable KeptOut(string ownerId, string what, string id)
+        // A registration called before the API's own Awake (a mod without [BepInDependency] that BepInEx loaded first):
+        // nothing of the API is up yet, and its log isn't either. Said by throwing, with what to add.
+        internal static void RequireStarted(string ownerId, string what, string id)
         {
-            // called before the API's own Awake (a mod without [BepInDependency] that BepInEx loaded first): nothing of
-            // the API is up yet, and its log isn't either
             if (Plugin.Log == null) throw new InvalidOperationException($"GK2 Donkey API has not started yet ({ownerId}'s {what} '{id}'): add [BepInDependency(\"{Plugin.Guid}\")] to your plugin.");
-            if (keptOutLogged.Add(ownerId + "|" + what))
-            {
-                Plugin.Log.LogInfo($"{what} '{id}' from {ownerId}: kept out of this version (mounts, skins and effects come in the next update; Mounts.MountsEnabled is false).");
-            }
-            return NoHandle.Instance;
-        }
-
-        private sealed class NoHandle : IDisposable
-        {
-            internal static readonly NoHandle Instance = new NoHandle();
-            public void Dispose() { }
         }
 
         // The colour regions, in panel order: Coat, Dark, Muzzle, Eye, Harness (the donkey), CartBody, Shafts, Straps,

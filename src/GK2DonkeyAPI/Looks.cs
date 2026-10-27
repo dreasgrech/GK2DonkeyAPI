@@ -116,7 +116,7 @@ namespace GK2DonkeyAPI
         // The API ships no skin of its own since 2026-10-21 (the user: the backend, the donkey alone; every skin and mount,
         // Hellfire and Royal Parade included, is Saddle Up's and comes through RegisterEmbedded like any mod's). What
         // is left here: the recipes (none shipped) and the loose skin packs under plugins\. Called after the dev keys
-        // bind, and only with the mounts switched on (Plugin.MountsOn: off for players in this version).
+        // bind.
         internal static void RegisterBuiltIns()
         {
             RegisterRecipes();
@@ -2516,7 +2516,6 @@ namespace GK2DonkeyAPI
 
         internal static void TickWarm()
         {
-            if (!Plugin.MountsOn) return;
             string id = (WarmWanted ?? "").Trim();
             SkinDef d = id.Length == 0 || id.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase) ? null : Find(id);
             if (d != null && d.Unavailable != null) d = null;
@@ -2910,8 +2909,7 @@ namespace GK2DonkeyAPI
                             // Not a fault of anything here: the mod or pack that had the skin is gone (mounts come from mods of
                             // their own, docs/mounts-as-mods.md), or a cfg names one that was never there. An Info either way:
                             // a warning is for something to fix, and a player who removed a mod has nothing to fix.
-                            if (Plugin.MountsOn) Plugin.Log.LogInfo($"Looks: no skin '{want}' is installed (its mod or pack isn't loaded); the donkey is drawn as the game draws it (the choice is kept and comes back with it).");
-                            else Plugin.Log.LogInfo($"Looks: the skin '{want}' is set, but the skins are off in this version (Debug.MountsPreview); the donkey is drawn as the game draws it (the choice is kept).");
+                            Plugin.Log.LogInfo($"Looks: no skin '{want}' is installed (its mod or pack isn't loaded); the donkey is drawn as the game draws it (the choice is kept and comes back with it).");
                         }
                     }
                     else if (d.Base != viewBase)
@@ -2967,6 +2965,11 @@ namespace GK2DonkeyAPI
                 tunedStyle = style;
                 TuneStamp++;
                 if (owner == null || paper) return;
+                if (owner.CargoRig != null && owner.CargoRig.ApplySlots()) // the cart's slots follow the mount's cargo (a mount switched while hitched)
+                {
+                    Plugin.Log.LogInfo($"Cargo: the cart's slot count follows {k.Id}'s cargo ({Catalog.CargoOf(k)}) on {owner.Describe()}.");
+                    Mount.OnCargoChanged(); // the hint over what the keeper faces: room on the cart
+                }
                 var merged = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
                 // What a mount may pin (docs/mounts-foundation-2.md 2.1): the ride and cart families (speed, the seat and the
                 // rider's motion and pose, the cart's geometry, the sounds) and the shuffle's values; never a look key (the

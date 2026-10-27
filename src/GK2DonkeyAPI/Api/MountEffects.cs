@@ -75,7 +75,7 @@ namespace GK2DonkeyAPI.Api
                 part.Emitters.AddRange(p.Emitters);
                 d.Parts.Add(part);
             }
-            if (!Mounts.MountsEnabled) return Mounts.KeptOut(ownerId, "the effect", def.Id);
+            Mounts.RequireStarted(ownerId, "the effect", def.Id);
             GK2DonkeyAPI.Effects.Register(d);
             return new Handle(d.Id, ownerId);
         }

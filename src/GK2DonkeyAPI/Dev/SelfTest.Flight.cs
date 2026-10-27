@@ -60,11 +60,11 @@ namespace GK2DonkeyAPI
             Check(fallS > 0f && (fallS < upS || js.RiseShare <= 0.5f), $"up from the ground to the top in {upS:0.000} s, down in {fallS:0.000} s (the rise's share {js.RiseShare:0.00})");
 
             // live: a donkey of the test's own ridden plain (the experiment on), in place, then at two walls
-            if (!Flight.Active || !Plugin.MountsOn)
+            if (!Flight.Active)
             {
                 Flight.Jump(null);
                 Check(Flight.Now == Flight.Phase.Ground, "no mount ridden: the jump refused (the keeper on foot never jumps)");
-                Info($"the live part wants the flying experiment on and the mounts on ({(!Flight.Active ? "the experiment off" : "the mounts off")}): skipped");
+                Info("the live part wants the flying experiment on: skipped");
                 yield break;
             }
             if (Mount.Instance.IsIndoors())
@@ -420,7 +420,6 @@ namespace GK2DonkeyAPI
         // flies, the rest don't, all jump), a pack's own read and listed, written back only when not the default.
         private static IEnumerator FlightFlags()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             const string owner = Owner + ".flags";
             MountInfo dragon = Mounts.Catalog.Find(M("dragon")), rat = Mounts.Catalog.Find(M("rat"));
             Check(dragon != null && dragon.Flies && dragon.Jumps, $"the dragon flies and jumps (its [Mount] says flies = true): {dragon?.Flies} {dragon?.Jumps}");
@@ -482,7 +481,7 @@ namespace GK2DonkeyAPI
         // Flight.Press, as the keys would.
         private static IEnumerator FlightOneKey()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
             const string owner = Owner + ".onekey";
             string tempRoot;
@@ -630,7 +629,7 @@ namespace GK2DonkeyAPI
         // as a state change would) parks the mount on the ground under where it flew, the prompts back, nothing fallen.
         private static IEnumerator FlightInTheAir()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: flying indoors is off"); yield break; }
             PlayerInteractionComponent ic = PC.PlayerInteractionComponent;
             if (ic == null) { Skip("the keeper has no interaction component"); yield break; }
@@ -758,7 +757,7 @@ namespace GK2DonkeyAPI
         // rule refuses the ground (Mount.Instance.FindBesideSpot); a jump in place there lands in place.
         private static IEnumerator FlightJumpBeside()
         {
-            if (!Flight.Active || !Plugin.MountsOn) { Skip(!Flight.Active ? "the flying experiment is off" : "the mounts are off (Debug.MountsPreview)"); yield break; }
+            if (!Flight.Active) { Skip("the flying experiment is off"); yield break; }
             if (Mount.Instance.IsIndoors()) { Skip("indoors: the jump stays in place there"); yield break; }
             MountHandle donkey = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
             try

@@ -461,12 +461,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> SkinPackAutoReload;
-        internal static ConfigEntry<bool> MountsPreview;
         internal static ConfigEntry<int> PanelFakeEntries; // dev: made-up entries padded onto the Mounts panel's list, to see it scroll
-        // What Debug.MountsPreview said at start (the built-ins register once, so a change takes the next start): the
-        // mounts other than the donkey, the skins and the effects are on. Off for players in this version
-        // (Mounts.MountsEnabled; the next update switches them on).
-        internal static bool MountsOn { get; private set; }
         internal static ConfigEntry<bool> CargoSeatOnShapes;
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
         internal static ConfigEntry<bool> TuningWindowEnabled;
@@ -573,7 +568,7 @@ namespace GK2DonkeyAPI
             CargoChest = Config.Bind("General", "CargoChest", Defaults.Get("General", "CargoChest", true),
                 "A plain storage chest (rough, normal or good) rides on the cart: the action key on it while driving lifts it, contents and all; the interact key with nothing in front sets it down. Nothing else rides with it. Off: chests stay where they are.");
             CartSlots = Config.Bind("General", "CartSlots", Defaults.Get("General", "CartSlots", 6),
-                new ConfigDescription("How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers), 6 (three layers). Applied to every cart at once. A cart holding more than the new number stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
+                new ConfigDescription("How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers), 6 (three layers). Applied to every cart at once. A mount whose [Mount] cargo is smaller pulls that many (the smaller wins). A cart holding more than the new number stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
             CartSlots.Entry.SettingChanged += (_, __) => Mount.ApplyCartSlots("the setting changed");
             CorpseIntoMorgue = Config.Bind("General", "CorpseIntoMorgue", Defaults.Get("General", "CorpseIntoMorgue", true),
                 "Driving the cart through the morgue door with a corpse aboard: the ride ends at the door as always and the cart stays outside with its load, but the corpse goes into the keeper's hands, so he walks in carrying it (one; more with the game's extra hand slots). Only there (CorpseIntoMorguePlaces). Off: it stays on the cart.");
@@ -689,26 +684,14 @@ namespace GK2DonkeyAPI
                 "Where the self-tests start, as scene|x,y,z. Written by the runner itself after a full run (every scenario) with no failures and no warnings; at the start of a run in that scene the keeper is moved there and put back where he stood afterwards. Empty: the tests run from where he stands (a built-up area with open ground around).");
             TuningKeys = dbg.Bind("Debug", "TuningKeys", false,
                 "While mounted: keypad 8/2 move the torso, keypad 4/6 the legs sideways, Insert/Delete the legs up/down, one art pixel per press, editing the current style's values. Development aid, turn off for normal play.");
-            // The mounts other than the donkey, the skins and the effects are in this DLL but off for players in this
-            // version (the next update switches them on; CHANGELOG "switched on in the next update"). A dev key, so a
-            // player's cfg can't flip it: locked, it answers false. Nothing of it is registered when off, so every list
-            // (the Mount and Skin rows, the colours per mount) holds the donkey alone and a mod's registrations are
-            // kept out (Mounts.KeptOut). The built-ins register here rather than in Looks.Bind because
-            // the key binds after them.
-            MountsPreview = dbg.Bind("Debug", "MountsPreview", false,
-                "Dev: switches on what the next update brings players: the mounts other than the donkey (Saddle Up's Gerry the skull, its packs' dragon, giant rat, giant snail and giant worm, and any mod's or skin pack's), the skins (Hellfire with its fire, Royal Parade, the skin packs) and the particle effects. Off, as players have it in this version: only the donkey is offered and a mod's registrations are kept out with a log line. Takes effect at the next start.");
             PanelFakeEntries = dbg.Bind("Debug", "MountsPanelFakeEntries", 0,
                 "Dev only: this many made-up entries padded onto the Mounts panel's list (\"Test mount 1\"...), to see it scroll with a long list; they can't be picked. 0 = none. The settings self-test counts them as a failure: 0 for a run.");
-            MountsOn = MountsPreview.Value;
-            if (MountsOn)
-            {
-                Looks.RegisterBuiltIns(); // the loose packs; the Hellfire effect is Saddle Up's too (its Awake registers it through the API)
-                Log.LogInfo("Mounts, skins and effects: on (Debug.MountsPreview; players have them off in this version).");
-            }
-            else
-            {
-                Log.LogInfo("Mounts, skins and effects: off in this version, the donkey is the only mount offered (they come in the next update" + (DevTools.Unlocked ? "; Debug.MountsPreview switches them on here" : "") + ").");
-            }
+            // Debug.MountsPreview: retired 2026-10-27 (the user: the mounts are other mods now, so a switch in the API
+            // for them makes no sense). 0.10.0 shipped the mounts, skins and effects in this DLL switched off by it;
+            // since 0.12.0 they are always on and which mounts a player has is which packs they installed. A dev
+            // machine's line leaves the cfg here, once.
+            DropRetired("Debug", new[] { "MountsPreview" });
+            Looks.RegisterBuiltIns(); // the loose packs; the Hellfire effect is Saddle Up's too (its Awake registers it through the API)
 
             if (DevTools.Unlocked)
             {

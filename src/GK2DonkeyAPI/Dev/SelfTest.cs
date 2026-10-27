@@ -144,6 +144,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupChest, Name = "chest: a zombie using it", Body = ChestZombieGuard },
             new Scenario { Group = GroupCargo, Name = "cargo: more than two items (layers, a re-made cart, the setting)", Body = CargoLayers },
             new Scenario { Group = GroupCargo, Name = "cargo: a cart with a hitch gap keeps its place as items go on", Body = CargoKeepsTheGap },
+            new Scenario { Group = GroupCargo, Name = "cargo: each mount carries its own (the smaller of it and Cart capacity, nothing dropped)", Body = CargoPerMount },
             new Scenario { Group = GroupIndoors, Name = "indoors: the two switches (refused, ended, allowed) under the indoor light", Body = IndoorsRules },
             new Scenario { Group = GroupIndoors, Name = "indoors: through a building's door riding and driving, and back out", Body = IndoorsThroughADoor },
             new Scenario { Group = GroupIndoors, Name = "indoors: the cart left at the morgue door, the corpse into the hands, the mount inside", Body = IndoorsMorgue },
@@ -162,7 +163,6 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupFight, Name = "fight: the armour on while driving leaves the cart", Body = FightArmourWhileDriving },
             new Scenario { Group = GroupFight, Name = "fight: a sword attack from the saddle", Body = FightAttackRides },
             new Scenario { Group = GroupFight, Name = "fight: build mode dismounts", Body = FightBuildModeDismounts },
-            new Scenario { Group = GroupLooks, Name = "mounts off: only the donkey offered, registrations kept out", Body = MountsOff },
             new Scenario { Group = GroupLooks, Name = "skin: on, off, removed (pictures loaded and freed)", Body = SkinOnOff },
             new Scenario { Group = GroupLooks, Name = "skin pack: a folder read, validated, worn, withdrawn", Body = SkinPack },
             new Scenario { Group = GroupLooks, Name = "skins: no leaks over spawn and remove", Body = SkinLeaks },
@@ -921,7 +921,7 @@ namespace GK2DonkeyAPI
             parent.SetData(Owner, "tricky", v2);
             parent.Tuning.Set(Owner, "CoatColorize", "00FF80");
             cartDonkey.Tuning.Set(Owner, "Skin", Sk("rat")); // a skin whose own [Tuning.Cart] sets a cart-style value (the rat's HitchGapPx 9; the dragon pulls no cart since 2026-10-25): the skin id is kept, the merged value is not
-            if (Plugin.MountsOn) yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the rat's cart-style values once the view is up
+            yield return Until(() => cartDonkey.Tuning.IsSet("HitchGapPx"), 6f); // the skin's rig merges the rat's cart-style values once the view is up
             yield return Frames(2);
             List<Mount.Instance> kept = Mount.KeptInstances(i => i.OwnerId == Owner, log: false);
             Check(kept.Count == (foal != null ? 4 : 3), $"the kept list has the test's {kept.Count} (parent, foal, donkey with cart, free cart)");
@@ -970,8 +970,7 @@ namespace GK2DonkeyAPI
             Check(pr != null && pr.DataLines.Exists(x => x[1] == "tricky" && x[2] == v2), "a value with a tab, a line break and a backslash comes back exactly");
             Mount.Record cr = records.Find(x => x.Key == "rt cart");
             Check(cr != null && cr.Sets.Exists(x => x[0] == "Skin" && x.Length > 1 && x[x.Length - 1] == Sk("rat")), $"the skin id is in the record (Skin = {Sk("rat")})");
-            if (Plugin.MountsOn) Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the rat's own hitch gap is on the wearer (cart style) but not in the record");
-            else Info("the mounts are off (Debug.MountsPreview): the rat isn't registered, so its hitch gap on the wearer isn't checked (the id is kept all the same)");
+            Check(cartDonkey.Tuning.IsSet("HitchGapPx") && cartDonkey.Tuning.SetBy("HitchGapPx") == Looks.TuningOwner && cr != null && !cr.Sets.Exists(x => x[0] == "HitchGapPx"), "the rat's own hitch gap is on the wearer (cart style) but not in the record");
         }
 
         // A donkey takes a free cart and leaves it again: one instance with the cart (the cart's data merged, its parts
@@ -1411,11 +1410,6 @@ namespace GK2DonkeyAPI
         // per-mount rows at CatchUp (what Show runs the frame after Publish).
         private static IEnumerator SettingsRows()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the rows need Saddle Up's mounts (the off state is in 'mounts off')");
-                yield break;
-            }
             foreach (MountSettingsPage live in MountSettingsPage.All)
             {
                 if (!live.Shown || !live.HasMountRow) continue;
@@ -1560,11 +1554,6 @@ namespace GK2DonkeyAPI
         // Mounts.Looks.SkinsChanged and Mounts.Catalog.MountsChanged fire on a register and on an unregister.
         private static IEnumerator ChangedEvents()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps registrations out");
-                yield break;
-            }
             int skins = 0, mounts = 0;
             Action onSkins = () => skins++;
             Action onMounts = () => mounts++;
@@ -1599,11 +1588,6 @@ namespace GK2DonkeyAPI
         // when a mount can't be ridden. The player's AutoSeat value is put back at the end.
         private static IEnumerator SeatReadout()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             StyleSettings ride = Plugin.For(MountStyle.Ride);
             bool autoWas = ride.AutoSeat.Entry.Value;
             const float px = 0.02f * 1.6667f; // Mount.PxWorldY: one art pixel along the seat's axis
@@ -1693,11 +1677,6 @@ namespace GK2DonkeyAPI
         // spawn with a cart wearing it is refused instead.
         private static IEnumerator CartReadout()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             const float pxX = 0.02f;            // Mount.PxWorld: one art pixel along the ground
             const float pxY = 0.02f * 1.6667f;  // Mount.PxWorldY: one art pixel along the seat's axis
             var clearance = new Dictionary<string, float>(StringComparer.Ordinal);
@@ -1815,11 +1794,6 @@ namespace GK2DonkeyAPI
         // donkey's). Nothing picks an effect in this version, so the rig is told through its test hook (TestWant).
         private static IEnumerator SkinEffect()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -1843,11 +1817,6 @@ namespace GK2DonkeyAPI
         // region (the worm) and live on the rat, the snail, the dragon (its belly) and the donkey.
         private static IEnumerator SecondTone()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's mounts and its packs' (the dragon, rat, snail, worm)");
-                yield break;
-            }
             Check(MountSettingsPage.MountHasRegion(M("rat"), "Muzzle") && MountSettingsPage.MountHasRegion(M("snail"), "Muzzle") && MountSettingsPage.MountHasRegion(M("dragon"), "Muzzle") && MountSettingsPage.MountHasRegion(MountCatalog.DonkeyId, "Muzzle"), "the rat, the snail, the dragon and the donkey have a second tone: the row is live for them");
             Check(!MountSettingsPage.MountHasRegion(M("worm"), "Muzzle"), "the worm has none: the row is left out for it");
             const string owner = Owner + ".secondtone";
@@ -1886,11 +1855,6 @@ namespace GK2DonkeyAPI
         // the worm's 720 are all paired, the first run showed, 2026-10-20).
         private static IEnumerator CoatEveryBuiltIn()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs Saddle Up's mounts and its packs' (the dragon, rat, snail, worm)");
-                yield break;
-            }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -1942,11 +1906,6 @@ namespace GK2DonkeyAPI
         // gap must follow the worn skin within two frames.
         private static IEnumerator PreviewGap()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in rat and worm");
-                yield break;
-            }
             if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("rat")) == null)
             {
                 Warn("the built-in worm or rat isn't registered: skipped");
@@ -2003,11 +1962,6 @@ namespace GK2DonkeyAPI
         // pixels show whose colour is in front: the keeper's over the body, the wing's over the keeper.
         private static IEnumerator FrontLayer()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in dragon");
-                yield break;
-            }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -2099,11 +2053,6 @@ namespace GK2DonkeyAPI
         // reds under the harness colour and its cloth drawn in the walk; the snail's own rider offset on its wearer.
         private static IEnumerator OverBuiltIns()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             if (a == null) { Fail("could not spawn"); yield break; }
@@ -2178,11 +2127,6 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator GameCreature()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in Gerry");
-                yield break;
-            }
             if (Looks.Find(Sk("gerry")) == null)
             {
                 Fail($"the built-in skin '{Sk("gerry")}' isn't registered");
@@ -2287,11 +2231,6 @@ namespace GK2DonkeyAPI
         // Muzzle setting changes the belly's colours only (its [Colors]).
         private static IEnumerator SkinColours()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in worm and dragon");
-                yield break;
-            }
             if (Looks.Find(Sk("worm")) == null || Looks.Find(Sk("dragon")) == null)
             {
                 Warn("the built-in worm or dragon isn't registered: skipped");
@@ -2865,52 +2804,10 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // Debug.MountsPreview off (what players have in this version): the donkey is the only mount offered, its only
-        // skin the game's own, no effect listed, nothing built in registered, and a mod's registrations are kept out:
-        // a handle to nothing, nothing thrown, nothing in the lists.
-        private static IEnumerator MountsOff()
-        {
-            if (Plugin.MountsOn)
-            {
-                Skip("the mounts are on (Debug.MountsPreview): the switch isn't in effect");
-                yield break;
-            }
-            IReadOnlyList<(string Id, string Label)> mounts = Looks.MountChoices();
-            Check(mounts.Count == 1 && mounts[0].Id == MountCatalog.DonkeyId, $"the Mount list holds the donkey only ({mounts.Count})");
-            IReadOnlyList<(string Id, string Label)> skins = Looks.SkinChoicesOf(MountCatalog.DonkeyId);
-            Check(skins.Count == 1 && skins[0].Id == MountLooks.DonkeyId && skins[0].Label == Looks.DefaultLabel, $"the donkey's Skin list holds Default only ({skins.Count})");
-            Check(Mounts.Effects.Effects.Count == 0, $"no effect is listed ({Mounts.Effects.Effects.Count})");
-            Check(Looks.Find(Sk("hellfire")) == null && Looks.Find(Sk("rat")) == null && Looks.Find(Sk("gerry")) == null && Catalog.Find(M("dragon")) == null && GK2DonkeyAPI.Effects.Find("saddleup.hellfire") == null, "no built-in skin, mount or effect is registered");
-            Check(!Mounts.MountsEnabled, "Mounts.MountsEnabled says so");
-            int skinsBefore = Mounts.Looks.Skins.Count, mountsBefore = Mounts.Catalog.All.Count, effectsBefore = Mounts.Effects.Effects.Count;
-            IDisposable a = Mounts.Looks.RegisterRecipe(Owner, "selftest.off-skin", "Off Skin", f => f.Pixels);
-            IDisposable b = Mounts.Catalog.Register(Owner, new MountDef { Id = "selftest.off-mount", Name = "Off Mount" });
-            var fx = new MountEffectDef { Id = "off-fx", Name = "Off Fx" };
-            var part = new MountEffectPart { Source = Mounts.Effects.GameParticles("flame_fx", "Assets/AddressableAssets/Materials/flame_fx.mat") };
-            part.Emitters.Add(new MountEffectEmitter { Placement = MountEffectPlacement.Ring, Count = 1 });
-            fx.Parts.Add(part);
-            IDisposable c = Mounts.Effects.Register(Owner, fx);
-            int folder = Mounts.Looks.RegisterFolder(Owner, System.IO.Path.GetTempPath());
-            Check(a != null && b != null && c != null, "a skin, a mount and an effect registration each return a handle (nothing thrown)");
-            Check(Mounts.Looks.Skins.Count == skinsBefore && Mounts.Catalog.All.Count == mountsBefore && Mounts.Effects.Effects.Count == effectsBefore
-                && Looks.Find("donkey/selftest.off-skin") == null && Catalog.Find("selftest.off-mount") == null && GK2DonkeyAPI.Effects.Find("off-fx") == null, "none of them was registered");
-            Check(folder == 0, $"a folder registration reports 0 packs ({folder})");
-            a.Dispose();
-            b.Dispose();
-            c.Dispose();
-            Check(Mounts.Looks.Skins.Count == skinsBefore && Mounts.Catalog.All.Count == mountsBefore, "disposing the handles changes nothing");
-            yield break;
-        }
-
         // A built-in skin on a spawned donkey: drawn (its overlay shows, the donkey's own body kept from rendering),
         // its pictures loaded; cleared: the donkey's own body again; removed: the pictures freed.
         private static IEnumerator SkinOnOff()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             // a built-in nobody wears at the moment: a skin's sheet is one texture shared by its wearers (refcounted), so
             // the counts below only move for a skin that is not loaded yet (the player's own mount may be the rat)
             string id = null;
@@ -3298,11 +3195,6 @@ namespace GK2DonkeyAPI
         // withdrawn with the handle.
         private static IEnumerator MountFromCode()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps a mount out");
-                yield break;
-            }
             const string owner = Owner + ".mount";
             var ability = new CountingAbility();
             var thrower = new ThrowingAbility();
@@ -3383,11 +3275,6 @@ namespace GK2DonkeyAPI
         // page row that names its tuning key is disabled while the companion's chosen mount pins that key.
         private static IEnumerator TuningOwnership()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps a mount out");
-                yield break;
-            }
             const string one = Owner + ".one", two = Owner + ".two", mountOwner = Owner + ".own";
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle m = Spawn(near, true);
@@ -3506,11 +3393,6 @@ namespace GK2DonkeyAPI
         // to the mount; the same skin from two places: the higher version wins, versions compared as numbers.
         private static IEnumerator IdRules()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string o1 = Owner + ".ids1", o2 = Owner + ".ids2", o4 = Owner + ".ids4";
             const string beast = "selftest.idbeast", own = beast + "/default", joiner = beast + "/selftest.joiner-test", oldLook = beast + "/old-beast-look";
             string r1 = null, r2 = null, r3 = null, r4 = null;
@@ -3573,11 +3455,6 @@ namespace GK2DonkeyAPI
         // its id takes its entries with it.
         private static IEnumerator IdRulesCode()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps a mount out");
-                yield break;
-            }
             const string oA = Owner + ".clashA", oB = Owner + ".clashB", oC = Owner + ".clashC", oD = Owner + ".clashD", oP = Owner + ".clashP";
             const string id = "selftest.clash", id2 = "selftest.clash2", id3 = "selftest.clash3";
             IDisposable hA = null, hC = null, hD = null, hA2 = null, hA3 = null, skinA = null;
@@ -3676,11 +3553,6 @@ namespace GK2DonkeyAPI
         // owner's mount and a donkey recipe without it are refused (thrown); on its own mount a code skin takes any name.
         private static IEnumerator DefaultSkinRules()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string o1 = Owner + ".defskin", o2 = Owner + ".defskin2", o3 = Owner + ".defskin3";
             string r1 = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-defskin1");
             string r2 = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "gk2donkeyapi-selftest-defskin2");
@@ -3794,11 +3666,6 @@ namespace GK2DonkeyAPI
         // frame key is reported, not dropped.
         private static IEnumerator PackFormat()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string owner = Owner + ".format";
             string r1 = null, r2 = null, r3 = null, r4 = null;
             IDisposable reg = null;
@@ -3955,11 +3822,6 @@ namespace GK2DonkeyAPI
         // there in the recipe's own colours; cleared, they are freed.
         private static IEnumerator SkinRecipe()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps registrations out");
-                yield break;
-            }
             const string owner = Owner + ".recipe";
             var rim = new Color32(40, 24, 12, 255);
             var fill = new Color32(200, 40, 40, 255);
@@ -4003,11 +3865,6 @@ namespace GK2DonkeyAPI
         // picks an effect in this version: the rig is told through its test hook (TestWant).
         private static IEnumerator EffectOnOff()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in effect");
-                yield break;
-            }
             Vector3 near = Spot(home, 4f) ?? home;
             MountHandle a = Spawn(near, true);
             yield return Until(() => a != null && a.IsReady, 6f);
@@ -4044,11 +3901,6 @@ namespace GK2DonkeyAPI
         // Many skinned donkeys spawned and removed, twice: the skin loads once, and everything is freed at the end.
         private static IEnumerator SkinLeaks()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             if (Looks.Find(Sk("rat")) == null)
             {
                 Warn("no built-in skin 'rat': skipped");
@@ -4090,11 +3942,6 @@ namespace GK2DonkeyAPI
         // sleep tier: Sleep), and is built again when it wakes (docs/mounts-foundation-2.md 2.5).
         private static IEnumerator SkinSleep()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the built-in skins");
-                yield break;
-            }
             string skin = null;
             foreach (string id in new[] { "rat", "snail", "worm" }) if (Looks.Find(Sk(id)) != null && !Looks.IsLoaded(Sk(id))) { skin = Sk(id); break; }
             if (skin == null)
@@ -4193,11 +4040,6 @@ namespace GK2DonkeyAPI
         // pause menu shown again as it was.
         private static IEnumerator PanelWayBack()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the panel needs Saddle Up's mounts");
-                yield break;
-            }
             MountSettingsPage page = null;
             foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && live.HasMountRow) { page = live; break; }
             if (page == null)
@@ -4277,11 +4119,6 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator PanelSmoke()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the panel needs Saddle Up's mounts");
-                yield break;
-            }
             MountSettingsPage page = null;
             foreach (MountSettingsPage live in MountSettingsPage.All) if (live.Shown && live.HasMountRow) { page = live; break; }
             if (page == null)
@@ -4470,11 +4307,6 @@ namespace GK2DonkeyAPI
         // door and no setting change (docs/mounts-foundation-2.md 4.4).
         private static IEnumerator AsideSkin()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): needs the skins");
-                yield break;
-            }
             const string owner = Owner + ".aside";
             string tempRoot = null;
             MountHandle a = null;

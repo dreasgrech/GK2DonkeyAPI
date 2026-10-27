@@ -96,16 +96,13 @@ namespace GK2DonkeyAPI
                 Check(err == null && kd.Jump != null && kd.Jump.Count == 5 && Mathf.Abs(kd.Jump["crouch"] - 4f) < 0.001f, $"read again: the file's jump is the mount's ({(kd.Jump != null ? kd.Jump.Count + " keys" : "none")})");
 
                 // a code mount's MountDef.Jump
-                if (Mounts.MountsEnabled)
-                {
-                    codeReg = Mounts.Catalog.Register(owner, new MountDef { Id = "selftest.jump-code", Name = "Jump Code Beast", Jump = new MountJump { Height = 40f, Hang = 0.1f } });
-                    MountInfo c = Mounts.Catalog.Find("selftest.jump-code");
-                    Check(c != null && c.OwnJump && Mathf.Abs(c.Jump.Height.Value - 40f) < 0.001f && Mathf.Abs(c.Jump.Hang.Value - 0.1f) < 0.001f && Mathf.Abs(c.Jump.Time.Value - def.Time) < 0.001f,
-                        $"a code mount's MountDef.Jump: height {c?.Jump.Height}, hang {c?.Jump.Hang}, the time the default's {c?.Jump.Time}");
-                }
+                codeReg = Mounts.Catalog.Register(owner, new MountDef { Id = "selftest.jump-code", Name = "Jump Code Beast", Jump = new MountJump { Height = 40f, Hang = 0.1f } });
+                MountInfo c = Mounts.Catalog.Find("selftest.jump-code");
+                Check(c != null && c.OwnJump && Mathf.Abs(c.Jump.Height.Value - 40f) < 0.001f && Mathf.Abs(c.Jump.Hang.Value - 0.1f) < 0.001f && Mathf.Abs(c.Jump.Time.Value - def.Time) < 0.001f,
+                    $"a code mount's MountDef.Jump: height {c?.Jump.Height}, hang {c?.Jump.Hang}, the time the default's {c?.Jump.Time}");
 
                 // live: ridden plain, a held jump tops out at its own height
-                if (!Flight.Active || !Plugin.MountsOn) { Info($"the live part wants the flying experiment and the mounts on: skipped"); yield break; }
+                if (!Flight.Active) { Info("the live part wants the flying experiment on: skipped"); yield break; }
                 if (Mount.Instance.IsIndoors()) { Info("indoors: the live part wants open ground"); yield break; }
                 h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
                 if (h == null) { Fail("could not spawn"); yield break; }

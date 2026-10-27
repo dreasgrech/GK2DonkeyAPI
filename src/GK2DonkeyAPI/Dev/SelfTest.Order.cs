@@ -14,11 +14,6 @@ namespace GK2DonkeyAPI
     {
         private static IEnumerator OrderAndIdentity()
         {
-            if (!Plugin.MountsOn)
-            {
-                Skip("the mounts are off (Debug.MountsPreview): the API keeps packs out");
-                yield break;
-            }
             const string oA = Owner + ".order-a", oB = Owner + ".order-b", oC = Owner + ".order-c";
             const string beast = "selftest.order-beast", other = "selftest.order-other", codeMount = "selftest.order-code", absent = "selftest.order-absent";
             string r1 = null, r2 = null, r3 = null, r4 = null;

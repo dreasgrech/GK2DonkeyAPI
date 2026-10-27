@@ -663,10 +663,10 @@ The one-page guide with both shapes of a mod's own mount (a pack in a DLL, a mou
 The one-page guide with both shapes of a mod's own mount (a pack in a DLL, a mount in code with an ability):
 [making-a-mount.md](making-a-mount.md).
 
-> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
-> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
-> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
-> with the dev key `Debug.MountsPreview` on.
+> **On for players since Saddle Up 0.12.0 (API 0.40.0).** In 0.10.0's download `Mounts.MountsEnabled` was false: the
+> lists held the donkey alone or nothing, and a registration returned a handle that does nothing, with one log line
+> per owner. Since 0.40.0 `Mounts.MountsEnabled` is always true and the switch (`Debug.MountsPreview`) is gone: which
+> mounts a player has is which packs they installed.
 
 What the player rides as a creature type, against a skin, which is how it is drawn ([mounts-design.md](mounts-design.md)).
 A mount (`Mounts.Catalog`, `MountDef`) owns the rider's seat for it (values for existing tuning keys: `Tuning` for both
@@ -805,10 +805,10 @@ A code skin or mount gives its sounds in its def (`Sounds`, `SoundsRide`, `Sound
 
 ## Skins (0.30.0)
 
-> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
-> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
-> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
-> with the dev key `Debug.MountsPreview` on.
+> **On for players since Saddle Up 0.12.0 (API 0.40.0).** In 0.10.0's download `Mounts.MountsEnabled` was false: the
+> lists held the donkey alone or nothing, and a registration returned a handle that does nothing, with one log line
+> per owner. Since 0.40.0 `Mounts.MountsEnabled` is always true and the switch (`Debug.MountsPreview`) is gone: which
+> mounts a player has is which packs they installed.
 
 A skin draws the donkey as something else. `Mounts.Looks` lists them and takes new ones; a donkey wears one through its
 tuning key `Skin` (also `MountCompanion.Skin` for a player mod's donkey, with `FoalsWearSkin`). The pictures are a PNG
@@ -908,10 +908,10 @@ every menu alike, and a stored id that isn't in the list is shown as "not instal
 
 ## Effects (0.30.0)
 
-> **Switched off in Saddle Up 0.10.0's download** (`Mounts.MountsEnabled` is false there; the next update switches it
-> on): the lists hold the donkey alone or nothing, and a registration returns a handle that does nothing, with one log
-> line per owner. Everything below describes the API as it works when switched on, and as it works now on a machine
-> with the dev key `Debug.MountsPreview` on.
+> **On for players since Saddle Up 0.12.0 (API 0.40.0).** In 0.10.0's download `Mounts.MountsEnabled` was false: the
+> lists held the donkey alone or nothing, and a registration returned a handle that does nothing, with one log line
+> per owner. Since 0.40.0 `Mounts.MountsEnabled` is always true and the switch (`Debug.MountsPreview`) is gone: which
+> mounts a player has is which packs they installed.
 
 A particle effect for a mount: Saddle Up's **Hellfire** (the game's own lamp fire on a ring round the donkey, its
 sparks, a trail of flames left behind) and the effects mods register with `Mounts.Effects`.
@@ -1069,6 +1069,11 @@ History:
   What a pack may hold is checked before it costs anything: a picture's size from its PNG header (a frame at most its
   canvas, a sheet its cells, a portrait 512x512), sound files at most 16 MB (a WAV chunk with a bad length is refused),
   no NaN or Infinity, file names inside the pack's own folder (no `..`, no drive, no network share).
+- 0.40.0: **cargo enforced per mount** (the user, 2026-10-27; docs/next-update.md section 3): `MountDef.Cargo` /
+  `[Mount] cargo` is no longer a stat only: a cart holds the smaller of the player's `CartSlots` and the cargo of the
+  mount pulling it, re-applied when the mount under a hitched cart changes, never fewer slots than it holds (a lighter
+  mount drops nothing; the size follows as items come off). The shipped mounts: the giant rat 2, Gerry and the giant
+  worm 4, the donkey and the giant snail 6. No change to the public surface.
 - 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,
   2026-10-25: "for mounts that cant pull the cart, the drive the cart button still appears in teh journal and there's
   still cart customization"): a cart row shows only for a mount that pulls one; the Mounts panel's Drive the cart

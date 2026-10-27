@@ -26,7 +26,6 @@ namespace GK2DonkeyAPI
 
         private static IEnumerator WalkSurvey()
         {
-            if (!Plugin.MountsOn) { Skip("the mounts are off (Debug.MountsPreview)"); yield break; }
             if (!DevTools.Unlocked) { Skip("the stride probe is dev only (dev tools locked)"); yield break; }
             if (!Plugin.For(MountStyle.Ride).SoundsOn.Value) Info("the mount sounds are off: the rig (and the probe in it) only ticks with them on; no rows will come");
             try
