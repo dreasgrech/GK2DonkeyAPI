@@ -14,7 +14,7 @@ For players:
 
 **The mounts are here.** 0.10.0 had them built in but switched off; this version switches them on. In short:
 
-- **Six mounts to ride**, picked in the Mounts panel (the Mount section's Mounts button, or its key):
+- **Six mounts to ride**, picked in the Mounts panel (**L**, or the Mount section's Mounts button):
 
   | Mount | Download | Riding | Cart | Its thing |
   |---|---|---|---|---|
@@ -43,6 +43,9 @@ For players:
 
 Everything else in this version, in detail:
 
+- **L opens the Mounts panel** (the user, 2026-10-27: "we cant not have a default hotkey for this"): the Mounts
+  panel key is the first row of Keys and is L by default (it had no key; the Mount section's button still opens it). L
+  is free in the game's own keys; typing a name or a search in the panel doesn't open or close it.
 - **Each mount has its own name, babies and voice, set in the Mounts panel** (the user, 2026-10-26: "make the amount
   of babies be saved per mount"; "users need to set their mount names from inside here"). The journal page lists, for
   the mount picked: its Name (a text box: type it there, no more editing the cfg), its Skin, Babies (0 to 5), Babies
@@ -928,6 +931,13 @@ For mod authors:
 
 Development:
 
+- **The 0.12.0 fixture** (`tests/fixtures/released/0.12.0/`): the two cfgs the release zip's first run wrote, every
+  value set off its default with the new `tools/fixture-flip.py`, `defaults.cfg`, and a side file (to be replaced
+  by one with a parked loaded cart). The release rehearsal (first start and the upgrade over 0.10.0's files) is in
+  docs/release-checklist.md section 5.
+- **The jump probe is off by default** (the user, 2026-10-27: "these files are still being created"): its trace files
+  under `BepInEx\GK2-jumps\` were written for every ridden jump whenever the dev tools were unlocked; now only with
+  the new dev key `Debug.JumpTrace` on. Players never had it.
 - **The mounts gate is removed:** `Debug.MountsPreview`, `Plugin.MountsOn`, `Mounts.KeptOut` and every "switched off"
   text (Saddle Up's description, its "Other mounts and skins" row, the Mount and Skin rows' descriptions, the log
   lines) are gone; the built-ins always register. A dev cfg's `MountsPreview` line leaves the file at start (one

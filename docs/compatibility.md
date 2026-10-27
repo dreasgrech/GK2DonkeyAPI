@@ -120,7 +120,11 @@ changelog line that says it reaches new installs only.
   (from the sources at 7ac9a6c and the live cfg on this machine, each file's header says so); `0.10.0` is the cfgs the
   release zip's rehearsal run wrote over the 0.9.1 fixture (the keys new in 0.10.0 then set off their defaults) and a
   real side file of the 0.30.0 build; from here on they are captured at release (checklist 3b): the two cfgs after
-  the first run and a side file with a parked loaded cart. Every value in a cfg fixture differs from its default, so
+  the first run and a side file with a parked loaded cart. `0.12.0`: the cfgs the release zip's first run wrote
+  (rehearsal run A, 2026-10-27; `MountsKey` then already set by hand), every value then set off its default
+  (`python -I tools/fixture-flip.py <in.cfg> <out.cfg> "<header>"`: bools inverted, numbers to the range's other end, enums to the next value, keys to keypad
+  keys, names "Fixture"); the side file a real one of the same format (2) with five kept mounts and no load yet:
+  to be replaced by one with a parked loaded cart saved by the 0.40.0 build. Every value in a cfg fixture differs from its default, so
   a lost value shows.
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, Saddle Up's cfg through the live page's own carry-over (`MountSettingsPage.Upgrade`:

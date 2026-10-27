@@ -14,7 +14,9 @@ namespace GK2DonkeyAPI
     // the jump changes. Dev only (flying is).
     internal static class JumpTrace
     {
-        internal static bool On = DevTools.Unlocked; // never for a player, whatever flying becomes (the files, the strings per frame)
+        // never for a player, whatever flying becomes (the files, the strings per frame); for the dev only with
+        // Debug.JumpTrace on (off by default since 2026-10-27: it wrote a file per jump on every dev session)
+        internal static bool On => DevTools.Unlocked && Plugin.JumpTraceOn != null && Plugin.JumpTraceOn.Value;
         private static readonly StringBuilder sb = new StringBuilder(64 * 1024);
         private static bool open;
         private static int seq, rows;

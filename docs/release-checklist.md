@@ -100,7 +100,7 @@ Rehearse the first start on a clean config, with the game closed:
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.
 3b. **Capture the released files** for `tests/fixtures/released/<version>/` (docs/compatibility.md section 4): copy
    the two cfgs BepInEx just wrote (then set every value in the copies to something other than its default, so a
-   lost value shows), the save's `<save>.gk2donkeyapi.dat` with the parked loaded cart, and `src/GK2DonkeyAPI/defaults.cfg`.
+   lost value shows: `python -I tools/fixture-flip.py`), the save's `<save>.gk2donkeyapi.dat` with the parked loaded cart, and `src/GK2DonkeyAPI/defaults.cfg`.
 3c. **The upgrade rehearsal**: put the previous release's two cfgs back (a player's: the ones moved aside in step 1
    are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
    loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
@@ -175,6 +175,18 @@ cfg equal to its backup key by key (164 keys, 0 lost, 0 changed; `backup-dev-202
 with the upgrade scenario green over the 0.9.1 and the 0.10.0 fixtures; no warning but the tests' own. Found and fixed
 in that run: a heading with a picture row's label got a picture of its own (the headings are "Mount colours" and
 "Cart colours" now; the page refuses such a row).
+
+Run 2026-10-27 with the release zips of 0.12.0 / API 0.40.0 (`GK2-Saddle-Up-0.12.0.zip` and the All Mounts zip), the dev
+marker, the dev DLLs and the dev-only plugins aside (staged by a script: stage-a, capture-a, stage-b, restore).
+**A, a first start** (no cfgs): 392 log lines, no warning, error or exception, no `Dev tools unlocked`, the four pack
+mounts and Gerry declared with their cargo (Gerry 4, rat 2, snail 6, worm 4, the dragon no cart), layout from embedded;
+H, G, two items, H left the cart, G brought the same cart with both; the Mounts panel listed six mounts; the fresh API
+cfg has no `[Debug]`. Its cfgs are the `0.12.0` fixture (every value then set off its default). Found in it: the Mounts
+panel key had no default (now L, the first Keys row; rebuilt and re-extracted before B). **B, the upgrade** over the
+0.10.0 fixture's cfgs: 430 lines, 0 warnings; every moved row logged "carried over", the 7 [Effects] lines retired;
+key by key 42 of 42 Saddle Up values and 453 of 453 API values kept (the 15 others the retired Effect and speed rows);
+in the panel Bella, 3 babies, the 0.10.0 colours, the lantern off (the fixture's `Lantern = false`). Saves byte-identical
+before and after; everything restored and the dev builds redeployed (`--no-incremental`).
 
 ## 6. Versions, changelog and hand-off
 

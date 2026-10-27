@@ -74,6 +74,11 @@ namespace SaddleUp
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
                 "Your own mount and cart: ride it (H), drive the cart (G), haul with it. The donkey or Gerry, or any mount a pack or another mod adds (the Dragon, the Critters...). Built on GK2 Donkey API.");
             p.Status("Keys");
+            // the Mounts panel first, on L (the user, 2026-10-27: "we cant not have a default hotkey for this"; L is
+            // unbound in the game's defaults, docs/api-design.md "Showcase keys"): where the mount, its skins, name,
+            // babies and colours are chosen
+            p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its name, skins, babies and colours. None = no key (the Mount section's button opens it too).",
+                pressed: p.OpenPanel);
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Your mount comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
             ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your mount comes with its cart and you drive; again: dismount. Riding: the cart comes and is hitched.",
@@ -103,8 +108,6 @@ namespace SaddleUp
             // with its own gate (not during a door, a cutscene or a dialogue)
             p.Key("Keys", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Stuck, or fallen somewhere you shouldn't be: puts you back on the last ground you stood on in this scene. None = no key (the Behaviour section has a button).",
                 apply: v => Mounts.Behaviour.Set(Guid, "ReturnKey", v));
-            p.Key("Keys", "MountsKey", KeyboardShortcut.Empty, "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins and colours. None = no key (the Mount section's button opens it too).",
-                pressed: p.OpenPanel);
 
             // The page since 0.11: Keys; Mount (what you have: its picture, its name, what it is and how it is drawn,
             // its babies, whether it is kept with the save); Colours (every colour of it and of the cart); Behaviour (what

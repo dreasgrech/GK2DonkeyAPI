@@ -461,6 +461,7 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<string> SelfTestSpot;
         internal static ConfigEntry<bool> CargoTabTint;
         internal static ConfigEntry<bool> SkinPackAutoReload;
+        internal static ConfigEntry<bool> JumpTraceOn; // dev: the jump probe's files (JumpProbe.cs), off by default
         internal static ConfigEntry<int> PanelFakeEntries; // dev: made-up entries padded onto the Mounts panel's list, to see it scroll
         internal static ConfigEntry<bool> CargoSeatOnShapes;
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
@@ -678,6 +679,8 @@ namespace GK2DonkeyAPI
             CargoSeatOnShapes.SettingChanged += (_, __) => Cargo.RefreshViews();
             CargoTabTint = dbg.Bind("Debug", "CargoTabTint", true,
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
+            JumpTraceOn = dbg.Bind("Debug", "JumpTrace", false,
+                "The jump probe (docs/flying.md \"The jump probe\"): every ridden jump traced frame by frame into a file of its own under BepInEx\\GK2-jumps\\ (the newest 120 kept), with the landing audit. For looking into a jump or a landing; off: no files (it was always on with the dev tools until 2026-10-27).");
             SkinPackAutoReload = dbg.Bind("Debug", "SkinPackAutoReload", false,
                 "A skin pack in use is read again by itself when its files change on disk (skin.cfg or a picture; checked once a second, after the files have stood still for a second), as the Mounts tab's \"Reload from the file\" does. For drawing a skin: save in the editor, look in the game (docs/sprite-tools.md). Off: only the button reloads.");
             SelfTestSpot = dbg.Bind("Debug", "SelfTestSpot", "",

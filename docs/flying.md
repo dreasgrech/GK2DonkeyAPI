@@ -4,7 +4,7 @@
 the dev tools; the Flying tab's switch is a dev session toggle (on), its numbers stay session-only, and the climb and
 descend keys are the Behaviour keys `ClimbKey` (Left Shift) and `DescendKey` (Left Ctrl) with Saddle Up's Keys rows
 (the tab's two key rows are gone). Dev-only still: the per-frame `[flight-probe]` lines (off) and the jump probe's
-files (`JumpProbe.On` needs the dev tools). The `[flight]` log lines a player gets are event lines (a take-off, a
+files (`JumpTrace.On`: the dev tools and `Debug.JumpTrace`, off by default since 2026-10-27). The `[flight]` log lines a player gets are event lines (a take-off, a
 landing, a bump said once per thing every two seconds, a refused landing). **Still open for players, as below:** the
 "through the ground on the high rock table" question (studying, nothing built; the fall guard is what catches a fall
 there), the hand tests of step 2, and the sections marked "not seen in game".
