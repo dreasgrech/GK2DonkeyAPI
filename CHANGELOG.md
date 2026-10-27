@@ -26,7 +26,7 @@ For players:
   | Dragon | GK2 Saddle Up: Dragon | Slow | no cart | **flies**: over water, fences, cliffs and roofs |
 
 - **Each mount pulls its own load** (the user, 2026-10-27): the faster it is, the less its cart holds. A cart holds
-  the mount's number or your Cart capacity, whichever is smaller; switching to a lighter mount never drops anything
+  as many items as its mount carries; switching to a lighter mount never drops anything
   (the cart stays full until you unload it). The Mounts panel shows each mount's speed and cargo.
 - **Skins:** the donkey has Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire comes in a
   later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour). Other mods and
@@ -35,21 +35,42 @@ For players:
 - **Everything is kept per mount:** its colours (coat, harness, second tone, the cart's paint, wheels, hubs and
   lantern), its name, its babies and its voice, all set in the Mounts panel. Your 0.10.0 donkey keeps everything it
   had.
-- **Babies are the same mount and skin** (a setting): a dragon's young are little dragons, Gerry's are skulls their
-  own size, each baby a little different from its siblings.
+- **Babies look like their parent:** a dragon's young are little dragons, Gerry's are skulls their own size, each
+  baby a little different from its siblings.
 - **Every mount jumps** (Space); the dragon takes off with a second press in the air. Not in a fight, where Space is
   your attack. The silent ones (the snail, the worm) are silent by choice; the dragon's, the rat's and Gerry's own
   get-on, get-off and answer sounds come later.
 
 Everything else in this version, in detail:
 
+- **"Behaviour" is "Mount Behaviour"** in the settings, and the "Status: Active" line at the top of Keys is gone (the Mods
+  list says whether the mod is working). Your values carry over.
+- **Babies always look like their parent** (the user, 2026-10-27): "Babies are the same mount and skin" is gone; off,
+  it made a dragon's babies plain baby donkeys. A 0.10.0 player who had it off now sees their babies in the donkey's
+  skin. The line leaves the cfg.
+- **The bell is the cart's** (the user, 2026-10-27): the bell key rings only while you drive the cart.
+- **Two settings are gone** (the user, 2026-10-27: "i dont think we need them"): "Calling your mount leaves the cart
+  parked" (always so now: the ride key brings your mount alone and a parked cart stays where it is) and "Bell sound
+  when setting off" (no bell when the cart sets off). Their lines leave the cfg.
+- **No more Cart capacity setting** (the user, 2026-10-27: "we shouldnt have a Cart Capacity option now because ... each
+  mount can have its own value"): a cart holds what its mount carries (the donkey and the snail 6, Gerry and the worm 4,
+  the rat 2). A Cart capacity you had set no longer limits your carts; its line leaves both cfg files.
+- **The safe spot has its own section** at the end of the settings: "Bring me back if I fall out of the world", the
+  "Back to the last safe spot" key and button (before, spread over Keys and Behaviour; the "Last safe spot"
+  coordinates line is gone).
+- **Every setting's text is short and plain** (the user, 2026-10-27: "keep them simple ... read with a skim"): whole
+  sentences, no "None = no key". "Bray sounds" is "Mount calls" and "Say why mounting is refused" is "Say why you can't
+  get on" (the cfg keys are the same).
+- **The mount packs' files are named like the rest** (the user, 2026-10-27): `GK2SaddleUpDragon.dll` in
+  `BepInEx\plugins\GK2SaddleUpDragon\` and `GK2SaddleUpCritters.dll` in `BepInEx\plugins\GK2SaddleUpCritters\`, beside
+  `GK2DonkeyAPI` and `GK2SaddleUp` (never released under the old names; the mounts' ids are unchanged).
 - **L opens the Mounts panel** (the user, 2026-10-27: "we cant not have a default hotkey for this"): the Mounts
   panel key is the first row of Keys and is L by default (it had no key; the Mount section's button still opens it). L
   is free in the game's own keys; typing a name or a search in the panel doesn't open or close it.
 - **Each mount has its own name, babies and voice, set in the Mounts panel** (the user, 2026-10-26: "make the amount
   of babies be saved per mount"; "users need to set their mount names from inside here"). The journal page lists, for
   the mount picked: its Name (a text box: type it there, no more editing the cfg), its Skin, Babies (0 to 5), Babies
-  follow you on foot, Babies come indoors, Babies are the same mount and skin, and Voice and steps (its sounds'
+  follow you on foot, Babies come indoors, and Voice and steps (its sounds'
   volume); the babies rows only for a mount that has babies. They are in the same order on every mount. Lantern and
   Lantern lit by day moved into the colours window's Cart colours, per mount too. These left the options pages (Sound
   and Cart lose a row each; the Babies section is gone). What you had set carries over to the donkey; the other mounts
@@ -295,8 +316,8 @@ Everything else in this version, in detail:
   donkey, yours comes and you get on it.
 - **Each mount has its own speed now.** How fast you ride belongs to the mount you pick, and the cart slows every
   mount the same way (to three quarters of its riding speed, as it always did the donkey). The Mounts panel shows it:
-  "Speed: Fast" (against the donkey), and a new stat, "Cargo: 6 items", what its cart carries (every mount the most
-  for now; your Cart capacity setting still decides what a cart holds). The donkey is as fast as ever (twice walking
+  "Speed: Fast" (against the donkey), and a new stat, "Cargo: 6 items", what its cart carries (since 0.12 it is what
+  the cart holds, and the Cart capacity setting is gone). The donkey is as fast as ever (twice walking
   speed riding, 1.5 times with the cart); the giant rat is very fast, Gerry a little faster, the dragon and the worm a
   little slower and the snail slowest. **The Riding speed and Cart speed rows are gone**, and a Faster or Fastest you
   had picked no longer applies: the mounts set the speeds now. Their old lines leave your settings file by themselves.
@@ -931,6 +952,15 @@ For mod authors:
 
 Development:
 
+- **`General.CartSlots` is session-only**: bound in a config that is never written (`Plugin.sessionOnly`), its line
+  retired from `dreas.gk2.donkeyapi.cfg`; a mod's `Mounts.Behaviour.Set("CartSlots", n)` still lowers every cart for
+  its session (the Mounts panel then reads "2 of 6 items (a mod limits the cart to 2)"). Saddle Up retires its
+  `CartSlots` under Cart and Behaviour. The 0.12.0 fixture made before this is set aside, to be captured again at the
+  release rehearsal.
+- **Pack DLL names come from the csproj** (`<AssemblyName>GK2<Pack>`): `build-dist.sh`, `make-release-zip.py` and
+  `check-dist.py` read it (the repo folder `packs/<Pack>/`, the namespace, the resource prefix and the ids keep the
+  pack's name). The self-tests "Built in or external" and the dragon's embedded sounds expect the GK2 names; the
+  speeds test checks the card at Cart capacity 6 and 2.
 - **The 0.12.0 fixture** (`tests/fixtures/released/0.12.0/`): the two cfgs the release zip's first run wrote, every
   value set off its default with the new `tools/fixture-flip.py`, `defaults.cfg`, and a side file (to be replaced
   by one with a parked loaded cart). The release rehearsal (first start and the upgrade over 0.10.0's files) is in

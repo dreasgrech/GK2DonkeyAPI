@@ -434,7 +434,7 @@ namespace GK2DonkeyAPI.Api
             // is one Skin row per mount, shown for the chosen mount only (cfg keys Mount and Skin_<mount id>). What the
             // companion gets, and the save keeps, is one thing: the skin id (companion.Skin).
             mountRow = List(section, "Mount", MountCatalog.DonkeyId, Looks.MountChoices, "Mount",
-                "What you ride: the donkey, or another mount (the giant rat, the dragon, ... from a mod or a skin pack you installed). Each mount has its own skins: its Skin row in the Mounts panel.",
+                "The mount you ride.",
                 v => ApplyMountRows(), look: true);
             foreach (MountInfo k in Mounts.Catalog.All) AddSkinRow(k);
             ApplyMountRows();
@@ -479,7 +479,7 @@ namespace GK2DonkeyAPI.Api
             try
             {
                 skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
-                    $"How the {k.Name.ToLowerInvariant()} is drawn: one of its skins.",
+                    $"How your {k.Name.ToLowerInvariant()} looks.",
                     v => ApplyMountRows(), look: true);
             }
             finally
@@ -578,8 +578,8 @@ namespace GK2DonkeyAPI.Api
         internal bool Shown => shown;
 
         // The rows for the mount's babies (foals), for a section of their own ("Babies"; MountRows' section works too):
-        // how many, whether they follow the keeper on foot, whether they come indoors, whether they are the same mount
-        // and skin. Cfg keys: Foals, FoalsFollow, FoalsIndoors, FoalsWearSkin in the section given (a mod that had them
+        // how many, whether they follow the keeper on foot, whether they come indoors (since 0.40.0 they always look like
+        // their parent). Cfg keys: Foals, FoalsFollow, FoalsIndoors in the section given (a mod that had them
         // in another section names it with MovedKey first). The count, FoalsFollow and FoalsWearSkin rows default to
         // the companion's values as they are when this is called (set them first for your own defaults).
         public void FoalRows(string section, MountCompanion companion)
@@ -593,10 +593,13 @@ namespace GK2DonkeyAPI.Api
             {
                 MountLook l = me.LookOf(mountId);
                 Func<bool> babies = () => Catalog.Find(mountId)?.Foals ?? true;
-                Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "Little ones of your mount that stay with it and follow it around. Kept for each mount.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
-                Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out.", v => l.FoalsFollowOnFoot = v, babies, look: true);
-                Toggle(section, "FoalsIndoors" + sfx, true, "Babies come indoors", "They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you.", v => l.FoalsComeIndoors = v, babies, look: true);
-                Toggle(section, "FoalsWearSkin" + sfx, l.FoalsWearSkin, "Babies are the same mount and skin", "Off: they stay plain baby donkeys whatever yours is.", v => l.FoalsWearSkin = v, babies, look: true);
+                Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
+                Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
+                Toggle(section, "FoalsIndoors" + sfx, true, "Babies come indoors", "The babies follow you into buildings and back out.", v => l.FoalsComeIndoors = v, babies, look: true);
+                // "Babies are the same mount and skin" is gone (the user, 2026-10-27): off made a dragon's babies plain
+                // donkeys. Babies always look like their parent (MountLook.FoalsWearSkin stays true unless a mod sets it); the
+                // old lines leave the file.
+                RetiredKey(section, "FoalsWearSkin" + sfx);
             });
         }
 

@@ -31,19 +31,19 @@ def plain(sec):
 
 def page_rows(src):
     rows, aliases = set(), {}
-    for m in re.finditer(r'p\.(Key|Text|Toggle|Choice|Steps|Color|List)\("(\w+)", "(\w+)"( \+ sfx)?', src):
+    for m in re.finditer(r'p\.(Key|Text|Toggle|Choice|Steps|Color|List)\("(\w[\w ]*)", "(\w+)"( \+ sfx)?', src):
         kind, sec, key, sfx = m.groups()
         for s in (MOUNTS if sfx else [""]):
             rows.add((sec, key + s))
             if kind == "Color":
                 rows.add((sec, key + "Lightness" + s))
-    for m in re.finditer(r'p\.MovedKey\("(\w+)", "(\w+)"( \+ sfx)?, "(\w+)"(?:, "(\w+)")?\)', src):
+    for m in re.finditer(r'p\.MovedKey\("(\w[\w ]*)", "(\w+)"( \+ sfx)?, "(\w[\w ]*)"(?:, "(\w+)")?\)', src):
         sec, key, sfx, old, oldKey = m.groups()
         for s in (MOUNTS if sfx else [""]):
             aliases.setdefault((sec, key + s), []).append((old, (oldKey or key) + s))  # a key may name several old places
             if (sec, key + "Lightness" + s) in rows:  # Color() carries the lightness alias along
                 aliases.setdefault((sec, key + "Lightness" + s), []).append((old, (oldKey or key) + "Lightness" + s))
-    for m in re.finditer(r'p\.RetiredKey\("(\w+)", "(\w+)"\)', src):
+    for m in re.finditer(r'p\.RetiredKey\("(\w[\w ]*)", "(\w+)"\)', src):
         rows.add((m.group(1), m.group(2)))  # retired on purpose: its line leaves the file, never a value lost
     for m in re.finditer(r'p\.MountRows\("(\w+)"', src):
         rows.add((m.group(1), "Mount"))

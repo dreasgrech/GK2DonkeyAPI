@@ -303,8 +303,8 @@ packs/                                 external: each folder is one download, a 
   and a dev build records `GK2MountsSourceDir` (the pack's `gk2mounts\`), so the F11 Mounts tab saves into the repo's
   `packs/`. Not watched on disk while the game runs (embedded packs never are): after editing a file, build again.
 - **A release** (`tools/build-dist.sh` builds every pack's DLL into `dist/`; `tools/make-release-zip.py`): Saddle Up's
-  zip (the two DLLs), one zip per pack (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\SaddleUpDragon\` with
-  `SaddleUpDragon.dll`, `README.md`, `CHANGELOG.md`) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its
+  zip (the two DLLs), one zip per pack (`GK2-Saddle-Up-Dragon-1.0.0.zip`: `BepInEx\plugins\GK2SaddleUpDragon\` with
+  `GK2SaddleUpDragon.dll`, `README.md`, `CHANGELOG.md`) and `GK2-Saddle-Up-All-Mounts-<v>.zip` (every pack, each in its
   own folder). `check-dist.py` checks each pack's DLL (no manifest, no game assembly, no path) and its folder (its
   docs, the version, `needs`, `version`, its `skins\default\`, nothing stray in `gk2mounts\`).
 - **A new one:** `new_skin.py --mount <name> --pack <Pack> [--prefix <pack-prefix>.]` makes `packs/<Pack>/` (its

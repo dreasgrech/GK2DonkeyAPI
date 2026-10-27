@@ -948,7 +948,7 @@ namespace GK2DonkeyAPI
                 Info("Saddle Up's page isn't shown: its babies rows not checked");
                 return;
             }
-            var keys = new[] { "Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin" };
+            var keys = new[] { "Foals", "FoalsFollow", "FoalsIndoors" }; // "FoalsWearSkin" retired 2026-10-27: babies always look like their parent
             var where = new List<string>();
             bool all = true;
             foreach (string k in keys)
@@ -958,6 +958,8 @@ namespace GK2DonkeyAPI
                 where.Add(k + " " + (row == null ? "missing" : row.ShownSection));
             }
             Check(all, $"Saddle Up's babies rows are the mount's, in the Mounts panel's journal ({string.Join(", ", where)})");
+            Check(!saddle.Rows.Exists(x => x.Entry != null && x.Entry.Definition.Key.StartsWith("FoalsWearSkin", System.StringComparison.Ordinal)) && saddle.IsRetired("Mount", "FoalsWearSkin"),
+                "no \"Babies are the same mount and skin\" row; its key is retired (the babies always look like their parent)");
             MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
             MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
             bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;

@@ -3,7 +3,7 @@
     python tools/make-release-zip.py
 
 Besides Saddle Up's zip: one per external mount pack, release/GK2-Saddle-Up-<Pack without SaddleUp>-<version>.zip
-(GK2-Saddle-Up-Dragon-1.0.0.zip) holding BepInEx/plugins/<Pack>/<Pack>.dll (from dist/: its gk2mounts/ folder
+(GK2-Saddle-Up-Dragon-1.0.0.zip) holding BepInEx/plugins/GK2<Pack>/GK2<Pack>.dll (the csproj's AssemblyName) (from dist/: its gk2mounts/ folder
 embedded, so an update replaces everything) with the pack's README.md and CHANGELOG.md beside it (the version is its
 Plugin.cs Version), and release/GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip holding every pack, each in its own
 folder (a mount lives in exactly one pack: the bundle is the packs side by side). Every zip is read back and each file
@@ -83,11 +83,23 @@ def pack_version(pack):
     return version(f"packs/{pack}/Plugin.cs")  # check-dist.py: the same as its CHANGELOG.md's first heading
 
 
+def assembly_of(pack_dir):
+    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragon for packs/SaddleUpDragon)."""
+    name = os.path.basename(pack_dir.rstrip("/\\"))
+    try:
+        text = open(os.path.join(pack_dir, name + ".csproj"), encoding="utf-8").read()
+        i = text.index("<AssemblyName>") + len("<AssemblyName>")
+        return text[i:text.index("</AssemblyName>", i)].strip()
+    except (OSError, ValueError):
+        return name
+
+
 def pack_files(pack):
     """(source path, zip name) of a pack's files: its DLL from dist/ (the mounts embedded) and its README.md and
     CHANGELOG.md; its folder as an entry of its own."""
-    prefix = INNER + pack + "/"
-    out = [(None, prefix), (os.path.join(DIST, pack + ".dll"), prefix + pack + ".dll")]
+    dll = assembly_of(os.path.join(PACKS, pack))  # GK2SaddleUpDragon: its plugin folder and DLL, as the main mods'
+    prefix = INNER + dll + "/"
+    out = [(None, prefix), (os.path.join(DIST, dll + ".dll"), prefix + dll + ".dll")]
     for doc in ("README.md", "CHANGELOG.md"):
         out.append((os.path.join(PACKS, pack, doc), prefix + doc))
     return out

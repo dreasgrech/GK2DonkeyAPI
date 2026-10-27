@@ -10,8 +10,8 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 **Mounts and skins.** Saddle Up itself brings the donkey (skins: Default, Hellfire, Royal Parade) and Gerry, the
 game's talking skull (packs in `assets/mounts/`: `donkey/skins/`, `saddleup.gerry/`, registered with the API at start
 the way any mod ships a mount). More mounts are downloads of their own, each a folder for `BepInEx\plugins\`:
-- **GK2 Saddle Up: Dragon** (`SaddleUpDragon\SaddleUpDragon.dll`): the dragon, which flies;
-- **GK2 Saddle Up: Critters** (`SaddleUpCritters\SaddleUpCritters.dll`): the giant rat, the giant snail and the giant worm;
+- **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`): the dragon, which flies;
+- **GK2 Saddle Up: Critters** (`GK2SaddleUpCritters\GK2SaddleUpCritters.dll`): the giant rat, the giant snail and the giant worm;
 - or both in one, the **All Mounts** zip.
 
 | Mount | Download | Riding | Cart |
@@ -23,8 +23,8 @@ the way any mod ships a mount). More mounts are downloads of their own, each a f
 | Giant Snail | GK2 Saddle Up: Critters | Very slow | 6 items |
 | Dragon | GK2 Saddle Up: Dragon | Slow | no cart (it flies) |
 
-A cart holds the mount's number or your Cart capacity, whichever is smaller; switching to a lighter mount never drops
-what the cart already holds. The donkey's skins: Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring
+Each mount's cart carries its own number of items, the table above. Switching to a mount that carries less never
+drops what the cart already holds. The donkey's skins: Hellfire (horns, a devil's tail, glowing eyes, lava cracks; its ring
 of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; the cloth follows your harness colour).
 
 ## Playing
@@ -34,7 +34,7 @@ of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; t
 | **H** | your donkey comes and you ride it; a parked cart stays where you left it (a setting) | get off | leave the cart standing, ride on |
 | **G** | your donkey comes with its cart and you drive (the dragon: it says it can't pull the cart) | the cart comes and is hitched | get off |
 | **E** (the game's interact key) | at your donkey: ride or drive it; at the cart holding something: put it on the cart; at the cart's back with empty hands: take the top item | next to a free cart: take it | with nothing in front: set the top item down behind the cart |
-| Bell key (B) | – | ring the bell | ring the bell |
+| Bell key (B) | – | – | ring the bell (the bell is the cart's) |
 | Call out key (V) | – | your mount calls out (the donkey brays, the dragon roars, the rat squeaks, Gerry talks); its babies answer | the same |
 | Send-away key (none by default) | your mount, its cart and its babies go (the load is set down first) | the same | the same |
 | Back to the last safe spot (none by default) | puts you back on the last ground you stood on in this scene | the same | the same |
@@ -42,8 +42,8 @@ of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; t
 - **Your donkey stays in the world** where you got off, with its cart and its load. Walk up to it and press E, or
   press H or G anywhere: it comes to you.
 - **It's kept with the save:** after loading, it's where you left it, the load on the cart.
-- **The cart carries six items** behind the donkey, in three layers of two (two or four with "Cart capacity"; a
-  mount that carries less pulls less, the table above). Anything you pick up while driving goes onto it; piles, tables, graves and quest
+- **The cart carries the mount's own number of items**, the table above. The donkey's carries six, in three layers
+  of two. Anything you pick up while driving goes onto it; piles, tables, graves and quest
   hand-ins take from it as if you held the item. On the donkey alone, your hands stay empty.
 - **The dragon flies** (riding it plain, outdoors): Space jumps, Space again in the air takes off, Left Shift climbs,
   Left Ctrl descends, Space while flying lands. Over water, fences, cliffs and roofs; it comes down only where you can
@@ -60,51 +60,56 @@ All of these apply at once:
 - **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
   game's **Mods** menu, under GK2 Saddle Up. Its sections are numbered (1. Keys first) to keep them in this order.
 - **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
-  settings and Saddle Up's pages. To set a key, press either arrow of its row, then the key (Backspace: no key; Esc: cancel).
+  settings and Saddle Up's pages. To set a key, press either arrow of its row, then the key (Backspace: no key; Esc: cancel). A lone Shift or Ctrl can't be set there, only in the Mods menu or the cfg.
 - **In the Mounts panel** (L, the Mounts panel key, or the Mount section's Mounts button): everything kept per mount,
   marked "(in the Mounts panel)" below.
 - **Always:** in `BepInEx\config\dreas.gk2.saddleup.cfg` (with the game closed).
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Mounts panel, Ride, Drive, Bell, Call out, Send away, Jump, Fly, Climb, Descend, Back to the last safe spot | L, H, G, B, V, none, Space, Space, Left Shift, Left Ctrl, none | Call out: your mount's own cry on demand, and its babies answer (the cries now and then still come by themselves; Sound's Bray row switches those off, not the key). Jump and Fly on one key: a press jumps (hold for a higher jump), a second press in the air takes off a mount that flies (the dragon), a press while flying lands; Climb and Descend are held in the air (a lone modifier can't be set in the game's Settings window, only in the Mods menu or the cfg). No hitch key: H and G switch between riding and driving (H while driving leaves the cart standing; G while riding brings your cart), and the interact key (E) hitches a cart you ride up to. |
-| 2. Mount | (the picture) | | Your mount, drawn in its colours. |
-| | Mounts | | A button: closes the menu and opens the **Mounts panel** over the game: every mount you can ride on the left, the chosen one drawn on the right with its speed and cargo, and its journal page under it. Done keeps your choices, Cancel puts them back. Every "(in the Mounts panel)" row is chosen there, not in this menu, and kept per mount. |
-| | Mount | Donkey | (in the Mounts panel) What you ride: the donkey, Gerry, and the mounts of the packs you installed (the Dragon; the Giant Rat, Giant Snail and Giant Worm) or any other mod's. Picking one in the list shows it; Ride or Drive the cart makes it yours. |
-| | Name | none | (in the Mounts panel) A text box. Shown when you walk up to it: "[E] Ride Bella". |
-| | Skin | Default | (in the Mounts panel) How that mount is drawn: the donkey also has Hellfire and Royal Parade; skin packs from anyone add more. |
-| | Babies | none | (in the Mounts panel) 0 to 5 little ones of your mount that stay with it and follow it around. The babies rows show only for a mount that has babies. |
-| | Babies follow you on foot | on | (in the Mounts panel) Off your mount, outdoors, they come with you instead of staying by it: they trot after you, and catch up out of sight when you're far ahead. When you get on a mount they go back to yours. Into buildings only with Babies come indoors; without it they wait with your mount and come again when you're out. |
-| | Babies come indoors | on | (in the Mounts panel) They come through doors with you into buildings, the church and dungeons, follow you inside and come back out with you. |
-| | Babies are the same mount and skin | on | (in the Mounts panel) Off: they stay plain baby donkeys whatever yours is. |
-| | Voice and steps | 100% | (in the Mounts panel) Its sounds: steps, calls, wheels, the bell; 0 to 150%, on top of the game's SFX volume. |
-| | Keep your mount with the save | on | Kept in a small file next to each save (`<save>.gk2donkeyapi.dat`), which Steam Cloud syncs along with your saves. |
-| 3. Colours | | | Every row here is in the Mounts panel's colours window, under two headings, "Mount colours" and "Cart colours"; kept per mount. A mount that pulls no cart (the dragon) has no Cart colours. |
-| | Coat colour | Game default | (in the Mounts panel) The mount's body (the donkey's coat, and skins drawn in its colours): Brown, Dark, Cream, Black, or Custom. On another mount it reaches every colour its skin doesn't name as something else (the dragon's scales, the rat's fur); a colour row for a part the mount hasn't got is greyed. |
-| | Harness colour | Game default | (in the Mounts panel) The mount's tack (the donkey's harness): Black, Red, Blue, Green, or Custom. |
-| | Second tone | Game default | (in the Mounts panel) The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava. Pale, Rose, Brown, Green, Blue, Dark, or Custom. Not shown for a mount without one (the worm); greyed in the Mounts panel. |
-| | Paint | Game default | (in the Mounts panel) Your cart's body and shafts: Dark wood, Red, Green, Blue, or Custom. Another cart you hitch in the world keeps its own look. |
-| | Wheel colour | Game default | (in the Mounts panel) The wood of the wheels: Dark wood, Red, Green, Blue, Black, or Custom. |
-| | Wheel hub colour | Game default | (in the Mounts panel) The iron in the middle of the wheels: Black, Brass, Silver, or Custom. |
-| | Lantern light | Warm (game default) | (in the Mounts panel) White, Green, Blue, or Custom. |
-| | Lantern | on | (in the Mounts panel) The lantern on its pole. |
-| | Lantern lit by day | on | (in the Mounts panel) Off: it goes dark by day, like your hand lantern. |
-| 4. Behaviour | *(speeds)* | | Each mount has its own speed and cargo, and the cart slows every mount alike (the Mounts panel shows both: the donkey Normal, 6 items; Gerry Fast, 4; the giant rat Very fast, 2; the giant worm Slow, 4; the giant snail Very slow, 6; the dragon Slow, no cart). The Riding speed and Cart speed rows were here until 0.12. |
-| | Say why mounting is refused | on | The keeper's thought bubble. |
-| | Shuffles while standing | on | Left without its cart, your mount takes a few slow steps now and then. |
-| | Allow mounting indoors | off | Ride into houses, the church and the morgue, and get on inside. A door with a loading screen still ends the ride. Off: you get off at the door and can't mount inside. |
-| | Allow mounting with the cart indoors | off | (only with the row above on) The cart comes inside too; it can get caught on furniture and door frames. Off: driving the cart through a door, the cart stays at the door with its load and you ride on inside (at the morgue you get off inside carrying the corpse, your mount with you); inside you can ride, not drive. |
-| | Bring me back if I fall out of the world | on | If you ever end up under the ground, falling into nothing or far below the world, you are put back on the last ground you stood on, with "Back on solid ground.". Never during a door, a cutscene or a dialogue; standing under a bridge is fine. |
-| | Back to the last safe spot | | A button: puts you back on the last ground you stood on in this scene, right now (stuck somewhere, or the row above off). The Keys section has a key for it; the "Last safe spot" row under it says where that is. |
-| 5. Cart | Cart capacity | 6 items | How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. A mount that carries less pulls less (the giant rat 2, Gerry and the giant worm 4; the Mounts panel shows each one's cargo). Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded. |
-| | Zombies ride on the cart | on | Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies. |
-| | A storage chest rides on the cart | on | Drive up to a plain storage chest and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are. |
-| | Carry the corpse into the morgue | on | Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse (riding indoors allowed and the cart not: your mount comes in with you). Off: it stays on the cart. |
-| | Donkey leaves corpses at the crossroads | **off** | The game's own delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears: it walks out from behind its tree, the bodies drop beside it with a notification, and it walks back and vanishes. You carry them to the morgue, or cart them. Bodies on the ground count toward the morgue's capacity, and one left out of sight for about 75 minutes of play turns into a grave mound (the game's rules; the API's cfg can switch the rot off, change the spots and the text). Off: the game's own delivery, nothing of it hooked. |
-| | Calling your mount leaves the cart parked | on | H while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you. |
-| 6. Sound | Bell sound when setting off | off | When the cart sets off with a load after standing. |
-| | Bray sounds | on | Now and then, and when you get on. |
-| | Standing mounts and babies sound | on | Parked mounts and babies near you make their sounds: steps, grazing, the lip smack, a call now and then, the babies answering their parent. Off: only the mount you ride. |
+| 1. Keys | Mounts panel | L | Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours. |
+| | Ride your mount | H | Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on. |
+| | Drive the cart | G | Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart. |
+| | Ring the bell | B | Rings the bell while you drive the cart. |
+| | Call out | V | Your mount calls out while you ride, and its babies answer. |
+| | Send your mount away | none | Sends your mount, its cart and its babies away. The cart's load is put down first. |
+| | Jump | Space | Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting. |
+| | Fly | Space | Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead. |
+| | Climb (hold) | Left Shift | Hold it while flying to go up. |
+| | Descend (hold) | Left Ctrl | Hold it while flying to go down. You land when you reach the ground. |
+| 2. Mount | Your mount (the picture) | | Your mount, drawn in its colours. |
+| | Mounts | | A button. Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
+| | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Gerry. Packs and other mods add more. |
+| | Skin | Default | (in the Mounts panel) How your mount looks. The donkey also has Hellfire and Royal Parade. |
+| | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |
+| | Keep your mount with the save | on | After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs. |
+| | Babies | none | (in the Mounts panel) How many little ones follow your mount around, up to 5. They always look like their parent. Only for a mount that has babies. |
+| | Babies follow you on foot | on | (in the Mounts panel) When you get off, the babies follow you instead of staying with your mount. |
+| | Babies come indoors | on | (in the Mounts panel) The babies follow you into buildings and back out. |
+| | Voice and steps | 100% | (in the Mounts panel) How loud your mount is. This adds to the game's sound volume. |
+| 3. Colours | | | All of these are in the Mounts panel's colours window and kept per mount. A mount that pulls no cart (the dragon) has no cart colours. |
+| | *Mount colours:* Coat colour | Game default | (in the Mounts panel) The colour of your mount's body. Brown, Dark, Cream, Black or Custom. |
+| | Harness colour | Game default | (in the Mounts panel) The colour of your mount's harness. Black, Red, Blue, Green or Custom. Mounts without one ignore it. |
+| | Second tone | Game default | (in the Mounts panel) Your mount's second colour, such as the donkey's muzzle or the dragon's belly. Pale, Rose, Brown, Green, Blue, Dark or Custom. Mounts without one ignore it. |
+| | *Cart colours:* Paint | Game default | (in the Mounts panel) The colour of the cart. Dark wood, Red, Green, Blue or Custom. |
+| | Wheel colour | Game default | (in the Mounts panel) The colour of the wheels. Dark wood, Red, Green, Blue, Black or Custom. |
+| | Wheel hub colour | Game default | (in the Mounts panel) The colour of the metal in the middle of the wheels. Black, Brass, Silver or Custom. |
+| | Lantern light | Warm (game default) | (in the Mounts panel) The colour of the lantern's light. White, Green, Blue or Custom. |
+| | Lantern | on | (in the Mounts panel) Shows the lantern on its pole. |
+| | Lantern lit by day | on | (in the Mounts panel) Keeps the lantern lit in daylight. Turn it off to light it only at night. |
+| 4. Mount Behaviour | Say why you can't get on | on | The keeper says why in a thought bubble. |
+| | Shuffles while standing | on | Your mount takes a few slow steps now and then while it waits without its cart. |
+| | Allow mounting indoors | off | Ride into houses, the church and the morgue. Doors with a loading screen still end the ride. |
+| | Allow mounting with the cart indoors | off | The cart comes inside too, but it can get stuck on furniture. When this is off, the cart waits at the door. Only with the row above on. |
+| 5. Cart | Zombies ride on the cart | on | Zombies you pick up while driving lie on the cart. You can hand them to their work from there. |
+| | A storage chest rides on the cart | on | Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down. |
+| | Carry the corpse into the morgue | on | Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside. |
+| | Donkey leaves corpses at the crossroads | **off** | The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself. |
+| 6. Sound | Mount calls | on | Your mount calls out now and then, and when you get on. |
+| | Standing mounts and babies sound | on | Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride. |
+| 7. Safe spot | Bring me back if I fall out of the world | on | If you fall out of the world, you are put back on the last ground you stood on. |
+| | Back to the last safe spot (key) | none | Puts you back on the last ground you stood on. Use it if you get stuck. |
+| | Back to the last safe spot (button) | | Puts you back on the last ground you stood on, right now. |
 
 **Choosing colours:**
 - **A picture** of your mount and cart in the chosen colours, walking on the spot: at the top of the Mount

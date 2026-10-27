@@ -1461,8 +1461,7 @@ namespace GK2DonkeyAPI
                 Check(entries.Count == withSkins && entries[0].Id == MountCatalog.DonkeyId, $"the panel lists every mount with a skin, the donkey first ({entries.Count} of {withSkins} mounts)");
                 Check(dragonEntry != null && dragonEntry.Description.Length > 0 && dragonEntry.Lines.Exists(l => l.StartsWith("Can't pull the cart")) && dragonEntry.Lines.Exists(l => l.StartsWith("Has babies")), $"the dragon's entry carries its description and what it does: no cart, babies ({dragonEntry?.Lines.Count} lines)");
                 ConfigEntry<int> foals = Row<int>("Foals");
-                ConfigEntry<bool> wear = Row<bool>("FoalsWearSkin");
-                Check(foals != null && wear != null && Row<bool>("FoalsIndoors") != null && Row<bool>("FoalsFollow") != null, "the four babies rows are bound");
+                Check(foals != null && Row<bool>("FoalsWearSkin") == null && Row<bool>("FoalsIndoors") != null && Row<bool>("FoalsFollow") != null, "the three babies rows are bound (no \"same mount and skin\" row since 2026-10-27)");
                 Check(Row<bool>("FoalsFollow") != null && Equals(Row<bool>("FoalsFollow").DefaultValue, false), "a page whose companion is left as the core has it: \"follow you on foot\" starts off");
                 // per mount since 2026-10-26: the plain keys are the donkey's (its MountLook), the dragon's carry its id
                 if (foals != null)
@@ -1479,12 +1478,7 @@ namespace GK2DonkeyAPI
                     else Warn("no Foals row for the dragon (its pack not installed?): the per-mount babies not checked");
                     foals.Value = 0;
                 }
-                if (wear != null)
-                {
-                    wear.Value = false;
-                    Check(!me.LookOf(MountCatalog.DonkeyId).FoalsWearSkin, "Babies are the same mount and skin = off reaches the donkey's own");
-                    wear.Value = true;
-                }
+                Check(me.LookOf(MountCatalog.DonkeyId).FoalsWearSkin, "the babies wear their parent's mount and skin (no row turns it off)");
                 Check(Row<string>("Effect") == null, "no Effect row (the effect rows went, 2026-10-25)");
 
                 // the look per mount (PerMount, MountLook): a row set per mount, the donkey's keys plain, the others

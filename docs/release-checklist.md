@@ -93,8 +93,8 @@ Rehearse the first start on a clean config, with the game closed:
    `plugins\GK2AssetProbe\` and the dev marker `BepInEx\config\dreas.gk2.dev`.
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then the All Mounts zip (or each pack's):
-   `SaddleUpDragon.dll` and `SaddleUpCritters.dll` replace theirs in `plugins\SaddleUpDragon\` and
-   `plugins\SaddleUpCritters\`, with their README and CHANGELOG.
+   `GK2SaddleUpDragon.dll` and `GK2SaddleUpCritters.dll` replace theirs in `plugins\GK2SaddleUpDragon\` and
+   `plugins\GK2SaddleUpCritters\`, with their README and CHANGELOG.
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.

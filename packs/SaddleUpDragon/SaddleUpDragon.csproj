@@ -6,7 +6,9 @@
        kept the files the new version had dropped, and the loader used them (the user, 2026-10-26). -->
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
-    <AssemblyName>SaddleUpDragon</AssemblyName>
+    <!-- GK2-prefixed like GK2DonkeyAPI.dll and GK2SaddleUp.dll (the user, 2026-10-27); the folder, the namespace,
+         the resource prefix and the mount ids keep the pack's name -->
+    <AssemblyName>GK2SaddleUpDragon</AssemblyName>
     <RootNamespace>SaddleUpDragon</RootNamespace>
     <Version>1.0.0</Version>
     <LangVersion>latest</LangVersion>
@@ -39,7 +41,7 @@
     <Reference Include="BepInEx"><HintPath>$(BepInExCore)\BepInEx.dll</HintPath><Private>false</Private></Reference>
   </ItemGroup>
 
-  <!-- Deploys into the game (plugins\SaddleUpDragon\) after every build, only while it is closed (-p:Deploy=false skips it). -->
+  <!-- Deploys into the game (plugins\GK2SaddleUpDragon\) after every build, only while it is closed (-p:Deploy=false skips it). -->
   <Import Project="$(MSBuildThisFileDirectory)..\..\DeployToGame.targets" />
 
 </Project>

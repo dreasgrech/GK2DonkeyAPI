@@ -1,6 +1,6 @@
 #!/bin/bash
 # The release build (docs/release-checklist.md, section 3): GK2DonkeyAPI.dll, GK2SaddleUp.dll and every external pack's
-# DLL (packs/<Pack>/<Pack>.csproj: SaddleUpDragon.dll, SaddleUpCritters.dll) built with
+# DLL (packs/<Pack>/<Pack>.csproj, named by its AssemblyName: GK2SaddleUpDragon.dll, GK2SaddleUpCritters.dll) built with
 # -p:ForDist=true (no debug directory, no source-folder marker) and -p:Deploy=false (the game may be running), copied
 # into dist/, then tools/check-dist.py. Stops at the first failure. Build output: release/logs/build-dist.log.
 #
@@ -37,7 +37,9 @@ build src/GK2DonkeyAPI GK2DonkeyAPI
 build src/SaddleUp GK2SaddleUp
 for pack in "$REPO"/packs/*/; do
   name="$(basename "$pack")"
-  [ -f "$pack/$name.csproj" ] && build "packs/$name" "$name"
+  [ -f "$pack/$name.csproj" ] || continue
+  asm="$(grep -o '<AssemblyName>[^<]*' "$pack/$name.csproj" | head -1 | cut -d'>' -f2)"
+  build "packs/$name" "${asm:-$name}"
 done
 echo "== check-dist"
 python "$REPO/tools/check-dist.py" || { echo "check-dist FAILED"; exit 1; }

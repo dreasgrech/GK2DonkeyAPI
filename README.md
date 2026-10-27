@@ -28,8 +28,8 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder.
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
    `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`.
-3. Optional: the mount packs, each a folder of its own for `BepInEx\plugins\` (`SaddleUpDragon\SaddleUpDragon.dll`,
-   `SaddleUpCritters\SaddleUpCritters.dll`), or the All Mounts zip with both.
+3. Optional: the mount packs, each a folder of its own for `BepInEx\plugins\` (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`,
+   `GK2SaddleUpCritters\GK2SaddleUpCritters.dll`), or the All Mounts zip with both.
 4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.40.0 loaded` and `GK2 Saddle Up 0.12.0
    loaded`.
 5. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in

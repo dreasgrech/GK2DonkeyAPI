@@ -72,42 +72,39 @@ namespace SaddleUp
             Mounts.Behaviour.Set(Guid, "HitchKey", KeyCode.None); // H and G switch riding and driving; E hitches a cart in reach
 
             MountSettingsPage p = Mounts.SettingsPage(Guid, Config, "GK2 Saddle Up", "dreas",
-                "Your own mount and cart: ride it (H), drive the cart (G), haul with it. The donkey or Gerry, or any mount a pack or another mod adds (the Dragon, the Critters...). Built on GK2 Donkey API.");
-            p.Status("Keys");
+                "Ride your own mount and drive its cart. Press H to ride, G to drive the cart and L to choose your mount. Haul logs, stone and corpses, and find your mount where you left it. Comes with the donkey and Gerry. More mounts and skins can be downloaded.");
+            // no Status row since 0.12 (the user, 2026-10-27: "Active" sat in Keys for no reason): the Mods list's
+            // Compatibility line and the log say when the mod is off and why
             // the Mounts panel first, on L (the user, 2026-10-27: "we cant not have a default hotkey for this"; L is
             // unbound in the game's defaults, docs/api-design.md "Showcase keys"): where the mount, its skins, name,
             // babies and colours are chosen
-            p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mounts panel", "Opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its name, skins, babies and colours. None = no key (the Mount section's button opens it too).",
+            p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mounts panel", "Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours.",
                 pressed: p.OpenPanel);
-            ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Your mount comes and you ride it (a parked cart stays where it is); again: dismount. In the cart: leave the cart standing and ride on.",
+            ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
-            ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Your mount comes with its cart and you drive; again: dismount. Riding: the cart comes and is hitched.",
+            ConfigEntry<KeyboardShortcut> cartKey = p.Key("Keys", "CartKey", new KeyboardShortcut(KeyCode.G), "Drive the cart", "Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.",
                 pressed: () => me.Use(MountStyle.Cart));
-            p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "While mounted. None = no key.", pressed: me.RingBell);
+            p.Key("Keys", "BellKey", new KeyboardShortcut(KeyCode.B), "Ring the bell", "Rings the bell while you drive the cart.", pressed: me.RingBell);
             // the mount's own cry on demand (the user, 2026-10-25): the voice event of the ridden mount, as its idle timer
             // plays it, and its babies answer; V is unbound in the game (docs/api-design.md "Showcase keys")
-            p.Key("Keys", "CallOutKey", new KeyboardShortcut(KeyCode.V), "Call out", "While mounted, your mount calls out: the donkey brays, the dragon roars, the rat squeaks, Gerry talks; its babies answer. The snail and the worm are silent. None = no key.", pressed: Mounts.Bray);
-            p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Your mount, its cart and its babies go (the cart's load is set down first); the next key brings a new one. None = no key.",
+            p.Key("Keys", "CallOutKey", new KeyboardShortcut(KeyCode.V), "Call out", "Your mount calls out while you ride, and its babies answer.", pressed: Mounts.Bray);
+            p.Key("Keys", "SendAwayKey", KeyboardShortcut.Empty, "Send your mount away", "Sends your mount, its cart and its babies away. The cart's load is put down first.",
                 pressed: me.SendAway);
             // jumping and flying (on for everyone since API 0.38.0; the rows grey while a dev switched it off). One key for
             // both: a press jumps, a second press in the air takes off on a mount that flies, a press while flying lands;
             // in the air, Climb and Descend are held.
-            p.Key("Keys", "JumpKey", new KeyboardShortcut(KeyCode.Space), "Jump", "Riding, your mount jumps: hold the key for a higher jump. Over what is lower than the jump. Not in a fight, where Space attacks. None = no jumping.",
+            p.Key("Keys", "JumpKey", new KeyboardShortcut(KeyCode.Space), "Jump", "Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting.",
                 apply: v => Mounts.Behaviour.Set(Guid, "JumpKey", v));
-            p.Key("Keys", "FlyKey", new KeyboardShortcut(KeyCode.Space), "Fly", "Riding a mount that flies, outdoors: take off, and land again. The same key as Jump: jump, then press again in the air to take off. None = no flying.",
+            p.Key("Keys", "FlyKey", new KeyboardShortcut(KeyCode.Space), "Fly", "Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead.",
                 apply: v => Mounts.Behaviour.Set(Guid, "FlyKey", v));
-            p.Key("Keys", "ClimbKey", new KeyboardShortcut(KeyCode.LeftShift), "Climb (hold)", "Flying: hold it to climb, up to the flight's highest. The key alone counts (a modifier can be it; the game's Settings window can't set a lone modifier, the Mods menu and the cfg can). None = no climbing.",
+            p.Key("Keys", "ClimbKey", new KeyboardShortcut(KeyCode.LeftShift), "Climb (hold)", "Hold it while flying to go up.",
                 apply: v => Mounts.Behaviour.Set(Guid, "ClimbKey", v));
-            p.Key("Keys", "DescendKey", new KeyboardShortcut(KeyCode.LeftControl), "Descend (hold)", "Flying: hold it to come down; at the ground you have landed. The key alone counts. None = the Fly key lands.",
+            p.Key("Keys", "DescendKey", new KeyboardShortcut(KeyCode.LeftControl), "Descend (hold)", "Hold it while flying to go down. You land when you reach the ground.",
                 apply: v => Mounts.Behaviour.Set(Guid, "DescendKey", v));
             p.EnableWhen("Keys", "JumpKey", () => Mounts.FlyingEnabled);
             p.EnableWhen("Keys", "FlyKey", () => Mounts.FlyingEnabled);
             p.EnableWhen("Keys", "ClimbKey", () => Mounts.FlyingEnabled);
             p.EnableWhen("Keys", "DescendKey", () => Mounts.FlyingEnabled);
-            // never lost (the API's safe spots, docs/never-lost.md): a key for "back to the last safe spot"; the API reads it
-            // with its own gate (not during a door, a cutscene or a dialogue)
-            p.Key("Keys", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Stuck, or fallen somewhere you shouldn't be: puts you back on the last ground you stood on in this scene. None = no key (the Behaviour section has a button).",
-                apply: v => Mounts.Behaviour.Set(Guid, "ReturnKey", v));
 
             // The page since 0.11: Keys; Mount (what you have: its picture, its name, what it is and how it is drawn,
             // its babies, whether it is kept with the save); Colours (every colour of it and of the cart); Behaviour (what
@@ -123,7 +120,7 @@ namespace SaddleUp
             p.MovedKey("Mount", "Foals", "Donkey");
             p.MovedKey("Mount", "FoalsIndoors", "Babies");
             p.MovedKey("Mount", "FoalsIndoors", "Donkey");
-            p.MovedKey("Mount", "FoalsWearSkin", "Babies");
+            p.RetiredKey("Babies", "FoalsWearSkin"); // the row is gone since 0.12 (FoalRows retires it under Mount)
             p.MovedKey("Mount", "FoalsFollow", "Babies");
             p.MovedKey("Mount", "Volume", "Sound");
             p.MovedKey("Colours", "Lantern", "Cart");
@@ -134,7 +131,7 @@ namespace SaddleUp
             // panel of its own, the mounts listed, the chosen one drawn with its stats and abilities; it stays the
             // same size however many mounts are installed). The rows below are bound as before (the same cfg keys)
             // and marked look: true, which keeps them out of the menu and in the panel.
-            p.PanelButton("Mount", "Mounts", "Closes this and opens the Mounts panel over the game: every mount you can ride, the chosen one drawn with what it is and does, its skins and its colours. Done keeps your choices.");
+            p.PanelButton("Mount", "Mounts", "Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours.");
             // before any mount's own settings are made (each starts from the companion's): on in Saddle Up (the user,
             // 2026-10-22); the API's stays off for other mods
             me.FoalsFollowOnFoot = true;
@@ -143,16 +140,16 @@ namespace SaddleUp
             p.PerMount((mountId, sfx, shown) =>
             {
                 MountLook own = me.LookOf(mountId);
-                p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to it: \"[E] Ride Bella\". Empty: no name. Kept for each mount.", v => own.Name = v, look: true);
+                p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to your mount, as in \"Ride Bella\".", v => own.Name = v, look: true);
             });
-            p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After loading, your mount and cart are where you left them, the load on the cart. They're kept in a small file next to each save (<save>.gk2donkeyapi.dat), which Steam Cloud syncs along with your saves.", v => me.KeepWithSaves = v);
+            p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.", v => me.KeepWithSaves = v);
 
             // The babies (a section of their own since 0.12): how many, following you on foot, indoors, the same mount and skin.
             p.FoalRows("Mount", me);
             p.PerMount((mountId, sfx, shown) =>
             {
                 MountLook own = me.LookOf(mountId);
-                p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voice and steps", "Its sounds: steps, calls, wheels, the bell; on top of the game's SFX volume. Kept for each mount.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
+                p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voice and steps", "How loud your mount is. This adds to the game's sound volume.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
             });
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
@@ -170,9 +167,9 @@ namespace SaddleUp
                 p.MovedKey("Colours", "CustomCoat" + sfx, "Donkey");
                 p.MovedKey("Colours", "Harness" + sfx, "Donkey");
                 p.MovedKey("Colours", "CustomHarness" + sfx, "Donkey");
-                ConfigEntry<CoatColor> coat = p.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "The mount's body: the donkey's coat, a dragon's scales, the worm's skin. Kept per mount.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
+                ConfigEntry<CoatColor> coat = p.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "The colour of your mount's body.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
                 p.Color("Colours", "CustomCoat" + sfx, "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coat.Value == CoatColor.Custom);
-                ConfigEntry<HarnessColor> harness = p.Choice("Colours", "Harness" + sfx, look.Harness, "Harness colour", "The mount's tack (the donkey's harness), on the mounts whose look has any; the others ignore it. Kept per mount.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
+                ConfigEntry<HarnessColor> harness = p.Choice("Colours", "Harness" + sfx, look.Harness, "Harness colour", "The colour of your mount's harness. Mounts without one ignore it.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
                 // a mount whose skins have no tack (the worm): the harness rows grey, the value is kept
                 p.EnableWhen("Colours", "Harness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
                 p.Color("Colours", "CustomHarness" + sfx, "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => look.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
@@ -180,7 +177,7 @@ namespace SaddleUp
                 // the second body tone (the API's Muzzle region): the donkey's muzzle, the rat's tail, ears and nose, the
                 // snail's shell, the dragon's belly; a mount whose look has none (the worm) greys the rows (the user, 2026-10-20:
                 // every part of every skin reachable from the page)
-                ConfigEntry<MuzzleColor> muzzle = p.Choice("Colours", "Muzzle" + sfx, look.Muzzle, "Second tone", "The mount's second body tone, where its look has one: the donkey's muzzle, the rat's tail, ears and nose, the snail's shell, the dragon's belly, Hellfire's lava; the others ignore it. Kept per mount.", v => look.Muzzle = v, new[] { "Game default", "Pale", "Rose", "Brown", "Green", "Blue", "Dark", "Custom" }, look: true);
+                ConfigEntry<MuzzleColor> muzzle = p.Choice("Colours", "Muzzle" + sfx, look.Muzzle, "Second tone", "Your mount's second colour, such as the donkey's muzzle or the dragon's belly. Mounts without one ignore it.", v => look.Muzzle = v, new[] { "Game default", "Pale", "Rose", "Brown", "Green", "Blue", "Dark", "Custom" }, look: true);
                 p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
                 p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
@@ -197,17 +194,17 @@ namespace SaddleUp
                 p.MovedKey("Colours", "CustomHubs" + sfx, "Cart");
                 p.MovedKey("Colours", "LanternColor" + sfx, "Cart");
                 p.MovedKey("Colours", "CustomLantern" + sfx, "Cart");
-                ConfigEntry<CartPaint> paint = p.Choice("Colours", "Paint" + sfx, look.Paint, "Paint", "The cart's paint with this mount.", v => look.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
+                ConfigEntry<CartPaint> paint = p.Choice("Colours", "Paint" + sfx, look.Paint, "Paint", "The colour of the cart.", v => look.Paint = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Custom" }, look: true);
                 p.Color("Colours", "CustomPaint" + sfx, "Custom paint", "Used when the paint is Custom.", PaletteColor.Brick, v => look.CustomPaint = v, () => paint.Value == CartPaint.Custom);
-                ConfigEntry<WheelColor> wheels = p.Choice("Colours", "Wheels" + sfx, look.Wheels, "Wheel colour", "The wood of the wheels.", v => look.Wheels = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Black", "Custom" }, look: true);
+                ConfigEntry<WheelColor> wheels = p.Choice("Colours", "Wheels" + sfx, look.Wheels, "Wheel colour", "The colour of the wheels.", v => look.Wheels = v, new[] { "Game default", "Dark wood", "Red", "Green", "Blue", "Black", "Custom" }, look: true);
                 p.Color("Colours", "CustomWheels" + sfx, "Custom wheel colour", "Used when the wheel colour is Custom.", PaletteColor.Mustard, v => look.CustomWheels = v, () => wheels.Value == WheelColor.Custom);
-                ConfigEntry<HubColor> hubs = p.Choice("Colours", "Hubs" + sfx, look.Hubs, "Wheel hub colour", "The iron in the middle of the wheels.", v => look.Hubs = v, new[] { "Game default", "Black", "Brass", "Silver", "Custom" }, look: true);
+                ConfigEntry<HubColor> hubs = p.Choice("Colours", "Hubs" + sfx, look.Hubs, "Wheel hub colour", "The colour of the metal in the middle of the wheels.", v => look.Hubs = v, new[] { "Game default", "Black", "Brass", "Silver", "Custom" }, look: true);
                 p.Color("Colours", "CustomHubs" + sfx, "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => look.CustomHubs = v, () => hubs.Value == HubColor.Custom);
-                ConfigEntry<LanternColor> light = p.Choice("Colours", "LanternColor" + sfx, look.LanternLight, "Lantern light", "", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
+                ConfigEntry<LanternColor> light = p.Choice("Colours", "LanternColor" + sfx, look.LanternLight, "Lantern light", "The colour of the lantern's light.", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
                 p.Color("Colours", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
                 // the lantern itself, per mount with its light (the user, 2026-10-26: from the Cart options into the colours window)
-                p.Toggle("Colours", "Lantern" + sfx, look.Lantern, "Lantern", "The lantern on its pole.", v => look.Lantern = v, look: true);
-                p.Toggle("Colours", "LanternByDay" + sfx, look.LanternByDay, "Lantern lit by day", "Off: it goes dark by day, like your hand lantern.", v => look.LanternByDay = v, look: true);
+                p.Toggle("Colours", "Lantern" + sfx, look.Lantern, "Lantern", "Shows the lantern on its pole.", v => look.Lantern = v, look: true);
+                p.Toggle("Colours", "LanternByDay" + sfx, look.LanternByDay, "Lantern lit by day", "Keeps the lantern lit in daylight. Turn it off to light it only at night.", v => look.LanternByDay = v, look: true);
                 // a mount that can't pull the cart (the dragon) has no cart colours (the user, 2026-10-25); the values are kept
                 foreach (string key in new[] { "Paint", "CustomPaint", "Wheels", "CustomWheels", "Hubs", "CustomHubs", "LanternColor", "CustomLantern", "Lantern", "LanternByDay" }) p.CartRow("Colours", key + sfx);
             });
@@ -227,39 +224,55 @@ namespace SaddleUp
             // old lines leave the file.
             p.RetiredKey("Behaviour", "RideSpeed");
             p.RetiredKey("Behaviour", "CartSpeed");
-            p.Toggle("Behaviour", "ShowMessages", true, "Say why mounting is refused", "The keeper's thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
-            p.Toggle("Behaviour", "IdleShuffle", true, "Shuffles while standing", "Left without its cart, it takes a few slow steps now and then.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
+            // the section is "Mount Behaviour" since 0.12 (the user, 2026-10-27), "Behaviour" before: its values carry over
+            p.MovedKey("Mount Behaviour", "ShowMessages", "Behaviour");
+            p.MovedKey("Mount Behaviour", "IdleShuffle", "Behaviour");
+            p.MovedKey("Mount Behaviour", "MountIndoors", "Behaviour");
+            p.MovedKey("Mount Behaviour", "CartIndoors", "Behaviour");
+            p.Toggle("Mount Behaviour", "ShowMessages", true, "Say why you can't get on", "The keeper says why in a thought bubble.", v => Mounts.Behaviour.Set(Guid, "ShowMessages", v));
+            p.Toggle("Mount Behaviour", "IdleShuffle", true, "Shuffles while standing", "Your mount takes a few slow steps now and then while it waits without its cart.", v => Mounts.Behaviour.Set(Guid, "IdleShuffle", v));
             // Indoors (a player asked, 2026-10-21): both off = as before, the ride ends at a building's door. The API's
             // DismountIndoors is the first row turned round; CartIndoors only counts with it on, so its row greys.
-            ConfigEntry<bool> indoors = p.Toggle("Behaviour", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue, and get on inside. A door with a loading screen still ends the ride. Off: you get off at the door and can't mount inside.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
-            p.Toggle("Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "With mounting indoors allowed: the cart comes inside too (it can get caught on furniture and door frames). Off: driving the cart through a door, the cart stays at the door with its load and you ride on inside (at the morgue you get off inside carrying the corpse, your mount with you); inside you can ride, not drive.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
-            p.EnableWhen("Behaviour", "CartIndoors", () => indoors.Value);
-            // never lost: the fall watchdog, and the same by hand
-            p.Toggle("Behaviour", "FallGuard", true, "Bring me back if I fall out of the world", "If you ever end up under the ground, falling into nothing or far below the world, you are put back on the last ground you stood on (the log says why). Never during a door, a cutscene or a dialogue; standing under a bridge is fine.", v => Mounts.Behaviour.Set(Guid, "FallGuard", v));
-            p.Button("Behaviour", "Back to the last safe spot", "Puts you back on the last ground you stood on in this scene, right now (stuck somewhere, or the watchdog is off). The Keys section has a key for it.", () =>
-            {
-                Mounts.ReturnToSafeSpot("Saddle Up's settings button"); // the API says the result in the keeper's bubble
-            });
-            p.Info("Behaviour", "Last safe spot", () => Mounts.LastSafeSpot is Vector3 spot ? $"{spot.x:0.0}, {spot.z:0.0} (height {spot.y:0.0})" : "none yet in this scene", "Where \"Back to the last safe spot\" would put you.");
+            ConfigEntry<bool> indoors = p.Toggle("Mount Behaviour", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
+            p.Toggle("Mount Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "The cart comes inside too, but it can get stuck on furniture. When this is off, the cart waits at the door.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
+            p.EnableWhen("Mount Behaviour", "CartIndoors", () => indoors.Value);
 
-            p.MovedKey("Cart", "CartSlots", "Behaviour");
+            // Cart capacity was a row here until 0.12: each mount carries its own cargo now ([Mount] cargo; the Mounts panel
+            // shows it), so the player's number is dropped (the user, 2026-10-27: a player's old 2 kept every cart at two)
+            // and the old line leaves the file, wherever it stood.
+            p.RetiredKey("Cart", "CartSlots");
+            p.RetiredKey("Behaviour", "CartSlots");
             p.MovedKey("Cart", "CargoZombies", "Behaviour");
             p.MovedKey("Cart", "CargoChest", "Behaviour");
             p.MovedKey("Cart", "CorpseIntoMorgue", "Behaviour");
             p.MovedKey("Cart", "CorpsesAtCrossroads", "Behaviour");
-            p.MovedKey("Cart", "CartStaysParked", "Behaviour");
-            p.Steps("Cart", "CartSlots", 6, 2, 6, 2, "Cart capacity", "How many items the cart carries: 6 (three layers of two), 4 (two layers) or 2 like the game's own delivery cart. A mount that carries less pulls less (the giant rat 2, Gerry and the giant worm 4; the Mounts panel shows each one's cargo). Piles, tables and stations take from all of them; a chest aboard still takes the whole cart. Lowering it never drops anything: a fuller cart stays full until unloaded.", v => Mounts.Behaviour.Set(Guid, "CartSlots", v), v => v + " items");
-            p.Toggle("Cart", "CargoZombies", true, "Zombies ride on the cart", "Pick up a zombie while driving and it lies on the cart, as many as the cart holds; hand it to its work straight from the cart. Off: the cart refuses zombies.", v => Mounts.Behaviour.Set(Guid, "CargoZombies", v));
-            p.Toggle("Cart", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a plain storage chest (rough, normal or good) and press the action key: it rides on the cart with everything inside, alone. The interact key with nothing in front sets it down. Off: chests stay where they are.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
-            p.Toggle("Cart", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Driving the cart through the morgue door with a corpse on it: you get off at the door as always and the cart stays outside with its load, but you walk in carrying the corpse (riding indoors allowed and the cart not: your mount comes in with you). Off: it stays on the cart.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));
-            p.Toggle("Cart", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves the bodies it brings at the crossroads by the nun, where it appears, instead of putting them on the morgue pallets. You carry them to the morgue yourself, or cart them. Off: the game's own delivery.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
-            p.Toggle("Cart", "CartStaysParked", me.CartStaysParked, "Calling your mount leaves the cart parked", "Ride key while your mount stands somewhere with the cart: it comes alone and the cart stays where you left it, with its load. Off: both come and the cart is left standing next to you.", v => me.CartStaysParked = v);
+            p.Toggle("Cart", "CargoZombies", true, "Zombies ride on the cart", "Zombies you pick up while driving lie on the cart. You can hand them to their work from there.", v => Mounts.Behaviour.Set(Guid, "CargoZombies", v));
+            p.Toggle("Cart", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
+            p.Toggle("Cart", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));
+            p.Toggle("Cart", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
+            // Two rows gone in 0.12 (the user, 2026-10-27: "i dont think we need them"): calling your mount leaves a parked
+            // cart where it is (CartStaysParked, the companion's default, on) and the cart rings no bell when it sets off
+            // (BellOnSetOff, off). The old lines leave the file wherever they stood.
+            p.RetiredKey("Cart", "CartStaysParked");
+            p.RetiredKey("Behaviour", "CartStaysParked");
+            p.RetiredKey("Cart", "Bell");
+            p.RetiredKey("Sound", "Bell");
 
-            p.Toggle("Sound", "Bell", me.BellOnSetOff, "Bell sound when setting off", "When the cart sets off with a load after standing.", v => me.BellOnSetOff = v);
-            p.Toggle("Sound", "Brays", me.Brays, "Bray sounds", "Now and then, and when you get on.", v => me.Brays = v);
-            p.TuningKey("Sound", "Bell", "BellOnSetOff", me);
+            p.Toggle("Sound", "Brays", me.Brays, "Mount calls", "Your mount calls out now and then, and when you get on.", v => me.Brays = v);
             p.TuningKey("Sound", "Brays", "BrayOnMountChance", me);
-            p.Toggle("Sound", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds: steps, grazing, the lip smack, a call now and then, the babies answering their parent. Off: only the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
+            p.Toggle("Sound", "StandingSounds", true, "Standing mounts and babies sound", "Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.", v => Mounts.Behaviour.Set(Guid, "StandingSounds", v));
+
+            // Never lost (the API's safe spots, docs/never-lost.md), a section of its own at the end (the user, 2026-10-27;
+            // before, the key sat in Keys and the rest in Behaviour, never released there): the fall watchdog, the same by
+            // hand (a button and a key; the API reads the key with its own gate: not during a door, a cutscene or a
+            // dialogue). Where it would put you is in the log, not on the page (the user, 2026-10-27: coordinates mean nothing to a player).
+            p.Toggle("Safe spot", "FallGuard", true, "Bring me back if I fall out of the world", "If you fall out of the world, you are put back on the last ground you stood on.", v => Mounts.Behaviour.Set(Guid, "FallGuard", v));
+            p.Key("Safe spot", "ReturnKey", KeyboardShortcut.Empty, "Back to the last safe spot", "Puts you back on the last ground you stood on. Use it if you get stuck.",
+                apply: v => Mounts.Behaviour.Set(Guid, "ReturnKey", v));
+            p.Button("Safe spot", "Back to the last safe spot", "Puts you back on the last ground you stood on, right now.", () =>
+            {
+                Mounts.ReturnToSafeSpot("Saddle Up's settings button"); // the API says the result in the keeper's bubble
+            });
             p.Publish();
             Logger.LogInfo($"GK2 Saddle Up {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }

@@ -176,10 +176,11 @@ namespace GK2DonkeyAPI.Api
             return result;
         }
 
-        // Both respect the Sounds feature (and RingBell the Bell feature).
+        // Both respect the Sounds feature (and RingBell the Bell feature). The bell is the cart's (0.40.0; the user,
+        // 2026-10-27): it rings only while the keeper drives the cart, never riding plain (a dragon has no cart).
         public static void RingBell()
         {
-            if (Mount.IsMounted && MountRules.Allowed(MountFeature.Sounds) && MountRules.Allowed(MountFeature.Bell))
+            if (Mount.IsMounted && Mount.CurrentStyle == MountStyle.Cart && MountRules.Allowed(MountFeature.Sounds) && MountRules.Allowed(MountFeature.Bell))
             {
                 GK2DonkeyAPI.Sounds.RingBell(); // the type, not the Sounds property of this class
             }

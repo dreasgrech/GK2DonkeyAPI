@@ -612,8 +612,8 @@ namespace GK2DonkeyAPI
             SoundBank.Entry te = SoundBank.Find(id);
             Check(waited && te != null && te.Clips.Length == tl.Files.Length, $"the take-off's files decode from the pack's DLL ({id}: {(te != null ? te.Clips.Length : 0)} clip(s) of {tl?.Files?.Length})");
             string cache = Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "sounds", mount.Owner, "mount-" + M("dragon"));
-            Check(mount.Pack?.SourceAssembly?.GetName().Name == "SaddleUpDragon" && Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")),
-                "embedded in SaddleUpDragon.dll, its cache files under the mount's own name (" + cache + ")");
+            Check(mount.Pack?.SourceAssembly?.GetName().Name == "GK2SaddleUpDragon" && Directory.Exists(cache) && File.Exists(Path.Combine(cache, "takeoff_1.ogg")),
+                "embedded in GK2SaddleUpDragon.dll, its cache files under the mount's own name (" + cache + ")");
         }
 
         private static IEnumerator SoundsFlying()

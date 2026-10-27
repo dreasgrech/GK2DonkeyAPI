@@ -398,6 +398,7 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> CargoZombies;
         internal static Tuned<bool> CargoChest;
         internal static Tuned<int> CartSlots;
+        private static ConfigFile sessionOnly; // never written: CartSlots since 0.40.0 (a mod's session override only)
         internal static Tuned<bool> CorpseIntoMorgue;
         internal static Tuned<string> CorpseIntoMorguePlaces;
         internal static ConfigEntry<bool> InstanceControls;
@@ -568,8 +569,14 @@ namespace GK2DonkeyAPI
                 "Zombies ride on the cart like any other load (as many as it holds), and can be handed to their work straight from it. Off: the cart refuses zombies, and they can't be taken while riding.");
             CargoChest = Config.Bind("General", "CargoChest", Defaults.Get("General", "CargoChest", true),
                 "A plain storage chest (rough, normal or good) rides on the cart: the action key on it while driving lifts it, contents and all; the interact key with nothing in front sets it down. Nothing else rides with it. Off: chests stay where they are.");
-            CartSlots = Config.Bind("General", "CartSlots", Defaults.Get("General", "CartSlots", 6),
-                new ConfigDescription("How many items the cart carries: 2 like the game's own delivery cart, 4 (two layers), 6 (three layers). Applied to every cart at once. A mount whose [Mount] cargo is smaller pulls that many (the smaller wins). A cart holding more than the new number stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
+            // The cart's slots are its mount's cargo since 0.40.0 (the user, 2026-10-27: "we shouldnt have a Cart Capacity
+            // option now because ... each mount can have its own value"; a player's old 2 kept every donkey at two). The
+            // key stays a Behaviour key a mod may lower for its session (Mounts.Behaviour.Set "CartSlots"), bound in a
+            // config that is never written; the line leaves the player's cfg once (DropRetired).
+            sessionOnly = new ConfigFile(System.IO.Path.Combine(Paths.ConfigPath, "dreas.gk2.donkeyapi.session-only.cfg"), false) { SaveOnConfigSet = false };
+            CartSlots = sessionOnly.Bind("General", "CartSlots", Catalog.CargoMax,
+                new ConfigDescription("At most this many items on any cart (a mod's session override; the mount's [Mount] cargo is the rule, the smaller wins). A cart holding more stays full until it is unloaded; nothing is ever dropped. A chest aboard still takes the whole cart.", new AcceptableValueRange<int>(1, 6)));
+            DropRetired("General", new[] { "CartSlots" });
             CartSlots.Entry.SettingChanged += (_, __) => Mount.ApplyCartSlots("the setting changed");
             CorpseIntoMorgue = Config.Bind("General", "CorpseIntoMorgue", Defaults.Get("General", "CorpseIntoMorgue", true),
                 "Driving the cart through the morgue door with a corpse aboard: the ride ends at the door as always and the cart stays outside with its load, but the corpse goes into the keeper's hands, so he walks in carrying it (one; more with the game's extra hand slots). Only there (CorpseIntoMorguePlaces). Off: it stays on the cart.");

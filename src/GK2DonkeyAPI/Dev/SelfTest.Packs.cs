@@ -23,12 +23,12 @@ namespace GK2DonkeyAPI
                     Skip($"the pack {pack} is not installed ({M(name)} isn't registered): build packs/{pack}/{pack}.csproj with the game closed");
                     yield break;
                 }
-                string asm = k.Pack?.SourceAssembly?.GetName().Name;
-                Check(k.Owner == guid && asm == pack && k.Pack?.Source == null,
-                    $"{M(name)}: from the pack's own DLL {pack}.dll (owner {k.Owner}; {asm ?? "no DLL"})");
+                string asm = k.Pack?.SourceAssembly?.GetName().Name, dll = "GK2" + pack; // the DLL GK2-prefixed since 2026-10-27, the folder packs/<pack>
+                Check(k.Owner == guid && asm == dll && k.Pack?.Source == null,
+                    $"{M(name)}: from the pack's own DLL {dll}.dll (owner {k.Owner}; {asm ?? "no DLL"})");
                 Check(!string.IsNullOrEmpty(k.Needs), $"{M(name)}: its mount.cfg says the API it needs (needs = {k.Needs})");
                 Looks.SkinDef own = Looks.Find(Sk(name));
-                Check(own != null && own.Owner == k.Owner && own.SourceAssembly?.GetName().Name == pack, $"{Sk(name)}: its own look from the same DLL ({own?.Owner})");
+                Check(own != null && own.Owner == k.Owner && own.SourceAssembly?.GetName().Name == dll,$"{Sk(name)}: its own look from the same DLL ({own?.Owner})");
                 Check(BepInEx.Bootstrap.Chainloader.PluginInfos.ContainsKey(guid), $"{pack} is a BepInEx plugin of its own ({guid})");
             }
             Catalog.Entry gerry = Catalog.Find(M("gerry"));

@@ -78,10 +78,28 @@ namespace GK2DonkeyAPI
                 float wantCart = 2.5f * Catalog.CartFactor;
                 Check(info != null && Mathf.Approximately(info.Speed, 2.5f) && Mathf.Abs(info.CartSpeed - wantCart) < 0.001f && info.SpeedWord == "Fast" && info.Cargo == 4, $"MountInfo: {info?.Speed}, with the cart {info?.CartSpeed:0.###} (2.5 x {Catalog.CartFactor:0.###}), \"{info?.SpeedWord}\", cargo {info?.Cargo}");
                 Check(info != null && info.Stats.Count == 1 && info.Stats[0].Label == "Diet", $"its own \"Speed\" stat line is left out (the API writes that one): {info?.Stats.Count} line(s)");
-                MountsPanel.Entry entry = MountsPanel.Entries().Find(x => x.Id == "selftest.speed-beast");
-                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
+                // the card's cargo is what the cart holds for this player: the mount's, or the Cart capacity when smaller
+                // (the user, 2026-10-27: "Cargo: 6 items" while the cart took two). Cart capacity taken over for the checks.
+                string slotsOwner = Mounts.Behaviour.OverriddenBy("CartSlots");
+                object slotsWas = slotsOwner == null ? null : Mounts.Behaviour.Get<object>("CartSlots");
+                MountsPanel.Entry entry, donkeyEntry, small;
+                try
+                {
+                    Mounts.Behaviour.ClearAny("CartSlots");
+                    Mounts.Behaviour.Set(Owner, "CartSlots", 6);
+                    entry = MountsPanel.Entries().Find(x => x.Id == "selftest.speed-beast");
+                    donkeyEntry = MountsPanel.Entries().Find(x => x.Id == MountCatalog.DonkeyId);
+                    Mounts.Behaviour.Set(Owner, "CartSlots", 2);
+                    small = MountsPanel.Entries().Find(x => x.Id == "selftest.speed-beast");
+                }
+                finally
+                {
+                    Mounts.Behaviour.ClearAny("CartSlots");
+                    if (slotsOwner != null) Mounts.Behaviour.Set(slotsOwner, "CartSlots", slotsWas);
+                }
+                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card at Cart capacity 6: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
                 Check(entry != null && entry.Lines.Contains("Speed: Fast (2.5x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
-                MountsPanel.Entry donkeyEntry = MountsPanel.Entries().Find(x => x.Id == MountCatalog.DonkeyId);
+                Check(small != null && small.Stats.Count >= 2 && small.Stats[1] == ("Cargo", "2 of 4 items") && small.Lines.Contains("Cargo: 2 of 4 items (a mod limits the cart to 2)"), $"with every cart limited to 2 (a mod's session override) the card says what the cart holds: {(small == null ? "no entry" : small.Stats[1].Value)}");
                 float cfgRide = Plugin.For(MountStyle.Ride).SpeedMultiplier.Entry.Value, cfgCart = Plugin.For(MountStyle.Cart).SpeedMultiplier.Entry.Value;
                 Check(donkeyEntry != null && donkeyEntry.Stats[0].Value == Catalog.SpeedWord(cfgRide, MountStyle.Ride) && donkeyEntry.Stats[1].Value == Catalog.CargoMax + " items", $"the donkey's card reads the cfg's speed and the most cargo ({cfgRide}: {donkeyEntry?.Stats[0].Value}, {donkeyEntry?.Stats[1].Value})");
 

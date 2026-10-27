@@ -126,7 +126,11 @@ namespace GK2DonkeyAPI
                 // 2026-10-22: cargo, not the cart's speed, which follows the mount's)
                 float ride = Catalog.SpeedOf(k, MountStyle.Ride);
                 e.Lines.Add("Speed: " + SpeedText(ride, MountStyle.Ride));
-                if (k.Cart) e.Lines.Add("Cargo: " + Catalog.CargoOf(k) + " items");
+                // what its cart holds: the mount's cargo, or less while a mod limits every cart (Behaviour CartSlots, a session
+                // override; Cargo.Rig.WantedSlots). The player's Cart capacity row is gone since 0.12 (the user, 2026-10-27).
+                int ownCargo = Catalog.CargoOf(k), holds = Mathf.Min(ownCargo, Plugin.CartSlots.GlobalValue);
+                string cargoText = holds < ownCargo ? $"{holds} of {ownCargo} items" : holds + " items";
+                if (k.Cart) e.Lines.Add("Cargo: " + cargoText + (holds < ownCargo ? $" (a mod limits the cart to {holds})" : ""));
                 int skins = (k == Catalog.Donkey ? 1 : 0);
                 foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
                 if (skins > 1) e.Lines.Add(skins + " skins");
@@ -139,7 +143,7 @@ namespace GK2DonkeyAPI
                 // the stats card (the user's pick, 2026-10-21; cargo for the cart's speed and no babies line, 2026-10-22): speed,
                 // what its cart carries (or no cart), skins
                 e.Stats.Add(("Speed", Catalog.SpeedWord(ride, MountStyle.Ride)));
-                e.Stats.Add(("Cargo", k.Cart ? Catalog.CargoOf(k) + " items" : "no cart"));
+                e.Stats.Add(("Cargo", k.Cart ? cargoText : "no cart"));
                 e.Stats.Add(("Skins", skins.ToString()));
                 list.Add(e);
             }

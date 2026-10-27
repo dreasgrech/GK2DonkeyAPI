@@ -6,7 +6,7 @@ docs/dependency-check.md) must find every game member it names in the installed 
 changed or vanished needs a re-audit and a rebuild before it ships. GK2SaddleUp carries no manifest: it uses no game
 member of its own (only the API), which this checks too.
 The external mount packs (packs/<Pack>/, their own downloads, docs/making-a-mount.md "Built in or external") ship as a
-small DLL each with their gk2mounts/ folder embedded (dist/<Pack>.dll, checked as the others: no manifest, no game
+small DLL each with their gk2mounts/ folder embedded (dist/GK2<Pack>.dll, the csproj's AssemblyName, checked as the others: no manifest, no game
 assembly) and their README.md and CHANGELOG.md beside it: each needs both, its Plugin.cs Version the CHANGELOG's first
 heading, and in every mount its mount.cfg with needs = and version = and its skins/default/skin.cfg; no file may name a
 path on this machine; nothing stray (Thumbs.db, editor backups) may be in gk2mounts/ (it would be embedded).
@@ -18,11 +18,21 @@ TOOL = os.path.join(REPO, "tools", "DepManifest", "bin", "Release", "net8.0", "D
 NO_MANIFEST = {"GK2SaddleUp.dll": "no manifest: it uses no game member of its own (it follows the API's check through Mounts.IsAvailable); its built-in content (Gerry, two donkey skins) is embedded packs"}
 STRAY = ("thumbs.db", "desktop.ini", ".ds_store")  # never shipped
 PACKS_DIR = os.path.join(REPO, "packs")
+def assembly_of(pack_dir):
+    """A pack's DLL name (without .dll): its csproj's AssemblyName (GK2SaddleUpDragon for packs/SaddleUpDragon)."""
+    name = os.path.basename(pack_dir.rstrip("/\\"))
+    try:
+        text = open(os.path.join(pack_dir, name + ".csproj"), encoding="utf-8").read()
+        i = text.index("<AssemblyName>") + len("<AssemblyName>")
+        return text[i:text.index("</AssemblyName>", i)].strip()
+    except (OSError, ValueError):
+        return name
+
 for _p in (sorted(os.listdir(PACKS_DIR)) if os.path.isdir(PACKS_DIR) else []):
     if os.path.isfile(os.path.join(PACKS_DIR, _p, _p + ".csproj")):
-        NO_MANIFEST[_p + ".dll"] = "no manifest: a mount pack's plugin, it uses the API only; its gk2mounts\\ folder is embedded"
-    if os.path.isfile(os.path.join(PACKS_DIR, _p, _p + ".csproj")) and not os.path.isfile(os.path.join(REPO, "dist", _p + ".dll")):
-        print(f"FAIL  {_p}.dll  not in dist/ (bash tools/build-dist.sh)")
+        NO_MANIFEST[assembly_of(os.path.join(PACKS_DIR, _p)) + ".dll"] = "no manifest: a mount pack's plugin, it uses the API only; its gk2mounts\\ folder is embedded"
+    if os.path.isfile(os.path.join(PACKS_DIR, _p, _p + ".csproj")) and not os.path.isfile(os.path.join(REPO, "dist", assembly_of(os.path.join(PACKS_DIR, _p)) + ".dll")):
+        print(f"FAIL  {assembly_of(os.path.join(PACKS_DIR, _p))}.dll  not in dist/ (bash tools/build-dist.sh)")
         NO_MANIFEST["__missing__" + _p] = ""  # counted below
 
 
