@@ -4,7 +4,7 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 | Mod | Version | For | What it is |
 |---|---|---|---|
-| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.12.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Gerry the skull and the donkey's skins Hellfire and Royal Parade come with it; the Dragon (GK2 Saddle Up: Dragon) and the Giant Rat, Giant Snail and Giant Worm (GK2 Saddle Up: Critters) are downloads of their own. |
+| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.12.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Gerry the skull and the donkey's skins Hellfire and Royal Parade come with it; the Dragon (GK2 Saddle Up: Dragon) and the Rat, Snail and Worm (GK2 Saddle Up: Critters) are downloads of their own. |
 | [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.40.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
 Both are built and audited against Steam game build 25910882 (game 1.010).
@@ -15,7 +15,7 @@ dragon, rat, snail and worm as Saddle Up's external packs, each its own download
 | Mount | Skins | Notes |
 |---|---|---|
 | Donkey (the game's own) | the game's own look, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire is registered but not shown since API 0.37.0), **Royal Parade** (a saddle cloth and a crown; the cloth follows the harness colour) | Normal speed, cart of 6, babies |
-| Giant Rat, Giant Snail, Giant Worm (GK2 Saddle Up: Critters) | their own look (our own art) | the rat Very fast, cart of 2; the worm Slow, cart of 4; the snail Very slow, cart of 6; babies; the snail and the worm have no voice |
+| Rat, Snail, Worm (GK2 Saddle Up: Critters) | their own look (our own art) | the rat Very fast, cart of 2; the worm Slow, cart of 4; the snail Very slow, cart of 6; babies; the snail and the worm have no voice |
 | Dragon (GK2 Saddle Up: Dragon) | its own look (our own art, called Red Dragon) | Slow, babies, no cart, **flies** (Space jumps and takes off, Left Shift and Left Ctrl climb and descend, docs/flying.md); its near wing is drawn in front of the rider |
 | Gerry (the game's talking skull) | the game's own frames, read at run time | Fast, cart of 4, babies his own size; the keeper calls him a skull |
 

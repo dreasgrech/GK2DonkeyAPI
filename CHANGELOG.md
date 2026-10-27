@@ -20,9 +20,9 @@ For players:
   |---|---|---|---|---|
   | Donkey | GK2 Saddle Up | Normal | 6 items | the all-rounder; skins Hellfire and Royal Parade |
   | Gerry | GK2 Saddle Up | Fast | 4 items | the game's talking skull, three times his size; he talks |
-  | Giant Rat | GK2 Saddle Up: Critters | Very fast | 2 items | the courier: quick, a light cart |
-  | Giant Worm | GK2 Saddle Up: Critters | Slow | 4 items | a quiet hauler |
-  | Giant Snail | GK2 Saddle Up: Critters | Very slow | 6 items | a slow, full cart |
+  | Rat | GK2 Saddle Up: Critters | Very fast | 2 items | the courier: quick, a light cart |
+  | Worm | GK2 Saddle Up: Critters | Slow | 4 items | a quiet hauler |
+  | Snail | GK2 Saddle Up: Critters | Very slow | 6 items | a slow, full cart |
   | Dragon | GK2 Saddle Up: Dragon | Slow | no cart | **flies**: over water, fences, cliffs and roofs |
 
 - **Each mount pulls its own load** (the user, 2026-10-27): the faster it is, the less its cart holds. A cart holds
@@ -43,6 +43,8 @@ For players:
 
 Everything else in this version, in detail:
 
+- **The Critters are the Rat, the Snail and the Worm** (the user, 2026-10-27: no "Giant" in their names; their ids are
+  the same, so nothing in a save changes).
 - **"Behaviour" is "Mount Behaviour"** in the settings, and the "Status: Active" line at the top of Keys is gone (the Mods
   list says whether the mod is working). Your values carry over.
 - **Babies always look like their parent** (the user, 2026-10-27): "Babies are the same mount and skin" is gone; off,
@@ -116,7 +118,7 @@ Everything else in this version, in detail:
   false`), G says it can't pull the cart and leaves the cart where it stands; before, the cart came to you and was
   refused only then.
 - **The mounts are downloads of their own** (the user, 2026-10-26): GK2 Saddle Up itself ships the donkey, Gerry and
-  the donkey's Hellfire and Royal Parade; the Dragon (GK2 Saddle Up: Dragon) and the giant rat, snail and worm (GK2
+  the donkey's Hellfire and Royal Parade; the Dragon (GK2 Saddle Up: Dragon) and the rat, snail and worm (GK2
   Saddle Up: Critters) are mount packs to add, each a folder for `BepInEx\plugins\`, or all of them in one zip.
 - **Kept donkeys and carts are never lost because something went wrong** (docs/multi-mod-loading.md): after an error
   took them away, the side file is left as it was instead of being rewritten or deleted by the next save; a side file
@@ -140,7 +142,7 @@ Everything else in this version, in detail:
 - **The babies' answers are as loud as their parent's call** (the user, 2026-10-25: "i still cant hear the babies
   ever replying"; the log showed every answer playing, about 10 dB under the call once the babies' smaller size and
   their distance were counted). The dragon's babies answer with a lower growl too, not a chirp.
-- **The giant snail squelches as it slides along** (the user, 2026-10-25: "sound those slime sounds while walking"):
+- **The snail squelches as it slides along** (the user, 2026-10-25: "sound those slime sounds while walking"):
   three more squelches from the slime recording, two a stride, as quiet as the donkey's hooves on grass. It was
   silent while moving.
 - **The babies answer after their parent's call, so you hear them** (the user, 2026-10-25: "are we sure the foals
@@ -157,7 +159,7 @@ Everything else in this version, in detail:
   your mount gives its own cry on demand: the donkey brays, the dragon roars, the rat squeaks, Gerry talks; its
   babies answer. The snail and the worm have no voice and stay silent. The cries that come by themselves now and then
   are unchanged (the Bray sounds row switches those off; the key still works).
-- **The dragon, the giant rat and the giant snail have sounds of their own** (the user's recordings, 2026-10-25:
+- **The dragon, the rat and the snail have sounds of their own** (the user's recordings, 2026-10-25:
   "can we fill some missing slots with our new sounds?"). The dragon roars with three growls (it used the zombie's
   cry pitched down), growls as you get on and off, thuds as it touches down after a flight, and its babies answer
   with the growls pitched up. The rat squeaks (it used the spitter's cry pitched up), squeaks as you get on and off,
@@ -318,7 +320,7 @@ Everything else in this version, in detail:
   mount the same way (to three quarters of its riding speed, as it always did the donkey). The Mounts panel shows it:
   "Speed: Fast" (against the donkey), and a new stat, "Cargo: 6 items", what its cart carries (since 0.12 it is what
   the cart holds, and the Cart capacity setting is gone). The donkey is as fast as ever (twice walking
-  speed riding, 1.5 times with the cart); the giant rat is very fast, Gerry a little faster, the dragon and the worm a
+  speed riding, 1.5 times with the cart); the rat is very fast, Gerry a little faster, the dragon and the worm a
   little slower and the snail slowest. **The Riding speed and Cart speed rows are gone**, and a Faster or Fastest you
   had picked no longer applies: the mounts set the speeds now. Their old lines leave your settings file by themselves.
 - **The colours window draws the mount as big as the Mounts panel does** (it was smaller there).
@@ -379,7 +381,7 @@ Everything else in this version, in detail:
   the log names the loser and its folder so you can delete it. Before, the folder always won, silently.
 - **Every mount and skin carries a description** (the dragon, the rat, the snail, the worm, Gerry, Hellfire,
   Royal Parade), shown in the Mounts panel.
-- **The five mounts are Saddle Up's.** The Red Dragon, the Giant Rat, the Giant Snail, the Giant Worm and Gerry
+- **The five mounts are Saddle Up's.** The Red Dragon, the Rat, the Snail, the Worm and Gerry
   moved out of GK2 Donkey API into GK2 Saddle Up (five skin packs in its DLL, registered with the API at start,
   the same way anyone else's mod ships a mount). Nothing changes for you: the same download, still switched
   off until the next update. Since the same night the donkey's two skins, Hellfire and Royal Parade, and the Hellfire
@@ -1115,7 +1117,7 @@ Development:
   seconds, in the skin's `sounds` folder, named for the event (`voice_1.ogg`, `voice_2.ogg`, `flap_1.ogg`).
 - **First sounds for the built-in creatures, from the game's own ids** (`[Mount.Sounds]` in the five skin.cfgs, to
   audition on the Mounts tab): the dragon growls (the zombie's attack cry pitched down), treads heavily (the stone
-  step, two a cycle) and breathes at the grass (the furnace bellows); the giant rat squeals (the spitter's cry pitched
+  step, two a cycle) and breathes at the grass (the furnace bellows); the rat squeals (the spitter's cry pitched
   up), patters (six light steps a cycle) and nibbles (the food sound); the snail is silent but for a wet blop getting
   on and off; the worm rustles as it drags (two a cycle), eats dirt (the shovel) and slaps wetly getting on and off;
   Gerry speaks in his own dialogue voice (the game's "garry" clips, in the speech channel) and clatters on bone steps

@@ -1,10 +1,10 @@
 # GK2 Saddle Up: Critters
 
-A mount pack for GK2 Saddle Up: three giant creatures to ride, each pulling the cart and having young.
+A mount pack for GK2 Saddle Up: three mounts to ride, each pulling the cart and having young.
 
-- **The Giant Rat** (`saddleup-critters.rat`): very fast, squeaks; a light cart (2 items).
-- **The Giant Snail** (`saddleup-critters.snail`): very slow and silent but for a wet squelch; a full cart (6 items).
-- **The Giant Worm** (`saddleup-critters.worm`): slow, rustles along; a two-layer cart (4 items).
+- **The Rat** (`saddleup-critters.rat`): very fast, squeaks; a light cart (2 items).
+- **The Snail** (`saddleup-critters.snail`): very slow and silent but for a wet squelch; a full cart (6 items).
+- **The Worm** (`saddleup-critters.worm`): slow, rustles along; a two-layer cart (4 items).
 
 A cart holds the mount's own number or the player's Cart capacity, whichever is smaller.
 

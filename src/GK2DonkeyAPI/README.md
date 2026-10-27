@@ -209,7 +209,7 @@ effects") are written and not yet run in game.
 | Built in | What |
 |---|---|
 | Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`) |
-| the mounts: Giant Rat, Giant Snail, Giant Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs, registered through the API like any mod's (`docs/mounts-as-mods.md`): Gerry and the donkey's skins built into Saddle Up (`src/SaddleUp/assets/mounts/saddleup.gerry/`, `mounts/donkey/skins/`), the dragon and the rat, snail and worm as external packs, downloads of their own (`packs/SaddleUpDragon`, `packs/SaddleUpCritters`); our own art from `tools/skins/creatures/`, Gerry's frames read from the game |
+| the mounts: Rat, Snail, Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's since 2026-10-21) | not in the API since 2026-10-20: they are Saddle Up's packs, registered through the API like any mod's (`docs/mounts-as-mods.md`): Gerry and the donkey's skins built into Saddle Up (`src/SaddleUp/assets/mounts/saddleup.gerry/`, `mounts/donkey/skins/`), the dragon and the rat, snail and worm as external packs, downloads of their own (`packs/SaddleUpDragon`, `packs/SaddleUpCritters`); our own art from `tools/skins/creatures/`, Gerry's frames read from the game |
 
 ## Not built
 

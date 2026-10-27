@@ -1484,8 +1484,8 @@ def frames_for(fn):
 # ... and the hitch gap: how many px further behind the body the whole cart sits with the cart hitched ([Tuning.Cart]
 # HitchGapPx; the donkey's is 0; None = none: the mount pulls no cart (the dragon, 2026-10-25), or not measured yet (the
 # "cart readout" self-test says what it is))
-CREATURES = (("worm", worm, "Giant Worm", 96, ("worm", "Giant Worm"), 52, None), ("snail", snail, "Giant Snail", 96, ("snail", "Giant Snail"), 55, None),
-             ("rat", rat, "Giant Rat", 96, ("rat", "Giant Rat"), 52, 9),
+CREATURES = (("worm", worm, "Worm", 96, ("worm", "Worm"), 52, None), ("snail", snail, "Snail", 96, ("snail", "Snail"), 55, None),
+             ("rat", rat, "Rat", 96, ("rat", "Rat"), 52, 9),
              ("dragon", dragon, "Red Dragon", 128, ("dragon", "Dragon"), 68 - RAISE, None))  # seat rows: the donkey's 52 (+16 on 128), the snail 3 lower
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # tools/skins/creatures/make_creatures.py -> the repo

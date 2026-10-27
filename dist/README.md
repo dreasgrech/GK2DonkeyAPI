@@ -22,7 +22,7 @@ The two pack DLLs ship as zips of their own (`make-release-zip.py`, each with th
 (`BepInEx\plugins\GK2SaddleUpCritters\`), and `GK2-Saddle-Up-All-Mounts-<Saddle Up's version>.zip` with both.
 
 Players download GK2 Saddle Up (the donkey with its skins Hellfire and Royal Parade, and Gerry) and, if they want
-more mounts, the packs: GK2 Saddle Up: Dragon (the dragon), GK2 Saddle Up: Critters (the giant rat, snail and worm),
+more mounts, the packs: GK2 Saddle Up: Dragon (the dragon), GK2 Saddle Up: Critters (the rat, snail and worm),
 or the All Mounts zip with both.
 
 What is new since 0.10.0 is CHANGELOG.md's Unreleased section (as of 2026-10-27). The mounts and skins are on for

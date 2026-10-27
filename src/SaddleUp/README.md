@@ -11,16 +11,16 @@ Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey AP
 game's talking skull (packs in `assets/mounts/`: `donkey/skins/`, `saddleup.gerry/`, registered with the API at start
 the way any mod ships a mount). More mounts are downloads of their own, each a folder for `BepInEx\plugins\`:
 - **GK2 Saddle Up: Dragon** (`GK2SaddleUpDragon\GK2SaddleUpDragon.dll`): the dragon, which flies;
-- **GK2 Saddle Up: Critters** (`GK2SaddleUpCritters\GK2SaddleUpCritters.dll`): the giant rat, the giant snail and the giant worm;
+- **GK2 Saddle Up: Critters** (`GK2SaddleUpCritters\GK2SaddleUpCritters.dll`): the rat, the snail and the worm;
 - or both in one, the **All Mounts** zip.
 
 | Mount | Download | Riding | Cart |
 |---|---|---|---|
 | Donkey | GK2 Saddle Up | Normal | 6 items |
 | Gerry | GK2 Saddle Up | Fast | 4 items |
-| Giant Rat | GK2 Saddle Up: Critters | Very fast | 2 items |
-| Giant Worm | GK2 Saddle Up: Critters | Slow | 4 items |
-| Giant Snail | GK2 Saddle Up: Critters | Very slow | 6 items |
+| Rat | GK2 Saddle Up: Critters | Very fast | 2 items |
+| Worm | GK2 Saddle Up: Critters | Slow | 4 items |
+| Snail | GK2 Saddle Up: Critters | Very slow | 6 items |
 | Dragon | GK2 Saddle Up: Dragon | Slow | no cart (it flies) |
 
 Each mount's cart carries its own number of items, the table above. Switching to a mount that carries less never

@@ -75,7 +75,7 @@ namespace GK2DonkeyAPI
         private sealed class ApiMod : Gk2ModBase
         {
             private readonly Gk2ModMetadata metadata = new Gk2ModMetadata(Plugin.Guid, "GK2 Donkey API", "dreas", Plugin.Version,
-                $"The mounts (donkeys, dragons, giant rats...), their skins, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
+                $"The mounts (donkeys, dragons, rats...), their skins, carts and riding that other mods build on (API {Mounts.ApiVersion}). It does nothing on its own: "
                 + "install a mod that uses it, like GK2 Saddle Up.",
                 supportsRuntimeToggle: false, requiresKnownBuild: true, frameworkManagesEnabledState: false);
 
