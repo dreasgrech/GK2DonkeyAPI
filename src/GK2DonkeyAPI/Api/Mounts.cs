@@ -21,6 +21,18 @@ namespace GK2DonkeyAPI.Api
         Cart,
     }
 
+    // The Mounts panel's speed words, slowest first (0.40.0): what a mount's speed reads as against the donkey's, and the
+    // one speed every mount takes with the Behaviour key FreeplaySameSpeed (FreeplaySpeed). Their words, in this order:
+    // Mounts.Catalog.SpeedWords.
+    public enum SpeedBand
+    {
+        VerySlow,
+        Slow,
+        Normal,
+        Fast,
+        VeryFast,
+    }
+
     // Parts of a ride another mod can switch off (Mounts.AddFeatureRule). Each also has the core's own settings; a
     // feature is on when those say so and every rule allows it. Riding in Cart style at all is not a feature: refuse
     // it with a mount rule on MountStyle.Cart, which can say why.
@@ -267,6 +279,11 @@ namespace GK2DonkeyAPI.Api
         //   ReturnKey                (KeyboardShortcut, 0.36.0, None) a key for ReturnToSafeSpot
         //   IdleShuffle              donkeys standing in the world without a cart take a few slow steps now and then
         //                            (off in the core; how they step: Mounts.Shuffle). Per donkey: MountHandle.Tuning.
+        //   FreeplayMaxCargo         (0.40.0, off) every mount that pulls a cart carries the most a cart holds (6), whatever
+        //                            its own cargo; MountInfo.Cargo and the panel's card say so too
+        //   FreeplaySameSpeed        (0.40.0, off) every mount, the donkey too, goes at FreeplaySpeed's speed (a SpeedBand,
+        //   FreeplaySpeed            Normal: the donkey's as shipped; with the cart times the donkey's ratio); MountInfo's
+        //                            speeds and the panel say so too. Both Saddle Up's Freeplay section.
         public static MountTuning Behaviour
         {
             get
@@ -279,7 +296,7 @@ namespace GK2DonkeyAPI.Api
                 {
                     Plugin.StayMountedThroughDoors, Plugin.DismountIndoors, Plugin.CartIndoors, Plugin.ShowMessages, IdleShuffle.On, Plugin.HitchKey, Plugin.CargoZombies, Plugin.CargoChest,
                     Plugin.CorpseIntoMorgue, Plugin.CorpseIntoMorguePlaces, Plugin.CartSlots, Plugin.FlyIndoors, Plugin.JumpKey, Plugin.FlyKey, Plugin.ClimbKey, Plugin.DescendKey,
-                    Plugin.FallGuard, Plugin.ReturnKey, Plugin.StandingSounds,
+                    Plugin.FallGuard, Plugin.ReturnKey, Plugin.StandingSounds, Plugin.FreeplayMaxCargo, Plugin.FreeplaySameSpeed, Plugin.FreeplaySpeed,
                 }));
             }
         }

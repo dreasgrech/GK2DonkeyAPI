@@ -25,7 +25,7 @@ namespace SaddleUp
         // mod was written against.
         public const string Version = "0.12.0";
 
-        // The API this mod is written against: 0.40 the per-mount name, babies, voice and lantern (MountLook) and the
+        // The API this mod is written against: 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
         // look Toggle and Text rows; 0.39 reads the dragon's [Jump] (its own jump, with wings); 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
         // rename) and ships no skin (Hellfire's effect is registered here); 0.35 the Mounts panel (PanelButton,
         // OpenPanel) and TuningKey (0.34
@@ -278,6 +278,15 @@ namespace SaddleUp
             {
                 Mounts.ReturnToSafeSpot("Saddle Up's settings button"); // the API says the result in the keeper's bubble
             });
+
+            // Freeplay, the page's last section (the user, 2026-10-27: "for players who dont want the gameplay stuff"):
+            // every mount the most cargo, every mount one speed. The speed's words and the most cargo are the API's (the
+            // Mounts panel's words, Mounts.Catalog.SpeedWords), never repeated here.
+            var speedWords = new string[Mounts.Catalog.SpeedWords.Count];
+            for (int i = 0; i < speedWords.Length; i++) speedWords[i] = Mounts.Catalog.SpeedWords[i];
+            p.Toggle("Freeplay", "MaxCargo", false, "All mounts carry max cargo", $"Every mount that pulls a cart carries {Mounts.Catalog.MostCargo} items, whatever its own cargo.", v => Mounts.Behaviour.Set(Guid, "FreeplayMaxCargo", v));
+            ConfigEntry<bool> sameSpeed = p.Toggle("Freeplay", "SameSpeed", false, "All mounts have the same speed", "Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always.", v => Mounts.Behaviour.Set(Guid, "FreeplaySameSpeed", v));
+            p.Choice("Freeplay", "Speed", SpeedBand.Normal, "Speed of every mount", "Normal is the donkey's speed.", v => Mounts.Behaviour.Set(Guid, "FreeplaySpeed", v), speedWords, visible: () => sameSpeed.Value);
             p.Publish();
             Logger.LogInfo($"GK2 Saddle Up {Version} loaded (GK2 Donkey API {Mounts.ApiVersion}): ride {rideKey.Value}, cart {cartKey.Value}.");
         }

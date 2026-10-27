@@ -44,6 +44,13 @@ For players:
 
 Everything else in this version, in detail:
 
+- **Freeplay, a section at the end of the settings** (the user, 2026-10-27: for players who don't want the mounts'
+  differences): "All mounts carry max cargo" (every cart holds 6 items, whatever mount pulls it) and "All mounts have
+  the same speed" (every mount, the donkey too, at the speed you pick: Very slow, Slow, Normal, Fast or Very fast, the
+  Mounts panel's own words; Normal is the donkey's). Both off by default, both take effect at once, even while you
+  ride, and the Mounts panel's cards show what your mounts carry and how fast they go with them on.
+- **The worm is a touch slower** (1.6 times walking speed, was 1.75): every mount's speed is now one of five set
+  speeds, the ones the Mounts panel names (the worm was already called Slow, and Slow is the dragon's 1.6).
 - **The babies react, not mirror** (the user, 2026-10-27): when you jump on their parent they jump a quarter of a second
   to about a second later (the lively ones sooner), never in the same moment; and when it calls, each baby answers by
   its own chance (the lively more often), so it isn't always the whole family.
@@ -453,6 +460,16 @@ Everything else in this version, in detail:
 
 For mod authors:
 
+- **Freeplay's Behaviour keys** (`[General]`, all off/Normal): `FreeplayMaxCargo` (every cart the most cargo,
+  `Mounts.Catalog.MostCargo`, 6), `FreeplaySameSpeed` with `FreeplaySpeed` (a new `SpeedBand`: every mount, the donkey
+  too, at that band's speed, the cart's times the donkey's ratio). `MountInfo.Cargo`, `Speed`, `CartSpeed` and
+  `SpeedWord` report what is in effect with them on. `Mounts.Catalog.SpeedWords` gives the panel's words in
+  `SpeedBand`'s order, from the same one table the words and the bands come from (labels for a `SpeedBand` choice).
+- **A mount's speed is one of the API's words** (the user, 2026-10-27: "These definitions should not be in the
+  individual pack mods. They should exist in the api"): `[Mount] speed = Fast` (any case; `VeryFast` too), and
+  `MountDef.Speed` is a `SpeedBand?` (it was a `float?` since 0.36.0, never released). The API says what each is: Very
+  slow 1.25, Slow 1.6, Normal 2, Fast 2.25, Very fast 2.75 times walking speed. A number in `speed` is refused with a
+  report (the donkey's applies), and so is a `SpeedMultiplier` in a mount's tuning, with a warning.
 - **`Mounts.MountsEnabled` is always true** (it was false in 0.10.0's download): your mounts, skins and effects
   register and are offered to players. The switch behind it, the dev key `Debug.MountsPreview`, is gone (the user,
   2026-10-27: the mounts are mods of their own now, so which ones a player has is which packs they installed). The
@@ -981,6 +998,15 @@ For mod authors:
 
 Development:
 
+- **SkinsScan reads the speed words from the API's table** (Catalog.cs `SpeedBands`) and fails a pack whose `speed` is
+  not one of them; the shipped `mount.cfg`s and `new_skin.py`'s template say a word.
+- **Self-test "freeplay: max cargo and one speed for every mount"**: the words' one table (each band's speed reads back
+  as its own word, riding and with the cart, the five numbers the shipped mounts', a word read in any case and a number
+  refused), max cargo on the catalog, MountInfo, the panel's card and a hitched cart's
+  slots (and back), the one speed ridden, driven and changed while riding (the donkey and a test mount, and back to
+  their own), Saddle Up's Freeplay rows (the last section, the dropdown's words the API's, hidden with the switch off,
+  each row driving its key). The whole run holds Freeplay off, so a player's Freeplay can't change what the other
+  scenarios check.
 - **The UI probe** (`Debug.UiProbe`, off by default; Dev/UiProbe.cs): when the Mounts panel is built it writes
   `BepInEx\GK2-ui-probe.txt`, the game's Settings window tree (rects, sprites and their slicing, fonts), the dialog
   button and the loaded buttons' fonts. It found the panel's face under the frame and the plain font on its buttons.

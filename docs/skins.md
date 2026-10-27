@@ -137,7 +137,7 @@ foals = true          # may the baby donkeys be it
 flies = true          # ridden plain, it takes off and flies (off unless said; flying is a dev-only experiment for now)
 jumps = false         # ridden plain, it never jumps (on unless said); both written only when not the default
 foal_scale = 0.6      # the babies' size against the grown mount, 0.2 to 1 (Gerry: 0.33)
-speed = 2.5           # riding, times the keeper's walking speed (1 = walking; the donkey: 2), 0.5 to 4
+speed = Fast          # one of the API's speeds: Very slow, Slow, Normal (the donkey), Fast, Very fast
 cargo = 6             # items its cart carries, 1 to 6 (under the player's Cart capacity); only on a mount that pulls one
 
 [Stats]               # lines the Mounts panel shows as given, in this order (optional; Speed and Cargo are the API's own lines)
@@ -171,18 +171,22 @@ word, and the one a new instance of the mount wears; the others by their `name`.
 "Default" only, and a second dragon look (another folder under `saddleup-dragon.dragon\skins\`, from any pack) shows next
 to it by its name. There is no `default_skin` key: one in `[Mount]` is reported as ignored.
 Every mount a player can pick has at least one skin. Keys the loader doesn't know in `[Mount]` are ignored and named
-in the log; a bad `foal_scale`, `speed` or `cargo` is named too and the default stands (a speed
-outside 0.5 to 4 is taken to the nearest end).
+in the log; a bad `foal_scale`, `speed` or `cargo` is named too and the default stands (a `speed` that isn't one
+of the words, a number among them, is the donkey's).
 
-**Speed and cargo** (the user, 2026-10-22): a mount's `speed` is how fast the keeper rides it, times his walking
-speed (the game's speed is linear in it). With the cart it is that times the donkey's cart speed over its riding
-one (1.5 / 2 as shipped): the cart slows every mount alike. The Mounts panel shows it as a word against the
-donkey's: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above that Very fast
-(`MountInfo.SpeedWord`; the number is `MountInfo.Speed`). A mount without one rides at the donkey's, the API cfg's
-`[Ride]` / `[Cart]` `SpeedMultiplier`. Tested in game up to 2.5 riding. `cargo` is how many items its cart carries,
+**Speed and cargo** (the user, 2026-10-22; words since 2026-10-27: "these definitions should not be in the individual
+pack mods"): a mount's `speed` names one of the API's speeds, and the API says how fast each is, times the keeper's
+walking speed (the game's speed is linear in it): Very slow 1.25, Slow 1.6, Normal 2 (the donkey), Fast 2.25, Very
+fast 2.75 (`Catalog.SpeedBands`, the one table; the shipped mounts' speeds). The word is read in any case, and as
+the name too (`VeryFast`); a number is refused. With the cart it is that times the donkey's cart speed over its
+riding one (1.5 / 2 as shipped): the cart slows every mount alike. The Mounts panel shows the word (a speed reads as
+one against the donkey's: under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above that Very
+fast; `MountInfo.SpeedWord`, the number `MountInfo.Speed`). A mount without one rides at the donkey's, the API cfg's
+`[Ride]` / `[Cart]` `SpeedMultiplier`; a `SpeedMultiplier` in a mount's `[Tuning]` is refused with a warning (its
+speed is its word). Tested in game up to 2.5 riding. `cargo` is how many items its cart carries,
 1 to 6, shown as "Cargo: 6 items": its cart holds that many, or the player's Cart capacity when that is smaller (since
 API 0.40.0; a mount that pulls fewer than a cart holds leaves it standing with its load and can't hitch it until the extra is off). The built-in cargo: the giant rat 2, Gerry and the
-giant worm 4, the donkey and the giant snail 6 (the faster, the lighter; docs/next-update.md section 3). The built-in speeds: donkey 2, rat 2.75 (above the 2.5 seen in game so far), Gerry 2.25, dragon 1.6, worm 1.75, snail 1.25.
+giant worm 4, the donkey and the giant snail 6 (the faster, the lighter; docs/next-update.md section 3). The built-in speeds: the donkey Normal, the rat Very fast (2.75, above the 2.5 seen in game so far), Gerry Fast, the dragon and the worm Slow (the worm 1.75 before the words), the snail Very slow.
 
 Back in `skin.cfg`: two optional keys move the pictures on the donkey, in art pixels (x towards the head, y up):
 `offset = 0 0` while riding and `offset_cart = 0 0` with the cart hitched (a skin that should stand closer to the

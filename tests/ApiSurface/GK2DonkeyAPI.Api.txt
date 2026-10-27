@@ -89,6 +89,8 @@ sealed class GK2DonkeyAPI.Api.MountAbilityInfo
 sealed class GK2DonkeyAPI.Api.MountCatalog
   field static const string DonkeyId = donkey
   property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountInfo> All { get; }
+  property int MostCargo { get; }
+  property System.Collections.Generic.IReadOnlyList<string> SpeedWords { get; }
   event System.Action MountsChanged
   method GK2DonkeyAPI.Api.MountInfo Find(string id)
   method System.IDisposable Register(string ownerId, GK2DonkeyAPI.Api.MountDef def)
@@ -161,7 +163,7 @@ sealed class GK2DonkeyAPI.Api.MountDef
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsBaby
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
-  field System.Nullable<float> Speed
+  field System.Nullable<GK2DonkeyAPI.Api.SpeedBand> Speed
   field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountStat> Stats
   field System.Collections.Generic.Dictionary<string, object> Tuning
   field System.Collections.Generic.Dictionary<string, object> TuningCart
@@ -643,6 +645,12 @@ enum GK2DonkeyAPI.Api.RiderPose
   Idle = 0
   FishingIdle = 203
   FocusedWalk = 41
+enum GK2DonkeyAPI.Api.SpeedBand
+  VerySlow = 0
+  Slow = 1
+  Normal = 2
+  Fast = 3
+  VeryFast = 4
 enum GK2DonkeyAPI.Api.SpriteColorMethod
   Palette = 0
   Lut = 1

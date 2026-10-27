@@ -162,6 +162,12 @@ Mounts.ClearTuning("you.gk2.mymod");                  // all your overrides, eve
 - `StandingSounds` (0.36.0, on): standing mounts and babies near the keeper make their sounds (steps, grazing, the
   lip smack; a baby higher and softer). Off: only the ridden mount, and a standing one's lip smack is the game's own
   ([mount-sounds-design.md](mount-sounds-design.md)).
+- Freeplay (0.40.0; Saddle Up's Freeplay section): `FreeplayMaxCargo` (off): every cart holds the most
+  (`Mounts.Catalog.MostCargo`, 6), whatever its mount's `cargo`. `FreeplaySameSpeed` (off) with `FreeplaySpeed`
+  (`SpeedBand`, Normal): every mount, the donkey too, goes at that band's speed (a speed inside the band, Normal the
+  donkey's 2 as shipped; with the cart times the donkey's cart-to-riding ratio). Both take effect at once, on the ridden
+  mount too; `MountInfo`'s cargo and speeds and the Mounts panel report what is in effect. `Mounts.Catalog.SpeedWords`:
+  the words in `SpeedBand`'s order (`Catalog.SpeedBands`, the one table behind `SpeedWord` too).
 - `JumpKey`, `FlyKey` (0.36.0, `KeyboardShortcut`, Space both: a key with its modifiers, Ctrl+Space is Ctrl+Space;
   more keys held, such as the climb's Left Shift, don't stop a press): riding plain, the mount jumps; a mount that flies takes off
   and lands. One key for both: a press jumps, a second press in the air during the jump takes off a mount that
@@ -1072,6 +1078,17 @@ History:
 - 0.40.0: `MountLook.StepsVolume` and `BabyStepsVolume` (0 to 1.5) beside `SoundVolume`, which is the voices only now;
   the style keys `VoicesVolume`, `StepsVolume`, `BabyStepsVolume` (times `SoundVolume`: the calls, answers, lip smack
   and chewing; everything else of a grown mount; everything but the answer of a baby).
+- 0.40.0: **Freeplay** (the user, 2026-10-27): the Behaviour keys `FreeplayMaxCargo`, `FreeplaySameSpeed`,
+  `FreeplaySpeed` (see Behaviour above); the enum `SpeedBand` (VerySlow, Slow, Normal, Fast, VeryFast);
+  `Mounts.Catalog.SpeedWords` (the words in its order) and `MostCargo` (6). `MountInfo`'s `Cargo`, `Speed`,
+  `CartSpeed` and `SpeedWord` are what is in effect with them on.
+- 0.40.0 (breaking, pre-release): **the speeds are the API's** (the user, 2026-10-27: "these definitions should not be
+  in the individual pack mods. They should exist in the api"). `MountDef.Speed` is a `SpeedBand?` (was a `float?`), a
+  pack's `[Mount] speed` a word (`Very fast`, any case, or `VeryFast`; a number is refused with a report, and the
+  donkey's applies); each word's speed is the API's one table, `Catalog.SpeedBands`: Very slow 1.25, Slow 1.6, Normal
+  2, Fast 2.25, Very fast 2.75 times walking speed (the shipped mounts'; the panel's words read a number back by the
+  same table). A `SpeedMultiplier` in a mount's `Tuning` / `TuningRide` / `TuningCart` (or a `mount.cfg` `[Tuning]`)
+  is refused with a warning. A mod's session value on an instance (`MountHandle.Tuning`) still sets one.
 - 0.40.0: **cargo enforced per mount** (the user, 2026-10-27; docs/next-update.md section 3): `MountDef.Cargo` /
   `[Mount] cargo` is no longer a stat only: a cart holds the smaller of the player's `CartSlots` and the cargo of the
   mount pulling it, re-applied when the mount under a hitched cart changes. A mount that pulls fewer items than a cart

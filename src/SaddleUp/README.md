@@ -112,6 +112,9 @@ All of these apply at once:
 | 7. Safe spot | Bring me back if I fall out of the world | on | If you fall out of the world, you are put back on the last ground you stood on. |
 | | Back to the last safe spot (key) | none | Puts you back on the last ground you stood on. Use it if you get stuck. |
 | | Back to the last safe spot (button) | | Puts you back on the last ground you stood on, right now. |
+| 8. Freeplay | All mounts carry max cargo | off | Every mount that pulls a cart carries 6 items, whatever its own cargo. |
+| | All mounts have the same speed | off | Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always. |
+| | Speed of every mount (shown with the row above on) | Normal | Very slow, Slow, Normal, Fast or Very fast, the Mounts panel's words. Normal is the donkey's speed. |
 
 **Choosing colours:**
 - **A picture** of your mount and cart in the chosen colours, walking on the spot: at the top of the Mount

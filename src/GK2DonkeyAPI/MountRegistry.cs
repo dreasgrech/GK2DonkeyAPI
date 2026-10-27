@@ -672,6 +672,7 @@ namespace GK2DonkeyAPI
             {
                 Colors.MarkDirty(); // a Colors (or behaviour) override: rebuilt at the next frame
                 ApplyCartSlots("a behaviour override");
+                Catalog.ApplyFreeplay("a behaviour override"); // quiet unless Freeplay's values in effect changed
             }
             ForEachInstance(i => i.OnTuningChanged(style));
         }

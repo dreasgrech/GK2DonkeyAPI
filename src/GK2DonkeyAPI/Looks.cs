@@ -2997,13 +2997,19 @@ namespace GK2DonkeyAPI
                     if (from == null) return;
                     foreach (var kv in from)
                     {
+                        // its speed is its word ([Mount] speed, MountDef.Speed: the API's numbers), never a number of its own
+                        if (kv.Key.Equals("SpeedMultiplier", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (tuningLogged.Add(k.Id + "/SpeedMultiplier")) Plugin.Log.LogWarning($"Looks: mount '{k.Id}' sets SpeedMultiplier in its tuning: a mount's speed is one of the API's words ([Mount] speed = {string.Join(" / ", Catalog.SpeedWords())}, MountDef.Speed); not applied.");
+                            continue;
+                        }
                         merged[kv.Key] = kv.Value;
                         fromMount.Add(kv.Key);
                     }
                 }
                 TakeMount(k.Tuning);
                 TakeMount(style == MountStyle.Cart ? k.TuningCart : k.TuningRide);
-                float? ownSpeed = Catalog.OwnSpeed(k, style); // [Mount] speed (with the cart times the donkey's ratio): over a SpeedMultiplier in its tuning
+                float? ownSpeed = Catalog.OwnSpeed(k, style); // [Mount] speed (with the cart times the donkey's ratio), or Freeplay's one speed: over a SpeedMultiplier in its tuning
                 if (ownSpeed.HasValue)
                 {
                     merged["SpeedMultiplier"] = ownSpeed.Value;

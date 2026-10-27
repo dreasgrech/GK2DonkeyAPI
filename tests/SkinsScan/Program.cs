@@ -91,6 +91,11 @@ var mountKeys = StringsIn(mountPacksCs, "MountKeys");
 if (mountKeys.Count < 14) Fail($"MountPacks.cs MountKeys: {mountKeys.Count} keys read (14 expected)"); else Pass("MountPacks.cs MountKeys: the [Mount] block's keys");
 if (mountKeys.Contains("effect") || mountKeys.Contains("effect_when")) Fail("MountPacks.cs MountKeys still has effect / effect_when (nothing picks an effect since 2026-10-25)");
 if (mountKeys.Contains("default_skin")) Fail("MountPacks.cs MountKeys still has default_skin (a mount's own look is its skins\\default\\ since 2026-10-24)");
+// The speeds a [Mount] speed may name: the words of the API's one table (Catalog.cs SpeedBands), never a number (2026-10-27)
+var catalogCs = File.ReadAllText(Path.Combine(repo, "src", "GK2DonkeyAPI", "Catalog.cs"));
+var speedTable = Regex.Match(catalogCs, @"SpeedBands\s*=\s*\{(.*?)\};", RegexOptions.Singleline);
+var speedWords = new HashSet<string>(Regex.Matches(speedTable.Groups[1].Value, @"\(SpeedBand\.\w+,\s*""([^""]+)""").Select(x => x.Groups[1].Value), StringComparer.OrdinalIgnoreCase);
+if (speedWords.Count != 5) Fail($"Catalog.cs SpeedBands: {speedWords.Count} speed words read (5 expected)"); else Pass("Catalog.cs SpeedBands: " + string.Join(", ", speedWords));
 var mountRequired = new[] { "id", "name", "author", "version", "cart", "foals" }; // the canonical block (docs/mounts-foundation-audit.md §4)
 var baseKnobs = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Hue", "Saturation", "Brightness", "Contrast", "Colorize", "ColorizeAmount", "Tint", "Overlay", "OverlayAmount" };
 var effectsCs = File.ReadAllText(Path.Combine(repo, "src", "SaddleUp", "Plugin.cs")); // the shipped effects are Saddle Up's (RegisterHellfire)
@@ -392,8 +397,8 @@ foreach (var mdir in mountDirs)
         if (!double.TryParse(fsv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var fs) || fs < 0.2 || fs > 1) BadM($"[Mount] foal_scale = {fsv}: 0.2 to 1");
         else if (Math.Abs(fs - 0.6) < 0.001) BadM("[Mount] foal_scale = 0.6 is the default: leave it out");
     }
-    if (!m.TryGetValue("speed", out var sv)) BadM("[Mount] speed missing: a built-in mount says its own speed (times walking speed; the donkey's is 2)");
-    else if (!double.TryParse(sv, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out var spd) || spd < 0.5 || spd > 4) BadM($"[Mount] speed = {sv}: a number, 0.5 to 4 (times walking speed)");
+    if (!m.TryGetValue("speed", out var sv)) BadM("[Mount] speed missing: a built-in mount names its speed (" + string.Join(", ", speedWords) + "; the donkey is Normal)");
+    else if (!speedWords.Contains(sv.Trim())) BadM($"[Mount] speed = {sv}: one of the API's speeds, by its word ({string.Join(", ", speedWords)})");
     if (m.TryGetValue("cargo", out var cg))
     {
         if (!int.TryParse(cg, out var cgn) || cgn < 1 || cgn > 6) BadM($"[Mount] cargo = {cg}: a whole number, 1 to 6");

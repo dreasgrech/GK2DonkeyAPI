@@ -34,14 +34,16 @@ namespace GK2DonkeyAPI
             bool allOwn = true;
             // the cargo against the speed (docs/next-update.md section 3): the faster, the lighter; the dragon pulls no cart
             var cargo = new Dictionary<string, int> { ["rat"] = 2, ["snail"] = 6, ["worm"] = 4, ["dragon"] = 0, ["gerry"] = 4 };
+            // each names one of the API's words; the number is the API's (2026-10-27)
+            var word = new Dictionary<string, SpeedBand> { ["rat"] = SpeedBand.VeryFast, ["snail"] = SpeedBand.VerySlow, ["worm"] = SpeedBand.Slow, ["dragon"] = SpeedBand.Slow, ["gerry"] = SpeedBand.Fast };
             foreach (string id in new[] { "rat", "snail", "worm", "dragon", "gerry" })
             {
                 Catalog.Entry k = Catalog.Find(M(id));
                 if (k == null) { said.Add(id + " not loaded"); continue; }
-                allOwn &= k.Speed.HasValue && (k.Cart ? Catalog.CargoOf(k) : 0) == cargo[id];
-                said.Add($"{id} {k.Speed?.ToString("0.##") ?? "-"} {Catalog.SpeedWord(Catalog.SpeedOf(k, MountStyle.Ride), MountStyle.Ride)}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
+                allOwn &= k.Speed == word[id] && Mathf.Approximately(Catalog.SpeedOf(k, MountStyle.Ride), Catalog.SpeedOfBand(word[id], MountStyle.Ride)) && (k.Cart ? Catalog.CargoOf(k) : 0) == cargo[id];
+                said.Add($"{id} {(k.Speed.HasValue ? Catalog.WordOf(k.Speed.Value) : "-")} {Catalog.SpeedOf(k, MountStyle.Ride):0.##}, cart {Catalog.SpeedOf(k, MountStyle.Cart):0.##}, cargo {Catalog.CargoOf(k)}");
             }
-            Check(allOwn, "every built-in mount says its own speed and cargo (rat 2, snail 6, worm 4, dragon no cart, Gerry 4) (" + string.Join(", ", said) + ")");
+            Check(allOwn, "every built-in mount names its word and has its cargo (rat Very fast 2, snail Very slow 6, worm Slow 4, dragon Slow no cart, Gerry Fast 4), at the API's speed for it (" + string.Join(", ", said) + ")");
             Check(!Catalog.Donkey.Speed.HasValue && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax, "the donkey says none: it rides at the API cfg's speeds, as it always did");
 
             // Saddle Up: the two rows are gone, their lines retired (out of the file)
@@ -60,10 +62,10 @@ namespace GK2DonkeyAPI
             IDisposable reg = null;
             string tempRoot = null;
             MountHandle plain = null, carted = null;
-            Info("the next \"is the API's own line\" warning is this test's own: a mount's Speed stat line is left out");
+            Info("the next \"is the API's own line\" warning is this test's own: a mount's Speed stat line is left out; so is the \"sets SpeedMultiplier in its tuning\" one when it is worn (refused: its speed is its word)");
             try
             {
-                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "selftest.speed-beast", Name = "Speed Beast", Speed = 2.5f, Cargo = 4,
+                reg = Mounts.Catalog.Register(owner, new MountDef { Id = "selftest.speed-beast", Name = "Speed Beast", Speed = SpeedBand.Fast, Cargo = 4,
                     TuningRide = new Dictionary<string, object> { ["SpeedMultiplier"] = 1.1f }, Stats = { new MountStat { Label = "Speed", Value = "a made-up line" }, new MountStat { Label = "Diet", Value = "keepers" } } });
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-speed", "selftest.speed-test", "[Skin]\nformat = 1\nname = Speed Test\nmount = selftest.speed-beast\n");
                 Looks.RegisterFolder(tempRoot, owner);
@@ -77,8 +79,9 @@ namespace GK2DonkeyAPI
             try
             {
                 MountInfo info = Mounts.Catalog.Find("selftest.speed-beast");
-                float wantCart = 2.5f * Catalog.CartFactor;
-                Check(info != null && Mathf.Approximately(info.Speed, 2.5f) && Mathf.Abs(info.CartSpeed - wantCart) < 0.001f && info.SpeedWord == "Fast" && info.Cargo == 4, $"MountInfo: {info?.Speed}, with the cart {info?.CartSpeed:0.###} (2.5 x {Catalog.CartFactor:0.###}), \"{info?.SpeedWord}\", cargo {info?.Cargo}");
+                float wantRide = Catalog.SpeedOfBand(SpeedBand.Fast, MountStyle.Ride), wantCart = wantRide * Catalog.CartFactor;
+                Check(Mathf.Approximately(wantRide, 2.25f), $"Fast is the API's 2.25 ({wantRide})");
+                Check(info != null && Mathf.Approximately(info.Speed, wantRide) && Mathf.Abs(info.CartSpeed - wantCart) < 0.001f && info.SpeedWord == "Fast" && info.Cargo == 4, $"MountInfo: {info?.Speed}, with the cart {info?.CartSpeed:0.###} ({wantRide} x {Catalog.CartFactor:0.###}), \"{info?.SpeedWord}\", cargo {info?.Cargo}");
                 Check(info != null && info.Stats.Count == 1 && info.Stats[0].Label == "Diet", $"its own \"Speed\" stat line is left out (the API writes that one): {info?.Stats.Count} line(s)");
                 // the card's cargo is what the cart holds for this player: the mount's, or the Cart capacity when smaller
                 // (the user, 2026-10-27: "Cargo: 6 items" while the cart took two). Cart capacity taken over for the checks.
@@ -100,7 +103,7 @@ namespace GK2DonkeyAPI
                     if (slotsOwner != null) Mounts.Behaviour.Set(slotsOwner, "CartSlots", slotsWas);
                 }
                 Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card at Cart capacity 6: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
-                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.5x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
+                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.25x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
                 Check(small != null && small.Stats.Count >= 2 && small.Stats[1] == ("Cargo", "2 of 4 items") && small.Lines.Contains("Cargo: 2 of 4 items (a mod limits the cart to 2)"), $"with every cart limited to 2 (a mod's session override) the card says what the cart holds: {(small == null ? "no entry" : small.Stats[1].Value)}");
                 float cfgRide = Plugin.For(MountStyle.Ride).SpeedMultiplier.Entry.Value, cfgCart = Plugin.For(MountStyle.Cart).SpeedMultiplier.Entry.Value;
                 Check(donkeyEntry != null && donkeyEntry.Stats[0].Value == Catalog.SpeedWord(cfgRide, MountStyle.Ride) && donkeyEntry.Stats[1].Value == Catalog.CargoMax + " items", $"the donkey's card reads the cfg's speed and the most cargo ({cfgRide}: {donkeyEntry?.Stats[0].Value}, {donkeyEntry?.Stats[1].Value})");
@@ -134,14 +137,14 @@ namespace GK2DonkeyAPI
                 carted.Tuning.Set(Owner, "Skin", "selftest.speed-beast/selftest.speed-test");
                 yield return Until(() => plain.Mount == "selftest.speed-beast" && carted.Mount == "selftest.speed-beast" && plain.Tuning.IsSet("SpeedMultiplier") && carted.Tuning.IsSet("SpeedMultiplier"), 8f);
                 Check(waited && plain.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner, $"worn: the mount's speed is on the wearer, owned by the skin system ({plain.Tuning.SetBy("SpeedMultiplier")})");
-                Check(Math.Abs(plain.Tuning.Get<float>("SpeedMultiplier") - 2.5f) < 0.001f, $"Speed wins over a SpeedMultiplier in its tuning ({plain.Tuning.Get<float>("SpeedMultiplier")}, not 1.1)");
+                Check(Math.Abs(plain.Tuning.Get<float>("SpeedMultiplier") - wantRide) < 0.001f, $"its word's speed, the SpeedMultiplier in its tuning refused ({plain.Tuning.Get<float>("SpeedMultiplier")}, not 1.1)");
 
                 r = plain.Ride(showMessage: false);
                 Check(r.Ok, $"the speed beast ridden ({Said(r)})");
                 if (r.Ok)
                 {
                     yield return Frames(3);
-                    Check(Mounts.Style == MountStyle.Ride && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - 2.5f) < 0.01f, $"riding at its own 2.5 ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.##})");
+                    Check(Mounts.Style == MountStyle.Ride && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantRide) < 0.01f, $"riding at Fast's {wantRide} ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.##})");
                     Mounts.Dismount("self-test");
                     yield return Until(() => !Mounts.IsMounted, 5f);
                 }
@@ -150,7 +153,7 @@ namespace GK2DonkeyAPI
                 if (r.Ok)
                 {
                     yield return Frames(3);
-                    Check(Mounts.Style == MountStyle.Cart && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantCart) < 0.01f, $"driving at its speed times the donkey's ratio, {wantCart:0.###} ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.###})");
+                    Check(Mounts.Style == MountStyle.Cart && Mathf.Abs(pc.PhysicalBody.SpeedMultiplier - wantCart) < 0.01f, $"driving at Fast's speed times the donkey's ratio, {wantCart:0.###} ({Mounts.Style}, {pc.PhysicalBody.SpeedMultiplier:0.###})");
                     Mounts.Dismount("self-test");
                     yield return Until(() => !Mounts.IsMounted, 5f);
                 }

@@ -41,6 +41,13 @@ namespace GK2DonkeyAPI.Api
             return d == null ? null : new MountInfo(d);
         }
 
+        // The panel's speed words in SpeedBand's order, slowest first ("Very slow" ... "Very fast", 0.40.0): labels for a
+        // SpeedBand choice (Saddle Up's Freeplay speed), the same words MountInfo.SpeedWord uses.
+        public IReadOnlyList<string> SpeedWords => GK2DonkeyAPI.Catalog.SpeedWords();
+
+        // The most items a cart holds (6; 0.40.0): a mount's cargo is 1 to this, and every cart's with FreeplayMaxCargo.
+        public int MostCargo => GK2DonkeyAPI.Catalog.CargoMax;
+
         // Raised after a mount is registered, declared by a pack or withdrawn.
         public event Action MountsChanged;
 
@@ -73,7 +80,7 @@ namespace GK2DonkeyAPI.Api
             var d = new GK2DonkeyAPI.Catalog.Entry
             {
                 Id = def.Id, Name = string.IsNullOrEmpty(def.Name) ? def.Id : def.Name, Noun = string.IsNullOrWhiteSpace(def.Noun) ? null : def.Noun.Trim(), Author = def.Author, Version = def.Version, Owner = ownerId,
-                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Numbers.Finite(def.FoalScale, 0.2f, 1f, 0.6f), Speed = ClampSpeed(def.Speed), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
+                Cart = def.Cart, Foals = def.Foals, Flies = def.Flies, Jumps = def.Jumps, FoalScale = Numbers.Finite(def.FoalScale, 0.2f, 1f, 0.6f), Speed = CheckSpeed(def.Speed, def.Id), Cargo = def.Cargo.HasValue ? Math.Max(1, Math.Min(GK2DonkeyAPI.Catalog.CargoMax, def.Cargo.Value)) : (int?)null,
                 Tuning = Copy(def.Tuning), TuningRide = Copy(def.TuningRide), TuningCart = Copy(def.TuningCart), Jump = JumpShapes.FromApi(def.Jump, def.Id),
                 Abilities = def.Abilities != null ? def.Abilities.ToArray() : Array.Empty<MountAbility>(),
                 Description = string.IsNullOrWhiteSpace(def.Description) ? null : def.Description.Trim(), PortraitTexture = def.Portrait,
@@ -117,7 +124,13 @@ namespace GK2DonkeyAPI.Api
             return GK2DonkeyAPI.Catalog.Unregister(id, ownerId);
         }
 
-        private static float? ClampSpeed(float? v) => v.HasValue && Numbers.IsFinite(v.Value) ? Math.Max(GK2DonkeyAPI.Catalog.SpeedMin, Math.Min(GK2DonkeyAPI.Catalog.SpeedMax, v.Value)) : (float?)null;
+        // A word cast from a number that isn't one ((SpeedBand)7): none, said once (the donkey's applies).
+        private static SpeedBand? CheckSpeed(SpeedBand? v, string id)
+        {
+            if (!v.HasValue || Enum.IsDefined(typeof(SpeedBand), v.Value)) return v;
+            Plugin.Log.LogWarning($"Catalog: mount '{id}': Speed {(int)v.Value} is not one of the speeds ({string.Join(", ", GK2DonkeyAPI.Catalog.SpeedWords())}); it goes at the donkey's.");
+            return null;
+        }
 
         private static Dictionary<string, object> Copy(Dictionary<string, object> d)
         {
@@ -214,11 +227,12 @@ namespace GK2DonkeyAPI.Api
         // A baby's size as a fraction of the grown one (0.2 to 1; the donkey's foals are 0.6): a mount drawn three
         // times its creature's size (Gerry) sets 0.33 so its babies are the creature's own size.
         public float FoalScale = 0.6f;
-        // How fast the keeper rides it, times his walking speed (1 = walking; 0.36.0): 0.5 to 4 (tested in game up to
-        // 2.5). Null: the donkey's (2 as shipped). With the cart: this times the donkey's cart speed over its riding one
-        // (1.5 / 2 as shipped). Over a SpeedMultiplier in Tuning / TuningRide / TuningCart. The Mounts panel shows it as
-        // a word against the donkey's ("Fast").
-        public float? Speed;
+        // How fast the keeper rides it (0.36.0; a word since 0.40.0): one of the API's speeds, whose numbers are the API's
+        // (Very slow 1.25, Slow 1.6, Normal 2, Fast 2.25, Very fast 2.75 times his walking speed; MountInfo.Speed reads
+        // the number back). Null: the donkey's (the player's [Ride] SpeedMultiplier, 2 as shipped). With the cart: times the
+        // donkey's cart speed over its riding one (1.5 / 2 as shipped). A SpeedMultiplier in Tuning / TuningRide /
+        // TuningCart is refused: this is its speed. The Mounts panel shows the word.
+        public SpeedBand? Speed;
         // How many items its cart carries, 1 to 6 (0.36.0; enforced since 0.40.0). Null: 6. The cart holds the smaller of
         // this and a mod's session CartSlots; a mount that pulls fewer than a cart holds leaves it standing and can't hitch it.
         public int? Cargo;
@@ -370,7 +384,9 @@ namespace GK2DonkeyAPI.Api
         public float FoalScale { get; }
         // Its speeds, times the keeper's walking speed (its own, else the donkey's; with the cart its own times the
         // donkey's cart-to-riding ratio), the panel's word for the riding one ("Very slow", "Slow", "Normal", "Fast",
-        // "Very fast" against the donkey's), and the items its cart carries (0 for a mount that can't pull one).
+        // "Very fast" against the donkey's), and the items its cart carries (0 for a mount that can't pull one). With the
+        // player's Freeplay keys on (FreeplaySameSpeed, FreeplayMaxCargo) these are what it goes at and carries now: the
+        // one speed, the most cargo.
         public float Speed { get; }
         public float CartSpeed { get; }
         public string SpeedWord { get; }

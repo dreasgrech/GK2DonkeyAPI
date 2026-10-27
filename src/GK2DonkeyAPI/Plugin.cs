@@ -411,6 +411,8 @@ namespace GK2DonkeyAPI
         internal static Tuned<bool> FallGuard;              // never lost: the fall watchdog (SafeSpots.cs)
         internal static Tuned<KeyboardShortcut> ReturnKey;  // never lost: back to the last safe spot by a key
         internal static Tuned<bool> StandingSounds;         // standing mounts and babies make their sounds near the keeper (Sounds.cs)
+        internal static Tuned<bool> FreeplayMaxCargo, FreeplaySameSpeed; // Freeplay: every cart the most cargo, every mount one speed (Catalog.CargoOf, OwnSpeed)
+        internal static Tuned<SpeedBand> FreeplaySpeed;
 
         // Every [HarmonyPatch] class (tests/FrameworkScan checks the list is complete).
         internal static readonly Type[] PatchClasses =
@@ -605,6 +607,16 @@ namespace GK2DonkeyAPI
                 "A key that puts the keeper back on the last safe spot of this scene by hand (stuck somewhere). None: no key. Not during a door, a cutscene or a dialogue.");
             StandingSounds = Config.Bind("General", "StandingSounds", Defaults.Get("General", "StandingSounds", true),
                 "Standing mounts and babies near you make their sounds: steps, grazing, the lip smack (at the mount sounds' volume). Off: only the mount you ride sounds, and a standing one's lip smack is the game's own.");
+            // Freeplay (0.40.0; Saddle Up's section of that name): a player who doesn't want the mounts' differences.
+            FreeplayMaxCargo = Config.Bind("General", "FreeplayMaxCargo", Defaults.Get("General", "FreeplayMaxCargo", false),
+                "Every mount that pulls a cart carries the most items a cart holds, whatever its own cargo. Off: each mount's own ([Mount] cargo).");
+            FreeplaySameSpeed = Config.Bind("General", "FreeplaySameSpeed", Defaults.Get("General", "FreeplaySameSpeed", false),
+                "Every mount, the donkey too, goes at the one speed FreeplaySpeed names (with the cart that times the donkey's cart-to-riding ratio). Off: each mount's own ([Mount] speed; the donkey's from [Ride] / [Cart] SpeedMultiplier).");
+            FreeplaySpeed = Config.Bind("General", "FreeplaySpeed", Defaults.Get("General", "FreeplaySpeed", SpeedBand.Normal),
+                "With FreeplaySameSpeed: the speed every mount goes at, as the Mounts panel's words name speeds against the donkey's (Normal is the donkey's as shipped).");
+            FreeplayMaxCargo.Entry.SettingChanged += (_, __) => Catalog.ApplyFreeplay("the setting changed");
+            FreeplaySameSpeed.Entry.SettingChanged += (_, __) => Catalog.ApplyFreeplay("the setting changed");
+            FreeplaySpeed.Entry.SettingChanged += (_, __) => Catalog.ApplyFreeplay("the setting changed");
             // The on-foot zones of a standing cart (docs/load-on-foot.md), measured from the cart body's drawn box.
             CartZoneSide = Config.Bind("General", "CartZoneSide", Defaults.Get("General", "CartZoneSide", 0.6f),
                 new ConfigDescription("On foot next to a standing cart: how far beside the cart body's sides the cart's area reaches (and the donkey's, which is as wide), world units.", new AcceptableValueRange<float>(0f, 2f)));

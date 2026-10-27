@@ -32,7 +32,7 @@ namespace GK2DonkeyAPI
             internal bool Flies;                       // takes off and flies ([Mount] flies; the flying experiment, docs/flying.md)
             internal bool Jumps = true;                // jumps, riding plain ([Mount] jumps = false: never)
             internal float FoalScale = 0.6f;           // a baby's size as a fraction of the grown one (the view's scale)
-            internal float? Speed;                     // riding, times the keeper's walking speed ([Mount] speed); null: the donkey's. With the cart: times CartFactor
+            internal SpeedBand? Speed;                 // its word ([Mount] speed), whose speed is the API's (SpeedBands); null: the donkey's
             internal int? Cargo;                       // items its cart carries, 1 to CargoMax ([Mount] cargo); null: CargoMax. Caps its cart's slots under the player's Cart capacity (Cargo.Rig.WantedSlots)
             // values for existing tuning keys (a pack's as cfg text, code's typed): both styles, riding, with the cart
             internal Dictionary<string, object> Tuning, TuningRide, TuningCart;
@@ -62,19 +62,27 @@ namespace GK2DonkeyAPI
             defs[DonkeyId] = Donkey;
         }
 
-        // A mount's speed (the user, 2026-10-22): times the keeper's walking speed, 1 = walking (the game's speed is
-        // linear in PlayerPhysicalBody.SpeedMultiplier: PROBE-FINDINGS.md "Speed is linear"). Its own ([Mount] speed,
-        // MountDef.Speed), else a SpeedMultiplier in its tuning, else the donkey's: the API cfg's [Ride] / [Cart]
-        // SpeedMultiplier (2 and 1.5 as shipped), so a default player's donkey is as it always was. With the cart a mount
-        // that says its speed goes at it times CartFactor, the donkey's cart speed over its riding one (0.75 as shipped):
-        // the cart slows every mount the same way (the user: "always relative to the speed of the mount"; carts of their
-        // own speed maybe later).
-        internal const float SpeedMin = 0.5f, SpeedMax = 4f;
+        // A mount's speed (the user, 2026-10-22; one of the API's words since 2026-10-27: "these definitions should not be
+        // in the individual pack mods ... everything can be consumed from there"): a SpeedBand ([Mount] speed = Fast,
+        // MountDef.Speed), whose number is the API's (SpeedBands: times the keeper's walking speed, 1 = walking; the
+        // game's speed is linear in PlayerPhysicalBody.SpeedMultiplier: PROBE-FINDINGS.md "Speed is linear"). A mount
+        // without one goes at the donkey's: the API cfg's [Ride] / [Cart] SpeedMultiplier (2 and 1.5 as shipped), so a
+        // default player's donkey is as it always was. A SpeedMultiplier in a mount's tuning is refused (ApplyTuning):
+        // the word is its speed. With the cart a mount goes at its band's speed times CartFactor, the donkey's cart speed
+        // over its riding one (0.75 as shipped): the cart slows every mount the same way (the user: "always relative to
+        // the speed of the mount"; carts of their own speed maybe later).
         internal const float DonkeyRideSpeed = 2f, DonkeyCartSpeed = 1.5f; // as shipped: what the panel's words compare with
         // The cart's most items (the CartSlots row's top, 1 to 6): a mount's cargo stat is 1 to this.
         internal const int CargoMax = 6;
 
-        internal static int CargoOf(Entry k) => k?.Cargo ?? CargoMax;
+        // What a mount's cart carries: its own cargo, or the most with Freeplay's "All mounts carry max cargo"
+        // (FreeplayMaxCargo, a player's choice: every reader, the cart's slots, the panel's card, MountInfo, takes it).
+        internal static int CargoOf(Entry k) => FreeplayMaxCargo ? CargoMax : k?.Cargo ?? CargoMax;
+
+        internal static bool FreeplayMaxCargo => Plugin.FreeplayMaxCargo != null && Plugin.FreeplayMaxCargo.Value;
+
+        // Freeplay's "All mounts have the same speed" (FreeplaySameSpeed): the band chosen (FreeplaySpeed), else null.
+        internal static SpeedBand? FreeplaySpeed => Plugin.FreeplaySameSpeed != null && Plugin.FreeplaySameSpeed.Value && Plugin.FreeplaySpeed != null ? Plugin.FreeplaySpeed.Value : (SpeedBand?)null;
 
         internal static float CartFactor
         {
@@ -86,34 +94,99 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // The speed a mount's own value gives in a style: riding as said, with the cart times CartFactor; null without one.
-        internal static float? OwnSpeed(Entry k, MountStyle style) => k?.Speed == null ? (float?)null : style == MountStyle.Cart ? k.Speed.Value * CartFactor : k.Speed.Value;
+        // The speed a mount goes at in a style from its word (SpeedOfBand), or Freeplay's one word for every mount, the
+        // donkey too; null for a mount without one (the donkey: the cfg's).
+        internal static float? OwnSpeed(Entry k, MountStyle style)
+        {
+            SpeedBand? band = FreeplaySpeed ?? k?.Speed;
+            return band.HasValue ? SpeedOfBand(band.Value, style) : (float?)null;
+        }
 
         internal static float SpeedOf(Entry k, MountStyle style)
         {
             float? own = OwnSpeed(k, style);
             if (own.HasValue) return own.Value;
-            if (k != null)
-            {
-                object pin = null;
-                if (k.Tuning != null) k.Tuning.TryGetValue("SpeedMultiplier", out pin);
-                Dictionary<string, object> styled = style == MountStyle.Cart ? k.TuningCart : k.TuningRide;
-                if (styled != null && styled.TryGetValue("SpeedMultiplier", out object p)) pin = p;
-                float? f = AsFloat(pin);
-                if (f.HasValue) return f.Value;
-            }
             StyleSettings s = Plugin.For(style);
             return s?.SpeedMultiplier?.Entry != null ? s.SpeedMultiplier.Entry.Value : style == MountStyle.Cart ? DonkeyCartSpeed : DonkeyRideSpeed;
         }
 
-        // The word the Mounts panel shows for a speed, against the donkey's for that style (so the donkey reads Normal
-        // both ways, and a cart's word compares carts): under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to
-        // 1.35 Fast, above Very fast.
-        internal static string SpeedWord(float speed, MountStyle style)
+        // The speeds, the API's one table (in SpeedBand's order): each word's speed riding (times the keeper's walking
+        // speed; the shipped mounts': the snail, the dragon, the donkey, Gerry, the rat), and the band the Mounts panel
+        // reads a speed into, against the donkey's for that style (so the donkey reads Normal both ways, and a cart's word
+        // compares carts): under 0.7 of it Very slow, under 0.9 Slow, to 1.1 Normal, to 1.35 Fast, above Very fast. A
+        // mount names its word (MountDef.Speed, [Mount] speed), Freeplay picks one, the panel shows them; the self-test
+        // reads each word's speed back as its own word.
+        internal static readonly (SpeedBand Band, string Word, float Upto, bool UptoIncluded, float Speed)[] SpeedBands =
+        {
+            (SpeedBand.VerySlow, "Very slow", 0.7f, false, 1.25f),
+            (SpeedBand.Slow, "Slow", 0.9f, false, 1.6f),
+            (SpeedBand.Normal, "Normal", 1.1f, true, 2f),
+            (SpeedBand.Fast, "Fast", 1.35f, true, 2.25f),
+            (SpeedBand.VeryFast, "Very fast", float.PositiveInfinity, true, 2.75f),
+        };
+
+        // A word read back (a pack's [Mount] speed): "Very fast" or "VeryFast", any case; null for anything else (a
+        // number among them: the speeds are the API's).
+        internal static SpeedBand? ParseBand(string text)
+        {
+            string t = (text ?? "").Trim();
+            foreach (var b in SpeedBands)
+            {
+                if (t.Equals(b.Word, StringComparison.OrdinalIgnoreCase) || t.Equals(b.Band.ToString(), StringComparison.OrdinalIgnoreCase)) return b.Band;
+            }
+            return null;
+        }
+
+        internal static SpeedBand BandOf(float speed, MountStyle style)
         {
             float r = speed / (style == MountStyle.Cart ? DonkeyCartSpeed : DonkeyRideSpeed);
             const float e = 0.001f;
-            return r < 0.7f - e ? "Very slow" : r < 0.9f - e ? "Slow" : r <= 1.1f + e ? "Normal" : r <= 1.35f + e ? "Fast" : "Very fast";
+            foreach (var b in SpeedBands)
+            {
+                if (b.UptoIncluded ? r <= b.Upto + e : r < b.Upto - e) return b.Band;
+            }
+            return SpeedBand.VeryFast;
+        }
+
+        internal static string SpeedWord(float speed, MountStyle style) => WordOf(BandOf(speed, style));
+
+        internal static string WordOf(SpeedBand band)
+        {
+            foreach (var b in SpeedBands) if (b.Band == band) return b.Word;
+            return SpeedBands[(int)SpeedBand.Normal].Word;
+        }
+
+        // The speed a word gives: its riding speed from the table; with the cart that times CartFactor.
+        internal static float SpeedOfBand(SpeedBand band, MountStyle style)
+        {
+            float ride = DonkeyRideSpeed;
+            foreach (var b in SpeedBands) if (b.Band == band) ride = b.Speed;
+            return style == MountStyle.Cart ? ride * CartFactor : ride;
+        }
+
+        // The words in SpeedBand's order: Saddle Up's Freeplay dropdown reads them (Mounts.Catalog.SpeedWords).
+        internal static string[] SpeedWords()
+        {
+            var words = new string[SpeedBands.Length];
+            for (int i = 0; i < words.Length; i++) words[i] = SpeedBands[i].Word;
+            return words;
+        }
+
+        // Freeplay's switches changed (a player's row, a mod's session value, the cfg): every mount and cart takes them
+        // now: the speeds re-merged (ApplyTuning reads OwnSpeed), the carts' slots (WantedSlots reads CargoOf). Quiet when
+        // the values in effect didn't change.
+        private static string freeplayWas;
+
+        internal static void ApplyFreeplay(string why)
+        {
+            string now = (FreeplayMaxCargo ? "max cargo" : "own cargo") + ", " + (FreeplaySpeed.HasValue ? "all " + WordOf(FreeplaySpeed.Value) : "own speeds");
+            if (now == freeplayWas) return;
+            bool first = freeplayWas == null;
+            freeplayWas = now;
+            Version++;
+            Mount.ForEachInstance(i => i.LooksRig.RetuneNow(), bind: false);
+            Mount.ApplyCartSlots("Freeplay");
+            if (!first || now != "own cargo, own speeds") Plugin.Log.LogInfo($"Freeplay: {now} ({why}).");
         }
 
         // The stat lines the API writes itself: a mount.cfg [Stats] line (or a code mount's MountStat) by these names is
@@ -362,7 +435,7 @@ namespace GK2DonkeyAPI
             Changed();
             Looks.MountArrived(d);
             Late(d.Owner, "the mount '" + d.Id + "'");
-            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + d.Speed.Value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.Jump != null && d.Jump.Count > 0 ? ", its own jump" : "")}.");
+            Plugin.Log.LogInfo($"Catalog: mount '{d.Id}' ({d.Label}) declared by {where}: cart {(d.Cart ? "yes" : "no")}, foals {(d.Foals ? "yes, " + d.FoalScale.ToString("0.00") + "x" : "no")}{(d.Flies ? ", flies" : "")}{(d.Jumps ? "" : ", doesn't jump")}{(d.Speed.HasValue ? ", speed " + WordOf(d.Speed.Value) : "")}{(d.Cargo.HasValue ? ", cargo " + d.Cargo.Value : "")}{(d.Tuning != null || d.TuningRide != null || d.TuningCart != null ? ", with tuning" : "")}{(d.Jump != null && d.Jump.Count > 0 ? ", its own jump" : "")}.");
             return d;
         }
 

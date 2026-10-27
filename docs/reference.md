@@ -53,6 +53,10 @@ grazing, the lip smack, at the mount sounds' volume; a grown one calls now and t
 scene, and the babies answer it; a baby higher and softer). Off: only the ridden mount sounds,
 and a standing one's lip smack is the game's own ([`docs/mount-sounds-design.md`](mount-sounds-design.md)).
 
+**Freeplay** (`FreeplayMaxCargo`, off; `FreeplaySameSpeed`, off; `FreeplaySpeed`, Normal): every cart holds the most
+(6) whatever its mount's cargo; every mount, the donkey too, goes at one speed, named as the Mounts panel names speeds
+(Very slow to Very fast against the donkey's; with the cart times its ratio) ([`docs/api.md`](api.md), Behaviour).
+
 **Never lost** (`FallGuard`, on; `ReturnKey`, None): the keeper fallen out of the world is put back on the last ground
 he stood on; the key does it by hand ([`docs/never-lost.md`](never-lost.md)).
 
@@ -114,7 +118,7 @@ a value already in someone's `dreas.gk2.donkeyapi.cfg`: that row then shows yell
 
 | Key | Ride | Cart | Meaning |
 |---|---|---|---|
-| `SpeedMultiplier` | 2 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). The donkey's: a mount says its own (`[Mount] speed`, `MountDef.Speed`; with the cart times this column's ratio, Cart over Ride), which wins over this. |
+| `SpeedMultiplier` | 2 | 1.5 | Walking speed while mounted, times normal (measured to scale exactly linearly). The donkey's: a mount names one of the API's speeds (`[Mount] speed = Fast`, `MountDef.Speed`: Very slow 1.25 to Very fast 2.75; with the cart times this column's ratio, Cart over Ride), which wins over this; a mount may not pin this key. |
 | `WalkCycleSpeed` | 1.5 | 1.5 | How fast the walk animation plays for each unit of walking speed: the stride. 1.5 is the donkey's (the game's own rate; a constant until 0.35.0). A mount with a longer stride sets less in its `mount.cfg`'s `[Tuning]`, a scurrying one more, so its legs match its speed. |
 | `FocusSpeed` | 0.5 | 0.5 | In armour, while aiming (right click held): the mount's speed times this (the game halves the keeper's own). |
 | `Depth` | 0.32 | 0 | Donkey towards the camera (negative, drawn in front of the keeper) or away from it (positive, behind). |

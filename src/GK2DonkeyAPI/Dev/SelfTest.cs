@@ -185,6 +185,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "between mods: versions and ids (needs in mount.cfg, ASCII ids, versions that aren't numbers, sound ids, one mod's sound for an event)", Body = VersionsAndIds },
             new Scenario { Group = GroupLooks, Name = "built in or external: our mounts from their packs' own DLLs (owner, plugin, needs), Gerry and the donkey skins from Saddle Up's DLL, the old ids healed", Body = ExternalPacks },
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words; Saddle Up's rows retired", Body = MountSpeeds },
+            new Scenario { Group = GroupLooks, Name = "freeplay: max cargo and one speed for every mount (the words' one table, the cart's slots, ridden, driven, changed while riding, the panel, MountInfo, Saddle Up's rows)", Body = Freeplay },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
@@ -283,6 +284,9 @@ namespace GK2DonkeyAPI
                 Line("[test] " + Status);
                 yield break;
             }
+            // A player's Freeplay (every cart the most cargo, every mount one speed) would change what the scenarios check:
+            // held off for the run, back after it (the Freeplay scenario sets its own).
+            BehaviourHeld[] freeplayWas = HoldFreeplayOff();
             // Out of the armour view (a fight's look: the cart is refused in it); the fight scenarios put it on themselves.
             bool armourWas = Mount.Instance.InArmour(pc);
             if (armourWas)
@@ -424,6 +428,7 @@ namespace GK2DonkeyAPI
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
             Cargo.SlotFloor = slotFloorWas;
+            foreach (BehaviourHeld h in freeplayWas) h.Restore();
             if (corpseDrops.Count > 0)
             {
                 // A corpse scenario that threw after its drop: its bodies are real, so they go now, not at the next load.
@@ -3338,8 +3343,9 @@ namespace GK2DonkeyAPI
             string tempRoot = null;
             try
             {
-                reg = Mounts.Catalog.Register(mountOwner, new MountDef { Id = "selftest.own-beast", Name = "Own Beast", Abilities = { ability },
-                    Tuning = new Dictionary<string, object> { ["SpeedMultiplier"] = 2f, ["BrayVolume"] = 0.2f, ["IdleShuffle"] = false } });
+                // its speed is its word (Fast: the API's 2.25); the SpeedMultiplier in its tuning is refused (2026-10-27)
+                reg = Mounts.Catalog.Register(mountOwner, new MountDef { Id = "selftest.own-beast", Name = "Own Beast", Abilities = { ability }, Speed = SpeedBand.Fast,
+                    Tuning = new Dictionary<string, object> { ["SpeedMultiplier"] = 1.1f, ["BrayVolume"] = 0.2f, ["IdleShuffle"] = false } });
                 tempRoot = WriteTempPack("gk2donkeyapi-selftest-own", "selftest.own-test", "[Skin]\nformat = 1\nname = Own Test\nmount = selftest.own-beast\n");
             }
             catch (Exception e)
@@ -3351,11 +3357,12 @@ namespace GK2DonkeyAPI
             try
             {
             Looks.RegisterFolder(tempRoot, mountOwner);
-            Info("the next \"mount 'selftest.own-beast' wants to set IdleShuffle\" warning is this test's own: a mount may not pin a behaviour switch");
+            Info("the next \"mount 'selftest.own-beast' sets SpeedMultiplier in its tuning\" and \"wants to set IdleShuffle\" warnings are this test's own: a mount's speed is its word, and it may not pin a behaviour switch");
             Check(ability.Owner == mountOwner + ".ability.selftest.own-beast", $"the ability's owner is given by the API ({ability.Owner})");
             m.Tuning.Set(Owner, "Skin", "selftest.own-beast/selftest.own-test");
             yield return Until(() => m.IsReady && m.Mount == "selftest.own-beast" && m.Tuning.IsSet("SpeedMultiplier"), 8f);
-            Check(waited && m.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner && Math.Abs(m.Tuning.Get<float>("SpeedMultiplier") - 2f) < 0.001f, "the mount pins its speed (a mount key)");
+            float fast = Catalog.SpeedOfBand(SpeedBand.Fast, MountStyle.Ride);
+            Check(waited && m.Tuning.SetBy("SpeedMultiplier") == Looks.TuningOwner && Math.Abs(m.Tuning.Get<float>("SpeedMultiplier") - fast) < 0.001f, $"the mount's word sets its speed, Fast's {fast}; the 1.1 in its tuning refused ({(m.Tuning.IsSet("SpeedMultiplier") ? m.Tuning.Get<float>("SpeedMultiplier").ToString("0.##") : "not set")})");
             Check(m.Tuning.IsSet("BrayVolume") && m.Tuning.SetBy("BrayVolume") == Looks.TuningOwner, "and its bray volume (a sound key)");
             Check(!m.Tuning.IsSet("IdleShuffle"), "its IdleShuffle is refused: a behaviour switch is the player's");
             m.Tuning.Set(one, "SpeedMultiplier", 2.5f);
@@ -3704,14 +3711,14 @@ namespace GK2DonkeyAPI
             try
             {
                 r1 = WriteTempPack("gk2donkeyapi-selftest-fmt1", Looks.DefaultSkinName,
-                    "[Skin]\nformat = 1\nneeds = 0.35\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = selftest.fmt-beast\n\n[Mount]\nid = selftest.fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nspeed = 2.75\ncargo = 3\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
+                    "[Skin]\nformat = 1\nneeds = 0.35\nname = Format Test\ndescription = A test look.\nportrait = bdy_static_left.png\nmount = selftest.fmt-beast\n\n[Mount]\nid = selftest.fmt-beast\nname = Format Beast\ndescription = A test creature.\nportrait = bdy_static_left.png\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = true\nspeed = very fast\ncargo = 3\n\n[Mount.Stats]\nSpeed = steady\nDiet = keepers\n");
                 int n = Looks.RegisterFolder(r1, owner);
                 MountSkinInfo sk = Mounts.Looks.Find("selftest.fmt-beast/default");
                 MountInfo k = Mounts.Catalog.Find("selftest.fmt-beast");
                 Check(n == 1 && sk != null && sk.Description == "A test look." && sk.HasPortrait, $"the skin's description and portrait are read (\"{sk?.Description}\", portrait {sk?.HasPortrait})");
                 Check(k != null && k.Description == "A test creature." && k.HasPortrait, $"the mount's description and portrait are read (\"{k?.Description}\")");
                 Check(k != null && k.Stats.Count == 1 && k.Stats[0].Label == "Diet", $"[Mount.Stats] lines in file order, its own Speed line left out: the API writes that one ({k?.Stats.Count})");
-                Check(k != null && Mathf.Approximately(k.Speed, 2.75f) && k.SpeedWord == "Very fast" && k.Cargo == 3, $"[Mount] speed and cargo are read ({k?.Speed} {k?.SpeedWord}, cargo {k?.Cargo})");
+                Check(k != null && Mathf.Approximately(k.Speed, Catalog.SpeedOfBand(SpeedBand.VeryFast, MountStyle.Ride)) && k.SpeedWord == "Very fast" && k.Cargo == 3, $"[Mount] speed (a word, any case: the API's number for it) and cargo are read ({k?.Speed} {k?.SpeedWord}, cargo {k?.Cargo})");
                 Check((Catalog.Find("selftest.fmt-beast")?.Pack?.Report ?? "").Contains("[Stats] Speed left out"), "and the mount's report says the Speed line was left out");
                 Texture2D portrait = Looks.PortraitOf(Looks.Find("selftest.fmt-beast/default"));
                 Check(portrait != null && portrait.width == 96 && portrait.height == 96, $"the portrait PNG is read from the pack ({portrait?.width}x{portrait?.height})");

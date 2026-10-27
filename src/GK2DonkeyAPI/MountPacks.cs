@@ -126,12 +126,10 @@ namespace GK2DonkeyAPI
             }
             if (mount.TryGetValue("speed", out string speedText))
             {
-                if (Numbers.TryFloat(speedText, out float speedValue) && speedValue > 0f)
-                {
-                    if (speedValue < Catalog.SpeedMin || speedValue > Catalog.SpeedMax) p.Report += "[Mount] speed = " + speedText + " is outside 0.5 to 4, taken as " + Num(Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax)) + "; ";
-                    k.Speed = Mathf.Clamp(speedValue, Catalog.SpeedMin, Catalog.SpeedMax);
-                }
-                else p.Report += "[Mount] speed = " + speedText + " is not a number (0.5 to 4, times walking speed), the donkey's applies; ";
+                // one of the API's words; its number is the API's (Catalog.SpeedBands), never the pack's
+                SpeedBand? band = Catalog.ParseBand(speedText);
+                if (band.HasValue) k.Speed = band;
+                else p.Report += "[Mount] speed = " + speedText + " is not one of the speeds (" + string.Join(", ", Catalog.SpeedWords()) + "), the donkey's applies; ";
             }
             if (mount.TryGetValue("cargo", out string mcargo))
             {
@@ -368,7 +366,7 @@ namespace GK2DonkeyAPI
                 if (k.Flies) mn.Key(sb, "flies", "true");
                 if (!k.Jumps) mn.Key(sb, "jumps", "false");
                 if (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f) mn.Key(sb, "foal_scale", Num(k.FoalScale));
-                if (k.Speed.HasValue) mn.Key(sb, "speed", Num(k.Speed.Value));
+                if (k.Speed.HasValue) mn.Key(sb, "speed", Catalog.WordOf(k.Speed.Value));
                 if (k.Cargo.HasValue) mn.Key(sb, "cargo", k.Cargo.Value.ToString(System.Globalization.CultureInfo.InvariantCulture));
                 foreach (string l in mn.Trail) sb.Append(l).Append('\n');
                 if (k.Stats != null && k.Stats.Count > 0)

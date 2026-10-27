@@ -65,7 +65,7 @@ namespace GK2DonkeyAPI
                 if (k != null)
                 {
                     Check(k.FoalScale == 0.6f && (k.Pack?.Report ?? "").Contains("foal_scale = NaN"), $"foal_scale = NaN: the babies stay 0.6, said in the report ({k.FoalScale})");
-                    Check(!k.Speed.HasValue, $"speed = Infinity: no speed of its own ({k.Speed})");
+                    Check(!k.Speed.HasValue && (k.Pack?.Report ?? "").Contains("speed = Infinity is not one of the speeds"), $"speed = Infinity: no speed of its own, said in the report ({k.Speed})");
                 }
                 if (d != null)
                 {

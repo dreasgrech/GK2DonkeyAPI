@@ -290,15 +290,16 @@ namespace GK2DonkeyAPI
         }
 
         // The speed row is the mount's speed (in the cart style the row shows and sets it through the donkey's ratio),
-        // never a SpeedMultiplier in its tuning (SkinsScan refuses one).
+        // never a SpeedMultiplier in its tuning (SkinsScan refuses one, and so does the merge). A mount's speed is one of
+        // the API's words: the slider snaps to the word its value reads as.
         private const string SpeedKey = "SpeedMultiplier";
 
         private static void MountSet(Catalog.Entry mount, bool ride, string key, object value)
         {
             if (key == SpeedKey)
             {
-                float s = Mathf.Clamp(Convert.ToSingle(value, System.Globalization.CultureInfo.InvariantCulture), Catalog.SpeedMin, Catalog.SpeedMax);
-                mount.Speed = Mathf.Clamp(ride ? s : s / Mathf.Max(0.01f, Catalog.CartFactor), Catalog.SpeedMin, Catalog.SpeedMax);
+                float s = Convert.ToSingle(value, System.Globalization.CultureInfo.InvariantCulture);
+                mount.Speed = Catalog.BandOf(s, ride ? MountStyle.Ride : MountStyle.Cart);
                 (ride ? mount.TuningRide : mount.TuningCart)?.Remove(key);
                 mount.Tuning?.Remove(key);
                 Catalog.Touch(mount);

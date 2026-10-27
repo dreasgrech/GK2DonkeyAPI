@@ -247,7 +247,7 @@ def main():
         mlines = [f"# A mount of {('the pack ' + pack) if pack else project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
                   "[Mount]"] + (["needs = 0.40"] if pack else []) + [f"id = {mount_id}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
                   "author = dreas", "version = 0.1", "cart = true", "foals = true",
-                  "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = 2  # riding, times the keeper's walking speed (the donkey: 2)", "cargo = 6  # items its cart carries, 1 to 6",
+                  "# foal_scale = 0.6  # the babies' size (0.2 to 1) when not 0.6", "speed = Normal  # one of the API's speeds: Very slow, Slow, Normal (the donkey), Fast, Very fast", "cargo = 6  # items its cart carries, 1 to 6",
                   "", "# The creature's sounds (docs/mount-sounds.md): files in sounds\\ next to this file, or the game's sound ids.",
                   "[Sounds]", "lips = none  # the donkey's own lip smack is not this creature's"]
         os.makedirs(mount_dir, exist_ok=True)
