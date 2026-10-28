@@ -28,6 +28,13 @@ the numbers in the API's `[Colors.Coat]`. Both must survive every update as they
 - **Per-mount rows keep the donkey's keys.** `PerMount` gives the donkey's row set no suffix, so `Coat`, `CustomCoat`,
   `Paint`... are the 0.9.1 keys with the 0.9.1 values; the other mounts' sets are new keys (`Coat_dragon`). Nothing
   to carry over.
+- **Per-skin rows keep the first skin on the mount's keys** (0.13.0 / API 0.41.0, docs/per-skin-looks.md): `PerSkin`
+  gives a mount's first skin the mount's suffix (the donkey's own art the plain `Coat`, the dragon's default
+  `Coat_saddleup-dragon.dragon`), so a 0.12 file loads unchanged; every other skin's keys are new
+  (`Coat_donkey/saddleup-donkey-skins.hellfire`). **The seed:** a 0.12 player's per-mount values were set while wearing
+  the mount's chosen skin; when that skin isn't the first, the file holds the mount's keys and none of the skin's,
+  the mount's values move to the skin's rows at the first start (the mount's rows back to their defaults), said in
+  the log (`MountSettingsPage.SeedFromMount`). Checked by the self-test "looks per skin" with a crafted 0.12 file.
 
 - **A key's name and type are permanent.** Labels, descriptions and the choice labels shown to the player can change
   freely; the cfg key (`Coat`), its type and an enum's member names (`CoatColor.Custom`) cannot. A renamed enum member

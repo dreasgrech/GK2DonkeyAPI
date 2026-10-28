@@ -181,6 +181,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "speed: each mount's own, ridden and with the cart; the donkey's from the cfg; the panel's words", Body = MountSpeeds },
             new Scenario { Group = GroupLooks, Name = "freeplay: max cargo and one speed for every mount (the words' one table, the cart's slots, ridden, driven, changed while riding, the panel, MountInfo)", Body = Freeplay },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
+            new Scenario { Group = GroupLooks, Name = "looks per skin: a row set per skin, the 0.12 values moved to the skin worn, each skin's look when worn, a late skin caught up, regions per skin", Body = LooksPerSkin },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
@@ -1452,39 +1453,41 @@ namespace GK2DonkeyAPI
                 if (foals != null)
                 {
                     foals.Value = 2;
-                    Check(me.LookOf(MountCatalog.DonkeyId).FoalCount == 2, $"Babies = 2 reaches the donkey's own ({me.LookOf(MountCatalog.DonkeyId).FoalCount})");
+                    Check(me.OwnOf(MountCatalog.DonkeyId).FoalCount == 2, $"Babies = 2 reaches the donkey's own ({me.OwnOf(MountCatalog.DonkeyId).FoalCount})");
                     ConfigEntry<int> beastFoals = Row<int>("Foals_" + beast);
                     if (beastFoals != null)
                     {
                         beastFoals.Value = 0;
-                        Check(me.LookOf(beast).FoalCount == 0 && me.LookOf(MountCatalog.DonkeyId).FoalCount == 2, "the beast's babies are its own: 0 for it leaves the donkey's 2");
-                        Check(me.FoalCount == me.LookOf(me.MountId).FoalCount, $"the companion's count is the current mount's ({me.MountId}: {me.FoalCount})");
+                        Check(me.OwnOf(beast).FoalCount == 0 && me.OwnOf(MountCatalog.DonkeyId).FoalCount == 2, "the beast's babies are its own: 0 for it leaves the donkey's 2");
+                        Check(me.FoalCount == me.OwnOf(me.MountId).FoalCount, $"the companion's count is the current mount's ({me.MountId}: {me.FoalCount})");
                     }
                     else Warn("no Foals row for the beast (its pack not installed?): the per-mount babies not checked");
                     foals.Value = 0;
                 }
-                Check(me.LookOf(MountCatalog.DonkeyId).FoalsWearSkin, "the babies wear their parent's mount and skin (no row turns it off)");
+                Check(me.OwnOf(MountCatalog.DonkeyId).FoalsWearSkin, "the babies wear their parent's mount and skin (no row turns it off)");
                 Check(Row<string>("Effect") == null, "no Effect row (the effect rows went, 2026-10-25)");
 
-                // the look per mount (PerMount, MountLook): a row set per mount, the donkey's keys plain, the others
-                // suffixed; the chosen mount's set is the one shown; a mount's look is kept while another is chosen
+                // the look per skin (PerSkin, MountLook; per mount until 0.40.0): a row set per skin of every mount, a mount's
+                // first skin's keys the mount's (the donkey's plain), the others suffixed with the skin's id; the chosen
+                // mount's chosen skin's set is the one shown; a skin's look is kept while another is chosen
                 mount.Value = MountCatalog.DonkeyId; // the checks below assume the donkey chosen (the test left the beast chosen above and failed on it, 2026-10-19)
-                int sets = 0;
-                page.PerMount((id, sfx, shown) =>
+                int sets = 0, skinSets = 0;
+                foreach (MountInfo k in Mounts.Catalog.All) skinSets += Looks.SkinChoicesOf(k.Id).Count;
+                page.PerSkin((skinId, id, sfx, shown) =>
                 {
                     sets++;
-                    MountLook look = me.LookOf(id);
+                    MountLook look = me.LookOf(skinId);
                     ConfigEntry<CoatColor> coatRow = page.Choice("Donkey", "Coat" + sfx, look.Coat, "Coat colour", "", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
                     page.Color("Donkey", "CustomCoat" + sfx, "Custom coat colour", "", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coatRow.Value == CoatColor.Custom);
                 });
                 ConfigEntry<CoatColor> coatDonkey = Row<CoatColor>("Coat"), coatBeast = Row<CoatColor>("Coat_" + beast);
                 ConfigEntry<int> lightBeast = Row<int>("CustomCoatLightness_" + beast);
-                Check(sets == Mounts.Catalog.All.Count && coatDonkey != null && coatBeast != null && lightBeast != null, $"one row set per mount ({sets}): the donkey's keys plain, the beast's suffixed (CustomCoatLightness_beast too)");
+                Check(sets == skinSets && coatDonkey != null && coatBeast != null && lightBeast != null, $"one row set per skin ({sets} of {skinSets}): the donkey's own art's keys plain, the beast's first skin's suffixed with the mount (CustomCoatLightness_beast too)");
                 MountSettingsPage.Row rowBeast = page.Rows.Find(r => r.Entry == coatBeast), rowCustomBeast = page.Rows.Find(r => r.Entry != null && r.Entry.Definition.Key == "CustomCoat_" + beast);
                 Check(rowBeast != null && rowBeast.Shown != null && rowBeast.Enabled == null && rowCustomBeast != null && rowCustomBeast.Shown != null && rowCustomBeast.Enabled != null, "a per-mount row knows which mount shows it; the custom colour row keeps its own condition apart (Enabled)");
                 Check(rowBeast != null && !rowBeast.Shown() && !rowBeast.Visible(), "with the donkey chosen the beast's Coat row isn't shown");
                 coatBeast.Value = CoatColor.Custom;
-                Check(me.LookOf(beast).Coat == CoatColor.Custom && me.Coat == CoatColor.Game, $"the beast's coat set to Custom while the donkey is chosen: kept on the beast's look, the current (donkey's) coat still {me.Coat}");
+                Check(me.LookOf(beastSkin).Coat == CoatColor.Custom && me.Coat == CoatColor.Game, $"the beast's coat set to Custom while the donkey is chosen: kept on the beast's look, the current (donkey's) coat still {me.Coat}");
                 Check(rowCustomBeast != null && rowCustomBeast.Enabled() && !rowCustomBeast.Visible(), "its custom colour row is enabled by its preset but not shown (the beast isn't chosen)");
                 mount.Value = beast;
                 Check(me.MountId == beast && me.Coat == CoatColor.Custom, $"Mount = beast: the current look is the beast's ({me.MountId}: {me.Coat})");

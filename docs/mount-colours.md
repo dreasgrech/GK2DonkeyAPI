@@ -114,7 +114,13 @@ empty region maps nothing; the row's description says so ("on the mounts whose l
 it"). A "(none on this mount)" note after the value is a later step: a `Choice` row has no dynamic suffix, and in
 the Mods menu the framework draws the row, so it would go through `MenuLabels`.
 
-### 2.6 The look is kept per mount
+### 2.6 The look is kept per mount (per skin since 0.41.0)
+
+**Amended 2026-10-28** (the user, the day the Donkey Skin Pack went public: "skins look different so the colors
+customization needs to apply for each"): the look is kept **per skin** now, everything in the Colours window
+included (the lantern toggles too); a mount's first skin keeps the mount's keys, the others carry the skin's id;
+the mount's own (name, babies, volumes) stays per mount. docs/per-skin-looks.md has the design, the seed from a 0.12
+file and the tests. The text below is the 2026-10-18 decision it replaces.
 
 What the colour rows set belongs to the mount they were set on (the user, 2026-10-18: "we're not saving these
 values per skin/per mount"). Per mount, not per skin: the dragon is green whichever of its skins is worn, which is

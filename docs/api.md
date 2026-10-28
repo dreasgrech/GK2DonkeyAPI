@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.40.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.41.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -759,11 +759,19 @@ your own calls from the hooks; `examples/GK2DonkeySkins` has one (the checker be
 `SpeedMultiplier` under the ability's own owner). An ability never sets a look key (the skin and the colours
 are the player's): such a Set is refused, held or free (0.35.0).
 
-A mod's **look rows are kept per mount** with `page.PerMount((mountId, suffix, shown) => { ... })`: the body runs
-once per registered mount and builds the rows with the suffix on their cfg keys (`""` for the donkey,
-`"_saddleup.dragon"` for the dragon) against `companion.LookOf(mountId)` (a `MountLook`: `Coat`, `CustomCoat`, `Harness`, `Paint`,
-`Wheels`, `Hubs`, `LanternLight` and their custom colours); the chosen mount's rows are the ones shown. The
-companion's own `Coat`, `Harness`... read and write the current mount's look (`MountId`). A row about the cart (its
+A mod's **look rows are kept per skin** (0.41.0; docs/per-skin-looks.md) with `page.PerSkin((skinId, mountId, suffix,
+shown) => { ... })`: the body runs once per skin of every registered mount and builds the rows with the suffix on
+their cfg keys (a mount's first skin keeps the mount's suffix, `""` for the donkey's own art and `"_saddleup.dragon"`
+for the dragon's default: the keys of 0.12 and before; every other skin `"_<skin id>"`, `Coat_donkey/acme-pack.blaze`)
+against `companion.LookOf(skinId)` (a `MountLook`: `Coat`, `CustomCoat`, `Harness`, `Muzzle`, `Paint`, `Wheels`, `Hubs`,
+`LanternLight` and their custom colours, `Lantern` and `LanternByDay`); the chosen mount's chosen skin's rows are the
+ones shown, and `MountSettingsPage.SkinHasRegion(skinId, region)` tells a row's `EnableWhen` whether that skin has
+the region (an over skin of the donkey keeps the donkey's). A 0.12 file (per-mount values) whose mount wore a skin
+that isn't its first moves those values to that skin's rows once, the first skin's going to their defaults, said
+in the log. The companion's own `Coat`, `Harness`... read and write the worn skin's look (`Skin`). The mount's own
+(`Name`, `FoalCount`, `FoalsFollowOnFoot`, `FoalsComeIndoors`, `SoundVolume`, `StepsVolume`, `BabyStepsVolume`) is a
+`MountOwn` per mount, `companion.OwnOf(mountId)`, built with `page.PerMount((mountId, suffix, shown) => { ... })` as
+before (the body runs once per mount, the donkey's keys plain). A row about the cart (its
 paint, wheels, hubs, lantern) says so with `page.CartRow(section, key)` after it (0.39.0; each key, the custom colour
 rows too): it shows only while its mount pulls the cart (`MountSettingsPage.MountPullsCart(mountId)`: `[Mount]
 cart`, `MountDef.Cart`), so the dragon has no cart colours; the value is kept. The Mounts panel hides its
@@ -1050,6 +1058,14 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.41.0 (2026-10-28, breaking): **looks per skin** (the user: "skins look different so the colors customization needs to
+  apply for each"; docs/per-skin-looks.md). `MountLook` is one skin's (`SkinId`; its `MountId` the skin's mount): the
+  colours, their customs, `Lantern` and `LanternByDay`; `MountCompanion.LookOf(string skinId)` (a mount id given by an
+  old caller gives its first skin's look, said once). The mount's own moved to `MountOwn` (`Name`, `FoalCount`,
+  `FoalsFollowOnFoot`, `FoalsComeIndoors`, `FoalsWearSkin`, the three volumes), `MountCompanion.OwnOf(mountId)`; the
+  companion's pass-through properties are unchanged. `MountSettingsPage.PerSkin` (a row set per skin, the first
+  skin on the mount's keys), `SkinHasRegion`, `Row.SkinId`; `CatchUp` adds a late skin's rows; the 0.12 carry-over
+  moves a mount's values to the skin it wore. `PerMount` and `MountHasRegion` stay for the per-mount rows.
 - 0.40.0: **content from many mods** (the user, 2026-10-26: "make sure our foundation is solid first";
   docs/multi-mod-loading.md). Additions: `MountHandle.Remove(ownerId)` (refused for another mod's instance; the
   parameterless `Remove()` still works from the owner's own plugin, from another mod's code it does nothing and warns

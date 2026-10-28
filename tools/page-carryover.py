@@ -20,7 +20,10 @@ PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
 # only. The keys carry the mount's id (MountSettingsPage.PerMount "_<id>", MountRows "Skin_<id>"): "<mod>.<name>" since
 # 2026-10-24, the donkey's plain
 KINDS = ["donkey", "saddleup-dragon.dragon", "saddleup.gerry", "saddleup-critters.rat", "saddleup-critters.snail", "saddleup-critters.worm", "example.checker-beast"]  # the four by their packs' ids since 2026-10-26
-MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"]
+# the per-skin sets (PerSkin, 0.13 / API 0.41.0): a mount's first skin keeps the mount's suffix, every other shipped skin its
+# own id (Coat_donkey/saddleup-donkey-skins.hellfire); a 0.12 file holds the per-mount keys only
+SKINS = ["donkey/saddleup-donkey-skins.hellfire", "donkey/saddleup-donkey-skins.royal-parade"]
+MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"] + ["_" + s for s in SKINS]
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
 
 
@@ -31,7 +34,7 @@ def plain(sec):
 
 def page_rows(src):
     rows, aliases = set(), {}
-    for m in re.finditer(r'p\.(Key|Text|Toggle|Choice|Steps|Color|List)\("(\w[\w ]*)", "(\w+)"( \+ sfx)?', src):
+    for m in re.finditer(r'p\.(Key|Text|Toggle|Choice|Steps|Color|List)\("(\w[\w ]*)", "(\w+)"( \+ sfx)?', src):  # PerMount and PerSkin rows alike (" + sfx")
         kind, sec, key, sfx = m.groups()
         for s in (MOUNTS if sfx else [""]):
             rows.add((sec, key + s))

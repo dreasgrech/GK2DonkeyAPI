@@ -85,6 +85,7 @@ namespace GK2DonkeyAPI
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> colourGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static List<Entry> entries = new List<Entry>();
         private static string builtFor;            // the mount the right side was built for
+        private static string builtForSkin;        // and the skin its Skin row said then (the colours window is that skin's, 0.41.0)
         private static string journalSignature, coloursSignature; // which rows were built (a preset shows a row: rebuilt)
         private static readonly Dictionary<ConfigEntryBaseKey, object> before = new Dictionary<ConfigEntryBaseKey, object>();
         private static readonly Dictionary<ConfigEntryBaseKey, object> coloursBefore = new Dictionary<ConfigEntryBaseKey, object>();
@@ -596,12 +597,24 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The colours window's title: the mount's name, and the skin's after it when the chosen skin isn't the mount's
+        // first ("Colours: Donkey - Blaze": the window's rows are that skin's, 0.41.0).
+        private static string ColoursTitle()
+        {
+            string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
+            string skin = page?.SkinChosen(chosen) ?? "";
+            string title = "Colours: " + headerName.text;
+            if (skin.Length == 0 || skin.Equals(Looks.FirstSkinOf(chosen), StringComparison.OrdinalIgnoreCase)) return title;
+            return title + " - " + (Mounts.Looks.Find(skin)?.Name ?? NameFromId(skin));
+        }
+
         // The right side for the chosen mount: the header, the stats card, the look rows; the colours window's groups
         // gathered too (built when it opens).
         private static void BuildRight()
         {
             string chosen = page.MountChosen ?? MountCatalog.DonkeyId;
             builtFor = chosen;
+            builtForSkin = page.SkinChosen(chosen);
             Entry e = entries.Find(x => x.Id.Equals(chosen, StringComparison.OrdinalIgnoreCase));
             Catalog.Entry k = Catalog.Find(chosen);
             MountIcons.Icon icon = MountIcons.Of(k);
@@ -668,7 +681,7 @@ namespace GK2DonkeyAPI
             journalSignature = BuildRows(journalGroups, contentRoot, contentScroll, journalW - ScrollbarW, rows, out _);
             if (colours != null)
             {
-                coloursTitle.text = "Colours: " + headerName.text;
+                coloursTitle.text = ColoursTitle();
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
             }
             Refresh();
@@ -871,7 +884,7 @@ namespace GK2DonkeyAPI
             {
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
                 colours = Window("colours window", settings, CW, CH, 30001);
-                coloursTitle = TitleBar(colours, settings, CW, "Colours: " + headerName.text, () => CloseColours(keep: true));
+                coloursTitle = TitleBar(colours, settings, CW, ColoursTitle(), () => CloseColours(keep: true));
                 float top = Pad + TitleH + Gap;
                 coloursStage = Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
                 coloursPicture = Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();
@@ -1587,9 +1600,9 @@ namespace GK2DonkeyAPI
                 return;
             }
             string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
-            if (!chosen.Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase))
+            if (!chosen.Equals(builtFor ?? "", StringComparison.OrdinalIgnoreCase) || !string.Equals(page?.SkinChosen(chosen) ?? "", builtForSkin ?? "", StringComparison.OrdinalIgnoreCase))
             {
-                BuildRight(); // the mount changed under the panel (the cfg, a key): the right side follows
+                BuildRight(); // the mount, or its skin, changed under the panel (the cfg, a key, the Skin row): the right side follows; the colours window is the skin's
                 MarkList();
                 return;
             }
@@ -1949,6 +1962,7 @@ namespace GK2DonkeyAPI
             colourGroups.Clear();
             statLines.Clear();
             builtFor = null;
+            builtForSkin = null;
             journalSignature = coloursSignature = null;
             if (panel != null)
             {

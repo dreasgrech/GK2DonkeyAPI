@@ -140,7 +140,8 @@ sealed class GK2DonkeyAPI.Api.MountCompanion
   property string Skin { get; set; }
   property float SoundVolume { get; set; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
-  method GK2DonkeyAPI.Api.MountLook LookOf(string mountId)
+  method GK2DonkeyAPI.Api.MountLook LookOf(string skinId)
+  method GK2DonkeyAPI.Api.MountOwn OwnOf(string mountId)
   method void RingBell()
   method void SendAway()
   method GK2DonkeyAPI.Api.MountResult Use(GK2DonkeyAPI.Api.MountStyle style)
@@ -321,7 +322,6 @@ sealed class GK2DonkeyAPI.Api.MountJump
   field System.Nullable<bool> Wings
   method void .ctor()
 sealed class GK2DonkeyAPI.Api.MountLook
-  property float BabyStepsVolume { get; set; }
   property GK2DonkeyAPI.Api.CoatColor Coat { get; set; }
   property string CustomCoat { get; set; }
   property string CustomHarness { get; set; }
@@ -330,10 +330,6 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property string CustomMuzzle { get; set; }
   property string CustomPaint { get; set; }
   property string CustomWheels { get; set; }
-  property int FoalCount { get; set; }
-  property bool FoalsComeIndoors { get; set; }
-  property bool FoalsFollowOnFoot { get; set; }
-  property bool FoalsWearSkin { get; set; }
   property GK2DonkeyAPI.Api.HarnessColor Harness { get; set; }
   property GK2DonkeyAPI.Api.HubColor Hubs { get; set; }
   property bool Lantern { get; set; }
@@ -341,10 +337,8 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property GK2DonkeyAPI.Api.LanternColor LanternLight { get; set; }
   property string MountId { get; }
   property GK2DonkeyAPI.Api.MuzzleColor Muzzle { get; set; }
-  property string Name { get; set; }
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
-  property float SoundVolume { get; set; }
-  property float StepsVolume { get; set; }
+  property string SkinId { get; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
 sealed class GK2DonkeyAPI.Api.MountLooks
   field static const string DonkeyId = donkey
@@ -358,6 +352,16 @@ sealed class GK2DonkeyAPI.Api.MountLooks
   method System.IDisposable RegisterRecipe(string ownerId, string id, string name, System.Func<GK2DonkeyAPI.Api.MountSkinFrame, UnityEngine.Color32[]> pixels, string author = null, string version = null)
   method string Report(string id)
   method bool Unregister(string ownerId, string id)
+sealed class GK2DonkeyAPI.Api.MountOwn
+  property float BabyStepsVolume { get; set; }
+  property int FoalCount { get; set; }
+  property bool FoalsComeIndoors { get; set; }
+  property bool FoalsFollowOnFoot { get; set; }
+  property bool FoalsWearSkin { get; set; }
+  property string MountId { get; }
+  property string Name { get; set; }
+  property float SoundVolume { get; set; }
+  property float StepsVolume { get; set; }
 static class GK2DonkeyAPI.Api.MountPalette
   method static string Hex(GK2DonkeyAPI.Api.PaletteColor c)
   method static string Hex(GK2DonkeyAPI.Api.PaletteColor c, int lightness)
@@ -456,10 +460,12 @@ sealed class GK2DonkeyAPI.Api.MountSettingsPage
   method void OpenPanel()
   method void PanelButton(string section, string label, string description)
   method void PerMount(System.Action<string, string, System.Func<bool>> rows)
+  method void PerSkin(System.Action<string, string, string, System.Func<bool>> rows)
   method static string PinnedBy(GK2DonkeyAPI.Api.MountCompanion companion, string tuningKey)
   method void Preview(string section, GK2DonkeyAPI.Api.MountCompanion companion, string label = Your mount, bool cart = True)
   method void Publish()
   method void RetiredKey(string section, string key)
+  method static bool SkinHasRegion(string skinId, string region)
   method void Status(string section, string label = Status, string description = What the mod is doing right now.)
   method BepInEx.Configuration.ConfigEntry<int> Steps(string section, string key, int value, int min, int max, int step, string label, string description, System.Action<int> apply = null, System.Func<int, string> format = null, bool look = False, System.Func<bool> visible = null)
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply, System.Func<bool> visible)

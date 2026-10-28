@@ -10,7 +10,27 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-Nothing yet.
+For players:
+
+- **Colours per skin** (2026-10-28, the day the Donkey Skin Pack went out): everything in the Colours window is kept
+  for the skin you are customizing, not for the mount: coat, harness, second tone, the cart's paint, wheels, hubs,
+  the lantern's light and whether the lantern shows and stays lit by day. A fiery skin keeps its reds, the plain
+  donkey its brown, and switching skins brings each one's colours back. The window's title names the skin. What you
+  had set in 0.12 goes to the skin you were wearing (the mount's other skins start at the game's defaults).
+
+For mod authors:
+
+- **API 0.41.0 (breaking): looks per skin.** `MountLook` is one skin's (`SkinId`): the colours and the lantern toggles;
+  `MountCompanion.LookOf(skinId)`. The mount's own (`Name`, the babies, the volumes) is `MountOwn`, `OwnOf(mountId)`.
+  `MountSettingsPage.PerSkin` builds a row set per skin (a mount's first skin on the mount's keys, the others on
+  `<key>_<skin id>`), `SkinHasRegion` for a row's `EnableWhen`, `Row.SkinId`; `CatchUp` adds a late skin's rows; a 0.12
+  file's per-mount values move to the skin the mount wore. The companion's pass-through properties are unchanged.
+  docs/per-skin-looks.md, docs/api.md.
+
+Development:
+
+- Self-test "looks per skin" (group Skins and effects); `tools/page-carryover.py` knows the shipped skins' key sets;
+  the API surface snapshot regenerated for 0.41.0.
 
 ## 0.12.0 (GK2 Donkey API 0.40.0), 2026-10-28
 

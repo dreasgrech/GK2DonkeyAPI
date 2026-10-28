@@ -36,7 +36,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             MountSettingsPage.Row follow = saddle.Rows.Find(x => x.Entry != null && x.Entry.Definition.Key == "FoalsFollow");
             MountCompanion me = Mounts.Companion("dreas.gk2.saddleup");
             bool on = follow?.Entry is BepInEx.Configuration.ConfigEntry<bool> fe && fe.Value;
-            Check(follow != null && me.LookOf(MountCatalog.DonkeyId).FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the donkey's own ({(on ? "on" : "off")})");
+            Check(follow != null && me.OwnOf(MountCatalog.DonkeyId).FoalsFollowOnFoot == on, $"\"Babies follow you on foot\" reaches the donkey's own ({(on ? "on" : "off")})");
             Check(follow?.Entry != null && Equals(follow.Entry.DefaultValue, true), $"and it is on by default in Saddle Up ({follow?.Entry?.DefaultValue})");
             yield break;
         }

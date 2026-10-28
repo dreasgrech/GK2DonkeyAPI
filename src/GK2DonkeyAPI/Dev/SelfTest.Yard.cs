@@ -240,6 +240,11 @@ namespace GK2DonkeyAPI
                     float last = float.NaN, worst = 0f, worstDt = 0f, slowest = 0f; // the biggest step, the frame it came in, the slowest frame
                     Flight.TestJumpHeld = true;
                     Flight.TestMoveDir = new Vector2(dir.x, dir.z);
+                    // the jump's air speed is capped by the ride's measured top (Flight: "the ride's own top, measured"), and a
+                    // ride before this one at the same speed multiplier leaves its measurement behind: 1.6 (the donkey's riding
+                    // speed) made the jump crawl 0.65 along the slope, 2026-10-28, where the runs before had 0.4 (no cap) and
+                    // 3.3. Forgotten here, so the jump is the same every run: no ride on this spot yet.
+                    Flight.TestSetRideTop(0f);
                     try
                     {
                         Flight.Jump(mi);

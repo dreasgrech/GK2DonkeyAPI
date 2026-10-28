@@ -52,7 +52,9 @@ mount (`MountSettingsPage.MountPullsCart`; a mount not installed keeps it, the d
 rows are `CartRow`s, left out with their heading.
 
 **2026-10-25 (API 0.37.0):** the effect rows are gone. The journal has no Effect group and no "Comes with: ..." line,
-the colours window has no Effect toggles, and its button and title are "Colours..." / "Colours: <mount>". The
+the colours window has no Effect toggles, and its button and title are "Colours..." / "Colours: <mount>" (since 0.41.0
+"Colours: <mount> - <skin>" when the chosen skin isn't the mount's first: the window's rows are that skin's,
+`PerSkin`, and a change of the Skin row rebuilds the right side, `builtForSkin`; docs/per-skin-looks.md). The
 drawing below keeps the effect parts as built on 2026-10-21; nothing picks an effect until the skins' use of one is
 designed (docs/open-items.md "Effects on skins").
 

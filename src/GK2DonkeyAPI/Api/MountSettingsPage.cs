@@ -45,7 +45,8 @@ namespace GK2DonkeyAPI.Api
             internal Action OnClick;         // RowKind.Button
             internal string ButtonText;      // RowKind.Button: the word on it ("Open", "Go")
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
-            internal string MountId;         // a PerMount row's mount (null: a row of no one mount)
+            internal string MountId;         // a PerMount or PerSkin row's mount (null: a row of no one mount)
+            internal string SkinId;          // a PerSkin row's skin (null: a row of no one skin)
         }
 
         internal readonly List<Row> Rows = new List<Row>();
@@ -508,7 +509,8 @@ namespace GK2DonkeyAPI.Api
         // The rows of the mounts registered after MountRows and PerMount were called: a mod whose Awake ran after the
         // page's mod's (BepInEx orders plugins by their dependencies only; docs/mounts-as-mods.md 4). Run once before
         // the page is shown (Show, the frame after Publish, when every Awake has run); a mount still without a skin is
-        // left for the next start (the Mount list leaves it out too). Returns how many mounts got their rows.
+        // left for the next start (the Mount list leaves it out too). Returns how many mounts got rows (a mount whose
+        // late skin got its PerSkin rows counts too).
         internal int CatchUp()
         {
             if (mountRow == null || shown) return 0;
@@ -516,12 +518,24 @@ namespace GK2DonkeyAPI.Api
             catchingUp = true;
             try
             {
+                var lateMounts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 foreach (MountInfo k in Mounts.Catalog.All)
                 {
                     if (skinRows.ContainsKey(k.Id) || k.Skins.Count == 0) continue;
                     AddSkinRow(k);
                     foreach (Action<string, string, Func<bool>> rows in perMountBuilders) RunPerMount(rows, k.Id);
+                    foreach (Action<string, string, string, Func<bool>> rows in perSkinBuilders) RunPerSkinAll(rows, k.Id); // its skins' rows too (0.41.0)
+                    lateMounts.Add(k.Id);
                     added++;
+                }
+                // a skin registered after the page for a mount that had its rows (a skin pack loaded after the page's mod;
+                // 0.41.0): its PerSkin rows now
+                foreach (MountInfo k in Mounts.Catalog.All)
+                {
+                    if (!skinRows.ContainsKey(k.Id) || lateMounts.Contains(k.Id)) continue;
+                    int made = 0;
+                    foreach (Action<string, string, string, Func<bool>> rows in perSkinBuilders) made += RunPerSkinAll(rows, k.Id);
+                    if (made > 0) added++;
                 }
             }
             finally
@@ -571,7 +585,7 @@ namespace GK2DonkeyAPI.Api
             // babies. A page without MountRows: the donkey's alone (PerMount).
             PerMount((mountId, sfx, shown) =>
             {
-                MountLook l = me.LookOf(mountId);
+                MountOwn l = me.OwnOf(mountId);
                 Func<bool> babies = () => Catalog.Find(mountId)?.Foals ?? true;
                 Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
                 Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
@@ -979,6 +993,7 @@ namespace GK2DonkeyAPI.Api
                 throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
             }
             r.MountId = pendingMountId;
+            r.SkinId = pendingSkinId;
             if (pendingShown != null)
             {
                 Func<bool> shown = pendingShown, own = r.Visible;
@@ -990,7 +1005,8 @@ namespace GK2DonkeyAPI.Api
         }
 
         private Func<bool> pendingShown; // set while PerMount (or MountRows) builds one mount's rows
-        private string pendingMountId;   // set while PerMount builds one mount's rows
+        private string pendingMountId;   // set while PerMount (or PerSkin) builds one mount's rows
+        private string pendingSkinId;    // set while PerSkin builds one skin's rows
         private ConfigEntry<string> mountRow; // MountRows' Mount row: which mount is chosen
 
         // Rows kept per mount (the colour rows: another mount's look isn't the donkey's; docs/mount-colours.md 2.7): rows is
@@ -1081,6 +1097,23 @@ namespace GK2DonkeyAPI.Api
             return false;
         }
 
+        // Whether a skin's look has a colour region (its skin.cfg's [Colors] names; the donkey's own art has the API's
+        // five): for a PerSkin row's EnableWhen, so Harness greys on a skin without tack and Second tone on one without
+        // a second tone. An over skin of the donkey keeps the donkey's regions under it (docs/skins.md), so those count
+        // too. A skin nothing provides (its pack not installed): false.
+        public static bool SkinHasRegion(string skinId, string region)
+        {
+            if (string.IsNullOrEmpty(skinId) || skinId.Equals(MountLooks.DonkeyId, StringComparison.OrdinalIgnoreCase)) return MountHasRegion(MountCatalog.DonkeyId, region);
+            MountSkinInfo s = Mounts.Looks.Find(skinId);
+            if (s == null) return false;
+            foreach (string r in s.Regions) if (string.Equals(r, region, StringComparison.OrdinalIgnoreCase)) return true;
+            if (s.Over && string.Equals(s.Mount, MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase))
+            {
+                foreach (string r in Colors.MountRegionKeys) if (string.Equals(r, region, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
         public void PerMount(Action<string, string, Func<bool>> rows)
         {
             if (rows == null) throw new ArgumentNullException(nameof(rows));
@@ -1091,6 +1124,136 @@ namespace GK2DonkeyAPI.Api
             }
             perMountBuilders.Add(rows); // a mount registered after this call gets its rows at CatchUp
             foreach (MountInfo k in Mounts.Catalog.All) RunPerMount(rows, k.Id);
+        }
+
+        // The rows kept per skin (0.41.0; docs/per-skin-looks.md): the body runs once for every skin of every mount with
+        // (skinId, mountId, suffix, shown) and binds that skin's rows. The suffix: a mount's first skin (its Skin row's
+        // default) keeps the mount's ("" for the donkey's own art, "_<mount id>" for another mount's default: the keys of
+        // 0.12 and before, which were per mount), every other skin "_<skin id>" (Coat_donkey/acme-pack.blaze). shown is
+        // true while that mount is chosen and its Skin row says that skin: the Mounts panel's colours window shows that
+        // set. A skin registered after this call (a pack loaded later) gets its rows at CatchUp. Without MountRows the
+        // body runs once for the donkey's own art.
+        // The 0.12 carry-over: a player's per-mount values were set while wearing the mount's chosen skin; when that
+        // skin isn't the first and none of its rows is in the file while the mount's are, the mount's values move to it
+        // (the first skin's rows go to their defaults), once, said in the log.
+        public void PerSkin(Action<string, string, string, Func<bool>> rows)
+        {
+            if (rows == null) throw new ArgumentNullException(nameof(rows));
+            if (mountRow == null)
+            {
+                rows(MountLooks.DonkeyId, MountCatalog.DonkeyId, "", null);
+                return;
+            }
+            perSkinBuilders.Add(rows);
+            foreach (MountInfo k in Mounts.Catalog.All) RunPerSkinAll(rows, k.Id);
+        }
+
+        private readonly List<Action<string, string, string, Func<bool>>> perSkinBuilders = new List<Action<string, string, string, Func<bool>>>();
+        private readonly HashSet<string> perSkinDone = new HashSet<string>(StringComparer.OrdinalIgnoreCase); // "<builder index>|<skin id>"
+        private readonly Dictionary<Action<string, string, string, Func<bool>>, Row> lastSkinRowOf = new Dictionary<Action<string, string, string, Func<bool>>, Row>();
+        internal int SeededSkins => seededSkins.Count; // the skins whose rows took the mount's 0.12 values (the self-test)
+        private readonly HashSet<string> seededSkins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        // Every skin of a mount the builder hasn't made rows for yet (its choices, the first one first).
+        private int RunPerSkinAll(Action<string, string, string, Func<bool>> rows, string mountId)
+        {
+            int made = 0;
+            int at = perSkinBuilders.IndexOf(rows);
+            foreach ((string id, string label) in Looks.SkinChoicesOf(mountId))
+            {
+                if (!perSkinDone.Add(at + "|" + id)) continue;
+                RunPerSkin(rows, id, mountId);
+                made++;
+            }
+            return made;
+        }
+
+        private void RunPerSkin(Action<string, string, string, Func<bool>> rows, string skinId, string mountId)
+        {
+            bool donkey = mountId.Equals(MountCatalog.DonkeyId, StringComparison.OrdinalIgnoreCase);
+            string first = Looks.FirstSkinOf(mountId);
+            bool isFirst = skinId.Equals(first, StringComparison.OrdinalIgnoreCase);
+            string mountSfx = donkey ? "" : "_" + mountId;
+            string sfx = isFirst ? mountSfx : "_" + skinId;
+            Func<bool> isShown = () => string.Equals(mountRow?.Value ?? MountCatalog.DonkeyId, mountId, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(SkinChosen(mountId), skinId, StringComparison.OrdinalIgnoreCase);
+            pendingShown = isShown;
+            pendingMountId = mountId;
+            pendingSkinId = skinId;
+            int before = Rows.Count;
+            try
+            {
+                rows(skinId, mountId, sfx, isShown);
+            }
+            finally
+            {
+                pendingShown = null;
+                pendingMountId = null;
+                pendingSkinId = null;
+            }
+            int made = Rows.Count - before;
+            if (made <= 0) return;
+            List<Row> mine = Rows.GetRange(before, made);
+            if (catchingUp && lastSkinRowOf.TryGetValue(rows, out Row last))
+            {
+                int at = Rows.IndexOf(last);
+                if (at >= 0 && at < before - 1)
+                {
+                    Rows.RemoveRange(before, made);
+                    Rows.InsertRange(at + 1, mine);
+                }
+            }
+            lastSkinRowOf[rows] = mine[mine.Count - 1];
+            if (!isFirst) SeedFromMount(mine, skinId, mountId, "_" + skinId, mountSfx);
+        }
+
+        // The Skin row's value for a mount (its first skin when the row has none).
+        internal string SkinChosen(string mountId)
+        {
+            string id = string.IsNullOrEmpty(mountId) ? MountCatalog.DonkeyId : mountId;
+            if (skinRows.TryGetValue(id, out ConfigEntry<string> row) && !string.IsNullOrEmpty(row.Value)) return row.Value;
+            return Looks.FirstSkinOf(id);
+        }
+
+        // The 0.12 carry-over (PerSkin): the skin's rows just made take the mount's values from the file when the file
+        // has the mount's and none of the skin's, and the mount's Skin row in the file says this skin; the mount's rows
+        // (its first skin's) go back to their defaults, so the first skin doesn't wear this skin's colours.
+        private void SeedFromMount(List<Row> mine, string skinId, string mountId, string skinSfx, string mountSfx)
+        {
+            if (Config == null || string.IsNullOrEmpty(Config.ConfigFilePath)) return;
+            if (fileSections == null) fileSections = ReadSections(Config.ConfigFilePath);
+            if (fileSections.Count == 0) return;
+            // the file's own Skin row value for the mount, under any number of its section
+            string skinKey = "Skin_" + mountId, chosenInFile = null;
+            foreach (KeyValuePair<string, Dictionary<string, string>> s in fileSections)
+            {
+                if (s.Value.TryGetValue(skinKey, out string v)) { chosenInFile = v; break; }
+            }
+            if (chosenInFile == null || !chosenInFile.Trim().Equals(skinId, StringComparison.OrdinalIgnoreCase)) return;
+            var pairs = new List<(Row Skin, Row Mount)>();
+            foreach (Row r in mine)
+            {
+                if (r.Entry == null) continue;
+                string key = r.Entry.Definition.Key;
+                if (!key.EndsWith(skinSfx, StringComparison.OrdinalIgnoreCase)) continue;
+                if (fileSections.TryGetValue(r.Entry.Definition.Section, out Dictionary<string, string> own) && own.ContainsKey(key)) return; // the skin has values of its own: nothing to seed
+                string mountKey = key.Substring(0, key.Length - skinSfx.Length) + mountSfx;
+                Row m = Rows.Find(o => o.Entry != null && o.Entry.Definition.Section == r.Entry.Definition.Section && o.Entry.Definition.Key == mountKey);
+                if (m == null) continue;
+                if (!fileSections.TryGetValue(m.Entry.Definition.Section, out Dictionary<string, string> ms) || !ms.ContainsKey(mountKey)) continue; // the mount's row isn't in the file either
+                pairs.Add((r, m));
+            }
+            if (pairs.Count == 0) return;
+            foreach ((Row Skin, Row Mount) pr in pairs)
+            {
+                pr.Skin.Entry.BoxedValue = pr.Mount.Entry.BoxedValue;
+                pr.Mount.Entry.BoxedValue = pr.Mount.Entry.DefaultValue;
+            }
+            bool first = seededSkins.Add(skinId);
+            string name = Mounts.Looks.Find(skinId)?.Name ?? skinId;
+            Plugin.Log.LogInfo(first
+                ? $"Settings: {Title}: {name}'s look took {pairs.Count} value(s) of {mountId}'s (0.12 kept the colours per mount, and {name} was the skin worn); {mountId}'s first skin is at its defaults for them."
+                : $"Settings: {Title}: {name}'s look took {pairs.Count} more value(s) of {mountId}'s.");
         }
 
         // Where each builder's rows end (its last row so far): a mount caught up later gets its rows put right after them,

@@ -23,7 +23,7 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.12.0";
+        public const string Version = "0.13.0";
 
         // The API this mod is written against: 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
         // look Toggle and Text rows; 0.39 reads a mount's own [Jump]; 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount
@@ -121,7 +121,7 @@ namespace SaddleUp
             // Its name and its voice, per mount, in the Mounts panel's journal under the Skin (the user, 2026-10-26)
             p.PerMount((mountId, sfx, shown) =>
             {
-                MountLook own = me.LookOf(mountId);
+                MountOwn own = me.OwnOf(mountId);
                 p.Text("Mount", "Name" + sfx, own.Name ?? "", "Name", "Shown when you walk up to your mount, as in \"Ride Bella\".", v => own.Name = v, look: true);
             });
             p.Toggle("Mount", "KeepWithSaves", me.KeepWithSaves, "Keep your mount with the save", "After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.", v => me.KeepWithSaves = v);
@@ -130,7 +130,7 @@ namespace SaddleUp
             p.FoalRows("Mount", me);
             p.PerMount((mountId, sfx, shown) =>
             {
-                MountLook own = me.LookOf(mountId);
+                MountOwn own = me.OwnOf(mountId);
                 // three sliders since 0.12 (the user, 2026-10-27): "Volume" (the one "Voice and steps" row before) is the voices
                 // now, so a player's value carries over there; Steps and Baby steps start at 100%
                 p.Steps("Mount", "Volume" + sfx, Mathf.RoundToInt(own.SoundVolume * 100f), 0, 150, 10, "Voices volume", "How loud your mount's calls are, and its babies' answers.", v => own.SoundVolume = v / 100f, v => v + "%", look: true);
@@ -140,16 +140,17 @@ namespace SaddleUp
             });
 
             // The colours: the button opens them over the game, the rows are here too, under a heading for the mount
-            // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per mount (PerMount: the donkey's rows keep their keys, another mount's
-            // carry its id, Coat_<mount>; docs/mount-colours.md). Coat is the body (the donkey's coat, another mount's
+            // and one for the cart (not the picture rows' labels: a picture is found on screen by its label). Kept per skin since 0.13 (PerSkin, the user, 2026-10-28:
+            // a skin names its own regions; docs/per-skin-looks.md): a mount's first skin keeps the 0.12 keys (the donkey's plain, another mount's Coat_<mount>), every other
+            // skin's carry its id (Coat_donkey/<pack>.<skin>); a 0.12 file's values go to the skin that was worn. Coat is the body (the donkey's coat, another mount's
             // scales or skin); Harness its tack, on the mounts whose look has any. A Color row's lightness key moves
             // with its colour key (Color registers it).
             // no picture or pointer line here (2026-10-21): every row of the section is the Mounts panel's, the menus leave the
             // section out; the rows below still make "3. Colours" in the cfg, so players' files keep their section
             p.Heading("Colours", "Mount colours");
-            p.PerMount((mountId, sfx, shown) =>
+            p.PerSkin((skinId, mountId, sfx, shown) =>
             {
-                MountLook look = me.LookOf(mountId);
+                MountLook look = me.LookOf(skinId);
                 p.MovedKey("Colours", "Coat" + sfx, "Donkey");
                 p.MovedKey("Colours", "CustomCoat" + sfx, "Donkey");
                 p.MovedKey("Colours", "Harness" + sfx, "Donkey");
@@ -157,22 +158,22 @@ namespace SaddleUp
                 ConfigEntry<CoatColor> coat = p.Choice("Colours", "Coat" + sfx, look.Coat, "Coat colour", "The colour of your mount's body.", v => look.Coat = v, new[] { "Game default", "Brown", "Dark", "Cream", "Black", "Custom" }, look: true);
                 p.Color("Colours", "CustomCoat" + sfx, "Custom coat colour", "Used when the coat colour is Custom.", PaletteColor.Chestnut, v => look.CustomCoat = v, () => coat.Value == CoatColor.Custom);
                 ConfigEntry<HarnessColor> harness = p.Choice("Colours", "Harness" + sfx, look.Harness, "Harness colour", "The colour of your mount's harness. Mounts without one ignore it.", v => look.Harness = v, new[] { "Game default", "Black", "Red", "Blue", "Green", "Custom" }, look: true);
-                // a mount whose skins have no tack: the harness rows grey, the value is kept
-                p.EnableWhen("Colours", "Harness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
+                // a skin without tack: the harness rows grey, the value is kept (the chosen skin's regions, an over skin of the donkey keeps the donkey's)
+                p.EnableWhen("Colours", "Harness" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Harness"));
                 p.Color("Colours", "CustomHarness" + sfx, "Custom harness colour", "Used when the harness colour is Custom.", PaletteColor.Wine, v => look.CustomHarness = v, () => harness.Value == HarnessColor.Custom);
-                p.EnableWhen("Colours", "CustomHarness" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Harness"));
+                p.EnableWhen("Colours", "CustomHarness" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Harness"));
                 // the second body tone (the API's Muzzle region): the donkey's muzzle, another mount's belly, shell or tail;
                 // a mount whose look has none greys the rows (the user, 2026-10-20:
                 // every part of every skin reachable from the page)
                 ConfigEntry<MuzzleColor> muzzle = p.Choice("Colours", "Muzzle" + sfx, look.Muzzle, "Second tone", "Your mount's second colour, such as the donkey's muzzle. Mounts without one ignore it.", v => look.Muzzle = v, new[] { "Game default", "Pale", "Rose", "Brown", "Green", "Blue", "Dark", "Custom" }, look: true);
-                p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
+                p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
-                p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.MountHasRegion(mountId, "Muzzle"));
+                p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
             });
             p.Heading("Colours", "Cart colours");
-            p.PerMount((mountId, sfx, shown) =>
+            p.PerSkin((skinId, mountId, sfx, shown) =>
             {
-                MountLook look = me.LookOf(mountId);
+                MountLook look = me.LookOf(skinId);
                 p.MovedKey("Colours", "Paint" + sfx, "Cart");
                 p.MovedKey("Colours", "CustomPaint" + sfx, "Cart");
                 p.MovedKey("Colours", "Wheels" + sfx, "Cart");
@@ -189,7 +190,7 @@ namespace SaddleUp
                 p.Color("Colours", "CustomHubs" + sfx, "Custom wheel hub colour", "Used when the wheel hub colour is Custom.", PaletteColor.Gold, v => look.CustomHubs = v, () => hubs.Value == HubColor.Custom);
                 ConfigEntry<LanternColor> light = p.Choice("Colours", "LanternColor" + sfx, look.LanternLight, "Lantern light", "The colour of the lantern's light.", v => look.LanternLight = v, new[] { "Warm (game default)", "White", "Green", "Blue", "Custom" }, look: true);
                 p.Color("Colours", "CustomLantern" + sfx, "Custom light", "Used when the lantern light is Custom.", PaletteColor.Cream, v => look.CustomLantern = v, () => light.Value == LanternColor.Custom);
-                // the lantern itself, per mount with its light (the user, 2026-10-26: from the Cart options into the colours window)
+                // the lantern itself, per skin with its light (the user, 2026-10-26: from the Cart options into the colours window; 2026-10-28: part of the look)
                 p.Toggle("Colours", "Lantern" + sfx, look.Lantern, "Lantern", "Shows the lantern on its pole.", v => look.Lantern = v, look: true);
                 p.Toggle("Colours", "LanternByDay" + sfx, look.LanternByDay, "Lantern lit by day", "Keeps the lantern lit in daylight. Turn it off to light it only at night.", v => look.LanternByDay = v, look: true);
                 // a mount that can't pull the cart has no cart colours (the user, 2026-10-25); the values are kept
