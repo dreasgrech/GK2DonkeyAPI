@@ -1,6 +1,10 @@
 # GK2 Saddle Up: Critters, changes
 
-## Unreleased (1.0.0)
+## Unreleased
+
+Nothing yet.
+
+## 1.0.0, 2026-10-28
 
 - The pack is `GK2SaddleUpCrittersMountPack`: its DLL, plugin folder (`BepInEx\plugins\GK2SaddleUpCrittersMountPack\`), source folder
   (`packs\GK2SaddleUpCrittersMountPack\`) and zip (`GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip`) (the user, 2026-10-28; the pack's

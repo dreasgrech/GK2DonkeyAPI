@@ -39,3 +39,5 @@ takes the blend from the frames just before the start, so nothing after the end 
 | `sounds.mp4` | the cart over gravel and grass, with sound | OBS take |
 | `settings.png` | the Mods menu page with the donkey preview | F10 |
 | `trailer.mp4` | the 30-60 s trailer | the edit script (not built) |
+
+The packs' own pictures live in a folder each: `donkey-skin-pack/` (GK2 Saddle Up: Donkey Skins; its README lists them).

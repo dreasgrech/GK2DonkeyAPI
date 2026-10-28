@@ -1,6 +1,10 @@
 # GK2 Saddle Up: Donkey Skins, changes
 
-## Unreleased (1.0.0)
+## Unreleased
+
+Nothing yet.
+
+## 1.0.0, 2026-10-28
 
 - The pack is `GK2SaddleUpDonkeySkinPack`: its DLL, plugin folder (`BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`), source folder
   (`packs\GK2SaddleUpDonkeySkinPack\`) and zip (`GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`) (the user, 2026-10-28; the pack's

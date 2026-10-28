@@ -10,6 +10,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.12.0 (GK2 Donkey API 0.40.0), 2026-10-28
+
 For players:
 
 **The mounts are here.** 0.10.0 had them built in but switched off; this version switches them on. In short:

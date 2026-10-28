@@ -6,11 +6,11 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.40.0 (not released yet; the last release is 0.30.0) | 25910882 (1.010), built 2026-10-28 00:35 (content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players, the gate removed; cargo per mount) |
-| `GK2SaddleUp.dll` | 0.12.0 (needs GK2 Donkey API 0.40.0 or newer; not released yet; the last release is 0.10.0) | 25910882 (1.010), built 2026-10-28 00:35 |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the dragon embedded, built 2026-10-28 00:35 |
-| `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-28 00:35 |
-| `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; never released) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-28 00:35 |
+| `GK2DonkeyAPI.dll` | 0.40.0 (released 2026-10-28 with Saddle Up 0.12.0) | 25910882 (1.010), built 2026-10-28 00:35 (content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players, the gate removed; cargo per mount) |
+| `GK2SaddleUp.dll` | 0.12.0 (needs GK2 Donkey API 0.40.0 or newer; released 2026-10-28) | 25910882 (1.010), built 2026-10-28 00:35 |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the dragon embedded, built 2026-10-28 00:35 |
+| `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-28 00:35 |
+| `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-28 00:35 |
 
 The API DLL carries the list of every game member it uses (840 entries against this build); at start it compares
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
