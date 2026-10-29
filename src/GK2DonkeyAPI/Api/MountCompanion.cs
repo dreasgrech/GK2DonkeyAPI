@@ -980,6 +980,12 @@ namespace GK2DonkeyAPI.Api
             var noSkin = new Dictionary<string, object>();
             if (paper != null)
             {
+                // the previewed skin's own lantern (part of the look, 0.41.0): the paper's own overrides, so the worn skin's
+                // session value (ApplyRide) doesn't reach it; by day off: the day dim 0, as ApplyRide does for the ride
+                paper.Overrides["LanternShow"] = pl.Lantern;
+                paper.Overrides["LanternLightDayDim"] = pl.LanternByDay ? Plugin.Cart.LanternLightDayDim.Entry.Value : 0f;
+                paper.OverrideOwners["LanternShow"] = OwnerId;
+                paper.OverrideOwners["LanternLightDayDim"] = OwnerId;
                 OnPaper(CoatKeys, sameOnPaper ? coatKeys : Look(CoatPreset(pl.Coat, pl.CustomCoat, "coat", ps)));
                 OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
                 OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));

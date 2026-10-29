@@ -81,6 +81,9 @@ namespace GK2DonkeyAPI
             private LightShadows mainShadows;
             private Vector3 glowScaleRest;
             private bool poleShown = true;
+            private bool glowDrawn;             // the glow sprite drawn with any alpha to see (the lit lamp by day or night)
+            internal bool PoleShown => poleShown; // what the lamp draws: the Mounts panel's picture is framed for it (PreviewStage)
+            internal bool GlowDrawn => glowDrawn;
 
             public bool Attached => pole != null && pole;
 
@@ -232,6 +235,7 @@ namespace GK2DonkeyAPI
                 }
                 if (!show)
                 {
+                    glowDrawn = false;
                     return;
                 }
                 float sun = 0f;
@@ -265,6 +269,7 @@ namespace GK2DonkeyAPI
                     Color c = Colors.GlowRgb(glowColor); // Colors tab: its own colour, the game's alpha
                     c.a = Mathf.Clamp01(glowColor.a * s.LanternGlowAlpha.Value * day);
                     glow.color = c;
+                    glowDrawn = glow.enabled && c.a > 0.035f;
                     glow.transform.localScale = glowScaleRest * s.LanternGlowScale.Value;
                 }
                 if (glass != null && glass)
@@ -357,6 +362,10 @@ namespace GK2DonkeyAPI
                             overwriteLogged = true;
                             Plugin.Log.LogInfo($"Lantern: the pole's child node was moved by something else (pos {pole.localPosition:F3} vs {lastPolePos:F3}, rot {pole.localEulerAngles:F1}); re-applying the lantern pose every frame from now on.");
                         }
+                        // the lamp's lights and whether it shows go with the pose every time: on the Mounts panel's stage the
+                        // animator moves the pole every frame, so this is the only path taken there, and the lamp stayed as it
+                        // was at attach whatever the look said (the user's screenshots, 2026-10-29)
+                        ApplyLight(owner.S);
                         Apply(true);
                         return;
                     }

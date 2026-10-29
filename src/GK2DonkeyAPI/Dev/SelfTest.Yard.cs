@@ -146,10 +146,32 @@ namespace GK2DonkeyAPI
                 }
                 Check(bad.Count == 0, $"{tried} thing(s) jumped at: every jump ended on the ground, nothing over him, never sent back, the watchdog silent ({over} over, {stopped} stopped, {beside} beside, {carried} carried off a top)" + (bad.Count > 0 ? "; failed: " + string.Join(" | ", bad) : ""));
 
-                // along the longest thing (a fence, a wall), approached at an angle to its long side: a slide
+                // along the longest thing (a fence, a wall), approached at an angle to its long side: a slide. A named thing
+                // taller than the tapped jump, and the jump tapped, so it can't be cleared: the held jump went over an
+                // anonymous 17 px obstacle group (pooled scenery, "Obstacle (7.8x3.9)") into a closed pocket beyond it and
+                // the keeper was put back; 0.45 along it one run, 0.06 the next (2026-10-29)
                 YardThing fence = null;
-                foreach (YardThing t in things) if (Mathf.Max(t.B.size.x, t.B.size.z) > 2f && (fence == null || Mathf.Max(t.B.size.x, t.B.size.z) > Mathf.Max(fence.B.size.x, fence.B.size.z))) fence = t;
-                if (fence != null && ApproachTo(fence, things, out Vector3 fs, out Vector3 fd, longSide: true))
+                foreach (YardThing t in things)
+                {
+                    if (t.Name == "Obstacle" || t.Name == "Colliders" || t.TopPx <= Flight.J.Tap + 2f || Mathf.Max(t.B.size.x, t.B.size.z) <= 2f) continue;
+                    if (fence == null || Mathf.Max(t.B.size.x, t.B.size.z) > Mathf.Max(fence.B.size.x, fence.B.size.z)) fence = t;
+                }
+                // a mount standing on the run (the player's own donkey, cart or babies live in this yard and shuffle about):
+                // the slide is not tried against it (0.07 along the fence with the babies around, 2026-10-29, 0.45 the run before)
+                Mount.Instance onTheRun = null;
+                float onTheRunAt = float.MaxValue;
+                if (fence != null && ApproachTo(fence, things, out Vector3 fs0, out Vector3 fd0, longSide: true))
+                {
+                    Vector3 mid = fs0 + fd0 * 1.7f;
+                    foreach (Mount.Instance i in Mount.All)
+                    {
+                        float dAt = Mathf.Min(Vector3.Distance(i.Position, fs0), Vector3.Distance(i.Position, mid));
+                        if (dAt < onTheRunAt) { onTheRunAt = dAt; onTheRun = i; }
+                    }
+                    Info($"the slide along {fence.Name}: the nearest mount {(onTheRun != null ? onTheRun.FullId + " " + onTheRun.MountName : "none")} is {(onTheRun != null ? onTheRunAt.ToString("0.0") : "-")} from the run");
+                }
+                if (fence != null && onTheRun != null && onTheRunAt < 3f) Info($"a mount stands on the run ({onTheRun.FullId} {onTheRun.MountName}, {onTheRunAt:0.0} away): the slide along {fence.Name} not tried");
+                else if (fence != null && ApproachTo(fence, things, out Vector3 fs, out Vector3 fd, longSide: true))
                 {
                     Vector3 side = Mathf.Abs(fd.x) > 0.5f ? Vector3.forward : Vector3.right;
                     Vector3 diag = (fd + side * 0.8f).normalized;
@@ -158,13 +180,13 @@ namespace GK2DonkeyAPI
                     yield return Frames(6);
                     Vector3 before = Keeper();
                     int ret = SafeSpots.TestReturns;
-                    yield return JumpWith(mi, new Vector2(diag.x, diag.z), held: true);
+                    yield return JumpWith(mi, new Vector2(diag.x, diag.z), held: false); // tapped: under the thing's top, a slide not a vault
                     Vector3 at = Keeper();
                     float slid = Vector3.Dot(at - before, side), into2 = Vector3.Dot(at - before, fd);
                     Check(SurfaceAtFeet(at) && Mount.Instance.WhyUnderground(at) == null && !Flight.TestJumpWentBack && Flight.Now == Flight.Phase.Ground && SafeSpots.TestReturns == ret,
                         $"along {fence.Name} at an angle: {slid:0.00} along it, {into2:0.00} towards it, down on the ground, not sent back");
                 }
-                else Info("nothing longer than 2 in the yard (a fence, a wall): the slide along one not tried");
+                else Info("nothing named, longer than 2 and taller than a tapped jump in the yard (a fence, a wall): the slide along one not tried");
             }
             finally
             {

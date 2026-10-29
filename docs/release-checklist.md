@@ -90,7 +90,10 @@ again; `bin/` holds whichever was built last.
 
 ## 5. A first run as a player (this machine)
 
-Rehearse the first start on a clean config, with the game closed:
+Rehearse the first start on a clean config, with the game closed. `tools/rehearsal.sh` does the staging (`stage-a`,
+`capture-a`, `stage-b <saddleup.cfg>`, `restore`; it refuses while the game runs, and refuses a cfg that would switch
+the API off or has numpad keys); `tools/fixture-live.py` makes a fixture's Saddle Up cfg fit to stage (keys L/H/G, a
+real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios an F11 run left no line for. By hand:
 
 1. Move `BepInEx\config\dreas.gk2.donkeyapi.cfg` and `dreas.gk2.saddleup.cfg` aside (they come back afterwards).
    Move the dev tools aside too (a player has none): `plugins\GK2ShowcaseDirector\`, `plugins\GK2PerfRunner\`,
@@ -109,7 +112,10 @@ Rehearse the first start on a clean config, with the game closed:
 3c. **The upgrade rehearsal**: put the previous release's two cfgs back (a player's: the ones moved aside in step 1
    are fine when the previous release wrote them, else the previous fixture's), with a side file holding a parked
    loaded cart, start the new zip, load: the colours and keys as before, the cart where it stood with its load, the
-   log's "Settings: ... carried over" lines and no warning; quit.
+   log's "Settings: ... carried over" lines and no warning; quit. **Never stage a fixture's API cfg live**: a fixture
+   has every value off its default, the API's `[General] Enabled = false` among them, so the API is off in game and
+   nothing works (seen 2026-10-29); stage Saddle Up's fixture cfg (its keys are on the numpad: set L/H/G first) with
+   the API cfg rehearsal A wrote.
 4. `BepInEx\LogOutput.log`: `GK2 Donkey API x.y.z loaded`, `GK2 Saddle Up x.y.z loaded (GK2 Donkey API x.y.z): ride H,
    cart G`, each installed pack's own line (`GK2 Saddle Up: Dragon 1.0.0: 1 skin(s) registered (the mount
    saddleup-dragon.dragon)`, `GK2 Saddle Up: Critters 1.0.0: 3 skin(s) registered (the mounts ...)`, `GK2 Saddle Up:
@@ -242,6 +248,14 @@ GUID now), and the dist, the scans (23 of 23) and the four zips remade from othe
 not rehearsed again (the same layout, a folder named after each DLL). The full F11 on the renamed build (01:10, night,
 the donkey and cart chosen): 1331 passed, 0 failed, 0 skipped, every pack's content from its renamed DLL; the one
 fault on the way was the integration test's own ("built in or external" prepended GK2 to the folder name).
+Run 2026-10-29 for 0.13.0 / API 0.41.0 (per-skin looks): dist 12:08, 23 of 23 scans, A on fresh cfgs with the three
+packs (0.41.0 / 0.13.0 loaded, no `[Debug]`, no Dev tools line, 0 warnings in 383 lines; the per-skin keys written for
+three skins; the fixture 0.13.0 made from it, 259 keys); B with the 0.12.0 fixture's Saddle Up cfg and Hellfire worn
+(`tools/fixture-live.py`) over A's API cfg: the seed lines ("Hellfire's look took 9 value(s) of donkey's", "14 more"),
+Hellfire in the fixture's colours, the plain donkey at defaults. B's screenshots showed the journal's picture off
+centre for the skins (docs/per-skin-looks.md §7): fixed the same afternoon, full F11 1356 passed, 0 failed, 0 skipped;
+the dist, scans and zip remade from the final sources after that (the zip not rehearsed again: the change is the
+picture's framing and the stage's lantern, nothing in the cfgs or the install).
 
 ## 6. Versions, changelog and hand-off
 

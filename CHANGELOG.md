@@ -10,6 +10,10 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.13.0 (GK2 Donkey API 0.41.0), 2026-10-29
+
 For players:
 
 - **Colours per skin** (2026-10-28, the day the Donkey Skin Pack went out): everything in the Colours window is kept
@@ -17,6 +21,10 @@ For players:
   the lantern's light and whether the lantern shows and stays lit by day. A fiery skin keeps its reds, the plain
   donkey its brown, and switching skins brings each one's colours back. The window's title names the skin. What you
   had set in 0.12 goes to the skin you were wearing (the mount's other skins start at the game's defaults).
+- **The Mount Journal's picture is centred whether or not the lantern shows** (2026-10-29): the picture's framing is
+  kept per look and was taken with the lamp on its pole; shown without the lamp (its toggle off, or where the lamp
+  isn't allowed) the mount sat low and left of the middle. The framing knows about the lamp now, and the picture
+  shows the lantern setting of the skin you are looking at, not of the one you wear.
 
 For mod authors:
 

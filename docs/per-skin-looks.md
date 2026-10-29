@@ -75,7 +75,10 @@ among the donkey's.
 - The Colours window is the chosen skin's: titled "Colours: Donkey — Hellfire" (the skin's name after the mount's
   when it isn't the mount's first), its rows the `PerSkin` set whose `shown` is true. Changing the Skin row in the
   journal rebuilds the window's rows (the panel's row signature; `ApplyMountRows` on the Skin row's change).
-- The preview already draws the previewed skin with its own look (`PaperSkin`).
+- The preview already draws the previewed skin with its own look (`PaperSkin`); its lantern too since the same day: the
+  paper carries its own `LanternShow` / `LanternLightDayDim` overrides from the previewed skin's look (`ApplyLook`),
+  not the worn skin's session value. The picture is framed for what the lamp draws (docs/mount-switching-performance.md
+  2.1: the framing key and `StageVariant`), so a skin without the lamp is centred like one with it.
 
 ## 6. Tests, tools, docs
 
@@ -100,3 +103,25 @@ late skin caught up, SkinHasRegion). Full F11 2026-10-28 ~03:40: 1346 passed, 0 
 more", the plain donkey at its defaults. On the way: CatchUp counted a late mount twice (fixed), and the hillside
 scenario showed a pre-existing fragility (the jump's air speed capped by a ride top measured in an earlier ride; the
 test forgets the cap before each jump now).
+
+**The journal's picture, 2026-10-29 afternoon** (the user's screenshots after rehearsal B: the plain donkey centred, the
+two skins low and left): two defects in the picture, both fixed and covered by the panel scenario's lantern check
+(toggled on the previewed skin: `lantern:lit 371 px -> lantern:off 320 px`, and the kept framing back at once):
+- the framing cache knew nothing of the lamp (`PreviewStage.StageVariant`: pole shown / glow / off, per view, in the
+  framing key and the file's version 2; a change frames again, a measure whose variant changes starts over; the
+  first build compared a running measure's variant with the last finished framing's and restarted it every frame);
+- the stage's lantern rig never applied the look after attach (its per-frame tick took the "pose re-applied" path the
+  animator forces on the stage, which skipped `ApplyLight`), and the paper showed the worn skin's lantern, not the
+  previewed skin's (its own `LanternShow` / `LanternLightDayDim` overrides now, `ApplyLook`).
+Full F11 after: 1356 passed, 0 failed, 0 skipped. On the way the yard scenario's fence slide turned out to be a
+vault over an anonymous 17 px obstacle group into a closed pocket (luck decided it); it slides along a named thing
+taller than a tapped jump now, tapped.
+
+**Open (the user, 2026-10-29, left for after 0.13.0):** the picture is framed on what is drawn, so with the lamp the
+frame reaches up and right and the mount sits lower-left and about 18% smaller than without it (371x243 at 1.16x
+against 320x198 at 1.375x in the user's two screenshots; the mount+cart centre the same within a few px either way).
+The better rule: frame every look as if the lamp were there (forced visible during the one-time measure, hidden at
+render when the skin's toggle is off: one framing per look, the variant machinery goes) and centre the picture on
+the mount+cart rectangle (the same photos read back with the lamp renderers off), at a scale that keeps the lamp's
+room. PreviewStage (the measure, the framing record, file version 3), MountsPanel.Fit, the panel scenario's lantern
+check ("toggling the lamp changes nothing but the lamp"). docs/open-items.md.

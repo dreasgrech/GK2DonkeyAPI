@@ -40,6 +40,8 @@ Options:
   pivot, scale, hitch gap, its default's stamp when built on it), the game build, and a framing version number. A look
   is measured once ever per version. A changed look or a new one measures as today. The edge check still catches a
   framing something outgrows. A stale framing that is too wide isn't caught, which is why the key must cover every
+  input: since 2026-10-29 the lamp's state too (`PreviewStage.StageVariant`: pole shown or not, glow drawn or not; file
+  version 2), after kept framings taken with the lamp left a lamp-less picture off centre; a change of it frames again.
   input.
 - **B. Compute the framing without photos.** The mount's drawn pixels per walk frame are known from the build
   (`ColumnsByKey` has the columns; rows would be added). The cart, lamp and shafts are the same 3D parts for every

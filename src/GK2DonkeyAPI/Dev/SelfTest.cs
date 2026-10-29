@@ -3252,6 +3252,37 @@ namespace GK2DonkeyAPI
                     yield return PanelShot("colours-" + withCart);
                     MountsPanel.TestCloseColours(keep: true);
                     yield return Frames(2);
+                    // the lantern is the look's (0.41.0): toggled on the previewed skin, the picture is framed again for what
+                    // is drawn, and the earlier framing comes back with it at once (a framing kept from before, with room
+                    // for a lamp no longer drawn, left the mount low and left of the middle: the user's screenshots, 2026-10-29)
+                    MountCompanion pc = page.TestCompanion;
+                    if (pc != null)
+                    {
+                        MountLook pl = pc.LookOf(page.SkinChosen(withCart));
+                        bool had = pl.Lantern;
+                        yield return Until(() => !PreviewStage.TestCartMeasuring, 6f);
+                        int rf0 = PreviewStage.TestCartReframes, w0 = PreviewStage.TestCartPictureWidth;
+                        string v0 = PreviewStage.TestCartVariant;
+                        pl.Lantern = !had;
+                        yield return Frames(3);
+                        {
+                            // the probe (2026-10-29: the toggle changed nothing on the stage twice): what the paper holds and what its rig says
+                            Mount.Instance pp = pc.Paper;
+                            string ov = pp != null && pp.Overrides.TryGetValue("LanternShow", out object o) ? o.ToString() : "(none)";
+                            Info($"lantern probe: the look's Lantern {pl.Lantern} ({pl.SkinId}; worn {pc.Skin}); the paper {(pp != null ? pp.FullId : "none")} override LanternShow = {ov}, its rig attached {pp?.LanternRig.Attached}, pole shown {pp?.LanternRig.PoleShown}, glow {pp?.LanternRig.GlowDrawn}; the stage dressed as {(PreviewStage.TestDressedAs != null ? PreviewStage.TestDressedAs.FullId : "none")}, variant {PreviewStage.TestCartVariant}; cart view: {PreviewStage.TestCartState}");
+                        }
+                        yield return Until(() => PreviewStage.TestCartReframes > rf0 && !PreviewStage.TestCartMeasuring, 8f);
+                        yield return Frames(2);
+                        int w1 = PreviewStage.TestCartPictureWidth;
+                        string v1 = PreviewStage.TestCartVariant;
+                        // the lamp hangs at the cart's back end: the picture is wider with it (as tall as the mount's ears either way)
+                        Check(PreviewStage.TestCartReframes > rf0 && v1 != v0 && (had ? w1 < w0 : w1 > w0), $"the lantern toggled {(had ? "off" : "on")} on the previewed skin: the picture framed again for what is drawn ({v0}, {w0} px wide -> {v1}, {w1} px)");
+                        int rf1 = PreviewStage.TestCartReframes;
+                        pl.Lantern = had;
+                        yield return Until(() => PreviewStage.TestCartReframes > rf1, 8f);
+                        yield return Frames(2);
+                        Check(PreviewStage.TestCartReframes > rf1 && !PreviewStage.TestCartMeasuring && PreviewStage.TestCartPictureWidth == w0 && PreviewStage.TestCartVariant == v0, $"and back: the earlier framing again, kept, not measured ({PreviewStage.TestCartVariant}, {PreviewStage.TestCartPictureWidth} px)");
+                    }
                     MountsPanel.TestSelect(was);
                     yield return Frames(2);
                 }

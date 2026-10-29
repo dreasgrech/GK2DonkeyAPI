@@ -63,6 +63,8 @@ namespace GK2DonkeyAPI
             internal int TightenStep = -1;     // -1: not measuring
             internal int MinX, MinY, MaxX, MaxY;
             internal bool EdgeReframe;         // framed again because something reached the edge: measured anew, not taken from memory
+            internal string FramedVariant;     // what was drawn when the framing in use was taken (StageVariant); another: framed again
+            internal string MeasuringVariant;  // what was drawn when the measure in progress began: changed meanwhile, the measure starts over
             internal RenderTexture Scratch;
             internal Texture2D Readback;       // one buffer for this view's read-backs (a new texture and array each was 1.3 MB a read)
 
@@ -86,13 +88,25 @@ namespace GK2DonkeyAPI
 
         private static readonly Dictionary<string, Framing> framings = new Dictionary<string, Framing>(StringComparer.Ordinal);
 
-        private static string FramingKey(View v) => (framedLook ?? "") + "|" + v.Name;
+        private static string FramingKey(View v) => (framedLook ?? "") + "|" + v.Name + "|" + StageVariant(v);
+
+        // What the stage draws beyond the look itself, which decides a framing: the lamp on its pole or not (the look's
+        // Lantern, a feature rule), and its glow (lit, or dark by day). A framing taken with the lamp kept room top right
+        // for it; shown without the lamp, the mount sat low and left of the middle (the user's screenshots, 2026-10-29:
+        // the donkey's own art measured anew without the lamp was centred, the skins' kept framings weren't).
+        private static string StageVariant(View v)
+        {
+            if (!v.WithCart) return "alone"; // the donkey alone: no cart, no lamp (RenderLit switches them off)
+            var rig = dressedAs?.LanternRig;
+            if (rig == null || !rig.Attached) return "lantern:none";
+            return rig.PoleShown ? (rig.GlowDrawn ? "lantern:lit" : "lantern:dark") : "lantern:off";
+        }
 
         // The framings measured, kept on disk across sessions (docs/mount-switching-performance.md 2.1): a look is measured
         // once ever, not once a session. Kept under what decides a framing: the look's pictures (their hash), its canvas
         // and pivot, the hitch gap, the stage's pixel density, the game's version, and this file's version; any of them
         // changed is another key, measured anew. A look with no hash (a code skin's own sprites) stays per session.
-        private const int FramingFileVersion = 1;
+        private const int FramingFileVersion = 2; // 2: the lantern's state in the key (2026-10-29)
         private static Dictionary<string, Framing> onDisk;
         private static string FramingFile => System.IO.Path.Combine(BepInEx.Paths.BepInExRootPath, "cache", "GK2DonkeyAPI", "framings.txt");
 
@@ -105,7 +119,7 @@ namespace GK2DonkeyAPI
             float gap = dressedAs != null ? Looks.HitchGapWorldFor(dressedAs) : 0f;
             return string.Join("|", FramingFileVersion.ToString(ci), Application.version, framedLook, v.Name, hash.ToString("x16"),
                 d != null ? $"{d.CanvasW}x{d.CanvasH}@{d.PivotX.ToString("0.###", ci)},{d.PivotY.ToString("0.###", ci)}" : "-",
-                gap.ToString("0.####", ci), (ppu * Detail).ToString("0.###", ci));
+                gap.ToString("0.####", ci), (ppu * Detail).ToString("0.###", ci), StageVariant(v));
         }
 
         private static bool FromDisk(View v, out Framing f)
@@ -536,11 +550,18 @@ namespace GK2DonkeyAPI
             }
             try
             {
+                string variant = StageVariant(v);
+                // the lamp came or went: the framing for that (kept, or measured). Against the measure in progress while one
+                // runs, not the last finished framing: compared with that, every frame of the new measure started it over
+                // (stuck at its first step for good, the probe of 2026-10-29)
+                string framedNow = v.TightenStep >= 0 ? v.MeasuringVariant : v.FramedVariant;
+                if (!v.Reframe && framedNow != null && variant != framedNow) v.Reframe = true;
                 if (v.Reframe)
                 using (Perf.Measure(Perf.S.PrevFrame))
                 {
                     v.Reframe = false;
                     TestReframes++;
+                    if (v.WithCart) TestCartReframes++;
                     if (!v.EdgeReframe && (framings.TryGetValue(FramingKey(v), out Framing known) || FromDisk(v, out known)))
                     {
                         framings[FramingKey(v)] = known;
@@ -550,6 +571,7 @@ namespace GK2DonkeyAPI
                     else
                     {
                         framings.Remove(FramingKey(v));
+                        v.MeasuringVariant = variant;
                         Frame(v, scratch: true);
                         StartTighten(v);
                     }
@@ -640,6 +662,14 @@ namespace GK2DonkeyAPI
         private static int gapStamp = -1;
         internal static float TestGapApplied => gapApplied;   // the self-tests: the hitch gap on the stage's cart parts now
         internal static int TestReframes;                     // the self-tests: how often a picture was framed again
+        internal static int TestCartReframes;                 // the self-tests: the cart picture's framings alone (the alone picture frames too)
+        internal static int TestCartPictureWidth => cartView.Rt != null ? cartView.Rt.width : 0; // the self-tests: the cart picture's framing now
+        internal static string TestCartVariant => cartView.FramedVariant;
+        internal static bool TestCartMeasuring => cartView.TightenStep >= 0;
+        internal static bool TestAloneMeasuring => donkeyView.TightenStep >= 0;
+        internal static Mount.Instance TestDressedAs => dressedAs;   // the self-tests: the paper the stage is dressed as
+        // the self-tests' probe: why the cart view isn't framed again (2026-10-29)
+        internal static string TestCartState => $"reframe {cartView.Reframe}, framed as {cartView.FramedVariant ?? "-"}, now {StageVariant(cartView)}, measuring {cartView.TightenStep}, last render frame {cartView.LastRenderFrame} (now {Time.frameCount}), asked {Time.unscaledTime - cartView.LastAsked:0.00} s ago, shown paper {(shownPaper != null ? shownPaper.FullId : "none")}, settling {(shownPaper != null && shownPaper.LooksRig.Settling)}, drawn {cartView.Drawn}";
 
         private static void Fail(string why)
         {
@@ -902,6 +932,7 @@ namespace GK2DonkeyAPI
             v.Cam.farClipPlane = f.Far;
             NewTexture(v, f.W, f.H);
             v.Cam.targetTexture = v.Rt;
+            v.FramedVariant = StageVariant(v);
             if (v.WithCart)
             {
                 lamp.transform.position = stage.transform.position + f.LampFromStage;
@@ -1002,6 +1033,12 @@ namespace GK2DonkeyAPI
         // after the last, the camera narrowed onto them, the framing remembered, and the first photo taken into Rt.
         private static void TightenStep(View v)
         {
+            if (StageVariant(v) != v.MeasuringVariant)
+            {
+                v.TightenStep = -1; // what's drawn changed under the measure (the lamp toggled): framed again from the start
+                v.Reframe = true;
+                return;
+            }
             int w0 = v.Scratch.width, h0 = v.Scratch.height;
             int steps = Mathf.Max(1, Mathf.RoundToInt(CycleSeconds / CycleStep));
             if (v.TightenStep > 0)
@@ -1062,10 +1099,11 @@ namespace GK2DonkeyAPI
                 Near = v.Cam.nearClipPlane, Far = v.Cam.farClipPlane, W = w, H = h,
                 LampFromStage = lamp.transform.position - stage.transform.position, LampRange = lamp.range,
             };
+            v.FramedVariant = v.MeasuringVariant;
             framings[FramingKey(v)] = measured;
             ToDisk(v, measured);
             v.Cam.Render();
-            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {w} x {h} pixels (from {w0} x {h0}); remembered for this look.");
+            Plugin.Log.LogInfo($"[preview] {v.Name}: framed on what's drawn over {CycleSeconds:0.#} s of the walk ({steps} photos, one a frame), {w} x {h} pixels (from {w0} x {h0}), {v.FramedVariant}; remembered for this look.");
         }
 
         // ------------------------------------------------------------------ the log

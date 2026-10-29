@@ -3,6 +3,14 @@
 What is built but not yet seen in game, what is undecided, and what was put off. As of 2026-10-03, API 0.20.0,
 Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new ones at the end of their list.
 
+## Next (decided, not built)
+
+- **The journal's picture: frame as if the lamp were there, centre on the mount** (the user, 2026-10-29, after 0.13.0's
+  fixes; docs/per-skin-looks.md §7): today each picture is cut to what is drawn, so with the lamp the mount sits
+  lower-left and about 18% smaller than without it. Measure with the lamp forced visible, record the mount+cart
+  rectangle, centre the panel's picture on it at a scale that keeps the lamp's room (PreviewStage, MountsPanel.Fit, the
+  panel scenario's lantern check). Left for the next update.
+
 ## To check in game (built and deployed, not yet seen)
 
 - **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the

@@ -893,6 +893,9 @@ namespace GK2DonkeyAPI.IntegrationTests
                 me.Skin = "";
                 yield break;
             }
+            // the picture read once the framing is done: a look's first picture measures its framing over 20 frames and shows
+            // its last photo meanwhile (every kept framing measured again once after the framing file's version 2, 2026-10-29)
+            yield return Until(() => { PreviewStage.Picture(paper, withCart: false); return !PreviewStage.TestAloneMeasuring; }, 10f);
             for (int i = 0; i < 4; i++) { PreviewStage.Picture(paper, withCart: false); yield return null; }
             float before = PreviewStage.TestDominantHue(false, out int pinkPixels, out string topBefore);
             // at night the preview stage takes the scene's blue-tinted light (seen 2026-10-19: the worm's outline 36141C read
@@ -907,6 +910,9 @@ namespace GK2DonkeyAPI.IntegrationTests
             else Info($"the mount regions aren't at their defaults in the cfg (the Colors tab): the 'none changed' check skipped ({before2.Changed} of {before2.Colours} changed)");
             me.CustomCoat = "20C040";
             me.Coat = CoatColor.Custom;
+            // the picture read once the framing is done: a look's first picture measures its framing over 20 frames and shows
+            // its last photo meanwhile (every kept framing measured again once after the framing file's version 2, 2026-10-29)
+            yield return Until(() => { PreviewStage.Picture(paper, withCart: false); return !PreviewStage.TestAloneMeasuring; }, 10f);
             for (int i = 0; i < 4; i++) { PreviewStage.Picture(paper, withCart: false); yield return null; }
             float after = PreviewStage.TestDominantHue(false, out int greenPixels, out string topAfter);
             Check(greenPixels > 100 && after >= 80f && after <= 170f, $"a custom green coat: the picture leans green ({after:0}°, {greenPixels} coloured pixels; most drawn: {topAfter})");
