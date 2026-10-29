@@ -102,7 +102,8 @@ real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios an F
 2. Extract the release zip into the game folder: its two DLLs replace the dev builds in their folders
    (`BepInEx\plugins\GK2DonkeyAPI\`, `BepInEx\plugins\GK2SaddleUp\`); then each pack's zip: `GK2SaddleUpDragonsMountPack.dll`,
    `GK2SaddleUpCrittersMountPack.dll` and `GK2SaddleUpDonkeySkinPack.dll` replace theirs in `plugins\GK2SaddleUpDragonsMountPack\`,
-   `plugins\GK2SaddleUpCrittersMountPack\` and `plugins\GK2SaddleUpDonkeySkinPack\`, with their README and CHANGELOG.
+   `plugins\GK2SaddleUpCrittersMountPack\` and `plugins\GK2SaddleUpDonkeySkinPack\` (the DLL alone since 2026-10-29; the
+   1.0.0 zips of 2026-10-28 also carried the pack's README and CHANGELOG, which nothing reads).
 3. Start the game, load a save, call the donkey (H), drive the cart (G), load two items, press H (the cart is left
    standing), ride a few steps, press G: the SAME cart comes back with the two items (one cart in the world, its
    paint still on; the hitch event order bug of 2026-10-14 showed here as a second cart), quit.

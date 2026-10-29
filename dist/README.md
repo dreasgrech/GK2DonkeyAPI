@@ -8,9 +8,9 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 |---|---|---|
 | `GK2DonkeyAPI.dll` | 0.41.0 (with Saddle Up 0.13.0; the last release 0.40.0 / 0.12.0 of 2026-10-28) | 25910882 (1.010), built 2026-10-29 14:37 (content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players, the gate removed; cargo per mount) |
 | `GK2SaddleUp.dll` | 0.13.0 (needs GK2 Donkey API 0.41.0 or newer; the last release 0.12.0 of 2026-10-28) | 25910882 (1.010), built 2026-10-29 14:37 |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the dragon embedded, built 2026-10-29 14:37 |
-| `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
-| `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; released 2026-10-28) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-29 14:37 |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-29, mods/420; the zip the DLL alone) | the external pack: the dragon embedded, built 2026-10-29 14:37 |
+| `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; not released yet as of 2026-10-29) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
+| `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-28, mods/419) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-29 14:37 |
 
 The API DLL carries the list of every game member it uses (840 entries against this build); at start it compares
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
@@ -18,8 +18,8 @@ them with the installed game and decides per feature what a changed one means (`
 Players install both, each in its own folder: `BepInEx\plugins\GK2DonkeyAPI\` and `BepInEx\plugins\GK2SaddleUp\` (the
 release zip, `tools/make-release-zip.py`, holds that layout). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
 
-The three pack DLLs ship as zips of their own (`make-release-zip.py`, each with the pack's README.md and
-CHANGELOG.md): `GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDragonsMountPack\`),
+The three pack DLLs ship as zips of their own (`make-release-zip.py`, the DLL alone in its folder, as Saddle Up's
+zip; until 2026-10-29 the pack's README.md and CHANGELOG.md rode beside it): `GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDragonsMountPack\`),
 `GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpCrittersMountPack\`) and
 `GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDonkeySkinPack\`). There is no combined zip: each
 pack ships on its own (the user, 2026-10-27).

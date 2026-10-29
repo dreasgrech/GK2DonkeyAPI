@@ -4,8 +4,9 @@
 
 Besides Saddle Up's zip: one per external pack, release/GK2-Saddle-Up-<Pack without GK2SaddleUp, words dashed>-<version>.zip
 (GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip, GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip) holding BepInEx/plugins/<Pack>/<Pack>.dll (the csproj's AssemblyName, the folder's name) (from dist/: its gk2mounts/ folder
-embedded, so an update replaces everything) with the pack's README.md and CHANGELOG.md beside it (the version is its
-Plugin.cs Version). Each pack ships on its own; there is no bundle of them (the user, 2026-10-27). Every zip is read
+embedded, so an update replaces everything) and nothing else: the DLL alone, as Saddle Up's zip (the user, 2026-10-29;
+until then the pack's README.md and CHANGELOG.md rode beside it, which nothing reads; they stay in the repo). The
+version is its Plugin.cs Version. Each pack ships on its own; there is no bundle of them (the user, 2026-10-27). Every zip is read
 back and each file compared with its source byte for byte.
 
 Runs tools/check-dist.py first and stops if it fails. Then writes release/GK2-Saddle-Up-<version>.zip holding
@@ -94,14 +95,11 @@ def assembly_of(pack_dir):
 
 
 def pack_files(pack):
-    """(source path, zip name) of a pack's files: its DLL from dist/ (the mounts embedded) and its README.md and
-    CHANGELOG.md; its folder as an entry of its own."""
+    """(source path, zip name) of a pack's files: its DLL from dist/ (the mounts embedded), nothing else; its folder
+    as an entry of its own."""
     dll = assembly_of(os.path.join(PACKS, pack))  # GK2SaddleUpDragonsMountPack: its plugin folder and DLL, as the main mods'
     prefix = INNER + dll + "/"
-    out = [(None, prefix), (os.path.join(DIST, dll + ".dll"), prefix + dll + ".dll")]
-    for doc in ("README.md", "CHANGELOG.md"):
-        out.append((os.path.join(PACKS, pack, doc), prefix + doc))
-    return out
+    return [(None, prefix), (os.path.join(DIST, dll + ".dll"), prefix + dll + ".dll")]
 
 
 def write_pack_zip(path, packs, what):

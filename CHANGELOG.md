@@ -10,7 +10,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-Nothing yet.
+Development:
+
+- **The pack zips hold the DLL alone** (2026-10-29): `tools/make-release-zip.py` no longer puts a pack's README.md
+  and CHANGELOG.md beside its DLL (nothing reads them in the game; Saddle Up's zip never carried its own). The packs'
+  1.0.0 zips of 2026-10-28 were the ones with them. `check-dist.py` still wants both files in the pack's source folder.
 
 ## 0.13.0 (GK2 Donkey API 0.41.0), 2026-10-29
 

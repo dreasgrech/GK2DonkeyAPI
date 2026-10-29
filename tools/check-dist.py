@@ -7,8 +7,8 @@ changed or vanished needs a re-audit and a rebuild before it ships. GK2SaddleUp 
 member of its own (only the API), which this checks too.
 The external mount packs (packs/<Pack>/, their own downloads, docs/making-a-mount.md "Built in or external") ship as a
 small DLL each with their gk2mounts/ folder embedded (dist/GK2<Pack>.dll, the csproj's AssemblyName, checked as the others: no manifest, no game
-assembly) and their README.md and CHANGELOG.md beside it: each needs both, its Plugin.cs Version the CHANGELOG's first
-heading, and in every mount its mount.cfg with needs = and version = and its skins/default/skin.cfg; no file may name a
+assembly); the zip holds the DLL alone, but the pack's source folder needs its README.md and CHANGELOG.md, its
+Plugin.cs Version the CHANGELOG's first heading, and in every mount its mount.cfg with needs = and version = and its skins/default/skin.cfg; no file may name a
 path on this machine; nothing stray (Thumbs.db, editor backups) may be in gk2mounts/ (it would be embedded).
 Exit code 1 on any finding."""
 import glob, os, re, subprocess, sys
