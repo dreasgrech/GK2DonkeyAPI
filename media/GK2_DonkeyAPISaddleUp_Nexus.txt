@@ -69,6 +69,12 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png?v=2[/img][/center]
 
 
+[size=4][b]Ride Gerry, the talking skull[/b][/size]
+[size=3]The donkey is not your only mount. Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Gerry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img][/center]
+
+
 [size=4][b]Optional: bodies left at the crossroads[/b][/size]
 [size=3]Off by default. The game's delivery donkey drops its corpses by the nun's crossroads, and you cart them in yourself.[/size]
 
@@ -79,6 +85,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [*][size=3][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/size][/*]
 [*][size=3][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/size][/*]
 [*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
+[*][size=3][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.[/size][/*]
 [*][size=3][b]B[/b] — ring the bell.[/size][/*]
 [*][size=3][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.[/size][/*]
 [/list]
