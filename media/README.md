@@ -34,8 +34,6 @@ takes the blend from the frames just before the start, so nothing after the end 
 | `colours.gif` | every customisable part changing | director: "All parts at once" |
 | `colours-parts.gif` | one part at a time through its presets | director: "Look series" |
 | `foals.gif` | the donkey with foals trailing it | OBS take |
-| `dragon-flying.gif` | the dragon takes off in the yard and flies over the cliffs, the graveyard and the river (13 s, 19 MB: over the 5 MB rule on purpose) | OBS take 2026-10-27 14-19-15, 5.9-18.9 s |
-| `dragon-flying-286.gif` | the whole flight, yard to graveyard, the river and back (21.5 s, 286 wide) | the same take |
 | `sounds.mp4` | the cart over gravel and grass, with sound | OBS take |
 | `settings.png` | the Mods menu page with the donkey preview | F10 |
 | `trailer.mp4` | the 30-60 s trailer | the edit script (not built) |

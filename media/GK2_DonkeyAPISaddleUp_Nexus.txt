@@ -1,0 +1,150 @@
+[center][size=6][b][color=#f0b45a]GK2 Saddle Up[/color][/b][/size]
+[size=4]Your own donkey and cart in Graveyard Keeper 2.[/size]
+
+[youtube]Ww9S6X9hTOU[/youtube]
+
+[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.[/size][/center]
+[line]
+[size=5][b][color=#f0b45a]What you get[/color][/b][/size]
+
+[size=4][b]Your own donkey as a mount[/b][/size]
+[size=3]Press [b]H[/b] anywhere and it comes to you; you ride.  [/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-comes.gif?v=2[/img][/center]
+
+[size=3]Press [b]G[/b] and it comes with its cart; you drive.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif?v=2[/img][/center]
+
+[size=3]Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.[/size]
+
+[size=4][b]Name it, and give it foals[/b][/size]
+[size=3]"[E] Ride Balthazar". Up to five baby donkeys follow yours around, and can come indoors with you.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Foals.png?v=2[/img][/center]
+
+
+[size=4][b]A cart that carries six[/b][/size]
+[size=3]Everything you pick up while driving goes on the cart, stacked in three layers (or four or two items, in the settings). Piles, tables, graves and quest hand-ins take from it as if you held the item.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img][/center]
+
+
+[size=4][b]Haul corpses[/b][/size]
+[size=3]Bodies ride on the cart like anything else. Drive to the morgue door, step off, and you walk in with the body in your hands.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/corpse-to-morgue.gif?v=2[/img][/center]
+
+
+[size=4][b]Zombies ride too[/b][/size]
+[size=3]Pick up a zombie while driving and it lies on the cart. Hand it to its work straight from the cart.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/ZombieWorkstation.png?v=2[/img][/center]
+
+
+[size=4][b]A storage chest on wheels[/b][/size]
+[size=3]Drive up to a storage chest and take it with you, everything inside. Set it down wherever you want it.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/chest-on-cart.gif?v=2[/img][/center]
+
+
+[size=4][b]Fight from the saddle[/b][/size]
+[size=3]In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim. The cart stays out of fights: it is left standing when your armour goes on.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-a.gif?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-b.gif?v=2[/img][/center]
+
+
+[size=4][b]Your donkey, your colours[/b][/size]
+[size=3]Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Donkey-Cart-Colors-Editor.png?v=2[/img][/center]
+
+
+[size=4][b]Leave it standing[/b][/size]
+[size=3]Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with [b]E[/b].
+Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png?v=2[/img][/center]
+
+
+[size=4][b]Optional: bodies left at the crossroads[/b][/size]
+[size=3]Off by default. The game's delivery donkey drops its corpses by the nun's crossroads, and you cart them in yourself.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Keys[/color][/b][/size]
+
+[list]
+[*][size=3][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.[/size][/*]
+[*][size=3][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.[/size][/*]
+[*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
+[*][size=3][b]B[/b] — ring the bell.[/size][/*]
+[*][size=3][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.[/size][/*]
+[/list]
+[size=3]All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Settings[/color][/b][/size]
+
+[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png?v=2[/img][/center]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings.gif?v=2[/img][/center]
+
+[size=3]Without any mod framework: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/NoGK2ModFrameworkSettings.png?v=2[/img][/center]
+
+[line]
+[size=5][b][color=#f0b45a]Install[/color][/b][/size]
+
+[list=1]
+[*][size=3]Install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
+[/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is).
+It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plugins[/i].[/size]
+[/*]
+[*][size=3]Start the game. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.[/size][/*]
+[/list]
+
+[size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
+
+[b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
+
+[b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i]. Your saves still load without them.
+
+[b]Found a bug?[/b] Report it in the [url=https://www.nexusmods.com/graveyardkeeper2/mods/391?tab=bugs]Bugs tab[/url] and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
+
+[line]
+[size=5][b][color=#f0b45a]One visual limitation[/color][/b][/size]
+
+[size=3]Unfortunately, although the donkey can move in any direction, since the game only has left and right facing donkey sprites, those are the only two directions I could have the donkey face in visually.  This means that when you go up or down, the donkey will still keep facing the left/right direction but this is only a visual thing.
+
+In the future I am planning to investigate with external assets so maybe we can have sprites of the donkey which face up and down.  That would be cool.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]A work in progress[/color][/b][/size]
+
+[size=3]This is a big mod and it has taken a lot of time to arrive to it's current state and a lot of testing was involved as well.  But all my testing was conducted in the starting areas and that's because I have spent more time developing this mod than actually playing the game, which means that there are areas in the game where I haven't yet been able to test the donkeys.
+
+So it would be immensely appreciated if you let me know what issues you encounter when using the donkey in different places.
+
+One other thing is the cargo on the cart, and I currently support up to six carryable items on the cart and as you can image, given the amount of different carryable items in the game and the cart supporting up to six different items, there are lot of different combinations of cargo layout configurations.
+If you encounter any cargo set of items on the cart which doesn't look right, please also let me know about it so I can fix it.
+
+I would say that most of the combinations of cargo items look alright but there are a lot.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]For modders[/color][/b][/size]
+
+[size=3]The way I've built this mod is in two parts: the [b]GK2 Donkey API[/b] mod and the [b]Saddle Up[/b] mod. The Donkey API mod does the heavy lifting and can be used by mod authors to gain full control of the donkey functionalities that are demonstrated on this page and more, while this Saddle Up mod is a full playable showcase of most the features that the Donkey API exposes.
+
+This SaddleUp mod download already contains the DonkeyAPI bundled with it because it needs it to work since it's build on top of it, but I will later be creating a separate page on here for the DonkeyAPI where it could be downloaded separately as well.
+
+This is because multiple mods can make use of the DonkeyAPI and unless they are specifically doing the same things, there will not be clashes.  This allows anyone who wants to create anything with the donkey to call the api and do whatever they want with it.
+
+The full source code will also come with it.[/size]

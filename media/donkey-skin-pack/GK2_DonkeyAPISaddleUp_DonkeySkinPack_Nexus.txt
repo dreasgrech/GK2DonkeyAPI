@@ -1,0 +1,72 @@
+[center][size=6][b][color=#f0b45a]GK2 Saddle Up - Donkey Skin Pack[/color][/b][/size]
+[size=4]A donkey skin pack for the donkey mount in the Saddle Up mod[/size]
+[size=3][b]Hellfire[/b] and [b]Royal Parade[/b]: two new looks for your donkey mount.[/size]
+[/center]
+[line]
+[size=5][b][color=#f0b45a]Skins[/color][/b][/size]
+
+[size=4][b]Hellfire[/b][/size]
+[size=3]Horns, a devil's tail, glowing eyes and lava cracks over an ash coat. The bishop does not approve. The cracks glow in your second tone colour, so they burn whatever colour you give them in the colours window.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/hellfire-riding.png?v=2[/img][/center]
+
+[size=4][b]Royal Parade[/b][/size]
+[size=3]A crown and a royal saddle cloth, fit for a coronation or at least a good funeral. The cloth follows your harness colour; the crown and the gold trim stay gold.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/royal-parade-riding.png?v=2[/img][/center]
+
+[size=4][b]Pick it in the Mount Journal[/b][/size]
+[size=3]Press [b]L[/b], pick the Donkey, and choose the skin in its [b]Skin[/b] list. The picture shows it with the cart before you ride. Your coat, harness and cart colours still apply under the skin, and the choice is kept with your save.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/journal-hellfire.png?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/journal-royal-parade.png?v=2[/img][/center]
+
+[size=4][b]Customize it[/b][/size]
+[size=3]The Colours window works on the skins as on the plain donkey: coat, harness and second tone on the mount, paint, wheels and hubs on the cart, with the preview of your real donkey. Hellfire's cracks take the second tone; Royal Parade's cloth takes the harness colour.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-hellfire.png?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-skin-pack/colours-royal-parade.png?v=2[/img][/center]
+
+[size=4][b]The babies wear it too[/b][/size]
+[size=3]Your donkey's babies look like their parent: little horns and cracks, or little crowns and cloths, each its own size and shade.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Install[/color][/b][/size]
+
+[size=3]Needs [url=https://www.nexusmods.com/graveyardkeeper2/mods/391]GK2 Saddle Up[/url] 0.12.0 or newer (it brings GK2 Donkey API 0.40.0 with it) and BepInEx 5, installed as on the Saddle Up page.[/size]
+
+[list=1]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDonkeySkinPack[/b] to [i]BepInEx\plugins[/i].[/size][/*]
+[*][size=3]Start the game, press [b]L[/b], pick the Donkey: Hellfire and Royal Parade are in its Skin list.[/size][/*]
+[/list]
+
+[size=3][b]Update.[/b] Replace the folder. The pack is one file with everything inside, so nothing is left over.
+
+[b]Remove.[/b] Delete the folder [b]GK2SaddleUpDonkeySkinPack[/b] from [i]BepInEx\plugins[/i]. A donkey that wore one of the skins shows as the game's own donkey again; the Skin list says "Hellfire (not installed)", and the moment the pack is back it wears it again. Your save is never touched.
+
+[b]Found a bug?[/b] Report it in this page's Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
+
+[line]
+[size=5][b][color=#f0b45a]Coming later[/color][/b][/size]
+
+[size=3]More skins will be coming to this pack, and more packs like it, so you install the looks you want. Particle effects on skins will be introduced later on.[/size]
+
+[line]
+[size=5][b][color=#f0b45a]The Saddle Up mod[/color][/b][/size]
+
+[size=3]Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.[/size]
+
+
+[center][youtube]Ww9S6X9hTOU[/youtube][/center]
+
+[center][size=3][url=https://www.nexusmods.com/graveyardkeeper2/mods/391]Download GK2 Saddle Up on Nexus Mods[/url][/size][/center]
+
+[line]
+[size=5][b][color=#f0b45a]Other Saddle Up Mounts and Skins Packs[/color][/b][/size]
+
+[size=4][b]Dragons Mount Pack[/b][/size]
+[size=3][b]The Dragon[/b]: a mount that flies. Slow on its feet and it pulls no cart, but no fence, river or roof in the village can stop it, and its babies follow it around.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/dragon-flying.gif?v=2[/img][/center]
+
+[center][size=3][url=https://www.nexusmods.com/graveyardkeeper2/mods/420]Download the Dragons Mount Pack on Nexus Mods[/url][/size][/center]

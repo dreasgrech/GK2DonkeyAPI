@@ -2,7 +2,8 @@
 
 Pictures for the pack's own pages (the Nexus Mods page of GK2 Saddle Up: Dragon). The rules of `../README.md` hold:
 one file per subject, named by the subject, re-shot in place; hotlink the raw URL. The flight itself is
-`../dragon-flying.gif` (and its 286-wide copy), shot 2026-10-27.
+`dragon-flying.gif` here (moved in from `media/` 2026-10-29; the 13 s take of 2026-10-27 14-19-15, 5.9-18.9 s,
+560 wide, 19 MB: over the 5 MB rule on purpose).
 
 Crops of Steam screenshots (2560x1440, the HUD kept out), scaled to 560 wide as the folder's other pictures (Pillow,
 Lanczos), made 2026-10-29 with the pack's 1.0.0 release build and Saddle Up 0.13.0. The crop box is given as
