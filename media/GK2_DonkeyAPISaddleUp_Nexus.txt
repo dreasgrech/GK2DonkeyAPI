@@ -110,7 +110,6 @@ It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plu
 [/*]
 [*][size=3]Start the game. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.[/size][/*]
 [/list]
-
 [size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
 [b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
