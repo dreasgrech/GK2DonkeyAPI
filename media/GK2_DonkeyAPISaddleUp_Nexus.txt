@@ -55,6 +55,12 @@
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-b.gif?v=2[/img][/center]
 
 
+[size=4][b]Ride Gerry![/b][/size]
+[size=3]The donkey is not your only mount. Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Gerry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.[/size]
+
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img][/center]
+
+
 [size=4][b]Your donkey, your colours[/b][/size]
 [size=3]Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.[/size]
 
@@ -67,12 +73,6 @@
 Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/SteamCloudSync.png?v=2[/img][/center]
-
-
-[size=4][b]Ride Gerry, the talking skull[/b][/size]
-[size=3]The donkey is not your only mount. Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Gerry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.[/size]
-
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img][/center]
 
 
 [size=4][b]Optional: bodies left at the crossroads[/b][/size]

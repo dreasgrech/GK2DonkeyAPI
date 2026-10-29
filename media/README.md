@@ -34,6 +34,7 @@ takes the blend from the frames just before the start, so nothing after the end 
 | `colours.gif` | every customisable part changing | director: "All parts at once" |
 | `colours-parts.gif` | one part at a time through its presets | director: "Look series" |
 | `foals.gif` | the donkey with foals trailing it | OBS take |
+| `gerry-riding.gif` | riding Gerry round the graveyard, his skulls trailing (7 s, 10 fps, 560 wide) | OBS take 2026-10-29 23-39-48, 0-7.0 s (`tools/loop-gif.py --start 0 --end 7.0 --fade 0 --fps 10`) |
 | `sounds.mp4` | the cart over gravel and grass, with sound | OBS take |
 | `settings.png` | the Mods menu page with the donkey preview | F10 |
 | `trailer.mp4` | the 30-60 s trailer | the edit script (not built) |
