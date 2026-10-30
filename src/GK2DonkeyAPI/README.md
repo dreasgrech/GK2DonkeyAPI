@@ -208,7 +208,7 @@ effects") are written and not yet run in game.
 
 | Built in | What |
 |---|---|
-| Hellfire, Royal Parade | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/` generate them into `packs/GK2SaddleUpDonkeySkinPack`) |
+| Hellfire, Royal Parade, Armored | skins over the donkey (`tools/skins/hellfire/`, `tools/skins/royal-parade/`, `tools/skins/armored/` generate them into `packs/GK2SaddleUpDonkeySkinPack`; the donkey's anatomy they share: `tools/skins/donkey/`) |
 | the mounts: Rat, Snail, Worm, Dragon (Red Dragon), Gerry; the donkey's skins Hellfire and Royal Parade (Saddle Up's from 2026-10-21, the Donkey Skins pack's since 2026-10-27) | not in the API since 2026-10-20: they are Saddle Up's packs, registered through the API like any mod's (`docs/mounts-as-mods.md`): Gerry built into Saddle Up (`src/SaddleUp/assets/mounts/saddleup.gerry/`), the dragon, the rat, snail and worm and the donkey's two skins as external packs, downloads of their own (`packs/GK2SaddleUpDragonsMountPack`, `packs/GK2SaddleUpCrittersMountPack`, `packs/GK2SaddleUpDonkeySkinPack`); our own art from `tools/skins/creatures/`, Gerry's frames read from the game. The API names none of them (`tools/layering-scan.py`) |
 
 ## Not built

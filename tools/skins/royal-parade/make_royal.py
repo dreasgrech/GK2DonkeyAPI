@@ -16,20 +16,18 @@
 # each column's top on that frame's own back line, so the cloth rides the back through a walk's bob and a graze's
 # dip without changing size or sliding along the body. A frame whose back is shorter (the turn clips, the body
 # foreshortened) gets the cloth cut to a fraction of that back instead.
-import json, os, sys
+import os, sys
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(HERE))
-from contact import ORDER, load
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))  # the donkey's frames and anatomy, shared by every skin over it
+from anatomy import ORDER, load, HORNS, ANCHORS, body, belly
 import ase_write
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 OUTDIR = os.path.join(HERE, "out")                      # generated: the .aseprite, the previews, the strips (git-ignored)
 OUT = os.path.join(OUTDIR, "royal.aseprite")
 ASSETS = os.path.join(REPO, "packs", "GK2SaddleUpDonkeySkinPack", "gk2mounts", "donkey", "skins", "saddleup-donkey-skins.royal-parade")  # the built-in pack: skin.cfg by hand, PNGs from here
-HORNS = json.load(open(os.path.join(HERE, "horn_bases.json")))
-ANCHORS = json.load(open(os.path.join(HERE, "anchors.json")))
 HEM_ABOVE = 2     # the hem this many rows above the standing frame's belly line: the belly and the legs show
 REAR = 1.0        # the cloth covers this much of the back, measured from the hip towards the collar
 FRONT = 2         # and this many columns more, over the collar strap's rear edge
@@ -98,61 +96,20 @@ def crown(key, donkey=None):
     return im
 
 
-def body(key, donkey):
-    """What the generator reads off a frame: the body test, the collar's rear edge, the back line per column inside
-    the torso box, and the hip (the rump's end at back level). None for a frame without a body."""
-    if key.startswith("hed_"):
-        return None
-    dp = donkey.load()
-    op = lambda x, y: 0 <= x < 96 and 0 <= y < 96 and dp[x, y][3] > 0
-    orange = lambda x, y: op(x, y) and dp[x, y][0] >= 90 and dp[x, y][0] > 1.3 * dp[x, y][1]
-    a = ANCHORS[key]
-    if not a.get("torso"):
-        return None
-    tx0, ty0, tx1, ty1 = a["torso"]
-    col = [x for y in range(96) for x in range(96) if orange(x, y)]
-    if not col:
-        return None
-    collar = max(col) + 1
-    top = {}
-    for x in range(collar, tx1 + 1):
-        ys = [y for y in range(96) if op(x, y)]
-        if ys:
-            top[x] = min(ys)
-    if not top:
-        return None
-    back = min(top.values())
-    hip = max(x for y in range(back, back + 6) for x in range(collar, tx1 + 1) if op(x, y))
-    ground = max(y for y in range(96) for x in range(96) if op(x, y))
-    return {"op": op, "collar": collar, "top": top, "hip": hip, "ground": ground}
-
-
 def standing_profile():
     """The cloth's shape from the standing frame: for each column, counted back from the hip, how deep the cloth is
-    (back line to HEM_ABOVE rows above the belly), and how many columns it spans."""
+    (back line to HEM_ABOVE rows above the belly), and how many columns it spans. (body() and belly() are the shared
+    donkey anatomy, tools/skins/donkey/anatomy.py.)"""
     b = body("bdy_static_left", load("bdy_static_left"))
-    op, top, hip, collar, ground = b["op"], b["top"], b["hip"], b["collar"], b["ground"]
-    # the belly per column: the end of the run of body pixels down from the back; a run to the ground is a leg
-    belly = {}
-    for x in sorted(top):
-        y = top[x]
-        while op(x, y + 1):
-            y += 1
-        if y < ground - 3:
-            belly[x] = y
-    known = sorted(belly)
-    for x in top:
-        if x not in belly:
-            left = max((k for k in known if k < x), default=None)
-            right = min((k for k in known if k > x), default=None)
-            belly[x] = belly[right] if left is None else belly[left] if right is None else round(belly[left] + (belly[right] - belly[left]) * (x - left) / (right - left))
+    top, hip, collar = b["top"], b["hip"], b["collar"]
+    bel = belly(b)
     width = round((hip - collar) * REAR) + FRONT
     depth = {}
     for i in range(width):
         x = hip - GAP - i
         if x not in top:
             continue
-        win = sorted(belly[k] for k in (x - 1, x, x + 1) if k in belly)
+        win = sorted(bel[k] for k in (x - 1, x, x + 1) if k in bel)
         depth[i] = win[len(win) // 2] - HEM_ABOVE - top[x]
     # a smooth hem: each column's depth the median of its five neighbours (no hanging corner at an end column)
     smooth = {}
@@ -313,7 +270,7 @@ if __name__ == "__main__":
     fr = build()
     S, C = 4, 8
     os.makedirs(OUTDIR, exist_ok=True)
-    from zoom import zoom
+    from zoom import zoom  # tools/skins/donkey/zoom.py
     picks = ["bdy_static_left", "bdy_walk_left_03", "bdy_walk_left_07", "bdy_graze_left_03", "bdy_turn_left_03", "bdy_turn_left_06"]
     zoom([(k, composite(fr[ORDER.index(k)])) for k in picks], os.path.join(OUTDIR, "zoom.png"), S=8, box=(24, 20, 84, 70))
     print("strips:", ", ".join(strips(fr)))

@@ -453,3 +453,20 @@ tail, cracks, the glow) with the erase colour where the ears and tail come off a
 (a recolour rule, so the player's coat colour still works), and since 2026-10-20 it comes with its fire
 (`effect = hellfire`). Every built-in skin is now a pack of the one format, made by a generator in the repo
 (docs/skins.md "Worked examples", docs/sprite-tools.md "Making a skin: the one pipeline").
+
+**Armored** (2026-10-30, `tools/skins/armored/make_armored.py`, the Donkey Skin Pack's third skin, unreleased): plate
+barding over the donkey from the user's references (a cartoon war horse in segmented plate with rivet rows, knights'
+chargers with a plumed chanfron and a forehead spike): a chanfron with an eye hole, the spike and a red plume, a chest
+plate (peytral), riveted flank lames with a brass hem over red padding, a crupper over the rump; ears, tail and legs
+bare, nothing erased, no front layer (the rider's legs hang in front of the barding as a knight's do). What decided
+the drawing: the head is a pure translation of the standing one in 36 of the 41 body frames and rotates in the graze
+and the turn, so the head pieces are cut once and moved with the ear bases, cut again on a rotated head, and a frontal
+pattern faces the camera; the hip stays put, so the body plates hang from it as the cloth does; the chest moves with
+the neck, so the chest plate is fitted to each frame's chest underside. Tried and dropped the same day: a crinet (neck
+lames) on the three columns of neck between the rear ear and the collar, under the rider's reins arm, which read as a
+dark blob. Colours: the steel is the `Muzzle` region (the page's Second tone row, as Hellfire's lava: black iron,
+bronze or gold at the player's choice; a player who set a dark second tone for the muzzle gets black iron on the first
+wear, by design), the plume and the padding `Harness` (as Royal Parade's cloth), the outline `Dark`, the brass kept
+as drawn (as Royal Parade's gold). Measured on the hand-over pictures (`tools/skins/handover.py armored`): the rider
+covers the top lame and the rear of the chest plate; the face mask, spike, plume, the chest plate's front, the crupper
+and the hem under his feet stay in view; no piece sits on the wrong body part in the five poses.

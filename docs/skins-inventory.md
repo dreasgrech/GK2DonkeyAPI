@@ -56,14 +56,32 @@ format for anyone: `docs/skins.md`; colours on every mount: `docs/mount-colours.
   so the cloth's reds follow the harness colour; a PNG per frame generated), embedded in the DLL exactly like
   Hellfire (before: `packs/royal-parade/` as one sheet, copied into the game's `gk2skins\` by the generator).
 - **Generator**: `tools/skins/royal-parade/make_royal.py` (the saddle cloth cut from the standing frame and hung from
-  the hip in every frame, the crown on the eye), with `contact.py` (the frame loader), `measure.py` -> `anchors.json`,
-  `horn_bases.py` -> `horn_bases.json` (the crown's fallback anchors, measured from the Hellfire pack's horns),
-  `zoom.py`, `view.py`, `Watch Royal Parade.cmd`. Outputs in `out\` (git-ignored): `royal.aseprite` (a by-hand copy),
+  the hip in every frame, the crown on the eye), `view.py`, `Watch Royal Parade.cmd`; the donkey's frames and
+  measurements it reads are the shared `tools/skins/donkey/` since 2026-10-30 (`anatomy.py`, `contact.py`,
+  `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`, the crown's fallback anchors measured from
+  the Hellfire pack's horns, `zoom.py`). Outputs in `out\` (git-ignored): `royal.aseprite` (a by-hand copy),
   `preview.png`, `zoom.png`, `strips\<animation>.png` (look at every strip before the game), `pack\sheet.png`.
 - **In the game**: nothing on disk; the pictures come with the DLL (a build + deploy after every generator run).
   The old loose copy in `gk2skins\royal-parade\` was removed 2026-10-19 23:00 (a second skin with the same id is
   refused at start).
 - Docs: `docs/sprite-tools.md` ("Generated, no drawing", "The canvas, found wrong", "The crown"), `docs/open-items.md`.
+
+### Armored (donkey, pack drawn over the donkey; built 2026-10-30, unreleased)
+- **Pack**: `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.armored/`
+  (`donkey/saddleup-donkey-skins.armored`; `skin.cfg` written once by the generator, `layer = over`, nothing erased;
+  `[Colors]`: the steel as `Muzzle` (the Second tone row), the plume's and padding's reds as `Harness`, the outline
+  `Dark`, the brass kept; a PNG per frame).
+- **Generator**: `tools/skins/armored/make_armored.py` over `tools/skins/donkey/anatomy.py`: the chanfron (face
+  plate with an eye hole), spike and plume cut on the head's axis from the ear bases to the muzzle tip on the
+  standing frame and moved with the head (`head_delta`) where it only moves, cut again on the frame's own axis in
+  graze 02-05 and turn 02-03, a frontal pattern in turn 04-06; the peytral fitted to each frame's chest underside;
+  the flank lames and the crupper hung from the hip as Royal Parade's cloth. A crinet (neck lames) was drawn and
+  dropped: three columns of neck under the rider's arm came out as a blob. Outputs in `out\`: `armored.aseprite`
+  (layers barding, peytral, chanfron), `preview.png`, `strips\`, `pack\sheet.png`, `handover\` (from
+  `tools/skins/handover.py`). The motion report (`review.motion_check`) shows the chanfron's box the same against the
+  ear base in 35 of 44 frames (the nine others are the rotated and frontal heads), the barding's left edge the same
+  against the hip in every non-turn frame, the peytral's against the collar.
+- **In the game**: nothing on disk; the pictures come with the pack's DLL.
 
 ### Red Dragon, Giant Rat, Giant Snail, Giant Worm (their own mounts; Saddle Up's packs since 2026-10-20)
 - **Ids**: the mounts `saddleup-dragon.dragon`, `saddleup-critters.rat`, `saddleup-critters.snail`, `saddleup-critters.worm`; each one's look is its

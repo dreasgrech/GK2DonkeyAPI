@@ -1,0 +1,3 @@
+out/
+__pycache__/
+*.gk2export.txt

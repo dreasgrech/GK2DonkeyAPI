@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <!-- GK2 Saddle Up: Donkey Skins, an external skins pack of GK2 Saddle Up (docs/making-a-mount.md "Built in or
-       external"): the folder gk2mounts\donkey\skins\ (Hellfire and Royal Parade, no mount.cfg: skins for the game's
+       external"): the folder gk2mounts\donkey\skins\ (Hellfire, Royal Parade and Armored, no mount.cfg: skins for the game's
        donkey) embedded in one DLL and handed to the API in Awake with Hellfire's effect (Plugin.cs). One file, so an
        update replaces everything: a folder unzipped over an older one kept the files the new version had dropped, and
        the loader used them (the user, 2026-10-26). -->

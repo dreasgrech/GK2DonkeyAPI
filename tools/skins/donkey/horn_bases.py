@@ -1,11 +1,11 @@
-# The crown's fallback anchors: the Hellfire horn bases per frame, measured from the Hellfire pack itself
+# The ear bases per frame (Royal Parade's crown, the Armored chanfron): the Hellfire horn bases, measured from the Hellfire pack itself
 # (packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.hellfire/<key>.png, bone-coloured pixels on the game's canvas). Each horn is one
 # 8-connected cluster of bone pixels; its base is the cluster's lowest row, the x the base's edge on the side the horn
 # leans to (the tip's columns against the base's: 1 = leans right, -1 = left, the turn frames facing the camera).
 # Writes horn_bases.json as [[x, y, lean], [x, y, lean]] per frame (left horn first), the same file the first
 # version produced from the v14 positions on the old .raw canvas (2026-10-19 23:30: 44 of 44 frames identical).
-#   python tools/skins/royal-parade/horn_bases.py          # rewrites horn_bases.json
-#   python tools/skins/royal-parade/horn_bases.py --check  # compares with the file, changes nothing
+#   python tools/skins/donkey/horn_bases.py          # rewrites horn_bases.json
+#   python tools/skins/donkey/horn_bases.py --check  # compares with the file, changes nothing
 import json, os, sys
 from PIL import Image
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))

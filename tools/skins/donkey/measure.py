@@ -1,5 +1,6 @@
 # Per-frame anchors on the game's canvas: the eye, the torso box (coat rows past the head), the back line, the
-# collar's rear edge, the bottom per column. Writes anchors.json next to this file; make_royal.py reads it.
+# collar's rear edge, the bottom per column. Writes anchors.json next to this file; anatomy.py reads it for every
+# generator (python tools/skins/donkey/measure.py).
 import json, os, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from contact import ORDER, load

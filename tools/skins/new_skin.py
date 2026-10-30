@@ -299,8 +299,10 @@ import os, sys
 from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
+sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
 import review
 from gamedir import donkey_frames, game_dir  # donkey_frames: the base's pictures an over skin is drawn on
+{"from anatomy import load, HORNS, ANCHORS, body, belly, head_delta, top_outline, run_bottom  # the donkey per frame: anchor every piece where its motion keeps it (docs/sprite-tools.md step 2; Armored is the example)" if over else "# a skin over the donkey would read it through tools/skins/donkey/anatomy.py (docs/sprite-tools.md step 2)"}
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 ASSETS = os.path.join(REPO, {where}, "{mount_id}", "skins", "{sid}")
@@ -335,6 +337,8 @@ def main(argv):
     base = {'review.load_base(donkey_frames())' if over else 'None'}  # an over skin is shown over the donkey, with its erase colour cleared
     strips = review.write_all(OUT, frames, base=base, erase={'(255, 0, 255)' if over else 'None'}, rider=rider, seat_row={seat if not over else 'review.DONKEY_SEAT_ROW'})
     print("strips ->", strips)
+    # one piece with the body (review.motion_check): give each piece its anchor per frame (the hip, an ear base...)
+    # and read the report before the strips; then python -I tools/skins/handover.py {sid.split('.')[-1]} for the hand-over pictures
     return 0
 
 
@@ -344,7 +348,7 @@ if __name__ == "__main__":
     with open(os.path.join(gen_dir, gen), "w", encoding="utf-8", newline="\n") as f:
         f.write(stub)
     with open(os.path.join(gen_dir, ".gitignore"), "w", encoding="utf-8", newline="\n") as f:
-        f.write("out/\n__pycache__/\n")
+        f.write("out/\n__pycache__/\n*.gk2export.txt\n")  # the sidecar carries this machine's paths: never committed
     # the Aseprite sidecar: the watcher exports a drawing into the built-in's folder as per-frame PNGs
     with open(os.path.join(gen_dir, f"{gen_name}.gk2export.txt"), "w", encoding="utf-8", newline="\n") as f:
         f.write(f"pack = {folder}\ncolumns = 8\ncheck = python \"{os.path.join(HERE, 'check_skin.py')}\" \"{folder}\"\n")

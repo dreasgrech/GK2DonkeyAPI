@@ -14,7 +14,7 @@ worm and the donkey's two skins as Saddle Up's external packs, each its own down
 
 | Mount | Skins | Notes |
 |---|---|---|
-| Donkey (the game's own) | the game's own look; in GK2 Saddle Up: Donkey Skins, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire is registered but not shown since API 0.37.0), **Royal Parade** (a saddle cloth and a crown; the cloth follows the harness colour) | Normal speed, cart of 6, babies |
+| Donkey (the game's own) | the game's own look; in GK2 Saddle Up: Donkey Skins, **Hellfire** (horns, a devil's tail, glowing eyes, lava cracks; its ring of fire is registered but not shown since API 0.37.0), **Royal Parade** (a saddle cloth and a crown; the cloth follows the harness colour), **Armored** (plate barding: a plumed chanfron, a chest plate, flank lames and a crupper; the steel follows the second tone, the plume and padding the harness colour; unreleased) | Normal speed, cart of 6, babies |
 | Rat, Snail, Worm (GK2 Saddle Up: Critters) | their own look (our own art) | the rat Very fast, cart of 2; the worm Slow, cart of 4; the snail Very slow, cart of 6; babies; the snail and the worm have no voice |
 | Dragon (GK2 Saddle Up: Dragon) | its own look (our own art, called Red Dragon) | Slow, babies, no cart, **flies** (Space jumps and takes off, Left Shift and Left Ctrl climb and descend, docs/flying.md); its near wing is drawn in front of the rider |
 | Gerry (the game's talking skull) | the game's own frames, read at run time | Fast, cart of 4, babies his own size; the keeper calls him a skull |

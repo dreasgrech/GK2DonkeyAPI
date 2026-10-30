@@ -10,8 +10,27 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+For players:
+
+- **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
+  drawn over the donkey (a plumed chanfron with an eye hole and a forehead spike, a chest plate, riveted flank lames
+  with a brass hem over red padding, a crupper); the steel follows the Second tone, the plume and the padding the
+  harness colour.
+
 Development:
 
+- **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our
+  skin creation pipeline so that it gets easier with every skin"): the donkey's anatomy that every skin drawn over it
+  needs is one shared module, `tools/skins/donkey/` (`anatomy.py`: `body()` with the hip, collar and back line,
+  `belly()`, `head_delta()`, `top_outline()`, `run_bottom()`, the measured `anchors.json` and `horn_bases.json` with
+  their scripts, `contact.py`, `zoom.py`, all moved out of `tools/skins/royal-parade/`; Royal Parade regenerates
+  byte-identical through it); `tools/skins/handover.py <skin> [--ref <picture>]` renders the hand-over pictures of
+  step 5 (the poses at 1x, 3x and 8x with and without the rider, the reference under them) for any skin in one
+  command; `review.motion_check()` reports every piece's box against its anchor per frame (the "one piece with the
+  body" measure of docs/front-layer.md section 5) and `review.phase_check()` fails a repeating pattern (rivets, a
+  checkered hem) that repeats from the canvas instead of the piece's anchor (it crawls along the piece as the anchor
+  shifts between frames; Armored's first cut did), both run by the Armored generator; the scaffold's sidecar
+  (`<skin>.gk2export.txt`, which carries this machine's paths) is git-ignored. docs/sprite-tools.md "Making a skin".
 - **The pack zips hold the DLL alone** (2026-10-29): `tools/make-release-zip.py` no longer puts a pack's README.md
   and CHANGELOG.md beside its DLL (nothing reads them in the game; Saddle Up's zip never carried its own). The packs'
   1.0.0 zips of 2026-10-28 were the ones with them. `check-dist.py` still wants both files in the pack's source folder.

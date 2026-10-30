@@ -6,8 +6,8 @@ using GK2DonkeyAPI.Api;
 
 namespace GK2SaddleUpDonkeySkinPack
 {
-    // GK2 Saddle Up: Donkey Skins (docs/making-a-mount.md "Built in or external"): two skins for the game's donkey,
-    // Hellfire and Royal Parade, embedded in this DLL as a mount folder without a mount.cfg (gk2mounts\donkey\skins\:
+    // GK2 Saddle Up: Donkey Skins (docs/making-a-mount.md "Built in or external"): three skins for the game's donkey,
+    // Hellfire, Royal Parade and Armored, embedded in this DLL as a mount folder without a mount.cfg (gk2mounts\donkey\skins\:
     // skins added to a mount registered elsewhere) and handed to the API in Awake, with the effect Hellfire is drawn for.
     // A skins-only pack: no mount of its own; the way any mod ships skins for a mount another mod owns (their names carry
     // this pack's prefix, saddleup-donkey-skins.). Saddle Up offers them in its Mounts panel.

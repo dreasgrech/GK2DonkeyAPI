@@ -1,4 +1,5 @@
-# The donkey's frames for the Royal Parade generator, and a contact sheet of them.
+# The donkey's frames (ORDER, load) for every generator that draws over it, and a contact sheet of them
+# (python contact.py -> out\donkey_contact.png). The anatomy read off them: anatomy.py next to this file.
 import os, sys
 from PIL import Image, ImageDraw
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,5 +23,6 @@ if __name__ == "__main__":
         im = load(k).resize((96 * S, 96 * S), Image.NEAREST); x, y = (n % C) * 96 * S, (n // C) * 96 * S
         sheet.alpha_composite(im, (x, y)); d.text((x + 4, y + 4), k.replace("_left", ""), fill=(255, 255, 0, 255))
         for r in (41, 64): d.line([(x, y + r * S), (x + 96 * S, y + r * S)], fill=(0, 160, 255, 90))
+    os.makedirs(os.path.join(HERE, "out"), exist_ok=True)
     sheet.save(os.path.join(HERE, "out", "donkey_contact.png"))
     print(load(ORDER[0]).getbbox())

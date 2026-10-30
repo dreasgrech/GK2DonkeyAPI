@@ -129,7 +129,10 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | The two menu scripts (File > Scripts) | `tools/skins/scripts/`, installed in `%APPDATA%\Aseprite\scripts\` |
 | The checker, the watcher, the .aseprite writer, the game-folder helper | `tools/skins/check_skin.py`, `watch_skin.py`, `ase_write.py`, `gamedir.py` (the game folder from Directory.Build.props) |
 | The donkey's 44 frames as the game places them | `BepInEx\GK2-asset-probe\donkey-frames\` (the asset probe writes them) |
-| Royal Parade: the generator, its measurements, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `contact.py`, `measure.py` -> `anchors.json`, `horn_bases.py` -> `horn_bases.json`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
+| The donkey's anatomy, for every skin drawn over it (since 2026-10-30; in `tools/skins/royal-parade/` before) | `tools/skins/donkey/`: `anatomy.py` (`ORDER`, `load`, `HORNS`, `ANCHORS`, `body()`: the hip, collar, back line and ground of a frame; `belly()`; `head_delta()`: the head's shift against the standing frame; `top_outline()`, `run_bottom()`), `contact.py` (the frame loader and a contact sheet), `measure.py` -> `anchors.json` (the eye, torso box, back and bottom per frame), `horn_bases.py` -> `horn_bases.json` (the ear bases per frame, measured from the Hellfire pack), `zoom.py` |
+| Royal Parade: the generator, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `view.py`, the watcher's `.cmd`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
+| Armored: the generator, its outputs | `tools/skins/armored/` (`make_armored.py`); `out\` (git-ignored): `armored.aseprite`, `preview.png`, `strips\`, `pack\sheet.png`, `handover\` |
+| The hand-over pictures of step 5 for any skin | `tools/skins/handover.py <skin> [frame ...] [--ref <picture>]` -> `tools/skins/<skin>/out/handover/` |
 | Royal Parade: the pack | `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), in the Donkey Skins pack with Hellfire since 2026-10-27, a built-in like Hellfire from 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24 to 2026-10-27) |
 
 ### Making a skin: the one pipeline (2026-10-19 23:00; the tools finished 2026-10-20, the plan's M6)
@@ -151,12 +154,29 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    module), the `.gk2export.txt` sidecar for Aseprite, runs the stub and the scan. Nothing else to set up.
 2. **Generate or draw.** The generator (`tools/skins/<id>/make_<id>.py`) reads the base's frames as the game places
    them (`gamedir.donkey_frames()`, the asset probe's export; never the raw harness frames) and draws or computes the
-   skin's pixels per frame on that canvas; measurements it needs (anchors, horn bases) are data files next to it,
-   each with the script that measured them. Every generator writes its pictures for the eye through
+   skin's pixels per frame on that canvas. **A skin over the donkey reads the donkey through
+   `tools/skins/donkey/anatomy.py`** (since 2026-10-30; the measurements and the frame loader were Royal Parade's
+   own files before): `body(key, donkey)` gives the hip, the collar, the back line per column and the ground,
+   `belly()` the belly per column, `head_delta(key)` the head's shift against the standing frame, `HORNS` the ear
+   bases and `ANCHORS` the eye per frame; the measured facts behind it (`measure.py`, `horn_bases.py`) are next to
+   it with their data files. Anchor every piece where the donkey's own motion keeps it (measured, not guessed: the
+   head is a pure translation of the standing one in the walk, ear, chew and lips frames and rotates in graze 02-05
+   and turn 02-06; the hip stays put in every frame but the turn's; the chest and neck move with the head, 2-4 px):
+   head pieces move with the head (`head_delta`) and are cut again on a rotated head, body pieces hang from the hip
+   (the cloth's rule, Royal Parade), pieces that must follow an outline (a chest plate) are fitted to that frame's
+   own outline. Every generator writes its pictures for the eye through
    `tools/skins/review.py` (`write_all`): `out\strips\<animation>.png` (every animation as a strip, the front layer
    composited, the rider on the seat row: **look at every strip before the game does**), `out\preview.png` (all 44
-   frames) and `out\pack\sheet.png` (the cells, for Aseprite). The four creatures share one generator
-   (`tools/skins/creatures/make_creatures.py [name]`, `out\<name>\`), Hellfire and Royal Parade have their own.
+   frames) and `out\pack\sheet.png` (the cells, for Aseprite), and prints `review.motion_check()`: per piece, its
+   box against its anchor in every frame (the "one piece with the body" measure of docs/front-layer.md section 5;
+   a piece that only moves has one line, a fitted piece lists the frames where its size follows the outline), and
+   `review.phase_check()`: a repeating pattern on a moving piece (rivets every third column, a checkered hem) must
+   repeat from the piece's anchor, never from the canvas, or it crawls one column along the piece whenever the anchor
+   shifts between frames, a shimmer at game speed that no strip shows (Armored's first cut had it; the generator
+   exits 1 on a FAIL line). The
+   four creatures share one generator (`tools/skins/creatures/make_creatures.py [name]`, `out\<name>\`), Hellfire,
+   Royal Parade and Armored have their own (Armored, `tools/skins/armored/make_armored.py`, is the worked example
+   of several anchored pieces).
    Drawing by hand instead: open the `.aseprite` (or make one with `ase_write.py`), save, and `watch_skin.py` exports
    the sheet and **splits it into the per-frame PNGs** of the folder the `.gk2export.txt` sidecar names (`front.png`
    into `front\`), runs the checker and writes previews with the front layer and the rider (the round below). A
@@ -188,7 +208,9 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    `[Colors]` lists against the pixels, every `mount.cfg` and its rules); `tools/release-scans.sh` runs all three
    on every built-in (the checker reads the asset probe's `donkey-frames\` export under an over skin, so that export
    must exist on the machine running the scans).
-5. **Look**: the review page (`python -I tools/skins/skin_preview_html.py <probe folder> <probe
+5. **Look**: `python -I tools/skins/handover.py <skin> [--ref <picture>]` renders the hand-over pictures of this step
+   for any skin in the repo (the five head poses, standing, walk 03, graze 04, turn 03, turn 05, at 1x, 3x and 8x,
+   each with and without the rider, the reference under them; `tools/skins/<skin>/out/handover/`), then the review page (`python -I tools/skins/skin_preview_html.py <probe folder> <probe
    folder>/skins-preview.html`), every frame through the same composite the game makes, grouped by mount, the front
    layer in front of the rider, the rider on the seat row with the skin's offset, the seat line, the card's facts
    (seat, hitch gap, babies, colour regions). **Before anyone else looks** (the dragon's wings, 2026-10-20: twelve

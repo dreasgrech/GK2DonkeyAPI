@@ -145,3 +145,71 @@ def load_rider(probe_dir):
     """The probe's rider picture (BepInEx\\GK2-asset-probe\\rider.png), or None."""
     p = os.path.join(probe_dir, "rider.png")
     return Image.open(p).convert("RGBA") if os.path.isfile(p) else None
+
+
+def motion_check(layers, anchors, reference="bdy_static_left"):
+    """One piece with the body (docs/front-layer.md section 5: a part re-rasterised between two anchors jiggled in the
+    world): per frame and per layer, the layer's box against its anchor, compared with the reference frame's. layers:
+    {frame key: {layer name: {(x, y): colour} or a PIL image}}; anchors: {frame key: {layer name: (ax, ay)}} (the
+    point the layer is meant to move with: the hip, the collar, an ear base). Returns the report's lines: per layer
+    the frames whose (left - ax, top - ay, width, height) differ from the reference's, with the numbers; a fitted
+    piece (cut to the frame's own outline) changes size by design, so read the lines, the check asserts nothing."""
+    def box(layer):
+        pts = layer if isinstance(layer, dict) else {(x, y) for x in range(layer.width) for y in range(layer.height) if layer.getpixel((x, y))[3]}
+        if not pts:
+            return None
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        return min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+    names = sorted({n for L in layers.values() for n in L})
+    lines = []
+    for n in names:
+        rel = {}
+        for k, L in layers.items():
+            b = box(L.get(n)) if n in L else None
+            a = anchors.get(k, {}).get(n)
+            if b is None or a is None:
+                continue
+            rel[k] = (b[0] - a[0], b[1] - a[1], b[2], b[3])
+        if reference not in rel:
+            lines.append(f"{n}: no reference frame"); continue
+        ref = rel[reference]
+        diff = {k: v for k, v in rel.items() if v != ref}
+        same = len(rel) - len(diff)
+        lines.append(f"{n}: (left-ax, top-ay, w, h) = {ref} in {same} of {len(rel)} frames" + (": differs in " + ", ".join(f"{k} {v}" for k, v in diff.items()) if diff else ""))
+    return lines
+
+
+def phase_check(layers, anchors, periods, skip=()):
+    """A repeating pattern on a piece that moves (rivets every third column, a checkered hem) must repeat from the
+    piece's anchor, not from the canvas: phased to the canvas it crawls one column along the piece whenever the anchor
+    shifts between frames (a shimmer at game speed that strips and box checks never show). periods: {colour: n} for
+    the colours that mark a pattern's dots (a rivet's deep steel, the padding's dark red, the hem's light brass);
+    for every frame and layer, the columns of each such colour must all sit at the same residues modulo n from the
+    layer's anchor column as in the reference frame (bdy_static_left). Returns lines: "ok <layer>" or "FAIL <layer>
+    <frame>: <colour> at residues {..} (reference {..})". Pixels of the colour on a solid row (a seam, not dots) are
+    counted too, so give the dot colours only."""
+    lines = []
+    names = sorted({n for L in layers.values() for n in L} - set(skip))
+    for n in names:
+        res = {}
+        for k, L in layers.items():
+            layer = L.get(n)
+            a = anchors.get(k, {}).get(n)
+            if not layer or a is None:
+                continue
+            pts = layer if isinstance(layer, dict) else {(x, y): layer.getpixel((x, y))[:3] for x in range(layer.width) for y in range(layer.height) if layer.getpixel((x, y))[3]}
+            per = {}
+            for (x, y), c in pts.items():
+                if c in periods:
+                    per.setdefault(c, set()).add((x - a[0]) % periods[c])
+            res[k] = per
+        if "bdy_static_left" not in res:
+            continue
+        ref = res["bdy_static_left"]
+        fails = [(k, c, v) for k, per in res.items() for c, v in per.items() if c in ref and v != ref[c]]
+        if fails:
+            for k, c, v in fails:
+                lines.append(f"FAIL {n} {k}: {c} at residues {sorted(v)} (reference {sorted(ref[c])})")
+        else:
+            lines.append(f"ok {n}: every pattern repeats from the anchor in all {len(res)} frames")
+    return lines
