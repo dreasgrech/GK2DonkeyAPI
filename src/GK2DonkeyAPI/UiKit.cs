@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using HarmonyLib;
 using LazyBearTechnology;
 using TMPro;
 using UnityEngine;
@@ -43,8 +44,8 @@ namespace GK2DonkeyAPI
         // The look, read off the game's Settings window. Throws when a part to copy is missing (a game update).
         internal void Read(UIGameSettingsWindow settings)
         {
-            UISwitchButton template = settings.GetComponentInChildren<UISwitchButton>(true);
-            DialogTemplate = settings.GetComponentInChildren<UIDialogWindowButton>(true);
+            UISwitchButton template = SwitchOf(settings);
+            DialogTemplate = OkButtonOf(settings);
             if (template == null || DialogTemplate == null)
             {
                 throw new InvalidOperationException("no row or button to copy in the Settings window");
@@ -62,6 +63,75 @@ namespace GK2DonkeyAPI
             if (bt != null) { ButtonTextColor = bt.color; BoldFont = bt.font; BoldMaterial = bt.fontSharedMaterial; }
             MeasureRow();
             FocusTemplate = TemplateRow.GetComponentInChildren<GamepadNavigationItem>(true)?.focusFrame;
+        }
+
+        // The Settings window's own OK button and its own Language row, by the window's fields (2026-10-30, the user: other
+        // mods can add buttons and rows to that window, and "the first one found" would then be theirs, with their
+        // components and look). A game update that renames a field: the first one found that isn't ours, as before.
+        private static AccessTools.FieldRef<UIGameSettingsWindow, UIDialogWindowButton> okField;
+        private static AccessTools.FieldRef<UIGameSettingsWindow, UISwitchButton> languageField;
+        private static bool fieldsTried;
+
+        private static void ReadFields()
+        {
+            if (fieldsTried) return;
+            fieldsTried = true;
+            try { okField = AccessTools.FieldRefAccess<UIGameSettingsWindow, UIDialogWindowButton>("lazyButton"); }
+            catch (Exception e) { Plugin.Log.LogInfo("Settings: the Settings window's OK button field isn't found (" + e.Message + "); its first button is copied."); }
+            try { languageField = AccessTools.FieldRefAccess<UIGameSettingsWindow, UISwitchButton>("languageButton"); }
+            catch (Exception e) { Plugin.Log.LogInfo("Settings: the Settings window's Language row field isn't found (" + e.Message + "); its first row is read."); }
+        }
+
+        internal static UIDialogWindowButton OkButtonOf(UIGameSettingsWindow settings)
+        {
+            ReadFields();
+            UIDialogWindowButton ok = null;
+            try { ok = okField != null ? okField(settings) : null; } catch { }
+            if (ok != null) return ok;
+            foreach (UIDialogWindowButton b in settings.GetComponentsInChildren<UIDialogWindowButton>(true))
+            {
+                if (!b.name.StartsWith("GK2DonkeyAPI", StringComparison.Ordinal)) return b;
+            }
+            return null;
+        }
+
+        internal static UISwitchButton SwitchOf(UIGameSettingsWindow settings)
+        {
+            ReadFields();
+            UISwitchButton sw = null;
+            try { sw = languageField != null ? languageField(settings) : null; } catch { }
+            if (sw != null) return sw;
+            foreach (UISwitchButton s in settings.GetComponentsInChildren<UISwitchButton>(true))
+            {
+                if (!s.name.StartsWith("GK2DonkeyAPI", StringComparison.Ordinal) && !s.transform.parent.name.StartsWith("GK2DonkeyAPI", StringComparison.Ordinal)) return s;
+            }
+            return null;
+        }
+
+        // Every component under go that isn't the game's own (or Unity's, TextMeshPro's...: an assembly of the game's
+        // Managed folder) removed: a mod's component on a game object we copy (a tooltip, a sound, a logger put on the
+        // OK button) would act on our copy too. Call it while the copy is still inactive (its components haven't woken).
+        // Returns what was removed, for the log.
+        internal static List<string> StripForeign(GameObject go)
+        {
+            var removed = new List<string>();
+            string managed;
+            try { managed = System.IO.Path.GetFullPath(System.IO.Path.Combine(Application.dataPath, "Managed")); }
+            catch { return removed; }
+            Component[] all = go.GetComponentsInChildren<Component>(true);
+            for (int i = all.Length - 1; i >= 0; i--) // later components first: one may need an earlier one
+            {
+                Component c = all[i];
+                if (c == null || c is Transform) continue;
+                string at = null;
+                try { at = c.GetType().Assembly.Location; } catch { }
+                bool game = false;
+                try { game = !string.IsNullOrEmpty(at) && System.IO.Path.GetFullPath(at).StartsWith(managed, StringComparison.OrdinalIgnoreCase); } catch { }
+                if (game) continue;
+                removed.Add(c.GetType().FullName + " (" + c.GetType().Assembly.GetName().Name + ")");
+                UnityEngine.Object.DestroyImmediate(c);
+            }
+            return removed;
         }
 
         // The window's content: the vertical layout the rows sit in, above a row's UISwitchButton.

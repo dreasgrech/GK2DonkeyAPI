@@ -251,3 +251,129 @@ Built:
 
 Still gone: the framework's page of every row, `MenuLabels` (the choices' labels over its dropdowns), `ModsWindow`
 and `LookPreview` (the picture over its window).
+
+## 12. Side effects and other mods (2026-10-30, the user: "Could other mods screw this up? ... hundreds of other mods")
+
+Seen in game: the button stands above OK in the game's red, centred like it (the user's screenshot, 21:15).
+
+### Where another mod can get in the way
+
+| # | Where | What can happen | How likely |
+|---|---|---|---|
+| 1 | The button is added from `LazyWindowsStackController.OnWindowOpened` | the game raises it as a plain multicast (`OnWindowOpened?.Invoke(window)`, read 2026-10-30): a mod whose handler throws before ours stops ours, and the button is missing for that open | low, silent when it happens |
+| 2 | The button is a copy of "the first `UIDialogWindowButton` in the window" | a mod that adds its own dialog button to the Settings window first gets copied instead: its components and look come along on ours | low |
+| 3 | The copy brings every component on the OK button | a mod that put a component of its own on OK (a tooltip, a sound, a logger) has it duplicated on our button, acting on our clicks | low |
+| 4 | The look (fonts, row measures, focus frame) is read off "the first `UISwitchButton` in the window" | a mod that injects its own rows at the top (as our old "Showing" row was) is read instead: a wrong font or size in our windows | low to medium (it's what settings mods do) |
+| 5 | The window under ours is set aside with `SetActive(false)` | Unity stops every coroutine on it; a mod (or the game) running one on the Settings window or the Mods menu loses it; its Update stops meanwhile | low; the panel has done this for weeks without a report |
+| 6 | A game window opening while ours is open (a popup, another mod's window on a hotkey) | it opens under our canvas (sorting 30000+), unseen, and takes the game's modal focus; closing ours shows the old window again under it | low, confusing when it happens |
+| 7 | Other mods' hotkeys | they read the keyboard themselves: pressing a key to bind it in our key box (or typing a name) also fires another mod's key on it. Only our own mods' keys wait (`KeyActions`) | medium; every BepInEx mod with keys does the same |
+| 8 | The key clash line knows only our pages | a key another mod (or the game: E, I, Tab, Space in a fight) already uses isn't said | medium: the commonest real conflict |
+| 9 | Escape | a mod that reads Escape itself (closes its window, opens a menu) acts on the same press as ours | low |
+| 10 | GK2 Mod Framework's Settings button (our prefix on its private `OpenSettingsPage`) | a framework version that renames it: the prefix isn't applied, the page's one button still opens the window. Another mod patching the same method for its own entries doesn't touch ours (ours acts only on our ids) | low, falls back |
+| 11 | The controls taken (`ByUI`) | closing ours gives them back unless a game modal window is open; a mod that took `ByUI` itself for a non-modal window of its own could lose its hold when ours closes | very low |
+| 12 | UI scale and resolution mods | a different canvas size: `FitToScreen` follows the canvas we sit on | none seen |
+
+### What would harden it (A to E built 2026-10-30 21:24, the user's pick; F left for later)
+
+- **A. The game's own parts, not "the first found"** (2 and 4): the OK button and a template row from the Settings
+  window's own fields (`UIGameSettingsWindow.lazyButton`, `languageButton`; game members, so the dependency manifest
+  watches them for game updates), "first found" only as the fallback.
+- **B. A clean copy** (3): after copying OK, remove every component that isn't the game's, Unity's or TextMeshPro's.
+- **C. A watchdog for the button** (1, and a mod rebuilding the window's content): while the Settings window is the
+  window on top, check twice a second that our button is there, and add it if not. The event stays the fast path.
+- **D. Clashes with every mod and the game** (8): the key clash reads every loaded plugin's cfg (`Chainloader.PluginInfos`:
+  each one's `KeyboardShortcut` and `KeyCode` entries) and the game's own bindings, and says "Same key as <mod>:
+  <setting>" or "Same key as the game's <action>". The commonest conflict is a key, and this names it.
+- **E. Step aside for a window opened over ours** (6): when another game window becomes the top window while ours is
+  open, ours hides and comes back when that one closes (or closes, the game's window then on top).
+- **F. A gentler set-aside** (5): hide the window under ours with a CanvasGroup (invisible, no clicks) and switch off its
+  own keys (`LazyWindowInputController.Disable`, the game's pair for a covered window) instead of `SetActive(false)`:
+  its coroutines and other mods' parts on it keep running. It changes the panel's tested way back, so it would need
+  the way-back self-tests and a measure first.
+- Nothing to do for 7 and 9: a mod reading the keyboard itself can't be stopped by ours; the key box saying which other
+  mod has the key (D) is the help we can give.
+
+Built:
+- **A** `UiKit.OkButtonOf` / `SwitchOf`: the window's `lazyButton` and `languageButton` fields (`AccessTools.FieldRefAccess`,
+  so the dependency manifest watches them), else the first one found that isn't ours.
+- **B** `UiKit.StripForeign`: the copy is made under an inactive holder, and every component whose assembly isn't in the
+  game's Managed folder is removed before it wakes; what was removed is logged.
+- **C** `SettingsButtons.Tick` (Plugin.LateUpdate, twice a second): while the Settings window is on top, every page's
+  button is there (made per page and kept by reference; one switched off is switched on again); a re-add is said once.
+- **D** `KeyCapture.Snapshot` (when the options window opens): every other plugin's `KeyboardShortcut` (an exact
+  match) and `KeyCode` settings (the main key alone: most mods read it whatever is held), the pages' and the API's own
+  cfgs left out; the game's `LazyInput.GameBindings.keyBindings` but the menus' own (values under 100), named in the
+  game's language, for a row acting on its press. The line reads "Same key as GK2 Tech Tree Search: ToggleKey" or
+  "Same key as the game's Inventory"; the log lists them at each open when they changed.
+- **E** `GameWindowAside.Tick` / `Covered`: a game window on top that isn't the one ours set aside makes ours step aside
+  (their canvases off, no keys or clicks) until it closes; the window set aside, shown again by something else
+  meanwhile, is set aside again. The options window and the Mounts panel both follow it.
+- Self-test "settings: the options window among other mods" (OptionsTests.AmongOtherMods).
+
+## 13. Checked (2026-10-30 evening)
+
+- F11, the full set on the final build (the framework kept, the hardening): 1412 passed, 0 failed, 0 warnings (21:50).
+- A start without GK2 Mod Framework (it was moved aside and back, the game closed both times; 21:54): GK2 Donkey API and
+  Saddle Up load without a warning or an error; no framework line from either; the options open from the Settings
+  window's button and from the journal's Options button and come back where they were; no clash at the defaults. The
+  four QOL mods load too. The one error in that log is Performance Hog's (a third-party tool with a hard dependency
+  on the framework), not ours.
+- By hand (the user, 23:13 and 23:44): Ctrl + G on Send your mount away sent the mount away with no cart called, G
+  alone drove it; a lone Left Shift set, Backspace to None, Esc; Defaults on Keys and Freeplay; the window from the main
+  menu through the Mods menu; the gamepad. The journal's final buttons seen, 634 of 634 at 23:44.
+- Not yet: the window at a Steam Deck size, screenshots for the pages.
+
+## 14. Keys that overlap (investigated 2026-10-30, the user: "whats ctrl g? ... investigate the issue more")
+
+The clash line compares whole combinations: G and Ctrl + G are two keys. But not every reader of a key works that way.
+
+### How a press is read (read from the code, 2026-10-30)
+
+| Reader | Who | A press is | Held with it |
+|---|---|---|---|
+| BepInEx `KeyboardShortcut.IsDown()` | most other BepInEx mods (decompiled BepInEx.dll) | its main key goes down and all its modifiers are held | **any other key held stops it** (`ModifierKeyTest`: every supported key but the mouse buttons, so W held while walking stops it too) |
+| The game (`LazyInput`'s `KeyboardController`) | the game's own keys (E, I, Space...) | its key goes down and its extra keys (`additionalKeyCodes`) are held | anything else held is ignored: Ctrl + E is still E |
+| Ours (`KeyActions.Pressed`, `ModifiersHeld`; flying's jump and fly keys; the safe spot's key) | Saddle Up's keys | its main key goes down and its modifiers are held | **anything else held is ignored, on purpose**: walking keys (KeyActions' note), the climb's Left Shift held while the fly key is pressed (Flight's note) |
+| Ours, held (flying's Climb and Descend) | `UpKey`, `DownKey` | the main key held, nothing else asked | ignored (a modifier can be the key) |
+
+### Where that makes two keys act on one press
+
+1. **Two of ours, one with more modifiers:** Send your mount away on Ctrl + G and Drive the cart on G: Ctrl + G does
+   both (our reader ignores the extra Ctrl for G). Not said today: the clash line compares exactly.
+2. **One of ours on a lone modifier:** a key acting on its press set to Left Shift fires on every Shift + something of
+   any mod or of ours; Climb (held, while flying) climbs whenever any Shift + something is pressed in the air.
+3. **Another mod's shortcut with more modifiers than ours:** their Ctrl + G (IsDown) also fires our G; our G alone
+   doesn't fire theirs. Not said today.
+4. **The game's key as our main key:** Ctrl + E of ours also interacts (the game ignores the Ctrl): said today (the
+   game rule compares the main key).
+5. **Another mod's plain KeyCode setting:** most read the key alone, whatever is held: said today (the main key).
+
+### What can be done (A and B built 2026-10-30 22:04, the user's pick)
+
+- **The clash line reads overlaps, not only exact matches** (no change to how any key acts): ours against ours, the
+  same main key and one's modifiers inside the other's, or one's main key a modifier of the other; ours against a
+  mod's shortcut (IsDown), the same main key and ours' modifiers inside theirs, or our main key one of their
+  modifiers; ours against a KeyCode setting or a game key, as today. The line: "Same key as X" for the exact match,
+  "Clashes with X (Ctrl + G)" for an overlap.
+- **The most specific of our keys wins** (a behaviour change, ours only): when two of our keys go down on one press, the
+  one whose modifiers are all held and are more (Ctrl + G over G) acts, the other doesn't. Fixes 1 in play without
+  changing a key used alone (Shift held while pressing H still rides when no Shift + H is bound). The key poll knows
+  only the keys with an action (`pressed:`); flying's and the safe spot's keys would ask it too.
+- **Not:** refusing every extra key, as BepInEx does: walking keys held would stop our keys, and the climb's Shift
+  would stop the fly key in the air; the game ignores extras too.
+- **Can't:** another mod's own reader. The line naming the overlap is the help we can give.
+
+Built:
+- **A** `KeyCapture.Clash` returns the whole line. Ours against ours: the same combination, or one's main key a
+  modifier of the other's when that one acts on its press (the same main key with more modifiers is no clash: B
+  makes the more specific act alone; Climb and Descend, held on Left Shift and Left Ctrl while flying, marked every
+  Shift + and Ctrl + key of ours in the first build, F11 22:16, and no longer count). The same against another mod's
+  combination: ours on a lone modifier counts only when it acts on its press (the log at the defaults, 23:13:
+  "Descend (hold) (Left Ctrl): Clashes with GK2 Tech Tree Search: FocusKey (Ctrl + F)"; fixed 23:15).
+  Against a mod's shortcut: the same combination, its exact press doing ours (the same main key, our modifiers among
+  its), or a main key that is the other's modifier. Against a mod's KeyCode setting: our main key or one of our
+  modifiers. Against the game, for a row acting on its press: our main key, one's held keys among the other's.
+- **B** `KeyActions.Shadowed(k)` / `MoreSpecific(o, k)`: the key poll, flying's jump and fly keys and the safe spot's
+  key skip a press when another key row has the same main key, k's modifiers and more, all held now.
+- Self-tests: the smoke test (the more specific rule; Ctrl + a free key over the key: no line; Right Alt alone and
+  Right Alt + the key: both lines) and "among other mods" (another mod's Ctrl + Alt + the key over ours).

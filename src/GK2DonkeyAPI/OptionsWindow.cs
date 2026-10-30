@@ -90,7 +90,9 @@ namespace GK2DonkeyAPI
                 overPanel = MountsPanel.IsShownOnTop;
                 openedInGame = Mount.IsGameReady;
                 ui.Read(settings);
+                KeyCapture.Snapshot(); // the keys other mods and the game use, for the key rows' clash lines
                 Build();
+                SayClashes(p);
                 if (overPanel) MountsPanel.HideUnderOptions(); // the journal waits underneath
                 else GameWindowAside.SetAside(Who); // the game window it was opened from (the Settings window) waits underneath, as it is
                 GameWindowAside.TakeControls(Who);
@@ -101,6 +103,44 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogWarning("Settings: the options window can't open (" + e.Message + "); the options are still in the cfg (BepInEx\\config).");
                 Close(back: true);
             }
+        }
+
+        // The page's keys that another row, mod or the game has too, in the log (what the key rows say under their names),
+        // when they differ from the last open's.
+        private static string clashesSaid;
+
+        private static void SayClashes(MountSettingsPage p)
+        {
+            var parts = new List<string>();
+            foreach (MountSettingsPage.Row r in p.Rows)
+            {
+                if (r.RowKind != MountSettingsPage.RowKind.Key || !p.InOptions(r)) continue;
+                string c = KeyCapture.Clash(r);
+                if (c != null) parts.Add($"{r.Label} ({KeyCapture.Words((BepInEx.Configuration.KeyboardShortcut)r.Entry.BoxedValue)}): {c}");
+            }
+            string said = parts.Count == 0 ? "none" : string.Join("; ", parts);
+            if (said == clashesSaid) return;
+            clashesSaid = said;
+            Plugin.Log.LogInfo($"Settings: {p.Title}'s keys another row, mod or the game has too: {said}.");
+        }
+
+        // A game window opened over ours (a popup, another mod's window on a key): ours steps aside, invisible and taking
+        // no clicks or keys, until that window closes (GameWindowAside.Covered).
+        private static bool covered;
+
+        private static void FollowCover()
+        {
+            bool now = GameWindowAside.Covered;
+            if (now == covered || window == null) return;
+            covered = now;
+            Canvas c = window.GetComponent<Canvas>();
+            if (c != null) c.enabled = !now;
+            if (now)
+            {
+                if (KeyCapture.Row != null) KeyCapture.Cancel();
+                controls.CloseDropdown(refocus: false);
+            }
+            else controls.NavDirty = true;
         }
 
         // back: to where it was opened from, as it was. Not back (the game left): only the windows go.
@@ -150,6 +190,7 @@ namespace GK2DonkeyAPI
             page = null;
             overPanel = false;
             described = null;
+            covered = false;
         }
 
         // The journal opened over the options (their Mounts button), and closed back to them.
@@ -451,6 +492,8 @@ namespace GK2DonkeyAPI
                 return;
             }
             if (!window.activeSelf) return; // the journal over it: the panel's tick
+            FollowCover();
+            if (covered) return; // a game window over it: its keys and clicks are that window's
             controls.TrackTyping();
             Wheel();
             if (GameWindowAside.ControlsTaken) GameWindowAside.TakeControls(Who); // re-asserted: a game popup closing gives ByUI back
@@ -616,6 +659,7 @@ namespace GK2DonkeyAPI
         internal static void TestRefresh() => Refresh();
         internal static string TestDescription(MountSettingsPage.Row r) => DescriptionOf(r, r == null || Usable(r), false, false);
         internal static float TestScale => window != null ? window.transform.localScale.x : 0f;
+        internal static bool TestDrawn => window != null && window.GetComponent<Canvas>() != null && window.GetComponent<Canvas>().enabled;
         // The first part of a row drawn outside the rows' column (its mask would cut it), or null.
         internal static string TestOutside()
         {

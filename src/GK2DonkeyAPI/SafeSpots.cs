@@ -142,7 +142,7 @@ namespace GK2DonkeyAPI
             KeyboardShortcut key = Plugin.ReturnKey != null ? Plugin.ReturnKey.Value : KeyboardShortcut.Empty;
             if (!Flight.SameKey(key, keySeen)) { keySeen = key; keyWaitRelease = key.MainKey != KeyCode.None; }
             if (keyWaitRelease && (key.MainKey == KeyCode.None || !UnityInput.Current.GetKey(key.MainKey))) keyWaitRelease = false;
-            if (!keyWaitRelease && key.MainKey != KeyCode.None && controls && !MountsPanel.IsOpen && !OptionsWindow.IsOpen && GUIUtility.keyboardControl == 0 && !KeyCapture.Active && KeyActions.Pressed(key))
+            if (!keyWaitRelease && key.MainKey != KeyCode.None && controls && !MountsPanel.IsOpen && !OptionsWindow.IsOpen && GUIUtility.keyboardControl == 0 && !KeyCapture.Active && KeyActions.Pressed(key) && !KeyActions.Shadowed(key))
             {
                 MountResult r = Return("the key");
                 if (!r.Ok) Mount.Say(r.Reason, 3f);

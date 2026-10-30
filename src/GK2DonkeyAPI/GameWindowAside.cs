@@ -46,6 +46,42 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // A game window opened over ours (a popup, another mod's window opened on a key; 2026-10-30, docs/options-window.md
+        // §12): it would sit under our canvas, unseen, holding the game's modal focus. While it is the window on top, ours
+        // step aside (invisible, no clicks, no keys: Covered, followed by each of ours) and come back when it closes.
+        internal static bool Covered { get; private set; }
+        private static LazyWidgetBase coveredBy;
+
+        // Every frame (Plugin.LateUpdate) while one of ours is open. Also: the window set aside, shown again by something
+        // else meanwhile (the stack showing it when a window over it closed), is set aside again.
+        internal static void Tick(bool oursOpen)
+        {
+            if (!oursOpen)
+            {
+                Covered = false;
+                coveredBy = null;
+                return;
+            }
+            LazyWidgetBase top = null;
+            try { top = LazyWindowsStackController.ActiveWindow; } catch { }
+            bool now = top != null && top != under && top.gameObject.activeInHierarchy;
+            if (now != Covered)
+            {
+                Covered = now;
+                if (now)
+                {
+                    coveredBy = top;
+                    Plugin.Log.LogInfo($"Settings: {top.name} opened over our window: ours waits, hidden, until it closes.");
+                }
+                else
+                {
+                    Plugin.Log.LogInfo($"Settings: {(coveredBy != null ? coveredBy.name : "the window over ours")} closed: ours is back.");
+                    coveredBy = null;
+                }
+            }
+            if (!now && under != null && under.gameObject.activeSelf) under.gameObject.SetActive(false);
+        }
+
         // The game gone (a load, the main menu): its windows went with it.
         internal static void Forget() => under = null;
 

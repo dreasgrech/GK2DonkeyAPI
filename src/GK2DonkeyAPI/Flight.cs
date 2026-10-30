@@ -862,7 +862,7 @@ namespace GK2DonkeyAPI
                     if (fk.MainKey == KeyCode.Space) fk = KeyboardShortcut.Empty;
                 }
                 else if (!armour) armourSaid = false;
-                bool jd = !keysWaitRelease && KeyActions.Pressed(jk), fd = !keysWaitRelease && !SameKey(fk, jk) && KeyActions.Pressed(fk);
+                bool jd = !keysWaitRelease && KeyActions.Pressed(jk) && !KeyActions.Shadowed(jk), fd = !keysWaitRelease && !SameKey(fk, jk) && KeyActions.Pressed(fk) && !KeyActions.Shadowed(fk); // a more specific key of ours pressed: that one acts
                 if (jd || fd) Press(i, jd, fd);
                 if (Now == Phase.Jumping && jumpByKey && float.IsPositiveInfinity(jumpLetGo) && !Held(jk)) jumpLetGo = jumpT;
                 if (Now == Phase.Airborne || Now == Phase.Rising)

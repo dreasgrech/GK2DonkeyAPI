@@ -22,7 +22,9 @@ For players:
   key boxes: click one and press the key, with Shift, Ctrl or Alt, or one of those on its own (Climb's Left Shift
   and Descend's Left Ctrl can be set now); Backspace sets no key, Esc cancels, and a key two options share is said
   under both. **Defaults** sets the section shown back to its defaults, after asking. The Mounts button opens the
-  Mounts panel over the options, and Escape steps back one window at a time. The buttons that act on your mount
+  Mounts panel over the options, and Escape steps back one window at a time. The journal's buttons line up with the
+  mount list and its picture: Options under the list, Customize under the picture, Drive the cart and Ride on the
+  right; the journal's Done button is gone (its X and Escape close it, keeping what was chosen). The buttons that act on your mount
   or the keeper work in a game only (greyed in the main menu). With GK2 Mod Framework installed, Saddle Up's
   **Settings** button in its Mods menu opens the same window (the framework's own page of every setting is gone).
   The "Showing" pages of the game's Settings window are gone too; your settings are kept as they were (the same
@@ -69,6 +71,18 @@ Development:
   framework installed, the page in its Mods menu and its Settings button pointed at the window) and "the
   options window's way back" (the Settings window's button, the Mounts button and back, the journal's Options
   button and back, Ride from the journal over them).
+- **The options among other mods** (2026-10-30; the user: "hundreds of other mods out there ... the better can
+  reinforce our code"; docs/options-window.md §12): the Settings window's OK button is copied from the window's own
+  field, not the first button found, and the copy is cleaned of other mods' components before it wakes; a watchdog
+  adds the button again while the Settings window is on top (another mod's handler that throws stops the game's
+  window event before ours); a key row names a key another mod's cfg or the game's own bindings already use; a game
+  window opened over ours makes the options window and the Mounts panel step aside until it closes. Self-test "the
+  options window among other mods".
+- **Keys that overlap** (2026-10-30; docs/options-window.md §14): our keys ignore keys held with theirs (walking
+  keys, the climb's Shift), so one press could do two of them: of two of our keys on one main key, the more
+  specific now acts alone (Ctrl + G over G: Ctrl + G no longer also drives the cart); and a key row says when
+  another key overlaps it, "Clashes with X (Ctrl + G)": a key of ours on a lone Shift, Ctrl or Alt that goes off on
+  the way into another, another mod's combination that does ours too, the game's key held with more.
 - **Self-tests for both findings of 2026-10-30** (the user: "make sure we have tests written for these problems"):
   "keys: the mods' keys wait while a text box of any window has the cursor" (a TextMeshPro box, a Unity UI box, a
   selected button; through `KeyActions.WaitReason`, the one check the key poll makes), and a third part of the

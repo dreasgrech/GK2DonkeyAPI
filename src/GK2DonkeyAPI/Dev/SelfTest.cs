@@ -188,6 +188,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
             new Scenario { Group = GroupLooks, Name = "settings: the options window (every option our own control in its section; a switch; a key set, in words, a clash; the line at the bottom; Defaults asked)", Body = OptionsTests.Smoke },
             new Scenario { Group = GroupLooks, Name = "settings: the options window's way back (the Settings window's button; the Mounts button and back; the journal's Options button and back; Ride from the journal over them)", Body = OptionsTests.WayBack },
+            new Scenario { Group = GroupLooks, Name = "settings: the options window among other mods (the window's own OK copied, another mod's part left off it, our button added again when taken away; another mod's key and the game's named; a game window over the options)", Body = OptionsTests.AmongOtherMods },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -3191,6 +3192,12 @@ namespace GK2DonkeyAPI
                 if (!MountsPanel.IsOpen) yield break;
                 var m = MountsPanel.TestMeasure();
                 Check(m.Scale >= 0.5f && m.W * m.Scale <= m.RoomW + 1f && m.H * m.Scale <= m.RoomH + 1f, $"it fits the screen ({m.W:0}x{m.H:0} at {m.Scale:0.##} in {m.RoomW:0}x{m.RoomH:0})");
+                // the buttons on the stage's edges (the user's screenshot, 2026-10-30)
+                var edges = MountsPanel.TestButtonEdges();
+                Check((float.IsNaN(edges.OptionsCentre) || (Mathf.Abs(edges.OptionsCentre - (edges.ListLeft + edges.ListRight) / 2f) < 1f && edges.OptionsWidth < edges.ListRight - edges.ListLeft))
+                    && Mathf.Abs(edges.CustomizeCentre - (edges.StageLeft + edges.StageRight) / 2f) < 1f
+                    && Mathf.Abs(edges.DriveLeft - edges.StageRight) < 0.5f && Mathf.Abs(edges.RideRight - edges.RightMargin) < 0.5f && !edges.Done,
+                    $"the buttons on the list's and the stage's edges: Options centred at {edges.OptionsCentre:0}, {edges.OptionsWidth:0} wide (the list {edges.ListLeft:0} to {edges.ListRight:0}), Customize centred at {edges.CustomizeCentre:0}, Drive the cart from {edges.DriveLeft:0} (the stage to {edges.StageRight:0}), Ride to {edges.RideRight:0} (the margin {edges.RightMargin:0}), no Done ({!edges.Done})");
                 // the chosen mount's pack may be left out (a mod installed without that pack; 2026-10-27): it is listed greyed, with no
                 // rows, no picture and no Ride, Drive or Colours; the rest of the test runs from the mounts that are there
                 bool wasMissing = Catalog.Find(was) == null;

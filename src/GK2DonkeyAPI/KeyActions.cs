@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using BepInEx;
 using BepInEx.Bootstrap;
 using BepInEx.Configuration;
+using GK2DonkeyAPI.Api;
 using UnityEngine;
 
 namespace GK2DonkeyAPI
@@ -12,6 +13,8 @@ namespace GK2DonkeyAPI
     // - A key counts when its main key went down this frame with the shortcut's own modifiers held; other keys held
     //   don't matter. Not KeyboardShortcut.IsDown(): that also demands that no other key is held, so it never fired
     //   while the player walks (W/A/S/D down), which is exactly when mounting matters (found in game 2026-09-30).
+    //   But of two of our keys on one main key, the more specific acts alone (Shadowed, 2026-10-30): Ctrl + G of one
+    //   row, G of another, Ctrl + G pressed: only the Ctrl + G row acts.
     // - A mod that is unloaded (its plugin destroyed, e.g. by a script reloader) has its tuning cleared and its keys
     //   dropped: mods don't need an OnDestroy of their own for it.
     internal static class KeyActions
@@ -90,7 +93,7 @@ namespace GK2DonkeyAPI
                     if (UnityInput.Current.GetKey(e.Key.Value.MainKey)) continue;
                     e.WaitRelease = false;
                 }
-                if (!Pressed(e.Key.Value))
+                if (!Pressed(e.Key.Value) || Shadowed(e.Key.Value)) // a more specific key of ours pressed: that one acts
                 {
                     continue;
                 }
@@ -208,6 +211,59 @@ namespace GK2DonkeyAPI
                     if (x.Current != y.Current) return false;
                 }
             }
+        }
+
+        // The most specific of our keys acts alone (docs/options-window.md §14; the user, 2026-10-30): our keys ignore what
+        // is held with them (walking keys, the climb's Shift), so with G and Ctrl + G both ours, Ctrl + G did both. True
+        // when another key row of a page has k's main key and k's modifiers and more, and those are all held now: that
+        // key acts, k doesn't. A key used alone is unchanged (Shift held while pressing H still rides when nothing of ours
+        // is on Shift + H). Asked only when k was pressed, so walking the rows costs nothing in a frame without a press.
+        internal static bool Shadowed(KeyboardShortcut k)
+        {
+            if (k.MainKey == KeyCode.None) return false;
+            foreach (MountSettingsPage p in MountSettingsPage.All)
+            {
+                foreach (MountSettingsPage.Row o in p.Rows)
+                {
+                    if (o.RowKind != MountSettingsPage.RowKind.Key || o.Entry == null) continue;
+                    var ok = (KeyboardShortcut)o.Entry.BoxedValue;
+                    if (MoreSpecific(ok, k) && ModifiersHeld(ok)) return true;
+                }
+            }
+            return false;
+        }
+
+        // o has k's main key, every modifier of k's, and more.
+        internal static bool MoreSpecific(KeyboardShortcut o, KeyboardShortcut k)
+        {
+            if (o.MainKey == KeyCode.None || o.MainKey != k.MainKey) return false;
+            KeyCode[] ko = KeysOf(ref o), kk = KeysOf(ref k);
+            if (ko == null || kk == null)
+            {
+                var om = new List<KeyCode>(o.Modifiers);
+                int n = 0;
+                foreach (KeyCode m in k.Modifiers) { if (!om.Contains(m)) return false; n++; }
+                return om.Count > n;
+            }
+            int no = ko.Length, nk = kk.Length < 1 ? 1 : kk.Length; // the main key first, its modifiers after
+            if (no <= nk) return false;
+            for (int i = 1; i < nk; i++)
+            {
+                bool found = false;
+                for (int j = 1; j < no; j++) if (ko[j] == kk[i]) { found = true; break; }
+                if (!found) return false;
+            }
+            return true;
+        }
+
+        // The self-test: the key rows that would act instead of k (Shadowed, its held-keys part left out).
+        internal static List<string> TestMoreSpecificThan(KeyboardShortcut k)
+        {
+            var labels = new List<string>();
+            foreach (MountSettingsPage p in MountSettingsPage.All)
+                foreach (MountSettingsPage.Row o in p.Rows)
+                    if (o.RowKind == MountSettingsPage.RowKind.Key && o.Entry != null && MoreSpecific((KeyboardShortcut)o.Entry.BoxedValue, k)) labels.Add(o.Label);
+            return labels;
         }
 
         // The same combination (its main key and its modifiers, in order).

@@ -149,7 +149,11 @@ control (the options window needs them; the user: "no compromise on controls"). 
   registered later had its rows, its Skin among them, made later).
 - **The gamepad**: every control is a stop of the rows' group; a dropdown's list is group 3 on its own while open (no
   hand-over out of it), focus goes to the chosen choice and back to the dropdown when it closes.
-- The four buttons at the bottom have one gap (12) between them.
+- The buttons at the bottom stand on the list's and the stage's edges (the user's screenshots, 2026-10-30, three cuts
+  that evening): Options centred under the mount list, the buttons' own width; Customize centred under the stage (it colours what the
+  stage shows); Drive the cart and Ride on the right, equal, Drive from the stage's right edge, Ride ending on the
+  window's margin. No Done: the title bar's X and Escape close the journal (`PanelSmoke` checks every edge and that
+  there is no Done).
 - Self-test (`PanelSmoke`, `JournalChecks`): the name first and the Skin second, no game row left, every label 100 or
   wider (journal and colours window), the name's box focused when activated, every part inside the column, the babies rows only for a mount with babies, the same order on each mount picked. The screenshots
   (`PanelShot`) go to `BepInEx\GK2-panel-shots\`.

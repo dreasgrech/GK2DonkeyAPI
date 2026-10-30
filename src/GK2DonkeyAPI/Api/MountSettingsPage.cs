@@ -806,8 +806,8 @@ namespace GK2DonkeyAPI.Api
 
 
         // A button that opens the Mounts panel over the options window: every mount listed, the chosen one drawn with its
-        // description, what it does and its abilities, and the page's look rows for it (its Skin, the colours), with Done
-        // (Escape too; both keep what was chosen, and go back to the options). Only in a game; greyed in the main menu.
+        // description, what it does and its abilities, and the page's look rows for it (its Skin, the colours); its X and
+        // Escape keep what was chosen and go back to the options. Only in a game; greyed in the main menu.
         public void PanelButton(string section, string label, string description)
         {
             Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });

@@ -14,13 +14,21 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 ## To check in game (built and deployed, not yet seen)
 
 - **The options window** (2026-10-30, API 0.42.0, deployed 21:05; docs/options-window.md): F11 done (the full run 1402
-  passed, its one failure the stale integration-tests DLL; the garbage survey rerun 3 of 3). Seen in the log by
+  passed, its one failure the stale integration-tests DLL; the garbage survey rerun 3 of 3; the final build's full run
+  21:50: 1412 of 1412, the framework installed; a start without the framework 21:54: clean, the Settings window's
+  button and the journal's opened the window and came back). Seen in the log by
   hand: the Mods menu's Settings button, the Settings window's button and the journal's Options button open the
   window and come back where they were. Still to look at by hand:
   - the pause menu, Settings: the "GK2 Saddle Up options" button above OK (its look next to OK, the gamepad reaching it);
   - the window: the sections left, the rows right, the line at the bottom under the mouse and on the gamepad;
   - a key box: click, press Ctrl+G; click, press and let go Left Shift alone (Climb's default); Backspace; Esc;
   - two pressed keys alike (Ride on G): "Same key as Drive the cart" under both; set back, it goes;
+  - overlaps: seen by hand 23:13: Send your mount away on Ctrl + G sent the mount away, riding and driving, with no
+    cart called; G alone drove the cart. (The user then set it to Enter: the key box takes Enter as a key.)
+  - the journal's buttons (Options centred under the list, Customize under the picture, Drive the cart and Ride on
+    the right, no Done; 23:32): seen by the user, Skins and effects 634 of 634 at 23:44;
+  - by hand, 23:44 (the user, from the main menu through the Mods menu): a lone Left Shift set, Backspace to None,
+    Esc, Defaults on Keys and Freeplay (Set back: 2 and 3 changed), the main menu, the gamepad: all done;
   - Defaults on a section: asked, Cancel keeps, Set back sets it back;
   - the Mounts button: the journal over the options, Escape back to them, Escape back to the Settings window;
   - the journal (L): its Options button, the options over it, their Mounts button back to it;
@@ -28,6 +36,8 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   - GK2 Mod Framework (installed here): Saddle Up and the API listed as registered (a check mark, no "Imported
     settings"); Saddle Up's Settings button opens the options window, Escape back to the Mods menu on Saddle Up;
     the log line "GK2 Mod Framework's Settings button opens the options window of our pages";
+  - among other mods (built 21:24; F11 628 of 628 at 21:35): at Saddle Up's defaults no key clashes with the 11 keys of
+    other mods or the 30 game bindings installed here; with other mods, watch for "Same key as" lines that are noise;
   - screenshots of the window for the Nexus and Workshop pages: the old Mods-menu pictures are out of the page texts
     (media/GK2ModFramework-Mods.png, settings.gif, NoGK2ModFrameworkSettings.png stay in media/ until replaced).
 

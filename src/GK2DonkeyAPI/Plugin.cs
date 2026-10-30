@@ -808,6 +808,8 @@ namespace GK2DonkeyAPI
             // the API is in (its options open on a stopped API too, and in the main menu): before the mods' keys act.
             try
             {
+                GameWindowAside.Tick(MountsPanel.Exists || OptionsWindow.IsOpen); // a game window over ours: they step aside
+                SettingsButtons.Tick(); // the Settings window's options button there while it is on top
                 KeyCapture.Tick();
                 OptionsWindow.Tick();
             }

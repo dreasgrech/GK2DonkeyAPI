@@ -16,7 +16,7 @@ namespace GK2DonkeyAPI
     // (speed, the cart, babies, skins); under them the row that defines its look at a glance, the Skin, as the game's
     // own rows. A "Customize" button opens a second window of the same make with the colour rows in two full columns
     // (the user, 2026-10-21: the journal must not squash the customisation; the colours get a window of their own; the
-    // effect rows went on 2026-10-25). Done and Escape keep what was chosen (no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
+    // effect rows went on 2026-10-25). Its X and Escape keep what was chosen (no Done since 2026-10-30, no Cancel since 2026-10-21; the snapshot below still lets a self-test put back what was set
     // when the window opened). Only in a game.
     //
     // Built by hand at a fixed size (1060x600 on the game's 1280x720 canvas; scaled only on a smaller canvas), no
@@ -108,6 +108,43 @@ namespace GK2DonkeyAPI
         internal static bool IsOpen => panel != null && (panel.activeSelf || colours != null);
         internal static bool SearchFocused => controls.TypingField() != null; // the search box or a row's text box (the name)
         internal static bool IsColoursOpen => colours != null;
+        internal static bool Exists => panel != null; // open, shown or waiting under the options window
+        private static GameObject optionsButton;
+
+        // The self-test's view of the buttons against the list and the stage (panel units from the left): Options' centre
+        // and width, Customize's centre, Drive the cart's left edge, Ride's right edge; the list's edges, the stage's, the
+        // window's right margin; NaN for a button not there; whether a Done button is there (none since 2026-10-30).
+        internal static (float OptionsCentre, float OptionsWidth, float CustomizeCentre, float DriveLeft, float RideRight, float ListLeft, float ListRight, float StageLeft, float StageRight, float RightMargin, bool Done) TestButtonEdges()
+        {
+            float X(GameObject go, float along)
+            {
+                if (go == null) return float.NaN;
+                var rt = (RectTransform)go.transform;
+                return rt.anchoredPosition.x + rt.sizeDelta.x * along;
+            }
+            float left = Pad + ListW + Gap;
+            bool done = panel != null && panel.transform.Find("GK2DonkeyAPI mounts panel done") != null;
+            return (X(optionsButton, 0.5f), X(optionsButton, 1f) - X(optionsButton, 0f), X(coloursButton, 0.5f), X(driveButton, 0f), X(rideButton, 1f),
+                Pad, Pad + ListW, left, left + StageW, W - Pad, done);
+        }
+
+        // A game window opened over the panel (GameWindowAside.Covered): the journal and its colours window step aside,
+        // invisible and taking no clicks or keys, until it closes.
+        private static bool covered;
+
+        private static void FollowCover()
+        {
+            bool now = GameWindowAside.Covered;
+            if (now == covered) return;
+            covered = now;
+            foreach (GameObject w in new[] { panel, colours })
+            {
+                Canvas c = w != null ? w.GetComponent<Canvas>() : null;
+                if (c != null) c.enabled = !now;
+            }
+            if (now) controls.CloseDropdown(refocus: false);
+            else controls.NavDirty = true;
+        }
 
         // Every mount a player can pick (Looks.MountChoices: the mounts with a skin, the donkey first), with its words.
         internal static List<Entry> Entries()
@@ -412,26 +449,31 @@ namespace GK2DonkeyAPI
             contentScroll = ui.ScrollView(rightArea, "content", statsX, rowsTop, statsW, Mathf.Max(40f, y + StageH - rowsTop), out contentRoot, 2f, manual: true);
             ui.AddScrollbar(contentScroll);
 
-            // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
-            GameObject done = ui.OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
-            UiKit.Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject customise = coloursButton = ui.OwnButton(panel.transform, "colours", "Customize", 200f, ButtonH, OpenColours);
-            UiKit.Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
+            // the buttons, on the list's and the stage's edges (the user's screenshots, 2026-10-30): Options centred under
+            // the mount list, the buttons' own width; Customize centred under the stage (it colours what the stage shows); Drive the cart and Ride
+            // on the right, Drive from the stage's right edge, Ride ending on the window's margin, one gap (12) between
+            // them. No Done (the user, 2026-10-30): the title bar's X and Escape close the journal, keeping what was chosen
+            // (no Cancel since 2026-10-21).
+            float stageLeft = Pad + ListW + Gap, stageRight = stageLeft + StageW, buttonsY = H - Pad - ButtonH;
+            float callW = Mathf.Floor((W - Pad - stageRight - 12f) / 2f);
+            GameObject customise = coloursButton = ui.OwnButton(panel.transform, "colours", "Customize", ButtonW, ButtonH, OpenColours);
+            UiKit.Rect(customise, Mathf.Round(stageLeft + (StageW - ButtonW) / 2f), buttonsY, ButtonW, ButtonH);
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
-            GameObject ride = rideButton = ui.OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
-            UiKit.Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject drive = driveButton = ui.OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
-            foreach (GameObject bgo in new[] { done, customise, ride, drive }) UiKit.NavGroup(bgo, 2);
-            // the page's options (OptionsWindow), left of Customize, one gap (12) between them; from the options themselves
-            // (their Mounts button opened the journal), back to them
+            GameObject ride = rideButton = ui.OwnButton(panel.transform, "ride", "Ride", callW, ButtonH, () => Call(MountStyle.Ride));
+            UiKit.Rect(ride, W - Pad - callW, buttonsY, callW, ButtonH);
+            GameObject drive = driveButton = ui.OwnButton(panel.transform, "drive", "Drive the cart", callW, ButtonH, () => Call(MountStyle.Cart));
+            foreach (GameObject bgo in new[] { customise, ride, drive }) UiKit.NavGroup(bgo, 2);
+            // the page's options (OptionsWindow), under the mount list; from the options themselves (their Mounts button
+            // opened the journal), back to them
+            optionsButton = null;
             if (OptionsWindow.HasOptions(page))
             {
-                GameObject opts = ui.OwnButton(panel.transform, "options", "Options", ButtonW, ButtonH, () =>
+                GameObject opts = optionsButton = ui.OwnButton(panel.transform, "options", "Options", ButtonW, ButtonH, () =>
                 {
                     if (overOptions) Close(keep: true);
                     else OptionsWindow.Open(page);
                 });
-                UiKit.Rect(opts, W - Pad - ButtonW - 12f - 200f - 12f - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
+                UiKit.Rect(opts, Mathf.Round(Pad + (ListW - ButtonW) / 2f), buttonsY, ButtonW, ButtonH);
                 UiKit.NavGroup(opts, 2);
             }
             var jnav = panel.GetComponent<GamepadNavigationController>();
@@ -439,7 +481,7 @@ namespace GK2DonkeyAPI
             UiKit.Hand(jnav, 1, GUIDirection.Left, 0); UiKit.Hand(jnav, 1, GUIDirection.Down, 2);   // the rows -> the list, the buttons
             UiKit.Hand(jnav, 2, GUIDirection.Up, 1); UiKit.Hand(jnav, 2, GUIDirection.Left, 0);     // the buttons -> the rows, the list
             UiKit.Hand(jnav, 1, GUIDirection.Up, 0);
-            UiKit.Rect(drive, Pad + ButtonW + 12f, H - Pad - ButtonH, 150f, ButtonH);
+            UiKit.Rect(drive, stageRight, buttonsY, callW, ButtonH);
 
             pictureOff = false;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
@@ -1101,7 +1143,8 @@ namespace GK2DonkeyAPI
             }
             // the rest only while the journal or its colours window is the one shown (the options window over it has its own)
             GameObject shown = colours != null ? colours : panel != null && panel.activeSelf ? panel : null;
-            if (shown != null)
+            if (shown != null) FollowCover();
+            if (shown != null && !covered)
             {
                 controls.TrackTyping();
                 Wheel();
@@ -1339,6 +1382,7 @@ namespace GK2DonkeyAPI
             nextPicture = 0f;
             fitted.Clear(); // the pictures go with the windows
             page = null;
+            covered = false;
             bool fromOptions = overOptions;
             overOptions = false;
             if (!wasOpen) return;

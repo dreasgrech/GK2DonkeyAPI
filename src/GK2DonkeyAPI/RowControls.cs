@@ -123,7 +123,7 @@ namespace GK2DonkeyAPI
             float clashH = 0f;
             if (clash != null)
             {
-                clashLine = ui.Text(go.transform, "clash", "Same key as " + clash, 0.8f, TextAlignmentOptions.TopLeft, true, lay.LabelX, 0f, labelW, OwnRowH);
+                clashLine = ui.Text(go.transform, "clash", clash, 0.8f, TextAlignmentOptions.TopLeft, true, lay.LabelX, 0f, labelW, OwnRowH);
                 clashLine.color = ClashColor;
                 clashH = Mathf.Ceil(clashLine.GetPreferredValues(clashLine.text, labelW, 0f).y);
             }
