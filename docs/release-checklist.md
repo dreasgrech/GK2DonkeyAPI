@@ -53,10 +53,20 @@ The game may be running: a build is fine, only the deploy copy into the game nee
 from `bin/`, not from the game folder.
 
 ```
-bash tools/build-dist.sh           # GK2DonkeyAPI.dll and GK2SaddleUp.dll into dist/, then check-dist.py
-bash tools/release-scans.sh        # section 2
-python tools/make-release-zip.py   # release/GK2-Saddle-Up-<version>.zip
+bash tools/release.sh              # all of it, in order, stopping at the first failure (since 2026-10-30):
+#   python tools/release-versions.py check   every version line agrees, the editorial pieces exist
+#   python tools/release-versions.py items   which DLLs this release raised, which stay released builds
+#   bash tools/build-dist.sh                 the release build into dist/, kept DLLs back to their committed bytes
+#   bash tools/release-scans.sh              section 2
+#   python tools/make-release-zip.py         the raised items' zips and workshop/<Item>/ folders
 ```
+
+**The release rule** (`release-versions.py items`): a DLL whose source version differs from the one committed in
+`dist/` is in this release; one with the same version is a released build, so `build-dist.sh` puts its committed
+bytes back and `make-release-zip.py` writes no zip for it. The baseline is the commit: commit `dist/` after the
+release build (a rerun then says "nothing to release"), and raise a version to ship any change. This replaced
+the by-hand `git checkout` of unreleased pack DLLs and the hand-picked `--only` (2026-10-30). No step of a release
+lives outside `tools/`.
 
 `build-dist.sh` builds each with `dotnet build -c Release --no-incremental -p:ForDist=true -p:Deploy=false`, stops on
 a failed build or any compiler warning, copies the DLLs into `dist/` and runs `check-dist.py` (build output in
@@ -70,21 +80,21 @@ installed game, or a Saddle Up DLL that references a game assembly (it carries n
 `--no-incremental` matters: after a dev build, a `ForDist` build of the unchanged sources reuses the dev output (the
 property change doesn't invalidate the compile), and the check then fails on the PDB path (seen 2026-10-13).
 
-`make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
-`modinfo.json` (id `dreas.gk2.saddleup`, name, version: the game's Mods window reads them; since 2026-10-30,
-`docs/mods-window-and-workshop.md`), `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and
+`make-release-zip.py` (it runs `release-versions.py check` and `check-dist.py` first) writes
+`release/GK2-Saddle-Up-<version>.zip` with `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and
 `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod; Saddle Up's built-in Gerry is a pack inside its DLL),
 read back and compared with `dist/`; this zip is the Nexus upload and extracts into the game folder as before (the game's
 Mods window lists only Workshop items; `Mods\Code` is the README's local test folder and our rehearsal, not a player
 install). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's name after
 `GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
-`GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, its `modinfo.json` with the pack's GUID, the version from the pack's
+`GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, the version from the pack's
 CHANGELOG.md, raised there when the pack changed): each its own Nexus file. There is no bundle of the packs (the user,
 2026-10-27: "ill ship individuals"). `--only saddleup` (or a pack's folder name) writes one item's zip: a pack whose
 number is public is not rebuilt. `release/` is not kept in git.
 
 The same run stages each item for the Steam Workshop in `workshop/<Item>/` (not in git; `--no-workshop` skips it):
-the zip's content as a folder plus `Thumbnail.jpg` (from `media/workshop/<Item>/`, made by
+the zip's content as a folder plus `modinfo.json` (id = the plugin GUID, name, version: the game's Mods window shows
+name and version; no zip carries it, nothing reads it in the game folder), `Thumbnail.jpg` (from `media/workshop/<Item>/`, made by
 `tools/workshop-thumbnail.py <picture> <Item>`), `_description.bbcode` (from `media/..._Workshop.txt`, Steam's BBCode;
 the tool warns while a `{{ }}` placeholder is left or the text is over Steam's 8,000 characters) and `_changenote.txt`
 (the item's "For players" entry of its changelog). The game's Workshop creator (Shift+F11 in the main menu with

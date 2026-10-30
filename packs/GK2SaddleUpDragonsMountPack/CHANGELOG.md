@@ -2,9 +2,9 @@
 
 ## 1.0.1, 2026-10-30
 
-- **On the Steam Workshop** (2026-10-30): the zip carries a `modinfo.json` (id `dreas.gk2.saddleup.dragon`, name,
-  version) and its content is the Workshop item's; subscribed, the game's Mods window lists the pack. The zip
-  installs into the game folder as always.
+- **On the Steam Workshop** (2026-10-30): the Workshop item holds the same DLL and a `modinfo.json` (id
+  `dreas.gk2.saddleup.dragon`, name, version); subscribed, the game's Mods window lists the pack. The zip installs
+  into the game folder as always.
 - **The plugin is named "GK2 Saddle Up: Dragons Mount Pack"** (2026-10-30; it was "GK2 Saddle Up: Dragon"): the name BepInEx logs and the framework's Mods
   menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
   (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.

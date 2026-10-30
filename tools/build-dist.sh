@@ -41,6 +41,20 @@ for pack in "$REPO"/packs/*/; do
   asm="$(grep -o '<AssemblyName>[^<]*' "$pack/$name.csproj" | head -1 | cut -d'>' -f2)"
   build "packs/$name" "${asm:-$name}"
 done
+# The release rule (tools/release-versions.py items): a DLL whose version was not raised above the one committed in
+# dist/ is a released build: its committed bytes go back into dist/ (a public version is never rebuilt; 2026-10-30:
+# the Donkey Skin Pack's source held the unreleased Armored under its public 1.0.0). A raised or new one stays built.
+echo "== the release rule"
+ITEMS="$(python -I "$REPO/tools/release-versions.py" items)" || { echo "release-versions.py items FAILED"; exit 1; }
+while read -r state dll ver rest; do
+  case "$state" in
+    kept)
+      git -C "$REPO" checkout -- "dist/$dll.dll" || { echo "could not restore dist/$dll.dll"; exit 1; }
+      echo "   $dll $ver: kept, the released build (its version was not raised)" ;;
+    raised|new) echo "   $dll $ver: $state, this release's build" ;;
+    *) echo "release-versions.py items said: $state $dll $ver $rest"; exit 1 ;;
+  esac
+done <<< "$ITEMS"
 echo "== check-dist"
 python "$REPO/tools/check-dist.py" || { echo "check-dist FAILED"; exit 1; }
 echo "DIST BUILT"

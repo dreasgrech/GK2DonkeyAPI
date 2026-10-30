@@ -16,7 +16,7 @@ The API DLL carries the list of every game member it uses (840 entries against t
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
 
 Players install both, each in its own folder: `BepInEx\plugins\GK2DonkeyAPI\` and `BepInEx\plugins\GK2SaddleUp\` (the
-release zip, `tools/make-release-zip.py`, holds that layout, plus a `modinfo.json` from the release after 0.13.1 on). The zip extracts
+release zip, `tools/make-release-zip.py`, holds that layout; the Workshop folder adds a `modinfo.json`). The zip extracts
 into the game folder; the same files are the Steam Workshop items' content, which the game installs and lists in its
 Mods window (`docs/mods-window-and-workshop.md`). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
 
@@ -35,9 +35,10 @@ players since this version (0.10.0 shipped them off); which mounts a player has 
 
 Sizes 2026-10-30 afternoon (`bash tools/build-dist.sh` for 0.13.2 / API 0.41.2 and the Dragons Mount Pack 1.0.1; F11 on
 the dev build 1361 passed, 0 failed, 0 warnings; `tools/release-versions.py check` and 24 of 24 release scans green):
-`GK2-Saddle-Up-0.13.2.zip` 888,786 bytes (`modinfo.json`, `GK2DonkeyAPI.dll` 2,697,216 bytes, `GK2SaddleUp.dll` 34,816),
-`GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip` 449,496 bytes (`modinfo.json`, the DLL 616,448); the same files staged
-in `workshop\GK2SaddleUp\` and `workshop\GK2SaddleUpDragonsMountPack\` for the Workshop items. The Critters and
+`GK2-Saddle-Up-0.13.2.zip` 888,603 bytes (`GK2DonkeyAPI.dll` 2,697,216 bytes, `GK2SaddleUp.dll` 34,816),
+`GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip` 449,290 bytes (the DLL 616,448); no `modinfo.json` in either (rebuilt
+before the upload); the same DLLs plus `modinfo.json` staged in `workshop\GK2SaddleUp\` and
+`workshop\GK2SaddleUpDragonsMountPack\` for the Workshop items. The Critters and
 Donkey Skin Pack DLLs here stay the 1.0.0 builds (restored from git after the build).
 
 Sizes 2026-10-30 13:01 (`bash tools/build-dist.sh` for 0.13.1 / API 0.41.1, the 1.011 re-audit, no code change; 24 of 24

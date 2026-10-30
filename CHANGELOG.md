@@ -21,6 +21,12 @@ For players:
 
 Development:
 
+- **One command for a release** (2026-10-30, after 0.13.2): `bash tools/release.sh` runs the version check, the
+  release items, the dist build, the scans and the zips in order and stops at the first failure. The release rule
+  (`tools/release-versions.py items`): a DLL whose version is not raised above the one committed in `dist/` keeps its
+  committed bytes (`build-dist.sh` restores them) and gets no zip (`make-release-zip.py` picks the raised items
+  itself); a raised pack needs its `docs/nexus/<name>-<version>-changelog.md`. This replaces the hand steps of
+  0.13.2 (a `git checkout` of the unreleased pack DLLs, a hand-picked `--only`).
 - **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our
   skin creation pipeline so that it gets easier with every skin"): the donkey's anatomy that every skin drawn over it
   needs is one shared module, `tools/skins/donkey/` (`anatomy.py`: `body()` with the hip, collar and back line,
@@ -40,9 +46,10 @@ For players:
 
 - **On the Steam Workshop** (2026-10-30; `docs/mods-window-and-workshop.md`): GK2 Saddle Up, the Dragons Mount Pack
   and the Donkey Skin Pack are Workshop items as well; subscribed, the game installs and updates them and its
-  main-menu Mods window lists them with their version and an Enable/Disable switch. The zip carries the same
-  `modinfo.json` (id `dreas.gk2.saddleup`, name, version) and installs into the game folder as always; installed
-  that way the mod is not listed in the game's Mods window, which shows only what the game installed itself. The
+  main-menu Mods window lists them with their version and an Enable/Disable switch (from the item's `modinfo.json`:
+  id `dreas.gk2.saddleup`, name, version). The zip is the same plugin files and installs into the game folder as
+  always, without `modinfo.json` (nothing reads it there); installed that way the mod is not listed in the game's
+  Mods window, which shows only what the game installed itself. The
   game's `Mods\Code` folder, which its README_MODDING.txt calls "Testing locally", is left out of the player texts.
 - **A mount's own getting-on and getting-off sounds play whole** (2026-10-30): the donkey's snorts start 0.42 s in
   (their silence skipped), and a pack's own clip for the event inherited that start. The rat's and the snail's

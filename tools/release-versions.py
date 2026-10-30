@@ -1,8 +1,14 @@
 """Every line that carries a version number, checked or moved together (docs/release-checklist.md, section 6).
 
     python tools/release-versions.py check
+    python tools/release-versions.py items           # which DLLs this release carries (raised) and which stay released (kept)
     python tools/release-versions.py set saddleup 0.13.2 --api 0.41.2
     python tools/release-versions.py set GK2SaddleUpDragonsMountPack 1.0.1
+
+The release rule (`items`, used by build-dist.sh and make-release-zip.py): a DLL whose source version differs from the
+one committed in dist/ is in this release ("raised"); one with the same version is a released build ("kept"):
+build-dist.sh puts its committed bytes back and make-release-zip.py writes no zip for it. A released version is never
+rebuilt; to ship a change, raise the version.
 
 `check` (make-release-zip.py runs it first; exit 1 on any finding) reads the one place each version lives (the
 plugin's `Version` constant in Plugin.cs) and verifies every other line that repeats it: the csproj, README.md's table
@@ -103,6 +109,17 @@ def check():
     if not os.path.isfile(os.path.join(ROOT, nexus)):
         bad += 1
         print(f"FAIL  the Nexus note {nexus} is missing (editorial: the simplified player text of this release)")
+    # a pack raised in this release needs its player note too (its Nexus file's text, and its Workshop change note)
+    raised = {dll for dll, ver, committed in dll_items() if committed is not None and ver != committed}
+    for pack in pack_dirs():
+        if dll_of(pack) not in raised:
+            continue
+        v = constant(f"packs/{pack}/Plugin.cs")
+        short = zip_name(pack, v)[len("GK2-Saddle-Up-"):-len(f"-{v}.zip")].lower()
+        note = f"docs/nexus/{short}-{v}-changelog.md"
+        if not os.path.isfile(os.path.join(ROOT, note)):
+            bad += 1
+            print(f"FAIL  {pack} {v} is in this release but its player note {note} is missing")
     # a pack's CHANGELOG first versioned heading must be its version (an Unreleased block above it is fine)
     for pack in pack_dirs():
         v = constant(f"packs/{pack}/Plugin.cs")
@@ -163,12 +180,43 @@ def set_pack(pack, v_new):
     print(f"\nStill yours: packs/{pack}/CHANGELOG.md's heading '## {v_new}, <date>' (from its Unreleased), dist/README.md's note on the row. Then: python tools/release-versions.py check")
 
 
+def dll_items():
+    """[(dll name, its source version, the version of the dll committed in dist/ or None)] for the API, Saddle Up and each pack."""
+    import subprocess, tempfile
+    out = [("GK2DonkeyAPI", constant("src/GK2DonkeyAPI/Plugin.cs")), ("GK2SaddleUp", constant("src/SaddleUp/Plugin.cs"))]
+    out += [(dll_of(p), constant(f"packs/{p}/Plugin.cs")) for p in pack_dirs()]
+    res = []
+    for dll, ver in out:
+        blob = subprocess.run(["git", "-C", ROOT, "show", f"HEAD:dist/{dll}.dll"], capture_output=True)
+        committed = None
+        if blob.returncode == 0:
+            with tempfile.TemporaryDirectory() as d:
+                path = os.path.join(d, dll + ".dll")
+                open(path, "wb").write(blob.stdout)
+                v = subprocess.run(["pwsh", "-NoProfile", "-Command", f"[Reflection.AssemblyName]::GetAssemblyName('{path}').Version.ToString(3)"],
+                                   capture_output=True, text=True)
+                committed = v.stdout.strip() or None
+        res.append((dll, ver, committed))
+    return res
+
+
+def items():
+    """Which DLLs this release carries: raised = the source's version differs from the one committed in dist/ (a new
+    release of it); kept = the same version, a released build (build-dist.sh puts the committed bytes back; no zip)."""
+    for dll, ver, committed in dll_items():
+        state = "new" if committed is None else ("raised" if ver != committed else "kept")
+        print(f"{state:6} {dll} {ver}" + ("" if committed in (None, ver) else f" (dist/ has {committed})"))
+
+
 def main():
     args = sys.argv[1:]
-    if not args or args[0] not in ("check", "set"):
+    if not args or args[0] not in ("check", "set", "items"):
         sys.exit(__doc__)
     if args[0] == "check":
         sys.exit(1 if check() else 0)
+    if args[0] == "items":
+        items()
+        return
     if len(args) < 3:
         sys.exit(__doc__)
     api_new = args[args.index("--api") + 1] if "--api" in args else None

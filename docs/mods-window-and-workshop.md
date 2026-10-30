@@ -325,3 +325,9 @@ Nexus texts and release notes carry **no link to Steam and no Workshop promotion
 that the game's Mods window lists only what the game installed itself from the Steam Workshop, so a Nexus install
 missing there is normal. The Workshop change notes speak of the Workshop through notes of their own,
 `docs/nexus/<name>-<version>-workshop-changenote.txt`, which `make-release-zip.py` prefers over the Nexus note.
+
+**`modinfo.json` leaves the zips** (the user, 2026-10-30, before the 0.13.2 upload): with the Nexus install into the
+game folder it lands next to the exe, where nothing reads it (the game's code: only the mod scan reads it, inside a
+Workshop item or a `Mods\Code` folder; the lab's scenario F), and the README marks it optional and for the Mods
+window. It stays in the Workshop folders, where it gives the tile its name and version. The plugin files are the
+same bytes on both channels.

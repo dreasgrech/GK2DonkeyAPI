@@ -15,19 +15,18 @@ A zip that already exists in release/ is never overwritten without --overwrite: 
 Runs tools/check-dist.py first and stops if it fails.
 
 One item per download (the user, 2026-10-27: each pack ships on its own, there is no bundle): GK2 Saddle Up with the
-Donkey API inside, and each external pack. Every item is one folder laid out as the game's code-mod contract wants
+Donkey API inside, and each external pack. Every item is laid out as the game's code-mod contract wants
 (README_MODDING.txt in the game folder since 1.011, docs/mods-window-and-workshop.md):
 
-    modinfo.json                        id (the plugin GUID), name, version: the game's Mods window shows name and version
     BepInEx/plugins/<Mod>/<Mod>.dll     a folder per plugin (Saddle Up's zip: GK2DonkeyAPI and GK2SaddleUp)
+    modinfo.json                        the Workshop folder only: id (the plugin GUID), name, version for the game's Mods window
 
-The same folder serves both channels, byte for byte (the lab run of 2026-10-30 in the report):
-- zipped, it is the Nexus download: release/GK2-Saddle-Up-<version>.zip and release/GK2-Saddle-Up-<Pack words
-  dashed>-<version>.zip (GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip). Extracted into the game folder it is the loose
-  install of old (BepInEx finds plugins in subfolders; the stray modinfo.json next to the exe is read by nothing);
-  extracted into Mods\\Code\\<Name>\\ in the save data folder it is a local code mod the Mods window lists, with
-  Enable/Disable, and the game copies the plugin folders into BepInEx\\plugins itself.
-- as a folder, workshop/<Item>/ is what the game's Workshop creator (Shift+F11) uploads: the item content plus
+The plugin files are the same bytes on both channels (the lab run of 2026-10-30 in the report):
+- zipped, they are the Nexus download: release/GK2-Saddle-Up-<version>.zip and release/GK2-Saddle-Up-<Pack words
+  dashed>-<version>.zip (GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip), extracted into the game folder (BepInEx finds
+  plugins in subfolders). No modinfo.json in a zip (the user, 2026-10-30): next to the exe nothing reads it, and the
+  game's Mods window lists only what the game installed itself (Workshop items, its Mods\\Code test folder).
+- as a folder, workshop/<Item>/ is what the game's Workshop creator (Shift+F11) uploads: modinfo.json and the plugins, plus
   Thumbnail.png|jpg (the preview; from media/workshop/<Item>/), _description.bbcode (from media/..._Workshop.txt, Steam's
   BBCode) and _changenote.txt (the item's "For players" entry of its changelog); the uploader skips the three
   (names starting with _ and Thumbnail.*). workshop/ is not kept in git.
@@ -98,7 +97,7 @@ class Item:
     def __init__(self, folder, zip_name, guid, name, ver, dlls, what, changelog, media_dir, text_name, nexus_note=None):
         self.folder, self.zip_name, self.guid, self.name, self.version, self.what = folder, zip_name, guid, name, ver, what
         self.changelog, self.media_dir, self.text_name, self.nexus_note = changelog, media_dir, text_name, nexus_note
-        self.entries = [(None, MODINFO), (None, "BepInEx/"), (None, INNER)]
+        self.entries = [(None, MODINFO), (None, "BepInEx/"), (None, INNER)]  # modinfo.json: the Workshop folder only
         for dll in dlls:  # a folder per plugin, named after the DLL
             self.entries += [(None, INNER + dll + "/"), (os.path.join(DIST, dll + ".dll"), INNER + dll + "/" + dll + ".dll")]
 
@@ -136,11 +135,10 @@ def write_zip(item, overwrite=False):
         # a zip in release/ may be the public one (0.13.1 was overwritten in place on 2026-10-30 before anyone noticed it
         # was uploaded already): a released version is never rebuilt, and a new one gets a new number
         sys.exit(f"{path} exists: a released zip is never rebuilt (bump the version), or pass --overwrite for one that was never uploaded")
+    entries = [(s, n) for s, n in item.entries if n != MODINFO]  # the Nexus zip: the plugins alone
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
-        for src, name in item.entries:
-            if name == MODINFO:
-                z.writestr(MODINFO, item.modinfo())
-            elif src is None:
+        for src, name in entries:
+            if src is None:
                 z.writestr(zipfile.ZipInfo(name), b"")  # the folders as entries of their own: some extractors and managers want them
             else:
                 z.write(src, name)
@@ -148,16 +146,12 @@ def write_zip(item, overwrite=False):
         if z.testzip() is not None:
             sys.exit(f"{path} reads back broken")
         names = z.namelist()
-        if names != [n for _, n in item.entries]:
+        if names != [n for _, n in entries]:
             sys.exit(f"{path}: unexpected entries: {names}")
-        for src, name in item.entries:
-            if src is not None or name == MODINFO:
-                if sha(z.read(name)) != sha(item.data(src, name)):
-                    sys.exit(f"{name} in {path} differs from its source")
-        info = json.loads(z.read(MODINFO).decode("utf-8"))
-        if info["version"] != item.version or info["id"] != item.guid:
-            sys.exit(f"{path}: modinfo.json says {info}, the plugin {item.guid} {item.version}")
-    files = sum(1 for s, _ in item.entries if s is not None) + 1
+        for src, name in entries:
+            if src is not None and sha(z.read(name)) != sha(open(src, "rb").read()):
+                sys.exit(f"{name} in {path} differs from its source")
+    files = sum(1 for s, _ in entries if s is not None)
     print(f"{path}: {item.what}, {files} files, {os.path.getsize(path):,} bytes")
     for n in names:
         print("  " + n)
@@ -281,6 +275,19 @@ def main():
         items = [it for it in items if (want == "saddleup" and it.folder == "GK2SaddleUp") or it.folder.lower() == want or it.what.lower().startswith(f"the pack {want} ")]
         if not items:
             sys.exit(f"--only {only[0]}: no such item (saddleup or one of {', '.join(packs)})")
+    else:
+        # the release rule (tools/release-versions.py items): an item is in this release when one of its DLLs was raised
+        # above the version committed in dist/ (or is new); a kept one is a released build and gets no zip
+        r = subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools", "release-versions.py"), "items"], capture_output=True, text=True)
+        if r.returncode != 0:
+            sys.exit("release-versions.py items failed: " + r.stderr.strip())
+        raised = {line.split()[1] for line in r.stdout.splitlines() if line.split() and line.split()[0] in ("raised", "new")}
+        for it in items:
+            dlls = {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None}
+            print(f"{'in this release' if dlls & raised else 'kept (released)':16} {it.name} {it.version}")
+        items = [it for it in items if {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None} & raised]
+        if not items:
+            sys.exit("no item's version was raised above the one committed in dist/: nothing to release")
     os.makedirs(OUT, exist_ok=True)
     for it in items:
         if zips:
