@@ -9,7 +9,7 @@ namespace SaddleUp
 {
     // The player mod: the keeper's own donkey, cart and foal, built only on the public GK2 Donkey API (docs/api.md).
     // The API does the work (Mounts.Companion: calling, riding, hitching, looks, keeping it with the save; and
-    // Mounts.SettingsPage: the Mods menu with GK2 Mod Framework, else the game's own Settings window, its keys polled and
+    // Mounts.SettingsPage: the options window, opened from the game's Settings window and the Mounts panel, its keys polled and
     // the mod's tuning cleared if it's unloaded). This mod only lists its settings and what its keys do, so it's also
     // the example of how little a player mod needs. Its built-in content (Gerry) is a mount pack embedded in this DLL
     // (the csproj's assets\mounts\**) and handed to the API in Awake. Every other mount and skin comes from a mod or a

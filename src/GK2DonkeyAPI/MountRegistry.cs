@@ -434,8 +434,6 @@ namespace GK2DonkeyAPI
             {
                 TickInner();
                 MountCompanion.TickAll();
-                LookPreview.Tick();
-                MenuLabels.Tick();
                 using (Perf.Measure(Perf.S.Preview)) PreviewStage.Tick();
                 using (Perf.Measure(Perf.S.PanelTick)) MountsPanel.Tick();
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
@@ -678,7 +676,7 @@ namespace GK2DonkeyAPI
         }
 
         // The cart's slot count (General.CartSlots, or an instance's own override) applied to every cart, standing ones
-        // too: at a setting change (the panel, the Mods menu, the cfg) and at a Behaviour override. Quiet when nothing
+        // too: at a setting change (a window, the cfg) and at a Behaviour override. Quiet when nothing
         // changes.
         internal static void ApplyCartSlots(string why)
         {

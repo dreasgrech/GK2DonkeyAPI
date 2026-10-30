@@ -13,6 +13,24 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **The options window** (2026-10-30, API 0.42.0, deployed 21:05; docs/options-window.md): F11 done (the full run 1402
+  passed, its one failure the stale integration-tests DLL; the garbage survey rerun 3 of 3). Seen in the log by
+  hand: the Mods menu's Settings button, the Settings window's button and the journal's Options button open the
+  window and come back where they were. Still to look at by hand:
+  - the pause menu, Settings: the "GK2 Saddle Up options" button above OK (its look next to OK, the gamepad reaching it);
+  - the window: the sections left, the rows right, the line at the bottom under the mouse and on the gamepad;
+  - a key box: click, press Ctrl+G; click, press and let go Left Shift alone (Climb's default); Backspace; Esc;
+  - two pressed keys alike (Ride on G): "Same key as Drive the cart" under both; set back, it goes;
+  - Defaults on a section: asked, Cancel keeps, Set back sets it back;
+  - the Mounts button: the journal over the options, Escape back to them, Escape back to the Settings window;
+  - the journal (L): its Options button, the options over it, their Mounts button back to it;
+  - the main menu, Settings: the button, the window, the Mounts and safe-spot buttons greyed ("Only in a game");
+  - GK2 Mod Framework (installed here): Saddle Up and the API listed as registered (a check mark, no "Imported
+    settings"); Saddle Up's Settings button opens the options window, Escape back to the Mods menu on Saddle Up;
+    the log line "GK2 Mod Framework's Settings button opens the options window of our pages";
+  - screenshots of the window for the Nexus and Workshop pages: the old Mods-menu pictures are out of the page texts
+    (media/GK2ModFramework-Mods.png, settings.gif, NoGK2ModFrameworkSettings.png stay in media/ until replaced).
+
 - **The keys wait while any text box has the cursor** (2026-10-30, KeyActions.TextBoxHasCursor; the user: L typed in
   the Tech Tree Search box opened the Mounts panel): typing an L in that box leaves the panel shut, L outside it
   still opens it; F11 `PanelSmoke`'s three text box checks. Not covered: IMGUI text fields (BepInEx's Configuration

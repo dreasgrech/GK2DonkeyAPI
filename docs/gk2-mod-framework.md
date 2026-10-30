@@ -1,5 +1,15 @@
 # GK2 Mod Framework (third-party) — investigation
 
+**Since 2026-10-30 (API 0.42.0) the options are the API's own window** (docs/options-window.md): the framework isn't
+on the Steam Workshop, so Workshop players wouldn't have it (the user). It is still supported (the user, the same
+evening: "We should still support the g2k framework"): the API and the page keep their entries in its Mods menu
+(registered, so the framework doesn't import their cfgs raw as "Imported settings"), the page's entry has one
+setting, a button to the window, and a Harmony prefix on the framework's private
+`ModsMenuWindow.OpenSettingsPage(RegisteredMod)` (the same in 0.1.16 and 0.1.24; the framework has no public hook)
+opens the window from its Settings button directly. Found with System.Type's reflection by the exact signature; if
+a version changes it, the one button shows instead. The labelled lists and the picture over the Mods menu
+(MenuLabels, ModsWindow, LookPreview) are gone with the rows. The report below is kept as it was.
+
 Investigated 2026-09-29 from the download at `C:\Users\User\Downloads\GK2 Mod Framework\` (version 0.1.16),
 by reading its docs and decompiling `GK2.Framework.dll` (ilspycmd, against the Steam build 25601286).
 Not installed in the game.

@@ -87,15 +87,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
 
-[size=3]With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu.[/size]
-
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/GK2ModFramework-Mods.png?v=2[/img][/center]
-
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings.gif?v=2[/img][/center]
-
-[size=3]Without any mod framework: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.[/size]
-
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/NoGK2ModFrameworkSettings.png?v=2[/img][/center]
+[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mounts panel (L) has an [b]Options[/b] button too, and with [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed, Saddle Up's [b]Settings[/b] button in its Mods menu opens them as well. To set a key, click its box and press the key. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]

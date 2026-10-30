@@ -126,7 +126,9 @@ different order on each mount. Decided with the user ("mixed by kind"; the colou
 | Choice, List (the Skin, every colour preset) | a dropdown: a click opens its list under it (over it near the window's bottom), 7 shown, then scrolling; a click outside, Escape or Back closes it |
 | Text (the name) | a text box (24 characters), written when the typing ends; the mods' keys wait while typing |
 
-Other kinds (a key, a button, an info line) still get the game's row. Code: `MountsPanel.Controls.cs` (`OwnRow`).
+Other kinds (a key, a button, an info line) got the game's row until 2026-10-30; since then every kind has its own
+control (the options window needs them; the user: "no compromise on controls"). Code: `RowControls.cs`
+(`OwnRow`; `MountsPanel.Controls.cs` was a partial of the panel, gone: the user wants no partial classes).
 
 - **One row**: its label left on the column's label edge, wrapping onto a second line when long (the row grows to
   fit), its control ending on the column's value edge. Journal: labels at x 12 and controls ending at 276, the stats
@@ -188,6 +190,13 @@ pause menu and forgets its return window, and its `Open` starts on the mod list.
 every window's `Update`, so a window switched back on reads keys from the next frame, when that Escape is over.
 Escape steps back: out of the search box, the colours window to the journal, the journal to the window under it.
 Done does the same; Ride and Drive close the whole chain into the game.
+
+The options window (2026-10-30, docs/options-window.md) is a level of the same way back: opened from the journal's
+**Options** button it hides the journal, which its Done, Escape or Mounts button shows again; its own Mounts button
+opens the journal over it, and the journal's Done, Escape or Options button goes back to it; Ride and Drive from a
+journal over the options close the options and the game windows under them. The game window under the first of
+ours, the controls and one Escape a frame are `GameWindowAside`'s (moved out of the panel), the rows' controls
+`RowControls`', the window pieces `UiKit`'s: the panel and the options window use the same.
 
 Any game window (2026-10-30): the window under the panel is held as the stack's own `LazyWidgetBase`. It was held as
 `LazyWindow<LazyWidgetDataBase>`, which C# doesn't match for a window with its own data type (classes have no generic

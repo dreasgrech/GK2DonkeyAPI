@@ -12,7 +12,7 @@ namespace GK2DonkeyAPI
     // it was built) with the installed game; this class reads the verdict by the mod's own classes behind each changed
     // member (game-code.txt, embedded):
     //
-    //   identical            run; the Mods menu is told the build is confirmed
+    //   identical            run
     //   missing / failed     stop (a member that is gone, or a check that could not run): the game runs unmodified
     //   changed, core        stop, unless Safety.ForceRunOnChangedGameCode (then everything runs but the chest, loudly)
     //   changed, a feature   that feature is off for the session (frozen) or runs with a warning (warned); the rest runs
@@ -28,7 +28,7 @@ namespace GK2DonkeyAPI
 
         internal static ConfigEntry<bool> ForceRun;
 
-        // The Mods menu's Status row (Mounts.StatusText): "Active", or what the start decided and why.
+        // A page's Status row (Mounts.StatusText): "Active", or what the start decided and why.
         internal static string Status { get; private set; } = "Active";
 
         // True when the mod stopped at start (Status says why); Mounts.StatusText shows that instead of the generic "off".

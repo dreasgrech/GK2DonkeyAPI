@@ -5,23 +5,25 @@ using BepInEx.Configuration;
 
 namespace GK2DonkeyAPI.Api
 {
-    // A player mod's settings, defined once and shown where the player looks (Mounts.SettingsPage):
-    // - with GK2 Mod Framework installed: in its Mods menu (the mod's own entry, its sections, every mount of row);
-    // - without it: in the game's own Settings window, on pages of the mod's own after the game's settings, made of
-    //   copies of the game's own rows (SettingsRows.cs). Keys and text there show read-only; they're set in the cfg.
-    // Each row binds a BepInEx entry in the mod's own cfg, runs its apply action now and on every change (from the menu,
-    // the Settings window or the cfg), and shows under its section. Call Publish once, after the rows, from the mod's
-    // Awake; the page reaches the menus the frame after (Show), when every plugin's Awake has run, so a mount or skin
-    // another mod registered in its Awake is in the lists whatever order BepInEx loaded the plugins in (it orders by
-    // dependencies only, and a mount mod can't ask to load before the mod that owns the page; docs/mounts-as-mods.md 4).
-    // Sections keep the order they're first used in: the cfg section is numbered ("1. Keys", "2. Behaviour"), because
-    // the framework's Mods menu sorts sections by name and has no other way to order them. The game's Settings window
-    // shows the plain names.
-    // Looks: Preview shows a picture of the mod's donkey in its current colours next to the settings (LookPreview.cs);
-    // the look rows (look: true; the Mount and Skin rows, the colours) are not in the menus at all: they
-    // live in the Mounts panel (MountsPanel.cs: the mounts listed, the chosen one drawn with its words and its rows),
-    // which PanelButton opens from the page and OpenPanel from a mod's key. Both are extras: if anything about them
-    // fails, they don't show, and the settings work through the cfg as before.
+    // A player mod's settings, defined once and shown where the player looks (Mounts.SettingsPage), the same for every
+    // player (since 0.42.0; GK2 Mod Framework's Mods menu before, when installed, else pages in the game's Settings
+    // window; the framework isn't on the Steam Workshop, the user 2026-10-30, docs/options-window.md):
+    // - the options window (OptionsWindow.cs): every row but the look rows, its sections side by side with their rows,
+    //   each our own control (keys set there too); opened from the mod's button in the game's Settings window
+    //   (SettingsButtons.cs), the Mounts panel's Options button, and with GK2 Mod Framework installed the Settings
+    //   button of the mod's entry in its Mods menu (FrameworkLink.cs: the entry has one setting, a button to it);
+    // - the Mounts panel (MountsPanel.cs: the mounts listed, the chosen one drawn with its words and its rows): the look
+    //   rows (look: true; the Mount and Skin rows, the colours), opened by PanelButton from the page and OpenPanel from a
+    //   mod's key.
+    // Each row binds a BepInEx entry in the mod's own cfg, runs its apply action now and on every change (from a window or
+    // the cfg), and shows under its section. Call Publish once, after the rows, from the mod's Awake; the page reaches the
+    // windows the frame after (Show), when every plugin's Awake has run, so a mount or skin another mod registered in its
+    // Awake is in the lists whatever order BepInEx loaded the plugins in (it orders by dependencies only, and a mount mod
+    // can't ask to load before the mod that owns the page; docs/mounts-as-mods.md 4).
+    // Sections keep the order they're first used in: the cfg section is numbered ("1. Keys", "2. Behaviour"; the
+    // framework's Mods menu sorted sections by name, and the numbers stay: renaming them would move every player's
+    // values). The windows show the plain names. If a window fails, it doesn't show, and the settings work through the
+    // cfg as before.
     public sealed class MountSettingsPage
     {
         internal enum RowKind { Toggle, Choice, Steps, Key, Text, Info, Button, Preview, Note, List }
@@ -38,12 +40,14 @@ namespace GK2DonkeyAPI.Api
             internal int Min, Max, Step;
             internal Func<int, string> Format;
             internal Func<string> InfoValue;
-            internal Func<bool> Visible;     // shown at all (Shown and Enabled together, for the menus)
+            internal Func<bool> Visible;     // shown at all
             internal Func<bool> Shown;       // a row of a set kept per mount (PerMount, the Skin rows): the chosen mount's shows, the others don't
-            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel leaves the row out while false (a custom colour shows with its preset), the Settings window greys it
-            internal bool IsLook;           // the Mounts panel's, not the menus' (InMenu); a Note with it is a heading there (Heading)
+            internal Func<bool> Enabled;     // the mod's own condition (a custom colour with its preset on Custom): the Mounts panel leaves the row out while false (a custom colour shows with its preset), the options window greys it
+            internal bool IsLook;           // the Mounts panel's, not the options window's (InOptions); a Note with it is a heading there (Heading)
             internal Action OnClick;         // RowKind.Button
             internal string ButtonText;      // RowKind.Button: the word on it ("Open", "Go")
+            internal bool OpensPanel;        // RowKind.Button: PanelButton's (from the journal under the options, it goes back to it)
+            internal bool HasPress;          // RowKind.Key: the mod acts on its press (pressed:): another key row with the same key is a clash (KeyCapture.Clash)
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
             internal string MountId;         // a PerMount or PerSkin row's mount (null: a row of no one mount)
             internal string SkinId;          // a PerSkin row's skin (null: a row of no one skin)
@@ -53,7 +57,6 @@ namespace GK2DonkeyAPI.Api
         internal static readonly List<MountSettingsPage> All = new List<MountSettingsPage>(); // every page made this session (the upgrade self-test)
         private readonly List<string> sections = new List<string>();
         internal MountCompanion PreviewOf;
-        internal Action RefreshMenu; // the Mods menu re-reads the rows' visibility (set by FrameworkLink)
 
         // "Keys" -> "1. Keys", numbered in the order sections are first used.
         private string Sec(string name)
@@ -551,11 +554,12 @@ namespace GK2DonkeyAPI.Api
         internal MountResult UseMount(MountStyle style) => mountCompanion != null ? mountCompanion.UseFromPanel(style) : MountResult.Refused("No mount rows on this page."); // the panel's Ride and Drive buttons
         internal bool IsMountRow(Row r) => r != null && r.Entry != null && ReferenceEquals(r.Entry, mountRow); // the Mount dropdown: the panel's list is the picker, the row stays out of its rows
 
-        // Whether a row is the menus' (the Mods menu, the game's Settings window, the menu labels) or the Mounts panel's:
-        // a look row is the panel's; a heading (Heading) is the panel's only when the rows after it in its section are
-        // look rows, so a mod's heading over plain rows stays in the menus.
-        internal bool InMenu(Row r)
+        // Whether a row is the options window's (OptionsWindow) or the Mounts panel's: a look row is the panel's; a
+        // heading (Heading) is the panel's only when the rows after it in its section are look rows, so a mod's heading
+        // over plain rows stays in the options; the picture (Preview) is neither's (the panel draws the mount itself).
+        internal bool InOptions(Row r)
         {
+            if (r.RowKind == RowKind.Preview) return false;
             if (!r.IsLook) return true;
             if (r.RowKind != RowKind.Note) return false;
             int at = Rows.IndexOf(r);
@@ -566,7 +570,7 @@ namespace GK2DonkeyAPI.Api
                 if (n.RowKind == RowKind.Note) break; // the next heading: nothing of this one's
                 return !n.IsLook;
             }
-            return false; // a heading with nothing after it: not worth a menu line
+            return false; // a heading with nothing after it: not worth a line
         }
         internal bool HasMountRow => mountRow != null;
         internal bool Shown => shown;
@@ -603,7 +607,7 @@ namespace GK2DonkeyAPI.Api
             => Toggle(section, key, value, label, description, apply, visible, look: false);
 
         // On or off.
-        // look: the Mounts panel's row (not the menus'), as Choice's.
+        // look: the Mounts panel's row (not the options window's), as Choice's.
         public ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, Action<bool> apply = null, Func<bool> visible = null, bool look = false)
         {
             string cfgSection = Sec(section);
@@ -614,7 +618,7 @@ namespace GK2DonkeyAPI.Api
         }
 
         // One of an enum's values; labels (one per value, in order) are what players see, else the value names.
-        // look: the Mounts panel's row (PanelButton), not the menus'.
+        // look: the Mounts panel's row (PanelButton), not the options window's.
         public ConfigEntry<T> Choice<T>(string section, string key, T value, string label, string description, Action<T> apply = null, string[] labels = null, bool look = false, Func<bool> visible = null) where T : struct, Enum
         {
             string cfgSection = Sec(section);
@@ -635,7 +639,7 @@ namespace GK2DonkeyAPI.Api
         // a name made from the id, "Blaze (not installed)" (MountsPanel.NameFromId; the id itself showed until
         // 2026-10-27), and left alone, so it returns with what provides it. The list is read once per
         // session, when the page is shown (the frame after Publish): anything registered after that appears after a
-        // restart. look: the Mounts panel's row, not the menus'.
+        // restart. look: the Mounts panel's row, not the options window's.
         public ConfigEntry<string> List(string section, string key, string value, Func<IReadOnlyList<(string Id, string Label)>> choices, string label, string description, Action<string> apply = null, bool look = false, Func<bool> visible = null)
         {
             if (choices == null) throw new ArgumentNullException(nameof(choices));
@@ -648,8 +652,8 @@ namespace GK2DonkeyAPI.Api
             return e;
         }
 
-        // A List row's labels and ids, filled once from its choices (plus the stored id if it isn't among them), so the
-        // Mods menu's dropdown, its labels and the Settings window agree for the session.
+        // A List row's labels and ids, filled once from its choices (plus the stored id if it isn't among them), so every
+        // window shows the same list for the session.
         internal static void FillList(Row r)
         {
             if (r.RowKind != RowKind.List || r.ChoiceLabels != null) return;
@@ -693,18 +697,17 @@ namespace GK2DonkeyAPI.Api
             return e;
         }
 
-        // A key (with modifiers). Read-only in the game's Settings window.
+        // A key (with modifiers), set in the options window's key box (KeyCapture: Shift, Ctrl or Alt alone too).
         // pressed: called when the player presses the key (its modifiers held; other keys held, like walking, don't
         // matter), while the API is on. The API polls it: the mod needs no Update of its own. Not while the Mounts panel
         // or its colours window is open (0.36.0), except a key whose pressed is OpenPanel (it closes the panel).
-        // Plain Backspace means no key: set from either menu or the cfg, it's cleared at once (GK2 Mod Framework's key
-        // capture has no way to clear a key and takes Backspace as one; the game's Settings window does the same on
-        // its own). Publish adds a row saying so before the page's first key.
+        // Plain Backspace means no key: the key box sets none for it, and a cfg (or an older menu) holding Backspace is
+        // cleared at once.
         public ConfigEntry<KeyboardShortcut> Key(string section, string key, KeyboardShortcut value, string label, string description, Action<KeyboardShortcut> apply = null, Action pressed = null)
         {
             string cfgSection = Sec(section);
             ConfigEntry<KeyboardShortcut> e = Bind(cfgSection, key, value, description);
-            Add(new Row { RowKind = RowKind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description });
+            Add(new Row { RowKind = RowKind.Key, Entry = e, Section = cfgSection, ShownSection = section, Label = label, Description = description, HasPress = pressed != null });
             ClearIfBackspace(e);
             e.SettingChanged += (_, __) => ClearIfBackspace(e); // before apply: apply sees the cleared key
             Wire(e, apply);
@@ -720,8 +723,8 @@ namespace GK2DonkeyAPI.Api
         public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply, Func<bool> visible)
             => Text(section, key, value, label, description, apply, visible, look: false);
 
-        // Free text. Read-only in the game's Settings window. visible: shown only while it says so.
-        // look: the Mounts panel's row (its own text box there; the menus show none).
+        // Free text, in a text box. visible: shown only while it says so.
+        // look: the Mounts panel's row, not the options window's.
         public ConfigEntry<string> Text(string section, string key, string value, string label, string description, Action<string> apply = null, Func<bool> visible = null, bool look = false)
         {
             string cfgSection = Sec(section);
@@ -788,43 +791,31 @@ namespace GK2DonkeyAPI.Api
             Add(new Row { RowKind = RowKind.Note, Section = Sec(section), ShownSection = section, Label = label, Description = description, IsLook = true });
         }
 
-        // A picture of the companion's donkey and cart in their current colours, walking on the spot: a row of the page,
-        // here in this section, in the order called (LookPreview); call it once per section that should show it (e.g.
-        // at the top of each section with look rows, so it's in view from each). Also above the Mods window, where it
-        // stays in view whatever row is scrolled to, when there's room there (1440p and up, not 1080p).
-        // label: the row's name; cart: the row's picture is the donkey with its cart, or the donkey alone (above the
-        // window it's always with the cart). Above the game's Settings window without the Mods menu; the Mounts panel
-        // too. It needs no donkey in the game: drawn from the game's own files in the companion's colours, so it shows
-        // in the main menu and indoors.
+        // The companion whose mount the Mounts panel draws (its picture of the mount and cart in their current colours).
+        // Since 0.42.0 the options window shows no picture (the panel shows the mount); the row stays on the page, out of
+        // every window, so a mod calling it is unchanged. label: the row's name; cart: kept for mods built against it.
         public void Preview(string section, MountCompanion companion, string label = "Your mount", bool cart = true)
         {
             PreviewOf = companion;
             Add(new Row
             {
-                RowKind = RowKind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = PreviewRoom,
-                Visible = () => LookPreview.RowsShown, WithCart = cart,
+                RowKind = RowKind.Preview, Section = Sec(section), ShownSection = section, Label = label, Description = "",
+                WithCart = cart,
             });
         }
 
-        // The rows are found on screen by their labels (LookPreview), and the Mods menu sizes a row by its description
-        // (only line breaks count as empty: the minimum height), so the picture's room is eight lines of one fully
-        // transparent dot each (a zero-width space didn't count).
-        internal bool HasPreviewRows => Rows.Exists(r => r.RowKind == RowKind.Preview);
 
-        internal Row PreviewRowLabelled(string text) => Rows.Find(r => r.RowKind == RowKind.Preview && r.Label == text);
-        internal const string PreviewRoom = "<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>\n<alpha=#00>.</alpha>";
-
-        // A button that closes the menu and opens the Mounts panel over the game: every mount listed, the chosen one
-        // drawn with its description, what it does and its abilities, and the page's look rows for it (its Skin, the
-        // colours), with Done (Escape too; both keep what was chosen). Only in a game; in the main menu it says so.
+        // A button that opens the Mounts panel over the options window: every mount listed, the chosen one drawn with its
+        // description, what it does and its abilities, and the page's look rows for it (its Skin, the colours), with Done
+        // (Escape too; both keep what was chosen, and go back to the options). Only in a game; greyed in the main menu.
         public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false) });
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });
         }
 
-        // A button of the mod's own (0.36.0): onClick runs when it is pressed, in the game's Settings window and in the
-        // Mods menu (there only in a game). buttonText: the word on it. enabled: the Settings window greys it and the Mods
-        // menu leaves it out while false. No cfg key. A handler that throws is logged.
+        // A button of the mod's own (0.36.0): onClick runs when it is pressed in the options window, only in a game (greyed
+        // in the main menu). buttonText: the word on it. enabled: greyed while false. No cfg key. A handler that throws is
+        // logged.
         public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null)
         {
             if (onClick == null) throw new ArgumentNullException(nameof(onClick));
@@ -893,8 +884,8 @@ namespace GK2DonkeyAPI.Api
             }
         }
 
-        // The mod is done adding rows. The page is shown the frame after (Show): in the framework's Mods menu when it's
-        // installed, else in the game's Settings window. The frame between is what lets every plugin's Awake run first
+        // The mod is done adding rows. The page is shown the frame after (Show): its button goes into the game's Settings
+        // window (SettingsButtons), opening the options window. The frame between is what lets every plugin's Awake run first
         // (the header's note): the mounts registered meanwhile get their rows (CatchUp) and every list is read then.
         public void Publish()
         {
@@ -921,21 +912,17 @@ namespace GK2DonkeyAPI.Api
             if (late > 0) Plugin.Log.LogInfo($"Settings: {Title}: {late} mount(s) registered after the page was built (a mod loaded after {OwnerId}) got their rows before the page was shown.");
             shown = true;
             AnyShown = true;
-            AddKeyHelp();
             FinishBinding();
             GuardCallbacks();
-            LookPreview.Watch(this);
-            if (FrameworkLink.TryRegister(this))
+            SettingsButtons.Add(this);
+            if (OptionsWindow.HasOptions(this) && FrameworkLink.TryRegister(this))
             {
-                MenuLabels.Add(this); // the choices' labels over the framework's plain names
-                Plugin.Log.LogInfo($"Settings: {Title} is in GK2 Mod Framework's Mods menu ({Rows.Count} rows).");
-                return;
+                Plugin.Log.LogInfo($"Settings: {Title} is in GK2 Mod Framework's Mods menu too (its Settings button opens the options window).");
             }
-            SettingsRows.Add(this);
         }
 
         // The mod's own functions on its rows (shown, enabled, an info line, a value's words) run in shared windows: the
-        // game's Settings, the Mods menu, the Mounts panel with every mod's rows. One that throws would close the panel
+        // options window, the Mounts panel with every mod's rows. One that throws would close the window
         // or stop the page for every mod (docs/multi-mod-loading.md 3): each is wrapped once, a throw logged once with
         // the page's mod and the row, and the row then shown, enabled, "-" or the plain number.
         private void GuardCallbacks()
@@ -986,8 +973,8 @@ namespace GK2DonkeyAPI.Api
             {
                 throw new InvalidOperationException("Add every row before Publish.");
             }
-            // A picture row is found on screen by its label (LookPreview.FindRows), so no other row may share it: a
-            // heading "Your mount" next to a picture "Your mount" got a picture of its own (seen 2026-10-19).
+            // A picture row's label is its own: until 0.42.0 the picture was found on screen by its label (a heading "Your
+            // mount" next to a picture "Your mount" got a picture of its own, seen 2026-10-19), and a page made since keeps to it.
             if (!string.IsNullOrEmpty(r.Label) && Rows.Exists(o => (o.RowKind == RowKind.Preview || r.RowKind == RowKind.Preview) && o.Label == r.Label))
             {
                 throw new ArgumentException($"the label \"{r.Label}\" is already a row's on this page, and one of the two is a picture row (Preview): a picture is found on screen by its label, so give it a label of its own.");
@@ -1013,11 +1000,10 @@ namespace GK2DonkeyAPI.Api
         // called once per registered mount with the mount's id, the suffix for the cfg keys ("" for the donkey, so a cfg
         // from before keeps its values under the same keys; "_crab" for a crab) and whether that mount is the one
         // chosen in the Mount row. The rows built in the call show for that mount only; a mod's own visible condition
-        // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel leaves such a row out until it holds, the menus hide it).
+        // on them (a custom colour with its preset) stays its own (Row.Enabled: the Mounts panel leaves such a row out until it holds).
         // Without a Mount row (MountRows not called) the rows are built once, for the donkey, as plain rows.
         // Greys a row (of this page) unless the condition holds: a colour row for a region none of the mount's skins has
-        // (a Harness row on a mount without one). The row stays and keeps its value; the Mounts panel shows it greyed, the Mods menu
-        // (which knows only visibility) leaves it out for that mount.
+        // (a Harness row on a mount without one). The row stays and keeps its value; the windows show it greyed.
         // The mount a companion's chosen skin is a look of pins this tuning key (its [Mount.Tuning] or a code mount's
         // Tuning, either style): its label, else null. A player's row for such a key does nothing on that mount.
         public static string PinnedBy(MountCompanion companion, string tuningKey)
@@ -1032,8 +1018,8 @@ namespace GK2DonkeyAPI.Api
             return Has(k.Tuning) || Has(k.TuningRide) || Has(k.TuningCart) ? k.Label : null;
         }
 
-        // Says which tuning key a row sets, so the row is left out of the Mods menu and the game's Settings window while the
-        // companion's chosen mount pins that key: a speed row does nothing on a mount that sets its own speed
+        // Says which tuning key a row sets, so the row is greyed in the options window while the companion's chosen mount
+        // pins that key: a speed row does nothing on a mount that sets its own speed
         // (docs/mounts-foundation-2.md 2.1). Call it after the row; the mod's own condition, if any, stays.
         public void TuningKey(string section, string key, string tuningKey, MountCompanion companion)
         {
@@ -1060,8 +1046,8 @@ namespace GK2DonkeyAPI.Api
         // Says a row is about the cart (its paint, its wheels, its lantern; 0.39.0): shown only while its mount pulls one
         // (a PerMount row's mount, else the chosen mount): a mount whose [Mount] says cart = false (MountDef.Cart false)
         // has no cart to colour (the user, 2026-10-25: "for mounts that cant pull the cart ... there's still cart
-        // customization ... these shouldnt be available"). Left out of the Mounts panel, the Mods menu and the Settings
-        // window alike; its value is kept. Call it after the row, for each of its keys (a custom colour row too).
+        // customization ... these shouldnt be available"). Left out of the Mounts panel and the options window alike; its
+        // value is kept. Call it after the row, for each of its keys (a custom colour row too).
         public void CartRow(string section, string key)
         {
             string cfgSection = Sec(section);
@@ -1292,8 +1278,6 @@ namespace GK2DonkeyAPI.Api
             lastRowOf[rows] = mine[mine.Count - 1];
         }
 
-        internal const string KeyHelp = "While setting a key, Backspace clears it and Esc cancels.";
-
         internal static bool IsClearKey(KeyboardShortcut k)
         {
             if (k.MainKey != UnityEngine.KeyCode.Backspace) return false;
@@ -1308,23 +1292,6 @@ namespace GK2DonkeyAPI.Api
                 e.Value = KeyboardShortcut.Empty;
                 Plugin.Log.LogInfo($"Settings: {OwnerId} {e.Definition.Key} cleared (Backspace means no key).");
             }
-        }
-
-        // Before the page's first key row, in its section: how to clear a key and cancel setting one. A note: in the Mods
-        // menu a row whose description is the sentence, in the game's Settings window the sentence across the row.
-        private void AddKeyHelp()
-        {
-            int first = Rows.FindIndex(r => r.RowKind == RowKind.Key);
-            if (first < 0)
-            {
-                return;
-            }
-            Row k = Rows[first];
-            Rows.Insert(first, new Row
-            {
-                RowKind = RowKind.Note, Section = k.Section, ShownSection = k.ShownSection, Label = "Setting a key",
-                Description = KeyHelp,
-            });
         }
 
         private void Wire<T>(ConfigEntry<T> e, Action<T> apply)

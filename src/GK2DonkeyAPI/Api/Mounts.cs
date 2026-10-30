@@ -645,10 +645,10 @@ namespace GK2DonkeyAPI.Api
             return c;
         }
 
-        // Your mod's player settings (MountSettingsPage): in GK2 Mod Framework's Mods menu when it's installed, else
-        // in the game's own Settings window. title: shown to players; status: what the Status row shows (page.Status)
-        // and "Active" when all is well (the Mods menu then confirms the game build); without it, StatusText. Add rows,
-        // then Publish.
+        // Your mod's player settings (MountSettingsPage): the options window (a button in the game's Settings window and
+        // the Mounts panel's Options button; the look rows in the Mounts panel). title: shown to players, and the
+        // button's "<title> options"; status: what the Status row shows (page.Status), "Active" when all is well;
+        // without it, StatusText. Add rows, then Publish.
         public static MountSettingsPage SettingsPage(string ownerId, BepInEx.Configuration.ConfigFile config, string title, string author, string description, Func<string> status = null)
         {
             if (string.IsNullOrEmpty(ownerId))

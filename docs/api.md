@@ -532,32 +532,27 @@ Where they apply:
 **`MountSettingsPage`** (`Mounts.SettingsPage(owner, Config, title, author, description, status)`; without `status`,
 `Mounts.StatusText`: "Active", or what the API is doing instead and why: a feature off after a game update, stopped, or switched off):
 
-| Row | Binds | In the game's Settings window |
+| Row | Binds | In the options window (0.42.0) |
 |---|---|---|
-| `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | Off / On |
-| `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | the labels |
-| `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | each step, `format` turns it into text ("100%") |
-| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | either arrow, then the key ("Press a key..."; Backspace: none, Esc: cancel). Plain Backspace always means no key (the Mods menu takes it as a key; it's cleared at once), and a note saying so ("While setting a key, Backspace clears it and Esc cancels.") is added before your first key |
-| `Status(section, label = "Status", description)` | nothing: the page's status | read-only |
-| `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | read-only |
-| `Info(section, label, value)` | nothing | read-only |
-| `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | the colour by name, its lightness |
-| `Color` | as above | a look row: in the Mounts panel, not in the menus (0.35.0); its lightness row goes with it |
-| `Choice` / `Steps` with `look: true` | as above | in the Mounts panel, not in the menus (0.35.0) |
-| `Preview(section, companion, label = "Your mount", cart = true)` | a row with the picture; call once per section that should show it. `cart: false`: that row shows the donkey alone. The picture also goes above the Mods window when there's room | a picture of the companion's donkey and cart in its current colours next to the settings (the Mounts panel draws its own). No donkey needed: the art comes from the game's files, the colours from the companion |
-| `PanelButton(section, label, description)` (`LookButton` is the same) | nothing | a button: the menu closes and the Mounts panel opens over the game (every mount listed, the chosen one drawn with its words, its look rows under it). `OpenPanel()` opens it from a key, and closes it when the key comes again while it is open; the button only brings it forward |
-| `Button(section, label, description, onClick, buttonText = "Go", enabled = null)` (0.36.0) | nothing | a button of the mod's own: `onClick` runs when it is pressed (the game's Settings window; the Mods menu in a game), `buttonText` is the word on it, `enabled` greys it in the Settings window and leaves it out of the Mods menu while false. A handler that throws is logged. Saddle Up's "Back to the last safe spot" ([never-lost.md](never-lost.md)) |
-| `TuningKey(section, key, tuningKey, companion)` | nothing | says which tuning key the row sets: the row is left out of the Mods menu and the game's Settings window while the companion's chosen mount pins that key (`PinnedBy(companion, key)` names the mount; only for a key a mount may pin; a set-aside skin pins nothing) |
-| `Heading(section, label, description = "")` | nothing | a heading inside a section: a line with the label and no value, before the rows it names (Saddle Up: "Mount colours" and "Cart colours" in Colours). In the Mounts panel the look rows after it, in its section, stand under this heading in a group of their own instead of under the section's name. Not a picture row's label: a `Preview` row is found on screen by its label, so no other row may share it (the page throws) |
+| `Toggle(section, key, value, label, description, apply)` | `ConfigEntry<bool>` | a switch |
+| `Choice<T>(..., apply, labels)` | `ConfigEntry<T>` (an enum); `labels` are what players see | a dropdown with the labels |
+| `Steps(section, key, value, min, max, step, ..., apply, format)` | `ConfigEntry<int>` | up to 8 values: a button each; more: a slider with `format`'s words ("100%") |
+| `Key(..., apply, pressed)` | `ConfigEntry<KeyboardShortcut>`; `pressed` runs when the player presses it | a key box: a click, then the key (with Shift, Ctrl or Alt, or one of those on its own; Backspace: none; Esc: cancel). Plain Backspace in the cfg means no key too (cleared at once). Two key rows with the same key, either with `pressed`, are marked under both (a clash: both would act) |
+| `Status(section, label = "Status", description)` | nothing: the page's status | an info line |
+| `Text(..., apply, visible)` | `ConfigEntry<string>`; `visible` shows it only while it says so | a text box |
+| `Info(section, label, value)` | nothing | its value, read again while shown |
+| `Color(section, key, label, description, PaletteColor, apply, visible)` | `ConfigEntry<PaletteColor>` `<key>` (24 named colours: Chestnut, Sand, Moss, Sky, ...) and `ConfigEntry<int>` `<key>Lightness` (40–160%); `apply` gets the colour as hex `RRGGBB` | a look row: in the Mounts panel (swatches, its lightness), not in the options (0.35.0) |
+| `Choice` / `Steps` / `Toggle` / `Text` with `look: true` | as above | in the Mounts panel, not in the options (0.35.0) |
+| `Preview(section, companion, label = "Your mount", cart = true)` | the companion whose mount the Mounts panel draws | not drawn since 0.42.0 (the Mounts panel shows the mount); call it as before |
+| `PanelButton(section, label, description)` (`LookButton` is the same) | nothing | a button: the Mounts panel opens over the options (every mount listed, the chosen one drawn with its words, its look rows under it); Done or Escape goes back to them. `OpenPanel()` opens it from a key, and closes it when the key comes again while it is open |
+| `Button(section, label, description, onClick, buttonText = "Go", enabled = null)` (0.36.0) | nothing | a button of the mod's own: `onClick` runs when it is pressed, `buttonText` is the word on it, `enabled` greys it while false; in a game only (greyed in the main menu). A handler that throws is logged. Saddle Up's "Back to the last safe spot" ([never-lost.md](never-lost.md)) |
+| `TuningKey(section, key, tuningKey, companion)` | nothing | says which tuning key the row sets: the row is greyed while the companion's chosen mount pins that key (`PinnedBy(companion, key)` names the mount; only for a key a mount may pin; a set-aside skin pins nothing) |
+| `Heading(section, label, description = "")` | nothing | a heading inside a section, before the rows it names. In the Mounts panel the look rows after it, in its section, stand under this heading in a group of their own (Saddle Up: "Mount colours" and "Cart colours"); over plain rows it is a heading in the options. Not a `Preview` row's label (the page throws) |
 
-- **In the Mods menu:** your mod lists `dreas.gk2.donkeyapi` as its dependency, and GK2 Donkey API has its own entry
-  in the list (no settings). While the API is off or unconfirmed for the game build, the menu marks your mod
-  "Dependency unavailable".
-- **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from the Mods menu, the
-  Settings window or the cfg.
+- **Binding:** each row binds an entry in your cfg and runs `apply` now and on every change, from a window or the cfg.
 - **Sections keep your order:** the cfg section is numbered in the order you first use them (`1. Keys`,
-  `2. Behaviour`, ...), because the framework's Mods menu sorts sections by name and offers no other way to order
-  them. The game's Settings window shows the plain names. Moving a section in a later version renumbers it, and the
+  `2. Behaviour`, ...; GK2 Mod Framework's Mods menu sorted sections by name, and the numbers stay so no player's values
+  move). The windows show the plain names. Moving a section in a later version renumbers it, and the
   page carries a player's values over: a key the cfg lacks under its section takes the value the cfg has under the
   same name with another number (of several old copies, the fullest section wins, then the highest number), and the
   old copy is dropped from the file at the next save; the log says which section moved. A key you move to another
@@ -565,32 +560,22 @@ Where they apply:
   it changed too), and the first bind with nothing in the cfg takes the old value the same way. A key that moved
   more than once names each old place in a call of its own (0.36.0), e.g. Saddle Up's babies:
   `MovedKey("Babies", "Foals", "Mount")` and `MovedKey("Babies", "Foals", "Donkey")`.
-- **`Publish()`, once, after the rows, from your `Awake`:**
-  - with GK2 Mod Framework installed, your mod gets an entry in its **Mods** menu, grouped by section (the framework
-    sorts the sections by name);
-  - without it, your rows go into the game's own **Settings** window, on pages of their own: a "Showing" row at the
-    top switches between the game's settings and yours. They're copies of the game's own rows (look, sounds,
-    gamepad). Each page holds as many rows as the game's own page; only the rows showing count, and the pages are
-    planned again when rows show or hide: the fewest pages, a section going on over the next page ("(more)") only
-    when keeping it whole would take another page, at least two rows on each side of a cut.
-- **The framework is never required:** the API's link to it is soft, and if it's missing or fails, the Settings
-  window is used.
-- **The look, three ways:**
-  - **named colours:** a colour by name and its lightness; the picture shows the result;
-  - **the picture:** the donkey and its cart walking on the spot, in the companion's colours (its "paper donkey", an
-    instance never spawned, carrying only its look). A stripped copy of the game's own donkey
-    (`Assets/AddressableAssets/WGOs/npc_donkey.prefab`, through Addressables) is drawn by a hidden camera at the
-    game's angle, at 3 picture pixels per art pixel, so it shows in the main menu and indoors too. In the Mods menu it
-    goes into its rows in the list, one per `Preview` call, and above the window too when it fits there (0.75
-    canvas units per art pixel or more: 1440p and up, not 1080p). Above the Settings window without the framework,
-    and the Mounts panel draws its own picture of the chosen mount;
-  - **the Mounts panel:** the mounts listed, the chosen one drawn with its description, what it does and its
-    abilities, and the page's look rows for it, with Done and Cancel. Cancel puts back what was set when it opened
-    (every mount's). Only in a game. The look rows are not in the Mods menu or the Settings window at all.
-- **The picture and the Mounts panel are extras.** They're found and built defensively. If something about them fails
-  (after a game or framework update), they don't show and the log says so once; the settings work as before.
-- **`status`:** shown as a "Status" row. "Active" lets the Mods menu confirm the game build; anything else shows
-  "Unknown build" there.
+- **`Publish()`, once, after the rows, from your `Awake`** (0.42.0; before, GK2 Mod Framework's Mods menu when it was
+  installed, else pages in the game's Settings window): the game's **Settings** window (in the pause menu and the main
+  menu) gets a button "`<title>` options", and the Mounts panel an **Options** button. They open the **options
+  window**: your sections as cards on the left, the chosen one's rows on the right, each row the API's own control, a
+  line at the bottom saying what the row under the mouse or the gamepad's focus does (its `description`), **Defaults**
+  (the section shown back to its defaults, asked first) and Done. Changes apply at once. With GK2 Mod Framework
+  installed your mod has an entry in its Mods menu too, whose Settings button opens the same window (its page holds
+  one button to it, the fallback when the framework's Settings button can't be pointed at the window; GK2 Donkey API
+  has an entry of its own, and your mod lists it as its dependency). The window takes the
+  player's controls while open, the game window under it waits switched off, and Escape steps back one window at a
+  time (docs/options-window.md).
+- **The Mounts panel:** the mounts listed, the chosen one drawn with its description, what it does and its
+  abilities, and the page's look rows for it, with Done. Only in a game. The look rows are not in the options window.
+- **The windows are extras.** They're built defensively. If something about them fails (after a game update), they
+  don't show and the log says so once; the settings work through the cfg as before.
+- **`status`:** shown as a "Status" row when you add one ("Active", or what the API is doing instead).
 
 **Also new in 0.14.0:**
 - `MountHandle.DisplayName` and `SetDisplayName(owner, name)` (owner only, at most 24 characters, kept with the save).
@@ -1062,6 +1047,12 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
+- 0.42.0 (unreleased): no change to the public surface. A page shows in the API's options window (a button in the
+  game's Settings window, the Mounts panel's Options button, and with GK2 Mod Framework installed the Settings button
+  of its entry in the Mods menu, which has one setting: a button to the window), every row as the API's own control;
+  the pages in the game's Settings window are gone. Key rows are set in the window (a lone modifier too), text rows are text boxes, a `Preview` row is no
+  longer drawn, the "Setting a key" note row is gone, two key rows with the same key are marked when either has
+  `pressed`. `MountSettingsPage` above.
 - 0.41.1 (2026-10-30): no change to the API; the build re-audited against game 1.011 (Steam 26297960,
   docs/game-update-26297960.md): 11 of the game members it uses changed in IL, none went missing, and the
   dependency manifest it embeds is the new build's (0.41.0 stopped itself on 1.011).
@@ -1261,7 +1252,7 @@ History:
 - 0.15.0: `Preview(section, companion, label, cart)` rows; the picture above the Mods window or in the rows.
 - 0.14.0: `MountCompanion` (`Mounts.Companion`), the look and speed presets (`MountSpeed`, `CoatColor`,
   `HarnessColor`, `CartPaint`, `LanternColor`), `MountSettingsPage` (`Mounts.SettingsPage`: the Mods menu or the
-  game's Settings window), `MountHandle.DisplayName` / `SetDisplayName`, and `HitchKey` in `Mounts.Behaviour`.
+  game's Settings window then; the options window since 0.42.0), `MountHandle.DisplayName` / `SetDisplayName`, and `HitchKey` in `Mounts.Behaviour`.
 - 0.13.0 (breaking, pre-release): the rename. GK2 Mounts is now GK2 Donkey API: `GK2DonkeyAPI.dll`, GUID
   `dreas.gk2.donkeyapi`, namespace `GK2DonkeyAPI.Api` (was `GK2Mounts.Api`). Type and member names are unchanged.
   The showcase is now GK2 Saddle Up (`dreas.gk2.saddleup`). A save's old side file and old owner ids are read and

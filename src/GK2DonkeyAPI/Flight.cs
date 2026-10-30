@@ -845,11 +845,11 @@ namespace GK2DonkeyAPI
             // the keys: never with the Mounts panel or a text box, the controls taken (a dialogue: Space skips speech; a
             // menu: Space selects) or the game paused
             PlayerController pcIn = MainGame.PlayerController;
-            // ... nor while a key is being set in the Settings window (the API's key poller skips those frames too)
+            // ... nor while a key is being set in the options window (the API's key poller skips those frames too)
             KeyboardShortcut jk = JumpKeyNow, fk = FlyKeyNow;
             if (!SameKey(jk, keysSeenJump) || !SameKey(fk, keysSeenFly)) { keysSeenJump = jk; keysSeenFly = fk; keysWaitRelease = true; }
             if (keysWaitRelease && !Held(jk) && !Held(fk)) keysWaitRelease = false;
-            if (!MountsPanel.IsOpen && GUIUtility.keyboardControl == 0 && !SettingsRows.CapturingKey && pcIn != null && pcIn.IsControlsEnabled && !MainGame.IsGamePaused)
+            if (!MountsPanel.IsOpen && !OptionsWindow.IsOpen && GUIUtility.keyboardControl == 0 && !KeyCapture.Active && pcIn != null && pcIn.IsControlsEnabled && !MainGame.IsGamePaused)
             {
                 var input = UnityInput.Current;
                 // in a fight (the keeper in armour, a weapon out) the game's Attack is on Space: the jump and fly keys are

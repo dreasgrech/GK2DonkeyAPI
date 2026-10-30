@@ -361,8 +361,8 @@ namespace GK2DonkeyAPI
     // faster while riding. The donkey is a temporary view only (the game's build-preview mechanism): it is never
     // added to the world data, so nothing about it is saved. See README.md and FEASIBILITY.md.
     [BepInPlugin(Guid, "GK2 Donkey API", Version)]
-    // Soft: with GK2 Mod Framework installed, player mods' settings pages go into its Mods menu (FrameworkLink);
-    // without it they go into the game's own Settings window. Never needed.
+    // Soft: with GK2 Mod Framework installed, the API and each player mod's page are in its Mods menu, the page's Settings
+    // button opening the options window (FrameworkLink). Never needed: the options open from the game's Settings window too.
     [BepInDependency(FrameworkLink.FrameworkGuid, BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
@@ -598,7 +598,7 @@ namespace GK2DonkeyAPI
             FlyKey = Config.Bind("General", "FlyKey", Defaults.Get("General", "FlyKey", new KeyboardShortcut(KeyCode.Space)),
                 "Riding plain a mount that flies: take off and land. The same key as JumpKey: take off with a second press in the air during a jump. None: no flying by key.");
             ClimbKey = Config.Bind("General", "ClimbKey", Defaults.Get("General", "ClimbKey", new KeyboardShortcut(KeyCode.LeftShift)),
-                "Flying: held, the mount climbs (up to the flight's highest). The main key alone counts, so a modifier (Left Shift) can be the key; the game's Settings window can't set a lone modifier (the cfg and the Mods menu can). None: no climbing by key.");
+                "Flying: held, the mount climbs (up to the flight's highest). The main key alone counts, so a modifier (Left Shift) can be the key (an options window's key box sets one: press and let go). None: no climbing by key.");
             DescendKey = Config.Bind("General", "DescendKey", Defaults.Get("General", "DescendKey", new KeyboardShortcut(KeyCode.LeftControl)),
                 "Flying: held, the mount descends; at the ground it has landed. The main key alone counts (as ClimbKey). None: no descending by key (the fly key lands).");
             FallGuard = Config.Bind("General", "FallGuard", Defaults.Get("General", "FallGuard", true),
@@ -791,7 +791,7 @@ namespace GK2DonkeyAPI
         // LateUpdate: runs after the game moved the player for this frame, so the donkey follows without lag.
         private void LateUpdate()
         {
-            // The deferred actions first, whatever state the API is in (a page reaches the menus on a stopped API too).
+            // The deferred actions first, whatever state the API is in (a page reaches the windows on a stopped API too).
             while (nextFrame.Count > 0)
             {
                 Action a = nextFrame.Dequeue();
@@ -801,8 +801,19 @@ namespace GK2DonkeyAPI
                 }
                 catch (Exception e)
                 {
-                    Log.LogWarning("A deferred action threw (a settings page may be missing from the menus): " + e);
+                    Log.LogWarning("A deferred action threw (a settings page may be missing from the windows): " + e);
                 }
+            }
+            // A key being set in the options window, then the window itself (its Escape, its gamepad), whatever state
+            // the API is in (its options open on a stopped API too, and in the main menu): before the mods' keys act.
+            try
+            {
+                KeyCapture.Tick();
+                OptionsWindow.Tick();
+            }
+            catch (Exception e)
+            {
+                Log.LogError($"The options window failed this frame. {e}");
             }
             // Unity's layout pass runs before every OnGUI and makes garbage even when nothing is drawn: off while the
             // panel isn't showing (set here, before this frame's OnGUI, so the events of one frame agree).
@@ -846,7 +857,6 @@ namespace GK2DonkeyAPI
                 using (Perf.MeasureAlloc())
                 using (Perf.Measure(Perf.S.Keys))
                 {
-                    SettingsRows.Tick(); // a key being set in the game's Settings window (before the keys act)
                     KeyActions.Poll(); // the mods' keys (MountSettingsPage.Key with pressed:), before this frame's update
                 }
             }

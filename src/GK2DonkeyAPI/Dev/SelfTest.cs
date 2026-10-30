@@ -186,6 +186,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window; over the Character window on the Tech Tree)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
+            new Scenario { Group = GroupLooks, Name = "settings: the options window (every option our own control in its section; a switch; a key set, in words, a clash; the line at the bottom; Defaults asked)", Body = OptionsTests.Smoke },
+            new Scenario { Group = GroupLooks, Name = "settings: the options window's way back (the Settings window's button; the Mounts button and back; the journal's Options button and back; Ride from the journal over them)", Body = OptionsTests.WayBack },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -3250,7 +3252,7 @@ namespace GK2DonkeyAPI
                         $"{noCart}, which can't pull the cart: no Drive the cart button, no Cart colours (its mount colours stay)");
                     // its picture finished (the alone view): waited for, not a fixed count (a flying mount, a pack read from disk
                     // since 2026-10-26, was still building after 30 frames: the "last photo" was another mount's)
-                    Mount.Instance paperBefore = LookPreview.PaperOf(page);
+                    Mount.Instance paperBefore = MountsPanel.PaperOf(page);
                     yield return Until(() => MountsPanel.TestPicture != null && PreviewStage.ShowsLookNow(MountsPanel.TestPicture, paperBefore), 15f);
                     Check(waited, $"{noCart}'s picture is shown whole before the switch (within 15 s)");
                     yield return PanelShot("journal-" + noCart);
@@ -3258,7 +3260,7 @@ namespace GK2DonkeyAPI
                     // one whole in the cart view, never the new mount in the alone view (the user, 2026-10-25: "large and
                     // without a cart" for a few frames)
                     Texture before = MountsPanel.TestPicture;
-                    Mount.Instance paperNow = LookPreview.PaperOf(page);
+                    Mount.Instance paperNow = MountsPanel.PaperOf(page);
                     MountsPanel.TestSelect(withCart);
                     int stale = 0, bad = 0, frames = 0;
                     Texture now = before;

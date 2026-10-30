@@ -59,10 +59,14 @@ of fire comes in a later update) and Royal Parade (a saddle cloth and a crown; t
 ## Settings
 
 All of these apply at once:
-- **With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed** (optional): in the
-  game's **Mods** menu, under GK2 Saddle Up. Its sections are numbered (1. Keys first) to keep them in this order.
-- **Without it:** in the game's own **Settings** window. The "Showing" row at the top switches between the game's
-  settings and Saddle Up's pages. To set a key, press either arrow of its row, then the key (Backspace: no key; Esc: cancel). A lone Shift or Ctrl can't be set there, only in the Mods menu or the cfg.
+- **In the options window:** the game's **Settings** window (in the pause menu and the main menu) has a **GK2 Saddle
+  Up options** button, and the Mounts panel an **Options** button. The sections are on the left, their options on the
+  right, and the line at the bottom says what the option under the mouse does. To set a key, click its box and press
+  the key: with Shift, Ctrl or Alt, or one of those on its own (Backspace: no key; Esc: cancel). A key that another
+  option has too is said under its name. **Defaults** sets the section shown back to its defaults, after asking. The
+  buttons (the Mounts panel, the safe spot) work in a game only. With [GK2 Mod
+  Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed, Saddle Up's **Settings** button in its
+  Mods menu opens the same window.
 - **In the Mounts panel** (L, the Mounts panel key, or the Mount section's Mounts button): everything kept per mount,
   marked "(in the Mounts panel)" below.
 - **Always:** in `BepInEx\config\dreas.gk2.saddleup.cfg` (with the game closed).
@@ -119,10 +123,8 @@ All of these apply at once:
 | | Speed of every mount (shown with the row above on) | Normal | Very slow, Slow, Normal, Fast or Very fast, the Mounts panel's words. Normal is the donkey's speed. |
 
 **Choosing colours:**
-- **A picture** of your mount and cart in the chosen colours, walking on the spot: at the top of the Mount
-  section, in the Mounts panel and its colours window, and above the Mods window too when the screen
-  has room for it (1440p and up). Above the Settings window without the Mods menu. It needs no mount in
-  the game.
+- **A picture** of your mount and cart in the chosen colours, walking on the spot: in the Mounts panel and its
+  colours window.
 - **Custom** shows two more rows for that part: a colour by name (24 of them: Chestnut, Sand, Cream, Snow, Ash, Slate,
   Charcoal, Black, Rust, Brick, Wine, Coral, Rose, Plum, Lavender, Navy, Sky, Teal, Mint, Moss, Forest, Olive,
   Mustard, Gold) and its lightness. The picture shows the result.

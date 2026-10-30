@@ -20,11 +20,11 @@ namespace GK2DonkeyAPI
     // when the window opened). Only in a game.
     //
     // Built by hand at a fixed size (1060x600 on the game's 1280x720 canvas; scaled only on a smaller canvas), no
-    // nested auto-sizing. From the game: the window frame sprite, its dialog button's face (sliced onto the panel's own
-    // buttons), its font (read off one of its labels), and its "< value >" rows (SettingsRows), placed where they draw
-    // (a game row draws wider than its rectangle: MeasureRow). If a part can't be found, the panel doesn't open and
-    // the log says so.
-    internal static partial class MountsPanel
+    // nested auto-sizing. From the game (UiKit): the window frame sprite, its dialog button's face (sliced onto the
+    // panel's own buttons), its font (read off one of its labels) and its rows' measures. Every row is our own control
+    // (RowControls); the game window under the panel waits switched off (GameWindowAside). If a part can't be found,
+    // the panel doesn't open and the log says so.
+    internal static class MountsPanel
     {
         private const float W = 1060f, H = 600f, Pad = 20f, Gap = 8f, FaceInset = 13f; // FaceInset: the game's BackMask inside its frame
         // TitleH: from the window's top to the content: the game's title bar (11 in, 26 high: its windows' HeaderGroup, read
@@ -45,27 +45,19 @@ namespace GK2DonkeyAPI
         // column (SwatchRow; laid on the game row's measured lines until 2026-10-26, which stopped measuring true).
         // MeasureRow still logs where the game row's label ends and its "< value >" spans (from its drawn left).
         private const float SwatchGap = 2f;
+        private const float JournalCtrlW = 140f; // the journal's wide controls (a list, the numbers, a slider, the name)
+        private const float ColoursColW = 369f, ColoursLabelW = 150f; // the colours window: two columns side by side, each its labels then its controls
         // the colours window's columns end this far before its scrollbar (the user, 2026-10-27: the right column's dropdowns and
         // last swatch ran under it)
         private const float ColoursScrollGap = 10f;
-        private static float rowLabelRight = 160f, rowCtrlLeft = 168f, rowCtrlRight = 168f + 12f * 16f;
         private const float EdgeGap = 24f; // the least room left at the screen's edges before a window is scaled down
         private const float CW = 800f, CH = 640f, CStageW = StageW, CStageH = 236f, CPictureScale = PictureScale; // the colours window and its picture: the journal's stage and size, so the mount is drawn as big in both (the user, 2026-10-22: smaller in the colours window)
-        private static readonly Color CardBase = new Color(0.13f, 0.14f, 0.18f, 0.9f), CardChosen = new Color(0.42f, 0.11f, 0.11f, 0.95f); // a journal's rows: dark, the chosen one in the game's red
-        private static readonly Color BoxColor = new Color(0f, 0f, 0f, 0.35f), EdgeColor = new Color(1f, 1f, 1f, 0.12f);
 
         private static GameObject panel, colours;
         private static MountSettingsPage page;
-        private static GameObject templateRow;
-        private static UIDialogWindowButton dialogTemplate;
-        private static Sprite buttonSprite;      // the game's dialog button face, for the panel's own buttons
-        private static Color buttonTextColor = Color.white;
-        private static TMP_FontAsset font, boldFont; // the labels' (small_font) and the game's buttons' and titles' (small_font_bold)
-        private static Material boldMaterial;
-        private static Material fontMaterial;
-        private static Color fontColor = Color.white;
-        private static float fontSize = 18f;
-        private static Rect rowVisual = new Rect(0f, 0f, 400f, 33f); // where a copied game row really draws, relative to its rectangle's top left: x and y its offsets (negative: outside), its drawn width and height
+        // what the windows are built with (the game's look, read when the panel opens) and the rows' controls (UiKit, RowControls)
+        private static readonly UiKit ui = new UiKit("GK2DonkeyAPI mounts panel ");
+        private static readonly RowControls controls = new RowControls(ui, () => colours != null ? colours : panel, Refresh);
 
         private static RectTransform listContent, rightArea, stage, contentRoot, coloursRoot, coloursStage;
         private static ScrollRect listScroll, contentScroll, coloursScroll;
@@ -114,7 +106,7 @@ namespace GK2DonkeyAPI
         }
 
         internal static bool IsOpen => panel != null && (panel.activeSelf || colours != null);
-        internal static bool SearchFocused => TypingField() != null; // the search box or a row's text box (the name)
+        internal static bool SearchFocused => controls.TypingField() != null; // the search box or a row's text box (the name)
         internal static bool IsColoursOpen => colours != null;
 
         // Every mount a player can pick (Looks.MountChoices: the mounts with a skin, the donkey first), with its words.
@@ -235,9 +227,9 @@ namespace GK2DonkeyAPI
             }
             float h = n > 0 ? StatsTitleH + 4f + n * AbilityLineH + 6f : 0f;
             abilitiesCard.gameObject.SetActive(n > 0);
-            if (n > 0) Rect(abilitiesCard.gameObject, statsColX, statsColTop + StatsCardH + Gap, statsColW, h);
+            if (n > 0) UiKit.Rect(abilitiesCard.gameObject, statsColX, statsColTop + StatsCardH + Gap, statsColW, h);
             float rowsTop = statsColTop + StatsCardH + Gap + (n > 0 ? h + Gap : 0f);
-            Rect(contentScroll.gameObject, statsColX, rowsTop, statsColW, Mathf.Max(40f, statsColTop + StageH - rowsTop));
+            UiKit.Rect(contentScroll.gameObject, statsColX, rowsTop, statsColW, Mathf.Max(40f, statsColTop + StageH - rowsTop));
         }
 
         // A mount's or skin's name from its id when nothing else knows it (its pack not installed): "acme-pack.crab"
@@ -275,8 +267,8 @@ namespace GK2DonkeyAPI
                     }
                     else
                     {
-                        FitToScreen(panel, W, H); // the button again: the panel stays as it is
-                        if (colours != null) FitToScreen(colours, CW, CH);
+                        UiKit.FitToScreen(panel, W, H); // the button again: the panel stays as it is
+                        if (colours != null) UiKit.FitToScreen(colours, CW, CH);
                     }
                     return;
                 }
@@ -284,9 +276,13 @@ namespace GK2DonkeyAPI
                 page = p;
                 p.HoldMountForPanel(); // picking a row shows a mount, Ride or Drive the cart makes it his
                 Build(settings);
-                HideUnder(); // the game window it was opened from (if any) waits underneath, as it is
-                TakeControls();
-                Plugin.Log.LogInfo($"Settings: the Mounts panel opened over {UnderText()}.");
+                // the window it was opened from waits underneath, as it is: the options window (its Mounts button), else the
+                // game's (if any)
+                overOptions = OptionsWindow.IsShown;
+                if (overOptions) OptionsWindow.HideUnderPanel();
+                else GameWindowAside.SetAside("the Mounts panel");
+                GameWindowAside.TakeControls("the Mounts panel");
+                Plugin.Log.LogInfo($"Settings: the Mounts panel opened over {(overOptions ? "the options window" : GameWindowAside.UnderText)}.");
             }
             catch (Exception e)
             {
@@ -299,27 +295,9 @@ namespace GK2DonkeyAPI
 
         private static void Build(UIGameSettingsWindow settings)
         {
-            UISwitchButton template = settings.GetComponentInChildren<UISwitchButton>(true);
-            dialogTemplate = settings.GetComponentInChildren<UIDialogWindowButton>(true);
-            if (template == null || dialogTemplate == null)
-            {
-                throw new InvalidOperationException("no row or button to copy in the Settings window");
-            }
-            Transform content = SettingsRows.ContentOf(template.transform);
-            templateRow = SettingsRows.RowGameObject(template.transform, content);
-
-            panel = Window("mounts panel", settings, W, H, 30000);
-            ReadFont();
-            buttonSprite = null;
-            foreach (Image img in dialogTemplate.GetComponentsInChildren<Image>(true))
-            {
-                if (img.sprite != null) { buttonSprite = img.sprite; break; }
-            }
-            TextMeshProUGUI bt = dialogTemplate.GetComponentInChildren<TextMeshProUGUI>(true);
-            if (bt != null) { buttonTextColor = bt.color; boldFont = bt.font; boldMaterial = bt.fontSharedMaterial; }
-            UiProbe.Dump(settings, dialogTemplate, font, fontMaterial, fontSize); // dev only, Debug.UiProbe (2026-10-27)
-            MeasureRow();
-            focusTemplate = templateRow.GetComponentInChildren<GamepadNavigationItem>(true)?.focusFrame; // the game row's own focus frame, for the panel's buttons
+            ui.Read(settings); // the game's look: its frame, fonts, button face, focus frame (throws when a part is missing)
+            panel = ui.Window("mounts panel", W, H, 30000);
+            UiProbe.Dump(settings, ui.DialogTemplate, ui.Font, ui.FontMaterial, ui.FontSize); // dev only, Debug.UiProbe (2026-10-27)
 
             // What was set when the panel opened, for a put-back (the self-tests; no Cancel button since 2026-10-21): every look row of the page (the mount, every mount's
             // skin and colours), not only the chosen mount's, so a put-back after choosing another mount puts
@@ -333,7 +311,7 @@ namespace GK2DonkeyAPI
             // the title line
             // the title in the game's own title bar, with its close button (the user, 2026-10-27: "all that gap for just the word
             // Mounts is not worth it"; the count of mounts is gone)
-            TitleBar(panel, settings, W, "Mount Journal", () => Close(keep: true));
+            ui.TitleBar(panel, W, "Mount Journal", () => Close(keep: true));
 
             // the list, scrolling; a search box above it once it is long
             entries = Entries();
@@ -347,19 +325,19 @@ namespace GK2DonkeyAPI
                 listTop += SearchH + Gap;
             }
             float listH = H - listTop - Gap - ButtonsH - Pad;
-            listScroll = ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 4f);
-            AddScrollbar(listScroll);
+            listScroll = ui.ScrollView(panel.transform, "list", Pad, listTop, ListW, listH, out listContent, 4f);
+            ui.AddScrollbar(listScroll);
 
             // the right side: the header, the stage and the stats card beside it, the look rows under them
             float x0 = Pad + ListW + Gap, rw = W - Pad - x0;
             float rightTop = Pad + TitleH + Gap;
-            rightArea = Rect(Node("right", panel.transform), x0, rightTop, rw, H - rightTop - Gap - ButtonsH - Pad);
-            headerIcon = Node("portrait", rightArea, typeof(RawImage)).GetComponent<RawImage>();
+            rightArea = UiKit.Rect(ui.Node("right", panel.transform), x0, rightTop, rw, H - rightTop - Gap - ButtonsH - Pad);
+            headerIcon = ui.Node("portrait", rightArea, typeof(RawImage)).GetComponent<RawImage>();
             headerIcon.raycastTarget = false;
-            Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
+            UiKit.Rect(headerIcon.gameObject, 0f, 4f, HeaderIconPx, HeaderIconPx);
             headerIcon.gameObject.SetActive(false);
-            headerName = Bold(Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f));
-            headerDesc = Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
+            headerName = ui.Bold(ui.Text(rightArea, "name", "", 1.35f, TextAlignmentOptions.Left, false, HeaderIconPx + 12f, 0f, rw - HeaderIconPx - 12f, 32f));
+            headerDesc = ui.Text(rightArea, "description", "", 0.9f, TextAlignmentOptions.TopLeft, true, HeaderIconPx + 12f, 32f, rw - HeaderIconPx - 12f, HeaderH - 32f);
             headerDesc.overflowMode = TextOverflowModes.Ellipsis;
             // one line under the name (HeaderH): a longer line shrinks a little to fit, down to 80%, before it is cut
             headerDesc.enableAutoSizing = true;
@@ -367,8 +345,8 @@ namespace GK2DonkeyAPI
             headerDesc.fontSizeMin = headerDesc.fontSize * 0.8f;
 
             float y = HeaderH + Gap;
-            stage = Box(rightArea, "stage", 0f, y, StageW, StageH);
-            picture = Node("picture", stage, typeof(RawImage)).GetComponent<RawImage>();
+            stage = ui.Box(rightArea, "stage", 0f, y, StageW, StageH);
+            picture = ui.Node("picture", stage, typeof(RawImage)).GetComponent<RawImage>();
             picture.raycastTarget = false;
             var pic = (RectTransform)picture.transform;
             pic.anchorMin = pic.anchorMax = new Vector2(0.5f, 0.5f);
@@ -376,15 +354,15 @@ namespace GK2DonkeyAPI
             picture.gameObject.SetActive(false);
             // a chosen mount that isn't installed: no picture (the donkey drawn under another mount's name read as a mix-up,
             // the user 2026-10-27), this line in its place
-            stageNote = Text(stage, "not installed note", "Not installed", 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
+            stageNote = ui.Text(stage, "not installed note", "Not installed", 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
             stageNote.gameObject.SetActive(false);
 
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
-            RectTransform statsCard = Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
-            Bold(Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
-            GameObject rule = Node("stats rule", statsCard, typeof(Image));
-            Rect(rule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
-            rule.GetComponent<Image>().color = EdgeColor;
+            RectTransform statsCard = ui.Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
+            ui.Bold(ui.Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
+            GameObject rule = ui.Node("stats rule", statsCard, typeof(Image));
+            UiKit.Rect(rule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
+            rule.GetComponent<Image>().color = UiKit.EdgeColor;
             rule.GetComponent<Image>().raycastTarget = false;
             statLines.Clear();
             for (int i = 0; i < StatCount; i++)
@@ -392,36 +370,36 @@ namespace GK2DonkeyAPI
                 float ly = StatsTitleH + i * StatLineH;
                 if (i > 0)
                 {
-                    GameObject div = Node("stat divider " + i, statsCard, typeof(Image));
-                    Rect(div, 12f, ly, statsW - 24f, 1f);
-                    div.GetComponent<Image>().color = new Color(EdgeColor.r, EdgeColor.g, EdgeColor.b, EdgeColor.a * 0.5f);
+                    GameObject div = ui.Node("stat divider " + i, statsCard, typeof(Image));
+                    UiKit.Rect(div, 12f, ly, statsW - 24f, 1f);
+                    div.GetComponent<Image>().color = new Color(UiKit.EdgeColor.r, UiKit.EdgeColor.g, UiKit.EdgeColor.b, UiKit.EdgeColor.a * 0.5f);
                     div.GetComponent<Image>().raycastTarget = false;
                 }
-                TextMeshProUGUI l = Text(statsCard, "stat label " + i, "", 0.9f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
-                l.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.7f);
-                TextMeshProUGUI v = Text(statsCard, "stat value " + i, "", 0.95f, TextAlignmentOptions.Right, false, statsW * 0.42f, ly, statsW * 0.58f - 12f, StatLineH);
-                v.color = buttonTextColor;
+                TextMeshProUGUI l = ui.Text(statsCard, "stat label " + i, "", 0.9f, TextAlignmentOptions.Left, false, 12f, ly, statsW * 0.42f, StatLineH);
+                l.color = new Color(ui.FontColor.r, ui.FontColor.g, ui.FontColor.b, 0.7f);
+                TextMeshProUGUI v = ui.Text(statsCard, "stat value " + i, "", 0.95f, TextAlignmentOptions.Right, false, statsW * 0.42f, ly, statsW * 0.58f - 12f, StatLineH);
+                v.color = ui.ButtonTextColor;
                 statLines.Add((l, v));
             }
             // the abilities card: built with room for AbilityMax lines, sized and filled for the mount picked (BuildRight)
-            abilitiesCard = Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
-            Bold(Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
-            GameObject arule = Node("abilities rule", abilitiesCard, typeof(Image));
-            Rect(arule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
-            arule.GetComponent<Image>().color = EdgeColor;
+            abilitiesCard = ui.Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
+            ui.Bold(ui.Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
+            GameObject arule = ui.Node("abilities rule", abilitiesCard, typeof(Image));
+            UiKit.Rect(arule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
+            arule.GetComponent<Image>().color = UiKit.EdgeColor;
             arule.GetComponent<Image>().raycastTarget = false;
             abilityLines.Clear();
             for (int i = 0; i < AbilityMax; i++)
             {
                 float ly = StatsTitleH + 4f + i * AbilityLineH;
-                RawImage ai = Node("ability icon " + i, abilitiesCard, typeof(RawImage)).GetComponent<RawImage>();
+                RawImage ai = ui.Node("ability icon " + i, abilitiesCard, typeof(RawImage)).GetComponent<RawImage>();
                 ai.raycastTarget = false;
-                Rect(ai.gameObject, 12f, ly + (AbilityLineH - AbilityIconPx) / 2f - 2f, AbilityIconPx, AbilityIconPx);
-                TextMeshProUGUI an = Text(abilitiesCard, "ability name " + i, "", 0.95f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
-                Bold(an);
-                an.color = buttonTextColor;
-                TextMeshProUGUI al = Text(abilitiesCard, "ability line " + i, "", 0.78f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
-                al.color = new Color(fontColor.r, fontColor.g, fontColor.b, 0.75f);
+                UiKit.Rect(ai.gameObject, 12f, ly + (AbilityLineH - AbilityIconPx) / 2f - 2f, AbilityIconPx, AbilityIconPx);
+                TextMeshProUGUI an = ui.Text(abilitiesCard, "ability name " + i, "", 0.95f, TextAlignmentOptions.BottomLeft, false, 12f + AbilityIconPx + 10f, ly, statsW - 34f - AbilityIconPx, 20f);
+                ui.Bold(an);
+                an.color = ui.ButtonTextColor;
+                TextMeshProUGUI al = ui.Text(abilitiesCard, "ability line " + i, "", 0.78f, TextAlignmentOptions.TopLeft, true, 12f + AbilityIconPx + 10f, ly + 20f, statsW - 34f - AbilityIconPx, AbilityLineH - 20f);
+                al.color = new Color(ui.FontColor.r, ui.FontColor.g, ui.FontColor.b, 0.75f);
                 al.overflowMode = TextOverflowModes.Ellipsis;
                 abilityLines.Add((ai, an, al));
             }
@@ -431,25 +409,37 @@ namespace GK2DonkeyAPI
             // under a "Skin" heading, they sat off to the right with empty space round them)
             float rowsTop = y + StatsCardH + Gap;
             journalW = statsW;
-            contentScroll = ScrollView(rightArea, "content", statsX, rowsTop, statsW, Mathf.Max(40f, y + StageH - rowsTop), out contentRoot, 2f, manual: true);
-            AddScrollbar(contentScroll);
+            contentScroll = ui.ScrollView(rightArea, "content", statsX, rowsTop, statsW, Mathf.Max(40f, y + StageH - rowsTop), out contentRoot, 2f, manual: true);
+            ui.AddScrollbar(contentScroll);
 
             // the buttons: Colours..., Done (no Cancel: Done and Escape both keep what was chosen, the user 2026-10-21)
-            GameObject done = OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
-            Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject customise = coloursButton = OwnButton(panel.transform, "colours", "Customize", 200f, ButtonH, OpenColours);
-            Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
+            GameObject done = ui.OwnButton(panel.transform, "done", "Done", ButtonW, ButtonH, () => Close(keep: true));
+            UiKit.Rect(done, W - Pad - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
+            GameObject customise = coloursButton = ui.OwnButton(panel.transform, "colours", "Customize", 200f, ButtonH, OpenColours);
+            UiKit.Rect(customise, W - Pad - ButtonW - 12f - 200f, H - Pad - ButtonH, 200f, ButtonH); // one gap (12) between all four buttons
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
-            GameObject ride = rideButton = OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
-            Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
-            GameObject drive = driveButton = OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
-            foreach (GameObject bgo in new[] { done, customise, ride, drive }) NavGroup(bgo, 2);
+            GameObject ride = rideButton = ui.OwnButton(panel.transform, "ride", "Ride", ButtonW, ButtonH, () => Call(MountStyle.Ride));
+            UiKit.Rect(ride, Pad, H - Pad - ButtonH, ButtonW, ButtonH);
+            GameObject drive = driveButton = ui.OwnButton(panel.transform, "drive", "Drive the cart", 150f, ButtonH, () => Call(MountStyle.Cart));
+            foreach (GameObject bgo in new[] { done, customise, ride, drive }) UiKit.NavGroup(bgo, 2);
+            // the page's options (OptionsWindow), left of Customize, one gap (12) between them; from the options themselves
+            // (their Mounts button opened the journal), back to them
+            if (OptionsWindow.HasOptions(page))
+            {
+                GameObject opts = ui.OwnButton(panel.transform, "options", "Options", ButtonW, ButtonH, () =>
+                {
+                    if (overOptions) Close(keep: true);
+                    else OptionsWindow.Open(page);
+                });
+                UiKit.Rect(opts, W - Pad - ButtonW - 12f - 200f - 12f - ButtonW, H - Pad - ButtonH, ButtonW, ButtonH);
+                UiKit.NavGroup(opts, 2);
+            }
             var jnav = panel.GetComponent<GamepadNavigationController>();
-            Hand(jnav, 0, GUIDirection.Right, 1); Hand(jnav, 0, GUIDirection.Down, 2);  // the list -> the rows, the buttons
-            Hand(jnav, 1, GUIDirection.Left, 0); Hand(jnav, 1, GUIDirection.Down, 2);   // the rows -> the list, the buttons
-            Hand(jnav, 2, GUIDirection.Up, 1); Hand(jnav, 2, GUIDirection.Left, 0);     // the buttons -> the rows, the list
-            Hand(jnav, 1, GUIDirection.Up, 0);
-            Rect(drive, Pad + ButtonW + 12f, H - Pad - ButtonH, 150f, ButtonH);
+            UiKit.Hand(jnav, 0, GUIDirection.Right, 1); UiKit.Hand(jnav, 0, GUIDirection.Down, 2);  // the list -> the rows, the buttons
+            UiKit.Hand(jnav, 1, GUIDirection.Left, 0); UiKit.Hand(jnav, 1, GUIDirection.Down, 2);   // the rows -> the list, the buttons
+            UiKit.Hand(jnav, 2, GUIDirection.Up, 1); UiKit.Hand(jnav, 2, GUIDirection.Left, 0);     // the buttons -> the rows, the list
+            UiKit.Hand(jnav, 1, GUIDirection.Up, 0);
+            UiKit.Rect(drive, Pad + ButtonW + 12f, H - Pad - ButtonH, 150f, ButtonH);
 
             pictureOff = false;
             Mounts.Looks.SkinsChanged -= OnRegistryChanged;
@@ -459,62 +449,8 @@ namespace GK2DonkeyAPI
             panel.SetActive(true); // before the list: a layout under an inactive root computes nothing, so the scroll to the chosen mount was lost
             BuildList();
             BuildRight();
-            FitToScreen(panel, W, H);
+            UiKit.FitToScreen(panel, W, H);
             Plugin.Log.LogInfo($"Settings: the Mounts panel of {page.Title} is open ({entries.Count} mount(s), {rows.Count} look rows for {builtFor}{(panel.transform.localScale.x < 1f ? $", scaled to {panel.transform.localScale.x:0.##} to fit the screen" : "")}).");
-        }
-
-        // A window of the panel's make: a dark face, the game's frame, its own canvas above the HUD; centred, hidden.
-        private static GameObject Window(string name, UIGameSettingsWindow settings, float w, float h, int sorting)
-        {
-            var go = new GameObject("GK2DonkeyAPI " + name, typeof(RectTransform), typeof(Canvas), typeof(GraphicRaycaster), typeof(Image));
-            go.transform.SetParent(settings.transform.parent, false);
-            var canvas = go.GetComponent<Canvas>();
-            canvas.overrideSorting = true;
-            canvas.sortingOrder = sorting;
-            // no face of our own: the game's frame sprite (sliced) is the window's face and its corners; a dark face under it
-            // showed past the frame's rounded corners as a margin the game's windows don't have (the user, 2026-10-27).
-            // Transparent, it still takes the clicks (the window blocks the world under it).
-            go.GetComponent<Image>().color = new Color(0f, 0f, 0f, 0f);
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            rt.sizeDelta = new Vector2(w, h);
-            // the face: the frame sprite's centre is see-through (the game draws its window face apart, inside the frame:
-            // BackMask, 13 in), so a face of ours inset as far, under the frame, never past its corners (2026-10-27)
-            Image face = Node("face", go.transform, typeof(Image)).GetComponent<Image>();
-            face.color = new Color(0.11f, 0.12f, 0.15f, 0.97f);
-            face.raycastTarget = false;
-            var frt = (RectTransform)face.transform;
-            Stretch(frt);
-            frt.offsetMin = new Vector2(FaceInset, FaceInset);
-            frt.offsetMax = new Vector2(-FaceInset, -FaceInset);
-            Image frame = settings.transform.Find("GenericWIndowLayout/Frame")?.GetComponent<Image>();
-            if (frame != null && frame.sprite != null)
-            {
-                Image bi = Node("frame", go.transform, typeof(Image)).GetComponent<Image>();
-                bi.sprite = frame.sprite;
-                bi.type = Image.Type.Sliced;
-                bi.raycastTarget = false;
-                Stretch((RectTransform)bi.transform);
-            }
-            var nav = go.AddComponent<GamepadNavigationController>(); // the game's gamepad navigation, as every game window has
-            nav.loopVerticalNavigation = true;
-            nav.restoreLastInGroup = true;
-            nav.navigationGroupSources = new List<GamepadNavigationController.NavigationGroupSource>();
-            go.SetActive(false);
-            return go;
-        }
-
-        private static void Hand(GamepadNavigationController nav, int from, GUIDirection dir, int to)
-        {
-            var src = nav.navigationGroupSources.Find(s => s.group == from);
-            if (src == null)
-            {
-                src = new GamepadNavigationController.NavigationGroupSource(from, new List<GamepadNavigationController.NavigationGroupTarget>());
-                nav.navigationGroupSources.Add(src);
-            }
-            src.groupTargets.Add(new GamepadNavigationController.NavigationGroupTarget(to, dir));
         }
 
         // The list: a row per mount (its icon and name), the chosen one in red; scrolled to the chosen one.
@@ -532,7 +468,7 @@ namespace GK2DonkeyAPI
                 shown++;
                 string id = e.Id;
                 bool fake = e.Fake;
-                GameObject go = OwnButton(listContent, "card " + id, e.Label, ListW - 8f - ScrollbarW, CardH, () => { if (!fake) { Select(id); Sounds.Audition(page?.MountPaper); } }, textLeft: IconPx + 14f, flat: true);
+                GameObject go = ui.OwnButton(listContent, "card " + id, e.Label, ListW - 8f - ScrollbarW, CardH, () => { if (!fake) { Select(id); Sounds.Audition(page?.MountPaper); } }, textLeft: IconPx + 14f, flat: true);
                 var le = go.AddComponent<LayoutElement>();
                 le.preferredWidth = ListW - 8f - ScrollbarW;
                 le.preferredHeight = CardH;
@@ -545,7 +481,7 @@ namespace GK2DonkeyAPI
                 MountIcons.Icon icon = MountIcons.Of(Catalog.Find(id));
                 if (icon.Any)
                 {
-                    RawImage img = Node("icon", go.transform, typeof(RawImage)).GetComponent<RawImage>();
+                    RawImage img = ui.Node("icon", go.transform, typeof(RawImage)).GetComponent<RawImage>();
                     img.raycastTarget = false;
                     Show(img, icon, IconPx);
                     var irt = (RectTransform)img.transform;
@@ -554,11 +490,11 @@ namespace GK2DonkeyAPI
                     irt.anchoredPosition = new Vector2(8f + (IconPx - irt.sizeDelta.x) / 2f, 0f);
                 }
                 cards.Add((id, go.GetComponent<Image>(), go.GetComponentInChildren<TextMeshProUGUI>(true)));
-                NavGroup(go, 0);
+                UiKit.NavGroup(go, 0);
                 if (fake) { var fi = go.GetComponent<GamepadNavigationItem>(); if (fi != null) fi.Active = false; }
                 if (id.Equals(chosen, StringComparison.OrdinalIgnoreCase)) at = shown - 1;
             }
-            navDirty = true;
+            controls.NavDirty = true;
             MarkList();
             LayoutRebuilder.ForceRebuildLayoutImmediate(listContent);
             if (at >= 0 && shown > 1) listScroll.verticalNormalizedPosition = 1f - Mathf.Clamp01(at / (float)(shown - 1));
@@ -570,10 +506,10 @@ namespace GK2DonkeyAPI
             foreach ((string id, Image face, TextMeshProUGUI label) in cards)
             {
                 bool on = id.Equals(chosen, StringComparison.OrdinalIgnoreCase);
-                if (face != null) face.color = on ? CardChosen : CardBase;
+                if (face != null) face.color = on ? UiKit.CardChosen : UiKit.CardBase;
                 if (label != null)
                 {
-                    label.color = on ? buttonTextColor : fontColor;
+                    label.color = on ? ui.ButtonTextColor : ui.FontColor;
                     label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
                 }
             }
@@ -622,16 +558,16 @@ namespace GK2DonkeyAPI
             bool drives = MountSettingsPage.MountPullsCart(chosen);
             bool missing = k == null;
             drives = drives && !missing;
-            if (driveButton != null && driveButton.activeSelf != drives) { driveButton.SetActive(drives); navDirty = true; }
-            if (rideButton != null && rideButton.activeSelf == missing) { rideButton.SetActive(!missing); navDirty = true; }
-            if (coloursButton != null && coloursButton.activeSelf == missing) { coloursButton.SetActive(!missing); navDirty = true; }
+            if (driveButton != null && driveButton.activeSelf != drives) { driveButton.SetActive(drives); controls.NavDirty = true; }
+            if (rideButton != null && rideButton.activeSelf == missing) { rideButton.SetActive(!missing); controls.NavDirty = true; }
+            if (coloursButton != null && coloursButton.activeSelf == missing) { coloursButton.SetActive(!missing); controls.NavDirty = true; }
             if (stageNote != null) stageNote.gameObject.SetActive(missing);
             if (missing && picture != null) picture.gameObject.SetActive(false);
             headerIcon.gameObject.SetActive(icon.Any);
             if (icon.Any) ShowCentred(headerIcon, icon, HeaderIconPx, 0f, Mathf.Max(0f, (HeaderH - HeaderIconPx) / 2f));
             float textX = icon.Any ? HeaderIconPx + 12f : 0f;
-            Rect(headerName.gameObject, textX, 0f, rightArea.rect.width - textX, 32f);
-            Rect(headerDesc.gameObject, textX, 32f, rightArea.rect.width - textX, HeaderH - 32f);
+            UiKit.Rect(headerName.gameObject, textX, 0f, rightArea.rect.width - textX, 32f);
+            UiKit.Rect(headerDesc.gameObject, textX, 32f, rightArea.rect.width - textX, HeaderH - 32f);
             for (int i = 0; i < statLines.Count; i++)
             {
                 (string label, string value) = e != null && i < e.Stats.Count ? e.Stats[i] : ("", "");
@@ -704,7 +640,7 @@ namespace GK2DonkeyAPI
         private static string BuildRows(List<(string Group, List<MountSettingsPage.Row> Rows)> groups, RectTransform root, ScrollRect scroll, float areaW,
             List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> into, out float needed)
         {
-            CloseDropdown(refocus: false); // its button goes with the rows
+            controls.CloseDropdown(refocus: false); // its button goes with the rows
             foreach (Transform c in root) { c.gameObject.SetActive(false); UnityEngine.Object.Destroy(c.gameObject); }
             into.Clear();
             var sig = new StringBuilder();
@@ -715,7 +651,7 @@ namespace GK2DonkeyAPI
             // came out at 12 of 354 on 2026-10-26 (its switch covers the whole row now), which left the labels 10 px
             // (the user's screenshot: "Co / col" under the dropdowns)
             bool journal = root == contentRoot;
-            float colGap = 16f, step = rowVisual.height + 4f;
+            float colGap = 16f, step = ui.RowVisual.height + 4f;
             float colW = journal ? areaW : Mathf.Floor(Math.Min(ColoursColW, (areaW - colGap) / 2f));
             var lay = journal
                 ? new RowLayout { LabelX = 12f, CtrlRight = areaW + ScrollbarW - 12f, CtrlLeft = areaW + ScrollbarW - 12f - JournalCtrlW, ColW = colW }
@@ -740,11 +676,11 @@ namespace GK2DonkeyAPI
                     if (group.Group != null && any) // a heading only over rows that show (a row hidden by its own condition)
                     {
                         // left on the column's start (a game heading row right-aligns on the labels' edge and floated mid-column)
-                        TextMeshProUGUI h = Text(root, "heading " + group.Group, group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
-                        Bold(h);
-                        GameObject line = Node("heading line", root, typeof(Image));
-                        Rect(line, cx, cy + step - 4f, colW, 1f);
-                        line.GetComponent<Image>().color = EdgeColor;
+                        TextMeshProUGUI h = ui.Text(root, "heading " + group.Group, group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
+                        ui.Bold(h);
+                        GameObject line = ui.Node("heading line", root, typeof(Image));
+                        UiKit.Rect(line, cx, cy + step - 4f, colW, 1f);
+                        line.GetComponent<Image>().color = UiKit.EdgeColor;
                         line.GetComponent<Image>().raycastTarget = false;
                         cy += step + 2f;
                     }
@@ -758,20 +694,18 @@ namespace GK2DonkeyAPI
                         if (IsPalette(r))
                         {
                             go = SwatchRow(root, r, lay, out refresh, out float sh); // the named colours as squares across the controls' span
-                            Place(go, cx, cy);
+                            UiKit.Place(go, cx, cy);
                             cy += sh + 4f;
                         }
-                        else if ((go = OwnRow(root, r, lay, out refresh, out float h)) != null)
+                        else if ((go = controls.OwnRow(root, r, lay, out refresh, out float h)) != null)
                         {
-                            Place(go, cx, cy); // the panel's own controls (MountsPanel.Controls.cs)
+                            UiKit.Place(go, cx, cy); // the panel's own controls (RowControls)
                             cy += h + 4f;
                         }
                         else
                         {
-                            go = SettingsRows.MakeRow(templateRow, root, r, page, out refresh); // a kind the panel has no control for
-                            go.SetActive(true); // a copied row starts switched off (SettingsRows.Copy)
-                            Place(go, cx - rowVisual.x, cy - rowVisual.y);
-                            cy += step;
+                            Plugin.Log.LogInfo($"Settings: {page.Title}'s row '{r.Label}' has nothing to choose from; left out of the Mounts panel.");
+                            continue; // a list with no choices (every control is our own: no game row to fall back on)
                         }
                         CanvasGroup grp = r.Enabled != null ? go.AddComponent<CanvasGroup>() : null;
                         into.Add((r, go, refresh, grp));
@@ -785,7 +719,7 @@ namespace GK2DonkeyAPI
             scroll.verticalNormalizedPosition = 1f;
             int navGroup = root == contentRoot ? 1 : 0;
             foreach (GamepadNavigationItem ni in root.GetComponentsInChildren<GamepadNavigationItem>(true)) ni.group = navGroup;
-            navDirty = true;
+            controls.NavDirty = true;
             return sig.ToString();
         }
 
@@ -800,13 +734,13 @@ namespace GK2DonkeyAPI
             // the squares across the controls' span, as the other rows' controls (2026-10-26)
             float px = Mathf.Max(8f, Mathf.Floor((lay.CtrlRight - lay.CtrlLeft - (perRow - 1) * SwatchGap) / perRow));
             float left = lay.CtrlRight - (perRow * px + (perRow - 1) * SwatchGap); // the rounding's slack on the left: they end on the value edge
-            GameObject go = Node("swatches " + r.Entry.Definition.Key, parent);
+            GameObject go = ui.Node("swatches " + r.Entry.Definition.Key, parent);
             // left on the column's edge, as the own rows' labels and the headings (2026-10-26); wrapping, the row as tall as it needs
             float labelW = Mathf.Max(40f, left - 10f - lay.LabelX);
-            TextMeshProUGUI label = Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
+            TextMeshProUGUI label = ui.Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
             height = Mathf.Max(2f * px + SwatchGap + 6f, Mathf.Ceil(label.GetPreferredValues(r.Label ?? "", labelW, 0f).y) + 8f);
-            Rect(go, 0f, 0f, lay.ColW, height);
-            Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
+            UiKit.Rect(go, 0f, 0f, lay.ColW, height);
+            UiKit.Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
             var frames = new List<(PaletteColor Colour, GameObject Frame)>();
             Array values = Enum.GetValues(typeof(PaletteColor));
             float top = Mathf.Round((height - (2f * px + SwatchGap)) / 2f);
@@ -815,15 +749,15 @@ namespace GK2DonkeyAPI
                 var colour = (PaletteColor)values.GetValue(i);
                 float sx = left + (i % perRow) * (px + SwatchGap);
                 float sy = top + (i / perRow) * (px + SwatchGap);
-                GameObject frame = Node("frame " + colour, go.transform, typeof(Image));
-                Rect(frame, sx - 2f, sy - 2f, px + 4f, px + 4f);
+                GameObject frame = ui.Node("frame " + colour, go.transform, typeof(Image));
+                UiKit.Rect(frame, sx - 2f, sy - 2f, px + 4f, px + 4f);
                 frame.GetComponent<Image>().color = Color.white;
                 frame.GetComponent<Image>().raycastTarget = false;
                 frame.SetActive(false);
-                GameObject sw = Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
-                Rect(sw, sx, sy, px, px);
-                GameObject swFocus = Node("focus", sw.transform, typeof(Image), typeof(Outline));
-                Rect(swFocus, -3f, -3f, px + 6f, px + 6f);
+                GameObject sw = ui.Node("swatch " + colour, go.transform, typeof(Image), typeof(UnityEngine.UI.Button), typeof(GamepadNavigationItem));
+                UiKit.Rect(sw, sx, sy, px, px);
+                GameObject swFocus = ui.Node("focus", sw.transform, typeof(Image), typeof(Outline));
+                UiKit.Rect(swFocus, -3f, -3f, px + 6f, px + 6f);
                 swFocus.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
                 swFocus.GetComponent<Image>().raycastTarget = false;
                 var swo = swFocus.GetComponent<Outline>();
@@ -883,31 +817,31 @@ namespace GK2DonkeyAPI
             try
             {
                 UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
-                colours = Window("colours window", settings, CW, CH, 30001);
-                coloursTitle = TitleBar(colours, settings, CW, ColoursTitle(), () => CloseColours(keep: true));
+                colours = ui.Window("colours window", CW, CH, 30001);
+                coloursTitle = ui.TitleBar(colours, CW, ColoursTitle(), () => CloseColours(keep: true));
                 float top = Pad + TitleH + Gap;
-                coloursStage = Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
-                coloursPicture = Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();
+                coloursStage = ui.Box(colours.transform, "colours stage", (CW - CStageW) / 2f, top, CStageW, CStageH); // the mount as it is coloured, so one sees what one changes
+                coloursPicture = ui.Node("colours picture", coloursStage, typeof(RawImage)).GetComponent<RawImage>();
                 coloursPicture.raycastTarget = false;
                 var cprt = (RectTransform)coloursPicture.transform;
                 cprt.anchorMin = cprt.anchorMax = new Vector2(0.5f, 0.5f);
                 cprt.pivot = new Vector2(0.5f, 0.5f);
                 coloursPicture.gameObject.SetActive(false);
                 top += CStageH + Gap;
-                coloursScroll = ScrollView(colours.transform, "colours content", Pad, top, CW - 2f * Pad, CH - top - Gap - ButtonsH - Pad, out coloursRoot, 2f, manual: true);
-                AddScrollbar(coloursScroll);
-                GameObject done = OwnButton(colours.transform, "colours done", "Done", ButtonW, ButtonH, () => CloseColours(keep: true));
-                Rect(done, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
-                NavGroup(done, 1);
+                coloursScroll = ui.ScrollView(colours.transform, "colours content", Pad, top, CW - 2f * Pad, CH - top - Gap - ButtonsH - Pad, out coloursRoot, 2f, manual: true);
+                ui.AddScrollbar(coloursScroll);
+                GameObject done = ui.OwnButton(colours.transform, "colours done", "Done", ButtonW, ButtonH, () => CloseColours(keep: true));
+                UiKit.Rect(done, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
+                UiKit.NavGroup(done, 1);
                 var cnav = colours.GetComponent<GamepadNavigationController>();
-                Hand(cnav, 0, GUIDirection.Down, 1); Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
+                UiKit.Hand(cnav, 0, GUIDirection.Down, 1); UiKit.Hand(cnav, 1, GUIDirection.Up, 0); // the rows and swatches <-> Done
                 coloursBefore.Clear();
                 foreach (var g in colourGroups) foreach (MountSettingsPage.Row r in g.Rows) if (r.Entry != null) coloursBefore[new ConfigEntryBaseKey(r.Entry)] = r.Entry.BoxedValue;
                 coloursSignature = BuildRows(colourGroups, coloursRoot, coloursScroll, CW - 2f * Pad - ScrollbarW - ColoursScrollGap, colourRows, out _);
                 panel.SetActive(false); // the journal waits underneath
-                navDirty = true;
+                controls.NavDirty = true;
                 colours.SetActive(true);
-                FitToScreen(colours, CW, CH);
+                UiKit.FitToScreen(colours, CW, CH);
                 Refresh();
                 Plugin.Log.LogInfo($"Settings: the colours window is open for {builtFor} ({colourRows.Count} rows).");
             }
@@ -936,7 +870,7 @@ namespace GK2DonkeyAPI
             }
             coloursBefore.Clear();
             colourRows.Clear();
-            CloseDropdown(refocus: false);
+            controls.CloseDropdown(refocus: false);
             if (colours != null)
             {
                 UnityEngine.Object.Destroy(colours);
@@ -950,7 +884,7 @@ namespace GK2DonkeyAPI
             if (panel != null && reshow)
             {
                 panel.SetActive(true);
-                navDirty = true;
+                controls.NavDirty = true;
                 Refresh();
             }
         }
@@ -986,7 +920,7 @@ namespace GK2DonkeyAPI
         // A search box: typing filters the list by name; the mods' keys wait while it has focus (KeyActions).
         private static TMP_InputField SearchBox(Transform parent, float x, float y, float w, float h)
         {
-            TMP_InputField field = InputBox(parent, "search", x, y, w, h, "Search...", 40);
+            TMP_InputField field = controls.InputBox(parent, "search", x, y, w, h, "Search...", 40);
             field.onValueChanged.AddListener(v =>
             {
                 filter = v ?? "";
@@ -996,282 +930,6 @@ namespace GK2DonkeyAPI
         }
 
         // ---- the pieces ----
-
-        private static void ReadFont()
-        {
-            GameObject probe = SettingsRows.MakeHeading(templateRow, panel.transform, page, "probe");
-            TextMeshProUGUI t = null;
-            foreach (TextMeshProUGUI c in probe.GetComponentsInChildren<TextMeshProUGUI>(true))
-            {
-                if (t == null || c.gameObject.activeInHierarchy) t = c;
-            }
-            if (t != null)
-            {
-                font = t.font;
-                fontMaterial = t.fontSharedMaterial;
-                fontColor = t.color;
-                fontSize = t.fontSize > 0f ? t.fontSize : fontSize;
-            }
-            probe.SetActive(false);
-            UnityEngine.Object.Destroy(probe);
-        }
-
-        private static GameObject Node(string name, Transform parent, params Type[] components)
-        {
-            var types = new Type[components.Length + 1];
-            types[0] = typeof(RectTransform);
-            Array.Copy(components, 0, types, 1, components.Length);
-            var go = new GameObject("GK2DonkeyAPI mounts panel " + name, types);
-            go.transform.SetParent(parent, false);
-            return go;
-        }
-
-        // A rectangle placed from the top left of its parent.
-        private static RectTransform Rect(GameObject go, float x, float y, float w, float h)
-        {
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.anchoredPosition = new Vector2(x, -y);
-            rt.sizeDelta = new Vector2(w, h);
-            return rt;
-        }
-
-        // A dark box with a faint edge: the stage, the stats card.
-        private static RectTransform Box(Transform parent, string name, float x, float y, float w, float h)
-        {
-            RectTransform rt = Rect(Node(name, parent, typeof(Image), typeof(Outline)), x, y, w, h);
-            var img = rt.GetComponent<Image>();
-            img.color = BoxColor;
-            img.raycastTarget = false;
-            var outline = rt.GetComponent<Outline>();
-            outline.effectColor = EdgeColor;
-            outline.effectDistance = new Vector2(1f, -1f);
-            return rt;
-        }
-
-        // A copied row or heading put at x, y from the top left of its parent, its size kept.
-        private static void Place(GameObject go, float x, float y)
-        {
-            var rt = (RectTransform)go.transform;
-            Vector2 size = rt.rect.size;
-            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(0f, 1f);
-            rt.sizeDelta = size;
-            rt.anchoredPosition = new Vector2(x, -y);
-            var le = go.GetComponent<LayoutElement>();
-            if (le != null) le.ignoreLayout = true;
-        }
-
-        // Where the game's own row draws, relative to its rectangle's top left: its parts hang outside the rectangle (the
-        // label to the left, the value box to the right), so a row is placed by where it draws, not by its rectangle.
-        private static void MeasureRow()
-        {
-            try
-            {
-                var root = (RectTransform)templateRow.transform;
-                var corners = new Vector3[4];
-                float minX = float.MaxValue, maxX = float.MinValue, minY = float.MaxValue, maxY = float.MinValue;
-                foreach (RectTransform r in templateRow.GetComponentsInChildren<RectTransform>(true))
-                {
-                    if (!ActiveUnder(r.transform, root)) continue;
-                    if (r.rect.width <= 0f || r.rect.height <= 0f) continue;
-                    r.GetWorldCorners(corners);
-                    foreach (Vector3 c in corners)
-                    {
-                        Vector3 l = root.InverseTransformPoint(c);
-                        minX = Math.Min(minX, l.x); maxX = Math.Max(maxX, l.x);
-                        minY = Math.Min(minY, l.y); maxY = Math.Max(maxY, l.y);
-                    }
-                }
-                if (maxX <= minX || maxY <= minY) return;
-                root.GetWorldCorners(corners);
-                Vector3 topLeft = root.InverseTransformPoint(corners[1]);
-                rowVisual = new Rect(minX - topLeft.x, topLeft.y - maxY, maxX - minX, maxY - minY); // y down: a drawn part above the rectangle gives a negative y
-                // where its label ends and its "< value >" spans, from the drawn left (the swatch rows and headings line up on them)
-                UISwitchButton sw = templateRow.GetComponentInChildren<UISwitchButton>(true);
-                TextMeshProUGUI lab = null;
-                foreach (TextMeshProUGUI t in templateRow.GetComponentsInChildren<TextMeshProUGUI>(true))
-                {
-                    if (t.name.IndexOf("Name", StringComparison.OrdinalIgnoreCase) >= 0) { lab = t; break; }
-                    if (lab == null && sw != null && !t.transform.IsChildOf(sw.transform)) lab = t;
-                }
-                float XRange(RectTransform rt, bool right)
-                {
-                    rt.GetWorldCorners(corners);
-                    float a = root.InverseTransformPoint(corners[0]).x, b = root.InverseTransformPoint(corners[2]).x;
-                    return (right ? Math.Max(a, b) : Math.Min(a, b)) - minX;
-                }
-                if (sw != null && lab != null)
-                {
-                    var swRt = (RectTransform)sw.transform;
-                    rowLabelRight = XRange((RectTransform)lab.transform, true);
-                    rowCtrlLeft = XRange(swRt, false);
-                    rowCtrlRight = XRange(swRt, true);
-                    if (rowLabelRight > rowCtrlLeft) rowLabelRight = rowCtrlLeft - 8f;
-                }
-                Plugin.Log.LogInfo($"Settings: its label ends at {rowLabelRight:0}, its value spans {rowCtrlLeft:0} to {rowCtrlRight:0} (from its drawn left).");
-                Plugin.Log.LogInfo($"Settings: a game row draws {rowVisual.width:0}x{rowVisual.height:0} at {rowVisual.x:0},{rowVisual.y:0} from its rectangle's top left ({root.rect.width:0}x{root.rect.height:0}).");
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogInfo("Settings: the game row could not be measured (" + e.Message + "); the panel places rows by their rectangle.");
-            }
-        }
-
-        private static bool ActiveUnder(Transform t, Transform root)
-        {
-            for (Transform p = t; p != null && p != root; p = p.parent)
-            {
-                if (!p.gameObject.activeSelf) return false;
-            }
-            return true;
-        }
-
-        private static void Stretch(RectTransform rt)
-        {
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-        }
-
-        // The game's bold font on a text (its buttons', titles' and tabs'), else a faux bold of the labels' font.
-        private static TextMeshProUGUI Bold(TextMeshProUGUI t)
-        {
-            if (t == null) return t;
-            if (boldFont != null)
-            {
-                t.font = boldFont;
-                if (boldMaterial != null) t.fontSharedMaterial = boldMaterial;
-                t.fontStyle = FontStyles.Normal;
-            }
-            else t.fontStyle = FontStyles.Bold;
-            return t;
-        }
-
-        // The game's window title bar (its HeaderGroup, read from the Settings window: the tan bar sliced, an ornament at
-        // each end, the title in its font, its close button), 11 in from the top and the sides, 26 high, on a window of
-        // ours; null pieces are left out. Returns the title's text.
-        private static TextMeshProUGUI TitleBar(GameObject win, UIGameSettingsWindow settings, float w, string title, Action onClose)
-        {
-            Transform hg = settings != null ? settings.transform.Find("GenericWIndowLayout/Frame/HeaderGroup") : null;
-            const float inset = 11f, barH = 26f;
-            float bw = w - 2f * inset;
-            GameObject bar = Node("title bar", win.transform);
-            Rect(bar, inset, inset, bw, barH);
-            Image bgSrc = hg != null ? hg.Find("Background")?.GetComponent<Image>() : null;
-            if (bgSrc != null && bgSrc.sprite != null)
-            {
-                Image bg = Node("title back", bar.transform, typeof(Image)).GetComponent<Image>();
-                bg.sprite = bgSrc.sprite;
-                bg.type = Image.Type.Sliced;
-                bg.raycastTarget = false;
-                Stretch((RectTransform)bg.transform);
-            }
-            Image decor = hg != null ? hg.Find("DecorCommonLeft")?.GetComponent<Image>() : null;
-            if (decor != null && decor.sprite != null)
-            {
-                for (int side = 0; side < 2; side++)
-                {
-                    Image d = Node(side == 0 ? "title decor left" : "title decor right", bar.transform, typeof(Image)).GetComponent<Image>();
-                    d.sprite = decor.sprite;
-                    d.raycastTarget = false;
-                    Rect(d.gameObject, side == 0 ? 0f : bw - 28f, 0f, 28f, barH);
-                    if (side == 1) d.transform.localScale = new Vector3(-1f, 1f, 1f); // mirrored on the right
-                }
-            }
-            TextMeshProUGUI head = hg != null ? hg.Find("Header")?.GetComponent<TextMeshProUGUI>() : null;
-            TextMeshProUGUI tt = Text(bar.transform, "title", title, 1f, TextAlignmentOptions.Center, false, 34f, 0f, bw - 68f, barH);
-            Bold(tt);
-            if (head != null) { tt.font = head.font; tt.fontSize = head.fontSize; tt.color = head.color; }
-            Image closeBack = hg != null ? hg.Find("CloseButton/Background")?.GetComponent<Image>() : null;
-            Image closeIcon = hg != null ? hg.Find("CloseButton/BtnImage")?.GetComponent<Image>() : null;
-            if (closeIcon != null && closeIcon.sprite != null && onClose != null)
-            {
-                float bx = bw - 26f + 1f;
-                if (closeBack != null && closeBack.sprite != null)
-                {
-                    Image cb = Node("close back", bar.transform, typeof(Image)).GetComponent<Image>();
-                    cb.sprite = closeBack.sprite;
-                    cb.raycastTarget = false;
-                    Rect(cb.gameObject, bx - 24f, 0f, 50f, barH);
-                }
-                GameObject btn = Node("close", bar.transform, typeof(Image), typeof(UnityEngine.UI.Button));
-                Image ci = btn.GetComponent<Image>();
-                ci.sprite = closeIcon.sprite;
-                Rect(btn, bx, 0f, 26f, barH);
-                var b = btn.GetComponent<UnityEngine.UI.Button>();
-                b.targetGraphic = ci;
-                ColorBlock xc = b.colors; // lit under the mouse and darker pressed, as the game's own close button
-                xc.normalColor = new Color(0.85f, 0.85f, 0.85f, 1f);
-                xc.highlightedColor = new Color(1.25f, 1.25f, 1.25f, 1f);
-                xc.selectedColor = xc.normalColor;
-                xc.pressedColor = new Color(0.6f, 0.6f, 0.6f, 1f);
-                xc.colorMultiplier = 1f;
-                xc.fadeDuration = 0.05f;
-                b.colors = xc;
-                b.onClick.AddListener(() => onClose());
-            }
-            return tt;
-        }
-
-        private static TextMeshProUGUI Text(Transform parent, string name, string text, float sizeMul, TextAlignmentOptions align, bool wrap, float x, float y, float w, float h)
-        {
-            var t = Node(name, parent, typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
-            if (font != null) t.font = font;
-            if (fontMaterial != null) t.fontSharedMaterial = fontMaterial;
-            t.color = fontColor;
-            t.fontSize = fontSize * sizeMul;
-            t.enableAutoSizing = false;
-            t.alignment = align;
-            t.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-            t.overflowMode = TextOverflowModes.Overflow;
-            t.raycastTarget = false;
-            t.richText = false;
-            t.text = text;
-            Rect(t.gameObject, x, y, w, h);
-            return t;
-        }
-
-        // A scroll view: the wheel scrolls; a vertical layout of children inside, or (manual) rows placed by hand.
-        private static ScrollRect ScrollView(Transform parent, string name, float x, float y, float w, float h, out RectTransform content, float spacing, bool manual = false)
-        {
-            GameObject go = Node(name, parent, typeof(ScrollRect), typeof(RectMask2D));
-            Rect(go, x, y, w, h);
-            var sr = go.GetComponent<ScrollRect>();
-            GameObject viewport = Node(name + " viewport", go.transform, typeof(RectMask2D));
-            Stretch((RectTransform)viewport.transform);
-            GameObject c = manual ? Node(name + " content", viewport.transform) : Node(name + " content", viewport.transform, typeof(VerticalLayoutGroup), typeof(ContentSizeFitter));
-            var crt = (RectTransform)c.transform;
-            crt.anchorMin = new Vector2(0f, 1f);
-            crt.anchorMax = new Vector2(1f, 1f);
-            crt.pivot = new Vector2(0.5f, 1f);
-            crt.offsetMin = new Vector2(0f, 0f);
-            crt.offsetMax = new Vector2(0f, 0f);
-            if (!manual)
-            {
-                var vl = c.GetComponent<VerticalLayoutGroup>();
-                vl.spacing = spacing;
-                vl.padding = new RectOffset(4, 4, 2, 2);
-                vl.childAlignment = TextAnchor.UpperLeft;
-                vl.childControlWidth = true;
-                vl.childControlHeight = true;
-                vl.childForceExpandWidth = false;
-                vl.childForceExpandHeight = false;
-                var cf = c.GetComponent<ContentSizeFitter>();
-                cf.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
-                cf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            }
-            sr.content = crt;
-            sr.viewport = (RectTransform)viewport.transform;
-            sr.horizontal = false;
-            sr.vertical = true;
-            sr.movementType = ScrollRect.MovementType.Clamped;
-            sr.scrollSensitivity = 0f; // the wheel is Wheel()'s, anywhere on the window (a second scroll here would double it)
-            sr.inertia = false;
-            content = crt;
-            return sr;
-        }
 
         // An icon shown whole inside a square of px canvas units, pixel art at a whole-number scale when it fits one.
         private static void Show(RawImage img, MountIcons.Icon icon, float px)
@@ -1289,157 +947,11 @@ namespace GK2DonkeyAPI
         {
             Show(img, icon, px);
             Vector2 size = ((RectTransform)img.transform).sizeDelta;
-            Rect(img.gameObject, Mathf.Round(x + (px - size.x) / 2f), Mathf.Round(y + (px - size.y) / 2f), size.x, size.y);
+            UiKit.Rect(img.gameObject, Mathf.Round(x + (px - size.x) / 2f), Mathf.Round(y + (px - size.y) / 2f), size.x, size.y);
         }
 
-        // A button of the panel's own: flat (a journal's row: a dark face with a faint edge, hover brightens, the chosen
-        // one coloured by MarkList) or the game's dialog button face sliced to the size (a touch dark at rest so the
-        // hover shows), with the game's font.
-        private static GameObject OwnButton(Transform parent, string name, string text, float w, float h, Action onClick, float textLeft = 0f, bool flat = false)
-        {
-            GameObject go = Node(name, parent, typeof(Image), typeof(UnityEngine.UI.Button), typeof(CanvasGroup));
-            Rect(go, 0f, 0f, w, h);
-            var img = go.GetComponent<Image>();
-            var b = go.GetComponent<UnityEngine.UI.Button>();
-            b.targetGraphic = img;
-            ColorBlock cb = b.colors;
-            if (flat)
-            {
-                img.color = CardBase;
-                var edge = go.AddComponent<Outline>();
-                edge.effectColor = new Color(1f, 1f, 1f, 0.10f);
-                edge.effectDistance = new Vector2(1f, -1f);
-                cb.normalColor = Color.white;
-                cb.highlightedColor = new Color(1.5f, 1.5f, 1.5f, 1f);
-                cb.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-                cb.selectedColor = Color.white;
-            }
-            else
-            {
-                if (buttonSprite != null)
-                {
-                    img.sprite = buttonSprite;
-                    img.type = buttonSprite.border != Vector4.zero ? Image.Type.Sliced : Image.Type.Simple;
-                }
-                else
-                {
-                    img.color = new Color(0.45f, 0.12f, 0.12f, 1f);
-                }
-                cb.normalColor = new Color(0.82f, 0.82f, 0.82f, 1f);
-                cb.highlightedColor = Color.white;
-                cb.pressedColor = new Color(0.65f, 0.65f, 0.65f, 1f);
-                cb.selectedColor = new Color(0.82f, 0.82f, 0.82f, 1f);
-            }
-            cb.colorMultiplier = 1f;
-            cb.fadeDuration = 0.08f;
-            b.colors = cb;
-            b.onClick.AddListener(() => onClick());
-            TextMeshProUGUI t = Text(go.transform, "label", text, 1f, textLeft > 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center, false, textLeft, 0f, w - textLeft - 6f, h);
-            t.color = flat ? fontColor : buttonTextColor;
-            t.overflowMode = TextOverflowModes.Ellipsis;
-            if (flat) t.fontStyle = FontStyles.Normal; else Bold(t);
-            // the gamepad: an item whose select presses the button (as LazyButton.SetCallbacksIntoGamepadNavigationItem),
-            // framed while focused with the game row's own focus frame
-            var item = go.AddComponent<GamepadNavigationItem>();
-            UnityEngine.UI.Button pressed = b;
-            item.SetCallbacks(null, null, () => { if (pressed.interactable) pressed.onClick.Invoke(); });
-            item.focusFrame = FocusFrame(go.transform);
-            return go;
-        }
-
-        private static GameObject focusTemplate;
-
-        // A focus frame over a button: a copy of the game row's own, else a bright outline.
-        private static GameObject FocusFrame(Transform parent)
-        {
-            GameObject f;
-            if (focusTemplate != null)
-            {
-                f = UnityEngine.Object.Instantiate(focusTemplate, parent, false);
-                f.name = "focus";
-                foreach (Graphic g in f.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
-            }
-            else
-            {
-                f = Node("focus", parent, typeof(Image), typeof(Outline));
-                f.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0f);
-                f.GetComponent<Image>().raycastTarget = false;
-                var o = f.GetComponent<Outline>();
-                o.effectColor = new Color(1f, 0.85f, 0.3f, 1f);
-                o.effectDistance = new Vector2(2f, -2f);
-            }
-            var rt = (RectTransform)f.transform;
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(-2f, -2f);
-            rt.offsetMax = new Vector2(2f, 2f);
-            var le = f.GetComponent<LayoutElement>() ?? f.AddComponent<LayoutElement>();
-            le.ignoreLayout = true;
-            f.SetActive(false);
-            return f;
-        }
-
-        private static void NavGroup(GameObject go, int group)
-        {
-            var item = go.GetComponent<GamepadNavigationItem>();
-            if (item != null) item.group = group;
-        }
 
         // ---- the gamepad, every frame (from Tick) ----
-        private static bool navDirty = true;
-
-        private static void TickGamepad()
-        {
-            GameObject window = colours != null ? colours : panel;
-            if (window == null) return;
-            var nav = window.GetComponent<GamepadNavigationController>();
-            if (nav == null) return;
-            if (!LazyInput.IsGamepadActive)
-            {
-                if (nav.IsEnabled) nav.Disable(); // the mouse: no focus frames, as the game's windows
-                return;
-            }
-            if (!nav.IsEnabled || navDirty)
-            {
-                GamepadNavigationItem was = nav.IsEnabled ? nav.FocusedItem : null;
-                nav.Enable();
-                nav.ReinitItems(focusOnFirstActive: false);
-                navDirty = false;
-                if (focusNext != null && focusNext && focusNext.isActiveAndEnabled) { nav.SetFocusedItem(focusNext); KeepInView(focusNext); } // a dropdown opened or closed
-                else if (was != null && was && was.isActiveAndEnabled) nav.SetFocusedItem(was);
-                else FocusStart(nav, window);
-                focusNext = null;
-            }
-            if (TypingField() != null) return; // typing a name: the keys are the text box's
-            GamepadNavigationItem focused = nav.FocusedItem;
-            bool onValueRow = focused != null && focused.GetComponentInParent<UISwitchButton>() != null; // a value row steps itself with Left/Right (UISwitchButton.Update)
-            if (focused != null && steppers.TryGetValue(focused, out Action<int> stepper)) // a slider: Left/Right move it
-            {
-                int d = Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft) ? -1 : Pressed(GameKey.Right) || Pressed(GameKey.DpadRight) ? 1 : 0;
-                if (d != 0)
-                {
-                    foreach (GameKey k in new[] { GameKey.Left, GameKey.DpadLeft, GameKey.Right, GameKey.DpadRight }) LazyInput.ClearKeyDown(k);
-                    stepper(d);
-                    return;
-                }
-                onValueRow = true; // no way left or right out of it: Up and Down
-            }
-            if (Pressed(GameKey.Up) || Pressed(GameKey.DpadUp)) Move(nav, GUIDirection.Up);
-            else if (Pressed(GameKey.Down) || Pressed(GameKey.DpadDown)) Move(nav, GUIDirection.Down);
-            else if (!onValueRow && (Pressed(GameKey.Left) || Pressed(GameKey.DpadLeft))) Move(nav, GUIDirection.Left);
-            else if (!onValueRow && (Pressed(GameKey.Right) || Pressed(GameKey.DpadRight))) Move(nav, GUIDirection.Right);
-            else if (!onValueRow && Pressed(GameKey.Select)) { LazyInput.ClearKeyDown(GameKey.Select); nav.SelectFocusedItem(); }
-        }
-
-        private static bool Pressed(GameKey k) => LazyInput.GetKeyDown(k);
-
-        private static void Move(GamepadNavigationController nav, GUIDirection dir)
-        {
-            foreach (GameKey k in new[] { GameKey.Up, GameKey.DpadUp, GameKey.Down, GameKey.DpadDown, GameKey.Left, GameKey.DpadLeft, GameKey.Right, GameKey.DpadRight }) LazyInput.ClearKeyDown(k);
-            nav.Navigate(dir);
-            KeepInView(nav.FocusedItem);
-        }
 
         // The first focus: the chosen mount's row in the journal, the first row in the colours window.
         private static void FocusStart(GamepadNavigationController nav, GameObject window)
@@ -1454,24 +966,7 @@ namespace GK2DonkeyAPI
                 }
             }
             if (start != null) nav.SetFocusedItem(start); else nav.FocusOnFirstActive(0);
-            KeepInView(nav.FocusedItem);
-        }
-
-        // A focused item inside a scroll view scrolled into view.
-        private static void KeepInView(GamepadNavigationItem item)
-        {
-            if (item == null) return;
-            ScrollRect sr = item.GetComponentInParent<ScrollRect>();
-            if (sr == null || sr.content == null || sr.viewport == null) return;
-            var irt = (RectTransform)item.transform;
-            Vector3[] c = new Vector3[4];
-            irt.GetWorldCorners(c);
-            float top = sr.viewport.InverseTransformPoint(c[1]).y, bottom = sr.viewport.InverseTransformPoint(c[0]).y;
-            Rect view = sr.viewport.rect;
-            float shift = 0f;
-            if (top > view.yMax) shift = top - view.yMax + 4f;
-            else if (bottom < view.yMin) shift = bottom - view.yMin - 4f;
-            if (shift != 0f) sr.content.anchoredPosition -= new Vector2(0f, shift / Mathf.Max(0.0001f, sr.content.lossyScale.y / sr.viewport.lossyScale.y));
+            UiKit.KeepInView(nav.FocusedItem);
         }
 
         // The mouse wheel scrolls anywhere on a window, not only over a row (the user, 2026-10-22: the scrollbars could
@@ -1488,17 +983,17 @@ namespace GK2DonkeyAPI
             if (Mathf.Approximately(d, 0f)) return;
             Vector2 at = UnityInput.Current.mousePosition;
             ScrollRect target = null;
-            if (dropdown != null)
+            if (controls.DropdownOpen)
             {
-                if (dropScroll != null && Over(dropScroll.gameObject, at)) target = dropScroll; // an open list takes the wheel alone
+                if (controls.DropScroll != null && UiKit.Over(controls.DropScroll.gameObject, at)) target = controls.DropScroll; // an open list takes the wheel alone
             }
             else if (colours != null && colours.activeSelf)
             {
-                if (Over(colours, at)) target = coloursScroll;
+                if (UiKit.Over(colours, at)) target = coloursScroll;
             }
-            else if (panel.activeSelf && Over(panel, at))
+            else if (panel.activeSelf && UiKit.Over(panel, at))
             {
-                target = listScroll != null && Over(listScroll.gameObject, at) ? listScroll : contentScroll;
+                target = listScroll != null && UiKit.Over(listScroll.gameObject, at) ? listScroll : contentScroll;
             }
             if (target == null || target.content == null || target.viewport == null) return;
             float room = target.content.rect.height - target.viewport.rect.height;
@@ -1513,53 +1008,6 @@ namespace GK2DonkeyAPI
             if (Mathf.Approximately(y, p.y)) return;
             target.StopMovement();
             target.content.anchoredPosition = new Vector2(p.x, y);
-        }
-
-        private static bool Over(GameObject go, Vector2 screen)
-        {
-            var rt = go.transform as RectTransform;
-            if (rt == null) return false;
-            Canvas c = go.GetComponentInParent<Canvas>();
-            Canvas root = c != null ? c.rootCanvas : null;
-            Camera cam = root == null || root.renderMode == RenderMode.ScreenSpaceOverlay ? null : root.worldCamera;
-            return RectTransformUtility.RectangleContainsScreenPoint(rt, screen, cam);
-        }
-
-        // A thin scrollbar at the right edge of a scroll view, shown while there is more than fits.
-        private static void AddScrollbar(ScrollRect sr)
-        {
-            GameObject track = Node("scrollbar", sr.transform, typeof(Image), typeof(Scrollbar));
-            var trt = (RectTransform)track.transform;
-            trt.anchorMin = new Vector2(1f, 0f);
-            trt.anchorMax = new Vector2(1f, 1f);
-            trt.pivot = new Vector2(1f, 0.5f);
-            trt.anchoredPosition = new Vector2(0f, 0f);
-            trt.sizeDelta = new Vector2(ScrollbarW, -4f);
-            track.GetComponent<Image>().color = new Color(1f, 1f, 1f, 0.06f);
-            GameObject handle = Node("handle", track.transform, typeof(Image));
-            Stretch((RectTransform)handle.transform);
-            var hi = handle.GetComponent<Image>();
-            hi.color = new Color(1f, 1f, 1f, 0.28f);
-            var sb = track.GetComponent<Scrollbar>();
-            sb.handleRect = (RectTransform)handle.transform;
-            sb.targetGraphic = hi;
-            sb.direction = Scrollbar.Direction.BottomToTop;
-            sr.verticalScrollbar = sb;
-            sr.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
-        }
-
-        // A window scaled down as a whole when the canvas is smaller than it (never cut), centred.
-        private static void FitToScreen(GameObject window, float w, float h)
-        {
-            if (window == null) return;
-            var canvasRt = window.transform.parent as RectTransform;
-            if (canvasRt == null) return;
-            float roomH = canvasRt.rect.height - 2f * EdgeGap, roomW = canvasRt.rect.width - 2f * EdgeGap;
-            float scale = Mathf.Max(0.5f, Mathf.Min(1f, roomW / w, roomH / h));
-            window.transform.localScale = new Vector3(scale, scale, 1f);
-            // measure, never assume (the user, 2026-10-21): the canvas's units at this screen, its scaler's factor, the screen
-            Canvas root = canvasRt.GetComponentInParent<Canvas>();
-            Plugin.Log.LogInfo($"Settings: {window.name} {w:0}x{h:0} on a canvas of {canvasRt.rect.width:0}x{canvasRt.rect.height:0} units (scale factor {(root != null ? root.scaleFactor : 0f):0.##}, screen {Screen.width}x{Screen.height}): window scale {scale:0.##}.");
         }
 
         // The self-test's view of the panel ("settings: the Mounts panel opens...").
@@ -1646,26 +1094,27 @@ namespace GK2DonkeyAPI
         {
             page?.SavePicked(now: false);
             if (lastPage != null && lastPage != page) lastPage.SavePicked(now: false); // a pick written to the cfg file once the picking pauses (MountSettingsPage.SelectMount)
-            if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null)))
+            if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null && !OptionsWindow.IsOverPanel)))
             {
-                Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (RestoreUnder is skipped)
+                Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (the game window is forgotten)
                 return;
             }
-            TMP_InputField typing = TypingField();
-            if (typing != null) { typingIn = typing; typingFrame = Time.frameCount; }
-            if (panel != null) Wheel();
-            if (panel != null && controlsTaken) TakeControls(); // re-asserted: a game popup closing gives ByUI back
-            if (panel != null && controlsTaken) TickGamepad();
-            if (panel != null && (UnityInput.Current.GetKeyDown(KeyCode.Escape) || (LazyInput.IsGamepadActive && LazyInput.GetKeyDown(GameKey.Back)))) // the gamepad's Back is the game windows' close too
+            // the rest only while the journal or its colours window is the one shown (the options window over it has its own)
+            GameObject shown = colours != null ? colours : panel != null && panel.activeSelf ? panel : null;
+            if (shown != null)
             {
+                controls.TrackTyping();
+                Wheel();
+                if (GameWindowAside.ControlsTaken) GameWindowAside.TakeControls("the Mounts panel"); // re-asserted: a game popup closing gives ByUI back
+                if (GameWindowAside.ControlsTaken) controls.TickGamepad(shown, nav => FocusStart(nav, shown));
                 // Escape steps back: out of the search box first (the field already put its text back), then the colours
                 // window to the journal, then the journal closed (keeping what was chosen). The game reads the same press
-                // and opens its pause menu: closed again now and a frame later (the order of the two Updates isn't fixed;
-                // the user, 2026-10-21: Escape must not fall through to the pause menu).
-                // consumed: nothing else of the game's reads this press (the controls are the panel's anyway)
-                try { LazyInput.ClearKeyDown(GameKey.InGameMenu); LazyInput.ClearKeyDown(GameKey.Back); } catch { }
-                StepBack();
-                return;
+                // and would open its pause menu: consumed (the user, 2026-10-21: Escape must not fall through to the pause menu).
+                if (GameWindowAside.TakeEscape())
+                {
+                    StepBack();
+                    return;
+                }
             }
             if (panel == null || Time.unscaledTime < nextPicture)
             {
@@ -1689,7 +1138,7 @@ namespace GK2DonkeyAPI
             if (pictureOff) return;
             try
             {
-                Mount.Instance paper = LookPreview.PaperOf(page);
+                Mount.Instance paper = PaperOf(page);
                 Texture pic;
                 using (Perf.Measure(Perf.S.Preview)) pic = PreviewStage.Picture(paper);
                 if (paper != null && !paper.LooksRig.Settling)
@@ -1726,155 +1175,19 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static bool controlsTaken;
-
         // One step back (Escape): out of a text box (the search, the name), else a dropdown's list closed, else the colours
         // window to the journal, else the journal closed and the window under it shown again. The self-test walks it too
         // (it can't press a key).
         private static void StepBack()
         {
-            if (typingIn != null && typingFrame >= Time.frameCount - 1) typingIn.DeactivateInputField();
-            else if (dropdown != null) CloseDropdown(refocus: true);
+            if (controls.LeaveTyping()) { }
+            else if (controls.DropdownOpen) controls.CloseDropdown(refocus: true);
             else if (colours != null) CloseColours(keep: true);
             else Close(keep: true); // and back to where it was opened from
         }
 
         internal static void TestStepBack() => StepBack();
-        internal static bool TestControlsTaken => controlsTaken;
-
-        // The way back, a stack: the game's own windows below (the pause menu, the Mods menu on a mod's page, the Settings
-        // window on a page...), then the journal, then the colours window. The game window on top when the panel opens
-        // is not closed: it stays in the game's window stack as it is (modal: the game stays paused) with its GameObject
-        // switched off, so its own Escape handling doesn't run under the panel; the panel closing switches it back on,
-        // same page and state, and its own Escape goes on from there. Closing and reopening it would not do: the Mods
-        // menu's Close reopens the pause menu and forgets where it came from, and its Open starts on the mod list
-        // (GK2 Mod Framework's ModsMenuWindow, read 2026-10-21).
-        // Any game window: held as the game's base type (LazyWidgetBase, what the window stack holds). It was
-        // LazyWindow<LazyWidgetDataBase>, which C# doesn't match for a window with its own data type (no generic
-        // variance on classes): 44 of the game's 62, the Character window with the Tech Tree, the inventory and chests
-        // among them, stayed live under the panel and open after Ride (the user, 2026-10-30; F11 caught it).
-        private static LazyWidgetBase under;
-
-        private static void HideUnder()
-        {
-            under = null;
-            try
-            {
-                LazyWidgetBase top = LazyWindowsStackController.ActiveWindow;
-                if (top != null && top.gameObject.activeSelf)
-                {
-                    under = top;
-                    top.gameObject.SetActive(false);
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogInfo("Settings: the window under the Mounts panel could not be set aside (" + e.Message + ").");
-            }
-        }
-
-        // back: the window under it shown again as it was. Not back (Ride, Drive): every game window closed, into the game.
-        private static void RestoreUnder(bool back)
-        {
-            LazyWidgetBase w = under;
-            under = null;
-            if (w == null) return; // opened from the game: nothing to show again
-            try
-            {
-                w.gameObject.SetActive(true);
-                if (back)
-                {
-                    Plugin.Log.LogInfo($"Settings: the Mounts panel closed: back to {w.name}.");
-                    return;
-                }
-                // into the game: close the chain the game and the framework built (each Close may open the one before it)
-                for (int i = 0; i < 8; i++)
-                {
-                    LazyWidgetBase top = LazyWindowsStackController.ActiveWindow;
-                    if (top == null) break;
-                    if (!top.gameObject.activeSelf) top.gameObject.SetActive(true);
-                    if (!CloseWindow(top) || LazyWindowsStackController.ActiveWindow == top)
-                    {
-                        Plugin.Log.LogWarning($"Settings: the game window {top.name} could not be closed after the Mounts panel's Ride or Drive; close it yourself.");
-                        break; // the same window again would be closed again: stop
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Settings: the window under the Mounts panel could not be shown again (" + e.Message + ").");
-            }
-        }
-
-        private static string UnderText() => under != null ? under.name : "the game";
-
-        // A game window's own Close(), whatever its data type: the game has no Close on its base type, only on
-        // LazyWindow<T>. Looked up once per window type (a Ride or Drive from the panel, never per frame) on its
-        // LazyWindow<T> base; the call goes to the window's own override. False: not a LazyWindow, or Close threw.
-        private static readonly Dictionary<Type, System.Reflection.MethodInfo> closeOf = new Dictionary<Type, System.Reflection.MethodInfo>();
-
-        private static bool CloseWindow(LazyWidgetBase w)
-        {
-            Type t = w.GetType();
-            if (!closeOf.TryGetValue(t, out System.Reflection.MethodInfo close))
-            {
-                close = null;
-                for (Type b = t; b != null; b = b.BaseType)
-                {
-                    if (b.IsGenericType && b.GetGenericTypeDefinition() == typeof(LazyWindow<>))
-                    {
-                        close = b.GetMethod("Close", Type.EmptyTypes);
-                        break;
-                    }
-                }
-                closeOf[t] = close;
-            }
-            if (close == null) return false;
-            try
-            {
-                close.Invoke(w, null);
-                return true;
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning($"Settings: closing the game window {w.name} failed: {(e.InnerException ?? e).Message}");
-                return false;
-            }
-        }
-
-        // The player's controls taken while the panel is open, as the game's own modal windows do (ByUI: the ride goes
-        // on, as with a chest or the inventory): the game's own key reader (PlayerInputHandler, the pause menu on Escape,
-        // E, I, movement) does not run under the panel. Re-asserted every tick: the game gives ByUI back when its last
-        // modal window closes, which a popup over the panel would do.
-        private static void TakeControls()
-        {
-            try
-            {
-                PlayerController pc = MainGame.PlayerController;
-                if (pc == null) return;
-                if (pc.IsControlEnabledByType(TakenControlType.ByUI)) pc.SetControlTakenType(TakenControlType.ByUI, isEnabled: false);
-                controlsTaken = true;
-            }
-            catch (Exception e)
-            {
-                if (!controlsTaken) Plugin.Log.LogInfo("Settings: the Mounts panel could not take the controls (" + e.Message + "); the game's keys work under it.");
-            }
-        }
-
-        private static void ReleaseControls()
-        {
-            if (!controlsTaken) return;
-            controlsTaken = false;
-            try
-            {
-                PlayerController pc = MainGame.PlayerController;
-                if (pc != null && !LazyWindowsStackController.HasAnyModalWindowOpened) pc.SetControlTakenType(TakenControlType.ByUI, isEnabled: true); // a game window open meanwhile keeps its own hold
-            }
-            catch (Exception e)
-            {
-                Plugin.Log.LogWarning("Settings: the Mounts panel could not give the controls back (" + e.Message + ").");
-            }
-        }
+        internal static bool TestControlsTaken => GameWindowAside.ControlsTaken;
 
         private static void Fit(RawImage img, RectTransform box, Texture pic, float maxScale)
         {
@@ -1940,7 +1253,7 @@ namespace GK2DonkeyAPI
                 if (!IsOpen) return;
                 try
                 {
-                    // the panel's own lists (the Skin rows: never in the Mods menu or the game's Settings, InMenu) are read
+                    // the panel's own lists (the Skin rows: never in the options window, InOptions) are read
                     // again, so a skin added or withdrawn shows as it is now
                     if (page != null) foreach (MountSettingsPage.Row r in page.Rows) if (r.IsLook && r.RowKind == MountSettingsPage.RowKind.List) { r.ChoiceLabels = null; r.ChoiceValues = null; }
                     entries = Entries();
@@ -1959,8 +1272,8 @@ namespace GK2DonkeyAPI
         private static void Close(bool keep, bool back = true)
         {
             bool wasOpen = panel != null;
-            try { CommitFields(); } catch (Exception e) { Plugin.Log.LogWarning("Settings: a name being typed could not be kept: " + e.Message); } // a name still being typed is kept
-            CloseDropdown(refocus: false);
+            try { controls.CommitFields(); } catch (Exception e) { Plugin.Log.LogWarning("Settings: a name being typed could not be kept: " + e.Message); } // a name still being typed is kept
+            controls.CloseDropdown(refocus: false);
             MountSettingsPage closing = page;
             if (wasOpen) Perf.TracePick("the panel closed, " + (closing?.MountChosen ?? MountCatalog.DonkeyId) + " chosen"); // the world's mount turning into it
             closing?.SavePickedSoon(); // the picking is over: the chosen mount to the cfg file half a second on (put back below when not kept: written again by its set)
@@ -1993,13 +1306,6 @@ namespace GK2DonkeyAPI
             {
                 Plugin.Log.LogWarning("Settings: the mount held for the Mounts panel could not be let go: " + e.Message);
             }
-            try
-            {
-                page?.RefreshMenu?.Invoke(); // the Mods menu re-reads its conditions: a row the chosen mount pins or leaves out
-            }
-            catch
-            {
-            }
             before.Clear();
             rows.Clear();
             cards.Clear();
@@ -2030,21 +1336,155 @@ namespace GK2DonkeyAPI
             search = null;
             filter = "";
             titleCount = headerName = headerDesc = null;
-            templateRow = null;
-            dialogTemplate = null;
-            font = null;
-            fontMaterial = null;
-            boldFont = null;
-            boldMaterial = null;
             nextPicture = 0f;
             fitted.Clear(); // the pictures go with the windows
             page = null;
-            if (wasOpen)
+            bool fromOptions = overOptions;
+            overOptions = false;
+            if (!wasOpen) return;
+            if (OptionsWindow.IsOverPanel) OptionsWindow.Discard(); // the options opened from the journal go with it (the game left)
+            if (fromOptions && OptionsWindow.IsOpen)
             {
-                if (Mount.IsGameReady) RestoreUnder(back); // the game gone (a load, the main menu): its windows went with it
-                else under = null;
-                ReleaseControls(); // after: a game window shown again keeps its own hold on the controls
+                if (back)
+                {
+                    OptionsWindow.ShowAfterPanel(); // back to the options it was opened from, as they were
+                    return;
+                }
+                OptionsWindow.Discard(); // Ride, Drive, the game left: the options go too, then the game's windows
             }
+            if (Mount.IsGameReady) GameWindowAside.Restore(back, "the Mounts panel"); // the game gone (a load, the main menu): its windows went with it
+            else GameWindowAside.Forget();
+            GameWindowAside.ReleaseControls("the Mounts panel"); // after: a game window shown again keeps its own hold on the controls
+        }
+
+        // The journal over the options window (opened from its Mounts button): Close goes back to them.
+        private static bool overOptions;
+
+        // The options window opened over the journal (its Options button) or closed back to it.
+        internal static void HideUnderOptions()
+        {
+            if (panel != null) panel.SetActive(false);
+        }
+
+        internal static void ShowAfterOptions()
+        {
+            if (panel == null) return;
+            panel.SetActive(true);
+            controls.NavDirty = true;
+            Refresh();
+        }
+
+        // The journal is open over the options window (the options' Mounts button pressed again goes back to it).
+        internal static bool IsOverOptions => panel != null && overOptions;
+
+        internal static bool IsShownOnTop => panel != null && (colours != null || panel.activeSelf);
+
+        // The picture's model: the page's companion's paper mount (MountSettingsPage.Preview), else the one the page holds.
+        internal static Mount.Instance PaperOf(MountSettingsPage p) => p?.PreviewOf?.Paper ?? p?.MountPaper;
+
+        // The journal's rows in one order on every mount (the user, 2026-10-26: "the order of these are not all the
+        // same for all mounts"; "The skin most definitely should be the second in the list after name to show that the
+        // name is per mount not per skin"): a text row (its name) first, then the Skin, then the others in the order
+        // the page made the donkey's (a mount registered later had its rows made later: page.Rows alone put its Skin
+        // last).
+        private static void JournalOrder(List<MountSettingsPage.Row> list, string chosen)
+        {
+            var rank = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            int i = 0;
+            foreach (MountSettingsPage.Row r in page.Rows)
+            {
+                if (!r.IsLook || r.Entry == null || !string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase)) continue;
+                string b = BaseKey(r, r.MountId);
+                if (!rank.ContainsKey(b)) rank[b] = i;
+                i++;
+            }
+            int Rank(MountSettingsPage.Row r)
+            {
+                if (r.RowKind == MountSettingsPage.RowKind.Text) return -2;
+                string b = BaseKey(r, chosen);
+                if (b.Equals("Skin", StringComparison.OrdinalIgnoreCase)) return -1;
+                return rank.TryGetValue(b, out int at) ? at : int.MaxValue;
+            }
+            // a stable insertion sort (few rows; no LINQ in the game)
+            for (int a = 1; a < list.Count; a++)
+            {
+                MountSettingsPage.Row r = list[a];
+                int k = Rank(r), j = a - 1;
+                while (j >= 0 && Rank(list[j]) > k)
+                {
+                    list[j + 1] = list[j];
+                    j--;
+                }
+                list[j + 1] = r;
+            }
+        }
+
+        // The self-tests' view of the journal: its rows' keys in order (without the mount's part), how many are still the
+        // game's rows, and the first part of a row drawn outside the journal's column (its mask would cut it), or null.
+        internal static string TestJournalOrder()
+        {
+            var keys = new List<string>();
+            foreach (var x in rows) keys.Add(BaseKey(x.Row, builtFor));
+            return string.Join(",", keys);
+        }
+
+        internal static int TestJournalGameRows()
+        {
+            int n = 0;
+            foreach (var x in rows) if (x.Go != null && x.Go.GetComponentInChildren<UISwitchButton>(true) != null) n++;
+            return n;
+        }
+
+        // The first row of a window (the journal, else the colours window) whose label has less than 100 units, or null
+        // (the user's screenshot, 2026-10-26: the colours window's labels 10 wide, "Co / col" under the dropdowns).
+        internal static string TestNarrowLabel(bool coloursWindow)
+        {
+            foreach (var x in coloursWindow ? colourRows : rows)
+            {
+                if (x.Go == null) continue;
+                Transform t = x.Go.transform.Find("GK2DonkeyAPI mounts panel label");
+                if (t is RectTransform rt && rt.rect.width < 100f) return $"{x.Row.Label}: {rt.rect.width:0}";
+            }
+            return null;
+        }
+
+        // The name's text box takes the typing: activated, it is focused a frame on (built switched on before its text
+        // parts were set, it never was: the user, 2026-10-26). Null: no text box in the journal.
+        internal static TMP_InputField TestNameField()
+        {
+            foreach (var x in rows) if (x.Go != null && x.Row.RowKind == MountSettingsPage.RowKind.Text) return x.Go.GetComponentInChildren<TMP_InputField>(true);
+            return null;
+        }
+
+        internal static string TestJournalOutside()
+        {
+            if (contentScroll == null || contentScroll.viewport == null) return "no journal";
+            RectTransform view = contentScroll.viewport;
+            Rect area = view.rect;
+            var corners = new Vector3[4];
+            foreach (var x in rows)
+            {
+                if (x.Go == null) continue;
+                foreach (RectTransform rt in x.Go.GetComponentsInChildren<RectTransform>(false))
+                {
+                    if (rt.rect.width <= 0f) continue;
+                    rt.GetWorldCorners(corners);
+                    float a = view.InverseTransformPoint(corners[0]).x, b = view.InverseTransformPoint(corners[2]).x;
+                    if (Math.Min(a, b) < area.xMin - 0.5f || Math.Max(a, b) > area.xMax + 0.5f)
+                        return $"{x.Row.Label}: {rt.name} spans {Math.Min(a, b) - area.xMin:0} to {Math.Max(a, b) - area.xMin:0} of 0 to {area.width:0}";
+                }
+            }
+            return null;
+        }
+
+        // A row's key without its mount's part: "Foals_acme-pack.crab" and "Foals" are both "Foals", every
+        // "Skin_<mount>" is "Skin".
+        private static string BaseKey(MountSettingsPage.Row r, string mountId)
+        {
+            string key = r.Entry?.Definition.Key ?? "";
+            if (key.StartsWith("Skin_", StringComparison.OrdinalIgnoreCase)) return "Skin";
+            if (!string.IsNullOrEmpty(mountId) && key.EndsWith("_" + mountId, StringComparison.OrdinalIgnoreCase)) return key.Substring(0, key.Length - mountId.Length - 1);
+            return key;
         }
     }
 }

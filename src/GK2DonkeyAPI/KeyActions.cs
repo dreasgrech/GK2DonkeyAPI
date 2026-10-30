@@ -21,7 +21,7 @@ namespace GK2DonkeyAPI
             internal string Owner;
             internal ConfigEntry<KeyboardShortcut> Key;
             internal Action Pressed;
-            // The binding changed (its SettingChanged: the Mods menu's key capture, the Settings window's, a cfg reload).
+            // The binding changed (its SettingChanged: the options window's key capture, a cfg reload).
             // Was a KeyboardShortcut.Serialize() of every key every frame, compared as text: about half the mod's steady
             // garbage once the foals' names were gone (0.22 to 0.44 KB a frame, the garbage survey 2026-10-25 12:52).
             internal volatile bool Changed;
@@ -69,14 +69,16 @@ namespace GK2DonkeyAPI
             {
                 return;
             }
-            // The Mounts panel or its colours window open: the mods' keys wait, as the game's own do (the user,
-            // 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it.
-            bool panelOpen = MountsPanel.IsOpen;
+            // The Mounts panel, its colours window or the options window open: the mods' keys wait, as the game's own do
+            // (the user, 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it,
+            // while the panel is the one shown.
+            bool windowOpen = MountsPanel.IsOpen || OptionsWindow.IsOpen;
+            bool panelShown = MountsPanel.IsShownOnTop && !OptionsWindow.IsShown;
             for (int i = 0; i < entries.Count; i++)
             {
                 Entry e = entries[i];
-                // The binding changed since the last poll (the Mods menu's key capture writes it on the key-down, the
-                // Settings window's too, or a cfg reload): the press that set it is not a press of it. Nothing fires until
+                // The binding changed since the last poll (the options window's key capture writes it on the key-down, or a
+                // cfg reload): the press that set it is not a press of it. Nothing fires until
                 // the new key has been let go (the user, 2026-10-21: binding the Mounts panel key opened the panel at once).
                 if (e.Changed)
                 {
@@ -92,7 +94,7 @@ namespace GK2DonkeyAPI
                 {
                     continue;
                 }
-                if (panelOpen && !e.OverPanel)
+                if (windowOpen && !(e.OverPanel && panelShown))
                 {
                     continue;
                 }
@@ -110,9 +112,9 @@ namespace GK2DonkeyAPI
         // Why the mods' keys wait this frame, or null: what Poll asks first (the self-test asks it too).
         internal static string WaitReason()
         {
-            if (SettingsRows.CapturingKey)
+            if (KeyCapture.Active)
             {
-                return "a key is being set"; // in the game's Settings window
+                return "a key is being set"; // in the options window
             }
             if (MountsPanel.SearchFocused)
             {

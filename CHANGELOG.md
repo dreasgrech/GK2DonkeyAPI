@@ -14,6 +14,19 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Saddle Up's own options window** (2026-10-30, GK2 Donkey API 0.42.0; the user: GK2 Mod Framework isn't on the
+  Steam Workshop, so every player gets the same options): the game's **Settings** window (in the pause menu and the
+  main menu) has a **GK2 Saddle Up options** button, and the Mounts panel an **Options** button. The sections are on
+  the left, their options on the right, and a line at the bottom says what the option under the mouse (or the
+  gamepad's focus) does. Every option has a control of its own: switches, number buttons, sliders, dropdowns, and
+  key boxes: click one and press the key, with Shift, Ctrl or Alt, or one of those on its own (Climb's Left Shift
+  and Descend's Left Ctrl can be set now); Backspace sets no key, Esc cancels, and a key two options share is said
+  under both. **Defaults** sets the section shown back to its defaults, after asking. The Mounts button opens the
+  Mounts panel over the options, and Escape steps back one window at a time. The buttons that act on your mount
+  or the keeper work in a game only (greyed in the main menu). With GK2 Mod Framework installed, Saddle Up's
+  **Settings** button in its Mods menu opens the same window (the framework's own page of every setting is gone).
+  The "Showing" pages of the game's Settings window are gone too; your settings are kept as they were (the same
+  cfg, the same lines).
 - **Typing in another text box no longer presses the mod's keys** (2026-10-30, GK2 Donkey API): a letter typed in
   a text box of another mod or of the game (e.g. a search box on the Tech Tree) was also read as the key on that
   letter, so typing an L opened the Mounts panel. The keys only read the keyboard while no text box has the cursor,
@@ -27,8 +40,35 @@ For players:
   with a brass hem over red padding, a crupper); the steel follows the Second tone, the plume and the padding the
   harness colour.
 
+For mod authors:
+
+- **A settings page shows in the options window** (GK2 Donkey API 0.42.0): `MountSettingsPage` is unchanged (every
+  method as before), but its rows that aren't look rows go into the API's options window, opened from a button
+  named after the page's title in the game's Settings window and from the Mounts panel. Key rows are set there
+  (they showed read-only in the Settings window), text rows are text boxes, info rows read again, a `Heading` over
+  plain rows is a heading. A `Preview` row is no longer drawn (the Mounts panel shows the mount); calling it still
+  sets the panel's companion. The "Setting a key" note row is gone. Two key rows with the same key, either with a
+  `pressed:` action, are marked as a clash. With GK2 Mod Framework installed, the page's entry in its Mods menu has
+  one setting, a button opening the options window, and its Settings button opens the window straight away (a
+  Harmony prefix on the framework's private `ModsMenuWindow.OpenSettingsPage(RegisteredMod)`, found by its exact
+  signature; without it, the one button). The API keeps its own entry (no settings).
+
 Development:
 
+- **The options window and the parts it shares with the Mounts panel** (2026-10-30; docs/options-window.md): the
+  user, "no compromise on controls" and no partial classes. `OptionsWindow` (the window), `SettingsButtons` (its
+  button in the game's Settings window, a copy of the window's OK button as the game's own Mods window makes its
+  buttons), `RowControls` (every row control, one instance per window, with the new key box, button row and info
+  line), `KeyCapture` (setting a key, a lone modifier included), `UiKit` (the game's look and the window pieces),
+  `GameWindowAside` (the game window under ours, the controls, one Escape a frame). The Mounts panel uses them
+  (`MountsPanel.Controls.cs`, a partial, is gone); its journal, colours window and way back work as before.
+  `FrameworkLink` now registers the one-button entry and points the Settings button at the window. Gone:
+  `MenuLabels`, `ModsWindow`, `LookPreview`, `SettingsRows`. Self-tests: "settings: the options window" (every
+  option our own control in
+  its section, a switch, a key set and in words and a clash, the line at the bottom, Defaults asked; with the
+  framework installed, the page in its Mods menu and its Settings button pointed at the window) and "the
+  options window's way back" (the Settings window's button, the Mounts button and back, the journal's Options
+  button and back, Ride from the journal over them).
 - **Self-tests for both findings of 2026-10-30** (the user: "make sure we have tests written for these problems"):
   "keys: the mods' keys wait while a text box of any window has the cursor" (a TextMeshPro box, a Unity UI box, a
   selected button; through `KeyActions.WaitReason`, the one check the key poll makes), and a third part of the

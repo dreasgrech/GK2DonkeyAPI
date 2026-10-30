@@ -36,8 +36,9 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
    `GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`).
 4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.41.2 loaded` and `GK2 Saddle Up 0.13.2
    loaded`.
-5. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
-   the game's **Mods** menu. Without it, everything works the same and the settings are in
+5. Saddle Up's options: the game's **Settings** window has a **GK2 Saddle Up options** button, and the Mounts panel
+   an **Options** button. With [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) installed,
+   Saddle Up's **Settings** button in its Mods menu opens them too. They are also in
    `BepInEx\config\dreas.gk2.saddleup.cfg`.
 
 **After a game update** the API compares every game member it uses with the new game at start (a list embedded

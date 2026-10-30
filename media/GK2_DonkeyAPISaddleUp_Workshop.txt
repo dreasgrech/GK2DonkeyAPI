@@ -81,9 +81,7 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 [hr][/hr]
 [h2]Settings[/h2]
 
-With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu.
-
-Without any mod framework: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.
+In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mounts panel (L) has an [b]Options[/b] button too. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
 
 [hr][/hr]
 [h2]Install[/h2]
