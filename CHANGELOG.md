@@ -10,6 +10,8 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+(The Armored skin and the pipeline work ship with the Donkey Skin Pack's 1.1.0; nothing here is in 0.13.1.)
+
 For players:
 
 - **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
@@ -31,6 +33,21 @@ Development:
   checkered hem) that repeats from the canvas instead of the piece's anchor (it crawls along the piece as the anchor
   shifts between frames; Armored's first cut did), both run by the Armored generator; the scaffold's sidecar
   (`<skin>.gk2export.txt`, which carries this machine's paths) is git-ignored. docs/sprite-tools.md "Making a skin".
+
+## 0.13.1 (GK2 Donkey API 0.41.1), 2026-10-30
+
+For players:
+
+- **Audited against game 1.011** (Steam build 26297960, 2026-10-30; `docs/game-update-26297960.md`): 11 of the 839
+  game members the API uses changed, none went missing, nothing in the code had to change; the deployed 0.41.0
+  stopped itself on 1.011 (three core patch classes touch changed members) until this rebuild, so this
+  release is the one 1.011 players need. The game now ships BepInEx and a Workshop sync patcher, and has a
+  building move of its own; the report says what that means for the zips and the Nexus install steps. No code
+  changed: 0.13.1 / 0.41.1 are 0.13.0 / 0.41.0 rebuilt with the 1.011 manifest. Move Building (the QOL repo) is
+  retired: the game moves buildings itself now.
+
+Development:
+
 - **The pack zips hold the DLL alone** (2026-10-29): `tools/make-release-zip.py` no longer puts a pack's README.md
   and CHANGELOG.md beside its DLL (nothing reads them in the game; Saddle Up's zip never carried its own). The packs'
   1.0.0 zips of 2026-10-28 were the ones with them. `check-dist.py` still wants both files in the pack's source folder.

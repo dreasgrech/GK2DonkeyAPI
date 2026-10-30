@@ -272,5 +272,5 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
   goes on top. Its "For players" part is the Nexus changelog text for that version.
 - **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
-  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`25910882`,
+  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26297960`,
   1.010 as of 2026-10-13) and what `docs/open-items.md` still lists as unseen in game.

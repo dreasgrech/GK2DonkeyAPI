@@ -4,7 +4,7 @@ Your own donkey and cart in Graveyard Keeper 2. Call it, ride it, drive the cart
 leave it standing with its load, and find it where you left it after a reload.
 
 Install both DLLs: `GK2DonkeyAPI.dll` (the library it's built on, [GK2 Donkey API](../GK2DonkeyAPI/README.md)) and
-`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.13.0, for GK2 Donkey API 0.41.0 or newer, and Steam game build 25910882 (game
+`GK2SaddleUp.dll`, each in its own folder under `BepInEx\plugins` (the release zip has them so). Version 0.13.1, for GK2 Donkey API 0.41.1 or newer, and Steam game build 26297960 (game
 1.010).
 
 **Mounts and skins.** Saddle Up itself brings the donkey (the game's own look) and Gerry, the game's talking skull

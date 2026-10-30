@@ -4,10 +4,10 @@ BepInEx mods for Graveyard Keeper 2 that give the game a rideable donkey and its
 
 | Mod | Version | For | What it is |
 |---|---|---|---|
-| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.13.0 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Gerry the skull comes with it; the Dragon (GK2 Saddle Up: Dragon), the Rat, Snail and Worm (GK2 Saddle Up: Critters) and the donkey's skins Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) are downloads of their own. |
-| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.41.0 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
+| [GK2 Saddle Up](src/SaddleUp/README.md) | 0.13.1 | players | Your own donkey and cart: call it with H or G, ride it, drive it, haul logs and corpses on the cart, leave it standing with its load and find it again after a reload. Gerry the skull comes with it; the Dragon (GK2 Saddle Up: Dragon), the Rat, Snail and Worm (GK2 Saddle Up: Critters) and the donkey's skins Hellfire and Royal Parade (GK2 Saddle Up: Donkey Skins) are downloads of their own. |
+| [GK2 Donkey API](src/GK2DonkeyAPI/README.md) | 0.41.1 | mod authors (and every Saddle Up player, as its library) | The library behind it: riding, the cart and its cargo, the lantern, sounds, colours, any number of donkeys and carts in the world, foals, keeping them with the save, rules for other mods. On its own it does nothing. |
 
-Both are built and audited against Steam game build 25910882 (game 1.010).
+Both are built and audited against Steam game build 26297960 (game 1.011; `docs/game-update-26297960.md`).
 
 What you ride and how it is drawn (the donkey in the API; Gerry built into Saddle Up; the dragon, rat, snail and
 worm and the donkey's two skins as Saddle Up's external packs, each its own download, in `packs/`; the mounts and skins are on for players since Saddle Up 0.12.0, [`docs/skins.md`](docs/skins.md); a mod shipping a mount of its own: [`docs/making-a-mount.md`](docs/making-a-mount.md)):
@@ -31,7 +31,7 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
 3. Optional: the packs, each a download and a folder of its own for `BepInEx\plugins\`
    (`GK2SaddleUpDragonsMountPack\GK2SaddleUpDragonsMountPack.dll`, `GK2SaddleUpCrittersMountPack\GK2SaddleUpCrittersMountPack.dll`,
    `GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`).
-4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.41.0 loaded` and `GK2 Saddle Up 0.13.0
+4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.41.1 loaded` and `GK2 Saddle Up 0.13.1
    loaded`.
 5. Optional: [GK2 Mod Framework](https://www.nexusmods.com/graveyardkeeper2/mods/42) puts Saddle Up's settings in
    the game's **Mods** menu. Without it, everything works the same and the settings are in
