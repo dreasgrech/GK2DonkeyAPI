@@ -11,7 +11,7 @@ namespace GK2SaddleUpDonkeySkinPack
     // skins added to a mount registered elsewhere) and handed to the API in Awake, with the effect Hellfire is drawn for.
     // A skins-only pack: no mount of its own; the way any mod ships skins for a mount another mod owns (their names carry
     // this pack's prefix, saddleup-donkey-skins.). Saddle Up offers them in its Mounts panel.
-    [BepInPlugin(Guid, "GK2 Saddle Up: Donkey Skins", Version)]
+    [BepInPlugin(Guid, "GK2 Saddle Up: Donkey Skin Pack", Version)]
     [BepInDependency("dreas.gk2.donkeyapi", "0.40.0")] // the API it was written against: an older one is refused by BepInEx
     [BepInDependency("dreas.gk2.saddleup", BepInDependency.DependencyFlags.SoftDependency)] // after Saddle Up when it's there: it offers the skins
     public sealed class Plugin : BaseUnityPlugin

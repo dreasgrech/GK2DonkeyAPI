@@ -34,7 +34,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             {
                 bool skin = ShippedDonkeySkins.ContainsKey(m);
                 if (skin ? Looks.Find(Sk(m)) != null : Catalog.Find(M(m)) != null) continue;
-                string pack = skin ? "GK2 Saddle Up: Donkey Skins" : m == "dragon" ? "GK2 Saddle Up: Dragon" : m == "gerry" ? "GK2 Saddle Up" : "GK2 Saddle Up: Critters";
+                string pack = skin ? "GK2 Saddle Up: Donkey Skin Pack" : m == "dragon" ? "GK2 Saddle Up: Dragons Mount Pack" : m == "gerry" ? "GK2 Saddle Up" : "GK2 Saddle Up: Critters Mount Pack";
                 return $"{pack} isn't installed (no {m}): this needs it";
             }
             return null;

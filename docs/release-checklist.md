@@ -71,12 +71,26 @@ installed game, or a Saddle Up DLL that references a game assembly (it carries n
 property change doesn't invalidate the compile), and the check then fails on the PDB path (seen 2026-10-13).
 
 `make-release-zip.py` (it runs `check-dist.py` first) writes `release/GK2-Saddle-Up-<version>.zip` with
-`BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod;
-Saddle Up's built-in Gerry is a pack inside its DLL), read back and compared with `dist/`; this zip is
-the Nexus upload (extracts into the game folder). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's
-name after `GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
-`GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, the version from the pack's CHANGELOG.md, raised there when the pack changed):
-each its own Nexus file. There is no bundle of the packs (the user, 2026-10-27: "ill ship individuals"). `release/` is not kept in git.
+`modinfo.json` (id `dreas.gk2.saddleup`, name, version: the game's Mods window reads them; since 2026-10-30,
+`docs/mods-window-and-workshop.md`), `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and
+`BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod; Saddle Up's built-in Gerry is a pack inside its DLL),
+read back and compared with `dist/`; this zip is the Nexus upload. It extracts into the game folder as before, or
+into `Mods\Code\<Name>\` in the save data folder, where the game's Mods window lists it with Enable/Disable and
+copies the plugin folders in itself. Besides it, one zip per external pack (`packs/<Pack>/`, the pack's name after
+`GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
+`GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, its `modinfo.json` with the pack's GUID, the version from the pack's
+CHANGELOG.md, raised there when the pack changed): each its own Nexus file. There is no bundle of the packs (the user,
+2026-10-27: "ill ship individuals"). `--only saddleup` (or a pack's folder name) writes one item's zip: a pack whose
+number is public is not rebuilt. `release/` is not kept in git.
+
+The same run stages each item for the Steam Workshop in `workshop/<Item>/` (not in git; `--no-workshop` skips it):
+the zip's content as a folder plus `Thumbnail.jpg` (from `media/workshop/<Item>/`, made by
+`tools/workshop-thumbnail.py <picture> <Item>`), `_description.bbcode` (from `media/..._Workshop.txt`, Steam's BBCode;
+the tool warns while a `{{ }}` placeholder is left or the text is over Steam's 8,000 characters) and `_changenote.txt`
+(the item's "For players" entry of its changelog). The game's Workshop creator (Shift+F11 in the main menu with
+`"workshopCreatorMode": true` in `Mods\workshop.json` in the save data folder) uploads that folder; the uploader
+itself skips the three files. One item per zip, the same bytes on both channels; the Saddle Up item carries the API
+(bundle, decided 2026-10-30: two items sharing a file path delete it for each other, so the API never ships twice).
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
 again; `bin/` holds whichever was built last.
@@ -89,6 +103,10 @@ again; `bin/` holds whichever was built last.
 - `docs/open-items.md`: what is built but not yet seen in game, so the release notes can say so.
 
 ## 5. A first run as a player (this machine)
+
+Since 2026-10-30 there is a second rehearsal, of the Workshop content as a local pack in `Mods\Code` (the game's
+own install path, the same files the Workshop delivers): `bash tools/rehearsal.sh stage-pack` / `restore-pack`,
+the run and its expected lines in `docs/mods-window-and-workshop.md` section 11.
 
 Rehearse the first start on a clean config, with the game closed. `tools/rehearsal.sh` does the staging (`stage-a`,
 `capture-a`, `stage-b <saddleup.cfg>`, `restore`; it refuses while the game runs, and refuses a cfg that would switch
@@ -273,4 +291,6 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   goes on top. Its "For players" part is the Nexus changelog text for that version.
 - **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
   `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26297960`,
-  1.010 as of 2026-10-13) and what `docs/open-items.md` still lists as unseen in game.
+  1.011 as of 2026-10-30) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
+  the items exist): Shift+F11, the item's Upload button with `workshop/<Item>/` as its linked folder; the change
+  note comes from `_changenote.txt`; a pack's Required item (GK2 Saddle Up) is set once on its Steam page.

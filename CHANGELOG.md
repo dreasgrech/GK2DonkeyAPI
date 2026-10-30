@@ -14,6 +14,13 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The download works with the game's own Mods window** (2026-10-30): the zip carries a `modinfo.json` (id
+  `dreas.gk2.saddleup`, name, version). Extracted into the game folder it installs as before; extracted into
+  `Mods\Code\GK2SaddleUp\` in the save data folder, 1.011's main-menu Mods window lists GK2 Saddle Up with its
+  version and an Enable/Disable switch and the game copies the plugins into `BepInEx\plugins` itself
+  (`docs/mods-window-and-workshop.md`; rehearsed in game 2026-10-30, its section 11). One place or the other, never
+  both. The packs' zips get the same file with their next version; their 1.0.0 zips work in `Mods\Code` too, listed
+  by folder name without a version. (0.13.1 was already public when this was built, so it ships with this release.)
 - **A mount's own getting-on and getting-off sounds play whole** (2026-10-30): the donkey's snorts start 0.42 s in
   (their silence skipped), and a pack's own clip for the event inherited that start. The rat's and the snail's
   squeaks are shorter than 0.42 s, so every ride-style mount and dismount seeked past their end and Unity logged
@@ -32,6 +39,19 @@ For players:
 
 Development:
 
+- **The packs' plugin names are their public names** (2026-10-30, with each pack's next version): "GK2 Saddle Up:
+  Dragons Mount Pack", "GK2 Saddle Up: Critters Mount Pack", "GK2 Saddle Up: Donkey Skin Pack" in `[BepInPlugin]`,
+  the log and the framework's Mods menu, the same as the zips' `modinfo.json` gives the game's Mods window; the ids
+  are unchanged. (The user, on the Dragon tile: "the name is actually Dragons Mount Pack, not Dragon".)
+- **One item folder for Nexus and the Steam Workshop** (2026-10-30; `docs/mods-window-and-workshop.md`, with a lab run
+  of the game's own sync library on our zips): `tools/make-release-zip.py` writes each download as the game's code-mod
+  contract wants it (`modinfo.json` + `BepInEx/plugins/<Mod>/<Mod>.dll`), the zip for Nexus and the same bytes as
+  `workshop/<Item>/` (git-ignored) for the game's Shift+F11 Workshop creator, with `Thumbnail.jpg`
+  (`media/workshop/<Item>/`, made by `tools/workshop-thumbnail.py`), `_description.bbcode` (the new
+  `media/..._Workshop.txt` texts in Steam's BBCode, drafted from the Nexus ones with a subscription Install section and
+  `{{ WORKSHOP_URL_* }}` placeholders until the items exist) and `_changenote.txt` (the changelog's "For players"
+  entry). `--only saddleup` writes one item (a public pack version is never rebuilt). Decided once, for both
+  channels: the Saddle Up item carries the API (bundle); the game deletes a file two items share when either goes.
 - **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our
   skin creation pipeline so that it gets easier with every skin"): the donkey's anatomy that every skin drawn over it
   needs is one shared module, `tools/skins/donkey/` (`anatomy.py`: `body()` with the hip, collar and back line,

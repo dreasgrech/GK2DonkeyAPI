@@ -115,7 +115,7 @@ Saddle Up's (hard dependency), so every list has it. The cheapest route and the 
 
 **(b) A plugin DLL with the folder embedded** (recommended for anything we publish; since the evening it is how Saddle
 Up itself ships its five mounts, section 10): `GK2SaddleUpDragonsMountPack.dll` with
-`[BepInPlugin("dreas.gk2.saddleup.dragon", "GK2 Saddle Up: Dragon", "1.0.0")]`, `[BepInDependency("dreas.gk2.donkeyapi",
+`[BepInPlugin("dreas.gk2.saddleup.dragon", "GK2 Saddle Up: Dragons Mount Pack", "1.0.0")]`, `[BepInDependency("dreas.gk2.donkeyapi",
 "0.33.0")]`, the `assets\mounts\saddleup.dragon\**` embedded with the csproj line above (`assets\skins\dragon\**`
 before 2026-10-24), and an Awake of five lines: the API
 version check (`Mounts.ApiVersion`, as the example does) and `RegisterEmbedded`. It carries a version and the

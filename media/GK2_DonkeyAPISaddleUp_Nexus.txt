@@ -108,20 +108,24 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]Install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+[*][size=3]On Steam, game 1.011 or newer ships BepInEx: nothing to install. On GOG or Epic, or an older build, install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
 [*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is).
-It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plugins[/i].[/size]
+It adds the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] to [i]BepInEx\plugins[/i].
+
+Or, on game 1.011 or newer, extract it into the game's own mod folder [i]%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2SaddleUp[/i] instead: the main menu's [b]Mods[/b] window then lists GK2 Saddle Up with its version and an Enable/Disable switch, and the game copies the mod into [i]BepInEx\plugins[/i] by itself on the next start. One place or the other, never both.[/size]
 [/*]
 [*][size=3]Start the game. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.[/size][/*]
 [/list]
 [size=3][b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 
-[b]Game updates.[/b] Built for Steam game v1.010. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
+[b]Game updates.[/b] Built for Steam game v1.011. After a game update the mod checks the game's code at start; if the game changed under it, the affected part stays off and the log says so.
 
-[b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i]. Your saves still load without them.
+[b]Uninstall.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. Then delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i]; installed through [i]Mods\Code[/i], delete the folder there instead (the game removes its copy) or switch the mod off in the Mods window. Your saves still load without them.
+
+[b]Updating from an older install.[/b] If the two DLLs ever sat anywhere else under [i]BepInEx\plugins[/i], delete those copies: two copies of one plugin make BepInEx skip one with a warning.
 
 [b]Found a bug?[/b] Report it in the [url=https://www.nexusmods.com/graveyardkeeper2/mods/391?tab=bugs]Bugs tab[/url] and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
 

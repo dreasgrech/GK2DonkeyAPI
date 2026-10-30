@@ -1,0 +1,120 @@
+[h1]GK2 Saddle Up[/h1]
+Your own donkey and cart in Graveyard Keeper 2.
+
+[url=https://www.youtube.com/watch?v=Ww9S6X9hTOU]Watch the trailer on YouTube[/url]
+
+Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.
+[hr][/hr]
+[h2]What you get[/h2]
+
+[h3]Your own donkey as a mount[/h3]
+Press [b]H[/b] anywhere and it comes to you; you ride.  
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-comes.gif?v=2[/img]
+
+Press [b]G[/b] and it comes with its cart; you drive.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif?v=2[/img]
+
+Twice your walking speed on the donkey, one and a half times with the cart. Faster steps in the settings.
+
+[h3]Name it, and give it foals[/h3]
+"[E] Ride Balthazar". Up to five baby donkeys follow yours around, and can come indoors with you.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Foals.png?v=2[/img]
+
+[h3]A cart that carries six[/h3]
+Everything you pick up while driving goes on the cart, stacked in three layers (or four or two items, in the settings). Piles, tables, graves and quest hand-ins take from it as if you held the item.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/cargo-sixitems-cycle.gif?v=2[/img]
+
+[h3]Haul corpses[/h3]
+Bodies ride on the cart like anything else. Drive to the morgue door, step off, and you walk in with the body in your hands.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/corpse-to-morgue.gif?v=2[/img]
+
+[h3]Zombies ride too[/h3]
+Pick up a zombie while driving and it lies on the cart. Hand it to its work straight from the cart.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/ZombieWorkstation.png?v=2[/img]
+
+[h3]A storage chest on wheels[/h3]
+Drive up to a storage chest and take it with you, everything inside. Set it down wherever you want it.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/chest-on-cart.gif?v=2[/img]
+
+[h3]Fight from the saddle[/h3]
+In your armour you swing the sword and shoot the bow from the donkey, aim up and down, and the donkey backs away with you while you aim. The cart stays out of fights: it is left standing when your armour goes on.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/fight-a.gif?v=2[/img]
+
+[h3]Ride Gerry![/h3]
+The donkey is not your only mount. Gerry comes with the mod: the talking skull, three times his usual size, hopping along on pure opinion and sharing it on the way in his own voice. Fast, with a cart that holds four, and little skulls of his own trailing him. Press [b]L[/b] to open the Mount Journal, pick Gerry and ride; the journal is also where you name your mount, pick its skin, set its babies and open its colours.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/gerry-riding.gif?v=2[/img]
+
+[h3]Your donkey, your colours[/h3]
+Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img]
+
+[h3]Leave it standing[/h3]
+Get off anywhere and your donkey, cart and load stay there. Load and unload a standing cart on foot with [b]E[/b].
+Kept with your save: after a reload your donkey is where you left it, the load still on the cart, and Steam Cloud carries it along with the save.
+
+[h3]Optional: bodies left at the crossroads[/h3]
+Off by default. The game's delivery donkey drops its corpses by the nun's crossroads, and you cart them in yourself.
+
+[hr][/hr]
+[h2]Keys[/h2]
+
+[list]
+[*][b]H[/b] — your donkey comes and you ride. Riding: get off. Driving: leave the cart standing and ride on.
+[*][b]G[/b] — your donkey comes with its cart and you drive. Riding: the cart comes and is hitched. Driving: get off.
+[*][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).
+[*][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.
+[*][b]B[/b] — ring the bell.
+[*][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.
+[/list]
+All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.
+
+[hr][/hr]
+[h2]Settings[/h2]
+
+With [url=https://www.nexusmods.com/graveyardkeeper2/mods/42]GK2 Mod Framework[/url] installed: in the game's [b]Mods[/b] menu.
+
+Without any mod framework: in the game's own [b]Settings[/b] window, under "Showing". Always: in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i] with the game closed.
+
+[hr][/hr]
+[h2]Install[/h2]
+
+[olist]
+[*]Subscribe. The game installs the mod itself: on the next start the main menu's [b]Mods[/b] window lists GK2 Saddle Up with its version and an Enable/Disable switch. Nothing to copy, no BepInEx to install (the game ships it since 1.011).
+[*]Start the game and load a save. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.
+[/olist]
+[b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
+
+[b]Installed from Nexus Mods before?[/b] Delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i] (or your folder under [i]Mods\Code[/i]) before you subscribe: the game must own one copy. Your settings and saves stay.
+
+[b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
+
+[b]Game updates.[/b] Built for game 1.011. After a game update the mod checks the game's code at start; what the update changed under it stays off until this item is updated, and the log says so.
+
+[b]Unsubscribe.[/b] Unload the cart and set any chest down first, so nothing is left riding on it. The game removes the mod's files on the next start. Your saves still load without it.
+
+[b]Found a bug?[/b] Post it in the Discussions here and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).
+
+[hr][/hr]
+[h2]Mount and Skin Packs for Saddle Up[/h2]
+
+Saddle Up comes with the donkey and Gerry the skull. More mounts and skins are packs of their own, one Workshop item each, subscribed like this mod; the Mount Journal ([b]L[/b]) lists what you have installed.
+
+[list]
+[*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830144338]Dragons Mount Pack[/url]: the Dragon, a mount that flies. Slow on its feet and it pulls no cart, but no fence, river or roof in the village can stop it, and its babies follow it around.
+[*][url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830154040]Donkey Skin Pack[/url]: Hellfire and Royal Parade, two new looks for your donkey, with your colours under them and babies that wear them too.
+[/list]
+
+[hr][/hr]
+[h2]For modders[/h2]
+
+The mod is two parts: the [b]GK2 Donkey API[/b], which does the heavy lifting and gives mod authors full control of the donkey (the mounts, the cart, the cargo, the looks and more), and [b]Saddle Up[/b], a full playable showcase of most of what the API exposes. This Workshop item contains the API, because Saddle Up is built on top of it; a mod that builds on the Donkey API lists this item as its required item. Several mods can use the API at once without clashes unless they do the very same thing. The source code is coming with it.

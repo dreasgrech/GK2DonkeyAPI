@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **The plugin is named "GK2 Saddle Up: Critters Mount Pack"** (2026-10-30; it was "GK2 Saddle Up: Critters"): the name BepInEx logs and the framework's Mods
+  menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
+  (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.
 - The zip holds the DLL alone in its folder, as Saddle Up's zip does; the README.md and CHANGELOG.md that rode
   beside it in 1.0.0 stay in the repo (the user, 2026-10-29).
 

@@ -25,3 +25,7 @@ release/
 *.un~
 # an editor's / SmartGit's copy of a file as last saved (~CHANGELOG.md.saved.bak): never part of the repo
 ~*.saved.bak
+
+# Steam Workshop staging folders (tools/make-release-zip.py writes workshop/<Item>/ for the game's Shift+F11 uploader);
+# the root folder only: media/workshop/ holds the items' thumbnails and is kept
+/workshop/

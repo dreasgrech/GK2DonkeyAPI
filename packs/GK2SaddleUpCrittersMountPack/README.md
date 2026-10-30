@@ -9,7 +9,8 @@ A mount pack for GK2 Saddle Up: three mounts to ride, each pulling the cart and 
 A cart holds the mount's own number or the player's Cart capacity, whichever is smaller.
 
 - **Needs:** GK2 Donkey API 0.40.0 or newer and GK2 Saddle Up (it offers the mounts to ride).
-- **Install:** put the folder `GK2SaddleUpCrittersMountPack` into `BepInEx\plugins\` (the zip has it so):
+- **Install:** put the folder `GK2SaddleUpCrittersMountPack` into `BepInEx\plugins\` (the zip has it so; or extract the zip into
+  `Mods\Code\GK2SaddleUpCrittersMountPack\` in the save data folder on game 1.011 or newer, and the game's Mods window lists and installs it):
   `BepInEx\plugins\GK2SaddleUpCrittersMountPack\GK2SaddleUpCrittersMountPack.dll`, a plugin with the pack's files inside. To update, replace it.
 - **In the game:** the Mounts panel (Saddle Up's settings) lists them; pick one and ride.
 - **Remove:** delete the folder `GK2SaddleUpCrittersMountPack`. Saved ones wait as "not installed" and come back when the pack does.

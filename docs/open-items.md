@@ -325,6 +325,18 @@ closed):
   only (no `[flight-probe]`, no `GK2-jumps` files without the dev marker), and the first take-off's walk-grid scan
   time in the log.
 
+- **One panel check failed once on the Workshop build** (F11 on the 0.41.1 release DLLs from the Steam item,
+  2026-10-30: 1314 passed, 1 failed, the 2 warnings the fixture scenarios that cannot run on a release build):
+  "settings: the Mounts panel ...: donkey, which pulls the cart: Drive the cart and the Cart colours are back",
+  checked two frames after the picture switched from the dragon to the donkey, on the path where the donkey's
+  kept skin (Armored) is not installed (the Donkey Skins pack was the 1.0.0 Workshop item): the log has
+  "no skin 'donkey/saddleup-donkey-skins.armored' is installed" right before the FAIL, and the panel shot one
+  second later (`GK2-panel-shots\journal-donkey.png`) shows Drive the cart and the cart in the picture, so the end
+  state is right and the failure is the moment of the check. The same code passed on the dev build at 12:54
+  (1355/0) with Armored installed. To pin down on a dev build: a run with the Donkey Skins pack aside and a kept
+  Armored choice, with the frames of `BuildRight` and the colour groups logged around the switch; then either the
+  check waits for the rebuild or the panel rebuilds its colour groups with the look.
+
 ## Undecided
 
 - **The settings picture at night is blue-lit** (found 2026-10-19 by the colours self-test: the worm's outline 36141C

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **The plugin is named "GK2 Saddle Up: Donkey Skin Pack"** (2026-10-30; it was "GK2 Saddle Up: Donkey Skins"): the name BepInEx logs and the framework's Mods
+  menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
+  (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.
 - **Armored** (2026-10-30; the next release is 1.1.0): a third look for the donkey, plate barding drawn over it: a chanfron with an eye hole and
   a forehead spike, a red plume at the poll, a chest plate, flank lames with rivets and a brass hem over red padding,
   a crupper over the rump; ears, tail and legs stay the donkey's. The steel is the Second tone (black iron, bronze or

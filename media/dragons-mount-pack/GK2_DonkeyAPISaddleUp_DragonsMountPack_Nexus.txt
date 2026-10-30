@@ -39,13 +39,13 @@
 [size=3]Needs [url=https://www.nexusmods.com/graveyardkeeper2/mods/391]GK2 Saddle Up[/url] 0.12.0 or newer (it brings GK2 Donkey API 0.40.0 with it) and BepInEx 5, installed as on the Saddle Up page.[/size]
 
 [list=1]
-[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDragonsMountPack[/b] to [i]BepInEx\plugins[/i].[/size][/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDragonsMountPack[/b] to [i]BepInEx\plugins[/i]. Or, on game 1.011 or newer, into the game's own mod folder [i]%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2SaddleUpDragonsMountPack[/i] instead: the main menu's [b]Mods[/b] window then lists the pack and the game copies it in by itself on the next start. One place or the other, never both.[/size][/*]
 [*][size=3]Start the game, press [b]L[/b]: the Dragon is in the mount list. Pick it and press [b]H[/b].[/size][/*]
 [/list]
 
 [size=3][b]Update.[/b] Replace the folder. The pack is one file with everything inside, so nothing is left over.
 
-[b]Remove.[/b] Delete the folder [b]GK2SaddleUpDragonsMountPack[/b] from [i]BepInEx\plugins[/i]. A save that rode the dragon shows "Dragon (not installed)" in the journal and the donkey comes when you press H; the moment the pack is back you ride the dragon again, with its name, colours and babies as you left them. Your save is never touched.
+[b]Remove.[/b] Delete the folder [b]GK2SaddleUpDragonsMountPack[/b] from [i]BepInEx\plugins[/i] (installed through [i]Mods\Code[/i]: the folder there, or the Mods window's switch). A save that rode the dragon shows "Dragon (not installed)" in the journal and the donkey comes when you press H; the moment the pack is back you ride the dragon again, with its name, colours and babies as you left them. Your save is never touched.
 
 [b]Found a bug?[/b] Report it in this page's Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
 

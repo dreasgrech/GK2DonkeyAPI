@@ -16,7 +16,9 @@ The API DLL carries the list of every game member it uses (840 entries against t
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
 
 Players install both, each in its own folder: `BepInEx\plugins\GK2DonkeyAPI\` and `BepInEx\plugins\GK2SaddleUp\` (the
-release zip, `tools/make-release-zip.py`, holds that layout). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
+release zip, `tools/make-release-zip.py`, holds that layout, plus a `modinfo.json` from the release after 0.13.1 on). The zip extracts
+into the game folder, or into `Mods\Code\<Name>\` in the save data folder, where game 1.011's Mods window lists
+it and installs it (`docs/mods-window-and-workshop.md`). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
 
 The three pack DLLs ship as zips of their own (`make-release-zip.py`, the DLL alone in its folder, as Saddle Up's
 zip; until 2026-10-29 the pack's README.md and CHANGELOG.md rode beside it): `GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDragonsMountPack\`),
@@ -33,6 +35,11 @@ players since this version (0.10.0 shipped them off); which mounts a player has 
 
 Sizes 2026-10-30 13:01 (`bash tools/build-dist.sh` for 0.13.1 / API 0.41.1, the 1.011 re-audit, no code change; 24 of 24
 release scans green): `GK2-Saddle-Up-0.13.1.zip` 886,911 bytes: `GK2DonkeyAPI.dll` 2,691,072 bytes, `GK2SaddleUp.dll` 34,816.
+That zip is the public one (uploaded 2026-10-30 morning). The afternoon's tool run overwrote the file in `release/` in
+place with a rebuild carrying `modinfo.json` (887,094 bytes; nobody had said it was uploaded), which was then deleted;
+the file now in `release/` is regenerated with the tool as it was at the upload and is byte-identical to the Nexus
+download (sha256 compared 2026-10-30; 886,911 bytes). Since then `make-release-zip.py` refuses to overwrite an existing zip.
+The next release's zip is the first with `modinfo.json`.
 The three pack DLLs here are still the 2026-10-28 release builds (1.0.0): the Donkey Skin Pack's source holds the
 unreleased Armored skin, so its dist DLL is restored from git after every build-dist until 1.1.0 ships.
 
