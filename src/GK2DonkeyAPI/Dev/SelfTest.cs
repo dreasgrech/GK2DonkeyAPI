@@ -182,8 +182,9 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "freeplay: max cargo and one speed for every mount (the words' one table, the cart's slots, ridden, driven, changed while riding, the panel, MountInfo)", Body = Freeplay },
             new Scenario { Group = GroupLooks, Name = "settings: the Mount, Skin and babies rows", Body = SettingsRows },
             new Scenario { Group = GroupLooks, Name = "looks per skin: a row set per skin, the 0.12 values moved to the skin worn, each skin's look when worn, a late skin caught up, regions per skin", Body = LooksPerSkin },
+            new Scenario { Group = GroupLooks, Name = "keys: the mods' keys wait while a text box of any window has the cursor (a TextMeshPro box, a Unity UI box, not a selected button)", Body = KeysWaitWhileTyping },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel opens, fits, follows the list, the colours window, the key", Body = PanelSmoke },
-            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window)", Body = PanelWayBack },
+            new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's way back (from the game; over the pause menu through the colours window; over the Character window on the Tech Tree)", Body = PanelWayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the Mounts panel's Ride and Drive buttons while riding keep the ride", Body = PanelRideButtons },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
@@ -3062,7 +3063,9 @@ namespace GK2DonkeyAPI
         // The way back (docs/mounts-panel-design.md "Escape and the way back"), walked by the step Escape takes: opened
         // from the game it takes the controls and gives them back, nothing else opens; opened over the pause menu it
         // hides the pause menu (still open, modal), the colours window steps back to the journal, the journal to the
-        // pause menu shown again as it was.
+        // pause menu shown again as it was. Over the Character window on the Tech Tree (a window with its own data type,
+        // as 44 of the game's 62 are; 2026-10-30: L there opened the panel "over the game" with the window left live
+        // under it): set aside the same, shown again by a step back, closed by Ride.
         internal static IEnumerator PanelWayBack()
         {
             MountSettingsPage page = null;
@@ -3078,6 +3081,7 @@ namespace GK2DonkeyAPI
                 yield break;
             }
             UIGamePauseWindow pause = LazyUI.GetWindow<UIGamePauseWindow>();
+            CharacterWindow character = null;
             try
             {
                 // 1. from the game
@@ -3106,11 +3110,35 @@ namespace GK2DonkeyAPI
                 MountsPanel.TestStepBack();
                 yield return Frames(2);
                 Check(!MountsPanel.IsOpen && LazyWindowsStackController.IsWindowOpened(pause) && pause.gameObject.activeSelf && LazyWindowsStackController.ActiveWindow == pause, "a step back from the journal: the pause menu shown again, on top");
+                pause.Close();
+                yield return Frames(2);
+                // 3. over the Character window on the Tech Tree
+                character = LazyUI.GetWindow<CharacterWindow>();
+                if (character == null)
+                {
+                    Warn("no Character window to open: the third part skipped");
+                    yield break;
+                }
+                character.Open(new CharacterWindowData(MainGame.Instance.GameSave, CharacterWindowData.CharPage.TechTree));
+                yield return Frames(2);
+                Check(LazyWindowsStackController.ActiveWindow == character && character.LastOpenedPage == CharacterWindowData.CharPage.TechTree, $"the Character window open on the Tech Tree (page {character.LastOpenedPage})");
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(2);
+                Check(MountsPanel.IsOpen && LazyWindowsStackController.IsWindowOpened(character) && !character.gameObject.activeSelf, $"opened over the Character window: it waits underneath, still open, switched off (switched on: {character.gameObject.activeSelf})");
+                MountsPanel.TestStepBack();
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && LazyWindowsStackController.IsWindowOpened(character) && character.gameObject.activeSelf && LazyWindowsStackController.ActiveWindow == character, "a step back from the journal: the Character window shown again, on top");
+                MountsPanel.Open(page, toggle: false);
+                yield return Frames(2);
+                MountsPanel.TestClose(keep: true, commit: true, back: false); // as Ride and Drive the cart close it
+                yield return Frames(2);
+                Check(!MountsPanel.IsOpen && !LazyWindowsStackController.IsWindowOpened(character), "Ride from the panel over it: the Character window closed, straight into the game");
             }
             finally
             {
                 if (MountsPanel.IsOpen) MountsPanel.TestClose(keep: true);
                 try { if (pause != null && LazyWindowsStackController.IsWindowOpened(pause)) { pause.gameObject.SetActive(true); pause.Close(); } } catch { }
+                try { if (character != null && LazyWindowsStackController.IsWindowOpened(character)) { character.gameObject.SetActive(true); character.Close(); } } catch { }
             }
             yield return Frames(2);
             Check(LazyWindowsStackController.ActiveWindow == null && MainGame.PlayerController.IsControlEnabledByType(TakenControlType.ByUI), "cleaned up: no window, the controls free");

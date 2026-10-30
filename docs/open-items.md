@@ -13,6 +13,20 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## To check in game (built and deployed, not yet seen)
 
+- **The keys wait while any text box has the cursor** (2026-10-30, KeyActions.TextBoxHasCursor; the user: L typed in
+  the Tech Tree Search box opened the Mounts panel): typing an L in that box leaves the panel shut, L outside it
+  still opens it; F11 `PanelSmoke`'s three text box checks. Not covered: IMGUI text fields (BepInEx's Configuration
+  Manager), whose focus is `GUIUtility.keyboardControl`, not the selected object.
+
+- **Fixed 2026-10-30, to see in game: the window under the panel was set aside only for 18 of the game's 62 windows** (2026-10-30,
+  from the decompiled 1.011): `HideUnder` and `RestoreUnder` match `LazyWindow<LazyWidgetDataBase>`, and C#
+  classes have no generic variance, so every window with its own data type (44, the Character window with the Tech
+  Tree, the inventory, chests, the input dialog among them) stays shown and live under the panel; the log then says
+  "opened over the game" (so it did for the opening from the Tech Tree in the user's session of 19:01). What that does in game (Escape, Ride or
+  Drive from the panel over the Character window) is not yet seen. F11's way-back test caught it (2 FAILs); fixed
+  (`under` is a `LazyWidgetBase`, closed through its `LazyWindow<T>.Close`, MountsPanel.CloseWindow). To see: L on
+  the Tech Tree, Escape: the Tech Tree back as it was (the search box too); L, Ride: the window gone, riding.
+
 - **Built in or external** (2026-10-26, docs/making-a-mount.md): the Mounts panel lists the donkey, Gerry, the
   dragon, rat, snail and worm; the dev world's dragon and colours came back through `Catalog.renamedMounts` (gone
   since 2026-10-27: an old id finds nothing now) and a save writes the new ids; an F11 Mounts tab edit lands in the repo's `packs/` (GK2MountsSourceDir); a pack's DLL moved out of

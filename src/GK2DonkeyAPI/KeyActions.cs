@@ -65,13 +65,9 @@ namespace GK2DonkeyAPI
                 nextOwnerCheck = Time.unscaledTime + 1f;
                 CheckOwners();
             }
-            if (SettingsRows.CapturingKey)
+            if (WaitReason() != null)
             {
-                return; // a key is being set in the game's Settings window
-            }
-            if (MountsPanel.SearchFocused)
-            {
-                return; // typing in the Mounts panel's search box: H is a letter, not the ride key
+                return;
             }
             // The Mounts panel or its colours window open: the mods' keys wait, as the game's own do (the user,
             // 2026-10-22: H in the panel got him on and off). Only the panel's own key works, to close it.
@@ -109,6 +105,50 @@ namespace GK2DonkeyAPI
                     Plugin.Log.LogError($"{e.Owner}: the action of its key {e.Key.Definition.Key} failed. {ex}");
                 }
             }
+        }
+
+        // Why the mods' keys wait this frame, or null: what Poll asks first (the self-test asks it too).
+        internal static string WaitReason()
+        {
+            if (SettingsRows.CapturingKey)
+            {
+                return "a key is being set"; // in the game's Settings window
+            }
+            if (MountsPanel.SearchFocused)
+            {
+                return "typing in the Mounts panel"; // its search box or a name: H is a letter, not the ride key
+            }
+            if (TextBoxHasCursor())
+            {
+                return "typing in a text box"; // another window's (another mod's, the game's bug report): the same
+            }
+            return null;
+        }
+
+        // A text box anywhere in the UI has the cursor. The keys are read from the keyboard (UnityInput), not through the
+        // game's LazyInput, so a window that switches LazyInput off while its box is typed in (the game's bug report
+        // window does) doesn't stop them: a letter typed in another mod's search box over a game window opened the Mounts
+        // panel (the user, 2026-10-30). Both kinds of input field make themselves the selected object when they take
+        // the cursor; its components are looked up once per selected object.
+        private static GameObject selSeen;
+        private static TMPro.TMP_InputField selTmp;
+        private static UnityEngine.UI.InputField selUi;
+
+        internal static bool TextBoxHasCursor()
+        {
+            UnityEngine.EventSystems.EventSystem es = UnityEngine.EventSystems.EventSystem.current;
+            GameObject sel = es != null ? es.currentSelectedGameObject : null;
+            if (sel == null)
+            {
+                return false;
+            }
+            if (!ReferenceEquals(sel, selSeen))
+            {
+                selSeen = sel;
+                selTmp = sel.GetComponent<TMPro.TMP_InputField>();
+                selUi = sel.GetComponent<UnityEngine.UI.InputField>();
+            }
+            return (selTmp != null && selTmp.isFocused) || (selUi != null && selUi.isFocused);
         }
 
         internal static bool Pressed(KeyboardShortcut k)

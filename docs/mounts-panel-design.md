@@ -189,6 +189,13 @@ every window's `Update`, so a window switched back on reads keys from the next f
 Escape steps back: out of the search box, the colours window to the journal, the journal to the window under it.
 Done does the same; Ride and Drive close the whole chain into the game.
 
+Any game window (2026-10-30): the window under the panel is held as the stack's own `LazyWidgetBase`. It was held as
+`LazyWindow<LazyWidgetDataBase>`, which C# doesn't match for a window with its own data type (classes have no generic
+variance): 44 of the game's 62 windows, among them the Character window (Tech Tree, map, quests), the inventory and
+chests, stayed live under the panel, and Ride left them open. The game has no `Close` on the base type, so Ride and
+Drive call each window's `LazyWindow<T>.Close` found once per window type (`MountsPanel.CloseWindow`), and stop with
+a warning if a window stays on top. F11's way-back test covers the Character window on the Tech Tree.
+
 ## The gamepad (2026-10-21, the game's way)
 
 Read from the game: every window has a `GamepadNavigationController` on its root, enabled only while

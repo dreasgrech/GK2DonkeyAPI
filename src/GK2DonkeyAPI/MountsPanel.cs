@@ -1577,10 +1577,10 @@ namespace GK2DonkeyAPI
             foreach (var g in colourGroups) names.Add((g.Group ?? "(none)") + " " + g.Rows.Count);
             return names.Count == 0 ? "none" : string.Join(", ", names);
         }
-        internal static void TestClose(bool keep, bool commit = false)
+        internal static void TestClose(bool keep, bool commit = false, bool back = true)
         {
-            committing = commit; // commit: as Ride and Drive the cart close it
-            Close(keep);
+            committing = commit; // commit: as Ride and Drive the cart close it (they close with back: false)
+            Close(keep, back);
         }
         internal static void TestOpenColours() => OpenColours();
         internal static void TestCloseColours(bool keep) => CloseColours(keep);
@@ -1749,14 +1749,19 @@ namespace GK2DonkeyAPI
         // same page and state, and its own Escape goes on from there. Closing and reopening it would not do: the Mods
         // menu's Close reopens the pause menu and forgets where it came from, and its Open starts on the mod list
         // (GK2 Mod Framework's ModsMenuWindow, read 2026-10-21).
-        private static LazyWindow<LazyWidgetDataBase> under;
+        // Any game window: held as the game's base type (LazyWidgetBase, what the window stack holds). It was
+        // LazyWindow<LazyWidgetDataBase>, which C# doesn't match for a window with its own data type (no generic
+        // variance on classes): 44 of the game's 62, the Character window with the Tech Tree, the inventory and chests
+        // among them, stayed live under the panel and open after Ride (the user, 2026-10-30; F11 caught it).
+        private static LazyWidgetBase under;
 
         private static void HideUnder()
         {
             under = null;
             try
             {
-                if (LazyWindowsStackController.ActiveWindow is LazyWindow<LazyWidgetDataBase> top && top != null && top.gameObject.activeSelf)
+                LazyWidgetBase top = LazyWindowsStackController.ActiveWindow;
+                if (top != null && top.gameObject.activeSelf)
                 {
                     under = top;
                     top.gameObject.SetActive(false);
@@ -1771,7 +1776,7 @@ namespace GK2DonkeyAPI
         // back: the window under it shown again as it was. Not back (Ride, Drive): every game window closed, into the game.
         private static void RestoreUnder(bool back)
         {
-            LazyWindow<LazyWidgetDataBase> w = under;
+            LazyWidgetBase w = under;
             under = null;
             if (w == null) return; // opened from the game: nothing to show again
             try
@@ -1783,10 +1788,16 @@ namespace GK2DonkeyAPI
                     return;
                 }
                 // into the game: close the chain the game and the framework built (each Close may open the one before it)
-                for (int i = 0; i < 8 && LazyWindowsStackController.ActiveWindow is LazyWindow<LazyWidgetDataBase> top && top != null; i++)
+                for (int i = 0; i < 8; i++)
                 {
+                    LazyWidgetBase top = LazyWindowsStackController.ActiveWindow;
+                    if (top == null) break;
                     if (!top.gameObject.activeSelf) top.gameObject.SetActive(true);
-                    top.Close();
+                    if (!CloseWindow(top) || LazyWindowsStackController.ActiveWindow == top)
+                    {
+                        Plugin.Log.LogWarning($"Settings: the game window {top.name} could not be closed after the Mounts panel's Ride or Drive; close it yourself.");
+                        break; // the same window again would be closed again: stop
+                    }
                 }
             }
             catch (Exception e)
@@ -1796,6 +1807,40 @@ namespace GK2DonkeyAPI
         }
 
         private static string UnderText() => under != null ? under.name : "the game";
+
+        // A game window's own Close(), whatever its data type: the game has no Close on its base type, only on
+        // LazyWindow<T>. Looked up once per window type (a Ride or Drive from the panel, never per frame) on its
+        // LazyWindow<T> base; the call goes to the window's own override. False: not a LazyWindow, or Close threw.
+        private static readonly Dictionary<Type, System.Reflection.MethodInfo> closeOf = new Dictionary<Type, System.Reflection.MethodInfo>();
+
+        private static bool CloseWindow(LazyWidgetBase w)
+        {
+            Type t = w.GetType();
+            if (!closeOf.TryGetValue(t, out System.Reflection.MethodInfo close))
+            {
+                close = null;
+                for (Type b = t; b != null; b = b.BaseType)
+                {
+                    if (b.IsGenericType && b.GetGenericTypeDefinition() == typeof(LazyWindow<>))
+                    {
+                        close = b.GetMethod("Close", Type.EmptyTypes);
+                        break;
+                    }
+                }
+                closeOf[t] = close;
+            }
+            if (close == null) return false;
+            try
+            {
+                close.Invoke(w, null);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Plugin.Log.LogWarning($"Settings: closing the game window {w.name} failed: {(e.InnerException ?? e).Message}");
+                return false;
+            }
+        }
 
         // The player's controls taken while the panel is open, as the game's own modal windows do (ByUI: the ride goes
         // on, as with a chest or the inventory): the game's own key reader (PlayerInputHandler, the pause menu on Escape,
