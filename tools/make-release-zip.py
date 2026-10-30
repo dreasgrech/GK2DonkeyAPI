@@ -126,7 +126,8 @@ def pack_item(pack):
     # Mount Pack"), not the plugin's short name ("GK2 Saddle Up: Dragon"; the user, 2026-10-30)
     name = "GK2 Saddle Up: " + dashed.replace("-", " ")
     return Item(dll, f"GK2-Saddle-Up-{dashed}-{ver}.zip", guid, name, ver, [dll], f"the pack {pack} {ver}",
-                os.path.join(PACKS, pack, "CHANGELOG.md"), os.path.join(MEDIA, dashed.lower()), "GK2_DonkeyAPISaddleUp_" + short)
+                os.path.join(PACKS, pack, "CHANGELOG.md"), os.path.join(MEDIA, dashed.lower()), "GK2_DonkeyAPISaddleUp_" + short,
+                os.path.join(ROOT, "docs", "nexus", f"{dashed.lower()}-{ver}-changelog.md"))  # the player note, when written
 
 
 def write_zip(item, overwrite=False):
@@ -167,6 +168,12 @@ def changenote(item):
     (docs/nexus/saddleup-<version>-changelog.md, the simplified Nexus text), else the 'For players' bullets of its
     changelog entry for this version (Saddle Up: the heading '## <version> (' ; a pack: '## <version>'); before the
     release heading exists, the Unreleased block, said so."""
+    # a Workshop note of its own first (docs/nexus/<name>-<version>-workshop-changenote.txt: the Nexus note never sends
+    # players to Steam, the user 2026-10-30; the Workshop's may speak of the Workshop), then the Nexus note
+    workshop_note = item.nexus_note.replace("-changelog.md", "-workshop-changenote.txt") if item.nexus_note else None
+    if workshop_note and os.path.isfile(workshop_note):
+        print(f"  change note: {os.path.relpath(workshop_note, ROOT)}")
+        return open(workshop_note, encoding="utf-8").read().replace("\r\n", "\n").strip("\n") + "\n"
     if item.nexus_note and os.path.isfile(item.nexus_note):
         note = open(item.nexus_note, encoding="utf-8").read().replace("\r\n", "\n")
         note = re.sub(r"(?m)^# ", "", note)

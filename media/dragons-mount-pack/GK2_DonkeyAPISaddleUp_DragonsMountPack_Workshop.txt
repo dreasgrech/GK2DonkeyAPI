@@ -36,6 +36,8 @@ Up to five little dragons follow yours around, jump when it jumps and answer its
 [hr][/hr]
 [h2]Install[/h2]
 
+[b]A BepInEx plugin.[/b] The game ships BepInEx and installs the plugin itself; nothing to copy.
+
 Needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851]GK2 Saddle Up[/url] (it brings GK2 Donkey API with it): Steam lists it as this item's required item, so subscribe to both.
 
 [olist]
@@ -44,7 +46,7 @@ Needs [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851]GK2
 [/olist]
 [b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
 
-[b]Installed from Nexus Mods before?[/b] Delete the folder [b]GK2SaddleUpDragonsMountPack[/b] from [i]BepInEx\plugins[/i] in the game folder, or the folder you put under [i]Mods\Code[/i], before you subscribe; two copies of one plugin make BepInEx skip one with a warning.
+[b]Installed from Nexus Mods before?[/b] Delete the folder [b]GK2SaddleUpDragonsMountPack[/b] from [i]BepInEx\plugins[/i] in the game folder before you subscribe; two copies of one plugin make BepInEx skip one with a warning.
 
 [b]Update.[/b] Steam updates the item and the game copies it in on the next start. The pack is one file with everything inside, so nothing is left over.
 

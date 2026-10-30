@@ -88,13 +88,15 @@ Without any mod framework: in the game's own [b]Settings[/b] window, under "Show
 [hr][/hr]
 [h2]Install[/h2]
 
+[b]A BepInEx plugin.[/b] The game ships BepInEx and installs the plugin itself; nothing to copy.
+
 [olist]
 [*]Subscribe. The game installs the mod itself: on the next start the main menu's [b]Mods[/b] window lists GK2 Saddle Up with its version and an Enable/Disable switch. Nothing to copy, no BepInEx to install (the game ships it since 1.011).
 [*]Start the game and load a save. Press [b]H[/b] to call your donkey and [b]G[/b] to call the cart.
 [/olist]
 [b]Steam Deck and Linux (Proton).[/b] Set the game's launch options to [code]WINEDLLOVERRIDES="winhttp=n,b" %command%[/code] so BepInEx loads.
 
-[b]Installed from Nexus Mods before?[/b] Delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i] (or your folder under [i]Mods\Code[/i]) before you subscribe: the game must own one copy. Your settings and saves stay.
+[b]Installed from Nexus Mods before?[/b] Delete the folders [b]GK2DonkeyAPI[/b] and [b]GK2SaddleUp[/b] from [i]BepInEx\plugins[/i] before you subscribe: the game must own one copy. Your settings and saves stay.
 
 [b]Safe for your save.[/b] Nothing in your save is ever touched: a save with a donkey loads fine without the mod, the donkey simply waits in its own small file next to the save.
 

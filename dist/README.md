@@ -17,8 +17,8 @@ them with the installed game and decides per feature what a changed one means (`
 
 Players install both, each in its own folder: `BepInEx\plugins\GK2DonkeyAPI\` and `BepInEx\plugins\GK2SaddleUp\` (the
 release zip, `tools/make-release-zip.py`, holds that layout, plus a `modinfo.json` from the release after 0.13.1 on). The zip extracts
-into the game folder, or into `Mods\Code\<Name>\` in the save data folder, where game 1.011's Mods window lists
-it and installs it (`docs/mods-window-and-workshop.md`). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
+into the game folder; the same files are the Steam Workshop items' content, which the game installs and lists in its
+Mods window (`docs/mods-window-and-workshop.md`). Mod authors reference `GK2DonkeyAPI.dll` and ship only their own DLL.
 
 The three pack DLLs ship as zips of their own (`make-release-zip.py`, the DLL alone in its folder, as Saddle Up's
 zip; until 2026-10-29 the pack's README.md and CHANGELOG.md rode beside it): `GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip` (`BepInEx\plugins\GK2SaddleUpDragonsMountPack\`),

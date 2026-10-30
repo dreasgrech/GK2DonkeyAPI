@@ -74,9 +74,9 @@ property change doesn't invalidate the compile), and the check then fails on the
 `modinfo.json` (id `dreas.gk2.saddleup`, name, version: the game's Mods window reads them; since 2026-10-30,
 `docs/mods-window-and-workshop.md`), `BepInEx/plugins/GK2DonkeyAPI/GK2DonkeyAPI.dll` and
 `BepInEx/plugins/GK2SaddleUp/GK2SaddleUp.dll` (a folder per mod; Saddle Up's built-in Gerry is a pack inside its DLL),
-read back and compared with `dist/`; this zip is the Nexus upload. It extracts into the game folder as before, or
-into `Mods\Code\<Name>\` in the save data folder, where the game's Mods window lists it with Enable/Disable and
-copies the plugin folders in itself. Besides it, one zip per external pack (`packs/<Pack>/`, the pack's name after
+read back and compared with `dist/`; this zip is the Nexus upload and extracts into the game folder as before (the game's
+Mods window lists only Workshop items; `Mods\Code` is the README's local test folder and our rehearsal, not a player
+install). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's name after
 `GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
 `GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, its `modinfo.json` with the pack's GUID, the version from the pack's
 CHANGELOG.md, raised there when the pack changed): each its own Nexus file. There is no bundle of the packs (the user,

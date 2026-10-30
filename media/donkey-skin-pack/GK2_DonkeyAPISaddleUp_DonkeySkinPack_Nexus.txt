@@ -36,13 +36,13 @@
 [size=3]Needs [url=https://www.nexusmods.com/graveyardkeeper2/mods/391]GK2 Saddle Up[/url] 0.12.0 or newer (it brings GK2 Donkey API 0.40.0 with it) and BepInEx 5, installed as on the Saddle Up page.[/size]
 
 [list=1]
-[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDonkeySkinPack[/b] to [i]BepInEx\plugins[/i]. Or, on game 1.011 or newer, into the game's own mod folder [i]%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2SaddleUpDonkeySkinPack[/i] instead: the main menu's [b]Mods[/b] window then lists the pack and the game copies it in by itself on the next start. One place or the other, never both.[/size][/*]
+[*][size=3]Extract the download into the game folder (where [i]GraveyardKeeper2.exe[/i] is). It adds the folder [b]GK2SaddleUpDonkeySkinPack[/b] to [i]BepInEx\plugins[/i]. The game's own [b]Mods[/b] window (main menu) lists only the mods the game installed itself from the Steam Workshop: installed from this download, the mod works fully but is not listed there. That is normal.[/size][/*]
 [*][size=3]Start the game, press [b]L[/b], pick the Donkey: Hellfire and Royal Parade are in its Skin list.[/size][/*]
 [/list]
 
 [size=3][b]Update.[/b] Replace the folder. The pack is one file with everything inside, so nothing is left over.
 
-[b]Remove.[/b] Delete the folder [b]GK2SaddleUpDonkeySkinPack[/b] from [i]BepInEx\plugins[/i] (installed through [i]Mods\Code[/i]: the folder there, or the Mods window's switch). A donkey that wore one of the skins shows as the game's own donkey again; the Skin list says "Hellfire (not installed)", and the moment the pack is back it wears it again. Your save is never touched.
+[b]Remove.[/b] Delete the folder [b]GK2SaddleUpDonkeySkinPack[/b] from [i]BepInEx\plugins[/i]. A donkey that wore one of the skins shows as the game's own donkey again; the Skin list says "Hellfire (not installed)", and the moment the pack is back it wears it again. Your save is never touched.
 
 [b]Found a bug?[/b] Report it in this page's Bugs tab and attach [i]BepInEx\LogOutput.log[/i] from the game folder (it is rewritten each time the game starts, so grab it right after the problem).[/size]
 

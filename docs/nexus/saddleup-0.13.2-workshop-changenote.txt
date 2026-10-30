@@ -1,0 +1,10 @@
+GK2 Saddle Up 0.13.2
+
+GK2 Donkey API 0.41.2 is in it. Built for game 1.011.
+
+- On the Steam Workshop: subscribe, and the game installs it, keeps it up to date and lists it in its Mods window.
+- Mount and dismount sounds play whole. The rat's and the snail's squeaks were cut off, and the dragon's growl lost
+  its first half second. A mount's own clips now start from their beginning.
+- The "Allow mounting with the cart indoors" setting says what really happens: the cart has no collider indoors, so
+  it rolls through furniture and door frames instead of getting stuck. It only looks odd.
+- Your settings and saves carry over.

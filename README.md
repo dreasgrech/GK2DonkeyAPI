@@ -28,11 +28,10 @@ ship packs in its DLL the way Saddle Up ships its own (the API ships none) ([`do
 1. **BepInEx 5** (the 5.4.23.x, x64, Mono build) in the game folder: the Steam game ships it since 1.011; on another
    store or an older build, install it yourself.
 2. Extract the release zip into the game folder: it adds `BepInEx\plugins\GK2DonkeyAPI\GK2DonkeyAPI.dll` and
-   `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`. Or, on 1.011 or newer, into the game's own mod folder
-   `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2SaddleUp\`: the main menu's Mods window then
-   lists GK2 Saddle Up with its version and an Enable/Disable switch, and the game copies the plugins in itself
-   (`docs/mods-window-and-workshop.md`). One place or the other, never both.
-3. Optional: the packs, each a download and a folder of its own for `BepInEx\plugins\` (or for `Mods\Code\`, like the mod)
+   `BepInEx\plugins\GK2SaddleUp\GK2SaddleUp.dll`. On Steam, subscribing to the [Workshop item](https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851) does it
+   instead: the game installs and updates it and lists it in its main-menu Mods window, which shows only Workshop
+   items (`docs/mods-window-and-workshop.md`). One or the other, not both.
+3. Optional: the packs, each a download (or a Workshop item) and a folder of its own for `BepInEx\plugins\`
    (`GK2SaddleUpDragonsMountPack\GK2SaddleUpDragonsMountPack.dll`, `GK2SaddleUpCrittersMountPack\GK2SaddleUpCrittersMountPack.dll`,
    `GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`).
 4. Start the game. The log (`BepInEx\LogOutput.log`) says `GK2 Donkey API 0.41.2 loaded` and `GK2 Saddle Up 0.13.2

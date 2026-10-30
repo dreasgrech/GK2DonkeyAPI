@@ -7,9 +7,7 @@ For players. GK2 Donkey API 0.41.2 is in the download. Built for game 1.011 (Ste
   clips now start from their beginning.
 - **The "Allow mounting with the cart indoors" setting** says what really happens: the cart has no collider indoors,
   so it rolls through furniture and door frames instead of getting stuck. It only looks odd.
-- **Two ways to install.** Extract the zip into the game folder as before, or into the game's own mod folder
-  `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2SaddleUp`: the main menu's Mods window
-  then lists GK2 Saddle Up with its version and an Enable/Disable switch, and the game copies it into BepInEx\plugins by
-  itself. One place or the other, never both.
+- **The game's own Mods window** (new in 1.011) lists only the mods the game installed itself from the Steam Workshop.
+  Installed from this download, Saddle Up works fully but is not listed there; that is normal.
 - Your settings and saves carry over. The Donkey Skin Pack 1.0.0 needs no update; the Dragons Mount Pack has a 1.0.1
   (its name in the log and the mod lists is now "GK2 Saddle Up: Dragons Mount Pack"; nothing else changed).

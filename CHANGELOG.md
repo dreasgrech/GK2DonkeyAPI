@@ -38,13 +38,12 @@ Development:
 
 For players:
 
-- **The download works with the game's own Mods window** (2026-10-30): the zip carries a `modinfo.json` (id
-  `dreas.gk2.saddleup`, name, version). Extracted into the game folder it installs as before; extracted into
-  `Mods\Code\GK2SaddleUp\` in the save data folder, 1.011's main-menu Mods window lists GK2 Saddle Up with its
-  version and an Enable/Disable switch and the game copies the plugins into `BepInEx\plugins` itself
-  (`docs/mods-window-and-workshop.md`; rehearsed in game 2026-10-30, its section 11). One place or the other, never
-  both. The packs' zips get the same file with their next version; their 1.0.0 zips work in `Mods\Code` too, listed
-  by folder name without a version. (0.13.1 was already public when this was built, so it ships with this release.)
+- **On the Steam Workshop** (2026-10-30; `docs/mods-window-and-workshop.md`): GK2 Saddle Up, the Dragons Mount Pack
+  and the Donkey Skin Pack are Workshop items as well; subscribed, the game installs and updates them and its
+  main-menu Mods window lists them with their version and an Enable/Disable switch. The zip carries the same
+  `modinfo.json` (id `dreas.gk2.saddleup`, name, version) and installs into the game folder as always; installed
+  that way the mod is not listed in the game's Mods window, which shows only what the game installed itself. The
+  game's `Mods\Code` folder, which its README_MODDING.txt calls "Testing locally", is left out of the player texts.
 - **A mount's own getting-on and getting-off sounds play whole** (2026-10-30): the donkey's snorts start 0.42 s in
   (their silence skipped), and a pack's own clip for the event inherited that start. The rat's and the snail's
   squeaks are shorter than 0.42 s, so every ride-style mount and dismount seeked past their end and Unity logged

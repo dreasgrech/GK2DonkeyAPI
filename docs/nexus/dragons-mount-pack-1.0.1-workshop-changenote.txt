@@ -1,0 +1,5 @@
+GK2 Saddle Up: Dragons Mount Pack 1.0.1
+
+- On the Steam Workshop: subscribe, and the game installs it, keeps it up to date and lists it in its Mods window.
+- The pack's name in the log and in mod lists is now "GK2 Saddle Up: Dragons Mount Pack".
+- Nothing else changed. Your dragon, its name, colours and babies carry over.

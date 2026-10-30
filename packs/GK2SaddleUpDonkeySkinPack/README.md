@@ -10,8 +10,7 @@ A skins pack for GK2 Saddle Up: three new looks for the donkey.
   your harness colour.
 
 - **Needs:** GK2 Donkey API 0.40.0 or newer and GK2 Saddle Up (it offers the skins).
-- **Install:** put the folder `GK2SaddleUpDonkeySkinPack` into `BepInEx\plugins\` (the zip has it so; or extract the zip into
-  `Mods\Code\GK2SaddleUpDonkeySkinPack\` in the save data folder on game 1.011 or newer, and the game's Mods window lists and installs it):
+- **Install:** put the folder `GK2SaddleUpDonkeySkinPack` into `BepInEx\plugins\` (the zip has it so; a Workshop item, where there is one, installs it instead):
   `BepInEx\plugins\GK2SaddleUpDonkeySkinPack\GK2SaddleUpDonkeySkinPack.dll`, a plugin with the pack's files inside. To
   update, replace it.
 - **In the game:** in the Mounts panel (L), pick the Donkey; its Skin list has Hellfire, Royal Parade and Armored.

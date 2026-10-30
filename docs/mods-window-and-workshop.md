@@ -308,3 +308,20 @@ copies byte-identical to the download; API 0.41.1 and Saddle Up 0.13.1 loaded, 0
 under the Steam id, `sources.json` the Workshop folder, `code_mods.json` the item approved next to the earlier
 `local:` entry. The framework's Mods menu (a plugin list) shows it as well. Still to do: the two pack items, their
 Required item, the link placeholders, the dev builds back (`restore-pack` after unsubscribing and one launch).
+
+## 13. The install texts, decided (2026-10-30)
+
+After re-reading README_MODDING.txt with the user: section 6 calls `Mods\Code` "Testing locally", and two install
+places invite the doubled install of section 4. So the player texts say: **on Steam, subscribe on the Workshop** (the
+README's "supported way": installed, updated and listed by the game), **the Nexus download installs into the game
+folder as always** (any store), and one sentence that the game's Mods window lists only Workshop subscriptions, so a
+Nexus install not being there is normal. `Mods\Code` stays our rehearsal tool (`rehearsal.sh stage-pack`), out of
+every player text. The Workshop pages say "A BepInEx plugin" (README section 5). The release notes:
+`docs/nexus/saddleup-0.13.2-changelog.md`, `docs/nexus/dragons-mount-pack-1.0.1-changelog.md` (also the Workshop change
+note of the pack: `make-release-zip.py` prefers `docs/nexus/<pack-name>-<version>-changelog.md`).
+
+Revised the same evening (the user: "Why are we linking nexus -> steam? I dont think we should do that"): the
+Nexus texts and release notes carry **no link to Steam and no Workshop promotion**; they keep one neutral sentence
+that the game's Mods window lists only what the game installed itself from the Steam Workshop, so a Nexus install
+missing there is normal. The Workshop change notes speak of the Workshop through notes of their own,
+`docs/nexus/<name>-<version>-workshop-changenote.txt`, which `make-release-zip.py` prefers over the Nexus note.
