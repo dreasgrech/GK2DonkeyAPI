@@ -801,9 +801,9 @@ namespace GK2DonkeyAPI
 
         // A pack's own clip and the base's start offset (2026-10-30): the donkey's getting-on and getting-off snorts start
         // 0.42 s in (MountSoundStart / DismountSoundStart, their silence skipped); a pack's own file for the event is a
-        // different clip, so it starts at 0 unless its line says start. Before: the rat's 0.33 s squeak was seeked past its
-        // end at every ride-style mount and Unity logged "invalid seek position" (Player.log, never an exception); the
-        // dragon's growl lost its first 0.42 s. The guard in PlayId: a start past the clip's end is dropped with one
+        // different clip, so it starts at 0 unless its line says start. Before: a pack's clip shorter than 0.42 s was seeked
+        // past its end at every ride-style mount and Unity logged "invalid seek position" (Player.log, never an exception);
+        // a longer one lost its first 0.42 s. The guard in PlayId: a start past the clip's end is dropped with one
         // warning, never seeked. The Unity log is read back (Application.logMessageReceived) while the clips play.
         internal static IEnumerator SoundsStartOffset()
         {

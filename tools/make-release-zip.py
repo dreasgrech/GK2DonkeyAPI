@@ -262,6 +262,8 @@ def main():
         only = args[i + 1:i + 2]
         if not only:
             sys.exit("--only needs saddleup or a pack folder name")
+    if subprocess.run([sys.executable, "-I", os.path.join(ROOT, "tools", "release-versions.py"), "check"]).returncode != 0:
+        sys.exit("release-versions.py check failed: a version line is stale or an editorial piece is missing; no zip written")
     if subprocess.run([sys.executable, os.path.join(ROOT, "tools", "check-dist.py")]).returncode != 0:
         sys.exit("check-dist.py failed: no zip written")
     items = [saddle_up_item()]

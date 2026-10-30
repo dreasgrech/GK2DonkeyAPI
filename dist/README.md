@@ -6,9 +6,9 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.41.1 (with Saddle Up 0.13.1; the last release 0.41.0 / 0.13.0 of 2026-10-29) | 26297960 (1.011), built 2026-10-30 13:01 (content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players, the gate removed; cargo per mount) |
-| `GK2SaddleUp.dll` | 0.13.1 (needs GK2 Donkey API 0.41.1 or newer; the last release 0.13.0 of 2026-10-29) | 26297960 (1.011), built 2026-10-30 13:01 |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-29, mods/420; the zip the DLL alone) | the external pack: the dragon embedded, built 2026-10-29 14:37 |
+| `GK2DonkeyAPI.dll` | 0.41.2 (with Saddle Up 0.13.2; the last release 0.41.1 / 0.13.1 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 afternoon (the sound start fix; content from many mods; the dragon and the critters as packs of their own; the mounts and skins on for players, the gate removed; cargo per mount) |
+| `GK2SaddleUp.dll` | 0.13.2 (needs GK2 Donkey API 0.41.2 or newer; the last release 0.13.1 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 afternoon |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.0.1 (needs GK2 Donkey API 0.40.0; the plugin's public name + modinfo.json, 2026-10-30; 1.0.0 public on Nexus 2026-10-29, mods/420) | the external pack: the dragon embedded, built 2026-10-30 afternoon |
 | `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; not released yet as of 2026-10-29) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
 | `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-28, mods/419) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-29 14:37 |
 
@@ -33,6 +33,13 @@ Royal Parade).
 What is new since 0.10.0 is CHANGELOG.md's Unreleased section (as of 2026-10-27). The mounts and skins are on for
 players since this version (0.10.0 shipped them off); which mounts a player has is which packs they installed.
 
+Sizes 2026-10-30 afternoon (`bash tools/build-dist.sh` for 0.13.2 / API 0.41.2 and the Dragons Mount Pack 1.0.1; F11 on
+the dev build 1361 passed, 0 failed, 0 warnings; `tools/release-versions.py check` and 24 of 24 release scans green):
+`GK2-Saddle-Up-0.13.2.zip` 888,786 bytes (`modinfo.json`, `GK2DonkeyAPI.dll` 2,697,216 bytes, `GK2SaddleUp.dll` 34,816),
+`GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip` 449,496 bytes (`modinfo.json`, the DLL 616,448); the same files staged
+in `workshop\GK2SaddleUp\` and `workshop\GK2SaddleUpDragonsMountPack\` for the Workshop items. The Critters and
+Donkey Skin Pack DLLs here stay the 1.0.0 builds (restored from git after the build).
+
 Sizes 2026-10-30 13:01 (`bash tools/build-dist.sh` for 0.13.1 / API 0.41.1, the 1.011 re-audit, no code change; 24 of 24
 release scans green): `GK2-Saddle-Up-0.13.1.zip` 886,911 bytes: `GK2DonkeyAPI.dll` 2,691,072 bytes, `GK2SaddleUp.dll` 34,816.
 That zip is the public one (uploaded 2026-10-30 morning). The afternoon's tool run overwrote the file in `release/` in
@@ -40,8 +47,8 @@ place with a rebuild carrying `modinfo.json` (887,094 bytes; nobody had said it 
 the file now in `release/` is regenerated with the tool as it was at the upload and is byte-identical to the Nexus
 download (sha256 compared 2026-10-30; 886,911 bytes). Since then `make-release-zip.py` refuses to overwrite an existing zip.
 The next release's zip is the first with `modinfo.json`.
-The three pack DLLs here are still the 2026-10-28 release builds (1.0.0): the Donkey Skin Pack's source holds the
-unreleased Armored skin, so its dist DLL is restored from git after every build-dist until 1.1.0 ships.
+(At 0.13.1 the three pack DLLs here were the 2026-10-28 release builds, 1.0.0.) The Donkey Skin Pack's source holds
+the unreleased Armored skin, so its dist DLL is restored from git after every build-dist until 1.1.0 ships.
 
 Sizes 2026-10-29 14:37 (`bash tools/build-dist.sh` for 0.13.0 / API 0.41.0 after the journal picture's framing and
 lantern fixes of that afternoon, 23 of 23 release scans green, the zips of 14:38; the three pack DLLs unchanged in

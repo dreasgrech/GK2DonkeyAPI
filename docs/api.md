@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.41.1** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.41.2** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -1058,6 +1058,10 @@ History:
   is retired: its lines leave the player's `dreas.gk2.donkeyapi.cfg` at start, and the upgrade self-test counts them
   as retired, not lost. Nothing shows an effect on a mount in this version; how a skin uses one is still to be
   designed (docs/open-items.md).
+- 0.41.2 (2026-10-30): no change to the public surface. A layer that gives its own sound (`files`, `clips` or `source`)
+  starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
+  and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
+  The `DismountIndoors` setting's text says the cart has no collider indoors.
 - 0.41.1 (2026-10-30): no change to the API; the build re-audited against game 1.011 (Steam 26297960,
   docs/game-update-26297960.md): 11 of the game members it uses changed in IL, none went missing, and the
   dependency manifest it embeds is the new build's (0.41.0 stopped itself on 1.011).

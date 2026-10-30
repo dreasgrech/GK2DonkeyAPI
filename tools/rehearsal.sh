@@ -18,8 +18,8 @@
 # MountsKey, RideKey and CartKey must be keys a keyboard has (a fixture's are on the numpad). A file that fails is not
 # staged.
 set -e
-SADDLEUP_ZIP="GK2-Saddle-Up-0.13.0.zip"
-PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip"
+SADDLEUP_ZIP="GK2-Saddle-Up-0.13.2.zip"
+PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip"
 ASIDE_NAME="rehearsal-aside-$(date +%Y-%m-%d)"
 
 REPO="$(cd "$(dirname "$0")/.." && pwd)"

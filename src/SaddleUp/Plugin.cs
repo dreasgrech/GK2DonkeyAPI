@@ -23,7 +23,7 @@ namespace SaddleUp
         public const string Guid = "dreas.gk2.saddleup";
         // This mod's own version; the GK2 Donkey API counts its own (Mounts.ApiVersion), and NeedsApi says which one this
         // mod was written against.
-        public const string Version = "0.13.1";
+        public const string Version = "0.13.2";
 
         // The API this mod is written against: 0.40 the Freeplay keys (SpeedBand, Mounts.Catalog.SpeedWords, MostCargo), the per-mount name, babies, voice and lantern (MountLook) and the
         // look Toggle and Text rows; 0.39 reads a mount's own [Jump]; 0.38 has flying for players (the ClimbKey and DescendKey rows); 0.36 CartIndoors (the indoors rows), Mounts.Catalog (the mount

@@ -1,7 +1,10 @@
 # GK2 Saddle Up: Dragon, changes
 
-## Unreleased
+## 1.0.1, 2026-10-30
 
+- The zip carries a `modinfo.json` (id `dreas.gk2.saddleup.dragon`, name, version): extracted into
+  `Mods\Code\GK2SaddleUpDragonsMountPack\` in the save data folder, game 1.011's Mods window lists the pack with its
+  version and an Enable/Disable switch and installs it itself; the same folder is the Steam Workshop item's content.
 - **The plugin is named "GK2 Saddle Up: Dragons Mount Pack"** (2026-10-30; it was "GK2 Saddle Up: Dragon"): the name BepInEx logs and the framework's Mods
   menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
   (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.

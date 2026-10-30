@@ -15,7 +15,7 @@ namespace GK2SaddleUpDragonsMountPack
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup.dragon";
-        public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
+        public const string Version = "1.0.1"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
         private const string Prefix = "GK2SaddleUpDragonsMountPack.mounts.";
 
         private void Awake()

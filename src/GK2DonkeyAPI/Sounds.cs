@@ -1021,8 +1021,8 @@ namespace GK2DonkeyAPI
                 if (l.PitchVariation.HasValue) r.PitchVariation = l.PitchVariation.Value;
                 // A start offset belongs to the clip it was measured on: a layer that gives its own sound (files, clips, a game
                 // id, none, the ground) starts it at 0 unless its line says start. The base's 0.42 s (MountSoundStart, the
-                // donkey's snort's silence) reached the rat's 0.33 s squeak and was seeked past its end: Unity logged "An
-                // invalid seek position" at every ride-style mount and dismount of the rat and the snail (2026-10-30).
+                // donkey's snort's silence) reached a pack's own clips shorter than that and seeked past their end: Unity
+                // logged "An invalid seek position" at every ride-style mount and dismount of such a mount (2026-10-30).
                 if (l.Files != null || l.Clips != null || l.Source != null) r.Start = 0f;
                 if (l.Start.HasValue) r.Start = l.Start.Value;
                 if (l.Loop.HasValue) r.Loop = l.Loop.Value;

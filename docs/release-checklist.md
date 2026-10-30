@@ -286,6 +286,9 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   csproj, kept equal. Then the version lines: `README.md` (the table, the log line), `src/GK2DonkeyAPI/README.md`,
   `src/SaddleUp/README.md`, `docs/api.md` (the version line, the `BepInDependency` example, a history entry),
   `docs/reference.md` (the log line), `dist/README.md`. `git grep` the old numbers: history entries stay.
+  Since 2026-10-30 `python tools/release-versions.py set saddleup <v> --api <v>` (and `set <Pack> <v>`) moves the
+  mechanical lines and `python tools/release-versions.py check` (run by `make-release-zip.py` before anything else)
+  fails on any line left behind, the missing CHANGELOG heading, docs/api.md history entry or Nexus note included.
 - **The changelog** (`CHANGELOG.md`): every change goes under **Unreleased** when it is made, not at release. At
   release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
   goes on top. Its "For players" part is the Nexus changelog text for that version.

@@ -172,7 +172,7 @@ I would say that most of the combinations of cargo items look alright but there 
 
 [size=3]The way I've built this mod is in two parts: the [b]GK2 Donkey API[/b] mod and the [b]Saddle Up[/b] mod. The Donkey API mod does the heavy lifting and can be used by mod authors to gain full control of the donkey functionalities that are demonstrated on this page and more, while this Saddle Up mod is a full playable showcase of most the features that the Donkey API exposes.
 
-This SaddleUp mod download already contains the DonkeyAPI bundled with it because it needs it to work since it's build on top of it, but I will later be creating a separate page on here for the DonkeyAPI where it could be downloaded separately as well.
+This Saddle Up download contains the Donkey API, because Saddle Up is built on top of it. A mod that builds on the Donkey API needs this download installed; there is no separate Donkey API download, so there is never more than one copy of it in a game.
 
 This is because multiple mods can make use of the DonkeyAPI and unless they are specifically doing the same things, there will not be clashes.  This allows anyone who wants to create anything with the donkey to call the api and do whatever they want with it.
 
