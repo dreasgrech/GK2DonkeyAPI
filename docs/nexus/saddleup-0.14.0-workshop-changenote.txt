@@ -1,0 +1,14 @@
+GK2 Saddle Up 0.14.0
+
+GK2 Donkey API 0.42.0 is in it. Built for game 1.011.
+
+- Saddle Up's own options window: the game's Settings window has a GK2 Saddle Up options button, and the Mounts panel
+  (L) an Options button. Sections on the left, options on the right, a line saying what each option does, and
+  Defaults for a section.
+- Keys are set in the window: click a key's box and press the key, with Shift, Ctrl or Alt, or one of those on its
+  own. A key another option, another mod or the game already uses is said under it.
+- Of two of your keys on the same key, the more specific acts alone (Ctrl + G no longer also drives the cart).
+- Typing in another mod's or the game's text box no longer presses Saddle Up's keys.
+- The Mounts panel over the Character window, the inventory or a chest: that window waits underneath and comes back
+  with Escape. The panel's Done button is gone (its X and Escape close it).
+- Your settings and saves carry over.

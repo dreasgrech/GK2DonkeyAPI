@@ -158,6 +158,16 @@ real skin worn with `--skin`); `tools/log-scenarios.py` lists the scenarios an F
    new API cfg has no `[Debug]` section. A second run with the marker file in `BepInEx\config` shows the panel.
 5. Put the config files and the dev DLLs back (or rebuild without `ForDist`).
 
+Run 2026-10-30 23:56 with the 0.14.0 zip itself (`tools/rehearsal.sh stage-a`: the dev plugins, both cfgs and the dev
+marker aside; the 0.14.0, Dragons Mount Pack 1.0.1 and Donkey Skin Pack 1.0.0 zips extracted; Critters, never
+released, left out: the script skipped its missing zip since this run; GK2 Mod Framework 0.1.24 installed): API 0.42.0
+and Saddle Up 0.14.0 loaded with both packs, the cargo layout from embedded, no `Dev tools unlocked`, the fresh API cfg
+without `[Debug]`, no warning, error or exception in 588 lines; H, G, three items, H left the cart, G brought the same
+cart back with 3 of 3 items; Settings, the options button, the window open and back; Saddle Up in the framework's Mods
+menu with its Settings button pointed at the window. No 0.14.0 fixture: its cfgs have the 0.13.0 fixture's keys (the
+fixture's extra lines are the Critters mounts', installed when it was captured). `restore`: everything back, the saves
+identical.
+
 Run 2026-10-13 with the 0.28.0 dist, without the framework and with a stock `BepInEx.cfg`: all seven plugins loaded,
 layout `from embedded`, the save's donkey and foals restored, ride, cart, two logs loaded, a dismount at a build desk;
 no warning, error or exception in 101 log lines; the fresh cfgs at defaults; no new file in the BepInEx folder.

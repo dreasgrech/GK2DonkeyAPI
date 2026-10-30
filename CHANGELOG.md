@@ -14,21 +14,49 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
+  drawn over the donkey (a plumed chanfron with an eye hole and a forehead spike, a chest plate, riveted flank lames
+  with a brass hem over red padding, a crupper); the steel follows the Second tone, the plume and the padding the
+  harness colour.
+
+Development:
+
+- **The rehearsal skips a pack that was never released** (2026-10-30, at 0.14.0): `tools/rehearsal.sh stage-a` stopped
+  (set -e) on the missing Critters zip after the dev setup had gone aside; a pack zip not in `release/` is now left out, said.
+- **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our
+  skin creation pipeline so that it gets easier with every skin"): the donkey's anatomy that every skin drawn over it
+  needs is one shared module, `tools/skins/donkey/` (`anatomy.py`: `body()` with the hip, collar and back line,
+  `belly()`, `head_delta()`, `top_outline()`, `run_bottom()`, the measured `anchors.json` and `horn_bases.json` with
+  their scripts, `contact.py`, `zoom.py`, all moved out of `tools/skins/royal-parade/`; Royal Parade regenerates
+  byte-identical through it); `tools/skins/handover.py <skin> [--ref <picture>]` renders the hand-over pictures of
+  step 5 (the poses at 1x, 3x and 8x with and without the rider, the reference under them) for any skin in one
+  command; `review.motion_check()` reports every piece's box against its anchor per frame (the "one piece with the
+  body" measure of docs/front-layer.md section 5) and `review.phase_check()` fails a repeating pattern (rivets, a
+  checkered hem) that repeats from the canvas instead of the piece's anchor (it crawls along the piece as the anchor
+  shifts between frames; Armored's first cut did), both run by the Armored generator; the scaffold's sidecar
+  (`<skin>.gk2export.txt`, which carries this machine's paths) is git-ignored. docs/sprite-tools.md "Making a skin".
+
+## 0.14.0 (GK2 Donkey API 0.42.0), 2026-10-30
+
+For players:
+
 - **Saddle Up's own options window** (2026-10-30, GK2 Donkey API 0.42.0; the user: GK2 Mod Framework isn't on the
   Steam Workshop, so every player gets the same options): the game's **Settings** window (in the pause menu and the
   main menu) has a **GK2 Saddle Up options** button, and the Mounts panel an **Options** button. The sections are on
   the left, their options on the right, and a line at the bottom says what the option under the mouse (or the
-  gamepad's focus) does. Every option has a control of its own: switches, number buttons, sliders, dropdowns, and
-  key boxes: click one and press the key, with Shift, Ctrl or Alt, or one of those on its own (Climb's Left Shift
-  and Descend's Left Ctrl can be set now); Backspace sets no key, Esc cancels, and a key two options share is said
-  under both. **Defaults** sets the section shown back to its defaults, after asking. The Mounts button opens the
-  Mounts panel over the options, and Escape steps back one window at a time. The journal's buttons line up with the
-  mount list and its picture: Options under the list, Customize under the picture, Drive the cart and Ride on the
-  right; the journal's Done button is gone (its X and Escape close it, keeping what was chosen). The buttons that act on your mount
-  or the keeper work in a game only (greyed in the main menu). With GK2 Mod Framework installed, Saddle Up's
-  **Settings** button in its Mods menu opens the same window (the framework's own page of every setting is gone).
-  The "Showing" pages of the game's Settings window are gone too; your settings are kept as they were (the same
-  cfg, the same lines).
+  gamepad's focus) does. Every option has a control of its own: switches, number buttons, sliders, dropdowns, and key
+  boxes: click one and press the key, with Shift, Ctrl or Alt, or one of those on its own (Climb's Left Shift and
+  Descend's Left Ctrl can be set now); Backspace sets no key, Esc cancels, and a key another option, another mod or
+  the game already uses is said under it. **Defaults** sets the section shown back to its defaults, after asking. The
+  Mounts button opens the Mounts panel over the options, and Escape steps back one window at a time. The journal's
+  buttons line up with the mount list and its picture: Options under the list, Customize under the picture, Drive the
+  cart and Ride on the right; the journal's Done button is gone (its X and Escape close it, keeping what was chosen).
+  The buttons that act on your mount or the keeper work in a game only (greyed in the main menu). With GK2 Mod
+  Framework installed, Saddle Up's **Settings** button in its Mods menu opens the same window (the framework's own
+  page of every setting is gone). The "Showing" pages of the game's Settings window are gone too; your settings are
+  kept as they were (the same cfg, the same lines).
+- **Two keys on one key** (2026-10-30, GK2 Donkey API): of two of your keys on the same key, the more specific acts
+  alone: with Send your mount away on Ctrl + G, Ctrl + G no longer drives the cart too.
 - **Typing in another text box no longer presses the mod's keys** (2026-10-30, GK2 Donkey API): a letter typed in
   a text box of another mod or of the game (e.g. a search box on the Tech Tree) was also read as the key on that
   letter, so typing an L opened the Mounts panel. The keys only read the keyboard while no text box has the cursor,
@@ -37,10 +65,6 @@ For players:
   Tech Tree, the map, the quests), the inventory, a chest or most other game windows, the panel left that window
   running under it, and Ride or Drive the cart left it open. It is now set aside as the pause menu always was:
   Escape brings it back as it was, Ride and Drive the cart close it.
-- **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
-  drawn over the donkey (a plumed chanfron with an eye hole and a forehead spike, a chest plate, riveted flank lames
-  with a brass hem over red padding, a crupper); the steel follows the Second tone, the plume and the padding the
-  harness colour.
 
 For mod authors:
 
@@ -98,18 +122,6 @@ Development:
   committed bytes (`build-dist.sh` restores them) and gets no zip (`make-release-zip.py` picks the raised items
   itself); a raised pack needs its `docs/nexus/<name>-<version>-changelog.md`. This replaces the hand steps of
   0.13.2 (a `git checkout` of the unreleased pack DLLs, a hand-picked `--only`).
-- **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our
-  skin creation pipeline so that it gets easier with every skin"): the donkey's anatomy that every skin drawn over it
-  needs is one shared module, `tools/skins/donkey/` (`anatomy.py`: `body()` with the hip, collar and back line,
-  `belly()`, `head_delta()`, `top_outline()`, `run_bottom()`, the measured `anchors.json` and `horn_bases.json` with
-  their scripts, `contact.py`, `zoom.py`, all moved out of `tools/skins/royal-parade/`; Royal Parade regenerates
-  byte-identical through it); `tools/skins/handover.py <skin> [--ref <picture>]` renders the hand-over pictures of
-  step 5 (the poses at 1x, 3x and 8x with and without the rider, the reference under them) for any skin in one
-  command; `review.motion_check()` reports every piece's box against its anchor per frame (the "one piece with the
-  body" measure of docs/front-layer.md section 5) and `review.phase_check()` fails a repeating pattern (rivets, a
-  checkered hem) that repeats from the canvas instead of the piece's anchor (it crawls along the piece as the anchor
-  shifts between frames; Armored's first cut did), both run by the Armored generator; the scaffold's sidecar
-  (`<skin>.gk2export.txt`, which carries this machine's paths) is git-ignored. docs/sprite-tools.md "Making a skin".
 
 ## 0.13.2 (GK2 Donkey API 0.41.2), 2026-10-30
 

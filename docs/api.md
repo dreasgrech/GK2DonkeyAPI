@@ -5,7 +5,7 @@ donkey: ridden on its back (**Ride**), or pulling its cart (**Cart**), with carg
 does nothing: **your mod decides when the keeper may mount, what the ride can do and how it looks.** Saddle Up
 (`src/SaddleUp`) is the playable version for players and uses nothing but this API.
 
-API version **0.41.2** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
+API version **0.42.0** (`Mounts.ApiVersion`, the same number as the mod's own; `Plugin.Version` is the one place). Everything public is in the namespace `GK2DonkeyAPI.Api`. The exact
 surface is `tests/ApiSurface/GK2DonkeyAPI.Api.txt`.
 
 ## Setup
@@ -1047,7 +1047,7 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
-- 0.42.0 (unreleased): no change to the public surface. A page shows in the API's options window (a button in the
+- 0.42.0 (2026-10-30): no change to the public surface. A page shows in the API's options window (a button in the
   game's Settings window, the Mounts panel's Options button, and with GK2 Mod Framework installed the Settings button
   of its entry in the Mods menu, which has one setting: a button to the window), every row as the API's own control;
   the pages in the game's Settings window are gone. Key rows are set in the window (a lone modifier too), text rows are text boxes, a `Preview` row is no

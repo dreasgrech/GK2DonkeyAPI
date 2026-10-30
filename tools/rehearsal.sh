@@ -18,7 +18,7 @@
 # MountsKey, RideKey and CartKey must be keys a keyboard has (a fixture's are on the numpad). A file that fails is not
 # staged.
 set -e
-SADDLEUP_ZIP="GK2-Saddle-Up-0.13.2.zip"
+SADDLEUP_ZIP="GK2-Saddle-Up-0.14.0.zip"
 PACK_ZIPS="GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip GK2-Saddle-Up-Critters-Mount-Pack-1.0.0.zip GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip"
 ASIDE_NAME="rehearsal-aside-$(date +%Y-%m-%d)"
 
@@ -64,7 +64,10 @@ check_saddleup_cfg() { # a dreas.gk2.saddleup.cfg that is about to go live
 
 extract() {
   local z
+  [ -f "$REPO/release/$SADDLEUP_ZIP" ] || { echo "no release/$SADDLEUP_ZIP: run tools/release.sh first"; exit 1; }
   for z in "$SADDLEUP_ZIP" $PACK_ZIPS; do
+    # a pack never released has no zip (Critters, 2026-10-30): a player can't have it, so it is left out, said
+    if [ ! -f "$REPO/release/$z" ]; then echo "skipped $z: not in release/ (not released)"; continue; fi
     unzip -o -q "$REPO/release/$z" -d "$G" -x modinfo.json  # the zip's modinfo.json is for a Mods\Code install; not next to the exe
     echo "extracted $z"
   done
