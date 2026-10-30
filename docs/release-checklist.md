@@ -90,7 +90,9 @@ install). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's nam
 `GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, the version from the pack's
 CHANGELOG.md, raised there when the pack changed): each its own Nexus file. There is no bundle of the packs (the user,
 2026-10-27: "ill ship individuals"). `--only saddleup` (or a pack's folder name) writes one item's zip: a pack whose
-number is public is not rebuilt. `release/` is not kept in git.
+number is public is not rebuilt. **The zips in `release/` are kept in git** (since 2026-10-30, after two public zips
+were overwritten and lost while the folder was ignored): commit each new zip with its release; only `release/logs/`
+is ignored.
 
 The same run stages each item for the Steam Workshop in `workshop/<Item>/` (not in git; `--no-workshop` skips it):
 the zip's content as a folder plus `modinfo.json` (id = the plugin GUID, name, version: the game's Mods window shows

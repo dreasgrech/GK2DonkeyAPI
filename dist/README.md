@@ -39,7 +39,9 @@ the dev build 1361 passed, 0 failed, 0 warnings; `tools/release-versions.py chec
 `GK2-Saddle-Up-Dragons-Mount-Pack-1.0.1.zip` 449,290 bytes (the DLL 616,448); no `modinfo.json` in either (rebuilt
 before the upload); the same DLLs plus `modinfo.json` staged in `workshop\GK2SaddleUp\` and
 `workshop\GK2SaddleUpDragonsMountPack\` for the Workshop items. The Critters and
-Donkey Skin Pack DLLs here stay the 1.0.0 builds (restored from git after the build).
+Donkey Skin Pack DLLs here stay the 1.0.0 builds (restored from git after the build). `GK2-Saddle-Up-Donkey-Skin-Pack-1.0.0.zip`
+(33,791 bytes) in `release/` is made from that committed 1.0.0 DLL with today's tool (the DLL alone), the public file's
+own copy having been lost on 2026-10-30; the zip on Nexus (2026-10-28) also carried the pack's README.md and CHANGELOG.md.
 
 Sizes 2026-10-30 13:01 (`bash tools/build-dist.sh` for 0.13.1 / API 0.41.1, the 1.011 re-audit, no code change; 24 of 24
 release scans green): `GK2-Saddle-Up-0.13.1.zip` 886,911 bytes: `GK2DonkeyAPI.dll` 2,691,072 bytes, `GK2SaddleUp.dll` 34,816.

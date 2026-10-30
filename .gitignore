@@ -19,8 +19,9 @@ tools/cargo-sheet/out/
 # Frame sheets drawn by tools/frames*.py
 tools/frames-out/
 
-# Release zips (tools/make-release-zip.py, uploaded to Nexus) and the logs of tools/build-dist.sh and release-scans.sh
-release/
+# The release zips in release/ ARE kept in git (the user, 2026-10-30: two public zips were overwritten and lost on this
+# machine while release/ was ignored); only the logs of tools/build-dist.sh and release-scans.sh are not
+release/logs/
 
 *.un~
 # an editor's / SmartGit's copy of a file as last saved (~CHANGELOG.md.saved.bak): never part of the repo
