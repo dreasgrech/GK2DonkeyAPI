@@ -300,7 +300,14 @@ namespace GK2DonkeyAPI
                 h.SetPitch(Mathf.Clamp(pitch, 0.1f, 3f));
                 if (startAt > 0f)
                 {
-                    h.SetTime(startAt);
+                    // a start at or past the clip's end is dropped (the clip plays whole), said once: the game's SetTime
+                    // clamps to the length and FMOD refuses the seek with a Unity error
+                    float length = ClipLength(sound, clip);
+                    if (length > 0f && startAt >= length - 0.01f)
+                    {
+                        if (warnedIds.Add("start:" + id)) Plugin.Log.LogWarning($"Sounds: '{id}' is {length:0.00} s long, not longer than its start offset of {startAt:0.00} s; played from its start. A pack's own file starts at 0 unless its line says start.");
+                    }
+                    else h.SetTime(startAt);
                 }
                 // The game's pooled players keep the fade times of whatever used them last, and a fade re-applies
                 // the volume read at fade setup every frame; zero fades with the volume above as the target.
@@ -315,6 +322,22 @@ namespace GK2DonkeyAPI
                 }
                 return null;
             }
+        }
+
+        // The length of the clip that will play: clip n's, or the shortest enabled sample's for a plain id (the game picks
+        // one at random); 0 when none is known.
+        private static float ClipLength(Sound sound, int clip)
+        {
+            if (sound == null || sound.samples == null) return 0f;
+            if (clip > 0) return clip <= sound.samples.Count && sound.samples[clip - 1]?.clip != null ? sound.samples[clip - 1].clip.length : 0f;
+            float shortest = 0f;
+            for (int k = 0; k < sound.samples.Count; k++)
+            {
+                var s = sound.samples[k];
+                if (s == null || !s.isEnabled || s.clip == null) continue;
+                if (shortest <= 0f || s.clip.length < shortest) shortest = s.clip.length;
+            }
+            return shortest;
         }
 
         // "id#n": clip n (1-based) of the sound; 0 for a plain id (the game picks a clip at random).
@@ -996,6 +1019,11 @@ namespace GK2DonkeyAPI
                 if (l.Volume.HasValue) vol = l.Volume.Value;
                 if (l.Pitch.HasValue) pitch = l.Pitch.Value;
                 if (l.PitchVariation.HasValue) r.PitchVariation = l.PitchVariation.Value;
+                // A start offset belongs to the clip it was measured on: a layer that gives its own sound (files, clips, a game
+                // id, none, the ground) starts it at 0 unless its line says start. The base's 0.42 s (MountSoundStart, the
+                // donkey's snort's silence) reached the rat's 0.33 s squeak and was seeked past its end: Unity logged "An
+                // invalid seek position" at every ride-style mount and dismount of the rat and the snail (2026-10-30).
+                if (l.Files != null || l.Clips != null || l.Source != null) r.Start = 0f;
                 if (l.Start.HasValue) r.Start = l.Start.Value;
                 if (l.Loop.HasValue) r.Loop = l.Loop.Value;
                 if (l.Speech.HasValue) r.Speech = l.Speech.Value;

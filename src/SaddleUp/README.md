@@ -103,7 +103,7 @@ All of these apply at once:
 | 4. Mount Behaviour | Say why you can't get on | on | The keeper says why in a thought bubble. |
 | | Shuffles while standing | on | Your mount takes a few slow steps now and then while it waits without its cart. |
 | | Allow mounting indoors | off | Ride into houses, the church and the morgue. Doors with a loading screen still end the ride. |
-| | Allow mounting with the cart indoors | off | The cart comes inside too, but it can get stuck on furniture. When this is off, the cart waits at the door. Only with the row above on. |
+| | Allow mounting with the cart indoors | off | The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door. Only with the row above on. |
 | 5. Cart | Zombies ride on the cart | on | Zombies you pick up while driving lie on the cart. You can hand them to their work from there. |
 | | A storage chest rides on the cart | on | Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down. |
 | | Carry the corpse into the morgue | on | Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside. |

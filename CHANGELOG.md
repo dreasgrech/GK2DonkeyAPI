@@ -10,9 +10,20 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-(The Armored skin and the pipeline work ship with the Donkey Skin Pack's 1.1.0; nothing here is in 0.13.1.)
+(The Armored skin and the pipeline work ship with the Donkey Skin Pack's 1.1.0.)
 
 For players:
+
+- **A mount's own getting-on and getting-off sounds play whole** (2026-10-30): the donkey's snorts start 0.42 s in
+  (their silence skipped), and a pack's own clip for the event inherited that start. The rat's and the snail's
+  squeaks are shorter than 0.42 s, so every ride-style mount and dismount seeked past their end and Unity logged
+  "an invalid seek position" in Player.log (14 lines in a self-test run; no exception, the clip still played); the
+  dragon's growl lost its first 0.42 s. A layer's own sound now starts at 0 unless its line says `start`, and a start
+  at or past a clip's end is dropped with one warning. New self-test "a pack's own clip and the base's start offset"
+  reads the Unity log back while the clips play.
+- **Saddle Up's "Allow mounting with the cart indoors" row** (and the API's `DismountIndoors` text) no longer says
+  the cart can get stuck on furniture: it has no collider indoors, it rolls through furniture and door frames, which
+  only looks odd (the user, 2026-10-30).
 
 - **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
   drawn over the donkey (a plumed chanfron with an eye hole and a forehead spike, a chest plate, riveted flank lames

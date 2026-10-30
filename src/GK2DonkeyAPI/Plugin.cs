@@ -565,7 +565,7 @@ namespace GK2DonkeyAPI
             StayMountedThroughDoors = Config.Bind("General", "StayMountedThroughDoors", Defaults.Get("General", "StayMountedThroughDoors", true),
                 "Keep riding after a scene change (the donkey is re-summoned in the new scene). Off: dismount at every door.");
             DismountIndoors = Config.Bind("General", "DismountIndoors", Defaults.Get("General", "DismountIndoors", true),
-                "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart cannot avoid furniture and door frames inside.");
+                "Dismount automatically when entering a building, church or dungeon (the game's indoor lighting presets), and refuse to mount while indoors. The cart has no collider indoors: it rolls through furniture and door frames, which only looks odd.");
             CartIndoors = Config.Bind("General", "CartIndoors", Defaults.Get("General", "CartIndoors", false),
                 "With DismountIndoors off (riding indoors allowed): the cart comes indoors too. Off: riding indoors is allowed, the cart is not (driving it through a door into a building leaves it standing at the door with its load and the ride goes on inside; at the morgue with a corpse aboard the keeper gets off inside carrying it; the cart can't be called, hitched or switched to indoors). Ignored while DismountIndoors is on.");
             FlyIndoors = Config.Bind("General", "FlyIndoors", Defaults.Get("General", "FlyIndoors", false),

@@ -222,7 +222,7 @@ namespace SaddleUp
             // Indoors (a player asked, 2026-10-21): both off = as before, the ride ends at a building's door. The API's
             // DismountIndoors is the first row turned round; CartIndoors only counts with it on, so its row greys.
             ConfigEntry<bool> indoors = p.Toggle("Mount Behaviour", "MountIndoors", false, "Allow mounting indoors", "Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.", v => Mounts.Behaviour.Set(Guid, "DismountIndoors", !v));
-            p.Toggle("Mount Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "The cart comes inside too, but it can get stuck on furniture. When this is off, the cart waits at the door.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
+            p.Toggle("Mount Behaviour", "CartIndoors", false, "Allow mounting with the cart indoors", "The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.", v => Mounts.Behaviour.Set(Guid, "CartIndoors", v));
             p.EnableWhen("Mount Behaviour", "CartIndoors", () => indoors.Value);
 
             // Cart capacity was a row here until 0.12: each mount carries its own cargo now ([Mount] cargo; the Mounts panel

@@ -172,7 +172,11 @@ and unhitching, the bell, and the cart style's ladder sounds getting on and off.
 Royal Parade included, is untouched.
 
 A layer's `volume` and `pitch` multiply the base's (the topmost layer that says one wins among the layers); its
-other attributes and numbers replace the base's. The player's switches stay on top of every layer: `SoundsOn`,
+other attributes and numbers replace the base's. A `start` is the clip's own: a layer that gives its own sound starts
+it at 0 unless its line says `start`, so the donkey's `MountSoundStart` / `DismountSoundStart` (0.42 s, the silence
+at the front of its snorts) never reach a pack's file (until 2026-10-30 they did: a clip shorter than 0.42 s was seeked
+past its end and Unity logged an audio error). A start at or past a clip's end is dropped with one warning and the
+clip plays whole. The player's switches stay on top of every layer: `SoundsOn`,
 `SoundVolume`, the per-event `...On` switches, Saddle Up's Bell, Brays and Volume rows, the game's Sounds slider.
 A skin can give the rat a squeak; the player can still turn the brays off.
 

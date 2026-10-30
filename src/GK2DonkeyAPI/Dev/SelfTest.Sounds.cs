@@ -798,5 +798,75 @@ namespace GK2DonkeyAPI
             }
             return ok;
         }
+
+        // A pack's own clip and the base's start offset (2026-10-30): the donkey's getting-on and getting-off snorts start
+        // 0.42 s in (MountSoundStart / DismountSoundStart, their silence skipped); a pack's own file for the event is a
+        // different clip, so it starts at 0 unless its line says start. Before: the rat's 0.33 s squeak was seeked past its
+        // end at every ride-style mount and Unity logged "invalid seek position" (Player.log, never an exception); the
+        // dragon's growl lost its first 0.42 s. The guard in PlayId: a start past the clip's end is dropped with one
+        // warning, never seeked. The Unity log is read back (Application.logMessageReceived) while the clips play.
+        internal static IEnumerator SoundsStartOffset()
+        {
+            if (!LazyAudio.IsInitialized) { Skip("the game's audio is not up"); yield break; }
+            const string owner = Owner + ".soundstart";
+            string tempRoot = null;
+            MountHandle h = null;
+            var unityErrors = new List<string>();
+            Application.LogCallback onLog = (condition, stack, type) => { if (type == LogType.Error || type == LogType.Exception) unityErrors.Add(condition); };
+            try
+            {
+                tempRoot = WriteTempPack("gk2donkeyapi-selftest-soundstart", Looks.DefaultSkinName,
+                    "# a test pack\n[Skin]\nformat = 1\nname = Start Test\nmount = selftest.start-beast\n\n" +
+                    "[Sounds]\nmount = mount_1.wav\ndismount = dismount_1.wav\ndismount.start = 0.1\n\n" +
+                    "[Mount]\nid = selftest.start-beast\nname = Start Beast\nauthor = the self-test\nversion = 0.1\ncart = true\nfoals = false\n");
+                string sdir = Path.Combine(TempSkinDir(tempRoot, "selftest.start-beast", Looks.DefaultSkinName), "sounds");
+                Directory.CreateDirectory(sdir);
+                File.WriteAllBytes(Path.Combine(sdir, "mount_1.wav"), SoundBank.TestTone(0.2f, 500f));    // shorter than the donkey's 0.42 s offset
+                File.WriteAllBytes(Path.Combine(sdir, "dismount_1.wav"), SoundBank.TestTone(0.5f, 400f));
+            }
+            catch (Exception e) { Warn("the temp pack could not be written: " + e.Message); yield break; }
+            Application.logMessageReceived += onLog;
+            try
+            {
+                int n = Looks.RegisterFolder(tempRoot, owner);
+                Check(n == 1, $"one pack found ({n})");
+                h = Spawn(Spot(home, 3f) ?? home, right: homeFacing > 0f);
+                if (h == null) { Fail("could not spawn"); yield break; }
+                yield return Until(() => h.IsReady, 6f);
+                h.Tuning.Set(Owner, "Skin", "selftest.start-beast/default");
+                yield return Until(() => h.Mount == "selftest.start-beast", 8f);
+                Check(waited, "the donkey wears the pack's skin and is its mount");
+                Sounds.Rig rig = h.I.SoundsRig;
+                rig.Invalidate();
+                SoundSpec m = rig.Resolve("mount");
+                string mid = m?.BankId;
+                yield return Until(() => mid != null && SoundBank.StateOf(mid) == SoundBank.State.Ready, 6f);
+                rig.Invalidate();
+                m = rig.Resolve("mount");
+                float baseStart = Plugin.For(MountStyle.Ride).MountSoundStart.Value;
+                Check(m != null && m.Layer == "skin" && m.BankId != null && m.Start == 0f, $"mount = a file of the pack's starts at 0, not at the donkey's {baseStart:0.00} s ({m?.Describe()})");
+                SoundSpec dm = rig.Resolve("dismount");
+                Check(dm != null && dm.Layer == "skin" && Mathf.Abs(dm.Start - 0.1f) < 0.001f, $"dismount.start = 0.1 is the line's own ({dm?.Describe()})");
+                unityErrors.Clear();
+                SoundHandler hm = rig.Emit("mount");
+                yield return null;
+                yield return null;
+                Check(hm != null && unityErrors.Count == 0, hm == null ? "Emit(mount) played nothing" : $"the 0.2 s clip plays with no Unity error logged ({unityErrors.Count}: {string.Join(" | ", unityErrors.ToArray())})");
+                // the guard: a start past the clip's end asked for directly is dropped (one warning of the mod's), not seeked
+                unityErrors.Clear();
+                Line("[test] INFO " + current + ": the next \"not longer than its start offset\" warning is this test's own");
+                SoundHandler hp = Sounds.PlayId(mid, PC.transform, 1f, 1f, 5f);
+                yield return null;
+                yield return null;
+                Check(hp != null && unityErrors.Count == 0, hp == null ? "PlayId played nothing" : $"a start of 5 s on the 0.2 s clip: played from its start, no Unity error ({unityErrors.Count})");
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+                if (h != null) h.Remove();
+                try { Looks.Unregister("selftest.start-beast/default", owner); } catch { }
+                try { if (tempRoot != null) Directory.Delete(tempRoot, true); } catch { }
+            }
+        }
     }
 }
