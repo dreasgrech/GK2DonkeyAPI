@@ -19,7 +19,7 @@
     <Copy Condition="'$(GameRunning)' != 'true'" SourceFiles="$(TargetPath)" DestinationFolder="$(PluginFolder)" />
     <!-- its translations beside it (docs/localization.md): Languages\ of the project, as the release zips ship it -->
     <ItemGroup>
-      <DeployLanguageFile Include="$(MSBuildProjectDirectory)\Languages\*.txt;$(MSBuildProjectDirectory)\Languages\*.csv" />
+      <DeployLanguageFile Include="$(MSBuildProjectDirectory)\Languages\*.csv" />
     </ItemGroup>
     <Copy Condition="'$(GameRunning)' != 'true' And '@(DeployLanguageFile)' != ''" SourceFiles="@(DeployLanguageFile)" DestinationFolder="$(PluginFolder)\Languages" />
     <Message Condition="'$(GameRunning)' != 'true' And Exists('$(LooseCopy)')" Importance="high" Text="Removed the old loose copy $(LooseCopy)" />

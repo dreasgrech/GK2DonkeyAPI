@@ -5,7 +5,12 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
 
 ## Next (decided, not built)
 
-- **The journal's picture: frame as if the lamp were there, centre on the mount** (the user, 2026-10-29, after 0.13.0's
+- **The journal's picture: DECIDED 2026-11-01, keep today's (nothing to build).** The user: "whatever there is, lamp or
+  not, the entire thing should be centered accordingly." That is what it does: the picture is cut to what is drawn
+  with even margins (with the lamp, the mount, cart and lamp centred within 3 px; without, the mount and cart within
+  2 px; measured 2026-11-01 00:30) and `MountsPanel` centres it in its box (anchors and pivot at the middle). The
+  lamp switched on or off moves and resizes the mount a little, as the whole changes. History below.
+  (Asked 2026-10-29: frame as if the lamp were there, centre on the mount; the user, after 0.13.0's
   fixes; docs/per-skin-looks.md §7): today each picture is cut to what is drawn, so with the lamp the mount sits
   lower-left and about 18% smaller than without it. Measure with the lamp forced visible, record the mount+cart
   rectangle, centre the panel's picture on it at a scale that keeps the lamp's room (PreviewStage, MountsPanel.Fit, the
@@ -580,6 +585,10 @@ closed):
   Translations group's first F11 23:08: 37/0/0. The long-text rule built since (OwnButton labels shrink to 80% before
   the "...", checked by the windows scenario). **TESTED 2026-10-31 23:31** (Translations 74/0/0, localization.md
   section 7): German read back, all 11 languages' fonts right (the font fix was needed), no text likely to overflow.
+- **Translations: CSV only since 2026-11-01** (the user: "less to maintain"): built, deployed, the 15 `en.txt`
+  deleted (repository, game plugin folders, the dev dumps); the next dev start must make `l10n-sync.py --check` say
+  "same" (the repository's `en.csv` were converted from the `en.txt`; the dumps still hold the 3-column `en.csv`
+  until then); then an F11 of the Translations group (the files' CSV fixtures, the template round trip).
 - **Translations, steps 2 and 3 BUILT 2026-11-01** (the user: "lets do a lot so we get this translation finished and
   ready"; localization.md section 8): the keeper's bubbles (71 sentences, 6 templates; `MountResult.Reason` stays
   English), the 8 prompts on foot, the crossroads notice, the mounts' and skins' names, descriptions and abilities by

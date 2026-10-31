@@ -29,6 +29,7 @@ namespace GK2DonkeyAPI
             string bundled = Path.Combine(root, "bundled");
             string translator = Path.Combine(root, "translator");
             string theirs = Path.Combine(Path.Combine(translator, "Translations"), Owner);
+            // (a translator's own folder, Translations\<owner>\, and the bundled one; CSV only since 2026-11-01)
             string languageWas = Texts.LanguageOverride;
             bool? testWas = Texts.TestForced;
             List<string> rootsWas = Texts.TestTranslators;
@@ -37,13 +38,13 @@ namespace GK2DonkeyAPI
                 if (Directory.Exists(root)) Directory.Delete(root, true);
                 Directory.CreateDirectory(bundled);
                 Directory.CreateDirectory(theirs);
-                var plain = new UTF8Encoding(false);
-                File.WriteAllText(Path.Combine(bundled, "pt.txt"),
-                    "# a note of the translator's, not the English\n# en: Hello\ngreet = Olá\n\n# en: Old English\nchanged = Mudado\n# no English recorded below\nnoen = Sem\n"
-                    + "a line without an equals sign\n# en: Empty\nempty =\n# en: Ride {0}\nfmt = Montar {0}\n# en: Ride {0}\nbadfmt = Montar {1}\n# en: Two\\nlines\ntwo = Duas\\nlinhas\n# en: Both\nboth = TXT\n", plain);
-                File.WriteAllText(Path.Combine(bundled, "pt.csv"), "key;value;english\ngreet;CSV;Hello\nboth;CSV;Both\ncsvonly;\"Só; com \"\"aspas\"\"\";Only CSV\n", new UTF8Encoding(true));
-                File.WriteAllText(Path.Combine(theirs, "pt-br.txt"), "# en: Hello\ngreet = Oi\n# en: Bye\nbye = Tchau\n", plain);
-                File.WriteAllText(Path.Combine(theirs, "pt-br.csv"), "key\tvalue\ntabkey\tTab\n", plain);
+                // a translator's own pt-br (commas, the template's note column), a bundled pt-br saved with tabs and a bundled
+                // pt saved as European Excel does (; and a BOM)
+                File.WriteAllText(Path.Combine(theirs, "pt-br.csv"), "key,value,english,note\ngreet,Oi,Hello,\"a note, not read\"\nbye,Tchau,Bye,\n", new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(bundled, "pt-br.csv"), "key\tvalue\tenglish\ntabkey\tTab\tTab key\ngreet\tBundled\tHello\n", new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(bundled, "pt.csv"),
+                    "key;value;english\r\ngreet;Olá;Hello\r\nchanged;Mudado;Old English\r\nnoen;Sem;\r\nempty;;Empty\r\nfmt;Montar {0};Ride {0}\r\n"
+                    + "badfmt;Montar {1};Ride {0}\r\ntwo;\"Duas\r\nlinhas\";\"Two\r\nlines\"\r\ncsvonly;\"Só; com \"\"aspas\"\"\";Only CSV\r\na line without a separator\r\n", new UTF8Encoding(true));
                 Texts.TestBundled[Owner] = bundled;
                 Texts.TestTranslators = new List<string> { translator };
                 Texts.TestForced = false;
@@ -51,22 +52,22 @@ namespace GK2DonkeyAPI
                 Texts.TestWarnings = 0;
                 Texts.LanguageOverride = "pt-br";
                 Texts.Forget();
-                SelfTest.Check(Of("greet", "Hello") == "Oi", $"pt-br: a translator's own pt-br file beats the bundled pt ({Of("greet", "Hello")})");
-                SelfTest.Check(Of("bye", "Bye") == "Tchau" && Of("tabkey", "Tab key") == "Tab", "its .txt and its .csv with a tab are read");
-                SelfTest.Check(Of("both", "Both") == "TXT", $"in one folder, .txt beats .csv ({Of("both", "Both")})");
-                SelfTest.Check(Of("csvonly", "Only CSV") == "Só; com \"aspas\"", $"a CSV saved with ; (European Excel), a quoted field with ; and \"\" ({Of("csvonly", "Only CSV")})");
+                SelfTest.Check(Of("greet", "Hello") == "Oi", $"pt-br: a translator's own pt-br.csv beats the bundled ones ({Of("greet", "Hello")})");
+                SelfTest.Check(Of("bye", "Bye") == "Tchau", "a CSV with commas and the template's fourth column (the note, not read)");
+                SelfTest.Check(Of("tabkey", "Tab key") == "Tab", "a CSV saved with tabs");
+                SelfTest.Check(Of("csvonly", "Only CSV") == "Só; com \"aspas\"", $"a CSV saved with ; and a BOM (European Excel), a quoted field with ; and \"\" ({Of("csvonly", "Only CSV")})");
                 SelfTest.Check(Of("changed", "New English") == "New English", "a line whose English changed since shows the English");
-                SelfTest.Check(Of("noen", "Anything") == "Sem", "a line with no \"# en:\" above it is used (a translator's own comment isn't taken for the English)");
+                SelfTest.Check(Of("noen", "Anything") == "Sem", "a line with no English recorded is used");
                 SelfTest.Check(Of("missing", "Missing") == "Missing" && Of("empty", "Empty") == "Empty", "a line left out or left empty shows the English");
                 SelfTest.Check(Texts.Format(Owner, "fmt", "Ride {0}", "Bella") == "Montar Bella", "a template fills in its {0}");
                 SelfTest.Check(Texts.Format(Owner, "badfmt", "Ride {0}", "Bella") == "Ride Bella", "a template that doesn't take its values: the English");
-                SelfTest.Check(Of("two", "Two\nlines") == "Duas\nlinhas", "\\n is a line break");
+                SelfTest.Check(Of("two", "Two\nlines") == "Duas\nlinhas", "a line break inside a quoted field");
                 Texts.Table table = Texts.TableOf(Owner);
-                SelfTest.Check(table != null && table.Malformed == 1 && Texts.TestWarnings >= 1, $"the line without = is left out and said ({table?.Malformed} left out, {Texts.TestWarnings} warning(s), not logged in the test)");
+                SelfTest.Check(table != null && table.Malformed == 1 && Texts.TestWarnings >= 1, $"the line without a separator is left out and said ({table?.Malformed} left out, {Texts.TestWarnings} warning(s), not logged in the test)");
                 yield return null;
                 Texts.LanguageOverride = "pt";
                 Texts.Forget();
-                SelfTest.Check(Of("greet", "Hello") == "Olá" && Of("bye", "Bye") == "Bye", "pt: the bundled pt.txt; the pt-br files aren't read");
+                SelfTest.Check(Of("greet", "Hello") == "Olá" && Of("bye", "Bye") == "Bye" && Of("tabkey", "Tab key") == "Tab key", "pt: the bundled pt.csv; the pt-br files aren't read");
                 Texts.LanguageOverride = "de";
                 Texts.Forget();
                 SelfTest.Check(Of("greet", "Hello") == "Hello", "a language with no file: the English");
@@ -77,6 +78,22 @@ namespace GK2DonkeyAPI
                 string t = Of("greet", "Hello"), f = Texts.Format(Owner, "fmt", "Ride {0}", "Bella");
                 SelfTest.Check(t.StartsWith("[Hello") && t.EndsWith("]") && t.Length >= 9 && f.StartsWith("[Ride Bella") && f.EndsWith("]"), $"the test language: longer and in brackets, a template still filled ({t}; {f})");
                 Texts.TestForced = false;
+                // the API's English template copied as a translation (a translator's first step: en.csv saved as de.csv)
+                // reads back whole: every line found, its English the code's, none left out
+                List<(string Key, string English, string What)> words = Texts.EnglishOf(Texts.Api);
+                string copied = Path.Combine(root, "copied");
+                Directory.CreateDirectory(copied);
+                File.WriteAllText(Path.Combine(copied, "de.csv"), Texts.EnglishCsv(words), new UTF8Encoding(true));
+                Texts.TestBundled[Owner] = copied;
+                Texts.TestTranslators = new List<string>();
+                Texts.LanguageOverride = "de";
+                Texts.Forget();
+                Texts.Table back = Texts.TableOf(Owner);
+                int same = 0;
+                foreach (var x in words) if (back != null && back.Lines.TryGetValue(x.Key, out Texts.Line l) && l.Value == x.English && l.English == x.English) same++;
+                SelfTest.Check(back != null && same == words.Count && back.Malformed == 0, $"the API's English template read back as a translation: {same} of its {words.Count} lines, {back?.Malformed ?? 0} left out (en.csv saved as de.csv is a whole translation)");
+                Texts.LanguageOverride = "en";
+                Texts.Forget();
                 // what there is to translate: the API's words, each key once
                 List<(string Key, string English, string What)> api = Texts.EnglishOf(Texts.Api);
                 var keys = new HashSet<string>();
@@ -107,7 +124,7 @@ namespace GK2DonkeyAPI
         // The keeper's bubbles, the prompts on foot and the crossroads notice (step 2). Under the test language: every say.
         // word found by its English (a fixed sentence, or one a template made a moment ago, Word.Make) and shown bracketed;
         // the reason a template makes stays English; another mod's sentence as it is; a bubble said for real shows the
-        // translation (Mount.Say, in a game). Then a German de.txt of the API's (a fixed sentence, a template with the
+        // translation (Mount.Say, in a game). Then a German de.csv of the API's (a fixed sentence, a template with the
         // donkey's name in it, a prompt, the notice, a line whose English changed since) read back.
         internal static IEnumerator Bubbles()
         {
@@ -167,14 +184,14 @@ namespace GK2DonkeyAPI
                 // German
                 if (Directory.Exists(root)) Directory.Delete(root, true);
                 Directory.CreateDirectory(root);
-                File.WriteAllText(Path.Combine(root, "de.txt"),
-                    "# a German test translation of the API's (the self-test's own)\n"
-                    + "# en: The cart is full.\nsay.cart_full = Der Karren ist voll.\n"
-                    + "# en: {0} can't pull the cart.\nsay.cant_pull_the_cart = {0} kann den Karren nicht ziehen.\n"
-                    + "# en: Donkey\nmount.donkey.name = Esel\n"
-                    + "# en: Ride {0}\nprompt.ride_named = {0} reiten\n"
-                    + "# en: The donkey left a body at the crossroads\nnotice.crossroads = Der Esel hat eine Leiche an der Kreuzung gelassen\n"
-                    + "# en: An older English of this sentence\nsay.too_much_on_cart = Zu viel ({0} von {1}).\n", new UTF8Encoding(false));
+                File.WriteAllText(Path.Combine(root, "de.csv"),
+                    "key,value,english\n"
+                    + "say.cart_full,Der Karren ist voll.,The cart is full.\n"
+                    + "say.cant_pull_the_cart,{0} kann den Karren nicht ziehen.,{0} can't pull the cart.\n"
+                    + "mount.donkey.name,Esel,Donkey\n"
+                    + "prompt.ride_named,{0} reiten,Ride {0}\n"
+                    + "notice.crossroads,Der Esel hat eine Leiche an der Kreuzung gelassen,The donkey left a body at the crossroads\n"
+                    + "say.too_much_on_cart,Zu viel ({0} von {1}).,An older English of this sentence\n", new UTF8Encoding(false));
                 Texts.TestBundled[Texts.Api] = root;
                 Texts.TestForced = false;
                 Texts.LanguageOverride = "de";
@@ -208,7 +225,7 @@ namespace GK2DonkeyAPI
         // The mounts' and skins' names (step 3), in the files of the mod or pack that registered them: a mount other than the
         // donkey and a named skin, under the test language (the name, the journal's entry and header, the Skin list's choice)
         // and with German files in the owners' bundled folders (read back the same ways); every owner's English lists its
-        // mounts and skins (what the dev run writes for the packs, BepInEx\GK2-l10n\<owner>\en.txt).
+        // mounts and skins (what the dev run writes for the packs, BepInEx\GK2-l10n\<owner>\en.csv).
         internal static IEnumerator PackNames()
         {
             MountSettingsPage page = null;
@@ -292,15 +309,15 @@ namespace GK2DonkeyAPI
                 // German, in each owner's bundled folder as its pack would ship it
                 if (Directory.Exists(root)) Directory.Delete(root, true);
                 var files = new Dictionary<string, StringBuilder>();
-                foreach (string o in owned) files[o] = new StringBuilder("# a German test translation (the self-test's own)\n");
-                if (k != null) files[k.Owner].Append("# en: ").Append(k.Name).Append("\nmount.").Append(k.Id).Append(".name = Ä ").Append(k.Name).Append('\n');
-                if (skin != null) files[skin.Owner].Append("# en: ").Append(skin.Name).Append("\nskin.").Append(skin.Id).Append(".name = Ä ").Append(skin.Name).Append('\n');
+                foreach (string o in owned) files[o] = new StringBuilder("key,value,english\n");
+                if (k != null) files[k.Owner].Append(Csv("mount." + k.Id + ".name")).Append(',').Append(Csv("Ä " + k.Name)).Append(',').Append(Csv(k.Name)).Append('\n');
+                if (skin != null) files[skin.Owner].Append(Csv("skin." + skin.Id + ".name")).Append(',').Append(Csv("Ä " + skin.Name)).Append(',').Append(Csv(skin.Name)).Append('\n');
                 int n = 0;
                 foreach (var kv in files)
                 {
                     string dir = Path.Combine(root, (n++).ToString());
                     Directory.CreateDirectory(dir);
-                    File.WriteAllText(Path.Combine(dir, "de.txt"), kv.Value.ToString(), new UTF8Encoding(false));
+                    File.WriteAllText(Path.Combine(dir, "de.csv"), kv.Value.ToString(), new UTF8Encoding(false));
                     Texts.TestBundled[kv.Key] = dir;
                 }
                 Texts.TestForced = false;
@@ -309,7 +326,7 @@ namespace GK2DonkeyAPI
                 if (k != null)
                 {
                     MountsPanel.Entry e = MountsPanel.Entries().Find(x => x.Id == k.Id);
-                    SelfTest.Check(Catalog.NameTerm(k).Text == "Ä " + k.Name && e != null && e.Label == "Ä " + k.Name, $"German: {k.Name} from its owner's de.txt, in the journal's list too ({e?.Label})");
+                    SelfTest.Check(Catalog.NameTerm(k).Text == "Ä " + k.Name && e != null && e.Label == "Ä " + k.Name, $"German: {k.Name} from its owner's de.csv, in the journal's list too ({e?.Label})");
                     // the journal on that mount: only with a pick to put back (SelectMount can't put an empty one back)
                     if (page != null && !string.IsNullOrEmpty(chosenWas) && LazyWindowsStackController.ActiveWindow == null && !MountsPanel.IsOpen && !OptionsWindow.IsOpen)
                     {
@@ -332,7 +349,7 @@ namespace GK2DonkeyAPI
                 }
                 if (skin != null)
                 {
-                    SelfTest.Check(Looks.NameTerm(skin).Text == "Ä " + skin.Name, $"German: the skin {skin.Name} from its owner's de.txt");
+                    SelfTest.Check(Looks.NameTerm(skin).Text == "Ä " + skin.Name, $"German: the skin {skin.Name} from its owner's de.csv");
                     if (skinRow != null) SelfTest.Check(Texts.Choice(skinRow, skinAt) == "Ä " + skin.Name, $"German: and in the Skin list ({Texts.Choice(skinRow, skinAt)})");
                 }
             }
@@ -452,7 +469,7 @@ namespace GK2DonkeyAPI
         }
 
         // A German translation as a translator would ship it, the windows drawn with it (our lookup in German; the game's own
-        // language untouched): the page's de.txt in a test copy of its Languages folder (four rows translated, a fifth whose
+        // language untouched): the page's de.csv in a test copy of its Languages folder (four rows translated, a fifth whose
         // English changed since), the API's de.csv saved as European Excel does (; between columns, a BOM, a quoted field).
         // Read back from the windows: the translated rows in German, the stale one and the rest in English, the API's words
         // (Done, the journal's title, the colours window's title) in German.
@@ -488,10 +505,10 @@ namespace GK2DonkeyAPI
                 if (Directory.Exists(root)) Directory.Delete(root, true);
                 Directory.CreateDirectory(pageDir);
                 Directory.CreateDirectory(apiDir);
-                var txt = new StringBuilder("# a German test translation (the self-test's own)\n");
-                foreach (MountSettingsPage.Row r in chosen) txt.Append("\n# en: ").Append(r.Label).Append('\n').Append(r.TextKey).Append(".label = Ä ").Append(r.Label).Append('\n');
-                if (stale != null) txt.Append("\n# en: An older English of this row\n").Append(stale.TextKey).Append(".label = Ä alt\n");
-                File.WriteAllText(Path.Combine(pageDir, "de.txt"), txt.ToString(), new UTF8Encoding(false));
+                var csv = new StringBuilder("key,value,english\n");
+                foreach (MountSettingsPage.Row r in chosen) csv.Append(Csv(r.TextKey + ".label")).Append(',').Append(Csv("Ä " + r.Label)).Append(',').Append(Csv(r.Label)).Append('\n');
+                if (stale != null) csv.Append(Csv(stale.TextKey + ".label")).Append(",Ä alt,An older English of this row\n");
+                File.WriteAllText(Path.Combine(pageDir, "de.csv"), csv.ToString(), new UTF8Encoding(false));
                 File.WriteAllText(Path.Combine(apiDir, "de.csv"), "key;value;english\r\noptions.done;Fertig;Done\r\njournal.title;\"Reittier-Tagebuch; Seite\";Mount Journal\r\ncolours.title;Farben: {0};Colours: {0}\r\n", new UTF8Encoding(true));
                 Texts.TestBundled[page.OwnerId] = pageDir;
                 Texts.TestBundled[Texts.Api] = apiDir;
@@ -715,6 +732,9 @@ namespace GK2DonkeyAPI
         }
 
         private static bool IsBracketed(string s) => s.Length >= 2 && s[0] == '[' && s[s.Length - 1] == ']';
+
+        // A field of a comma CSV as a spreadsheet writes it: quoted when it holds a comma, a quote or a line break.
+        private static string Csv(string s) => s.IndexOfAny(new[] { ',', '"', '\n', '\r' }) < 0 ? s : "\"" + s.Replace("\"", "\"\"") + "\"";
 
         // The long-text rule (UiKit.OwnButton): under the test language every one-line text that shrinks (a button, a
         // dropdown's face, a card) fits at its smallest size; a wrapped one that still doesn't is said (it ends in "..." by

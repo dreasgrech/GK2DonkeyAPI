@@ -15,14 +15,14 @@ namespace GK2DonkeyAPI
     // looked up when it is drawn (the game sets its language after the plugins start: in Awake it is always English).
     // A text belongs to a plugin, its owner by GUID: a page's rows and sections to the mod that made the page, the API's
     // window words (UiWords) and the rows its builders add (the Skin row, the babies rows) to the API.
-    // An owner's translations are files, <id>.txt and <id>.csv, where id is the game's language id (de, fr, pt-br, zh_cn,
-    // or a community language pack's):
+    // An owner's translations are CSV files, <id>.csv, where id is the game's language id (de, fr, pt-br, zh_cn, or a
+    // community language pack's) (CSV only since 2026-11-01, the user: "less to maintain"; .txt was read too before):
     // - bundled: in its DLL's folder, Languages\;
     // - a translator's own download: in any plugin folder, Translations\<owner guid>\ (it wins over the bundled one).
-    // .txt is "key = text" lines; "# en: <English>" just above an entry is the English it was translated from; any other
-    // # line is a comment; \n is a line break. .csv is key,value,english with the separator of its header line (, ; or a
-    // tab: European Excel saves with ;), quoted as the game's own strings.csv. In one folder a .txt line beats a .csv
-    // line. The language's id is tried, then the part before its first - or _ (pt-br: pt), then the English in the code.
+    // Its columns are key,value,english (a note after them, the English template's context, is not read), the separator
+    // that of its header line (, ; or a tab: European Excel saves with ;), quoted as the game's own strings.csv (a field
+    // in quotes may hold the separator, line breaks and "" for a quote). The language's id is tried, then the part before
+    // its first - or _ (pt-br: pt), then the English in the code.
     // A line whose recorded English isn't the code's any more shows the English until it is translated again; a line
     // left out or empty shows the English. The cfg never changes language: BepInEx writes the descriptions Bind got, in
     // Awake, before any language.
@@ -235,7 +235,6 @@ namespace GK2DonkeyAPI
             {
                 foreach (string dir in folders)
                 {
-                    ReadTxt(Path.Combine(dir, id + ".txt"), t);
                     ReadCsv(Path.Combine(dir, id + ".csv"), t);
                 }
             }
@@ -295,52 +294,8 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        // "key = text" lines (the header's note on the format). A line already read (from a file before) is kept.
-        internal static void ReadTxt(string path, Table t)
-        {
-            if (!File.Exists(path)) return;
-            string[] lines;
-            try
-            {
-                lines = File.ReadAllLines(path, Encoding.UTF8);
-            }
-            catch (Exception e)
-            {
-                Warn(path, 0, "can't be read (" + e.Message + ")");
-                return;
-            }
-            t.Files.Add(path);
-            if (NotUtf8(lines)) Warn(path, 0, "isn't saved as UTF-8: its letters outside English may be wrong (save it as UTF-8)");
-            string english = null;
-            for (int i = 0; i < lines.Length; i++)
-            {
-                string s = lines[i].Trim();
-                if (s.Length == 0)
-                {
-                    english = null;
-                    continue;
-                }
-                if (s[0] == '#')
-                {
-                    string c = s.Substring(1).TrimStart();
-                    if (c.StartsWith("en:", StringComparison.OrdinalIgnoreCase)) english = Unescape(c.Substring(3).Trim());
-                    continue;
-                }
-                int eq = s.IndexOf('=');
-                if (eq <= 0)
-                {
-                    t.Malformed++;
-                    Warn(path, i + 1, "has no \"key = text\"; left out");
-                    english = null;
-                    continue;
-                }
-                string key = s.Substring(0, eq).Trim(), value = Plain(Unescape(s.Substring(eq + 1).Trim()));
-                if (value.Length > 0 && !t.Lines.ContainsKey(key)) t.Lines[key] = new Line { Value = value, English = english, Source = Path.GetFileName(path) + ":" + (i + 1) };
-                english = null;
-            }
-        }
-
-        // key,value,english rows (the header's note on the format). A line already read is kept.
+        // key,value,english rows (the header's note on the format; a fourth column, the template's note, is ignored). A line
+        // already read (from a folder before) is kept.
         internal static void ReadCsv(string path, Table t)
         {
             if (!File.Exists(path)) return;
@@ -382,7 +337,7 @@ namespace GK2DonkeyAPI
                 }
                 string key = f[0].Trim(), value = Plain(f[1].Trim());
                 if (value.IndexOf('\n') >= 0 && value.IndexOf(sep) >= 0) Warn(path, rows[n].Line, "has a quote that seems to swallow the lines after it (a \" in a text is written \"\")");
-                string english = f.Count > 2 && f[2].Trim().Length > 0 ? f[2].Trim() : null; // trimmed as the .txt's: a space after a separator is no part of it
+                string english = f.Count > 2 && f[2].Trim().Length > 0 ? f[2].Trim() : null; // trimmed: a space after a separator is no part of it
                 if (key.Length > 0 && value.Length > 0 && !t.Lines.ContainsKey(key)) t.Lines[key] = new Line { Value = value, English = english, Source = Path.GetFileName(path) + ":" + rows[n].Line };
             }
             if (unclosed) Warn(path, rows.Count > 0 ? rows[rows.Count - 1].Line : line, "has a quote that is never closed: the lines after it are lost (a \" in a text is written \"\")");
@@ -456,14 +411,6 @@ namespace GK2DonkeyAPI
             return end < 0 ? text.Length : end + 1;
         }
 
-        private static bool NotUtf8(string[] lines)
-        {
-            foreach (string l in lines) if (l.IndexOf('�') >= 0) return true;
-            return false;
-        }
-
-        private static string Unescape(string s) => s.Replace("\\n", "\n");
-
         // Our labels draw no rich text (UiKit.Text): the game's own Japanese and Chinese wrap their lines in <nobr>, and a
         // translator copying that habit would see the tags; they are taken out (where a line breaks is TMP's then).
         internal static string Plain(string s)
@@ -476,8 +423,6 @@ namespace GK2DonkeyAPI
             }
             return s;
         }
-
-        private static string Escape(string s) => (s ?? "").Replace("\r", "").Replace("\n", "\\n");
 
         private static readonly HashSet<string> warned = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         internal static bool TestQuiet;      // the self-tests' own broken files: counted, not logged
@@ -636,20 +581,16 @@ namespace GK2DonkeyAPI
                 Plugin.Log.LogInfo($"Translations: {owner} in {lang}: {t.Lines.Count} line(s) read from {string.Join(", ", t.Files)}{use}{(t.Malformed > 0 ? $", {t.Malformed} line(s) left out (the warnings say which)" : "")}.");
             }
             if (Plugin.TranslationReport == null || !Plugin.TranslationReport.Value || all.Count == 0 || (todo.Count == 0)) return;
-            var sb = new StringBuilder();
-            sb.Append("# ").Append(NameOf(owner)).Append(" (").Append(owner).Append("): the lines not yet translated into ").Append(lang).Append(", ")
-              .Append(todo.Count).Append(" of ").Append(all.Count).Append(".\n");
-            sb.Append("# Translate them and add them to ").Append(lang).Append(".txt (the README's Translations has where it goes). Keep the keys and the \"# en:\" lines.\n");
+            // the rows still to translate, in the English template's columns: the value to replace, the English, the note
+            // (and, for a line whose English changed, what it was translated as): ready to fill in and add to <lang>.csv
+            var rows = new List<(string Key, string English, string What)>();
             foreach (var x in todo)
             {
-                sb.Append('\n');
-                if (x.What != null) sb.Append("# ").Append(x.What).Append('\n');
-                if (x.Was != null) sb.Append("# changed: the English is new; it was translated as: ").Append(Escape(x.Was)).Append('\n');
-                sb.Append("# en: ").Append(Escape(x.English)).Append('\n');
-                sb.Append(x.Key).Append(" = ").Append(Escape(x.English)).Append('\n');
+                string note = x.Was != null ? "changed: the English is new; it was translated as: " + x.Was + (x.What != null ? " | " + x.What : "") : x.What;
+                rows.Add((x.Key, x.English, note));
             }
-            string path = Path.Combine(Path.Combine(Path.Combine(Paths.BepInExRootPath, "GK2-l10n"), owner), lang + ".missing.txt");
-            if (WriteIfChanged(path, sb.ToString(), bom: false)) Plugin.Log.LogInfo($"Translations: {todo.Count} line(s) of {owner} still to translate into {lang}: written to {path}.");
+            string path = Path.Combine(Path.Combine(Path.Combine(Paths.BepInExRootPath, "GK2-l10n"), owner), lang + ".missing.csv");
+            if (WriteIfChanged(path, EnglishCsv(rows), bom: true)) Plugin.Log.LogInfo($"Translations: {todo.Count} of {all.Count} line(s) of {owner} ({NameOf(owner)}) still to translate into {lang}: written to {path}.");
         }
 
         private static string NameOf(string owner)
@@ -667,9 +608,9 @@ namespace GK2DonkeyAPI
             return owner;
         }
 
-        // A page shown: with the dev tools, the English of every owner written out (BepInEx\GK2-l10n\<owner>\en.txt and
-        // en.csv: the page's, the API's, every mod's and pack's that registered a mount or a skin; tools/l10n-sync.py
-        // copies them into the repository, where they ship as the translators' templates).
+        // A page shown: with the dev tools, the English of every owner written out (BepInEx\GK2-l10n\<owner>\en.csv: the
+        // page's, the API's, every mod's and pack's that registered a mount or a skin; tools/l10n-sync.py copies them into
+        // the repository, where they ship as the translators' templates).
         internal static void Published(MountSettingsPage p)
         {
             if (!DevTools.Unlocked) return;
@@ -683,9 +624,7 @@ namespace GK2DonkeyAPI
                 List<(string Key, string English, string What)> lines = EnglishOf(owner);
                 if (lines.Count == 0) return;
                 string dir = Path.Combine(Path.Combine(Paths.BepInExRootPath, "GK2-l10n"), owner);
-                bool txt = WriteIfChanged(Path.Combine(dir, "en.txt"), EnglishTxt(owner, lines), bom: false);
-                bool csv = WriteIfChanged(Path.Combine(dir, "en.csv"), EnglishCsv(lines), bom: true);
-                if (txt || csv) Plugin.Log.LogInfo($"Translations: {owner}'s English written ({lines.Count} lines) to {dir} (tools/l10n-sync.py takes it into the repository).");
+                if (WriteIfChanged(Path.Combine(dir, "en.csv"), EnglishCsv(lines), bom: true)) Plugin.Log.LogInfo($"Translations: {owner}'s English written ({lines.Count} lines) to {dir} (tools/l10n-sync.py takes it into the repository).");
             }
             catch (Exception e)
             {
@@ -693,31 +632,15 @@ namespace GK2DonkeyAPI
             }
         }
 
-        private static string EnglishTxt(string owner, List<(string Key, string English, string What)> lines)
+        // key,value,english,note: the value is the English to replace, the english column the English it was translated from
+        // (a translation's line whose english isn't the code's any more shows the English), the note where it shows and
+        // what its {0} is (not read back). A BOM and CRLF: Excel opens it as UTF-8.
+        internal static string EnglishCsv(List<(string Key, string English, string What)> lines)
         {
-            var sb = new StringBuilder();
-            sb.Append("# ").Append(NameOf(owner)).Append(" (").Append(owner).Append("): its English, to translate.\n");
-            sb.Append("# Copy this file to <language id>.txt beside it: de.txt, fr.txt, es.txt, pt-br.txt, ru.txt, pl.txt, tr.txt, ja.txt,\n");
-            sb.Append("# zh_cn.txt or ko.txt (the game's own ids). Change the text after each \"=\"; keep the keys and the \"# en:\" lines\n");
-            sb.Append("# (a line whose \"# en:\" isn't the mod's English any more shows in English until it is translated again). A line\n");
-            sb.Append("# left out or left empty shows in English. Keep {0} and {1}: the mod fills them in. \\n is a line break.\n");
-            sb.Append("# Save as UTF-8. The same lines are in en.csv, for a spreadsheet: either file works.\n");
+            var sb = new StringBuilder("key,value,english,note\r\n");
             foreach (var x in lines)
             {
-                sb.Append('\n');
-                if (x.What != null) sb.Append("# ").Append(x.What).Append('\n');
-                sb.Append("# en: ").Append(Escape(x.English)).Append('\n');
-                sb.Append(x.Key).Append(" = ").Append(Escape(x.English)).Append('\n');
-            }
-            return sb.ToString();
-        }
-
-        private static string EnglishCsv(List<(string Key, string English, string What)> lines)
-        {
-            var sb = new StringBuilder("key,value,english\r\n");
-            foreach (var x in lines)
-            {
-                sb.Append(CsvField(x.Key)).Append(',').Append(CsvField(x.English)).Append(',').Append(CsvField(x.English)).Append("\r\n");
+                sb.Append(CsvField(x.Key)).Append(',').Append(CsvField(x.English)).Append(',').Append(CsvField(x.English)).Append(',').Append(CsvField(x.What)).Append("\r\n");
             }
             return sb.ToString();
         }

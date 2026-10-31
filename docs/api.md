@@ -590,17 +590,16 @@ always keeps your English descriptions.
 
 **Where the files go:**
 
-- `Languages/<id>.txt` or `<id>.csv` in your DLL's folder.
-- Or, from a translator's own download, `BepInEx/plugins/<their folder>/Translations/<your GUID>/<id>.*`, which wins
+- `Languages/<id>.csv` in your DLL's folder (CSV only since 2026-11-01).
+- Or, from a translator's own download, `BepInEx/plugins/<their folder>/Translations/<your GUID>/<id>.csv`, which wins
   over yours.
 - `<id>` is the game's language id (`de`, `fr`, `pt-br`, `zh_cn`...), then the part before its `-` or `_`, then your
   English.
 
-**The formats:**
-
-- `.txt`: `key = text` lines, with `# en: <the English it was translated from>` above each.
-- `.csv`: `key,value,english`, the separator from its header line (`,`, `;` or a tab).
-- A line whose recorded English is no longer yours shows your English until it is translated again.
+**The format:** CSV, `key,value,english` and an optional `note` column (not read), the separator from its header
+line (`,`, `;` or a tab), quoted as the game's own `strings.csv` (a quoted field may hold the separator, line breaks
+and `""` for a quote), UTF-8 with or without a BOM. A line whose recorded English is no longer yours shows your English
+until it is translated again.
 
 **Keys:**
 
@@ -619,8 +618,8 @@ always keeps your English descriptions.
   in `Languages/` beside its DLL. The registered English stays the data: `MountInfo.Name`, the logs.
 
 **Your English file:** with the dev tools unlocked, every start writes your English to
-`BepInEx/GK2-l10n/<your GUID>/en.txt` and `en.csv` when a settings page is shown: your page's, and your mounts' and
-skins' when you registered any. Ship those as the translators' templates.
+`BepInEx/GK2-l10n/<your GUID>/en.csv` when a settings page is shown: your page's, and your mounts' and skins' when you
+registered any, each line with a note on where it shows. Ship it as the translators' template.
 
 **Reasons stay English:** `MountResult.Reason` and the refusals your rules give are English text for your code and
 the log. The keeper's bubble shows the API's own reasons in the player's language (found by their English); a reason

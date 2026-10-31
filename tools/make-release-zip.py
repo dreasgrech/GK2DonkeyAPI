@@ -20,7 +20,7 @@ Donkey API inside, and each external pack. Every item is laid out as the game's 
 
     BepInEx/plugins/<Mod>/<Mod>.dll     a folder per plugin (Saddle Up's zip: GK2DonkeyAPI and GK2SaddleUp)
     BepInEx/plugins/<Mod>/Languages/    its translation files, when its source folder has any (docs/localization.md): the
-                                        English templates en.txt and en.csv (tools/l10n-sync.py) and the bundled translations
+                                        English template en.csv (tools/l10n-sync.py) and the bundled translations, CSV only
     modinfo.json                        the Workshop folder only: id (the plugin GUID), name, version for the game's Mods window
 
 The plugin files are the same bytes on both channels (the lab run of 2026-10-30 in the report):
@@ -108,12 +108,12 @@ def source_dir(dll):
 
 
 def languages_of(dll):
-    """The plugin's translation files (Languages/*.txt and *.csv of its source folder), sorted; [] without any."""
+    """The plugin's translation files (Languages/*.csv of its source folder: CSV only since 2026-11-01), sorted; [] without any."""
     src = source_dir(dll)
     folder = os.path.join(src, "Languages") if src else None
     if not folder or not os.path.isdir(folder):
         return []
-    return [os.path.join(folder, n) for n in sorted(os.listdir(folder)) if n.lower().endswith((".txt", ".csv"))]
+    return [os.path.join(folder, n) for n in sorted(os.listdir(folder)) if n.lower().endswith(".csv")]
 
 
 class Item:

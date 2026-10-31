@@ -1,148 +1,148 @@
-﻿key,value,english
-options.done,Done,Done
-options.defaults,Defaults,Defaults
-options.set_back_ask,Set every option in {0} back to its default?,Set every option in {0} back to its default?
-options.set_back,Set back,Set back
-options.cancel,Cancel,Cancel
-options.hint_pad,Move to an option to see what it does.,Move to an option to see what it does.
-options.hint_mouse,Point at an option to see what it does.,Point at an option to see what it does.
-options.press_key_for,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel."
-options.key_how_pad,"Select it, then press the key on the keyboard.","Select it, then press the key on the keyboard."
-options.key_how_mouse,Click it to set the key.,Click it to set the key.
-options.only_in_game,Only in a game.,Only in a game.
-options.not_now,Not available right now.,Not available right now.
-options.and_then,{0} {1},{0} {1}
-options.page_button,{0} options,{0} options
-row.open,Open,Open
-row.go,Go,Go
-row.press_a_key,Press a key...,Press a key...
-row.none,None,None
-key.same_as,Same key as {0},Same key as {0}
-key.clashes_with,Clashes with {0} ({1}),Clashes with {0} ({1})
-row.skin,Skin,Skin
-row.default_skin,Default,Default
-row.no_choice,(none),(none)
-row.babies,Babies,Babies
-row.babies_follow,Babies follow you on foot,Babies follow you on foot
-row.babies_indoors,Babies come indoors,Babies come indoors
-journal.title,Mount Journal,Mount Journal
-journal.search,Search...,Search...
-journal.customize,Customize,Customize
-journal.ride,Ride,Ride
-journal.drive_cart,Drive the cart,Drive the cart
-journal.options,Options,Options
-journal.stats,Stats,Stats
-journal.abilities,Abilities,Abilities
-journal.stat_speed,Speed,Speed
-journal.stat_cargo,Cargo,Cargo
-journal.stat_skins,Skins,Skins
-journal.stat_status,Status,Status
-journal.no_cart,No cart,No cart
-journal.cargo_of,{0} of {1},{0} of {1}
-journal.flying,Flying,Flying
-journal.flying_line,It lands wherever you can stand.,It lands wherever you can stand.
-journal.cargo_cart,Cargo cart,Cargo cart
-journal.cargo_cart_line,Pulls a cart (cargo {0}).,Pulls a cart (cargo {0}).
-journal.not_installed,Not installed,Not installed
-journal.name_not_installed,{0} (not installed),{0} (not installed)
-journal.name_set_aside,{0} (set aside),{0} (set aside)
-journal.missing_note,"The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.","The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back."
-journal.gone_note,"Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.","Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
-journal.aside_note,"Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.","Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead."
-journal.no_skin_note,"It has no skin to wear. Your choice is kept; the donkey comes instead.","It has no skin to wear. Your choice is kept; the donkey comes instead."
-journal.waiting_skins,"Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.","Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it."
-mount.donkey.name,Donkey,Donkey
-mount.donkey.description,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.","The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each."
-colours.title,Colours: {0},Colours: {0}
-colours.title_skin,{0} - {1},{0} - {1}
-speed.very_slow,Very slow,Very slow
-speed.slow,Slow,Slow
-speed.normal,Normal,Normal
-speed.fast,Fast,Fast
-speed.very_fast,Very fast,Very fast
-prompt.ride,Ride,Ride
-prompt.ride_named,Ride {0},Ride {0}
-prompt.hitch,Hitch the cart,Hitch the cart
-prompt.load,Load on cart,Load on cart
-prompt.cart_full,Cart is full,Cart is full
-prompt.take,Take from cart,Take from cart
-prompt.set_down,Set down,Set down
-prompt.load_chest,Load onto the cart,Load onto the cart
-notice.crossroads,The donkey left a body at the crossroads,The donkey left a body at the crossroads
-say.not_in_game,Not in a game.,Not in a game.
-say.still_loading,Not yet: the game is still loading.,Not yet: the game is still loading.
-say.already_mounted,Already mounted.,Already mounted.
-say.nowhere_to_be_found,Your mount is nowhere to be found.,Your mount is nowhere to be found.
-say.not_in_coop_game,Not in a co-op game.,Not in a co-op game.
-say.not_right_now,Not right now.,Not right now.
-say.not_indoors,Not indoors.,Not indoors.
-say.busy,I'm busy.,I'm busy.
-say.not_while_building,Not while building.,Not while building.
-say.no_such_animal,There is no such animal ({0}).,There is no such animal ({0}).
-say.cant_ride_a,Can't ride a {0}: {1},Can't ride a {0}: {1}
-say.side_town_quality,it would change the town quality in the save.,it would change the town quality in the save.
-say.side_npc_group,it belongs to an NPC group the save keeps track of.,it belongs to an NPC group the save keeps track of.
-say.side_start_items,"it comes with items, which the cart would create out of nothing.","it comes with items, which the cart would create out of nothing."
-say.cart_without_mount,That is a cart without a mount.,That is a cart without a mount.
-say.too_small_to_ride,This one is too small to ride.,This one is too small to ride.
-say.not_here_now,It isn't here right now.,It isn't here right now.
-say.it_is_gone,It is gone.,It is gone.
-say.not_cart_in_fight,Not the cart in a fight.,Not the cart in a fight.
-say.not_cart_indoors,Not the cart indoors.,Not the cart indoors.
-say.cant_pull_the_cart,{0} can't pull the cart.,{0} can't pull the cart.
-say.too_much_on_cart,Too much on the cart ({0} of at most {1}). Take some off first.,Too much on the cart ({0} of at most {1}). Take some off first.
-say.no_cart_here_ride_up,"This {0} has no cart here; ride it up to one.","This {0} has no cart here; ride it up to one."
-say.already_pulls_cart,This {0} already pulls a cart.,This {0} already pulls a cart.
-say.cant_pull_a_cart,This one can't pull a cart.,This one can't pull a cart.
-say.not_a_free_cart,That is not a free cart.,That is not a free cart.
-say.cart_elsewhere,The cart is somewhere else.,The cart is somewhere else.
-say.scene_not_loaded,Not while the scene is not loaded.,Not while the scene is not loaded.
-say.cant_get_to_cart,I can't get to that cart from here.,I can't get to that cart from here.
-say.no_cart_to_leave,No cart to leave.,No cart to leave.
-say.cart_cant_stand,The cart can't stand here.,The cart can't stand here.
-say.cart_not_left_where_stands,The cart could not be left where it stands.,The cart could not be left where it stands.
-say.cart_not_left_here,The cart could not be left here.,The cart could not be left here.
-say.no_cart_here,No cart here.,No cart here.
-say.has_no_cart,It has no cart.,It has no cart.
-say.cart_not_here,The cart is not here.,The cart is not here.
-say.nothing_in_hand,Nothing in hand.,Nothing in hand.
-say.cart_takes_nothing,The cart takes nothing now.,The cart takes nothing now.
-say.cart_cant_take,The cart can't take that.,The cart can't take that.
-say.cart_full,The cart is full.,The cart is full.
-say.no_keeper,No keeper.,No keeper.
-say.cart_gives_nothing,The cart gives nothing now.,The cart gives nothing now.
-say.cart_empty,The cart is empty.,The cart is empty.
-say.hands_full,My hands are full.,My hands are full.
-say.wont_come_off,It won't come off the cart.,It won't come off the cart.
-say.not_while_riding,Not while riding.,Not while riding.
-say.ridden_pickups,Ridden: pickups go onto the cart already.,Ridden: pickups go onto the cart already.
-say.chest_off,The chest on the cart is off for now (see the log).,The chest on the cart is off for now (see the log).
-say.chests_dont_ride,Chests don't ride on the cart.,Chests don't ride on the cart.
-say.needs_the_cart,That needs the cart.,That needs the cart.
-say.only_plain_chest,Only a plain storage chest goes on the cart.,Only a plain storage chest goes on the cart.
-say.chest_aboard,There's a chest on the cart already.,There's a chest on the cart already.
-say.cargo_down_first,Set the cargo down first.,Set the cargo down first.
-say.cant_be_moved,This can't be moved.,This can't be moved.
-say.not_in_coop,Not in co-op.,Not in co-op.
-say.marked_for_taking_down,It's marked for taking down.,It's marked for taking down.
-say.its_busy,It's busy.,It's busy.
-say.attached_to_workbench,It's attached to a workbench.,It's attached to a workbench.
-say.someone_works_at_it,Someone works at it.,Someone works at it.
-say.someone_using_it,Someone is using it right now.,Someone is using it right now.
-say.close_building_window,Close the building window first.,Close the building window first.
-say.zombie_using_chest,A zombie is using this chest.,A zombie is using this chest.
-say.didnt_work,That didn't work.,That didn't work.
-say.no_room_here,There's no room for it here.,There's no room for it here.
-say.cant_reach_spot,I can't reach that spot.,I can't reach that spot.
-say.outside_building_area,That spot is outside any building area.,That spot is outside any building area.
-say.chest_stays,The chest stays by the cart.,The chest stays by the cart.
-say.cant_fly_in_here,Can't fly in here.,Can't fly in here.
-say.cant_fly_now,Can't fly now.,Can't fly now.
-say.nowhere_to_land,Nowhere to land here.,Nowhere to land here.
-say.land_first,Land first.,Land first.
-say.back_on_ground,Back on solid ground.,Back on solid ground.
-say.keeper_not_there,The keeper's body isn't there.,The keeper's body isn't there.
-say.not_now_door,"Not now: a door, a scene or a cutscene has the keeper.","Not now: a door, a scene or a cutscene has the keeper."
-say.no_safe_spot_yet,No safe spot in this scene yet (stand on the ground a moment).,No safe spot in this scene yet (stand on the ground a moment).
-say.no_safe_spot_holds,No safe spot of this scene still holds.,No safe spot of this scene still holds.
-say.no_safe_spot_any_more,No safe spot of this scene holds any more.,No safe spot of this scene holds any more.
+﻿key,value,english,note
+options.done,Done,Done,
+options.defaults,Defaults,Defaults,
+options.set_back_ask,Set every option in {0} back to its default?,Set every option in {0} back to its default?,"the Defaults button's question; {0}: a section's name"
+options.set_back,Set back,Set back,
+options.cancel,Cancel,Cancel,
+options.hint_pad,Move to an option to see what it does.,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,Point at an option to see what it does.,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.","while a key is being set; {0}: the option's name"
+options.key_how_pad,"Select it, then press the key on the keyboard.","Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,Click it to set the key.,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Only in a game.,Only in a game.,after a greyed button's description
+options.not_now,Not available right now.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0} options,{0} options,"the button in the game's Settings window; {0}: the mod's name"
+row.open,Open,Open,a button that opens the Mounts panel
+row.go,Go,Go,a mod's button
+row.press_a_key,Press a key...,Press a key...,a key option while it waits for the key
+row.none,None,None,"a key option with no key; an empty name; no babies"
+key.same_as,Same key as {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Clashes with {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,Skin,Skin,
+row.default_skin,Default,Default,the Skin list: a mount's own look
+row.no_choice,(none),(none),a list with nothing to choose
+row.babies,Babies,Babies,
+row.babies_follow,Babies follow you on foot,Babies follow you on foot,
+row.babies_indoors,Babies come indoors,Babies come indoors,
+journal.title,Mount Journal,Mount Journal,
+journal.search,Search...,Search...,"the search box over the mounts, while empty"
+journal.customize,Customize,Customize,
+journal.ride,Ride,Ride,
+journal.drive_cart,Drive the cart,Drive the cart,
+journal.options,Options,Options,
+journal.stats,Stats,Stats,
+journal.abilities,Abilities,Abilities,
+journal.stat_speed,Speed,Speed,
+journal.stat_cargo,Cargo,Cargo,"the Cargo stat's name; its value is a number (how many things the cart holds)"
+journal.stat_skins,Skins,Skins,
+journal.stat_status,Status,Status,
+journal.no_cart,No cart,No cart,
+journal.cargo_of,{0} of {1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,Flying,Flying,
+journal.flying_line,It lands wherever you can stand.,It lands wherever you can stand.,
+journal.cargo_cart,Cargo cart,Cargo cart,
+journal.cargo_cart_line,Pulls a cart (cargo {0}).,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,Not installed,Not installed,
+journal.name_not_installed,{0} (not installed),{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0} (set aside),{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,"The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.","The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,"Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.","Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.",
+journal.aside_note,"Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.","Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.",
+journal.no_skin_note,"It has no skin to wear. Your choice is kept; the donkey comes instead.","It has no skin to wear. Your choice is kept; the donkey comes instead.",
+journal.waiting_skins,"Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.","Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.","a mount whose skins are installed but not the mount; {0}: the skins' names"
+mount.donkey.name,Donkey,Donkey,
+mount.donkey.description,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.","The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,Colours: {0},Colours: {0},"the colours window's title; {0}: the mount's name"
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,Very slow,Very slow,a mount's speed in the journal's stats
+speed.slow,Slow,Slow,
+speed.normal,Normal,Normal,
+speed.fast,Fast,Fast,
+speed.very_fast,Very fast,Very fast,
+prompt.ride,Ride,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,Ride {0},Ride {0},"on foot by a mount the player named; {0}: the name they gave it"
+prompt.hitch,Hitch the cart,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,Load on cart,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,Cart is full,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,Take from cart,Take from cart,on foot by a cart with something on it
+prompt.set_down,Set down,Set down,the chest riding on the cart
+prompt.load_chest,Load onto the cart,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,The donkey left a body at the crossroads,The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,Not in a game.,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,Not yet: the game is still loading.,Not yet: the game is still loading.,
+say.already_mounted,Already mounted.,Already mounted.,
+say.nowhere_to_be_found,Your mount is nowhere to be found.,Your mount is nowhere to be found.,
+say.not_in_coop_game,Not in a co-op game.,Not in a co-op game.,
+say.not_right_now,Not right now.,Not right now.,
+say.not_indoors,Not indoors.,Not indoors.,
+say.busy,I'm busy.,I'm busy.,
+say.not_while_building,Not while building.,Not while building.,
+say.no_such_animal,There is no such animal ({0}).,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,Can't ride a {0}: {1},Can't ride a {0}: {1},"{0}: the game's id of the animal a setting names; {1}: one of the three sentences below"
+say.side_town_quality,it would change the town quality in the save.,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,it belongs to an NPC group the save keeps track of.,it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,"it comes with items, which the cart would create out of nothing.","it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,That is a cart without a mount.,That is a cart without a mount.,
+say.too_small_to_ride,This one is too small to ride.,This one is too small to ride.,
+say.not_here_now,It isn't here right now.,It isn't here right now.,
+say.it_is_gone,It is gone.,It is gone.,
+say.not_cart_in_fight,Not the cart in a fight.,Not the cart in a fight.,
+say.not_cart_indoors,Not the cart indoors.,Not the cart indoors.,
+say.cant_pull_the_cart,{0} can't pull the cart.,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,Too much on the cart ({0} of at most {1}). Take some off first.,Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,"This {0} has no cart here; ride it up to one.","This {0} has no cart here; ride it up to one.","{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,This {0} already pulls a cart.,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,This one can't pull a cart.,This one can't pull a cart.,
+say.not_a_free_cart,That is not a free cart.,That is not a free cart.,
+say.cart_elsewhere,The cart is somewhere else.,The cart is somewhere else.,
+say.scene_not_loaded,Not while the scene is not loaded.,Not while the scene is not loaded.,
+say.cant_get_to_cart,I can't get to that cart from here.,I can't get to that cart from here.,
+say.no_cart_to_leave,No cart to leave.,No cart to leave.,
+say.cart_cant_stand,The cart can't stand here.,The cart can't stand here.,
+say.cart_not_left_where_stands,The cart could not be left where it stands.,The cart could not be left where it stands.,
+say.cart_not_left_here,The cart could not be left here.,The cart could not be left here.,
+say.no_cart_here,No cart here.,No cart here.,
+say.has_no_cart,It has no cart.,It has no cart.,
+say.cart_not_here,The cart is not here.,The cart is not here.,
+say.nothing_in_hand,Nothing in hand.,Nothing in hand.,
+say.cart_takes_nothing,The cart takes nothing now.,The cart takes nothing now.,
+say.cart_cant_take,The cart can't take that.,The cart can't take that.,
+say.cart_full,The cart is full.,The cart is full.,
+say.no_keeper,No keeper.,No keeper.,
+say.cart_gives_nothing,The cart gives nothing now.,The cart gives nothing now.,
+say.cart_empty,The cart is empty.,The cart is empty.,
+say.hands_full,My hands are full.,My hands are full.,
+say.wont_come_off,It won't come off the cart.,It won't come off the cart.,
+say.not_while_riding,Not while riding.,Not while riding.,
+say.ridden_pickups,Ridden: pickups go onto the cart already.,Ridden: pickups go onto the cart already.,
+say.chest_off,The chest on the cart is off for now (see the log).,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,Chests don't ride on the cart.,Chests don't ride on the cart.,
+say.needs_the_cart,That needs the cart.,That needs the cart.,
+say.only_plain_chest,Only a plain storage chest goes on the cart.,Only a plain storage chest goes on the cart.,
+say.chest_aboard,There's a chest on the cart already.,There's a chest on the cart already.,
+say.cargo_down_first,Set the cargo down first.,Set the cargo down first.,
+say.cant_be_moved,This can't be moved.,This can't be moved.,
+say.not_in_coop,Not in co-op.,Not in co-op.,
+say.marked_for_taking_down,It's marked for taking down.,It's marked for taking down.,
+say.its_busy,It's busy.,It's busy.,
+say.attached_to_workbench,It's attached to a workbench.,It's attached to a workbench.,
+say.someone_works_at_it,Someone works at it.,Someone works at it.,
+say.someone_using_it,Someone is using it right now.,Someone is using it right now.,
+say.close_building_window,Close the building window first.,Close the building window first.,
+say.zombie_using_chest,A zombie is using this chest.,A zombie is using this chest.,
+say.didnt_work,That didn't work.,That didn't work.,
+say.no_room_here,There's no room for it here.,There's no room for it here.,
+say.cant_reach_spot,I can't reach that spot.,I can't reach that spot.,
+say.outside_building_area,That spot is outside any building area.,That spot is outside any building area.,
+say.chest_stays,The chest stays by the cart.,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,Can't fly in here.,Can't fly in here.,
+say.cant_fly_now,Can't fly now.,Can't fly now.,
+say.nowhere_to_land,Nowhere to land here.,Nowhere to land here.,
+say.land_first,Land first.,Land first.,
+say.back_on_ground,Back on solid ground.,Back on solid ground.,
+say.keeper_not_there,The keeper's body isn't there.,The keeper's body isn't there.,
+say.not_now_door,"Not now: a door, a scene or a cutscene has the keeper.","Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,No safe spot in this scene yet (stand on the ground a moment).,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,No safe spot of this scene still holds.,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,No safe spot of this scene holds any more.,No safe spot of this scene holds any more.,

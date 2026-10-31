@@ -43,7 +43,7 @@ manifest verified against the installed game (`tools/DepManifest`), `check-dist.
 included, or in the API DLL's strings, and no pack's name in `src/SaddleUp`), and in `tests/`
 `CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
 `--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game), and
-`tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.txt` and `en.csv` are the English the
+`tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.csv` is the English the
 last dev start wrote, so start the game once with the dev tools after the last text change; and no bubble or prompt
 said with a literal in the API's game code, docs/localization.md). All must
 end green; `FrameworkScan`
@@ -95,7 +95,7 @@ CHANGELOG.md, raised there when the pack changed): each its own Nexus file. Ther
 2026-10-27: "ill ship individuals").
 
 **The translations** (docs/localization.md): each item carries its plugin's `Languages/` beside the DLL
-(`BepInEx/plugins/<Mod>/Languages/`: the English templates `en.txt` and `en.csv`, and every translation that ships),
+(`BepInEx/plugins/<Mod>/Languages/`: the English template `en.csv` and every translation that ships, CSV only),
 taken from the source folder's `Languages/` in the working tree, so the zip refuses while any of them is uncommitted.
 A translation added between releases is a change like any other: `release-versions.py check` notes a kept item whose
 `Languages/` differs from its released zip's ("raise its version to ship them"), and the release rule writes no zip

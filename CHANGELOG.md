@@ -19,15 +19,15 @@ For players:
   the Mount Journal." The key itself (L, cfg key MountsKey) is unchanged.
 - **Translations, step 1** (2026-10-31; a player asked for an English file to translate): the options window, the
   Mount Journal and its colours window are drawn in the game's language when a translation is installed. Each mod
-  ships its English as `Languages\en.txt` (and `en.csv` for a spreadsheet) beside its DLL; a translator copies it to
-  `de.txt`, `fr.txt`, ... (the game's language ids). A line not translated, or whose English changed since, shows in
+  ships its English as a spreadsheet file, `Languages\en.csv`, beside its DLL; a translator copies it to `de.csv`,
+  `fr.csv`, ... (the game's language ids) and changes its value column. A line not translated, or whose English changed since, shows in
   English. The README's Translations says how; `[Translations] Report` (the API's cfg) writes the lines still to
   translate. No translation ships yet.
 - **Translations, steps 2 and 3** (2026-11-01): the keeper's thought bubbles (why something can't be done), the
   prompts on foot ("Ride", "Hitch the cart", "Load on cart", "Take from cart", the chest's two), the crossroads
   notification (while it is still the shipped text) and the mounts' and skins' names and descriptions (the journal,
-  the Skin list, the colours window's title) are translatable too: the API's in its `en.txt`, Saddle Up's Gerry in
-  Saddle Up's, each pack's mounts and skins in the pack's own `Languages\en.txt`. Key names stay English.
+  the Skin list, the colours window's title) are translatable too: the API's in its `en.csv`, Saddle Up's Gerry in
+  Saddle Up's, each pack's mounts and skins in the pack's own `Languages\en.csv`. Key names stay English.
 - **Four sentences say it differently**, so that every language can say them (2026-11-01, the user's yes):
   - the journal's Cargo is a number ("4", or "2 of 4" while a mod limits the cart), and the Cargo cart ability reads
     "Pulls a cart (cargo 4)." (no more "1 items");
@@ -44,7 +44,7 @@ For players:
 
 For mod authors:
 
-- **A settings page is translatable** (2026-10-31; docs/api.md "Translations"): `Languages/<id>.txt` or `.csv` beside
+- **A settings page is translatable** (2026-10-31; docs/api.md "Translations"): `Languages/<id>.csv` beside
   the DLL (or a translator's `BepInEx/plugins/<folder>/Translations/<GUID>/`), keyed by the row's cfg key without its
   mount or skin part (`.label`, `.desc`, `.choice.<i>`, `.button`), `section.<slug>`, `page.title`; looked up when
   drawn; the English passed to the page stays the source and the cfg's. No public API change.
@@ -94,7 +94,7 @@ Development:
   - One test session collects every measurement still open (the user: "collecting as much data as possible when
     testing so we don't do one thing at a time"):
     - the windows scenario measures the room in English, then in the test language, with the descriptions;
-    - `TranslationTests.German` ships a German translation (a `de.txt` with a stale line, a `;`-saved `de.csv`) and
+    - `TranslationTests.German` ships a German translation (a `de.csv` with a stale line, a `;`-saved `de.csv`) and
       reads the windows back;
     - `TranslationTests.Fonts` switches the game through every language (not saved, the player's own back) and
       records our windows' font against the game style's, with the characters of each language's own words
@@ -107,6 +107,15 @@ Development:
   - The font our windows read: the Settings row's text style is applied for the language now before its font is
     copied (the game restyles only open windows on a language switch, so a closed Settings window could hold the
     last language's font).
+- **Translations: CSV only** (2026-11-01; the user: "scrap the txt files and lets stick to csv only. less to
+  maintain."): `Texts` reads `<id>.csv` alone (the `.txt` reader, its `# en:` comments and `\n` escapes gone); the
+  English template is `en.csv` alone, with a fourth column, `note` (the context the `.txt`'s comments carried: where a
+  text shows, what its `{0}` is; the reader ignores it); the translators' report is `<id>.missing.csv` in the same
+  columns. `DeployToGame.targets`, `make-release-zip.py`, `release-versions.py` and `l10n-sync.py` (which names a
+  `.txt` left in a `Languages/` folder as not read) take `.csv` only. The repository's `en.csv` were made from the
+  `en.txt` beside them before those went (the next dev start's `--check` compares with the code's). Self-tests: the
+  files' fixtures are three CSVs (commas with the note column, tabs, `;` with a BOM) and the API's template copied as a
+  `de.csv` reads back as a whole translation; the German, bubbles and names tests write `de.csv`.
 - **Translations, steps 2 and 3 built** (2026-11-01; the user: "lets do a lot so we get this translation finished
   and ready"; docs/localization.md section 8):
   - `UiWords`: `Term` (owner, key, English) under `Word`; the keeper's 71 fixed sentences and 6 templates

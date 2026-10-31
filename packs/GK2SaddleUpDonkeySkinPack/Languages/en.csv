@@ -1,4 +1,4 @@
-﻿key,value,english
-skin.donkey/saddleup-donkey-skins.armored.name,Armored,Armored
-skin.donkey/saddleup-donkey-skins.hellfire.name,Hellfire,Hellfire
-skin.donkey/saddleup-donkey-skins.royal-parade.name,Royal Parade,Royal Parade
+﻿key,value,english,note
+skin.donkey/saddleup-donkey-skins.armored.name,Armored,Armored,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.hellfire.name,Hellfire,Hellfire,"a skin's name (the Skin list, the colours window's title)"
+skin.donkey/saddleup-donkey-skins.royal-parade.name,Royal Parade,Royal Parade,"a skin's name (the Skin list, the colours window's title)"

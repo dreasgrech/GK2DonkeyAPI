@@ -269,6 +269,10 @@ English. The crossroads notification already goes through the game's lookup with
 
 ### D2. The file format: the data (the user asked for more data, 2026-10-31)
 
+**Decided again 2026-11-01 (the user): CSV only.** "Scrap the txt files and lets stick to csv only. less to
+maintain." Built step 1 shipped and read both (below); since then the mod reads `<id>.csv` alone and ships `en.csv`
+alone, with a fourth column, `note`, for the context the `.txt`'s comments carried. The data below is kept as it was.
+
 **Four candidates**, shown with the same two lines translated into German:
 
 - **The game's CSV** (`strings.csv`), plus a third column for the English:
@@ -537,6 +541,8 @@ translatable lines like any other, and a translator keeps a name as it is.
    tools to use, and how to send a file.
 
 ## 7. Built: step 1 (2026-10-31)
+
+(Since 2026-11-01 CSV only: the `.txt` reader and `en.txt` are gone, see D2. What follows is step 1 as built.)
 
 The plan was agreed with the user (D1 our own files, D3 both places, the format left to the translator: both
 templates shipped, both read; step 1 = the settings rows and the windows' own words). Built and deployed (API build of

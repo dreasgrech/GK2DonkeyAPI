@@ -1,145 +1,145 @@
-﻿key,value,english
-page.title,GK2 Saddle Up,GK2 Saddle Up
-section.keys,Keys,Keys
-section.mount,Mount,Mount
-section.colours,Colours,Colours
-section.mount_behaviour,Mount Behaviour,Mount Behaviour
-section.cart,Cart,Cart
-section.sound,Sound,Sound
-section.safe_spot,Safe spot,Safe spot
-section.freeplay,Freeplay,Freeplay
-MountsKey.label,Mount Journal,Mount Journal
-MountsKey.desc,"Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours."
-RideKey.label,Ride your mount,Ride your mount
-RideKey.desc,"Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.","Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on."
-CartKey.label,Drive the cart,Drive the cart
-CartKey.desc,"Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.","Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart."
-BellKey.label,Ring the bell,Ring the bell
-BellKey.desc,Rings the bell while you drive the cart.,Rings the bell while you drive the cart.
-CallOutKey.label,Call out,Call out
-CallOutKey.desc,"Your mount calls out while you ride, and its babies answer.","Your mount calls out while you ride, and its babies answer."
-SendAwayKey.label,Send your mount away,Send your mount away
-SendAwayKey.desc,"Sends your mount, its cart and its babies away. The cart's load is put down first.","Sends your mount, its cart and its babies away. The cart's load is put down first."
-JumpKey.label,Jump,Jump
-JumpKey.desc,"Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting.","Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting."
-FlyKey.label,Fly,Fly
-FlyKey.desc,"Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead.","Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead."
-ClimbKey.label,Climb (hold),Climb (hold)
-ClimbKey.desc,Hold it while flying to go up.,Hold it while flying to go up.
-DescendKey.label,Descend (hold),Descend (hold)
-DescendKey.desc,Hold it while flying to go down. You land when you reach the ground.,Hold it while flying to go down. You land when you reach the ground.
-panel.mounts.label,Mounts,Mounts
-panel.mounts.desc,"Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours."
-Name.label,Name,Name
-KeepWithSaves.label,Keep your mount with the save,Keep your mount with the save
-KeepWithSaves.desc,"After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.","After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs."
-Volume.label,Voices volume,Voices volume
-StepsVolume.label,Steps volume,Steps volume
-BabyStepsVolume.label,Baby steps volume,Baby steps volume
-heading.mount_colours.label,Mount colours,Mount colours
-Coat.label,Coat colour,Coat colour
-Coat.choice.0,Game default,Game default
-Coat.choice.1,Brown,Brown
-Coat.choice.2,Dark,Dark
-Coat.choice.3,Cream,Cream
-Coat.choice.4,Black,Black
-Coat.choice.5,Custom,Custom
-CustomCoat.label,Custom coat colour,Custom coat colour
-CustomCoatLightness.label,Custom coat colour: lightness,Custom coat colour: lightness
-Harness.label,Harness colour,Harness colour
-Harness.choice.0,Game default,Game default
-Harness.choice.1,Black,Black
-Harness.choice.2,Red,Red
-Harness.choice.3,Blue,Blue
-Harness.choice.4,Green,Green
-Harness.choice.5,Custom,Custom
-CustomHarness.label,Custom harness colour,Custom harness colour
-CustomHarnessLightness.label,Custom harness colour: lightness,Custom harness colour: lightness
-Muzzle.label,Second tone,Second tone
-Muzzle.choice.0,Game default,Game default
-Muzzle.choice.1,Pale,Pale
-Muzzle.choice.2,Rose,Rose
-Muzzle.choice.3,Brown,Brown
-Muzzle.choice.4,Green,Green
-Muzzle.choice.5,Blue,Blue
-Muzzle.choice.6,Dark,Dark
-Muzzle.choice.7,Custom,Custom
-CustomMuzzle.label,Custom second tone,Custom second tone
-CustomMuzzleLightness.label,Custom second tone: lightness,Custom second tone: lightness
-heading.cart_colours.label,Cart colours,Cart colours
-Paint.label,Paint,Paint
-Paint.choice.0,Game default,Game default
-Paint.choice.1,Dark wood,Dark wood
-Paint.choice.2,Red,Red
-Paint.choice.3,Green,Green
-Paint.choice.4,Blue,Blue
-Paint.choice.5,Custom,Custom
-CustomPaint.label,Custom paint,Custom paint
-CustomPaintLightness.label,Custom paint: lightness,Custom paint: lightness
-Wheels.label,Wheel colour,Wheel colour
-Wheels.choice.0,Game default,Game default
-Wheels.choice.1,Dark wood,Dark wood
-Wheels.choice.2,Red,Red
-Wheels.choice.3,Green,Green
-Wheels.choice.4,Blue,Blue
-Wheels.choice.5,Black,Black
-Wheels.choice.6,Custom,Custom
-CustomWheels.label,Custom wheel colour,Custom wheel colour
-CustomWheelsLightness.label,Custom wheel colour: lightness,Custom wheel colour: lightness
-Hubs.label,Wheel hub colour,Wheel hub colour
-Hubs.choice.0,Game default,Game default
-Hubs.choice.1,Black,Black
-Hubs.choice.2,Brass,Brass
-Hubs.choice.3,Silver,Silver
-Hubs.choice.4,Custom,Custom
-CustomHubs.label,Custom wheel hub colour,Custom wheel hub colour
-CustomHubsLightness.label,Custom wheel hub colour: lightness,Custom wheel hub colour: lightness
-LanternColor.label,Lantern light,Lantern light
-LanternColor.choice.0,Warm (game default),Warm (game default)
-LanternColor.choice.1,White,White
-LanternColor.choice.2,Green,Green
-LanternColor.choice.3,Blue,Blue
-LanternColor.choice.4,Custom,Custom
-CustomLantern.label,Custom light,Custom light
-CustomLanternLightness.label,Custom light: lightness,Custom light: lightness
-Lantern.label,Lantern,Lantern
-LanternByDay.label,Lantern lit by day,Lantern lit by day
-ShowMessages.label,Say why you can't get on,Say why you can't get on
-ShowMessages.desc,The keeper says why in a thought bubble.,The keeper says why in a thought bubble.
-IdleShuffle.label,Shuffles while standing,Shuffles while standing
-IdleShuffle.desc,Your mount takes a few slow steps now and then while it waits without its cart.,Your mount takes a few slow steps now and then while it waits without its cart.
-MountIndoors.label,Allow mounting indoors,Allow mounting indoors
-MountIndoors.desc,"Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.","Ride into houses, the church and the morgue. Doors with a loading screen still end the ride."
-CartIndoors.label,Allow mounting with the cart indoors,Allow mounting with the cart indoors
-CartIndoors.desc,"The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.","The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door."
-CargoZombies.label,Zombies ride on the cart,Zombies ride on the cart
-CargoZombies.desc,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.
-CargoChest.label,A storage chest rides on the cart,A storage chest rides on the cart
-CargoChest.desc,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.
-CorpseIntoMorgue.label,Carry the corpse into the morgue,Carry the corpse into the morgue
-CorpseIntoMorgue.desc,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.
-CorpsesAtCrossroads.label,Donkey leaves corpses at the crossroads,Donkey leaves corpses at the crossroads
-CorpsesAtCrossroads.desc,The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.,The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.
-Brays.label,Mount calls,Mount calls
-Brays.desc,"Your mount calls out now and then, and when you get on.","Your mount calls out now and then, and when you get on."
-StandingSounds.label,Standing mounts and babies sound,Standing mounts and babies sound
-StandingSounds.desc,"Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.","Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride."
-FallGuard.label,Bring me back if I fall out of the world,Bring me back if I fall out of the world
-FallGuard.desc,"If you fall out of the world, you are put back on the last ground you stood on.","If you fall out of the world, you are put back on the last ground you stood on."
-ReturnKey.label,Back to the last safe spot,Back to the last safe spot
-ReturnKey.desc,Puts you back on the last ground you stood on. Use it if you get stuck.,Puts you back on the last ground you stood on. Use it if you get stuck.
-button.back_to_the_last_safe_spot.label,Back to the last safe spot,Back to the last safe spot
-button.back_to_the_last_safe_spot.desc,"Puts you back on the last ground you stood on, right now.","Puts you back on the last ground you stood on, right now."
-MaxCargo.label,All mounts carry max cargo,All mounts carry max cargo
-MaxCargo.desc,"Every mount that pulls a cart carries 6 items, whatever its own cargo.","Every mount that pulls a cart carries 6 items, whatever its own cargo."
-SameSpeed.label,All mounts have the same speed,All mounts have the same speed
-SameSpeed.desc,"Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always.","Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always."
-Speed.label,Speed of every mount,Speed of every mount
-Speed.desc,Normal is the donkey's speed.,Normal is the donkey's speed.
-Speed.choice.0,Very slow,Very slow
-Speed.choice.1,Slow,Slow
-Speed.choice.2,Normal,Normal
-Speed.choice.3,Fast,Fast
-Speed.choice.4,Very fast,Very fast
-mount.saddleup.gerry.name,Gerry,Gerry
-mount.saddleup.gerry.description,"The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.","The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way."
+﻿key,value,english,note
+page.title,GK2 Saddle Up,GK2 Saddle Up,the page's title: the options window's title and the Settings window's button
+section.keys,Keys,Keys,a section
+section.mount,Mount,Mount,a section
+section.colours,Colours,Colours,a section
+section.mount_behaviour,Mount Behaviour,Mount Behaviour,a section
+section.cart,Cart,Cart,a section
+section.sound,Sound,Sound,a section
+section.safe_spot,Safe spot,Safe spot,a section
+section.freeplay,Freeplay,Freeplay,a section
+MountsKey.label,Mount Journal,Mount Journal,"Keys, a key"
+MountsKey.desc,"Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Keys, a key: its description"
+RideKey.label,Ride your mount,Ride your mount,"Keys, a key"
+RideKey.desc,"Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.","Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.","Keys, a key: its description"
+CartKey.label,Drive the cart,Drive the cart,"Keys, a key"
+CartKey.desc,"Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.","Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart.","Keys, a key: its description"
+BellKey.label,Ring the bell,Ring the bell,"Keys, a key"
+BellKey.desc,Rings the bell while you drive the cart.,Rings the bell while you drive the cart.,"Keys, a key: its description"
+CallOutKey.label,Call out,Call out,"Keys, a key"
+CallOutKey.desc,"Your mount calls out while you ride, and its babies answer.","Your mount calls out while you ride, and its babies answer.","Keys, a key: its description"
+SendAwayKey.label,Send your mount away,Send your mount away,"Keys, a key"
+SendAwayKey.desc,"Sends your mount, its cart and its babies away. The cart's load is put down first.","Sends your mount, its cart and its babies away. The cart's load is put down first.","Keys, a key: its description"
+JumpKey.label,Jump,Jump,"Keys, a key"
+JumpKey.desc,"Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting.","Your mount jumps while you ride. Hold the key to jump higher. In a fight, Space attacks instead, so set another key if you want to jump while fighting.","Keys, a key: its description"
+FlyKey.label,Fly,Fly,"Keys, a key"
+FlyKey.desc,"Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead.","Takes off on a mount that can fly. Press it again while flying to land. If it shares the Jump key, jump first and press it in the air to take off. In a fight, Space attacks instead.","Keys, a key: its description"
+ClimbKey.label,Climb (hold),Climb (hold),"Keys, a key"
+ClimbKey.desc,Hold it while flying to go up.,Hold it while flying to go up.,"Keys, a key: its description"
+DescendKey.label,Descend (hold),Descend (hold),"Keys, a key"
+DescendKey.desc,Hold it while flying to go down. You land when you reach the ground.,Hold it while flying to go down. You land when you reach the ground.,"Keys, a key: its description"
+panel.mounts.label,Mounts,Mounts,"Mount, a button"
+panel.mounts.desc,"Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.","Mount, a button: its description"
+Name.label,Name,Name,"Mount, a text box"
+KeepWithSaves.label,Keep your mount with the save,Keep your mount with the save,"Mount, a switch"
+KeepWithSaves.desc,"After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.","After you load a game, your mount and cart are where you left them, with their load. They are kept in a small file next to each save, which Steam Cloud syncs.","Mount, a switch: its description"
+Volume.label,Voices volume,Voices volume,"Mount, a slider"
+StepsVolume.label,Steps volume,Steps volume,"Mount, a slider"
+BabyStepsVolume.label,Baby steps volume,Baby steps volume,"Mount, a slider"
+heading.mount_colours.label,Mount colours,Mount colours,"Colours, a heading"
+Coat.label,Coat colour,Coat colour,"Colours, a choice"
+Coat.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Coat.choice.1,Brown,Brown,"Colours, a choice: a choice"
+Coat.choice.2,Dark,Dark,"Colours, a choice: a choice"
+Coat.choice.3,Cream,Cream,"Colours, a choice: a choice"
+Coat.choice.4,Black,Black,"Colours, a choice: a choice"
+Coat.choice.5,Custom,Custom,"Colours, a choice: a choice"
+CustomCoat.label,Custom coat colour,Custom coat colour,"Colours, a choice"
+CustomCoatLightness.label,Custom coat colour: lightness,Custom coat colour: lightness,"Colours, a slider"
+Harness.label,Harness colour,Harness colour,"Colours, a choice"
+Harness.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Harness.choice.1,Black,Black,"Colours, a choice: a choice"
+Harness.choice.2,Red,Red,"Colours, a choice: a choice"
+Harness.choice.3,Blue,Blue,"Colours, a choice: a choice"
+Harness.choice.4,Green,Green,"Colours, a choice: a choice"
+Harness.choice.5,Custom,Custom,"Colours, a choice: a choice"
+CustomHarness.label,Custom harness colour,Custom harness colour,"Colours, a choice"
+CustomHarnessLightness.label,Custom harness colour: lightness,Custom harness colour: lightness,"Colours, a slider"
+Muzzle.label,Second tone,Second tone,"Colours, a choice"
+Muzzle.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Muzzle.choice.1,Pale,Pale,"Colours, a choice: a choice"
+Muzzle.choice.2,Rose,Rose,"Colours, a choice: a choice"
+Muzzle.choice.3,Brown,Brown,"Colours, a choice: a choice"
+Muzzle.choice.4,Green,Green,"Colours, a choice: a choice"
+Muzzle.choice.5,Blue,Blue,"Colours, a choice: a choice"
+Muzzle.choice.6,Dark,Dark,"Colours, a choice: a choice"
+Muzzle.choice.7,Custom,Custom,"Colours, a choice: a choice"
+CustomMuzzle.label,Custom second tone,Custom second tone,"Colours, a choice"
+CustomMuzzleLightness.label,Custom second tone: lightness,Custom second tone: lightness,"Colours, a slider"
+heading.cart_colours.label,Cart colours,Cart colours,"Colours, a heading"
+Paint.label,Paint,Paint,"Colours, a choice"
+Paint.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Paint.choice.1,Dark wood,Dark wood,"Colours, a choice: a choice"
+Paint.choice.2,Red,Red,"Colours, a choice: a choice"
+Paint.choice.3,Green,Green,"Colours, a choice: a choice"
+Paint.choice.4,Blue,Blue,"Colours, a choice: a choice"
+Paint.choice.5,Custom,Custom,"Colours, a choice: a choice"
+CustomPaint.label,Custom paint,Custom paint,"Colours, a choice"
+CustomPaintLightness.label,Custom paint: lightness,Custom paint: lightness,"Colours, a slider"
+Wheels.label,Wheel colour,Wheel colour,"Colours, a choice"
+Wheels.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Wheels.choice.1,Dark wood,Dark wood,"Colours, a choice: a choice"
+Wheels.choice.2,Red,Red,"Colours, a choice: a choice"
+Wheels.choice.3,Green,Green,"Colours, a choice: a choice"
+Wheels.choice.4,Blue,Blue,"Colours, a choice: a choice"
+Wheels.choice.5,Black,Black,"Colours, a choice: a choice"
+Wheels.choice.6,Custom,Custom,"Colours, a choice: a choice"
+CustomWheels.label,Custom wheel colour,Custom wheel colour,"Colours, a choice"
+CustomWheelsLightness.label,Custom wheel colour: lightness,Custom wheel colour: lightness,"Colours, a slider"
+Hubs.label,Wheel hub colour,Wheel hub colour,"Colours, a choice"
+Hubs.choice.0,Game default,Game default,"Colours, a choice: a choice"
+Hubs.choice.1,Black,Black,"Colours, a choice: a choice"
+Hubs.choice.2,Brass,Brass,"Colours, a choice: a choice"
+Hubs.choice.3,Silver,Silver,"Colours, a choice: a choice"
+Hubs.choice.4,Custom,Custom,"Colours, a choice: a choice"
+CustomHubs.label,Custom wheel hub colour,Custom wheel hub colour,"Colours, a choice"
+CustomHubsLightness.label,Custom wheel hub colour: lightness,Custom wheel hub colour: lightness,"Colours, a slider"
+LanternColor.label,Lantern light,Lantern light,"Colours, a choice"
+LanternColor.choice.0,Warm (game default),Warm (game default),"Colours, a choice: a choice"
+LanternColor.choice.1,White,White,"Colours, a choice: a choice"
+LanternColor.choice.2,Green,Green,"Colours, a choice: a choice"
+LanternColor.choice.3,Blue,Blue,"Colours, a choice: a choice"
+LanternColor.choice.4,Custom,Custom,"Colours, a choice: a choice"
+CustomLantern.label,Custom light,Custom light,"Colours, a choice"
+CustomLanternLightness.label,Custom light: lightness,Custom light: lightness,"Colours, a slider"
+Lantern.label,Lantern,Lantern,"Colours, a switch"
+LanternByDay.label,Lantern lit by day,Lantern lit by day,"Colours, a switch"
+ShowMessages.label,Say why you can't get on,Say why you can't get on,"Mount Behaviour, a switch"
+ShowMessages.desc,The keeper says why in a thought bubble.,The keeper says why in a thought bubble.,"Mount Behaviour, a switch: its description"
+IdleShuffle.label,Shuffles while standing,Shuffles while standing,"Mount Behaviour, a switch"
+IdleShuffle.desc,Your mount takes a few slow steps now and then while it waits without its cart.,Your mount takes a few slow steps now and then while it waits without its cart.,"Mount Behaviour, a switch: its description"
+MountIndoors.label,Allow mounting indoors,Allow mounting indoors,"Mount Behaviour, a switch"
+MountIndoors.desc,"Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.","Ride into houses, the church and the morgue. Doors with a loading screen still end the ride.","Mount Behaviour, a switch: its description"
+CartIndoors.label,Allow mounting with the cart indoors,Allow mounting with the cart indoors,"Mount Behaviour, a switch"
+CartIndoors.desc,"The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.","The cart comes inside too. It has no collider indoors, so it rolls through furniture and door frames rather than getting stuck; it only looks odd. When this is off, the cart waits at the door.","Mount Behaviour, a switch: its description"
+CargoZombies.label,Zombies ride on the cart,Zombies ride on the cart,"Cart, a switch"
+CargoZombies.desc,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.,"Cart, a switch: its description"
+CargoChest.label,A storage chest rides on the cart,A storage chest rides on the cart,"Cart, a switch"
+CargoChest.desc,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.,"Cart, a switch: its description"
+CorpseIntoMorgue.label,Carry the corpse into the morgue,Carry the corpse into the morgue,"Cart, a switch"
+CorpseIntoMorgue.desc,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.,"Cart, a switch: its description"
+CorpsesAtCrossroads.label,Donkey leaves corpses at the crossroads,Donkey leaves corpses at the crossroads,"Cart, a switch"
+CorpsesAtCrossroads.desc,The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.,The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.,"Cart, a switch: its description"
+Brays.label,Mount calls,Mount calls,"Sound, a switch"
+Brays.desc,"Your mount calls out now and then, and when you get on.","Your mount calls out now and then, and when you get on.","Sound, a switch: its description"
+StandingSounds.label,Standing mounts and babies sound,Standing mounts and babies sound,"Sound, a switch"
+StandingSounds.desc,"Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.","Parked mounts and babies near you make their sounds too. When this is off, you only hear the mount you ride.","Sound, a switch: its description"
+FallGuard.label,Bring me back if I fall out of the world,Bring me back if I fall out of the world,"Safe spot, a switch"
+FallGuard.desc,"If you fall out of the world, you are put back on the last ground you stood on.","If you fall out of the world, you are put back on the last ground you stood on.","Safe spot, a switch: its description"
+ReturnKey.label,Back to the last safe spot,Back to the last safe spot,"Safe spot, a key"
+ReturnKey.desc,Puts you back on the last ground you stood on. Use it if you get stuck.,Puts you back on the last ground you stood on. Use it if you get stuck.,"Safe spot, a key: its description"
+button.back_to_the_last_safe_spot.label,Back to the last safe spot,Back to the last safe spot,"Safe spot, a button"
+button.back_to_the_last_safe_spot.desc,"Puts you back on the last ground you stood on, right now.","Puts you back on the last ground you stood on, right now.","Safe spot, a button: its description"
+MaxCargo.label,All mounts carry max cargo,All mounts carry max cargo,"Freeplay, a switch"
+MaxCargo.desc,"Every mount that pulls a cart carries 6 items, whatever its own cargo.","Every mount that pulls a cart carries 6 items, whatever its own cargo.","Freeplay, a switch: its description"
+SameSpeed.label,All mounts have the same speed,All mounts have the same speed,"Freeplay, a switch"
+SameSpeed.desc,"Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always.","Every mount, the donkey too, goes at the speed you pick below. With the cart it is slower, as always.","Freeplay, a switch: its description"
+Speed.label,Speed of every mount,Speed of every mount,"Freeplay, a choice"
+Speed.desc,Normal is the donkey's speed.,Normal is the donkey's speed.,"Freeplay, a choice: its description"
+Speed.choice.0,Very slow,Very slow,"Freeplay, a choice: a choice"
+Speed.choice.1,Slow,Slow,"Freeplay, a choice: a choice"
+Speed.choice.2,Normal,Normal,"Freeplay, a choice: a choice"
+Speed.choice.3,Fast,Fast,"Freeplay, a choice: a choice"
+Speed.choice.4,Very fast,Very fast,"Freeplay, a choice: a choice"
+mount.saddleup.gerry.name,Gerry,Gerry,"a mount's name (the Mount Journal; the keeper's bubbles)"
+mount.saddleup.gerry.description,"The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.","The talking skull finally makes himself useful. He hops along on pure opinion, and he has plenty of it to share on the way.",a mount's description in the Mount Journal

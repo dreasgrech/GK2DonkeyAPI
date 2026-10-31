@@ -14,8 +14,8 @@
 - The zip holds the DLL alone in its folder, as Saddle Up's zip does; the README.md and CHANGELOG.md that rode
   beside it in 1.0.0 stay in the repo (the user, 2026-10-29).
 - **Translatable** (2026-11-01; GK2 Donkey API's translations, its docs/localization.md): the pack ships its English
-  as `Languages\en.txt` and `en.csv` beside its DLL: its three skins' names (the Skin list, the colours window's title).
-  A translator copies it to `de.txt`, `fr.txt`, ... (the game's language ids; GK2 Saddle Up's README says how).
+  as `Languages\en.csv` beside its DLL: its three skins' names (the Skin list, the colours window's title).
+  A translator copies it to `de.csv`, `fr.csv`, ... (the game's language ids; GK2 Saddle Up's README says how).
   It shows with a GK2 Donkey API that reads translations (the next release); an older one ignores the folder.
   No code change.
 

@@ -253,7 +253,7 @@ def languages_changed(dll):
     now = {}
     if folder and os.path.isdir(folder):
         for n in sorted(os.listdir(folder)):
-            if n.lower().endswith((".txt", ".csv")):
+            if n.lower().endswith(".csv"):
                 now[n] = open(os.path.join(folder, n), "rb").read().replace(b"\r\n", b"\n")
     zip_name_, shipped = released
     added = [n for n in now if n not in shipped]

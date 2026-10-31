@@ -1,13 +1,13 @@
 """The translators' English templates, from a dev run into the repository (docs/localization.md, "Built").
 
-    python -I tools/l10n-sync.py           # copy BepInEx/GK2-l10n/<guid>/en.txt and en.csv into each plugin's Languages/
+    python -I tools/l10n-sync.py           # copy BepInEx/GK2-l10n/<guid>/en.csv into each plugin's Languages/
     python -I tools/l10n-sync.py --check   # copy nothing; exit 1 when the repository's differ from the last dev run's,
                                            # or when the API's game code says a sentence of its own (below)
 
 A dev run (the dev tools unlocked) writes each plugin's English when a settings page is shown: a page's rows, its
 sections and title, the API's own words (UiWords: the windows, the keeper's bubbles, the prompts on foot), and the
 names and descriptions of the mounts and skins each mod or pack registered (Texts.WriteEnglish, Texts.Owners). The code is the source of the English; these
-files are what translators copy (en.txt for a text editor, en.csv for a spreadsheet), shipped beside the DLL
+files are what translators copy (en.csv, saved as de.csv and so on: CSV only since 2026-11-01), shipped beside the DLL
 (tools/make-release-zip.py, DeployToGame.targets). A plugin's GUID is read from its Plugin.cs (Guid constant) to find
 its source folder: src/GK2DonkeyAPI, src/SaddleUp, packs/<Pack>. Also reports, for every translation in a Languages/
 folder, the keys the English no longer has (left over after a rename: harmless, the game ignores them). Line endings
@@ -23,7 +23,7 @@ import shutil
 import sys
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TEMPLATES = ("en.txt", "en.csv")
+TEMPLATES = ("en.csv",)
 
 
 def game_dir():
@@ -76,25 +76,26 @@ def literals():
     return found
 
 
-def keys_of(path):
-    """The keys of a .txt translation file (key = text lines; # lines are comments)."""
-    keys = []
-    for line in open(path, encoding="utf-8-sig").read().split("\n"):
-        s = line.strip()
-        if s and not s.startswith("#") and "=" in s:
-            keys.append(s.split("=", 1)[0].strip())
-    return keys
-
-
 def csv_keys(path):
-    """The first column of a .csv translation file after its header (enough for the leftover-key report)."""
+    """The keys of a translation CSV (its first column after the header), with the mod's rules: the separator from the
+    header line (, ; or a tab, or Excel's sep= line), quoted fields that may hold it, line breaks and "" (Texts.ReadCsv)."""
+    import csv
+    import io
     text = open(path, encoding="utf-8-sig").read()
     lines = text.split("\n")
-    sep = ";" if lines and lines[0].startswith("key;") else "\t" if lines and lines[0].startswith("key\t") else ","
+    sep = ","
+    if lines and lines[0].lower().startswith("sep=") and len(lines[0].strip()) >= 5:
+        sep = lines[0].strip()[4]
+        text = text.split("\n", 1)[1] if "\n" in text else ""
+    elif lines and lines[0].lower().startswith("key;"):
+        sep = ";"
+    elif lines and lines[0].lower().startswith("key\t"):
+        sep = "\t"
     keys = []
-    for line in lines[1:]:
-        if line.strip() and not line.startswith('"'):
-            keys.append(line.split(sep, 1)[0].strip())
+    for n, row in enumerate(csv.reader(io.StringIO(text), delimiter=sep)):
+        if not row or not row[0].strip() or (n == 0 and row[0].strip().lower() == "key"):
+            continue
+        keys.append(row[0].strip())
     return keys
 
 
@@ -122,9 +123,9 @@ def main():
                 print(f"same     {rel}/{name}")
                 continue
             differ += 1
-            if name == "en.txt":
-                before = set(keys_of(dest)) if old is not None else set()
-                after = set(keys_of(src))
+            if name == "en.csv":
+                before = set(csv_keys(dest)) if old is not None else set()
+                after = set(csv_keys(src))
                 print(f"{'differs' if check else 'copied ':8} {rel}/{name}: {len(after - before)} key(s) added, {len(before - after)} removed"
                       + (", text changed" if before == after else ""))
             else:
@@ -133,14 +134,17 @@ def main():
                 os.makedirs(dest_dir, exist_ok=True)
                 shutil.copyfile(src, dest)
         # the translations' keys the English no longer has
-        en = os.path.join(dest_dir, "en.txt")
+        en = os.path.join(dest_dir, "en.csv")
         if os.path.isfile(en) and os.path.isdir(dest_dir):
-            known = set(keys_of(en))
+            known = set(csv_keys(en))
             for n in sorted(os.listdir(dest_dir)):
-                if n in TEMPLATES or not n.lower().endswith((".txt", ".csv")):
+                if n.lower().endswith(".txt"):
+                    print(f"note     {rel}/{n}: not read (translations are CSV only since 2026-11-01): make it {n[:-4]}.csv")
+                    continue
+                if n in TEMPLATES or not n.lower().endswith(".csv"):
                     continue
                 p = os.path.join(dest_dir, n)
-                ks = keys_of(p) if n.lower().endswith(".txt") else csv_keys(p)
+                ks = csv_keys(p)
                 gone = [k for k in ks if k not in known]
                 if gone:
                     print(f"note     {rel}/{n}: {len(gone)} key(s) the English no longer has (ignored by the mod): {', '.join(gone[:8])}{' ...' if len(gone) > 8 else ''}")
