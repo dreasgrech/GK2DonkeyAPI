@@ -36,6 +36,11 @@ Development:
   loss (`donkey-comes` and `riding-cart` by gifsicle's lossy mode, the colours cycle at 128 colours and two sets of
   three) into `media/workshop/GK2SaddleUp/gallery/`; the rest are 3-10x over even so and stay in the descriptions
   only. `media/README.md` records how each was made.
+- **Square Workshop thumbnails** (2026-10-31, before the items went public; the user: the 16:9 previews had bars in
+  Steam's square tiles): the three `media/workshop/<Item>/Thumbnail.jpg` are square cuts of the original screenshots
+  (1024, the skin pack's 900 at its own pixels; the packs' were 560-wide page pictures scaled up), restaged into
+  `workshop/<Item>/` with `--no-zip` (zips untouched). `tools/workshop-thumbnail.py`: 1024 by default, says when a
+  picture is not square, and `--width` works (its value was taken for a third argument).
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a

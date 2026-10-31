@@ -70,6 +70,18 @@ with the item's YouTube videos for motion in the gallery:
   then `gifsicle -O3` (1,939,938 bytes: two colour sets of three, 0.3 s each; lossy does nothing on flat colours).
 - `cargo-sixitems-cycle.gif` goes up as it is.
 
+**Thumbnails** (`workshop/<Item>/Thumbnail.jpg`, the item's preview, sent by the game's uploader): square, since
+Steam's tiles are square and letterbox anything else (the first, 16:9 ones had bars; the packs' were also their
+560-wide page pictures scaled up). Cut from the screenshot at full size (`tools/crop-shot.py ... --width 0` in
+GK2QOLMods), then `tools/workshop-thumbnail.py <cut> <Item>` (1024 wide; `--width 900` for the skin pack's 900 box,
+so it is not scaled up), 2026-10-31:
+
+| Item | Screenshot, box | Shows |
+|---|---|---|
+| `GK2SaddleUp` | `20261016173738_1.jpg`, box 1197,0-2297,1100 | the keeper riding the donkey, the cart loaded (chest, barrel, log) |
+| `GK2SaddleUpDragonsMountPack` | `20261029172811_1.jpg`, box 1110,66-2350,1306 | the keeper on the path and the dragon (`dragon-keeper.png`'s shot) |
+| `GK2SaddleUpDonkeySkinPack` | `20261028013218_1.jpg`, box 993,115-1893,1015 | the keeper riding the Hellfire donkey, a Hellfire baby (`hellfire-riding.png`'s shot) |
+
 | File | Screenshot, box | Size |
 |---|---|---|
 | `GK2SaddleUp/gallery/Foals.jpg` | `20261014211544_1.jpg`, box 310,140-1645,908 | 1335x768 |

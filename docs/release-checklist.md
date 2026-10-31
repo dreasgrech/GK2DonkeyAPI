@@ -97,7 +97,7 @@ is ignored.
 The same run stages each item for the Steam Workshop in `workshop/<Item>/` (not in git; `--no-workshop` skips it):
 the zip's content as a folder plus `modinfo.json` (id = the plugin GUID, name, version: the game's Mods window shows
 name and version; no zip carries it, nothing reads it in the game folder), `Thumbnail.jpg` (from `media/workshop/<Item>/`, made by
-`tools/workshop-thumbnail.py <picture> <Item>`), `_description.bbcode` (from `media/..._Workshop.txt`, Steam's BBCode;
+`tools/workshop-thumbnail.py <picture> <Item>` from a square cut of a screenshot: Steam's tiles are square), `_description.bbcode` (from `media/..._Workshop.txt`, Steam's BBCode;
 the tool warns while a `{{ }}` placeholder is left, and refuses a text over 8,000 bytes: Steam then fails the whole
 upload, docs/mods-window-and-workshop.md section 12) and `_changenote.txt`
 (`docs/nexus/<name>-<version>-workshop-changenote.txt`, else the Nexus note; the tool stops without one, the

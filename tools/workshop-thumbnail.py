@@ -3,9 +3,12 @@
     python tools/workshop-thumbnail.py <picture> <Item> [--width W] [--nearest]
 
 <Item> is the item's folder name as tools/make-release-zip.py stages it (GK2SaddleUp, GK2SaddleUpDragonsMountPack,
-GK2SaddleUpDonkeySkinPack). The picture is scaled to --width (default 1280; never upscaled above 2x) and written as a
+GK2SaddleUpDonkeySkinPack). The picture is scaled to --width (default 1024; never upscaled above 2x) and written as a
 JPEG under 1 MB (Steam's limit for the preview); --nearest keeps pixel art crisp when it is scaled up by a whole
-number. A 16:9 picture suits Steam's thumbnails best; the tool keeps whatever aspect it is given.
+number. Give it a square picture cut from a full-size screenshot (`tools/crop-shot.py <shot> <box> -o x.png --width 0`
+in GK2QOLMods): Steam shows the preview in square tiles and letterboxes anything else (our first, 16:9 previews had
+bars, 2026-10-31), and a 560-wide page picture scaled up comes out blurred. The tool keeps the aspect it is given and
+says so when it is not square.
 make-release-zip.py copies the file into workshop/<Item>/ as Thumbnail.jpg, which the game's uploader sends as the preview.
 """
 import os
@@ -17,16 +20,19 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    argv = sys.argv[1:]
+    args = [a for k, a in enumerate(argv) if not a.startswith("--") and (k == 0 or argv[k - 1] != "--width")]
     if len(args) != 2:
         sys.exit(__doc__)
-    width = 1280
+    width = 1024
     if "--width" in sys.argv:
         width = int(sys.argv[sys.argv.index("--width") + 1])
     nearest = "--nearest" in sys.argv
     src, item = args
     im = Image.open(src).convert("RGB")
     w, h = im.size
+    if w != h:
+        print(f"note: {w}x{h} is not square; Steam's tiles will show bars")
     scale = width / w
     if scale > 2:
         scale = 2

@@ -167,7 +167,8 @@ Built 2026-10-30 after the lab run (section 9), bundle decided (section 10):
   was at the upload and compared with the Nexus download: byte-identical (sha256 equal, 886,911 bytes). The rebuilt one served the rehearsal of section 11 only.
   The first public zip with `modinfo.json` is the next release's (0.13.2 / API 0.41.2), and the Nexus Install text of
   section 5 goes live with that upload (a 0.13.1 zip in `Mods\Code` is listed by folder name, without a version).
-- `tools/workshop-thumbnail.py`: the preview pictures, `media/workshop/<Item>/Thumbnail.jpg` (under 1 MB).
+- `tools/workshop-thumbnail.py`: the preview pictures, `media/workshop/<Item>/Thumbnail.jpg` (under 1 MB; square,
+  since Steam's tiles letterbox anything else, 2026-10-31).
 - `tools/workshop-gallery.py`: the image gallery's pictures, `media/workshop/<Item>/gallery/<name>.jpg`, cut from
   the Steam screenshots at full size (under 1 MB; uploaded by hand on the item's page; 2026-10-31). The gallery
   takes up to 2 MB a picture: most page GIFs are over it (media/README.md, "Steam Workshop gallery").
