@@ -52,6 +52,10 @@ Development:
   list), paid for by text the page says twice: Gerry's "the journal is also where..." (the L key line), the
   Unsubscribe paragraph's "Your saves still load without it" (Safe for your save), "Gerry the skull" and "subscribed
   like this mod" in the packs intro; 7,971 of 8,000 bytes, restaged (`--no-zip`).
+- **`docs/nexus/saddleup-description.txt` deleted** (2026-10-31; the user): the 2026-10-14 draft of the Saddle Up
+  page, stale since the page texts moved to `media/` (it still said game v1.010 and promised a separate DonkeyAPI
+  page); `docs/nexus/README.md` names the three `media/*_Nexus.txt` texts instead, and the done "Publishing (Nexus
+  Mods)" item left `docs/open-items.md`.
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a

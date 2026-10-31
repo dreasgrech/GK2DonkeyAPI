@@ -548,9 +548,6 @@ closed):
 - **`dist/` at release:** API rebuilt 2026-10-14 18:41 (the hitch event order fix and the rewritten isolate self-test checks; 24 scans green; Saddle Up 0.9.0 of 16:59 unchanged, now named GK2 Saddle Up without the mark; 24 offline scans green, check-dist
   identical manifest, 692 entries) ([release-checklist.md](release-checklist.md)); the QOL repo's dist is current (03:02).
   Rebuild again after any change. The player rehearsal (checklist §5) has not been run on this dist.
-- **Publishing (Nexus Mods):** the page description is drafted in [nexus/saddleup-description.txt](nexus/saddleup-description.txt)
-  (2026-10-14, notes in `nexus/README.md`): 15 `{{ }}` placeholders for screenshots, GIFs, a trailer and the repo URL.
-  Open: the user's review of the text, the media, the zip layout (both DLLs + a short readme), the GitHub repo URL.
 - **The herd test mod** (`examples/GK2DonkeyHerd`) still polls its own keys and clears its tuning in `OnDestroy`;
   it could use the API's key actions instead.
 - **Earlier showcase tests:** zombie, scene-door and save-while-mounted tests, and the persistence check J8

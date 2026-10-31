@@ -1,7 +1,13 @@
 # Nexus Mods page
 
-`saddleup-description.txt` is the mod page's description for Nexus Mods (game `graveyardkeeper2`), in Nexus's
-BBCode. Paste it into the description editor's BBCode view as it is. Written 2026-10-14 for Saddle Up 0.9.0 / API 0.29.0.
+The page descriptions for Nexus Mods (game `graveyardkeeper2`), in Nexus's BBCode, are in `media/`:
+`media/GK2_DonkeyAPISaddleUp_Nexus.txt` (Saddle Up, mods/391),
+`media/dragons-mount-pack/GK2_DonkeyAPISaddleUp_DragonsMountPack_Nexus.txt` (mods/420) and
+`media/donkey-skin-pack/GK2_DonkeyAPISaddleUp_DonkeySkinPack_Nexus.txt` (mods/419). Paste one whole into the
+description editor's BBCode view. The Steam Workshop texts sit next to them (`*_Workshop.txt`, Steam's BBCode).
+This folder keeps the release notes: `<name>-<version>-changelog.md` for Nexus and
+`<name>-<version>-workshop-changenote.txt` for the Workshop. The first draft (2026-10-14, Saddle Up 0.9.0) was
+`saddleup-description.txt` here; the texts moved to `media/` on 2026-10-29 and the old copy was deleted on 2026-10-31.
 
 **Media** lives in the repo's `media/` folder (its README lists the files by subject), hotlinked by raw GitHub URL;
 the same files serve every other page too.
