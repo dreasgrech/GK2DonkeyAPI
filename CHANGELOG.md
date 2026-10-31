@@ -44,6 +44,9 @@ Development:
 - **The packs' "The Saddle Up mod" section** (2026-10-31; the user): the Dragons and Donkey Skin pages, Workshop and
   Nexus, say the pack needs GK2 Saddle Up and that Saddle Up gives you the donkey mount, and show `riding-cart.gif`
   there; both Workshop folders restaged (`--no-zip`).
+- **Settings pictures on the Saddle Up Workshop page** (2026-10-31; the user): `settings-button.png` and
+  `options-window.png` under Settings, as on Nexus, paid for by the Install section's first line (step 1 says the
+  same: nothing to copy, no BepInEx to install); 7,927 of Steam's 8,000 bytes, restaged (`--no-zip`).
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a

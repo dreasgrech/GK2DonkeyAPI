@@ -81,10 +81,12 @@ All keys can be changed. You get off by yourself for work, ladders, fishing, sle
 
 In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mount Journal (L) has an [b]Options[/b] button too. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
 
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings-button.png?v=2[/img]
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/options-window.png?v=2[/img]
+
 [hr][/hr]
 [h2]Install[/h2]
-
-[b]A BepInEx plugin.[/b] The game ships BepInEx and installs the plugin itself; nothing to copy.
 
 [olist]
 [*]Subscribe. The game installs the mod itself: on the next start the main menu's [b]Mods[/b] window lists GK2 Saddle Up with its version and an Enable/Disable switch. Nothing to copy, no BepInEx to install (the game ships it since 1.011).
