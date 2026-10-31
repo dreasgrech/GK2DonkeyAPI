@@ -56,7 +56,19 @@ subject cut at the screenshot's own pixels, never scaled: `python tools/workshop
 the game (2560x1440, `userdata\<account>\760\remote\4358690\screenshots\`), found again by matching each page
 picture against them: the boxes of the pack pictures are their READMEs' (an exact match), the 2026-10-14/15
 Saddle Up ones were cut by hand at full size and found at their own scale in their first commit. Same subjects as the
-page pictures of the same name; the GIFs stay as they are.
+page pictures of the same name.
+
+The gallery takes up to 2 MB a picture (the user, 2026-10-31), and the page GIFs are 2.8 to 19 MB but the cargo
+cycle's 1.1 MB: a following camera changes every pixel every frame, so 2 MB holds 1.5 to 3 s of one at 560 wide.
+gifsicle's lossy mode saved 10-40% on them, fewer colours 15-30%. Three fit with little loss, made from the page
+GIFs (gifsicle 1.97, the Windows build linked from lcdf.org/gifsicle; ffmpeg); the others stay in the descriptions,
+with the item's YouTube videos for motion in the gallery:
+
+- `GK2SaddleUp/gallery/donkey-comes.gif`: `gifsicle -O3 --lossy=150` (1,933,789 bytes, every frame).
+- `GK2SaddleUp/gallery/riding-cart.gif`: `gifsicle -O3 --lossy=200` (1,899,777 bytes, every frame).
+- `GK2SaddleUp/gallery/donkey-cart-colors-cycle.gif`: ffmpeg `fps=10/3`, 128 colours, `paletteuse=dither=none`,
+  then `gifsicle -O3` (1,939,938 bytes: two colour sets of three, 0.3 s each; lossy does nothing on flat colours).
+- `cargo-sixitems-cycle.gif` goes up as it is.
 
 | File | Screenshot, box | Size |
 |---|---|---|

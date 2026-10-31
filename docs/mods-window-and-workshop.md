@@ -169,7 +169,8 @@ Built 2026-10-30 after the lab run (section 9), bundle decided (section 10):
   section 5 goes live with that upload (a 0.13.1 zip in `Mods\Code` is listed by folder name, without a version).
 - `tools/workshop-thumbnail.py`: the preview pictures, `media/workshop/<Item>/Thumbnail.jpg` (under 1 MB).
 - `tools/workshop-gallery.py`: the image gallery's pictures, `media/workshop/<Item>/gallery/<name>.jpg`, cut from
-  the Steam screenshots at full size (under 1 MB; uploaded by hand on the item's page; 2026-10-31).
+  the Steam screenshots at full size (under 1 MB; uploaded by hand on the item's page; 2026-10-31). The gallery
+  takes up to 2 MB a picture: most page GIFs are over it (media/README.md, "Steam Workshop gallery").
 - `media/*_Workshop.txt`: the three items' descriptions in Steam's BBCode (h1-h3, b, i, url, img, olist, hr; a
   bare YouTube link makes the widget), each with a subscription Install section, the Deck launch option and the
   "installed from Nexus before" line; `{{ WORKSHOP_URL_* }}` placeholders until the items exist (the tool warns).

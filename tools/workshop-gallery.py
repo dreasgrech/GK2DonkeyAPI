@@ -6,8 +6,8 @@ The gallery opens a picture in a viewer about 1500 px wide, so the page pictures
 out blurred there (2026-10-31); a gallery picture is the same cut at the screenshot's own pixels. The box is in the
 screenshot's pixels, left,top-right,bottom (the form media/README.md uses). <Item> is the item's folder in
 media/workshop/ (GK2SaddleUp, GK2SaddleUpDragonsMountPack, GK2SaddleUpDonkeySkinPack); the picture is written as
-media/workshop/<Item>/gallery/<name>.jpg, a JPEG under 1 MB (quality 95, lower only to get under it; Steam documents no
-limit for gallery images, 1 MB is its preview's, so we stay under that). The release tool takes only Thumbnail.* from
+media/workshop/<Item>/gallery/<name>.jpg, a JPEG under 1 MB (quality 95, lower only to get under it; the gallery takes
+up to 2 MB a picture, found by the user 2026-10-31, so 1 MB leaves room). The release tool takes only Thumbnail.* from
 media/workshop/<Item>/, so the gallery folder never reaches the item's files. The gallery is uploaded by hand on the
 item's page (Add/Remove Images); an existing picture is replaced only with --overwrite (it may be on Steam already).
 """

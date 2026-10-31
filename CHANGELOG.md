@@ -32,6 +32,10 @@ Development:
   and `media/colours-donkey.png`, take the old editor's place in the Nexus description, and their full-size cuts its
   place in the Workshop gallery (the gallery folder's `Donkey-Cart-Colors-Editor.jpg` removed). The Workshop
   description never showed it. `media/Donkey-Cart-Colors-Editor.png` stays while the live Nexus page does.
+- **GIFs for the 2 MB gallery** (2026-10-31): three page GIFs squeezed under Steam's 2 MB gallery limit with little
+  loss (`donkey-comes` and `riding-cart` by gifsicle's lossy mode, the colours cycle at 128 colours and two sets of
+  three) into `media/workshop/GK2SaddleUp/gallery/`; the rest are 3-10x over even so and stay in the descriptions
+  only. `media/README.md` records how each was made.
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a
