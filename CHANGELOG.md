@@ -47,6 +47,11 @@ Development:
 - **Settings pictures on the Saddle Up Workshop page** (2026-10-31; the user): `settings-button.png` and
   `options-window.png` under Settings, as on Nexus, paid for by the Install section's first line (step 1 says the
   same: nothing to copy, no BepInEx to install); 7,927 of Steam's 8,000 bytes, restaged (`--no-zip`).
+- **A picture per pack on the Saddle Up Workshop page** (2026-10-31; the user): the "Mount and Skin Packs" section
+  shows `dragon-flying.gif` and `royal-parade-riding.png` as the Nexus page does (two paragraphs instead of the
+  list), paid for by text the page says twice: Gerry's "the journal is also where..." (the L key line), the
+  Unsubscribe paragraph's "Your saves still load without it" (Safe for your save), "Gerry the skull" and "subscribed
+  like this mod" in the packs intro; 7,971 of 8,000 bytes, restaged (`--no-zip`).
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a
