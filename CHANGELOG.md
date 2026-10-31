@@ -21,6 +21,15 @@ For players:
 
 Development:
 
+- **`docs/localization.md`: translating Saddle Up, investigated** (2026-10-31, two passes; a player asked for an
+  English file others can translate; the user: "investigate the decisions we need to make and the findings"): the
+  game's 11 languages (read out of `resources.assets`: 11 tables of 9,474 lines; fonts of their own only for ja,
+  zh_cn, ko) and its community language packs (always a new language); an inventory of what a player sees (234
+  different texts in normal play: Saddle Up 102, the API 126 in 22 files, the packs 6); the findings checked (plugins
+  start before the game loads its language, so text is looked up when drawn; our windows rebuild on open; how much
+  longer the game's own labels run per language; 60 glued sentences; words that are also data; the cfg stays English
+  by itself; the Workshop copier carries `.csv` files); nine decisions with the evidence and a recommendation each.
+  Nothing built.
 - **Full-size pictures for the Workshop galleries** (2026-10-31; the user: the gallery blows the 560-wide pictures
   up): `tools/workshop-gallery.py` cuts a box out of a Steam screenshot at its own pixels into
   `media/workshop/<Item>/gallery/` (a JPEG under 1 MB). Every gallery picture's screenshot was found again in the

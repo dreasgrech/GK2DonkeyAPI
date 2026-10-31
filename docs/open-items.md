@@ -523,6 +523,25 @@ closed):
   api and then we will consume it from the skin consumer", and of the skin hook: "Remove it and we'll think about how
   to implement properly". Until then nothing shows Hellfire (Saddle Up still registers it); only the self-tests light
   it, through a test hook.
+- **Translations** (2026-10-31; a player asked for an English file to translate): investigated in two passes in
+  [localization.md](localization.md); nothing built. To decide (its section 5, a recommendation each): D1 the game's
+  language packs or our own files (B); D2 the format (the game's CSV with a third column for the English); D3 where
+  translations live (bundled and translators' own, decided before the first one); D4 the order (the page rows first);
+  D5 the code as the English source with a generated `en.csv`; D6 keys; D7 plurals and nouns (word them out); D8 key
+  names (English for now); D9 what stays English. In-game checks with the first build: Japanese fonts, a long test
+  language.
+- **A bubble shows coordinates** (found 2026-10-31 by the translation inventory): when no safe spot of the scene
+  holds, `Mounts.ReturnToSafeSpot` says "No safe spot of this scene still holds (...)" in the keeper's bubble with
+  coordinates and game collider names inside (`SafeSpots.cs` 246, 261; `Mounts.cs` 435), against the 2026-10-27 rule
+  that coordinates mean nothing to a player (Saddle Up's comment). Drop the part in brackets from the bubble (the log
+  keeps it)? Not changed.
+- **"1 items"** (found 2026-10-31): a mount whose `cargo` is 1 reads "1 items" in the journal (`MountsPanel.cs` 173,
+  192) and in the too-much-cargo bubble (`Looks.cs` 1571); Freeplay's description too if the most cargo were 1. Word
+  it without a plural (localization.md D7)? Not changed.
+- **Text written but never shown** (found 2026-10-31): the descriptions of the journal's and colours window's rows
+  (Saddle Up 20, the API 6: only the options window draws descriptions; they are cfg comments), the picture row's
+  "Your mount", and the journal entry's `Lines` ("Pulls the cart", "Speed: ...", `[Stats]` lines; only self-tests
+  read them). Keep (cfg comments, the API's data for mods) or trim? Not changed.
 
 ## Deferred
 
