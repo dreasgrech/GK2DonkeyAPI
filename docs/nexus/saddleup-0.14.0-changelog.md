@@ -3,8 +3,8 @@
 For players. GK2 Donkey API 0.42.0 is in the download. Built for game 1.011 (Steam build 26297960).
 
 - **Saddle Up's own options window.** The game's Settings window (in the pause menu and the main menu) has a new
-  **GK2 Saddle Up options** button, and the Mounts panel (L) an **Options** button. It is the same window for every
-  player, with or without GK2 Mod Framework (with it installed, Saddle Up's Settings button in its Mods menu opens it).
+  **GK2 Saddle Up options** button, and the Mounts panel (L) an **Options** button. If you have GK2 Mod Framework
+  installed, Saddle Up's Settings button in its Mods menu opens it too.
 - The sections are on the left and their options on the right; the line at the bottom says what the option under
   the mouse does. **Defaults** sets the section shown back to its defaults, after asking.
 - **Keys are set in the window:** click a key's box and press the key, with Shift, Ctrl or Alt, or one of those on its

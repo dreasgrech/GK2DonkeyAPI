@@ -6,8 +6,8 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.42.0 (with Saddle Up 0.14.0; the last release 0.41.1 / 0.13.1 of 2026-10-30, 0.41.2 / 0.13.2 built the same day) | 26297960 (1.011), built 2026-10-30 23:50 (the options window; GK2 Mod Framework's Settings button pointed at it; keys while typing; the panel over any game window; overlapping keys) |
-| `GK2SaddleUp.dll` | 0.14.0 (needs GK2 Donkey API 0.42.0 or newer; the last release 0.13.1 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 23:50 |
+| `GK2DonkeyAPI.dll` | 0.42.0 (with Saddle Up 0.14.0; the last release 0.41.2 / 0.13.2 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 23:50 (the options window; GK2 Mod Framework's Settings button pointed at it; keys while typing; the panel over any game window; overlapping keys) |
+| `GK2SaddleUp.dll` | 0.14.0 (needs GK2 Donkey API 0.42.0 or newer; the last release 0.13.2 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 23:50 |
 | `GK2SaddleUpDragonsMountPack.dll` | 1.0.1 (needs GK2 Donkey API 0.40.0; the plugin's public name + modinfo.json, 2026-10-30; 1.0.0 public on Nexus 2026-10-29, mods/420) | the external pack: the dragon embedded, built 2026-10-30 afternoon |
 | `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; not released yet as of 2026-10-29) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
 | `GK2SaddleUpDonkeySkinPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-28, mods/419) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-29 14:37 |

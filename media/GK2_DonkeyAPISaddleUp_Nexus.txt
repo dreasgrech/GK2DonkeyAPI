@@ -106,7 +106,7 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [size=5][b][color=#f0b45a]Install[/color][/b][/size]
 
 [list=1]
-[*][size=3]On Steam, game 1.011 or newer ships BepInEx: nothing to install. On GOG or Epic, or an older build, install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
+[*][size=3]Game 1.011 or newer ships BepInEx: if your game folder has a [i]BepInEx[/i] folder, there is nothing to install. Otherwise (an older build), install the [url=https://www.nexusmods.com/site/mods/115]BepInEx 5 mod[/url] (or download from [url=https://github.com/BepInEx/BepInEx/releases]official repo[/url], v5.4.23 or newer) into the game folder and start the game once.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/BepInEx-files.png?v=2[/img][/center]
 [/*]
