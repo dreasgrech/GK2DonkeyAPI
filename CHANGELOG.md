@@ -27,6 +27,11 @@ Development:
   game's Steam screenshots (the packs' by their README boxes, the four older Saddle Up ones by matching their first
   commit), and 17 were cut: the three items' gallery pictures plus `colours-dragon`, `options-window` and
   `settings-button`; `media/README.md` lists each one's screenshot and box.
+- **The Mount Journal and the Colours window on the Saddle Up pages** (2026-10-31; the user: the colours editor
+  picture is outdated): two new screenshots of the Default donkey, cut with the packs' boxes, `media/journal-donkey.png`
+  and `media/colours-donkey.png`, take the old editor's place in the Nexus description, and their full-size cuts its
+  place in the Workshop gallery (the gallery folder's `Donkey-Cart-Colors-Editor.jpg` removed). The Workshop
+  description never showed it. `media/Donkey-Cart-Colors-Editor.png` stays while the live Nexus page does.
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a

@@ -59,7 +59,8 @@
 [size=3]Coat and harness, cart paint, wheels and hubs, the lantern's light. Presets, or 24 custom colours with a live preview on your real donkey.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/donkey-cart-colors-cycle.gif?v=2[/img][/center]
-[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/Donkey-Cart-Colors-Editor.png?v=2[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/journal-donkey.png?v=1[/img][/center]
+[center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/colours-donkey.png?v=1[/img][/center]
 
 
 [size=4][b]Leave it standing[/b][/size]

@@ -39,6 +39,8 @@ takes the blend from the frames just before the start, so nothing after the end 
 | `settings.png` | the Mods menu page with the donkey preview (until 0.13; out of the page texts since 0.14.0) | F10 |
 | `options-window.png` | the options window on Keys (0.14.0) | Steam screenshot 2026-10-30 23:45, box 372,112-2190,1326 (the window), 560 wide (`tools/crop-shot.py` in GK2QOLMods) |
 | `settings-button.png` | the game's Settings window with the GK2 Saddle Up options button above OK (0.14.0) | Steam screenshot 2026-10-31 11:25, box 880,306-1680,1129 (the window with a 24 px margin), 560 wide (`tools/crop-shot.py` in GK2QOLMods) |
+| `journal-donkey.png` | the Mount Journal on the Donkey (Default skin, its cart, the Name, Skin and Babies rows); with `colours-donkey.png` in the old colours editor's place (`Donkey-Cart-Colors-Editor.png`, outdated 2026-10-31) | Steam screenshot 2026-10-31 14:54, box 236,134-2328,1306 (the window's frame, the packs' box), 560 wide (`tools/crop-shot.py` in GK2QOLMods) |
+| `colours-donkey.png` | the Colours window on the Donkey: a custom grey coat, a blue harness, orange paint, black wheels, silver hubs | Steam screenshot 2026-10-31 14:56, box 492,92-2068,1348 (the window's own outline, the packs' box), 560 wide (`tools/crop-shot.py` in GK2QOLMods) |
 | `trailer.mp4` | the 30-60 s trailer | the edit script (not built) |
 
 The packs' own pictures live in a folder each, with a README listing them: `donkey-skin-pack/` (GK2 Saddle Up: Donkey
@@ -52,7 +54,7 @@ wide, so the 560-wide page pictures came out blurred there (2026-10-31); a galle
 subject cut at the screenshot's own pixels, never scaled: `python tools/workshop-gallery.py <screenshot> <box> <Item>
 <name>` (a JPEG under 1 MB, quality 95; `--overwrite` to replace one). The screenshots are the Steam screenshots of
 the game (2560x1440, `userdata\<account>\760\remote\4358690\screenshots\`), found again by matching each page
-picture against them: the boxes of the pack pictures are their READMEs' (an exact match), the four 2026-10-14/15
+picture against them: the boxes of the pack pictures are their READMEs' (an exact match), the 2026-10-14/15
 Saddle Up ones were cut by hand at full size and found at their own scale in their first commit. Same subjects as the
 page pictures of the same name; the GIFs stay as they are.
 
@@ -60,7 +62,8 @@ page pictures of the same name; the GIFs stay as they are.
 |---|---|---|
 | `GK2SaddleUp/gallery/Foals.jpg` | `20261014211544_1.jpg`, box 310,140-1645,908 | 1335x768 |
 | `GK2SaddleUp/gallery/ZombieWorkstation.jpg` | `20261015191446_1.jpg`, box 836,271-1838,859 | 1002x588 |
-| `GK2SaddleUp/gallery/Donkey-Cart-Colors-Editor.jpg` | `20261014211246_1.jpg`, box 891,180-1672,1211 | 781x1031 |
+| `GK2SaddleUp/gallery/journal-donkey.jpg` | `20261031145438_1.jpg`, box 236,134-2328,1306 | 2092x1172 |
+| `GK2SaddleUp/gallery/colours-donkey.jpg` | `20261031145654_1.jpg`, box 492,92-2068,1348 | 1576x1256 |
 | `GK2SaddleUp/gallery/GK2ModFramework-Mods.jpg` | `20261015194751_1.jpg`, box 510,217-2048,1223 | 1538x1006 |
 | `GK2SaddleUp/gallery/options-window.jpg` | `20261030234548_1.jpg`, box 372,112-2190,1326 | 1818x1214 |
 | `GK2SaddleUp/gallery/settings-button.jpg` | `20261031112533_1.jpg`, box 880,306-1680,1129 | 800x823 |

@@ -42,7 +42,8 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   - among other mods (built 21:24; F11 628 of 628 at 21:35): at Saddle Up's defaults no key clashes with the 11 keys of
     other mods or the 30 game bindings installed here; with other mods, watch for "Same key as" lines that are noise;
   - screenshots of the window for the Nexus and Workshop pages: the old Mods-menu pictures are out of the page texts
-    (media/GK2ModFramework-Mods.png, settings.gif, NoGK2ModFrameworkSettings.png stay in media/ until replaced).
+    (media/GK2ModFramework-Mods.png, settings.gif, NoGK2ModFrameworkSettings.png stay in media/ until replaced;
+    so does Donkey-Cart-Colors-Editor.png, out of the page texts 2026-10-31 for journal-donkey.png and colours-donkey.png).
 
 - **The keys wait while any text box has the cursor** (2026-10-30, KeyActions.TextBoxHasCursor; the user: L typed in
   the Tech Tree Search box opened the Mounts panel): typing an L in that box leaves the panel shut, L outside it
