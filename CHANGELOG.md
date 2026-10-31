@@ -21,6 +21,22 @@ For players:
 
 Development:
 
+- **Full-size pictures for the Workshop galleries** (2026-10-31; the user: the gallery blows the 560-wide pictures
+  up): `tools/workshop-gallery.py` cuts a box out of a Steam screenshot at its own pixels into
+  `media/workshop/<Item>/gallery/` (a JPEG under 1 MB). Every gallery picture's screenshot was found again in the
+  game's Steam screenshots (the packs' by their README boxes, the four older Saddle Up ones by matching their first
+  commit), and 17 were cut: the three items' gallery pictures plus `colours-dragon`, `options-window` and
+  `settings-button`; `media/README.md` lists each one's screenshot and box.
+- **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
+  Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
+  (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a
+  text over 8,000 UTF-8 bytes now, before it clears the Workshop folder, instead of a note.
+- **Workshop change notes: player notes only, unwrapped** (2026-10-31, before the items went public): the packs'
+  1.0.0 notes on Steam came from their developer changelogs (source folders, zip names, "(the user, ...)");
+  `tools/make-release-zip.py` stops now when an item has no player note (`docs/nexus/donkey-skin-pack-1.0.0-workshop-changenote.txt`
+  written), and joins each paragraph and bullet into one line, since Steam shows every line break and the notes'
+  wrapping broke each bullet mid-sentence. The page texts and the 0.14.0 notes say Mount Journal (the window's
+  title) and Send your mount away (the option's name).
 - **The rehearsal skips a pack that was never released** (2026-10-30, at 0.14.0): `tools/rehearsal.sh stage-a` stopped
   (set -e) on the missing Critters zip after the dev setup had gone aside; a pack zip not in `release/` is now left out, said.
 - **The skin pipeline, one step easier per skin** (2026-10-30, with Armored; the user: "refine and standardize our

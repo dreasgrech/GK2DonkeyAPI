@@ -10,6 +10,9 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   lower-left and about 18% smaller than without it. Measure with the lamp forced visible, record the mount+cart
   rectangle, centre the panel's picture on it at a scale that keeps the lamp's room (PreviewStage, MountsPanel.Fit, the
   panel scenario's lantern check). Left for the next update.
+- **The key that opens the Mount Journal is labelled "Mounts panel"** (2026-10-31): the window's title is Mount
+  Journal, and the page texts and the 0.14.0 notes say so. Rename the row's label (display text only; its cfg key
+  stays) in Saddle Up's next release, and the READMEs' option tables with it.
 
 ## To check in game (built and deployed, not yet seen)
 

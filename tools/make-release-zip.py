@@ -52,7 +52,10 @@ MEDIA = os.path.join(ROOT, "media")
 PACKS = os.path.join(ROOT, "packs")
 INNER = "BepInEx/plugins/"
 MODINFO = "modinfo.json"
-STEAM_DESCRIPTION_MAX = 8000  # k_cchPublishedDocumentDescriptionMax: Steam refuses a longer description
+# k_cchPublishedDocumentDescriptionMax. Over it Steam fails the whole upload, not only the description (2026-10-31: an
+# 11,064-character text gave SubmitItemUpdate k_EResultInvalidParam; 7,892 bytes went up). Counted in UTF-8 bytes, the
+# safe reading while it is unknown whether Steam counts bytes or characters.
+STEAM_DESCRIPTION_MAX = 8000
 
 
 def plugin_facts(rel):
@@ -157,56 +160,50 @@ def write_zip(item, overwrite=False):
         print("  " + n)
 
 
+def unwrap(note):
+    """One line per paragraph and per bullet. Steam shows every line break of a change note, and the note files are
+    wrapped at ~118 columns, so each bullet broke mid-sentence on the item's page (2026-10-31)."""
+    out = []
+    for line in note.split("\n"):
+        s = line.strip()
+        if s and out and out[-1] and not s.startswith("- "):
+            out[-1] += " " + s
+        else:
+            out.append(line.rstrip() if s.startswith("- ") else s)
+    return "\n".join(out).strip("\n") + "\n"
+
+
 def changenote(item):
-    """The item's change note: the player text written for the release when there is one
-    (docs/nexus/saddleup-<version>-changelog.md, the simplified Nexus text), else the 'For players' bullets of its
-    changelog entry for this version (Saddle Up: the heading '## <version> (' ; a pack: '## <version>'); before the
-    release heading exists, the Unreleased block, said so."""
-    # a Workshop note of its own first (docs/nexus/<name>-<version>-workshop-changenote.txt: the Nexus note never sends
-    # players to Steam, the user 2026-10-30; the Workshop's may speak of the Workshop), then the Nexus note
-    workshop_note = item.nexus_note.replace("-changelog.md", "-workshop-changenote.txt") if item.nexus_note else None
-    if workshop_note and os.path.isfile(workshop_note):
+    """The item's change note, unwrapped: the Workshop note written for the release
+    (docs/nexus/<name>-<version>-workshop-changenote.txt: the Nexus note never sends players to Steam, the user
+    2026-10-30; the Workshop's may speak of the Workshop), else the Nexus note (docs/nexus/<name>-<version>-changelog.md,
+    markdown off). Without either it stops: the developer changelog is no player note (the packs' 1.0.0 notes came from
+    it, with source folders, zip names and "(the user, ...)" on the item's page; 2026-10-31)."""
+    workshop_note = item.nexus_note.replace("-changelog.md", "-workshop-changenote.txt")
+    if os.path.isfile(workshop_note):
         print(f"  change note: {os.path.relpath(workshop_note, ROOT)}")
-        return open(workshop_note, encoding="utf-8").read().replace("\r\n", "\n").strip("\n") + "\n"
-    if item.nexus_note and os.path.isfile(item.nexus_note):
+        return unwrap(open(workshop_note, encoding="utf-8").read().replace("\r\n", "\n"))
+    if os.path.isfile(item.nexus_note):
         note = open(item.nexus_note, encoding="utf-8").read().replace("\r\n", "\n")
         note = re.sub(r"(?m)^# ", "", note)
         note = re.sub(r"\*\*(.+?)\*\*", r"\1", note)
         note = re.sub(r"`([^`]*)`", r"\1", note)
         print(f"  change note: {os.path.relpath(item.nexus_note, ROOT)}")
-        return note.strip("\n") + "\n"
-    text = open(item.changelog, encoding="utf-8").read().replace("\r\n", "\n")
-    heads = [(m.start(), m.group(1)) for m in re.finditer(r"(?m)^## (.+)$", text)]
-    block = None
-    for i, (pos, title) in enumerate(heads):
-        end = heads[i + 1][0] if i + 1 < len(heads) else len(text)
-        if title == item.version or title.startswith((item.version + " ", item.version + ",", item.version + " (")):
-            block = text[pos:end]
-            break
-    if block is None:
-        for i, (pos, title) in enumerate(heads):
-            if title.startswith("Unreleased"):
-                end = heads[i + 1][0] if i + 1 < len(heads) else len(text)
-                block = text[pos:end]
-                print(f"  note: {os.path.relpath(item.changelog, ROOT)} has no heading for {item.version} yet; the change note is its '{title}' block")
-                break
-    if block is None:
-        return f"{item.name} {item.version}\n"
-    lines = block.split("\n")[1:]
-    # the "For players:" part when the entry has parts, else the whole entry
-    if any(l.strip() == "For players:" for l in lines):
-        start = next(i for i, l in enumerate(lines) if l.strip() == "For players:") + 1
-        stop = next((i for i, l in enumerate(lines) if i > start and l.strip().endswith(":") and not l.startswith((" ", "-"))), len(lines))
-        lines = lines[start:stop]
-    out = "\n".join(lines).strip("\n")
-    out = re.sub(r"\*\*(.+?)\*\*", r"\1", out)  # markdown bold off: the note is plain text
-    out = re.sub(r"`([^`]*)`", r"\1", out)
-    return f"{item.name} {item.version}\n\n{out}\n"
+        return unwrap(note)
+    sys.exit(f"{item.name} {item.version}: no player note; write {os.path.relpath(workshop_note, ROOT)} (or the Nexus note "
+             f"{os.path.relpath(item.nexus_note, ROOT)}) before staging its Workshop folder")
 
 
 def stage_workshop(item):
     """workshop/<Item>/: the item content as the zip holds it, plus the uploader's own files."""
     dest = os.path.join(WORKSHOP, item.folder)
+    text = os.path.join(item.media_dir, item.text_name + "_Workshop.txt")
+    if os.path.isfile(text):
+        size = len(open(text, encoding="utf-8").read().replace("\r\n", "\n").encode("utf-8"))
+        if size > STEAM_DESCRIPTION_MAX:
+            sys.exit(f"{os.path.relpath(text, ROOT)} is {size:,} bytes; over {STEAM_DESCRIPTION_MAX:,} Steam fails the whole upload "
+                     f"(InvalidParam): shorten it. {dest} left as it was")
+    note = changenote(item)  # stops without a player note, before the folder is cleared
     if os.path.isdir(dest):
         shutil.rmtree(dest)
     os.makedirs(dest)
@@ -233,17 +230,14 @@ def stage_workshop(item):
             notes.append(f"Thumbnail is {os.path.getsize(thumb):,} bytes: Steam wants the preview under 1 MB")
     else:
         notes.append(f"no media/workshop/{item.folder}/Thumbnail.png (or .jpg): the item uploads without a preview")
-    text = os.path.join(item.media_dir, item.text_name + "_Workshop.txt")
     if os.path.isfile(text):
         desc = open(text, encoding="utf-8").read().replace("\r\n", "\n")
         open(os.path.join(dest, "_description.bbcode"), "w", encoding="utf-8", newline="\n").write(desc)
         if "{{" in desc:
             notes.append(f"{os.path.relpath(text, ROOT)} still has a {{{{ placeholder }}}}: fill it in before uploading")
-        if len(desc) > STEAM_DESCRIPTION_MAX:
-            notes.append(f"{os.path.relpath(text, ROOT)} is {len(desc):,} characters; Steam's description limit is {STEAM_DESCRIPTION_MAX:,}")
     else:
         notes.append(f"no {os.path.relpath(text, ROOT)}: the item uploads without a description (write it in Steam's BBCode)")
-    open(os.path.join(dest, "_changenote.txt"), "w", encoding="utf-8", newline="\n").write(changenote(item))
+    open(os.path.join(dest, "_changenote.txt"), "w", encoding="utf-8", newline="\n").write(note)
     print(f"{dest}: the Workshop folder ({item.what})")
     for dirpath, _, names in os.walk(dest):
         for n in sorted(names):

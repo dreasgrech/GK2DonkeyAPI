@@ -98,11 +98,16 @@ The same run stages each item for the Steam Workshop in `workshop/<Item>/` (not 
 the zip's content as a folder plus `modinfo.json` (id = the plugin GUID, name, version: the game's Mods window shows
 name and version; no zip carries it, nothing reads it in the game folder), `Thumbnail.jpg` (from `media/workshop/<Item>/`, made by
 `tools/workshop-thumbnail.py <picture> <Item>`), `_description.bbcode` (from `media/..._Workshop.txt`, Steam's BBCode;
-the tool warns while a `{{ }}` placeholder is left or the text is over Steam's 8,000 characters) and `_changenote.txt`
-(the item's "For players" entry of its changelog). The game's Workshop creator (Shift+F11 in the main menu with
+the tool warns while a `{{ }}` placeholder is left, and refuses a text over 8,000 bytes: Steam then fails the whole
+upload, docs/mods-window-and-workshop.md section 12) and `_changenote.txt`
+(`docs/nexus/<name>-<version>-workshop-changenote.txt`, else the Nexus note; the tool stops without one, the
+developer changelog being no player note, and unwraps it: Steam shows every line break). The game's Workshop creator (Shift+F11 in the main menu with
 `"workshopCreatorMode": true` in `Mods\workshop.json` in the save data folder) uploads that folder; the uploader
 itself skips the three files. One item per zip, the same bytes on both channels; the Saddle Up item carries the API
 (bundle, decided 2026-10-30: two items sharing a file path delete it for each other, so the API never ships twice).
+The item's image gallery is uploaded by hand on its page (Add/Remove Images), from `media/workshop/<Item>/gallery/`:
+full-size cuts made by `tools/workshop-gallery.py` (`media/README.md`, "Steam Workshop gallery"), not the 560-wide
+page pictures, which the gallery's viewer blows up.
 
 Afterwards build once more without `ForDist` (and with the game closed) so the DLL in the game is the dev build
 again; `bin/` holds whichever was built last.

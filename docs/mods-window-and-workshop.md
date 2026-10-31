@@ -168,6 +168,8 @@ Built 2026-10-30 after the lab run (section 9), bundle decided (section 10):
   The first public zip with `modinfo.json` is the next release's (0.13.2 / API 0.41.2), and the Nexus Install text of
   section 5 goes live with that upload (a 0.13.1 zip in `Mods\Code` is listed by folder name, without a version).
 - `tools/workshop-thumbnail.py`: the preview pictures, `media/workshop/<Item>/Thumbnail.jpg` (under 1 MB).
+- `tools/workshop-gallery.py`: the image gallery's pictures, `media/workshop/<Item>/gallery/<name>.jpg`, cut from
+  the Steam screenshots at full size (under 1 MB; uploaded by hand on the item's page; 2026-10-31).
 - `media/*_Workshop.txt`: the three items' descriptions in Steam's BBCode (h1-h3, b, i, url, img, olist, hr; a
   bare YouTube link makes the widget), each with a subscription Install section, the Deck launch option and the
   "installed from Nexus before" line; `{{ WORKSHOP_URL_* }}` placeholders until the items exist (the tool warns).
@@ -308,6 +310,15 @@ copies byte-identical to the download; API 0.41.1 and Saddle Up 0.13.1 loaded, 0
 under the Steam id, `sources.json` the Workshop folder, `code_mods.json` the item approved next to the earlier
 `local:` entry. The framework's Mods menu (a plugin list) shows it as well. Still to do: the two pack items, their
 Required item, the link placeholders, the dev builds back (`restore-pack` after unsubscribing and one launch).
+
+**The description limit, tried (2026-10-31).** The Saddle Up text was cut to fit `k_cchPublishedDocumentDescriptionMax`
+(8,000, also in the game's `com.rlabrecque.steamworks.net.dll`), never tried above it. The game's uploader
+(`SteamWorkshopCreatorService`) reads `_description.bbcode` whole and hands it to `SetItemDescription` unchecked.
+With everything cut put back (11,064 characters, 11,076 bytes) `SetItemDescription` returned true, and Steam then
+failed the whole update at commit with `k_EResultInvalidParam`; the uploader's retry without tags failed the same
+way. The same item, tag, files and thumbnail with the 7,880-character (7,892-byte) text had gone up at 13:18 that
+day, so the length is the cause, and a failed update leaves the item as it was. `make-release-zip.py` refuses a text
+over 8,000 UTF-8 bytes since (bytes or characters: not known; bytes is the safe reading).
 
 ## 13. The install texts, decided (2026-10-30)
 

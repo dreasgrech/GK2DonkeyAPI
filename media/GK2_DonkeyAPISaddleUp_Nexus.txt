@@ -87,14 +87,14 @@ Kept with your save: after a reload your donkey is where you left it, the load s
 [*][size=3][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).[/size][/*]
 [*][size=3][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.[/size][/*]
 [*][size=3][b]B[/b] — ring the bell.[/size][/*]
-[*][size=3][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.[/size][/*]
+[*][size=3][b]Send your mount away[/b] (no key until you set one) — your mount, its cart and its babies go; the load is set down first. H or G calls one again.[/size][/*]
 [/list]
 [size=3]All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.[/size]
 
 [line]
 [size=5][b][color=#f0b45a]Settings[/color][/b][/size]
 
-[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mounts panel (L) has an [b]Options[/b] button too. To set a key, click its box and press the key. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.[/size]
+[size=3]In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mount Journal (L) has an [b]Options[/b] button too. To set a key, click its box and press the key. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/settings-button.png?v=2[/img][/center]
 

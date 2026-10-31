@@ -1,8 +1,6 @@
 [h1]GK2 Saddle Up[/h1]
 Your own donkey and cart in Graveyard Keeper 2.
 
-[url=https://www.youtube.com/watch?v=Ww9S6X9hTOU]Watch the trailer on YouTube[/url]
-
 Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.
 [hr][/hr]
 [h2]What you get[/h2]
@@ -74,14 +72,14 @@ Off by default. The game's delivery donkey drops its corpses by the nun's crossr
 [*][b]E[/b] — at your donkey: get on. At the cart holding something: load it. At the back of the cart with empty hands: take the top item. Driving with nothing in front: set the top item down behind the cart (a chest too).
 [*][b]L[/b] — the Mount Journal: pick your mount (the donkey, Gerry, or a pack's), name it, choose its skin and babies, open its colours.
 [*][b]B[/b] — ring the bell.
-[*][b]Send the donkey away[/b] (no key until you set one) — your donkey, cart and foals go; the load is set down first. H or G calls one again.
+[*][b]Send your mount away[/b] (no key until you set one) — your mount, its cart and its babies go; the load is set down first. H or G calls one again.
 [/list]
 All keys can be changed. You get off by yourself for work, ladders, fishing, sleep and at building doors.
 
 [hr][/hr]
 [h2]Settings[/h2]
 
-In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mounts panel (L) has an [b]Options[/b] button too. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
+In the game's [b]Settings[/b] window (in the pause menu and the main menu), the [b]GK2 Saddle Up options[/b] button opens Saddle Up's own options. The Mount Journal (L) has an [b]Options[/b] button too. Everything is also in [i]BepInEx\config\dreas.gk2.saddleup.cfg[/i], to edit with the game closed.
 
 [hr][/hr]
 [h2]Install[/h2]
