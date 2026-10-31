@@ -6,7 +6,7 @@
 [size=5][b][color=#f0b45a]The mount[/color][/b][/size]
 
 [size=4][b]Dragon[/b][/size]
-[size=3]Nobody knows where it came from, and it isn't saying. Red scales, a spiked tail and a golden belly, twice the donkey's size, with a roar, wing beats and a landing thud of its own. It is slow on its feet and it won't pull a cart. It flies instead.[/size]
+[size=3]Nobody knows where it came from, and it isn't saying. Scales, a spiked tail and a big belly, twice the donkey's size, with a roar, wing beats and a landing thud of its own. It is slow on its feet and it won't pull a cart. It flies instead.[/size]
 
 [center][img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/dragon-keeper.png?v=2[/img][/center]
 
