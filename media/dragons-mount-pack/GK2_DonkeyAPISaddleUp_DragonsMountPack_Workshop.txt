@@ -62,7 +62,9 @@ This is the first mounts pack released for the Saddle Up mod and for now it only
 [hr][/hr]
 [h2]The Saddle Up mod[/h2]
 
-Call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.
+This pack needs the GK2 Saddle Up mod, which gives you a donkey mount: call it, ride it, drive the cart, haul logs, stone and corpses on it, leave it standing with its load and find it where you left it.
+
+[img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/riding-cart.gif?v=2[/img]
 
 [url=https://steamcommunity.com/sharedfiles/filedetails/?id=3830136851]Subscribe to GK2 Saddle Up[/url]
 

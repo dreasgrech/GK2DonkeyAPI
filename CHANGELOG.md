@@ -41,6 +41,9 @@ Development:
   (1024, the skin pack's 900 at its own pixels; the packs' were 560-wide page pictures scaled up), restaged into
   `workshop/<Item>/` with `--no-zip` (zips untouched). `tools/workshop-thumbnail.py`: 1024 by default, says when a
   picture is not square, and `--width` works (its value was taken for a third argument).
+- **The packs' "The Saddle Up mod" section** (2026-10-31; the user): the Dragons and Donkey Skin pages, Workshop and
+  Nexus, say the pack needs GK2 Saddle Up and that Saddle Up gives you the donkey mount, and show `riding-cart.gif`
+  there; both Workshop folders restaged (`--no-zip`).
 - **Steam's description limit is a hard one** (2026-10-31; docs/mods-window-and-workshop.md section 12): the Saddle Up
   Workshop text with everything cut for the limit put back (11,064 characters) failed the whole upload
   (`k_EResultInvalidParam` at submit), where the 7,880-character text went up. `tools/make-release-zip.py` refuses a
