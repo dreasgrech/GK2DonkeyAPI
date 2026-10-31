@@ -663,7 +663,7 @@ namespace GK2DonkeyAPI
                             jumpFlySaid = true;
                             Plugin.Log.LogInfo("[flight] no take-off from the jump: " + why);
                             // a mount that flies, refused here (indoors, the cart): said; one that doesn't fly: the press does nothing
-                            if (Flies(i)) Mount.Say(Mount.Instance.IsIndoors() ? "Can't fly in here." : "Can't fly now.", BubbleS);
+                            if (Flies(i)) Mount.Say(Mount.Instance.IsIndoors() ? UiWords.SayCantFlyInHere.English : UiWords.SayCantFlyNow.English, BubbleS);
                         }
                         return;
                     }
@@ -1299,7 +1299,7 @@ namespace GK2DonkeyAPI
             if (why != null)
             {
                 Why = "can't land here: " + why;
-                if (why != lastRefusal || !refusalSaidThisLanding) Mount.Say("Nowhere to land here.", BubbleS);
+                if (why != lastRefusal || !refusalSaidThisLanding) Mount.Say(UiWords.SayNowhereToLand.English, BubbleS);
                 refusalSaidThisLanding = true;
                 if (why != lastRefusal || Time.unscaledTime - lastRefusalSaid > 3f)
                 {
@@ -1454,7 +1454,7 @@ namespace GK2DonkeyAPI
             if (!Free) return false;
             if (Now == Phase.Jumping) { Release(owner, what + " mid-jump"); return false; }
             if (Now != Phase.Landing) Set(Phase.Landing, $"landing first ({what})");
-            Mount.Say("Land first.", BubbleS);
+            Mount.Say(UiWords.SayLandFirst.English, BubbleS);
             return true;
         }
 

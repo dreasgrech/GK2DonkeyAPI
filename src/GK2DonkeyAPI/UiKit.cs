@@ -168,12 +168,33 @@ namespace GK2DonkeyAPI
             }
             if (t != null)
             {
+                // The Settings window is mostly closed when ours open, and the game restyles only what is active on a
+                // language switch (TextStyleComponent.RefreshAll: FindObjectsInactive.Exclude), so its row may still wear the
+                // last language's font (another atlas for Japanese, Chinese, Korean). Its own style applied for the
+                // language now first, as the game would on a switch in the open window (docs/localization.md section 7).
+                FontBeforeRestyle = t.font != null ? t.font.name : null;
+                TextStyleComponent style = t.GetComponent<TextStyleComponent>();
+                if (style != null)
+                {
+                    try { style.ApplyStyle(); }
+                    catch (Exception e) { if (!restyleSaid) { restyleSaid = true; Plugin.Log.LogInfo("Settings: the Settings row's text style couldn't be applied for the language (" + e.Message + "); its font as it is."); } }
+                }
+                Restyled = style != null;
+                try { StyleFont = style?.CurrentTextStyle?.Font?.GetFontAssetFor(LLBase.CurrentLang, false); }
+                catch { StyleFont = null; }
                 Font = t.font;
                 FontMaterial = t.fontSharedMaterial;
                 FontColor = t.color;
                 FontSize = t.fontSize > 0f ? t.fontSize : FontSize;
             }
         }
+
+        // The self-tests' view of the font read (TranslationTests.Fonts): the row's font before its style was applied
+        // for the language now, and whether it had a style to apply.
+        internal string FontBeforeRestyle;
+        internal bool Restyled;
+        internal TMP_FontAsset StyleFont; // the font the row's style gives the language now (what the game itself would draw it in)
+        private static bool restyleSaid;
 
         // Where the game's own row draws, relative to its rectangle's top left: its parts hang outside the rectangle (the
         // label to the left, the value box to the right), so a row is placed by where it draws, not by its rectangle.
@@ -556,6 +577,12 @@ namespace GK2DonkeyAPI
             TextMeshProUGUI t = Text(go.transform, "label", text, 1f, textLeft > 0f ? TextAlignmentOptions.Left : TextAlignmentOptions.Center, false, textLeft, 0f, w - textLeft - 6f, h);
             t.color = flat ? FontColor : ButtonTextColor;
             t.overflowMode = TextOverflowModes.Ellipsis;
+            // a word longer than its button (a translation) shrinks to 80% before it is cut: measured 2026-10-31, the test
+            // language at 1.6 times ran past only on buttons and a dropdown's face (docs/localization.md section 7); the
+            // English, which fits, keeps its size (the largest size is its own)
+            t.enableAutoSizing = true;
+            t.fontSizeMax = t.fontSize;
+            t.fontSizeMin = t.fontSize * 0.8f;
             if (flat) t.fontStyle = FontStyles.Normal; else Bold(t);
             // the gamepad: an item whose select presses the button (as LazyButton.SetCallbacksIntoGamepadNavigationItem),
             // framed while focused with the game row's own focus frame

@@ -55,6 +55,14 @@ namespace GK2DonkeyAPI
             public bool Active => lampGo != null && mf != null && mf;
             public string Note { get; private set; } = "off";
 
+            // Its mesh renderers (the pole's split mesh, the hanging lamp): the self-tests' measure of the Mounts panel's
+            // picture without the lamp (Lantern.Rig.LampRenderers, PreviewStage.TestDrawnRect).
+            internal void Renderers(List<Renderer> into)
+            {
+                if (mr != null && mr && !into.Contains(mr)) into.Add(mr);
+                if (lampMr != null && lampMr && !into.Contains(lampMr)) into.Add(lampMr);
+            }
+
             // Called by Lantern.Detach (before the pole is measured again) and when the setting is switched off.
             public void Detach()
             {

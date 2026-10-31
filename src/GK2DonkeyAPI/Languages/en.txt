@@ -1,0 +1,495 @@
+# GK2 Donkey API (dreas.gk2.donkeyapi): its English, to translate.
+# Copy this file to <language id>.txt beside it: de.txt, fr.txt, es.txt, pt-br.txt, ru.txt, pl.txt, tr.txt, ja.txt,
+# zh_cn.txt or ko.txt (the game's own ids). Change the text after each "="; keep the keys and the "# en:" lines
+# (a line whose "# en:" isn't the mod's English any more shows in English until it is translated again). A line
+# left out or left empty shows in English. Keep {0} and {1}: the mod fills them in. \n is a line break.
+# Save as UTF-8. The same lines are in en.csv, for a spreadsheet: either file works.
+
+# en: Done
+options.done = Done
+
+# en: Defaults
+options.defaults = Defaults
+
+# the Defaults button's question; {0}: a section's name
+# en: Set every option in {0} back to its default?
+options.set_back_ask = Set every option in {0} back to its default?
+
+# en: Set back
+options.set_back = Set back
+
+# en: Cancel
+options.cancel = Cancel
+
+# the line under the options, with a gamepad
+# en: Move to an option to see what it does.
+options.hint_pad = Move to an option to see what it does.
+
+# the line under the options, with a mouse
+# en: Point at an option to see what it does.
+options.hint_mouse = Point at an option to see what it does.
+
+# while a key is being set; {0}: the option's name
+# en: Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.
+options.press_key_for = Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.
+
+# after a key option's description, with a gamepad
+# en: Select it, then press the key on the keyboard.
+options.key_how_pad = Select it, then press the key on the keyboard.
+
+# after a key option's description, with a mouse
+# en: Click it to set the key.
+options.key_how_mouse = Click it to set the key.
+
+# after a greyed button's description
+# en: Only in a game.
+options.only_in_game = Only in a game.
+
+# after a greyed option's description
+# en: Not available right now.
+options.not_now = Not available right now.
+
+# the line under the options: {0} the option's description, {1} the sentence after it (the two above)
+# en: {0} {1}
+options.and_then = {0} {1}
+
+# the button in the game's Settings window; {0}: the mod's name
+# en: {0} options
+options.page_button = {0} options
+
+# a button that opens the Mounts panel
+# en: Open
+row.open = Open
+
+# a mod's button
+# en: Go
+row.go = Go
+
+# a key option while it waits for the key
+# en: Press a key...
+row.press_a_key = Press a key...
+
+# a key option with no key; an empty name; no babies
+# en: None
+row.none = None
+
+# under a key option; {0}: another option, or another mod's setting
+# en: Same key as {0}
+key.same_as = Same key as {0}
+
+# under a key option; {0}: another option or mod's setting, {1}: its key
+# en: Clashes with {0} ({1})
+key.clashes_with = Clashes with {0} ({1})
+
+# en: Skin
+row.skin = Skin
+
+# the Skin list: a mount's own look
+# en: Default
+row.default_skin = Default
+
+# a list with nothing to choose
+# en: (none)
+row.no_choice = (none)
+
+# en: Babies
+row.babies = Babies
+
+# en: Babies follow you on foot
+row.babies_follow = Babies follow you on foot
+
+# en: Babies come indoors
+row.babies_indoors = Babies come indoors
+
+# en: Mount Journal
+journal.title = Mount Journal
+
+# the search box over the mounts, while empty
+# en: Search...
+journal.search = Search...
+
+# en: Customize
+journal.customize = Customize
+
+# en: Ride
+journal.ride = Ride
+
+# en: Drive the cart
+journal.drive_cart = Drive the cart
+
+# en: Options
+journal.options = Options
+
+# en: Stats
+journal.stats = Stats
+
+# en: Abilities
+journal.abilities = Abilities
+
+# en: Speed
+journal.stat_speed = Speed
+
+# the Cargo stat's name; its value is a number (how many things the cart holds)
+# en: Cargo
+journal.stat_cargo = Cargo
+
+# en: Skins
+journal.stat_skins = Skins
+
+# en: Status
+journal.stat_status = Status
+
+# en: No cart
+journal.no_cart = No cart
+
+# the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)
+# en: {0} of {1}
+journal.cargo_of = {0} of {1}
+
+# en: Flying
+journal.flying = Flying
+
+# en: It lands wherever you can stand.
+journal.flying_line = It lands wherever you can stand.
+
+# en: Cargo cart
+journal.cargo_cart = Cargo cart
+
+# the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6
+# en: Pulls a cart (cargo {0}).
+journal.cargo_cart_line = Pulls a cart (cargo {0}).
+
+# en: Not installed
+journal.not_installed = Not installed
+
+# {0}: a mount's or skin's name, its mod or pack gone
+# en: {0} (not installed)
+journal.name_not_installed = {0} (not installed)
+
+# {0}: a skin's name, the game no longer having its pictures
+# en: {0} (set aside)
+journal.name_set_aside = {0} (set aside)
+
+# en: The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.
+journal.missing_note = The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.
+
+# en: Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.
+journal.gone_note = Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.
+
+# en: Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.
+journal.aside_note = Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.
+
+# en: It has no skin to wear. Your choice is kept; the donkey comes instead.
+journal.no_skin_note = It has no skin to wear. Your choice is kept; the donkey comes instead.
+
+# a mount whose skins are installed but not the mount; {0}: the skins' names
+# en: Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.
+journal.waiting_skins = Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.
+
+# en: Donkey
+mount.donkey.name = Donkey
+
+# en: The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.
+mount.donkey.description = The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.
+
+# the colours window's title; {0}: the mount's name
+# en: Colours: {0}
+colours.title = Colours: {0}
+
+# the colours window's title with a skin; {0}: the title above, {1}: the skin's name
+# en: {0} - {1}
+colours.title_skin = {0} - {1}
+
+# a mount's speed in the journal's stats
+# en: Very slow
+speed.very_slow = Very slow
+
+# en: Slow
+speed.slow = Slow
+
+# en: Normal
+speed.normal = Normal
+
+# en: Fast
+speed.fast = Fast
+
+# en: Very fast
+speed.very_fast = Very fast
+
+# on foot by a mount: the key's prompt
+# en: Ride
+prompt.ride = Ride
+
+# on foot by a mount the player named; {0}: the name they gave it
+# en: Ride {0}
+prompt.ride_named = Ride {0}
+
+# riding, by a cart standing on its own
+# en: Hitch the cart
+prompt.hitch = Hitch the cart
+
+# on foot by a cart, carrying something
+# en: Load on cart
+prompt.load = Load on cart
+
+# on foot by a full cart, carrying something
+# en: Cart is full
+prompt.cart_full = Cart is full
+
+# on foot by a cart with something on it
+# en: Take from cart
+prompt.take = Take from cart
+
+# the chest riding on the cart
+# en: Set down
+prompt.set_down = Set down
+
+# riding with the cart, at a storage chest
+# en: Load onto the cart
+prompt.load_chest = Load onto the cart
+
+# the notification when the game's donkey leaves a body at the crossroads
+# en: The donkey left a body at the crossroads
+notice.crossroads = The donkey left a body at the crossroads
+
+# the keeper's thought bubble, as every say. line
+# en: Not in a game.
+say.not_in_game = Not in a game.
+
+# en: Not yet: the game is still loading.
+say.still_loading = Not yet: the game is still loading.
+
+# en: Already mounted.
+say.already_mounted = Already mounted.
+
+# en: Your mount is nowhere to be found.
+say.nowhere_to_be_found = Your mount is nowhere to be found.
+
+# en: Not in a co-op game.
+say.not_in_coop_game = Not in a co-op game.
+
+# en: Not right now.
+say.not_right_now = Not right now.
+
+# en: Not indoors.
+say.not_indoors = Not indoors.
+
+# en: I'm busy.
+say.busy = I'm busy.
+
+# en: Not while building.
+say.not_while_building = Not while building.
+
+# {0}: the game's id of the animal a setting names
+# en: There is no such animal ({0}).
+say.no_such_animal = There is no such animal ({0}).
+
+# {0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+# en: Can't ride a {0}: {1}
+say.cant_ride_a = Can't ride a {0}: {1}
+
+# after "Can't ride a ...:"
+# en: it would change the town quality in the save.
+say.side_town_quality = it would change the town quality in the save.
+
+# after "Can't ride a ...:"
+# en: it belongs to an NPC group the save keeps track of.
+say.side_npc_group = it belongs to an NPC group the save keeps track of.
+
+# after "Can't ride a ...:"
+# en: it comes with items, which the cart would create out of nothing.
+say.side_start_items = it comes with items, which the cart would create out of nothing.
+
+# en: That is a cart without a mount.
+say.cart_without_mount = That is a cart without a mount.
+
+# en: This one is too small to ride.
+say.too_small_to_ride = This one is too small to ride.
+
+# en: It isn't here right now.
+say.not_here_now = It isn't here right now.
+
+# en: It is gone.
+say.it_is_gone = It is gone.
+
+# en: Not the cart in a fight.
+say.not_cart_in_fight = Not the cart in a fight.
+
+# en: Not the cart indoors.
+say.not_cart_indoors = Not the cart indoors.
+
+# {0}: the mount's name (the player's name for it, else its kind's)
+# en: {0} can't pull the cart.
+say.cant_pull_the_cart = {0} can't pull the cart.
+
+# a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls
+# en: Too much on the cart ({0} of at most {1}). Take some off first.
+say.too_much_on_cart = Too much on the cart ({0} of at most {1}). Take some off first.
+
+# {0}: what the mount is, in lower case (donkey, crab); a translation may leave it out
+# en: This {0} has no cart here; ride it up to one.
+say.no_cart_here_ride_up = This {0} has no cart here; ride it up to one.
+
+# {0}: what the mount is, in lower case (donkey, crab); a translation may leave it out
+# en: This {0} already pulls a cart.
+say.already_pulls_cart = This {0} already pulls a cart.
+
+# en: This one can't pull a cart.
+say.cant_pull_a_cart = This one can't pull a cart.
+
+# en: That is not a free cart.
+say.not_a_free_cart = That is not a free cart.
+
+# en: The cart is somewhere else.
+say.cart_elsewhere = The cart is somewhere else.
+
+# en: Not while the scene is not loaded.
+say.scene_not_loaded = Not while the scene is not loaded.
+
+# en: I can't get to that cart from here.
+say.cant_get_to_cart = I can't get to that cart from here.
+
+# en: No cart to leave.
+say.no_cart_to_leave = No cart to leave.
+
+# en: The cart can't stand here.
+say.cart_cant_stand = The cart can't stand here.
+
+# en: The cart could not be left where it stands.
+say.cart_not_left_where_stands = The cart could not be left where it stands.
+
+# en: The cart could not be left here.
+say.cart_not_left_here = The cart could not be left here.
+
+# en: No cart here.
+say.no_cart_here = No cart here.
+
+# en: It has no cart.
+say.has_no_cart = It has no cart.
+
+# en: The cart is not here.
+say.cart_not_here = The cart is not here.
+
+# en: Nothing in hand.
+say.nothing_in_hand = Nothing in hand.
+
+# en: The cart takes nothing now.
+say.cart_takes_nothing = The cart takes nothing now.
+
+# en: The cart can't take that.
+say.cart_cant_take = The cart can't take that.
+
+# en: The cart is full.
+say.cart_full = The cart is full.
+
+# en: No keeper.
+say.no_keeper = No keeper.
+
+# en: The cart gives nothing now.
+say.cart_gives_nothing = The cart gives nothing now.
+
+# en: The cart is empty.
+say.cart_empty = The cart is empty.
+
+# en: My hands are full.
+say.hands_full = My hands are full.
+
+# en: It won't come off the cart.
+say.wont_come_off = It won't come off the cart.
+
+# en: Not while riding.
+say.not_while_riding = Not while riding.
+
+# en: Ridden: pickups go onto the cart already.
+say.ridden_pickups = Ridden: pickups go onto the cart already.
+
+# en: The chest on the cart is off for now (see the log).
+say.chest_off = The chest on the cart is off for now (see the log).
+
+# en: Chests don't ride on the cart.
+say.chests_dont_ride = Chests don't ride on the cart.
+
+# en: That needs the cart.
+say.needs_the_cart = That needs the cart.
+
+# en: Only a plain storage chest goes on the cart.
+say.only_plain_chest = Only a plain storage chest goes on the cart.
+
+# en: There's a chest on the cart already.
+say.chest_aboard = There's a chest on the cart already.
+
+# en: Set the cargo down first.
+say.cargo_down_first = Set the cargo down first.
+
+# en: This can't be moved.
+say.cant_be_moved = This can't be moved.
+
+# en: Not in co-op.
+say.not_in_coop = Not in co-op.
+
+# en: It's marked for taking down.
+say.marked_for_taking_down = It's marked for taking down.
+
+# en: It's busy.
+say.its_busy = It's busy.
+
+# en: It's attached to a workbench.
+say.attached_to_workbench = It's attached to a workbench.
+
+# en: Someone works at it.
+say.someone_works_at_it = Someone works at it.
+
+# en: Someone is using it right now.
+say.someone_using_it = Someone is using it right now.
+
+# en: Close the building window first.
+say.close_building_window = Close the building window first.
+
+# en: A zombie is using this chest.
+say.zombie_using_chest = A zombie is using this chest.
+
+# en: That didn't work.
+say.didnt_work = That didn't work.
+
+# en: There's no room for it here.
+say.no_room_here = There's no room for it here.
+
+# en: I can't reach that spot.
+say.cant_reach_spot = I can't reach that spot.
+
+# en: That spot is outside any building area.
+say.outside_building_area = That spot is outside any building area.
+
+# a door to another place while the chest rides on the cart: it is set down by the cart
+# en: The chest stays by the cart.
+say.chest_stays = The chest stays by the cart.
+
+# en: Can't fly in here.
+say.cant_fly_in_here = Can't fly in here.
+
+# en: Can't fly now.
+say.cant_fly_now = Can't fly now.
+
+# en: Nowhere to land here.
+say.nowhere_to_land = Nowhere to land here.
+
+# en: Land first.
+say.land_first = Land first.
+
+# en: Back on solid ground.
+say.back_on_ground = Back on solid ground.
+
+# en: The keeper's body isn't there.
+say.keeper_not_there = The keeper's body isn't there.
+
+# en: Not now: a door, a scene or a cutscene has the keeper.
+say.not_now_door = Not now: a door, a scene or a cutscene has the keeper.
+
+# en: No safe spot in this scene yet (stand on the ground a moment).
+say.no_safe_spot_yet = No safe spot in this scene yet (stand on the ground a moment).
+
+# en: No safe spot of this scene still holds.
+say.no_safe_spot_holds = No safe spot of this scene still holds.
+
+# en: No safe spot of this scene holds any more.
+say.no_safe_spot_any_more = No safe spot of this scene holds any more.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 using GK2DonkeyAPI.Api;
@@ -84,6 +85,25 @@ namespace GK2DonkeyAPI
             private bool glowDrawn;             // the glow sprite drawn with any alpha to see (the lit lamp by day or night)
             internal bool PoleShown => poleShown; // what the lamp draws: the Mounts panel's picture is framed for it (PreviewStage)
             internal bool GlowDrawn => glowDrawn;
+
+            // Every renderer the lamp draws with (the pole, the hanging lamp, the glow, the glass): the self-tests' measure of
+            // the Mounts panel's picture without the lamp (PreviewStage.TestDrawnRect; docs/per-skin-looks.md §7).
+            internal void LampRenderers(List<Renderer> into)
+            {
+                foreach (Transform t in new[] { pole, light })
+                {
+                    if (t == null || !t) continue;
+                    foreach (Renderer r in t.GetComponentsInChildren<Renderer>(true)) if (!into.Contains(r)) into.Add(r);
+                }
+                foreach (Renderer r in new Renderer[] { glow, glass }) if (r != null && r && !into.Contains(r)) into.Add(r);
+                Lamp?.Renderers(into);
+            }
+
+            // The glow sprite alone (the lit lamp's halo): the same measure without only it (does the glow widen the picture?).
+            internal void GlowRenderers(List<Renderer> into)
+            {
+                if (glow != null && glow && !into.Contains(glow)) into.Add(glow);
+            }
 
             public bool Attached => pole != null && pole;
 

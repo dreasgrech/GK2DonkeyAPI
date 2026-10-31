@@ -626,11 +626,11 @@ namespace GK2DonkeyAPI
         {
             if (Ridden != null)
             {
-                return "Already mounted.";
+                return UiWords.SayAlreadyMounted.English;
             }
             if (!IsGameReady)
             {
-                return "Not yet: the game is still loading.";
+                return UiWords.SayStillLoading.English;
             }
             var i = new Instance(NextId(Plugin.Guid), Plugin.Guid, ephemeral: true, hasDonkey: true, hasCart: style == MountStyle.Cart);
             Register(i);
@@ -884,7 +884,7 @@ namespace GK2DonkeyAPI
             }
             if (!Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
-                why = "Not in a game.";
+                why = UiWords.SayNotInGame.English;
                 return null;
             }
             // The summon's own checks on the definition (General.MountWgoId), before any WgoData is built from it.
@@ -892,13 +892,13 @@ namespace GK2DonkeyAPI
             WGODef def = GameBalance.Me?.GetDataOrNull<WGODef>(wgoId);
             if (def == null)
             {
-                why = "There is no such animal (" + wgoId + ").";
+                why = UiWords.SayNoSuchAnimal.Make(wgoId);
                 return null;
             }
-            why = Instance.WhyDefinitionTouchesTheSave(def);
-            if (why != null)
+            Word side = Instance.WhyDefinitionTouchesTheSave(def);
+            if (side != null)
             {
-                why = "Can't use a " + wgoId + ": " + why;
+                why = "Can't use a " + wgoId + ": " + side.English; // a mod's Spawn refused: for its author, in English
                 return null;
             }
             string inScene = !string.IsNullOrEmpty(a.SceneId) ? a.SceneId : parent != null ? parent.SceneId : scene.Id;

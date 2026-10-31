@@ -48,6 +48,45 @@ game holds them (the cargo lies at the cart, a chest stands there), nothing is l
 that feature is off or runs with a warning, the rest works. The log line starts with `GK2 Donkey API: the game
 changed the code of`; Saddle Up follows the API.
 
+## Translations
+
+The options window, the Mount Journal and its colours window, the keeper's thought bubbles, the prompts on foot, the
+crossroads notification and the mounts' and skins' names are drawn in the game's language when a translation of them
+is installed. Key names stay English ([`docs/localization.md`](docs/localization.md)).
+
+**To translate:**
+
+1. **Find the English.**
+   - Each mod's English is in its folder: `BepInEx\plugins\GK2SaddleUp\Languages\en.txt` (Saddle Up's options and
+     Gerry), `BepInEx\plugins\GK2DonkeyAPI\Languages\en.txt` (the windows' own words, the bubbles, the prompts, the
+     donkey), and each pack's own (`BepInEx\plugins\GK2SaddleUpDragonsMountPack\Languages\en.txt`: its mounts' and
+     skins' names).
+   - Each has an `en.csv` with the same lines, for a spreadsheet.
+2. **Copy it** to your language's file beside it.
+   - Name it by the game's own id: `de` Deutsch, `fr` Français, `es` Español, `pt-br` Português do Brasil, `ru` Русский,
+     `pl` Polski, `tr` Türkçe, `ja` Japanese, `zh_cn` Chinese (Simplified), `ko` Korean, or a community language pack's
+     folder name.
+   - So `de.txt`, or `de.csv` from the spreadsheet.
+3. **Translate.**
+   - In a `.txt`, change the text after each `=`.
+   - Keep the keys, the `# en:` lines, `{0}` and `{1}` (the mod fills them in) and `\n` (a line break).
+   - In a `.csv`, change the `value` column and keep the `english` one. A spreadsheet that saves with `;` is fine.
+   - No tags: the windows draw plain text (a `<nobr>` is taken out).
+   - Save as UTF-8 (in Excel: "CSV UTF-8").
+4. **See it:** start the game in your language. A line you haven't translated shows in English.
+   - When the mod's English changes later, the lines whose `# en:` no longer match show in English until you
+     translate them again.
+   - With `[Translations] Report = true` in `BepInEx\config\dreas.gk2.donkeyapi.cfg`, those lines are written to
+     `BepInEx\GK2-l10n\<mod>\<language>.missing.txt`, ready to fill in.
+   - Problems in a file (a line without `=`, a quote that swallows lines, a file not in UTF-8) are named in
+     `BepInEx\LogOutput.log`.
+5. **Share it:**
+   - Send the file to us and it ships with the next release, with your name in its notes.
+   - Or publish it yourself, in a folder of its own: `BepInEx\plugins\<your folder>\Translations\<mod GUID>\<language>.txt`
+     (`dreas.gk2.saddleup` for Saddle Up, `dreas.gk2.donkeyapi` for the windows' words, `dreas.gk2.saddleup.dragon`,
+     `dreas.gk2.saddleup.donkeyskins` and `dreas.gk2.saddleup.critters` for the packs). Never put it in our folders,
+     where an update would replace it. A translation installed that way wins over the one we ship.
+
 ## Building on the API (mod authors)
 
 Start with [`docs/api.md`](docs/api.md). Reference `GK2DonkeyAPI.dll` with `Private=false`, declare

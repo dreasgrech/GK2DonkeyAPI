@@ -1,0 +1,18 @@
+# GK2 Saddle Up: Donkey Skin Pack (dreas.gk2.saddleup.donkeyskins): its English, to translate.
+# Copy this file to <language id>.txt beside it: de.txt, fr.txt, es.txt, pt-br.txt, ru.txt, pl.txt, tr.txt, ja.txt,
+# zh_cn.txt or ko.txt (the game's own ids). Change the text after each "="; keep the keys and the "# en:" lines
+# (a line whose "# en:" isn't the mod's English any more shows in English until it is translated again). A line
+# left out or left empty shows in English. Keep {0} and {1}: the mod fills them in. \n is a line break.
+# Save as UTF-8. The same lines are in en.csv, for a spreadsheet: either file works.
+
+# a skin's name (the Skin list, the colours window's title)
+# en: Armored
+skin.donkey/saddleup-donkey-skins.armored.name = Armored
+
+# a skin's name (the Skin list, the colours window's title)
+# en: Hellfire
+skin.donkey/saddleup-donkey-skins.hellfire.name = Hellfire
+
+# a skin's name (the Skin list, the colours window's title)
+# en: Royal Parade
+skin.donkey/saddleup-donkey-skins.royal-parade.name = Royal Parade

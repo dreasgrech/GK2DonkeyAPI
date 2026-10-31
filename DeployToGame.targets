@@ -17,6 +17,11 @@
     <Warning Condition="'$(GameRunning)' == 'true'" Text="Graveyard Keeper 2 is running: $(TargetFileName) was built but NOT deployed. Close the game and build again." />
     <MakeDir Condition="'$(GameRunning)' != 'true'" Directories="$(PluginFolder)" />
     <Copy Condition="'$(GameRunning)' != 'true'" SourceFiles="$(TargetPath)" DestinationFolder="$(PluginFolder)" />
+    <!-- its translations beside it (docs/localization.md): Languages\ of the project, as the release zips ship it -->
+    <ItemGroup>
+      <DeployLanguageFile Include="$(MSBuildProjectDirectory)\Languages\*.txt;$(MSBuildProjectDirectory)\Languages\*.csv" />
+    </ItemGroup>
+    <Copy Condition="'$(GameRunning)' != 'true' And '@(DeployLanguageFile)' != ''" SourceFiles="@(DeployLanguageFile)" DestinationFolder="$(PluginFolder)\Languages" />
     <Message Condition="'$(GameRunning)' != 'true' And Exists('$(LooseCopy)')" Importance="high" Text="Removed the old loose copy $(LooseCopy)" />
     <Delete Condition="'$(GameRunning)' != 'true' And Exists('$(LooseCopy)')" Files="$(LooseCopy)" />
     <Message Condition="'$(GameRunning)' != 'true'" Importance="high" Text="Deployed $(TargetFileName) to $(PluginFolder)" />

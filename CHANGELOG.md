@@ -14,12 +14,132 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The key that opens the Mount Journal is called Mount Journal** in the options (it said "Mounts panel", the
+  window's old name; 2026-10-31, the open item). Its description and the Mount section's Mounts button say "Opens
+  the Mount Journal." The key itself (L, cfg key MountsKey) is unchanged.
+- **Translations, step 1** (2026-10-31; a player asked for an English file to translate): the options window, the
+  Mount Journal and its colours window are drawn in the game's language when a translation is installed. Each mod
+  ships its English as `Languages\en.txt` (and `en.csv` for a spreadsheet) beside its DLL; a translator copies it to
+  `de.txt`, `fr.txt`, ... (the game's language ids). A line not translated, or whose English changed since, shows in
+  English. The README's Translations says how; `[Translations] Report` (the API's cfg) writes the lines still to
+  translate. No translation ships yet.
+- **Translations, steps 2 and 3** (2026-11-01): the keeper's thought bubbles (why something can't be done), the
+  prompts on foot ("Ride", "Hitch the cart", "Load on cart", "Take from cart", the chest's two), the crossroads
+  notification (while it is still the shipped text) and the mounts' and skins' names and descriptions (the journal,
+  the Skin list, the colours window's title) are translatable too: the API's in its `en.txt`, Saddle Up's Gerry in
+  Saddle Up's, each pack's mounts and skins in the pack's own `Languages\en.txt`. Key names stay English.
+- **Four sentences say it differently**, so that every language can say them (2026-11-01, the user's yes):
+  - the journal's Cargo is a number ("4", or "2 of 4" while a mod limits the cart), and the Cargo cart ability reads
+    "Pulls a cart (cargo 4)." (no more "1 items");
+  - a mount that pulls fewer things than are on the cart: "Too much on the cart (6 of at most 4). Take some off
+    first." (it said "Bella pulls 4 items at most. Take 2 off the cart first.");
+  - a mount whose skins are installed but not the mount: "Skins for this mount are installed (...), but not the mount
+    itself: install the mod that adds it to ride it.", for one skin or many;
+  - the safe-spot key's refusal "No safe spot of this scene still holds." without the coordinates and collider names,
+    which go to the log's `[safe-spot]` line.
 - **Armored**, a third donkey skin in GK2 Saddle Up: Donkey Skins (2026-10-30, the pack's 1.1.0): plate barding
   drawn over the donkey (a plumed chanfron with an eye hole and a forehead spike, a chest plate, riveted flank lames
   with a brass hem over red padding, a crupper); the steel follows the Second tone, the plume and the padding the
   harness colour.
 
+For mod authors:
+
+- **A settings page is translatable** (2026-10-31; docs/api.md "Translations"): `Languages/<id>.txt` or `.csv` beside
+  the DLL (or a translator's `BepInEx/plugins/<folder>/Translations/<GUID>/`), keyed by the row's cfg key without its
+  mount or skin part (`.label`, `.desc`, `.choice.<i>`, `.button`), `section.<slug>`, `page.title`; looked up when
+  drawn; the English passed to the page stays the source and the cfg's. No public API change.
+- **A mount's and a skin's words are translatable** (2026-11-01; docs/api.md "Translations"): `mount.<mount
+  id>.name`, `.description`, `.ability.<ability id>.name` and `.description`, `skin.<skin id>.name` and
+  `.description`, in the `Languages/` of the mod or pack that registered them (its GUID's). Drawn in the journal, the
+  Skin list and the colours window. The registered English stays the data: `MountInfo.Name`, the cfg, the logs.
+- **`MountResult.Reason` stays English** (2026-11-01): the bubble shows the API's own reasons in the player's
+  language, found by their English; a mod's own reason is shown as it is. Two of the API's reasons are worded
+  differently (the cart overload and the safe spot, above).
+
 Development:
+
+- **Translations, step 1 built** (2026-10-31; the plan agreed with the user, docs/localization.md section 7):
+  - `Texts.cs`: folders, the two readers (`key = value` with `# en:`, CSV with the separator from its header and
+    the game's quoting), the language chain, the stale-English rule, the cache, the log line and the warnings, the
+    test language (`Debug.TestLanguage`) and the translators' report.
+  - `UiWords.cs`: the API's 60 words.
+  - `MountSettingsPage.Row`: `Owner`, `TextKey`, `LabelWord`, `ButtonWord`.
+  - Drawn through the lookup: the options window, the row controls, the journal and its colours window, the key
+    clash lines (with "None" for an unbound key, the one key word translated: key names stay English), and the
+    Settings-window button, which retitles itself on a language switch.
+  - The English templates: written by a dev run to `BepInEx/GK2-l10n/<guid>/`, copied into
+    `src/<Plugin>/Languages/` by `tools/l10n-sync.py` (its `--check` in `tools/release-scans.sh`), deployed by
+    `DeployToGame.targets` and shipped by `tools/make-release-zip.py`. The release rule reads DLL names from `.dll`
+    entries only.
+  - Self-tests `TranslationTests.Files` and `.Windows`, in a group of their own, Translations (the user: not under Skins
+    and effects; docs/self-tests.md). F11 runs in English with the test language off.
+  - `game-code.txt`: `Texts` warned, `TranslationTests` dev.
+  - After the first dev start and a review (docs/localization.md section 7):
+    - the palette's names left out of the templates (310 lines down to 142);
+    - context hints on the API's templates;
+    - the Settings-window button retitled whenever the language changed since its drawing;
+    - the game's language read in a method of its own;
+    - line endings ignored by `l10n-sync.py --check`;
+    - `<nobr>` taken out;
+    - the Skin list's "(not installed)", "(set aside)" and "(none)" translated;
+    - a key used in two sections kept apart;
+    - the heading test made real;
+    - the bad-template warning quiet in the test;
+    - `.csv` values trimmed;
+    - no zip with uncommitted translation files.
+  - The long-text rule, after the first F11 of the Translations group (37/0/0): at 1.6 times only buttons and a
+    dropdown's face ran short, so `UiKit.OwnButton` labels shrink to 80% before their "…". English that fits keeps
+    its size. `TranslationTests.Windows` checks it: under the test language every one-line text that shrinks fits at
+    its smallest size (`TextRoom.Measure` returns them).
+  - One test session collects every measurement still open (the user: "collecting as much data as possible when
+    testing so we don't do one thing at a time"):
+    - the windows scenario measures the room in English, then in the test language, with the descriptions;
+    - `TranslationTests.German` ships a German translation (a `de.txt` with a stale line, a `;`-saved `de.csv`) and
+      reads the windows back;
+    - `TranslationTests.Fonts` switches the game through every language (not saved, the player's own back) and
+      records our windows' font against the game style's, with the characters of each language's own words
+      (`GK2-l10n-fonts.tsv`);
+    - a new self-test group, Measurements: `MeasureTests.LampFraming` measures the journal picture with the lamp lit,
+      dark and off for every donkey skin, for the framing decision (`GK2-lamp-framing.tsv`;
+      `PreviewStage.TestDrawnRect`, `Lantern.Rig.LampRenderers`). After its first run it also photographs without the
+      glow alone (`TestHide.Glow`) and reports the lamp's parts (`TestLampReport`): the noon stage kept the glow lit
+      for "dark", and Hellfire drew a lamp part while the stage said no lamp.
+  - The font our windows read: the Settings row's text style is applied for the language now before its font is
+    copied (the game restyles only open windows on a language switch, so a closed Settings window could hold the
+    last language's font).
+- **Translations, steps 2 and 3 built** (2026-11-01; the user: "lets do a lot so we get this translation finished
+  and ready"; docs/localization.md section 8):
+  - `UiWords`: `Term` (owner, key, English) under `Word`; the keeper's 71 fixed sentences and 6 templates
+    (`say.*`), 8 prompts (`prompt.*`) and the crossroads notice. The code returns a word's English
+    (`UiWords.SayCartFull.English`) and `Word.Make(args)` for a template, which remembers the last 8 sentences it
+    made so the bubble finds them; a `Term` value goes into the reason in English and into the bubble translated.
+  - `Mount.Say` shows `UiWords.Shown(text)`. `Mount.Instance.NotTheCartIndoors` is a property,
+    `WhyDefinitionTouchesTheSave` returns a word, `Looks.Who` the mount's name as a `Term`.
+  - `Catalog.NameTerm`, `ShownDescription`, `AbilityName`, `AbilityDescription` and `Looks.NameTerm`,
+    `ShownDescription`, drawn in the journal (list, header, description, abilities, waiting skins), the colours
+    window's title and the Skin list (`Texts.Choice`).
+  - `Texts.EnglishOf` lists an owner's mounts and skins (a mount's own look's name left out: it shows as "Default");
+    `Texts.Owners()` (the pages', the API's, every loaded plugin that registered a mount or a skin) and the dev run
+    writes each one's English; the file's header names a pack by its plugin name.
+  - The babies slider's "None" is the API's word; `Corpses.NotificationShown`.
+  - `tools/l10n-sync.py --check` fails on a bubble or a prompt said with a literal in the API's game code.
+  - Self-tests `TranslationTests.Bubbles` and `.PackNames` (the Translations group); `.Windows` checks every mount's
+    name, description and abilities in the journal's entries; the cargo checks (`SelfTest.Speeds`, `.Freeplay`)
+    read the number.
+  - A comment in `PreviewStage` named a pack's skin (the layering scan): reworded.
+  - After the first run (2026-11-01, 98/0/0): the English templates synced (the API 147 lines, Saddle Up 144, and the
+    packs' first, `packs/<Pack>/Languages/`); a skin's description goes into the English file only where a window
+    draws it (its mount has none of its own: 8 lines no one would ever see left out); `TranslationTests.PackNames`
+    puts the player's chosen mount back in its finally; `Term.Format` translates a `Term` value too.
+  - The lamp framing probe writes the stage's state with each measurement (`PreviewStage.TestCartState`): Hellfire's
+    picture keeps its no-lamp framing while the lamp draws, and the next run says why. It also records the stage at
+    the moment it used to measure, then waits (10 s at most) until the look is worn and framed for what the stage
+    draws, counting the frames, and measures after (`Looks.Rig.TestSettleReport`, `PreviewStage.TestShownSettling`):
+    the probe moved on after 6 frames, and a look still building keeps its last photo. Its run (00:30) settled it:
+    Hellfire's sheet was still building (22 frames), and once worn its picture was framed for the lamp like the others;
+    no change to the stage.
+  - `tools/release-versions.py check` notes a kept item (a released build) whose `Languages/` differs from its released
+    zip's: a translation added between releases ships only with a raised version (docs/release-checklist.md).
 
 - **`docs/localization.md`: translating Saddle Up, investigated** (2026-10-31, two passes; a player asked for an
   English file others can translate; the user: "investigate the decisions we need to make and the findings"): the
@@ -29,7 +149,33 @@ Development:
   start before the game loads its language, so text is looked up when drawn; our windows rebuild on open; how much
   longer the game's own labels run per language; 60 glued sentences; words that are also data; the cfg stays English
   by itself; the Workshop copier carries `.csv` files); nine decisions with the evidence and a recommendation each.
-  Nothing built.
+  Decided by the user: our own files (D1) and translations both bundled and translators' own (D3). For the format (D2)
+  the user asked for more data. Four formats were put through translator mistakes with each one's reader (the game's
+  CSV reader ported from the decompile, the game's own Newtonsoft.Json):
+  - one stray quote cost CSV 9 of 12 lines;
+  - European Excel's `;` cost CSV everything;
+  - JSON refused the whole file at any quote or comma slip;
+  - `key = value` lost at most one line.
+
+  The recommendation is revised to `key = value` with the English as a comment, CSV also accepted.
+
+  Three other GK2 mods were read (decompiled), for how they translate:
+  - WeeklyOverview has its 10 translations typed into its code, with a font check for Japanese, Korean and Chinese;
+  - Work Faster and Keeper's Longer Days keep JSON files in the GK2 Mod Framework's folder and need the Framework.
+
+  None gives translators a file that works without the Framework.
+
+  How often our English changes per public release, read from git: small releases 0 to 16 lines, feature releases 20
+  to 90. 0.12.0 changed 22 rows' English and moved 22 rows to other sections, so translation keys leave the section
+  out; the 46 keyed rows are unique. 20 real lines were written in each of the four formats for the user to compare,
+  and the format choice is framed by how the first translator works. Nothing built.
+- **Text room in the self-tests** (2026-10-31, the translation investigation's room finding): `Dev/TextRoom.cs`
+  measures, where the self-tests already show them, every text of the options window (each section, and every row's
+  description in the description line), the journal (per mount) and the colours window. The measure is how many times
+  longer a text can get and still fit its box: TMP lays out the text grown with its own words, at full size and, for a
+  text that shrinks, at its smallest. It writes `BepInEx\GK2-text-room.tsv` and an INFO line per window. It only
+  measures (no check, no change), through two test-only accessors (`OptionsWindow.TestRoot` / `TestDescriptionBox`,
+  `MountsPanel.TestRoot`).
 - **Full-size pictures for the Workshop galleries** (2026-10-31; the user: the gallery blows the 560-wide pictures
   up): `tools/workshop-gallery.py` cuts a box out of a Steam screenshot at its own pixels into
   `media/workshop/<Item>/gallery/` (a JPEG under 1 MB). Every gallery picture's screenshot was found again in the

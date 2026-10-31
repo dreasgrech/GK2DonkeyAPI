@@ -246,11 +246,11 @@ namespace GK2DonkeyAPI.Api
         {
             if (!Exists)
             {
-                return MountResult.Refused("It is gone.");
+                return MountResult.Refused(UiWords.SayItIsGone.English);
             }
             if (!GK2DonkeyAPI.Mount.Instance.IsInGame(out PlayerController pc, out _))
             {
-                return MountResult.Refused("Not in a game.");
+                return MountResult.Refused(UiWords.SayNotInGame.English);
             }
             string why;
             using (GK2DonkeyAPI.Mount.Bind(I))
@@ -265,7 +265,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (!Exists)
             {
-                return MountResult.Refused("It is gone.");
+                return MountResult.Refused(UiWords.SayItIsGone.English);
             }
             if (I.IsRidden)
             {
@@ -298,7 +298,7 @@ namespace GK2DonkeyAPI.Api
         {
             if (!Exists)
             {
-                return MountResult.Refused("It is gone.");
+                return MountResult.Refused(UiWords.SayItIsGone.English);
             }
             if (I.IsRidden)
             {
@@ -306,7 +306,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (!GK2DonkeyAPI.Mount.Instance.IsInGame(out PlayerController pc, out GameScene scene))
             {
-                return MountResult.Refused("Not in a game.");
+                return MountResult.Refused(UiWords.SayNotInGame.English);
             }
             bool right = facingRight ?? pc.PlayerData.Direction.x >= 0f;
             using (GK2DonkeyAPI.Mount.Bind(I))
@@ -346,19 +346,19 @@ namespace GK2DonkeyAPI.Api
             PlayerData pd = MainGame.PlayerData;
             if (!Exists)
             {
-                why = "It is gone.";
+                why = UiWords.SayItIsGone.English;
             }
             else if (!I.HasCart)
             {
-                why = "It has no cart.";
+                why = UiWords.SayHasNoCart.English;
             }
             else if (Mounts.IsMounted)
             {
-                why = I.IsRidden ? "Ridden: pickups go onto the cart already." : "Not while riding.";
+                why = I.IsRidden ? UiWords.SayRiddenPickups.English : UiWords.SayNotWhileRiding.English;
             }
             else if (pd == null || I.SceneId != pd.currentGameSceneId || !I.Ready)
             {
-                why = "The cart is not here.";
+                why = UiWords.SayCartNotHere.English;
             }
             if (why == null)
             {

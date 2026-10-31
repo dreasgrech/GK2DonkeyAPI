@@ -113,7 +113,7 @@ namespace GK2DonkeyAPI
                 MountsPanel.Entry entry = MountsPanel.Entries().Find(x => x.Id == beast);
                 Check(Catalog.CargoOf(k0) == Catalog.CargoMax && Catalog.CargoOf(Catalog.Donkey) == Catalog.CargoMax && info != null && info.Cargo == Mounts.Catalog.MostCargo && Mounts.Catalog.MostCargo == Catalog.CargoMax,
                     $"FreeplayMaxCargo on: the beast's cargo is the most, {Catalog.CargoMax} (catalog {Catalog.CargoOf(k0)}, MountInfo {info?.Cargo}, MostCargo {Mounts.Catalog.MostCargo})");
-                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[1] == ("Cargo", Catalog.CargoMax + " items") && entry.Abilities.Exists(a => a.Name == "Cargo cart" && a.Line.Contains(Catalog.CargoMax + " items")),
+                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[1] == ("Cargo", Catalog.CargoMax.ToString()) && entry.Abilities.Exists(a => a.Name == "Cargo cart" && a.Line.Contains("cargo " + Catalog.CargoMax)),
                     $"and the panel's card and its Cargo cart line ({(entry == null ? "no entry" : string.Join(", ", entry.Stats))})");
                 Mounts.Behaviour.Set(Owner, "FreeplayMaxCargo", false);
                 Check(Catalog.CargoOf(k0) == 2 && Mounts.Catalog.Find(beast)?.Cargo == 2, $"off again: its own 2 ({Catalog.CargoOf(k0)})");

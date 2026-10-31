@@ -19,6 +19,8 @@ Donkey API inside, and each external pack. Every item is laid out as the game's 
 (README_MODDING.txt in the game folder since 1.011, docs/mods-window-and-workshop.md):
 
     BepInEx/plugins/<Mod>/<Mod>.dll     a folder per plugin (Saddle Up's zip: GK2DonkeyAPI and GK2SaddleUp)
+    BepInEx/plugins/<Mod>/Languages/    its translation files, when its source folder has any (docs/localization.md): the
+                                        English templates en.txt and en.csv (tools/l10n-sync.py) and the bundled translations
     modinfo.json                        the Workshop folder only: id (the plugin GUID), name, version for the game's Mods window
 
 The plugin files are the same bytes on both channels (the lab run of 2026-10-30 in the report):
@@ -93,6 +95,27 @@ def assembly_of(pack_dir):
         return name
 
 
+def source_dir(dll):
+    """A plugin's source folder: src/GK2DonkeyAPI, src/SaddleUp, or the pack folder whose csproj builds the DLL."""
+    fixed = {"GK2DonkeyAPI": os.path.join(ROOT, "src", "GK2DonkeyAPI"), "GK2SaddleUp": os.path.join(ROOT, "src", "SaddleUp")}
+    if dll in fixed:
+        return fixed[dll]
+    if os.path.isdir(PACKS):
+        for d in sorted(os.listdir(PACKS)):
+            if os.path.isfile(os.path.join(PACKS, d, d + ".csproj")) and assembly_of(os.path.join(PACKS, d)) == dll:
+                return os.path.join(PACKS, d)
+    return None
+
+
+def languages_of(dll):
+    """The plugin's translation files (Languages/*.txt and *.csv of its source folder), sorted; [] without any."""
+    src = source_dir(dll)
+    folder = os.path.join(src, "Languages") if src else None
+    if not folder or not os.path.isdir(folder):
+        return []
+    return [os.path.join(folder, n) for n in sorted(os.listdir(folder)) if n.lower().endswith((".txt", ".csv"))]
+
+
 class Item:
     """One download: its folder name (the plugin folder of its main DLL), the zip name, modinfo, and the entries
     [(source path or None for a folder, path inside the item)] in zip order."""
@@ -103,6 +126,10 @@ class Item:
         self.entries = [(None, MODINFO), (None, "BepInEx/"), (None, INNER)]  # modinfo.json: the Workshop folder only
         for dll in dlls:  # a folder per plugin, named after the DLL
             self.entries += [(None, INNER + dll + "/"), (os.path.join(DIST, dll + ".dll"), INNER + dll + "/" + dll + ".dll")]
+            langs = languages_of(dll)
+            if langs:  # its translations beside it (docs/localization.md)
+                self.entries.append((None, INNER + dll + "/Languages/"))
+                self.entries += [(p, INNER + dll + "/Languages/" + os.path.basename(p)) for p in langs]
 
     def modinfo(self):
         return modinfo_bytes(self.guid, self.name, self.version)
@@ -261,6 +288,15 @@ def main():
         sys.exit("release-versions.py check failed: a version line is stale or an editorial piece is missing; no zip written")
     if subprocess.run([sys.executable, os.path.join(ROOT, "tools", "check-dist.py")]).returncode != 0:
         sys.exit("check-dist.py failed: no zip written")
+    # the translation files ship as the working tree has them (the DLLs as dist/ was committed): only committed ones
+    lang_dirs = [os.path.join(ROOT, "src", "GK2DonkeyAPI"), os.path.join(ROOT, "src", "SaddleUp")]
+    if os.path.isdir(PACKS):
+        lang_dirs += [os.path.join(PACKS, d) for d in sorted(os.listdir(PACKS))]
+    lang_dirs = [os.path.relpath(os.path.join(d, "Languages"), ROOT) for d in lang_dirs if os.path.isdir(os.path.join(d, "Languages"))]
+    if lang_dirs:
+        dirty = subprocess.run(["git", "-C", ROOT, "status", "--porcelain", "--"] + lang_dirs, capture_output=True, text=True).stdout.strip()
+        if dirty:
+            sys.exit("translation files not committed (a zip takes Languages/ from the working tree): commit them first, no zip written\n" + dirty)
     items = [saddle_up_item()]
     packs = sorted(d for d in os.listdir(PACKS) if os.path.isfile(os.path.join(PACKS, d, d + ".csproj"))) if os.path.isdir(PACKS) else []
     items += [pack_item(p) for p in packs]
@@ -277,9 +313,9 @@ def main():
             sys.exit("release-versions.py items failed: " + r.stderr.strip())
         raised = {line.split()[1] for line in r.stdout.splitlines() if line.split() and line.split()[0] in ("raised", "new")}
         for it in items:
-            dlls = {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None}
+            dlls = {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None and s.endswith(".dll")}
             print(f"{'in this release' if dlls & raised else 'kept (released)':16} {it.name} {it.version}")
-        items = [it for it in items if {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None} & raised]
+        items = [it for it in items if {os.path.basename(s)[:-4] for s, _ in it.entries if s is not None and s.endswith(".dll")} & raised]
         if not items:
             sys.exit("no item's version was raised above the one committed in dist/: nothing to release")
     os.makedirs(OUT, exist_ok=True)

@@ -10,9 +10,61 @@ Saddle Up 0.1.0. Tick items off (or delete them) as they're checked; add new one
   lower-left and about 18% smaller than without it. Measure with the lamp forced visible, record the mount+cart
   rectangle, centre the panel's picture on it at a scale that keeps the lamp's room (PreviewStage, MountsPanel.Fit, the
   panel scenario's lantern check). Left for the next update.
-- **The key that opens the Mount Journal is labelled "Mounts panel"** (2026-10-31): the window's title is Mount
-  Journal, and the page texts and the 0.14.0 notes say so. Rename the row's label (display text only; its cfg key
-  stays) in Saddle Up's next release, and the READMEs' option tables with it.
+  Studied 2026-10-31 (not built). **One question to measure first:** does "as if the lamp were there" include its
+  glow? The glow is a big soft sprite drawn only when lit, and the 371 vs 320 px of 2026-10-29 were lantern:lit
+  against lantern:off; there is no width for lantern:dark (the lamp without its glow). The measure counts pixels
+  with alpha over 8, so a dim glow by day counts for less.
+  **Measured 2026-10-31 23:31** (the Measurements group, GK2-lamp-framing.tsv), the donkey's skins Default, Armored and
+  Royal Parade alike:
+  - with the lamp: the picture 371x243, the mount and cart about 281x163 at (18 to 22, 62), their centre 25 px left
+    and 22 px low of the middle; the lamp adds about 50x40 at the top right;
+  - without it: 320x198, centred within 2 px.
+  "Dark" (on, not lit by day) stayed lantern:lit on the noon stage, so the glow wasn't separated. The probe now also
+  photographs with only the glow off (TestHide.Glow) and reports the lamp's parts (TestLampReport).
+  **Measured 2026-11-01 00:14:** the glow adds nothing to what is drawn (with and without it the same rectangle, every
+  skin): "as if the lamp were there" is the lamp alone. With the lamp, what is drawn (the mount, the cart and the lamp,
+  323x204) sits centred in today's 371x243 picture (margins 24/24 and 21/18); only the mount and cart are off-centre,
+  because the lamp takes the top right. "Dark" is still lit on the noon stage (the stage lights the lamp by day).
+  **What the choice means, in numbers (the Default skin):** framing centred on the mount and cart with room for the
+  lamp on all four sides needs about 420x277 (half-widths: 192 to the lamp's right edge, 120 to its top, from the
+  mount and cart's centre, plus the margins). The mount then shows about 12% smaller than with today's lamp picture,
+  and about 24% smaller than without the lamp, the same with the lamp on or off.
+  The other ways:
+  - frame the mount and cart alone (320x198, always centred, the lamp cut at the top right when on);
+  - keep today's.
+- **Hellfire's lamp: RESOLVED 2026-11-01 00:30, not a bug (the probe's timing).** With the settle wait, the probe's
+  "before" said: Hellfire wanted, Armored still worn, Hellfire's sheet building (not ready), the picture settling and
+  rightly holding its last photo. 22 frames later Hellfire was worn and framed for the lamp (371x242, like every other
+  skin) and nothing was cut. The runs before measured during the build. History below.
+  (found 2026-10-31 by the lamp framing measure): with Hellfire's lantern switched on, the stage
+  said lantern:off (pole not shown), yet a lamp part drew at the top right, reaching the picture's top edge
+  (299x180 against the mount's 278x162). Hellfire's skin.cfg says nothing of the lantern. Not changed.
+  **Measured 2026-11-01 00:14:** the lamp's parts all draw (the pole, `gk2_hanging_lamp`, both lights; the paper's
+  LanternShow override on, the rig's pole shown and glow drawn), so the lantern is on; what is wrong is the picture's
+  framing, still the one taken without the lamp (`FramedVariant` lantern:off, 320x198): the lamp is cut at the top and
+  the right. The other skins framed again for the lamp (371x242). `PreviewStage.RenderLit` frames again when the
+  variant changes, so for Hellfire it didn't run, or ran without seeing the change; which gate held it (settling, the
+  render frame, not asked) is not known yet. The probe now writes the stage's state with each measurement
+  (`PreviewStage.TestCartState`) for the next Measurements run. The likely cause, from the code: the probe moved on
+  after 6 frames, and a look whose sheet is still building (`Settling`) keeps its last photo and frames nothing, so
+  Hellfire may have been measured before it was worn. The probe now records the stage at that moment, then waits up to
+  10 s for the look to be worn and framed (counting the frames) and measures after: "settled after N frames" = a probe
+  artifact, "NOT settled in 10 s" = a real bug, with the stage's state. Not changed.
+  **Sketch:**
+  - `Lantern.LanternRig` gets a force switch that `ApplyLight` honours: the pole shown, and the glow if the answer
+    is yes.
+  - Each measuring step (`PreviewStage.TightenStep`) takes two photos:
+    - one with the lamp forced: the outer extent;
+    - one with the lamp's renderers off: the mount and the cart.
+  - The frame is centred on the second, as wide and tall as the farthest edge of the first on either side.
+  - The lantern state leaves the framing key and the disk key (`FramingFileVersion` 3), and the variant re-measure in
+    `RenderLit` goes.
+  - The panel scenario's lantern check changes to: toggling the lamp leaves the picture's size and framing as they
+    are.
+  - Cost: two read-backs a step (2 to 3.6 ms each) over 20 frames, once per look.
+- **DONE 2026-10-31: the key that opens the Mount Journal is labelled "Mount Journal"** (it said "Mounts panel"),
+  its description and the Mounts button's "Opens the Mount Journal.", Saddle Up's README table with them; the cfg key
+  stays. Ships with Saddle Up's next release.
 
 ## To check in game (built and deployed, not yet seen)
 
@@ -523,25 +575,28 @@ closed):
   api and then we will consume it from the skin consumer", and of the skin hook: "Remove it and we'll think about how
   to implement properly". Until then nothing shows Hellfire (Saddle Up still registers it); only the self-tests light
   it, through a test hook.
-- **Translations** (2026-10-31; a player asked for an English file to translate): investigated in two passes in
-  [localization.md](localization.md); nothing built. To decide (its section 5, a recommendation each): D1 the game's
-  language packs or our own files (B); D2 the format (the game's CSV with a third column for the English); D3 where
-  translations live (bundled and translators' own, decided before the first one); D4 the order (the page rows first);
-  D5 the code as the English source with a generated `en.csv`; D6 keys; D7 plurals and nouns (word them out); D8 key
-  names (English for now); D9 what stays English. In-game checks with the first build: Japanese fonts, a long test
-  language.
-- **A bubble shows coordinates** (found 2026-10-31 by the translation inventory): when no safe spot of the scene
-  holds, `Mounts.ReturnToSafeSpot` says "No safe spot of this scene still holds (...)" in the keeper's bubble with
-  coordinates and game collider names inside (`SafeSpots.cs` 246, 261; `Mounts.cs` 435), against the 2026-10-27 rule
-  that coordinates mean nothing to a player (Saddle Up's comment). Drop the part in brackets from the bubble (the log
-  keeps it)? Not changed.
-- **"1 items"** (found 2026-10-31): a mount whose `cargo` is 1 reads "1 items" in the journal (`MountsPanel.cs` 173,
-  192) and in the too-much-cargo bubble (`Looks.cs` 1571); Freeplay's description too if the most cargo were 1. Word
-  it without a plural (localization.md D7)? Not changed.
+- **Translations, step 1 BUILT 2026-10-31** (localization.md section 7): the English templates are in `src/*/Languages/`
+  (synced 2026-10-31 22:53 from the second dev start: Saddle Up 142 lines, the API 61; deployed beside the DLLs). The
+  Translations group's first F11 23:08: 37/0/0. The long-text rule built since (OwnButton labels shrink to 80% before
+  the "...", checked by the windows scenario). **TESTED 2026-10-31 23:31** (Translations 74/0/0, localization.md
+  section 7): German read back, all 11 languages' fonts right (the font fix was needed), no text likely to overflow.
+- **Translations, steps 2 and 3 BUILT 2026-11-01** (the user: "lets do a lot so we get this translation finished and
+  ready"; localization.md section 8): the keeper's bubbles (71 sentences, 6 templates; `MountResult.Reason` stays
+  English), the 8 prompts on foot, the crossroads notice, the mounts' and skins' names, descriptions and abilities by
+  their owner (the packs' own `Languages/`). Built, deployed, scans green (Cecil, ApiSurface, NoLinq, layering, the
+  new literal check). **Open:**
+  - **TESTED 2026-11-01 00:13** (Translations 98/0/0); the templates synced (`packs/*/Languages/` new, each pack's
+    CHANGELOG has it under Unreleased, deployed); the 8 never-drawn skin descriptions trimmed by hand to match the
+    fixed code, confirmed by the dev start of 2026-11-01 00:28 (`l10n-sync.py --check`: all 10 the same);
+  - the versions that ship the Languages folders (the API, Saddle Up, the three packs): the user's.
+  - The bubble's coordinates and "1 items" (found 2026-10-31) are done with it: the four rewordings, each in CHANGELOG
+    "For players" to undo on its own.
 - **Text written but never shown** (found 2026-10-31): the descriptions of the journal's and colours window's rows
   (Saddle Up 20, the API 6: only the options window draws descriptions; they are cfg comments), the picture row's
   "Your mount", and the journal entry's `Lines` ("Pulls the cart", "Speed: ...", `[Stats]` lines; only self-tests
-  read them). Keep (cfg comments, the API's data for mods) or trim? Not changed.
+  read them). Proposal: keep the descriptions (the cfg's comments) and "Your mount" but leave them out of the
+  translation files; take `Lines`/`Extra` and their self-test checks out the next time the journal is worked on.
+  Not changed.
 
 ## Deferred
 

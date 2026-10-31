@@ -366,26 +366,26 @@ namespace GK2DonkeyAPI
                 itemId = null;
                 if (inv == null || donkey == null)
                 {
-                    return "The cart is not here.";
+                    return UiWords.SayCartNotHere.English;
                 }
                 if (pd == null || !pd.HasOverheadItem)
                 {
-                    return "Nothing in hand.";
+                    return UiWords.SayNothingInHand.English;
                 }
                 if (!MountRules.Allowed(MountFeature.Cargo))
                 {
-                    return "The cart takes nothing now.";
+                    return UiWords.SayCartTakesNothing.English;
                 }
                 fitInv = inv;
                 if (!pd.TryGetOverheadItem(FitsCart, out Item item))
                 {
-                    return pd.TryGetOverheadItem(AllowedItem, out _) ? "The cart is full." : "The cart can't take that.";
+                    return pd.TryGetOverheadItem(AllowedItem, out _) ? UiWords.SayCartFull.English : UiWords.SayCartCantTake.English;
                 }
                 itemId = item.id;
                 if (!inv.AddItemToInventory(item))
                 {
                     Resync("load failed");
-                    return "The cart is full.";
+                    return UiWords.SayCartFull.English;
                 }
                 HeadReroute.RelinkZombie(inv, item, owner.Describe());
                 pd.RemoveOverheadItem(item);
@@ -401,37 +401,37 @@ namespace GK2DonkeyAPI
                 itemId = null;
                 if (inv == null || donkey == null)
                 {
-                    return "The cart is not here.";
+                    return UiWords.SayCartNotHere.English;
                 }
                 if (pd == null)
                 {
-                    return "No keeper.";
+                    return UiWords.SayNoKeeper.English;
                 }
                 if (!MountRules.Allowed(MountFeature.Cargo))
                 {
-                    return "The cart gives nothing now.";
+                    return UiWords.SayCartGivesNothing.English;
                 }
                 List<Item> list = inv.Data.Inventory;
                 if (list.Count == 0)
                 {
-                    return "The cart is empty.";
+                    return UiWords.SayCartEmpty.English;
                 }
                 if (!pd.HasFreeOverheadSlot)
                 {
-                    return "My hands are full.";
+                    return UiWords.SayHandsFull.English;
                 }
                 Item last = list[list.Count - 1];
                 if (!inv.RemoveItemFromInventoryByUID(last))
                 {
                     Resync("take failed");
-                    return "It won't come off the cart.";
+                    return UiWords.SayWontComeOff.English;
                 }
                 if (!pd.TryAddOverheadItemNoReplace(last))
                 {
                     inv.AddItemToInventory(last);
                     HeadReroute.RelinkZombie(inv, last, owner.Describe());
                     Resync("hands refused");
-                    return "My hands are full.";
+                    return UiWords.SayHandsFull.English;
                 }
                 itemId = last.id;
                 Plugin.Log.LogInfo($"Cargo: {Cargo.Name(last)} taken off {owner.Describe()} into the hands; cart {list.Count}/{inv.Data.InventorySize}, {pd.OverheadCount} held.");

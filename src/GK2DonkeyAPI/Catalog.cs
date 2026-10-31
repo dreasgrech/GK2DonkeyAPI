@@ -53,6 +53,18 @@ namespace GK2DonkeyAPI
         internal static IEnumerable<Entry> All => defs.Values;
         internal static Entry Donkey { get; private set; }
 
+        // A mount's words as the player reads them (docs/localization.md, step 3): its owner's translation (the mod or
+        // pack that registered it: mount.<id>.name, .description, .ability.<ability id>.name and .description in its
+        // Languages\ or a translator's folder), else as registered; the donkey's are the API's words. The registered
+        // English stays the data (the cfg, MountInfo, the logs, a refusal's reason).
+        internal static Term NameTerm(Entry k) => k == null || k == Donkey ? UiWords.DonkeyName : new Term(k.Owner, "mount." + k.Id + ".name", k.Label);
+
+        internal static string ShownDescription(Entry k) => k == null || k == Donkey ? UiWords.DonkeyDescription.Text : Texts.Of(k.Owner, "mount." + k.Id + ".description", k.Description);
+
+        internal static string AbilityName(Entry k, MountAbility a) => Texts.Of(k.Owner, "mount." + k.Id + ".ability." + a.Id + ".name", string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name);
+
+        internal static string AbilityDescription(Entry k, MountAbility a) => Texts.Of(k.Owner, "mount." + k.Id + ".ability." + a.Id + ".description", a.Description ?? "");
+
         // Bumped at every change: the rigs and the skins re-resolve their mount when it moves (one int compare a tick).
         internal static int Version { get; private set; } = 1;
 

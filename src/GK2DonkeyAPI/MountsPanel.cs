@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using GK2DonkeyAPI.Api;
 using BepInEx;
@@ -75,6 +76,7 @@ namespace GK2DonkeyAPI
         private static readonly List<(MountSettingsPage.Row Row, GameObject Go, Action Refresh, CanvasGroup Group)> colourRows = new List<(MountSettingsPage.Row, GameObject, Action, CanvasGroup)>();
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> journalGroups = new List<(string, List<MountSettingsPage.Row>)>();
         private static readonly List<(string Group, List<MountSettingsPage.Row> Rows)> colourGroups = new List<(string, List<MountSettingsPage.Row>)>();
+        private static readonly Dictionary<string, string> groupShown = new Dictionary<string, string>(StringComparer.Ordinal); // a colours group's heading in the player's language (Texts), by its English
         private static List<Entry> entries = new List<Entry>();
         private static string builtFor;            // the mount the right side was built for
         private static string builtForSkin;        // and the skin its Skin row said then (the colours window is that skin's, 0.41.0)
@@ -150,13 +152,15 @@ namespace GK2DonkeyAPI
         internal static List<Entry> Entries()
         {
             var list = new List<Entry>();
-            foreach ((string id, string label) in Looks.MountChoices())
+            foreach ((string id, _) in Looks.MountChoices())
             {
                 Catalog.Entry k = Catalog.Find(id);
                 if (k == null) continue;
-                var e = new Entry { Id = id, Label = label };
+                // the words in the player's language (Texts; built on every open): the donkey's are the API's, another mount's
+                // its owner's (the mod or pack that registered it, step 3)
+                var e = new Entry { Id = id, Label = Catalog.NameTerm(k).Text };
                 Looks.SkinDef def = Looks.Find(Looks.DefaultSkinOf(k));
-                e.Description = !string.IsNullOrEmpty(k.Description) ? k.Description : def?.Description ?? (k == Catalog.Donkey ? "The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each." : "");
+                e.Description = !string.IsNullOrEmpty(k.Description) ? Catalog.ShownDescription(k) : def?.Description != null ? Looks.ShownDescription(def) : (k == Catalog.Donkey ? UiWords.DonkeyDescription.Text : "");
                 e.HasPortrait = k.PortraitTexture != null || !string.IsNullOrEmpty(k.Portrait) || (def != null && (def.PortraitTexture != null || !string.IsNullOrEmpty(def.Portrait)));
                 e.Lines.Add(k.Cart ? "Pulls the cart" : "Can't pull the cart");
                 e.Lines.Add(k.Foals ? (Mathf.Abs(k.FoalScale - 0.6f) > 0.001f ? $"Has small babies ({k.FoalScale:0.##} of its size)" : "Has babies") : "No babies");
@@ -170,8 +174,9 @@ namespace GK2DonkeyAPI
                 // what its cart holds: the mount's cargo, or less while a mod limits every cart (Behaviour CartSlots, a session
                 // override; Cargo.Rig.WantedSlots). The player's Cart capacity row is gone since 0.12 (the user, 2026-10-27).
                 int ownCargo = Catalog.CargoOf(k), holds = Mathf.Min(ownCargo, Plugin.CartSlots.GlobalValue);
-                string cargoText = holds < ownCargo ? $"{holds} of {ownCargo} items" : holds + " items";
-                if (k.Cart) e.Lines.Add("Cargo: " + cargoText + (holds < ownCargo ? $" (a mod limits the cart to {holds})" : ""));
+                // a number, never "1 items" (the user's yes, 2026-11-01: no plural chosen in code); "2 of 4" while limited
+                string cargoText = holds < ownCargo ? UiWords.CargoOf.Format(holds, ownCargo) : holds.ToString(CultureInfo.InvariantCulture);
+                if (k.Cart) e.Lines.Add("Cargo: " + (holds < ownCargo ? $"{holds} of {ownCargo}" : holds.ToString(CultureInfo.InvariantCulture)) + (holds < ownCargo ? $" (a mod limits the cart to {holds})" : ""));
                 int skins = (k == Catalog.Donkey ? 1 : 0);
                 foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable == null) skins++; // the ones a player can pick
                 if (skins > 1) e.Lines.Add(skins + " skins");
@@ -183,18 +188,14 @@ namespace GK2DonkeyAPI
                 }
                 // the stats card (the user's pick, 2026-10-21; cargo for the cart's speed and no babies line, 2026-10-22): speed,
                 // what its cart carries (or no cart), skins
-                e.Stats.Add(("Speed", Catalog.SpeedWord(ride, MountStyle.Ride)));
-                e.Stats.Add(("Cargo", k.Cart ? cargoText : "No cart"));
-                e.Stats.Add(("Skins", skins.ToString()));
+                e.Stats.Add((UiWords.StatSpeed.Text, UiWords.Speed(Catalog.SpeedWord(ride, MountStyle.Ride))));
+                e.Stats.Add((UiWords.StatCargo.Text, k.Cart ? cargoText : UiWords.NoCart.Text));
+                e.Stats.Add((UiWords.StatSkins.Text, skins.ToString()));
                 // what it can do (the user, 2026-10-27: "an abilities section ... Flying is an ability and Cargo Cart is another"),
                 // each with its icon and a line in the players' words; a mod's own abilities after ours
-                if (Flight.Active && k.Flies) e.Abilities.Add(("Flying", "It lands wherever you can stand.", "fly"));
-                if (k.Cart) e.Abilities.Add(("Cargo cart", $"Pulls a cart that holds {ownCargo} items.", "cart"));
-                foreach (MountAbility a in k.Abilities)
-                {
-                    string an = string.IsNullOrWhiteSpace(a.Name) ? a.Id : a.Name;
-                    e.Abilities.Add((an, a.Description ?? "", "mount"));
-                }
+                if (Flight.Active && k.Flies) e.Abilities.Add((UiWords.Flying.Text, UiWords.FlyingLine.Text, "fly"));
+                if (k.Cart) e.Abilities.Add((UiWords.CargoCart.Text, UiWords.CargoCartLine.Format(ownCargo), "cart"));
+                foreach (MountAbility a in k.Abilities) e.Abilities.Add((Catalog.AbilityName(k, a), Catalog.AbilityDescription(k, a), "mount"));
                 list.Add(e);
             }
             // a mount whose skins are installed but not the mount (its mod is missing): listed, not pickable (the user,
@@ -202,12 +203,12 @@ namespace GK2DonkeyAPI
             foreach (var kv in Catalog.WaitingSkins())
             {
                 var names = new List<string>();
-                foreach (Looks.SkinDef s in kv.Value) names.Add(string.IsNullOrEmpty(s.Name) ? s.LocalId : s.Name);
+                foreach (Looks.SkinDef s in kv.Value) names.Add(string.IsNullOrEmpty(s.Name) ? s.LocalId : Looks.NameTerm(s).Text);
                 list.Add(new Entry
                 {
                     Id = kv.Key,
-                    Label = NameFromId(kv.Key) + " (not installed)",
-                    Description = $"{(names.Count == 1 ? "A skin" : names.Count + " skins")} for this mount {(names.Count == 1 ? "is" : "are")} installed ({string.Join(", ", names)}), but not the mount itself: install the mod that adds it to ride it.",
+                    Label = UiWords.NameNotInstalled.Format(NameFromId(kv.Key)),
+                    Description = UiWords.WaitingSkins.Format(string.Join(", ", names)), // one form for one skin or many (the user's yes, 2026-11-01)
                     Fake = true,
                 });
             }
@@ -230,11 +231,11 @@ namespace GK2DonkeyAPI
             var e = new Entry
             {
                 Id = chosen,
-                Label = NameFromId(chosen) + " (not installed)",
-                Description = "The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+                Label = UiWords.NameNotInstalled.Format(NameFromId(chosen)),
+                Description = UiWords.MissingNote.Text,
                 Fake = true,
             };
-            e.Stats.Add(("Status", "Not installed"));
+            e.Stats.Add((UiWords.StatStatus.Text, UiWords.NotInstalled.Text));
             list.Add(e);
         }
 
@@ -348,7 +349,7 @@ namespace GK2DonkeyAPI
             // the title line
             // the title in the game's own title bar, with its close button (the user, 2026-10-27: "all that gap for just the word
             // Mounts is not worth it"; the count of mounts is gone)
-            ui.TitleBar(panel, W, "Mount Journal", () => Close(keep: true));
+            ui.TitleBar(panel, W, UiWords.JournalTitle.Text, () => Close(keep: true));
 
             // the list, scrolling; a search box above it once it is long
             entries = Entries();
@@ -391,12 +392,12 @@ namespace GK2DonkeyAPI
             picture.gameObject.SetActive(false);
             // a chosen mount that isn't installed: no picture (the donkey drawn under another mount's name read as a mix-up,
             // the user 2026-10-27), this line in its place
-            stageNote = ui.Text(stage, "not installed note", "Not installed", 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
+            stageNote = ui.Text(stage, "not installed note", UiWords.NotInstalled.Text, 1.1f, TextAlignmentOptions.Center, true, 24f, 0f, StageW - 48f, StageH);
             stageNote.gameObject.SetActive(false);
 
             float statsX = StageW + 2f * Gap, statsW = rw - statsX;
             RectTransform statsCard = ui.Box(rightArea, "stats", statsX, y, statsW, StatsCardH);
-            ui.Bold(ui.Text(statsCard, "stats title", "Stats", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
+            ui.Bold(ui.Text(statsCard, "stats title", UiWords.Stats.Text, 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
             GameObject rule = ui.Node("stats rule", statsCard, typeof(Image));
             UiKit.Rect(rule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
             rule.GetComponent<Image>().color = UiKit.EdgeColor;
@@ -420,7 +421,7 @@ namespace GK2DonkeyAPI
             }
             // the abilities card: built with room for AbilityMax lines, sized and filled for the mount picked (BuildRight)
             abilitiesCard = ui.Box(rightArea, "abilities", statsX, y + StatsCardH + Gap, statsW, StatsTitleH);
-            ui.Bold(ui.Text(abilitiesCard, "abilities title", "Abilities", 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
+            ui.Bold(ui.Text(abilitiesCard, "abilities title", UiWords.Abilities.Text, 1f, TextAlignmentOptions.BottomLeft, false, 12f, 4f, statsW - 24f, StatsTitleH - 10f));
             GameObject arule = ui.Node("abilities rule", abilitiesCard, typeof(Image));
             UiKit.Rect(arule, 12f, StatsTitleH - 4f, statsW - 24f, 1f);
             arule.GetComponent<Image>().color = UiKit.EdgeColor;
@@ -456,19 +457,19 @@ namespace GK2DonkeyAPI
             // (no Cancel since 2026-10-21).
             float stageLeft = Pad + ListW + Gap, stageRight = stageLeft + StageW, buttonsY = H - Pad - ButtonH;
             float callW = Mathf.Floor((W - Pad - stageRight - 12f) / 2f);
-            GameObject customise = coloursButton = ui.OwnButton(panel.transform, "colours", "Customize", ButtonW, ButtonH, OpenColours);
+            GameObject customise = coloursButton = ui.OwnButton(panel.transform, "colours", UiWords.Customize.Text, ButtonW, ButtonH, OpenColours);
             UiKit.Rect(customise, Mathf.Round(stageLeft + (StageW - ButtonW) / 2f), buttonsY, ButtonW, ButtonH);
             // Ride and Drive: the panel closes (keeping what was chosen) and the mount is called, as the keys would
-            GameObject ride = rideButton = ui.OwnButton(panel.transform, "ride", "Ride", callW, ButtonH, () => Call(MountStyle.Ride));
+            GameObject ride = rideButton = ui.OwnButton(panel.transform, "ride", UiWords.Ride.Text, callW, ButtonH, () => Call(MountStyle.Ride));
             UiKit.Rect(ride, W - Pad - callW, buttonsY, callW, ButtonH);
-            GameObject drive = driveButton = ui.OwnButton(panel.transform, "drive", "Drive the cart", callW, ButtonH, () => Call(MountStyle.Cart));
+            GameObject drive = driveButton = ui.OwnButton(panel.transform, "drive", UiWords.DriveCart.Text, callW, ButtonH, () => Call(MountStyle.Cart));
             foreach (GameObject bgo in new[] { customise, ride, drive }) UiKit.NavGroup(bgo, 2);
             // the page's options (OptionsWindow), under the mount list; from the options themselves (their Mounts button
             // opened the journal), back to them
             optionsButton = null;
             if (OptionsWindow.HasOptions(page))
             {
-                GameObject opts = optionsButton = ui.OwnButton(panel.transform, "options", "Options", ButtonW, ButtonH, () =>
+                GameObject opts = optionsButton = ui.OwnButton(panel.transform, "options", UiWords.Options.Text, ButtonW, ButtonH, () =>
                 {
                     if (overOptions) Close(keep: true);
                     else OptionsWindow.Open(page);
@@ -581,9 +582,10 @@ namespace GK2DonkeyAPI
         {
             string chosen = page?.MountChosen ?? MountCatalog.DonkeyId;
             string skin = page?.SkinChosen(chosen) ?? "";
-            string title = "Colours: " + headerName.text;
+            string title = UiWords.ColoursTitle.Format(headerName.text);
             if (skin.Length == 0 || skin.Equals(Looks.FirstSkinOf(chosen), StringComparison.OrdinalIgnoreCase)) return title;
-            return title + " - " + (Mounts.Looks.Find(skin)?.Name ?? NameFromId(skin));
+            Looks.SkinDef sd = Looks.Find(skin);
+            return UiWords.ColoursTitleSkin.Format(title, sd != null && !string.IsNullOrEmpty(sd.Name) ? Looks.NameTerm(sd).Text : Mounts.Looks.Find(skin)?.Name ?? NameFromId(skin));
         }
 
         // The right side for the chosen mount: the header, the stats card, the look rows; the colours window's groups
@@ -628,17 +630,18 @@ namespace GK2DonkeyAPI
                 // skin whose frames the game lacks); the choice is kept, the donkey comes instead, and the panel says so
                 string why = null;
                 if (k != null) foreach (Looks.SkinDef sd in Catalog.SkinsOf(k)) if (sd.Unavailable != null) { why = sd.Unavailable; break; }
-                headerName.text = k?.Label ?? NameFromId(chosen) + " (not installed)";
-                headerDesc.text = k == null ? "Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead."
-                    : why != null ? "Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead."
-                    : "It has no skin to wear. Your choice is kept; the donkey comes instead.";
+                headerName.text = k != null ? Catalog.NameTerm(k).Text : UiWords.NameNotInstalled.Format(NameFromId(chosen));
+                headerDesc.text = k == null ? UiWords.GoneNote.Text
+                    : why != null ? UiWords.AsideNote.Text
+                    : UiWords.NoSkinNote.Text;
             }
 
             // the page's look rows for this mount, in groups: the journal takes the Mount section's rows (the Skin); the
             // colours window takes every other look section (the colours, under its two headings)
             journalGroups.Clear();
             colourGroups.Clear();
-            string heading = null, headingSection = null;
+            groupShown.Clear();
+            string heading = null, headingSection = null, headingShown = null;
             foreach (MountSettingsPage.Row r in page.Rows)
             {
                 if (!r.IsLook) continue;
@@ -646,12 +649,16 @@ namespace GK2DonkeyAPI
                 {
                     heading = r.Label;
                     headingSection = r.ShownSection;
+                    headingShown = Texts.Label(r);
                     continue;
                 }
                 if (r.Shown != null && !r.Shown()) continue; // another mount's row
                 if (page.IsMountRow(r)) continue; // the list is the picker
                 bool mountSection = string.Equals(r.ShownSection, "Mount", StringComparison.OrdinalIgnoreCase);
-                string group = heading != null && r.ShownSection == headingSection ? heading : (mountSection ? "Skin" : r.ShownSection);
+                bool underHeading = heading != null && r.ShownSection == headingSection;
+                string group = underHeading ? heading : (mountSection ? "Skin" : r.ShownSection);
+                // the group stays its English (its key: rows are gathered by it); its heading is drawn in the player's language
+                if (group != null && !groupShown.ContainsKey(group)) groupShown[group] = underHeading ? headingShown : mountSection ? UiWords.SkinRow.Text : Texts.Section(page, r.ShownSection);
                 if (mountSection) AddTo(journalGroups, null, r);  // the journal: the Skin, no heading (the user, 2026-10-25)
                 else AddTo(colourGroups, group, r);               // the colours window: every colour row
             }
@@ -718,7 +725,7 @@ namespace GK2DonkeyAPI
                     if (group.Group != null && any) // a heading only over rows that show (a row hidden by its own condition)
                     {
                         // left on the column's start (a game heading row right-aligns on the labels' edge and floated mid-column)
-                        TextMeshProUGUI h = ui.Text(root, "heading " + group.Group, group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
+                        TextMeshProUGUI h = ui.Text(root, "heading " + group.Group, groupShown.TryGetValue(group.Group, out string shownName) ? shownName : group.Group, 1f, TextAlignmentOptions.BottomLeft, false, cx, cy, colW, step - 6f);
                         ui.Bold(h);
                         GameObject line = ui.Node("heading line", root, typeof(Image));
                         UiKit.Rect(line, cx, cy + step - 4f, colW, 1f);
@@ -779,8 +786,9 @@ namespace GK2DonkeyAPI
             GameObject go = ui.Node("swatches " + r.Entry.Definition.Key, parent);
             // left on the column's edge, as the own rows' labels and the headings (2026-10-26); wrapping, the row as tall as it needs
             float labelW = Mathf.Max(40f, left - 10f - lay.LabelX);
-            TextMeshProUGUI label = ui.Text(go.transform, "label", r.Label, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
-            height = Mathf.Max(2f * px + SwatchGap + 6f, Mathf.Ceil(label.GetPreferredValues(r.Label ?? "", labelW, 0f).y) + 8f);
+            string labelText = Texts.Label(r) ?? ""; // in the player's language (Texts)
+            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, 30f);
+            height = Mathf.Max(2f * px + SwatchGap + 6f, Mathf.Ceil(label.GetPreferredValues(labelText, labelW, 0f).y) + 8f);
             UiKit.Rect(go, 0f, 0f, lay.ColW, height);
             UiKit.Rect(label.gameObject, lay.LabelX, 0f, labelW, height);
             var frames = new List<(PaletteColor Colour, GameObject Frame)>();
@@ -872,7 +880,7 @@ namespace GK2DonkeyAPI
                 top += CStageH + Gap;
                 coloursScroll = ui.ScrollView(colours.transform, "colours content", Pad, top, CW - 2f * Pad, CH - top - Gap - ButtonsH - Pad, out coloursRoot, 2f, manual: true);
                 ui.AddScrollbar(coloursScroll);
-                GameObject done = ui.OwnButton(colours.transform, "colours done", "Done", ButtonW, ButtonH, () => CloseColours(keep: true));
+                GameObject done = ui.OwnButton(colours.transform, "colours done", UiWords.Done.Text, ButtonW, ButtonH, () => CloseColours(keep: true));
                 UiKit.Rect(done, CW - Pad - ButtonW, CH - Pad - ButtonH, ButtonW, ButtonH);
                 UiKit.NavGroup(done, 1);
                 var cnav = colours.GetComponent<GamepadNavigationController>();
@@ -962,7 +970,7 @@ namespace GK2DonkeyAPI
         // A search box: typing filters the list by name; the mods' keys wait while it has focus (KeyActions).
         private static TMP_InputField SearchBox(Transform parent, float x, float y, float w, float h)
         {
-            TMP_InputField field = controls.InputBox(parent, "search", x, y, w, h, "Search...", 40);
+            TMP_InputField field = controls.InputBox(parent, "search", x, y, w, h, UiWords.Search.Text, 40);
             field.onValueChanged.AddListener(v =>
             {
                 filter = v ?? "";
@@ -1055,6 +1063,7 @@ namespace GK2DonkeyAPI
         // The self-test's view of the panel ("settings: the Mounts panel opens...").
         internal static int TestRows => rows.Count;
         internal static int TestColourRows => colourRows.Count;
+        internal static Transform TestRoot(bool coloursWindow) => coloursWindow ? (colours != null ? colours.transform : null) : (panel != null ? panel.transform : null);
         internal static int TestEntries => entries.Count;
         internal static string TestBuiltFor => builtFor;
         internal static void TestSelect(string id) => Select(id);

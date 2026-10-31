@@ -228,14 +228,14 @@ namespace GK2DonkeyAPI
         // the caller's to say). skip: spots already tried this time (ReturnCheck).
         internal static MountResult Return(string reason, int skip = 0)
         {
-            if (!Mount.IsGameReady) return MountResult.Refused("Not in a game.");
+            if (!Mount.IsGameReady) return MountResult.Refused(UiWords.SayNotInGame.English);
             PlayerController pc = MainGame.PlayerController;
             PlayerPhysicalBody pb = pc?.PhysicalBody;
             Rigidbody rb = pb?.Rb;
-            if (rb == null) return MountResult.Refused("The keeper's body isn't there.");
-            if (!pc.IsControlsEnabled) return MountResult.Refused("Not now: a door, a scene or a cutscene has the keeper.");
+            if (rb == null) return MountResult.Refused(UiWords.SayKeeperNotThere.English);
+            if (!pc.IsControlsEnabled) return MountResult.Refused(UiWords.SayNotNowDoor.English);
             string scene = pc.PlayerData?.currentGameSceneId;
-            if (scene == null || !rings.TryGetValue(scene, out Ring ring) || ring.Spots.Count == 0) return MountResult.Refused("No safe spot in this scene yet (stand on the ground a moment).");
+            if (scene == null || !rings.TryGetValue(scene, out Ring ring) || ring.Spots.Count == 0) return MountResult.Refused(UiWords.SayNoSafeSpotYet.English);
             Vector3 was = rb.position;
             int tried = 0;
             string lastWhy = null;
@@ -253,12 +253,13 @@ namespace GK2DonkeyAPI
                 LastReturnedTo = s.P;
                 TestReturns++;
                 Plugin.Log.LogWarning($"[safe-spot] back to {s.P:F2} from {was:F2} ({Vector3.Distance(s.P, was):0.0} away, {was.y - s.P.y:+0.0;-0.0} in height): {reason}; the spot {(s.Seed ? "the game's own (a seed)" : "stood on")} {Time.unscaledTime - s.At:0} s ago, number {k + 1} of {ring.Spots.Count}{(k > 0 ? "; skipped: " + lastWhy : "")}{(Mount.IsMounted ? "; riding, the mount follows" : "")}");
-                Mount.Say("Back on solid ground.", 3f);
+                Mount.Say(UiWords.SayBackOnGround.English, 3f);
                 Mounts.RaiseReturnedToSafeSpot(s.P);
                 Plugin.Instance.StartCoroutine(ReturnCheck(pc, s.P, k + 1));
                 return MountResult.Success;
             }
-            return MountResult.Refused(skip > 0 ? "No safe spot of this scene holds any more." : $"No safe spot of this scene still holds ({lastWhy}).");
+            Plugin.Log.LogInfo($"[safe-spot] no return: none of the {ring.Spots.Count} spot(s) of {scene} holds{(skip > 0 ? $" after the {skip} tried" : "")}; the last: {lastWhy}");
+            return MountResult.Refused(skip > 0 ? UiWords.SayNoSafeSpotAnyMore.English : UiWords.SayNoSafeSpotHolds.English);
         }
 
         // Two physics steps after a return: still standing there? Else the next older spot.

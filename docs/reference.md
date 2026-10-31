@@ -259,7 +259,7 @@ crossroads".
 | `CorpsesStandPoint` | `donkey_01_01` | GD point it walks to and unloads at (the road beside the nun). `crossroad_nun_corpses`: right beside her; `donkey_02`: further west; `donkey_01`: its own spawn point (then it unloads on the spot after `CorpsesUnloadDelay`). |
 | `CorpsesDropPoint` | `nun_body_drop_point` | GD point the bodies are left at (the game's own spot by the nun). |
 | `CorpsesNeverRot` | false | The bodies it leaves never turn into a grave mound (the game's rule: about 75 minutes of play out of sight). |
-| `CorpsesNotification` | The donkey left a body at the crossroads | Shown instead of the game's "New Body", with the body's icon. Empty: the game's own. |
+| `CorpsesNotification` | The donkey left a body at the crossroads | Shown instead of the game's "New Body", with the body's icon. Empty: the game's own. The shipped text shows in the player's language when a translation has it (`notice.crossroads`); a text of your own as you wrote it. |
 | `CorpsesUnloadDelay` | 1.5 | Only when it unloads on the spot: seconds before the bodies appear. |
 | `CorpsesLeaveDelay` | 1 | Only when it unloads on the spot: seconds before it vanishes. |
 

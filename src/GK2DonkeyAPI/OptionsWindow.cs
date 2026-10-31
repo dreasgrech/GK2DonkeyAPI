@@ -210,7 +210,7 @@ namespace GK2DonkeyAPI
         private static void Build()
         {
             window = ui.Window("options window", W, H, 30002);
-            ui.TitleBar(window, W, page.Title, () => Close(back: true));
+            ui.TitleBar(window, W, Texts.Title(page), () => Close(back: true));
             float top = Pad + TitleH + Gap, bandTop = H - Pad - ButtonsH;
 
             // the sections, as the journal's cards
@@ -220,7 +220,7 @@ namespace GK2DonkeyAPI
             foreach ((string sec, string name) in Sections(page))
             {
                 string s = sec;
-                GameObject go = ui.OwnButton(listContent, "section " + name, name, ListW - 8f - UiKit.ScrollbarW, CardH, () => ShowSection(s), textLeft: 14f, flat: true);
+                GameObject go = ui.OwnButton(listContent, "section " + name, Texts.Section(page, name), ListW - 8f - UiKit.ScrollbarW, CardH, () => ShowSection(s), textLeft: 14f, flat: true);
                 var le = go.AddComponent<LayoutElement>();
                 le.preferredWidth = ListW - 8f - UiKit.ScrollbarW;
                 le.preferredHeight = CardH;
@@ -242,9 +242,9 @@ namespace GK2DonkeyAPI
 
             // the bottom: what the row under the mouse does, Defaults (the section shown, asked first), Done
             float by = bandTop + (ButtonsH - ButtonH) / 2f;
-            GameObject done = ui.OwnButton(window.transform, "done", "Done", ButtonW, ButtonH, () => Close(back: true));
+            GameObject done = ui.OwnButton(window.transform, "done", UiWords.Done.Text, ButtonW, ButtonH, () => Close(back: true));
             UiKit.Rect(done, W - Pad - ButtonW, by, ButtonW, ButtonH);
-            GameObject defaults = ui.OwnButton(window.transform, "defaults", "Defaults", ButtonW, ButtonH, OpenConfirm);
+            GameObject defaults = ui.OwnButton(window.transform, "defaults", UiWords.Defaults.Text, ButtonW, ButtonH, OpenConfirm);
             UiKit.Rect(defaults, W - Pad - 2f * ButtonW - 12f, by, ButtonW, ButtonH);
             UiKit.NavGroup(done, 2);
             UiKit.NavGroup(defaults, 2);
@@ -282,7 +282,7 @@ namespace GK2DonkeyAPI
                     label.color = on ? ui.ButtonTextColor : ui.FontColor;
                     label.fontStyle = on ? FontStyles.Bold : FontStyles.Normal;
                 }
-                if (on && heading != null) heading.text = name;
+                if (on && heading != null) heading.text = Texts.Section(page, name);
             }
             BuildRows();
             if (rowsScroll != null) rowsScroll.verticalNormalizedPosition = 1f;
@@ -335,7 +335,7 @@ namespace GK2DonkeyAPI
             GameObject go = ui.Node("note " + (r.Label ?? ""), parent);
             bool isHeading = string.IsNullOrEmpty(r.Description);
             float w = lay.CtrlRight - lay.LabelX;
-            string text = isHeading ? r.Label ?? "" : r.Description;
+            string text = isHeading ? Texts.Label(r) ?? "" : Texts.Desc(r);
             TextMeshProUGUI t = ui.Text(go.transform, "label", text, isHeading ? 1f : 0.9f, isHeading ? TextAlignmentOptions.BottomLeft : TextAlignmentOptions.Left, !isHeading, lay.LabelX, 0f, w, RowControls.OwnRowH);
             if (isHeading) ui.Bold(t);
             else t.color = new Color(ui.FontColor.r, ui.FontColor.g, ui.FontColor.b, 0.8f);
@@ -434,10 +434,10 @@ namespace GK2DonkeyAPI
             const float bw = 460f, bh = 150f;
             RectTransform box = ui.Box(confirm.transform, "confirm box", (W - bw) / 2f, (H - bh) / 2f, bw, bh);
             box.GetComponent<Image>().color = new Color(0.08f, 0.09f, 0.12f, 0.98f);
-            ui.Text(box, "confirm text", $"Set every option in {name} back to its default?", 1f, TextAlignmentOptions.Center, true, 20f, 18f, bw - 40f, 60f);
-            GameObject yes = ui.OwnButton(box, "confirm yes", "Set back", ButtonW, ButtonH, () => { CloseConfirm(); ResetSection(); });
+            ui.Text(box, "confirm text", UiWords.SetBackAsk.Format(name), 1f, TextAlignmentOptions.Center, true, 20f, 18f, bw - 40f, 60f);
+            GameObject yes = ui.OwnButton(box, "confirm yes", UiWords.SetBack.Text, ButtonW, ButtonH, () => { CloseConfirm(); ResetSection(); });
             UiKit.Rect(yes, bw / 2f - ButtonW - 6f, bh - 20f - ButtonH, ButtonW, ButtonH);
-            GameObject no = ui.OwnButton(box, "confirm no", "Cancel", ButtonW, ButtonH, CloseConfirm);
+            GameObject no = ui.OwnButton(box, "confirm no", UiWords.Cancel.Text, ButtonW, ButtonH, CloseConfirm);
             UiKit.Rect(no, bw / 2f + 6f, bh - 20f - ButtonH, ButtonW, ButtonH);
             UiKit.NavGroup(yes, 4);
             UiKit.NavGroup(no, 4); // on their own while it is open: no way out of group 4 but Select and Back
@@ -589,18 +589,25 @@ namespace GK2DonkeyAPI
 
         internal static string DescriptionOf(MountSettingsPage.Row r, bool usable, bool setting, bool gamepad)
         {
-            if (r == null) return gamepad ? "Move to an option to see what it does." : "Point at an option to see what it does.";
-            if (setting) return $"Press the key for {r.Label}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.";
-            string d = r.Description ?? "";
-            if (r.RowKind == MountSettingsPage.RowKind.Key && usable) d += (d.Length > 0 ? " " : "") + (gamepad ? "Select it, then press the key on the keyboard." : "Click it to set the key.");
-            if (!usable) d += (d.Length > 0 ? " " : "") + (r.RowKind == MountSettingsPage.RowKind.Button && !Mount.IsGameReady ? "Only in a game." : "Not available right now.");
+            if (r == null) return gamepad ? UiWords.HintPad.Text : UiWords.HintMouse.Text;
+            if (setting) return UiWords.PressKeyFor.Format(Texts.Label(r));
+            string d = Texts.Desc(r) ?? "";
+            if (r.RowKind == MountSettingsPage.RowKind.Key && usable) d = AndThen(d, gamepad ? UiWords.KeyHowPad.Text : UiWords.KeyHowMouse.Text);
+            if (!usable) d = AndThen(d, r.RowKind == MountSettingsPage.RowKind.Button && !Mount.IsGameReady ? UiWords.OnlyInGame.Text : UiWords.NotNow.Text);
             return d;
         }
+
+        // A description and the sentence after it, in the language's own order ("{0} {1}" in English).
+        private static string AndThen(string d, string more) => d.Length == 0 ? more : UiWords.AndThen.Format(d, more);
 
         // ---- the self-tests' view ----
 
         internal static int TestRowCount => rows.Count;
         internal static string TestSection => section;
+        internal static Transform TestRoot => window != null ? window.transform : null;
+        internal static string TestHeadingText => heading != null ? heading.text : null;
+        internal static UiKit TestUi => ui;
+        internal static TextMeshProUGUI TestDescriptionBox => description;
         internal static string TestSections()
         {
             var names = new List<string>();

@@ -63,7 +63,10 @@ a flight or a jump is ended first (`Flight.Release`), a ride goes on (the mount 
 ground." in the bubble, `ReturnedToSafeSpot` raised, and a **warning** in the log with every fact:
 `[safe-spot] back to (x, y, z) from (x, y, z) (D away, H in height): <reason>; the spot stood on / the game's own N s
 ago, number k of n`. Two physics steps later the spot is checked again (`ReturnCheck`); failed, the next older one.
-A return is always a warning: it must not happen, and when it does the line says why.
+A return is always a warning: it must not happen, and when it does the line says why. When no spot of the scene holds
+any more, the return is refused with "No safe spot of this scene still holds." and an INFO line says why:
+`[safe-spot] no return: none of the n spot(s) of <scene> holds; the last: <the spot>: <why>` (since 2026-11-01: the
+coordinates and colliders were in the bubble before, and the bubble's sentences are translated now).
 
 **Keys and switches:** the Behaviour keys `FallGuard` (bool, on; the watchdog only: the record and the return always
 work) and `ReturnKey` (`KeyboardShortcut`, None), read by the API with the flight's gate (panel closed, no text box,

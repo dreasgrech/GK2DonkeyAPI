@@ -205,7 +205,7 @@ namespace GK2DonkeyAPI
             {
                 if (Mount.Instance.IsInGame(out _, out _))
                 {
-                    Mount.Say("The chest on the cart is off for now (see the log).");
+                    Mount.Say(UiWords.SayChestOff.English);
                 }
             }
             catch
@@ -430,61 +430,61 @@ namespace GK2DonkeyAPI
             {
                 if (!On)
                 {
-                    return "Chests don't ride on the cart.";
+                    return UiWords.SayChestsDontRide.English;
                 }
                 if (!owner.HasCart)
                 {
-                    return "That needs the cart.";
+                    return UiWords.SayNeedsTheCart.English;
                 }
                 if (!IsChest(d))
                 {
-                    return "Only a plain storage chest goes on the cart.";
+                    return UiWords.SayOnlyPlainChest.English;
                 }
                 if (Aboard)
                 {
-                    return "There's a chest on the cart already.";
+                    return UiWords.SayChestAboard.English;
                 }
                 if (owner.CargoRig.Count > 0)
                 {
-                    return "Set the cargo down first.";
+                    return UiWords.SayCargoDownFirst.English;
                 }
                 if (d.IsHidden || d.isTempObject || pc == null || d.WorldId != pc.PlayerData.currentGameSceneId || GameScene.GetWgoViewGlobal(d.UniqueId) == null)
                 {
-                    return "This can't be moved.";
+                    return UiWords.SayCantBeMoved.English;
                 }
                 if (Mount.Instance.IsCoop())
                 {
-                    return "Not in co-op.";
+                    return UiWords.SayNotInCoop.English;
                 }
                 CraftComponent cc = d.CraftComponent;
                 if (cc != null && cc.IsDestroyingCraftActive)
                 {
-                    return "It's marked for taking down.";
+                    return UiWords.SayMarkedForTakingDown.English;
                 }
                 if (cc != null && (cc.IsStarted || cc.HasCraftsInQueue))
                 {
-                    return "It's busy.";
+                    return UiWords.SayItsBusy.English;
                 }
                 if ((d.WorkbenchParents?.Count ?? 0) > 0 || (d.AttachedWorkbenchExtensions?.Count ?? 0) > 0)
                 {
-                    return "It's attached to a workbench.";
+                    return UiWords.SayAttachedToWorkbench.English;
                 }
                 if (d.Worker != null)
                 {
-                    return "Someone works at it.";
+                    return UiWords.SaySomeoneWorksAtIt.English;
                 }
                 WgoPartData part = d.MainWgoPartData;
                 if (part?.DockPointDataList != null && part.DockPointDataList.Exists(p => p != null && p.IsOccupied))
                 {
-                    return "Someone is using it right now.";
+                    return UiWords.SaySomeoneUsingIt.English;
                 }
                 if (ZoneInventoriesHeld())
                 {
-                    return "Close the building window first.";
+                    return UiWords.SayCloseBuildingWindow.English;
                 }
                 if (ZombieTargets(d))
                 {
-                    return "A zombie is using this chest.";
+                    return UiWords.SayZombieUsingChest.English;
                 }
                 return null;
             }
@@ -503,7 +503,7 @@ namespace GK2DonkeyAPI
                     Api.Mounts.RaiseChestLoaded(InfoOf(d, owner.Handle));
                     return true;
                 }
-                reason = "That didn't work.";
+                reason = UiWords.SayDidntWork.English;
                 return false;
             }
 
@@ -868,7 +868,7 @@ namespace GK2DonkeyAPI
                 }
                 else
                 {
-                    reason = "There's no room for it here.";
+                    reason = UiWords.SayNoRoomHere.English;
                     return false;
                 }
                 // His body's way to it clear too, so it never lands where he can't get to it (SafeGround.cs).
@@ -876,7 +876,7 @@ namespace GK2DonkeyAPI
                 if (blocked != null)
                 {
                     Plugin.Log.LogInfo($"Chest: not set down {how} at {spot:F2}: the keeper's way there from {pd.position.Value:F2} is blocked ({blocked}).");
-                    reason = "I can't reach that spot.";
+                    reason = UiWords.SayCantReachSpot.English;
                     return false;
                 }
                 float g = Mount.Instance.GroundHeight(spot, out _);
@@ -964,7 +964,7 @@ namespace GK2DonkeyAPI
                     if (zone == null && strict)
                     {
                         Follow();
-                        reason = "That spot is outside any building area.";
+                        reason = UiWords.SayOutsideBuildingArea.English;
                         return false;
                     }
                     ChestMoves.Show(d, v, at);
@@ -986,7 +986,7 @@ namespace GK2DonkeyAPI
                         Lock("setting a chest down threw");
                         return true;
                     }
-                    reason = "That didn't work.";
+                    reason = UiWords.SayDidntWork.English;
                     Lock("setting a chest down threw");
                     return false;
                 }
@@ -1195,7 +1195,7 @@ namespace GK2DonkeyAPI
                 }
                 if (CartChest.RigOfStandIn(d) != null)
                 {
-                    __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, "Set down")));
+                    __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, UiWords.PromptSetDown.Text)));
                     return;
                 }
                 Mount.Instance r = ChestInteractionHandler_HasInteraction2_Patch.Rider;
@@ -1206,7 +1206,7 @@ namespace GK2DonkeyAPI
                 // The plain offer whatever the chest's state; the press says why when it can't (the bubble), as the game's
                 // own station does and as the cart's "The cart is full." does. A "(not now)" suffix was tried and dropped
                 // 2026-10-09: no other hint in the game or the mod reads like that.
-                __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, "Load onto the cart")));
+                __result.Add(new InteractionInfo(InstanceControls.HintFor(GameKey.Action, UiWords.PromptLoadChest.Text)));
             }
             catch (Exception e)
             {
@@ -1248,7 +1248,7 @@ namespace GK2DonkeyAPI
                 // told from a cutscene's teleport and would leave the keeper frozen; and the house is a same-scene
                 // teleport, where nothing needs doing: the chest rides on with the parked cart.)
                 r.ChestRig.SetDownAt(r.CartPoint(), "door to " + to);
-                Mount.Say("The chest stays by the cart.");
+                Mount.Say(UiWords.SayChestStays.English);
                 return true;
             }
             catch (Exception e)

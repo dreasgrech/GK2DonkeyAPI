@@ -581,6 +581,53 @@ Where they apply:
 - `MountHandle.DisplayName` and `SetDisplayName(owner, name)` (owner only, at most 24 characters, kept with the save).
 - `Mounts.Behaviour` has `HitchKey` (a `KeyCode`).
 
+## Translations (unreleased; docs/localization.md)
+
+A settings page is drawn in the player's game language when your plugin ships a translation beside its DLL: no code
+of yours changes, and the English you pass to the page stays the source. The API looks every text up when its window
+draws it (the game sets its language after the plugins' `Awake`, so nothing translated is known there). The cfg file
+always keeps your English descriptions.
+
+**Where the files go:**
+
+- `Languages/<id>.txt` or `<id>.csv` in your DLL's folder.
+- Or, from a translator's own download, `BepInEx/plugins/<their folder>/Translations/<your GUID>/<id>.*`, which wins
+  over yours.
+- `<id>` is the game's language id (`de`, `fr`, `pt-br`, `zh_cn`...), then the part before its `-` or `_`, then your
+  English.
+
+**The formats:**
+
+- `.txt`: `key = text` lines, with `# en: <the English it was translated from>` above each.
+- `.csv`: `key,value,english`, the separator from its header line (`,`, `;` or a tab).
+- A line whose recorded English is no longer yours shows your English until it is translated again.
+
+**Keys:**
+
+- **A row with a cfg key:** its key without a `PerMount` or `PerSkin` suffix (`Coat_crab` and
+  `Coat_donkey/you.skin` are `Coat`), then `.label`, `.desc` (options window rows only: look rows' descriptions are
+  drawn nowhere), `.choice.<i>` (a `Choice`, in enum order) and `.button` (a `Button` with your own word).
+- **Rows without one:** headings `heading.<slug>`, buttons `button.<slug>`, `PanelButton` `panel.<slug>`, info lines
+  `info.<slug>`, the slug being the label in lower case with `_` between its words.
+- **Sections and the title:** `section.<slug>` and `page.title`.
+- **The API's words:** the rows `MountRows` and `FoalRows` add, the windows' own words, the keeper's bubbles, the
+  prompts on foot and the donkey's name are the API's, in `GK2DonkeyAPI/Languages/`.
+- **Your mounts and skins** (registered by your plugin, in code or as a pack): `mount.<mount id>.name`,
+  `mount.<mount id>.description`, `mount.<mount id>.ability.<ability id>.name` and `.description`,
+  `skin.<skin id>.name` and `skin.<skin id>.description` (the skin id with its mount: `acme.crab/frost`). They are
+  drawn in the Mount Journal, the Skin list and the colours window's title. A pack with no page ships them the same way,
+  in `Languages/` beside its DLL. The registered English stays the data: `MountInfo.Name`, the logs.
+
+**Your English file:** with the dev tools unlocked, every start writes your English to
+`BepInEx/GK2-l10n/<your GUID>/en.txt` and `en.csv` when a settings page is shown: your page's, and your mounts' and
+skins' when you registered any. Ship those as the translators' templates.
+
+**Reasons stay English:** `MountResult.Reason` and the refusals your rules give are English text for your code and
+the log. The keeper's bubble shows the API's own reasons in the player's language (found by their English); a reason
+of yours is shown as you wrote it.
+
+Nothing in the public API changed for this.
+
 ## Corpses at the crossroads (0.26.0)
 
 The game's own delivery donkey, made to leave the bodies it brings **at the crossroads by the nun**, where it appears,
@@ -1119,7 +1166,8 @@ History:
   `[Mount] cargo` is no longer a stat only: a cart holds the smaller of the player's `CartSlots` and the cargo of the
   mount pulling it, re-applied when the mount under a hitched cart changes. A mount that pulls fewer items than a cart
   holds leaves it standing with its load (a hitched cart, when the mount under it changes) and is refused it (the cart
-  key, `Mounts.Hitch`, mounting in Cart style): "Gerry pulls 4 items at most. Take 2 off the cart first." A mod's
+  key, `Mounts.Hitch`, mounting in Cart style): "Gerry pulls 4 items at most. Take 2 off the cart first." (since the
+  translations, 2026-11-01: "Too much on the cart (6 of at most 4). Take some off first.") A mod's
   session `CartSlots` only lowers the slots, never refuses (the size follows as items come off). The shipped mounts: the giant rat 2, Gerry and the giant
   worm 4, the donkey and the giant snail 6. No change to the public surface.
 - 0.39.0: `MountSettingsPage.CartRow(section, key)` and `MountSettingsPage.MountPullsCart(mountId)` (the user,

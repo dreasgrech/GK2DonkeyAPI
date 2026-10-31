@@ -108,7 +108,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (Mount.IsMounted)
             {
-                return MountResult.Refused("Already mounted.");
+                return MountResult.Refused(UiWords.SayAlreadyMounted.English);
             }
             owner = ownerId; // before the attempt: Mounted handlers may read Owner
             string reason = Mount.TryMountFromApi(style, showMessage);
@@ -148,7 +148,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (Flight.HoldForLanding("to " + style))
             {
-                return MountResult.Refused("Land first."); // flying free: down first
+                return MountResult.Refused(UiWords.SayLandFirst.English); // flying free: down first
             }
             string reason = (style == MountStyle.Cart && Mount.Instance.IsInGame(out PlayerController keeper, out _) ? Mount.Instance.WhyNotCart(keeper) ?? GK2DonkeyAPI.Looks.WhyNotCartByMount(Mount.Ridden) : null) ?? MountRules.WhyCannotMount(style);
             if (reason != null)
@@ -171,11 +171,11 @@ namespace GK2DonkeyAPI.Api
                     }
                     if (showMessage)
                     {
-                        Mount.Say("Not right now.");
+                        Mount.Say(UiWords.SayNotRightNow.English);
                     }
-                    return MountResult.Refused("Not right now.");
+                    return MountResult.Refused(UiWords.SayNotRightNow.English);
                 }
-                string noCart = $"This {Mount.Current?.Noun ?? "mount"} has no cart here; ride it up to one.";
+                string noCart = UiWords.SayNoCartHereRideUp.Make(Mount.Current?.Noun ?? "mount");
                 if (showMessage)
                 {
                     Mount.Say(noCart);
@@ -768,7 +768,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (!h.Exists)
             {
-                return "It is gone.";
+                return UiWords.SayItIsGone.English;
             }
             if (ownerId == h.I.OwnerId || Mount.IsCoreOwner(ownerId))
             {
@@ -812,7 +812,7 @@ namespace GK2DonkeyAPI.Api
             }
             if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
             {
-                return MountResult.Refused("Not in a game.");
+                return MountResult.Refused(UiWords.SayNotInGame.English);
             }
             string why;
             using (Mount.Bind(donkey.I))
@@ -853,7 +853,7 @@ namespace GK2DonkeyAPI.Api
 
         private static MountHandle UnhitchInstance(Mount.Instance i, out string why)
         {
-            why = "Not in a game.";
+            why = UiWords.SayNotInGame.English;
             if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
             {
                 return null;

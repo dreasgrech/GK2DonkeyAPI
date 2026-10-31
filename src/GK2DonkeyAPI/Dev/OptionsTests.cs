@@ -127,6 +127,14 @@ namespace GK2DonkeyAPI
                         if (OptionsWindow.TestRowObject(r) == null) SelfTest.Check(false, $"{name}: '{r.Label}' is drawn");
                     }
                     total += shown;
+                    // the room each text has before it no longer fits (the translation investigation, 2026-10-31)
+                    TextRoom.Measure(OptionsWindow.TestRoot, "options: " + name);
+                    var descriptions = new List<(string Name, string Text)>();
+                    foreach (MountSettingsPage.Row r in page.Rows)
+                    {
+                        if (page.InOptions(r) && ShownName(r) == name && (r.Visible == null || r.Visible())) descriptions.Add((r.Label, OptionsWindow.TestDescription(r)));
+                    }
+                    TextRoom.MeasureIn(OptionsWindow.TestDescriptionBox, "options: " + name + " (descriptions)", descriptions);
                     string outside = OptionsWindow.TestOutside();
                     SelfTest.Check(OptionsWindow.TestRowCount == shown && OptionsWindow.TestGameRows() == 0 && outside == null,
                         $"{name}: its {shown} rows are drawn, every one our own control ({OptionsWindow.TestGameRows()} game rows), inside the column ({outside ?? "nothing outside"})");

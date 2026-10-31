@@ -44,6 +44,11 @@ namespace GK2DonkeyAPI
         internal static Tuned<string> DropPoint;       // GD point the bodies are left at
         internal static Tuned<bool> NeverRot;          // the game's never-auto-destroy property on the bodies it leaves
         internal static Tuned<string> Notification;    // text instead of "New Body"; empty = the game's
+        internal static string TestLastNotification;   // the text last shown (the translations self-test)
+
+        // The notification's text as shown: the shipped words in the player's language (UiWords.NoticeCrossroads) while
+        // the setting is still them; a text of the player's own as they wrote it.
+        internal static string NotificationShown(string value) => value == UiWords.NoticeCrossroads.English ? UiWords.NoticeCrossroads.Text : value;
         internal static Tuned<float> UnloadDelay;      // on-the-spot unload only: seconds before the bodies appear
         internal static Tuned<float> LeaveDelay;       // on-the-spot unload only: seconds before it vanishes
 
@@ -566,10 +571,12 @@ namespace GK2DonkeyAPI
             {
                 return true; // the game's own "New Body"
             }
+            text = NotificationShown(text);
             try
             {
                 // LLBase.L returns an unknown key verbatim, so the text itself serves as the key.
                 __instance.ShowSimpleTextWithIconNotification(text, IconFor(bodyId));
+                TestLastNotification = text;
                 return false;
             }
             catch (Exception e)

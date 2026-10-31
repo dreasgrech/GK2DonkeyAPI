@@ -42,7 +42,10 @@ manifest verified against the installed game (`tools/DepManifest`), `check-dist.
 (`tools/layering-scan.py --dist`, since 2026-10-27: no name of Saddle Up or its packs in `src/GK2DonkeyAPI`, Dev
 included, or in the API DLL's strings, and no pack's name in `src/SaddleUp`), and in `tests/`
 `CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
-`--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game). All must
+`--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game), and
+`tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.txt` and `en.csv` are the English the
+last dev start wrote, so start the game once with the dev tools after the last text change; and no bubble or prompt
+said with a literal in the API's game code, docs/localization.md). All must
 end green; `FrameworkScan`
 also fails on any `Plugin` method named after a Unity message (a quit-time save once sat in `OnApplicationQuit`; it
 is in the `Application.quitting` handler now).
@@ -89,7 +92,14 @@ install). Besides it, one zip per external pack (`packs/<Pack>/`, the pack's nam
 `GK2SaddleUp` with its words dashed: `GK2-Saddle-Up-Dragons-Mount-Pack-<v>.zip`, `GK2-Saddle-Up-Critters-Mount-Pack-<v>.zip`,
 `GK2-Saddle-Up-Donkey-Skin-Pack-<v>.zip`, the version from the pack's
 CHANGELOG.md, raised there when the pack changed): each its own Nexus file. There is no bundle of the packs (the user,
-2026-10-27: "ill ship individuals"). `--only saddleup` (or a pack's folder name) writes one item's zip: a pack whose
+2026-10-27: "ill ship individuals").
+
+**The translations** (docs/localization.md): each item carries its plugin's `Languages/` beside the DLL
+(`BepInEx/plugins/<Mod>/Languages/`: the English templates `en.txt` and `en.csv`, and every translation that ships),
+taken from the source folder's `Languages/` in the working tree, so the zip refuses while any of them is uncommitted.
+A translation added between releases is a change like any other: `release-versions.py check` notes a kept item whose
+`Languages/` differs from its released zip's ("raise its version to ship them"), and the release rule writes no zip
+for it until its version is raised. A translator's file is credited in the release notes (README, "Translations"). `--only saddleup` (or a pack's folder name) writes one item's zip: a pack whose
 number is public is not rebuilt. **The zips in `release/` are kept in git** (since 2026-10-30, after two public zips
 were overwritten and lost while the folder was ignored): commit each new zip with its release; only `release/logs/`
 is ignored.
@@ -118,6 +128,8 @@ again; `bin/` holds whichever was built last.
 - `README.md` (the table), `src/GK2DonkeyAPI/README.md` (version line, the install step's log line),
   `src/SaddleUp/README.md` (version line, the key table): the API version and the game build.
 - `docs/open-items.md`: what is built but not yet seen in game, so the release notes can say so.
+- The translations: the README's Translations still names the files and the plugin GUIDs; a translation that ships
+  names its translator in the player notes.
 
 ## 5. A first run as a player (this machine)
 

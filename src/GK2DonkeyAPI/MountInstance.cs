@@ -519,15 +519,15 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey)
                 {
-                    return "That is a cart without a mount.";
+                    return UiWords.SayCartWithoutMount.English;
                 }
                 if (!Rideable)
                 {
-                    return "This one is too small to ride.";
+                    return UiWords.SayTooSmallToRide.English;
                 }
                 if (Ridden != null)
                 {
-                    return "Already mounted.";
+                    return UiWords.SayAlreadyMounted.English;
                 }
                 MountStyle style = asStyle ?? activeStyle;
                 string reason = WhyCannotMount(pc) ?? (style == MountStyle.Cart ? WhyNotCart(pc) : null) ?? MountRules.WhyCannotMount(style);
@@ -546,19 +546,19 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey)
                 {
-                    return "That is a cart without a mount.";
+                    return UiWords.SayCartWithoutMount.English;
                 }
                 if (!Rideable)
                 {
-                    return "This one is too small to ride.";
+                    return UiWords.SayTooSmallToRide.English;
                 }
                 if (Ridden != null)
                 {
-                    return "Already mounted.";
+                    return UiWords.SayAlreadyMounted.English;
                 }
                 if (!Ready || SceneId != pc.PlayerData.currentGameSceneId)
                 {
-                    return "It isn't here right now.";
+                    return UiWords.SayNotHereNow.English;
                 }
                 // The cart's refusal in armour here too: the self-test "mounting in armour, every cart path refused" rode
                 // a donkey standing with its cart through this path (2026-10-14), the one path that did not ask.
@@ -592,7 +592,7 @@ namespace GK2DonkeyAPI
                         GameScene here = LoadedScene(SceneId);
                         if (here == null)
                         {
-                            return "It isn't here right now.";
+                            return UiWords.SayNotHereNow.English;
                         }
                         Plugin.Log.LogInfo($"Mount: {Describe()}: its seat is no place for the keeper ({offGround}); it comes to him instead.");
                         ComeTo(pc, here, riderFacingX);
@@ -796,11 +796,11 @@ namespace GK2DonkeyAPI
             {
                 if (!HasDonkey || HasCart)
                 {
-                    return $"This {Noun} already pulls a cart.";
+                    return UiWords.SayAlreadyPullsCart.Make(Noun);
                 }
                 if (!Rideable || ViewScale != 1f)
                 {
-                    return "This one can't pull a cart.";
+                    return UiWords.SayCantPullACart.English;
                 }
                 string byMount = Looks.WhyNotCartByMount(this) ?? Looks.WhyNotCartByLoad(this, cart);
                 if (byMount != null)
@@ -809,16 +809,16 @@ namespace GK2DonkeyAPI
                 }
                 if (cart == null || cart.HasDonkey || cart.IsRidden || !IsRegistered(cart))
                 {
-                    return "That is not a free cart.";
+                    return UiWords.SayNotAFreeCart.English;
                 }
                 if (cart.SceneId != SceneId)
                 {
-                    return "The cart is somewhere else.";
+                    return UiWords.SayCartElsewhere.English;
                 }
                 GameScene scene = LoadedScene(SceneId);
                 if (scene == null)
                 {
-                    return "Not while the scene is not loaded.";
+                    return UiWords.SaySceneNotLoaded.English;
                 }
                 // Not in armour, riding or on foot (a hitch on foot is the companion's G and the world's E): the cart is
                 // refused in a fight everywhere, or it slips in by one path and not another (seen 2026-10-14). Other mods'
@@ -843,7 +843,7 @@ namespace GK2DonkeyAPI
                     if (offGround != null)
                     {
                         Plugin.Log.LogInfo($"Mount: hitching {cart.FullId} refused: its seat is no place for the keeper ({offGround}).");
-                        return "I can't get to that cart from here.";
+                        return UiWords.SayCantGetToCart.English;
                     }
                     seatFloor = seat.y;
                 }
@@ -893,14 +893,14 @@ namespace GK2DonkeyAPI
                 why = null;
                 if (!HasDonkey || !HasCart)
                 {
-                    why = "No cart to leave.";
+                    why = UiWords.SayNoCartToLeave.English;
                     return null;
                 }
                 GameScene scene = LoadedScene(SceneId);
                 bool viewed = scene != null && HasViewObject;
                 if (mounted && !viewed)
                 {
-                    why = "Not right now.";
+                    why = UiWords.SayNotRightNow.English;
                     return null;
                 }
                 if (mounted)
@@ -912,7 +912,7 @@ namespace GK2DonkeyAPI
                     if (offGround != null)
                     {
                         Plugin.Log.LogInfo($"Mount: {Describe()} can't leave its cart here: {offGround}.");
-                        why = "The cart can't stand here.";
+                        why = UiWords.SayCartCantStand.English;
                         return null;
                     }
                 }

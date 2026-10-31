@@ -60,7 +60,8 @@ namespace SaddleUp
             // the Mounts panel first, on L (the user, 2026-10-27: "we cant not have a default hotkey for this"; L is
             // unbound in the game's defaults, docs/api-design.md "Showcase keys"): where the mount, its skins, name,
             // babies and colours are chosen
-            p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mounts panel", "Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours.",
+            // the window's own name since 0.14.0, Mount Journal (the user, 2026-10-31: the label said "Mounts panel"); the cfg key stays
+            p.Key("Keys", "MountsKey", new KeyboardShortcut(KeyCode.L), "Mount Journal", "Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.",
                 pressed: p.OpenPanel);
             ConfigEntry<KeyboardShortcut> rideKey = p.Key("Keys", "RideKey", new KeyboardShortcut(KeyCode.H), "Ride your mount", "Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on.",
                 pressed: () => me.Use(MountStyle.Ride));
@@ -113,7 +114,7 @@ namespace SaddleUp
             // panel of its own, the mounts listed, the chosen one drawn with its stats and abilities; it stays the
             // same size however many mounts are installed). The rows below are bound as before (the same cfg keys)
             // and marked look: true, which keeps them out of the menu and in the panel.
-            p.PanelButton("Mount", "Mounts", "Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours.");
+            p.PanelButton("Mount", "Mounts", "Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours.");
             // before any mount's own settings are made (each starts from the companion's): on in Saddle Up (the user,
             // 2026-10-22); the API's stays off for other mods
             me.FoalsFollowOnFoot = true;

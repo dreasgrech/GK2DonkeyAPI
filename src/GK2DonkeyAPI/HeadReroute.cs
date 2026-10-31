@@ -258,7 +258,7 @@ namespace GK2DonkeyAPI
                 // Cart full: the item has already left wherever it was (the drop is gone, the pile removed it), so it
                 // reappears in front of the keeper instead of vanishing or landing on the head.
                 Cargo.DropAtKeeper(__instance, item);
-                Mount.Say("The cart is full.");
+                Mount.Say(UiWords.SayCartFull.English);
                 Plugin.Log.LogInfo($"Cargo: cart full, {Cargo.Name(item)} dropped in front of the keeper.");
                 return false;
             }

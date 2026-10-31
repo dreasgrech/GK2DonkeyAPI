@@ -264,6 +264,12 @@ namespace GK2DonkeyAPI
         private static readonly Dictionary<string, SkinDef> defs = new Dictionary<string, SkinDef>(StringComparer.OrdinalIgnoreCase);
         internal static IEnumerable<SkinDef> All => defs.Values;
 
+        // A named skin's words as the player reads them (docs/localization.md, step 3): its owner's translation
+        // (skin.<skin id>.name and .description), else as registered.
+        internal static Term NameTerm(SkinDef s) => new Term(s.Owner, "skin." + s.Id + ".name", s.Name);
+
+        internal static string ShownDescription(SkinDef s) => Texts.Of(s.Owner, "skin." + s.Id + ".description", s.Description);
+
         // A skin by its full name ("acme.crab/default"). A short name finds one too: a mount's id, or the name
         // after its prefix when only one mount has it, is that mount's default look ("crab", "crab/default": what a
         // dev's own world saved before the names, 2026-10-24); a skin's own name ("frost") the skin when only one
@@ -1552,12 +1558,13 @@ namespace GK2DonkeyAPI
         {
             if (i == null) return null;
             Catalog.Entry k = MountWanted(i);
-            return k.Cart ? null : $"{Who(i, k)} can't pull the cart.";
+            return k.Cart ? null : UiWords.SayCantPullTheCart.Make(Who(i, k));
         }
 
         // Who a refusal names (the user, 2026-10-27: its own name if it has one, else its mount type's): the
-        // player's name for it ("Bella"), else its mount's name (the Mounts panel's), never its noun ("a crab").
-        internal static string Who(Mount.Instance i, Catalog.Entry k) => !string.IsNullOrEmpty(i?.DisplayName) ? i.DisplayName : k.Label;
+        // player's name for it ("Bella", as typed), else its mount's name (the Mounts panel's, a Term: translated in the
+        // bubble, English in the reason), never its noun ("a crab").
+        internal static object Who(Mount.Instance i, Catalog.Entry k) => !string.IsNullOrEmpty(i?.DisplayName) ? (object)i.DisplayName : Catalog.NameTerm(k);
 
         // A mount that pulls the cart, but fewer items than this cart holds (0.40.0; the user, 2026-10-27: a mount that pulls
         // 4, hitched to the six the donkey had loaded): why not, else null. The mount's own cargo only: a mod's session cap
@@ -1568,7 +1575,7 @@ namespace GK2DonkeyAPI
             Catalog.Entry k = MountWanted(mount);
             if (!k.Cart) return null;
             int n = cart.CargoRig != null ? cart.CargoRig.Count : 0, cap = Catalog.CargoOf(k);
-            return n > cap ? $"{Who(mount, k)} pulls {cap} items at most. Take {n - cap} off the cart first." : null;
+            return n > cap ? UiWords.SayTooMuchOnCart.Make(n, cap) : null; // the user's yes, 2026-11-01: no plural in code (was "{Who} pulls {cap} items at most. Take {n - cap} off the cart first.")
         }
 
         // The tuning keys a skin's [Tuning] may set: the ones that exist because of how the pictures are drawn (where
@@ -2723,6 +2730,9 @@ namespace GK2DonkeyAPI
             // A new look on its way: a sheet still building, or the Skin key naming another skin than the one worn (the
             // settings picture holds its last finished photo meanwhile, PreviewStage).
             internal bool Settling => pending != null || !string.Equals(WantedDef?.Id ?? "", skin?.Def.Id ?? "", StringComparison.OrdinalIgnoreCase);
+
+            // The self-tests' account of Settling: the skin wanted, the one worn, a sheet building (the lamp framing probe).
+            internal string TestSettleReport => $"wanted {WantedDef?.Id ?? "-"}, worn {skin?.Def.Id ?? "-"}, building {(pending == null ? "none" : pending.Def.Id + (pending.Ready ? " (ready)" : " (not ready)"))}";
 
             // A column of the worn body picture (0 = the canvas's left edge, art facing left) as a world point on the
             // ground row of the body overlay, mirrored with the part: the cart readout measures the body's rear edge.

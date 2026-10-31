@@ -73,7 +73,7 @@ All of these apply at once:
 
 | Section (in the cfg) | Setting | Default | |
 |---|---|---|---|
-| 1. Keys | Mounts panel | L | Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours. |
+| 1. Keys | Mount Journal | L | Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours. |
 | | Ride your mount | H | Calls your mount and gets you on. Press it again to get off. In the cart, it leaves the cart standing and you ride on. |
 | | Drive the cart | G | Calls your mount with its cart so you can drive. Press it again to get off. While riding, it brings the cart. |
 | | Ring the bell | B | Rings the bell while you drive the cart. |
@@ -84,7 +84,7 @@ All of these apply at once:
 | | Climb (hold) | Left Shift | Hold it while flying to go up. |
 | | Descend (hold) | Left Ctrl | Hold it while flying to go down. You land when you reach the ground. |
 | 2. Mount | Your mount (the picture) | | Your mount, drawn in its colours. |
-| | Mounts | | A button. Opens the Mounts panel. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
+| | Mounts | | A button. Opens the Mount Journal. Pick your mount there and set its name, skin, babies and colours. Done keeps your choices and Cancel puts them back. |
 | | Mount | Donkey | (in the Mounts panel) The mount you ride. Saddle Up has the donkey and Gerry. Packs and other mods add more. |
 | | Skin | Default | (in the Mounts panel) How your mount looks. With GK2 Saddle Up: Donkey Skins the donkey also has Hellfire and Royal Parade. |
 | | Name | none | (in the Mounts panel) Shown when you walk up to your mount, as in "Ride Bella". |

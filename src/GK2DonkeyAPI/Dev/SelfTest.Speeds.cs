@@ -71,9 +71,9 @@ namespace GK2DonkeyAPI
                     Mounts.Behaviour.ClearAny("CartSlots");
                     if (slotsOwner != null) Mounts.Behaviour.Set(slotsOwner, "CartSlots", slotsWas);
                 }
-                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4 items"), $"the panel's stats card at Cart capacity 6: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
-                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.25x walking speed)") && entry.Lines.Contains("Cargo: 4 items"), "and the entry's lines carry the number (for the API; the card shows the word)");
-                Check(small != null && small.Stats.Count >= 2 && small.Stats[1] == ("Cargo", "2 of 4 items") && small.Lines.Contains("Cargo: 2 of 4 items (a mod limits the cart to 2)"), $"with every cart limited to 2 (a mod's session override) the card says what the cart holds: {(small == null ? "no entry" : small.Stats[1].Value)}");
+                Check(entry != null && entry.Stats.Count >= 2 && entry.Stats[0] == ("Speed", "Fast") && entry.Stats[1] == ("Cargo", "4"), $"the panel's stats card at Cart capacity 6: {(entry == null ? "no entry" : string.Join(", ", entry.Stats))}");
+                Check(entry != null && entry.Lines.Contains("Speed: Fast (2.25x walking speed)") && entry.Lines.Contains("Cargo: 4"), "and the entry's lines carry the number (for the API; the card shows the word)");
+                Check(small != null && small.Stats.Count >= 2 && small.Stats[1] == ("Cargo", "2 of 4") && small.Lines.Contains("Cargo: 2 of 4 (a mod limits the cart to 2)"), $"with every cart limited to 2 (a mod's session override) the card says what the cart holds: {(small == null ? "no entry" : small.Stats[1].Value)}");
                 float cfgRide = Plugin.For(MountStyle.Ride).SpeedMultiplier.Entry.Value, cfgCart = Plugin.For(MountStyle.Cart).SpeedMultiplier.Entry.Value;
                 Check(donkeyEntry != null && donkeyEntry.Stats[0].Value == Catalog.SpeedWord(cfgRide, MountStyle.Ride) && donkeyEntry.Stats[1].Value == Catalog.CargoMax + " items", $"the donkey's card reads the cfg's speed and the most cargo ({cfgRide}: {donkeyEntry?.Stats[0].Value}, {donkeyEntry?.Stats[1].Value})");
 

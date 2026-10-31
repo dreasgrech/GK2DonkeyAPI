@@ -51,7 +51,19 @@ namespace GK2DonkeyAPI.Api
             internal bool WithCart;          // RowKind.Preview: the donkey with its cart, or alone
             internal string MountId;         // a PerMount or PerSkin row's mount (null: a row of no one mount)
             internal string SkinId;          // a PerSkin row's skin (null: a row of no one skin)
+            // Translations (Texts, docs/localization.md): the text fields above stay English (they are compared and logged);
+            // the windows draw them through Texts with these. Owner: the page's mod; TextKey: the row's key in its
+            // translation file, without its mount or skin; LabelWord and ButtonWord: the API's own word instead (the
+            // rows its builders add, the default button words).
+            internal string Owner, TextKey;
+            internal Word LabelWord, ButtonWord;
+            // A List row's choices FillList marked (a stored id nothing installed provides, set aside, the list empty): drawn
+            // with the API's words around the name (Texts.Choice); ChoiceLabels keep the English for the comparisons and logs.
+            internal ChoiceNote[] ChoiceNotes;
+            internal string[] ChoiceNames;
         }
+
+        internal enum ChoiceNote { None, NotInstalled, SetAside, Empty }
 
         internal readonly List<Row> Rows = new List<Row>();
         internal static readonly List<MountSettingsPage> All = new List<MountSettingsPage>(); // every page made this session (the upgrade self-test)
@@ -468,9 +480,10 @@ namespace GK2DonkeyAPI.Api
             pendingShown = () => string.Equals(mountRow?.Value, id, StringComparison.OrdinalIgnoreCase); // the chosen mount's Skin row shows (Row.Shown)
             try
             {
-                skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), "Skin",
+                skinRows[id] = List(mountSection, "Skin_" + id, first, () => Looks.SkinChoicesOf(id), UiWords.SkinRow.English,
                     $"How your {k.Name.ToLowerInvariant()} looks.",
                     v => ApplyMountRows(), look: true);
+                LastRowSays(UiWords.SkinRow);
             }
             finally
             {
@@ -591,9 +604,12 @@ namespace GK2DonkeyAPI.Api
             {
                 MountOwn l = me.OwnOf(mountId);
                 Func<bool> babies = () => Catalog.Find(mountId)?.Foals ?? true;
-                Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, "Babies", "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? "None" : v.ToString(), look: true, visible: babies);
-                Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, "Babies follow you on foot", "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
-                Toggle(section, "FoalsIndoors" + sfx, true, "Babies come indoors", "The babies follow you into buildings and back out.", v => l.FoalsComeIndoors = v, babies, look: true);
+                Steps(section, "Foals" + sfx, l.FoalCount, 0, MountCompanion.MaxFoals, 1, UiWords.Babies.English, "How many little ones follow your mount around.", v => l.FoalCount = v, v => v == 0 ? UiWords.None.Text : v.ToString(), look: true, visible: babies);
+                LastRowSays(UiWords.Babies);
+                Toggle(section, "FoalsFollow" + sfx, l.FoalsFollowOnFoot, UiWords.BabiesFollow.English, "When you get off, the babies follow you instead of staying with your mount.", v => l.FoalsFollowOnFoot = v, babies, look: true);
+                LastRowSays(UiWords.BabiesFollow);
+                Toggle(section, "FoalsIndoors" + sfx, true, UiWords.BabiesIndoors.English, "The babies follow you into buildings and back out.", v => l.FoalsComeIndoors = v, babies, look: true);
+                LastRowSays(UiWords.BabiesIndoors);
                 // "Babies are the same mount and skin" is gone (the user, 2026-10-27): off made another mount's babies plain
                 // donkeys. Babies always look like their parent (MountLook.FoalsWearSkin stays true unless a mod sets it); the
                 // old lines leave the file.
@@ -659,6 +675,8 @@ namespace GK2DonkeyAPI.Api
             if (r.RowKind != RowKind.List || r.ChoiceLabels != null) return;
             var ids = new List<string>();
             var labels = new List<string>();
+            var notes = new List<ChoiceNote>();
+            var names = new List<string>();
             try
             {
                 foreach ((string id, string label) in r.Choices() ?? Array.Empty<(string, string)>())
@@ -666,6 +684,8 @@ namespace GK2DonkeyAPI.Api
                     if (string.IsNullOrEmpty(id) || ids.Contains(id)) continue;
                     ids.Add(id);
                     labels.Add(string.IsNullOrEmpty(label) ? id : label);
+                    notes.Add(ChoiceNote.None);
+                    names.Add(labels[labels.Count - 1]);
                 }
             }
             catch (Exception ex)
@@ -675,16 +695,24 @@ namespace GK2DonkeyAPI.Api
             string now = r.Entry.BoxedValue as string ?? "";
             if (now.Length > 0 && !ids.Contains(now))
             {
+                string name = MountsPanel.NameFromId(now);
+                bool aside = Looks.Find(now)?.Unavailable != null;
                 ids.Add(now);
-                labels.Add(MountsPanel.NameFromId(now) + (Looks.Find(now)?.Unavailable != null ? " (set aside)" : " (not installed)"));
+                labels.Add(name + (aside ? " (set aside)" : " (not installed)"));
+                notes.Add(aside ? ChoiceNote.SetAside : ChoiceNote.NotInstalled);
+                names.Add(name);
             }
             if (ids.Count == 0)
             {
                 ids.Add(now);
                 labels.Add(now.Length > 0 ? now : "(none)");
+                notes.Add(now.Length > 0 ? ChoiceNote.None : ChoiceNote.Empty);
+                names.Add(now);
             }
             r.ChoiceValues = ids.ToArray();
-            r.ChoiceLabels = labels.ToArray();
+            r.ChoiceNotes = notes.ToArray();
+            r.ChoiceNames = names.ToArray();
+            r.ChoiceLabels = labels.ToArray(); // last: a window reads the labels as the sign the list is filled
         }
 
         // A whole number from min to max in steps; format turns it into the shown text (e.g. "100%").
@@ -810,7 +838,7 @@ namespace GK2DonkeyAPI.Api
         // Escape keep what was chosen and go back to the options. Only in a game; greyed in the main menu.
         public void PanelButton(string section, string label, string description)
         {
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = "Open", OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = UiWords.Open.English, ButtonWord = UiWords.Open, OnClick = () => MountsPanel.Open(this, toggle: false), OpensPanel = true });
         }
 
         // A button of the mod's own (0.36.0): onClick runs when it is pressed in the options window, only in a game (greyed
@@ -819,7 +847,8 @@ namespace GK2DonkeyAPI.Api
         public void Button(string section, string label, string description, Action onClick, string buttonText = "Go", Func<bool> enabled = null)
         {
             if (onClick == null) throw new ArgumentNullException(nameof(onClick));
-            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = string.IsNullOrEmpty(buttonText) ? "Go" : buttonText, OnClick = onClick, Enabled = enabled });
+            bool go = string.IsNullOrEmpty(buttonText) || buttonText == UiWords.Go.English; // the default word is the API's, a mod's own word its own
+            Add(new Row { RowKind = RowKind.Button, Section = Sec(section), ShownSection = section, Label = label, Description = description, ButtonText = go ? UiWords.Go.English : buttonText, ButtonWord = go ? UiWords.Go : null, OnClick = onClick, Enabled = enabled });
         }
 
         // The same (the panel grew out of the look bar); kept so a mod written for 0.30 to 0.34 still opens it.
@@ -914,6 +943,7 @@ namespace GK2DonkeyAPI.Api
             AnyShown = true;
             FinishBinding();
             GuardCallbacks();
+            Texts.Published(this); // with the dev tools: the page's English written out for the translators' templates
             SettingsButtons.Add(this);
             if (OptionsWindow.HasOptions(this) && FrameworkLink.TryRegister(this))
             {
@@ -981,6 +1011,19 @@ namespace GK2DonkeyAPI.Api
             }
             r.MountId = pendingMountId;
             r.SkinId = pendingSkinId;
+            r.Owner = OwnerId;
+            r.TextKey = Texts.TextKeyOf(r);
+            // a key another section of the page has already (BepInEx allows a key per section; two buttons may share a label):
+            // this one's translation key takes its section, so each keeps a line of its own (a row's mount and skin copies
+            // share their section and key, and their line)
+            foreach (Row o in Rows)
+            {
+                if (o.TextKey == r.TextKey && o.ShownSection != r.ShownSection)
+                {
+                    r.TextKey = Texts.Slug(r.ShownSection) + "." + r.TextKey;
+                    break;
+                }
+            }
             if (pendingShown != null)
             {
                 Func<bool> shown = pendingShown, own = r.Visible;
@@ -989,6 +1032,13 @@ namespace GK2DonkeyAPI.Api
                 r.Visible = own == null ? shown : () => shown() && own();
             }
             Rows.Add(r);
+        }
+
+        // The row just added is drawn with the API's word as its label (a row the API's builders add: the Skin row, the
+        // babies rows), so its text is the API's to translate, not the page's.
+        private void LastRowSays(Word label)
+        {
+            if (Rows.Count > 0) Rows[Rows.Count - 1].LabelWord = label;
         }
 
         private Func<bool> pendingShown; // set while PerMount (or MountRows) builds one mount's rows

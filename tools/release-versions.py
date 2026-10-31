@@ -15,7 +15,8 @@ plugin's `Version` constant in Plugin.cs) and verifies every other line that rep
 and log line, the two mods' READMEs, docs/api.md's version line and history entry, dist/README.md's rows, CHANGELOG.md's
 first release heading, the Nexus note docs/nexus/saddleup-<version>-changelog.md, tools/rehearsal.sh's zip names, and
 for each pack its csproj, its CHANGELOG's first heading and its dist/README.md row. It also checks the game build pair
-on the lines that carry it.
+on the lines that carry it. A note (not a failure) names a kept item whose Languages/ (its translation files,
+docs/localization.md) differs from its released zip's: a translation added since ships only with a raised version.
 
 `set` rewrites the mechanical lines (the constants, the csproj, the READMEs, docs/api.md's version line, dist/README.md's
 rows, rehearsal.sh); the editorial ones stay yours and `check` then names what is missing: the CHANGELOG heading (the
@@ -131,6 +132,14 @@ def check():
     if m and (m.group(1), m.group(2)) != (su, api):
         bad += 1
         print(f"FAIL  CHANGELOG.md's first release heading is {m.group(1)} / {m.group(2)}, the constants say {su} / {api}")
+    # a released build whose translation files changed since: the release rule leaves it out until its version is raised
+    for dll, ver, committed in dll_items():
+        if committed is None or ver != committed:
+            continue
+        diff = languages_changed(dll)
+        if diff:
+            print(f"note  {dll} {ver} is kept (a released build), but its Languages/ differs from {diff[0]} ({diff[1]}): "
+                  f"raise its version to ship them")
     print("ok    every version line agrees" if not bad else f"{bad} finding(s)")
     return bad
 
@@ -180,8 +189,14 @@ def set_pack(pack, v_new):
     print(f"\nStill yours: packs/{pack}/CHANGELOG.md's heading '## {v_new}, <date>' (from its Unreleased), dist/README.md's note on the row. Then: python tools/release-versions.py check")
 
 
+_dll_items = None
+
+
 def dll_items():
     """[(dll name, its source version, the version of the dll committed in dist/ or None)] for the API, Saddle Up and each pack."""
+    global _dll_items
+    if _dll_items is not None:
+        return _dll_items
     import subprocess, tempfile
     out = [("GK2DonkeyAPI", constant("src/GK2DonkeyAPI/Plugin.cs")), ("GK2SaddleUp", constant("src/SaddleUp/Plugin.cs"))]
     out += [(dll_of(p), constant(f"packs/{p}/Plugin.cs")) for p in pack_dirs()]
@@ -197,7 +212,58 @@ def dll_items():
                                    capture_output=True, text=True)
                 committed = v.stdout.strip() or None
         res.append((dll, ver, committed))
+    _dll_items = res
     return res
+
+
+def source_dir(dll):
+    """A DLL's source folder: src/GK2DonkeyAPI, src/SaddleUp, or the pack whose csproj builds it."""
+    if dll == "GK2DonkeyAPI":
+        return os.path.join(ROOT, "src", "GK2DonkeyAPI")
+    if dll == "GK2SaddleUp":
+        return os.path.join(ROOT, "src", "SaddleUp")
+    for pack in pack_dirs():
+        if dll_of(pack) == dll:
+            return os.path.join(PACKS, pack)
+    return None
+
+
+def languages_changed(dll):
+    """For a released build: (its zip, what differs) when its source Languages/ isn't what that zip shipped, else None.
+    Its zip is the one in release/ whose BepInEx/plugins/<dll>/<dll>.dll is the dll committed in dist/."""
+    import subprocess, zipfile
+    blob = subprocess.run(["git", "-C", ROOT, "show", f"HEAD:dist/{dll}.dll"], capture_output=True)
+    if blob.returncode != 0:
+        return None
+    inner = f"BepInEx/plugins/{dll}/"
+    released = None
+    out_dir = os.path.join(ROOT, "release")
+    for name in sorted(os.listdir(out_dir)) if os.path.isdir(out_dir) else []:
+        if not name.endswith(".zip"):
+            continue
+        with zipfile.ZipFile(os.path.join(out_dir, name)) as z:
+            if inner + dll + ".dll" in z.namelist() and z.read(inner + dll + ".dll") == blob.stdout:
+                released = (name, {n[len(inner + "Languages/"):]: z.read(n).replace(b"\r\n", b"\n")
+                                   for n in z.namelist() if n.startswith(inner + "Languages/") and not n.endswith("/")})
+                break
+    if released is None:
+        return None
+    src = source_dir(dll)
+    folder = os.path.join(src, "Languages") if src else None
+    now = {}
+    if folder and os.path.isdir(folder):
+        for n in sorted(os.listdir(folder)):
+            if n.lower().endswith((".txt", ".csv")):
+                now[n] = open(os.path.join(folder, n), "rb").read().replace(b"\r\n", b"\n")
+    zip_name_, shipped = released
+    added = [n for n in now if n not in shipped]
+    changed = [n for n in now if n in shipped and now[n] != shipped[n]]
+    gone = [n for n in shipped if n not in now]
+    if not (added or changed or gone):
+        return None
+    what = "; ".join(x for x in (f"new {', '.join(added)}" if added else "", f"changed {', '.join(changed)}" if changed else "",
+                                   f"gone {', '.join(gone)}" if gone else "") if x)
+    return zip_name_, what
 
 
 def items():

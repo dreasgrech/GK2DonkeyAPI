@@ -67,6 +67,7 @@ namespace GK2DonkeyAPI
             if (failed || pages.Count == 0 || Time.unscaledTime < nextCheck) return;
             nextCheck = Time.unscaledTime + CheckEvery;
             if (!(LazyWindowsStackController.ActiveWindow is UIGameSettingsWindow settings) || !settings.gameObject.activeInHierarchy) return;
+            if (madeIn == settings && drawnIn != null && drawnIn != Texts.Language) Retitle(); // the language changed in this window: our buttons' words follow
             if (AllThere(settings)) return;
             try
             {
@@ -80,6 +81,20 @@ namespace GK2DonkeyAPI
             catch (Exception e)
             {
                 Fail("adding the buttons failed: " + e.Message);
+            }
+        }
+
+        // The language each button's words are in (Texts): the Language row of this very window changes it, and our
+        // buttons' labels ignore the game's own refresh (IgnoreLocalize), so Tick puts their words right.
+        private static string drawnIn;
+
+        private static void Retitle()
+        {
+            drawnIn = Texts.Language;
+            foreach (var kv in made)
+            {
+                TextMeshProUGUI t = kv.Value != null ? kv.Value.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+                if (t != null) t.text = UiWords.PageOptions.Format(Texts.Title(kv.Key));
             }
         }
 
@@ -145,7 +160,7 @@ namespace GK2DonkeyAPI
                 foreach (LocalizedLabel l in b.GetComponentsInChildren<LocalizedLabel>(true)) l.IgnoreLocalize = true; // our words, not a translation key's
                 b.gameObject.SetActive(true);
                 // replaceForGamepad false: a button on screen with the gamepad too (the OK button is a key tip there)
-                b.Draw(new UIDialogWindowData.ButtonData(() => OptionsWindow.Open(p), p.Title + " options", null, replaceForGamepad: false, GameKey.Select));
+                b.Draw(new UIDialogWindowData.ButtonData(() => OptionsWindow.Open(p), UiWords.PageOptions.Format(Texts.Title(p)), null, replaceForGamepad: false, GameKey.Select));
                 GamepadNavigationItem item = b.GetComponentInChildren<GamepadNavigationItem>(true);
                 if (item == null && b.LazyButton != null)
                 {
@@ -155,6 +170,9 @@ namespace GK2DonkeyAPI
                 made[page] = b;
                 added++;
             }
+            // the buttons kept from before (not drawn now) may be in another language (F11 runs in English after a German
+            // open, say): all retitled when the language isn't the one they were drawn in
+            if (drawnIn != Texts.Language) Retitle();
             if (added == 0) return;
             ((RectTransform)settings.transform).RefreshContentFitter();
             settings.GetComponent<GamepadNavigationController>()?.ReinitItems(focusOnFirstActive: false);

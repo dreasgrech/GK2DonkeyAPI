@@ -555,7 +555,7 @@ namespace GK2DonkeyAPI.Api
                 // the ride here would be refused: then nothing changes and the refusal is shown, as ComeToKeeper shows it.
                 if (!Mount.Instance.IsInGame(out PlayerController pc, out _))
                 {
-                    return MountResult.Refused("Not in a game.");
+                    return MountResult.Refused(UiWords.SayNotInGame.English);
                 }
                 string why;
                 using (Mount.Bind(Donkey.I))
@@ -568,7 +568,7 @@ namespace GK2DonkeyAPI.Api
                 }
                 if (Mounts.Unhitch(Donkey) == null)
                 {
-                    const string notLeft = "The cart could not be left where it stands.";
+                    string notLeft = UiWords.SayCartNotLeftWhereStands.English;
                     Mount.Say(notLeft);
                     return MountResult.Refused(notLeft);
                 }
@@ -608,7 +608,7 @@ namespace GK2DonkeyAPI.Api
                 MountHandle left = Mounts.UnhitchRidden(out string notLeft);
                 if (left == null)
                 {
-                    notLeft = string.IsNullOrEmpty(notLeft) ? "The cart could not be left here." : notLeft;
+                    notLeft = string.IsNullOrEmpty(notLeft) ? UiWords.SayCartNotLeftHere.English : notLeft;
                     Mount.Say(notLeft);
                     return MountResult.Refused(notLeft);
                 }

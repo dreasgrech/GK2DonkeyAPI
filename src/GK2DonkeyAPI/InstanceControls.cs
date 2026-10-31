@@ -301,7 +301,7 @@ namespace GK2DonkeyAPI
                     target = Nearest(pc, r.BodyPoint(), HitchReach, i => !i.HasDonkey && i.Parent == null);
                     if (target != null)
                     {
-                        label = HintText("Hitch the cart");
+                        label = HintText(UiWords.PromptHitch.Text);
                     }
                 }
                 KeyCode k = Plugin.HitchKey.Value;
@@ -327,7 +327,7 @@ namespace GK2DonkeyAPI
                 if (cart != null && MountRules.Allowed(MountFeature.Cargo) && pd.TryGetOverheadItem(Cargo.Rig.AllowedItem, out _))
                 {
                     bool fits = cart.CargoRig.HeldItemFits(pd);
-                    Set(cart, fits ? FootAction.Load : FootAction.Full, fits ? "Load on cart" : "Cart is full", atCart: true);
+                    Set(cart, fits ? FootAction.Load : FootAction.Full, fits ? UiWords.PromptLoad.Text : UiWords.PromptCartFull.Text, atCart: true);
                 }
                 return;
             }
@@ -335,25 +335,25 @@ namespace GK2DonkeyAPI
             {
                 if (zone == Zone.Donkey && cart.Rideable)
                 {
-                    Set(cart, FootAction.Ride, Named("Ride", cart), atCart: false); // "Ride" also with the cart (the user, 2026-10-03)
+                    Set(cart, FootAction.Ride, Named(cart), atCart: false); // "Ride" also with the cart (the user, 2026-10-03)
                     return;
                 }
                 if (zone == Zone.Cart && cart.CargoRig.Count > 0 && MountRules.Allowed(MountFeature.Cargo)
                     && Time.unscaledTime - lastLoad >= TakeAfterLoad)
                 {
-                    Set(cart, FootAction.Take, "Take from cart", atCart: true);
+                    Set(cart, FootAction.Take, UiWords.PromptTake.Text, atCart: true);
                     return;
                 }
             }
             Mount.Instance d = Nearest(pc, k, RideReach, i => i.HasDonkey && !i.HasCart && i.Rideable);
             if (d != null)
             {
-                Set(d, FootAction.Ride, Named("Ride", d), atCart: false);
+                Set(d, FootAction.Ride, Named(d), atCart: false);
             }
         }
 
-        // "Ride Bella" when the owner named it (MountHandle.SetDisplayName), else just the verb.
-        private static string Named(string verb, Mount.Instance i) => string.IsNullOrEmpty(i.DisplayName) ? verb : verb + " " + i.DisplayName;
+        // "Ride Bella" when the owner named it (MountHandle.SetDisplayName; the name as typed), else just the verb.
+        private static string Named(Mount.Instance i) => string.IsNullOrEmpty(i.DisplayName) ? UiWords.PromptRide.Text : UiWords.PromptRideNamed.Format(i.DisplayName);
 
         private static void Set(Mount.Instance i, FootAction a, string text, bool atCart)
         {
@@ -506,7 +506,7 @@ namespace GK2DonkeyAPI
             }
             else
             {
-                Mount.Say("No cart here.");
+                Mount.Say(UiWords.SayNoCartHere.English);
             }
         }
 
@@ -546,7 +546,7 @@ namespace GK2DonkeyAPI
                         }
                         return true;
                     case FootAction.Full:
-                        Mount.Say("The cart is full.");
+                        Mount.Say(UiWords.SayCartFull.English);
                         return true;
                     case FootAction.Take:
                         t.Handle.TakeToHead();

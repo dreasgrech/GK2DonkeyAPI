@@ -100,7 +100,7 @@ namespace GK2DonkeyAPI
             Action<string> onDismounted = r => reason = r;
             Mounts.Dismounted += onDismounted;
             bool lit = false;
-            const string NoCart = Mount.Instance.NotTheCartIndoors;
+            string NoCart = Mount.Instance.NotTheCartIndoors;
             try
             {
                 yield return Until(() => plain.IsReady && carted.IsReady && freeCart.IsReady && carted2.IsReady, 6f);

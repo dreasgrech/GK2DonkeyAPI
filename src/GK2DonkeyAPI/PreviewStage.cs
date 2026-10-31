@@ -664,7 +664,93 @@ namespace GK2DonkeyAPI
         internal static int TestReframes;                     // the self-tests: how often a picture was framed again
         internal static int TestCartReframes;                 // the self-tests: the cart picture's framings alone (the alone picture frames too)
         internal static int TestCartPictureWidth => cartView.Rt != null ? cartView.Rt.width : 0; // the self-tests: the cart picture's framing now
+        internal static int TestCartPictureHeight => cartView.Rt != null ? cartView.Rt.height : 0;
+
+        // The self-tests' measure for the framing question (docs/per-skin-looks.md §7, docs/open-items.md): the cart
+        // picture photographed once more at its framing, into a texture of its own (the shown one untouched), the lamp's
+        // renderers switched off for it when withoutLamp; the drawn pixels' rectangle (from the top left) and the picture's
+        // size. False with no picture to measure.
+        internal enum TestHide { Nothing, Lamp, Glow }
+
+        internal static bool TestDrawnRect(TestHide hide, out int x, out int y, out int w, out int h, out int pw, out int ph)
+        {
+            x = y = w = h = pw = ph = 0;
+            View v = cartView;
+            if (failed || v.Rt == null || v.Cam == null) return false;
+            pw = v.Rt.width;
+            ph = v.Rt.height;
+            var off = new List<Renderer>();
+            if (hide != TestHide.Nothing && dressedAs != null)
+            {
+                var lamp = new List<Renderer>();
+                if (hide == TestHide.Lamp) dressedAs.LanternRig.LampRenderers(lamp);
+                else dressedAs.LanternRig.GlowRenderers(lamp);
+                foreach (Renderer r in lamp)
+                {
+                    if (r != null && r.enabled)
+                    {
+                        r.enabled = false;
+                        off.Add(r);
+                    }
+                }
+            }
+            RenderTexture shown = v.Cam.targetTexture, temp = RenderTexture.GetTemporary(pw, ph, 16, RenderTextureFormat.ARGB32);
+            try
+            {
+                v.Cam.targetTexture = temp;
+                v.Cam.Render();
+                NativeArray<Color32> px = ReadBack(v, temp);
+                int minX = pw, minY = ph, maxX = -1, maxY = -1;
+                for (int yy = 0; yy < ph; yy++)
+                {
+                    for (int xx = 0; xx < pw; xx++)
+                    {
+                        if (px[yy * pw + xx].a <= 8) continue;
+                        if (xx < minX) minX = xx;
+                        if (xx > maxX) maxX = xx;
+                        if (yy < minY) minY = yy;
+                        if (yy > maxY) maxY = yy;
+                    }
+                }
+                if (maxX < 0) return false;
+                x = minX;
+                w = maxX - minX + 1;
+                y = ph - 1 - maxY; // the read-back's rows run bottom up
+                h = maxY - minY + 1;
+                return true;
+            }
+            finally
+            {
+                v.Cam.targetTexture = shown;
+                RenderTexture.ReleaseTemporary(temp);
+                foreach (Renderer r in off) r.enabled = true;
+            }
+        }
+
+        // The self-tests' account of the stage's lamp now: the rig's state, the paper's LanternShow override, and each lamp
+        // part with whether it draws (its object active and the renderer on). A pack's skin with its lantern on measured as
+        // "lantern:off" yet drew a lamp part at the top (the lamp framing measure, 2026-10-31): this says which part.
+        internal static string TestLampReport()
+        {
+            if (dressedAs == null) return "the stage dresses no paper";
+            Lantern.Rig rig = dressedAs.LanternRig;
+            string ov = dressedAs.Overrides.TryGetValue("LanternShow", out object o) ? o?.ToString() ?? "null" : "(none)";
+            var parts = new List<Renderer>();
+            rig.LampRenderers(parts);
+            var sb = new System.Text.StringBuilder();
+            sb.Append($"rig attached {rig.Attached}, pole shown {rig.PoleShown}, glow drawn {rig.GlowDrawn}, the paper's LanternShow override {ov}; parts:");
+            foreach (Renderer r in parts)
+            {
+                if (r == null) continue;
+                bool draws = r.enabled && r.gameObject.activeInHierarchy;
+                sb.Append(' ').Append(r.name).Append(draws ? " (draws)" : r.gameObject.activeInHierarchy ? " (off)" : " (inactive)").Append(';');
+            }
+            return sb.ToString();
+        }
         internal static string TestCartVariant => cartView.FramedVariant;
+        internal static string TestCartVariantNow => StageVariant(cartView); // what the stage draws now (the framing must match it)
+        internal static bool TestShownSettling => shownPaper != null && shownPaper.LooksRig.Settling;
+        internal static string TestShownLooks => shownPaper?.LooksRig?.TestSettleReport ?? "no paper shown";
         internal static bool TestCartMeasuring => cartView.TightenStep >= 0;
         internal static bool TestAloneMeasuring => donkeyView.TightenStep >= 0;
         internal static Mount.Instance TestDressedAs => dressedAs;   // the self-tests: the paper the stage is dressed as

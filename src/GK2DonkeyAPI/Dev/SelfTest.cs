@@ -107,6 +107,8 @@ namespace GK2DonkeyAPI
         internal const string GroupIndoors = "Indoors";
         internal const string GroupFlying = "Flying";
         internal const string GroupSafety = "Never lost";
+        internal const string GroupTranslations = "Translations"; // docs/localization.md: the files' rules, the test language over the windows
+        internal const string GroupMeasurements = "Measurements"; // data for open decisions, written to files under BepInEx\ (MeasureTests)
         // The checks of the whole run, last in every run (a group's or one scenario's too): the world's own donkeys came
         // through as they were, no test donkey left behind. A scenario of its own so its tally has a header like every
         // other check (the user, 2026-10-26: a failure there showed under all-green headers).
@@ -189,6 +191,13 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "settings: the options window (every option our own control in its section; a switch; a key set, in words, a clash; the line at the bottom; Defaults asked)", Body = OptionsTests.Smoke },
             new Scenario { Group = GroupLooks, Name = "settings: the options window's way back (the Settings window's button; the Mounts button and back; the journal's Options button and back; Ride from the journal over them)", Body = OptionsTests.WayBack },
             new Scenario { Group = GroupLooks, Name = "settings: the options window among other mods (the window's own OK copied, another mod's part left off it, our button added again when taken away; another mod's key and the game's named; a game window over the options)", Body = OptionsTests.AmongOtherMods },
+            new Scenario { Group = GroupTranslations, Name = "translations: the files (a translator's own beats the bundled, .txt beats .csv, ; and tab, the English changed, {0}, the language's base id, the test language, the API's English)", Body = TranslationTests.Files },
+            new Scenario { Group = GroupTranslations, Name = "translations: the test language over the options window, the Mount Journal and the colours window (every word looked up; the room at 1.6 times)", Body = TranslationTests.Windows },
+            new Scenario { Group = GroupTranslations, Name = "translations: a German translation in the windows (the page's de.txt with a row whose English changed, the API's de.csv saved with ; and quotes, read back from the options window, the journal and the colours window)", Body = TranslationTests.German },
+            new Scenario { Group = GroupTranslations, Name = "translations: every game language, the font our windows draw with (switched for a moment as the Settings window does, the player's own back; GK2-l10n-fonts.tsv)", Body = TranslationTests.Fonts },
+            new Scenario { Group = GroupTranslations, Name = "translations: the keeper's bubbles, the prompts on foot and the crossroads notice (the test language and a German de.txt; the reasons stay English; a bubble said for real)", Body = TranslationTests.Bubbles },
+            new Scenario { Group = GroupTranslations, Name = "translations: the mounts' and skins' names in their owners' files (the test language and German: the journal's list and header, the Skin list; every owner's English)", Body = TranslationTests.PackNames },
+            new Scenario { Group = GroupMeasurements, Name = "measure: the journal picture with the lamp lit, dark and off, every donkey skin (GK2-lamp-framing.tsv)", Body = MeasureTests.LampFraming },
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
@@ -391,6 +400,12 @@ namespace GK2DonkeyAPI
             {
                 Line($"[test] this run: {scenarios.Count} of {Scenarios.Count} scenario(s): {string.Join("; ", scenarios.ConvertAll(c => c.Name))}");
             }
+            // The windows' words in English for the run, whatever the game's language or Debug.TestLanguage: the scenarios
+            // check English texts (the translations scenario sets its own and puts these back).
+            string languageWas = Texts.LanguageOverride;
+            bool? testLanguageWas = Texts.TestForced;
+            Texts.LanguageOverride = "en";
+            Texts.TestForced = false;
             foreach (Scenario s in scenarios)
             {
                 if (abort)
@@ -423,6 +438,8 @@ namespace GK2DonkeyAPI
                 RunDone++;
             }
             running = null;
+            Texts.LanguageOverride = languageWas;
+            Texts.TestForced = testLanguageWas;
             Lod.On = lodOn;
             Lod.IdleSwitchesOff = idleOff;
             Lod.SpawnsPerFrame = perFrame;
@@ -3328,6 +3345,7 @@ namespace GK2DonkeyAPI
                 yield return Frames(2);
                 yield return PanelShot("colours-" + (page.MountChosen ?? "donkey"));
                 Check(MountsPanel.IsColoursOpen && MountsPanel.TestColourRows > 0, $"the colours window opens over the journal with {MountsPanel.TestColourRows} rows (the colours)");
+                TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: true), "colours window: " + (page.MountChosen ?? "donkey"));
                 string narrowColours = MountsPanel.TestNarrowLabel(coloursWindow: true);
                 Check(narrowColours == null, $"the colours window: every label has room (100 or more){(narrowColours != null ? " (NOT: " + narrowColours + ")" : "")}");
                 MountsPanel.TestCloseColours(keep: true);
@@ -3398,6 +3416,7 @@ namespace GK2DonkeyAPI
             bool named = keys.Contains("Name");
             Check(keys.Count > 0 && (named ? keys.Count > 1 && keys[0] == "Name" && keys[1] == "Skin" : keys[0] == "Skin"), $"{mount}'s journal: {(named ? "the name first, the Skin second" : "the Skin first")} ({order})");
             Check(MountsPanel.TestJournalGameRows() == 0, $"{mount}'s journal: every row is the panel's own control ({MountsPanel.TestJournalGameRows()} game rows)");
+            TextRoom.Measure(MountsPanel.TestRoot(coloursWindow: false), "journal: " + mount);
             string narrow = MountsPanel.TestNarrowLabel(coloursWindow: false);
             Check(narrow == null, $"{mount}'s journal: every label has room (100 or more){(narrow != null ? " (NOT: " + narrow + ")" : "")}");
             string outside = MountsPanel.TestJournalOutside();

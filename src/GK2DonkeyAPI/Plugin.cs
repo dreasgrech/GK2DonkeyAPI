@@ -470,6 +470,8 @@ namespace GK2DonkeyAPI
         internal static ConfigEntry<bool> SkinPackAutoReload;
         internal static ConfigEntry<bool> JumpTraceOn;
         internal static ConfigEntry<bool> UiProbeOn; // dev: the UI probe (Dev/UiProbe.cs), off by default // dev: the jump probe's files (JumpProbe.cs), off by default
+        internal static ConfigEntry<bool> TestLanguageOn; // dev: the translations' test language (Texts), off by default
+        internal static ConfigEntry<bool> TranslationReport; // [Translations] Report: the lines still to translate written out for translators (Texts), off by default
         internal static ConfigEntry<int> PanelFakeEntries; // dev: made-up entries padded onto the Mounts panel's list, to see it scroll
         internal static ConfigEntry<bool> CargoSeatOnShapes;
         internal static ConfigEntry<KeyCode> CargoNudgeUp, CargoNudgeDown;
@@ -639,7 +641,7 @@ namespace GK2DonkeyAPI
                 "GD point the bodies are left at. nun_body_drop_point is the game's own spot by the nun; crossroad_nun_corpses right beside her; donkey_01 where the donkey appears.");
             Corpses.NeverRot = Config.Bind(Corpses.Section, "CorpsesNeverRot", Defaults.Get(Corpses.Section, "CorpsesNeverRot", false),
                 "A body on the ground normally turns into a grave mound after about 75 minutes of play out of sight (the game's rule). On: the bodies the donkey leaves never rot.");
-            Corpses.Notification = Config.Bind(Corpses.Section, "CorpsesNotification", Defaults.Get(Corpses.Section, "CorpsesNotification", "The donkey left a body at the crossroads"),
+            Corpses.Notification = Config.Bind(Corpses.Section, "CorpsesNotification", Defaults.Get(Corpses.Section, "CorpsesNotification", UiWords.NoticeCrossroads.English),
                 "Shown instead of the game's \"New Body\" notification for each body left, with the body's icon. Empty: the game's own.");
             Corpses.UnloadDelay = Config.Bind(Corpses.Section, "CorpsesUnloadDelay", Defaults.Get(Corpses.Section, "CorpsesUnloadDelay", 1.5f),
                 new ConfigDescription("Only when the donkey unloads on the spot (CorpsesStandPoint is its spawn point, or no walk is possible): seconds before the bodies appear.", new AcceptableValueRange<float>(0.1f, 10f)));
@@ -705,6 +707,10 @@ namespace GK2DonkeyAPI
                 "The panel's Cargo tab tints the items on the ridden cart like the names in it: blue the first item of a layer, orange the second (or one alone on top), lighter the higher the layer. Off: no tint.");
             UiProbeOn = dbg.Bind("Debug", "UiProbe", false,
                 "The UI probe: when the Mounts panel is built, BepInEx\\GK2-ui-probe.txt gets the game's Settings window layout, its dialog button, the panel's font and the loaded buttons' fonts (open the game's pause menu once first). Measures only.");
+            TestLanguageOn = dbg.Bind("Debug", "TestLanguage", false,
+                "The translations' test language (docs/localization.md): every text our windows look up is drawn 1.6 times as long and in brackets, whatever the game's language. A text without brackets misses the lookup; a cut bracket has no room. The self-tests set their own.");
+            TranslationReport = Config.Bind("Translations", "Report", false,
+                "For translators: with the game in your language, the lines of each mod that aren't translated yet (or whose English changed) are written to BepInEx\\GK2-l10n\\<mod>\\<language>.missing.txt, ready to fill in. See the README's Translations.");
             JumpTraceOn = dbg.Bind("Debug", "JumpTrace", false,
                 "The jump probe (docs/flying.md \"The jump probe\"): every ridden jump traced frame by frame into a file of its own under BepInEx\\GK2-jumps\\ (the newest 120 kept), with the landing audit. For looking into a jump or a landing; off: no files (it was always on with the dev tools until 2026-10-27).");
             SkinPackAutoReload = dbg.Bind("Debug", "SkinPackAutoReload", false,

@@ -688,7 +688,7 @@ namespace GK2DonkeyAPI
             {
                 if (!IsInGame(out PlayerController pc, out GameScene scene))
                 {
-                    return "Not in a game.";
+                    return UiWords.SayNotInGame.English;
                 }
                 return TryMount(pc, scene, style, showMessage);
             }
@@ -772,7 +772,7 @@ namespace GK2DonkeyAPI
                 riderAttached = true; // sounds are bound from the mount on (SoundsRig.OnMounted below)
                 if (!TrySpawn(pc, scene))
                 {
-                    reason = "Your mount is nowhere to be found.";
+                    reason = UiWords.SayNowhereToBeFound.English;
                     if (showMessage)
                     {
                         Say(reason);
@@ -805,33 +805,33 @@ namespace GK2DonkeyAPI
             {
                 if (IsCoop())
                 {
-                    return "Not in a co-op game.";
+                    return UiWords.SayNotInCoopGame.English;
                 }
                 if (!pc.IsControlsEnabled)
                 {
-                    return "Not right now.";
+                    return UiWords.SayNotRightNow.English;
                 }
                 if (Plugin.DismountIndoors.Value && IsIndoors())
                 {
-                    return "Not indoors.";
+                    return UiWords.SayNotIndoors.English;
                 }
                 if (!(pc.Ssm?.CurState is FreePlayerState) || (pc.MovementComponent != null && pc.MovementComponent.IsMoving))
                 {
-                    return "I'm busy.";
+                    return UiWords.SayBusy.English;
                 }
                 if (BuildController.Instance != null && BuildController.Instance.IsBuildModeActive)
                 {
-                    return "Not while building.";
+                    return UiWords.SayNotWhileBuilding.English;
                 }
                 WGODef def = GameBalance.Me?.GetData<WGODef>(WgoId);
                 if (def == null)
                 {
-                    return "There is no such animal (" + WgoId + ").";
+                    return UiWords.SayNoSuchAnimal.Make(WgoId);
                 }
-                string sideEffect = WhyDefinitionTouchesTheSave(def);
+                Word sideEffect = WhyDefinitionTouchesTheSave(def);
                 if (sideEffect != null)
                 {
-                    return "Can't ride a " + WgoId + ": " + sideEffect;
+                    return UiWords.SayCantRideA.Make(WgoId, sideEffect);
                 }
                 return null;
             }
@@ -841,19 +841,19 @@ namespace GK2DonkeyAPI
             // list, and start items are created in its inventory (which the cart would then hand out on dismount). The
             // donkey has none of these (Round 11), but MountWgoId is a free text setting, so a definition that would
             // leave a mark in the save is refused before anything is constructed.
-            internal static string WhyDefinitionTouchesTheSave(WGODef def)
+            internal static Word WhyDefinitionTouchesTheSave(WGODef def)
             {
                 if (def.townQuality != 0)
                 {
-                    return "it would change the town quality in the save.";
+                    return UiWords.SaySideTownQuality;
                 }
                 if (!string.IsNullOrEmpty(def.npcLifeSimGroup))
                 {
-                    return "it belongs to an NPC group the save keeps track of.";
+                    return UiWords.SaySideNpcGroup;
                 }
                 if (def.startItems != null && def.startItems.Count > 0)
                 {
-                    return "it comes with items, which the cart would create out of nothing.";
+                    return UiWords.SaySideStartItems;
                 }
                 return null;
             }
@@ -888,9 +888,9 @@ namespace GK2DonkeyAPI
 
             // The cart in a fight: not for now (a wide object in a bordered arena, cargo and zombies aboard during a dash,
             // the cart's own interaction key handling); the Ride style fights (docs/mounted-combat.md).
-            internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? "Not the cart in a fight." : !CartAllowedHere() ? NotTheCartIndoors : null;
+            internal static string WhyNotCart(PlayerController pc) => InArmour(pc) ? UiWords.SayNotCartInFight.English : !CartAllowedHere() ? NotTheCartIndoors : null;
 
-            internal const string NotTheCartIndoors = "Not the cart indoors.";
+            internal static string NotTheCartIndoors => UiWords.SayNotCartIndoors.English;
 
             // The cart indoors only with both switches saying so: riding indoors allowed (DismountIndoors off) and the
             // cart with it (CartIndoors). Outdoors always.
@@ -3371,7 +3371,10 @@ namespace GK2DonkeyAPI
 
             // seconds: how long the bubble stays (0 = the game's own time: 2.5 s plus 0.085 s a letter, after the letters
             // have typed in; UISpeechBubble / SpeechBubbleSettings.CalculateBubbleShowingTime)
+            // text: the English (a reason); the bubble shows it in the player's language when it is one of the API's
+            // sentences (UiWords.Shown), another mod's as it is.
             internal static int TestSaidCount; // every bubble asked for (the self-test: a jump says nothing)
+            internal static string TestLastShown; // what the last one showed (the translations self-test)
             internal static void Say(string text, float seconds = 0f)
             {
                 TestSaidCount++;
@@ -3379,9 +3382,11 @@ namespace GK2DonkeyAPI
                 {
                     return;
                 }
+                string shown = UiWords.Shown(text);
+                TestLastShown = shown;
                 try
                 {
-                    Bubble.Talk(new PhraseData(true, null, text, null, null, SpeechBubbleType.Think, fixedShowTimeValue: Mathf.Max(0f, seconds)));
+                    Bubble.Talk(new PhraseData(true, null, shown, null, null, SpeechBubbleType.Think, fixedShowTimeValue: Mathf.Max(0f, seconds)));
                 }
                 catch (Exception e)
                 {

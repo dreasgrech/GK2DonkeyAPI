@@ -191,11 +191,11 @@ namespace GK2DonkeyAPI
                     if (o == r || o.RowKind != MountSettingsPage.RowKind.Key || o.Entry == null || !(r.HasPress || o.HasPress)) continue;
                     var ok = (KeyboardShortcut)o.Entry.BoxedValue;
                     if (ok.MainKey == KeyCode.None) continue;
-                    if (KeyActions.SameKey(k, ok)) return "Same key as " + o.Label;
+                    if (KeyActions.SameKey(k, ok)) return UiWords.SameKeyAs.Format(Texts.Label(o));
                     List<KeyCode> om = ModsOf(ok);
                     // the one on the lone modifier must act on its press to go off on the way: a key read while held (Climb,
                     // Descend: Left Shift, Left Ctrl, while flying) marked every Shift + and Ctrl + key of ours, at worst a dip
-                    if ((o.HasPress && OnTheWay(ok.MainKey, om, km)) || (r.HasPress && OnTheWay(k.MainKey, km, om))) return $"Clashes with {o.Label} ({Words(ok)})";
+                    if ((o.HasPress && OnTheWay(ok.MainKey, om, km)) || (r.HasPress && OnTheWay(k.MainKey, km, om))) return UiWords.ClashesWith.Format(Texts.Label(o), Words(ok));
                 }
             }
             foreach (OtherKey o in others)
@@ -203,22 +203,22 @@ namespace GK2DonkeyAPI
                 switch (o.Kind)
                 {
                     case OtherKind.Shortcut:
-                        if (KeyActions.SameKey(k, o.Shortcut)) return "Same key as " + o.Name;
+                        if (KeyActions.SameKey(k, o.Shortcut)) return UiWords.SameKeyAs.Format(o.Name);
                         List<KeyCode> om = ModsOf(o.Shortcut);
                         // ours on a lone modifier counts only when it acts on its press: Climb and Descend (held while flying) met
                         // every Shift + and Ctrl + key of every mod ("Descend (hold) (Left Ctrl): Clashes with GK2 Tech Tree Search: FocusKey (Ctrl + F)")
                         if ((o.Shortcut.MainKey == k.MainKey && Inside(km, om)) || (r.HasPress && OnTheWay(k.MainKey, km, om)) || OnTheWay(o.Shortcut.MainKey, om, km))
-                            return $"Clashes with {o.Name} ({Words(o.Shortcut)})";
+                            return UiWords.ClashesWith.Format(o.Name, Words(o.Shortcut));
                         break;
                     case OtherKind.Code: // a mod's plain KeyCode setting: most read the key alone, whatever is held with it
-                        if (k.MainKey == o.Code && km.Count == 0) return "Same key as " + o.Name;
-                        if (k.MainKey == o.Code || km.Contains(o.Code)) return $"Clashes with {o.Name} ({Word(o.Code)})";
+                        if (k.MainKey == o.Code && km.Count == 0) return UiWords.SameKeyAs.Format(o.Name);
+                        if (k.MainKey == o.Code || km.Contains(o.Code)) return UiWords.ClashesWith.Format(o.Name, Word(o.Code));
                         break;
                     case OtherKind.Game: // the game's binding: its key, the keys it wants held (held with more, it still acts)
                         if (!r.HasPress || k.MainKey != o.Code) break;
                         var gm = new List<KeyCode>(o.Held ?? new KeyCode[0]);
-                        if (Inside(gm, km) && Inside(km, gm)) return "Same key as " + o.Name;
-                        if (Inside(gm, km) || Inside(km, gm)) return $"Clashes with {o.Name} ({GameWords(o.Code, gm)})";
+                        if (Inside(gm, km) && Inside(km, gm)) return UiWords.SameKeyAs.Format(o.Name);
+                        if (Inside(gm, km) || Inside(km, gm)) return UiWords.ClashesWith.Format(o.Name, GameWords(o.Code, gm));
                         break;
                 }
             }
@@ -344,7 +344,7 @@ namespace GK2DonkeyAPI
         // A key in words: "H", "Ctrl + G", "Left Shift", "None".
         internal static string Words(KeyboardShortcut k)
         {
-            if (k.MainKey == KeyCode.None) return "None";
+            if (k.MainKey == KeyCode.None) return UiWords.None.Text; // the key names themselves stay English (docs/localization.md D8)
             var sb = new StringBuilder();
             bool any = false;
             foreach (KeyCode m in k.Modifiers)

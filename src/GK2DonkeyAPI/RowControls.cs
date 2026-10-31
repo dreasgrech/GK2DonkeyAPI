@@ -114,9 +114,10 @@ namespace GK2DonkeyAPI
             float ctrlLeft = lay.CtrlRight - ctrlW;
             float labelW = Mathf.Max(40f, ctrlLeft - 10f - lay.LabelX);
             GameObject go = ui.Node("row " + (r.Entry != null ? r.Entry.Definition.Key : r.Label ?? ""), parent);
-            TextMeshProUGUI label = ui.Text(go.transform, "label", r.Label ?? "", 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, OwnRowH);
+            string labelText = Texts.Label(r) ?? ""; // in the player's language (Texts)
+            TextMeshProUGUI label = ui.Text(go.transform, "label", labelText, 0.95f, TextAlignmentOptions.Left, true, lay.LabelX, 0f, labelW, OwnRowH);
             // as tall as its label needs (a long label wraps onto a second line), the control centred on it
-            float labelH = Mathf.Ceil(label.GetPreferredValues(r.Label ?? "", labelW, 0f).y);
+            float labelH = Mathf.Ceil(label.GetPreferredValues(labelText, labelW, 0f).y);
             // a key another row has too: said under the label (KeyCapture.Clash), the row as tall as both lines
             string clash = kind == MountSettingsPage.RowKind.Key ? KeyCapture.Clash(r) : null;
             TextMeshProUGUI clashLine = null;
@@ -357,7 +358,7 @@ namespace GK2DonkeyAPI
         // A text (the mount's name): a text box, written when the typing ends (Enter, a click elsewhere).
         private Action TextRow(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
         {
-            TMP_InputField f = InputBox(parent, "text", x, y, w, CtrlH, "None", NameChars);
+            TMP_InputField f = InputBox(parent, "text", x, y, w, CtrlH, UiWords.None.Text, NameChars);
             f.text = r.Entry.BoxedValue as string ?? "";
             f.onEndEdit.AddListener(v =>
             {
@@ -386,7 +387,7 @@ namespace GK2DonkeyAPI
                 bool setting = KeyCapture.Row == r;
                 if (face != null) face.color = setting ? UiKit.CardChosen : UiKit.CardBase;
                 if (label == null) return;
-                label.text = setting ? "Press a key..." : KeyCapture.Words((KeyboardShortcut)r.Entry.BoxedValue);
+                label.text = setting ? UiWords.PressAKey.Text : KeyCapture.Words((KeyboardShortcut)r.Entry.BoxedValue);
                 label.color = setting ? ui.ButtonTextColor : clash ? ClashColor : ui.FontColor;
                 label.fontStyle = setting ? FontStyles.Italic : FontStyles.Normal;
             };
@@ -395,7 +396,7 @@ namespace GK2DonkeyAPI
         // A button of the page's (the Mounts panel, the safe spot): the game's button face with its word.
         private void RowButton(Transform parent, MountSettingsPage.Row r, float x, float y, float w)
         {
-            GameObject b = ui.OwnButton(parent, "button", r.ButtonText ?? "Open", w, ChoiceH + 2f, () => press?.Invoke(r));
+            GameObject b = ui.OwnButton(parent, "button", Texts.Button(r), w, ChoiceH + 2f, () => press?.Invoke(r));
             UiKit.Rect(b, x, y, w, ChoiceH + 2f);
         }
 
@@ -423,7 +424,7 @@ namespace GK2DonkeyAPI
             return () =>
             {
                 int at = ChoiceIndex(r);
-                if (label != null) label.text = at >= 0 ? r.ChoiceLabels[at] : (r.Entry.BoxedValue?.ToString() ?? "");
+                if (label != null) label.text = at >= 0 ? Texts.Choice(r, at) : (r.Entry.BoxedValue?.ToString() ?? "");
             };
         }
 
@@ -490,7 +491,7 @@ namespace GK2DonkeyAPI
             {
                 object v = r.ChoiceValues.GetValue(i);
                 float iw = w - 4f - UiKit.ScrollbarW - 10f;
-                GameObject c = ui.OwnButton(content, "choice " + i, r.ChoiceLabels[i], iw, ChoiceH, () => { CloseDropdown(refocus: true); SetValue(r, v); }, textLeft: 8f, flat: true);
+                GameObject c = ui.OwnButton(content, "choice " + i, Texts.Choice(r, i), iw, ChoiceH, () => { CloseDropdown(refocus: true); SetValue(r, v); }, textLeft: 8f, flat: true);
                 var le = c.AddComponent<LayoutElement>();
                 le.preferredWidth = iw;
                 le.preferredHeight = ChoiceH;
