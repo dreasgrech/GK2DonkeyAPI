@@ -30,6 +30,9 @@ The Colours window works on the skins as on the plain donkey: coat, harness and 
 [h3]The babies wear it too[/h3]
 Your donkey's babies look like their parent: little horns and cracks, or little crowns and cloths, each its own size and shade.
 
+[h3]Languages[/h3]
+Available in English, French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0 or newer).
+
 [hr][/hr]
 [h2]Install[/h2]
 

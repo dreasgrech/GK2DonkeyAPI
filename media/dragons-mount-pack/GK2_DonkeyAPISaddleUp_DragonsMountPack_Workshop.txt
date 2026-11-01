@@ -33,6 +33,9 @@ Up to five little dragons follow yours around, jump when it jumps and answer its
 
 [img]https://raw.githubusercontent.com/dreasgrech/GK2DonkeyAPI/main/media/dragons-mount-pack/babies-dragon.png?v=2[/img]
 
+[h3]Languages[/h3]
+Available in English, French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0 or newer).
+
 [hr][/hr]
 [h2]Install[/h2]
 

@@ -1,4 +1,4 @@
 GK2 Saddle Up: Donkey Skin Pack 1.1.0
 
-- Armored, a third look for your donkey: plate barding in your colours.
-- The skins' names and descriptions in French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (with GK2 Saddle Up 0.15.0).
+- Added Armored, a new look for your donkey: plate armour that takes your colours.
+- Added localization support: French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean (needs GK2 Saddle Up 0.15.0).
