@@ -700,6 +700,13 @@ and `l10n-sync.py --check` found all 10 files the same: the trim confirmed.
 
 **Not yet:** the versions that ship the Languages folders (the user's).
 
+**The first translation (2026-11-01): French**, for GK2 Saddle Up and GK2 Donkey API (`fr.csv`, 147 and 144 lines;
+the user: "so we can see it and test it"). In the game's own French words where it has them (from its strings table,
+`lng_fr.tsv`): Gardien, corps, Carrefour, Morgue, coffre, zombie, lanterne, Paramètres, Annuler; "charrette" for the
+cart (the game has none) and "âne" for the donkey, as the game says. Key names in the sentences stay the mod's
+(Shift, Space, Esc: D8). Within the measured room: the tightest, the lantern's "Chaude (défaut du jeu)", grows 1.16x
+against 1.9x of room. `l10n-sync.py` checks it with every shipped translation (147 of 147, 144 of 144).
+
 ### The plan (2026-10-31)
 
 **The first F11 of the Translations group** (2026-10-31, 23:08): 37 passed, 0 failed, 0 warnings.

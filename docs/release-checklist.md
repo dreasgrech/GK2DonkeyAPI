@@ -44,8 +44,9 @@ included, or in the API DLL's strings, and no pack's name in `src/SaddleUp`), an
 `CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
 `--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game), and
 `tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.csv` is the English the
-last dev start wrote, so start the game once with the dev tools after the last text change; and no bubble or prompt
-said with a literal in the API's game code, docs/localization.md). All must
+last dev start wrote, so start the game once with the dev tools after the last text change; every shipped
+translation's `{0}` matching its English, its counts of translated, missing and changed lines listed; and no bubble
+or prompt said with a literal in the API's game code, docs/localization.md). All must
 end green; `FrameworkScan`
 also fails on any `Plugin` method named after a Unity message (a quit-time save once sat in `OnApplicationQuit`; it
 is in the `Application.quitting` handler now).

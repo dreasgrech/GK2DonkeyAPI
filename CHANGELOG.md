@@ -28,6 +28,12 @@ For players:
   notification (while it is still the shipped text) and the mounts' and skins' names and descriptions (the journal,
   the Skin list, the colours window's title) are translatable too: the API's in its `en.csv`, Saddle Up's Gerry in
   Saddle Up's, each pack's mounts and skins in the pack's own `Languages\en.csv`. Key names stay English.
+- **French** (2026-11-01, the user: "create the french translation for the saddle / donkey api mod so we can see it
+  and test it"): GK2 Saddle Up and GK2 Donkey API in French when the game is in French: the options, the Mount
+  Journal and its colours window, the keeper's bubbles, the prompts on foot, the crossroads notification
+  (`Languages\fr.csv` beside each DLL, 147 and 144 lines). The game's own French words where it has them (Gardien,
+  corps, Carrefour, Morgue, coffre, lanterne); the cart is "charrette", the donkey "âne". The packs' mount and skin
+  names stay English until their own `fr.csv`.
 - **Four sentences say it differently**, so that every language can say them (2026-11-01, the user's yes):
   - the journal's Cargo is a number ("4", or "2 of 4" while a mod limits the cart), and the Cargo cart ability reads
     "Pulls a cart (cargo 4)." (no more "1 items");
@@ -107,6 +113,12 @@ Development:
   - The font our windows read: the Settings row's text style is applied for the language now before its font is
     copied (the game restyles only open windows on a language switch, so a closed Settings window could hold the
     last language's font).
+- **The French translation and its check** (2026-11-01): `src/GK2DonkeyAPI/Languages/fr.csv` and
+  `src/SaddleUp/Languages/fr.csv`, written from each `en.csv` (its key, english and note columns as they are), every
+  line's `{0}` kept and the tight texts within their measured room (the lantern's "Warm (game default)" 1.9x, "Mount
+  Behaviour" and "Drive the cart" 2.1x: `GK2-text-room.tsv`). `tools/l10n-sync.py` reports every shipped translation
+  against the English (translated, missing, English changed since, keys gone) and its `--check` fails on a line whose
+  `{0}`, `{1}` don't match the English's (the mod would show the English); French: 147 of 147 and 144 of 144.
 - **Translations: CSV only** (2026-11-01; the user: "scrap the txt files and lets stick to csv only. less to
   maintain."): `Texts` reads `<id>.csv` alone (the `.txt` reader, its `# en:` comments and `\n` escapes gone); the
   English template is `en.csv` alone, with a fourth column, `note` (the context the `.txt`'s comments carried: where a

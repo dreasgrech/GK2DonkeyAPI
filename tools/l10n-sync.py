@@ -13,6 +13,9 @@ its source folder: src/GK2DonkeyAPI, src/SaddleUp, packs/<Pack>. Also reports, f
 folder, the keys the English no longer has (left over after a rename: harmless, the game ignores them). Line endings
 don't count in the comparison (git's core.autocrlf changes them on checkout).
 
+Each shipped translation (Languages/<id>.csv) is reported: how many lines are translated, missing, or have English that
+changed since, and any whose {0}, {1} don't match the English (--check fails on those).
+
 --check also looks for a bubble or a prompt said with a literal in the API's game code (src/GK2DonkeyAPI, not Dev/):
 Mount.Say("..."), HintText("..."), HintFor(key, "..."), a foot action's Set(..., "..."). Those sentences are words of
 UiWords (the code uses a word's English, Word.Make for a template), or they would never be translated.
@@ -79,6 +82,12 @@ def literals():
 def csv_keys(path):
     """The keys of a translation CSV (its first column after the header), with the mod's rules: the separator from the
     header line (, ; or a tab, or Excel's sep= line), quoted fields that may hold it, line breaks and "" (Texts.ReadCsv)."""
+    return [row[0] for row in csv_rows(path)]
+
+
+def csv_rows(path):
+    """A translation CSV's rows after its header as [key, value, english, ...] (fields trimmed as the mod trims them);
+    rows with no key left out."""
     import csv
     import io
     text = open(path, encoding="utf-8-sig").read()
@@ -91,12 +100,16 @@ def csv_keys(path):
         sep = ";"
     elif lines and lines[0].lower().startswith("key\t"):
         sep = "\t"
-    keys = []
+    rows = []
     for n, row in enumerate(csv.reader(io.StringIO(text), delimiter=sep)):
         if not row or not row[0].strip() or (n == 0 and row[0].strip().lower() == "key"):
             continue
-        keys.append(row[0].strip())
-    return keys
+        rows.append([f.strip() for f in row])
+    return rows
+
+
+def placeholders(s):
+    return sorted(set(re.findall(r"\{\d+\}", s or "")))
 
 
 def main():
@@ -105,6 +118,7 @@ def main():
     if not os.path.isdir(dumps):
         sys.exit(f"{dumps} doesn't exist: start the game once with the dev tools (a dev run writes the English there)")
     differ = 0
+    broken_total = 0
     for guid, folder in plugins().items():
         src_dir = os.path.join(dumps, guid)
         if not os.path.isdir(src_dir):
@@ -133,10 +147,11 @@ def main():
             if not check:
                 os.makedirs(dest_dir, exist_ok=True)
                 shutil.copyfile(src, dest)
-        # the translations' keys the English no longer has
+        # each shipped translation against the English: translated, changed since, missing, keys gone, broken templates
         en = os.path.join(dest_dir, "en.csv")
         if os.path.isfile(en) and os.path.isdir(dest_dir):
-            known = set(csv_keys(en))
+            english = {r[0]: (r[2] if len(r) > 2 else "", r[3] if len(r) > 3 else "") for r in csv_rows(en)}
+            known = set(english)
             for n in sorted(os.listdir(dest_dir)):
                 if n.lower().endswith(".txt"):
                     print(f"note     {rel}/{n}: not read (translations are CSV only since 2026-11-01): make it {n[:-4]}.csv")
@@ -144,15 +159,37 @@ def main():
                 if n in TEMPLATES or not n.lower().endswith(".csv"):
                     continue
                 p = os.path.join(dest_dir, n)
-                ks = csv_keys(p)
+                rows = csv_rows(p)
+                ks = [r[0] for r in rows]
                 gone = [k for k in ks if k not in known]
                 if gone:
                     print(f"note     {rel}/{n}: {len(gone)} key(s) the English no longer has (ignored by the mod): {', '.join(gone[:8])}{' ...' if len(gone) > 8 else ''}")
+                done, stale, broken = 0, [], []
+                for r in rows:
+                    if r[0] not in english or len(r) < 2 or not r[1]:
+                        continue
+                    eng, note = english[r[0]]
+                    recorded = r[2] if len(r) > 2 and r[2] else None
+                    if recorded is not None and recorded != eng:
+                        stale.append(r[0])
+                        continue
+                    need, have = placeholders(eng), placeholders(r[1])
+                    if set(have) - set(need) or (set(need) - set(have) and "may leave it out" not in note):
+                        broken.append(f"{r[0]} ({' '.join(need) or 'none'} in English, {' '.join(have) or 'none'} here)")
+                        continue
+                    done += 1
+                missing = len(known) - done - len(stale) - len(broken)
+                print(f"lang     {rel}/{n}: {done} of {len(known)} translated, {missing} missing, {len(stale)} with English that changed since"
+                      + (f" ({', '.join(stale[:6])}{' ...' if len(stale) > 6 else ''})" if stale else "")
+                      + (f"; BROKEN templates (the mod shows the English): {'; '.join(broken)}" if broken else ""))
+                broken_total += len(broken)
     said = literals() if check else []
     for where, line in said:
         print(f"literal  {where}: {line}")
     if check and differ:
         sys.exit(f"{differ} English template(s) differ from the last dev run's: run python -I tools/l10n-sync.py and commit them")
+    if check and broken_total:
+        sys.exit(f"{broken_total} translated line(s) whose {{0}} don't match their English: fix them in the file named above")
     if said:
         sys.exit(f"{len(said)} bubble(s) or prompt(s) said with a literal in the API's game code: make each a word of UiWords (docs/localization.md)")
     print("the English templates match the last dev run" if check else "done")

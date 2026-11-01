@@ -54,6 +54,8 @@ The options window, the Mount Journal and its colours window, the keeper's thoug
 crossroads notification and the mounts' and skins' names are drawn in the game's language when a translation of them
 is installed. Key names stay English ([`docs/localization.md`](docs/localization.md)).
 
+**Shipped:** French (GK2 Saddle Up and GK2 Donkey API). The packs' mount and skin names are English for now.
+
 **To translate:**
 
 1. **Find the English.** Each mod's English is a spreadsheet file, `en.csv`, in its folder:

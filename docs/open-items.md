@@ -585,6 +585,9 @@ closed):
   Translations group's first F11 23:08: 37/0/0. The long-text rule built since (OwnButton labels shrink to 80% before
   the "...", checked by the windows scenario). **TESTED 2026-10-31 23:31** (Translations 74/0/0, localization.md
   section 7): German read back, all 11 languages' fonts right (the font fix was needed), no text likely to overflow.
+- **French translation BUILT 2026-11-01** (Saddle Up and the API, `fr.csv`; deployed): the user's look in the game
+  (Settings > Language > Français): the options window, the journal, the colours window, bubbles, prompts. The packs'
+  names stay English (no pack `fr.csv`); the versions that ship it are the user's.
 - **Translations: CSV only since 2026-11-01** (the user: "less to maintain"): built, deployed, the 15 `en.txt`
   deleted (repository, game plugin folders, the dev dumps); the next dev start must make `l10n-sync.py --check` say
   "same" (the repository's `en.csv` were converted from the `en.txt`; the dumps still hold the 3-column `en.csv`
