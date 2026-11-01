@@ -54,7 +54,7 @@ The options window, the Mount Journal and its colours window, the keeper's thoug
 crossroads notification and the mounts' and skins' names are drawn in the game's language when a translation of them
 is installed. Key names stay English ([`docs/localization.md`](docs/localization.md)).
 
-**Shipped:** French (GK2 Saddle Up and GK2 Donkey API). The packs' mount and skin names are English for now.
+**Shipped:** French (GK2 Saddle Up, GK2 Donkey API and the three packs).
 
 **To translate:**
 
@@ -81,6 +81,9 @@ is installed. Key names stay English ([`docs/localization.md`](docs/localization
      `BepInEx\GK2-l10n\<mod>\<language>.missing.csv`, ready to fill in and add to your file.
    - Problems in a file (a line without a value, a quote that swallows lines, a file not in UTF-8) are named in
      `BepInEx\LogOutput.log`.
+   - The mod reads most mistakes anyway: a file saved by Excel's plain "CSV", the columns swapped, a key typed wrong,
+     `fr-FR.csv` or `french.csv` for a name, a quote left open. What it can't read shows in English and is named in the
+     log; it never shows a wrong text.
 5. **Share it:**
    - Send the file to us and it ships with the next release, with your name in its notes.
    - Or publish it yourself, in a folder of its own: `BepInEx\plugins\<your folder>\Translations\<mod GUID>\<language>.csv`

@@ -15,7 +15,8 @@ namespace GK2DonkeyAPI
     // folder of the test's own (BepInEx\GK2-l10n-test, gone after) and read by Texts' rules. Windows: the test language over
     // the options window (every section), the Mount Journal and its colours window: every word drawn looked up, the room
     // each has at 1.6 times its length measured (TextRoom). Bubbles: the keeper's sentences, the prompts on foot and the
-    // crossroads notice. PackNames: the mounts' and skins' names in their owners' files. All put back the run's English
+    // crossroads notice. PackNames: the mounts' and skins' names in their owners' files. Mistakes: the translator mistake
+    // catalogue (RunCatalogue, also run without the game by tests/TranslationScan). All put back the run's English
     // (SelfTest.Run sets it).
     internal static class TranslationTests
     {
@@ -67,7 +68,7 @@ namespace GK2DonkeyAPI
                 yield return null;
                 Texts.LanguageOverride = "pt";
                 Texts.Forget();
-                SelfTest.Check(Of("greet", "Hello") == "Olá" && Of("bye", "Bye") == "Bye" && Of("tabkey", "Tab key") == "Tab key", "pt: the bundled pt.csv; the pt-br files aren't read");
+                SelfTest.Check(Of("greet", "Hello") == "Olá" && Of("bye", "Bye") == "Tchau" && Of("tabkey", "Tab key") == "Tab", $"pt: its own pt.csv first, then the pt-br files (a close language before the English) ({Of("bye", "Bye")})");
                 Texts.LanguageOverride = "de";
                 Texts.Forget();
                 SelfTest.Check(Of("greet", "Hello") == "Hello", "a language with no file: the English");
@@ -365,6 +366,238 @@ namespace GK2DonkeyAPI
                 catch (Exception e) { SelfTest.Warn($"the test's folder {root} couldn't be deleted: {e.Message}"); }
             }
         }
+
+        // ---- the translator mistake catalogue (docs/localization.md, "Translator mistakes") ----
+
+        // One mistake: the files a person's spreadsheet or editor wrote, the game's language, what each key must show
+        // (the English when the reader can't know the translation: never a wrong text) and whether the translator is told.
+        private sealed class Mistake
+        {
+            internal string Name, Lang = "fr";
+            internal readonly List<(string Where, string File, byte[] Bytes)> Files = new List<(string, string, byte[])>();
+            internal readonly List<(string Key, string Shows, object[] Args, bool MayDrop)> Shows = new List<(string, string, object[], bool)>();
+            internal bool Told;
+
+            internal Mistake File(string where, string name, byte[] bytes) { Files.Add((where, name, bytes)); return this; }
+            internal Mistake Show(string key, string shows) { Shows.Add((key, shows, null, false)); return this; }
+            internal Mistake Fill(string key, string shows, bool mayDrop, params object[] args) { Shows.Add((key, shows, args, mayDrop)); return this; }
+        }
+
+        private const string MistakeOwner = "test.gk2.l10n.mistakes";
+
+        // The made-up owner's English: dotted keys as every real key is (a header in other words is told from a key so).
+        private static readonly List<(string Key, string English, string What)> MistakeEnglish = new List<(string, string, string)>
+        {
+            ("t.greet", "Hello", null), ("t.bye", "Bye", null), ("t.fmt", "Ride {0}", null), ("t.noun", "This {0} pulls", null),
+            ("t.one", "One", null), ("t.two", "Two", null), ("t.three", "Three", null), ("t.four", "Four", null), ("t.lines", "First line", null),
+        };
+
+        private static string EnglishOf(string key)
+        {
+            foreach (var x in MistakeEnglish) if (x.Key == key) return x.English;
+            return key;
+        }
+
+        private static byte[] U8(string s, bool bom = false)
+        {
+            byte[] b = new UTF8Encoding(false).GetBytes(s);
+            if (!bom) return b;
+            var all = new byte[b.Length + 3];
+            all[0] = 0xEF; all[1] = 0xBB; all[2] = 0xBF;
+            Array.Copy(b, 0, all, 3, b.Length);
+            return all;
+        }
+
+        private static byte[] Page(string lang, string s)
+        {
+            LegacyText.Encode(s, LegacyText.PageFor(lang, out _), out byte[] b);
+            return b;
+        }
+
+        private static byte[] Utf16(string s, bool bom)
+        {
+            byte[] b = Encoding.Unicode.GetBytes(s);
+            if (!bom) return b;
+            var all = new byte[b.Length + 2];
+            all[0] = 0xFF; all[1] = 0xFE;
+            Array.Copy(b, 0, all, 2, b.Length);
+            return all;
+        }
+
+        private static List<Mistake> Catalogue()
+        {
+            const string ok = "key,value,english\nt.greet,Bonjour,Hello\n";
+            var c = new List<Mistake>();
+            Mistake M(string name, string lang = "fr") { var m = new Mistake { Name = name, Lang = lang }; c.Add(m); return m; }
+            // what it's saved as
+            M("plain UTF-8 with a BOM (the template's own way)").File("bundled", "fr.csv", U8(ok, bom: true)).Show("t.greet", "Bonjour");
+            M("Excel's plain \"CSV\": Windows-1252, ; separated").File("bundled", "fr.csv", Page("fr", "key;value;english\r\nt.greet;Été, œuvre ’ok’ €;Hello\r\n")).Show("t.greet", "Été, œuvre ’ok’ €").Told = true;
+            M("Polish in Windows-1250", "pl").File("bundled", "pl.csv", Page("pl", "key,value,english\nt.greet,Cześć łódź ąę,Hello\n")).Show("t.greet", "Cześć łódź ąę").Told = true;
+            M("Russian in Windows-1251", "ru").File("bundled", "ru.csv", Page("ru", "key,value,english\nt.greet,Привет ёЁ,Hello\n")).Show("t.greet", "Привет ёЁ").Told = true;
+            M("Turkish in Windows-1254", "tr").File("bundled", "tr.csv", Page("tr", "key,value,english\nt.greet,Merhaba ğüşıİ,Hello\n")).Show("t.greet", "Merhaba ğüşıİ").Told = true;
+            M("Japanese not in UTF-8 (Shift-JIS): not readable, English", "ja").File("bundled", "ja.csv", new byte[] { 0x74, 0x2E, 0x67, 0x72, 0x65, 0x65, 0x74, 0x2C, 0x82, 0xA0, 0x2C, 0x48, 0x65, 0x6C, 0x6C, 0x6F, 0x0A }).Show("t.greet", "Hello").Told = true;
+            M("Excel's \"Unicode Text\": UTF-16 with tabs, saved as fr.txt").File("bundled", "fr.txt", Utf16("key\tvalue\tenglish\r\nt.greet\tBonjour\tHello\r\n", bom: true)).Show("t.greet", "Bonjour").Told = true;
+            M("UTF-16 without its BOM").File("bundled", "fr.csv", Utf16("key,value,english\r\nt.greet,Bonjour,Hello\r\n", bom: false)).Show("t.greet", "Bonjour");
+            M("a workbook saved with a .csv name").File("bundled", "fr.csv", new byte[] { 0x50, 0x4B, 0x03, 0x04, 0x14, 0x00, 0x06, 0x00 }).Show("t.greet", "Hello").Told = true;
+            M("a workbook beside: fr.xlsx").File("bundled", "fr.xlsx", new byte[] { 0x50, 0x4B, 0x03, 0x04 }).Show("t.greet", "Hello").Told = true;
+            M("UTF-8 opened as ANSI and saved again (Ã©)").File("bundled", "fr.csv", U8(LegacyText.Decode(U8("key,value,english\nt.greet,Été déjà là ’ok’,Hello\nt.bye,À bientôt,Bye\n"), 0, LegacyText.Western))).Show("t.greet", "Été déjà là ’ok’").Show("t.bye", "À bientôt").Told = true;
+            M("empty file").File("bundled", "fr.csv", new byte[0]).Show("t.greet", "Hello");
+            M("only a header").File("bundled", "fr.csv", U8("key,value,english\n")).Show("t.greet", "Hello");
+            M("random bytes").File("bundled", "fr.csv", new byte[] { 0xFF, 0x00, 0x13, 0x80, 0x22, 0x0A, 0x2C, 0xC3, 0x28, 0x22, 0x22, 0x0A, 0x81 }).Show("t.greet", "Hello").Told = true;
+            M("old Mac line ends (CR only)").File("bundled", "fr.csv", U8("key,value,english\rt.greet,Bonjour,Hello\rt.bye,Au revoir,Bye\r")).Show("t.greet", "Bonjour").Show("t.bye", "Au revoir");
+            // the columns
+            M("no header, ; separated").File("bundled", "fr.csv", U8("t.greet;Bonjour;Hello\nt.bye;Au revoir;Bye\n")).Show("t.greet", "Bonjour").Show("t.bye", "Au revoir");
+            M("a header in other words (clé;valeur;anglais)").File("bundled", "fr.csv", U8("clé;valeur;anglais\nt.greet;Bonjour;Hello\n")).Show("t.greet", "Bonjour");
+            M("Excel's sep= line").File("bundled", "fr.csv", U8("sep=;\nkey;value;english\nt.greet;Bonjour;Hello\n")).Show("t.greet", "Bonjour");
+            M("each row whole in one cell").File("bundled", "fr.csv", U8("\"t.greet,Bonjour,Hello\"\n\"t.bye,Au revoir,Bye\"\n")).Show("t.greet", "Bonjour").Show("t.bye", "Au revoir");
+            M("two columns, no english").File("bundled", "fr.csv", U8("t.greet,Bonjour\n")).Show("t.greet", "Bonjour");
+            M("spaces around fields, empty columns after").File("bundled", "fr.csv", U8("key , value , english\n t.greet , Bonjour , Hello ,,,\n")).Show("t.greet", "Bonjour");
+            M("a second header (two files put together)").File("bundled", "fr.csv", U8("key,value,english\nt.greet,Bonjour,Hello\nkey,value,english\nt.bye,Au revoir,Bye\n")).Show("t.greet", "Bonjour").Show("t.bye", "Au revoir");
+            M("comment rows").File("bundled", "fr.csv", U8("# my notes, with a comma\nt.greet,Bonjour,Hello\n")).Show("t.greet", "Bonjour");
+            M("a row with a key and nothing else").File("bundled", "fr.csv", U8("t.greet\nt.bye,Au revoir,Bye\n")).Show("t.greet", "Hello").Show("t.bye", "Au revoir").Told = true;
+            // quotes
+            M("a quote inside a text").File("bundled", "fr.csv", U8("t.greet,Il a dit \"bonjour\",Hello\nt.bye,Au revoir,Bye\n")).Show("t.greet", "Il a dit \"bonjour\"").Show("t.bye", "Au revoir");
+            M("a quoted text with \"\" and the separator").File("bundled", "fr.csv", U8("t.greet,\"Il dit \"\"oui\"\", puis non\",Hello\n")).Show("t.greet", "Il dit \"oui\", puis non");
+            M("a quote never closed: that line English, the rest read").File("bundled", "fr.csv", U8("t.greet,\"Bonjour,Hello\nt.bye,Au revoir,Bye\nt.one,Un,One\n")).Show("t.greet", "Hello").Show("t.bye", "Au revoir").Show("t.one", "Un").Told = true;
+            M("a quote that swallows the rows after it").File("bundled", "fr.csv", U8("t.greet,\"Bonjour\" dit-il,Hello\nt.bye,Au revoir,Bye\nt.one,\"Un\",One\n")).Show("t.greet", "Hello").Show("t.bye", "Au revoir").Show("t.one", "Un").Told = true;
+            M("a text over two lines in quotes (a one-line text: a space)").File("bundled", "fr.csv", U8("t.lines,\"Première\nligne\",First line\n")).Show("t.lines", "Première ligne");
+            // keys
+            M("a key in other case, invisible characters").File("bundled", "fr.csv", U8("T.Greet,Bonjour,Hello\n\u200Bt.bye\uFEFF,Au revoir,Bye\n")).Show("t.greet", "Bonjour").Show("t.bye", "Au revoir");
+            M("a key typed wrong, found by its English").File("bundled", "fr.csv", U8("t.greeet,Bonjour,Hello\n")).Show("t.greet", "Bonjour").Told = true;
+            M("a key translated, its English unknown: left out").File("bundled", "fr.csv", U8("t.salut,Bonjour,Salut\n")).Show("t.greet", "Hello").Told = true;
+            M("a key twice: the first").File("bundled", "fr.csv", U8("t.greet,Bonjour,Hello\nt.greet,Salut,Hello\n")).Show("t.greet", "Bonjour").Told = true;
+            // the english column
+            M("value and english columns swapped").File("bundled", "fr.csv", U8("t.one,One,Un\nt.two,Two,Deux\nt.three,Three,Trois\nt.four,Four,Quatre\n")).Show("t.one", "Un").Show("t.four", "Quatre").Told = true;
+            M("the english column translated too").File("bundled", "fr.csv", U8("t.one,Un,Un\nt.two,Deux,Deux\nt.three,Trois,Trois\n")).Show("t.one", "Un").Show("t.three", "Trois").Told = true;
+            M("one line's English changed since: English").File("bundled", "fr.csv", U8("t.greet,Salut,Hi there\nt.bye,Au revoir,Bye\n")).Show("t.greet", "Hello").Show("t.bye", "Au revoir");
+            M("most lines' English changed since (a stale file): English").File("bundled", "fr.csv", U8("t.one,Un,Uno\nt.two,Deux,Dos\nt.three,Trois,Tres\n")).Show("t.one", "One").Show("t.three", "Three");
+            // the texts
+            M("a literal \\n").File("bundled", "fr.csv", U8("t.two,Deux\\nlignes,Two\n")).Show("t.two", "Deux lignes");
+            M("{ 0 } with spaces").File("bundled", "fr.csv", U8("t.fmt,Monter { 0 },Ride {0}\n")).Fill("t.fmt", "Monter Bella", false, "Bella");
+            M("｛０｝ of Japanese input", "ja").File("bundled", "ja.csv", U8("t.fmt,｛０｝に乗る,Ride {0}\n")).Fill("t.fmt", "Bellaに乗る", false, "Bella");
+            M("{O}, a letter O").File("bundled", "fr.csv", U8("t.fmt,Monter {O},Ride {0}\n")).Fill("t.fmt", "Monter Bella", false, "Bella");
+            M("a template that lost its {0}: English").File("bundled", "fr.csv", U8("t.fmt,Monter,Ride {0}\n")).Fill("t.fmt", "Ride Bella", false, "Bella").Told = true;
+            M("a {1} the English hasn't: English").File("bundled", "fr.csv", U8("t.fmt,Monter {1},Ride {0}\n")).Fill("t.fmt", "Ride Bella", false, "Bella").Told = true;
+            M("a broken brace: English").File("bundled", "fr.csv", U8("t.fmt,Monter {0,Ride {0}\n")).Fill("t.fmt", "Ride Bella", false, "Bella").Told = true;
+            M("a noun the word allows to drop").File("bundled", "fr.csv", U8("t.noun,Elle tire,This {0} pulls\n")).Fill("t.noun", "Elle tire", true, "donkey");
+            M("a spreadsheet error cell (#NAME?): English").File("bundled", "fr.csv", U8("t.greet,#NAME?,Hello\nt.bye,Au revoir,Bye\n")).Show("t.greet", "Hello").Show("t.bye", "Au revoir").Told = true;
+            M("a very long text").File("bundled", "fr.csv", U8("t.greet," + new string('a', 5000) + ",Hello\n")).Show("t.greet", new string('a', 5000));
+            M("<nobr> tags").File("bundled", "fr.csv", U8("t.greet,<nobr>Bonjour</nobr>,Hello\n")).Show("t.greet", "Bonjour");
+            // names
+            M("FR.csv (upper case)").File("bundled", "FR.csv", U8(ok)).Show("t.greet", "Bonjour");
+            M("fr-FR.csv (a region)").File("bundled", "fr-FR.csv", U8(ok)).Show("t.greet", "Bonjour");
+            M("french.csv (a language's name)").File("bundled", "french.csv", U8(ok)).Show("t.greet", "Bonjour").Told = true;
+            M("français.csv").File("bundled", "français.csv", U8(ok)).Show("t.greet", "Bonjour").Told = true;
+            M("fr.csv.txt (a hidden extension)").File("bundled", "fr.csv.txt", U8(ok)).Show("t.greet", "Bonjour").Told = true;
+            M("fr.txt in the old key = value way: English").File("bundled", "fr.txt", U8("t.greet = Bonjour\n")).Show("t.greet", "Hello").Told = true;
+            M("pt_BR.csv for pt-br", "pt-br").File("bundled", "pt_BR.csv", U8(ok)).Show("t.greet", "Bonjour");
+            M("zh-CN.csv for zh_cn", "zh_cn").File("bundled", "zh-CN.csv", U8(ok)).Show("t.greet", "Bonjour");
+            M("jp.csv for ja", "ja").File("bundled", "jp.csv", U8(ok)).Show("t.greet", "Bonjour").Told = true;
+            M("de.csv in a French game: not read").File("bundled", "de.csv", U8("t.greet,Hallo,Hello\n")).Show("t.greet", "Hello");
+            // places
+            M("en.csv translated in place: English, said").File("bundled", "en.csv", U8("t.one,Un,One\nt.two,Deux,Two\nt.three,Trois,Three\n")).Show("t.one", "One").Told = true;
+            M("beside the DLL, not in Languages\\").File("plugin", "fr.csv", U8(ok)).Show("t.greet", "Hello").Told = true;
+            M("straight in Translations\\, no mod folder").File("translations", "fr.csv", U8(ok)).Show("t.greet", "Hello").Told = true;
+            M("Translations\\ folder named after the mod, not its GUID").File("byname", "fr.csv", U8(ok)).Show("t.greet", "Bonjour");
+            M("a translator's own beats the bundled").File("bundled", "fr.csv", U8(ok)).File("theirs", "fr.csv", U8("t.greet,Salut,Hello\n")).Show("t.greet", "Salut");
+            return c;
+        }
+
+        // Every mistake of the catalogue in turn, in a folder of the test's own: what shows, and whether the translator is told.
+        internal static IEnumerator Mistakes()
+        {
+            string root = Path.Combine(Paths.BepInExRootPath, "GK2-l10n-test-mistakes");
+            List<(string Name, bool Good, string Why)> results = RunCatalogue(root);
+            int passed = 0;
+            var failed = new List<string>();
+            foreach (var r in results)
+            {
+                SelfTest.Check(r.Good, $"mistake: {r.Name}{(r.Good ? "" : " -> " + r.Why)}");
+                if (r.Good) passed++;
+                else failed.Add(r.Name + ": " + r.Why);
+            }
+            SelfTest.Info($"the translator mistake catalogue: {passed} of {results.Count} handled as expected{(failed.Count > 0 ? "; NOT: " + string.Join(" | ", failed) : "")}");
+            yield break;
+        }
+
+        // The catalogue run in root (made and deleted), as the self-test and tests/TranslationScan run it: no Unity, no
+        // game; every Texts handle put back. A case is good when every key shows what it must and the translator is told
+        // exactly when the case says so (the warnings it gave are in Why).
+        internal static List<(string Name, bool Good, string Why)> RunCatalogue(string root)
+        {
+            var results = new List<(string Name, bool Good, string Why)>();
+            string languageWas = Texts.LanguageOverride;
+            bool? testWas = Texts.TestForced;
+            List<string> rootsWas = Texts.TestTranslators;
+            List<string> heardWas = TranslationFiles.TestHeard;
+            bool quietWas = Texts.TestQuiet;
+            try
+            {
+                Texts.TestEnglish[MistakeOwner] = MistakeEnglish;
+                Texts.TestNames[MistakeOwner] = new List<string> { "TestModFolder" };
+                Texts.TestForced = false;
+                Texts.TestQuiet = true;
+                foreach (Mistake m in Catalogue())
+                {
+                    var heard = new List<string>();
+                    var wrong = new List<string>();
+                    string error = null;
+                    try
+                    {
+                        // the case's folders made anew (in the try: a handle Windows releases late fails this case, not the run)
+                        string plugin = Path.Combine(root, "plugin"), bundled = Path.Combine(plugin, "Languages");
+                        string translator = Path.Combine(root, "translator"), translations = Path.Combine(translator, "Translations");
+                        if (Directory.Exists(root)) Directory.Delete(root, true);
+                        Directory.CreateDirectory(bundled);
+                        Directory.CreateDirectory(Path.Combine(translations, MistakeOwner));
+                        foreach (var (where, name, bytes) in m.Files)
+                        {
+                            string dir = where == "bundled" ? bundled : where == "plugin" ? plugin : where == "translations" ? translations
+                                : where == "byname" ? Path.Combine(translations, "TestModFolder") : Path.Combine(translations, MistakeOwner);
+                            Directory.CreateDirectory(dir);
+                            File.WriteAllBytes(Path.Combine(dir, name), bytes);
+                        }
+                        Texts.TestBundled[MistakeOwner] = bundled;
+                        Texts.TestTranslators = new List<string> { translator };
+                        Texts.LanguageOverride = m.Lang;
+                        Texts.TestWarnings = 0;
+                        TranslationFiles.TestHeard = heard;
+                        Texts.Forget();
+                        foreach (var (key, shows, args, mayDrop) in m.Shows)
+                        {
+                            string got = args == null ? Texts.Of(MistakeOwner, key, EnglishOf(key)) : Texts.Fill(MistakeOwner, key, EnglishOf(key), mayDrop, args);
+                            if (got != shows) wrong.Add($"{key} shows \"{Short(got)}\", not \"{Short(shows)}\"");
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        error = e.GetType().Name + ": " + e.Message;
+                    }
+                    bool told = Texts.TestWarnings > 0;
+                    bool good = error == null && wrong.Count == 0 && told == m.Told;
+                    string why = (error ?? string.Join("; ", wrong)) + (told != m.Told ? (told ? " (told, not expected)" : " (NOT told)") : "")
+                        + (heard.Count > 0 ? " [said: " + string.Join(" | ", heard) + "]" : "");
+                    results.Add((m.Name, good, why.Trim()));
+                }
+            }
+            finally
+            {
+                Texts.TestEnglish.Remove(MistakeOwner);
+                Texts.TestNames.Remove(MistakeOwner);
+                Texts.TestBundled.Remove(MistakeOwner);
+                Texts.TestTranslators = rootsWas;
+                Texts.LanguageOverride = languageWas;
+                Texts.TestForced = testWas;
+                Texts.TestQuiet = quietWas;
+                TranslationFiles.TestHeard = heardWas;
+                Texts.Forget();
+                try { if (Directory.Exists(root)) Directory.Delete(root, true); }
+                catch { } // a folder of the test's own; the next run deletes it first
+            }
+            return results;
+        }
+
+        private static string Short(string s) => s == null ? "(null)" : s.Length > 40 ? s.Substring(0, 40) + "..." : s.Replace("\n", "\\n");
 
         private static MountSettingsPage PageWithOptions()
         {

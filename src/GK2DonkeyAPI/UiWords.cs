@@ -10,6 +10,7 @@ namespace GK2DonkeyAPI
     internal class Term
     {
         internal readonly string Owner, Key, English;
+        internal bool MayDropValues; // a translation may leave a {n} out (Texts.Fill); else one without it shows the English
 
         internal Term(string owner, string key, string english)
         {
@@ -22,7 +23,7 @@ namespace GK2DonkeyAPI
         internal string Text => Texts.Of(Owner, Key, English);
 
         // A template filled in; a value that has a translation of its own (a Term) in the player's language.
-        internal string Format(params object[] args) => Texts.Format(Owner, Key, English, UiWords.Values(args, shown: true));
+        internal string Format(params object[] args) => Texts.Fill(Owner, Key, English, MayDropValues, UiWords.Values(args, shown: true));
 
         public override string ToString() => English;
     }
@@ -33,9 +34,10 @@ namespace GK2DonkeyAPI
     {
         internal readonly string What; // for the translator: where it shows and what its {0} is (the English file's comment)
 
-        internal Word(string key, string english, string what = null) : base(Texts.Api, key, english)
+        internal Word(string key, string english, string what = null, bool mayDropValues = false) : base(Texts.Api, key, english)
         {
             What = what;
+            MayDropValues = mayDropValues;
         }
 
         // A sentence the keeper says that also travels as an English reason (MountResult.Reason: other mods read it, log
@@ -184,8 +186,8 @@ namespace GK2DonkeyAPI
         internal static readonly Word SayNotCartIndoors = new Word("say.not_cart_indoors", "Not the cart indoors.");
         internal static readonly Word SayCantPullTheCart = new Word("say.cant_pull_the_cart", "{0} can't pull the cart.", "{0}: the mount's name (the player's name for it, else its kind's)");
         internal static readonly Word SayTooMuchOnCart = new Word("say.too_much_on_cart", "Too much on the cart ({0} of at most {1}). Take some off first.", "a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls");
-        internal static readonly Word SayNoCartHereRideUp = new Word("say.no_cart_here_ride_up", "This {0} has no cart here; ride it up to one.", "{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out");
-        internal static readonly Word SayAlreadyPullsCart = new Word("say.already_pulls_cart", "This {0} already pulls a cart.", "{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out");
+        internal static readonly Word SayNoCartHereRideUp = new Word("say.no_cart_here_ride_up", "This {0} has no cart here; ride it up to one.", "{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out", mayDropValues: true);
+        internal static readonly Word SayAlreadyPullsCart = new Word("say.already_pulls_cart", "This {0} already pulls a cart.", "{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out", mayDropValues: true);
         internal static readonly Word SayCantPullACart = new Word("say.cant_pull_a_cart", "This one can't pull a cart.");
         internal static readonly Word SayNotAFreeCart = new Word("say.not_a_free_cart", "That is not a free cart.");
         internal static readonly Word SayCartElsewhere = new Word("say.cart_elsewhere", "The cart is somewhere else.");

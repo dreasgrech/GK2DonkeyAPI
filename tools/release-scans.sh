@@ -30,7 +30,7 @@ run "$REPO/tools/DepManifest" "DepManifest build" dotnet build -c Release
 run "$REPO" "DepManifest verify GK2DonkeyAPI.dll" dotnet tools/DepManifest/bin/Release/net8.0/DepManifest.dll verify "src/GK2DonkeyAPI/bin/Release/netstandard2.1/GK2DonkeyAPI.dll" "$MANAGED"
 run "$REPO" "check-dist" python tools/check-dist.py
 run "$REPO" "layering (the API names no mod, Saddle Up no pack; the dist DLL too)" python -I tools/layering-scan.py --dist
-for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan NoLinqScan; do
+for t in CecilScan-DonkeyAPI ApiSurface DefaultsScan SkinsScan FrameworkScan NoLinqScan TranslationScan; do
   run "$T/$t" "$t" dotnet run -c Release
 done
 run "$REPO" "canonical skin.cfg layout" python -I tools/skins/canonical_cfg.py --check

@@ -33,7 +33,12 @@ For players:
   Journal and its colours window, the keeper's bubbles, the prompts on foot, the crossroads notification
   (`Languages\fr.csv` beside each DLL, 147 and 144 lines). The game's own French words where it has them (Gardien,
   corps, Carrefour, Morgue, coffre, lanterne); the cart is "charrette", the donkey "âne". The packs' mount and skin
-  names stay English until their own `fr.csv`.
+  names in French too: each pack's own `fr.csv` (11 lines).
+- **Translation files survive their translators' mistakes** (2026-11-01; the user: "expect EVERY TYPE OF STUPID
+  mistake"): a file Excel saved as plain "CSV" (not UTF-8), as "Unicode Text", or opened and saved again with mangled
+  letters; a missing or translated header; swapped columns; a key typed wrong; a stray or unclosed quote; `{ 0 }` or
+  `｛０｝`; `fr-FR.csv`, `french.csv`, `fr.csv.txt`; and more (docs/localization.md section 9). What can't be read
+  shows English and is named in the log, never a wrong text.
 - **Four sentences say it differently**, so that every language can say them (2026-11-01, the user's yes):
   - the journal's Cargo is a number ("4", or "2 of 4" while a mod limits the cart), and the Cargo cart ability reads
     "Pulls a cart (cargo 4)." (no more "1 items");
@@ -113,6 +118,17 @@ Development:
   - The font our windows read: the Settings row's text style is applied for the language now before its font is
     copied (the game restyles only open windows on a language switch, so a closed Settings window could hold the
     last language's font).
+- **Translator mistakes** (2026-11-01; docs/localization.md section 9): `TranslationFiles.cs` finds, decodes, parses
+  and cleans a translation file forgivingly; `LegacyText.cs` holds the Windows code pages 1252, 1250, 1251, 1254
+  (written by `tools/l10n-codepages.py` from Python's codecs; the game's Mono has no I18N assemblies); `Texts.Load`
+  and `Take` check each file against the owner's English (a key found again by its English, swapped columns, the english
+  column translated too: file-wide, most rows agreeing); keys case-insensitive; `Texts.Fill`: a translation that lost
+  a `{n}` shows the English (`Word.MayDropValues` for the two noun sentences); warnings at most 10 a file; the load
+  can't throw. The catalogue of 63 mistakes is `TranslationTests.Mistakes` (the Translations group) and
+  `tests/TranslationScan` (offline, in `tools/release-scans.sh`; also reads every shipped `Languages/*.csv`, no warning
+  allowed; `InternalsVisibleTo("TranslationScan")`). A game in `pt` reads `pt-br.csv` after its own `pt.csv`.
+  - The side effects: `Texts.TickWarm` reads the files ahead (one mod a frame, a game's start and a language change);
+    the journal closes when the language changes under it; the named prompt is made once per name and language.
 - **The French translation and its check** (2026-11-01): `src/GK2DonkeyAPI/Languages/fr.csv` and
   `src/SaddleUp/Languages/fr.csv`, written from each `en.csv` (its key, english and note columns as they are), every
   line's `{0}` kept and the tight texts within their measured room (the lantern's "Warm (game default)" 1.9x, "Mount

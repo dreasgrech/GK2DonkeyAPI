@@ -7,6 +7,7 @@
   A translator copies it to `de.csv`, `fr.csv`, ... (the game's language ids; GK2 Saddle Up's README says how).
   It shows with a GK2 Donkey API that reads translations (the next release); an older one ignores the folder.
   No code change.
+- **French** (2026-11-01): `Languages\fr.csv`, the dragon in French when the game is in French.
 
 ## 1.0.1, 2026-10-30
 

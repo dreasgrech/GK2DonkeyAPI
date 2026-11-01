@@ -41,7 +41,8 @@ all and lists each as ok or FAIL, exit 1 on any failure, the output in `release/
 manifest verified against the installed game (`tools/DepManifest`), `check-dist.py`, the layering scan
 (`tools/layering-scan.py --dist`, since 2026-10-27: no name of Saddle Up or its packs in `src/GK2DonkeyAPI`, Dev
 included, or in the API DLL's strings, and no pack's name in `src/SaddleUp`), and in `tests/`
-`CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `PackerScan` (plain, `--shapes`,
+`CecilScan-DonkeyAPI`, `ApiSurface`, `DefaultsScan`, `SkinsScan`, `FrameworkScan`, `NoLinqScan`, `TranslationScan` (the
+translator mistake catalogue and every shipped `Languages/*.csv`, no warning allowed), `PackerScan` (plain, `--shapes`,
 `--real --thorough`, `--review`, `--review-check`; the last lists the review's oks to look at again in game), and
 `tools/l10n-sync.py --check` (since 2026-10-31: every plugin's `Languages/en.csv` is the English the
 last dev start wrote, so start the game once with the dev tools after the last text change; every shipped

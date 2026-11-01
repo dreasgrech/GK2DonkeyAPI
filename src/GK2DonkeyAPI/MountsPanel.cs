@@ -331,8 +331,11 @@ namespace GK2DonkeyAPI
 
         // ---- the journal ----
 
+        private static string builtLanguage; // the language the journal was built in (Tick closes it when it changes)
+
         private static void Build(UIGameSettingsWindow settings)
         {
+            builtLanguage = Texts.Language;
             ui.Read(settings); // the game's look: its frame, fonts, button face, focus frame (throws when a part is missing)
             panel = ui.Window("mounts panel", W, H, 30000);
             UiProbe.Dump(settings, ui.DialogTemplate, ui.Font, ui.FontMaterial, ui.FontSize); // dev only, Debug.UiProbe (2026-10-27)
@@ -1148,6 +1151,15 @@ namespace GK2DonkeyAPI
             if (panel != null && (!Mount.IsGameReady || (!panel.activeSelf && colours == null && !OptionsWindow.IsOverPanel)))
             {
                 Close(keep: true, back: false); // the game left (a load, the main menu): nothing to go back to (the game window is forgotten)
+                return;
+            }
+            // the game's language changed under the journal (normal play can't: the game's Settings window doesn't open over
+            // ours): closed, what was chosen kept; opened again, its words and its font are the new language's
+            if (panel != null && builtLanguage != null && !string.Equals(builtLanguage, Texts.Language, StringComparison.OrdinalIgnoreCase))
+            {
+                Plugin.Log.LogInfo($"Settings: the game's language changed to {Texts.Language} while the Mounts panel was open: closed (it opens again in that language).");
+                builtLanguage = null;
+                Close(keep: true);
                 return;
             }
             // the rest only while the journal or its colours window is the one shown (the options window over it has its own)

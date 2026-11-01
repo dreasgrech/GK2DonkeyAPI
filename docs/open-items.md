@@ -585,13 +585,17 @@ closed):
   Translations group's first F11 23:08: 37/0/0. The long-text rule built since (OwnButton labels shrink to 80% before
   the "...", checked by the windows scenario). **TESTED 2026-10-31 23:31** (Translations 74/0/0, localization.md
   section 7): German read back, all 11 languages' fonts right (the font fix was needed), no text likely to overflow.
-- **French translation BUILT 2026-11-01** (Saddle Up and the API, `fr.csv`; deployed): the user's look in the game
-  (Settings > Language > Français): the options window, the journal, the colours window, bubbles, prompts. The packs'
-  names stay English (no pack `fr.csv`); the versions that ship it are the user's.
+- **French translation BUILT 2026-11-01** (Saddle Up, the API and the three packs' `fr.csv`; deployed): the user's look
+  in the game (Settings > Language > Français): the options window, the journal, the colours window, bubbles, prompts,
+  the packs' names. The versions that ship it are the user's (all five plugins now).
+- **Translator mistakes BUILT and TESTED 2026-11-01** (localization.md section 9): 63 cases pass offline
+  (`tests/TranslationScan`) and in the game (the Translations group 01:30: 162/0/0, the catalogue in a 34 ms frame).
+  French SEEN by the user 2026-11-01 (the Mount Journal in French, everything fitting; the log: all five fr.csv read whole,
+  147/144/6/2/3 lines, no warning, read ahead one mod a frame). Open decisions: key names
+  (D8) and the GK2 Mod Framework's entry.
 - **Translations: CSV only since 2026-11-01** (the user: "less to maintain"): built, deployed, the 15 `en.txt`
-  deleted (repository, game plugin folders, the dev dumps); the next dev start must make `l10n-sync.py --check` say
-  "same" (the repository's `en.csv` were converted from the `en.txt`; the dumps still hold the 3-column `en.csv`
-  until then); then an F11 of the Translations group (the files' CSV fixtures, the template round trip).
+  deleted (repository, game plugin folders, the dev dumps); the repository's `en.csv` converted from the `en.txt`,
+  confirmed by the dev start of 2026-11-01 01:29 (`l10n-sync.py --check`: all 5 the same).
 - **Translations, steps 2 and 3 BUILT 2026-11-01** (the user: "lets do a lot so we get this translation finished and
   ready"; localization.md section 8): the keeper's bubbles (71 sentences, 6 templates; `MountResult.Reason` stays
   English), the 8 prompts on foot, the crossroads notice, the mounts' and skins' names, descriptions and abilities by

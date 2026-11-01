@@ -436,6 +436,7 @@ namespace GK2DonkeyAPI
                 MountCompanion.TickAll();
                 using (Perf.Measure(Perf.S.Preview)) PreviewStage.Tick();
                 using (Perf.Measure(Perf.S.PanelTick)) MountsPanel.Tick();
+                Texts.TickWarm();      // the translation files read ahead, one owner a frame (a game's start, a language change)
                 Looks.TickWarm();      // the companion's skin acquired ahead (built by the next line, held), so a first spawn wears it at once
                 Looks.AdvanceBuilds(); // a sheet builds whether or not a rig with a view ticks this frame (one pass per frame)
                 SoundBank.Advance();   // a pack's sound file started, one a frame

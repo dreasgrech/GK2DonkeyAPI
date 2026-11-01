@@ -352,8 +352,25 @@ namespace GK2DonkeyAPI
             }
         }
 
-        // "Ride Bella" when the owner named it (MountHandle.SetDisplayName; the name as typed), else just the verb.
-        private static string Named(Mount.Instance i) => string.IsNullOrEmpty(i.DisplayName) ? UiWords.PromptRide.Text : UiWords.PromptRideNamed.Format(i.DisplayName);
+        // "Ride Bella" when the owner named it (MountHandle.SetDisplayName; the name as typed), else just the verb. Asked every
+        // frame on foot by a mount: made again only when the name or the language changes.
+        private static string Named(Mount.Instance i)
+        {
+            if (string.IsNullOrEmpty(i.DisplayName)) return UiWords.PromptRide.Text;
+            string lang = Texts.Language;
+            bool test = Texts.TestOn;
+            if (namedText == null || !string.Equals(i.DisplayName, namedFor, StringComparison.Ordinal) || !string.Equals(lang, namedLang, StringComparison.Ordinal) || test != namedTest)
+            {
+                namedFor = i.DisplayName;
+                namedLang = lang;
+                namedTest = test;
+                namedText = UiWords.PromptRideNamed.Format(i.DisplayName);
+            }
+            return namedText;
+        }
+
+        private static string namedFor, namedLang, namedText;
+        private static bool namedTest;
 
         private static void Set(Mount.Instance i, FootAction a, string text, bool atCart)
         {

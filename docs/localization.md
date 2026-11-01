@@ -795,3 +795,60 @@ like anyone's.
 
 **The English file:** the dev run writes one for every owner of a registered mount or skin (the packs have no page),
 at the first page shown.
+
+## 9. Translator mistakes (built 2026-11-01)
+
+The user: "other people aka users will be adding the translations which means that we need to expect EVERY TYPE OF
+STUPID mistake they can do". A translation file is read whatever a person or their spreadsheet did to it
+(`TranslationFiles.cs`, with `Texts.Load`/`Take` for what needs the mod's English, `LegacyText.cs` for the code pages).
+
+**The rule over every repair:** a mistake may show English, never a wrong text. A repair that could show a wrong text
+is file-wide, needs most of the file to agree (at least 3 lines and more than half of those with an english column),
+and is said once. Every mistake that loses or changes something is a warning in the log naming the file and line (at
+most 10 a file, then one saying there are more); the log's line per mod and language counts what was read, left out
+and repaired. Nothing in a file can throw: the whole load falls back to English.
+
+**The catalogue** (each a case of `TranslationTests.Mistakes`, run in the game by the Translations group and without it
+by `tests/TranslationScan`, which also reads every shipped `Languages/*.csv`: no warning allowed):
+
+| Mistake | What the mod does |
+|---|---|
+| Excel's plain "CSV" (the system's ANSI code page, not UTF-8) | read in the language's Windows code page: 1252 (fr, de, es, pt...), 1250 (pl), 1251 (ru), 1254 (tr); said. ja, zh_cn, ko: not readable, English, said |
+| Excel's "Unicode Text" (UTF-16, tabs, saved as `.txt`), UTF-16 without a BOM | read; the `.txt` name said |
+| a workbook (`.xlsx`, `.ods`) beside, or renamed `.csv` | not read, said ("Save As CSV UTF-8") |
+| UTF-8 opened as ANSI and saved again ("Ã©" for "é", "â€™" for "’") | repaired back, said |
+| an empty file, only a header, random bytes, old Mac line ends (CR only) | no crash; English, or the lines read |
+| no header, a header in other words ("clé;valeur;anglais"), Excel's `sep=` line | the separator counted on the first line; a first row that isn't a key skipped |
+| each row whole in one cell (Excel in a `;` country) | split again |
+| two columns (no english), spaces around fields, empty columns after, a second header (files put together), `#` comment rows | read |
+| a key with nothing after it | left out, said |
+| a quote inside a text; a quoted text with `""` and the separator | read as meant (a quote opens a quoted field only at its start) |
+| a quote never closed; a quote that swallows the rows after it | the file read line by line: the broken line English, the rest read; said |
+| a line break in a one-line text; a literal `\n` | a space (a line break only where the English has one) |
+| a key in other case, with invisible characters (zero-width space, BOM) | read |
+| a key typed wrong or translated | found again by its english column when one key has that English, said; else left out, said |
+| a key twice | the first, said |
+| the value and english columns swapped | swapped back (most of the file), said |
+| the english column translated too (it equals the value) | read as translated (most of the file), said |
+| a line's English changed since (one line or a whole stale file) | English (the stale-English rule stands) |
+| `{ 0 }`, the full-width `｛０｝` of Japanese input, `{O}` (a letter) | read as `{0}` |
+| a template that lost a `{n}` the English has, a `{1}` the English hasn't, a broken brace | English, said (the two noun sentences may drop their `{0}`: `Word.MayDropValues`) |
+| a spreadsheet error cell (`#NAME?`, `#VALUE!`, LibreOffice `Err:`) | English, said |
+| `<nobr>` tags; a very long text | tags out; read |
+| names: `FR.csv`, `fr-FR.csv`, `pt_BR.csv`, `zh-CN.csv` | read (a region's file after the language's own) |
+| names: `french.csv`, `français.csv`, `jp.csv`, `fr.csv.txt` (a hidden extension) | read, said ("name it fr.csv") |
+| the old `key = value` `.txt` | not CSV: English, said |
+| `en.csv` translated in place | English (en.csv is never read), said ("save it as fr.csv") |
+| the file beside the DLL instead of in `Languages\`, or straight in `Translations\` without the mod's folder | not read, said with the right place |
+| the `Translations\` folder named after the mod (`GK2SaddleUp`) instead of its GUID | read (an INFO line names the GUID) |
+
+**Also:** a game in `pt` reads `pt.csv`, then `pt-br.csv` (a close language before English); a translator's own file beats
+the bundled one; `tools/l10n-sync.py --check` fails on a shipped line whose `{n}` don't match.
+
+**The side effects fixed with it:** the files are read ahead (`Texts.TickWarm`, one mod a frame, at a game's start and after
+a language change); the journal closes when the language changes under it (normal play can't: the game's Settings
+window doesn't open over ours), keeping the choices; the named prompt ("Monter Bella") is made once per name and
+language, not every frame. The packs have their French too (11 lines).
+
+**Left as decisions:** key names (D8: English; the game itself translates only the four arrows) and the GK2 Mod
+Framework's entry (the Framework reads translations from its own folder, so our zip would write into another mod's).
