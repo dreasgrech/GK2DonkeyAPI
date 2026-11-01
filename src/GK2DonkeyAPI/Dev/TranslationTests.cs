@@ -1438,6 +1438,75 @@ namespace GK2DonkeyAPI
         }
 
         // The game's language switched as its Settings window does (GameSettings, then its labels and their fonts), not saved.
+        // The Settings window's options button after each language switch, before any hover (the user, 2026-11-01: it didn't
+        // fit, sometimes didn't translate, until hovered): its words the language's, its font the game's own OK button's
+        // restyled as a hover would (the game restyles a button's label only when its state changes), its text within its
+        // width.
+        internal static IEnumerator SettingsButtonLanguages()
+        {
+            GameSettings gs = GameSettings.Instance;
+            MountSettingsPage page = null;
+            foreach (MountSettingsPage p in MountSettingsPage.All) if (p.Shown) { page = p; break; }
+            if (gs == null || page == null)
+            {
+                SelfTest.Skip(gs == null ? "no game settings" : "no page shown");
+                yield break;
+            }
+            if (LazyWindowsStackController.ActiveWindow != null || MountsPanel.IsOpen || OptionsWindow.IsOpen)
+            {
+                SelfTest.Warn("a window is open: close it and run again; skipped");
+                yield break;
+            }
+            UIGameSettingsWindow settings = LazyUI.GetWindow<UIGameSettingsWindow>();
+            if (settings == null)
+            {
+                SelfTest.Skip("no Settings window");
+                yield break;
+            }
+            string languageWas = gs.language, overrideWas = Texts.LanguageOverride;
+            var ids = new List<string>(LLBase.AvailableLanguages.Keys);
+            int checkedLanguages = 0;
+            var wrong = new List<string>();
+            try
+            {
+                Texts.LanguageOverride = null;
+                settings.onClosed = null;
+                settings.Open(null);
+                yield return SelfTest.Frames(2);
+                foreach (string id in ids)
+                {
+                    Switch(gs, id);
+                    yield return SelfTest.Frames(1);
+                    UIDialogWindowButton ours = SettingsButtons.ButtonOf(settings, page);
+                    UIDialogWindowButton ok = UiKit.OkButtonOf(settings);
+                    // the OK button keeps its font until its state changes (a hover; "OK" reads in the Latin font): restyled
+                    // here as a hover would, the font the game's own button style gives the language
+                    ok?.LazyButton?.RefreshTextTransitions();
+                    TextMeshProUGUI label = ours != null ? ours.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+                    TextMeshProUGUI okLabel = ok != null ? ok.GetComponentInChildren<TextMeshProUGUI>(true) : null;
+                    if (label == null)
+                    {
+                        wrong.Add(id + ": no button");
+                        continue;
+                    }
+                    checkedLanguages++;
+                    string want = UiWords.PageOptions.Format(Texts.Title(page));
+                    float wants = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x, has = label.rectTransform.rect.width;
+                    if (label.text != want) wrong.Add($"{id}: the words \"{label.text}\", not \"{want}\"");
+                    if (okLabel != null && label.font != okLabel.font) wrong.Add($"{id}: the font {(label.font != null ? label.font.name : "none")}, the OK button's {(okLabel.font != null ? okLabel.font.name : "none")}");
+                    if (wants > has + 0.5f) wrong.Add($"{id}: the text wants {wants:0} of {has:0}");
+                }
+                SelfTest.Check(checkedLanguages == ids.Count && wrong.Count == 0, $"every language ({checkedLanguages} of {ids.Count}): the button's words, its font the OK button's and its width right at the switch, before any hover{(wrong.Count > 0 ? "; NOT: " + string.Join("; ", wrong) : "")}");
+            }
+            finally
+            {
+                Switch(gs, languageWas);
+                Texts.LanguageOverride = overrideWas;
+                Texts.Forget();
+                if (LazyWindowsStackController.IsWindowOpened(settings)) settings.Close();
+            }
+        }
+
         private static void Switch(GameSettings gs, string id)
         {
             gs.language = id;

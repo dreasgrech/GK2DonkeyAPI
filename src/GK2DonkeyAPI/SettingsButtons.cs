@@ -64,10 +64,13 @@ namespace GK2DonkeyAPI
         // page's button is there (added again if not).
         internal static void Tick()
         {
-            if (failed || pages.Count == 0 || Time.unscaledTime < nextCheck) return;
+            if (failed || pages.Count == 0) return;
+            // the language changed in the open window (its Language row): our buttons follow on that frame, as the game's
+            // own labels do (a wait showed our words in the last language's font)
+            if (madeIn != null && drawnIn != null && drawnIn != Texts.Language && madeIn.gameObject.activeInHierarchy) Retitle();
+            if (Time.unscaledTime < nextCheck) return;
             nextCheck = Time.unscaledTime + CheckEvery;
             if (!(LazyWindowsStackController.ActiveWindow is UIGameSettingsWindow settings) || !settings.gameObject.activeInHierarchy) return;
-            if (madeIn == settings && drawnIn != null && drawnIn != Texts.Language) Retitle(); // the language changed in this window: our buttons' words follow
             if (AllThere(settings)) return;
             try
             {
@@ -88,14 +91,20 @@ namespace GK2DonkeyAPI
         // buttons' labels ignore the game's own refresh (IgnoreLocalize), so Tick puts their words right.
         private static string drawnIn;
 
+        // Each button drawn again through the game's own Draw: its words, its style for the language now (RefreshTextTransitions:
+        // the language's font, material and colour; a label keeps the last language's font until restyled) and its size.
+        // Setting the label's text alone left the old font and width until a hover restyled it (LazyButton's text
+        // transitions: TextStyle.ApplyStyle and a layout rebuild; the user, 2026-11-01).
         private static void Retitle()
         {
             drawnIn = Texts.Language;
             foreach (var kv in made)
             {
-                TextMeshProUGUI t = kv.Value != null ? kv.Value.GetComponentInChildren<TextMeshProUGUI>(true) : null;
-                if (t != null) t.text = UiWords.PageOptions.Format(Texts.Title(kv.Key));
+                if (kv.Value == null) continue;
+                MountSettingsPage p = kv.Key;
+                kv.Value.Draw(new UIDialogWindowData.ButtonData(() => OptionsWindow.Open(p), UiWords.PageOptions.Format(Texts.Title(p)), null, replaceForGamepad: false, GameKey.Select));
             }
+            if (madeIn != null) ((RectTransform)madeIn.transform).RefreshContentFitter();
         }
 
         private static bool AllThere(UIGameSettingsWindow settings)

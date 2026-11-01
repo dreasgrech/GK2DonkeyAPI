@@ -4,6 +4,7 @@
     python tools/release-versions.py items           # which DLLs this release carries (raised) and which stay released (kept)
     python tools/release-versions.py set saddleup 0.13.2 --api 0.41.2
     python tools/release-versions.py set GK2SaddleUpDragonsMountPack 1.0.1
+    python tools/release-versions.py published GK2DonkeyAPI   # the committed release zip holding dist/'s DLL, exit 1: none
 
 The release rule (`items`, used by build-dist.sh and make-release-zip.py): a DLL whose source version differs from the
 one committed in dist/ is in this release ("raised"); one with the same version is a released build ("kept"):
@@ -266,6 +267,28 @@ def languages_changed(dll):
     return zip_name_, what
 
 
+def published(dll):
+    """The committed zip of release/ that holds the DLL committed in dist/ (a public release commits its zip with it:
+    the DLL is published), or None (committed in dist/ but never published, or not committed at all)."""
+    import io, subprocess, zipfile
+    blob = subprocess.run(["git", "-C", ROOT, "show", f"HEAD:dist/{dll}.dll"], capture_output=True)
+    if blob.returncode != 0:
+        return None
+    inner = f"BepInEx/plugins/{dll}/{dll}.dll"
+    names = subprocess.run(["git", "-C", ROOT, "ls-files", "release"], capture_output=True, text=True).stdout.split()
+    for name in names:
+        if not name.endswith(".zip"):
+            continue
+        data = subprocess.run(["git", "-C", ROOT, "show", f"HEAD:{name}"], capture_output=True).stdout
+        try:
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                if inner in z.namelist() and z.read(inner) == blob.stdout:
+                    return name
+        except zipfile.BadZipFile:
+            continue
+    return None
+
+
 def items():
     """Which DLLs this release carries: raised = the source's version differs from the one committed in dist/ (a new
     release of it); kept = the same version, a released build (build-dist.sh puts the committed bytes back; no zip)."""
@@ -276,8 +299,14 @@ def items():
 
 def main():
     args = sys.argv[1:]
-    if not args or args[0] not in ("check", "set", "items"):
+    if not args or args[0] not in ("check", "set", "items", "published"):
         sys.exit(__doc__)
+    if args[0] == "published":
+        if len(args) < 2:
+            sys.exit(__doc__)
+        zip_name = published(args[1])
+        print(zip_name or f"{args[1]}: the DLL committed in dist/ is in no committed release zip (never published)")
+        sys.exit(0 if zip_name else 1)
     if args[0] == "check":
         sys.exit(1 if check() else 0)
     if args[0] == "items":

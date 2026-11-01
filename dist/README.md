@@ -6,11 +6,11 @@ the mod defaults" button), checked with `python tools/check-dist.py`. The steps 
 
 | File | Version | Game build |
 |---|---|---|
-| `GK2DonkeyAPI.dll` | 0.43.0 (with Saddle Up 0.15.0; the last release 0.41.2 / 0.13.2 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 23:50 (the options window; GK2 Mod Framework's Settings button pointed at it; keys while typing; the panel over any game window; overlapping keys) |
-| `GK2SaddleUp.dll` | 0.15.0 (needs GK2 Donkey API 0.43.0 or newer; the last release 0.13.2 of 2026-10-30) | 26297960 (1.011), built 2026-10-30 23:50 |
-| `GK2SaddleUpDragonsMountPack.dll` | 1.1.0 (needs GK2 Donkey API 0.40.0; the plugin's public name + modinfo.json, 2026-10-30; 1.0.0 public on Nexus 2026-10-29, mods/420) | the external pack: the dragon embedded, built 2026-10-30 afternoon |
+| `GK2DonkeyAPI.dll` | 0.43.0 (with Saddle Up 0.15.0; the last release 0.42.0 / 0.14.0 of 2026-10-30) | 26297960 (1.011), built 2026-11-01 22:19 (translations: ten languages, the translator's own files, the reader of their mistakes; the options button after a language switch) |
+| `GK2SaddleUp.dll` | 0.15.0 (needs GK2 Donkey API 0.43.0 or newer; the last release 0.14.0 of 2026-10-30) | 26297960 (1.011), built 2026-11-01 19:27 |
+| `GK2SaddleUpDragonsMountPack.dll` | 1.1.0 (needs GK2 Donkey API 0.40.0; its translations; 1.0.0 public on Nexus 2026-10-29, mods/420) | the external pack: the dragon embedded, built 2026-11-01 19:27 |
 | `GK2SaddleUpCrittersMountPack.dll` | 1.0.0 (needs GK2 Donkey API 0.40.0; not released yet as of 2026-10-29) | the external pack: the rat (cargo 2), snail (6) and worm (4) embedded, built 2026-10-29 14:37 |
-| `GK2SaddleUpDonkeySkinPack.dll` | 1.1.0 (needs GK2 Donkey API 0.40.0; public on Nexus 2026-10-28, mods/419) | the external pack: the donkey's skins Hellfire and Royal Parade and Hellfire's effect embedded, built 2026-10-29 14:37 |
+| `GK2SaddleUpDonkeySkinPack.dll` | 1.1.0 (needs GK2 Donkey API 0.40.0; Armored and its translations; 1.0.0 public on Nexus 2026-10-28, mods/419) | the external pack: the donkey's skins Hellfire, Royal Parade and Armored and Hellfire's effect embedded, built 2026-11-01 19:27 |
 
 The API DLL carries the list of every game member it uses (840 entries against this build); at start it compares
 them with the installed game and decides per feature what a changed one means (`docs/dependency-check.md`).
@@ -32,6 +32,19 @@ Royal Parade).
 
 What is new since 0.10.0 is CHANGELOG.md's Unreleased section (as of 2026-10-27). The mounts and skins are on for
 players since this version (0.10.0 shipped them off); which mounts a player has is which packs they installed.
+
+Sizes 2026-11-01 19:36 (`bash tools/release.sh` for 0.15.0 / API 0.43.0 with the Dragons Mount Pack 1.1.0 and the
+Donkey Skin Pack 1.1.0; the full F11 on the dev build of the same sources: 1778 passed, 0 failed, 0 warnings at 19:26;
+`tools/release-versions.py check` and 26 of 26 release scans green; the zips written with `make-release-zip.py --only`
+for each item, the run's own zip step having found `dist/` already committed at 19:34). Then the rehearsal found the
+options button keeping the last language's font and width until hovered: fixed, the full F11 1779 passed, 0 failed, 0
+warnings at 22:10, the API rebuilt at 22:19 with `build-dist.sh --rebuild GK2DonkeyAPI` (committed in `dist/`, never
+published), 26 of 26 scans green, the Saddle Up zip written again at 22:28 (`--only saddleup --overwrite`, the user's
+yes): `GK2-Saddle-Up-0.15.0.zip` 1,101,577 bytes (`GK2DonkeyAPI.dll` 2,999,296 bytes, `GK2SaddleUp.dll` 34,816, each
+with its `Languages\` of 11 files),
+`GK2-Saddle-Up-Dragons-Mount-Pack-1.1.0.zip` 455,294 bytes (the DLL 616,448), `GK2-Saddle-Up-Donkey-Skin-Pack-1.1.0.zip`
+57,148 bytes (the DLL 113,664); each staged with its `modinfo.json` in `workshop\<Item>\`. The Critters Mount Pack is
+kept, its 1.0.0 build (not released).
 
 Sizes 2026-10-30 23:50 (`bash tools/release.sh` for 0.14.0 / API 0.42.0; F11 on the dev build: the full set 1414 passed
 at 22:16 (its two failures the clash rule, fixed), Skins and effects 634 passed, 0 failed, 0 warnings at 23:44 on the final

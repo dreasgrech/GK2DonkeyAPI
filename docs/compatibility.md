@@ -131,8 +131,10 @@ changelog line that says it reaches new installs only.
   (rehearsal run A, 2026-10-27; `MountsKey` then already set by hand), every value then set off its default
   (`python -I tools/fixture-flip.py <in.cfg> <out.cfg> "<header>"`: bools inverted, numbers to the range's other end, enums to the next value, keys to keypad
   keys, names "Fixture"); the side file a real one of the same format (2) with five kept mounts and no load yet:
-  to be replaced by one with a parked loaded cart saved by the 0.40.0 build. Every value in a cfg fixture differs from its default, so
-  a lost value shows.
+  to be replaced by one with a parked loaded cart saved by the 0.40.0 build. `0.15.0` (2026-11-01): the cfgs of the
+  0.15.0 / API 0.43.0 zip's first run (rehearsal A 22:40), flipped (477 API values, 120 Saddle Up's), and its
+  `defaults.cfg`; no side file (the rehearsal saved nothing, and the side file's format is 0.13.0's: no persistence change
+  since). Every value in a cfg fixture differs from its default, so a lost value shows.
 - **Self-test "upgrade: a released version's player files are all read"** (group "API, side file, carts, colours"):
   for every version folder, the API's cfg key by key against what this build binds, the side file through the real
   reader (every record whole), and the set-aside of a format-99 file. Saddle Up's cfg through the live page's own

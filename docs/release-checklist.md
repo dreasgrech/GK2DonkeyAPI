@@ -69,7 +69,10 @@ bash tools/release.sh              # all of it, in order, stopping at the first 
 **The release rule** (`release-versions.py items`): a DLL whose source version differs from the one committed in
 `dist/` is in this release; one with the same version is a released build, so `build-dist.sh` puts its committed
 bytes back and `make-release-zip.py` writes no zip for it. The baseline is the commit: commit `dist/` after the
-release build (a rerun then says "nothing to release"), and raise a version to ship any change. This replaced
+release build (a rerun then says "nothing to release"), and raise a version to ship any change. A DLL committed in
+`dist/` but never published (its version in no committed zip of `release/`) is rebuilt with `bash tools/build-dist.sh
+--rebuild <DLL>` and its zip written again with `make-release-zip.py --only <item> --overwrite`, on the user's word
+(0.15.0, 2026-11-01: `dist/` was committed mid-pipeline, then the API was fixed); `--rebuild` refuses a published DLL. This replaced
 the by-hand `git checkout` of unreleased pack DLLs and the hand-picked `--only` (2026-10-30). No step of a release
 lives outside `tools/`.
 
@@ -316,6 +319,19 @@ Hellfire in the fixture's colours, the plain donkey at defaults. B's screenshots
 centre for the skins (docs/per-skin-looks.md §7): fixed the same afternoon, full F11 1356 passed, 0 failed, 0 skipped;
 the dist, scans and zip remade from the final sources after that (the zip not rehearsed again: the change is the
 picture's framing and the stage's lantern, nothing in the cfgs or the install).
+Run 2026-11-01 for 0.15.0 / API 0.43.0 (translations) with the Dragons Mount Pack 1.1.0 and the Donkey Skin Pack 1.1.0:
+the full F11 1778/0/0 (19:26); `release.sh` built and scanned (26 of 26) but its zip step found `dist/` committed
+mid-run (19:34), so the zips came from `make-release-zip.py --only` per item. The first rehearsal found the options button
+keeping the last language's font and width until hovered: fixed, the full F11 1779/0/0 (22:10), the API rebuilt with
+`build-dist.sh --rebuild GK2DonkeyAPI` (new for this: committed in `dist/`, never published), 26 of 26 scans, the Saddle
+Up zip written again (`--overwrite`, the user's yes). A on fresh cfgs from the three zips (22:40): API 0.43.0, Saddle Up
+0.15.0, Donkey Skins 1.1.0 (3 skins) and Dragon 1.1.0 loaded, the cargo layout embedded, no `Dev tools` line, no
+`[Debug]` in the fresh API cfg; 5 of 5 kept mounts and carts back; the cart driven, two wood loaded, H left it standing
+with both, G brought the same cart back ("2 of 2 item(s) put back"); the Mount Journal with three mounts; the Settings
+window's options button in ten languages, every language's four files read from the zips' own `Languages\` folders;
+no warning, error or exception in 551 lines; the saves identical after. The fixture `tests/fixtures/released/0.15.0/`
+made from A's cfgs. B (an upgrade over the previous release's cfgs) not run: the full F11's upgrade self-tests read every
+released fixture, and no cfg key moved in this release.
 
 ## 6. Versions, changelog and hand-off
 

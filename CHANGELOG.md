@@ -42,6 +42,9 @@ For players:
 - **Every language the game has** (2026-11-01): German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish,
   Japanese, Simplified Chinese and Korean besides French, for GK2 Saddle Up, GK2 Donkey API and the three packs, in the
   game's own words for its things (docs/localization.md section 10). Not yet read by native speakers.
+- **The GK2 Saddle Up options button follows a language change at once** (2026-11-01, the user in the 0.15.0
+  rehearsal): switched in the open Settings window, its words, its font and its width are the new language's on that
+  frame; it kept the last language's font and width, sometimes its words, until the mouse went over it.
 - **Chinese and Korean words the game's fonts can't draw are replaced** (2026-11-01, the first in-game font check):
   6 Chinese characters in 8 lines (the snail is now 巨螺, the wheel hub 轮心) and 4 Korean ones in 10 lines ("load on
   cart" is now 수레에 올리기); the rest of each line is as it was.
@@ -88,6 +91,10 @@ For mod authors:
 
 Development:
 
+- **Release 0.15.0's own** (2026-11-01): `tests/fixtures/released/0.15.0/` (the zip's first-run cfgs, every value off
+  its default, and `defaults.cfg`); `tools/build-dist.sh --rebuild <DLL>` rebuilds a DLL committed in `dist/` but never
+  published (`release-versions.py published <DLL>` finds the committed release zip that holds it and refuses a public
+  one): `dist/` had been committed mid-pipeline, then the options button was fixed.
 - **The in-game Translations runs** (2026-11-01, the user's F11; 350/10/14, then 359/3/3, then 362/0/3): the files
   scenario's keys have their dot (round 11's rule read a dotless one as none of the mod's lines); the Keeper's bubble is
   found by its text without tags (the game types a bubble in with a transparent colour tag inside it); the prompt's

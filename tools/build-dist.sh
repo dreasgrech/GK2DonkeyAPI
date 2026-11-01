@@ -5,11 +5,27 @@
 # into dist/, then tools/check-dist.py. Stops at the first failure. Build output: release/logs/build-dist.log.
 #
 #   bash tools/build-dist.sh
+#   bash tools/build-dist.sh --rebuild GK2DonkeyAPI   a DLL the release rule keeps (its version committed in dist/) that
+#                                                     was never published is rebuilt, not put back (the user's word; refused
+#                                                     when a committed release zip holds the committed DLL: it is public)
 #
 # Afterwards: bash tools/release-scans.sh, python tools/make-release-zip.py, then a dev build with the game closed
 # (bin/ holds whichever was built last).
 set -u
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REBUILD=" "
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --rebuild) [ $# -ge 2 ] || { echo "--rebuild needs a DLL name (GK2DonkeyAPI, GK2SaddleUp, a pack's)"; exit 1; }; REBUILD="$REBUILD$2 "; shift 2 ;;
+    *) echo "unknown argument: $1"; exit 1 ;;
+  esac
+done
+for dll in $REBUILD; do
+  if python -I "$REPO/tools/release-versions.py" published "$dll" > /dev/null; then
+    echo "--rebuild $dll REFUSED: $(python -I "$REPO/tools/release-versions.py" published "$dll") holds the DLL committed in dist/: it is public, raise its version"
+    exit 1
+  fi
+done
 LOG="$REPO/release/logs/build-dist.log"
 mkdir -p "$REPO/release/logs"
 : > "$LOG"
@@ -49,8 +65,12 @@ ITEMS="$(python -I "$REPO/tools/release-versions.py" items)" || { echo "release-
 while read -r state dll ver rest; do
   case "$state" in
     kept)
-      git -C "$REPO" checkout -- "dist/$dll.dll" || { echo "could not restore dist/$dll.dll"; exit 1; }
-      echo "   $dll $ver: kept, the released build (its version was not raised)" ;;
+      if [[ "$REBUILD" == *" $dll "* ]]; then
+        echo "   $dll $ver: kept by its version, rebuilt (--rebuild: committed in dist/ but never published)"
+      else
+        git -C "$REPO" checkout -- "dist/$dll.dll" || { echo "could not restore dist/$dll.dll"; exit 1; }
+        echo "   $dll $ver: kept, the released build (its version was not raised)"
+      fi ;;
     raised|new) echo "   $dll $ver: $state, this release's build" ;;
     *) echo "release-versions.py items said: $state $dll $ver $rest"; exit 1 ;;
   esac
