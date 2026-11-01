@@ -263,6 +263,7 @@ namespace GK2DonkeyAPI
 
         private static readonly Dictionary<string, SkinDef> defs = new Dictionary<string, SkinDef>(StringComparer.OrdinalIgnoreCase);
         internal static IEnumerable<SkinDef> All => defs.Values;
+        internal static int Count => defs.Count; // Texts: an owner's English grew (a skin registered after its table was read)
 
         // A named skin's words as the player reads them (docs/localization.md, step 3): its owner's translation
         // (skin.<skin id>.name and .description), else as registered.

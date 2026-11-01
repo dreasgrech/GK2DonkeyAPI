@@ -8,6 +8,8 @@
   It shows with a GK2 Donkey API that reads translations (the next release); an older one ignores the folder.
   No code change.
 - **French** (2026-11-01): `Languages\fr.csv`, the dragon in French when the game is in French.
+- **Every language the game has** (2026-11-01): German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish,
+  Japanese, Simplified Chinese and Korean too (`Languages\<id>.csv`).
 
 ## 1.0.1, 2026-10-30
 

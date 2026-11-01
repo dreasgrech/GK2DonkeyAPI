@@ -359,8 +359,9 @@ namespace GK2DonkeyAPI
             if (string.IsNullOrEmpty(i.DisplayName)) return UiWords.PromptRide.Text;
             string lang = Texts.Language;
             bool test = Texts.TestOn;
-            if (namedText == null || !string.Equals(i.DisplayName, namedFor, StringComparison.Ordinal) || !string.Equals(lang, namedLang, StringComparison.Ordinal) || test != namedTest)
+            if (namedText == null || !string.Equals(i.DisplayName, namedFor, StringComparison.Ordinal) || !string.Equals(lang, namedLang, StringComparison.Ordinal) || test != namedTest || namedGeneration != Texts.Generation)
             {
+                namedGeneration = Texts.Generation;
                 namedFor = i.DisplayName;
                 namedLang = lang;
                 namedTest = test;
@@ -370,6 +371,7 @@ namespace GK2DonkeyAPI
         }
 
         private static string namedFor, namedLang, namedText;
+        private static int namedGeneration; // Texts.Generation it was made in (the self-tests' files changed under one language)
         private static bool namedTest;
 
         private static void Set(Mount.Instance i, FootAction a, string text, bool atCart)
@@ -739,5 +741,32 @@ namespace GK2DonkeyAPI
         }
 
         private static bool warnedHint;
+
+        // The self-tests (TranslationTests.GameBubbles): a hint of the test's own over an instance, shown by the game's
+        // bubble manager as the one on foot is; its displayed bubble (null until the manager has shown it); hidden again.
+        private static Hint testHint;
+
+        internal static void TestShowHint(Mount.Instance over, string text)
+        {
+            UIObjectBubbleManager m = UIObjectBubbleManager.Instance;
+            if (m == null || over == null) return;
+            if (testHint != null) m.Hide(testHint);
+            testHint = new Hint { Over = over, Text = HintText(text) };
+            m.RequestDisplay(testHint);
+        }
+
+        internal static Transform TestHintRoot()
+        {
+            UIObjectBubbleManager m = UIObjectBubbleManager.Instance;
+            if (m == null || testHint == null || !m.TryGetDisplayedBubble(testHint.BubbleDrawableUniqueId, out UIObjectBubble b) || b == null) return null;
+            return b.transform;
+        }
+
+        internal static void TestHideHint()
+        {
+            UIObjectBubbleManager m = UIObjectBubbleManager.Instance;
+            if (m != null && testHint != null) m.Hide(testHint);
+            testHint = null;
+        }
     }
 }

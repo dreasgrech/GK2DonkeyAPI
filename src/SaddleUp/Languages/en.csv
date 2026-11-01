@@ -115,7 +115,7 @@ CartIndoors.desc,"The cart comes inside too. It has no collider indoors, so it r
 CargoZombies.label,Zombies ride on the cart,Zombies ride on the cart,"Cart, a switch"
 CargoZombies.desc,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.,Zombies you pick up while driving lie on the cart. You can hand them to their work from there.,"Cart, a switch: its description"
 CargoChest.label,A storage chest rides on the cart,A storage chest rides on the cart,"Cart, a switch"
-CargoChest.desc,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.,Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.,"Cart, a switch: its description"
+CargoChest.desc,Drive up to a storage chest and press the Work key to load it with everything inside. Press the Interact key with nothing in front of you to set it down.,Drive up to a storage chest and press the Work key to load it with everything inside. Press the Interact key with nothing in front of you to set it down.,"Cart, a switch: its description"
 CorpseIntoMorgue.label,Carry the corpse into the morgue,Carry the corpse into the morgue,"Cart, a switch"
 CorpseIntoMorgue.desc,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.,Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.,"Cart, a switch: its description"
 CorpsesAtCrossroads.label,Donkey leaves corpses at the crossroads,Donkey leaves corpses at the crossroads,"Cart, a switch"

@@ -802,9 +802,11 @@ The user: "other people aka users will be adding the translations which means th
 STUPID mistake they can do". A translation file is read whatever a person or their spreadsheet did to it
 (`TranslationFiles.cs`, with `Texts.Load`/`Take` for what needs the mod's English, `LegacyText.cs` for the code pages).
 
-**The rule over every repair:** a mistake may show English, never a wrong text. A repair that could show a wrong text
-is file-wide, needs most of the file to agree (at least 3 lines and more than half of those with an english column),
-and is said once. Every mistake that loses or changes something is a warning in the log naming the file and line (at
+**The rule (as it reads since review round 6, section 11):** the mod never shows a text that isn't in the file, nor a
+text for an English it wasn't made for; a mistake shows English, and is said. The mod repairs nothing in a file: six
+review rounds each found a repair that made a wrong text in a corner (code pages, garbled letters, a key found by its
+English, a text joined across its separator), and each is off behind a switch of the user's. Garbled text the mod
+detects is left out; garbled text it doesn't is shown as the file has it, for the translator to see. Every mistake that loses or changes something is a warning in the log naming the file and line (at
 most 10 a file, then one saying there are more); the log's line per mod and language counts what was read, left out
 and repaired. Nothing in a file can throw: the whole load falls back to English.
 
@@ -813,37 +815,88 @@ by `tests/TranslationScan`, which also reads every shipped `Languages/*.csv`: no
 
 | Mistake | What the mod does |
 |---|---|
-| Excel's plain "CSV" (the system's ANSI code page, not UTF-8) | read in the language's Windows code page: 1252 (fr, de, es, pt...), 1250 (pl), 1251 (ru), 1254 (tr); said. ja, zh_cn, ko: not readable, English, said |
-| Excel's "Unicode Text" (UTF-16, tabs, saved as `.txt`), UTF-16 without a BOM | read; the `.txt` name said |
+| Excel's plain "CSV" (the system's ANSI code page), "CSV (MS-DOS)", "CSV (Macintosh)", a Linux or LibreOffice page (ISO-8859, KOI8-R), a file of UTF-8 and code-page lines, one stray byte | not read, said ("save it as CSV UTF-8"): a file must be UTF-8 or UTF-16 (since round 5; the code-page reader, `TranslationFiles.ReadCodePages`, is off: section 11) |
+| letters lost as "?" (Excel's plain "CSV" of a Russian or Japanese text on a Windows set to another language) | the line left out (more "?" than its English, two together, or one before a letter), said, in a file without its language's own letters (one that has them wasn't saved so: its "?" are question marks) |
+| Excel's "Unicode Text" (UTF-16, tabs, saved as `.txt`), UTF-16 without a BOM (either byte order, found by its zero bytes) | read; the `.txt` name said |
 | a workbook (`.xlsx`, `.ods`) beside, or renamed `.csv` | not read, said ("Save As CSV UTF-8") |
-| UTF-8 opened as ANSI and saved again ("Ã©" for "é", "â€™" for "’") | repaired back, said |
+| UTF-8 opened in a code page and saved again ("Ã©" for "é", "â€™" for "’", Cyrillic "Рџ" for "П", Polish "Ä…" for "ą", "√©"; even only two letters, twice, or in some lines only) | left out, said, where the mod sees it (Garbled); shown as the file has it where it doesn't (the repair, `RepairGarbled`, is off since round 6) |
+| Mac Excel's garbling ("√©" for "é") | repaired through Mac Roman, said |
+| a correct text that looks garbled through its page (Russian "Её", a capital and a no-break space) | read as it is (a garbled text's marks must cover most of its letters) |
+| a text still garbled (a character came in after the garbling, so its bytes can't come back); Mac garbling without its "√" ("–ü—Ä"); Japanese read as Shift-JIS ("縺薙ｓ"), Chinese as GBK, Korean; a script the language doesn't write (a Chinese character in French: UTF-8 through GBK; "Ÿ" alone in Russian, "Ű" in Korean) | left out (English), said |
 | an empty file, only a header, random bytes, old Mac line ends (CR only) | no crash; English, or the lines read |
-| no header, a header in other words ("clé;valeur;anglais"), Excel's `sep=` line | the separator counted on the first line; a first row that isn't a key skipped |
-| each row whole in one cell (Excel in a `;` country) | split again |
-| two columns (no english), spaces around fields, empty columns after, a second header (files put together), `#` comment rows | read |
+| no header (deleted, or a tool's file without one), also in a translation tool's order (`key,note,english,value`) | not read, said: a file is read from en.csv's header row on (read by its columns' places, a note column showed as the translation) |
+| Excel's `sep=` line, comments, a blank line or a title line (`日本語訳`, `Translated by Marie, 2026, v1.2`) before the header | the separator: the one after the first cell of the first rows (comments and blank lines skipped); a title line said; read from the header |
+| a header in other words or a translation tool's (`clé;valeur;anglais`, `キー,値,英語`, `ID,Status,English,Français`, `Key (e.g. options.done),…`, `,note,english,value`), also reordered | not read, said (copy en.csv's header row as it is): a header's columns are matched by en.csv's own names only (`key`, `value`, `english`, `note`; any case; spaces, quotes or a no-break space around) |
+| a section pasted under such a header, below one of en.csv's (also with a cell left empty, narrower than its rows, or under a header with a name twice) | not read up to the next header of en.csv's, said: under a header every line is one of the mod's (a key, also one damaged by one keystroke), a `#` comment or blank, and any other line stops the reading (each test of a header in other words by its words or its width let a section through, read by the columns above it) |
+| a key damaged by one keystroke (its dot deleted, a comma or a space typed into it); a line typed with spaces for its commas, or as `key = value` (its first word a key); a numbered row under a header without an index column; a line break typed into a text or its english (the line after it holds the rest and the row's English) | that line left out, said |
+| a comment, a title or a line of notes without `#` under the header (`Checked up to here, the rest later`, `TODO`) | the lines after it not read up to a header of en.csv's, said (a comment starts with `#`; such a line can't be told from a header in other words) |
+| a section in the other separator pasted under its own header (a `;` section in a `,` file) whose text holds the file's separator | the lines from that text on not read, said (the section's rows are split at the file's separator) |
+| rows of another column order pasted under en.csv's header without a header of their own | a limit: read as the header above them (nothing in the file says otherwise) |
+| something before `key` in the header: a stray separator | read without it, said |
+| something before `key` in the header: a column of its own (`done`, `No.`), a garbled BOM (`ï»¿key`) | not read, said so |
+| each row whole in one cell (Excel in a `;` country), also with Excel's `;` padding after it | split again, with the same quote checks (a quote not doubled, or a text cut at its line: left out, said) |
+| a template's translation with a doubled brace (`{{x}}`) | English, said |
+| two columns (no english), an english cell left empty | those lines left out (English), said: nothing could tell when the English changes under them (a choice's key is its place in the list) |
+| an index column before the key, named in the header (pandas' `to_csv`: `,key,value,english`; `#,key,…`) | read without it, said (up to a header without one) |
+| a separator typed at a text's start (the row's English one column right of the english column) | English, said |
+| a header that doesn't name `value` and `english` once each (`key,english,`, `key,value,note`, `key,value,english,value`, `key,french,english`) | not read, said |
+| a control character in a text | English, said |
+| a multi-line text whose last line starts with a web address (`www.exemple.fr, deux`) | read whole (a swallowed row starts with one of the mod's keys) |
+| a separator inside a text without quotes (`t.greet,Bonjour, toi,Hello`), also a comma row in a `;` file | English, said (its English after the rest of it; the join, `JoinSeparator`, is off since round 6) |
+| a lone CR ending rows, also among LF rows (Mac Excel) | a row end |
+| none of the english cells the mod's English (a stale file, notes in the english column's place) | English, said |
+| a separator inside the english text (typed into it, or an English with a comma whose quotes were deleted) | English, said |
+| symbols and emoji in a text (♥ → ✓ ≥ 😀) | read; a character no text of its language writes is named when its line is left out |
+| a quote inside a quoted text, not doubled (`"Bonjour" dit-il, puis "salut"`) | left out, said |
+| a `{n}` its English hasn't | left out, said |
+| a header in the translator's language after `key` (`key,valeur,anglais`) | not read, said (copy en.csv's header row) |
+| a header naming its columns otherwise (`key,checked,texte,anglais`, `key,Value (French),Notes (translator),English`) | not read, said (no column is taken by a guess at its name: a notes column named "Notes (translator)" was once read as the translation) |
+| a quote opening a row's first cell (a comment or a key) | the file read line by line, said |
+| an empty key column with text after it, under a header | left out, said |
+| a full-width brace that is no placeholder (`｛注意｝`), `{{ }}` with no number | kept as written |
+| a translation in another column beside the template's `value` (`translation`, `french`) | the value column is read (another column is never taken: it may be a reviewer's "ok", a translator's notes); a column en.csv hasn't is said when it holds text |
+| spaces around fields, empty columns after (also a column without a name: said when it holds text), a second header (files put together), `#` comment rows, a column of the translator's own (`todo`, `Notes de traduction`: said when it holds text), the columns in another order named by en.csv's names with the translation before the english (`key,note,value,english`) | read; an empty one: said |
+| the english column before the translation (`key,english,value`, `key;Englisch;Deutsch`) | not read, said (a comma typed into a text there would cut it with nothing to show it: put the columns as en.csv has them) |
+| text in more cells than the header has columns; one of the mod's keys past the header's named columns, or text there and the English out of its place (two lines joined, also under Excel's padding or a column without a name) | that line left out, said |
+| Excel's `;` padding after the header, then a comma typed into a text | English, said (the test of a text cut by a separator counts the header up to its last named column) |
+| a text cut by a comma typed into it whose tail is the English (`Bonjour, Hello,Hello`); a column after english holding the English | English, said (its English twice; the message names both causes) |
 | a key with nothing after it | left out, said |
 | a quote inside a text; a quoted text with `""` and the separator | read as meant (a quote opens a quoted field only at its start) |
-| a quote never closed; a quote that swallows the rows after it | the file read line by line: the broken line English, the rest read; said |
+| a quote never closed; a quote that swallows the rows after it | the file read line by line: the broken line English (with the lines of its text after it, up to the next key's line), the rest read; said |
+| a quoted text over lines, one of them starting "e.g.," | read (a swallowed row starts with a key: the mod's own or key-shaped) |
+| a stray quote swallowing rows with spaces or quotes around their keys, or a key the mod doesn't have | the file read line by line, said |
 | a line break in a one-line text; a literal `\n` | a space (a line break only where the English has one) |
 | a key in other case, with invisible characters (zero-width space, BOM) | read |
-| a key typed wrong or translated | found again by its english column when one key has that English, said; else left out, said |
-| a key twice | the first, said |
-| the value and english columns swapped | swapped back (most of the file), said |
-| the english column translated too (it equals the value) | read as translated (most of the file), said |
+| invisible characters at a text's ends; joiners inside it (U+200C, U+200D: Persian and the Indic scripts) | the ends taken off; inside kept |
+| a key typed wrong or translated | left out, said (finding it again by its English, `RescueByEnglish`, is off since round 6) |
+| a key twice | the first, said; the report's rows added under old ones (out of date, or still the English): the current line, not said |
+| a key typed wrong whose text is a key (`x.1,t.greet,Hello`) | left out, said |
+| the report kept as `fr.missing.csv`, filled in | not read, said ("add its rows to fr.csv") |
+| the value and english columns swapped; the english column deleted and the note moved into its place | those lines show English, said (a "swap back" drew the note as the translation) |
+| the english column translated too (it equals the value) | those lines show English, said |
+| a translator's line out of date, or still the English in a file mostly the English (a half-done copy), beside the bundled file | the bundled translation of that line (a file mostly translated keeps a word it left English on purpose) |
 | a line's English changed since (one line or a whole stale file) | English (the stale-English rule stands) |
 | `{ 0 }`, the full-width `｛０｝` of Japanese input, `{O}` (a letter) | read as `{0}` |
-| a template that lost a `{n}` the English has, a `{1}` the English hasn't, a broken brace | English, said (the two noun sentences may drop their `{0}`: `Word.MayDropValues`) |
-| a spreadsheet error cell (`#NAME?`, `#VALUE!`, LibreOffice `Err:`) | English, said |
+| a template that lost a `{n}` the English has, a `{1}` the English hasn't, a broken brace | English, said (the two noun sentences may drop their `{0}`: `Word.MayDropValues`); a broken one isn't formatted again |
+| a spreadsheet error cell in any language (`#NAME?`, `#VALUE!`, `#ИМЯ?`, `#¿NOMBRE?`, `#N/D`, LibreOffice `Err:`) | English, said (known by its shape) |
+| `{{0}}` (other translation tools) | read as `{0}` |
+| a text that is only `\n` or tags | English |
 | `<nobr>` tags; a very long text | tags out; read |
-| names: `FR.csv`, `fr-FR.csv`, `pt_BR.csv`, `zh-CN.csv` | read (a region's file after the language's own) |
+| names: `FR.csv`, `pt_BR.csv`, `zh-CN.csv` | read |
+| names: `fr-FR.csv`, `pt.csv` in a `pt-br` game, `jp_JP.csv`, `french_FR.csv` (a region, the base language, a name with a region), `fr` without an extension | read after the language's own file in its folder, said |
+| names: `fr - Copy.csv`, `fr_old.csv`, `fr (1).csv` (a copy, an old version, a download's second copy) | not read, said |
+| names: `zh-TW.csv` in a `zh_cn` game | not read (Traditional Chinese is another language) |
 | names: `french.csv`, `français.csv`, `jp.csv`, `fr.csv.txt` (a hidden extension) | read, said ("name it fr.csv") |
 | the old `key = value` `.txt` | not CSV: English, said |
 | `en.csv` translated in place | English (en.csv is never read), said ("save it as fr.csv") |
 | the file beside the DLL instead of in `Languages\`, or straight in `Translations\` without the mod's folder | not read, said with the right place |
 | the `Translations\` folder named after the mod (`GK2SaddleUp`) instead of its GUID | read (an INFO line names the GUID) |
+| `Translations\` straight in `plugins\`, one folder deeper (`plugins\X\X\Translations`, a zip unpacked into its own name), a `Languages\` folder inside the mod's | read |
 
-**Also:** a game in `pt` reads `pt.csv`, then `pt-br.csv` (a close language before English); a translator's own file beats
-the bundled one; `tools/l10n-sync.py --check` fails on a shipped line whose `{n}` don't match.
+**Also:** the folders are read in turn, a translator's before the bundled one (a translator's file of any name before
+the bundled ones); in a folder the language's own file first, then a language name's, then the base language's or a
+region's (a game in `pt` reads `pt.csv`, then `pt-br.csv`); `tools/l10n-sync.py --check` fails on a shipped line whose
+`{n}` don't match.
 
 **The side effects fixed with it:** the files are read ahead (`Texts.TickWarm`, one mod a frame, at a game's start and after
 a language change); the journal closes when the language changes under it (normal play can't: the game's Settings
@@ -852,3 +905,293 @@ language, not every frame. The packs have their French too (11 lines).
 
 **Left as decisions:** key names (D8: English; the game itself translates only the four arrows) and the GK2 Mod
 Framework's entry (the Framework reads translations from its own folder, so our zip would write into another mod's).
+
+## 10. Every game language (2026-11-01)
+
+The user: "how difficult would it now be to add translations for all the languages? First of all, double check our list
+of languages is correct and then lets create the translations. might as well."
+
+**The list, checked against the game:** the Fonts self-test switches through the game's own `LLBase.AvailableLanguages`
+and records each id: en, de, fr, pt-br, es, ru, pl, ja, zh_cn, ko, tr (ja, zh_cn and ko have fonts of their own:
+japanese, chinese, korean; the rest small_font). The game's own strings tables (11 x 9,474 lines) were extracted
+earlier (`lng_<id>.tsv`).
+
+**How they were made:** one agent a language (de, es, pt-br, ru, pl, tr, ja, zh_cn, ko; French was written before),
+each from the English with its notes and the French for meaning, the game's own words looked up in its table for that
+language (the Keeper, the donkey, a body, the Crossroads, the Morgue, a chest, zombie, lantern, options, cancel), and
+written only through a validating writer (every key, every `{n}`, no line breaks, the measured room, a wide East Asian
+character counting 2). Grammar rules given to all: a name in `{0}` never takes a case ending, article or particle
+(colons, the subject's place); no noun after a number; key names English; one term each for the mount, the cart, the
+skin (not the game's word for flesh), the babies and the Mount Journal. Each language: 147 + 144 + 6 + 3 + 2 lines;
+`tests/TranslationScan` reads all 50 files clean and `l10n-sync.py --check` counts every one whole.
+
+| | Keeper | donkey | cart | mount | Mount Journal | skin | babies | address |
+|---|---|---|---|---|---|---|---|---|
+| fr | Gardien | âne | charrette | monture | Journal des montures | apparence | petits | vous |
+| de | Wärter | Esel | Karren | Reittier | Reittier-Journal | Skin | Jungtiere | du |
+| es | guardián | asno | carreta | montura | Diario de monturas | aspecto | crías | tú |
+| pt-br | Coveiro | burro | carroça | montaria | Diário de Montarias | aparência | filhotes | você |
+| ru | Смотритель | ослик | телега | скакун | Журнал скакунов | облик | детёныши | вы |
+| pl | grabarz | osioł | wóz | wierzchowiec | Dziennik wierzchowców | skórka | młode | ty |
+| tr | Bekçi | eşek | araba | binek | Binek Günlüğü | görünüm | yavrular | sen |
+| ja | 墓守 | ロバ | 荷車 | 乗り物 | 乗り物図鑑 | スキン | 子供 | polite / the Keeper plain |
+| zh_cn | 守墓人 | 毛驴 | 板车 | 坐骑 | 坐骑图鉴 | 外观 | 幼崽 | |
+| ko | 묘지기 | 당나귀 | 수레 | 탈것 | 탈것 도감 | 외형 | 새끼 | 합니다 / the Keeper casual |
+
+**For a native speaker to look at** (the agents' own doubts):
+- de: "Tempo" for the speed stat. (The harness colour was "Zaumzeug", the bridle only, until the review rounds: it
+  paints the whole tack, straps, saddle and reins, so "Sattelzeug"; "Geschirr" is the game's own word for tableware.)
+- es: carreta or carro; "Acorazado" for Armored.
+- pt-br: "Blindado" for Armored; "Minhoca" for the worm.
+- ru: the game says Хранитель in its menus and Смотритель in its dialogue (96 to 11): Смотритель chosen; "Опции" as the game has it.
+- pl: "Wykonaj" for the Go button; "Robak" or "Czerw" for the worm.
+- tr: "araba" for the cart is also today's "car".
+- ja: 8 characters the game's own Japanese never uses were worded around (普 隣 淡 鍮 暖 昼 四 俊: the font may lack them).
+- zh_cn: 这家伙 ("this fellow") where the noun is dropped; the snail description's wordplay lost.
+- ko: 털 색상 (fur colour) for the coat.
+- Several: "Your mount is nowhere to be found." became the Keeper's first person ("my mount") in the bubble.
+
+**The fonts, still to measure:** zh_cn uses 22 characters and ko 13 that the game's own text in those languages never
+uses (among them 龙, the dragon; 蜗, the snail; 崽, the babies; Korean 싣 in the load prompts). If those fonts are cut to
+the game's characters, they would draw boxes. The Fonts self-test now checks every character of our translations in
+each language's font (fallbacks searched, a dynamic font may add them): its next run says which, if any, are missing;
+only then is anything reworded.
+
+## 11. Review rounds (2026-11-01)
+
+The user: "give the translations and the entire system another look", then "do more rounds until we find no issues for
+some runs" and "make sure we have enough tests to cover them especially for ui layout issues".
+
+**The translations:** every language proofread again and again by a fresh reviewer (one shared brief: the English, each
+line's note, the game's own words for its things; change only clear problems, never taste; the same doubts not raised
+again), until two rounds in a row changed nothing. Lines changed per round:
+
+| | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|
+| fr | 48 | 0 | 1 | 0 | 0 | |
+| de | 10 | 0 | 0 | 0 | 0 | |
+| es | 9 | 2 | 0 | 0 | | |
+| pt-br | 9 | 0 | 0 | | | |
+| ru | 6 | 1 | 0 | 1 | 0 | 0 |
+| pl | 12 | 0 | 0 | | | |
+| tr | 9 | 3 | 0 | 0 | | |
+| ja | 5 | 1 | 0 | 0 | | |
+| zh_cn | 4 | 0 | 0 | | | |
+| ko | 15 | 0 | 0 | | | |
+
+What the later rounds found: the key that loads a chest is the game's Work control and the set-down key its Interact
+control (the English said "the action key", a name the game gives neither: fixed in the English and all ten); each
+language's own word for the town fight; "simple" read as the game's Simple Chest (French); a bubble in which the Keeper
+addressed someone (Russian); the climb and descend keys (Spanish); the warm colour (Japanese). German's harness word
+was changed after its third round, from the code (the colour paints the whole tack), and German was read twice more
+(rounds 4 and 5, nothing found).
+
+**The code:** an independent review of the reader and the lookup, with its own probe against the built DLL, found 18
+issues; two showed a wrong text: the column "repairs" (a translator who deleted the english column and kept the note
+saw the notes drawn as translations) and garbled letters left garbled (two marks only, Cyrillic or Polish garbling, one
+stray byte turning a whole UTF-8 file into a code page). All are fixed (the table in section 9 is the result): lines
+without their English left out; columns by the header's names; the repair line by line through the language's page;
+a file of two encodings read line by line; a translator's out-of-date or half-done line no longer hiding the bundled
+translation; a translator's file of any name before the bundled ones; copies not read; zh-TW never for zh_cn; the
+separator from the first rows' first cell; the swallowed-row test by the mod's keys; UTF-16 by its zero bytes; a broken
+template not formatted again; a renamed game field said once; the translators' folders looked for again on a language
+change; a plugin name no folder can have skipped; joiners kept inside a text; the report counting a line still the
+English apart; the self-test driver disposing what it unwinds; `l10n-sync.py` reading a file as the mod does;
+`tests/TranslationScan` refusing a DLL older than the source. One fix of the review's was itself wrong at first and
+was caught by the shipped files: the leftover-garbling check counted Russian "лё" as a mark (ё is a later byte in
+Windows-1251); a mark is now a whole UTF-8 sequence.
+
+A second round (a fresh reviewer, its own probes) found the first round's fixes sound and 14 more, 8 of them showing a
+wrong text: letters lost as "?" by Excel's plain "CSV" on a Windows set to another language (the most common: a Russian
+or Japanese file all "?"), Excel's "CSV (MS-DOS)" and "CSV (Macintosh)" read through the Windows page, error cells in
+the other languages' spreadsheets, `{{0}}`, Mac Excel's garbling, Japanese and Chinese garbling, a correct short Russian
+text "repaired" into another letter, a stray quote before a row with spaces or quotes around its key; and the report's
+rows added under old ones losing to the old ones, a correct Russian typography left out, a translation typed into a
+column of its own, translators' folders one level off, a word a translator left English on purpose replaced, file names
+like `jp_JP.csv`, a lost line inside a quoted text, a typo key before the right one, one stray byte losing a line. All
+fixed, each first a failing catalogue case (32 failed: 128 cases now); `tests/TranslationScan` also fails on a shipped
+line the mod would leave out, and `l10n-sync.py --check` too. Not handled: a file started from another language's copy,
+or a column sorted alone in Excel (both give right-looking wrong texts no reader can tell from translations).
+
+A third round brought a new instrument: a sweep that saves every shipped file every wrong way a spreadsheet or editor
+saves it and reads it back. It found 7 more ways to a wrong text, and the cause they shared: the reader decided the
+encoding line by line, and every round patched one more line-level case. **The method changed** (the advisor's call,
+2026-11-01): an encoding is the file's. A file that isn't UTF-8 is read as a whole in its language's Windows page; a
+UTF-8 line among its lines is restored by the repair, a line with one stray byte read piecewise; every other line must
+hold only the letters and punctuation its language writes (`Plausible`), else the file is in a third encoding (Excel's
+"CSV (MS-DOS)", "CSV (Macintosh)") and isn't read at all, its plain ASCII lines too. Chinese, Japanese and Korean files
+must be UTF-8 throughout (their Windows pages need tables the mod hasn't). Round 3's other findings (letters lost as "?"
+counted against the English, Mac garbling and a script the language doesn't write, an index column, a reviewer's column
+taken as the translation, a separator inside a text, broken quoting, a `{n}` the English hasn't, a report kept as
+`fr.missing.csv`, a header in the translator's language, the report's row of a line still the English) are fixed too.
+
+**The sweep** (`tests/TranslationScan`, its third part): every shipped translation (50 files) saved as UTF-8 with and
+without a BOM, UTF-16 (both orders, with and without a BOM), Excel's plain "CSV" in its Windows page, "CSV (MS-DOS)"
+and "CSV (Macintosh)" in the language's DOS and Mac pages, with letters lost as "?" on a Windows set to another
+language, and garbled by a re-save through its page, Windows-1252, Mac Roman, GBK, Shift-JIS and the Korean page; each
+with LF, CRLF and CR line ends: 2,250 reads through `Texts.Of`. Every key must show its translation or English, never
+anything else; the correct ways must show every translation. Before the change: 519 reads failing; after: **0**, with
+60 at the documented limit below. A clean review round is defined by it: no wrong text through a realistic save path,
+the sweep at 0, the catalogue green; documented limits don't count.
+
+**Documented limits** (the user's decisions, docs/open-items.md): Chinese or Japanese UTF-8 garbled by a re-save through
+another East Asian page (GBK, Shift-JIS: the garbage is real Chinese characters; Korean is caught); a Chinese, Japanese
+or Korean file saved in its own Windows page (cp936, cp932, cp949: not read, said: tables for them would grow the DLL);
+a file started from another language's copy, or a column sorted alone in Excel (right-looking wrong texts no reader can
+tell from translations); a program that transliterates instead of writing "?" (Polish "Czesc" for "Cześć").
+
+A fourth round found the file-level check only as strong as the file is long: a translator's override of one or two
+lines, saved as "CSV (MS-DOS)" or "CSV (Macintosh)", looked plausible in the Windows page and was read wrong ("Cr¡as"),
+and garbling through the language's own Mac page or ISO-8859-1/-15 slipped through. The answer was the same principle
+one level up, "nothing else may be meant": a non-UTF-8 file is read through every page its language's programs save in
+(LegacyText.Candidates, generated like the rest), the pages with an implausible line dropped, the readings left merged
+line by line (a line read two ways is left out), so an MS-DOS or Mac file is now read in its own page when only that
+page reads it plausibly; a garbled line is repaired through every page it may have passed, and left out when two pages
+repair it otherwise (a correct text never round-trips: such a line is garbled for sure). Plausible grew a rule (a capital
+right after a small letter), the Western lists every Latin-1 letter but the few that made pages look alike, and a value's
+script is checked for every character (a code-page file valid UTF-8 by accident: Mac Turkish "ıç" are a Syriac letter's
+bytes). The sweep grew a second phase: every shipped line alone (27,482 small files) saved every code-page and garbled
+way as a translator's override over the correct bundled file: before the change 1,567 read wrong, after: **0**.
+
+**Round 5, and the decision.** A fifth round found three more ways to a wrong text, all through code pages and all
+with one cause: a page ruled out for the whole file stopped being a possible meaning even for lines it read plausibly
+(a UTF-8 file with one line in the Windows page; a Windows file with a "½" whose twin page ISO-8859-15 reads it as "œ";
+an MS-DOS file with one line retyped in Windows Excel). Five rounds on the same axis: every reader that admits more than
+one encoding has a corner where two readings are plausible and the file is small or mixed, and the rounds were listing
+those corners. **The code-page reader is switched off** (`TranslationFiles.ReadCodePages = false`, the advisor's call):
+a file that isn't UTF-8 or UTF-16 isn't read, and the translator is told to save it as "CSV UTF-8" (one re-save; our own
+template opens as UTF-8 in Excel, it has a BOM). It can't show a wrong text, because it isn't read. The reader stays
+compiled with its tables, so switching it back is one line; the costs, measured by the reviewers, for that decision:
+- on as it is (file-level page choice, line merge): wrong texts remain in the mixed and rare-sign corners above
+  (e.g. 8 of 122 French lines re-saved alone in the Windows page inside a UTF-8 file; "½" in a Windows-1252 file);
+- on with every page counted per line (the only variant with a safety argument): 15 to 47% of a correct Windows-page
+  file's lines left out (Russian 140 of 300, German 27 of 85, Spanish 38 of 96), told.
+Round 5's other findings (a lone CR as a row end, english cells matching none of the English, the separator repair
+joining a stale line to a reference column, symbols and emoji, the culture-free line-end test) are fixed for UTF-8 files.
+The sweep grew a third phase, a UTF-8 file with one line saved in a code page (3,564 reads); with the reader off, every
+code-page way is refused: never a wrong text by construction.
+
+**Round 6, and the rule as it reads.** With code pages off, a sixth round found the same shape in what was left: every
+remaining way to a wrong text was a repair the mod made to the translator's file. The garbled-letter repair gave a wrong
+letter when a literal `\n` stood before a capital, and garbled Polish all-capitals; the rescue of a mistyped key by its
+English took a line of a multi-line text for a row (a correct file with a web address in a text showed `deux"`); the
+separator join joined a stale line to a column of the new English. Each repair is off behind a switch, kept compiled:
+`TranslationFiles.RepairGarbled`, `Texts.RescueByEnglish`, `Texts.JoinSeparator`, and `TranslationFiles.ReadCodePages`
+from round 5. The rule says what a reader can promise: **the mod never shows a text that isn't in the file, nor one for an
+English it wasn't made for.** Garbled text the translator saved is that file's content: where the mod sees it, the line
+is left out and said; where it doesn't, it shows as written, and the translator sees it in the game. Round 6's parse bugs
+are fixed (a header naming no translation column, an index or empty first column without a header, an empty column
+after the key, an index with a stray quote, control characters, a swallowed-row test that took a web address for a key),
+and three self-tests no longer read real translators' folders. The sweep's garbled ways accept the file's own text as
+written; anything the mod made fails. A fourth phase reads **the game's own strings tables** as translation files (9,473
+lines a language, with literal `\n`, capitals, quotes, multi-line texts; given by `GK2_L10N_CORPUS`, never a path in the
+repository), correct and garbled through eight pages: 0 wrong in 85 reads. It also showed the "?" rules leaving correct
+lines out (Korean 235, Russian 114, French 112: translators add questions): they now apply only to a file without its
+language's own letters, and the game's correct tables read whole (but its real `#ERROR!` cells).
+
+**Round 7** checked the rule as it reads now and found parse corners where the mod still produced a text the file
+hasn't: a row Excel in a `;` country put whole in one cell was split again without the quote checks (quotes lost, a
+two-line text cut at its line), and a full-width `｛` that is no placeholder became an ASCII `{`; also a header naming no
+value column took a reviewer's column, a quote opening a row's first cell swallowed rows silently, an empty key column
+was skipped silently, `{{ }}` lost a brace, and a table read before a late mount or skin registered never took its
+lines. All fixed, each a catalogue case first (8 failed before). The instrument grew where round 7 showed it blind: the
+sweep re-saves every shipped file as Excel in a `;` country does (every row in one quoted cell), and the corpus checks
+the correct tables against a text made without the mod's own cleaning (no character changed) and fails a line left out
+unsaid.
+
+**Round 8** fuzzed every shipped file line by line with the mistakes a text editor makes (a comma, a quote, a line
+break typed into a text; quotes or separators deleted; two lines joined) and in other column orders, and found the one
+layout that can't check itself: with the english column before the translation, a comma typed into the text cuts it and
+nothing after it moves, so the cut text showed silently (in the template's order its tail lands in the english column,
+which then doesn't match). That layout is refused (said: put the columns as en.csv has them), a row with text in more
+cells than its header is left out (said), a row whose other cells are only Excel's `;` padding is split again, a
+template's translation with a doubled brace shows English, and a translation column beside the value one is always said.
+The fuzzer is now a test: every unquoted shipped line with one edit typed into its text (12,800 reads), and the sweep
+saves as Excel in a `;` country really does (cells split at `;`, short rows padded).
+
+**Round 9** fuzzed the header: its columns renamed (en.csv's names in other cases and spaces; names in the
+translator's language, a hint added, notes named with a translation word), reordered and added to. The header's names
+were matched in many languages and by guesses (a translation word, the language's name, the first column that wasn't a
+note's), and a notes column named "Notes (translator)" or "Notes de traduction" was read as the translation (1,040 of
+5,952 French header variants showed a wrong text); a header in other words, reordered, was read by position and showed a
+note. The same answer as rounds 6 to 8: the guess removed. A header's columns are matched by en.csv's own names only
+(`key`, `value`, `english`, `note`, any case, spaces around); a header that doesn't name `value` and `english` once each,
+or a row that is a header in other words (its first cell without a key's dot, two more cells text, none an English of
+the mod's), isn't read (said: copy en.csv's header row); a column en.csv hasn't is never read and said when it holds
+text. Also: Excel's `;` padding after a header no longer hides a comma typed into a text (that test counts the header up
+to its last named column), rows joined in a file without a header are left out (text past en.csv's four columns), a
+separator typed at a text's start under a header or into the english text is said, an index column without a header is
+dropped row by row (a comma typed at one line's start no longer shifts the lines after it), and a dotless key on the
+first two lines is said like any unknown key. The fuzzer is now a test, phase 6: every shipped translation with its
+header renamed one column at a time and all in other words, in all 24 column orders, and with a column of the
+translator's own put in at each place (55,600 reads: with en.csv's names, the key first and the value before the
+english, every translation must show; else every key its translation or English; a control that alters every value must
+be caught, and is on all 50 files).
+
+**Round 10** found the header-in-other-words test itself a guess: a translation tool's header (`ID,Status,English,
+Français`: key, context, source, target) wasn't told as one when a column's name was one of the mod's English texts
+(`Status`), when its first cell held a dot (`Key (e.g. options.done)`) or was empty (`,note,english,value`), and the rows
+after it were read by their columns' places: the context column showed as the translation (48 of 147 API lines, 144 of
+144 Saddle Up lines in its probes). The same answer again: reading by the columns' places removed. A file is read from
+en.csv's header row on, and a file without one isn't read (said: its first line is en.csv's header row). Under a header,
+a section pasted under a header in other words is told by the row's own place: its first cell no key (one the mod has, or
+a dotted word without spaces), the cell under the header's english column none of the mod's English, and as wide as the
+columns the header names. A comment line without `#` with fewer commas costs its own line: measured, round 9's test
+stopped the rest of a section on it (up to 145 keys, told). Also: two rows joined under a header with a column without a
+name, or under Excel's padding, are left out (one of the mod's keys past the named columns, or text there and the
+English out of its place); a text cut by a comma whose tail is the English is left out; and l10n-sync.py mirrors the
+header rule, the index column and the width test (the quotes' and the texts' own checks are TranslationScan's, which
+release-scans.sh runs). The instrument counted only wrong texts, never the correct lines an edit costs: edited lines now
+edits every row, also quoted ones (typed into its text or english, its key's dot or a quote deleted, a comment line put
+in after it), and fails on any other key fallen to English (26,615 reads; a comment line as wide as the header stops the
+reading 2,970 times, counted as the limit it is). No shipped text has a line break, so the line-by-line read's cost to
+multi-line texts isn't exercised by the shipped files (the catalogue has it). The catalogue's files got en.csv's header
+(107 had none: a shorthand that now isn't read); the cases about a missing header flip to not read.
+
+**Round 11**, the last (the user ended the rounds there), found round 10's width test leaking the same way: a section
+pasted under a header in other words with a cell left empty (`ID,,English,Français`), narrower than its rows
+(`ID,Status,English`), or under a header with a name twice, was read by the columns above it and its status column showed
+as the translation (74 of 147 API lines, 71 of 144 Saddle Up lines, no warning). The class closed rather than the width
+patched again: under a header every line is one of the mod's, a `#` comment or blank, and any other line stops the
+reading up to en.csv's header row (said: a comment starts with `#`). What would make that rule cost neighbours is handled
+by the line's own structure, not by a guess: a key damaged by one keystroke (its dot deleted, a comma or a space typed
+into it) is found among the mod's keys and costs its own line; a line break typed into a text or its english cuts the
+row, and the line after it, holding the rest and the row's own English, is left out with it; in the line-by-line read the
+lines after a quote never closed go with its text up to the next key's line. Also: an index column is dropped row by row
+(a stray separator before the header no longer costs every key), a column without a name holding text is said, a header
+with something before `key` is said so, and the English-twice message names a column holding the English. Edited lines
+also types a comma and a space into keys (32,655 reads, 0 other keys lost; every comment line a stop, 5,940, said). The
+catalogue's round-10 header insertion had also hit literals that aren't a file (the text `LegacyText.Decode` garbles, the
+later pieces of `Join`): taken out. Known and kept (section 9): a comment line without `#` stops the reading; a section
+in the other separator stops at a text holding the file's separator; rows of another order pasted without their own
+header read as the header above them.
+
+**The tests:** the mistake catalogue went from 63 to 94, then 128, then 150, then 155, then 161, then 168, then 178, then 185, then 197, then 217, then 229, then 231 cases, each new one written first and seen
+failing (29, 32, then 22 failed before the fixes); three expectations flipped on purpose in round 3 (a file in a third
+encoding isn't read at all; a CJK file not UTF-8 throughout isn't read; a real question mark is one its English has). The Layout scenario (F11, Translations) switches the game through every language with our real
+translations and measures in each language's own font: every section of the options window; every text its description
+box can hold (each row's description, greyed with its reason where a row can be greyed, a key's how-to by mouse and by
+gamepad, the "press the key" line, the hints); the Defaults question with each section's name; the Mount Journal on
+every mount and every mount's colours window. A one-line text without room at its smallest size fails; a wrapped text
+cut warns; `GK2-text-room.tsv` gets every line with its language. The game's own widgets our words go into are measured
+by a scenario of their own, in every language: the Keeper's longest sentence said for real (the thought bubble is a
+`UIDialogBubble`; the game's `Bubble.Talk` refreshes its content fitter after showing a message, read from its code)
+and the longest prompt shown over the nearest mount (a `UIObjectBubble`; its row's label has a `LayoutElement`). Not
+measured: the crossroads notification (the game's notification panel) and the "{0} options" button, which sits in the
+game's Settings window.
+
+**The fonts:** the prepared rewordings for characters a font may lack (`zh_cn`: 22, `ko`: 13; applied only to what the
+next Fonts check finds missing) had two defects, now fixed: a quote pair half ASCII and half curly (Chinese), and the
+Korean chest description still saying "action key". Where a mount's name has the missing character (the snail, the
+dragon), its rewording is another name (巨螺, 巨翼兽, 우렁이): a known trade-off, used only if the character is missing.
+The first in-game Fonts check (the user's run, 2026-11-01) found 6 of them missing in the Chinese font (毂 踱 ； 跶 驮
+蜗) and 4 in the Korean (끕 싣 뜁 옅): those words were replaced in the 18 lines holding them, only the missing
+characters' words (轮毂 → 轮心, 蜗牛 → 巨螺, 싣기 → 올리기, ...), the rest of each line as it was; the other prepared
+rewordings stay unused. The same run: every one-line text fits in all 10 languages (the layout scenario); three section
+headings only by shrinking (fr, pt-br and es "Mount Behaviour", 0.91x to 0.99x of their room); the game's prompt over a
+mount with a 22-letter name "cut" in ja, zh_cn and ko (0.86x), the measurement's: measured in the next runs, the label has
+its language's font, is as wide as its text wants and takes one line; a CJK font's line is ~14 high, the label 12, and
+it draws over its edges (as the game's own Japanese prompts do), so the measurement judges a label that doesn't clip by
+its lines since (TextRoom.Fits; a label that clips keeps the height); the Keeper's bubble wasn't found by the test (the
+game types a bubble in with a transparent colour tag inside its text: the test compares without tags since).
+

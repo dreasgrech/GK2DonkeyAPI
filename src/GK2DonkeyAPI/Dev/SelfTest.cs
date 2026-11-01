@@ -195,6 +195,8 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupTranslations, Name = "translations: the test language over the options window, the Mount Journal and the colours window (every word looked up; the room at 1.6 times)", Body = TranslationTests.Windows },
             new Scenario { Group = GroupTranslations, Name = "translations: a German translation in the windows (the page's de.txt with a row whose English changed, the API's de.csv saved with ; and quotes, read back from the options window, the journal and the colours window)", Body = TranslationTests.German },
             new Scenario { Group = GroupTranslations, Name = "translations: every game language, the font our windows draw with (switched for a moment as the Settings window does, the player's own back; GK2-l10n-fonts.tsv)", Body = TranslationTests.Fonts },
+            new Scenario { Group = GroupTranslations, Name = "translations: the layout in every language (our real translations in the game's own font for each: the options window's sections and descriptions, the journal on every mount, the colours window; a one-line text that doesn't fit fails, a wrapped text cut warns)", Body = TranslationTests.Layout },
+            new Scenario { Group = GroupTranslations, Name = "translations: the game's bubble and prompt in every language (the Keeper's longest sentence said for real, the longest prompt over the nearest mount, measured in each language's font; a one-line text that doesn't fit fails, a wrapped text cut warns)", Body = TranslationTests.GameBubbles },
             new Scenario { Group = GroupTranslations, Name = "translations: the translator mistake catalogue (every way a person's spreadsheet or editor gets a file wrong: what shows, never a wrong text, and whether the translator is told)", Body = TranslationTests.Mistakes },
             new Scenario { Group = GroupTranslations, Name = "translations: the keeper's bubbles, the prompts on foot and the crossroads notice (the test language and a German de.txt; the reasons stay English; a bubble said for real)", Body = TranslationTests.Bubbles },
             new Scenario { Group = GroupTranslations, Name = "translations: the mounts' and skins' names in their owners' files (the test language and German: the journal's list and header, the Skin list; every owner's English)", Body = TranslationTests.PackNames },
@@ -503,10 +505,19 @@ namespace GK2DonkeyAPI
                     more = false;
                     Fail("threw " + e.GetType().Name + ": " + e.Message);
                     Plugin.Log.LogWarning("[test] " + e);
-                    // The scenario that threw ends; the runner (the bottom of the stack) goes on with its cleanup.
+                    // The scenario that threw ends; the runner (the bottom of the stack) goes on with its cleanup. Each
+                    // coroutine unwound is disposed: its own finally (the language, the windows put back) runs then.
                     while (stack.Count > 1)
                     {
-                        stack.Pop();
+                        IEnumerator unwound = stack.Pop();
+                        try
+                        {
+                            (unwound as IDisposable)?.Dispose();
+                        }
+                        catch (Exception d)
+                        {
+                            Fail("its cleanup threw " + d.GetType().Name + ": " + d.Message);
+                        }
                     }
                     continue;
                 }

@@ -19,22 +19,51 @@ namespace GK2DonkeyAPI
     // community language pack's) (CSV only since 2026-11-01, the user: "less to maintain"; .txt was read too before):
     // - bundled: in its DLL's folder, Languages\;
     // - a translator's own download: in any plugin folder, Translations\<owner guid>\ (it wins over the bundled one).
-    // Its columns are key,value,english (a note after them, the English template's context, is not read), the separator
-    // that of its header line (, ; or a tab: European Excel saves with ;), quoted as the game's own strings.csv (a field
-    // in quotes may hold the separator, line breaks and "" for a quote). The language's id is tried, then the part before
-    // its first - or _ (pt-br: pt), then the English in the code.
+    // Its columns are key,value,english,note as en.csv's header row names them, which the file must have (the english
+    // after the value; the note, the English template's context, or a column of the translator's own is not read), the
+    // separator that of its first rows (, ; or a
+    // tab: European Excel saves with ;), quoted as the game's own strings.csv (a field in quotes may hold the separator,
+    // line breaks and "" for a quote). The language's id is tried, then the part before its first - or _ (pt-br: pt), then
+    // the English in the code.
     // A line whose recorded English isn't the code's any more shows the English until it is translated again; a line
-    // left out or empty shows the English. The cfg never changes language: BepInEx writes the descriptions Bind got, in
-    // Awake, before any language.
+    // left out, empty or without its English shows the English (TranslationFiles reads what people do to a file; the rule
+    // over every repair: a mistake may show English, never a wrong text). The cfg never changes language: BepInEx writes
+    // the descriptions Bind got, in Awake, before any language.
     internal static class Texts
     {
         internal const string Api = Plugin.Guid;
+
+        // The two repairs Take could make to a translator's file, the user's switches (off since code review round 6:
+        // each made a wrong text in a corner: a line of a multi-line text taken as a row found again by its English; a
+        // stale line joined to a column of the new English):
+        // - RescueByEnglish: a key the mod doesn't have read as the key whose English its english column holds;
+        // - JoinSeparator: a text split by its own unquoted separator joined back when its English follows exactly.
+        // Off, the first is left out and the second shows English; both are said.
+        internal static bool RescueByEnglish;
+        internal static bool JoinSeparator;
         private const float TestGrowth = 1.6f; // the test language: 1.6 times as long (between German's and French's 90th percentile for short labels)
 
         internal sealed class Line
         {
             internal string Value, English, Source;
             internal int Template;   // 0 not checked yet, 1 its {n} the English's, 2 not (Fill: the English shown)
+            internal bool Weak;      // out of date or still the English: a later file's line of the key takes its place (Take)
+            internal bool Same;      // still the English (a word left English, or not translated yet)
+            internal string File;    // the file it came from (Take: a row of the same file again)
+            internal string OneLine; // the value without its line breaks, for a one-line English (Lookup)
+            private string checkedFor;
+            private bool checkedSame;
+
+            // Whether it translates this English (SameEnglish, remembered for the English last asked: no work a frame).
+            internal bool IsFor(string english)
+            {
+                if (!ReferenceEquals(english, checkedFor))
+                {
+                    checkedSame = English == null || SameEnglish(English, english);
+                    checkedFor = english;
+                }
+                return checkedSame;
+            }
         }
 
         // An owner's translation in one language: its lines by key (any case: a translator's "Options.Done" is
@@ -45,6 +74,7 @@ namespace GK2DonkeyAPI
             internal readonly List<string> Files = new List<string>();
             internal readonly List<string> Notes = new List<string>();
             internal int Malformed, Unknown, Rescued;
+            internal int Stamp;      // the owner's English when read (EnglishStamp): read again when it moved
         }
 
         // ---- the self-tests' handles ----
@@ -52,6 +82,7 @@ namespace GK2DonkeyAPI
         internal static bool? TestForced;          // the test language on or off whatever Debug.TestLanguage says
         internal static readonly Dictionary<string, string> TestBundled = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // owner: its Languages folder
         internal static List<string> TestTranslators;  // plugin folders to look in for Translations\, in place of BepInEx\plugins\*
+        internal static string TestPluginsPath;        // a made-up BepInEx\plugins the real search looks through (TestTranslators null)
         internal static readonly Dictionary<string, List<string>> TestNames = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase); // a made-up owner's other folder names
         internal static readonly Dictionary<string, List<(string Key, string English, string What)>> TestEnglish = new Dictionary<string, List<(string, string, string)>>(StringComparer.OrdinalIgnoreCase); // a made-up owner's English
 
@@ -61,10 +92,21 @@ namespace GK2DonkeyAPI
             get
             {
                 if (LanguageOverride != null) return LanguageOverride;
-                try { return GameLanguage() ?? "en"; }
-                catch { return "en"; }
+                if (gameLanguageGone) return "en";
+                try
+                {
+                    return GameLanguage() ?? "en";
+                }
+                catch (Exception e)
+                {
+                    gameLanguageGone = true; // a game update renamed it: English from now on, not a throw a frame
+                    Plugin.Log?.LogWarning("Translations: the game's language can't be read (" + e.GetType().Name + ": " + e.Message + "); our windows stay English (game-code.txt lists LLBase.CurrentLang).");
+                    return "en";
+                }
             }
         }
+
+        private static bool gameLanguageGone;
 
         // The game's own, in a method of its own: a game update that renamed it fails when this one is compiled, inside
         // the try above (in the getter itself it would fail before the try; game-code.txt warns, our windows stay English).
@@ -87,11 +129,10 @@ namespace GK2DonkeyAPI
             if (string.IsNullOrEmpty(owner) || string.IsNullOrEmpty(key)) return english;
             Table t = TableOf(owner);
             if (t == null || !t.Lines.TryGetValue(key, out Line l)) return english;
-            if (l.English != null && !SameEnglish(l.English, english)) return english; // the English changed since it was translated
+            if (!l.IsFor(english)) return english; // the English changed since it was translated
             line = l;
-            string v = l.Value;
-            if (v.IndexOf('\n') >= 0 && english.IndexOf('\n') < 0) v = v.Replace('\n', ' '); // a line break typed into a one-line text
-            return v;
+            if (l.Value.IndexOf('\n') < 0 || english.IndexOf('\n') >= 0) return l.Value;
+            return l.OneLine ?? (l.OneLine = l.Value.Replace('\n', ' ')); // a line break typed into a one-line text
         }
 
         // The english column as the mod's English (a translator's copy may differ in spaces, \n or a {0}'s spelling only).
@@ -108,22 +149,26 @@ namespace GK2DonkeyAPI
             string t = Lookup(owner, key, english, out Line line);
             if (line != null)
             {
-                if (line.Template == 0) line.Template = KeepsValues(t, english, mayDropValues) ? 1 : 2;
+                // its {n} the English's, and no doubled brace (string.Format would show one brace less than the file has)
+                if (line.Template == 0) line.Template = KeepsValues(t, english, mayDropValues) && t.IndexOf("{{", StringComparison.Ordinal) < 0 && t.IndexOf("}}", StringComparison.Ordinal) < 0 ? 1 : 2;
                 if (line.Template == 2)
                 {
                     if (TestQuiet) TestWarnings++;
                     else if (badTemplates.Add(owner + "\n" + key))
-                        Plugin.Log.LogWarning($"Translations: {owner}'s line {key} in {Language} ({line.Source}) hasn't the {TranslationFiles.PlaceholdersOf(english)} of its English ({t}): the mod fills them in; the English is shown until it has them.");
+                        Plugin.Log.LogWarning($"Translations: {owner}'s line {key} in {Language} ({line.Source}) hasn't the {TranslationFiles.PlaceholdersOf(english)} of its English, or has a brace doubled ({t}): the mod fills them in; the English is shown until it has them.");
                     t = english;
                 }
             }
+            if (badEnglish.Count > 0 && ReferenceEquals(t, english) && badEnglish.Contains(english)) return english; // said once
             try
             {
                 return string.Format(CultureInfo.InvariantCulture, t, args);
             }
-            catch (FormatException)
+            catch (Exception)
             {
                 bool englishItself = t == english; // the code's own template is wrong: a bug of the mod's, not the translator's
+                if (englishItself) badEnglish.Add(english);
+                else if (line != null) line.Template = 2; // its braces broken ("{0} }"): English from now on, not a throw a frame
                 if (TestQuiet) TestWarnings++;
                 else if (badTemplates.Add(owner + "\n" + key))
                 {
@@ -131,12 +176,18 @@ namespace GK2DonkeyAPI
                         ? $"Translations: {owner}'s English {key} doesn't take its values ({english}): a bug in the mod."
                         : $"Translations: {owner}'s line {key} in {Language} doesn't take its values ({t}); the English is shown.");
                 }
+                if (englishItself) return english;
                 try { return string.Format(CultureInfo.InvariantCulture, english, args); }
-                catch (FormatException) { return english; }
+                catch (Exception)
+                {
+                    badEnglish.Add(english);
+                    return english;
+                }
             }
         }
 
         private static readonly HashSet<string> badTemplates = new HashSet<string>(StringComparer.Ordinal);
+        private static readonly HashSet<string> badEnglish = new HashSet<string>(StringComparer.Ordinal); // the code's own templates that don't format
 
         // Whether a translation has every {n} of its English (all of them may go when mayDropValues) and no other.
         private static bool KeepsValues(string translation, string english, bool mayDropValues)
@@ -281,7 +332,15 @@ namespace GK2DonkeyAPI
             translatorRoots = null;
             said.Clear();
             badTemplates.Clear();
+            badEnglish.Clear();
+            warmedFor = null;
+            warmQueue = null;
+            Generation++;
         }
+
+        // How many times the tables were forgotten: a text made from them and kept (a prompt's, InstanceControls) is made
+        // again when it moved.
+        internal static int Generation;
 
         internal static Table TableOf(string owner)
         {
@@ -290,8 +349,9 @@ namespace GK2DonkeyAPI
             {
                 tables.Clear();
                 tablesLanguage = lang;
+                translatorRoots = null; // a Translations folder put in while the game runs is found at the next language
             }
-            if (tables.TryGetValue(owner, out Table t)) return t;
+            if (tables.TryGetValue(owner, out Table t) && (t == null || t.Stamp == EnglishStamp(owner))) return t;
             try
             {
                 t = Load(owner, lang);
@@ -302,14 +362,39 @@ namespace GK2DonkeyAPI
                 if (TestQuiet) { TestWarnings++; TranslationFiles.TestHeard?.Add($"{owner} {lang}: {e.GetType().Name}: {e.Message}"); }
                 else Plugin.Log.LogWarning($"Translations: {owner}'s {lang} couldn't be read ({e.GetType().Name}: {e.Message}); its English is shown.");
             }
+            if (t != null) t.Stamp = EnglishStamp(owner);
             tables[owner] = t;
-            Said(owner, lang, t);
+            try
+            {
+                Said(owner, lang, t);
+            }
+            catch (Exception e)
+            {
+                Plugin.Log?.LogWarning($"Translations: {owner}'s {lang} log line or report failed ({e.GetType().Name}: {e.Message}).");
+            }
             return t;
         }
 
-        // The owner's translation in lang: its files in each folder (the translators' first, then the bundled one), the
-        // language's own files first, then a language name's, then the base language's (TranslationFiles.FilesFor), each
-        // read as forgivingly as TranslationFiles can and checked against the owner's English (Take). Null: none.
+        // What an owner's English is made of, as one number: the mods' mounts (Catalog.Version), skins and pages; a table read
+        // before a mount, skin or page registered (late, a pack loaded after the read ahead) is read again. 0 for a self-test's
+        // owner (its English is given; Catalog's start needs the game).
+        private static int EnglishStamp(string owner)
+        {
+            if (TestEnglish.ContainsKey(owner)) return 0;
+            try
+            {
+                return Catalog.Version * 31 + Looks.Count * 7 + MountSettingsPage.All.Count;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        // The owner's translation in lang: the folders in turn (the translators' first, then the bundled one: a translator's
+        // file of any name before the bundled ones), in a folder the language's own files first, then a language name's,
+        // then the base language's or a region's (TranslationFiles.FilesFor), each read as forgivingly as TranslationFiles
+        // can and checked against the owner's English (Take). Null: none.
         private static Table Load(string owner, string lang)
         {
             if (string.IsNullOrEmpty(lang) || IsEnglishId(lang)) return null;
@@ -324,17 +409,16 @@ namespace GK2DonkeyAPI
                 string e = TranslationFiles.Clean(x.English);
                 byEnglish[e] = byEnglish.ContainsKey(e) ? null : x.Key;
             }
-            var found = new List<List<(string Path, int Tier)>>();
-            foreach (string dir in folders) found.Add(TranslationFiles.FilesFor(dir, lang));
             var t = new Table();
-            for (int tier = 0; tier <= 2; tier++)
+            foreach (string dir in folders)
             {
-                foreach (var files in found)
+                List<(string Path, int Tier)> files = TranslationFiles.FilesFor(dir, lang);
+                for (int tier = 0; tier <= 2; tier++)
                 {
                     foreach (var (path, fileTier) in files)
                     {
                         if (fileTier != tier) continue;
-                        TranslationFiles.File f = TranslationFiles.Read(path, lang);
+                        TranslationFiles.File f = TranslationFiles.Read(path, lang, english);
                         if (!f.Usable) continue;
                         t.Files.Add(path);
                         t.Malformed += f.Malformed;
@@ -348,15 +432,22 @@ namespace GK2DonkeyAPI
             return null;
         }
 
-        // One file's rows into the table (a key a better file had is kept), checked against the owner's English:
-        // - the value and english columns the other way round: swapped back (most rows of the file must say so);
-        // - the english column translated too (it equals the value on most rows): the file's English isn't checked;
-        // - a key the owner doesn't have: found again by its english column when one key has that English, else left out.
+        // One file's rows into the table, checked against the owner's English (the rule: a mistake may show English, never a
+        // wrong text):
+        // - a line without its English (the english column deleted, or empty on that line) is left out: nothing could tell
+        //   when the mod's English changes under it (a choice's key is its place in the list);
+        // - a key the owner doesn't have: found again by its english column when one key has that English (a guess: any
+        //   line of the right key takes its place), else left out;
+        // - a key an earlier file (a translator's) or an earlier row had stays, unless that line is weak and this one isn't:
+        //   out of date, a guess, or still the English in a file mostly the English (a half-done copy; a file mostly
+        //   translated keeps a word it left English on purpose); the report's rows added under old ones so win;
+        // - the value and english columns the other way round, or the english column translated too: said, not repaired
+        //   (those lines show English; a "repair" showed a note column as the translation).
         // A file the English doesn't know yet (an owner whose page isn't built) is taken as it is.
         private static void Take(TranslationFiles.File f, Dictionary<string, string> english, Dictionary<string, string> byEnglish, Table t)
         {
             bool know = english.Count > 0;
-            int withEnglish = 0, swapped = 0, doubled = 0;
+            int withEnglish = 0, englishInValue = 0, doubled = 0, same = 0, matching = 0;
             if (know)
             {
                 foreach (TranslationFiles.Row r in f.Rows)
@@ -364,23 +455,34 @@ namespace GK2DonkeyAPI
                     if (r.English == null || !english.TryGetValue(r.Key, out string e)) continue;
                     withEnglish++;
                     string ce = TranslationFiles.Clean(e);
-                    if (r.Value == ce && r.English != ce) swapped++;
+                    if (SameEnglish(r.English, e)) matching++;
+                    if (r.Value == ce && r.English != ce) englishInValue++;
                     else if (r.English == r.Value && r.Value != ce) doubled++;
+                    if (r.Value == ce) same++;
                 }
             }
-            bool swap = swapped >= 3 && swapped * 2 > withEnglish;
-            bool trust = !swap && doubled >= 3 && doubled * 2 > withEnglish;
-            if (swap) TranslationFiles.Warn(f.Path, 0, "has its value and english columns the other way round (the translations are in the english column): read swapped; keep the columns as key, value, english");
-            if (trust) TranslationFiles.Warn(f.Path, 0, "has the translations in its english column too, which tells the mod which English each line translates: read as translated; copy the english column back from en.csv");
+            bool copyOfEnglish = same >= 2 && same * 2 >= withEnglish; // one line still the English is a word left so on purpose
+            if (f.OtherColumn != null)
+                TranslationFiles.Warn(f.Path, 0, $"has a column en.csv hasn't, \"{f.OtherColumn}\", which isn't read: the translation goes in the value column, a note in the note column");
+            if (englishInValue >= 3 && englishInValue * 2 > withEnglish)
+                TranslationFiles.Warn(f.Path, 0, "has the English in its value column and something else in its english column on most lines (the columns swapped, or the english column deleted?): those lines show English; the columns are key, value (the translation), english (copied from en.csv)");
+            else if (doubled >= 3 && doubled * 2 > withEnglish)
+                TranslationFiles.Warn(f.Path, 0, "has the translations in its english column too, which must say which English each line translates: those lines show English; copy the english column back from en.csv");
+            else if (withEnglish >= 3 && matching == 0)
+                TranslationFiles.Warn(f.Path, 0, $"has none of its {withEnglish} lines' english column matching the mod's English (the column holds something else, a note?, or the file is from an older version): those lines show English; copy the english column from en.csv");
             var unknown = new List<string>();
+            var firstAt = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase); // this file's rows by key
+            int noEnglish = 0, rows = 0, firstNoEnglish = 0, lostQ = 0, firstLostQ = 0, extraN = 0, firstExtraN = 0;
             foreach (TranslationFiles.Row r in f.Rows)
             {
-                string key = r.Key, value = swap ? r.English : r.Value, eng = swap ? r.Value : trust ? null : r.English;
+                string key = r.Key, value = r.Value, eng = r.English;
                 if (string.IsNullOrEmpty(value)) continue;
+                bool rescued = false;
                 if (know && !english.ContainsKey(key))
                 {
-                    if (key.IndexOf('.') < 0 && r.Line <= 2) continue; // a header in other words ("clé;valeur;anglais")
-                    string again = eng != null && byEnglish.TryGetValue(eng, out string k) ? k : null;
+                    string again = RescueByEnglish && eng != null && byEnglish.TryGetValue(eng, out string k) ? k : null;
+                    // never a key as the text (a column too many before it: an index, the key twice)
+                    if (again != null && (english.ContainsKey(value) || TranslationFiles.KeyShaped(value))) again = null;
                     if (again == null)
                     {
                         unknown.Add(key);
@@ -388,10 +490,77 @@ namespace GK2DonkeyAPI
                     }
                     TranslationFiles.Warn(f.Path, r.Line, $"has the key {key}, which the mod doesn't have: read as {again}, found by its English; keep the key column as en.csv has it");
                     key = again;
+                    rescued = true;
                     t.Rescued++;
                 }
-                if (t.Lines.ContainsKey(key)) continue;
-                t.Lines[key] = new Line { Value = value, English = eng, Source = Path.GetFileName(f.Path) + ":" + r.Line };
+                rows++;
+                if (eng == null)
+                {
+                    if (noEnglish++ == 0) firstNoEnglish = r.Line;
+                    continue;
+                }
+                bool weak = rescued, sameNow = false;
+                if (know && english.TryGetValue(key, out string now))
+                {
+                    string cleanNow = TranslationFiles.Clean(now);
+                    if (!SameEnglish(eng, now) && SeparatorInside(r, cleanNow, r.Sep, f.HeaderWidth, out string joined))
+                    {
+                        // the separator inside the text without quotes, its English right after
+                        if (JoinSeparator)
+                        {
+                            TranslationFiles.Warn(f.Path, r.Line, $"has the separator inside its text without quotes: read as \"{joined}\"; put such a text in quotes");
+                            value = joined;
+                            eng = cleanNow;
+                        }
+                        else TranslationFiles.Warn(f.Path, r.Line, "has the separator inside its text without quotes (its English after the rest of it): the line shows English; put such a text in quotes (a spreadsheet does it when it saves)");
+                    }
+                    else if (!SameEnglish(eng, now) && EnglishCut(r, cleanNow))
+                        TranslationFiles.Warn(f.Path, r.Line, "has a separator inside its english text (typed into it, or its quotes deleted): the line shows English; copy the english from en.csv as it is");
+                    if (!f.NativeLetters && Count(value, '?') > Count(cleanNow, '?'))
+                    {
+                        // letters lost as "?" (plain CSV in a code page without them; a lone "?" for a one-letter word)
+                        if (lostQ++ == 0) firstLostQ = r.Line;
+                        continue;
+                    }
+                    if (!ValuesOf(value, cleanNow))
+                    {
+                        if (extraN++ == 0) firstExtraN = r.Line;
+                        continue;
+                    }
+                    sameNow = value == cleanNow;
+                    weak |= !SameEnglish(eng, now) || (copyOfEnglish && sameNow);
+                }
+                bool again2 = firstAt.TryGetValue(key, out int first);
+                if (!again2) firstAt[key] = r.Line;
+                if (t.Lines.TryGetValue(key, out Line had) && (!had.Weak || weak))
+                {
+                    // a row of the same file again: a current translation takes the place of one still the English (the
+                    // report's rows added under the old ones)
+                    bool replace = again2 && had.File == f.Path && had.Same && !sameNow && !weak;
+                    if (!replace)
+                    {
+                        if (again2 && !rescued) TranslationFiles.Warn(f.Path, r.Line, $"has {key} a second time (first on line {first}): the first is used");
+                        continue;
+                    }
+                }
+                t.Lines[key] = new Line { Value = value, English = eng, Source = Path.GetFileName(f.Path) + ":" + r.Line, Weak = weak, Same = sameNow, File = f.Path };
+            }
+            if (lostQ > 0)
+            {
+                t.Malformed += lostQ;
+                TranslationFiles.Warn(f.Path, firstLostQ, $"has {lostQ} line(s) with more \"?\" than their English (letters lost as \"?\": saved as plain CSV in a code page without them; the first: this one): left out; save the file as \"CSV UTF-8\"");
+            }
+            if (extraN > 0)
+            {
+                t.Malformed += extraN;
+                TranslationFiles.Warn(f.Path, firstExtraN, $"has {extraN} line(s) with a {{0}} or {{1}} their English hasn't (the first: this one): left out; the mod fills in only the English's");
+            }
+            if (noEnglish > 0)
+            {
+                t.Malformed += noEnglish;
+                TranslationFiles.Warn(f.Path, noEnglish == rows ? 0 : firstNoEnglish, noEnglish == rows
+                    ? "has no english column (key, value, english: the english column, copied from en.csv, says which English each line translates, so a line is never shown for an English it wasn't made for): not read"
+                    : $"has {noEnglish} line(s) with nothing in the english column (the first: this one): left out; copy their English from en.csv");
             }
             if (unknown.Count > 0)
             {
@@ -400,6 +569,58 @@ namespace GK2DonkeyAPI
                 for (int i = 0; i < unknown.Count && i < 6; i++) shown.Add(unknown[i]);
                 TranslationFiles.Warn(f.Path, 0, $"has {unknown.Count} key(s) the mod doesn't have ({string.Join(", ", shown)}{(unknown.Count > 6 ? ", ..." : "")}): those lines are left out; keep the key column as en.csv has it");
             }
+        }
+
+        private static int Count(string s, char c)
+        {
+            int n = 0;
+            foreach (char x in s) if (x == c) n++;
+            return n;
+        }
+
+        // Whether a translation has no {n} its English hasn't (it may have fewer: Fill checks a template's own).
+        private static bool ValuesOf(string value, string english)
+        {
+            string have = TranslationFiles.PlaceholdersOf(value), need = TranslationFiles.PlaceholdersOf(english);
+            for (int i = 0; i < have.Length;)
+            {
+                int end = have.IndexOf('}', i);
+                if (end < 0) return false;
+                if (need.IndexOf(have.Substring(i, end - i + 1), StringComparison.Ordinal) < 0) return false;
+                i = end + 1;
+            }
+            return true;
+        }
+
+        // A row whose english cell was cut by a separator (typed into it, or the quotes of an English with one deleted):
+        // the english cell and the next one joined, with or without the separator, are its English.
+        private static bool EnglishCut(TranslationFiles.Row r, string english)
+        {
+            List<string> c = r.Cells;
+            if (c == null || r.EnglishAt < 1 || r.EnglishAt + 1 >= c.Count || r.Sep == '\0') return false;
+            string a = c[r.EnglishAt], b = c[r.EnglishAt + 1];
+            return TranslationFiles.Clean(a + r.Sep + b) == english || TranslationFiles.Clean(a + b) == english;
+        }
+
+        // A row whose text held the separator without quotes ("Bonjour, toi" split in two): its cells after the value,
+        // joined back until the ones that are its English exactly; joined: the text. Under a header, only a row with more
+        // cells than the header has columns (a column of the new English kept for reference is no text's tail).
+        private static bool SeparatorInside(TranslationFiles.Row r, string english, char sep, int headerWidth, out string joined)
+        {
+            joined = null;
+            List<string> c = r.Cells;
+            if (c == null || r.ValueAt < 1 || r.EnglishAt != r.ValueAt + 1 || sep == '\0') return false;
+            if (headerWidth > 0 && c.Count <= headerWidth) return false;
+            for (int from = r.EnglishAt + 1; from < c.Count; from++)
+            {
+                for (int to = from; to < c.Count; to++)
+                {
+                    if (TranslationFiles.Clean(string.Join(sep.ToString(), c.GetRange(from, to - from + 1))) != english) continue;
+                    joined = TranslationFiles.Clean(string.Join(sep.ToString(), c.GetRange(r.ValueAt, from - r.ValueAt)));
+                    return joined.Length > 0;
+                }
+            }
+            return false;
         }
 
         // No file for the language, but an en.csv someone translated where it lies: said (en.csv is the mod's English,
@@ -433,9 +654,22 @@ namespace GK2DonkeyAPI
             {
                 foreach (string name in names)
                 {
-                    string d = Path.Combine(Path.Combine(plugin, "Translations"), name);
-                    if (!Directory.Exists(d) || list.Contains(d)) continue;
+                    if (string.IsNullOrEmpty(name) || name.IndexOfAny(NoFolderChars) >= 0) continue; // "A|B": Path.Combine throws on Mono
+                    string d;
+                    string inner;
+                    try
+                    {
+                        d = Path.Combine(Path.Combine(plugin, "Translations"), name);
+                        if (!Directory.Exists(d) || list.Contains(d)) continue;
+                        inner = Path.Combine(d, "Languages"); // a Languages folder inside it, as the mod's own
+                        if (!Directory.Exists(inner)) inner = null;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
                     list.Add(d);
+                    if (inner != null) list.Add(inner);
                     if (!string.Equals(name, owner, StringComparison.OrdinalIgnoreCase) && !TestQuiet && aliasSaid.Add(d))
                         Plugin.Log.LogInfo($"Translations: {d} is read for {owner} (the folder named after the mod; its GUID, {owner}, is the name to use).");
                 }
@@ -446,6 +680,7 @@ namespace GK2DonkeyAPI
         }
 
         private static readonly HashSet<string> aliasSaid = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static readonly char[] NoFolderChars = Path.GetInvalidFileNameChars();
 
         // The names a translator may give the owner's folder under Translations\: its GUID, its DLL's folder and file
         // names, its plugin name.
@@ -485,6 +720,9 @@ namespace GK2DonkeyAPI
             }
         }
 
+        // The folders holding a Translations\ folder: plugins\ itself (a translator's own folder left out), each plugin's
+        // folder, and one deeper (a zip unpacked into a folder of its own name: plugins\X\X\Translations). Looked for
+        // again when the language changes (TableOf).
         private static List<string> TranslatorRoots()
         {
             if (TestTranslators != null) return TestTranslators;
@@ -492,14 +730,17 @@ namespace GK2DonkeyAPI
             translatorRoots = new List<string>();
             try
             {
-                foreach (string d in Directory.GetDirectories(Paths.PluginPath))
+                string plugins = TestPluginsPath ?? Paths.PluginPath;
+                if (Directory.Exists(Path.Combine(plugins, "Translations"))) translatorRoots.Add(plugins);
+                foreach (string d in Directory.GetDirectories(plugins))
                 {
                     if (Directory.Exists(Path.Combine(d, "Translations"))) translatorRoots.Add(d);
+                    foreach (string e in Directory.GetDirectories(d)) if (Directory.Exists(Path.Combine(e, "Translations"))) translatorRoots.Add(e);
                 }
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("Translations: the plugin folders couldn't be read for translators' files (" + e.Message + ").");
+                Plugin.Log?.LogWarning("Translations: the plugin folders couldn't be read for translators' files (" + e.Message + ").");
             }
             return translatorRoots;
         }
@@ -661,35 +902,46 @@ namespace GK2DonkeyAPI
         {
             if (IsEnglishId(lang) || !said.Add(owner + "\n" + lang)) return;
             List<(string Key, string English, string What)> all = EnglishOf(owner);
-            var todo = new List<(string Key, string English, string What, string Was)>();
-            int done = 0;
+            // a line still the English (en.csv saved as the language, not translated yet) is no translation: counted apart
+            var todo = new List<(string Key, string English, string What, string Was, bool Same)>();
+            int done = 0, changed = 0, same = 0;
             foreach (var x in all)
             {
                 if (t != null && t.Lines.TryGetValue(x.Key, out Line l))
                 {
-                    if (l.English == null || SameEnglish(l.English, x.English)) { done++; continue; }
-                    todo.Add((x.Key, x.English, x.What, l.Value));
+                    if (l.English != null && !SameEnglish(l.English, x.English))
+                    {
+                        todo.Add((x.Key, x.English, x.What, l.Value, false));
+                        changed++;
+                    }
+                    else if (l.Value == TranslationFiles.Clean(x.English))
+                    {
+                        todo.Add((x.Key, x.English, x.What, null, true));
+                        same++;
+                    }
+                    else done++;
                 }
-                else todo.Add((x.Key, x.English, x.What, null));
+                else todo.Add((x.Key, x.English, x.What, null, false));
             }
             if (t != null && !TestQuiet)
             {
-                int changed = 0;
-                foreach (var x in todo) if (x.Was != null) changed++;
                 // an owner without a page or words of its own (a made-up one of the self-tests): only what was read
-                string use = all.Count > 0 ? $"; {done} of its {all.Count} lines translated, {todo.Count - changed} missing, {changed} with English that changed since" : "";
+                string use = all.Count > 0 ? $"; {done} of its {all.Count} lines translated, {todo.Count - changed - same} missing, {same} the same as the English, {changed} with English that changed since" : "";
                 Plugin.Log.LogInfo($"Translations: {owner} in {lang}: {t.Lines.Count} line(s) read from {string.Join(", ", t.Files)}{use}"
                     + (t.Malformed > 0 ? $", {t.Malformed} line(s) left out" : "") + (t.Unknown > 0 ? $", {t.Unknown} unknown key(s) left out" : "")
                     + (t.Rescued > 0 ? $", {t.Rescued} key(s) found again by their English" : "") + (t.Notes.Count > 0 ? $" ({string.Join("; ", t.Notes)})" : "")
                     + (t.Malformed + t.Unknown + t.Rescued > 0 || t.Notes.Count > 0 ? " (the warnings say more)" : "") + ".");
             }
-            if (Plugin.TranslationReport == null || !Plugin.TranslationReport.Value || all.Count == 0 || (todo.Count == 0)) return;
+            if (Plugin.TranslationReport == null || !Plugin.TranslationReport.Value || all.Count == 0 || todo.Count == 0) return;
+            if (TestBundled.ContainsKey(owner) || TestTranslators != null) return; // a self-test's files: the real report stays as it is
             // the rows still to translate, in the English template's columns: the value to replace, the English, the note
             // (and, for a line whose English changed, what it was translated as): ready to fill in and add to <lang>.csv
             var rows = new List<(string Key, string English, string What)>();
             foreach (var x in todo)
             {
-                string note = x.Was != null ? "changed: the English is new; it was translated as: " + x.Was + (x.What != null ? " | " + x.What : "") : x.What;
+                string note = x.Was != null ? "changed: the English is new; it was translated as: " + x.Was + (x.What != null ? " | " + x.What : "")
+                    : x.Same ? "the same as the English: translate it, or keep it when the word is the same in " + lang + (x.What != null ? " | " + x.What : "")
+                    : x.What;
                 rows.Add((x.Key, x.English, note));
             }
             string path = Path.Combine(Path.Combine(Path.Combine(Paths.BepInExRootPath, "GK2-l10n"), owner), lang + ".missing.csv");

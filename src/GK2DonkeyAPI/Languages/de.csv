@@ -1,0 +1,148 @@
+﻿key,value,english,note
+options.done,Fertig,Done,
+options.defaults,Standardwerte,Defaults,
+options.set_back_ask,Alle Optionen im Bereich {0} auf ihre Standardwerte zurücksetzen?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,Zurücksetzen,Set back,
+options.cancel,Abbrechen,Cancel,
+options.hint_pad,"Wähle eine Option an, um zu sehen, was sie bewirkt.",Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,"Zeige auf eine Option, um zu sehen, was sie bewirkt.",Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"Drücke die Taste für {0}: Shift, Ctrl oder Alt allein oder zusammen mit einer anderen Taste. Backspace: keine Taste. Esc: abbrechen.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,Wähle die Option aus und drücke dann die Taste auf der Tastatur.,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,"Klicke darauf, um die Taste festzulegen.",Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Nur während eines Spiels.,Only in a game.,after a greyed button's description
+options.not_now,Im Moment nicht verfügbar.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,Optionen für {0},{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,Öffnen,Open,a button that opens the Mounts panel
+row.go,Los,Go,a mod's button
+row.press_a_key,Drücke eine Taste ...,Press a key...,a key option while it waits for the key
+row.none,Keine,None,a key option with no key; an empty name; no babies
+key.same_as,Gleiche Taste wie {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Konflikt mit {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,Skin,Skin,
+row.default_skin,Standard,Default,the Skin list: a mount's own look
+row.no_choice,(keine),(none),a list with nothing to choose
+row.babies,Jungtiere,Babies,
+row.babies_follow,Jungtiere folgen dir zu Fuß,Babies follow you on foot,
+row.babies_indoors,Jungtiere kommen mit hinein,Babies come indoors,
+journal.title,Reittier-Journal,Mount Journal,
+journal.search,Suchen ...,Search...,"the search box over the mounts, while empty"
+journal.customize,Anpassen,Customize,
+journal.ride,Reiten,Ride,
+journal.drive_cart,Mit dem Karren fahren,Drive the cart,
+journal.options,Optionen,Options,
+journal.stats,Werte,Stats,
+journal.abilities,Fähigkeiten,Abilities,
+journal.stat_speed,Tempo,Speed,
+journal.stat_cargo,Ladung,Cargo,the Cargo stat's name; its value is a number (how many things the cart holds)
+journal.stat_skins,Skins,Skins,
+journal.stat_status,Status,Status,
+journal.no_cart,Kein Karren,No cart,
+journal.cargo_of,{0} von {1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,Fliegen,Flying,
+journal.flying_line,"Es landet überall, wo du stehen kannst.",It lands wherever you can stand.,
+journal.cargo_cart,Lastkarren,Cargo cart,
+journal.cargo_cart_line,Zieht einen Karren (Ladung {0}).,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,Nicht installiert,Not installed,
+journal.name_not_installed,{0} (nicht installiert),{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0} (zurückgestellt),{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,"Die Mod oder das Paket, das dieses Reittier hinzufügt, ist nicht installiert. Deine Wahl bleibt erhalten, und bis es wieder da ist, kommt stattdessen der Esel.","The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,Nicht installiert: Die Mod oder das Paket mit diesem Reittier ist weg. Deine Wahl bleibt erhalten; stattdessen kommt der Esel.,Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.,
+journal.aside_note,"Zurückgestellt: Dem Spiel fehlen die Bilder, die der Skin dieses Reittiers braucht (das Log nennt sie). Deine Wahl bleibt erhalten; stattdessen kommt der Esel.",Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.,
+journal.no_skin_note,"Es hat keinen Skin, den es tragen könnte. Deine Wahl bleibt erhalten; stattdessen kommt der Esel.",It has no skin to wear. Your choice is kept; the donkey comes instead.,
+journal.waiting_skins,"Skins für dieses Reittier sind installiert ({0}), das Reittier selbst aber nicht: Installiere die Mod, die es hinzufügt, um es zu reiten.","Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.",a mount whose skins are installed but not the mount; {0}: the skins' names
+mount.donkey.name,Esel,Donkey,
+mount.donkey.description,Der geduldigste Arbeiter des Friedhofs. Er hat mehr Leichen geschleppt als irgendwer sonst im Dorf und hat zu jeder eine Meinung.,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,Farben: {0},Colours: {0},the colours window's title; {0}: the mount's name
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,Sehr langsam,Very slow,a mount's speed in the journal's stats
+speed.slow,Langsam,Slow,
+speed.normal,Normal,Normal,
+speed.fast,Schnell,Fast,
+speed.very_fast,Sehr schnell,Very fast,
+prompt.ride,Reiten,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,{0} reiten,Ride {0},on foot by a mount the player named; {0}: the name they gave it
+prompt.hitch,Karren anspannen,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,Auf den Karren laden,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,Karren ist voll,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,Vom Karren nehmen,Take from cart,on foot by a cart with something on it
+prompt.set_down,Abstellen,Set down,the chest riding on the cart
+prompt.load_chest,Auf den Karren laden,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,Der Esel hat eine Leiche an der Kreuzung abgelegt,The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,Kein Spiel geladen.,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,Noch nicht: Das Spiel lädt noch.,Not yet: the game is still loading.,
+say.already_mounted,Ich sitze schon im Sattel.,Already mounted.,
+say.nowhere_to_be_found,Mein Reittier ist nirgends zu finden.,Your mount is nowhere to be found.,
+say.not_in_coop_game,Nicht in einem Koop-Spiel.,Not in a co-op game.,
+say.not_right_now,Nicht jetzt.,Not right now.,
+say.not_indoors,Nicht in Gebäuden.,Not indoors.,
+say.busy,Ich bin beschäftigt.,I'm busy.,
+say.not_while_building,Nicht beim Bauen.,Not while building.,
+say.no_such_animal,So ein Tier gibt es nicht ({0}).,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,Kann {0} nicht reiten: {1},Can't ride a {0}: {1},{0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+say.side_town_quality,Das würde die Stadtqualität im Spielstand verändern.,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,"Es gehört zu einer NPC-Gruppe, über die der Spielstand Buch führt.",it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,"Es bringt Gegenstände mit, die der Karren aus dem Nichts erschaffen würde.","it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,Das ist ein Karren ohne Reittier.,That is a cart without a mount.,
+say.too_small_to_ride,Das hier ist zu klein zum Reiten.,This one is too small to ride.,
+say.not_here_now,Es ist gerade nicht hier.,It isn't here right now.,
+say.it_is_gone,Es ist weg.,It is gone.,
+say.not_cart_in_fight,Nicht mit dem Karren im Kampf.,Not the cart in a fight.,
+say.not_cart_indoors,Nicht mit dem Karren in Gebäuden.,Not the cart indoors.,
+say.cant_pull_the_cart,{0} kann den Karren nicht ziehen.,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,Zu viel auf dem Karren ({0} von höchstens {1}). Erst mal etwas abladen.,Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,Dieses Reittier hat hier keinen Karren; ich muss erst zu einem hinreiten.,This {0} has no cart here; ride it up to one.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,Dieses Reittier zieht schon einen Karren.,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,Das hier kann keinen Karren ziehen.,This one can't pull a cart.,
+say.not_a_free_cart,Das ist kein freier Karren.,That is not a free cart.,
+say.cart_elsewhere,Der Karren ist woanders.,The cart is somewhere else.,
+say.scene_not_loaded,"Nicht, solange die Szene nicht geladen ist.",Not while the scene is not loaded.,
+say.cant_get_to_cart,Von hier komme ich nicht an den Karren heran.,I can't get to that cart from here.,
+say.no_cart_to_leave,Kein Karren zum Abstellen.,No cart to leave.,
+say.cart_cant_stand,Hier kann der Karren nicht stehen.,The cart can't stand here.,
+say.cart_not_left_where_stands,Ich konnte den Karren nicht an seinem Platz stehen lassen.,The cart could not be left where it stands.,
+say.cart_not_left_here,Ich konnte den Karren hier nicht stehen lassen.,The cart could not be left here.,
+say.no_cart_here,Hier ist kein Karren.,No cart here.,
+say.has_no_cart,Es hat keinen Karren.,It has no cart.,
+say.cart_not_here,Der Karren ist nicht hier.,The cart is not here.,
+say.nothing_in_hand,Nichts in der Hand.,Nothing in hand.,
+say.cart_takes_nothing,Der Karren nimmt gerade nichts an.,The cart takes nothing now.,
+say.cart_cant_take,Das kann der Karren nicht aufnehmen.,The cart can't take that.,
+say.cart_full,Der Karren ist voll.,The cart is full.,
+say.no_keeper,Kein Wärter.,No keeper.,
+say.cart_gives_nothing,Der Karren gibt gerade nichts her.,The cart gives nothing now.,
+say.cart_empty,Der Karren ist leer.,The cart is empty.,
+say.hands_full,Ich habe die Hände voll.,My hands are full.,
+say.wont_come_off,Das geht nicht vom Karren runter.,It won't come off the cart.,
+say.not_while_riding,Nicht beim Reiten.,Not while riding.,
+say.ridden_pickups,"Beim Reiten landet alles, was ich aufhebe, schon auf dem Karren.",Ridden: pickups go onto the cart already.,
+say.chest_off,Die Kiste auf dem Karren ist vorerst abgeschaltet (siehe Log).,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,Kisten fahren nicht auf dem Karren mit.,Chests don't ride on the cart.,
+say.needs_the_cart,Dafür brauche ich den Karren.,That needs the cart.,
+say.only_plain_chest,Nur eine gewöhnliche Kiste kommt auf den Karren.,Only a plain storage chest goes on the cart.,
+say.chest_aboard,Auf dem Karren steht schon eine Kiste.,There's a chest on the cart already.,
+say.cargo_down_first,Erst muss die Ladung runter.,Set the cargo down first.,
+say.cant_be_moved,Das lässt sich nicht bewegen.,This can't be moved.,
+say.not_in_coop,Nicht im Koop.,Not in co-op.,
+say.marked_for_taking_down,Das ist zum Abbau markiert.,It's marked for taking down.,
+say.its_busy,Das ist gerade belegt.,It's busy.,
+say.attached_to_workbench,Das gehört zu einer Werkbank.,It's attached to a workbench.,
+say.someone_works_at_it,Da arbeitet jemand dran.,Someone works at it.,
+say.someone_using_it,Jemand benutzt das gerade.,Someone is using it right now.,
+say.close_building_window,Erst das Baufenster schließen.,Close the building window first.,
+say.zombie_using_chest,Ein Zombie benutzt diese Kiste.,A zombie is using this chest.,
+say.didnt_work,Das hat nicht geklappt.,That didn't work.,
+say.no_room_here,Hier ist kein Platz dafür.,There's no room for it here.,
+say.cant_reach_spot,An die Stelle komme ich nicht heran.,I can't reach that spot.,
+say.outside_building_area,Diese Stelle liegt außerhalb jedes Baugeländes.,That spot is outside any building area.,
+say.chest_stays,Die Kiste bleibt beim Karren.,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,Hier drin kann ich nicht fliegen.,Can't fly in here.,
+say.cant_fly_now,Jetzt kann ich nicht fliegen.,Can't fly now.,
+say.nowhere_to_land,Hier kann ich nirgends landen.,Nowhere to land here.,
+say.land_first,Erst landen.,Land first.,
+say.back_on_ground,Wieder auf festem Boden.,Back on solid ground.,
+say.keeper_not_there,Der Körper des Wärters ist nicht da.,The keeper's body isn't there.,
+say.not_now_door,"Nicht jetzt: Eine Tür, eine Szene oder eine Zwischensequenz hält den Wärter fest.","Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,Noch kein sicherer Ort in dieser Szene (kurz auf dem Boden stehen bleiben).,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,Kein sicherer Ort dieser Szene ist noch gültig.,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,Kein sicherer Ort dieser Szene gilt mehr.,No safe spot of this scene holds any more.,

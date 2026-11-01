@@ -23,7 +23,9 @@ namespace GK2DonkeyAPI
 
         // Every shown text under root. Returns each text that shrinks (auto size) with its room at its smallest size, for
         // a check that the long-text rule holds (TranslationTests: under the test language every one fits).
-        internal static List<(string Text, float Shrunk, bool Wraps)> Measure(Transform root, string where)
+        // shortOnes: when given, every text without room at its smallest size (a shrinking one at its smallest, the rest at
+        // their own) is added with its room (under 1: the share that fits) and whether it wraps (TranslationTests.Layout).
+        internal static List<(string Text, float Shrunk, bool Wraps)> Measure(Transform root, string where, List<(string Text, float Room, bool Wraps)> shortOnes = null)
         {
             var shrinking = new List<(string Text, float Shrunk, bool Wraps)>();
             if (root == null)
@@ -41,13 +43,15 @@ namespace GK2DonkeyAPI
                 lines.Add(Line(where, PathOf(t.transform, root), t, t.text, f, shrunk));
                 room.Add((f, t.text));
                 if (shrinks) shrinking.Add((t.text, shrunk, t.textWrappingMode != TextWrappingModes.NoWrap));
+                float best = shrinks ? shrunk : f;
+                if (shortOnes != null && best < 0.999f) shortOnes.Add((t.text, best, t.textWrappingMode != TextWrappingModes.NoWrap));
             }
             Store(where, lines, room);
             return shrinking;
         }
 
         // Texts that take turns in one box (the options window's description line, one row's description at a time).
-        internal static void MeasureIn(TextMeshProUGUI box, string where, List<(string Name, string Text)> texts)
+        internal static void MeasureIn(TextMeshProUGUI box, string where, List<(string Name, string Text)> texts, List<(string Text, float Room, bool Wraps)> shortOnes = null)
         {
             if (box == null)
             {
@@ -62,6 +66,8 @@ namespace GK2DonkeyAPI
                 float f = Factor(box, x.Text, out float shrunk);
                 lines.Add(Line(where, x.Name, box, x.Text, f, shrunk));
                 room.Add((f, x.Text));
+                float best = box.enableAutoSizing ? shrunk : f;
+                if (shortOnes != null && best < 0.999f) shortOnes.Add((x.Name + ": " + x.Text, best, box.textWrappingMode != TextWrappingModes.NoWrap));
             }
             Store(where, lines, room);
         }
@@ -115,8 +121,17 @@ namespace GK2DonkeyAPI
         private static bool Fits(TextMeshProUGUI t, string text, Rect r, bool wrap)
         {
             if (!wrap) return t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x <= r.width + 0.5f;
-            return t.GetPreferredValues(text, r.width, float.PositiveInfinity).y <= r.height + 0.5f;
+            float high = t.GetPreferredValues(text, r.width, float.PositiveInfinity).y;
+            if (high <= r.height + 0.5f) return true;
+            // a text that doesn't wrap at the box's width loses nothing in a label that draws over its edges (the game's
+            // prompt: a Japanese, Chinese or Korean font's line is taller than the label a Latin one fits); a label that
+            // clips keeps the height
+            return !Clips(t) && high <= t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).y + 0.5f;
         }
+
+        // Whether a label cuts what is past its box: an overflow mode other than Overflow, or a mask above it.
+        internal static bool Clips(TextMeshProUGUI t) =>
+            t.overflowMode != TextOverflowModes.Overflow || t.GetComponentInParent<UnityEngine.UI.RectMask2D>() != null || t.GetComponentInParent<UnityEngine.UI.Mask>() != null;
 
         // The text made f times as long by repeating its own words.
         private static string Grow(string text, float f)

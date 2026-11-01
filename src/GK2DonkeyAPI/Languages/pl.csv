@@ -1,0 +1,148 @@
+﻿key,value,english,note
+options.done,Gotowe,Done,
+options.defaults,Domyślne,Defaults,
+options.set_back_ask,Przywrócić domyślne wartości wszystkich opcji w sekcji {0}?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,Przywróć,Set back,
+options.cancel,Anuluj,Cancel,
+options.hint_pad,"Przejdź do opcji, by zobaczyć, do czego służy.",Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,"Wskaż opcję kursorem, by zobaczyć, do czego służy.",Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"Naciśnij klawisz dla opcji {0}: Shift, Ctrl lub Alt osobno albo razem z innym klawiszem. Backspace: brak klawisza. Esc: anuluj.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,"Wybierz tę opcję, a potem naciśnij klawisz na klawiaturze.","Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,"Kliknij, by ustawić klawisz.",Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Tylko w trakcie gry.,Only in a game.,after a greyed button's description
+options.not_now,Chwilowo niedostępne.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,Opcje: {0},{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,Otwórz,Open,a button that opens the Mounts panel
+row.go,Wykonaj,Go,a mod's button
+row.press_a_key,Naciśnij klawisz...,Press a key...,a key option while it waits for the key
+row.none,Brak,None,a key option with no key; an empty name; no babies
+key.same_as,Ten sam klawisz co {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Konflikt: {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,Skórka,Skin,
+row.default_skin,Domyślna,Default,the Skin list: a mount's own look
+row.no_choice,(brak),(none),a list with nothing to choose
+row.babies,Młode,Babies,
+row.babies_follow,"Młode podążają za tobą, gdy idziesz pieszo",Babies follow you on foot,
+row.babies_indoors,Młode wchodzą do budynków,Babies come indoors,
+journal.title,Dziennik wierzchowców,Mount Journal,
+journal.search,Szukaj...,Search...,"the search box over the mounts, while empty"
+journal.customize,Dostosuj,Customize,
+journal.ride,Dosiądź,Ride,
+journal.drive_cart,Powoź wozem,Drive the cart,
+journal.options,Opcje,Options,
+journal.stats,Statystyki,Stats,
+journal.abilities,Zdolności,Abilities,
+journal.stat_speed,Prędkość,Speed,
+journal.stat_cargo,Ładunek,Cargo,the Cargo stat's name; its value is a number (how many things the cart holds)
+journal.stat_skins,Skórki,Skins,
+journal.stat_status,Stan,Status,
+journal.no_cart,Brak wozu,No cart,
+journal.cargo_of,{0} z {1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,Latanie,Flying,
+journal.flying_line,"Ląduje wszędzie tam, gdzie da się stanąć.",It lands wherever you can stand.,
+journal.cargo_cart,Ciągnięcie wozu,Cargo cart,
+journal.cargo_cart_line,Ciągnie wóz (ładunek: {0}).,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,Nie zainstalowano,Not installed,
+journal.name_not_installed,{0} (nie zainstalowano),{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0} (nieaktywna),{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,"Mod lub pakiet, który dodaje tego wierzchowca, nie jest zainstalowany. Twój wybór zostaje zachowany, a dopóki mod nie wróci, w zastępstwie przychodzi osioł.","The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,Nie zainstalowano: mod lub pakiet z tym wierzchowcem zniknął. Twój wybór zostaje zachowany; w zastępstwie przychodzi osioł.,Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.,
+journal.aside_note,Skórka nieaktywna: gra nie ma już potrzebnych jej grafik (wymienia je log). Twój wybór zostaje zachowany; w zastępstwie przychodzi osioł.,Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.,
+journal.no_skin_note,Ten wierzchowiec nie ma żadnej skórki do założenia. Twój wybór zostaje zachowany; w zastępstwie przychodzi osioł.,It has no skin to wear. Your choice is kept; the donkey comes instead.,
+journal.waiting_skins,"Skórki tego wierzchowca są zainstalowane ({0}), ale sam wierzchowiec nie: zainstaluj mod, który go dodaje, by móc go dosiąść.","Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.",a mount whose skins are installed but not the mount; {0}: the skins' names
+mount.donkey.name,Osioł,Donkey,
+mount.donkey.description,Najcierpliwszy pracownik cmentarza. Przewiózł więcej zwłok niż ktokolwiek w wiosce i o każdych ma własne zdanie.,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,Kolory: {0},Colours: {0},the colours window's title; {0}: the mount's name
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,Bardzo wolna,Very slow,a mount's speed in the journal's stats
+speed.slow,Wolna,Slow,
+speed.normal,Normalna,Normal,
+speed.fast,Szybka,Fast,
+speed.very_fast,Bardzo szybka,Very fast,
+prompt.ride,Dosiądź,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,Dosiądź: {0},Ride {0},on foot by a mount the player named; {0}: the name they gave it
+prompt.hitch,Zaprzęgnij do wozu,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,Załaduj na wóz,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,Wóz jest pełny,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,Weź z wozu,Take from cart,on foot by a cart with something on it
+prompt.set_down,Postaw,Set down,the chest riding on the cart
+prompt.load_chest,Załaduj na wóz,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,Osioł zostawił ciało na rozdrożach,The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,Brak wczytanej gry.,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,Jeszcze nie: gra wciąż się wczytuje.,Not yet: the game is still loading.,
+say.already_mounted,Już jestem w siodle.,Already mounted.,
+say.nowhere_to_be_found,Wierzchowca nigdzie nie ma.,Your mount is nowhere to be found.,
+say.not_in_coop_game,Nie podczas gry w kooperacji.,Not in a co-op game.,
+say.not_right_now,Nie w tej chwili.,Not right now.,
+say.not_indoors,Nie w budynku.,Not indoors.,
+say.busy,Jestem zajęty.,I'm busy.,
+say.not_while_building,Nie podczas budowania.,Not while building.,
+say.no_such_animal,Nie ma takiego zwierzęcia ({0}).,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,Nie mogę dosiąść zwierzęcia {0}: {1},Can't ride a {0}: {1},{0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+say.side_town_quality,zmieniłoby to jakość miasta w zapisie gry.,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,"należy do grupy NPC, którą śledzi zapis gry.",it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,"ma przy sobie przedmioty, które wóz stworzyłby z niczego.","it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,To wóz bez wierzchowca.,That is a cart without a mount.,
+say.too_small_to_ride,To zwierzę jest za małe do jazdy wierzchem.,This one is too small to ride.,
+say.not_here_now,Teraz go tu nie ma.,It isn't here right now.,
+say.it_is_gone,Już go nie ma.,It is gone.,
+say.not_cart_in_fight,Nie z wozem w trakcie walki.,Not the cart in a fight.,
+say.not_cart_indoors,Nie z wozem w budynku.,Not the cart indoors.,
+say.cant_pull_the_cart,{0} nie może ciągnąć wozu.,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,"Za dużo na wozie ({0}, limit: {1}). Najpierw trzeba coś zdjąć.",Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,Ten wierzchowiec nie ma tu wozu; trzeba nim do jakiegoś podjechać.,This {0} has no cart here; ride it up to one.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,Ten wierzchowiec już ciągnie wóz.,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,Ten wierzchowiec nie może ciągnąć wozu.,This one can't pull a cart.,
+say.not_a_free_cart,To nie jest wolny wóz.,That is not a free cart.,
+say.cart_elsewhere,Wóz jest gdzie indziej.,The cart is somewhere else.,
+say.scene_not_loaded,"Nie, dopóki scena się nie wczyta.",Not while the scene is not loaded.,
+say.cant_get_to_cart,Nie dostanę się stąd do tego wozu.,I can't get to that cart from here.,
+say.no_cart_to_leave,Nie ma wozu do zostawienia.,No cart to leave.,
+say.cart_cant_stand,Wóz nie może tu stać.,The cart can't stand here.,
+say.cart_not_left_where_stands,"Nie udało się zostawić wozu tam, gdzie stoi.",The cart could not be left where it stands.,
+say.cart_not_left_here,Nie udało się zostawić tu wozu.,The cart could not be left here.,
+say.no_cart_here,Nie ma tu wozu.,No cart here.,
+say.has_no_cart,Ten wierzchowiec nie ma wozu.,It has no cart.,
+say.cart_not_here,Wozu tu nie ma.,The cart is not here.,
+say.nothing_in_hand,Nic nie trzymam w rękach.,Nothing in hand.,
+say.cart_takes_nothing,Wóz nic teraz nie przyjmie.,The cart takes nothing now.,
+say.cart_cant_take,Tego nie da się załadować na wóz.,The cart can't take that.,
+say.cart_full,Wóz jest pełny.,The cart is full.,
+say.no_keeper,Brak grabarza.,No keeper.,
+say.cart_gives_nothing,Z wozu nic teraz nie da się wziąć.,The cart gives nothing now.,
+say.cart_empty,Wóz jest pusty.,The cart is empty.,
+say.hands_full,Mam zajęte ręce.,My hands are full.,
+say.wont_come_off,Tego nie da się zdjąć z wozu.,It won't come off the cart.,
+say.not_while_riding,Nie podczas jazdy.,Not while riding.,
+say.ridden_pickups,"W siodle: to, co podnoszę, i tak trafia na wóz.",Ridden: pickups go onto the cart already.,
+say.chest_off,Skrzynia na wozie jest na razie wyłączona (szczegóły w logu).,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,Skrzynie nie jeżdżą na wozie.,Chests don't ride on the cart.,
+say.needs_the_cart,Do tego potrzebny jest wóz.,That needs the cart.,
+say.only_plain_chest,Na wóz pasuje tylko zwykła skrzynia.,Only a plain storage chest goes on the cart.,
+say.chest_aboard,Na wozie już jest skrzynia.,There's a chest on the cart already.,
+say.cargo_down_first,Najpierw trzeba zdjąć ładunek.,Set the cargo down first.,
+say.cant_be_moved,Tego nie da się przenieść.,This can't be moved.,
+say.not_in_coop,Nie w kooperacji.,Not in co-op.,
+say.marked_for_taking_down,To jest oznaczone do rozbiórki.,It's marked for taking down.,
+say.its_busy,To jest zajęte.,It's busy.,
+say.attached_to_workbench,To jest połączone z warsztatem.,It's attached to a workbench.,
+say.someone_works_at_it,Ktoś przy tym pracuje.,Someone works at it.,
+say.someone_using_it,Ktoś teraz z tego korzysta.,Someone is using it right now.,
+say.close_building_window,Najpierw trzeba zamknąć okno budowania.,Close the building window first.,
+say.zombie_using_chest,Zombie korzysta z tej skrzyni.,A zombie is using this chest.,
+say.didnt_work,Nie udało się.,That didn't work.,
+say.no_room_here,Nie ma tu na to miejsca.,There's no room for it here.,
+say.cant_reach_spot,Nie dostanę się w to miejsce.,I can't reach that spot.,
+say.outside_building_area,To miejsce jest poza obszarem budowy.,That spot is outside any building area.,
+say.chest_stays,Skrzynia zostaje przy wozie.,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,Tu w środku nie da się latać.,Can't fly in here.,
+say.cant_fly_now,Teraz nie da się latać.,Can't fly now.,
+say.nowhere_to_land,Nie ma tu gdzie wylądować.,Nowhere to land here.,
+say.land_first,Najpierw trzeba wylądować.,Land first.,
+say.back_on_ground,Znów na twardym gruncie.,Back on solid ground.,
+say.keeper_not_there,Ciała grabarza tam nie ma.,The keeper's body isn't there.,
+say.not_now_door,"Nie teraz: grabarza zajmują drzwi, scena albo przerywnik filmowy.","Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,W tej scenie nie ma jeszcze bezpiecznego miejsca (trzeba chwilę postać na ziemi).,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,Żadne bezpieczne miejsce w tej scenie nie jest już ważne.,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,W tej scenie nie ma już żadnego ważnego bezpiecznego miejsca.,No safe spot of this scene holds any more.,

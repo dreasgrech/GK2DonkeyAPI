@@ -236,7 +236,7 @@ namespace SaddleUp
             p.MovedKey("Cart", "CorpseIntoMorgue", "Behaviour");
             p.MovedKey("Cart", "CorpsesAtCrossroads", "Behaviour");
             p.Toggle("Cart", "CargoZombies", true, "Zombies ride on the cart", "Zombies you pick up while driving lie on the cart. You can hand them to their work from there.", v => Mounts.Behaviour.Set(Guid, "CargoZombies", v));
-            p.Toggle("Cart", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a storage chest and press the action key to load it with everything inside. Press interact with nothing in front of you to set it down.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
+            p.Toggle("Cart", "CargoChest", true, "A storage chest rides on the cart", "Drive up to a storage chest and press the Work key to load it with everything inside. Press the Interact key with nothing in front of you to set it down.", v => Mounts.Behaviour.Set(Guid, "CargoChest", v));
             p.Toggle("Cart", "CorpseIntoMorgue", true, "Carry the corpse into the morgue", "Drive through the morgue door with a corpse on the cart and you walk in carrying it. The cart waits outside.", v => Mounts.Behaviour.Set(Guid, "CorpseIntoMorgue", v));
             p.Toggle("Cart", "CorpsesAtCrossroads", false, "Donkey leaves corpses at the crossroads", "The game's delivery donkey leaves new bodies at the crossroads instead of in front of the morgue. You bring them in yourself.", v => Mounts.Corpses.Set(Guid, "CorpsesAtCrossroads", v));
             // Two rows gone in 0.12 (the user, 2026-10-27: "i dont think we need them"): calling your mount leaves a parked

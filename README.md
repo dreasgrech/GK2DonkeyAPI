@@ -54,7 +54,9 @@ The options window, the Mount Journal and its colours window, the keeper's thoug
 crossroads notification and the mounts' and skins' names are drawn in the game's language when a translation of them
 is installed. Key names stay English ([`docs/localization.md`](docs/localization.md)).
 
-**Shipped:** French (GK2 Saddle Up, GK2 Donkey API and the three packs).
+**Shipped:** every language the game has: French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish,
+Japanese, Simplified Chinese and Korean (GK2 Saddle Up, GK2 Donkey API and the three packs). They are made with care but
+not yet read by native speakers: corrections are welcome (a corrected file, or the line and the better words).
 
 **To translate:**
 
@@ -69,11 +71,19 @@ is installed. Key names stay English ([`docs/localization.md`](docs/localization
      folder name.
    - So `de.csv`.
 3. **Translate** in a spreadsheet (Excel, LibreOffice, Google Sheets) or a text editor.
-   - Its columns: `key`, `value`, `english`, `note`. Change the `value` column only.
-   - Keep the `english` column as it is: it tells the mod which English you translated.
+   - Its columns: `key`, `value`, `english`, `note`. Change the `value` column only. Keep the header row
+     (`key,value,english,note`) as it is, in English, and the columns in that order: a file without it, with its header
+     translated, or with the english column first, isn't read.
+   - Every line under the header is a key's line. A note of your own goes on a line that starts with `#`. Any other line
+     (a title, a comment, a header of your own) stops the reading there: every line after it shows in English until the
+     next header row, and the log says which line.
+   - Keep the `english` column as it is: it tells the mod which English you translated. A line without it shows in
+     English (nothing could tell when our English changes under it).
    - The `note` says where a text shows and what its `{0}` is. Keep `{0}` and `{1}` in your text: the mod fills them in.
    - No tags: the windows draw plain text (a `<nobr>` is taken out).
-   - Save as CSV in UTF-8 (in Excel: "CSV UTF-8"). A spreadsheet that saves with `;` or tabs is fine.
+   - Save as CSV in UTF-8 (in Excel: "CSV UTF-8"; in LibreOffice: character set "Unicode (UTF-8)"). A spreadsheet that
+     saves with `;` or tabs is fine. A file in another encoding (Excel's plain "CSV", "CSV (MS-DOS)", "CSV (Macintosh)")
+     isn't read: the log says so, and saving it again as "CSV UTF-8" is all it needs.
 4. **See it:** start the game in your language. A line you haven't translated shows in English.
    - When the mod's English changes later, the lines whose `english` no longer matches show in English until you
      translate them again.
@@ -81,9 +91,11 @@ is installed. Key names stay English ([`docs/localization.md`](docs/localization
      `BepInEx\GK2-l10n\<mod>\<language>.missing.csv`, ready to fill in and add to your file.
    - Problems in a file (a line without a value, a quote that swallows lines, a file not in UTF-8) are named in
      `BepInEx\LogOutput.log`.
-   - The mod reads most mistakes anyway: a file saved by Excel's plain "CSV", the columns swapped, a key typed wrong,
-     `fr-FR.csv` or `french.csv` for a name, a quote left open. What it can't read shows in English and is named in the
-     log; it never shows a wrong text.
+   - The mod copes with many mistakes: the columns in another order, `;` or tabs, `fr-FR.csv` or `french.csv` for a
+     name, a quote left open, a second header. It never shows a text that isn't in your file: what it can't read shows in
+     English and is named in the log. It repairs nothing either: garbled letters ("Ã©" for "é"), a key typed wrong or
+     letters turned into "?" are left out and named; open the file as UTF-8, fix them and save as "CSV UTF-8". A copy such
+     as `fr - Copy.csv` is never read: only `fr.csv` is.
 5. **Share it:**
    - Send the file to us and it ships with the next release, with your name in its notes.
    - Or publish it yourself, in a folder of its own: `BepInEx\plugins\<your folder>\Translations\<mod GUID>\<language>.csv`

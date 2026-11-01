@@ -588,6 +588,30 @@ closed):
 - **French translation BUILT 2026-11-01** (Saddle Up, the API and the three packs' `fr.csv`; deployed): the user's look
   in the game (Settings > Language > Français): the options window, the journal, the colours window, bubbles, prompts,
   the packs' names. The versions that ship it are the user's (all five plugins now).
+- **Every game language BUILT 2026-11-01** (localization.md section 10; deployed): de, es, pt-br, ru, pl, tr, ja, zh_cn,
+  ko besides fr, all five plugins. **Open:** the Translations group's Fonts check of our characters (zh_cn uses 22 and ko
+  13 the game's own text never does: boxes if the fonts are cut); native speakers' reading (section 10 lists the agents'
+  doubts); the versions that ship them.
+- **Review rounds 2026-11-01** (localization.md section 11; deployed 2026-11-01, all five plugins): every language
+  proofread until two rounds in a row changed nothing (German once more after its harness word); the code review's 18
+  findings fixed, then its second round's 14, its third's 19 with a change of method (an encoding is the file's) and
+  its fourth's 12, its fifth's 6, its sixth's 15, its seventh's 9, its eighth's 7, its ninth's 12, its tenth's 6 and its eleventh's 10 (the last: the user ended the rounds there); the mod now repairs nothing (code pages, garbled letters, a key by
+  its English, a text across its separator: OFF, four switches); the rule: never a text that isn't in the file; the
+  catalogue 63 to 231 cases; the sweep, the edited lines (with the blast: no other key lost), the headers and the game-table corpus (some 123,000 reads), 0 wrong; all passing offline; the Layout scenario
+  now measures every description-box text, the Defaults question and every mount's colours window. The first F11
+  Translations run (the user's, 2026-11-01: 350 passed, 10 failed, 14 warnings) is fixed (localization.md section 11,
+  "The fonts"); the third run (17:12): 362 passed, 0 failed (the files scenario, the Keeper's bubble measured in
+  every language, the Fonts check for zh_cn and ko), 3 warnings. The 3 were the measurement's (the label takes one line; a CJK line is taller than the 12-high label, which draws over
+  its edges): TextRoom judges a label that doesn't clip by its lines. The fourth run (17:42): 362 passed, 0 failed, 0
+  warnings; the prompt's label Overflow with no mask in every language, as measured;
+  Saddle Up's `en.csv` written by the next dev start (the chest keys' English); no further code-review round (the user ended them after the eleventh; its known limits are in localization.md section 9).
+  **Decisions (the user's), four switches, all off, each with its cost measured in localization.md section 11:**
+  `ReadCodePages` (Excel's plain "CSV", MS-DOS, Macintosh files read: wrong texts in mixed and rare-sign corners, or 15 to
+  47% of a correct file's lines lost in the safe variant), `RepairGarbled` ("Ã©" repaired: a wrong letter after a literal
+  \n, garbled Polish capitals), `RescueByEnglish` (a mistyped key found by its English: a line of a multi-line text taken
+  for a row), `JoinSeparator` (a text split by its unquoted comma joined back: a stale line joined to a reference column).
+  Also limits: transliteration ("Czesc"), a file copied from another language, a column sorted alone, garbled text the mod
+  doesn't see (shown as written).
 - **Translator mistakes BUILT and TESTED 2026-11-01** (localization.md section 9): 63 cases pass offline
   (`tests/TranslationScan`) and in the game (the Translations group 01:30: 162/0/0, the catalogue in a 34 ms frame).
   French SEEN by the user 2026-11-01 (the Mount Journal in French, everything fitting; the log: all five fr.csv read whole,

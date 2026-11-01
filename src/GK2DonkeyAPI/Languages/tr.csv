@@ -1,0 +1,148 @@
+﻿key,value,english,note
+options.done,Tamam,Done,
+options.defaults,Varsayılanlar,Defaults,
+options.set_back_ask,{0}: tüm seçenekler varsayılan değerlerine döndürülsün mü?,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,Sıfırla,Set back,
+options.cancel,İptal,Cancel,
+options.hint_pad,Ne işe yaradığını görmek için bir seçeneğe geç.,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,Ne işe yaradığını görmek için imleci bir seçeneğin üzerine getir.,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,"{0} için bir tuşa bas: Shift, Ctrl ya da Alt tek başına veya başka bir tuşla birlikte. Backspace: tuş yok. Esc: iptal.","Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,"Seç, ardından klavyede tuşa bas.","Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,Tuşu atamak için tıkla.,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,Yalnızca oyun içinde.,Only in a game.,after a greyed button's description
+options.not_now,Şu anda kullanılamıyor.,Not available right now.,after a greyed option's description
+options.and_then,{0} {1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0} seçenekleri,{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,Aç,Open,a button that opens the Mounts panel
+row.go,Git,Go,a mod's button
+row.press_a_key,Bir tuşa bas...,Press a key...,a key option while it waits for the key
+row.none,Yok,None,a key option with no key; an empty name; no babies
+key.same_as,Aynı tuş: {0},Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,Çakışıyor: {0} ({1}),Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,Görünüm,Skin,
+row.default_skin,Varsayılan,Default,the Skin list: a mount's own look
+row.no_choice,(yok),(none),a list with nothing to choose
+row.babies,Yavrular,Babies,
+row.babies_follow,Yürürken yavrular peşinden gelir,Babies follow you on foot,
+row.babies_indoors,Yavrular içeri girer,Babies come indoors,
+journal.title,Binek Günlüğü,Mount Journal,
+journal.search,Ara...,Search...,"the search box over the mounts, while empty"
+journal.customize,Özelleştir,Customize,
+journal.ride,Bin,Ride,
+journal.drive_cart,Arabayı sür,Drive the cart,
+journal.options,Seçenekler,Options,
+journal.stats,Özellikler,Stats,
+journal.abilities,Yetenekler,Abilities,
+journal.stat_speed,Hız,Speed,
+journal.stat_cargo,Yük,Cargo,the Cargo stat's name; its value is a number (how many things the cart holds)
+journal.stat_skins,Görünümler,Skins,
+journal.stat_status,Durum,Status,
+journal.no_cart,Araba yok,No cart,
+journal.cargo_of,{0} / {1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,Uçuş,Flying,
+journal.flying_line,Ayakta durabildiğin her yere iner.,It lands wherever you can stand.,
+journal.cargo_cart,Yük arabası,Cargo cart,
+journal.cargo_cart_line,Araba çeker (yük: {0}).,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,Yüklü değil,Not installed,
+journal.name_not_installed,{0} (yüklü değil),{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0} (kenara alındı),{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,Bu bineği ekleyen mod ya da paket yüklü değil. Seçimin korunuyor; o geri gelene kadar yerine eşek gelir.,"The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,Yüklü değil: bu bineği getiren mod ya da paket artık yok. Seçimin korunuyor; yerine eşek gelir.,Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.,
+journal.aside_note,Kenara alındı: bu bineğin görünümünün ihtiyaç duyduğu resimler artık oyunda yok (adları log dosyasında yazıyor). Seçimin korunuyor; yerine eşek gelir.,Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.,
+journal.no_skin_note,Giyecek bir görünümü yok. Seçimin korunuyor; yerine eşek gelir.,It has no skin to wear. Your choice is kept; the donkey comes instead.,
+journal.waiting_skins,"Bu binek için görünümler yüklü ({0}), ama bineğin kendisi yüklü değil: binebilmek için onu ekleyen modu yükle.","Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.",a mount whose skins are installed but not the mount; {0}: the skins' names
+mount.donkey.name,Eşek,Donkey,
+mount.donkey.description,Mezarlığın en sabırlı işçisi. Köyde herkesten çok ceset taşımıştır ve her biri hakkında bir fikri vardır.,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,Renkler: {0},Colours: {0},the colours window's title; {0}: the mount's name
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,Çok yavaş,Very slow,a mount's speed in the journal's stats
+speed.slow,Yavaş,Slow,
+speed.normal,Normal,Normal,
+speed.fast,Hızlı,Fast,
+speed.very_fast,Çok hızlı,Very fast,
+prompt.ride,Bin,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,Bin: {0},Ride {0},on foot by a mount the player named; {0}: the name they gave it
+prompt.hitch,Arabayı bağla,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,Arabaya yükle,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,Araba dolu,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,Arabadan al,Take from cart,on foot by a cart with something on it
+prompt.set_down,İndir,Set down,the chest riding on the cart
+prompt.load_chest,Arabaya yükle,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,"Eşek, Dört Yol Ağzı'na bir ceset bıraktı",The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,Oyun içinde değil.,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,Henüz değil: oyun hâlâ yükleniyor.,Not yet: the game is still loading.,
+say.already_mounted,Zaten binekteyim.,Already mounted.,
+say.nowhere_to_be_found,Bineğimi hiçbir yerde bulamıyorum.,Your mount is nowhere to be found.,
+say.not_in_coop_game,Co-op oyununda olmaz.,Not in a co-op game.,
+say.not_right_now,Şimdi olmaz.,Not right now.,
+say.not_indoors,İçeride olmaz.,Not indoors.,
+say.busy,Meşgulüm.,I'm busy.,
+say.not_while_building,İnşaat yaparken olmaz.,Not while building.,
+say.no_such_animal,Böyle bir hayvan yok ({0}).,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,Buna binemem ({0}): {1},Can't ride a {0}: {1},{0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+say.side_town_quality,kayıttaki kasaba kalitesini değiştirir.,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,kaydın takip ettiği bir NPC grubuna ait.,it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,eşyalarla birlikte geliyor; araba bunları yoktan var ederdi.,"it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,"Bu, bineği olmayan bir araba.",That is a cart without a mount.,
+say.too_small_to_ride,"Bu, binmek için çok küçük.",This one is too small to ride.,
+say.not_here_now,Şu an burada değil.,It isn't here right now.,
+say.it_is_gone,Gitmiş.,It is gone.,
+say.not_cart_in_fight,Çatışmada araba olmaz.,Not the cart in a fight.,
+say.not_cart_indoors,İçeride araba olmaz.,Not the cart indoors.,
+say.cant_pull_the_cart,{0} arabayı çekemez.,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,"Arabada çok fazla şey var ({0}, en fazla {1}). Önce birkaçını indirmeliyim.",Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,Bu bineğin burada arabası yok; onunla bir arabaya kadar gitmeliyim.,This {0} has no cart here; ride it up to one.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,Bu binek zaten bir araba çekiyor.,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,"Bu, araba çekemez.",This one can't pull a cart.,
+say.not_a_free_cart,Bu araba boşta değil.,That is not a free cart.,
+say.cart_elsewhere,Araba başka bir yerde.,The cart is somewhere else.,
+say.scene_not_loaded,Sahne yüklenmeden olmaz.,Not while the scene is not loaded.,
+say.cant_get_to_cart,Buradan o arabaya ulaşamıyorum.,I can't get to that cart from here.,
+say.no_cart_to_leave,Bırakacak araba yok.,No cart to leave.,
+say.cart_cant_stand,Araba burada duramaz.,The cart can't stand here.,
+say.cart_not_left_where_stands,Araba durduğu yerde bırakılamadı.,The cart could not be left where it stands.,
+say.cart_not_left_here,Araba buraya bırakılamadı.,The cart could not be left here.,
+say.no_cart_here,Burada araba yok.,No cart here.,
+say.has_no_cart,Arabası yok.,It has no cart.,
+say.cart_not_here,Araba burada değil.,The cart is not here.,
+say.nothing_in_hand,Elimde bir şey yok.,Nothing in hand.,
+say.cart_takes_nothing,Araba şu an bir şey almıyor.,The cart takes nothing now.,
+say.cart_cant_take,Araba bunu alamaz.,The cart can't take that.,
+say.cart_full,Araba dolu.,The cart is full.,
+say.no_keeper,Bekçi yok.,No keeper.,
+say.cart_gives_nothing,Araba şu an bir şey vermiyor.,The cart gives nothing now.,
+say.cart_empty,Araba boş.,The cart is empty.,
+say.hands_full,Ellerim dolu.,My hands are full.,
+say.wont_come_off,Arabadan inmiyor.,It won't come off the cart.,
+say.not_while_riding,Binekteyken olmaz.,Not while riding.,
+say.ridden_pickups,Binekteyim: aldığım her şey zaten arabaya gidiyor.,Ridden: pickups go onto the cart already.,
+say.chest_off,Arabada sandık taşıma şimdilik kapalı (log dosyasına bak).,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,Sandıklar arabada taşınmaz.,Chests don't ride on the cart.,
+say.needs_the_cart,Bunun için araba lazım.,That needs the cart.,
+say.only_plain_chest,Arabaya yalnızca sıradan bir depo sandığı konur.,Only a plain storage chest goes on the cart.,
+say.chest_aboard,Arabada zaten bir sandık var.,There's a chest on the cart already.,
+say.cargo_down_first,Önce yükü indirmeliyim.,Set the cargo down first.,
+say.cant_be_moved,Bu taşınamaz.,This can't be moved.,
+say.not_in_coop,Co-op modunda olmaz.,Not in co-op.,
+say.marked_for_taking_down,Sökülmek üzere işaretlenmiş.,It's marked for taking down.,
+say.its_busy,Meşgul.,It's busy.,
+say.attached_to_workbench,Bir tezgâha bağlı.,It's attached to a workbench.,
+say.someone_works_at_it,Başında biri çalışıyor.,Someone works at it.,
+say.someone_using_it,Şu an biri onu kullanıyor.,Someone is using it right now.,
+say.close_building_window,Önce inşaat penceresini kapatmalıyım.,Close the building window first.,
+say.zombie_using_chest,Bu sandığı bir zombi kullanıyor.,A zombie is using this chest.,
+say.didnt_work,Olmadı.,That didn't work.,
+say.no_room_here,Burada ona yer yok.,There's no room for it here.,
+say.cant_reach_spot,Oraya ulaşamıyorum.,I can't reach that spot.,
+say.outside_building_area,Orası hiçbir inşaat alanının içinde değil.,That spot is outside any building area.,
+say.chest_stays,Sandık arabanın yanında kalıyor.,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,Burada uçamam.,Can't fly in here.,
+say.cant_fly_now,Şimdi uçamam.,Can't fly now.,
+say.nowhere_to_land,Burada inecek yer yok.,Nowhere to land here.,
+say.land_first,Önce yere inmeliyim.,Land first.,
+say.back_on_ground,Yeniden sağlam zemindeyim.,Back on solid ground.,
+say.keeper_not_there,Bekçi'nin bedeni orada değil.,The keeper's body isn't there.,
+say.not_now_door,"Şimdi olmaz: Bekçi bir kapı, sahne ya da ara sahneyle meşgul.","Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,Bu sahnede henüz güvenli bir nokta yok (biraz yerde dur).,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,Bu sahnenin güvenli noktalarından hiçbiri geçerliliğini korumuyor.,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,Bu sahnenin güvenli noktalarından hiçbiri artık geçerli değil.,No safe spot of this scene holds any more.,

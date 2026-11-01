@@ -660,6 +660,8 @@ namespace GK2DonkeyAPI
         internal static void TestPress(MountSettingsPage.Row r) => PressRow(r);
         internal static void TestOpenConfirm() => OpenConfirm();
         internal static bool TestConfirmOpen => confirm != null;
+        internal static Transform TestConfirmRoot => confirm != null ? confirm.transform : null;
+        internal static void TestConfirmNo() => CloseConfirm();
         internal static void TestConfirmYes() { CloseConfirm(); ResetSection(); }
         internal static void TestStepBack() => StepBack();
         internal static void TestClose(bool back) => Close(back);

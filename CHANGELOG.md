@@ -34,11 +34,25 @@ For players:
   (`Languages\fr.csv` beside each DLL, 147 and 144 lines). The game's own French words where it has them (Gardien,
   corps, Carrefour, Morgue, coffre, lanterne); the cart is "charrette", the donkey "âne". The packs' mount and skin
   names in French too: each pack's own `fr.csv` (11 lines).
+- **Every language the game has** (2026-11-01): German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish,
+  Japanese, Simplified Chinese and Korean besides French, for GK2 Saddle Up, GK2 Donkey API and the three packs, in the
+  game's own words for its things (docs/localization.md section 10). Not yet read by native speakers.
+- **Chinese and Korean words the game's fonts can't draw are replaced** (2026-11-01, the first in-game font check):
+  6 Chinese characters in 8 lines (the snail is now 巨螺, the wheel hub 轮心) and 4 Korean ones in 10 lines ("load on
+  cart" is now 수레에 올리기); the rest of each line is as it was.
 - **Translation files survive their translators' mistakes** (2026-11-01; the user: "expect EVERY TYPE OF STUPID
-  mistake"): a file Excel saved as plain "CSV" (not UTF-8), as "Unicode Text", or opened and saved again with mangled
-  letters; a missing or translated header; swapped columns; a key typed wrong; a stray or unclosed quote; `{ 0 }` or
-  `｛０｝`; `fr-FR.csv`, `french.csv`, `fr.csv.txt`; and more (docs/localization.md section 9). What can't be read
-  shows English and is named in the log, never a wrong text.
+  mistake"): a file Excel saved as plain "CSV" (not UTF-8), as "Unicode Text", or opened and saved again with garbled
+  letters (also Cyrillic, Polish and Turkish ones, in some lines only); a file of two encodings; a reordered header;
+  a key typed wrong, or a line typed with spaces instead of commas; a stray or unclosed quote; `{ 0 }` or `｛０｝`; `fr-FR.csv`, `french.csv`,
+  `fr.csv.txt`; letters lost as "?", Mac Excel's
+  garbling, error cells in any language, `{{0}}`, an index column, a comma inside a text without quotes; and more
+  (docs/localization.md section 9). A file must be saved as "CSV UTF-8" (or Excel's "Unicode Text"): any other
+  encoding (Excel's plain "CSV", "CSV (MS-DOS)", "CSV (Macintosh)") isn't read, and the log says to save it again. What can't be read shows English and is named in the log,
+  never a text that isn't in the file: a line without its English column, or with the columns swapped, shows English;
+  garbled letters, a mistyped key, letters lost as "?" are left out and named, never repaired; a copy (`fr - Copy.csv`)
+  is never read; a translator's out-of-date line never hides the shipped translation. A file without en.csv's header
+  row, or with it translated, isn't read (the log says to copy it), and under the header a line that is neither a key's
+  nor a `#` comment stops the reading there (the log names it).
 - **Four sentences say it differently**, so that every language can say them (2026-11-01, the user's yes):
   - the journal's Cargo is a number ("4", or "2 of 4" while a mod limits the cart), and the Cargo cart ability reads
     "Pulls a cart (cargo 4)." (no more "1 items");
@@ -68,6 +82,13 @@ For mod authors:
   differently (the cart overload and the safe spot, above).
 
 Development:
+
+- **The in-game Translations runs** (2026-11-01, the user's F11; 350/10/14, then 359/3/3, then 362/0/3): the files
+  scenario's keys have their dot (round 11's rule read a dotless one as none of the mod's lines); the Keeper's bubble is
+  found by its text without tags (the game types a bubble in with a transparent colour tag inside it); the prompt's
+  label facts are said (font, style's font, box, lines, clipping), and TextRoom judges a wrapping text that takes one
+  line in a label that doesn't clip by its lines (a CJK line is taller than the game's 12-high prompt label, drawn over
+  its edges: the "cut" in ja, zh_cn and ko was the measurement's).
 
 - **Translations, step 1 built** (2026-10-31; the plan agreed with the user, docs/localization.md section 7):
   - `Texts.cs`: folders, the two readers (`key = value` with `# en:`, CSV with the separator from its header and
@@ -118,13 +139,45 @@ Development:
   - The font our windows read: the Settings row's text style is applied for the language now before its font is
     copied (the game restyles only open windows on a language switch, so a closed Settings window could hold the
     last language's font).
+- **Review rounds** (2026-11-01; docs/localization.md section 11): every language proofread until two rounds in a row
+  changed nothing; an independent code review of the reader in rounds (18 findings, then 14, 19, 12, 6, 15, 9, 7, 12,
+  6 and 10; the user ended them after the eleventh) and its fixes, each first a failing catalogue case (63 to 231); under
+  a header every line is one of the mod's, a `#` comment or blank (any other line stops the reading, said; a key damaged
+  by one keystroke or a row cut by a typed line break costs its own line); a file is read from en.csv's header row on (a
+  file without one isn't read: read by its columns' places, a translation tool's context column showed as the
+  translation), and a section pasted under a header in other words isn't read either; a file with its english column before the translation is
+  refused (a comma typed into a text there can't be told) and a row with text past its header's columns left out; a
+  header's columns matched by en.csv's own names only (a notes column named "Notes (translator)" was read as the
+  translation): a header in other words, or naming a column otherwise, isn't read (said: copy en.csv's header row); a table is read again when its owner's English grows (a
+  mount or skin registered late: `Texts.EnglishStamp`, `Looks.Count`); every remaining way to a wrong text was a repair of the
+  translator's file, and the repairs are off behind four switches kept compiled for the user's decision
+  (`TranslationFiles.ReadCodePages` and `RepairGarbled`, `Texts.RescueByEnglish` and `JoinSeparator`; the 17 generated
+  pages stay; docs/localization.md section 11); and
+  `tests/TranslationScan` sweeps every shipped file, every shipped line alone and every UTF-8 file with one line in a
+  code page, saved every wrong way (including Excel in a `;` country, in one cell and as Excel splits and pads it), every
+  shipped row with one edit (no other key may fall to English), every file's header renamed, reordered and added to
+  (some 123,000 reads in all), and with
+  `GK2_L10N_CORPUS` the game's own tables (85 reads of 9,473 lines, checked against a text made without the mod's
+  cleaning, a line left out unsaid failing): never a text the file hasn't; reading a file measured (its timing line): the repair's tries through every page threw
+  in the strict UTF-8 decoder for each correct line (7.3 ms for the slowest file on .NET, more on Mono, in the frame a
+  language is read ahead); UTF-8 is checked without a throw now (1.7 ms; all 55 files 29 ms); the Layout scenario measures every language in its own font (every options
+  section, every description-box text, the Defaults question, the journal and the colours window of every mount), and
+  a new scenario the game's own thought bubble and prompt on foot with each language's longest sentence and prompt;
+  `l10n-sync.py` reads a file as the mod does and counts lines still the English apart; `tests/TranslationScan` refuses
+  a stale DLL; both fail on a shipped line the mod would leave out; `SelfTest.Drive` disposes the scenarios it unwinds (their cleanup ran only on success).
+- **The nine other languages** (2026-11-01; docs/localization.md section 10): written by one agent a language through a
+  validating writer (every key, every `{n}`, the measured room, wide characters counted double), the game's own terms
+  looked up in its strings tables; 50 files, `tests/TranslationScan` and `l10n-sync.py --check` clean. The Fonts self-test
+  also checks every character of our translations in each language's font (zh_cn and ko use some the game's own text
+  doesn't).
 - **Translator mistakes** (2026-11-01; docs/localization.md section 9): `TranslationFiles.cs` finds, decodes, parses
   and cleans a translation file forgivingly; `LegacyText.cs` holds the Windows code pages 1252, 1250, 1251, 1254
   (written by `tools/l10n-codepages.py` from Python's codecs; the game's Mono has no I18N assemblies); `Texts.Load`
-  and `Take` check each file against the owner's English (a key found again by its English, swapped columns, the english
-  column translated too: file-wide, most rows agreeing); keys case-insensitive; `Texts.Fill`: a translation that lost
-  a `{n}` shows the English (`Word.MayDropValues` for the two noun sentences); warnings at most 10 a file; the load
-  can't throw. The catalogue of 63 mistakes is `TranslationTests.Mistakes` (the Translations group) and
+  and `Take` check each file against the owner's English (a key found again by its English; a line without its English
+  left out; swapped columns or the english column translated too said, never repaired); keys case-insensitive;
+  `Texts.Fill`: a translation that lost a `{n}` shows the English (`Word.MayDropValues` for the two noun sentences);
+  warnings at most 10 a file; the load can't throw. The catalogue of 231 mistakes is `TranslationTests.Mistakes` (the
+  Translations group) and
   `tests/TranslationScan` (offline, in `tools/release-scans.sh`; also reads every shipped `Languages/*.csv`, no warning
   allowed; `InternalsVisibleTo("TranslationScan")`). A game in `pt` reads `pt-br.csv` after its own `pt.csv`.
   - The side effects: `Texts.TickWarm` reads the files ahead (one mod a frame, a game's start and a language change);

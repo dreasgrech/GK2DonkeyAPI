@@ -1,0 +1,148 @@
+﻿key,value,english,note
+options.done,完了,Done,
+options.defaults,初期設定に戻す,Defaults,
+options.set_back_ask,{0}のすべてのオプションを初期設定に戻しますか？,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,戻す,Set back,
+options.cancel,キャンセル,Cancel,
+options.hint_pad,オプションにカーソルを合わせると、その説明が表示されます。,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,オプションにマウスを合わせると、その説明が表示されます。,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,{0}のキーを押してください。Shift、Ctrl、Alt は単独でも、ほかのキーと組み合わせても使えます。Backspace：キーなし。Esc：キャンセル。,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,選択してから、キーボードでキーを押してください。,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,クリックしてキーを設定します。,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,ゲームのプレイ中のみ使えます。,Only in a game.,after a greyed button's description
+options.not_now,今は使えません。,Not available right now.,after a greyed option's description
+options.and_then,{0}{1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0} のオプション,{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,開く,Open,a button that opens the Mounts panel
+row.go,実行,Go,a mod's button
+row.press_a_key,キーを押してください…,Press a key...,a key option while it waits for the key
+row.none,なし,None,a key option with no key; an empty name; no babies
+key.same_as,{0}と同じキー,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,{0}（{1}）と競合,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,スキン,Skin,
+row.default_skin,標準,Default,the Skin list: a mount's own look
+row.no_choice,（なし）,(none),a list with nothing to choose
+row.babies,子供,Babies,
+row.babies_follow,徒歩でも子供がついてくる,Babies follow you on foot,
+row.babies_indoors,子供も屋内に入る,Babies come indoors,
+journal.title,乗り物図鑑,Mount Journal,
+journal.search,検索…,Search...,"the search box over the mounts, while empty"
+journal.customize,カスタマイズ,Customize,
+journal.ride,乗る,Ride,
+journal.drive_cart,荷車を走らせる,Drive the cart,
+journal.options,オプション,Options,
+journal.stats,ステータス,Stats,
+journal.abilities,能力,Abilities,
+journal.stat_speed,速度,Speed,
+journal.stat_cargo,積載量,Cargo,the Cargo stat's name; its value is a number (how many things the cart holds)
+journal.stat_skins,スキン,Skins,
+journal.stat_status,状態,Status,
+journal.no_cart,荷車なし,No cart,
+journal.cargo_of,{0} / {1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,飛行,Flying,
+journal.flying_line,立てる場所ならどこにでも着地できる。,It lands wherever you can stand.,
+journal.cargo_cart,荷車引き,Cargo cart,
+journal.cargo_cart_line,荷車を引く（積載量 {0}）。,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,未インストール,Not installed,
+journal.name_not_installed,{0}（未インストール）,{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0}（保留中）,{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,この乗り物を追加する MOD またはパックがインストールされていません。選択内容は保持され、再びインストールされるまでは代わりにロバが来ます。,"The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,未インストール：この乗り物を追加していた MOD またはパックがなくなりました。選択内容は保持され、代わりにロバが来ます。,Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.,
+journal.aside_note,保留中：この乗り物のスキンに必要な画像がゲーム内にありません（ログに記載されています）。選択内容は保持され、代わりにロバが来ます。,Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.,
+journal.no_skin_note,使えるスキンがありません。選択内容は保持され、代わりにロバが来ます。,It has no skin to wear. Your choice is kept; the donkey comes instead.,
+journal.waiting_skins,この乗り物のスキン（{0}）はインストールされていますが、乗り物本体がありません。乗るには、この乗り物を追加する MOD をインストールしてください。,"Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.",a mount whose skins are installed but not the mount; {0}: the skins' names
+mount.donkey.name,ロバ,Donkey,
+mount.donkey.description,墓場で一番辛抱強い働き者。村の誰よりも多くの死体を運んできたし、そのひとつひとつに一家言ある。,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,{0}の色,Colours: {0},the colours window's title; {0}: the mount's name
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,とても遅い,Very slow,a mount's speed in the journal's stats
+speed.slow,遅い,Slow,
+speed.normal,ふつう,Normal,
+speed.fast,速い,Fast,
+speed.very_fast,とても速い,Very fast,
+prompt.ride,乗る,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,{0}に乗る,Ride {0},on foot by a mount the player named; {0}: the name they gave it
+prompt.hitch,荷車をつなぐ,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,荷車に積む,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,荷車がいっぱい,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,荷車から取る,Take from cart,on foot by a cart with something on it
+prompt.set_down,降ろす,Set down,the chest riding on the cart
+prompt.load_chest,荷車に積む,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,ロバが十字路に死体を置いていった,The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,ゲーム中じゃない。,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,まだだ。ゲームを読み込み中だ。,Not yet: the game is still loading.,
+say.already_mounted,もう乗っている。,Already mounted.,
+say.nowhere_to_be_found,乗り物がどこにも見当たらない。,Your mount is nowhere to be found.,
+say.not_in_coop_game,協力プレイ中は無理だ。,Not in a co-op game.,
+say.not_right_now,今はやめておこう。,Not right now.,
+say.not_indoors,屋内では無理だ。,Not indoors.,
+say.busy,今は忙しい。,I'm busy.,
+say.not_while_building,建築中は無理だ。,Not while building.,
+say.no_such_animal,そんな動物はいない（{0}）。,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,{0} には乗れない：{1},Can't ride a {0}: {1},{0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+say.side_town_quality,セーブデータの町の質が変わってしまう。,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,セーブデータが管理している NPC グループに属している。,it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,アイテムを持っているから、荷車が無からアイテムを生み出してしまう。,"it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,あれは引き手のいない荷車だ。,That is a cart without a mount.,
+say.too_small_to_ride,こいつは小さすぎて乗れない。,This one is too small to ride.,
+say.not_here_now,今はここにいない。,It isn't here right now.,
+say.it_is_gone,いなくなってしまった。,It is gone.,
+say.not_cart_in_fight,戦闘中に荷車は無理だ。,Not the cart in a fight.,
+say.not_cart_indoors,屋内に荷車は無理だ。,Not the cart indoors.,
+say.cant_pull_the_cart,{0}は荷車を引けない。,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,荷車に積みすぎだ（{0} 個、最大 {1} 個）。まずいくつか降ろさないと。,Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,こいつの荷車はここにない。荷車のところまで乗っていこう。,This {0} has no cart here; ride it up to one.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,こいつはもう荷車を引いている。,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,こいつは荷車を引けない。,This one can't pull a cart.,
+say.not_a_free_cart,あれはつなげる荷車じゃない。,That is not a free cart.,
+say.cart_elsewhere,荷車は別の場所にある。,The cart is somewhere else.,
+say.scene_not_loaded,シーンが読み込まれるまでは無理だ。,Not while the scene is not loaded.,
+say.cant_get_to_cart,ここからあの荷車には行けない。,I can't get to that cart from here.,
+say.no_cart_to_leave,置いていく荷車がない。,No cart to leave.,
+say.cart_cant_stand,ここには荷車を止められない。,The cart can't stand here.,
+say.cart_not_left_where_stands,荷車を今の場所に置いていけなかった。,The cart could not be left where it stands.,
+say.cart_not_left_here,ここに荷車を置いていけなかった。,The cart could not be left here.,
+say.no_cart_here,ここに荷車はない。,No cart here.,
+say.has_no_cart,こいつには荷車がない。,It has no cart.,
+say.cart_not_here,荷車がここにない。,The cart is not here.,
+say.nothing_in_hand,何も持っていない。,Nothing in hand.,
+say.cart_takes_nothing,今は荷車に何も積めない。,The cart takes nothing now.,
+say.cart_cant_take,それは荷車に積めない。,The cart can't take that.,
+say.cart_full,荷車がいっぱいだ。,The cart is full.,
+say.no_keeper,墓守がいない。,No keeper.,
+say.cart_gives_nothing,今は荷車から何も取れない。,The cart gives nothing now.,
+say.cart_empty,荷車は空っぽだ。,The cart is empty.,
+say.hands_full,両手がふさがっている。,My hands are full.,
+say.wont_come_off,荷車から降ろせない。,It won't come off the cart.,
+say.not_while_riding,乗っている間は無理だ。,Not while riding.,
+say.ridden_pickups,乗っている間は、拾った物はそのまま荷車に積まれる。,Ridden: pickups go onto the cart already.,
+say.chest_off,荷車の宝箱は今は無効になっている（ログを参照）。,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,宝箱は荷車に載せられない。,Chests don't ride on the cart.,
+say.needs_the_cart,それには荷車が必要だ。,That needs the cart.,
+say.only_plain_chest,荷車に載せられるのは、ただの宝箱だけだ。,Only a plain storage chest goes on the cart.,
+say.chest_aboard,荷車にはもう宝箱が載っている。,There's a chest on the cart already.,
+say.cargo_down_first,まずは積み荷を降ろさないと。,Set the cargo down first.,
+say.cant_be_moved,これは動かせない。,This can't be moved.,
+say.not_in_coop,協力プレイでは無理だ。,Not in co-op.,
+say.marked_for_taking_down,これは取り壊す予定になっている。,It's marked for taking down.,
+say.its_busy,今は使用中だ。,It's busy.,
+say.attached_to_workbench,これは作業台につながっている。,It's attached to a workbench.,
+say.someone_works_at_it,誰かが作業している。,Someone works at it.,
+say.someone_using_it,今、誰かが使っている。,Someone is using it right now.,
+say.close_building_window,まずは建築ウィンドウを閉じないと。,Close the building window first.,
+say.zombie_using_chest,ゾンビがこの宝箱を使っている。,A zombie is using this chest.,
+say.didnt_work,うまくいかなかった。,That didn't work.,
+say.no_room_here,ここには置く場所がない。,There's no room for it here.,
+say.cant_reach_spot,あそこには行けない。,I can't reach that spot.,
+say.outside_building_area,あそこは建築エリアの外だ。,That spot is outside any building area.,
+say.chest_stays,宝箱は荷車のそばに置いていく。,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,ここでは飛べない。,Can't fly in here.,
+say.cant_fly_now,今は飛べない。,Can't fly now.,
+say.nowhere_to_land,ここには着地できる場所がない。,Nowhere to land here.,
+say.land_first,まず着地しないと。,Land first.,
+say.back_on_ground,ようやく地に足がついた。,Back on solid ground.,
+say.keeper_not_there,墓守の体がそこにない。,The keeper's body isn't there.,
+say.not_now_door,今は無理だ：ドアかシーンかカットシーンの途中だ。,"Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,このシーンにはまだ安全な場所がない（少しの間、地面に立っていよう）。,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,このシーンの安全な場所はどれも使えなくなった。,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,このシーンにはもう使える安全な場所がない。,No safe spot of this scene holds any more.,

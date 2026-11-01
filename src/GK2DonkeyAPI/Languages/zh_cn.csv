@@ -1,0 +1,148 @@
+﻿key,value,english,note
+options.done,完成,Done,
+options.defaults,恢复默认,Defaults,
+options.set_back_ask,将{0}中的所有选项恢复为默认值？,Set every option in {0} back to its default?,the Defaults button's question; {0}: a section's name
+options.set_back,恢复,Set back,
+options.cancel,取消,Cancel,
+options.hint_pad,移动到某个选项上即可查看它的作用。,Move to an option to see what it does.,"the line under the options, with a gamepad"
+options.hint_mouse,将鼠标指向某个选项即可查看它的作用。,Point at an option to see what it does.,"the line under the options, with a mouse"
+options.press_key_for,请按下{0}的按键：可单独按Shift、Ctrl或Alt，也可与其他键组合。Backspace：不设按键。Esc：取消。,"Press the key for {0}: Shift, Ctrl or Alt on its own, or with another key. Backspace: no key. Esc: cancel.",while a key is being set; {0}: the option's name
+options.key_how_pad,选中后，在键盘上按下按键。,"Select it, then press the key on the keyboard.","after a key option's description, with a gamepad"
+options.key_how_mouse,点击以设置按键。,Click it to set the key.,"after a key option's description, with a mouse"
+options.only_in_game,仅在游戏中可用。,Only in a game.,after a greyed button's description
+options.not_now,当前不可用。,Not available right now.,after a greyed option's description
+options.and_then,{0}{1},{0} {1},"the line under the options: {0} the option's description, {1} the sentence after it (the two above)"
+options.page_button,{0}选项,{0} options,the button in the game's Settings window; {0}: the mod's name
+row.open,打开,Open,a button that opens the Mounts panel
+row.go,执行,Go,a mod's button
+row.press_a_key,请按键……,Press a key...,a key option while it waits for the key
+row.none,无,None,a key option with no key; an empty name; no babies
+key.same_as,与{0}按键相同,Same key as {0},"under a key option; {0}: another option, or another mod's setting"
+key.clashes_with,与{0}（{1}）冲突,Clashes with {0} ({1}),"under a key option; {0}: another option or mod's setting, {1}: its key"
+row.skin,外观,Skin,
+row.default_skin,默认,Default,the Skin list: a mount's own look
+row.no_choice,（无）,(none),a list with nothing to choose
+row.babies,幼崽,Babies,
+row.babies_follow,步行时幼崽跟随你,Babies follow you on foot,
+row.babies_indoors,幼崽可进入室内,Babies come indoors,
+journal.title,坐骑图鉴,Mount Journal,
+journal.search,搜索……,Search...,"the search box over the mounts, while empty"
+journal.customize,自定义,Customize,
+journal.ride,骑乘,Ride,
+journal.drive_cart,驾驶板车,Drive the cart,
+journal.options,选项,Options,
+journal.stats,属性,Stats,
+journal.abilities,能力,Abilities,
+journal.stat_speed,速度,Speed,
+journal.stat_cargo,载货量,Cargo,the Cargo stat's name; its value is a number (how many things the cart holds)
+journal.stat_skins,外观,Skins,
+journal.stat_status,状态,Status,
+journal.no_cart,无板车,No cart,
+journal.cargo_of,{0}/{1},{0} of {1},"the Cargo stat while a mod limits the cart: {0} what the cart holds now, {1} what the mount pulls (numbers)"
+journal.flying,飞行,Flying,
+journal.flying_line,凡是你能站立的地方，它都能降落。,It lands wherever you can stand.,
+journal.cargo_cart,载货板车,Cargo cart,
+journal.cargo_cart_line,拉一辆板车（载货量{0}）。,Pulls a cart (cargo {0}).,"the Cargo cart ability; {0}: how many things the cart holds, a number from 1 to 6"
+journal.not_installed,未安装,Not installed,
+journal.name_not_installed,{0}（未安装）,{0} (not installed),"{0}: a mount's or skin's name, its mod or pack gone"
+journal.name_set_aside,{0}（已搁置）,{0} (set aside),"{0}: a skin's name, the game no longer having its pictures"
+journal.missing_note,添加此坐骑的模组或扩展包未安装。你的选择会被保留，在它回来之前由毛驴代替出场。,"The mod or pack that adds this mount isn't installed. Your choice is kept, and the donkey comes instead until it is back.",
+journal.gone_note,未安装：提供此坐骑的模组或扩展包已被移除。你的选择会被保留，由毛驴代替出场。,Not installed: the mod or pack that had this mount is gone. Your choice is kept; the donkey comes instead.,
+journal.aside_note,已搁置：游戏中已没有此坐骑外观所需的图像（日志中列出了它们）。你的选择会被保留，由毛驴代替出场。,Set aside: the game no longer has the pictures this mount's skin needs (the log names them). Your choice is kept; the donkey comes instead.,
+journal.no_skin_note,它没有可用的外观。你的选择会被保留，由毛驴代替出场。,It has no skin to wear. Your choice is kept; the donkey comes instead.,
+journal.waiting_skins,此坐骑的外观已安装（{0}），但坐骑本身未安装：请安装添加它的模组才能骑乘。,"Skins for this mount are installed ({0}), but not the mount itself: install the mod that adds it to ride it.",a mount whose skins are installed but not the mount; {0}: the skins' names
+mount.donkey.name,毛驴,Donkey,
+mount.donkey.description,墓地里最有耐心的劳工。它运过的尸体比村里任何人都多，而且对每一具都有自己的看法。,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
+colours.title,颜色：{0},Colours: {0},the colours window's title; {0}: the mount's name
+colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+speed.very_slow,极慢,Very slow,a mount's speed in the journal's stats
+speed.slow,慢速,Slow,
+speed.normal,正常,Normal,
+speed.fast,快速,Fast,
+speed.very_fast,极快,Very fast,
+prompt.ride,骑乘,Ride,on foot by a mount: the key's prompt
+prompt.ride_named,骑乘{0},Ride {0},on foot by a mount the player named; {0}: the name they gave it
+prompt.hitch,套上板车,Hitch the cart,"riding, by a cart standing on its own"
+prompt.load,装上板车,Load on cart,"on foot by a cart, carrying something"
+prompt.cart_full,板车已满,Cart is full,"on foot by a full cart, carrying something"
+prompt.take,从板车上取下,Take from cart,on foot by a cart with something on it
+prompt.set_down,放下,Set down,the chest riding on the cart
+prompt.load_chest,装上板车,Load onto the cart,"riding with the cart, at a storage chest"
+notice.crossroads,毛驴把一具尸体留在了十字路口,The donkey left a body at the crossroads,the notification when the game's donkey leaves a body at the crossroads
+say.not_in_game,不在游戏中。,Not in a game.,"the keeper's thought bubble, as every say. line"
+say.still_loading,还不行：游戏仍在加载。,Not yet: the game is still loading.,
+say.already_mounted,已经骑上了。,Already mounted.,
+say.nowhere_to_be_found,坐骑不见踪影。,Your mount is nowhere to be found.,
+say.not_in_coop_game,合作模式下不行。,Not in a co-op game.,
+say.not_right_now,现在不行。,Not right now.,
+say.not_indoors,室内不行。,Not indoors.,
+say.busy,我正忙着呢。,I'm busy.,
+say.not_while_building,建造时不行。,Not while building.,
+say.no_such_animal,没有这种动物（{0}）。,There is no such animal ({0}).,{0}: the game's id of the animal a setting names
+say.cant_ride_a,无法骑乘{0}：{1},Can't ride a {0}: {1},{0}: the game's id of the animal a setting names; {1}: one of the three sentences below
+say.side_town_quality,这会改变存档中的小镇质量。,it would change the town quality in the save.,"after ""Can't ride a ...:"""
+say.side_npc_group,它属于存档所记录的某个NPC群组。,it belongs to an NPC group the save keeps track of.,"after ""Can't ride a ...:"""
+say.side_start_items,它自带物品，板车会凭空变出这些东西。,"it comes with items, which the cart would create out of nothing.","after ""Can't ride a ...:"""
+say.cart_without_mount,那是一辆没有坐骑的板车。,That is a cart without a mount.,
+say.too_small_to_ride,这家伙太小了，骑不了。,This one is too small to ride.,
+say.not_here_now,它现在不在这里。,It isn't here right now.,
+say.it_is_gone,它已经不见了。,It is gone.,
+say.not_cart_in_fight,战斗中不能用板车。,Not the cart in a fight.,
+say.not_cart_indoors,室内不能用板车。,Not the cart indoors.,
+say.cant_pull_the_cart,{0}拉不了板车。,{0} can't pull the cart.,"{0}: the mount's name (the player's name for it, else its kind's)"
+say.too_much_on_cart,板车上东西太多了（{0}件，最多{1}件）。得先卸下一些。,Too much on the cart ({0} of at most {1}). Take some off first.,"a mount that pulls fewer things than are on the cart; {0}: how many are on it, {1}: how many it pulls"
+say.no_cart_here_ride_up,这家伙在这里没有板车，得骑着它去找一辆。,This {0} has no cart here; ride it up to one.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.already_pulls_cart,这家伙已经拉着一辆板车了。,This {0} already pulls a cart.,"{0}: what the mount is, in lower case (donkey, crab); a translation may leave it out"
+say.cant_pull_a_cart,这家伙拉不了板车。,This one can't pull a cart.,
+say.not_a_free_cart,那不是一辆空闲的板车。,That is not a free cart.,
+say.cart_elsewhere,板车在别处。,The cart is somewhere else.,
+say.scene_not_loaded,场景还没加载好，现在不行。,Not while the scene is not loaded.,
+say.cant_get_to_cart,我从这里到不了那辆板车旁边。,I can't get to that cart from here.,
+say.no_cart_to_leave,没有可以留下的板车。,No cart to leave.,
+say.cart_cant_stand,板车不能停在这里。,The cart can't stand here.,
+say.cart_not_left_where_stands,没法把板车留在原地。,The cart could not be left where it stands.,
+say.cart_not_left_here,没法把板车留在这里。,The cart could not be left here.,
+say.no_cart_here,这里没有板车。,No cart here.,
+say.has_no_cart,它没有板车。,It has no cart.,
+say.cart_not_here,板车不在这里。,The cart is not here.,
+say.nothing_in_hand,手里什么都没有。,Nothing in hand.,
+say.cart_takes_nothing,板车现在装不了东西。,The cart takes nothing now.,
+say.cart_cant_take,板车装不了这个。,The cart can't take that.,
+say.cart_full,板车满了。,The cart is full.,
+say.no_keeper,没有守墓人。,No keeper.,
+say.cart_gives_nothing,现在没法从板车上取东西。,The cart gives nothing now.,
+say.cart_empty,板车是空的。,The cart is empty.,
+say.hands_full,我腾不出手来。,My hands are full.,
+say.wont_come_off,它没法从板车上卸下来。,It won't come off the cart.,
+say.not_while_riding,骑乘时不行。,Not while riding.,
+say.ridden_pickups,骑乘中：捡到的东西已经会直接放上板车了。,Ridden: pickups go onto the cart already.,
+say.chest_off,板车载箱子的功能暂时关闭了（详见日志）。,The chest on the cart is off for now (see the log).,
+say.chests_dont_ride,箱子不能放上板车。,Chests don't ride on the cart.,
+say.needs_the_cart,这得用板车才行。,That needs the cart.,
+say.only_plain_chest,只有普通的储物箱子才能放上板车。,Only a plain storage chest goes on the cart.,
+say.chest_aboard,板车上已经有一个箱子了。,There's a chest on the cart already.,
+say.cargo_down_first,得先把货物卸下来。,Set the cargo down first.,
+say.cant_be_moved,这东西搬不动。,This can't be moved.,
+say.not_in_coop,合作模式下不行。,Not in co-op.,
+say.marked_for_taking_down,它已被标记为拆除。,It's marked for taking down.,
+say.its_busy,它正被占用。,It's busy.,
+say.attached_to_workbench,它连着一个工作台。,It's attached to a workbench.,
+say.someone_works_at_it,有人正在那里干活。,Someone works at it.,
+say.someone_using_it,现在有人正在使用它。,Someone is using it right now.,
+say.close_building_window,得先关闭建造窗口。,Close the building window first.,
+say.zombie_using_chest,有个僵尸正在使用这个箱子。,A zombie is using this chest.,
+say.didnt_work,没成功。,That didn't work.,
+say.no_room_here,这里放不下它。,There's no room for it here.,
+say.cant_reach_spot,我到不了那个地方。,I can't reach that spot.,
+say.outside_building_area,那个地方不在任何建筑区内。,That spot is outside any building area.,
+say.chest_stays,箱子留在板车旁边。,The chest stays by the cart.,a door to another place while the chest rides on the cart: it is set down by the cart
+say.cant_fly_in_here,这里不能飞。,Can't fly in here.,
+say.cant_fly_now,现在不能飞。,Can't fly now.,
+say.nowhere_to_land,这里没有地方降落。,Nowhere to land here.,
+say.land_first,得先降落。,Land first.,
+say.back_on_ground,终于回到坚实的地面了。,Back on solid ground.,
+say.keeper_not_there,守墓人的身体不在那里。,The keeper's body isn't there.,
+say.not_now_door,现在不行：守墓人正在穿过一扇门、切换场景或观看过场动画。,"Not now: a door, a scene or a cutscene has the keeper.",
+say.no_safe_spot_yet,这个场景里还没有安全点（先在地面上站一会儿）。,No safe spot in this scene yet (stand on the ground a moment).,
+say.no_safe_spot_holds,这个场景里没有仍然有效的安全点。,No safe spot of this scene still holds.,
+say.no_safe_spot_any_more,这个场景里的安全点都已不再有效。,No safe spot of this scene holds any more.,
