@@ -1,0 +1,5 @@
+GK2 Saddle Up 0.15.0
+
+- Saddle Up is now in French, German, Spanish, Brazilian Portuguese, Russian, Polish, Turkish, Japanese, Simplified Chinese and Korean: it follows the game's language.
+- You can translate it into another language yourself: the mod's README says how.
+- A few messages are worded differently so every language can say them.

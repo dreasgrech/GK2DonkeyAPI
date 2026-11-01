@@ -17,7 +17,7 @@ namespace GK2SaddleUpDonkeySkinPack
     public sealed class Plugin : BaseUnityPlugin
     {
         public const string Guid = "dreas.gk2.saddleup.donkeyskins";
-        public const string Version = "1.0.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
+        public const string Version = "1.1.0"; // the same as CHANGELOG.md's first heading (check-dist.py checks it)
         private const string Prefix = "GK2SaddleUpDonkeySkinPack.mounts.";
 
         private void Awake()

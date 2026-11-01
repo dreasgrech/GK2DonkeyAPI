@@ -50,7 +50,7 @@ namespace GK2DonkeyAPI.IntegrationTests
             // the Mounts panel's abilities card (2026-10-27): Gerry's cart with his cargo; the dragon flies and pulls none
             List<MountsPanel.Entry> panelEntries = MountsPanel.Entries();
             MountsPanel.Entry gerryEntry = panelEntries.Find(x => x.Id == M("gerry")), dragonEntry = panelEntries.Find(x => x.Id == M("dragon"));
-            Check(gerryEntry != null && gerryEntry.Abilities.Exists(x => x.Name == "Cargo cart" && x.Line.Contains("4 items")) && !gerryEntry.Abilities.Exists(x => x.Name == "Flying"),
+            Check(gerryEntry != null && gerryEntry.Abilities.Exists(x => x.Name == "Cargo cart" && x.Line.Contains("cargo 4")) && !gerryEntry.Abilities.Exists(x => x.Name == "Flying"),
                 $"Gerry's abilities: a cargo cart of 4 ({(gerryEntry == null ? "no entry" : string.Join(", ", gerryEntry.Abilities.ConvertAll(x => x.Name)))})");
             if (dragonEntry != null) Check(dragonEntry.Abilities.Exists(x => x.Name == "Flying") != !Flight.Active && !dragonEntry.Abilities.Exists(x => x.Name == "Cargo cart"),
                 $"the dragon's abilities: flying, no cargo cart ({string.Join(", ", dragonEntry.Abilities.ConvertAll(x => x.Name))})");

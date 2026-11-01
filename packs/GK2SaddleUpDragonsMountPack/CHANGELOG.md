@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 1.1.0, 2026-11-01
+
 - **Translatable** (2026-11-01; GK2 Donkey API's translations, its docs/localization.md): the pack ships its English
   as `Languages\en.csv` beside its DLL: the dragon's name and description (the Mount Journal, the keeper's bubbles).
   A translator copies it to `de.csv`, `fr.csv`, ... (the game's language ids; GK2 Saddle Up's README says how).

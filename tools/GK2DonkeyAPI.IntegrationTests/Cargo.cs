@@ -55,7 +55,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 if (left == null) yield break;
                 yield return Until(() => h.IsReady && left.IsReady, 6f);
                 MountResult refused = Mounts.Hitch(h, left);
-                Check(!refused.Ok && (refused.Reason ?? "").Contains("2 items at most") && (refused.Reason ?? "").Contains("Take 2 off"), $"hitching it to the rat is refused with why (\"{refused.Reason}\")");
+                Check(!refused.Ok && (refused.Reason ?? "").Contains("4 of at most 2") && (refused.Reason ?? "").Contains("Take some off"), $"hitching it to the rat is refused with why (\"{refused.Reason}\")");
                 int removed = 0;
                 foreach (Item it in new List<Item>(left.I.CargoRig.Inv.Data.Inventory))
                 {

@@ -48,6 +48,7 @@ namespace GK2DonkeyAPI.IntegrationTests
                 if (button != null)
                 {
                     returns = SafeSpots.TestReturns;
+                    Info("the next \"[safe-spot] back to\" warning is this test's own: it presses the button on purpose");
                     PutKeeper(away.Value, homeFacing);
                     yield return Frames(3);
                     button.OnClick();

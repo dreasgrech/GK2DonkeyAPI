@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+(Nothing yet.)
+
+## 1.1.0, 2026-11-01
+
 - **The plugin is named "GK2 Saddle Up: Donkey Skin Pack"** (2026-10-30; it was "GK2 Saddle Up: Donkey Skins"): the name BepInEx logs and the framework's Mods
   menu shows is the pack's public name, the one of its Nexus page, its Workshop item and the game's own Mods window
   (which reads it from the zip's `modinfo.json`). The id and the mounts are unchanged.

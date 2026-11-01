@@ -57,6 +57,7 @@ namespace GK2DonkeyAPI
             Vector3 me = Keeper();
             Vector3 safe = Mounts.LastSafeSpot ?? me;
 
+            Info("the next two \"[safe-spot] back to\" warnings are this test's own: it puts him under the ground on purpose");
             // 1. under the ground
             int returns = SafeSpots.TestReturns;
             PutKeeper(me - Vector3.up * 1.0f, homeFacing);

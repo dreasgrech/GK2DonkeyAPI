@@ -10,7 +10,12 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-(The Armored skin and the pipeline work ship with the Donkey Skin Pack's 1.1.0.)
+(Nothing yet.)
+
+## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
+
+(The Armored skin and the skin pipeline work ship with the Donkey Skin Pack's 1.1.0, released with this; the Dragons
+Mount Pack's 1.1.0 carries its translations. The Critters Mount Pack stays unreleased.)
 
 For players:
 
@@ -22,7 +27,7 @@ For players:
   ships its English as a spreadsheet file, `Languages\en.csv`, beside its DLL; a translator copies it to `de.csv`,
   `fr.csv`, ... (the game's language ids) and changes its value column. A line not translated, or whose English changed since, shows in
   English. The README's Translations says how; `[Translations] Report` (the API's cfg) writes the lines still to
-  translate. No translation ships yet.
+  translate.
 - **Translations, steps 2 and 3** (2026-11-01): the keeper's thought bubbles (why something can't be done), the
   prompts on foot ("Ride", "Hitch the cart", "Load on cart", "Take from cart", the chest's two), the crossroads
   notification (while it is still the shipped text) and the mounts' and skins' names and descriptions (the journal,
