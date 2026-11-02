@@ -16,9 +16,18 @@ from gamedir import game_dir
 # the cuts on the page: (folder under out\study, the card's name, the generator's arguments); the last one run is
 # what out\pack holds afterwards
 STUDIES = [
-    ("armored-armet", "Armored (armet)", []),
-    ("armored-armet-comb", "Armored (armet, gilt comb)", ["--comb"]),
+    ("armored-in-progress", "Armored (in progress)", []),
 ]
+
+
+PACK = os.path.join(os.path.dirname(os.path.dirname(SKINS)), "packs", "GK2SaddleUpDonkeySkinPack", "gk2mounts", "donkey",
+                    "skins", "saddleup-donkey-skins.armored")
+
+
+def same_pictures(a, b):
+    names = sorted(f for f in os.listdir(a) if f.endswith(".png"))
+    return bool(names) and all(os.path.exists(os.path.join(b, f)) and
+                               open(os.path.join(a, f), "rb").read() == open(os.path.join(b, f), "rb").read() for f in names)
 
 
 def run(args):
@@ -54,7 +63,11 @@ def main(argv):
     args = []
     for folder, name, gen in STUDIES:
         run([os.path.join(HERE, "make_armored.py"), "--no-assets"] + gen)
-        args += ["--study", stage(folder, name)]
+        study = stage(folder, name)
+        if same_pictures(study, PACK):   # a cut already written into the pack is the page's own Armored card: a
+            print(f"{name}: the pack holds this cut, shown as Armored")   # study of it would only repeat it
+            continue
+        args += ["--study", study]
     page = os.path.join(probe, "skins-preview.html")
     run([os.path.join(SKINS, "skin_preview_html.py"), probe, page] + args)
     print("page:", page)

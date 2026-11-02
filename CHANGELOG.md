@@ -52,19 +52,29 @@ Development:
   armet references). `make_armored.py`: the chanfron, its rivets and the brow's boss replaced by a closed helmet in
   the same steel: a skull over the forehead and the poll (the ear comes out behind it), a gilt brow, the sight
   over the eye (the eye's white shows through it, and the lips frames' blink with it), a beaked visor over the nose
-  with breaths and a brass rosette where it pivots on the cheek, a roped gilt rim along the jaw; the nose's tip and
-  the lips stay out under the beak, so it is still a donkey. The skull lies flush with the head's own top line (a
-  first round dome standing above it and upright at the front was "that bulge near the brain area", the user's marked
-  screenshot), the plume's holder on its top edge. `--comb` adds a gilt comb along that edge (down the middle from the
-  front); `preview.py` stages both, "Armored (armet)" and "Armored
-  (armet, gilt comb)", for the user's pick. Graze 03-05 no longer push the head's art through the majority-vote warp
+  with breaths and a brass rosette where it pivots on the cheek, a roped gilt rim along the jaw. The skull lies flush
+  with the head's own top line (a first round dome standing above it and upright at the front was "that bulge near
+  the brain area", the user's marked screenshot), the plume's holder on its top edge, a gilt comb along that edge
+  (down the middle from the front; the user's pick over the plain skull, both were cards on the page; the option is
+  gone again, the page has one card "Armored (in progress)"). The visor is closed over the whole muzzle in every view:
+  the nose's tip and the lips first left out under the beak drew the donkey's olive outline round the helm's mouth
+  ("a border ... which doesn't really match the helm's colour", the user's next marked screenshot). Where a frame's
+  own mouth moves past the helm (chew 02-03, lips 04/06/08-10, turn 02, the lowered head, turn 05's muzzle),
+  `sealed()` gives those few donkey pixels next to the helmet its outline (its dark steel inside), so no olive shows
+  in any frame (the standing frame has none to seal). Graze 03-05 no longer push the head's art through the majority-vote warp
   alone (it broke the one-pixel brow, sight and rim into dots): `helmet_turned()` turns the helmet's shape and shading
   and draws its lines (Bresenham through the turned pixel centres), breaths and rosette again on the turned head.
   Turn 03 (three quarters) and turn 04-06 (the front) have new drawings of the helmet. Found on the way: in turn 04-06
   the front lame was drawn over the donkey's muzzle (in the shipped cut too); the lames and the skirt now stay behind
   the head where it is turned towards us (turn 03-06; turn 04, 05, 06 give 15, 11, 11 lame pixels back to the muzzle;
   every other frame's body is the shipped pictures' pixel for pixel, checked). The skin's
-  description says "a plumed knight's helmet". Only out\ changed; the pack waits for the user's pick.
+  description says "a plumed knight's helmet". Approved by the user on the page (2026-11-02, "have this one replace
+  the other one so we see it in game"): written into the pack (`--cfg`: pictures, skin.cfg, the pack's changelog
+  entry) and deployed (the DLL checked: all 45 files byte for byte, the new description, not the old); the README,
+  the docs, the media texts, the 1.1.0 notes, the zip and the Workshop folder still wait for the in-game verdict.
+  The preview page still showed the old cut after the pack write (the user; nothing had rebuilt it): rebuilt, and
+  `preview.py` now leaves a study the pack already holds off the page (it is the page's own Armored card then, so
+  running the review loop after a pack write gives the right page with no repeated card).
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

@@ -12,8 +12,6 @@ day (the user, after seeing it in game: "lacklustre", "fill the donkey's face mo
     python -I tools/skins/armored/make_armored.py              # the pack's pictures + out\\
     python -I tools/skins/armored/make_armored.py --no-assets  # out\\ only (the review folder; the pack untouched)
     python -I tools/skins/armored/make_armored.py --cfg        # rewrite the pack's skin.cfg too (by hand otherwise)
-    python -I tools/skins/armored/make_armored.py --comb       # the armet with a gilt comb on its skull (on the page
-                                                               # beside the plain skull, for the user's pick)
 
 How it is drawn: every piece is cut and shaded ONCE, on the standing frame, then moved into each frame with the part of
 the donkey it rides on, so its pixels never change between frames (no shimmer):
@@ -588,29 +586,22 @@ def chest_delta(key, donkey, b):
 # rivets and the brow's boss went with it.
 HELMET = [  # top-left at (24, 30): the skull over the forehead and the poll, flush with the head's own top line (a
     ".............kkk",    # 30   round dome standing above it and upright at the front read as a bulge on the
-    "...........kk75k",    # 31   brain: the user's marked screenshot, 2026-11-02); the ear comes out behind it (rows
-    ".........kk86k",      # 32   30-35); lit along its top edge, darker towards the ear and the jaw
-    "........k876k",       # 33
-    ".......k77665k",      # 34
+    "...........kkxwk",    # 31   brain: the user's marked screenshot, 2026-11-02); the ear comes out behind it (rows
+    ".........kkyxk",      # 32   30-35); a gilt comb along its top edge from the brow to the plume's holder (the
+    "........kyy6k",       # 33   user's pick over the plain skull, 2026-11-02); darker towards the ear and the jaw
+    ".......ky7665k",      # 34
     ".......k676554k",     # 35
     "......k66655443k",    # 36
-    "....kyzyyxxxwwwk",    # 37  the gilt brow
-    "...k6kkkkk.kk443k",   # 38  the sight (the eye's white shows through at (34, 38))
-    "..k76666555444y3k",   # 39  the visor: its upper face lit,
-    ".k87776665544yzxk",   # 40  the beak's crease over the nose; its pivot, a brass rosette, on the cheek
-    "...k5k5k4k4333w3k",   # 41  the breaths
-    "....k4333333232k",    # 42  (the nose's tip and the lips stay out under the beak: still a donkey)
-    ".....kyxyxyxwxwk",    # 43  the roped gilt rim along the jaw
-    "......kkkkkkkkk",     # 44
+    "...k7yzyyxxxwwwk",    # 37  the gilt brow
+    "..k76kkkkk.kk443k",   # 38  the sight (the eye's white shows through at (34, 38))
+    ".k776666555444y3k",   # 39  the visor, closed over the whole muzzle (the nose's tip and the lips left out drew
+    ".k87776665544yzxk",   # 40  the donkey's olive outline round the helm's mouth: the user's marked screenshot,
+    ".k655k5k4k4333w3k",   # 41  2026-11-02): its upper face lit, the beak's crease over the nose, the breaths; its
+    "..k444333333232k",    # 42  pivot, a brass rosette, on the cheek
+    "..kyxyxyxyxxwxwk",    # 43  the roped gilt rim along the jaw
+    "...kkkkkkkkkkkk",     # 44
 ]
 HELMET_AT = (24, 30)
-COMB = {  # --comb: a gilt comb along the skull's top edge, from the brow to the plume's holder (shown beside the plain
-    31: "...........kkxwk",   # skull on the page for the user's pick)
-    32: ".........kkyxk",
-    33: "........kyy6k",
-    34: ".......ky7665k",
-}
-OPTIONS = set()   # the generator's look options (main fills it from the command line)
 PLUME = [  # top-left at PLUME_AT: a short plume rising from a brass holder on the skull's top and falling back, in front
     "..qqq...",  # of the ear's root (the ear stays in view behind it); the cloth's colours, so it takes the harness colour
     ".qtuutq.",
@@ -631,7 +622,7 @@ PLUME_TURN = 0.5            # a lowered head turns the plume only this much of i
 
 
 def face_layer():
-    return stamp({}, combed(HELMET, HELMET_AT[1], COMB), *HELMET_AT)
+    return stamp({}, HELMET, *HELMET_AT)
 
 
 def plume_layer():
@@ -644,8 +635,8 @@ def plume_layer():
 # turned centres. The outline is the turned shape's own edge.
 HELMET_LINES = [[(x, 37) for x in range(29, 39)],   # the gilt brow
                 [(x, 38) for x in range(29, 37)],   # the sight (the eye hole left open)
-                [(x, 43) for x in range(30, 39)]]   # the roped rim
-COMB_LINE = [(32, 34), (33, 33), (34, 33), (35, 32), (36, 32), (37, 31), (38, 31)]
+                [(x, 43) for x in range(27, 39)]]   # the roped rim
+COMB_LINE = [(32, 34), (33, 33), (34, 33), (35, 32), (36, 32), (37, 31), (38, 31)]   # the gilt comb on the skull
 HELMET_DOTS = [(29, 41), (31, 41), (33, 41)]   # the breaths
 ROSETTE = ([".y.", "yzx", ".w."], (38, 40))    # the visor's pivot on the cheek: its art and its centre
 EYE_HOLE = (34, 38)
@@ -672,7 +663,7 @@ def cells(a, b):
 
 def helmet_turned(A, t):
     px = cached("face", face_layer)
-    lines = HELMET_LINES + ([COMB_LINE] if "--comb" in OPTIONS else [])
+    lines = HELMET_LINES + [COMB_LINE]
     art, (cx, cy) = ROSETTE
     rosette = {(cx - 1 + i, cy - 1 + j) for j, row in enumerate(art) for i, ch in enumerate(row) if ch != "."}
     detail = {p for line in lines for p in line} | set(HELMET_DOTS) | rosette | {EYE_HOLE}
@@ -811,62 +802,60 @@ def head_region():
 # turn 03 (three quarters) and turn 04 (the face towards us): their own drawings, top-left on the frame; turn 05/06
 # are turn 04 a row higher (their ear bases are)
 TURN3_HELMET = [  # top-left at (29, 35): the skull between the near ear and the far one lying back, flush with the
-    ".....kkkkkkk",      # 35   head's top (no dome above it), the gilt brow, the sight with the near eye's white at
-    "....k6787654k",     # 36   (38, 42), the beak's crease down the face's front (x 33), the breaths and the rosette
-    "..k567776654k",     # 37   on the near cheek, the roped rim; the muzzle's tip shows under the beak, bottom left
-    ".k5667666554k",     # 38
-    ".k4566655543k",     # 39
-    ".k4455554433k",     # 40
+    ".....kkkkkkk",      # 35   head's top (no dome above it), the gilt comb from its top down its front, the gilt
+    "....k67y7654k",     # 36   brow, the sight with the near eye's white at (38, 42), the beak's crease down the
+    "..k567y76654k",     # 37   face's front (x 33, bending left as the muzzle comes towards us), the breaths and the
+    ".k566x666554k",     # 38   rosette on the near cheek; the visor closed over the whole muzzle as in profile, the
+    ".k456x655543k",     # 39   roped rim at its bottom
+    ".k44x5554433k",     # 40
     ".kxyzyyxxxwwk",     # 41  the gilt brow
     ".kkkkkkkk.kkk",     # 42  the sight
     "k6778665544y3k",    # 43
     "k56785k5k4yzxk",    # 44
-    "..k6744k333wk",     # 45
-    "...kyxyxwxwk",      # 46  the roped rim
-    "....kkkkkkk",       # 47
+    ".k66744k333wk",     # 45
+    "k5675443322k",      # 46
+    "k56644332k",        # 47
+    "k45543322k",        # 48
+    "k4443322k",         # 49
+    "k3443221k",         # 50
+    ".kyxyxwk",          # 51  the roped rim
+    "..kkkkk",           # 52
 ]
-TURN3_COMB = {36: "....k67y7654k", 37: "..k567y76654k", 38: ".k566x666554k",
-              39: ".k456x655543k", 40: ".k44x5554433k"}   # --comb: from the skull's top down its front to the brow
 TURN3_PLUME = [".qq.", "qtuq", "qtsq", "qtsq", ".qrq", ".yx.", ".xw."]   # top-left at (34, 28): on the skull's front
 FRONT_HELMET = [  # top-left at (30, 33): the skull between the ears, flush with the head's top, the gilt brow, the
-    "....kkkkk",         # 33   sight across the face with the eyes' glints at its sides, the beak's crease down the
-    "...k78765k",        # 34   middle (lit on the left), a rosette at each side where the visor pivots, the breaths,
-    "..k6787654k",       # 35   the roped rim; the muzzle shows under it
-    "..k67776554k",      # 36
-    ".k5667665543k",     # 37
-    "k55666655443k",     # 38
-    "k45566554433k",     # 39
-    "k44555544332k",     # 40
+    "....kkkkk",         # 33   gilt comb down its middle, the sight across the face with the eyes' glints at its
+    "...k78y65k",        # 34   sides, the beak's crease down the middle (lit on the left), a rosette at each side
+    "..k678y654k",       # 35   where the visor pivots, the breaths; the visor closed over the whole muzzle as in
+    "..k677y6554k",      # 36   profile, the roped rim at its bottom
+    ".k5667x65543k",     # 37
+    "k55666x55443k",     # 38
+    "k45566x54433k",     # 39
+    "k44555w44332k",     # 40
     "kxyyzyyxxxwwk",     # 41  the gilt brow
     "kkk8kkkkkk8kk",     # 42  the sight
     "ky667785444xk",     # 43
     "kw566784433wk",     # 44
     ".k5k56743k3k",      # 45
     "..k4556332k",       # 46
-    "..kyxyxwxwk",       # 47  the roped rim
-    "...kkkkkkk",        # 48
+    "..k4556322k",       # 47
+    "..k3455322k",       # 48
+    "..k3445222k",       # 49
+    "..k2345221k",       # 50
+    "..k334421k",        # 51
+    "...kyxyxwk",        # 52  the roped rim
+    "....kkkkk",         # 53
 ]
-FRONT_COMB = {34: "...k78y65k", 35: "..k678y654k", 36: "..k677y6554k", 37: ".k5667x65543k",
-              38: "k55666x55443k", 39: "k45566x54433k", 40: "k44555w44332k"}   # --comb: down the skull's middle
 FRONT_PLUME = ["..qq..", ".qtuq.", ".qtusq", "..qsq.", "..qsrq", "..qrq.", "..yx..", "..xw.."]  # top-left at (34, 25)
-
-
-def combed(art, top, comb):
-    art = list(art)
-    if "--comb" in OPTIONS:
-        for y, row in comb.items():
-            art[y - top] = row
-    return art
 
 
 def drawn_head(key):
     dy = 0 if key in ("bdy_turn_left_03", "bdy_turn_left_04") else -1
     px = {}
     if key == "bdy_turn_left_03":
-        stamp(px, combed(TURN3_HELMET, 35, TURN3_COMB), 29, 35)
+        stamp(px, TURN3_HELMET, 29, 35)
         stamp(px, TURN3_PLUME, 34, 28)
     else:
-        stamp(px, combed(FRONT_HELMET, 33, FRONT_COMB), 30, 33 + dy)
+        stamp(px, FRONT_HELMET, 30, 33 + dy)
         stamp(px, FRONT_PLUME, 34, 25 + dy)
     return px
 
@@ -885,13 +874,16 @@ def head_place(key, donkey):
         rows = DRAWN_HEAD["bdy_turn_left_03" if key == "bdy_turn_left_03" else "bdy_turn_left_04"]
         dy = 0 if key in ("bdy_turn_left_03", "bdy_turn_left_04") else -1
         region = {(x, y + dy) for y, last in rows.items() for x in range(0, last + 1)}
-        return drawn_head(key), region, ("drawn",)
+        # sealed on the visor's outer side only (turn 05's muzzle is not quite turn 04's a row up; on the inner side
+        # the strap and the neck show as they should)
+        left = {(x, y) for y in range(40, 57) for x in range(24, 34)}
+        return sealed(drawn_head(key), donkey, left), region, ("drawn",)
     if key in WARP_ROTATE:
         s_ear, _, s_tip = landmarks(S_KEY, load(S_KEY))
         ear, _, tip = landmarks(key, donkey)
         a, A, t = rotation(s_ear, s_tip, ear, tip)
         region = set(warp({p: K for p in cached("head_region", head_region)}, A, t)) | neck_front(key, donkey)
-        px = helmet_turned(A, t)
+        px = sealed(helmet_turned(A, t), donkey, set(warp({p: K for p in mouth_box()}, A, t)))
         PA, Pt = turn(a * PLUME_TURN, PLUME_ROOT, apply(A, t, PLUME_ROOT))
         px.update(warp(cached("plume", plume_layer), PA, Pt, {BRASS[3]}))
         return px, region, ("warp", A, t, a)
@@ -904,8 +896,31 @@ def head_place(key, donkey):
     # (graze 01 and turn 01 are the standing picture: their armour must be the standing one, pixel for pixel)
     region = {(x + hd[0], y + hd[1]) for x, y in cached("head_region", head_region)} if key in HEAD_OVER_CHEST else None
     px = {(x + hd[0], y + hd[1]): c for (x, y), c in face.items()}
+    px = sealed(px, donkey, {(x + hd[0], y + hd[1]) for x, y in mouth_box()})
     px.update({(x + hd[0], y + hd[1]): c for (x, y), c in cached("plume", plume_layer).items()})
     return px, region, ("move", hd)
+
+
+MOUTH_BOX = (16, 34, 32, 48)   # x0, y0, x1, y1 on the standing frame: in front of and under the visor's front half
+
+
+def mouth_box():
+    x0, y0, x1, y1 = MOUTH_BOX
+    return {(x, y) for y in range(y0, y1) for x in range(x0, x1)}
+
+
+def sealed(px, donkey, zone):
+    """The helm's mouth kept closed where a frame's own mouth moves (chew, lips, the turn): the donkey's pixels in
+    `zone` within two pixels of the helmet take its outline (its dark steel inside), so no olive outline or lip of the
+    donkey shows round the helm's edge (the user's marked screenshot, 2026-11-02). The standing frame has none."""
+    op = opaque(donkey)
+    near = lambda x, y: any((x + i, y + j) in px for i in range(-2, 3) for j in range(-2, 3))
+    add = {(x, y) for (x, y) in zone if op(x, y) and (x, y) not in px and near(x, y)}
+    out = dict(px)
+    for (x, y) in add:
+        edge = any(not op(x + i, y + j) and (x + i, y + j) not in px for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        out[(x, y)] = K if edge else STEEL[2]
+    return out
 
 
 LOW_HEAD = {  # under the breast collar the lowered head itself: (first row, last row, last column)
@@ -998,7 +1013,6 @@ def write_aseprite(frames):
 
 
 def main(argv):
-    OPTIONS.update(a for a in argv if a in ("--comb",))
     os.makedirs(OUT, exist_ok=True)
     frames = {k: frame(k) for k in ORDER}
     pack = {k: v[1] for k, v in frames.items()}
