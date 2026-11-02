@@ -866,6 +866,87 @@ namespace GK2DonkeyAPI
             }
         }
 
+
+        // A jump's touch-down with the take-off past the game's walk grid (the 4.4 square round the body): the grid's
+        // nearest free cell to it is not the take-off's, so the jump's grid rule doesn't ask its way (F11 2026-11-02,
+        // the conveyor's debris: "no way" from a lone edge cell, a spot on open ground, sent back 3.88; docs/flying.md
+        // "The conveyor's debris"). A pen of temporary walls round the edge cell nearest a take-off 3.5 to his side cuts
+        // that cell off: the rule sees the grid doesn't hold that take-off and leaves the judging to the landing (the
+        // keeper's own ground); a take-off inside the pen, on a cell of its own, still gets "no way" (the pen is real,
+        // the way for a take-off on the grid unchanged).
+        internal static IEnumerator FlightGridTakeOff()
+        {
+            Rigidbody rb = PC?.PhysicalBody?.Rb;
+            if (rb == null) { Skip("no keeper's body"); yield break; }
+            if (Mount.Instance.IsIndoors()) { Skip("indoors: the test wants open ground round the keeper"); yield break; }
+            PlayerLocalAreaMovement lam = PC.PlayerLocalAreaMovement;
+            Pathfinding.NavGraph[] graphs = AstarPath.active?.data?.graphs;
+            if (lam == null || graphs == null || graphs.Length <= 3 || !(graphs[3] is Pathfinding.GridGraph grid)) { Skip("the game's walk grid isn't there"); yield break; }
+            if (lam.Status != PlayerLocalAreaMovement.MovementStatus.NotMoving) { Skip("the game is walking the keeper"); yield break; }
+            int layer = LayerMask.NameToLayer("Obstacle");
+            if (layer < 0 || (Mount.Instance.KeeperMask(rb) & (1 << layer)) == 0) { Skip("no Obstacle layer that stops the keeper here: no pen"); yield break; }
+            Vector3 me = rb.position;
+            Vector3 far = me + new Vector3(3.5f, 0f, 0f);
+            lam.RescanPlayerGraph();
+            Pathfinding.NNInfo e0 = grid.GetNearest(far, Pathfinding.NearestNodeConstraint.Walkable);
+            Pathfinding.NNInfo mine = grid.GetNearest(me, Pathfinding.NearestNodeConstraint.Walkable);
+            if (e0.node == null || mine.node == null) { Skip("no free cell on the walk grid round him"); yield break; }
+            Vector3 edge = e0.position;
+            float edgeOff = Flat(edge - far);
+            Info($"the take-off {far:F2}, 3.5 to his side: the grid's nearest free cell to it {edge:F2}, {edgeOff:F2} off (the grid: centre {grid.center:F2}, {grid.width} x {grid.depth} cells of {grid.nodeSize:F2})");
+            // the edge cell straight towards the take-off, joined to him: open ground there (else nothing to show)
+            if (edgeOff < 1.2f || edgeOff > 1.5f || !Pathfinding.PathUtilities.IsPathPossible(e0.node, mine.node))
+            {
+                Skip($"the grid's edge towards the take-off isn't open ground here ({edgeOff:F2} off, joined to him: {Pathfinding.PathUtilities.IsPathPossible(e0.node, mine.node)}): run it on open ground");
+                yield break;
+            }
+            Vector3 to = me;
+            string why = Mount.Instance.WhyNotOnGameGridBeside(PC, rb, ref to, far, out bool holds);
+            Check(why == null && !holds, $"on open ground: the grid doesn't hold a take-off 3.5 out, the rule says so ({why ?? "no refusal"}, holds it: {holds})");
+
+            float g = Mount.Instance.GroundHeight(edge, out string src);
+            if (float.IsNaN(g)) { Info($"no ground at the edge cell {edge:F2} ({src}): the pen not built"); yield break; }
+            var pen = new GameObject("gk2donkeyapi-selftest-gridpen");
+            try
+            {
+                pen.layer = layer;
+                pen.transform.position = new Vector3(edge.x, g, edge.z);
+                // inside 0.6 across: the edge cell and its neighbours free for the grid's 0.28 walker, the rest of the
+                // edge column 0.4 off and more (the nearest free cell to the take-off stays the one in the pen)
+                const float half = 0.35f, thick = 0.1f, high = 2f;
+                void Wall(Vector3 centre, Vector3 size)
+                {
+                    var c = pen.AddComponent<BoxCollider>();
+                    c.center = centre;
+                    c.size = size;
+                }
+                Wall(new Vector3(half, high / 2f, 0f), new Vector3(thick, high, 2f * half + thick));
+                Wall(new Vector3(-half, high / 2f, 0f), new Vector3(thick, high, 2f * half + thick));
+                Wall(new Vector3(0f, high / 2f, half), new Vector3(2f * half + thick, high, thick));
+                Wall(new Vector3(0f, high / 2f, -half), new Vector3(2f * half + thick, high, thick));
+                Physics.SyncTransforms();
+
+                to = me;
+                why = Mount.Instance.WhyNotOnGameGridBeside(PC, rb, ref to, far, out holds);
+                Pathfinding.NNInfo e1 = grid.GetNearest(far, Pathfinding.NearestNodeConstraint.Walkable);
+                Pathfinding.NNInfo me1 = grid.GetNearest(me, Pathfinding.NearestNodeConstraint.Walkable);
+                bool cutOff = e1.node != null && me1.node != null && Flat(e1.position - edge) < 0.2f && !Pathfinding.PathUtilities.IsPathPossible(e1.node, me1.node);
+                Check(cutOff, $"the pen cuts off the grid's nearest free cell to that take-off ({(e1.node == null ? "none" : e1.position.ToString("F2"))}): its way, the old rule's answer, is \"no way\"");
+                Check(why == null && !holds, $"the take-off past the grid with that cell cut off: its way not asked, the judging left to the landing ({why ?? "no refusal"}, holds it: {holds})");
+
+                to = me;
+                why = Mount.Instance.WhyNotOnGameGridBeside(PC, rb, ref to, edge, out holds);
+                Check(holds && why != null && why.StartsWith("the game's walk grid has no way", System.StringComparison.Ordinal), $"a take-off inside the pen, on a cell of its own: held, and still \"no way\" ({why ?? "no refusal"})");
+            }
+            finally
+            {
+                pen.SetActive(false);
+                Object.Destroy(pen);
+                Physics.SyncTransforms();
+                lam.RescanPlayerGraph();
+            }
+        }
+
         // "... (536 steps, 18.7 ms over 1 frame(s))" -> 536
         internal static int Steps(string how)
         {

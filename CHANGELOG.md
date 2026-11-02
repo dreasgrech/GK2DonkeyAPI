@@ -10,6 +10,17 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
+For players:
+
+- **A jump over things no longer puts you back where you jumped from for nothing** (2026-11-02, found by the
+  self-tests: over the conveyor's debris in the home yard, carried off 3.9 onto open ground and sent back). The
+  landing asked the game's walk grid for a way from the take-off, but that grid only covers a 4.4 square round the
+  keeper; a take-off further away was looked up at the grid's edge, there a lone cell among the debris, joined to
+  nothing. Where the grid holds no cell of the take-off's own, its answer no longer counts and the keeper's own
+  ground decides (here it had said he walks off: 0.8 to the take-off's ground). Jumps within the grid are judged as
+  before. Self-test "jump: a take-off past the game's walk grid"; docs/flying.md "The conveyor's debris". F11:
+  1787 passed, 0 failed, the conveyor's debris jumped and landed.
+
 Development:
 
 - **Armored redrawn, in review** (2026-11-01; the user held the Donkey Skin Pack's 1.1.0 back: "a lot more detail and
@@ -205,6 +216,26 @@ Development:
   strap whole and in one piece in every frame and nothing coming and going. The user looked on the preview page; written
   into the pack (check_skin all good), built and deployed with the game closed, the deployed DLL holds all 45 files
   byte for byte.
+- **A one-run probe for a walled-in landing, taken out again** (2026-11-02; F11 1785/1, the same in the rerun: the yard
+  test's jump at the ruins sent back to the take-off spot). The trace: the run started 1.1 east of the yard's box
+  between two rock walls the test doesn't know, went over a knee-high stone and came down in a gap between the ruin
+  wall, a linden's trunk and two stones; the walk-away test said walled in (4 steps of 0.25), nothing back along the
+  path fitted. Its 0.25 steps with his whole body tested at each can miss a slot narrower than a step and his body
+  (the gap looked 0.42 wide, his body is 0.30 deep), so it was not known whether the gap is closed. For one F11 the
+  landing audit (`Mount.Instance.LandAudit`, only with `Debug.JumpTrace` on) ran the same spread at 0.10 and 0.05
+  where it said walled in, and printed the game's walk grid as a map; once it had answered (closed: the next entry)
+  it was taken out again, nothing of it left. docs/flying.md "The yard's ruins".
+- **The yard test's runs start inside the yard, their run-up clear** (2026-11-02). The finer spreads answered the
+  probe above (F11 22:03, the same jump): the gap by the ruins is closed (walled in at 0.10 and 0.05, and the game's
+  walk grid shows it as an island ringed by blocked cells), so the landing rule was right and the test was not.
+  `ApproachTo` (Dev/SelfTest.Yard.cs) now starts a run only inside the yard's box and sweeps his body along the run
+  up to the thing's face (`RunBlockedBy`): anything that stops him on it but the thing itself rules that side out,
+  and the "no side with room" line says what each side had against it. docs/flying.md "The yard's ruins" and the
+  problem/test table.
+- **`tools/jump-audits.py`** (2026-11-02): the jump probe's landing audits as one table (how far from the take-off,
+  whether the game's walk grid held the take-off, whether the NPCs' mesh vouches, the grid's way, the verdicts), read
+  only. Its first read (114 audits): the take-off off the grid in 39, the grid's cell for it 0.3-2.7 away, and the
+  one landing that cell decided was the conveyor's false "no way" (docs/flying.md "The conveyor's debris").
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

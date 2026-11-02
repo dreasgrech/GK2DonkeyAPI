@@ -438,9 +438,15 @@ namespace GK2DonkeyAPI
             }
 
             // The jump's walk-grid rule (besideThings): from the take-off spot's cell (the body is the mod's, at the spot);
-            // a blocked cell with a free one within BesideGrid moves 'to' onto that one.
-            private static string WhyNotOnGameGridBeside(PlayerController pc, Rigidbody rb, ref Vector3 to, Vector3 takeOff, bool needWay = true)
+            // a blocked cell with a free one within BesideGrid moves 'to' onto that one. 'holdsTakeOff' false: the grid has
+            // no cell of the take-off's own (its nearest free one more than GridOwnCell from it: past the 4.4 square round
+            // the body, or the take-off on a blocked cell), so its way isn't asked: GetNearest never comes back empty, it
+            // snaps to the nearest edge cell, and from a lone one among the conveyor's debris the way was "no way" for a
+            // spot on open ground (F11 2026-11-02; docs/flying.md "The conveyor's debris"). The caller judges then.
+            internal const float GridOwnCell = 0.15f;
+            internal static string WhyNotOnGameGridBeside(PlayerController pc, Rigidbody rb, ref Vector3 to, Vector3 takeOff, out bool holdsTakeOff, bool needWay = true)
             {
+                holdsTakeOff = true;
                 PlayerLocalAreaMovement lam = pc.PlayerLocalAreaMovement;
                 Pathfinding.NavGraph[] graphs = AstarPath.active?.data?.graphs;
                 if (lam == null || graphs == null || graphs.Length <= 3 || !(graphs[3] is Pathfinding.GridGraph grid)) return null;
@@ -450,7 +456,8 @@ namespace GK2DonkeyAPI
                     using (Perf.Measure(Perf.S.LandGrid)) lam.RescanPlayerGraph();
                     Pathfinding.NNInfo a = grid.GetNearest(takeOff, Pathfinding.NearestNodeConstraint.Walkable);
                     Pathfinding.NNInfo b = grid.GetNearest(to);
-                    if (a.node == null) return "the take-off spot isn't on the game's walk grid";
+                    if (a.node == null) return "the game's walk grid has no free cell at all";
+                    holdsTakeOff = FlatOff(a.position, takeOff) <= GridOwnCell;
                     if (b.node == null || !b.node.Walkable || FlatOff(b.position, to) > 0.15f)
                     {
                         Pathfinding.NNInfo free = grid.GetNearest(to, Pathfinding.NearestNodeConstraint.Walkable);
@@ -458,7 +465,7 @@ namespace GK2DonkeyAPI
                         b = free;
                         to = new Vector3(free.position.x, to.y, free.position.z);
                     }
-                    if (needWay && !Pathfinding.PathUtilities.IsPathPossible(a.node, b.node)) return $"the game's walk grid has no way from the take-off spot to {to:F2}";
+                    if (needWay && holdsTakeOff && !Pathfinding.PathUtilities.IsPathPossible(a.node, b.node)) return $"the game's walk grid has no way from the take-off spot to {to:F2}";
                 }
                 catch (System.Exception e)
                 {

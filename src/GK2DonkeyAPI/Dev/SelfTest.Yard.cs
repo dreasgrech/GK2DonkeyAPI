@@ -120,7 +120,7 @@ namespace GK2DonkeyAPI
                 foreach (YardThing t in things)
                 {
                     if (tried >= MaxYardThings) break;
-                    if (!ApproachTo(t, things, out Vector3 start, out Vector3 dir)) { Info($"{t.Name}: no side with room to run at it from"); continue; }
+                    if (!ApproachTo(t, things, area, out Vector3 start, out Vector3 dir, out string noRoom)) { Info($"{t.Name}: no side with room to run at it from ({noRoom})"); continue; }
                     tried++;
                     PutKeeper(start, dir.x >= 0f ? 1f : -1f);
                     TestSay($"Jumping at {t.Name} ({t.TopPx:0} px)"); // the watcher sees which thing (the user, 2026-10-24: "jump over nothing")
@@ -160,7 +160,7 @@ namespace GK2DonkeyAPI
                 // the slide is not tried against it (0.07 along the fence with the babies around, 2026-10-29, 0.45 the run before)
                 Mount.Instance onTheRun = null;
                 float onTheRunAt = float.MaxValue;
-                if (fence != null && ApproachTo(fence, things, out Vector3 fs0, out Vector3 fd0, longSide: true))
+                if (fence != null && ApproachTo(fence, things, area, out Vector3 fs0, out Vector3 fd0, out _, longSide: true))
                 {
                     Vector3 mid = fs0 + fd0 * 1.7f;
                     foreach (Mount.Instance i in Mount.All)
@@ -171,7 +171,7 @@ namespace GK2DonkeyAPI
                     Info($"the slide along {fence.Name}: the nearest mount {(onTheRun != null ? onTheRun.FullId + " " + onTheRun.MountName : "none")} is {(onTheRun != null ? onTheRunAt.ToString("0.0") : "-")} from the run");
                 }
                 if (fence != null && onTheRun != null && onTheRunAt < 3f) Info($"a mount stands on the run ({onTheRun.FullId} {onTheRun.MountName}, {onTheRunAt:0.0} away): the slide along {fence.Name} not tried");
-                else if (fence != null && ApproachTo(fence, things, out Vector3 fs, out Vector3 fd, longSide: true))
+                else if (fence != null && ApproachTo(fence, things, area, out Vector3 fs, out Vector3 fd, out _, longSide: true))
                 {
                     Vector3 side = Mathf.Abs(fd.x) > 0.5f ? Vector3.forward : Vector3.right;
                     Vector3 diag = (fd + side * 0.8f).normalized;
@@ -459,23 +459,57 @@ namespace GK2DonkeyAPI
             return true;
         }
 
-        // the side of a thing with room to run at it from: 1.7 before its face, the run straight at its middle
-        internal static bool ApproachTo(YardThing t, List<YardThing> things, out Vector3 start, out Vector3 dir, bool longSide = false)
+        // the side of a thing with room to run at it from: 1.7 before its face, the run straight at its middle. The start
+        // inside the yard's box, and the run up to the face clear of everything that stops him but the thing itself (the
+        // ruins, F11 2026-11-02: a start 1.1 east of the box in a nook of rocks the yard's list doesn't have, the run along
+        // a rock and over a stone into a closed gap, sent back, rightly: docs/flying.md "The yard's ruins"); 'why' says
+        // what each side had against it
+        internal static bool ApproachTo(YardThing t, List<YardThing> things, Bounds area, out Vector3 start, out Vector3 dir, out string why, bool longSide = false)
         {
-            start = default; dir = default;
+            start = default; dir = default; why = null;
             // longSide: run at its long side (across its short axis), for a slide along it
             Vector3[] sides = longSide
                 ? (t.B.size.x >= t.B.size.z ? new[] { Vector3.back, Vector3.forward } : new[] { Vector3.left, Vector3.right })
                 : new[] { Vector3.left, Vector3.right, Vector3.back, Vector3.forward };
+            var against = new List<string>();
             foreach (Vector3 d in sides)
             {
+                string from = d.x < 0f ? "east" : d.x > 0f ? "west" : d.z < 0f ? "north" : "south";
                 float ext = Mathf.Abs(d.x) * t.B.extents.x + Mathf.Abs(d.z) * t.B.extents.z;
                 Vector3 p = new Vector3(t.B.center.x, t.B.center.y, t.B.center.z) - d * (ext + 1.7f);
-                if (!StandSpot(ref p, things, 0.35f)) continue;
+                if (!area.Contains(new Vector3(p.x, area.center.y, p.z))) { against.Add(from + ": outside the yard"); continue; }
+                if (!StandSpot(ref p, things, 0.35f)) { against.Add(from + ": no room to stand"); continue; }
+                string blocked = RunBlockedBy(t, p, d, 1.7f);
+                if (blocked != null) { against.Add($"{from}: {blocked} on the run"); continue; }
                 start = p; dir = d;
                 return true;
             }
+            why = string.Join(", ", against);
             return false;
+        }
+
+        // the nearest thing between 'from' and the thing's face 'run' ahead that stops him: his body swept along the run
+        // from just over the ground (the ground's own colliders and the edge walls aside, as the flight's sweeps), the
+        // thing's own colliders aside; null when the run is clear
+        private static readonly RaycastHit[] runHits = new RaycastHit[32];
+        internal static string RunBlockedBy(YardThing t, Vector3 from, Vector3 dir, float run)
+        {
+            Rigidbody rb = PC.PhysicalBody.Rb;
+            Collider body = PC.PhysicalBody.MeshCollider;
+            Vector3 half = body.bounds.extents;
+            half.y -= 0.05f;
+            float lead = Mathf.Abs(dir.x) * half.x + Mathf.Abs(dir.z) * half.z;
+            int mask = Mount.Instance.KeeperMask(rb) & ~GroundLayersMask & ~(1 << 14);
+            int n = Physics.BoxCastNonAlloc(from + Vector3.up * (half.y + 0.1f), half, dir, runHits, Quaternion.identity, Mathf.Max(0f, run - lead - 0.05f), mask, QueryTriggerInteraction.Ignore);
+            string first = null;
+            float firstAt = float.MaxValue;
+            for (int i = 0; i < n && i < runHits.Length; i++)
+            {
+                Collider c = runHits[i].collider;
+                if (c == null || c == body || c.attachedRigidbody == rb || ThingRoot(c) == t.Root) continue;
+                if (runHits[i].distance < firstAt) { firstAt = runHits[i].distance; first = ThingRoot(c).name.Replace("(Clone)", ""); }
+            }
+            return first;
         }
     }
 }

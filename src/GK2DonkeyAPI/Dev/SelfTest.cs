@@ -208,6 +208,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
             new Scenario { Group = GroupLooks, Name = "skin pack: read again by itself when its files change (dev switch)", Body = SkinPackAutoReload },
             new Scenario { Group = GroupFlying, Name = "landing: the walk-away test (the keeper's own ground, a walled pen, the cap's time)", Body = FlightWalkAway },
+            new Scenario { Group = GroupFlying, Name = "jump: a take-off past the game's walk grid (its nearest free cell walled off: the way not asked; a take-off inside the pen: no way)", Body = FlightGridTakeOff },
             new Scenario { Group = GroupFlying, Name = "mounts: the flies and jumps flags ([Mount] flies, jumps; a pack's mount flies by its flag)", Body = FlightFlags },
             new Scenario { Group = GroupFlying, Name = "keys: jump and fly on one key (a second press in the air takes off a flier), and on two", Body = FlightOneKey },
             new Scenario { Group = GroupFlying, Name = "jump: each mount its own ([Jump] in mount.cfg, MountDef.Jump): read, saved, refused in a skin.cfg, jumped live", Body = FlightJumpPerMount },

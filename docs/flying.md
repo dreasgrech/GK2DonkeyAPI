@@ -896,6 +896,104 @@ the run; **stopped by** both furnaces (53, 87), the brick kiln (45) and the zomb
 cap applies from 0.5): loosened to 0.5. The "px tall" counts from the ground under the thing now (a collider may dip
 under it: the chopping spot read 30 for 15).
 
+### The yard's ruins: sent back out of a gap (2026-11-02, the test's start fixed)
+
+F11 2026-11-02, 1785 passed and 1 failed, and the same in the rerun with the jump probe on: the yard test's 11th
+thing, the ruins ("Obstacle", 208 px, 7.8 x 3.9), "stopped before it, 0.00 along the run, SENT BACK". The trace
+(`jump-20261102-214256-032-back.txt`):
+
+- **The take-off**, (13.31, 21.31), is 1.1 east of the yard's box (x up to 12.2), between two rock walls
+  (`rock_l_blue-wall-strght-fl-l`, `rock_l_blue-wall-corn_out-fl-m-p1`). `ApproachTo` judges a side's room by the
+  yard's own things only, and neither the rocks nor the `landscape_elements_details` stones there are on its list
+  (this run's scan: 99 obstacle colliders, 32 things; 161 and 59 on 2026-10-24). The game's walk grid has no free
+  cell at the take-off (its nearest, (12.50, 21.05), is 0.86 away).
+- **The run** slid along the rock wall, went over a stone (drawn 25-27 px up, under the jump's 28) and came down at
+  (11.78, 20.87), between the ruin wall (x up to 11.48), `ruins_pack_03_v02` (the body 0.05 into it), a linden's
+  trunk (0.24 off) and a second stone (0.24 off).
+- **The rules**: the NPCs' mesh cut off (parts 597 and 1); the walk-away test walled in, 4 steps, 0.6 out at most; the
+  game's walk grid: the spot's cell free and joined to the take-off's nearest free cell, which is in the same gap
+  (so it says nothing of a way out). Back along the path: two points walled in, two inside a stone or a rock, one
+  over a rock top's mesh (8.41 for ground at 6.00); so the take-off spot, the last resort. In play: a 1.5 snap back.
+- **Open**: is the gap closed? The walk-away spreads in steps of 0.25 and tests his whole body at each; a slot
+  narrower than a step plus his body can fall between its cells (the stones look 0.42 apart, his body is 0.30 deep).
+
+The probe (2026-11-02, for one F11; taken out again once it had answered, nothing of it left in the code): where the
+walk-away said walled in, the landing audit ran the same spread at 0.10 and 0.05 (the open-ground size kept at 60
+square units) and printed the walk grid's map. If a finer
+spread walks out, the 0.25 cells give a false "walled in" (a fix to the rule, with its own test at a slot like
+this one); if not, the refusal stands and only the test changes (its start inside the yard's box, the run swept
+clear of every obstacle, not only the yard's).
+
+**The probe's answer** (F11 22:03, 1785/1, `jump-20261102-220309-032-back.txt`, the same jump): the gap is closed.
+The spread at 0.10 walled in, 23 steps, 0.7 out at most; at 0.05, 98 steps, 0.8 out. The game's walk grid agrees: the
+spot's free cells are an island of about 25 cells (0.1 each) ringed by blocked ones, joined to none of the open
+ground on the map, and the take-off itself sits on a blocked cell. The refusal and the way back were right: no false
+"walled in"; the lock-out guarantee did its job.
+
+**The fix is the test's** (built 2026-11-02): `ApproachTo` takes the yard's box and starts a run only inside it, and
+sweeps his body (`RunBlockedBy`: his body's box from 0.1 over the ground, every layer that stops him but the ground's
+and the edge walls) along the 1.7 up to the thing's face; anything on the run but the thing itself rules that side
+out. The "no side with room" line says what each side had against it (outside the yard, no room to stand, or what is
+on the run). The slide along the longest thing already left "Obstacle" and "Colliders" out (2026-10-29: the same
+kind of pocket beyond pooled scenery); that stays.
+
+### The conveyor's debris: a "no way" from a take-off the grid doesn't hold (2026-11-02, fixed)
+
+The F11 after the yard test's fix (22:22, 1785/1): the ruins pass (stopped before them, 1.52 along the run); the
+conveyor's debris (`workyard_conveyor_place_tp_blockage`, 30 px) failed: "came down over it, carried off, 0.19 along
+the run, SENT BACK". Its east start (13.03, 10.74) is outside the yard's box now, so it was run at from the north
+(10.49, 14.32). The trace (`jump-20261102-222238-032-back.txt`):
+
+- Over the first heap (21 px), carried off over the second, down at (10.49, 10.45), 3.88 from the take-off, on
+  ground at his level the NPCs' mesh doesn't cover (its nearest node 0.56 away, cut back by the debris and the ruins'
+  `NavMeshCutBoxCustom`): `offMesh`, so the keeper's own ground judged it, and said yes (`[flight-walk]`: "walks to
+  the take-off's part of the mesh at (9.74, 6.00, 10.45), 0.8 from the spot").
+- Then the jump's grid rule (`WhyNotOnGameGridBeside`, asked because the mesh doesn't vouch for the spot) refused it:
+  "no way from the take-off spot". The grid is the 4.4 square round the body; the take-off lies 1.67 past its edge.
+  The grid's nearest free cell to it, (10.70, 12.70), is a lone cell on the edge among the debris, joined to nothing,
+  while the spot lies on free ground that runs off west and south across the map. The way back: its two points past
+  the debris the same "no way", the others in the debris; so the take-off spot, 3.88 back.
+
+What the traces on disk say (`tools/jump-audits.py`, all 114 landing audits, today's three F11 runs and three of
+2026-10-27):
+
+- **The take-off off the grid in 39** (touch-downs 2.4 to 4.5 from it): the grid's stand-in cell 0.30 to 2.72 from
+  the take-off. In 38 of them the mesh vouches (the grid's way not asked; it said "a way" anyway, its edge cell on
+  open ground). The conveyor is the one where it decided.
+- **On the grid the take-off has its own cell**: 0.00 off in 72, 0.01 in one; the two exceptions (0.84, 0.85) are
+  the ruins' nook above, a take-off on a blocked cell.
+- **The off-grid case is never seen by the rule**: "the take-off spot isn't on the game's walk grid" fires on a null
+  nearest node, but `GetNearest` never returns null here, it snaps to the edge (in no trace).
+- **Only this rule has the blind spot**: the other grid rule (`WhyNotOnGameGrid`: flight landings, the keeper's moves,
+  the dismount spot search) asks from the keeper's own body, the grid's centre; a far end is an honest "no free
+  cell" (the dismount search counts on that: "spots beyond it, about 2 units, are refused").
+- It takes a touch-down more than 2.2 out along x or z from the take-off **and** a spot the mesh doesn't vouch for:
+  off the mesh, on another part of it, or beside it. The jumps that carry him furthest are the ones over and off
+  things (2.8-4.3 along the run in the yard), and things cut the mesh back round them.
+
+**The fix (built 2026-11-02, the user's yes after the study).** `WhyNotOnGameGridBeside` says whether the grid holds
+the take-off (`holdsTakeOff`: its nearest free cell within `GridOwnCell` 0.15 of it, the tolerance the spot's cell
+already had; the traces: 0.00-0.01 on the grid, 0.30 and more off it, 0.84 for the nook's blocked cell) and asks its
+way only then. Where it doesn't and the mesh doesn't vouch, `WhyCannotLandAt` lets the keeper's own ground judge: off
+the mesh or on another part of it the walk-away test has already said yes (its yes stands); beside the mesh it is
+asked now (sliced like the other; its line `[flight-walk] ... the game's walk grid has no cell of the take-off
+spot's`). A take-off on the grid is judged as before. The null-node refusal says what it is now ("no free cell at
+all"). The audit's line reads "from the take-off's nearest free cell (x, y, z), N off" (`tools/jump-audits.py` reads
+both wordings).
+
+Self-test "jump: a take-off past the game's walk grid" (group Flying, `FlightGridTakeOff`): on open ground a
+take-off 3.5 to his side is not held; a pen of temporary walls round the grid's nearest free cell to it cuts that
+cell off (its way, the old rule's answer, "no way"), and the rule still leaves the judging to the landing; a take-off
+inside the pen, on a cell of its own, is held and still gets "no way". The real case stays in the yard test (the
+conveyor's debris from the north).
+
+**Seen in game** (2026-11-02 22:4x-22:5x): the Flying scenarios on their own 129/0, then the whole F11 1787 passed, 0
+failed up to the walk survey (measures only; the game closed during it, so no "done" line; every scenario left its
+lines, no startup warning). The conveyor's debris from the north twice: "came down over it, carried off", 4.06 and
+3.94 along the run, the grid's way still "no way" from its edge cell and the jump's rule "lands" (the walk-away's
+yes off the mesh). The new scenario's four checks pass at the temple (the edge cell 1.30 from the take-off). The jump
+probe switched off again in the game's cfg.
+
 ### Never lost (2026-10-24, built)
 
 The net under all of this: the safe-spot record, the fall watchdog and "Back to the last safe spot" are in
@@ -908,7 +1006,7 @@ Two fixes in a row for the same teleport failed (below). The user: "u sure we go
 too many trial and error" and "lets get as much data as possible no guessing". So no fix until the data says why.
 `Dev/JumpProbe.cs` (`JumpTrace`, `Mount.Instance.LandAudit`), no behaviour changed:
 
-- A file per jump in `BepInEx/GK2-jumps/` (`jump-<date>-<time>-<n>-<outcome>.txt`, the newest 30 kept; outcome `ok`,
+- A file per jump in `BepInEx/GK2-jumps/` (`jump-<date>-<time>-<n>-<outcome>.txt`, the newest 120 kept; outcome `ok`,
   `over` (came down over something), `pushed`, `short` (landed back along its path), `back` (the take-off spot)).
 - `F` rows, every frame of the jump: the stage, the arc, the drawn height, what is under it (`solid`, and which thing:
   `FloorUnder`'s `LastFloorThing` by its path), the body's place, the jump's speed, free or not, the let-go.
@@ -917,9 +1015,9 @@ too many trial and error" and "lets get as much data as possible no guessing". S
 - `N` rows: the take (the body's speed), came down over (the thing and its bounds), every touch-down judged and its
   **audit**: the ground (navmesh or raycast), the walkable mesh's parts of the spot and the take-off, the drawn ground
   over it, **every** collider the body would go into (depth, direction, whether it counts), the NPCs' mesh, the
-  walk-away (only where the mesh says cut off, as the rule), the game's walk grid (the spot's cell free or blocked, the
-  nearest free cell, a way from the body's cell and from the take-off's cell), the rule's answer, and every collider
-  within 1.2 (shape, bounds, drawn top, whether it stops him); the push-out; each path point tried on the way back.
+  walk-away (only where the mesh says cut off, as the rule), the game's walk grid (the spot's cell free or blocked,
+  the nearest free cell, a way from the body's cell and from the take-off's nearest free cell, with how far that cell
+  is from the take-off; its map where there is no way), the rule's answer, and every collider within 1.2 (shape, bounds, drawn top, whether it stops him); the push-out; each path point tried on the way back.
 - The main log says `[jump-trace] <file> (<outcome>, N rows)` for each.
 
 **What the first 19 traced jumps showed** (the user's yard, 01:28-01:29; 6 ok, 7 over something, 2 pushed, 4 back;
@@ -973,10 +1071,12 @@ group Flying):
 | A surge along a wall pressed against; a false "on top" beside it | jump walls: pressed against it, a jump on the spot |
 | Sent back from on top of a bench; stuck by its own colliders | jump walls: the bench (a box and a taller capsule), stayed on, off it, not sent back |
 | Sent back past the walk grid's 4.4 square | jump walls: the bench's touch-down past 2.2 from the take-off |
+| Sent back past the walk grid's 4.4 square, off the NPCs' mesh (the conveyor's debris: "no way" from a lone edge cell) | jump: a take-off past the game's walk grid (a pen cuts off its nearest free cell: not asked; inside the pen: no way) |
 | The bubble spam | jump walls: no bubble from any of them |
 | Faster in the air than the ride | jump walls: the ride's top set to 3, the fastest step under it |
 | Jolts at the take and the touch-down on a slope (the bridge) | jump walls: two ramps of the ground's layer, the mount's ground never steps |
 | Sent back beside the yard's workbenches (the NPCs' mesh cut back) | jump beside: a real thing near the keeper, a jump in place lands in place (from the yard; skipped elsewhere) |
+| The yard test started outside the yard in a rock nook, ran over a stone into a closed gap (sent back, rightly) | jump: the home yard: each run starts inside the yard's box, its run-up swept clear (the "no side" line says why) |
 | Landed short on a bridge's deck (no NPCs' mesh there) | jump beside: real ground the mesh doesn't cover near the keeper (by a bridge; INFO elsewhere) |
 | Jump and fly on one key, two keys, the API, the event | keys: one key and two; the rows |
 | Ctrl+Space kept as Ctrl+Space | keys: the rows (Ctrl+K) |

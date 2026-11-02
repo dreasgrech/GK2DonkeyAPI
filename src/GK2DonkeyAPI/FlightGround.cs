@@ -82,6 +82,7 @@ namespace GK2DonkeyAPI
                 {
                     Physics.queriesHitBackfaces = backfaces;
                 }
+                bool walkedOut = false; // the keeper's own ground said he walks away from the spot
                 if (connectedTo.HasValue)
                 {
                     string cut = offMesh ? "off the NPCs' mesh (ground at his level it doesn't cover)" : WhyNotConnected(connectedTo.Value, spot);
@@ -92,6 +93,7 @@ namespace GK2DonkeyAPI
                         if (walled == WalkPending) return WalkPending; // still judging: asked again next frame
                         if (how != null) Plugin.Log.LogInfo($"[flight-walk] {spot:F2}: the NPCs' mesh says {cut}; the keeper's own ground: {walled ?? how}");
                         if (walled != null) return walled;
+                        walkedOut = true;
                     }
                 }
                 if (!grid) return null;
@@ -103,8 +105,21 @@ namespace GK2DonkeyAPI
                 // stands (never wrong when it says yes) and the grid is asked only for a free cell.
                 int spotPart = MeshAreaAt(spot, out _, out _), takePart = MeshAreaAt(connectedTo.Value, out _, out _);
                 bool meshVouches = spotPart >= 0 && spotPart == takePart;
-                string onGrid = WhyNotOnGameGridBeside(pc, rb, ref spot, connectedTo.Value, needWay: !meshVouches);
+                string onGrid = WhyNotOnGameGridBeside(pc, rb, ref spot, connectedTo.Value, out bool holdsTakeOff, needWay: !meshVouches);
                 if (onGrid != null) return onGrid;
+                // a take-off the grid has no cell of (past its 4.4 square round the body, 2.4-4.5 out in 39 of 114 traced
+                // touch-downs, or on a blocked cell): its way says nothing of the take-off, so where the mesh doesn't
+                // vouch the keeper's own ground judges (off the mesh or on another part of it it already has: its yes
+                // stands). The conveyor's debris, F11 2026-11-02: carried off 3.88 onto open ground, "no way" from a lone
+                // edge cell, sent back.
+                if (!meshVouches && !holdsTakeOff && !walkedOut)
+                {
+                    if (!walkOut) return "the game's walk grid has no cell of the take-off spot's";
+                    string walled = WhyCannotWalkAway(pc, connectedTo.Value, spot, out string howGrid, walkBudgetMs);
+                    if (walled == WalkPending) return WalkPending;
+                    if (howGrid != null) Plugin.Log.LogInfo($"[flight-walk] {spot:F2}: the game's walk grid has no cell of the take-off spot's; the keeper's own ground: {walled ?? howGrid}");
+                    if (walled != null) return walled;
+                }
                 // moved onto the free cell: the body there too
                 bool bf = Physics.queriesHitBackfaces;
                 try { Physics.queriesHitBackfaces = true; return BodyDoesNotFit(rb, body, KeeperMask(rb), spot); }
