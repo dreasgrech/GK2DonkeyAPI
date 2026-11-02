@@ -93,6 +93,26 @@ Development:
   are now a pixel fuller in every frame (4 pixels), so the lifted nose stays under the steel and nothing is sealed at
   the nose (the jaw's seal in chew 02 stays: the user, "the jaw part looks good"). Only out\ changed; the pack waits
   for the user's look.
+- **Armored: turn 02's skull, in review** (2026-11-02; the user: "in frame 2 of turn_02, we can partially see the
+  donkey's head unlike in the other frames"). Measured: turn 02 (the head starting to turn towards us, the helmet
+  moved by the eye) shows more forehead, 1-2 px above and in front of the skull's edge, and `sealed()` had darkened
+  two of those pixels. `TURN2_HELMET`: the standing helmet with its own skull rows (31-36), the outline on turn 02's
+  forehead and the gilt comb inside it; the rest of the helmet and the plume as before. Only turn 02 changes. Then
+  the user again ("part of the mount or that black something is still visible and all other frames are ok"): turn
+  02's muzzle hangs a pixel further forward and a row lower than the standing visor, and `sealed()` painted those 10
+  pixels flat dark under it; its own visor rows (40-45 in HELMET's coordinates) now close over them with the steel
+  shaded on, the roped rim along the new bottom edge, and nothing is sealed there.
+- **Armored: the grazing, nose and turn 02 fixes in the pack** (2026-11-02, the user: "make it in the game and replace
+  existing"): `make_armored.py --cfg` wrote them (40 of the 44 pictures change: every side view for the visor's
+  fuller top-front edge, graze 03-05, turn 02; turn 03-06 as before; skin.cfg unchanged), check_skin all good, the pack
+  built and deployed with the game closed, the deployed DLL holds all 45 files byte for byte, and the preview page,
+  rebuilt, shows them as the pack's Armored (the review card left off: the pack holds the same cut).
+- **The skins preview page keeps its settings** (2026-11-02, the user: "make all settings in skins-preview.html
+  persistable"): `skin_preview_html.py`'s page saves the clip, the view, the scale, the facing, night, the rider, a
+  paused frame and which mounts are hidden in the browser's storage on every change, and restores them on load and
+  after a rebuild (a clip the page no longer has keeps the default; no storage, the defaults). Checked in headless
+  Chrome on a copy of the page: seeded settings restored (graze frame 3 paused, strips, scale 5, mirrored, night,
+  rider, a hidden mount), and clicks saved.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

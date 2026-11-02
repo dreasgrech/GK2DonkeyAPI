@@ -602,6 +602,24 @@ HELMET = [  # top-left at (24, 30): the skull over the forehead and the poll, fl
     "...kkkkkkkkkkkk",     # 44
 ]
 HELMET_AT = (24, 30)
+# turn 02 (the head starting to turn towards us, moved by its eye) shows more of its forehead: the skull's top-front
+# stood 1-2 px inside it and the donkey's forehead showed above it ("we can partially see the donkey's head", the user,
+# 2026-11-02). Its own skull rows (31-36 in HELMET's coordinates), the outline on its forehead, the gilt comb inside.
+TURN2_HELMET = HELMET[:1] + [
+    "........kkkkkxwk",    # 31
+    ".......kyyxxwk",      # 32
+    "......ky7766k",       # 33
+    ".....ky777665k",      # 34
+    ".....ky6676554k",     # 35
+    "....kx666655443k",    # 36
+] + HELMET[7:10] + [   # and its own visor rows (40-45): its muzzle hangs a pixel further forward and a row lower
+    "k887776665544yzxk",   # 40   (the seal had painted those pixels flat dark under the visor: "that black something")
+    "k6655k5k4k4333w3k",   # 41
+    "k54444333333232k",    # 42
+    ".k4333333322232k",    # 43
+    ".kyxyxyxyxxwxwk",     # 44  the roped rim
+    "..kkkkkkkkkkkk",      # 45
+]
 PLUME = [  # top-left at PLUME_AT: a short plume rising from a brass holder on the skull's top and falling back, in front
     "..qqq...",  # of the ear's root (the ear stays in view behind it); the cloth's colours, so it takes the harness colour
     ".qtuutq.",
@@ -869,7 +887,8 @@ def head_place(key, donkey):
     # graze 02 and turn 02 bring the head down or round over the chest plate; every other moved frame keeps it clear
     # (graze 01 and turn 01 are the standing picture: their armour must be the standing one, pixel for pixel)
     region = {(x + hd[0], y + hd[1]) for x, y in cached("head_region", head_region)} if key in HEAD_OVER_CHEST else None
-    px = {(x + hd[0], y + hd[1]): c for (x, y), c in face.items()}
+    art = stamp({}, TURN2_HELMET, *HELMET_AT) if key in MOVE_BY_EYE else face
+    px = {(x + hd[0], y + hd[1]): c for (x, y), c in art.items()}
     px = sealed(px, donkey, {(x + hd[0], y + hd[1]) for x, y in mouth_box()})
     px.update({(x + hd[0], y + hd[1]): c for (x, y), c in cached("plume", plume_layer).items()})
     return px, region, ("move", hd)

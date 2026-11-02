@@ -574,7 +574,7 @@ body.all .strip .cell { margin-bottom:4px; }
   <button id="rider">Rider: off</button>
 </header>
 <nav id="nav"></nav>
-<p class="note">Every skin the API knows, by mount: the mount's own look first, then by name. Local only: the frames are the game's art and ours. The page shows the art as drawn (no player colours); night is a rough tint, not the game's lighting. A frame a skin has no picture for shows the donkey's own (faded in the strips). Frame strips: every frame of the clip side by side; all 44 frames: the whole skin, every picture named. Rider: the probe's rider with his hip on the skin's seat row (the yellow line), shifted by the skin's RiderOffsetPx; a front layer is drawn in front of him. Keys: space pauses, the arrows step.</p>
+<p class="note">Every skin the API knows, by mount: the mount's own look first, then by name. Local only: the frames are the game's art and ours. The page shows the art as drawn (no player colours); night is a rough tint, not the game's lighting. A frame a skin has no picture for shows the donkey's own (faded in the strips). Frame strips: every frame of the clip side by side; all 44 frames: the whole skin, every picture named. Rider: the probe's rider with his hip on the skin's seat row (the yellow line), shifted by the skin's RiderOffsetPx; a front layer is drawn in front of him. Keys: space pauses, the arrows step. The settings (the toolbar, a paused frame, the hidden mounts) are kept for the next visit and the next rebuild.</p>
 <p class="note" id="export"></p>
 <section id="caps"></section>
 <div id="mounts"></div>
@@ -584,6 +584,19 @@ document.getElementById('export').textContent = EXPORT ? 'The game\'s own export
 const DONKEY = GROUPS[0].skins.find(s => s.id === 'donkey');
 const $ = id => document.getElementById(id);
 let frame = 0, paused = false, last = 0, scale = 3;
+// the page's settings survive a reload and a rebuild (the user, 2026-11-02): the toolbar, the paused frame and which
+// mounts are hidden, kept in this browser's storage for the page (file pages may get none: then the defaults)
+const SAVE_KEY = 'gk2-skins-preview.settings';
+let saved = {};
+try { saved = JSON.parse(localStorage.getItem(SAVE_KEY) || '{}') || {}; } catch (e) { saved = {}; }
+function save() {
+  const hidden = {};
+  GROUPS.forEach(g => { hidden[g.id] = document.getElementById('m-' + g.id).classList.contains('collapsed'); });
+  const s = { clip: $('clip').value, view: $('view').value, scale: scale, facing: $('facing').value,
+              night: document.body.classList.contains('night'), rider: document.body.classList.contains('with-rider'),
+              paused: paused, frame: frame, hidden: hidden };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify(s)); } catch (e) { /* no storage here: nothing kept */ }
+}
 const stages = [];
 const hasFrames = s => Object.keys(s.frames).length > 0;
 // a section's stage is the largest canvas among its skins with pictures (the donkey's 96, the dragon's 128), so a
@@ -604,10 +617,11 @@ function applyScale() {
 const nav = $('nav'), mountsEl = $('mounts');
 GROUPS.forEach(g => {
   const a = document.createElement('a'); a.href = '#m-' + g.id; a.textContent = g.name + ' (' + g.skins.length + ')'; nav.appendChild(a);
-  const sec = document.createElement('section'); sec.className = 'mount' + (g.collapsed ? ' collapsed' : ''); sec.id = 'm-' + g.id;
+  const hide = saved.hidden && g.id in saved.hidden ? !!saved.hidden[g.id] : g.collapsed;
+  const sec = document.createElement('section'); sec.className = 'mount' + (hide ? ' collapsed' : ''); sec.id = 'm-' + g.id;
   const h = document.createElement('h2'); h.innerHTML = g.name + '<small>' + g.skins.length + ' skin' + (g.skins.length === 1 ? '' : 's') + '</small>';
-  const tg = document.createElement('button'); tg.className = 'toggle'; tg.textContent = g.collapsed ? 'show' : 'hide';
-  tg.onclick = () => { sec.classList.toggle('collapsed'); tg.textContent = sec.classList.contains('collapsed') ? 'show' : 'hide'; };
+  const tg = document.createElement('button'); tg.className = 'toggle'; tg.textContent = hide ? 'show' : 'hide';
+  tg.onclick = () => { sec.classList.toggle('collapsed'); tg.textContent = sec.classList.contains('collapsed') ? 'show' : 'hide'; save(); };
   h.appendChild(tg); sec.appendChild(h);
   const cards = document.createElement('div'); cards.className = 'cards'; sec.appendChild(cards);
   g.skins.forEach(s => {
@@ -682,18 +696,29 @@ function hold() { paused = true; $('pause').textContent = 'Play'; }
 const clipSel = $('clip');
 Object.keys(CLIPS).forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = c + ' (' + CLIPS[c].length + ')'; clipSel.appendChild(o); });
 clipSel.value = 'walk';
-clipSel.onchange = () => { frame = 0; buildStrips(); show(); };
-$('facing').onchange = show;
-$('scale').onchange = e => { scale = +e.target.value; applyScale(); };
-$('view').onchange = e => { document.body.classList.toggle('strips', e.target.value === 'strips'); document.body.classList.toggle('all', e.target.value === 'all'); buildStrips(); };
-$('scrub').oninput = e => { hold(); frame = +e.target.value; show(); };
-$('prev').onclick = () => { hold(); const n = CLIPS[clipSel.value].length; frame = (frame % n + n - 1) % n; show(); };
-$('next').onclick = () => { hold(); frame = (frame + 1) % CLIPS[clipSel.value].length; show(); };
-$('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; };
-$('night').onclick = e => { document.body.classList.toggle('night'); e.target.textContent = document.body.classList.contains('night') ? 'Day' : 'Night'; e.target.classList.toggle('on'); };
+clipSel.onchange = () => { frame = 0; buildStrips(); show(); save(); };
+$('facing').onchange = () => { show(); save(); };
+$('scale').onchange = e => { scale = +e.target.value; applyScale(); save(); };
+function setView(v) { $('view').value = v; document.body.classList.toggle('strips', v === 'strips'); document.body.classList.toggle('all', v === 'all'); }
+$('view').onchange = e => { setView(e.target.value); buildStrips(); save(); };
+$('scrub').oninput = e => { hold(); frame = +e.target.value; show(); save(); };
+$('prev').onclick = () => { hold(); const n = CLIPS[clipSel.value].length; frame = (frame % n + n - 1) % n; show(); save(); };
+$('next').onclick = () => { hold(); frame = (frame + 1) % CLIPS[clipSel.value].length; show(); save(); };
+$('pause').onclick = e => { paused = !paused; e.target.textContent = paused ? 'Play' : 'Pause'; save(); };
+function setNight(on) { document.body.classList.toggle('night', on); $('night').textContent = on ? 'Day' : 'Night'; $('night').classList.toggle('on', on); }
+$('night').onclick = () => { setNight(!document.body.classList.contains('night')); save(); };
 const riderBtn = $('rider');
+function setRider(on) { document.body.classList.toggle('with-rider', on); riderBtn.textContent = on ? 'Rider: on' : 'Rider: off'; riderBtn.classList.toggle('on', on); }
 if (!RIDER) { riderBtn.disabled = true; riderBtn.textContent = 'Rider: export it in the probe first'; }
-riderBtn.onclick = () => { document.body.classList.toggle('with-rider'); riderBtn.textContent = document.body.classList.contains('with-rider') ? 'Rider: on' : 'Rider: off'; riderBtn.classList.toggle('on'); };
+riderBtn.onclick = () => { setRider(!document.body.classList.contains('with-rider')); save(); };
+// the saved settings, where they still apply to this page (a clip it no longer has keeps the default)
+if (saved.clip && CLIPS[saved.clip]) clipSel.value = saved.clip;
+if (['anim', 'strips', 'all'].includes(saved.view)) setView(saved.view);
+if ([2, 3, 4, 5].includes(saved.scale)) { scale = saved.scale; $('scale').value = String(scale); }
+if (['left', 'right'].includes(saved.facing)) $('facing').value = saved.facing;
+if (saved.night) setNight(true);
+if (saved.rider && RIDER) setRider(true);
+if (saved.paused) { paused = true; $('pause').textContent = 'Play'; frame = Math.max(0, saved.frame | 0) % CLIPS[clipSel.value].length; }
 document.addEventListener('keydown', e => {
   if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') return;
   if (e.key === ' ') { e.preventDefault(); $('pause').click(); }
