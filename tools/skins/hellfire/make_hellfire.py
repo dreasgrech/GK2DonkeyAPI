@@ -87,13 +87,19 @@ def horn_runs(pp, y, w):
     return runs
 
 
-TUFT_ROWS = 4  # rows of mane above the horns' base row, between the horns, in every frame
+TUFT_ROWS = 2  # rows of mane above the horns' base row, between the horns, in every frame (4 until 2026-11-02:
+# the tuft stood a dark nub up between the horns, "a near-black nub ... sticks up between the horns", a fresh review)
 TUFT_DARK = (30, 25, 14, 255)   # the donkey's own outline dark (region Dark): the tuft's top two rows
 TUFT_MANE = (53, 46, 30, 255)   # the donkey's own mane shade (region Dark): the rest
+NO_TUFT = {"bdy_turn_left_03", "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}  # the head turning to
+# us: the horns stand apart (4-5 columns in turn 03, 7-15 in turn 04-06) and the tuft between them was a flat-topped
+# black block standing on the head, not hair between two horns (the user, 2026-11-02: "some black artifact appears
+# between the horns while it's turning and while it's turned"); left as the donkey has them. The gap's width alone
+# can't tell turn 03 from the standing frame (both 4-5), so the frames are named.
 
 
 def fill_between_horns(pack, orig, rows=TUFT_ROWS):
-    """The same mane tuft between the two horns in every frame. The horns are thinner than the ears they replace, so
+    """The same mane tuft between the two horns in every frame (NO_TUFT's left out). The horns are thinner than the ears they replace, so
     what stood between the ears showed between them: one column in the standing frames, a block three wide where the
     head bobs (walk 3/4/7/8, the turn), and the gap flickered open and shut as the donkey walked (the user, 2026-10-19
     evening; the recipe code did the same). Erasing it all left a hole in his head (the user: "it should be filled").
@@ -164,7 +170,7 @@ def main(argv):
     total_erased = total_drawn = 0
     for key in ORDER:
         frames[key], originals[key], results[key], e, d = pack_frame(key)
-        e2, d2 = fill_between_horns(frames[key], originals[key])
+        e2, d2 = (0, 0) if key in NO_TUFT else fill_between_horns(frames[key], originals[key])
         e += e2; d += d2
         total_erased += e; total_drawn += d
     cfg = skin_cfg()

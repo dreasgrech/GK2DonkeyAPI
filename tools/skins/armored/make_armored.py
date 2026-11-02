@@ -811,7 +811,17 @@ TURN3_HELMET = [  # top-left at (29, 35): the skull between the near ear and the
     ".kyxyxwk",          # 51  the roped rim
     "..kkkkk",           # 52
 ]
-TURN3_PLUME = [".qq.", "qtuq", "qtsq", "qtsq", ".qrq", ".yx.", ".xw."]   # top-left at (34, 28): on the skull's front
+TURN3_PLUME = [  # top-left at (34, 26): between the side view's plume and the front's, bushy, falling back to the right,
+    "..qqq..",       # its holder on the skull's top middle clear of the near ear (a four-pixel stick there looked "quite bad",
+    ".qtuutq",       # the user, 2026-11-02)
+    ".qttusq",
+    "..qtsrq",
+    "..qtsq.",
+    "..qsrq.",
+    "..qsq..",
+    "..yx...",
+    "..xw...",
+]
 FRONT_HELMET = [  # top-left at (30, 33): the skull between the ears, flush with the head's top, the gilt brow, the
     "....kkkkk",         # 33   gilt comb down its middle, the sight across the face with the eyes' glints at its
     "...k78y65k",        # 34   sides, the beak's crease down the middle (lit on the left), a rosette at each side
@@ -843,7 +853,7 @@ def drawn_head(key):
     px = {}
     if key == "bdy_turn_left_03":
         stamp(px, TURN3_HELMET, 29, 35)
-        stamp(px, TURN3_PLUME, 34, 28)
+        stamp(px, TURN3_PLUME, 34, 26)
     else:
         stamp(px, FRONT_HELMET, 30, 33 + dy)
         stamp(px, FRONT_PLUME, 34, 25 + dy)
@@ -883,18 +893,36 @@ def head_place(key, donkey):
         s_eye, eye = ANCHORS[S_KEY]["eye"], ANCHORS[key]["eye"]
         hd = (round(eye[0] - s_eye[0]), round(eye[1] - s_eye[1]))
     else:
-        hd = head_delta(key)
+        hd = HEAD_MOVE.get(key) or head_delta(key)
     # graze 02 and turn 02 bring the head down or round over the chest plate; every other moved frame keeps it clear
     # (graze 01 and turn 01 are the standing picture: their armour must be the standing one, pixel for pixel)
     region = {(x + hd[0], y + hd[1]) for x, y in cached("head_region", head_region)} if key in HEAD_OVER_CHEST else None
     art = stamp({}, TURN2_HELMET, *HELMET_AT) if key in MOVE_BY_EYE else face
     px = {(x + hd[0], y + hd[1]): c for (x, y), c in art.items()}
-    px = sealed(px, donkey, {(x + hd[0], y + hd[1]) for x, y in mouth_box()})
-    px.update({(x + hd[0], y + hd[1]): c for (x, y), c in cached("plume", plume_layer).items()})
+    px = sealed(px, donkey, {(x + hd[0], y + hd[1]) for x, y in mouth_box() | set(EXTRA_SEAL.get(key, ()))})
+    for p in POKE_ERASE.get(key, ()):   # the donkey's own pixels poking past the helm's outline: taken off the donkey
+        px[p] = ERASE
+    px_, py_ = PLUME_SHIFT.get(key, (0, 0))
+    px.update({(x + hd[0] + px_, y + hd[1] + py_): c for (x, y), c in cached("plume", plume_layer).items()})
     return px, region, ("move", hd)
 
 
+ERASE = (255, 0, 255)   # the erase colour (docs/skins.md "Erasing from the donkey"): clears the donkey's pixel there
+HEAD_MOVE = {"bdy_lips_left_05": (0, 0)}   # lips 05's ear base rises a row but its jaw doesn't: moved up with the ear, the helm
+# showed a row more of the throat under its rim for one frame (the gate review, 2026-11-02); it stays as in lips 04
+POKE_ERASE = {  # frame pixels of the donkey's own outline left outside the helm by a frame's small head move (lips 04-06: the
+    "bdy_graze_left_02": [(25, 51), (26, 51)],   # forehead lifts a pixel; graze 02: the chin under the visor), erased:
+    "bdy_lips_left_04": [(31, 33), (32, 32), (34, 31)],   # sealed in the helm's outline they stood as bumps, left they
+    "bdy_lips_left_05": [(31, 33), (32, 32), (33, 31), (34, 31)],   # made a double stair of outline (the gate review);
+    "bdy_lips_left_06": [(34, 31)],                                 # turn 02: the ear gone behind the plume left a
+    "bdy_turn_left_02": [(39, 23), (40, 28), (40, 29), (39, 30), (40, 30)],   # 1 px strip down its side and its tip
+}
+PLUME_SHIFT = {"bdy_turn_left_02": (-1, -1)}   # turn 02 moves the helmet 2 px onto the ear (the eye moves, the ear base
+# goes the other way): the ear peeked out at the plume's tip and down its left side (a fresh review, 2026-11-02)
 MOUTH_BOX = (16, 34, 32, 48)   # x0, y0, x1, y1 on the standing frame: in front of and under the visor's front half
+EXTRA_SEAL = {  # standing-frame pixels outside the box a frame's own head pushes past the helm: graze 02's poll showed at
+    "bdy_graze_left_02": [(34, 31)],   # the plume's foot (a fresh review, 2026-11-02; its chin under the visor is erased,
+}                                      # POKE_ERASE)
 
 
 def mouth_box():
@@ -913,6 +941,30 @@ def sealed(px, donkey, zone):
     for (x, y) in add:
         edge = any(not op(x + i, y + j) and (x + i, y + j) not in px for i, j in ((1, 0), (-1, 0), (0, 1), (0, -1)))
         out[(x, y)] = K if edge else STEEL[2]
+    return out
+
+
+SCRAP = 8   # a piece of a plate the head's region cut off from the rest, smaller than this, is dropped
+
+
+def drop_scraps(px, op):
+    """A plate cut behind the head (graze 02, turn 02: the head coming down or round over the chest) left loose bits of
+    1-3 pixels standing in the neck (a fresh review, 2026-11-02: "a stray light-grey 2-px cluster") and, in graze 02,
+    a 9-pixel corner hanging in the air before the neck with no outline on its cut edge (the gate review): the
+    pieces (4-connected) smaller than SCRAP go, and those mostly off the donkey (`op`); an uncut plate is one piece
+    on the body and stays whole."""
+    left, out = set(px), {}
+    while left:
+        part, todo = set(), [left.pop()]
+        while todo:
+            x, y = todo.pop()
+            part.add((x, y))
+            for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if q in left:
+                    left.discard(q)
+                    todo.append(q)
+        if len(part) >= SCRAP and 2 * sum(1 for p in part if op(*p)) > len(part):
+            out.update({p: px[p] for p in part})
     return out
 
 
@@ -951,7 +1003,8 @@ def frame(key):
         layers["skirt"] = {p: c for p, c in place_skirt(b, op, key, donkey, cdx).items() if not front(p)}
         layers["lames"] = {p: c for p, c in place_lames(b, op, key, donkey, cdx).items() if not front(p)}
         layers["rump"] = place_rump(cached("rump", rump_layer), b)
-        layers["chest"] = {(x + cdx, y + cdy): c for (x, y), c in cached("chest", chest_layer).items() if not behind((x + cdx, y + cdy))}
+        chest = {(x + cdx, y + cdy): c for (x, y), c in cached("chest", chest_layer).items() if not behind((x + cdx, y + cdy))}
+        layers["chest"] = drop_scraps(chest, op)
         layers["tail"] = tail_guard(donkey, b)
     layers["head"] = head
     im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
@@ -972,7 +1025,8 @@ def skin_cfg():
         "# Armored: plate barding drawn OVER the donkey (docs/skins.md): an armet (a closed helmet: a round skull, a gilt\n"
         "# brow, the sight, a beaked visor on a brass rosette, a roped gilt rim) with a plume, a chest plate, steel lames, a\n"
         "# rump plate, a cloth skirt and a steel guard on the tail; ears, tail and legs stay the donkey's. Generated by\n"
-        "# tools/skins/armored/make_armored.py (the pictures hold only our pixels; nothing is erased).\n"
+        "# tools/skins/armored/make_armored.py (the pictures hold only our pixels; the few the donkey's head pokes past the\n"
+        "# helm in five frames are erased, FF00FF).\n"
         "# Our own art; nothing of the game's.\n"
         "[Skin]\nformat = 1\nname = Armored\n"
         "description = Plate barding with a plumed knight's helmet, steel lames, a cloth skirt and a steel tail guard. The skirt and the plume follow your harness colour.\n"

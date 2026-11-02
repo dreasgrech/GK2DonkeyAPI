@@ -113,6 +113,61 @@ Development:
   after a rebuild (a clip the page no longer has keeps the default; no storage, the defaults). Checked in headless
   Chrome on a copy of the page: seeded settings restored (graze frame 3 paused, strips, scale 5, mirrored, night,
   rider, a hidden mount), and clicks saved.
+- **The donkey skins' turn frames, in review** (2026-11-02, the user on the preview page). Both generators reproduced
+  the pack exactly before the change, so only these frames differ:
+  - Hellfire, "some black artifact appears between the horns while it's turning and while it's turned": measured,
+    `fill_between_horns` fills the gap between the horns with the mane's tuft (made so in 2026-10-19, the gap
+    flickered in the walk), 3-5 columns in the side views, but 7-15 where the head faces us (turn 04-06), where
+    about 20 tuft pixels a frame went into the empty air: a black block. A first fix by the gap's width (rows wider
+    than 5 left alone) kept turn 03's block (the user: "still exists in turn_03"): its gap is 4-5, as the standing
+    frame's, but there the tuft is a flat-topped square standing between two upright horns, not hair tapering between
+    leaning ones; I had seen it in my own render and taken it for the side views' tuft. Now `NO_TUFT` names turn
+    03-06, left as the donkey has them; those four frames change.
+  - Royal Parade, "the crown seems offsetted badly in turn_03": the eye rule (2 columns behind the eye) put the crown
+    behind the head, where three quarters show the eye on the face's far side; turn 03 (`BETWEEN_EARS`) puts it
+    between the ears as the facing frames do, on the head's top.
+  - Armored, the plume in turn 03 "looks quite bad": a four-pixel stick by the near ear; now a bushy plume between
+    the side view's and the front's, its holder in the skull's top middle.
+  - Royal Parade, found by a sweep of every frame (not reported): in lips 04-05 the donkey blinks, no eye is found,
+    and the forehead rule lifted the crown 4 rows off the head; in the clips where the head only moves (walk, ear,
+    chew, lips) a shut eye is now the standing eye moved with the head (`MOVED_HEAD`).
+  - Found by a fresh reviewer (a subagent given the page's frames and the user's complaints, not the fixes'
+    explanations), all fixed on the user's "fix the found issues ... polished as much as possible":
+    - Armored graze 02: the chin hung 2 px under the visor and the poll showed at the plume's foot (`EXTRA_SEAL`);
+      cutting the chest plate behind the lowered head left 1-6 px bits in the neck (`drop_scraps`: pieces under 8 px
+      go; only graze 02 shows a change). Turn 02: the helmet moves 2 px onto the ear, which peeked out at the plume's
+      tip and down its left side; the plume a pixel left and up there (`PLUME_SHIFT`), the ear behind it as in turn 01.
+    - Hellfire: the tuft between the horns 2 rows above their base instead of 4 (`TUFT_ROWS`; it stood up as a dark
+      nub; still the same in every frame, so the walk's flicker stays fixed: every side view changes a little); the
+      glowing eyes in graze 03-05 (the eye is a light pixel there that no rule finds: its place in `EAR_FRAMES`, the
+      glow only, the body's box as built: 5 px a frame change); turn 03's far ear lying back over the neck, a flat dark
+      slab behind the far horn, erased (`FAR_EAR`; the horn settles onto the head below it).
+    - Royal Parade graze 03-05: the crown's front end overhung the lowered head's edge by a pixel; never past the
+      head's front there now.
+  - A second fresh review, the gate before the packs, found what the first round's fixes left, all fixed:
+    - Royal Parade: graze 03-05's crown was still a pixel out on the forehead's slope (the clamp now takes the head's
+      front on the crown's four lower rows, not two); turn 03's crown jumped 3 columns left of turn 02 and back
+      (`TURN_NUDGE` 2: its left edge goes 33, 35, 34, 34 through turn 01-04).
+    - Armored: erasing (docs/skins.md "Erasing from the donkey") instead of sealing where a frame's own pixel pokes
+      out: graze 02's chin under the visor, the forehead's outline over the dome in lips 04-06 (the forehead lifts a
+      pixel), turn 02's ear strip down the plume (`POKE_ERASE`: 15 pixels in 5 frames, built whole in the game);
+      sealed in the helm's outline those stood as bumps. Lips 05 keeps the helm where lips 04 has it (`HEAD_MOVE`: its
+      ear base rises a row but its jaw doesn't, and the helm showed a row more throat for one frame). Graze 02's
+      9-pixel chest-plate corner hanging in the air before the neck goes (`drop_scraps`: a cut piece mostly off the
+      donkey goes too).
+    - Hellfire: turn 03's last far-ear pixel by the rear horn, and in turn 04-06 the head's top corner beside each
+      horn's base (a pixel that stood out like a brim), erased.
+  Reviewed on the preview page as "Hellfire (in progress)", "Royal Parade (in progress)" and "Armored (in progress)"
+  beside the shipped ones; the gate's re-check: every finding fixed, nothing worse, nothing new. Then written into
+  the pack on the user's yes (2026-11-02 16:51: Armored 6 pictures and its skin.cfg note, Hellfire all 44, Royal
+  Parade 6; the packs' pictures equal the reviewed studies byte for byte), check_skin all good on each, built and
+  deployed with the game closed (the DLL holds all three skins' 45 files byte for byte), the page rebuilt from the
+  packs. The pack's 1.1.0 notes have a "Hellfire and Royal Parade polished" line.
+- **`tools/skins/page_frames.py`** (2026-11-02): the review of a skin change looks at the page's own pictures (cut out
+  of skins-preview.html: the composites with the skin's erase marks and its own [Base.*] recolour, exactly what the
+  user sees), a row per skin, a clip's frames or all 44, zoomed, any part of the canvas; it refuses to write into the
+  repo (the pictures hold the game's art). Made after a review on separate composites (no recolour) missed what the
+  page showed.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

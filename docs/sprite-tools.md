@@ -133,6 +133,7 @@ only the game's frames stay outside it (the asset probe's `donkey-frames\` in `B
 | Royal Parade: the generator, its outputs | `tools/skins/royal-parade/` (`make_royal.py`, `view.py`, the watcher's `.cmd`); `out\` (git-ignored): `royal.aseprite`, `preview.png`, `zoom.png`, `strips\`, `pack\sheet.png` |
 | Armored: the generator, its outputs | `tools/skins/armored/` (`make_armored.py`); `out\` (git-ignored): `armored.aseprite`, `preview.png`, `strips\`, `pack\sheet.png`, `handover\`, `study\` |
 | Armored: the review loop | `tools/skins/armored/preview.py` (double-click `Preview Armored.cmd`): the generator into `out\` only (the pack untouched), each cut being compared staged as a study (its `STUDIES`; now the one card "Armored (in progress)"), the skins preview page rebuilt with them beside the shipped Armored and opened |
+| What the page shows, frame by frame | `tools/skins/page_frames.py <out.png> --skins "<Skin>,<Skin> (in progress)" --clip <clip or all> [--box x0 y0 x1 y1] [--scale n]`: the page's own pictures (erase and [Base.*] recolour applied) cut out, a row per skin, zoomed; refuses to write into the repo |
 | The game's own sprites as style references | `tools/skins/game_sprites.py` (`presets`, `export`, `palette`): the character atlas's presets (0341, 0622, 0626, 0627, 0641 are armoured guards: Armored's steel), exported for looking at, never into the repo (it refuses); `handover.py --pack <folder> --ref <sprite>` puts one beside a cut at the same 3x |
 | The hand-over pictures of step 5 for any skin | `tools/skins/handover.py <skin> [frame ...] [--ref <picture>]` -> `tools/skins/<skin>/out/handover/` |
 | Royal Parade: the pack | `packs/GK2SaddleUpDonkeySkinPack/gk2mounts/donkey/skins/saddleup-donkey-skins.royal-parade/` (`skin.cfg` by hand, a PNG per frame generated), in the Donkey Skins pack with Hellfire since 2026-10-27, a built-in like Hellfire from 2026-10-19 23:00 (before: `packs/royal-parade/` as a sheet, copied into the game's `gk2skins\`; then `src/GK2DonkeyAPI/assets/skins/royal-parade/`, Saddle Up's `assets/skins/` from 2026-10-21, its `assets/mounts/donkey/skins/` from 2026-10-24 to 2026-10-27) |
@@ -224,6 +225,24 @@ are the worked examples; the next skin or mount is **scaffold, generate or draw,
    there; is the colour apart from the body's; is anything on the wrong part of the body (a wing on the rump, a
    fold on the tail); with the rider, what exactly is covered and what is in view; and name every difference from
    the reference that is left. A draft that only confirms what was intended is not a check.
+   **Every change after that, before it is handed over** (2026-11-02, Armored's rounds and the turn fixes: the user
+   found eight artifacts in a row that were on the pictures I had looked at, "they are costing us way too much"):
+   - **Look on the user's surface.** `python -I tools/skins/page_frames.py <out.png> --skins "<Skin>,<Skin> (in
+     progress)" --clip <clip> --box ... --scale 6` cuts the page's own pictures out (the skin's erase marks and its
+     [Base.*] recolour applied, as the user sees them). A separate composite is not the same picture.
+   - **Restate the complaint's frames first and tick each one.** "While it's turning and while it's turned" is turn
+     02-06, not the frames a rule explains: turn 03 was left out of a fix that way.
+   - **A number checks the mechanism, never the look.** A rule fitted on the frames already seen (the horns' gap) and
+     then used to clear the others passed turn 03 while its picture showed the block; a counter of cover-up pixels
+     ("sealed adds none") passed three times while each cover-up was the next blob the user saw. For each frame
+     named and its neighbours, write what is around the changed piece that is in neither the bare donkey nor the
+     shipped frame.
+   - **Sweep all 44 frames** at 4x on the page's pictures after any change to a head or face piece (`--clip all --box
+     12 16 50 64 --scale 4`), comparing each frame with its neighbours in the clip: a piece that jumps, floats or
+     blocks where the head doesn't. The first sweep found Royal Parade's crown lifted off the head in lips 04-05 (a
+     blink), never reported.
+   - **An unanchored read**: a fresh reviewer (a subagent) gets the page's frames and the user's complaints, not the
+     fix's explanation, and says which frames look wrong; its findings are fixed before the hand-off.
 6. **Build and deploy** with the game closed (`dotnet build src/SaddleUp/SaddleUp.csproj` for Saddle Up's packs); the self-tests
    (F11, Tests tab, "Skins and effects") cover the drawing with readbacks; wear it, walk, turn, graze; then "Export the
    loaded skins as built" (F11, Mounts tab: every skin loaded at that moment) and rebuild the page: it shows the game's

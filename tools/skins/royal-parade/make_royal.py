@@ -21,7 +21,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))  # the donkey's frames and anatomy, shared by every skin over it
-from anatomy import ORDER, load, HORNS, ANCHORS, body, belly
+from anatomy import ORDER, load, HORNS, ANCHORS, body, belly, head_delta
 import ase_write
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -63,6 +63,11 @@ def stamp(px, pattern, x0, y0):
 CROWN_FORWARD = 3  # columns towards the muzzle from the point between the ears (the user: "a bit more forward")
 CROWN_BEHIND_EYE = 2  # with the eye found: the crown's centre this many columns behind the eye
 CROWN_ABOVE_EYE = 3   # and its bottom row this many rows above the eye (the forehead)
+MOVED_HEAD = ("bdy_walk", "bdy_ear", "bdy_chew", "bdy_lips")   # clips where the head only moves (anatomy.py)
+TURN_NUDGE = {"bdy_turn_left_03": 2}   # between the ears it jumped 3 columns left of turn 02 and back in turn 04 (its left
+# edge 33, 35, 32, 34 through turn 01-04; the gate review, 2026-11-02): 2 columns on, it goes 33, 35, 34, 34
+BETWEEN_EARS = {"bdy_turn_left_03"}  # three quarters: the eye is on the face's far side, so the eye rule put the crown
+# behind the head (the user, 2026-11-02: "offsetted badly in turn_03"); it sits between the ears as in the facing frames
 
 
 def crown(key, donkey=None):
@@ -73,12 +78,16 @@ def crown(key, donkey=None):
     im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
     (ax, ay, la), (bx, by, lb) = HORNS[key]
     cx = round((ax + bx) / 2)
-    if la != lb or donkey is None:
+    if la != lb or donkey is None or key in BETWEEN_EARS:
+        cx += TURN_NUDGE.get(key, 0)
         stamp(im.load(), CROWN, cx - 3, min(ay, by) - 4 + 2)
         return im
     # the eye, where it is found: the one landmark of the head that no ear flick moves; the crown sits a little
     # behind it and above it (the standing frame's forehead)
     eye = ANCHORS.get(key, {}).get("eye")
+    if not eye and key.startswith(MOVED_HEAD):   # the eye shut (the blink in lips 04-05): the standing eye moved with
+        (sx, sy), (dx, dy) = ANCHORS["bdy_static_left"]["eye"], head_delta(key)   # the head (the forehead rule
+        eye = (sx + dx, sy + dy)   # below lifted the crown 4 rows off the head there: found by a sweep, 2026-11-02)
     if eye:
         stamp(im.load(), CROWN, round(eye[0]) + CROWN_BEHIND_EYE - 3, round(eye[1]) - CROWN_ABOVE_EYE - 4)
         return im
@@ -92,6 +101,12 @@ def crown(key, donkey=None):
         if ys:
             tops.append(min(ys))
     base = sorted(tops)[len(tops) // 2] if tops else min(ay, by)
+    # never past the head's front: its left end overhung the lowered head's edge by a pixel in graze 3-5 (a fresh review,
+    # 2026-11-02); the head's front edge on the crown's four lower rows (the forehead slopes: the bottom two alone left
+    # the rows above a pixel out, the gate review)
+    fronts = [min((x for x in range(96) if op(x, y)), default=None) for y in range(base - 3, base + 1)]
+    front = max((f for f in fronts if f is not None), default=cxf - 3)
+    cxf = max(cxf, front + 3)
     stamp(im.load(), CROWN, cxf - 3, base - 4)  # the bottom row on the forehead's outline row
     return im
 

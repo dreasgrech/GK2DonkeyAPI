@@ -287,14 +287,15 @@ def smooth_root(px, w, h, root):
 
 # Frames whose ears a rule can't read (2026-10-19): the head down grazing (one ear up, the far one lying back on the
 # neck as mane) and the head turned to the camera (two ears either side of the forelock). Per frame key: the boxes
-# that are ear (x0, x1, y0, y1, inclusive, top-down canvas rows) and the horns (base x, base y, lean).
+# that are ear (x0, x1, y0, y1, inclusive, top-down canvas rows) and the horns (base x, base y, lean); turn 4-6 also
+# erase the head's top corner beside each horn's base, a pixel that stood out like a brim (the gate review, 2026-11-02).
 EAR_FRAMES = {
-    "bdy_graze_left_03": {"erase": [(19, 26, 0, 22)], "horns": [(22, 23, 1), (26, 24, 1)]},
-    "bdy_graze_left_04": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)]},
-    "bdy_graze_left_05": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)]},
-    "bdy_turn_left_04": {"erase": [(15, 35, 0, 22)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(20, 30), (27, 30)]},
-    "bdy_turn_left_05": {"erase": [(15, 35, 0, 22)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
-    "bdy_turn_left_06": {"erase": [(15, 35, 0, 22)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
+    "bdy_graze_left_03": {"erase": [(19, 26, 0, 22)], "horns": [(22, 23, 1), (26, 24, 1)], "eyes": [(21, 35)]},
+    "bdy_graze_left_04": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)], "eyes": [(20, 35)]},
+    "bdy_graze_left_05": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)], "eyes": [(20, 35)]},
+    "bdy_turn_left_04": {"erase": [(15, 35, 0, 22), (17, 17, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(20, 30), (27, 30)]},
+    "bdy_turn_left_05": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
+    "bdy_turn_left_06": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
 }
 
 
@@ -303,6 +304,11 @@ EAR_FRAMES = {
 HORN_FRAMES = {
     "bdy_turn_left_02": [(27, 28, 1), (32, 29, 1)],
     "bdy_turn_left_03": [(19, 26, 1), (25, 26, 1)],
+}
+# turn 3: the far ear lies back over the neck, where the ear rule (the run under the topmost pixel) doesn't reach, and
+# stayed as a flat dark slab behind the far horn (a fresh review, 2026-11-02); its boxes, as EAR_FRAMES' erase
+FAR_EAR = {
+    "bdy_turn_left_03": [(22, 33, 23, 25), (22, 24, 26, 26), (28, 32, 26, 26)],
 }
 
 
@@ -480,17 +486,20 @@ def hellfire(name, phase=0.0):
     head_only = "_hed_" in name
     drawn = [(x, y) for y in range(h) for x in range(w) if px[x, y][3] > 0]
     tdx, tdy = min(p[0] for p in drawn) - 16, min(p[1] for p in drawn) - 16  # the tables are relative to a drawn area at (16, 16)
-    eye = find_eye(px, w, h)
+    eye = found = find_eye(px, w, h)
     special_eyes = EAR_FRAMES.get(name[5:] if name.startswith("0301_") else name, {}).get("eyes")
-    if special_eyes:  # the face drawn from the front: its eyes are light pixels, not the white one (turn 4-6)
+    if special_eyes:  # the face drawn from the front: its eyes are light pixels, not the white one (turn 4-6); the head
+        # down (graze 3-5): the eye a light pixel by the muzzle, found by no rule, so it had no glow (a fresh review,
+        # 2026-11-02)
         se = [(e[0] + tdx, e[1] + tdy) for e in special_eyes]
         eye = (sum(e[0] for e in se) / len(se), sum(e[1] for e in se) / len(se), se)
     root = None
-    if not head_only:
-        box = torso_box(px, w, h, eye[0] if eye else None)
+    body_eye = found if "_graze_" in name else eye   # graze 3-5's table eyes light the glow only: the body's box (the
+    if not head_only:                                # cracks, the rump) stays as it was built
+        box = torso_box(px, w, h, body_eye[0] if body_eye else None)
         if box:
             root = erase_tail_drawn(px, w, h, DARK)
-            box = torso_box(px, w, h, eye[0] if eye else None)  # without the tail
+            box = torso_box(px, w, h, body_eye[0] if body_eye else None)  # without the tail
             cracks(px, w, h, box)  # before the coat darkens: the cracks sit on coat pixels and keep their own colours
             if root:
                 y0 = root[0]
@@ -505,6 +514,8 @@ def hellfire(name, phase=0.0):
         horns = [(x + tdx, y + tdy, l) for (x, y, l) in special["horns"]]
     else:
         erase_ears(px, w, h, eye[1] if eye else None)
+        if key in FAR_EAR:
+            erase_boxes(px, w, h, [(a + tdx, b + tdx, c + tdy, d + tdy) for (a, b, c, d) in FAR_EAR[key]])
         # the horns from the skull's top, which moves only with the head (the eye pixel animates on its own and is
         # gone in the blinks: the horns jumped or vanished in the idles, 2026-10-19); placed as they were from the eye
         # in the standing frame: skull top right end (31, 25) -> horns at (29, 26) and (34, 27)
