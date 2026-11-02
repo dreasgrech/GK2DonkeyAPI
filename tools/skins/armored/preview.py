@@ -16,7 +16,8 @@ from gamedir import game_dir
 # the cuts on the page: (folder under out\study, the card's name, the generator's arguments); the last one run is
 # what out\pack holds afterwards
 STUDIES = [
-    ("armored-in-progress", "Armored (in progress)", []),
+    ("armored-armet", "Armored (armet)", []),
+    ("armored-armet-comb", "Armored (armet, gilt comb)", ["--comb"]),
 ]
 
 

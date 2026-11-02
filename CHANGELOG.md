@@ -44,7 +44,27 @@ Development:
   with the cut as "Armored (in progress)" beside the shipped one); `tools/skins/game_sprites.py`, the game's
   character sprites as style references (presets, export, palette; it refuses to write into the repo);
   `handover.py --pack <folder>` (a cut not yet in the pack) and `--ref` repeatable, a game sprite at the rows' 3x.
-  The pack's pictures, its skin.cfg and the 1.1.0 notes change only once the user approves the cut.
+  Written into the pack (pictures, skin.cfg, the pack's changelog entry) and deployed 2026-11-02; the user looked at
+  it in game the same day. The pack's README, docs/skins.md, the inventory, the looks design, the media texts, the
+  1.1.0 release notes, the zip and the Workshop folder still describe or hold the first cut until the user approves.
+- **Armored: an armet instead of the face plate, in review** (2026-11-02; the user, after the in-game look: the face
+  plate was "lacklustre", "fill the donkey's face more ... like a knight armet type helmet but more ornate", with
+  armet references). `make_armored.py`: the chanfron, its rivets and the brow's boss replaced by a closed helmet in
+  the same steel: a skull over the forehead and the poll (the ear comes out behind it), a gilt brow, the sight
+  over the eye (the eye's white shows through it, and the lips frames' blink with it), a beaked visor over the nose
+  with breaths and a brass rosette where it pivots on the cheek, a roped gilt rim along the jaw; the nose's tip and
+  the lips stay out under the beak, so it is still a donkey. The skull lies flush with the head's own top line (a
+  first round dome standing above it and upright at the front was "that bulge near the brain area", the user's marked
+  screenshot), the plume's holder on its top edge. `--comb` adds a gilt comb along that edge (down the middle from the
+  front); `preview.py` stages both, "Armored (armet)" and "Armored
+  (armet, gilt comb)", for the user's pick. Graze 03-05 no longer push the head's art through the majority-vote warp
+  alone (it broke the one-pixel brow, sight and rim into dots): `helmet_turned()` turns the helmet's shape and shading
+  and draws its lines (Bresenham through the turned pixel centres), breaths and rosette again on the turned head.
+  Turn 03 (three quarters) and turn 04-06 (the front) have new drawings of the helmet. Found on the way: in turn 04-06
+  the front lame was drawn over the donkey's muzzle (in the shipped cut too); the lames and the skirt now stay behind
+  the head where it is turned towards us (turn 03-06; turn 04, 05, 06 give 15, 11, 11 lame pixels back to the muzzle;
+  every other frame's body is the shipped pictures' pixel for pixel, checked). The skin's
+  description says "a plumed knight's helmet". Only out\ changed; the pack waits for the user's pick.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 
