@@ -168,6 +168,14 @@ Development:
   user sees), a row per skin, a clip's frames or all 44, zoomed, any part of the canvas; it refuses to write into the
   repo (the pictures hold the game's art). Made after a review on separate composites (no recolour) missed what the
   page showed.
+- **Armored: the skirt and the plume follow the Second tone** (2026-11-02, the user in the colours window: "the
+  harness colour should just colour the harness normally ... the thing on his head and the armor trim at the bottom
+  should be controlled by the second tone; right now the second tone doesn't do anything on this skin"). Its
+  skin.cfg's `[Colors]` names the cloth's five reds `Muzzle` (the Second tone row) instead of `Harness`; the harness
+  colour now reaches only the donkey's own harness, as on the plain donkey. The description says "follow your second
+  tone". Pictures unchanged (44 of 44 equal the pack's); check_skin all good (the five as Muzzle); written into the
+  pack (`--cfg`), built and deployed with the game closed, the deployed DLL holds the new `[Colors]` line and not the
+  old one.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

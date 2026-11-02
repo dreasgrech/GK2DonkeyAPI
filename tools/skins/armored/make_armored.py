@@ -4,9 +4,10 @@ skin"), the third skin of the Donkey Skin Pack. Second cut (2026-11-01, the user
 in plate, knights' chargers with a plumed chanfron and a caparison); HOW it is drawn comes from the game's own armoured
 guards (presets 0341, 0622, 0626, 0641: dull warm steel shaded round, lit from the front and above, a dark warm
 outline, one or two bright pixels where a curve meets the light, brass bits). The user's choices: the steel is always
-steel (kept as drawn, not the Second tone), a cloth skirt in the harness colour; neck plates and a forehead spike were
-chosen and dropped (2026-11-02, the user's videos and marked screenshot: on a donkey's head and neck anything that
-stands out reads as another ear); the face plate (with a brass boss on the brow) gave way to an ornate armet the same
+steel (kept as drawn), a cloth skirt and the plume in the Second tone (since 2026-11-02; the harness colour before,
+which left the Second tone doing nothing on this skin); neck plates and a forehead spike were chosen and dropped
+(2026-11-02, the user's videos and marked screenshot: on a donkey's head and neck anything that stands out reads as
+another ear); the face plate (with a brass boss on the brow) gave way to an ornate armet the same
 day (the user, after seeing it in game: "lacklustre", "fill the donkey's face more").
 
     python -I tools/skins/armored/make_armored.py              # the pack's pictures + out\\
@@ -22,7 +23,7 @@ the donkey it rides on, so its pixels never change between frames (no shimmer):
   - the middle of the body is five steel lames (the user's pick, 2026-11-02, over a padded caparison): the donkey's
     body stretches in the walk (the shoulders move, the hip stays) and one plate there either slid or seemed to
     stretch (the user's videos); each lame moves part way between the two, so no seam shifts more than a pixel;
-  - under them a cloth skirt in the harness colour, folds with a dagged hem, stretching as the body does;
+  - under them a cloth skirt in the Second tone (the [Colors] Muzzle row), folds with a dagged hem, stretching as the body does;
   - nothing of the body's armour reaches the tail (it runs down the rump's back edge); a steel guard of rings
     covers its upper half, the tuft free (the user's choice, 2026-11-02, after a ribbon bow and a steel ball on
     the tip were tried and dropped);
@@ -55,8 +56,9 @@ ASSETS = os.path.join(REPO, "packs", "GK2SaddleUpDonkeySkinPack", "gk2mounts", "
 OUT = os.path.join(HERE, "out")
 
 # The colours. The steel is the guards' steel (sampled from the game's helmets and breastplates: a warm grey with a
-# purple lean), kept as drawn; the brass is the guards' brass; the cloth (skirt, plume) is a red the player's harness
-# colour replaces (the [Colors] Harness row). None is a donkey colour (check_skin says so).
+# purple lean), kept as drawn; the brass is the guards' brass; the cloth (skirt, plume) is a red the player's Second
+# tone replaces (the [Colors] Muzzle row; the harness colour reaches only the donkey's own harness). None is a donkey
+# colour (check_skin says so).
 K = (40, 27, 38)  # the steel's outline
 STEEL = [K, (57, 49, 52), (72, 62, 63), (93, 83, 87), (112, 102, 112), (131, 121, 136), (157, 146, 163), (177, 172, 177), (205, 201, 205)]
 BRASS = [(78, 48, 10), (125, 83, 8), (164, 128, 11), (207, 169, 15), (241, 210, 116)]
@@ -621,7 +623,7 @@ TURN2_HELMET = HELMET[:1] + [
     "..kkkkkkkkkkkk",      # 45
 ]
 PLUME = [  # top-left at PLUME_AT: a short plume rising from a brass holder on the skull's top and falling back, in front
-    "..qqq...",  # of the ear's root (the ear stays in view behind it); the cloth's colours, so it takes the harness colour
+    "..qqq...",  # of the ear's root (the ear stays in view behind it); the cloth's colours, so it takes the Second tone
     ".qtuutq.",
     ".qttusrq",
     "..qtssrq",
@@ -1029,11 +1031,12 @@ def skin_cfg():
         "# helm in five frames are erased, FF00FF).\n"
         "# Our own art; nothing of the game's.\n"
         "[Skin]\nformat = 1\nname = Armored\n"
-        "description = Plate barding with a plumed knight's helmet, steel lames, a cloth skirt and a steel tail guard. The skirt and the plume follow your harness colour.\n"
+        "description = Plate barding with a plumed knight's helmet, steel lames, a cloth skirt and a steel tail guard. The skirt and the plume follow your second tone.\n"
         "author = dreas\nversion = 1.0\nbase = donkey\ncolours = own\nlayer = over\ncanvas = 96 96\n\n"
         "# The steel and the brass are kept as drawn (always steel, as the game's guards wear it); the skirt and the plume\n"
-        "# follow the harness colour (as Royal Parade's cloth).\n"
-        f"[Colors]\nHarness = {hexes(CLOTH)}\n"
+        "# follow the Second tone (the Muzzle row), so the harness colour reaches only the donkey's own harness (the user,\n"
+        "# 2026-11-02: under Harness the cloth took the harness colour and the Second tone did nothing on this skin).\n"
+        f"[Colors]\nMuzzle = {hexes(CLOTH)}\n"
     )
 
 
