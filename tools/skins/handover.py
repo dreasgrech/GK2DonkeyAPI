@@ -3,13 +3,17 @@ composes them, at 1x, 3x and 8x, each with and without the rider, and the refere
 checklist is answered on these pictures before anyone else looks. One command for any skin in the repo; the pictures
 go to the generator's out\\handover\\ (handover_1x3x.png, handover_8x_<n>.png one pair of frames each, handover_ref.png).
 
-    python -I tools/skins/handover.py <skin> [frame ...] [--ref <picture>] [--out <folder>]
+    python -I tools/skins/handover.py <skin> [frame ...] [--ref <picture> ...] [--out <folder>] [--pack <folder>]
 
   <skin>   any name tools/skins/skinroots.py takes (armored, donkey/saddleup-donkey-skins.armored, dragon)
   frames   the frame keys to show (default: standing, walk 03, graze 04, turn 03, turn 05: one of every pose the
            head takes)
-  --ref    a reference picture to put under the rows (the one the drawing was made from)
+  --ref    a reference picture to put beside the rows (the one the drawing was made from); repeat it for more, they
+           go side by side at the 3x height into handover_ref.png (a game sprite next to the art reference: how the
+           game draws the material)
   --out    the folder for the pictures (default: tools/skins/<skin's short name>/out/handover)
+  --pack   the skin's pictures and skin.cfg from this folder instead of the skin's own (a cut being drawn, such as a
+           generator's out\\pack, before it goes into the pack)
 """
 import os, sys
 from PIL import Image, ImageDraw
@@ -43,12 +47,17 @@ def arg(name, default=None):
 
 
 def main():
-    words = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and not sys.argv[i - 1] in ("--ref", "--out")]
+    words = [a for i, a in enumerate(sys.argv[1:], 1) if not a.startswith("--") and not sys.argv[i - 1] in ("--ref", "--out", "--pack")]
     if not words:
         print(__doc__); return 2
     folder = skinroots.find(words[0])
     if folder is None:
         print("no such skin:", words[0]); return 2
+    named = folder
+    if arg("--pack"):
+        folder = arg("--pack")
+        if not os.path.isfile(os.path.join(folder, "skin.cfg")):
+            print("no skin.cfg in", folder); return 2
     keys = words[1:] or DEFAULT_FRAMES
     cfg = read_cfg(os.path.join(folder, "skin.cfg"))
     over = cfg.get(("skin", "layer"), "replace").lower() == "over"
@@ -69,7 +78,7 @@ def main():
             front["front/" + k] = Image.open(fp).convert("RGBA")
     base = {k: v for k, v in review.load_base(donkey_frames()).items() if k in keys} if over else None
     rider = review.load_rider(os.path.join(game_dir(), "BepInEx", "GK2-asset-probe"))
-    out_dir = arg("--out") or os.path.join(HERE, skinroots.short_name(os.path.basename(folder)), "out", "handover")
+    out_dir = arg("--out") or os.path.join(HERE, skinroots.short_name(os.path.basename(named)), "out", "handover")
     os.makedirs(out_dir, exist_ok=True)
     off = (canvas - 96) // 2
     box = (BOX96[0] + off, BOX96[1] + off, BOX96[2] + off, BOX96[3] + off) if canvas >= 96 else (0, 0, canvas, canvas)
@@ -97,11 +106,23 @@ def main():
     sheet.save(os.path.join(out_dir, "handover_1x3x.png"))
     for n, k in enumerate(keys):
         row(8, [(k, False), (k, True)]).save(os.path.join(out_dir, f"handover_8x_{n}.png"))
-    ref = arg("--ref")
-    if ref and os.path.isfile(ref):
-        im = Image.open(ref).convert("RGBA")
-        im = im.resize((max(1, im.width * bh * 3 // im.height), bh * 3), Image.LANCZOS)
-        im.save(os.path.join(out_dir, "handover_ref.png"))
+    refs = []
+    for i, a in enumerate(sys.argv[:-1]):
+        if a == "--ref" and os.path.isfile(sys.argv[i + 1]):
+            im = Image.open(sys.argv[i + 1]).convert("RGBA")
+            # pixel art (a game sprite, small) at the rows' 3x, pixel for pixel, so the two compare at one scale; a
+            # painting is fitted to the 3x height smoothly
+            if im.height * 2 <= bh * 3:
+                refs.append(im.resize((im.width * 3, im.height * 3), Image.NEAREST))
+            else:
+                refs.append(im.resize((max(1, im.width * bh * 3 // im.height), bh * 3), Image.LANCZOS))
+    if refs:
+        sheet = Image.new("RGBA", (sum(r.width + 10 for r in refs), max(r.height for r in refs)), review.BG)
+        x = 0
+        for r in refs:
+            sheet.alpha_composite(r, (x, 0))
+            x += r.width + 10
+        sheet.save(os.path.join(out_dir, "handover_ref.png"))
     print("handover ->", out_dir, "frames:", ", ".join(keys))
     return 0
 

@@ -10,7 +10,41 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 ## Unreleased
 
-(Nothing yet.)
+Development:
+
+- **Armored redrawn, in review** (2026-11-01; the user held the Donkey Skin Pack's 1.1.0 back: "a lot more detail and
+  exquisiteness ... professional while matching the game's aesthetic"). `tools/skins/armored/make_armored.py`
+  rewritten: the steel and brass are the game's own guards' (sampled from their helmets and breastplates: a warm grey
+  with a purple lean, shaded round), always steel (the user's choice; no longer the Second tone); the plates are
+  shaped and lit by one light from the front and above, then given rolled rims, rivets and brass trims; a face
+  plate with an eye guard, a brass boss on the brow and a short plume (hand-drawn, chosen from variants on the
+  standing head), a breast plate (with the shoulders), a rump plate (with the hip) and between them five steel
+  lames (the user's pick over a padded caparison, both shown on the page), over a skirt with a dagged hem; the tail
+  stays clear of the body's armour (it runs down the rump's back edge) and wears its own guard of steel rings over
+  its upper half, the tuft free (the user's choice after a ribbon bow and a steel ball on the tip were tried and
+  dropped), fitted to every frame's own tail; the hip every hip-hung piece follows is measured by matching the
+  standing frame's hindquarters on the frame (anatomy.body()'s hip read the turned head's far ear as the back's
+  top in turn 02-03, 2-4 columns forward of a rump that had not moved, and was a column off where the tail swings
+  in some walk, graze and lips frames; Royal Parade's cloth hangs from that measure too); the plume
+  on the brow behind the boss; the breast plate's top runs down into its front (a square corner there did not look
+  real); skirt and plume in the harness colour. Every rigid piece is drawn once
+  on the standing frame and moved with its part of the body
+  (no shimmer). The breast collar is the seam in front of the middle (cut along the strap and the chest's outline
+  in every frame), so the strap stays in view in the harness colour. Found on the user's videos and marked
+  screenshot of the page (2026-11-02): the donkey's body grows and shrinks 2-4 pixels in the walk (the shoulders
+  move, the hip stays), and every steel middle that tried to take it as one plate looked wrong (a plate edge
+  sliding over another, "bugging"; a plate growing at its front or sliding under the rump plate, "stretched
+  out"); the caparison stretches as cloth does, the lames each shift a pixel at most. On the head anything that
+  stands out read as a third, armoured ear: three neck lames on the crest, and the forehead spike pointing up or
+  straight ahead; the neck plates and the spike the user chose were dropped, the brow has a brass boss.
+  The frames that rotate the head get the face plate turned onto the frame's ear-to-muzzle line (graze 03-05),
+  moved by the eye (turn 02) or their own drawings (turn 03-06), and the plates stay behind a head or neck that
+  comes down in front of them.
+  New: `tools/skins/armored/preview.py` and `Preview Armored.cmd`, the review loop (out\ only, the skins preview page
+  with the cut as "Armored (in progress)" beside the shipped one); `tools/skins/game_sprites.py`, the game's
+  character sprites as style references (presets, export, palette; it refuses to write into the repo);
+  `handover.py --pack <folder>` (a cut not yet in the pack) and `--ref` repeatable, a game sprite at the rows' 3x.
+  The pack's pictures, its skin.cfg and the 1.1.0 notes change only once the user approves the cut.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 
