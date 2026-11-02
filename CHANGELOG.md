@@ -75,6 +75,24 @@ Development:
   The preview page still showed the old cut after the pack write (the user; nothing had rebuilt it): rebuilt, and
   `preview.py` now leaves a study the pack already holds off the page (it is the page's own Armored card then, so
   running the review loop after a pack write gives the right page with no repeated card).
+- **Armored: the grazing frames drawn by hand, in review** (2026-11-02; the user on the page: "regarding the graze
+  animation, an extra gray part is appearing"). Measured: in graze 03-05 the donkey opens its jaw to the grass and the
+  jaw hung 2-3 px below the helmet turned with the standing head; `sealed()` painted that strip flat dark steel (24 px
+  a frame, under the gilt rim). The user's pick of two fixes: graze 03 and graze 04/05 have their own drawings
+  (`GRAZE_HELMET`). A first drawing on the turn's landmarks, closed over the open jaw, read as "the helm is expanding
+  when he's bowing down his head" (the user): measured, its pixels were the standing helmet's (162/170 against 158),
+  but the donkey's own lowered head is foreshortened (it turns towards us: the forehead stands tall over a short face,
+  the eye level with the muzzle, at (25, 53) and (27, 57), not where the turn put it), so a full-size helmet stood
+  over a smaller head. Now drawn on the frame's own head and flush with its outline: a narrow tall skull with the
+  comb from the ear down to the gilt brow, the sight over the frame's own eye, the visor over the muzzle with the beak
+  to the left, the rosette, the breaths, the roped rim along the jaw (117/120 px); the plume's holder moved onto it.
+  `helmet_turned()` and its line drawing are gone, and the grazing frames are not sealed (it shut the eye). The user
+  also: a bit of jaw showing is fine, an expanding helm is not; in the chew animation "a part of the nose is appearing
+  over the armor" in some frames: measured, chew 03 and lips 04/06 lift the nose's top a pixel (the eye stays), and
+  `sealed()` drew that pixel as an outline bump; the visor's top-front edge and the forehead line just above the brow
+  are now a pixel fuller in every frame (4 pixels), so the lifted nose stays under the steel and nothing is sealed at
+  the nose (the jaw's seal in chew 02 stays: the user, "the jaw part looks good"). Only out\ changed; the pack waits
+  for the user's look.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 

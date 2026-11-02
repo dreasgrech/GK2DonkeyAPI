@@ -36,8 +36,8 @@ the donkey it rides on, so its pixels never change between frames (no shimmer):
       rump plate: the hip;
       every body piece's columns draped on the frame's own back line (Royal Parade's cloth rule), so they ride the
         walk's bob;
-      the armet and its plume: the head; graze 03-05 turn the helmet's shape and shading with the head and draw its
-        lines and brass again on the turned head; turn 03-06 have their own drawings (three quarters, the front).
+      the armet and its plume: the head; graze 03-05 (the head turned down, the jaw open to the grass) and turn
+        03-06 (three quarters, the front) have their own drawings of the helmet, the plume turned with the head.
 """
 import math, os, sys
 from PIL import Image
@@ -590,10 +590,10 @@ HELMET = [  # top-left at (24, 30): the skull over the forehead and the poll, fl
     ".........kkyxk",      # 32   30-35); a gilt comb along its top edge from the brow to the plume's holder (the
     "........kyy6k",       # 33   user's pick over the plain skull, 2026-11-02); darker towards the ear and the jaw
     ".......ky7665k",      # 34
-    ".......k676554k",     # 35
-    "......k66655443k",    # 36
-    "...k7yzyyxxxwwwk",    # 37  the gilt brow
-    "..k76kkkkk.kk443k",   # 38  the sight (the eye's white shows through at (34, 38))
+    "......k6676554k",     # 35
+    ".....k666655443k",    # 36
+    "..k77yzyyxxxwwwk",    # 37  the gilt brow
+    ".k776kkkkk.kk443k",   # 38  the sight (the eye's white shows through at (34, 38))
     ".k776666555444y3k",   # 39  the visor, closed over the whole muzzle (the nose's tip and the lips left out drew
     ".k87776665544yzxk",   # 40  the donkey's olive outline round the helm's mouth: the user's marked screenshot,
     ".k655k5k4k4333w3k",   # 41  2026-11-02): its upper face lit, the beak's crease over the nose, the breaths; its
@@ -629,75 +629,48 @@ def plume_layer():
     return stamp({}, PLUME, *PLUME_AT)
 
 
-# The armet's details where a frame turns the head (graze 03-05): warp()'s majority vote breaks one-pixel lines (the
-# brow, the sight, the rim) into dots, so the turn moves only the helmet's shape and shading, and the details are
-# drawn again on the turned head: each line through its pixels' turned centres, the breaths and the rosette at their
-# turned centres. The outline is the turned shape's own edge.
-HELMET_LINES = [[(x, 37) for x in range(29, 39)],   # the gilt brow
-                [(x, 38) for x in range(29, 37)],   # the sight (the eye hole left open)
-                [(x, 43) for x in range(27, 39)]]   # the roped rim
-COMB_LINE = [(32, 34), (33, 33), (34, 33), (35, 32), (36, 32), (37, 31), (38, 31)]   # the gilt comb on the skull
-HELMET_DOTS = [(29, 41), (31, 41), (33, 41)]   # the breaths
-ROSETTE = ([".y.", "yzx", ".w."], (38, 40))    # the visor's pivot on the cheek: its art and its centre
-EYE_HOLE = (34, 38)
-
-
-def cells(a, b):
-    """The pixels of a line from pixel a to pixel b (Bresenham), both ends included."""
-    (x0, y0), (x1, y1) = a, b
-    dx, dy = abs(x1 - x0), -abs(y1 - y0)
-    sx, sy = (1 if x1 > x0 else -1), (1 if y1 > y0 else -1)
-    err, out = dx + dy, []
-    while True:
-        out.append((x0, y0))
-        if (x0, y0) == (x1, y1):
-            return out
-        e2 = 2 * err
-        if e2 >= dy:
-            err += dy
-            x0 += sx
-        if e2 <= dx:
-            err += dx
-            y0 += sy
-
-
-def helmet_turned(A, t):
-    px = cached("face", face_layer)
-    lines = HELMET_LINES + [COMB_LINE]
-    art, (cx, cy) = ROSETTE
-    rosette = {(cx - 1 + i, cy - 1 + j) for j, row in enumerate(art) for i, ch in enumerate(row) if ch != "."}
-    detail = {p for line in lines for p in line} | set(HELMET_DOTS) | rosette | {EYE_HOLE}
-    plain = {}   # the shading under the details and the outline: each such pixel takes its nearest plain steel
-    for (x, y), c in px.items():
-        if (x, y) in detail or c == K:
-            for r in (1, 2, 3):
-                near = [px[q] for q in ((x, y + r), (x, y - r), (x + r, y), (x - r, y))
-                        if q in px and q not in detail and px[q] != K]
-                if near:
-                    c = near[0]
-                    break
-        plain[(x, y)] = c
-    plain[EYE_HOLE] = plain.get((EYE_HOLE[0], EYE_HOLE[1] + 1), STEEL[4])
-    shape = warp(plain, A, t)
-    out = {}
-    for (x, y), c in shape.items():
-        edge = any((x + dx, y + dy) not in shape for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
-        out[(x, y)] = K if edge else c
-    inside = {p for p, c in out.items() if c != K}
-    to = lambda p: tuple(math.floor(v) for v in apply(A, t, (p[0] + 0.5, p[1] + 0.5)))
-    for line in lines:
-        for a, b in zip(line, line[1:]):
-            run = cells(to(a), to(b))
-            for i, q in enumerate(run):
-                if q in inside:
-                    out[q] = px.get(a, K) if i < len(run) - 1 else px.get(b, K)   # the eye hole: the sight's K
-    for p in HELMET_DOTS:
-        if to(p) in inside:
-            out[to(p)] = K
-    out.pop(to(EYE_HOLE), None)
-    rx, ry = to((cx, cy))
-    stamp(out, art, rx - 1, ry - 1)
-    return out
+# graze 03-05 turn the head down about 45 degrees with its jaw open to the grass: their own drawings of the armet,
+# top-left on the frame (the user's pick, 2026-11-02, over the turned standing helmet: its one-pixel brow, sight and
+# rim broke into steps, and the open jaw hung out under it, sealed as a flat grey strip, "an extra gray part"), drawn
+# on the frame's own head (its eye, its muzzle, its outline), the visor closed over the open jaw; graze 05 is graze
+# 04's head with a chewing jaw.
+GRAZE3_HELMET = [  # top-left at (20, 44): the lowered head seen more from the front and above, so its forehead
+    "...kkkkkk",        # 44   stands tall over the face and the face is short: the skull narrow and tall from the ear
+    "...ky765k",        # 45   down to the gilt brow, the sight across the face over the frame's own eye at (25, 53),
+    "..ky7665k",        # 46   the visor over the muzzle with the beak to the left, the rosette at (28, 54), the
+    "..ky76654k",       # 47   breaths, the roped rim along the jaw's bottom; flush with the head's own outline (the
+    "..ky76554k",       # 48   standing helmet turned with the head stayed its full size over the smaller lowered head:
+    "..ky66544k",       # 49   "the helm is expanding when he's bowing down his head", the user, 2026-11-02)
+    "..ky65443k",       # 50
+    ".k66544332k",      # 51
+    ".kyzyyxxxwk",      # 52  the gilt brow
+    "kkkkk.kky43k",     # 53  the sight, the eye's highlight showing through
+    "k877665yzx3k",     # 54
+    "k5k5k4k3w2k",      # 55  the breaths
+    ".kyxyxwk",         # 56  the roped rim
+    "..kkkkk",          # 57
+]
+GRAZE4_HELMET = [  # top-left at (22, 48): graze 03's helmet two columns right and four rows down, the face a column
+    "...kkkkkk",        # 48   shorter in front of the eye at (27, 57)
+    "...ky765k",        # 49
+    "..ky7665k",        # 50
+    "..ky76654k",       # 51
+    "..ky76554k",       # 52
+    "..ky66544k",       # 53
+    "..ky65443k",       # 54
+    "..k66544332k",     # 55
+    ".kyzyyxxxxwk",     # 56  the gilt brow
+    ".kkkk.kky43k",     # 57  the sight
+    ".k87766yzx3k",     # 58
+    ".k5k5k4kw22k",     # 59  the breaths
+    "..kyxyxyxwk",      # 60  the roped rim, closed over the open mouth
+    "...kkkkkkk",       # 61
+]
+GRAZE_HELMET = {  # the drawing, its top-left, and the plume's shift from where the turn puts it (its holder onto the
+    "bdy_graze_left_03": (GRAZE3_HELMET, 20, 44, (2, 4)),   # drawn skull's top)
+    "bdy_graze_left_04": (GRAZE4_HELMET, 22, 48, (2, 4)),
+    "bdy_graze_left_05": (GRAZE4_HELMET, 22, 48, (2, 4)),
+}
 
 
 # ---------------------------------------------------------------- per frame
@@ -707,8 +680,7 @@ def helmet_turned(A, t):
 #     keep their places against each other, only the jaw opens to the grass); turn 02 turns it a little towards us
 #     and is moved by its eye (an affine map through the ear base, the eye and the muzzle tip sheared it apart);
 #   warped: graze 03-05 turn the head down about 45 degrees (a rotation about the ear base onto the frame's ear-to-muzzle
-#     line; the plume turns half as much, so it still rises; the armet's lines and brass are drawn again on the
-#     turned head: helmet_turned);
+#     line; the plume turns half as much, so it still rises; the armet has its own drawings there, GRAZE_HELMET);
 #   drawn: turn 03 (three quarters) and turn 04-06 (the face towards us) have their own drawings.
 WARP_ROTATE = {"bdy_graze_left_03", "bdy_graze_left_04", "bdy_graze_left_05"}
 MOVE_BY_EYE = {"bdy_turn_left_02"}  # moved by the eye (its ear base moves the other way as the head turns)
@@ -883,8 +855,10 @@ def head_place(key, donkey):
         ear, _, tip = landmarks(key, donkey)
         a, A, t = rotation(s_ear, s_tip, ear, tip)
         region = set(warp({p: K for p in cached("head_region", head_region)}, A, t)) | neck_front(key, donkey)
-        px = sealed(helmet_turned(A, t), donkey, set(warp({p: K for p in mouth_box()}, A, t)))
-        PA, Pt = turn(a * PLUME_TURN, PLUME_ROOT, apply(A, t, PLUME_ROOT))
+        art, ax, ay, (sx, sy) = GRAZE_HELMET[key]
+        px = stamp({}, art, ax, ay)   # drawn on the frame's own head: nothing to seal (it would shut the eye)
+        foot = apply(A, t, PLUME_ROOT)
+        PA, Pt = turn(a * PLUME_TURN, PLUME_ROOT, (foot[0] + sx, foot[1] + sy))
         px.update(warp(cached("plume", plume_layer), PA, Pt, {BRASS[3]}))
         return px, region, ("warp", A, t, a)
     if key in MOVE_BY_EYE:
