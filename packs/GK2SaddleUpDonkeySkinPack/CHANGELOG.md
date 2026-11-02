@@ -12,12 +12,13 @@
 - **Armored** (2026-10-30, redrawn 2026-11-01/02 before release): a third look for the donkey, plate barding drawn over
   it: an ornate armet (a closed knight's helmet: the skull flush with the head with a gilt comb, a gilt brow, the
   sight with the eye showing through, a beaked visor closed over the muzzle with breaths and a brass rosette where it
-  pivots, a roped gilt rim) with a plume, a chest plate cut round the breast collar, five steel lames over the body, a
-  rump plate, a cloth skirt with a dagged hem under the plates and a steel guard of rings over the upper half of the
-  tail; ears, tail tuft and legs stay the donkey's. The steel and the brass are always steel and brass, in the shades
-  of the game's own armoured guards (not a player tone); the skirt and the plume follow the Second tone, and the
-  harness colour colours the donkey's own harness as on the plain donkey (2026-11-02, the user: under the harness
-  colour, the Second tone did nothing on this skin). The first cut (forehead spike, neck lames, Second-tone steel, flank lames over padding, a crupper)
+  pivots, a roped gilt rim) with a plume that sways in the walk, a chest plate cut round the breast collar, five
+  steel lames over the body, a rump plate, a cloth skirt with a dagged hem under the plates and a steel guard of
+  rings over the upper half of the tail; ears, tail tuft, legs and the harness stay the donkey's. The steel and the brass are
+  always steel and brass, in the shades of the game's own armoured guards (not a player tone); the skirt and the
+  plume follow the Second tone, and the harness colour colours the donkey's own harness as on the plain donkey
+  (2026-11-02, the user: under the harness colour, the Second tone did nothing on this skin). The first cut (forehead
+  spike, neck lames, Second-tone steel, flank lames over padding, a crupper)
   was redrawn after the user's review: on a donkey's head anything that stands out reads as another ear, and a single
   plate over the stretching body slid or seemed to stretch in the walk. The second cut's face plate (a chanfron with
   an eye guard and a brass boss) became the armet after the user saw it in game ("lacklustre", "fill the donkey's face

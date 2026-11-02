@@ -50,6 +50,7 @@ from anatomy import ORDER, load, HORNS, ANCHORS, body, head_delta
 import ase_write
 import review
 from gamedir import game_dir
+from skin_preview_html import donkey_regions
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
 ASSETS = os.path.join(REPO, "packs", "GK2SaddleUpDonkeySkinPack", "gk2mounts", "donkey", "skins", "saddleup-donkey-skins.armored")
@@ -298,6 +299,11 @@ def breast_collar(donkey):
 
 
 CHEST_FROM = 6   # under the collar's end the chest's front is the first body pixel at most this far in front of it
+CHEST_STEP = 1   # under the collar the chest's front is measured down the rows while it steps back at most this much from
+# the row above; a bigger step is the belly's curve under the chest, and the pieces hang straight from the row above
+# (the walk's two frames with the body a row up put that curve on the last measured row, 3 columns back, and cut the
+# skirt's front corner short there: "the front red cloth part is sometimes disappearing while walking", the user's
+# screenshot of walk 02, 2026-11-02)
 
 
 def near(d, i):
@@ -319,6 +325,7 @@ def cutter(b, op, key, donkey):
     front of it (the breast plate's); under the collar nothing in front of the chest's own front, the piece's edge
     there darkened; the strap's shadow on what lies behind it. Returns keep(x, y, colour) -> colour or None."""
     collar = breast_collar(donkey)
+    strap = harness_of(donkey)   # the shadow falls beside the whole strap, its outline included
     right = {}
     for x, y in collar:
         right[y] = max(right.get(y, -1), x)
@@ -328,6 +335,8 @@ def cutter(b, op, key, donkey):
     front = {}
     for y in range(last + 1, 57):
         xs = [x for x in range(lim + 1, b["hip"]) if op(x, y)]
+        if xs and front and xs[0] > front[max(front)] + CHEST_STEP:
+            break
         if xs:
             front[y] = xs[0]
     deepest = max(front) if front else last
@@ -342,7 +351,7 @@ def cutter(b, op, key, donkey):
                 return None
             if xt == f - 1:
                 c = CLOTH[0] if c in CLOTH else K
-        if (xt - 1, yt) in collar or (xt, yt - 1) in collar:
+        if (xt - 1, yt) in strap or (xt, yt - 1) in strap:
             c = CLOTH[1] if c in CLOTH[2:] else STEEL[2] if c in STEEL[2:] else c   # the strap's shadow
         return c
     return keep
@@ -520,6 +529,19 @@ CHEST_ROUND = {45: 4, 46: 2, 47: 1}   # its top rows start this many columns fur
 # front as the throat runs into the chest (a square corner there "doesn't look realistic": the user, 2026-11-02)
 
 
+HARNESS = donkey_regions()["Harness"]   # the donkey's harness colours as the API recolours them (Colors.cs): its lit
+# orange, its shaded underside and its own outline
+
+
+def harness_of(im):
+    """The donkey's whole harness in a frame (every pixel in a Harness colour). No piece of the body's armour covers
+    it: the harness is worn over the barding (the user, 2026-11-02, a marked screenshot of the chest: "missing part of
+    the harness in all animations"; the plates covered 66 of its 115 pixels standing, the strap's shaded underside,
+    its outline and its end under the chest, as strap_of()'s orange is only its lit edge)."""
+    px = im.load()
+    return {(x, y) for y in range(96) for x in range(96) if px[x, y][3] and px[x, y][:3] in HARNESS}
+
+
 def strap_of(im):
     """The harness strap's pixels in a frame (the donkey's orange)."""
     px = im.load()
@@ -647,6 +669,56 @@ def face_layer():
 
 def plume_layer():
     return stamp({}, PLUME, *PLUME_AT)
+
+
+# The plume sways lightly in the walk (the user, 2026-11-02: "make that red thing sway a little bit while the donkey is
+# moving ... nothing should really be 100% static while moving"; "we just need a normal looking plume swaying
+# lightly"): a column at most, one swing back and one forward per walk cycle, each held two frames, the holder still.
+# Rejected on the way, all on the preview page: the bush alone bending a column each way four times a cycle ("wiggling
+# at the top like some jelly thing"); the plume leaning a column back over one joint low in the stem twice a cycle
+# ("looks like its being offsetted instead of more similar to a piano metronome"); a tilt of two columns either way
+# ("youre making it look goofy").
+SWAY_CLIP = "bdy_walk_left_"
+SWAY = [0, 1, 1, 0, -1, -1, 0, 0]   # the tilt in columns back, walk frames 1-8; it changes only in a frame the head
+# steps the other way, so the tip never jumps two columns on screen (its path -4 -4 -5 -5 -5 -6 -6 -5, the loop too)
+PLUME_PIVOT = 8                     # the PLUME rows from here (the holder) never move
+TILT = {1: [1, 1, 0, 0, 0, 0, 0, 0], -1: [-1, -1, 0, 0, 0, 0, 0, 0]}   # each PLUME row's move at a tilt, top down: only
+# its top tuft; the rest is held by the holder (the user, 2026-11-02: "it moves from the top because ... the bottom part
+# is attached to the helment and the top part isnt"; the whole bush tilting on the stem was the other card)
+
+
+def plume_sway(key):
+    """The plume's tilt in a walk frame (SWAY); 0 outside the walk."""
+    if not key.startswith(SWAY_CLIP):
+        return 0
+    walk = [k for k in ORDER if k.startswith(SWAY_CLIP)]
+    return SWAY[walk.index(key)]
+
+
+def plume_tilted(t):
+    """The PLUME drawing tilted `t` columns at its tip about PLUME_PIVOT: each row above it moved as TILT says,
+    then the outline closed where a moved row leaves the cloth bare (never over the top row: its corner gap is
+    drawn so) and an outline pixel left touching no cloth dropped. t = 0 is the drawing as it is."""
+    art = {}
+    for j, row in enumerate(PLUME):
+        d = TILT[t][j] if t and j < PLUME_PIVOT else 0
+        for i, ch in enumerate(row):
+            if ch != ".":
+                art[(i + d, j)] = ch
+    cloth = set("rstu")
+    for x, y in [p for p, ch in art.items() if ch in cloth]:
+        for q in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if q not in art and q[1] >= 1:
+                art[q] = "q"
+    for x, y in [p for p, ch in art.items() if ch == "q"]:
+        if not any(art.get((x + a, y + b)) in cloth for a in (-1, 0, 1) for b in (-1, 0, 1)):
+            del art[(x, y)]
+    return {(PLUME_AT[0] + i, PLUME_AT[1] + j): PAL[ch] for (i, j), ch in art.items()}
+
+
+def plume_swayed(t):
+    """The plume as a frame draws it: tilted `t` columns (see plume_sway)."""
+    return cached("plume", plume_layer) if not t else cached(f"plume {t}", lambda: plume_tilted(t))
 
 
 # graze 03-05 turn the head down about 45 degrees with its jaw open to the grass: their own drawings of the armet,
@@ -905,7 +977,7 @@ def head_place(key, donkey):
     for p in POKE_ERASE.get(key, ()):   # the donkey's own pixels poking past the helm's outline: taken off the donkey
         px[p] = ERASE
     px_, py_ = PLUME_SHIFT.get(key, (0, 0))
-    px.update({(x + hd[0] + px_, y + hd[1] + py_): c for (x, y), c in cached("plume", plume_layer).items()})
+    px.update({(x + hd[0] + px_, y + hd[1] + py_): c for (x, y), c in plume_swayed(plume_sway(key)).items()})
     return px, region, ("move", hd)
 
 
@@ -999,15 +1071,24 @@ def frame(key):
     behind = (lambda p: p in region) if region else (lambda p: False)
     if b is not None:
         cdx, cdy = chest_delta(key, donkey, b)
+        harness = harness_of(donkey)   # worn over the barding: only the breast plate's edge covers it
         # the head turned towards us (turn 03-06) hangs its muzzle in front of the body: the lames and the skirt stay
         # behind it there (the front lame covered it in turn 04-06); elsewhere they are as the user approved them
         front = behind if how[0] == "drawn" else (lambda p: False)
         layers["skirt"] = {p: c for p, c in place_skirt(b, op, key, donkey, cdx).items() if not front(p)}
         layers["lames"] = {p: c for p, c in place_lames(b, op, key, donkey, cdx).items() if not front(p)}
         layers["rump"] = place_rump(cached("rump", rump_layer), b)
-        chest = {(x + cdx, y + cdy): c for (x, y), c in cached("chest", chest_layer).items() if not behind((x + cdx, y + cdy))}
+        chest = {(x + cdx, y + cdy): c for (x, y), c in cached("chest", chest_layer).items()
+                 if not behind((x + cdx, y + cdy))}   # its edge keeps the strap's front outline under it: a plate only in
+        # front of the whole strap would come and go in the walk (the room before the strap runs from 4 columns to none)
         layers["chest"] = drop_scraps(chest, op)
         layers["tail"] = tail_guard(donkey, b)
+        for name in ("skirt", "lames", "rump", "tail"):
+            layers[name] = {p: c for p, c in layers[name].items() if p not in harness}
+        for name in ("skirt", "lames"):   # the strap's end under the chest cuts a sliver off their fronts; what
+            # the head covers anyway is not counted (turn 05/06 kept a 6-px stub of a lame, 12 more of it under the
+            # helmet: the gate review)
+            layers[name] = drop_scraps({p: c for p, c in layers[name].items() if p not in head}, op)
     layers["head"] = head
     im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
     px = im.load()

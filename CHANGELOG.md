@@ -176,6 +176,35 @@ Development:
   tone". Pictures unchanged (44 of 44 equal the pack's); check_skin all good (the five as Muzzle); written into the
   pack (`--cfg`), built and deployed with the game closed, the deployed DLL holds the new `[Colors]` line and not the
   old one.
+- **Armored: the plume sways lightly in the walk; the skirt keeps its front** (2026-11-02, the user: "make that red
+  thing sway a little bit while the donkey is moving ... nothing should really be 100% static while moving"). Only
+  the plume's top tuft moves, a column back and a column forward once per walk cycle, each held two frames
+  (`SWAY` 0 1 1 0 -1 -1 0 0, `TILT`, `plume_tilted()`); the rest is held by the holder (the user: "it moves from the
+  top because ... the bottom part is attached to the helment and the top part isnt"). The tilt changes only in a frame
+  where the head steps the other way, so the tip never jumps two columns on screen (the loop too), and the outline is
+  closed where a moved row leaves the cloth bare. Four tries went before it, each seen by the user: the bush bending a
+  column each way four times a cycle (deployed, then "wiggling at the top like some jelly thing"), the plume leaning
+  back over one joint low in the stem ("looks like its being ofsetted"), a stiff two-column tilt ("goofy"), and the
+  whole bush tilting on the stem (shown beside this one; the user picked this). The skirt ("the front red cloth part
+  is sometimes disappearing while walking ... like in frame 2 walk_02"): under the breast collar the cutter measured the
+  chest's front down to a fixed row, and in walk 02 and 06 (the body a row up) that row was already the belly's curve,
+  3 columns back, so the skirt's front corner was cut 3 columns short; the rows now stop where the front steps back
+  more than a column (`CHEST_STEP`), so those two frames match the other six. Walk 02, 03, 05 and 06 change against
+  the last commit (01, 04, 07 and 08 hold the plume upright, as drawn). A gate review found no stray pixels, gaps or
+  new contact with the ear or helmet, the skirt fixed and nothing else changed; check_skin all good; written into the
+  pack, built and deployed with the game closed, the deployed DLL holds all 45 files byte for byte.
+- **Armored: the whole harness in view** (2026-11-02, the user's marked screenshot of the chest: "missing
+  part of the harness in all animations"). The plates covered 66 of the harness's 115 pixels standing (the strap's
+  shaded underside and its end under the chest: `strap_of()` sees only its lit orange). `harness_of()` takes the
+  API's own Harness colours (`Colors.cs`, through `skin_preview_html.donkey_regions()`); the lames, the skirt, the
+  rump plate and the tail guard leave it in view and the strap's shadow falls beside all of it; the breast plate keeps
+  its edge over the strap's front outline (a plate only in front
+  of the whole strap emptied in 11 frames, in the walk it would come and go). `drop_scraps()` then takes the slivers
+  the strap's end cuts off the skirt's and the lames' fronts, not counting what the head covers anyway (a gate review
+  of all 44 frames found a 6-px lame stub kept in turn 05/06, 12 more of it under the helmet). That review found the
+  strap whole and in one piece in every frame and nothing coming and going. The user looked on the preview page; written
+  into the pack (check_skin all good), built and deployed with the game closed, the deployed DLL holds all 45 files
+  byte for byte.
 
 ## 0.15.0 (GK2 Donkey API 0.43.0), 2026-11-01
 
