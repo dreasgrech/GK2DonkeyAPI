@@ -22,7 +22,9 @@ namespace GK2DonkeyAPI
 
             internal static void Note(Mount.Instance owner, SpriteRenderer part, SpriteRenderer body, SpriteRenderer front, string flyKey)
             {
-                if (!On || !Flight.Active || owner == null || body == null || front == null || !front.enabled) return;
+                if (!On || owner == null || body == null || front == null || !front.enabled) return;
+                Depths(owner, part, body, front);
+                if (!Flight.Active) return;
                 SpriteRenderer[] rider = owner.KeeperRenderers;
                 if (owner.KeeperBody == null || rider == null) return;
                 // a fresh budget for each state and facing: one flight each way is logged both ways (the first run's
@@ -82,6 +84,56 @@ namespace GK2DonkeyAPI
                 {
                     budget = 0;
                     Plugin.Log.LogWarning("[occlusion] the readout failed: " + e.Message);
+                }
+            }
+
+            private static readonly System.Collections.Generic.Dictionary<string, float> nextDepth = new System.Collections.Generic.Dictionary<string, float>();
+            private static readonly System.Collections.Generic.Dictionary<string, int> depthBudget = new System.Collections.Generic.Dictionary<string, int>();
+
+            // For each part with a front picture (the body's, and the head's: the game draws the head over the standing
+            // body while idle, and the Jester's stripes showed only idle), while ridden, on the ground or flying, twice a
+            // second for 40 lines a part: how far each layer sits from the camera
+            // (camera space, z forward) where it is drawn, its facing, its sorting and its material, and the camera's
+            // clip planes (the depth buffer's step). The Jester's cap, its front picture over the same cap in the body
+            // picture, showed thin dark stripes across it while ridden (the user's screenshot, 2026-11-03): stripes
+            // across a picture are two layers tying in the depth test, and this says which two and by how much.
+            internal static void Depths(Mount.Instance owner, SpriteRenderer part, SpriteRenderer body, SpriteRenderer front)
+            {
+                if (!On || owner == null || part == null || body == null || front == null || !front.enabled || owner.KeeperBody == null) return;
+                string slot = part.name;
+                if (!depthBudget.TryGetValue(slot, out int left)) left = 40;
+                if (left <= 0 || (nextDepth.TryGetValue(slot, out float at) && Time.unscaledTime < at)) return;
+                nextDepth[slot] = Time.unscaledTime + 0.5f;
+                depthBudget[slot] = left - 1;
+                try
+                {
+                    Camera cam = Camera.main;
+                    if (cam == null) return;
+                    Transform ct = cam.transform;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append($"[occlusion] depths, part {slot}, {body.sprite?.name}: camera {cam.name} {(cam.orthographic ? "orthographic" : "perspective")}, near {cam.nearClipPlane:0.###} far {cam.farClipPlane:0.###}, {Camera.allCamerasCount} camera(s);");
+                    void One(string what, SpriteRenderer r)
+                    {
+                        if (r == null || !r) return;
+                        Vector3 c = ct.InverseTransformPoint(r.transform.position);
+                        Vector3 n = ct.InverseTransformDirection(r.transform.forward);
+                        Material m = r.sharedMaterial;
+                        string zw = m != null && m.HasProperty("_ZWrite") ? $" zwrite {m.GetFloat("_ZWrite"):0}" : "";
+                        sb.Append($" {what} {r.name}{(r.enabled ? "" : " (off)")}{(r.forceRenderingOff ? " (forced off)" : "")} at z {c.z:0.0000} (x {c.x:0.000}, y {c.y:0.000}), facing {n.x:0.00} {n.y:0.00} {n.z:0.00}, local {r.transform.localPosition.x:0.0000} {r.transform.localPosition.y:0.0000} {r.transform.localPosition.z:0.0000}, scale {r.transform.lossyScale.z:0.###}, {r.sortingLayerName}/{r.sortingOrder}, {(m != null ? m.shader.name + " queue " + m.renderQueue + zw : "no material")};");
+                    }
+                    One("part", part);
+                    One("skin", body);
+                    One("front", front);
+                    SpriteRenderer[] rider = owner.KeeperRenderers;
+                    if (rider != null)
+                        foreach (SpriteRenderer r in rider)
+                            if (r != null && r && r.enabled && r.sprite != null && r.gameObject.activeInHierarchy) One("rider", r);
+                    Plugin.Log.LogInfo(sb.ToString());
+                }
+                catch (System.Exception e)
+                {
+                    depthBudget[slot] = 0;
+                    Plugin.Log.LogWarning("[occlusion] the depth readout failed: " + e.Message);
                 }
             }
         }

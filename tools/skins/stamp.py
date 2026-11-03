@@ -60,6 +60,19 @@ Pieces are laid in this order: body_drape, body, neck, then the head's (a view o
 The erase colour (FF00FF unless skin.cfg says another) can be drawn in any piece: it clears the donkey there, as in
 any pack (docs/skins.md "Erasing from the donkey").
 
+  stamp.cfg          optional, beside the pieces, read by stamp.py alone (it is not copied into the pack: the game
+                     reports a key it doesn't know). [Stamp] front = head (any of body_drape, body, neck, head): those
+                     layers go into the pack's front\\ pictures, which the game draws in front of the rider
+                     (docs/front-layer.md): the Jester's cap, whose back point the rider's arm covered. They stay in
+                     the main picture too: nobody riding, the game lays the front picture as little above the body as
+                     the main one (OverLift), so the two tie in the depth test, and ridden it can sit a fraction of a
+                     pixel off; with the donkey under it there, its ears showed over the Jester's cap on the foals and
+                     lines on it in the walk (2026-11-03). A front picture can't erase (the game refuses it), so their
+                     erase pixels are in the main picture only. Every body frame the layers draw in gets its front
+                     picture; the head frames (hed_*) none: while idle the game draws the head part over the standing
+                     body, and its front picture lands a thousandth of a unit from the body's, inside the depth
+                     buffer's step, so the two caps fought in stripes at night (measured, 2026-11-03).
+
 The output (default <source folder>\\out\\pack) is a pack folder: skin.cfg and a PNG per frame. Then
 tools/skins/check_skin.py and tools/skins/consistency.py run on it, and with --stage it goes onto the probe's
 skins-preview.html as its own card, beside every shipped skin.
@@ -96,6 +109,7 @@ SIDE_ONLY_MOVED = {"bdy_turn_left_02", "bdy_graze_left_02"}   # no view of their
 STRAP_BENDS = {"bdy_graze_left_02", "bdy_graze_left_03", "bdy_graze_left_04", "bdy_graze_left_05",
                "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}
 LAYERS = ["body_drape", "body", "neck", "head"]   # the pieces on the standing frame, bottom first (the order laid)
+STAMP_CFG = "stamp.cfg"   # the source's settings for stamp.py alone ([Stamp] front = <layers>)
 
 
 def read_piece(path):
@@ -233,47 +247,86 @@ def read_source(src, need=True):
     return pieces, per_frame
 
 
-def frame_of(key, pieces, per_frame, notes):
-    """The skin's picture of one frame, {(x, y): colour}: the pieces placed and laid in their order."""
+def front_of(src):
+    """The layers the source's stamp.cfg puts in front of the rider ([Stamp] front = head), a set of LAYERS' names."""
+    path = os.path.join(src, STAMP_CFG)
+    if not os.path.exists(path):
+        return set()
+    names, section = set(), None
+    for line in open(path, encoding="utf-8"):
+        t = line.split("#", 1)[0].strip()
+        if t.startswith("[") and t.endswith("]"):
+            section = t[1:-1].strip().lower()
+        elif t and section == "stamp" and "=" in t and t.split("=", 1)[0].strip().lower() == "front":
+            names = {n for n in t.split("=", 1)[1].replace(",", " ").split()}
+        elif t:
+            sys.exit(f"stamp: {path}: '{t}' is not [Stamp] front = <layers>")
+    bad = sorted(names - set(LAYERS))
+    if bad:
+        sys.exit(f"stamp: {path}: front = {', '.join(bad)}: not a layer ({', '.join(LAYERS)})")
+    return names
+
+
+def frame_layers(key, pieces, per_frame, notes):
+    """The pieces placed into one frame, [(layer, {(x, y): colour})] in the order they are laid."""
     view_of = {k: v for v, (_, ks) in VIEWS.items() for k in ks}
     layers = []
     # the body
     for name, place in (("body_drape", place_drape), ("body", place_body)):
         if (name, key) in per_frame:
-            layers.append(per_frame[(name, key)])
+            layers.append((name, per_frame[(name, key)]))
         elif pieces[name]:
-            layers.append(place(pieces[name], key))
+            layers.append((name, place(pieces[name], key)))
     # the neck: with the strap, left out where it bends unless drawn there
     if ("neck", key) in per_frame:
-        layers.append(per_frame[("neck", key)])
+        layers.append(("neck", per_frame[("neck", key)]))
     elif pieces["neck"] and key in STRAP_BENDS:
         notes.append(f"{key}: the collar strap bends there, so no neck piece (draw neck@{key}.png to set it)")
     elif pieces["neck"]:
         d = neck_move(key)
         if d is not None:
-            layers.append(moved(pieces["neck"], d))
+            layers.append(("neck", moved(pieces["neck"], d)))
     # the head
     if ("head", key) in per_frame:
-        layers.append(per_frame[("head", key)])
+        layers.append(("head", per_frame[("head", key)]))
     elif key in view_of and pieces[view_of[key]]:
         ref = VIEWS[view_of[key]][0]
         d = head_move(key, ref)
-        layers.append(moved(pieces[view_of[key]], d) if d else pieces[view_of[key]])
+        layers.append(("head", moved(pieces[view_of[key]], d) if d else pieces[view_of[key]]))
     elif key in view_of and pieces["head"]:
         notes.append(f"{key}: no {view_of[key]}.png, so no head piece there (the side view would sit wrong on that "
                      f"head)")
     elif pieces["head"]:
         d = head_move(key, STANDING)
         if d is not None:
-            layers.append(moved(pieces["head"], d))
+            layers.append(("head", moved(pieces["head"], d)))
             if key in SIDE_ONLY_MOVED:
                 notes.append(f"{key}: the side head moved there (no view of its own: draw head@{key}.png to set it)")
+    return layers
+
+
+def laid(layers, keep=lambda name, c: True):
+    """Layers laid into one picture in their order, {(x, y): colour}: the pixels 'keep' takes, on the canvas."""
     out = {}
-    for layer in layers:
+    for name, layer in layers:
         for (x, y), c in layer.items():
-            if 0 <= x < 96 and 0 <= y < 96:
+            if 0 <= x < 96 and 0 <= y < 96 and keep(name, c):
                 out[(x, y)] = c
     return out
+
+
+def frame_of(key, pieces, per_frame, notes):
+    """The skin's picture of one frame, {(x, y): colour}: the pieces placed and laid in their order (a front layer's
+    with them, as worn when nobody rides)."""
+    return laid(frame_layers(key, pieces, per_frame, notes))
+
+
+def save_picture(picture, path):
+    im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+    px = im.load()
+    for q, c in picture.items():
+        px[q] = c
+    im.save(path)
 
 
 def build(src, out, stage=None):
@@ -293,15 +346,32 @@ def build(src, out, stage=None):
     for f in os.listdir(out):
         if f.endswith(".png"):
             os.remove(os.path.join(out, f))
+    front_dir = os.path.join(out, "front")
+    if os.path.isdir(front_dir):
+        shutil.rmtree(front_dir)
     shutil.copy2(cfg, os.path.join(out, "skin.cfg"))
     erase = erase_of(src)
+    front = front_of(src)
+    is_erase = lambda c: erase is not None and c[:3] == erase
+    fronts = 0
     for key in ORDER:
-        im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
-        px = im.load()
-        drawn = frame_of(key, pieces, per_frame, notes)
-        for q, c in drawn.items():
-            px[q] = c
-        im.save(os.path.join(out, key + ".png"))
+        layers = frame_layers(key, pieces, per_frame, notes)
+        drawn = laid(layers)
+        # the main picture as laid, the front layers in it too: the front picture ties with it in the depth test
+        # when nobody rides (both OverLift above the body) and can sit a fraction of a pixel off it when ridden, so
+        # what lies under it must be its own pixels (the donkey's ears showed over the Jester's cap on the foals,
+        # and lines on it in the walk, 2026-11-03); the front picture the front layers' colours (it can't erase)
+        save_picture(drawn, os.path.join(out, key + ".png"))
+        # none for the head frames: the head part is drawn over the standing body while idle, and its front picture
+        # sat 0.001 from the body's (the [occlusion] depths readout), inside the depth buffer's step: the Jester's two
+        # caps fought in stripes at night, lit a shade apart (2026-11-03); the body's front already has those pixels
+        near = laid(layers, lambda n, c: n in front and not is_erase(c)) if key.startswith("bdy_") else {}
+        if near:
+            os.makedirs(front_dir, exist_ok=True)
+            save_picture(near, os.path.join(front_dir, key + ".png"))
+            fronts += 1
+        elif front and key.startswith("bdy_"):
+            notes.append(f"{key}: no front picture (the {', '.join(sorted(front))} layer draws nothing there)")
         cut = on_the_harness(key, drawn, erase)
         if cut:
             notes.append(f"{key}: the erase colour clears {len(cut)} px of the harness (the collar strap's orange: "
@@ -309,7 +379,8 @@ def build(src, out, stage=None):
                          f"clearing reached the strap (the Jester's graze, 2026-11-03)?")
     for n in notes:
         print("note:", n)
-    print(f"stamped: {len(ORDER)} frames -> {out}")
+    print(f"stamped: {len(ORDER)} frames -> {out}"
+          + (f", {fronts} front pictures ({', '.join(sorted(front))}: in front of the rider)" if front else ""))
     for tool in ("check_skin.py", "consistency.py"):
         r = subprocess.run([sys.executable, "-I", os.path.join(HERE, tool), out], capture_output=True, text=True)
         lines = (r.stdout or r.stderr).strip().splitlines()
@@ -411,6 +482,9 @@ def template(src, force=False):
         built = os.path.join(src, "out", "pack", key + ".png")
         if os.path.exists(built):
             cels[1] = Image.open(built).convert("RGBA")
+            near = os.path.join(src, "out", "pack", "front", key + ".png")
+            if os.path.exists(near):
+                cels[1].alpha_composite(Image.open(near).convert("RGBA"))
         if key == STANDING or key in {r for r, _ in VIEWS.values()}:
             guide = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
             for q in moving(key):

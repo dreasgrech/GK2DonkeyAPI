@@ -3391,6 +3391,7 @@ namespace GK2DonkeyAPI
                         }
                         else Follow(fr, part, game, part.sortingLayerID, part.sortingOrder + 2, OverLift, alongView: true); // above the body overlay too
                         if (s.Body) FrontReadout.Note(owner, part, ov, fr, flying ? flyKey : null);
+                        else FrontReadout.Depths(owner, part, ov, fr); // the head's front picture too (drawn over the standing body)
                     }
                 }
                 bool hide = show && (!skin.Def.Over || skin.Whole.Contains(mine)); // a whole frame (the erase colour) takes the part's place

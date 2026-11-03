@@ -481,6 +481,40 @@ Development:
   fleur and the crown as they were; the other 24 frames unchanged. `check_skin.py` all
   good; `consistency.py` lists the 11 lips frames where the bits hang off their resting place, each marked as the
   skin's own motion.
+- **A front layer in `stamp.py`** (the user, on the Jester in the game: "we need to implement the hat the same way we
+  implemented the wing of the dragon so that the hat appears on top of the rider, not underneath"; docs/front-layer.md):
+  a source's `stamp.cfg`, read by stamp alone (the game reports a `skin.cfg` key it doesn't know), says `[Stamp]
+  front = head`, and `build` writes those layers' colours into the pack's `front\` pictures, which the game draws in
+  front of the rider, and leaves them in the main picture too. Taken out of it at first, the donkey under the cap
+  showed through: its ears over the cap on the foals, and lines on it in the walk (the user, in the game). Nobody
+  riding, the game lays the front picture as little above the body as the main one (`OverLift`), so the two tie in
+  the depth test, and ridden it can sit a fraction of a pixel off; under it there must be its own pixels. Their erase
+  pixels are in the main picture only (a front picture can't erase), every frame the layers draw in gets its front
+  picture, and the template's preview layer shows both. The pieces stay where they
+  are, so `look`, `views`, `moves` and the template work as before.
+  - **The Jester's cap is in front of the rider** (`tools/skins/jester/stamp.cfg`): 44 front pictures; nobody riding,
+    every frame is the same as before, pixel for pixel. With the page's rider on the seat row the cap covers 28-40 of
+    his 702 pixels in the walk (2 on his head, in walk 05), 67-79 standing and in the idle clips, 8-21 of them the
+    front of his face (the navy point's bell, columns 50-51), 3-28 grazing and 39-56 turning. The collar stays behind
+    him (23 of its 110 pixels under his arm).
+  - **`page_frames.py`** draws a skin's front layer over each frame (it showed the main picture alone), and
+    `--rider` puts the page's rider between the two, as its Rider button does.
+- **No front picture for the head frames** (`stamp.py` leaves them out, `check_skin.py` warns about them). The
+  Jester's cap showed thin dark stripes at night, only while the donkey stood idle and only at some stops (the user:
+  "it only happens in the idle animation, never when grazing or running and also always at night"). Measured with
+  the readout below: while idle the game draws the head part (`hed_static_down`, the standing frame's own head) over
+  the standing body, and the head's front picture sat 0.0003 nearer in camera depth (0.001 at the same point on the
+  screen) than the body's, inside the depth buffer's step (0.004 already tied, docs/front-layer.md section 2): the
+  two caps fought row by row, lit a shade apart at night (by day alike, so unseen). The walk and the graze draw no
+  head part. The dragon has no head-frame front pictures, so it never had two. The body's front picture holds the
+  same pixels, and the head's blink is in the eyes, not the cap: the Jester has 41 front pictures now, its other
+  pictures the same.
+- **The front layer readout says each layer's depth** (dev, the Tuning panel's Flying tab, "Front layer readout",
+  off by default): while ridden, on the ground too, twice a second for 40 lines a part (the body's and the head's),
+  `[occlusion] depths`: the camera-space depth, facing, sorting and material of the donkey's part, the skin's
+  picture, its front picture and the rider's sprites, and the camera's clip planes. The Jester's cap showed thin dark
+  stripes across it while ridden (the user's screenshot), two layers tying in the depth test; this said which two
+  and by how much, before anything was changed (above).
 - **`page_frames.py --blind`**: the rows titled A, B ... instead of the skins' names, for a fresh reviewer asked
   "which is a jester, and what tells you so?" beside a shipped skin. Six reviews of the Jester's first design had asked
   only whether its pieces slide; the first blind one found its cloth was Royal Parade's block recoloured.

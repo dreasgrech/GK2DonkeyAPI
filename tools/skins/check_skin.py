@@ -129,6 +129,15 @@ def main(pack):
                 front_keys.append("front/" + k)
                 fronts += 1
             info.append(f"front layer: {fronts} picture(s) drawn in front of the rider")
+            heads = [k for k in front_keys if k.startswith("front/hed_")]
+            if heads:
+                # while idle the game draws the head part over the standing body; a front picture for both lands a
+                # thousandth of a unit apart, inside the depth buffer's step, and the two fight in stripes at night
+                # (the Jester's caps, measured with the [occlusion] depths readout, 2026-11-03; the dragon has none)
+                warn.append(f"{len(heads)} front picture(s) for the head frames ({', '.join(h[6:] for h in heads)}): the "
+                            f"head part is drawn over the standing body while idle, so its front picture and the body's "
+                            f"fight in the depth test (stripes at night); put the head's front pixels in "
+                            f"front/bdy_static_left.png and leave these out")
 
     named = {}
     for (sec, k), v in c.items():

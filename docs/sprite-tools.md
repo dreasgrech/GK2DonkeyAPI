@@ -511,6 +511,25 @@ The pieces, each a 96x96 PNG on the canvas of the frame it is drawn on (the prob
 | `head_turn.png`, `head_front.png`, `head_down.png` | turn 03, turn 05, graze 04 | turn 03; turn 04-06; graze 03-05; each moved with its frames' ear bases |
 | `<piece>@<frame>.png` | that frame | as drawn: the way out for a frame no rule covers (turn 02 and graze 02 move the side head and say so) |
 
+**In front of the rider:** a `stamp.cfg` beside the pieces, read by `stamp.py` alone (never copied into the pack: the
+game reports a `skin.cfg` key it doesn't know), puts whole layers into the pack's `front\` pictures, drawn in front of
+the rider (docs/front-layer.md):
+
+```
+[Stamp]
+front = head      # any of body_drape, body, neck, head
+```
+
+The layers stay in the main picture too, so what lies under the front picture is its own pixels: nobody riding, the
+game lays it as little above the body as the main picture (they tie in the depth test), and ridden it can sit a
+fraction of a pixel off. Taken out of the main picture, the donkey under the Jester's cap showed through: its ears over
+the cap on the foals, lines on it in the walk (2026-11-03). Their erase pixels are in the main picture only (a front
+picture can't erase); every body frame they draw in gets its front picture, the head frames (`hed_*`) none: while
+idle the game draws the head part over the standing body, and two front pictures there fought in stripes at night
+(docs/front-layer.md, measured 2026-11-03). The Jester's cap is the first
+(`tools/skins/jester/stamp.cfg`, 2026-11-03: the rider's arm covered its back point). `page_frames.py --rider` shows
+what a front layer covers of him.
+
 The commands (`python -I tools/skins/stamp.py ...`):
 
 - `build <source> [--out <folder>] [--stage "<card>"]`: the 44 frames into `<source>/out/pack` (or `--out`, a pack's

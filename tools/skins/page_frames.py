@@ -12,9 +12,14 @@ at this, not at a separate composite (2026-11-02: a review render without the re
     --clip          a clip of the page's clip list (walk, turn, graze ...), or "all" for every frame (default: all)
     --scale         pixel scale (default 4)
     --box x0 y0 x1 y1   the part of the 96 canvas to show (default: the whole canvas)
+    --rider         the page's rider on each skin's seat row, as its Rider button puts him: between the skin's
+                    picture and its front layer (docs/front-layer.md), so what the front layer covers of him shows
     --blind         rows titled A, B ... in the order of --skins instead of the skins' names: for a fresh reviewer
                     asked "which is a jester?" against a shipped skin (2026-11-03: six reviews had asked only
                     whether pieces slide, and the Jester's cloth was Royal Parade's block recoloured)
+
+A skin's front layer (its front\\ pictures) is drawn over each frame, as the page and the game draw it: with --rider
+over him, without over the donkey (nobody riding).
 
 The output holds the game's art (the donkey's frames): write it outside the repository (the scratchpad, the probe
 folder). It refuses a path inside the repo."""
@@ -49,7 +54,26 @@ def page_data(path):
     clips, _ = json.JSONDecoder().raw_decode(rest, cs)
     os_ = rest.index("ORDER = ") + len("ORDER = ")
     order, _ = json.JSONDecoder().raw_decode(rest, os_)
-    return groups, clips, order
+    rs = rest.index(", RIDER = ") + len(", RIDER = ")
+    rider, _ = json.JSONDecoder().raw_decode(rest, rs)
+    hs = rest.index("RIDER_HIP = ") + len("RIDER_HIP = ")
+    hip, _ = json.JSONDecoder().raw_decode(rest, hs)
+    return groups, clips, order, rider, hip
+
+
+def rider_at(s, hip):
+    """Where the page's Rider button puts the rider's 96 picture on a skin's canvas (its riderPlace(), facing left):
+    his hip (row 'hip' of his picture) on the skin's seat row (less its seat nudge), moved back by RiderOffsetPx."""
+    c = s.get("canvas") or 96
+    return ((c - 96) // 2 - (s.get("rider_dx") or 0), s["seat"] - (s.get("seat_adj") or 0) - hip)
+
+
+def over(base, top, x, y):
+    """top laid over base with its top-left at (x, y), cut to base (either may be negative)."""
+    x0, y0 = max(0, -x), max(0, -y)
+    part = top.crop((x0, y0, min(top.width, base.width - x), min(top.height, base.height - y)))
+    if part.width > 0 and part.height > 0:
+        base.alpha_composite(part, (x + x0, y + y0))
 
 
 def picture(url):
@@ -65,7 +89,13 @@ def main(argv):
         print(f"refused: {out} is inside the repository (the pictures hold the game's art)")
         return 1
     page = arg(argv, "--page") or os.path.join(game_dir(), "BepInEx", "GK2-asset-probe", "skins-preview.html")
-    groups, clips, order = page_data(page)
+    groups, clips, order, rider_url, rider_hip = page_data(page)
+    rider = None
+    if "--rider" in argv:
+        if not rider_url:
+            print("no rider on the page (the probe's rider.png is missing)")
+            return 1
+        rider = picture(rider_url)
     donkey = next(g for g in groups if g["id"] == "donkey")
     names = arg(argv, "--skins")
     wanted = [n.strip() for n in names.split(",")] if names else [s["name"] for s in donkey["skins"]]
@@ -101,7 +131,13 @@ def main(argv):
                 url = s["frames"].get(k) or own["frames"].get(k)
                 if not url:
                     continue
-                im = picture(url).crop(box).resize((cw, ch), Image.NEAREST)
+                im = picture(url)
+                if rider is not None and s.get("seat") is not None:
+                    over(im, rider, *rider_at(s, rider_hip))
+                near = s["frames"].get("front/" + k)
+                if near:
+                    over(im, picture(near), 0, 0)
+                im = im.crop(box).resize((cw, ch), Image.NEAREST)
                 x = 6 + i * (cw + 4)
                 img.alpha_composite(im, (x, y + 14))
                 dr.text((x + 2, y + 2), str(order.index(k) + 1 if clip == "all" else i + 1) + " " + k.replace("bdy_", "").replace("_left", ""),

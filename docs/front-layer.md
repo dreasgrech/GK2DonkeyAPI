@@ -148,6 +148,24 @@ small for the dragon, and growing it backwards keeps it off the ground).
    the order and the lift in the world.
 7. **Record** the numbers and the drafts in docs/mount-looks-design.md with the creature.
 
+A skin drawn once (`tools/skins/stamp.py`, docs/sprite-tools.md "Draw once") sends whole layers to the front with a
+`stamp.cfg` beside its pieces (`[Stamp] front = head`): the Jester's cap is drawn in front of the rider that way
+(2026-11-03). **Under a front picture, the body picture holds the front's own pixels or nothing**, never the creature
+under it: nobody riding, the front picture sits `OverLift` above the part, as the body overlay does, so the two tie in
+the depth test, and ridden it can sit a fraction of a pixel off. The Jester's cap, taken out of the body picture,
+showed the donkey's ears over it on the foals and lines on it in the walk; stamp keeps a front layer in both. (The
+dragon's body picture has nothing under the wing: section 3.) `page_frames.py --rider` cuts the page's frames with
+the rider between the picture and its front layer, for step 2's count and step 5's look.
+
+**No front picture for the head frames** (`hed_static_down`, `_02`, `_03`). While the donkey stands idle the game
+draws its head part, the standing frame's own head, over the standing body (docs/pooled-parts.md; the walk and the
+graze draw none). A front picture for both puts two layers in front of the rider that the lift brings to the same
+depth: measured with the readout (the Flying tab's "Front layer readout", `[occlusion] depths` lines, 2026-11-03),
+the head's sat 0.001 from the body's at the same point on the screen, inside the depth buffer's step (0.004 already
+tied: section 2). The Jester's two caps fought row by row, lit a shade apart at night: thin dark stripes, only idle,
+only at night, at some stops and not others. Put the head's front pixels in the body's standing front picture; the
+dragon has none for its head frames, and `check_skin.py` warns about them.
+
 ## 8. How the dragon got here (2026-10-20)
 
 Twenty-two drafts in one day, each judged done by the person who drew it and sent back by the user, until the
