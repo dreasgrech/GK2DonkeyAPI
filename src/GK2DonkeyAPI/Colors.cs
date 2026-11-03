@@ -121,7 +121,8 @@ namespace GK2DonkeyAPI
 
         // The mount's regions, one vocabulary for every mount (docs/mount-colours.md): the donkey's own look maps its
         // atlas colours into them (Regions above); a skin drawn in its own colours maps every colour of its pictures
-        // to Coat unless its [Colors] names it under another one. A skin never adds a region.
+        // to Coat unless its [Colors] names it under another one. A skin never adds a region; it may add tones of its own
+        // (SkinTones, section 7 of the doc), paired after these with the instance's value.
         internal static readonly string[] MountRegionKeys = { "Coat", "Dark", "Muzzle", "Eye", "Harness" };
 
         // The swap palette's size limit for a look: up to this many colours the exact swap (the keeper's own palette
@@ -913,6 +914,28 @@ namespace GK2DonkeyAPI
             private readonly Color32[][] lastDst = new Color32[GroupCount][];
             private readonly bool[] builtFor = new bool[GroupCount]; // textures hold this group's current mapping
 
+            // The worn look's named colour sets in pairing order, each with its map: the five mount regions (the player's
+            // settings), then the skin's own tones (SkinTones) with this instance's value, null for one as drawn.
+            private List<(string Key, RegionMap Map)> NamedMaps(Looks.Loaded look, Dictionary<RegionDef, RegionMap> maps)
+            {
+                var list = new List<(string, RegionMap)>();
+                foreach (string region in MountRegionKeys)
+                {
+                    RegionDef d = RegionOf(region);
+                    if (d != null) list.Add((region, maps[d]));
+                }
+                if (look.Def.Tones != null)
+                {
+                    foreach (SkinTones.ToneDef t in look.Def.Tones)
+                    {
+                        RegionTweak v = null;
+                        bool set = owner?.Tones != null && owner.Tones.TryGetValue(t.Id, out v) && v != null && !v.IsIdentity;
+                        list.Add((SkinTones.KeyOf(t.Id), set ? new RegionMap(v) : null));
+                    }
+                }
+                return list;
+            }
+
             // Returns how many textures were uploaded: only the groups whose mapping changed.
             private int Rebuild()
             {
@@ -938,14 +961,12 @@ namespace GK2DonkeyAPI
                     if (g == Group.DonkeySprites) lookColourCount = look?.Colours.Count ?? 0;
                     if (look != null && !over)
                     {
-                        foreach (string region in MountRegionKeys)
+                        foreach ((string named, RegionMap map) in NamedMaps(look, maps))
                         {
-                            RegionDef d = RegionOf(region);
-                            if (d == null || !look.ColoursByRegion.TryGetValue(region, out List<Color32> cols)) continue;
-                            RegionMap map = maps[d];
+                            if (!look.ColoursByRegion.TryGetValue(named, out List<Color32> cols)) continue;
                             foreach (Color32 src in cols)
                             {
-                                Color32 dst = on ? map.Apply(src) : src;
+                                Color32 dst = on && map != null ? map.Apply(src) : src;
                                 pairs.Add((src, dst));
                                 any |= !Same(src, dst);
                             }
@@ -980,11 +1001,9 @@ namespace GK2DonkeyAPI
                             var have = new HashSet<int>();
                             foreach (var p in pairs) have.Add(p.Src.r << 16 | p.Src.g << 8 | p.Src.b);
                             var shared = new List<string>();
-                            foreach (string region in MountRegionKeys)
+                            foreach ((string named, RegionMap map) in NamedMaps(look, maps))
                             {
-                                RegionDef d = RegionOf(region);
-                                if (d == null || !look.ColoursByRegion.TryGetValue(region, out List<Color32> cols)) continue;
-                                RegionMap map = maps[d];
+                                if (!look.ColoursByRegion.TryGetValue(named, out List<Color32> cols)) continue;
                                 foreach (Color32 src in cols)
                                 {
                                     if (!have.Add(src.r << 16 | src.g << 8 | src.b))
@@ -992,7 +1011,7 @@ namespace GK2DonkeyAPI
                                         shared.Add($"{src.r:X2}{src.g:X2}{src.b:X2}");
                                         continue;
                                     }
-                                    Color32 dst = on ? map.Apply(src) : src;
+                                    Color32 dst = on && map != null ? map.Apply(src) : src;
                                     pairs.Add((src, dst));
                                     any |= !Same(src, dst);
                                 }

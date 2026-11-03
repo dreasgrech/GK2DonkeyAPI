@@ -3,7 +3,8 @@ without changing a value, CRLF line ends, each section's comment above it.
 
 skin.cfg (assets/mounts/<mount>/skins/<skin>/): [Skin] keys in one order (SKIN_ORDER), then [Game], the skin's own
 geometry ([Tuning], [Tuning.Ride], [Tuning.Cart]), its sounds ([Sounds], [Sounds.Ride], [Sounds.Cart], [Sounds.Baby]),
-the colour sections ([Colors], [Base.*]). No [Mount*] section: a mount's values are its mount.cfg's (2026-10-24).
+the colour sections ([Colors], [Tone.*], [Base.*], in the file's order). No [Mount*] section: a mount's values are
+its mount.cfg's (2026-10-24).
 
 mount.cfg (assets/mounts/<mount>/): [Mount] (MOUNT_ORDER; always id, name, author, version, cart and foals), then
 [Stats], [Tuning], [Tuning.Ride], [Tuning.Cart], [Jump] (its keys in JUMP_ORDER), [Sounds], [Sounds.Ride],
@@ -131,14 +132,14 @@ def canonical(path):
         out.extend(secs["game"]["lines"])
     sections(out, secs, SKIN_SECTIONS)
     for name in order:
-        if name == "colors" or name.startswith("base."):
+        if name == "colors" or name.startswith("tone.") or name.startswith("base."):
             out.append("")
             out.extend(secs[name]["above"])
             out.append(secs[name]["header"])
             out.extend(secs[name]["lines"])
     known = {"", "skin", "game", "colors"} | {n for n, _ in SKIN_SECTIONS}
     for name in order:
-        if name not in known and not name.startswith("base."):
+        if name not in known and not name.startswith("tone.") and not name.startswith("base."):
             raise SystemExit(f"{path}: section [{name}] is not one a skin.cfg has")
     return "\r\n".join(out) + "\r\n"
 

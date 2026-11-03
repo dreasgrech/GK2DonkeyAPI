@@ -65,6 +65,18 @@ namespace GK2DonkeyAPI.Api
         internal bool lantern = true, lanternByDay = true;
         public bool Lantern { get => lantern; set { lantern = value; owner.LookChanged(this); } }
         public bool LanternByDay { get => lanternByDay; set { lanternByDay = value; owner.LookChanged(this); } }
+
+        // The colour of one of the skin's own tones (MountSkinInfo.Tones; docs/mount-colours.md section 7), by its id:
+        // made on first ask (Game, as drawn). A tone the skin doesn't have keeps its value and changes nothing.
+        private readonly Dictionary<string, MountTone> tones = new Dictionary<string, MountTone>(StringComparer.Ordinal);
+        public MountTone Tone(string toneId)
+        {
+            string id = (toneId ?? "").Trim().ToLowerInvariant();
+            if (!tones.TryGetValue(id, out MountTone t)) tones[id] = t = new MountTone(this, id);
+            return t;
+        }
+        internal MountTone FindTone(string toneId) => tones.TryGetValue(toneId ?? "", out MountTone t) ? t : null;
+        internal void Changed() => owner.LookChanged(this);
     }
 
     // A mount's own settings beside its looks (the user, 2026-10-26: the babies, the name and the voice kept per mount,
@@ -973,6 +985,7 @@ namespace GK2DonkeyAPI.Api
             var harnessKeys = Look(HarnessPreset(l.Harness, l.CustomHarness, "harness", skin));
             var muzzleKeys = Look(MuzzlePreset(l.Muzzle, l.CustomMuzzle, "second tone", skin));
             var skinKeys = SkinKeys(skin);
+            var tones = SkinTones.ValuesOf(l, skin); // the skin's own tones (docs/mount-colours.md section 7)
             // the paper: the Mounts panel's choice while it is open (PaperSkin), with that mount's look; else the same
             string ps = PaperSkin;
             bool sameOnPaper = string.Equals(ps, skin, StringComparison.Ordinal);
@@ -990,6 +1003,7 @@ namespace GK2DonkeyAPI.Api
                 OnPaper(HarnessKeys, sameOnPaper ? harnessKeys : Look(HarnessPreset(pl.Harness, pl.CustomHarness, "harness", ps)));
                 OnPaper(MuzzleKeys, sameOnPaper ? muzzleKeys : Look(MuzzlePreset(pl.Muzzle, pl.CustomMuzzle, "second tone", ps)));
                 OnPaper(LookKeys, sameOnPaper ? skinKeys : SkinKeys(ps));
+                SkinTones.Apply(paper, sameOnPaper ? tones : SkinTones.ValuesOf(pl, ps), OwnerId);
                 paper.LooksRig.MarkDirty();
             }
             var paperPaint = Look(PaintPreset(pl.Paint, pl.CustomPaint, "cart paint"));
@@ -1012,6 +1026,7 @@ namespace GK2DonkeyAPI.Api
                 Instance(Donkey, HarnessKeys, harnessKeys);
                 Instance(Donkey, MuzzleKeys, muzzleKeys);
                 Instance(Donkey, LookKeys, skinKeys);
+                SkinTones.Apply(Donkey.I, tones, OwnerId);
             }
             for (int i = 0; i < foalHandles.Length; i++)
             {
@@ -1026,6 +1041,8 @@ namespace GK2DonkeyAPI.Api
                     // the dark parts (a mount's wings, the donkey's mane and legs) with the coat: the whole baby its shade
                     Instance(h, FoalDarkKeys, Shade(NoKeys, "Dark", own.Hue * 0.7f, own.Brightness, own.Saturation, 0f));
                     Instance(h, LookKeys, CurrentOwn.FoalsWearSkin ? skinKeys : noSkin);
+                    // the parent's tones on a baby in its skin; one not in it is a plain donkey (no tones of its own)
+                    SkinTones.Apply(h.I, CurrentOwn.FoalsWearSkin ? tones : null, OwnerId);
                 }
             }
             // The cart's colours sit on whichever holds this companion's cart (they move with it at hitch and unhitch);
@@ -1292,20 +1309,24 @@ namespace GK2DonkeyAPI.Api
         // For a mount region the anchor is the worn look's own art when that skin is loaded (docs/mount-colours.md
         // 2.4); a skin still building anchors to the donkey's, and ApplyLook runs again when its sheet is whole
         // (Looks.LoadedReady, subscribed in the constructor).
-        private static float Lightness(string hex, string region, string skinId = null)
+        private static float Lightness(string hex, string region, string skinId = null) => LightnessAgainst(hex, Colors.ArtLightness(region, skinId));
+
+        // The rule itself: the colour's value over the art's average value (0..1), for a region and a skin's tone alike
+        // (SkinTones.Lightness).
+        internal static float LightnessAgainst(string hex, float art)
         {
             ColorUtility.TryParseHtmlString("#" + hex, out Color c);
             Color.RGBToHSV(c, out _, out _, out float v);
-            float art = Mathf.Max(0.05f, Colors.ArtLightness(region, skinId));
-            return Mathf.Clamp(v / art, 0.15f, 3f);
+            return Mathf.Clamp(v / Mathf.Max(0.05f, art), 0.15f, 3f);
         }
 
         private static readonly HashSet<string> warned = new HashSet<string>(StringComparer.Ordinal);
 
         // RRGGBB, upper case, or null. A bad value is logged once; an empty one is not: it means no colour given yet. Each
         // setter applies the look at once, so a mod setting Coat = Custom and then CustomCoat passes through Custom with
-        // no colour for a moment (a mod at every start: three false warnings, 2026-10-03).
-        private static string Hex(string value, string what)
+        // no colour for a moment (a mod at every start: three false warnings, 2026-10-03). A skin's tones read theirs
+        // here too (SkinTones.ValuesOf).
+        internal static string Hex(string value, string what)
         {
             string v = (value ?? "").Trim().TrimStart('#');
             if (v.Length == 0)

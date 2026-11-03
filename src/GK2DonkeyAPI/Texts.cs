@@ -222,7 +222,7 @@ namespace GK2DonkeyAPI
 
         // ---- the rows of a page (MountSettingsPage.Row: its Owner, TextKey, LabelWord, ButtonWord) ----
 
-        internal static string Label(MountSettingsPage.Row r) => r.LabelWord != null ? r.LabelWord.Text : Of(r.Owner, r.TextKey + ".label", r.Label);
+        internal static string Label(MountSettingsPage.Row r) => r.LabelOf != null ? r.LabelOf() : r.LabelWord != null ? r.LabelWord.Text : Of(r.Owner, r.TextKey + ".label", r.Label);
 
         internal static string Desc(MountSettingsPage.Row r) => Of(r.Owner, r.TextKey + ".desc", r.Description);
 
@@ -245,6 +245,7 @@ namespace GK2DonkeyAPI
                 Looks.SkinDef s = r.ChoiceValues != null && i < r.ChoiceValues.Length ? Looks.Find(r.ChoiceValues.GetValue(i) as string) : null;
                 return s != null && !string.IsNullOrEmpty(s.Name) && english == s.Name ? Looks.NameTerm(s).Text : english;
             }
+            if (r.ChoiceWords != null && i < r.ChoiceWords.Length) return r.ChoiceWords[i].Text; // a tone row's presets: the API's words
             return Of(r.Owner, r.TextKey + ".choice." + i.ToString(CultureInfo.InvariantCulture), english);
         }
 
@@ -808,11 +809,11 @@ namespace GK2DonkeyAPI
                 {
                     if (r.RowKind == MountSettingsPage.RowKind.Preview || p.IsMountRow(r)) continue;
                     string where = r.ShownSection + ", " + KindWord(r);
-                    if (r.LabelWord == null) Put(r.TextKey + ".label", r.Label, where);
+                    if (r.LabelWord == null && r.LabelOf == null) Put(r.TextKey + ".label", r.Label, where); // a tone row's label is its skin's (below)
                     if (p.InOptions(r)) Put(r.TextKey + ".desc", r.Description, where + ": its description");
                     // a custom colour's choices are the palette's names, drawn as swatches only (MountsPanel.SwatchRow): no words to translate
                     bool palette = r.Entry != null && r.Entry.SettingType == typeof(PaletteColor);
-                    if (r.RowKind == MountSettingsPage.RowKind.Choice && r.ChoiceLabels != null && !palette)
+                    if (r.RowKind == MountSettingsPage.RowKind.Choice && r.ChoiceLabels != null && !palette && r.ChoiceWords == null)
                     {
                         for (int i = 0; i < r.ChoiceLabels.Length; i++) Put(r.TextKey + ".choice." + i.ToString(CultureInfo.InvariantCulture), r.ChoiceLabels[i], where + ": a choice");
                     }
@@ -850,6 +851,16 @@ namespace GK2DonkeyAPI
                 Catalog.Entry m = Looks.MountOf(s);
                 if (m != null && string.IsNullOrEmpty(m.Description) && string.Equals(Looks.DefaultSkinOf(m), s.Id, StringComparison.OrdinalIgnoreCase))
                     Put("skin." + s.Id + ".description", s.Description, "the mount's description in the Mount Journal (its own look's: the mount has none of its own)");
+                // its own tones' names: their rows' labels in the colours window (MountSettingsPage.ToneRows); the ones it
+                // shows (a variant's tone without a name of its own shows its default's, and one without colours has no row)
+                List<SkinTones.ToneDef> tones = s.OwnColours ? SkinTones.DeclaredBy(s) : null;
+                if (tones != null)
+                {
+                    foreach (SkinTones.ToneDef t in tones)
+                    {
+                        if (s.Tones != null && s.Tones.Contains(t) && SkinTones.ColoursOf(s, t.Id).Count > 0) Put("skin." + s.Id + ".tone." + t.Id + ".name", t.Name, "a part of the skin the player colours on its own: its row's label in the colours window");
+                    }
+                }
             }
             return list;
         }

@@ -55,6 +55,19 @@ mount.donkey.name,Esel,Donkey,
 mount.donkey.description,Der geduldigste Arbeiter des Friedhofs. Er hat mehr Leichen geschleppt als irgendwer sonst im Dorf und hat zu jeder eine Meinung.,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
 colours.title,Farben: {0},Colours: {0},the colours window's title; {0}: the mount's name
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+colours.tone_game,Spielstandard,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.tone_red,Rot,Red,a colour for a part of a skin
+colours.tone_gold,Gold,Gold,a colour for a part of a skin
+colours.tone_green,Grün,Green,a colour for a part of a skin
+colours.tone_blue,Blau,Blue,a colour for a part of a skin
+colours.tone_purple,Lila,Purple,a colour for a part of a skin
+colours.tone_pink,Rosa,Pink,a colour for a part of a skin
+colours.tone_brown,Braun,Brown,a colour for a part of a skin
+colours.tone_black,Schwarz,Black,a colour for a part of a skin
+colours.tone_white,Weiß,White,a colour for a part of a skin
+colours.tone_custom,Eigene,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
+colours.tone_custom_colour,{0}: eigene Farbe,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
+colours.tone_lightness,{0}: Helligkeit,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 speed.very_slow,Sehr langsam,Very slow,a mount's speed in the journal's stats
 speed.slow,Langsam,Slow,
 speed.normal,Normal,Normal,

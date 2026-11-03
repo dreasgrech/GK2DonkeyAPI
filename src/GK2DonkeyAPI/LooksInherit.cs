@@ -39,6 +39,7 @@ namespace GK2DonkeyAPI
             internal SkinDef Parent;           // the default it is built on (Resolve); null: it stands alone
             internal bool OverDefault;         // layer = over on a skin of a mount other than the donkey: drawn over its default (Over stays "over the game's donkey")
             internal Dictionary<string, HashSet<string>> OwnColorRegions; // its own [Colors]; ColorRegions is the resolved map (the default's, then its own)
+            internal List<SkinTones.ToneDef> OwnTones; // its own [Tone.*]; Tones is the resolved list (the default's, then its own)
             internal Alone AloneValues;        // its values as read, for when it stands alone (taken at its first Resolve)
             internal string AsideBy;           // why layering set it aside: "default" (its default is set aside), "pictures" (nothing to draw), "build" (the default's pictures failed in its build); null: not by layering
 
@@ -146,6 +147,7 @@ namespace GK2DonkeyAPI
             if (d.AloneValues == null)
             {
                 d.OwnColorRegions = d.ColorRegions;
+                d.OwnTones = d.Tones;
                 d.AloneValues = new Alone
                 {
                     CanvasW = d.CanvasW, CanvasH = d.CanvasH, PivotX = d.PivotX, PivotY = d.PivotY, OwnColours = d.OwnColours, Base = d.Base,
@@ -175,6 +177,10 @@ namespace GK2DonkeyAPI
             }
             if (!d.Has(SkinGiven.Colours)) d.OwnColours = p?.OwnColours ?? a.OwnColours;
             d.ColorRegions = MergeRegions(p?.ColorRegions, d.OwnColorRegions);
+            d.Tones = SkinTones.Merge(p?.Tones, d.OwnTones); // a tone's colours merge with the regions above
+            // its own tones on a palette look taken from its default (FromCfg saw its own colours = only): they do nothing
+            if (!d.OwnColours && d.OwnTones != null && layerSaid.Add(d.Id + "|tones"))
+                Plugin.Log.LogInfo($"Looks: skin '{d.Id}' is in its default's palette colours (colours = palette, which it doesn't say otherwise), so its [Tone.*] are ignored: a palette skin takes the donkey's regions. Give it colours = own for tones of its own.");
             if (!d.Has(SkinGiven.Seat))
             {
                 // a seat row is a row of the canvas: only the same height and pivot row read it the same

@@ -251,6 +251,10 @@ namespace GK2DonkeyAPI.Api
         // Which of the skin's own colours are Dark, Muzzle, Eye or Harness (hex RRGGBB per region; everything not
         // named is Coat), as a pack's [Colors]; the player's colours then reach them. Null: all Coat.
         public Dictionary<string, string[]> Regions;
+        // The skin's own tones (docs/mount-colours.md section 7), as a pack's [Tone.<id>]: parts of its drawing the
+        // player colours apart from the regions, each with its own row on a page's ToneRows. A colour is in one tone or
+        // one region only. Null: none. Skins in the donkey's palette colours have none.
+        public List<MountSkinTone> Tones;
         // Over skins only: the colour whose pixels make the donkey transparent there (a pack's erase =); null: none.
         public Color32? Erase;
         // Over skins only: the donkey's regions recoloured under the skin (a pack's [Base.<Region>]: knob -> value text,
@@ -304,6 +308,15 @@ namespace GK2DonkeyAPI.Api
                 {
                     if (kv.Value == null || kv.Value.Length == 0) continue;
                     Looks.ColorRegionLine(d, kv.Key, string.Join(" ", kv.Value), "skin '" + Id + "' (code)");
+                }
+            }
+            if (Tones != null && PaletteColours) d.Report += "Tones on a skin in the donkey's palette colours, ignored (the donkey's regions apply); ";
+            else if (Tones != null)
+            {
+                foreach (MountSkinTone t in Tones)
+                {
+                    if (t == null) continue;
+                    SkinTones.Add(d, (t.Id ?? "").Trim().ToLowerInvariant(), t.Name, string.Join(" ", t.Colours), "skin '" + Id + "' (code)");
                 }
             }
             if (BaseRegions != null && Over)
@@ -377,6 +390,7 @@ namespace GK2DonkeyAPI.Api
             CanvasWidth = CanvasHeight = 96;
             SeatRow = -1;
             Regions = new List<string>(Colors.MountRegionKeys);
+            Tones = Array.Empty<MountSkinTone>();
         }
 
         internal MountSkinInfo(Looks.SkinDef d)
@@ -408,9 +422,19 @@ namespace GK2DonkeyAPI.Api
             else
             {
                 regions.Add("Coat");
-                if (d.ColorRegions != null) foreach (string r in d.ColorRegions.Keys) if (!regions.Contains(r)) regions.Add(r);
+                if (d.ColorRegions != null) foreach (string r in d.ColorRegions.Keys) if (!SkinTones.IsTone(r) && !regions.Contains(r)) regions.Add(r);
             }
             Regions = regions;
+            var tones = new List<MountSkinTone>();
+            if (d.OwnColours && d.Tones != null)
+            {
+                foreach (SkinTones.ToneDef t in d.Tones)
+                {
+                    List<string> colours = SkinTones.ColoursOf(d, t.Id);
+                    if (colours.Count > 0) tones.Add(new MountSkinTone(t.Id, t.Name, colours.ToArray()));
+                }
+            }
+            Tones = tones;
             HasFrontLayer = d.FrontSprites != null || d.LoadFrontSheetPng != null || (d.FileNames != null && d.FileNames.Exists(f => f.StartsWith(Looks.FrontKey, StringComparison.Ordinal)));
         }
 
@@ -451,6 +475,9 @@ namespace GK2DonkeyAPI.Api
         // The colour regions the player's colours reach on this skin (Coat always on a skin in its own colours, then
         // what its [Colors] names; every region on the donkey's palette).
         public IReadOnlyList<string> Regions { get; }
+        // The skin's own tones (a pack's [Tone.<id>], MountSkinDef.Tones), in its order, each with its colours as resolved
+        // (a variant's with its default's): a page's ToneRows gives each a row; MountLook.Tone sets one.
+        public IReadOnlyList<MountSkinTone> Tones { get; }
         // Its frames are another game character's, read at run time (source = game).
         public bool FromGame { get; }
         // The skin it is built on: its mount's own look ("<mount>/default") for every other skin of a mount but the

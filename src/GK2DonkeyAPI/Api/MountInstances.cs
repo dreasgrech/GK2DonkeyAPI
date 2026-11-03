@@ -595,9 +595,10 @@ namespace GK2DonkeyAPI.Api
             return true;
         }
 
-        // Every override of this instance.
+        // Every override of this instance (and a skin's tones set on it, SkinTones).
         public void Reset()
         {
+            GK2DonkeyAPI.SkinTones.Clear(i, null);
             if (i.Overrides.Count == 0)
             {
                 return;
@@ -609,6 +610,7 @@ namespace GK2DonkeyAPI.Api
 
         internal void ClearOwner(string ownerId)
         {
+            GK2DonkeyAPI.SkinTones.Clear(i, ownerId);
             bool any = false;
             foreach (var kv in new List<KeyValuePair<string, string>>(i.OverrideOwners))
             {

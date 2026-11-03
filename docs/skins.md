@@ -237,6 +237,41 @@ player's harness colour), and every colour not named is **kept as drawn** (the g
 colours the donkey doesn't have: a named colour the donkey also has follows the donkey's region, and the log says
 so once.
 
+**The skin's own colours: tones.** A part of the drawing the player should colour on its own (a cloth, a plume, a
+cap, the trim, a saddle's leather) is a **tone** of the skin: a section of its own with the part's name and its
+colours. Each tone gets its own dropdown in the Colours window, labelled with that name, after the Coat, Harness
+and Second tone rows; the player picks Game default (as drawn), a colour, or Custom with its lightness, and each
+skin keeps its own choice. A skin has as many tones as it needs:
+
+```ini
+[Tone.cap]
+name = Cap
+colours = 3A0A14 641A28 862534 A23444 C2485A   # its five shades, dark to light
+
+[Tone.plume]
+name = Plume
+colours = 38121A 5E1C24 8A282A
+```
+
+- The section's name after `Tone.` is the tone's id: lower case letters, digits and `-`. It is part of the players'
+  saved keys, so keep it once a skin is shared; the `name` can change freely (and is translated in the pack's
+  `Languages\` files as `skin.<skin id>.tone.<id>.name`).
+- A part is found by its exact colours. Give each part shades of its own: two parts in the same colours are one tone
+  (draw one of them a step apart to colour them separately). A colour is in one place only: one tone, or one
+  `[Colors]` region; the loader refuses a skin that names a colour twice.
+- The colour keeps each pixel's shading: a tone takes the picked colour's hue and saturation over its own shades,
+  as light against its own art as the colour itself is.
+- Over the donkey, the Coat, Harness and Second tone rows still reach the donkey's own parts under the skin; a part
+  of the skin under `[Colors] Harness` follows the player's harness colour instead of having a row of its own (the
+  released skins of 0.15.0 do so). On a skin in its own colours, its tones are taken out of Coat.
+- Colours named too close together may change together on the game's colour cube (over 48 colours, or with the
+  player's `SpriteMethod = Lut`): `tools/skins/check_skin.py` and `tests/SkinsScan` fail a tone's colour that shares a
+  cube cell with any other colour of the look.
+- A variant (see below) has its default's tones. A `[Tone.<id>]` of its own with a default's id adds its colours to
+  that tone (the default's name stays), or with a `name` of its own renames it (`colours` may then be left out).
+- A tone needs GK2 Donkey API with tones (an older one ignores the section and draws the part as drawn): say so with
+  `needs =`. A code skin gives the same with `MountSkinDef.Tones`.
+
 **Erasing from the donkey.** An over skin can take things off the donkey as well as add to it: every pixel of the
 **erase colour** (`erase = FF00FF`, magenta, unless the cfg says another colour or `none`) makes the donkey
 transparent there. Draw magenta over the ears and horns next to them, and the ears are gone; over the tail and a
@@ -443,6 +478,9 @@ A pack is someone else's files loaded into a player's game, so the loader checks
 - a file name (`sheet =`, `sheet_front =`, `portrait =`, a sound) outside the pack's own folder: `..`, a drive, a
   network share;
 - a sheet's `frames =` name that isn't a frame key (letters, digits, `_`, `-`);
+- a colour named in two places (two tones, or a tone and a `[Colors]` region), and a `[Tone.<id>]` whose id isn't
+  lower case letters, digits and `-`: the skin is refused; a tone without colours of its own colours nothing and
+  gets no row (unless it renames its default's tone), said in its report;
 - a `mount.cfg` whose `[Mount] id` isn't its folder's name, or whose `needs =` is newer than the API;
 - a skin of a mount that isn't installed is kept, but offered nowhere (the Mounts panel lists its mount as not
   installed); it is worn once its mount comes.

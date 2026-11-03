@@ -136,6 +136,22 @@ namespace GK2DonkeyAPI
         // the colours window
         internal static readonly Word ColoursTitle = new Word("colours.title", "Colours: {0}", "the colours window's title; {0}: the mount's name");
         internal static readonly Word ColoursTitleSkin = new Word("colours.title_skin", "{0} - {1}", "the colours window's title with a skin; {0}: the title above, {1}: the skin's name");
+        // a skin's own tones (MountSettingsPage.ToneRows): the choices, in ToneColor's order, and the custom rows' labels
+        internal static readonly Word ToneGame = new Word("colours.tone_game", "Game default", "a colour for a part of a skin (one of its own tones): the skin as drawn");
+        internal static readonly Word ToneRed = new Word("colours.tone_red", "Red", "a colour for a part of a skin");
+        internal static readonly Word ToneGold = new Word("colours.tone_gold", "Gold", "a colour for a part of a skin");
+        internal static readonly Word ToneGreen = new Word("colours.tone_green", "Green", "a colour for a part of a skin");
+        internal static readonly Word ToneBlue = new Word("colours.tone_blue", "Blue", "a colour for a part of a skin");
+        internal static readonly Word TonePurple = new Word("colours.tone_purple", "Purple", "a colour for a part of a skin");
+        internal static readonly Word TonePink = new Word("colours.tone_pink", "Pink", "a colour for a part of a skin");
+        internal static readonly Word ToneBrown = new Word("colours.tone_brown", "Brown", "a colour for a part of a skin");
+        internal static readonly Word ToneBlack = new Word("colours.tone_black", "Black", "a colour for a part of a skin");
+        internal static readonly Word ToneWhite = new Word("colours.tone_white", "White", "a colour for a part of a skin");
+        internal static readonly Word ToneCustomChoice = new Word("colours.tone_custom", "Custom", "a colour for a part of a skin: the player's own, picked in the row under it");
+        internal static readonly Word ToneCustom = new Word("colours.tone_custom_colour", "{0}: custom colour", "the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)");
+        internal static readonly Word ToneLightness = new Word("colours.tone_lightness", "{0}: lightness", "the row under it that makes that colour lighter or darker; {0}: the part's name");
+        // ToneColor's order (not a word of its own: UiWords.All lists the fields of type Word)
+        internal static readonly Word[] ToneChoices = { ToneGame, ToneRed, ToneGold, ToneGreen, ToneBlue, TonePurple, TonePink, ToneBrown, ToneBlack, ToneWhite, ToneCustomChoice };
 
         // the speeds (Catalog.SpeedBands' words, shown; mount.cfg's speed = is read in English, Catalog.ParseBand)
         internal static readonly Word SpeedVerySlow = new Word("speed.very_slow", "Very slow", "a mount's speed in the journal's stats");

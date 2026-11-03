@@ -340,6 +340,7 @@ sealed class GK2DonkeyAPI.Api.MountLook
   property GK2DonkeyAPI.Api.CartPaint Paint { get; set; }
   property string SkinId { get; }
   property GK2DonkeyAPI.Api.WheelColor Wheels { get; set; }
+  method GK2DonkeyAPI.Api.MountTone Tone(string toneId)
 sealed class GK2DonkeyAPI.Api.MountLooks
   field static const string DonkeyId = donkey
   property System.Collections.Generic.IReadOnlyList<string> FrameKeys { get; }
@@ -472,6 +473,7 @@ sealed class GK2DonkeyAPI.Api.MountSettingsPage
   method BepInEx.Configuration.ConfigEntry<string> Text(string section, string key, string value, string label, string description, System.Action<string> apply = null, System.Func<bool> visible = null, bool look = False)
   method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply, System.Func<bool> visible)
   method BepInEx.Configuration.ConfigEntry<bool> Toggle(string section, string key, bool value, string label, string description, System.Action<bool> apply = null, System.Func<bool> visible = null, bool look = False)
+  method void ToneRows(string section, string skinId, string suffix, GK2DonkeyAPI.Api.MountCompanion companion)
   method void TuningKey(string section, string key, string tuningKey, GK2DonkeyAPI.Api.MountCompanion companion)
 sealed class GK2DonkeyAPI.Api.MountSkinDef
   field string Author
@@ -499,6 +501,7 @@ sealed class GK2DonkeyAPI.Api.MountSkinDef
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsCart
   field System.Collections.Generic.Dictionary<string, GK2DonkeyAPI.Api.MountSound> SoundsRide
   field GK2DonkeyAPI.Api.IMountSkinSource Source
+  field System.Collections.Generic.List<GK2DonkeyAPI.Api.MountSkinTone> Tones
   field System.Collections.Generic.Dictionary<string, object> Tuning
   field System.Collections.Generic.Dictionary<string, object> TuningCart
   field System.Collections.Generic.Dictionary<string, object> TuningRide
@@ -540,7 +543,14 @@ sealed class GK2DonkeyAPI.Api.MountSkinInfo
   property int SeatRow { get; }
   property string SetAsideWhy { get; }
   property string Source { get; }
+  property System.Collections.Generic.IReadOnlyList<GK2DonkeyAPI.Api.MountSkinTone> Tones { get; }
   property string Version { get; }
+  method string ToString()
+sealed class GK2DonkeyAPI.Api.MountSkinTone
+  property System.Collections.Generic.IReadOnlyList<string> Colours { get; }
+  property string Id { get; }
+  property string Name { get; }
+  method void .ctor(string id, string name, System.String[] colours)
   method string ToString()
 sealed class GK2DonkeyAPI.Api.MountSound
   field bool ByGround
@@ -599,6 +609,10 @@ sealed class GK2DonkeyAPI.Api.MountStat
 enum GK2DonkeyAPI.Api.MountStyle
   Ride = 0
   Cart = 1
+sealed class GK2DonkeyAPI.Api.MountTone
+  property GK2DonkeyAPI.Api.ToneColor Color { get; set; }
+  property string Custom { get; set; }
+  property string Id { get; }
 sealed class GK2DonkeyAPI.Api.MountTuning
   property System.Collections.Generic.IReadOnlyList<string> Keys { get; }
   property string Section { get; }
@@ -660,6 +674,18 @@ enum GK2DonkeyAPI.Api.SpeedBand
 enum GK2DonkeyAPI.Api.SpriteColorMethod
   Palette = 0
   Lut = 1
+enum GK2DonkeyAPI.Api.ToneColor
+  Game = 0
+  Red = 1
+  Gold = 2
+  Green = 3
+  Blue = 4
+  Purple = 5
+  Pink = 6
+  Brown = 7
+  Black = 8
+  White = 9
+  Custom = 10
 enum GK2DonkeyAPI.Api.WheelColor
   Game = 0
   DarkWood = 1

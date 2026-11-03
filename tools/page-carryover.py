@@ -21,10 +21,39 @@ PLUGIN = os.path.join(REPO, "src", "SaddleUp", "Plugin.cs")
 # 2026-10-24, the donkey's plain
 KINDS = ["donkey", "saddleup-dragon.dragon", "saddleup.gerry", "saddleup-critters.rat", "saddleup-critters.snail", "saddleup-critters.worm", "example.checker-beast"]  # the four by their packs' ids since 2026-10-26
 # the per-skin sets (PerSkin, 0.13 / API 0.41.0): a mount's first skin keeps the mount's suffix, every other shipped skin its
-# own id (Coat_donkey/saddleup-donkey-skins.hellfire); a 0.12 file holds the per-mount keys only
-SKINS = ["donkey/saddleup-donkey-skins.hellfire", "donkey/saddleup-donkey-skins.royal-parade"]
+# own id (Coat_donkey/saddleup-donkey-skins.hellfire); a 0.12 file holds the per-mount keys only. Read from the shipped
+# skin folders since 2026-11-03 (a hand list missed Armored, whose keys the 0.15.0 fixture holds: 23 values "lost")
+SKIN_CFGS = sorted(glob.glob(os.path.join(REPO, "src", "*", "assets", "mounts", "*", "skins", "*", "skin.cfg"))
+                   + glob.glob(os.path.join(REPO, "packs", "*", "gk2mounts", "*", "skins", "*", "skin.cfg")))
+
+
+def skin_of(cfg):
+    """(mount, skin) of a shipped skin.cfg"""
+    skin_dir = os.path.dirname(cfg)
+    return os.path.basename(os.path.dirname(os.path.dirname(skin_dir))), os.path.basename(skin_dir)
+
+
+def suffix_of(mount, skin):
+    """a skin's PerSkin suffix: a mount's own look ("default", and the donkey's own art) the mount's, any other its id"""
+    return ("" if mount == "donkey" else "_" + mount) if skin == "default" else "_" + mount + "/" + skin
+
+
+SKINS = [m + "/" + s for m, s in (skin_of(c) for c in SKIN_CFGS) if s != "default"]
 MOUNTS = [""] + ["_" + k for k in KINDS if k != "donkey"] + ["_" + s for s in SKINS]
 FOAL_ROWS = ["Foals", "FoalsFollow", "FoalsIndoors", "FoalsWearSkin"]
+
+
+def shipped_tones():
+    """(suffix, tone id) for every [Tone.<id>] of a shipped skin.cfg (MountSettingsPage.ToneRows, 2026-11-03)"""
+    out = []
+    for cfg in SKIN_CFGS:
+        sfx = suffix_of(*skin_of(cfg))
+        with io.open(cfg, encoding="utf-8") as f:
+            for line in f:
+                t = re.match(r"^\s*\[Tone\.([a-z0-9-]+)\]", line, re.IGNORECASE)
+                if t:
+                    out.append((sfx, t.group(1).lower()))
+    return out
 
 
 def plain(sec):
@@ -53,6 +82,10 @@ def page_rows(src):
         rows.update((m.group(1), "Skin_" + k) for k in KINDS)
     for m in re.finditer(r'p\.FoalRows\("(\w+)"', src):
         rows.update((m.group(1), k + sfx) for k in FOAL_ROWS for sfx in MOUNTS)  # per mount since 2026-10-26 (PerMount: the donkey's plain)
+    for m in re.finditer(r'p\.ToneRows\("(\w+)"', src):
+        # a skin's own tones: a choice and its custom colour with the lightness, under the skin's suffix
+        for sfx, tone in shipped_tones():
+            rows.update((m.group(1), k + sfx) for k in ("Tone." + tone, "CustomTone." + tone, "CustomTone." + tone + "Lightness"))
     return rows, aliases
 
 

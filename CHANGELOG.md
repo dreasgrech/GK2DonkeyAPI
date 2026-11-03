@@ -12,6 +12,14 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **A skin can have colours of its own** (2026-11-03; the user, on the Jester: "harness color should only control
+  the color of the harness and then the skin can introduce its own color tones depending on what it needs"). A skin
+  names the parts of its drawing a player colours on their own (a cap, a cloth, a plume), as many as it needs, and
+  each gets a dropdown of its own in the Colours window, labelled with the part's name: Game default, Red, Gold,
+  Green, Blue, Purple, Pink, Brown, Black, White, or Custom with its lightness, kept per skin like the rest of the
+  window. Coat, Harness and Second tone keep meaning the mount's own parts. No released skin uses them yet:
+  Hellfire, Royal Parade and Armored keep their colours as before, under the rows they had. Self-test "colours: a
+  skin's own tones" (the Skins group); docs/mount-colours.md section 7, docs/skins.md "The skin's own colours: tones".
 - **The start-up check of the game's code covers the pathfinding too** (2026-11-03; the user's go after the 1.011.1
   audit). The API queries the game's A* pathfinding directly (the safe ground, the mount): 29 members, which the
   check could not see, and 1.011.1 recompiled that assembly. Its members are now in the dependency manifest like
@@ -41,7 +49,44 @@ For players:
   before. Self-test "jump: a take-off past the game's walk grid"; docs/flying.md "The conveyor's debris". F11:
   1787 passed, 0 failed, the conveyor's debris jumped and landed.
 
+For mod authors:
+
+- **A skin's own tones** (2026-11-03; docs/api.md "A skin's own tones"): skin.cfg `[Tone.<id>]` (`name`, `colours`)
+  and `MountSkinDef.Tones` (`MountSkinTone`: id, name, colours); `MountSkinInfo.Tones`; `MountLook.Tone(id)`, a
+  `MountTone` (`Color`: `ToneColor`, `Custom`); `MountSettingsPage.ToneRows(section, skinId, suffix, companion)`
+  inside `PerSkin`, keys `Tone.<id><suffix>`, `CustomTone.<id><suffix>`. A colour is in one place only (a tone or a
+  `[Colors]` region): one named twice, or a tone id other than lower case letters, digits and `-`, refuses the skin.
+  Additions only, so the next API version is a minor (`tests/ApiSurface` snapshot updated). An older API ignores the
+  section (the part as drawn): a pack using tones says `needs =` that version. Saddle Up gives every skin's tones
+  their rows (one line after its Second tone rows; it names no tone).
+
 Development:
+
+- **Tones, the checks and tools** (2026-11-03): `tests/SkinsScan` and `tools/skins/check_skin.py` read `[Tone.*]`
+  (the id, the keys, the colours in the pictures, one place per colour, not a donkey colour under an over skin) and
+  fail a tone colour that shares a colour-cube cell with another colour of the look (`Colors.Rig.LutIndex`; both
+  proven on a probe pixel one step from the donkey's coat). `tools/skins/canonical_cfg.py` keeps `[Tone.*]` among the
+  colour sections. The Jester (`tools/skins/jester/`, no pack) has its motley's two colours as tones, "First motley
+  colour" and "Second motley colour", in place of `[Colors]` Harness and Muzzle; the Harness row reaches the
+  donkey's strap only. The API's 13 new words in all 11 `Languages/` files.
+- **`tools/page-carryover.py` reads the shipped skins from their folders** (2026-11-03): its hand list lacked Armored,
+  so the 0.15.0 fixture's 23 Armored values read as lost and the tool exited 1; it also knows `ToneRows`. All five
+  fixtures land every value.
+- **SkinsScan's pack checks count** (2026-11-03): they printed "FAIL" without counting, so the packs' `Languages\`
+  folders (2026-11-01) showed three FAIL lines under an ALL PASS; `Languages\` is a pack's, and a pack failure fails
+  the scan.
+- **Tones, after a code review** (2026-11-04; 10 findings, each checked against the code): a variant's tone of its
+  default's id without a name of its own keeps the default's name and translation (it was labelled by its id), and
+  one with only a `name` renames it (it was dropped for having no colours); a skin's tones go with their owner's
+  overrides (`Mounts.ClearTuning`, `InstanceTuning.Reset`), so a skin put on that instance later by another mod
+  doesn't find the old colours; a baby not in its parent's skin (a plain donkey) takes no tones; a variant that
+  takes palette colours from its default says once that its tones are ignored; SkinsScan uses the donkey's colours
+  only under a skin over the donkey (not over another mount's default), and a variant's default's colours keep the
+  default's places there and in `check_skin.py` (a shade beside the same tone's was read as a clash); one hex reader
+  and one lightness rule for the regions and the tones (`MountCompanion.Hex`, `LightnessAgainst`: a bad custom tone
+  colour is said once, as a region's is); the tone lightness reads the skin's set without sorting a copy per apply.
+  Not changed: a variant whose default registers after the page is shown gets its inherited tones' rows at the next
+  start, as every late registration (docs/mount-colours.md 7.4).
 
 - **`tools/skins/donkey_frames.py`** (2026-11-03): `make` writes `src/GK2DonkeyAPI/donkey-frames.txt` (fingerprints,
   no art) from the asset probe's PNGs; `check` compares it with them, or with a dev build's own read of the game

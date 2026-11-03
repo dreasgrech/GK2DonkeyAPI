@@ -57,6 +57,10 @@ namespace GK2DonkeyAPI.Api
             // rows its builders add, the default button words).
             internal string Owner, TextKey;
             internal Word LabelWord, ButtonWord;
+            // A skin's tone row (ToneRows): its label made from the tone's name (its skin's owner's text, in an API template
+            // for the custom rows), its choices the API's words; the page has nothing of either to translate.
+            internal Func<string> LabelOf;
+            internal Word[] ChoiceWords;
             // A List row's choices FillList marked (a stored id nothing installed provides, set aside, the list empty): drawn
             // with the API's words around the name (Texts.Choice); ChoiceLabels keep the English for the comparisons and logs.
             internal ChoiceNote[] ChoiceNotes;
@@ -1148,6 +1152,37 @@ namespace GK2DonkeyAPI.Api
                 foreach (string r in Colors.MountRegionKeys) if (string.Equals(r, region, StringComparison.OrdinalIgnoreCase)) return true;
             }
             return false;
+        }
+
+        // A skin's own tones (skin.cfg [Tone.<id>], MountSkinDef.Tones; docs/mount-colours.md section 7), for a page's colour
+        // rows: call it inside PerSkin's body with its skin id and suffix. Per tone, in the skin's order: a choice of the
+        // presets (ToneColor; Game default is the skin as drawn) and its custom colour with the lightness (Color), keys
+        // Tone.<id><suffix>, CustomTone.<id><suffix> and CustomTone.<id>Lightness<suffix>, the look's MountLook.Tone. The
+        // label is the tone's name, translated by the skin's owner; the other words are the API's. A skin without tones
+        // gets no rows; one registered after the page gets them with its other PerSkin rows at CatchUp.
+        public void ToneRows(string section, string skinId, string suffix, MountCompanion companion)
+        {
+            if (companion == null) throw new ArgumentNullException(nameof(companion));
+            Looks.SkinDef def = Looks.Find(skinId);
+            if (def == null || !def.OwnColours || def.Tones == null) return;
+            MountLook look = companion.LookOf(skinId);
+            string sfx = suffix ?? "";
+            var english = new string[UiWords.ToneChoices.Length];
+            for (int i = 0; i < english.Length; i++) english[i] = UiWords.ToneChoices[i].English;
+            foreach (SkinTones.ToneDef t in def.Tones)
+            {
+                if (SkinTones.ColoursOf(def, t.Id).Count == 0) continue; // a variant's tone whose colours all went elsewhere
+                MountTone tone = look.Tone(t.Id);
+                Term name = SkinTones.NameTerm(def, t);
+                string who = $"{t.Name} ({def.Name ?? def.Id})";
+                ConfigEntry<ToneColor> choice = Choice(section, "Tone." + t.Id + sfx, ToneColor.Game, t.Name, $"A colour of the skin's own: {who}. Game default is the skin as drawn.", v => tone.Color = v, english, look: true);
+                Rows[Rows.Count - 1].LabelOf = () => name.Text;
+                Rows[Rows.Count - 1].ChoiceWords = UiWords.ToneChoices;
+                Color(section, "CustomTone." + t.Id + sfx, t.Name + ": custom colour", $"Used when {who} is Custom.", PaletteColor.Gold, v => tone.Custom = v, () => choice.Value == ToneColor.Custom);
+                // Color adds the colour row and its lightness row: their labels the API's templates around the tone's name
+                Rows[Rows.Count - 2].LabelOf = () => UiWords.ToneCustom.Format(name);
+                Rows[Rows.Count - 1].LabelOf = () => UiWords.ToneLightness.Format(name);
+            }
         }
 
         public void PerMount(Action<string, string, Func<bool>> rows)

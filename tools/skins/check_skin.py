@@ -139,16 +139,23 @@ def main(pack):
                             f"fight in the depth test (stripes at night); put the head's front pixels in "
                             f"front/bdy_static_left.png and leave these out")
 
+    def places(conf):
+        """(hex, place) for every colour [Colors] and the skin's own tones ([Tone.<id>] colours =) name"""
+        for (sec, k), v in conf.items():
+            if sec == "Colors":
+                yield from ((hx.upper(), k.capitalize()) for hx in v.replace(",", " ").split())
+            elif sec.startswith("Tone.") and k in ("colours", "colors"):
+                yield from ((hx.upper(), "Tone." + sec[5:].lower()) for hx in v.replace(",", " ").split())
+
     named = {}
-    for (sec, k), v in c.items():
-        if sec == "Colors":
-            for hx in v.split():
-                named[hx.upper()] = k.capitalize()
+    for hx, place in places(c):
+        if hx in named and named[hx] != place:
+            warn.append(f"{hx} is under {named[hx]} and {place}: one place per colour (a region or a tone); the game refuses the skin")
+            RESULT["errors"] += 1
+        named[hx] = place
     own_named = set(named)  # the stale-list warning counts its own lines only (the default's may not be in its pictures)
-    for (sec, k), v in pc.items():
-        if sec == "Colors":
-            for hx in v.split():
-                named.setdefault(hx.upper(), k.capitalize())  # a variant's colour map: the default's, its own over it
+    for hx, place in places(pc):
+        named.setdefault(hx, place)  # a variant's colour map: the default's, its own over it
     donkey_cols = set()
     if over and parent:
         # over its default: the default's pictures are under it (the donkey's are not)
@@ -232,11 +239,11 @@ def main(pack):
     kept = sorted(h for h in clash if h not in named)
     under_name = "default" if parent else "donkey"
     if fight:
-        warn.append(f"{len(fight)} colour(s) named in [Colors] the {under_name} itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
+        warn.append(f"{len(fight)} colour(s) named in [Colors] or a tone the {under_name} itself has: {', '.join(fight)} (one colour can be in one region only; draw them a shade apart)")
     if kept:
         info.append(f"{len(kept)} colour(s) of the {under_name}'s own, kept: {', '.join(kept)} (" + ("they are the default's colours: its regions reach them, Coat when unnamed" if parent else "they follow the donkey's colour settings and the skin's [Base.*], as the donkey's pixels do") + ")")
     if missing:
-        warn.append(f"[Colors] names {len(missing)} colour(s) no picture has: {', '.join(sorted(missing))}")
+        warn.append(f"[Colors] or [Tone.*] names {len(missing)} colour(s) no picture has: {', '.join(sorted(missing))}")
     if partial:
         warn.append(f"{partial} half-transparent pixel(s): pixel art should be fully on or off")
     if strays:
@@ -244,6 +251,24 @@ def main(pack):
     total = len(donkey_cols) + len([h for h in named if h in hexes]) if over else len(hexes)
     if total > 48:
         info.append(f"{total} colours to swap: over 48, so the game's colour cube recolours it instead of the exact swap (shaded art; docs/skins.md)")
+    # the colour cube (Colors.Rig.LutIndex: red and green rounded to 32 steps, blue floored): over 48 colours, or with the
+    # player's Lut setting, colours in one cell change together, so a tone's colour sharing a cell with any other colour
+    # of the look would be recoloured with it (docs/mount-colours.md 7.3)
+    def cube(rgb):
+        r, g, b = rgb
+        return (min(31, int(g / 255 * 31 + 0.5)), min(31, int(b / 255 * 31)), min(31, int(r / 255 * 31 + 0.5)))
+    # the colours under it: the donkey's, or a variant's default's in the default's own places (its regions and tones:
+    # one of its tone's shades beside the variant's shade of the same tone is that tone, not a clash)
+    look = {rgb: (named.get("%02X%02X%02X" % rgb) if parent else None) or "the " + under_name + "'s" for rgb in donkey_cols}
+    for h, rgb in hexes.items():
+        look.setdefault(rgb, named.get(h, "kept" if over else "Coat"))
+    in_cell = {}
+    for rgb, place in look.items():
+        in_cell.setdefault(cube(rgb), []).append((rgb, place))
+    for v in in_cell.values():
+        if len({p for _, p in v}) > 1 and any(p.startswith("Tone.") for _, p in v):
+            warn.append("a tone's colour shares a colour-cube cell with another colour of the look: " + ", ".join(f"{r:02X}{g:02X}{b:02X} ({p})" for (r, g, b), p in sorted(v)) + " (draw one of them a step apart)")
+            RESULT["errors"] += 1
 
     # frames where the donkey is drawn the same but the skin differs: likely one of them was missed (over skins only)
     groups = {}

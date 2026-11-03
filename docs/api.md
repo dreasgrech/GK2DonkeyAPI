@@ -259,6 +259,36 @@ Cart tuning key `LanternLightColor`.
 Changes show within a frame while mounted. A colour that isn't one of a region's `SourceColors` as a swap source
 does nothing.
 
+### A skin's own tones (unreleased)
+
+A skin may name parts of its drawing the player colours on their own (docs/mount-colours.md section 7; a pack's
+`[Tone.<id>]`, docs/skins.md): each an id, a name and its exact colours. They are not regions: `Mounts.ColorRegions`
+and a skin's `Regions` stay the five, and a tone has no tuning keys. A look sets them, and a settings page gives them
+rows:
+
+```csharp
+// a code skin's tones (a pack's skin.cfg says the same with [Tone.cloth] name = / colours =)
+def.Tones = new List<MountSkinTone> { new MountSkinTone("cloth", "Saddle cloth", "C41E38", "96122C", "3A0A12") };
+
+// the companion's look of that skin: a preset, or Custom with a hex
+MountTone t = companion.LookOf("donkey/me.fancy").Tone("cloth");
+t.Color = ToneColor.Custom;
+t.Custom = "2850B4";
+
+// a page's colour rows: inside PerSkin's body, a dropdown (and its custom colour) per tone of that skin
+page.PerSkin((skinId, mountId, sfx, shown) => page.ToneRows("Colours", skinId, sfx, companion));
+
+foreach (MountSkinTone tone in Mounts.Looks.Find("donkey/me.fancy").Tones) Logger.LogInfo($"{tone.Name}: {tone.Colours.Count} colours");
+```
+
+- `ToneColor`: `Game` (as drawn), `Red`, `Gold`, `Green`, `Blue`, `Purple`, `Pink`, `Brown`, `Black`, `White`,
+  `Custom`. A preset gives the tone its hue and saturation over each pixel's own shading, as light against the
+  tone's art as the colour itself is.
+- `ToneRows` keys: `Tone.<id><suffix>`, `CustomTone.<id><suffix>`, `CustomTone.<id>Lightness<suffix>`. The row's label is
+  the tone's name, translated by the skin's owner (`skin.<skin id>.tone.<id>.name`); the other words are the API's.
+- A tone the worn skin doesn't have changes nothing; the companion applies the worn skin's tones to its mount, its
+  babies and the Mounts panel's picture.
+
 ## Donkeys and carts in the world (0.6.0)
 
 Besides the one summoned under the keeper (`TryMount`), the core keeps any number of donkeys and carts standing in
@@ -1093,6 +1123,9 @@ History:
   starts it at 0 unless its line says `start` (it inherited the base's `MountSoundStart` before; docs/mount-sounds.md),
   and `Sounds.PlayId` drops a start offset at or past the clip's end with one warning instead of seeking past it.
   The `DismountIndoors` setting's text says the cart has no collider indoors.
+- Unreleased (additions only, so a minor; `tests/ApiSurface`): **a skin's own tones** (section "A skin's own tones"):
+  `MountSkinTone`, `MountSkinDef.Tones`, `MountSkinInfo.Tones`, `ToneColor`, `MountTone`, `MountLook.Tone(id)`,
+  `MountSettingsPage.ToneRows`; skin.cfg `[Tone.<id>]`.
 - 0.43.0 (2026-11-01): no change to the public surface. **Translations** (section "Translations"): a page's rows,
   sections and title, a mount's and a skin's words (name, description, abilities) and the API's own (its windows, the
   keeper's bubbles, the prompts on foot, the crossroads notification) are looked up in `Languages/<id>.csv` beside the

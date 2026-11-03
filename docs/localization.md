@@ -770,7 +770,9 @@ the chest's two.
 
 ### Step 3: the packs' texts
 
-**What:** a mount's `name` and `description` (`mount.cfg`) and a skin's `name` (`skin.cfg`).
+**What:** a mount's `name` and `description` (`mount.cfg`) and a skin's `name` (`skin.cfg`); since 2026-11-03 also
+the names of a skin's own tones (`[Tone.<id>] name =`, the labels of their dropdowns in the colours window;
+docs/mount-colours.md section 7), whose choice words are the API's.
 
 - Saddle Up's built-in Gerry is Saddle Up's.
 - The Dragon, Red Dragon, Hellfire, Royal Parade and Armored are their packs'.
@@ -778,7 +780,9 @@ the chest's two.
 **Owner:** the plugin that registered the mount or skin. The API already keeps it (`Looks.SkinDef.Owner`; the
 catalogue's mounts likewise), so the lookup needs no new knowledge and the layering holds.
 
-**Keys:** `mount.<mount id>.name`, `mount.<mount id>.description`, `skin.<skin id>.name`.
+**Keys:** `mount.<mount id>.name`, `mount.<mount id>.description`, `skin.<skin id>.name`,
+`skin.<skin id>.tone.<tone id>.name` (by the skin that declares the tone: a variant's tone taken from its default is
+the default's line).
 
 **Files:** in the pack's own `Languages/`, beside its DLL. The packs embed their cfgs, but a translation file is loose
 like anyone's.

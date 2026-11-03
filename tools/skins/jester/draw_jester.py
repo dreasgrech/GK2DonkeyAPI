@@ -18,8 +18,9 @@ near-black outline, flat pure red and blue, a hat as big as the head, nothing mo
 - head@bdy_turn_left_02.png, head@bdy_graze_left_02.png: the side cap posed by the poll and the muzzle;
 - head_turn.png, head_front.png (turn 04 as drawn) and head_down.png: the cap's other views.
 
-Colours: the burgundy is Harness, the navy the Second tone; gold only on the band and the bells. The donkey's strap is
-tinted the burgundy under the skin ([Base.Harness]).
+Colours: the burgundy and the navy are the skin's two tones (skin.cfg [Tone.motley1], [Tone.motley2]; each its own row
+in the colours window); gold only on the band and the bells. The donkey's strap is tinted the burgundy under
+the skin ([Base.Harness]), and the Harness row reaches it only.
 
     python -I tools/skins/jester/draw_jester.py [--into <folder>]   # then: python -I tools/skins/stamp.py build ...
 
@@ -37,8 +38,8 @@ from anatomy import body, load, rig
 from shapes import curve, pendulum, polygon, pose, save, side, stroke
 
 hexc = lambda h: (int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), 255)
-BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A")]   # edge, shade, base, lit, light: Harness
-NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8")]   # the Second tone (Muzzle)
+BURG = [hexc(h) for h in ("3A0A14", "641A28", "862534", "A23444", "C2485A")]   # edge, shade, base, lit, light: the tone motley1
+NAVY = [hexc(h) for h in ("141A3A", "243266", "34488A", "4E66A8", "6E86C8")]   # the tone motley2
 GOLD = [hexc(h) for h in ("5A3A0A", "966414", "E2A830", "FFD652")]             # edge, shade, base, light: as drawn
 STANDING = "bdy_static_left"
 ERASE = (255, 0, 255, 255)   # skin.cfg's erase colour: clears the donkey under it

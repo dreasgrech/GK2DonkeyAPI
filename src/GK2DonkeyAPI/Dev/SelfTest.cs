@@ -207,6 +207,7 @@ namespace GK2DonkeyAPI
             new Scenario { Group = GroupLooks, Name = "skins and mounts: the changed events", Body = ChangedEvents },
             new Scenario { Group = GroupLooks, Name = "skin: a game-source skin with no frames is set aside, the donkey comes, offered again when they are there", Body = AsideSkin },
             new Scenario { Group = GroupLooks, Name = "colours: a skin over the donkey keeps the donkey's regions", Body = SkinOverColours },
+            new Scenario { Group = GroupLooks, Name = "colours: a skin's own tones, each its own colour and its own rows", Body = ToneTests.Tones },
             new Scenario { Group = GroupLooks, Name = "over skin: the erase colour clears the donkey under it", Body = SkinOverErase },
             new Scenario { Group = GroupLooks, Name = "skin pack: read again by itself when its files change (dev switch)", Body = SkinPackAutoReload },
             new Scenario { Group = GroupFlying, Name = "landing: the walk-away test (the keeper's own ground, a walled pen, the cap's time)", Body = FlightWalkAway },

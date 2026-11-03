@@ -169,9 +169,11 @@ namespace GK2DonkeyAPI
             internal bool OwnColours = true;   // false: drawn in the base's palette colours (Colors recolours it with the base's own region map)
             // [Colors] (docs/mount-colours.md): the skin's own colours by mount region (Dark, Muzzle, Eye, Harness; every
             // colour not named is Coat), hex upper case. The colours themselves are collected from the pictures as the
-            // sheet is built (Loaded.Put); this only says which of them aren't Coat.
+            // sheet is built (Loaded.Put); this only says which of them aren't Coat. A skin's own tones' colours are here
+            // too, under "tone.<id>" (SkinTones; [Tone.<id>]).
             internal Dictionary<string, HashSet<string>> ColorRegions;
-            internal bool Over;               // true: drawn over the base, which stays visible
+            internal List<SkinTones.ToneDef> Tones; // its own tones in their order (docs/mount-colours.md section 7); null: none
+            internal bool Over;              // true: drawn over the base, which stays visible
             // A skin over the base may erase from it: every pixel of this colour in a picture makes the base transparent
             // there (the ears gone under horns, the tail gone under another). Such a frame is built whole at load (the
             // base's own frame with the holes, the picture's other pixels on top) and drawn in the base's place; a frame
@@ -750,20 +752,28 @@ namespace GK2DonkeyAPI
             }
             if (key == null) throw new FormatException($"{where}: [Colors] {region} is not a mount region ({string.Join(", ", Colors.MountRegionKeys)})");
             if (key == "Coat") throw new FormatException($"{where}: [Colors] Coat is every colour not named under another region; don't list it");
+            AddRegionColours(d, key, "[Colors] " + key, value, where);
+        }
+
+        // A region's or a tone's colours (SkinTones.Add): every one RRGGBB and in one place only (a region or a tone).
+        internal static void AddRegionColours(SkinDef d, string key, string label, string value, string where)
+        {
             if (d.ColorRegions == null) d.ColorRegions = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
             if (!d.ColorRegions.TryGetValue(key, out HashSet<string> set)) d.ColorRegions[key] = set = new HashSet<string>(StringComparer.Ordinal);
             foreach (string tok in value.Split(new[] { ' ', ',', '\t' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 string hex = tok.TrimStart('#').ToUpperInvariant();
                 if (hex.Length != 6 || !int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out _))
-                    throw new FormatException($"{where}: [Colors] {key}: '{tok}' is not a colour (RRGGBB)");
+                    throw new FormatException($"{where}: {label}: '{tok}' is not a colour (RRGGBB)");
                 foreach (var other in d.ColorRegions)
                 {
-                    if (other.Key != key && other.Value.Contains(hex)) throw new FormatException($"{where}: [Colors] {hex} is under {other.Key} and {key}; one region per colour");
+                    if (other.Key != key && other.Value.Contains(hex)) throw new FormatException($"{where}: {hex} is under {PlaceOf(other.Key)} and {PlaceOf(key)}; one place per colour (a region or a tone)");
                 }
                 set.Add(hex);
             }
         }
+
+        private static string PlaceOf(string key) => SkinTones.IsTone(key) ? "[Tone." + key.Substring(SkinTones.Prefix.Length) + "]" : "[Colors] " + key;
 
         // skin.cfg: "key = value" lines, "#" comments, a section line ignored. bytes(file) reads a file of the pack;
         // fileNames lists its files (the PNGs are the frames, unless the cfg names a sheet).
@@ -782,6 +792,9 @@ namespace GK2DonkeyAPI
             var game = new Dictionary<string, string>(StringComparer.Ordinal); // [Game]: prefix, scale, and base key = game frame lines
             string source = null;
             var unknownSections = new List<string>();
+            // [Tone.<id>] sections (SkinTones): name and colours per tone, in the file's order, added after the file is read
+            var toneOrder = new List<string>();
+            var toneLines = new Dictionary<string, string[]>(StringComparer.Ordinal);
             foreach (string raw in text.Split('\n'))
             {
                 string line = raw.Trim();
@@ -794,6 +807,15 @@ namespace GK2DonkeyAPI
                     if (c >= 0) line = line.Substring(0, c).Trim();
                     section = line.Trim('[', ']', ' ').ToLowerInvariant();
                     if (section == "mount" || section.StartsWith("mount.", StringComparison.Ordinal) || section == "jump") mountSections.Add(section); // the jump is the creature's, not its look's
+                    else if (section.StartsWith(SkinTones.Prefix, StringComparison.Ordinal))
+                    {
+                        string toneId = section.Substring(SkinTones.Prefix.Length);
+                        if (!toneLines.ContainsKey(toneId))
+                        {
+                            toneLines[toneId] = new string[2];
+                            toneOrder.Add(toneId);
+                        }
+                    }
                     else if (section != "skin" && section != "tuning" && section != "tuning.ride" && section != "tuning.cart" && section != "game" && section != "sounds" && section != "sounds.ride" && section != "sounds.cart" && section != "sounds.baby" && section != "colors" && !section.StartsWith("base.", StringComparison.Ordinal)) unknownSections.Add(section);
                     continue;
                 }
@@ -810,6 +832,19 @@ namespace GK2DonkeyAPI
                     if (d.BaseRegions == null) d.BaseRegions = new Dictionary<string, Colors.RegionTweak>(StringComparer.Ordinal);
                     if (!d.BaseRegions.TryGetValue(region, out Colors.RegionTweak tweak)) d.BaseRegions[region] = tweak = new Colors.RegionTweak();
                     if (!tweak.Set(key, value)) d.Report += $"[{section}] {key} = {value}: not a recolour knob or value, ignored; ";
+                    continue;
+                }
+                if (section.StartsWith(SkinTones.Prefix, StringComparison.Ordinal))
+                {
+                    // [Tone.<id>] (its section line made its entry): name = the row's label, colours = the tone's colours (colors too)
+                    string[] tone = toneLines[section.Substring(SkinTones.Prefix.Length)];
+                    switch (key.ToLowerInvariant())
+                    {
+                        case "name": tone[0] = value; break;
+                        case "colours":
+                        case "colors": tone[1] = tone[1] == null ? value : tone[1] + " " + value; break;
+                        default: d.Report += $"[{section}] {key}: not a tone's key (name, colours), ignored; "; break;
+                    }
                     continue;
                 }
                 switch (section)
@@ -909,6 +944,17 @@ namespace GK2DonkeyAPI
             {
                 d.Report += "[Base.*] is for layer = over only (a recolour of the donkey under the skin), ignored; ";
                 d.BaseRegions = null;
+            }
+            foreach (string toneId in toneOrder) SkinTones.Add(d, toneId, toneLines[toneId][0], toneLines[toneId][1], where);
+            if (!d.OwnColours && d.Tones != null)
+            {
+                d.Report += "[Tone.*] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
+                if (d.ColorRegions != null)
+                {
+                    foreach (SkinTones.ToneDef t in d.Tones) d.ColorRegions.Remove(SkinTones.KeyOf(t.Id)); // a tone without colours has none here
+                    if (d.ColorRegions.Count == 0) d.ColorRegions = null;
+                }
+                d.Tones = null;
             }
             if (!d.OwnColours && d.ColorRegions != null) d.Report += "[Colors] is for a skin in its own colours (colours = own); a palette skin takes the donkey's regions, ignored; ";
             if (unknown.Count > 0) d.Report += "unknown keys ignored: " + string.Join(", ", unknown) + "; ";
@@ -1989,6 +2035,7 @@ namespace GK2DonkeyAPI
                 {
                     foreach (var kv in Def.ColorRegions)
                     {
+                        if (!ColoursByRegion.ContainsKey(kv.Key)) ColoursByRegion[kv.Key] = new List<Color32>(); // a tone's (SkinTones)
                         foreach (string hex in kv.Value)
                         {
                             int v = int.Parse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture);
@@ -2005,7 +2052,7 @@ namespace GK2DonkeyAPI
                     string region = named.TryGetValue(v, out string r) ? r : Def.Over ? null : Def.OverDefault && (ParentColours == null || !ParentColours.Contains(v)) ? null : "Coat";
                     if (region != null) ColoursByRegion[region].Add(c);
                 }
-                if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{Def.Id}' [Colors] names {missing.Count} colour(s) its pictures don't have ({string.Join(", ", missing)}); they map nothing.");
+                if (missing.Count > 0) Plugin.Log.LogWarning($"Looks: skin '{Def.Id}' [Colors] or [Tone.*] names {missing.Count} colour(s) its pictures don't have ({string.Join(", ", missing)}); they map nothing.");
             }
 
             // Whether a [Colors] line is the skin's own (not one of its default's it took).

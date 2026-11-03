@@ -55,6 +55,19 @@ mount.donkey.name,Donkey,Donkey,
 mount.donkey.description,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.","The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
 colours.title,Colours: {0},Colours: {0},"the colours window's title; {0}: the mount's name"
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+colours.tone_game,Game default,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.tone_red,Red,Red,a colour for a part of a skin
+colours.tone_gold,Gold,Gold,a colour for a part of a skin
+colours.tone_green,Green,Green,a colour for a part of a skin
+colours.tone_blue,Blue,Blue,a colour for a part of a skin
+colours.tone_purple,Purple,Purple,a colour for a part of a skin
+colours.tone_pink,Pink,Pink,a colour for a part of a skin
+colours.tone_brown,Brown,Brown,a colour for a part of a skin
+colours.tone_black,Black,Black,a colour for a part of a skin
+colours.tone_white,White,White,a colour for a part of a skin
+colours.tone_custom,Custom,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
+colours.tone_custom_colour,{0}: custom colour,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
+colours.tone_lightness,{0}: lightness,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 speed.very_slow,Very slow,Very slow,a mount's speed in the journal's stats
 speed.slow,Slow,Slow,
 speed.normal,Normal,Normal,

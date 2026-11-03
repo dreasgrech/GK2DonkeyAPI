@@ -937,7 +937,7 @@ namespace GK2DonkeyAPI
             MountSettingsPage.Row stale = null;
             foreach (MountSettingsPage.Row r in page.Rows)
             {
-                if (!page.InOptions(r) || r.LabelWord != null || string.IsNullOrEmpty(r.Label) || r.RowKind == MountSettingsPage.RowKind.Note) continue;
+                if (!page.InOptions(r) || r.LabelWord != null || r.LabelOf != null || string.IsNullOrEmpty(r.Label) || r.RowKind == MountSettingsPage.RowKind.Note) continue;
                 if (r.Visible != null && !r.Visible()) continue;
                 if (chosen.Count < 4) chosen.Add(r);
                 else if (stale == null && (r.ShownSection ?? r.Section) == (chosen[0].ShownSection ?? chosen[0].Section)) stale = r;

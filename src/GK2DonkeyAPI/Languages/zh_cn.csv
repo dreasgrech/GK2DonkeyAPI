@@ -55,6 +55,19 @@ mount.donkey.name,毛驴,Donkey,
 mount.donkey.description,墓地里最有耐心的劳工。它运过的尸体比村里任何人都多，而且对每一具都有自己的看法。,"The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
 colours.title,颜色：{0},Colours: {0},the colours window's title; {0}: the mount's name
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+colours.tone_game,游戏默认,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.tone_red,红色,Red,a colour for a part of a skin
+colours.tone_gold,金色,Gold,a colour for a part of a skin
+colours.tone_green,绿色,Green,a colour for a part of a skin
+colours.tone_blue,蓝色,Blue,a colour for a part of a skin
+colours.tone_purple,紫色,Purple,a colour for a part of a skin
+colours.tone_pink,粉色,Pink,a colour for a part of a skin
+colours.tone_brown,棕色,Brown,a colour for a part of a skin
+colours.tone_black,黑色,Black,a colour for a part of a skin
+colours.tone_white,白色,White,a colour for a part of a skin
+colours.tone_custom,自定义,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
+colours.tone_custom_colour,{0}：自定义颜色,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
+colours.tone_lightness,{0}：亮度,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 speed.very_slow,极慢,Very slow,a mount's speed in the journal's stats
 speed.slow,慢速,Slow,
 speed.normal,正常,Normal,

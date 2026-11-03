@@ -170,6 +170,9 @@ namespace SaddleUp
                 p.EnableWhen("Colours", "Muzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
                 p.Color("Colours", "CustomMuzzle" + sfx, "Custom second tone", "Used when the second tone is Custom.", PaletteColor.Chestnut, v => look.CustomMuzzle = v, () => muzzle.Value == MuzzleColor.Custom);
                 p.EnableWhen("Colours", "CustomMuzzle" + sfx, () => MountSettingsPage.SkinHasRegion(skinId, "Muzzle"));
+                // the skin's own tones, after the mount's three (the user, 2026-11-03: "the skin can introduce its own color
+                // tones depending on what it needs"): whatever the skin declares, a row each; none here by name
+                p.ToneRows("Colours", skinId, sfx, me);
             });
             p.Heading("Colours", "Cart colours");
             p.PerSkin((skinId, mountId, sfx, shown) =>

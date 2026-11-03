@@ -55,6 +55,19 @@ mount.donkey.name,당나귀,Donkey,
 mount.donkey.description,"묘지에서 가장 참을성 많은 일꾼입니다. 마을의 누구보다 많은 시체를 실어 날랐고, 시체 하나하나에 대해 할 말이 있죠.","The graveyard's most patient worker. It has carried more corpses than anyone in the village, and has opinions on each.",
 colours.title,색상: {0},Colours: {0},the colours window's title; {0}: the mount's name
 colours.title_skin,{0} - {1},{0} - {1},"the colours window's title with a skin; {0}: the title above, {1}: the skin's name"
+colours.tone_game,게임 기본값,Game default,a colour for a part of a skin (one of its own tones): the skin as drawn
+colours.tone_red,빨간색,Red,a colour for a part of a skin
+colours.tone_gold,금색,Gold,a colour for a part of a skin
+colours.tone_green,초록색,Green,a colour for a part of a skin
+colours.tone_blue,파란색,Blue,a colour for a part of a skin
+colours.tone_purple,보라색,Purple,a colour for a part of a skin
+colours.tone_pink,분홍색,Pink,a colour for a part of a skin
+colours.tone_brown,갈색,Brown,a colour for a part of a skin
+colours.tone_black,검은색,Black,a colour for a part of a skin
+colours.tone_white,흰색,White,a colour for a part of a skin
+colours.tone_custom,사용자 지정,Custom,"a colour for a part of a skin: the player's own, picked in the row under it"
+colours.tone_custom_colour,{0}: 사용자 지정 색상,{0}: custom colour,"the row to pick one's own colour for a part of a skin; {0}: the part's name (the skin's)"
+colours.tone_lightness,{0}: 밝기,{0}: lightness,"the row under it that makes that colour lighter or darker; {0}: the part's name"
 speed.very_slow,매우 느림,Very slow,a mount's speed in the journal's stats
 speed.slow,느림,Slow,
 speed.normal,보통,Normal,
