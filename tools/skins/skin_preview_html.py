@@ -382,6 +382,13 @@ def main(argv):
         cfg = read_cfg(os.path.join(p, "skin.cfg"))
         frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
         add(skinroots.full_name(p), cfg.get(("Skin", "name"), d), cfg, frames, source, p, skinroots.mount_of(p), mount_cfg_of(p))
+    # a study installed in the game to be seen there (a loose copy in plugins\gk2mounts) is one card, the study's: by
+    # its mount and its name (two Jester cards, 2026-11-03)
+    study_names, installed = {}, set()
+    for p in studies:
+        if os.path.isfile(os.path.join(p, "skin.cfg")):
+            c = read_cfg(os.path.join(p, "skin.cfg"))
+            study_names[(c.get(("Skin", "mount"), "donkey"), c.get(("Skin", "name"), os.path.basename(p)))] = p
     # 3. the packs in the game (plugins\gk2mounts\<mount>\ and plugins\<Pack>\gk2mounts\<mount>\), not the repo's own
     #    packs, already shown above (a copy linked or unzipped from packs/<Pack>)
     plugins = os.path.normpath(os.path.join(probe, "..", "plugins"))
@@ -399,12 +406,15 @@ def main(argv):
                 if os.path.isfile(os.path.join(p, "skin.cfg")):
                     cfg = read_cfg(os.path.join(p, "skin.cfg"))
                     frames = frames_from_sheet(p, cfg) if ("Skin", "sheet") in cfg else frames_from_folder(p)
+                    if (m, cfg.get(("Skin", "name"), d)) in study_names:
+                        installed.add(study_names[(m, cfg.get(("Skin", "name"), d))])
+                        continue
                     add(m + "/" + d, cfg.get(("Skin", "name"), d), cfg, frames, "pack in the game", p, m, mount_cfg_of(p))
     # 3b. studies: skin folders being drawn (a generator's output in a temp folder), shown with their mount
     for p in studies:
         if os.path.isfile(os.path.join(p, "skin.cfg")):
             cfg = read_cfg(os.path.join(p, "skin.cfg"))
-            add(cfg.get(("Skin", "mount"), "donkey") + "/" + os.path.basename(os.path.normpath(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (not in the game)", p)
+            add(cfg.get(("Skin", "mount"), "donkey") + "/" + os.path.basename(os.path.normpath(p)), cfg.get(("Skin", "name"), os.path.basename(p)), cfg, frames_from_folder(p), "a study (also in the game, a loose copy)" if p in installed else "a study (not in the game)", p)
     # 4. recipes drawn to pictures
     for rid, folder in sorted(recipes.items()):
         if os.path.isdir(folder):

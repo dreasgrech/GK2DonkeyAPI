@@ -499,6 +499,101 @@ Development:
     him (23 of its 110 pixels under his arm).
   - **`page_frames.py`** draws a skin's front layer over each frame (it showed the main picture alone), and
     `--rider` puts the page's rider between the two, as its Rider button does.
+- **The Jester's cap smaller** (the user, a marked screenshot: "the jester hat is too big from the back and that
+  exceeds the donkeys head from the back, so i think it needs to be scaled down"). Measured against the donkey's
+  head alone (the game's `hed_static_down`): the cap was 28 px long over a 22 px head, its back 3-8 px past the head's
+  back at the poll (rows 34-36), the band running on behind the head. `draw_jester.smaller`: every view's cap 0.8 as
+  tall, its points 0.8 as long and thick; the side cap also 0.8 as long, about the brow, so the band ends on the head's
+  back (+2, -1, -3 px at rows 35-37) and the cap is 24 px long. The front and three-quarter caps keep their width,
+  the head's (0.9 as wide, the three-quarter cap left the far ear lying back in view). A fresh review then found the
+  graze cap (the front cap tilted down with the head) still as wide as the front one, its navy half 8-12 px behind
+  the poll over the neck and the collar strap's loop: it is its own now (`DOWN`), 0.65 as wide, its middle moved two
+  columns forward onto the skull (the lowered head's ear bases are 4 px apart, 11 facing us).
+  - **The side cap ends at the poll** (the user, on both cards, their purple mark again: "cant u see they both extend
+    to the harness at the back?"). Scaled, its back still ran to x 45-47, against the collar strap's top (45, 39): the
+    first measure took the head sprite's back outline, which reaches the strap, for the head's back. Its navy half's
+    back now comes down from the crown at x 42 (the poll is at (41, 34)), the band ends there, and the navy point rises
+    from the crown and hangs back over the ears, its bell at x 43-44, rows 31-34; behind the cap the head's back and
+    then the strap show. The three-quarter and front caps are as wide as before (the far ear lies back under the
+    three-quarter one).
+  - **Then narrower and centred over the head** (the user: "now align its center better but also make it a bit smaller
+    width wise even"): cut at the poll, its middle sat 2 px before the middle of the head's top (the forehead at x 30
+    to the head's back at 45) and the burgundy point hung far over the face. `narrowed`: 0.85 as long about its
+    middle, two columns back: the body x 32-43 (11 px, was 13), the band's front end off the brow (the top of the
+    forehead shows in front of it), the navy bell over the ears at x 44-46, rows 30-33, above the strap's top.
+  - **Then into the box the user marked** (orange over a walk frame of the page's card, the cap as it was in blue:
+    "your hat is aligned in the blue box but im thinking more around the orange box"): `fitted` takes the side cap
+    from x 28-46, rows 26-38 (its bells too) into x 32-44.5, rows 25-35.5 on the standing frame, its points' thickness
+    with it: a smaller cap sitting on the head's top, both points rising from it, the band at rows 33-36. The
+    three-quarter, front and graze caps are not changed yet, so the cap grows as the head turns to us.
+  - **The collar burgundy** (its band; its points navy, burgundy, navy): the user, on the page, "the cap still looks
+    huge, extending the back". The collar's band was navy, under the cap's navy back point: the two read as one blue
+    shape about 25 rows tall, the cap running on down the neck. Burgundy, the collar is the strap's own colour (the
+    skin tints the strap burgundy) and the navy stops at the cap's gold band. A card "Jester (cap 70%)" beside it on
+    the page, the cap smaller still, for the user's pick, removed once the cap's back was cut at the poll.
+- **The Jester's cap placed by hand in Aseprite** (`tools/skins/jester/place.py`, `Place Jester.cmd`; the user: "make it
+  work by layer in aseprite so that i try moving it by hand for one image and see how that works"; docs/sprite-tools.md
+  "Placing a piece by hand"): `out/place.aseprite` has a frame per view of the cap (standing, turn 03, turn 05, graze
+  04) with the cap on a layer of its own; a save is measured (the cap layer's box against the one it was made with)
+  into `placement.json`, a move and a scale per view, which `draw_jester.py` applies to the cap's shapes, so the cap
+  is drawn again clean at that place and size in every frame drawn from that view; then the build and the page card.
+  Tested with a drag written into the file: (2, 1) on the side frame moved the side cap by (2, 1), no other view. The
+  first placement: the side cap 3 px forward and 1 px up (the user's blue box: "align it more towards the front of his
+  head like my blue box").
+- **The Jester's cloth reaches the harness** (the user, a screenshot with the bare shoulder filled in: "can you extend
+  the cloth on the donkeys back to go right under the harness itself? ... so that none of the donkeys back is shown
+  due to the cloth, and extend the bells appropriately too"). Measured first: the cloth moves with the body and the
+  collar strap with the neck, and in the walk the strap runs 2-4 px ahead of the cloth and up to 2 lower (stamp's
+  neck and body moves), so a strip of the shoulder up to 5 px wide showed there (standing, only the strap's dark back
+  edge and a wedge over the hem). `draw_jester.tucked`: every side frame's cloth its own (body@ for all 41 frames but
+  turn 04-06), carried forward on each row to just behind that frame's own strap (its orange) down to the hem, its
+  colours and quarters continued from an inner column, edged where it meets the donkey; one more hem point (x 45)
+  and a bell under every point, four (two before). Not in turn 04-06, where the strap turns to us: the chest shows
+  between the collar and the cloth there.
+  - **A dark bar inside it, fixed** (the user: "many frames have horrible artifacts, very bad artifacts, like walk_04",
+    marked; "Is the process we wrote not good enough to be able to spot these artifacts?"). The walk's and the lips'
+    sway move the cloth's lower rows a column; `tucked` filled to the unswayed front, so the gap left at the old
+    front edge counted as outside and both its sides were outlined in the darkest: a bar 2 px wide, 4-5 rows tall in
+    walk 04-06, and a 2 px line at the new part's top in 35 frames. Each row now fills to its own front. Not caught
+    because the zoomed look covered the standing frame and walk 03, the two where the hem does not sway, and no check
+    looked for it. The new part has a fold of its own (x 42, ten columns before the cloth's first, a shade darker), as
+    the user asked ("needs another one of those vertical cuts on the extended part to make it like the rest"); at
+    x 42 it lay under the collar's bells, so it is at 47 (the cloth's vertical lines are 5 apart), moving with its
+    row's sway.
+  - **What a fresh review of every frame then found, fixed:** the hem's bells were placed by the swing's numbers and
+    hung a row under their tips where the swing lifted a point (a gap; more of them with a bell under every point):
+    each now hangs from its point's lowest pixel; points a frame apart swung into each other and their bells touched,
+    so the hem's points swing together (the new front one too, and with the hem's sway); the donkey's back poked 1-2 px
+    above the cloth's top behind the collar in the walk (the back line's bumps), now covered; the new part had a
+    second outline against the strap's own dark edge (a seam 3 px thick in graze 02-03), now the strap's edge alone.
+  - **The collar: two bold points instead of three thin ones** (fanned at 70 and 118 degrees, 8 px long, 5.5 wide):
+    three thin points (4 wide, 4.5 long) hanging nearly the same way from a band about 10 px long had their bells
+    touching in 36 of 38 frames, stacked into one gold bar in graze 05, and the band hid all but 2-5 px of each, so a
+    point shrank to a stub or vanished as it swung (walk 08, graze 04-05). Measured over every frame's collar
+    (pixels showing per point, tips' moves, bells touching): three fanned still left a point under 4 px or two bells
+    touching; two bold ones show 6 px or more in every frame and no bells touch. `collar` also turns its points
+    with the band where a pose turns it (the graze), swings each across itself on a pendulum's arc (straight across
+    the frame, a slanted point swung out of shape in walk 02 and 06) and hangs each bell from its point's tip pixel.
+    The front-view collar (turn 04-06) keeps three points, fanned (125, 90, 55 degrees, 5.5 long): its bells ran
+    together in turn 04-05.
+  - **A third fresh review, fixed:** the hem's points were drawn again as a triangle to each frame's swung tip, so
+    they lost pixels and changed shape (dark nubs in walk 05, short in lips 06-09) and the swing's lift shortened them;
+    each is now its shape at rest, shaded at rest, sheared row by row by its swing (`hem_point`), no lift, and one
+    colour by its middle (the point over the cloth's split had changed colour as it swung across it). The collar's
+    points swing without the lift (a bell hopped in walk 04), and the band is shaded with the points as solid under
+    it (its underside shade ran as a dark bar across the navy point's top in walk 01, 07, 08 and lips 01, 11-13).
+- **`stamp.py build` fills pinholes**: a pixel neither the skin nor the donkey draws, all four neighbours drawn (one
+  the skin's), is filled (the donkey's darkest neighbour colour where it has one, else the skin's) and said in a note:
+  the Jester's walk 03 and 07 had one under the cloth's front corner, its front collar one beside a point.
+- **`stamp.py build` finds an outline left inside a piece**: in every frame, each piece's runs of two or more of a
+  `[Colors]` ramp's darkest along a row or a column, with lighter shades of that ramp at both ends and that ramp
+  on both sides across the run (a dark bar crossing one colour of the piece: a piece is outlined at its edge in its
+  darkest, its seams and folds a shade lighter). On the Jester's broken build it lists the bar in walk 04-06 and the
+  line in 35 frames; on the fixed one, nothing. A single pixel, a notch on an edge (the hem between two points) and a
+  line against another colour (a point against its bell) are the drawing's own and not listed.
+- **The preview page shows a study installed in the game once** (`skin_preview_html.py`): the Jester's loose copy in
+  `BepInEx\plugins\gk2mounts` (put there to be seen in the game) made a second "Jester" card; an in-game skin with a
+  study's mount and name is now left out and the study's card says "also in the game, a loose copy".
 - **No front picture for the head frames** (`stamp.py` leaves them out, `check_skin.py` warns about them). The
   Jester's cap showed thin dark stripes at night, only while the donkey stood idle and only at some stops (the user:
   "it only happens in the idle animation, never when grazing or running and also always at night"). Measured with

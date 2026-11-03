@@ -530,6 +530,13 @@ idle the game draws the head part over the standing body, and two front pictures
 (`tools/skins/jester/stamp.cfg`, 2026-11-03: the rider's arm covered its back point). `page_frames.py --rider` shows
 what a front layer covers of him.
 
+**What `build` checks in every frame before the pack checks** (2026-11-03, after the Jester's cloth kept a dark
+bar inside it that two looks at the standing frame and walk 03 missed):
+- an outline left inside a piece: a run of two or more of a `[Colors]` ramp's darkest across one colour of a piece
+  (lighter shades of that ramp at both ends and on both sides), listed as a note;
+- pinholes: a pixel neither the skin nor the donkey draws with all four neighbours drawn, filled (the donkey's
+  darkest neighbour colour where it has one, else the skin's) and listed.
+
 The commands (`python -I tools/skins/stamp.py ...`):
 
 - `build <source> [--out <folder>] [--stage "<card>"]`: the 44 frames into `<source>/out/pack` (or `--out`, a pack's
@@ -864,6 +871,45 @@ order met):
   as it is.
 - **Into the pack:** the Jester ships only with a yes. Then `stamp.py build tools/skins/jester --out <the pack's
   folder>`, a version and the pack's notes.
+
+### 6. Placing a piece by hand (built 2026-11-03: `tools/skins/jester/place.py`)
+
+The user, after six rounds of describing where the Jester's cap should sit ("your hat is aligned in the blue box but
+im thinking more around the orange box"): "how possible is it for me to be able to move layers by myself in some
+editor so that I can align all the pieces of the skin with a mouse drag and doing them for one image and you take it
+for the rest". `stamp.py template` already gives a drawing surface where a moved piece reaches every frame, but not
+for the Jester: its pieces are drawn by `draw_jester.py` (a run draws them again), most of its frames carry their
+own drawing of the cap (the bells' swing), and a scale in Aseprite resamples the pixels.
+
+So the hand placement is data the generator reads:
+- **`placement.json`** (beside the pieces): per view of the cap (`side`, `turn`, `front`, `down`) a move (`dx`, `dy`,
+  pixels of that view's frame) and a scale (`sx`, `sy`, about the cap's middle). `draw_jester.placed` applies it to
+  the cap's shapes after everything else, so the cap is drawn again there, clean, and every frame drawn from that
+  view follows (the side cap: the walk, the ear, chew and lips clips, turn 02 and graze 02, the swinging bells too).
+- **`place.py template`**: `out/place.aseprite` (git-ignored: the donkey's frames are the game's), a frame per view
+  (the standing frame, turn 03, turn 05, graze 04, tagged `side`, `turn`, `front`, `down`), two layers: the donkey
+  with the rest of the skin (locked, the ears cleared as the cap clears them now) and `cap`. The cap layers as made
+  and the placement then are kept in `out/place/`.
+- **`place.py import`**: Aseprite's command line exports the `cap` layer of each frame; each one's box against the
+  box it was made with gives the move (the middles) and the scale (the sizes), added to the placement it was made
+  with, into `placement.json`; then `draw_jester.py` and `stamp.py build --stage "Jester"`. The file is not changed:
+  every save is measured from the file as made, so move, save, look, move again. `template --force` makes it again
+  from the cap as it is now (after a round that is wanted).
+- **`place.py watch`** imports on every save; **`place.py edit`** (`Place Jester.cmd`) opens the file in Aseprite
+  (made first if missing) and watches.
+
+Tested without the window: the file imported untouched says "no change"; the side frame's cap layer written again
+moved by (2, 1) moved the side placement by (2, 1) and no other view. The box includes the bells, which are not
+scaled: a scale is read a little off, and the next drag corrects it. A cap dragged partly off the frame reads as
+smaller.
+
+The first placement in the file: the side cap 3 px forward and 1 px up (the user's blue box over a walk frame of the
+card, "align it more towards the front of his head like my blue box"); behind it the head's top and the near ear's
+base show.
+
+Not built: the collar and the cloth as layers (the same way: their shapes are the generator's too); a generic form
+for any generated skin (a generator naming its placeable parts); a stamp skin's hand-drawn pieces need none of this
+(`stamp.py template` moves them already; scaling them stays a redraw).
 
 ### Outside tools, looked at again (2026-11-03)
 

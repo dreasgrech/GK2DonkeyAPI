@@ -74,7 +74,8 @@ any pack (docs/skins.md "Erasing from the donkey").
                      buffer's step, so the two caps fought in stripes at night (measured, 2026-11-03).
 
 The output (default <source folder>\\out\\pack) is a pack folder: skin.cfg and a PNG per frame. Then
-tools/skins/check_skin.py and tools/skins/consistency.py run on it, and with --stage it goes onto the probe's
+tools/skins/check_skin.py and tools/skins/consistency.py run on it (and before them each frame's pieces are
+checked for an outline left inside them: inner_outlines, a note per frame), and with --stage it goes onto the probe's
 skins-preview.html as its own card, beside every shipped skin.
 """
 import hashlib
@@ -321,6 +322,69 @@ def frame_of(key, pieces, per_frame, notes):
     return laid(frame_layers(key, pieces, per_frame, notes))
 
 
+def ramps_of(src):
+    """The skin's colour ramps ([Colors] lines of its skin.cfg), each a list of (r, g, b), darkest first."""
+    out, section = [], None
+    for line in open(os.path.join(src, "skin.cfg"), encoding="utf-8"):
+        t = line.split("#", 1)[0].strip()
+        if t.startswith("[") and t.endswith("]"):
+            section = t[1:-1].strip().lower()
+        elif section == "colors" and "=" in t:
+            cols = [tuple(int(h[i:i + 2], 16) for i in (0, 2, 4)) for h in t.split("=", 1)[1].split() if len(h) == 6]
+            if len(cols) > 2:
+                out.append(sorted(cols, key=lambda c: 0.3 * c[0] + 0.59 * c[1] + 0.11 * c[2]))
+    return out
+
+
+def inner_outlines(layers, ramps):
+    """Outlines left inside a piece: a run of two or more of a ramp's darkest along a row (or a column) with that
+    ramp's lighter shades at both its ends and that ramp on both sides across it all along (above and below it, or
+    left and right): a dark bar crossing one colour of the piece. A single pixel, or one against another colour (a
+    point's edge against its bell, a point's hook against its stem) is the drawing's own line. A piece is outlined at its edge in its own darkest, and its seams and folds
+    are a shade darker, never the darkest; a notch on its edge (the hem between two points) has the outside on one
+    side. The Jester's cloth, carried forward to the strap, kept its old front edge inside it, two pixels wide, where
+    the walk's sway had moved its rows (walk 04 and more, the user's mark, 2026-11-03). [(layer, (x, y))]."""
+    found = []
+    for name, art in layers:
+        for r in ramps:
+            dark = {q for q, c in art.items() if c[:3] == r[0]}
+            light = lambda q: q in art and art[q][:3] in r[1:]
+            for (ax, ay), (cx, cy) in (((1, 0), (0, 1)), ((0, 1), (1, 0))):   # runs along rows, then along columns
+                for q in dark:
+                    if (q[0] - ax, q[1] - ay) in dark:
+                        continue   # not the run's first pixel
+                    run = [q]
+                    while (run[-1][0] + ax, run[-1][1] + ay) in dark:
+                        run.append((run[-1][0] + ax, run[-1][1] + ay))
+                    ends = (q[0] - ax, q[1] - ay), (run[-1][0] + ax, run[-1][1] + ay)
+                    same = lambda q: q in art and art[q][:3] in r
+                    across = all(same((x + cx, y + cy)) and same((x - cx, y - cy)) for x, y in run)
+                    if len(run) >= 2 and light(ends[0]) and light(ends[1]) and across:
+                        found += [(name, p) for p in run]
+    return sorted(set(found))
+
+
+def pinholes(key, drawn):
+    """Pixels of a frame where neither the skin nor the donkey draws, with all four neighbours drawn (one of them the
+    skin's): a hole the size of a pixel or two between pieces, the background showing through (the Jester's walk 03
+    and 07, beside its collar's points in turn 05-06, a fresh review). {pixel: the colour to fill it with: its donkey
+    neighbours' darkest where it has one (a hole between a bell and a leg filled with the bell's gold joined the two),
+    else its skin neighbours' darkest}."""
+    don = load(key).convert("RGBA").load()
+    seen = lambda q: q in drawn or (0 <= q[0] < 96 and 0 <= q[1] < 96 and don[q][3] > 0)
+    out = {}
+    for x in range(1, 95):
+        for y in range(1, 95):
+            if seen((x, y)):
+                continue
+            around = [(x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)]
+            skin = [drawn[q] for q in around if q in drawn]
+            if skin and all(seen(q) for q in around):
+                own = [don[q] for q in around if q not in drawn]
+                out[(x, y)] = min(own or skin, key=lambda c: c[0] + c[1] + c[2])
+    return out
+
+
 def save_picture(picture, path):
     im = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
     px = im.load()
@@ -352,11 +416,20 @@ def build(src, out, stage=None):
     shutil.copy2(cfg, os.path.join(out, "skin.cfg"))
     erase = erase_of(src)
     front = front_of(src)
+    ramps = ramps_of(src)
+    inside = {}
     is_erase = lambda c: erase is not None and c[:3] == erase
     fronts = 0
     for key in ORDER:
         layers = frame_layers(key, pieces, per_frame, notes)
+        holes = pinholes(key, laid(layers))
+        if holes:   # filled in the main picture (laid last), said
+            layers = layers + [("pinholes", holes)]
+            notes.append(f"{key}: {len(holes)} pinhole(s) between the pieces filled "
+                         f"({', '.join(f'{x},{y}' for x, y in sorted(holes)[:4])})")
         drawn = laid(layers)
+        for name, q in inner_outlines(layers, ramps):
+            inside.setdefault((key, name), []).append(q)
         # the main picture as laid, the front layers in it too: the front picture ties with it in the depth test
         # when nobody rides (both OverLift above the body) and can sit a fraction of a pixel off it when ridden, so
         # what lies under it must be its own pixels (the donkey's ears showed over the Jester's cap on the foals,
@@ -377,6 +450,10 @@ def build(src, out, stage=None):
             notes.append(f"{key}: the erase colour clears {len(cut)} px of the harness (the collar strap's orange: "
                          f"{', '.join(f'{x},{y}' for x, y in cut[:4])}{' ...' if len(cut) > 4 else ''}): an ear's "
                          f"clearing reached the strap (the Jester's graze, 2026-11-03)?")
+    for (key, name), qs in sorted(inside.items()):
+        notes.append(f"{key}: an outline inside the {name} piece at {', '.join(f'{x},{y}' for x, y in sorted(qs)[:6])}"
+                     f"{' ...' if len(qs) > 6 else ''} ({len(qs)} px: its darkest with its lighter shades on both "
+                     f"sides; an edge left inside it?)")
     for n in notes:
         print("note:", n)
     print(f"stamped: {len(ORDER)} frames -> {out}"
