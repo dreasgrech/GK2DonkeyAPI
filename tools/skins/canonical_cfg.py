@@ -18,6 +18,7 @@ Run it after editing a cfg by hand, then tests/SkinsScan; --check runs in tools/
 that is not byte for byte in this layout. tools/skins/new_skin.py writes new files in this layout from the start.
 
     python -I tools/skins/canonical_cfg.py            # rewrites every pack cfg under src/*/assets/mounts (skinroots.py)
+    python -I tools/skins/canonical_cfg.py <skin.cfg> # rewrites that one (a skin's source outside the packs: stamp.py)
     python -I tools/skins/canonical_cfg.py --check    # says which files differ from their canonical text, writes nothing
 """
 import io, os, sys
@@ -204,8 +205,10 @@ def repeats_default(path):
 
 def main(argv):
     check = "--check" in argv
+    named = [a for a in argv if not a.startswith("--")]   # one cfg by path: a skin's source outside the packs (stamp.py)
+    todo = [(p, p, canonical_mount if os.path.basename(p) == "mount.cfg" else canonical) for p in named] or files()
     diff = 0
-    for label, path, fn in files():
+    for label, path, fn in todo:
         text = fn(path)
         current = io.open(path, encoding="utf-8", newline="").read()
         if fn is canonical:

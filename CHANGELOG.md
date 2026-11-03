@@ -315,6 +315,148 @@ Development:
   - Armored, in review: `body_of` takes the rig's hip, where the rump match said 64 in walk 04-06 for a rump at 65:
     those three frames change (its rump plate, rearmost lames, skirt rear and tail guard a column back); the phase
     checks ok. On the page as "Armored (in progress)".
+- **Draw once: `tools/skins/stamp.py`** (2026-11-03 night, the user: "continue working on the rig tool and any other
+  tools that can help us create skins/mounts in a more straight forward way to minimize guessing"; docs/sprite-tools.md
+  "Catching what the user caught" 4).
+  - **What it does:** a skin over the donkey is drawn as a few pictures and placed into all 44 frames by `rig.json`'s
+    points, with no rule of its own that finds the body:
+    - `body.png` is moved as one, by the hip and the middle move of the back line under it;
+    - `body_drape.png` is moved column by column;
+    - `head.png` and three head views follow the ear bases;
+    - `<piece>@<frame>.png` is for a single frame.
+  - **The commands:**
+    - `build`: the checks, then a card on the preview page;
+    - `moves`: where the body's top is a pixel off the back, and where a pattern would step, before anything is drawn;
+    - `template`: an `.aseprite` drawing surface in the skin's git-ignored `out\`;
+    - `export`: the layers back into the pieces;
+    - `watch`: export and build on every save.
+
+    `export` leaves a piece changed outside the template as it is and names it. `template` refuses to overwrite a
+    drawing without `--force`, and to write where git would take it.
+  - **`new_skin.py <skin> --stamp --pack <Pack>`** scaffolds such a skin in `tools/skins/<skin>/`: `skin.cfg`,
+    `.gitignore`, `Watch <Name>.cmd` and the template. The pack's folder is made only when it ships.
+  - **`ase_write.write`** takes a layer's opacity.
+  - **Proved on Royal Parade**, cut into pieces from its in-progress cut and staged as "Royal Parade (drawn once)":
+    - the crown is identical to the generator's in all 44 frames;
+    - the cloth is one shape in every frame with no slide;
+    - `check_skin.py` all good, `consistency.py` 0 frames;
+    - the gate review's three findings (all from the column moves and the strap below) are gone.
+- **What drawing the Jester asked of the tools** (2026-11-03 night, the user: "try it out by creating a new donkey skin
+  and create a full medieval jester skin ... so we can see how they help us and how we can improve them"; each was a
+  scratch script or a hand step first; docs/sprite-tools.md "Catching what the user caught" 4 and 5):
+  - **`stamp.py look`**: the pieces worn in chosen frames without a build, zoomed, with a grid, coordinates and the
+    rig's points, at 1x and 3x. About a second, where a build and a page cut take 20-60 s.
+  - **The donkey's moving parts under a head piece:** `moves` lists the frames, and the template's `moving (guide)`
+    layer shows them in magenta (`stamp.moving()`: the ears' flicks, the blinks, the mouth, which a cap hides in some
+    frames and not others).
+  - **`tools/skins/pixgrid.py`**: pixel art as text, a palette and grids at canvas coordinates. `render` makes a
+    piece; `dump` writes any picture's box as a grid, which is how the donkey's outline was read before drawing
+    against it.
+  - **`tools/skins/shapes.py`**: tapered strokes, outlines, lighting and a bell, shared (out of the Jester's drawing
+    script, byte for byte the same pieces).
+  - **`canonical_cfg.py <skin.cfg>`** rewrites one cfg by path (a source outside the packs).
+  - **`stamp.py build` prints the checker's warnings** (only its verdict before: "1 thing to look at" and no thing).
+  - **`new_skin.py --stamp`'s next steps:** `look`, the guide, and `[Colors]` by hand (`skin_colors.py` only walks
+    the packs).
+  - **`stamp.py`'s build split into `read_source` and `frame_of`**, which `look` shares; the pack the same.
+  - **`shapes.pose`**: a shape drawn on one frame turned and moved onto another by two rig points (the poll and the
+    muzzle), then drawn again, so a tilted head's piece keeps whole outlines (graze 02-05: -10 to -41 degrees).
+  - **The moving-parts guide compares the outline only**, and only in the clips whose head is the standing one moved.
+    Compared colour by colour, the walk's head, shaded differently all over, came out as one moving blob.
+  - **The template takes the source's one-frame drawings** (the Jester's posed caps): a frame each,
+    its layer that drawing; the frames it was made with are kept (`out/pieces.canvases.json`) and read by the export.
+  - **`stamp.py build` names an erase that clears the harness** (the collar strap's orange): the Jester's ears-off
+    variant cleared the strap's top in graze 02-05 once; checked with one planted over it.
+  - **`stamp.py views`**: the head piece in every frame by numbers (size, box, middle), each clip's neighbours
+    compared against both the poll's move and the face's: what the Jester's reviewers measured by hand, as a command.
+  - **`stamp.py look -`** shows the bare donkey's frames with coordinates and points (tonight's scratch scripts);
+    `views` is a report and never fails; **`tools/skins/royal-parade/drawn_once.py`** writes the drawn-once card's
+    source from the generator's frames and compares the two (it lived in the scratchpad before).
+  - **Moving head pieces with the face, tried and taken back:** the third review's turn 04 step led to moving by the
+    eyes and the muzzle instead of the ear bases (the two agree in every frame but turn 04 and the turned heads). The
+    fresh review of the Royal Parade drawn-once card then found its crown flicking a pixel left in turn 04, where the
+    face moves sideways and the forehead doesn't. stamp moves by the ear bases again; the Jester's turn 04 has its own
+    drawing, the same pixels under either rule.
+- **The Jester, in progress** (2026-11-03 night; docs/sprite-tools.md "Catching what the user caught" 5): a new
+  donkey skin made with the tools above, `tools/skins/jester/`. Not in a pack, staged as "Jester (in progress)".
+  - **The pieces:** a harlequin caparison (red and yellow diamonds 7 across, a yellow piping, three dags with a gold
+    bell each), and a parti-coloured two-pointed fool's cap with bells, the donkey's own ears rising behind it.
+  - **The cap's frames:**
+    - its side view, low on the forehead so the ear rises whole behind it;
+    - a three-quarter view, a front view (turn 04-06) and a grazing view (graze 04, used in 03-05);
+    - the side cap posed by the rig onto turn 02 and graze 02, which tilt 9-10 degrees.
+  - **Colours:** the reds Harness, the yellows the Second tone.
+  - **Checks:** `check_skin.py` all good and `consistency.py` 0 frames.
+  - **Six fresh gate reviews**, their findings fixed (the sixth on both cards):
+    - the first: the brim strand, the ear in a hook, graze 02 -> 03's change of hat, turn 03's front view, turn 04's
+      point;
+    - the second: the posed cap floating on the graze's upright ear, turn 03's flat band, the ears reading as lumps,
+      a bell against the strap, the cloth reading as one band.
+    - the third: turn 03's cap too tall, turn 04's cap a pixel low (now its own drawing), the ear's tip a pompom
+      and a wart, the graze cap thinner, the cloth reading as spots.
+    - the fourth: turn 03's yellow half standing up, the graze cap a headband with a ribbon (now the front cap's
+      shape on the skull's top), the hem's dags lost to the outline (now tabs with points), a dark band cutting the
+      lower diamonds, the bells and turn 04's cap stepping (turn 04 takes the front cap as drawn).
+    - the fifth: the brim's lone end pixel, the yellow diamonds' flat tips, the front bell on the collar; its ear
+      finding is the choice below.
+    - the sixth (both cards): graze 02's notch behind the cap, ear stubs beside the front cap, a nub on the graze
+      cap's peak, the ear clip frozen under the cap (the yellow point now lifts as the ear flicks), turn 03 a row
+      high. These last fixes were checked with `look`, the page cuts and the erase check, not by a seventh review.
+  - **A second card, "Jester (ears under the cap)"** (`draw_jester.py --ears-off`): the same skin with the donkey's
+    ears cleared above the cap along the moving-parts guide, for the user to choose (the ear behind the cap read as
+    a lump in ear 02-04 in three reviews; on a forehead cap that is a choice, not a bug).
+  - **Left:** the second review's lips 04-06 (the rig's ear points from Hellfire's table move in 05 only, the head's
+    top in 04 and 06 a pixel up in part).
+  - **The second design** (2026-11-04, the user on the two cards: "it looks like parade one with a messed up hat right
+    now, so not amazing"; docs/sprite-tools.md "Catching what the user caught" 5, part 12). One card, "Jester"; the
+    two first cards are gone.
+    - **The cap is the silhouette:** a fool's hood with two points arching up where the ears were (the ears cleared
+      under it), a bell on each. In the walk the tips trail the head's bob by a pixel. Graze 03-05 have the front hood
+      at full size, tilted with the head.
+    - **A collar behind the jaw:** a blue band with red and blue points hanging from it and a bell on each, the same
+      object in every view (a U under the chin from the front). Tried before it: a collar along the whole strap ("a
+      scarf"), ruffs of radiating points ("flags", "a bow tie").
+    - **The cloth lost Royal Parade's tells:** quartered red and blue, no gold trim along its top, its rear edge and
+      its hem cut into points, the hem's bells above row 60 (at hoof height they read as extra feet).
+    - **The donkey's own strap is tinted the motley's red** under the skin (`[Base.Harness]`), where its leather
+      showed between the pieces. The player's harness colour still reaches it on top.
+    - **Colours:** the red is Harness, the blue the Second tone; the hat's yellow band, the outline and the bells are
+      drawn as they are.
+    - **Four fresh blind reviews** (`page_frames.py --blind`, the pair with Royal Parade): each named the jester at
+      once and read the two as "a matched court pair (king and fool)". The first found the first design's cloth was
+      Royal Parade's block recoloured. Their findings on the cap, the graze, the hem, the collar's shape and stray
+      pixels were fixed.
+    - **Left for the user:** the collar's read from the side (the last review: "a bell strap hanging from the hat"),
+      the graze hat's tilt, the stepped brim of turn 02 and graze 02, and whether the head-only frames
+      (`hed_static_down`) double the collar over a walking body in the game.
+    - check_skin all good, consistency 0, no erase on the harness or below the poll.
+- **A collar piece in `stamp.py`: `neck.png`** (2026-11-04, for the Jester's second design; before it, "nothing can sit
+  on the neck").
+  - **It moves with the collar strap**, by the rig's chest point (the breast collar's lowest point). Measured first:
+    in the walk the strap moves 2-4 px forward of the body as one piece, and the chest point's move lays the
+    standing frame's strap on 47-50 of its 50 pixels in every frame but seven.
+  - **Where the strap bends** (graze 02-05, where the neck lowers, and turn 04-06, where the breast collar turns to
+    us; 29-42 of 50) the piece is left out unless drawn there (`neck@<frame>.png`), and the build says so
+    (`STRAP_BENDS`).
+  - It is laid between the body and the head; `moves` reports it; the template has a neck layer and frames for the
+    bends.
+- **`shapes.curve` and `shapes.polygon`**: a smooth path bent towards its middle points (a jester's point arching
+  over and drooping), and a polygon filled (a hood's outline, corner by corner, where a stroke can only round it).
+- **`page_frames.py --blind`**: the rows titled A, B ... instead of the skins' names, for a fresh reviewer asked
+  "which is a jester, and what tells you so?" beside a shipped skin. Six reviews of the Jester's first design had asked
+  only whether its pieces slide; the first blind one found its cloth was Royal Parade's block recoloured.
+- **The `[Colors]` comment `new_skin.py` and `skin_colors.py` write** says what an unnamed colour does by the skin's
+  layer: kept as drawn on an over skin (docs/skins.md), the Coat on a replace skin. It said Coat for every skin.
+- **The withers is behind the collar strap** (2026-11-03 night).
+  - **The cause:** `body()`'s collar column is the strap's dark rear edge in all 44 frames, running from above the
+    back (3C2A14, rows 39-44 standing). `rig.json` took its top as the withers, and stamp's back line took the
+    strap's top as the back's, so the cloth's front column dropped 2-3 px off its neighbours in the walk and graze.
+  - **The fix:** the withers is the first column behind the strap (`rig.py measure`; `rig.json`'s 41 body frames
+    imported). The back line starts there.
+  - **A new warning:** `stamp.py build` names a body pixel drawn on the strap, in front of the withers and above the
+    back. Royal Parade's cloth runs its outline 3 px up the strap, which stands as a post wherever the strap moves
+    forward.
+  - No generator reads the withers; the rig page was rebuilt.
 - **A one-run probe for a walled-in landing, taken out again** (2026-11-02; F11 1785/1, the same in the rerun: the yard
   test's jump at the ruins sent back to the take-off spot). The trace: the run started 1.1 east of the yard's box
   between two rock walls the test doesn't know, went over a knee-high stone and came down in a gap between the ruin

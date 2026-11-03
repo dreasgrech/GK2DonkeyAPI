@@ -102,7 +102,9 @@ def write_section(skin, regions):
     t = "\n".join(lines)
     t = re.sub(r"\n{3,}", "\n\n", t)
     t = t.rstrip("\n") + "\n"
-    lines = ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is Coat.", "[Colors]"]
+    over = re.search(r"(?im)^layer\s*=\s*over\b", t) is not None
+    lines = ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is "
+             + ("kept as drawn (an over skin, docs/skins.md)." if over else "Coat."), "[Colors]"]
     for region in ("Dark", "Muzzle", "Eye", "Harness"):
         hexes = regions.get(region, [])
         if hexes:

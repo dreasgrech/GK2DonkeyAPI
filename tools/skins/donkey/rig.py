@@ -11,7 +11,7 @@ rules of its own, and a page to check the points by eye once.
 The points, on the game's 96 canvas (the asset probe's donkey-frames, the frames every skin is drawn on):
   body  hip       the rump's end at back level: body pieces hang from it (a cloth, plates)
         back      the back's level over the rump (4 columns before the hip)
-        withers   the back where the collar strap crosses it (its rear edge): where the body's columns start
+        withers   the back just behind the collar strap: where the body's columns start
         chest     the breast collar's lowest point (the strap's end under the chest): a plate's or a skirt's front
         tail      where the tail leaves the rump (its root on the body's edge)
   head  ear_left  ear_right   the ear bases, left and right on the picture (horns, a helmet's crest)
@@ -57,7 +57,7 @@ STANDING = "bdy_static_left"
 ABOUT = {
     "hip": "the rump's end at back level: body pieces hang from it",
     "back": "the back's level over the rump, 4 columns before the hip",
-    "withers": "the back where the collar strap's rear edge crosses it: the body's columns start here",
+    "withers": "the back just behind the collar strap: the body's columns start here",
     "chest": "the breast collar's lowest point, the strap's end under the chest",
     "tail": "where the tail leaves the rump",
     "ear_left": "the left ear's base on the picture",
@@ -195,7 +195,11 @@ def measure(key, HP, standing=None, standing_edge=None, force_hip=None):
             back_row = back
         pts["hip"] = [hip, back_row]
         pts["back"] = [hip - 4, b["top"].get(hip - 4, back)]
-        pts["withers"] = [b["collar"], b["top"].get(b["collar"], back)]
+        # body()'s collar column is the strap's dark rear edge, a run of 6 or more rows from above the back (its top is
+        # the strap's, never the back's, in all 44 frames): the back starts one column behind it (measured
+        # 2026-11-03: Royal Parade's cloth front column followed the strap, 2-3 px off its neighbours in the walk)
+        w = b["collar"] + 1
+        pts["withers"] = [w, b["top"].get(w, back)]
         pts["chest"] = chest_point(pix)
         px = im.copy().load()
         xs = [x for (x, y), p in pix.items() if p[3]]

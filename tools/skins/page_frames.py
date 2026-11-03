@@ -12,6 +12,9 @@ at this, not at a separate composite (2026-11-02: a review render without the re
     --clip          a clip of the page's clip list (walk, turn, graze ...), or "all" for every frame (default: all)
     --scale         pixel scale (default 4)
     --box x0 y0 x1 y1   the part of the 96 canvas to show (default: the whole canvas)
+    --blind         rows titled A, B ... in the order of --skins instead of the skins' names: for a fresh reviewer
+                    asked "which is a jester?" against a shipped skin (2026-11-04: six reviews had asked only
+                    whether pieces slide, and the Jester's cloth was Royal Parade's block recoloured)
 
 The output holds the game's art (the donkey's frames): write it outside the repository (the scratchpad, the probe
 folder). It refuses a path inside the repo."""
@@ -88,9 +91,10 @@ def main(argv):
     img = Image.new("RGBA", (per_row * (cw + 4) + 8, lines * (ch + 18) + len(rows) * 16 + 4), (74, 105, 58, 255))
     dr = ImageDraw.Draw(img)
     y = 2
-    for name, chunks in rows:
+    blind = "--blind" in argv
+    for r, (name, chunks) in enumerate(rows):
         s = by_name[name]
-        dr.text((6, y), name, fill=(255, 240, 160, 255))
+        dr.text((6, y), chr(ord("A") + r) if blind else name, fill=(255, 240, 160, 255))
         y += 16
         for chunk in chunks:
             for i, k in enumerate(chunk):

@@ -11,15 +11,17 @@ def _chunk(typ, data):
 VISIBLE, EDITABLE = 1, 2
 
 def write(path, w, h, layers, frames, tags, durations):
-    """layers: [(name, flags)] bottom first; frames: [{layer_index: PIL RGBA image (full canvas) or None}];
-    tags: [(name, from, to)]; durations: [ms] per frame. Each cel is cropped to its drawn box and placed there."""
+    """layers: [(name, flags[, opacity 0-255])] bottom first; frames: [{layer_index: PIL RGBA image (full canvas) or
+    None}]; tags: [(name, from, to)]; durations: [ms] per frame. Each cel is cropped to its drawn box and placed
+    there."""
     out = []
     for n, cels in enumerate(frames):
         ch = []
         if n == 0:
             ch.append(_chunk(0x2019, struct.pack("<III8x", 1, 0, 0) + struct.pack("<HBBBB", 0, 0, 0, 0, 255)))
-            for name, flags in layers:
-                ch.append(_chunk(0x2004, struct.pack("<HHHHHHB3x", flags, 0, 0, 0, 0, 0, 255) + _s(name)))
+            for layer in layers:
+                name, flags, opacity = layer[0], layer[1], (layer[2] if len(layer) > 2 else 255)
+                ch.append(_chunk(0x2004, struct.pack("<HHHHHHB3x", flags, 0, 0, 0, 0, 0, opacity) + _s(name)))
             t = struct.pack("<H8x", len(tags))
             for name, a, b in tags:
                 t += struct.pack("<HHBH6x3Bx", a, b, 0, 0, 0, 0, 0) + _s(name)

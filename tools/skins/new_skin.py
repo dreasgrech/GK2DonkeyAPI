@@ -14,6 +14,9 @@ carries one already. A skin of your own mod's mount takes any name.
     python -I tools/skins/new_skin.py <skin> --pack <Pack>         a skin of the donkey in a skins pack: skins\\<prefix><skin>\\
                                                                    (never "default"; --pack GK2SaddleUpDonkeySkinPack: ours)
     python -I tools/skins/new_skin.py <skin> --over --pack <Pack>  a skin drawn over the donkey
+    python -I tools/skins/new_skin.py <skin> --stamp --pack <Pack> a skin drawn once over the donkey (docs/sprite-tools.md
+                                                                   "Draw once"): its source in tools/skins/<skin>/, the pack
+                                                                   folder when it ships
     python -I tools/skins/new_skin.py <skin> --mount <mount>       one more skin for a mount that exists (saddleup.rat or rat)
     python -I tools/skins/new_skin.py --mount <name> [--name "Giant Thing"] [--prefix <mod>.]
                                                                    a new mount, <prefix><name>, its look in skins\\default\\
@@ -135,6 +138,43 @@ def existing_prefix(pack):
     return None
 
 
+def stamp_source(gen_dir, gen_name, name, lines, folder):
+    """A skin drawn once (docs/sprite-tools.md "Draw once"): its source folder under tools/skins/, with skin.cfg, the
+    pieces drawn there on the drawing surface stamp.py template makes, and a watcher to double-click. The pack's
+    folder is made when the skin ships (stamp.py build <source> --out <the pack's folder>), not before."""
+    cfg_path = os.path.join(gen_dir, "skin.cfg")
+    with open(cfg_path, "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("\n".join(lines) + "\n")
+    import canonical_cfg
+    text = canonical_cfg.canonical(cfg_path)
+    with open(cfg_path, "w", encoding="utf-8", newline="") as f:
+        f.write(text)
+    with open(os.path.join(gen_dir, ".gitignore"), "w", encoding="utf-8", newline="\n") as f:
+        f.write("out/\n__pycache__/\n")   # out\: the drawing surface and the builds hold the game's frames
+    card = f"{name} (in progress)"
+    with open(os.path.join(gen_dir, f"Watch {name}.cmd"), "w", encoding="utf-8", newline="\r\n") as f:
+        f.write("@echo off\n"
+                "rem Every save of out\\pieces.aseprite in Aseprite: the pieces exported, the 44 frames built and checked,\n"
+                f"rem and the card \"{card}\" on the skins preview page (Ctrl+C stops).\n"
+                f"python -u \"%~dp0..\\stamp.py\" watch \"%~dp0.\" --stage \"{card}\"\n"
+                "pause\n")
+    r = subprocess.run([sys.executable, "-I", os.path.join(HERE, "stamp.py"), "template", gen_dir], capture_output=True, text=True)
+    print((r.stdout or r.stderr).strip())
+    rel = os.path.relpath(gen_dir, REPO).replace(os.sep, "/")
+    print(f"made: {gen_dir} (skin.cfg, .gitignore, Watch {name}.cmd; the drawing surface in out/)")
+    print("Next:")
+    print(f"  1. open {rel}/out/pieces.aseprite in Aseprite and double-click \"Watch {name}.cmd\": each save builds the 44"
+          f" frames and shows \"{card}\" on the skins preview page")
+    print(f"  2. before drawing a pattern on the body: python -I tools/skins/stamp.py moves {rel}")
+    print(f"  3. while drawing: python -I tools/skins/stamp.py look {rel} walk_03 turn_05 graze_04 (the pieces worn, zoomed,"
+          f" with coordinates); a head piece over the donkey's moving parts is listed by moves and shown on the"
+          f" template's guide layer")
+    print(f"  4. name the colours in {rel}/skin.cfg [Colors] by hand (Harness = ..., Muzzle = ...: the build's check lists"
+          f" every colour with its region), then python -I tools/skins/canonical_cfg.py {rel}/skin.cfg")
+    print(f"  5. to ship it: python -I tools/skins/stamp.py build {rel} --out {os.path.relpath(folder, REPO)}")
+    return 0
+
+
 def main():
     ids, skip = [], False
     for a in sys.argv[1:]:
@@ -144,14 +184,15 @@ def main():
         if a in VALUED:
             skip = True
         elif a.startswith("--"):
-            if a != "--over":
+            if a not in ("--over", "--stamp"):
                 print("unknown flag", a); print(__doc__); return 2
         else:
             ids.append(a)
     if len(ids) > 1:
         print(__doc__); return 2
     mount = arg("--mount")
-    over = "--over" in sys.argv
+    stamp = "--stamp" in sys.argv   # drawn once: a source folder for tools/skins/stamp.py, over the donkey
+    over = "--over" in sys.argv or stamp
     if over and mount:
         print("--over is a skin drawn over the donkey: it has no mount of its own (drop --mount)"); return 2
     pack = arg("--pack")
@@ -245,12 +286,14 @@ def main():
     gen_dir = os.path.join(HERE, gen_name)
     if os.path.exists(folder) or os.path.exists(gen_dir):
         print("exists already:", folder if os.path.exists(folder) else gen_dir); return 2
-    os.makedirs(folder)
+    if not stamp:
+        os.makedirs(folder)   # a skin drawn once gets its pack folder when it ships
     os.makedirs(gen_dir)
     # (the mount's folder and mount.cfg, when new, are written below with the skin's cfg)
     gen = f"make_{gen_name.replace('-', '_')}.py"
+    made_by = f"drawn once in tools/skins/{gen_name}/, placed by tools/skins/stamp.py" if stamp else f"drawn by tools/skins/{gen_name}/{gen}"
     # the cfg, in the canonical layout (tools/skins/canonical_cfg.py: [Skin], the colours, the mount block last)
-    lines = [f"# {name}: {'a skin drawn over the donkey' if over else 'the own look of a mount of its own' if new_mount else 'a skin of ' + mount_id} (docs/skins.md). Our own art, drawn by tools/skins/{gen_name}/{gen}.",
+    lines = [f"# {name}: {'a skin drawn over the donkey' if over else 'the own look of a mount of its own' if new_mount else 'a skin of ' + mount_id} (docs/skins.md). Our own art, {made_by}.",
              "[Skin]", "format = 1", f"name = {name}", f"description = {name}: a line or two for the Mounts panel (edit me).", "author = dreas", "version = 0.1", "base = donkey", "colours = own",
              f"layer = {'over' if over else 'replace'}"]
     if over:
@@ -258,8 +301,11 @@ def main():
     lines.append(f"canvas = {canvas} {canvas}")
     if not over:
         lines.append(f"seat = {seat}            # the canvas row the rider's hip sits on, every frame, for every player (52 = the donkey's own on 96)")
-    lines += ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is Coat.", "[Colors]",
+    lines += ["", "# The skin's colours by mount region (docs/mount-colours.md); every colour not named is "
+              + ("kept as drawn (an over skin, docs/skins.md)." if over else "Coat."), "[Colors]",
               "Dark = 141E14        # the placeholder's outline: replace with the hexes your pictures use (tools/skins/skin_colors.py writes the section from a colors.json block)"]
+    if stamp:
+        return stamp_source(gen_dir, gen_name, name, lines, folder)
     if new_mount:
         mlines = [f"# A mount of {('the pack ' + pack) if pack else project} (docs/making-a-mount.md): what the player rides, shared by every skin in skins\\.",
                   "[Mount]"] + (["needs = 0.40"] if pack else []) + [f"id = {mount_id}", f"name = {name}", f"description = A {name.lower()} of the keeper's own: it pulls the cart and has young (edit me).",
