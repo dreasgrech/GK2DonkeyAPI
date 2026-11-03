@@ -17,8 +17,8 @@ What to do before `dist/` goes public, in order. Written 2026-10-13 from the fir
   `src/SaddleUp/Plugin.cs`, kept equal),
   and `tests/ApiSurface` is green (its snapshot is the public API).
 - The audited game: the build embeds the dependency manifest against the installed game (`docs/dependency-check.md`;
-  no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list (the
-  audit notes are `docs/game-update-*.md`); `tests/CecilScan-DonkeyAPI` must report the manifest identical and every
+  no pin to move). After any update `tests/GameDiff` and `DepManifest verify` give the audit its reading list, and
+  `tools/game-asset-diff.py` the art and data the update changed (the audit notes are `docs/game-update-*.md`); `tests/CecilScan-DonkeyAPI` must report the manifest identical and every
   class sorted in `src/GK2DonkeyAPI/game-code.txt`.
 - The dev tools cannot reach a player by accident: the `[Debug]` keys exist only with the dev tools unlocked
   (`DevTools.cs`: the sources on this machine, or the marker file `BepInEx\config\dreas.gk2.dev`); a player's cfg
@@ -350,7 +350,7 @@ Released versions are never reused (0.9.0 went public 2026-10-16): a release wit
   release that heading becomes `<Saddle Up version> (GK2 Donkey API <version>), <date>` and a new empty Unreleased
   goes on top. Its "For players" part is the Nexus changelog text for that version.
 - **Hand-off**: the user commits, tags (`saddleup-<version>`; 0.9.0 is commit `6be69a2`) and uploads
-  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26297960`,
-  1.011 as of 2026-10-30) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
+  `release/GK2-Saddle-Up-<version>.zip` with the changelog entry; the release notes name the game build (`26404424`,
+  1.011.1 as of 2026-11-03) and what `docs/open-items.md` still lists as unseen in game. On the Steam Workshop (once
   the items exist): Shift+F11, the item's Upload button with `workshop/<Item>/` as its linked folder; the change
   note comes from `_changenote.txt`; a pack's Required item (GK2 Saddle Up) is set once on its Steam page.

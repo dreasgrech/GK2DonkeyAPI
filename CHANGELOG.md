@@ -12,6 +12,11 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **Audited against game 1.011.1** (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): a hotfix of the
+  zombie assistants' autocrafts and two save fixers. None of the 866 game members the API uses changed, so every
+  build made for 1.011 (the released 0.13.2, 0.14.0 and 0.15.0 among them) runs on 1.011.1 as it is, with one info
+  line at start: no re-release is needed. The changed art is 49 scenery sprites, none of the donkey's. The audited
+  build moved in the READMEs, the release checklist, `tools/release-versions.py` and the probe's pin.
 - **A jump over things no longer puts you back where you jumped from for nothing** (2026-11-02, found by the
   self-tests: over the conveyor's debris in the home yard, carried off 3.9 onto open ground and sent back). The
   landing asked the game's walk grid for a way from the take-off, but that grid only covers a 4.4 square round the
@@ -23,6 +28,14 @@ For players:
 
 Development:
 
+- **`tools/game-asset-diff.py`** (2026-11-03): the art and data half of a game-update audit, beside
+  `tests/GameDiff`: every asset file the update changed (the old ones read from the game folder's git), compared
+  object by object; the game's version before and after (what a new save is stamped with); and the balance changes
+  that are not just regenerated quest-node ids. `docs/release-checklist.md` names it with GameDiff. And
+  `tests/GameDiff` (both repos' copies) now compares every game assembly whose bytes changed, not only
+  Assembly-CSharp and LazyBearTechnology: the API uses the A* pathfinding too, which this update recompiled.
+- **MSB3277 marked as the game's own in `GK2DonkeyHerd`, `GK2DonkeyTechGate` and `GK2DonkeyProbe`** (2026-11-03),
+  as the API and the other tools already do: the three warned on every build.
 - **Armored redrawn, in review** (2026-11-01; the user held the Donkey Skin Pack's 1.1.0 back: "a lot more detail and
   exquisiteness ... professional while matching the game's aesthetic"). `tools/skins/armored/make_armored.py`
   rewritten: the steel and brass are the game's own guards' (sampled from their helmets and breastplates: a warm grey
