@@ -155,7 +155,7 @@ function draw() {
   const S = +document.getElementById("zoom").value, f = rig.frames[cur];
   document.getElementById("title").textContent = short(cur) + (f.same_body_as ? "  (the body of " + short(f.same_body_as) + ": moving its hip, back or tail moves them there and in every copy)" : "");
   document.getElementById("checked").checked = !!f.checked;
-  document.getElementById("flags").textContent = f.flags.join("\n");
+  document.getElementById("flags").textContent = f.flags.join("\n") + (f.note ? (f.flags.length ? "\n" : "") + f.note : "");
   drawFrame(cv, cur, S, { ghost: document.getElementById("ghost").checked, ghostPrev: document.getElementById("ghostprev").checked,
                           labels: document.getElementById("labels").checked, sel, cands: true });
   points(); strip(); trail(); list();

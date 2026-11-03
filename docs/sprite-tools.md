@@ -408,18 +408,41 @@ generator works one out of its own again. Each frame also keeps the SHA-1 of the
 `anatomy.rig(key)` (the reader) says on stderr when the game's frame is not that one any more (a game update).
 
 `python -I tools/skins/donkey/rig.py build` fills it in. A frame whose donkey is pixel for pixel an earlier frame's
-behind x 50 copies that frame's hip, back and tail (20 of the 41 body frames); a clip whose rump outline reads one
-shift in every frame takes one hip for the whole clip (the walk: 66 in all eight, where the measure picked per frame
-alternated 65, 65, 66, 66, 65, 65, 66, 66, Royal Parade's shipped jitter again); the eyes and ears of the frames the
-user approved in Hellfire's rounds come from its tables. Where the measures disagree, the frame is flagged with each
-one's answer: 18 frames (the walk's hip, graze 02-03, lips 04-08 where the tail lifts and the rump's top edge moves,
-lips 04-05's shut eye taken from the standing one, turn 04-06's muzzle). `rig.py check` lists every move of the
-rump's points between neighbour frames (none allowed where the rump doesn't move; the walk's bob and lips 04-08 are
-what it lists now), a frame whose picture changed, and a frame with an earlier one's body but other rump points;
+behind x 50 copies that frame's hip, back and tail (20 of the 41 body frames); the hip's column comes from the rump's
+back edge, its curve matched from its own top row up or down (`rump_move`): the walk's rump is the standing curve
+moved one or two rows with the bob and never sideways, so 65 in every walk frame, its row riding the bob (41, 40,
+39, 40 ...). The first measure compared the rows as they stood and read that lift on the slanted curve as a column
+(66 throughout), the same artifact behind `body()`'s 65/66 alternation, Royal Parade's shipped jitter. A clip whose
+rump reads one shift in every frame takes one hip for the whole clip. The eyes and ears of the frames the user
+approved in Hellfire's rounds come from its tables. Where the measures disagree, the frame is flagged with each
+one's answer (16 frames: the walk's and graze 02-03's hip, lips 04-08 where the tail lifts and the rump's top
+bulges a column, lips 04-05's shut eye taken from the standing one, turn 04-06's muzzle). Claude's pass
+(2026-11-03, a `note` on each, shown on the page; `checked` stays the user's): the walk 65 throughout (walk 08's
+whole rear outline sits a column back there, held at 65 so nothing hung from it jumps for one frame), graze 02-03
+65 (their edge is the standing one's row for row), lips 04-08 65 (the body stays; the bulge is the tail pulling the
+rump's top, as Hellfire's rump does since the user's yes), the shut eyes and the face-on muzzles looked at and
+kept. `build` keeps frames ticked or with a note unless `--refresh`. `rig.py check` lists every move of the
+rump's points between neighbour frames (none allowed where the rump doesn't move; the walk's bob, and walk 08's back
+a pixel read where its rump sits a column back, are what it lists now), a frame whose picture changed, and a frame
+with an earlier one's body but other rump points;
 `rig.py sheet <out.png> [--keys ...] [--scale 8]` draws the points on the frames (outside the repo only).
 
-The order to move the generators onto it, each a regeneration and a page review, after the user's pass on the page:
-Hellfire (the most rules of its own), Royal Parade, Armored; the consistency check (2) run on each before the page.
+The order to move the generators onto it, each a regeneration and a page review: Hellfire (the most rules of its
+own), Royal Parade, Armored; the consistency check (2) run on each before the page.
+
+- **Hellfire (moved 2026-11-03, the pack byte for byte the same):** the cracks' anchor is the rig's hip; a frame whose
+  rig hip, back and tail are the standing frame's takes the standing frame's rump (the fill's curve and the tail's
+  row), which replaced `STILL_RUMP` (lips 04-08) and `STILL_BODY` (turn 02-06); the horns stand on the rig's ear
+  bases (`horns_of`, leaning outwards on the left where the face looks at us), which replaced `HORN_FRAMES`, the horns
+  of `EAR_FRAMES`, the eye's offset and the skull's top. Left as Hellfire's own: which of the donkey's ear pixels to
+  erase (`EAR_FRAMES`' boxes, `FAR_EAR`), the eyes to glow where no rule finds the eye pixels, `NO_TUFT`, and the
+  walk's own cracks.
+- **Royal Parade (in review 2026-11-03):** the cloth hangs from the rig's hip (`HIP_FROM_RUMP` gone): 13 frames change
+  (walk 03, 04, 07, 08, graze 02-05, lips 04-08), the cloth's columns 47-63 in every frame of the walk, graze and lips
+  (shipped 47-48, 49 in lips 06), the check (2) none listed where it listed 4. The crown still has its own rules.
+- **Armored (in review 2026-11-03):** `body_of` takes the rig's hip (the rump match it replaced said 64 in walk 04-06
+  for a rump at 65): walk 04-06 change, the rump plate, the rearmost lames, the skirt's rear and the tail guard a
+  column back to where the other walk frames have them. Its chest, head and plume keep their own rules for now.
 
 ### 2. The check (built 2026-11-03: `tools/skins/consistency.py`)
 

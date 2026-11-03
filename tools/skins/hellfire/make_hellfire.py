@@ -23,7 +23,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
 from gamedir import donkey_frames
-from anatomy import body_by_rump, load as donkey_load
+from anatomy import rig
 import hellfire_proto as HP
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -56,12 +56,10 @@ _WALK_REL = None
 
 
 def body_anchor(key):
-    """Where the body is in a frame: the hip matched from the rump (anatomy.body_by_rump) and the back's level over
-    the rump (the median of the back line over the 8 columns before the hip)."""
-    b = body_by_rump(key, donkey_load(key))
-    hip = b["hip"]
-    cols = sorted(b["top"][x] for x in range(hip - 8, hip) if x in b["top"])
-    return hip, cols[len(cols) // 2]
+    """Where the body is in a frame: the body points' hip (anatomy.rig: the rump's end at back level, checked by eye
+    on rig.py's page; the same as the rump-matched hip and the back's median it replaced in every frame but the walk's,
+    which keeps its own cracks)."""
+    return rig(key)["hip"]
 
 
 def crack_pixels(key):
@@ -84,28 +82,43 @@ def crack_pixels(key):
     return [(hip + dx, back + dy, c) for dx, dy, c in _WALK_REL]
 
 
-STILL_RUMP = {f"bdy_lips_left_{i:02d}" for i in range(4, 9)}  # the donkey lifts its tail in lips 04-08 and the rump's
-# edge just above it moves back 1-2 columns (x 66, 67 in lips 06, against 65 standing; the rest of the rump stays): the
-# fill drew its curve from that edge, a column wider over 12 rows (two in lips 06; "why is the donkeys ass growing
-# larger in hellfire lips animation?", the user, 2026-11-03); those frames set the standing frame's curve
+STANDING = "bdy_static_left"
 _STANDING_RUMP = None
 
 
-def rump_curve(key):
-    """The standing frame's rump curve for the frames in STILL_RUMP, else None (the frame's own)."""
+def rump_of(key):
+    """The standing frame's rump (its fill's curve and the row its tail grows from) for every frame whose body points
+    put the rump where the standing frame's is (the rig's hip, back and tail the same), else None (the frame's own).
+    It replaced two lists of frames: lips 04-08, where the donkey lifts its tail and the rump's edge just above it
+    bulges 1-2 columns, so the fill drew its curve from there a column wider over 12 rows ("why is the donkeys ass
+    growing larger in hellfire lips animation?", the user, 2026-11-03); and turn 02-06, where the torso box moved with
+    the turning head and took the fill and the tail's root along ("the red lines on his back are moving all over the
+    place"). The walk keeps its own (the rump bobs)."""
     global _STANDING_RUMP
-    if key not in STILL_RUMP:
+    if "_walk_" in key or key.startswith("hed_") or key == STANDING:
+        return None
+    r, s = rig(key), rig(STANDING)
+    if any(r[n] != s[n] for n in ("hip", "back", "tail")):
         return None
     if _STANDING_RUMP is None:
-        HP.hellfire("0301_bdy_static_left", phase_of("bdy_static_left"), crack_pixels=crack_pixels("bdy_static_left"))
+        HP.hellfire("0301_" + STANDING, phase_of(STANDING), crack_pixels=crack_pixels(STANDING))
         _STANDING_RUMP = dict(HP.LAST_RUMP)
     return _STANDING_RUMP
+
+
+def horns_of(key):
+    """The horns on the ear bases of the body points (anatomy.rig): (x, y, lean) for the left and the right, both leaning
+    towards the muzzle, the left one outwards where the face looks at us (both eyes in view)."""
+    r = rig(key)
+    if not (r["ear_left"] and r["ear_right"]):
+        return None
+    return [(r["ear_left"][0], r["ear_left"][1], -1 if r["eye2"] else 1), (r["ear_right"][0], r["ear_right"][1], 1)]
 
 
 def pack_frame(key):
     """The pack's picture for one frame: the prototype's result against the original, pixel by pixel."""
     orig = HP.load("0301_" + key)
-    res = HP.hellfire("0301_" + key, phase_of(key), crack_pixels=crack_pixels(key), rump_curve=rump_curve(key))
+    res = HP.hellfire("0301_" + key, phase_of(key), crack_pixels=crack_pixels(key), rump=rump_of(key), horn_bases=horns_of(key))
     assert res.size == orig.size, (key, res.size, orig.size)
     w, h = orig.size
     op, rp = orig.load(), res.load()

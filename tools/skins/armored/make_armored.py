@@ -46,7 +46,7 @@ from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))
-from anatomy import ORDER, load, HORNS, ANCHORS, body, body_by_rump, head_delta
+from anatomy import ORDER, load, HORNS, ANCHORS, body, head_delta, rig
 import ase_write
 import review
 from gamedir import game_dir
@@ -145,7 +145,15 @@ S_KEY = "bdy_static_left"
 S = None
 
 
-body_of = body_by_rump   # the hip from the rump itself (anatomy.py; the turned head's far ear moved body()'s)
+def body_of(key, donkey):
+    """anatomy.body() with the hip of the body points (anatomy.rig, checked by eye): the rump match it replaced put
+    the hip a column forward in walk 04-06 (64 for a rump that bobs at 65: the rump plate, the lames, the skirt and the
+    tail guard a column forward for three frames of eight), and body()'s own moved with the turned head's far ear in
+    turn 02-03."""
+    b = body(key, donkey)
+    if b is not None:
+        b["hip"] = rig(key)["hip"][0]
+    return b
 
 
 def standing():

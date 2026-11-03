@@ -2,7 +2,7 @@
 tools/skins/donkey/rig.json, that every generator drawing over the donkey is to read instead of finding the body with
 rules of its own, and a page to check the points by eye once.
 
-    python -I tools/skins/donkey/rig.py build [--refresh]  # pre-fill rig.json from the frames; frames ticked "checked" are kept
+    python -I tools/skins/donkey/rig.py build [--refresh]  # pre-fill rig.json from the frames; frames ticked "checked" or with a note are kept
     python -I tools/skins/donkey/rig.py check              # the rig against itself and the frames: jumps, flags, changed frames
     python -I tools/skins/donkey/rig.py sheet <out.png> [--keys a,b] [--scale 8]  # frames with their points drawn (the game's art: outside the repo)
     python -I tools/skins/donkey/rig.py page               # the checking page, rig.html in the asset probe's folder
@@ -21,7 +21,7 @@ The points, on the game's 96 canvas (the asset probe's donkey-frames, the frames
 
 The pre-fill: a frame whose donkey is pixel for pixel an earlier frame's behind x 50 copies its hip, back and tail; one
 whose head only moved (anatomy.head_delta: walk, ear, chew, lips) has the standing head's points moved with it, where
-its own measure is missing; the rest is measured (anatomy.body, body_by_rump, the rump's outline, the strap's
+its own measure is missing; the rest is measured (anatomy.body, body_by_rump, the rump's edge curve, the strap's
 pixels, horn_bases.json, anchors.json, the eye and ear tables the user approved in Hellfire's rounds). Where measures
 disagree the frame is flagged with each one's answer: those are the frames to look at first. Each frame keeps the SHA-1
 of the picture it was measured on; the reader warns when the game's frames change (game updates).
@@ -106,29 +106,53 @@ def chest_point(pix):
     return [min(x for x, y in collar if y == last), last]
 
 
-def rear_shift(key, standing_rows):
-    """The rump's back edge against the standing frame's, the median over rows 40-50 (the tail's dark colours out)."""
+def rump_edge(key):
+    """The rump's back edge as a curve: from the first row whose last body pixel behind x REAR_X reaches x 60, five
+    rows down: (that row, [the last body pixel's x per row])."""
     px = load(key).load()
-    shifts = []
-    for y in range(40, 51):
-        xs = [x for x in range(REAR_X, 96) if px[x, y][3] and px[x, y][:3] not in TAIL_DARK]
-        if xs and y in standing_rows:
-            shifts.append(max(xs) - standing_rows[y])
-    shifts.sort()
-    return shifts[len(shifts) // 2] if shifts else 0
+    for top in range(30, 70):
+        xs = [x for x in range(REAR_X, 96) if px[x, top][3]]
+        if xs and max(xs) >= 60:
+            break
+    else:
+        return None
+    edge = []
+    for y in range(top, top + 5):
+        xs = [x for x in range(REAR_X, 96) if px[x, y][3]]
+        edge.append(max(xs) if xs else None)
+    return top, edge
 
 
-TAIL_DARK = {(0x1e, 0x19, 0x0e), (0x30, 0x1f, 0x0f), (0x29, 0x23, 0x16), (0x35, 0x2e, 0x1e), (0x13, 0x0a, 0x0c), (0x2f, 0x2c, 0x1f)}
+def rump_shift(key, standing_edge):
+    """The rump's sideways shift against the standing frame's: its curve matched from its own top row, the median of
+    the five rows' differences. The walk's bob lifts the curve a row or two without moving it sideways (walk 02 is the
+    standing curve a row up, walk 03 two); read row by row against the standing frame's rows, that lift on the slanted
+    curve read as a column (2026-11-03: the walk came out 66 for a rump at 65, and body()'s 65/66 alternation is the
+    same thing)."""
+    return rump_move(key, standing_edge)[0]
 
 
-def rows_of(key):
+def rump_move(key, standing_edge):
+    """(dx, dy): the rump's move against the standing frame's: dy the row shift that fits the standing curve best
+    (the least column difference over its five rows), dx the median column difference there."""
+    if standing_edge is None:
+        return 0, 0
     px = load(key).load()
-    out = {}
-    for y in range(40, 51):
-        xs = [x for x in range(REAR_X, 96) if px[x, y][3] and px[x, y][:3] not in TAIL_DARK]
-        if xs:
-            out[y] = max(xs)
-    return out
+
+    def edge(y):
+        xs = [x for x in range(REAR_X, 96) if px[x, y][3]]
+        return max(xs) if xs else None
+    s_top, s_edge = standing_edge
+    best = None
+    for dy in range(-3, 4):
+        d = sorted(edge(s_top + i + dy) - s for i, s in enumerate(s_edge) if s is not None and edge(s_top + i + dy) is not None)
+        if len(d) < 3:
+            continue
+        med = d[len(d) // 2]
+        cost = sum(abs(v - med) for v in d)
+        if best is None or (cost, abs(dy)) < (best[0], abs(best[2])):
+            best = (cost, med, dy)
+    return (best[1], best[2]) if best else (0, 0)
 
 
 def hellfire_tables():
@@ -145,9 +169,9 @@ def offset16(pix):
     return min(xs) - 16, min(ys) - 16
 
 
-def measure(key, HP, standing=None, standing_rows=None, force_hip=None):
+def measure(key, HP, standing=None, standing_edge=None, force_hip=None):
     """One frame's points, the candidates where there are several measures, and the flags. force_hip: the clip's one
-    hip (build: a clip whose rump outline reads one shift in every frame)."""
+    hip (build: a clip whose rump edge reads one shift in every frame)."""
     im = load(key)
     pix = pixels(im)
     pts, cand, flags = {n: None for n in POINTS}, {}, []
@@ -155,17 +179,21 @@ def measure(key, HP, standing=None, standing_rows=None, force_hip=None):
     b = body(key, im)
     if b is not None:
         m = body_by_rump(key, im)
-        out = standing["points"]["hip"][0] + rear_shift(key, standing_rows) if standing else m["hip"]
-        hips = {"body()": b["hip"], "rump match": m["hip"], "rump outline": out}
+        out = standing["points"]["hip"][0] + rump_shift(key, standing_edge) if standing else m["hip"]
+        hips = {"body()": b["hip"], "rump match": m["hip"], "rump edge": out}
         hs = sorted(hips.values())
         hip = hs[1] if force_hip is None else force_hip
         if len(set(hs)) > 1:
             cand["hip"] = hips
             flags.append("hip: " + ", ".join(f"{k} {v}" for k, v in hips.items())
-                         + (f"; the clip's rump outline reads one shift in every frame: {hip} in all" if force_hip is not None else ""))
+                         + (f"; the clip's rump edge reads one shift in every frame: {hip} in all" if force_hip is not None else ""))
         cols = sorted(b["top"][x] for x in range(hip - 8, hip) if x in b["top"])
         back = cols[len(cols) // 2] if cols else None
-        pts["hip"] = [hip, back]
+        if standing:   # the hip's row rides the rump's own up and down (the walk's bob), not the back line's median
+            back_row = standing["points"]["hip"][1] + rump_move(key, standing_edge)[1]
+        else:
+            back_row = back
+        pts["hip"] = [hip, back_row]
         pts["back"] = [hip - 4, b["top"].get(hip - 4, back)]
         pts["withers"] = [b["collar"], b["top"].get(b["collar"], back)]
         pts["chest"] = chest_point(pix)
@@ -178,15 +206,9 @@ def measure(key, HP, standing=None, standing_rows=None, force_hip=None):
             flags.append("tail: no root found")
     # the head
     tables = HP.EAR_FRAMES.get(key, {})
-    horns = HP.HORN_FRAMES.get(key)
     if key in HORNS:
         (xl, yl, _), (xr, yr, _) = HORNS[key]
         pts["ear_left"], pts["ear_right"] = [xl, yl], [xr, yr]
-    if horns:
-        hp = sorted([(x + tdx, y + tdy) for x, y, _ in horns])
-        if [list(hp[0]), list(hp[1])] != [pts["ear_left"], pts["ear_right"]]:
-            cand["ears"] = {"horn_bases.json": [pts["ear_left"], pts["ear_right"]], "Hellfire's HORN_FRAMES": [list(hp[0]), list(hp[1])]}
-            flags.append(f"ears: horn_bases.json {pts['ear_left']} {pts['ear_right']}, Hellfire's table {list(hp[0])} {list(hp[1])}")
     eye = ANCHORS.get(key, {}).get("eye")
     if tables.get("eyes"):
         es = sorted((x + tdx, y + tdy) for x, y in tables["eyes"])
@@ -229,8 +251,8 @@ def build(refresh=False):
     rears = {}
     s_pts, _, s_flags = measure(STANDING, HP)
     standing = {"points": s_pts}
-    s_rows = rows_of(STANDING)
-    # a clip whose rump outline reads one shift in every frame has one hip: the rump doesn't move in it, and a hip
+    s_edge = rump_edge(STANDING)
+    # a clip whose rump edge reads one shift in every frame has one hip: the rump doesn't move in it, and a hip
     # picked per frame from measures 1-2 apart alternated (the walk 65, 65, 66, 66, 65, 65, 66, 66: Royal Parade's
     # shipped jitter again)
     force, clips = {}, {}
@@ -238,15 +260,17 @@ def build(refresh=False):
         if not key.startswith("hed_") and key != STANDING:
             clips.setdefault(clip_of(key), []).append(key)
     for ks in clips.values():
-        outs = {s_pts["hip"][0] + rear_shift(k, s_rows) for k in ks}
+        outs = {s_pts["hip"][0] + rump_shift(k, s_edge) for k in ks}
         if len(ks) > 1 and len(outs) == 1:
             v = outs.pop()
             force.update({k: v for k in ks})
     for key in ORDER:
-        if old and key in old["frames"] and old["frames"][key].get("checked") and not refresh:
+        if old and key in old["frames"] and (old["frames"][key].get("checked") or old["frames"][key].get("note")) and not refresh:
             frames[key] = old["frames"][key]
+            if not key.startswith("hed_") and not frames[key].get("same_body_as"):   # a kept frame is still a body later
+                rears.setdefault(rear_of(pixels(load(key))), key)                     # frames can be copies of
             continue
-        pts, cand, flags = measure(key, HP, standing if key != STANDING else None, s_rows, force.get(key))
+        pts, cand, flags = measure(key, HP, standing if key != STANDING else None, s_edge, force.get(key))
         rec = {"points": pts, "candidates": cand, "flags": flags, "same_body_as": None, "head_from": None,
                "checked": False, "sha1": sha1(key)}
         if not key.startswith("hed_"):

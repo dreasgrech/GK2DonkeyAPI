@@ -14,14 +14,14 @@
 # frame's back-to-belly depth minus HEM_ABOVE. In every frame it hangs from the HIP (the rump's end at back level,
 # the one point of the body that stays put while the head, neck and legs move): the same width back from the hip,
 # each column's top on that frame's own back line, so the cloth rides the back through a walk's bob and a graze's
-# dip without changing size or sliding along the body (in turn 02-03 the hip matched from the rump: HIP_FROM_RUMP). A
+# dip without changing size or sliding along the body (the hip of the body points: anatomy.rig). A
 # frame whose back is shorter gets the cloth cut to a fraction of that back instead.
 import os, sys
 from PIL import Image
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "donkey"))  # the donkey's frames and anatomy, shared by every skin over it
-from anatomy import ORDER, load, HORNS, ANCHORS, body, body_by_rump, belly, head_delta
+from anatomy import ORDER, load, HORNS, ANCHORS, body, belly, head_delta, rig
 import ase_write
 
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(HERE)))
@@ -135,11 +135,6 @@ def standing_profile():
 
 
 PROFILE = None
-HIP_FROM_RUMP = {"bdy_turn_left_02", "bdy_turn_left_03"}   # body()'s hip there is the turned head's far ear (63 and 61
-# for a rump the same as the standing one's: the cloth's rear edge 2 and 4 columns forward, "the red rug is being pulled
-# back", the user, 2026-11-03); the rump-matched one (anatomy.body_by_rump) is right there. Not everywhere: in walk 04-06
-# it came out a column forward of a rump that doesn't move and stepped the hem (the gate review, 2026-11-03), and no
-# measure tried agreed to the pixel on the walk and lips 04-08 (the rump's own outline read 0 to +2 by the rows taken)
 
 
 def cloth_mask(key, donkey):
@@ -148,7 +143,12 @@ def cloth_mask(key, donkey):
     if PROFILE is None:
         PROFILE = standing_profile()
     width, depth = PROFILE
-    b = body_by_rump(key, donkey) if key in HIP_FROM_RUMP else body(key, donkey)
+    b = body(key, donkey)
+    if b is not None:   # the hip of the body points (anatomy.rig, checked by eye): body()'s moved with the turned head's far
+        # ear in turn 02-03 (63 and 61 for a rump the same as the standing one's: "the red rug is being pulled back", the user,
+        # 2026-11-03) and with the walk's bob and lips 04-08's bulge (66, 67 where the rump stays at 65), and the cloth slid
+        # a column or two with it
+        b["hip"] = rig(key)["hip"][0]
     if b is None:
         return None
     top, hip, collar = b["top"], b["hip"], b["collar"]

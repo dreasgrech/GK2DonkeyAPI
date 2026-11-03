@@ -286,14 +286,35 @@ Development:
   eye (and the second one where the face looks at us), the poll and the muzzle, with the SHA-1 of the frame they were
   measured on; `anatomy.rig(key)` reads it (and says when the game's frame changed). `tools/skins/donkey/rig.py`:
   `build` fills it in (a frame with an earlier one's body behind x 50 copies its rump points, 20 of 41; a clip whose
-  rump outline reads one shift takes one hip, the walk 66 in all eight where the per-frame pick alternated 65 and
-  66; Hellfire's approved eye and ear tables; the frames where the measures disagree flagged with each answer, 18),
+  rump reads one shift takes one hip, the walk 65 in all eight with its row riding the bob, where the per-frame pick
+  alternated 65 and 66; Hellfire's approved eye and ear tables; the frames where the measures disagree flagged with each
+  answer, 16, and Claude's pass on them as a note each, see docs/sprite-tools.md),
   `check` (rump points moving between neighbour frames, changed frames), `sheet` (the points drawn, outside the repo),
   `page` (`BepInEx\GK2-asset-probe\rig.html` from `rig_page.html`: flagged frames first, the frame zoomed over the
   standing one, drag or arrow keys, the measures as rings to pick, the clip played with its points, every point's
   offset per frame, Save as a download) and `import` (checks a saved file, lists each change, writes `rig.json`). The
   page renders headless; import listed a moved point and a ticked frame, refused a broken point, and put the original
-  back byte for byte. No generator reads the points yet: that waits for the user's pass on the page.
+  back byte for byte. (Read by Hellfire and Royal Parade since: the next entry.)
+- **Hellfire, Royal Parade and Armored on the body points** (2026-11-03, the user: "continue"; docs/sprite-tools.md "Catching
+  what the user caught" 1). First Claude's pass over the 16 flagged frames, each decision a `note` in `rig.json`
+  shown on the page (`checked` stays the user's): the walk's rump is the standing curve moved up and down with the
+  bob, never sideways, so its hip is 65 in every frame (the first measure read the lift on the slanted curve as a
+  column and said 66: `rump_move` now matches the curve up or down from its own top row); walk 08's whole rear
+  outline sits a column back, held at 65 so nothing hung from it jumps for one frame; graze 02-03 65; lips 04-08 65
+  (the rump's top bulges a column as the tail lifts, the body stays). `rig.py build` now keeps a frame with a note
+  as a body later frames can copy (it lost graze 04-05's copy once) and rebuilds the same file.
+  - Hellfire: the cracks' anchor is the rig's hip; a frame whose rig rump is the standing frame's takes the standing
+    frame's rump fill and tail row (replacing `STILL_RUMP` and `STILL_BODY`; the fill leaves the edge above the tail
+    as drawn where it already is the curve's, which it had rewritten in 26 frames); the horns stand on the rig's ear
+    bases (replacing `HORN_FRAMES`, `EAR_FRAMES`' horns, the eye's offset and the skull's top). The pack byte for
+    byte the same.
+  - Royal Parade, in review: the cloth hangs from the rig's hip (`HIP_FROM_RUMP` gone): walk 03, 04, 07, 08, graze
+    02-05 and lips 04-08 change, the cloth now on columns 47-63 in every frame of those clips (shipped 47-48, 49 in
+    lips 06); `consistency.py` lists none of its frames where it listed 4. On the preview page as "Royal Parade (in
+    progress)"; the pack not written yet.
+  - Armored, in review: `body_of` takes the rig's hip, where the rump match said 64 in walk 04-06 for a rump at 65:
+    those three frames change (its rump plate, rearmost lames, skirt rear and tail guard a column back); the phase
+    checks ok. On the page as "Armored (in progress)".
 - **A one-run probe for a walled-in landing, taken out again** (2026-11-02; F11 1785/1, the same in the rerun: the yard
   test's jump at the ruins sent back to the take-off spot). The trace: the run started 1.1 east of the yard's box
   between two rock walls the test doesn't know, went over a knee-high stone and came down in a gap between the ruin

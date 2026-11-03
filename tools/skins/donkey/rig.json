@@ -72,12 +72,12 @@
   "bdy_walk_left_01": {
    "points": {
     "hip": [
-     66,
-     42
+     65,
+     41
     ],
     "back": [
-     62,
-     42
+     61,
+     41
     ],
     "withers": [
      45,
@@ -113,16 +113,8 @@
      42
     ]
    },
-   "candidates": {
-    "hip": {
-     "body()": 65,
-     "rump match": 65,
-     "rump outline": 66
-    }
-   },
-   "flags": [
-    "hip: body() 65, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
-   ],
+   "candidates": {},
+   "flags": [],
    "same_body_as": null,
    "head_from": {
     "frame": "bdy_static_left",
@@ -132,17 +124,18 @@
     ]
    },
    "checked": false,
-   "sha1": "610f29580d37d97a573bec5456425a93ee7662f9"
+   "sha1": "610f29580d37d97a573bec5456425a93ee7662f9",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_02": {
    "points": {
     "hip": [
-     66,
-     41
+     65,
+     40
     ],
     "back": [
-     62,
-     41
+     61,
+     40
     ],
     "withers": [
      44,
@@ -178,16 +171,8 @@
      42
     ]
    },
-   "candidates": {
-    "hip": {
-     "body()": 65,
-     "rump match": 65,
-     "rump outline": 66
-    }
-   },
-   "flags": [
-    "hip: body() 65, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
-   ],
+   "candidates": {},
+   "flags": [],
    "same_body_as": null,
    "head_from": {
     "frame": "bdy_static_left",
@@ -197,17 +182,18 @@
     ]
    },
    "checked": false,
-   "sha1": "f7817fe68cef1622777ece144cd123e731ace2cc"
+   "sha1": "f7817fe68cef1622777ece144cd123e731ace2cc",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_03": {
    "points": {
     "hip": [
-     66,
-     40
+     65,
+     39
     ],
     "back": [
-     62,
-     40
+     61,
+     39
     ],
     "withers": [
      43,
@@ -247,11 +233,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 66, rump match 65, rump edge 65"
    ],
    "same_body_as": null,
    "head_from": {
@@ -262,17 +248,18 @@
     ]
    },
    "checked": false,
-   "sha1": "718e9dda0f04e612463fc74836919a27d6f7fc80"
+   "sha1": "718e9dda0f04e612463fc74836919a27d6f7fc80",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_04": {
    "points": {
     "hip": [
-     66,
-     41
+     65,
+     40
     ],
     "back": [
-     62,
-     41
+     61,
+     40
     ],
     "withers": [
      44,
@@ -312,11 +299,11 @@
     "hip": {
      "body()": 66,
      "rump match": 64,
-     "rump outline": 66
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 66, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 66, rump match 64, rump edge 65"
    ],
    "same_body_as": null,
    "head_from": {
@@ -327,17 +314,18 @@
     ]
    },
    "checked": false,
-   "sha1": "0eec98099c02fc0d69785ea46f6d68eef0b4873d"
+   "sha1": "0eec98099c02fc0d69785ea46f6d68eef0b4873d",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_05": {
    "points": {
     "hip": [
-     66,
-     42
+     65,
+     41
     ],
     "back": [
-     62,
-     42
+     61,
+     41
     ],
     "withers": [
      45,
@@ -377,11 +365,11 @@
     "hip": {
      "body()": 65,
      "rump match": 64,
-     "rump outline": 66
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 65, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 65, rump match 64, rump edge 65"
    ],
    "same_body_as": null,
    "head_from": {
@@ -392,17 +380,18 @@
     ]
    },
    "checked": false,
-   "sha1": "9cc2dabf43cd5fb6dae9216ac6e3ef8daaedad6f"
+   "sha1": "9cc2dabf43cd5fb6dae9216ac6e3ef8daaedad6f",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_06": {
    "points": {
     "hip": [
-     66,
-     41
+     65,
+     40
     ],
     "back": [
-     62,
-     41
+     61,
+     40
     ],
     "withers": [
      44,
@@ -442,11 +431,11 @@
     "hip": {
      "body()": 65,
      "rump match": 64,
-     "rump outline": 66
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 65, rump match 64, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 65, rump match 64, rump edge 65"
    ],
    "same_body_as": null,
    "head_from": {
@@ -457,17 +446,18 @@
     ]
    },
    "checked": false,
-   "sha1": "52d47105cac139ea59519880aeb6d61006dfb967"
+   "sha1": "52d47105cac139ea59519880aeb6d61006dfb967",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_07": {
    "points": {
     "hip": [
-     66,
-     40
+     65,
+     39
     ],
     "back": [
-     62,
-     40
+     61,
+     39
     ],
     "withers": [
      43,
@@ -507,11 +497,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 66, rump match 65, rump edge 65"
    ],
    "same_body_as": null,
    "head_from": {
@@ -522,16 +512,17 @@
     ]
    },
    "checked": false,
-   "sha1": "6dc94ea7a1c0df23a466c3135433a22bfd4f1b3e"
+   "sha1": "6dc94ea7a1c0df23a466c3135433a22bfd4f1b3e",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's curve moved up and down with the bob (walk 02 one row up, walk 03 two), never sideways, so 65 in every frame, its row riding the bob; the other measures read the lift on the slanted curve as a column."
   },
   "bdy_walk_left_08": {
    "points": {
     "hip": [
-     66,
-     41
+     65,
+     40
     ],
     "back": [
-     62,
+     61,
      41
     ],
     "withers": [
@@ -572,11 +563,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 66
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 66; the clip's rump outline reads one shift in every frame: 66 in all"
+    "hip: body() 66, rump match 65, rump edge 66"
    ],
    "same_body_as": null,
    "head_from": {
@@ -587,7 +578,8 @@
     ]
    },
    "checked": false,
-   "sha1": "d23025f9c932c640b6b57ef58a522e0a0a9de567"
+   "sha1": "d23025f9c932c640b6b57ef58a522e0a0a9de567",
+   "note": "Claude's pass, 2026-11-03: here the whole rear outline is the standing one a column back (the stride), the only walk frame so; the hip stays 65 with the bob's row (40, as walk 04): a piece hung from 66 here would jump a column for one frame in eight, held at 65 one more pixel of the rump shows, the game's own motion."
   },
   "bdy_ear_left_01": {
    "points": {
@@ -973,16 +965,17 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 65
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 65; the clip's rump outline reads one shift in every frame: 65 in all"
+    "hip: body() 66, rump match 65, rump edge 65; the clip's rump edge reads one shift in every frame: 65 in all"
    ],
    "same_body_as": null,
    "head_from": null,
    "checked": false,
-   "sha1": "e5b7d77cf42ec9c4fde615762669454348e3f7b0"
+   "sha1": "e5b7d77cf42ec9c4fde615762669454348e3f7b0",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's row for row: 65 (body() read 66)."
   },
   "bdy_graze_left_03": {
    "points": {
@@ -1032,16 +1025,17 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 65
+     "rump edge": 65
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 65; the clip's rump outline reads one shift in every frame: 65 in all"
+    "hip: body() 66, rump match 65, rump edge 65; the clip's rump edge reads one shift in every frame: 65 in all"
    ],
    "same_body_as": null,
    "head_from": null,
    "checked": false,
-   "sha1": "7925b5873d70c2987148df1d9ffd091268e24743"
+   "sha1": "7925b5873d70c2987148df1d9ffd091268e24743",
+   "note": "Claude's pass, 2026-11-03: the rump's back edge is the standing frame's row for row: 65 (body() read 66)."
   },
   "bdy_graze_left_04": {
    "points": {
@@ -1535,11 +1529,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 65
+     "rump edge": 66
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 65",
+    "hip: body() 66, rump match 65, rump edge 66",
     "eye: none found here (a blink?), the standing one moved with the head"
    ],
    "same_body_as": null,
@@ -1551,17 +1545,18 @@
     ]
    },
    "checked": false,
-   "sha1": "8793c4371d79db8ce56c59aa396a0da46683ac23"
+   "sha1": "8793c4371d79db8ce56c59aa396a0da46683ac23",
+   "note": "Claude's pass, 2026-11-03: the donkey lifts its tail and the rump's top bulges a column at rows 42-46 (two in lips 06); the body itself stays, so the standing hip, 65: a piece hung from it holds still, as Hellfire's rump does since the user's yes. The eye is shut: the standing eye moved with the head, on the shut eye's line (looked at)."
   },
   "bdy_lips_left_05": {
    "points": {
     "hip": [
-     66,
-     42
+     65,
+     41
     ],
     "back": [
-     62,
-     42
+     61,
+     41
     ],
     "withers": [
      47,
@@ -1601,11 +1596,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 66
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 66",
+    "hip: body() 66, rump match 65, rump edge 66",
     "eye: none found here (a blink?), the standing one moved with the head"
    ],
    "same_body_as": null,
@@ -1617,17 +1612,18 @@
     ]
    },
    "checked": false,
-   "sha1": "75c5e82e89d464b96224e6de72f612024d90049c"
+   "sha1": "75c5e82e89d464b96224e6de72f612024d90049c",
+   "note": "Claude's pass, 2026-11-03: the donkey lifts its tail and the rump's top bulges a column at rows 42-46 (two in lips 06); the body itself stays, so the standing hip, 65: a piece hung from it holds still, as Hellfire's rump does since the user's yes. The eye is shut: the standing eye moved with the head, on the shut eye's line (looked at)."
   },
   "bdy_lips_left_06": {
    "points": {
     "hip": [
-     66,
-     42
+     65,
+     41
     ],
     "back": [
-     62,
-     42
+     61,
+     41
     ],
     "withers": [
      47,
@@ -1667,11 +1663,11 @@
     "hip": {
      "body()": 67,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 67
     }
    },
    "flags": [
-    "hip: body() 67, rump match 65, rump outline 66"
+    "hip: body() 67, rump match 65, rump edge 67"
    ],
    "same_body_as": null,
    "head_from": {
@@ -1682,17 +1678,18 @@
     ]
    },
    "checked": false,
-   "sha1": "193ced643a55f5e5b95ac0b115389b2bc5b9fc92"
+   "sha1": "193ced643a55f5e5b95ac0b115389b2bc5b9fc92",
+   "note": "Claude's pass, 2026-11-03: the donkey lifts its tail and the rump's top bulges a column at rows 42-46 (two in lips 06); the body itself stays, so the standing hip, 65: a piece hung from it holds still, as Hellfire's rump does since the user's yes."
   },
   "bdy_lips_left_07": {
    "points": {
     "hip": [
-     66,
-     42
+     65,
+     41
     ],
     "back": [
-     62,
-     42
+     61,
+     41
     ],
     "withers": [
      47,
@@ -1732,11 +1729,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 66
+     "rump edge": 66
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 66"
+    "hip: body() 66, rump match 65, rump edge 66"
    ],
    "same_body_as": null,
    "head_from": {
@@ -1747,7 +1744,8 @@
     ]
    },
    "checked": false,
-   "sha1": "f34f0b0629e60926776ab4c00aa0fb0838f1467b"
+   "sha1": "f34f0b0629e60926776ab4c00aa0fb0838f1467b",
+   "note": "Claude's pass, 2026-11-03: the donkey lifts its tail and the rump's top bulges a column at rows 42-46 (two in lips 06); the body itself stays, so the standing hip, 65: a piece hung from it holds still, as Hellfire's rump does since the user's yes."
   },
   "bdy_lips_left_08": {
    "points": {
@@ -1797,11 +1795,11 @@
     "hip": {
      "body()": 66,
      "rump match": 65,
-     "rump outline": 65
+     "rump edge": 66
     }
    },
    "flags": [
-    "hip: body() 66, rump match 65, rump outline 65"
+    "hip: body() 66, rump match 65, rump edge 66"
    ],
    "same_body_as": null,
    "head_from": {
@@ -1812,7 +1810,8 @@
     ]
    },
    "checked": false,
-   "sha1": "de0d759b8f32db8f2907ff2e575fce1d21f53bef"
+   "sha1": "de0d759b8f32db8f2907ff2e575fce1d21f53bef",
+   "note": "Claude's pass, 2026-11-03: the donkey lifts its tail and the rump's top bulges a column at rows 42-46 (two in lips 06); the body itself stays, so the standing hip, 65: a piece hung from it holds still, as Hellfire's rump does since the user's yes."
   },
   "bdy_lips_left_09": {
    "points": {
@@ -2306,7 +2305,8 @@
    "same_body_as": "bdy_static_left",
    "head_from": null,
    "checked": false,
-   "sha1": "36b6205f2c749416ce1f636faf8b3358336d081a"
+   "sha1": "36b6205f2c749416ce1f636faf8b3358336d081a",
+   "note": "Claude's pass, 2026-11-03: the muzzle at the bottom of the face's light patch (looked at, zoomed); both eyes on the eyes."
   },
   "bdy_turn_left_05": {
    "points": {
@@ -2362,7 +2362,8 @@
    "same_body_as": "bdy_static_left",
    "head_from": null,
    "checked": false,
-   "sha1": "aa47cc03689628033d99b8987d2aeedac1111f05"
+   "sha1": "aa47cc03689628033d99b8987d2aeedac1111f05",
+   "note": "Claude's pass, 2026-11-03: the muzzle at the bottom of the face's light patch (looked at, zoomed); both eyes on the eyes."
   },
   "bdy_turn_left_06": {
    "points": {
@@ -2418,7 +2419,8 @@
    "same_body_as": "bdy_static_left",
    "head_from": null,
    "checked": false,
-   "sha1": "2abe4c34a89b17bd75582758fd7afd7233986cba"
+   "sha1": "2abe4c34a89b17bd75582758fd7afd7233986cba",
+   "note": "Claude's pass, 2026-11-03: the muzzle at the bottom of the face's light patch (looked at, zoomed); both eyes on the eyes."
   },
   "hed_static_down": {
    "points": {

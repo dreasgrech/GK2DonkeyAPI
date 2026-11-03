@@ -28,28 +28,9 @@ CRACKS = [
     [(0.52, 0.40), (0.42, 0.56)],
     [(0.80, 0.34), (0.86, 0.52), (0.78, 0.70), (0.84, 0.86)],
 ]
-# turn 02-06: the head swings round to face us while the body stays as it stands (pixel for pixel behind the neck),
-# but the torso box starts 10 columns past the eye, so it moved and changed size with the head (left edge 44-48,
-# width 22-26, height 14-21) and the cracks, the rump's fill and the tail's root with it ("the red lines on his back
-# are moving all over the place", the user, 2026-11-03): those frames take the standing frame's box for the rump and the
-# tail (the cracks: make_hellfire.crack_pixels, the walk's)
-STILL_BODY = {"bdy_turn_left_02", "bdy_turn_left_03", "bdy_turn_left_04", "bdy_turn_left_05", "bdy_turn_left_06"}
-_STANDING_BOX = None
 LAST_CRACK_PIXELS = []   # the last frame's crack pixels as drawn, (x, y, colour) (make_hellfire copies walk 01's)
-LAST_RUMP = {}   # the last frame's rump curve, row -> column (make_hellfire sets the standing frame's where only the tail moves)
-
-
-def standing_box():
-    """The standing frame's torso box as hellfire() builds it (the tail erased first)."""
-    global _STANDING_BOX
-    if _STANDING_BOX is None:
-        im = load("0301_bdy_static_left")
-        w, h = im.size
-        px = im.load()
-        eye = find_eye(px, w, h)
-        erase_tail_drawn(px, w, h, DARK)
-        _STANDING_BOX = torso_box(px, w, h, eye[0] if eye else None)
-    return _STANDING_BOX
+LAST_RUMP = {}   # the last frame's rump: {"curve": row -> column, "tail_row": the row the tail grows from}
+# (make_hellfire sets the standing frame's wherever the body's points say the rump is the standing one's)
 
 
 def load(name):
@@ -277,6 +258,10 @@ def fill_rump(px, w, h, y0, yb, bulge_per_row=1 / 7.0, curve_from=None):
         e = edge(y)
         if e is None:
             continue
+        if y == y0 - 1 and e == target:   # the edge above the tail is left as drawn where it is the curve's already
+            # (set, it gave that row a pixel the frame the curve came from never had: 26 frames, x 64)
+            curve[y] = target
+            continue
         last = max((x for x in range(0, min(e, target) + 1) if px[x, y][3] > 0 and (px[x, y][:3] in COAT or px[x, y][:3] in lava)), default=None)
         if last is None:
             continue
@@ -317,24 +302,21 @@ def smooth_root(px, w, h, root):
 
 # Frames whose ears a rule can't read (2026-10-19): the head down grazing (one ear up, the far one lying back on the
 # neck as mane) and the head turned to the camera (two ears either side of the forelock). Per frame key: the boxes
-# that are ear (x0, x1, y0, y1, inclusive, top-down canvas rows) and the horns (base x, base y, lean); turn 4-6 also
-# erase the head's top corner beside each horn's base, a pixel that stood out like a brim (the gate review, 2026-11-02).
+# that are ear (x0, x1, y0, y1, inclusive, top-down canvas rows); turn 4-6 also erase the head's top corner beside each
+# horn's base, a pixel that stood out like a brim (the gate review, 2026-11-02); and the eyes there, light pixels no
+# rule finds (the glow's pixels). The horns stand on the ear bases of the body points (make_hellfire.horns_of,
+# anatomy.rig) since 2026-11-03: the horns of this table and of HORN_FRAMES (turn 2-3), the eye's offset and the skull's
+# top before them, the same bases.
 EAR_FRAMES = {
-    "bdy_graze_left_03": {"erase": [(19, 26, 0, 22)], "horns": [(22, 23, 1), (26, 24, 1)], "eyes": [(21, 35)]},
-    "bdy_graze_left_04": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)], "eyes": [(20, 35)]},
-    "bdy_graze_left_05": {"erase": [(18, 25, 0, 22)], "horns": [(21, 23, 1), (25, 24, 1)], "eyes": [(20, 35)]},
-    "bdy_turn_left_04": {"erase": [(15, 35, 0, 22), (17, 17, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(20, 30), (27, 30)]},
-    "bdy_turn_left_05": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
-    "bdy_turn_left_06": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "horns": [(20, 23, -1), (30, 23, 1)], "eyes": [(21, 31), (27, 31)]},
+    "bdy_graze_left_03": {"erase": [(19, 26, 0, 22)], "eyes": [(21, 35)]},
+    "bdy_graze_left_04": {"erase": [(18, 25, 0, 22)], "eyes": [(20, 35)]},
+    "bdy_graze_left_05": {"erase": [(18, 25, 0, 22)], "eyes": [(20, 35)]},
+    "bdy_turn_left_04": {"erase": [(15, 35, 0, 22), (17, 17, 23, 23), (32, 32, 23, 23)], "eyes": [(20, 30), (27, 30)]},
+    "bdy_turn_left_05": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "eyes": [(21, 31), (27, 31)]},
+    "bdy_turn_left_06": {"erase": [(15, 35, 0, 22), (16, 16, 23, 23), (32, 32, 23, 23)], "eyes": [(21, 31), (27, 31)]},
 }
 
 
-# The head mid-turn (turn 2 and 3, 2026-10-19): the ears' roots move forward as the face turns, so the eye-based
-# offset lands behind them; the horns at the ears' roots by hand.
-HORN_FRAMES = {
-    "bdy_turn_left_02": [(27, 28, 1), (32, 29, 1)],
-    "bdy_turn_left_03": [(19, 26, 1), (25, 26, 1)],
-}
 # turn 3: the far ear lies back over the neck, where the ear rule (the run under the topmost pixel) doesn't reach, and
 # stayed as a flat dark slab behind the far horn (a fresh review, 2026-11-02); its boxes, as EAR_FRAMES' erase
 FAR_EAR = {
@@ -351,15 +333,6 @@ def erase_boxes(px, w, h, boxes):
         for x in range(w):
             if px[x, y][3] > 0 and px[x, y - 1][3] == 0 and px[x, y][:3] in COAT:
                 px[x, y] = OUTLINE + (255,)
-
-
-def skull_top(px, w, h):
-    """after the ears are gone: the head's top row (topmost pixels within 16 columns of the muzzle tip) and its right end"""
-    pts = [(x, y) for y in range(h) for x in range(w) if px[x, y][3] > 0]
-    mx = min(p[0] for p in pts)
-    head = [p for p in pts if p[0] <= mx + 16]
-    ty = min(p[1] for p in head)
-    return max(p[0] for p in head if p[1] == ty), ty
 
 
 def erase_ears(px, w, h, ey):
@@ -521,9 +494,11 @@ def devil_tail(px, w, h, rx, ry, phase):
     put(px, tx - 1, ty - 2, (120, 20, 16), w, h)
     put(px, tx + 1, ty - 2, (120, 20, 16), w, h)
 
-def hellfire(name, phase=0.0, crack_pixels=None, rump_curve=None):
+def hellfire(name, phase=0.0, crack_pixels=None, rump=None, horn_bases=None):
     """One frame: the donkey's frame turned Hellfire. crack_pixels: the cracks as (x, y, colour) to copy (default:
-    drawn into the torso box). rump_curve: the rump's curve to set (default: drawn from this frame's edge)."""
+    drawn into the torso box). rump: another frame's LAST_RUMP to set (its curve and its tail's row; default: drawn
+    from this frame's own edge and torso box). horn_bases: the two horns' (x, y, lean), the ear bases (none: no
+    horns)."""
     global LAST_RUMP
     im = load(name)
     w, h = im.size
@@ -546,8 +521,6 @@ def hellfire(name, phase=0.0, crack_pixels=None, rump_curve=None):
         if box:
             root = erase_tail_drawn(px, w, h, DARK)
             box = torso_box(px, w, h, body_eye[0] if body_eye else None)  # without the tail
-            if key in STILL_BODY:
-                box = standing_box()
             # before the coat darkens: the cracks sit on coat pixels and keep their own colours
             if crack_pixels is None:
                 cracks(px, w, h, box)
@@ -555,31 +528,20 @@ def hellfire(name, phase=0.0, crack_pixels=None, rump_curve=None):
                 stamp_cracks(px, w, h, crack_pixels)
             if root:
                 y0 = root[0]
-                LAST_RUMP = fill_rump(px, w, h, y0, box[3], curve_from=rump_curve)
-                ry = y0 + (box[3] - y0) // 3  # the tail grows from the upper third of the rump's curve
+                curve = fill_rump(px, w, h, y0, box[3], curve_from=rump["curve"] if rump else None)
+                # the tail grows from the upper third of the rump's curve
+                ry = rump["tail_row"] if rump else y0 + (box[3] - y0) // 3
+                LAST_RUMP = {"curve": curve, "tail_row": ry}
                 rr = runs(px, ry, w, h)
                 root = (rr[-1][1], ry) if rr else None  # the row's actual edge (the body may be wider than the curve there)
     special = EAR_FRAMES.get(key)
     if special:
         erase_boxes(px, w, h, [(a + tdx, b + tdx, c + tdy, d + tdy) for (a, b, c, d) in special["erase"]])
-        horns = [(x + tdx, y + tdy, l) for (x, y, l) in special["horns"]]
     else:
         erase_ears(px, w, h, eye[1] if eye else None)
         if key in FAR_EAR:
             erase_boxes(px, w, h, [(a + tdx, b + tdx, c + tdy, d + tdy) for (a, b, c, d) in FAR_EAR[key]])
-        # the horns from the skull's top, which moves only with the head (the eye pixel animates on its own and is
-        # gone in the blinks: the horns jumped or vanished in the idles, 2026-10-19); placed as they were from the eye
-        # in the standing frame: skull top right end (31, 25) -> horns at (29, 26) and (34, 27)
-        # the horns from the eye, as in ear twitch 2-4 (the user's reference, 2026-10-19): eye + (4, -4) and
-        # eye + (9, -3); in a blink (no eye drawn) from the skull's top, calibrated so the standing frame gets the same
-        if key in HORN_FRAMES:  # the head mid-turn: the ears (and so the horns) move forward on the face
-            horns = [(x + tdx, y + tdy, l) for (x, y, l) in HORN_FRAMES[key]]
-        elif eye and not special_eyes:
-            ex0, ey0 = rh(eye[0]), rh(eye[1])  # half up, as in the game
-            horns = [(ex0 + 4, ey0 - 4, 1), (ex0 + 9, ey0 - 3, 1)]
-        else:
-            sx, sy = skull_top(px, w, h)
-            horns = [(sx - 2, sy + 2, 1), (sx + 3, sy + 3, 1)]
+    horns = list(horn_bases or [])   # on the ear bases (make_hellfire.horns_of)
     darken_coat(px, w, h)
     if eye:
         ex, ey, pts = eye
