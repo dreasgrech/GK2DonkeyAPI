@@ -82,8 +82,13 @@ Steam changelog was saved for this one; what it does is read from the code and t
   dev probes (`NearestNodeConstraint`, `NNInfo`, `PathUtilities`, `RecastGraph`, `NavGraph`, `GridGraph`,
   `DistanceMetric`). The dependency manifest's scopes are `Assembly-CSharp` and `LazyBearTechnology` only
   (`src/Shared/DependencyManifest.cs`, `GameScopes`), so a change there would pass the start check unseen. This
-  time nothing of it changed (above). Adding the assembly to the scopes is shared code in both repos, and the
-  user's call. The QOL mods reference neither A* nor firstpass.
+  time nothing of it changed (above). The QOL mods reference neither A* nor firstpass.
+  - **Closed the same day** (the user's go): the pathfinding is the manifest's third scope, with its module id in
+    the fast path and the cache's key (`docs/dependency-check.md`, "Scopes").
+- **The donkey's art had no check at all.** `docs/skins-design.md` section 11 described a run-time check of the
+  donkey's sprite keys that was never built. Built the same day: the fingerprints of the 48 frames the skins were
+  drawn on (`donkey-frames.txt`), checked once a session against the running game (`DonkeyFrames.cs`, section 11).
+  `tools/game-asset-diff.py` says "unchanged" for this update.
 - **Every project compiles** against the new DLLs: the API, Saddle Up, the three packs, the three examples and the six
   tools. They were built with `-p:Deploy=false`, so nothing was deployed. Three dev projects (`GK2DonkeyHerd`,
   `GK2DonkeyTechGate`, `GK2DonkeyProbe`) showed MSB3277. That warning is the game's own System.IO.Compression
@@ -121,6 +126,30 @@ Steam changelog was saved for this one; what it does is read from the code and t
     `GameScene.OnDestroy` and `Wgo.DeInit`). They were in the 1.011 session's log too, and were traced on
     2026-09-30 (`src/GK2DonkeyAPI/PROBE-FINDINGS.md`).
   - The BoxCollider "negative scale" lines on the fight ruins were in the 1.011 log as well.
+
+## The rebuild of 2026-11-03, 22:07
+
+The API (with Saddle Up and the packs) and the four QOL mods were rebuilt against 1.011.1 and deployed: the pathfinding
+in the dependency check, the donkey-art check (above, "Patch targets and references"). So the next start differs
+from the 21:35 one:
+
+- **No "recompiled ... identical" line** from any of the five: each is now built against this game, so the fast
+  path passes and nothing is logged; the framework's build contract still passes for each.
+- **One new info line once a mount is out:** "Looks: the game's donkey frames are the ones the skins were drawn on
+  (donkey-frames.txt; 48 frame(s) read in N ms over 48 game frames)".
+- **F11:** two new scenarios, "the start's check of the game's code: the A* pathfinding ..." (the core group) and
+  "the donkey's art ..." (Skins; it skips without a mount out, so load the save with the donkeys around).
+
+### In game (2026-11-03, 22:42)
+
+- **The start:** no "recompiled" line from any of the five; the framework's build contract passed for each.
+- **The donkey-art check is calibrated.** "Looks: the game's donkey frames are the ones the skins were drawn on
+  (donkey-frames.txt; 48 frame(s) read in 338 ms over 48 game frames)". The probe's export and the API's own read
+  give the same bytes, and `donkey_frames.py check` on the dev dump says 48 the same, 0 changed. The read cost no
+  slow frame: the [perf] line after it reads 120 fps, frame 8.3 ms, worst 13.
+- **F11: 1799 passed, 0 failed, 0 warnings.** Both new scenarios passed: the start's check found the running
+  pathfinding by its name with the id it was built against (identical), and the donkey's art held its four parts.
+  Every warning and error in the log lies inside the run, the same test-made kinds as at 21:35.
 
 ## In-game checks (pending)
 

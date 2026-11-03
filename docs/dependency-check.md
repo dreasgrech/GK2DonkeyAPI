@@ -112,8 +112,18 @@ say so in their headers; change both). What this repo added to them, used by bot
   lists only those overloads, not every method of the name. `AccessTools.Inner` lists the nested type.
 - **`embed-text <mod.dll> <manifest.txt>`** in the tool: embeds a manifest text as given, for the in-game tests.
 
-Scopes: the manifest reads `Assembly-CSharp` and `LazyBearTechnology`; `tests/CecilScan-DonkeyAPI` also resolves
-`FlowCanvas` references (the corpse nodes' base types), which never changed and belong to a third-party package.
+Scopes: the manifest reads `Assembly-CSharp`, `LazyBearTechnology` and, since game 1.011.1, the A* pathfinding
+(`AstarPathfindingProject`). The API queries the pathfinding's graphs directly in the safe ground, the mount and
+the dev probes: 29 entries, used by `Mount` (core) and `SelfTest` (dev). The 1.011.1 update recompiled that
+assembly, and the manifest could not see it (`docs/game-update-26404424.md`).
+- **Its module id:** a manifest line `module-mvid <assembly> <id>` after the two named ones, written only for
+  scopes the entries use (the QOL mods' manifests have none and read as before).
+- **The fast path and the cache:** the start's fast path counts that id (the assembly found among the loaded ones by
+  name), and so does the cache's key, so an update that recompiled only the pathfinding is compared, not passed.
+- **Old manifests** without the line parse as before (the released DLLs, `check-dist`).
+- `tests/CecilScan-DonkeyAPI` also resolves `FlowCanvas` references (the corpse nodes' base types), which never
+  changed and belong to a third-party package. `tests/GameDiff` compares every game assembly whose bytes changed,
+  so a new one the mods use shows there first.
 
 At start, `Plugin.BindAndPatch` binds the Safety keys and runs the comparison before the `[Debug]` keys bind (the dev
 lock needs the verdict), applies the verdict after every key is bound (`GameCode.Apply`: the log line, the freezes,
@@ -129,7 +139,7 @@ cleaned by hand). The dev panel's General tab shows the two switches and the Sta
 an update is to dump the new build ("the game changed, running anyway" is the wanted answer).
 
 Offline: `tools/check-dist.py` runs `DepManifest verify` on the dist API DLL and checks the dist Saddle Up DLL
-references neither game assembly; `tests/CecilScan-DonkeyAPI` verifies the bin DLL's manifest against the installed
+references no game assembly (Assembly-CSharp, LazyBearTechnology, the pathfinding); `tests/CecilScan-DonkeyAPI` verifies the bin DLL's manifest against the installed
 game and the class table's coverage; after a game update `verify` lists exactly which members changed (the audit's
 reading list), and `show` prints the manifest with its classes.
 

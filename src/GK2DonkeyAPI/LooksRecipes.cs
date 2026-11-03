@@ -77,6 +77,9 @@ namespace GK2DonkeyAPI
         // The base's own sprites by frame key, found once from its atlases (the sprites loaded while any view of it
         // exists), the originals rather than the skin changer's "(Clone)" copies.
         private static readonly Dictionary<string, Sprite> gameFrames = new Dictionary<string, Sprite>(StringComparer.Ordinal);
+        // The prefix's other sprites in the same atlases, found in the same pass (the donkey's cart wheel,
+        // wheel_walk_left_*): no frame key of the base, but part of its art for DonkeyFrames' check.
+        private static readonly Dictionary<string, Sprite> gameFramesOther = new Dictionary<string, Sprite>(StringComparer.Ordinal);
         private static string gamePrefix;
         private static SkinBase gameBase;
 
@@ -84,6 +87,7 @@ namespace GK2DonkeyAPI
         {
             if (gameBase == b && gamePrefix == prefix && gameFrames.Count > 0) return;
             gameFrames.Clear();
+            gameFramesOther.Clear();
             gamePrefix = prefix;
             gameBase = b;
             foreach (Sprite s in Resources.FindObjectsOfTypeAll<Sprite>())
@@ -91,11 +95,11 @@ namespace GK2DonkeyAPI
                 if (s == null || !s.name.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 if (s.texture == null || s.texture.name.IndexOf(b.AtlasName, StringComparison.OrdinalIgnoreCase) < 0) continue;
                 string key = FrameKey(s.name);
-                if (!b.KeySet.Contains(key)) continue;
+                Dictionary<string, Sprite> into = b.KeySet.Contains(key) ? gameFrames : gameFramesOther;
                 bool clone = s.name.IndexOf("(Clone)", StringComparison.Ordinal) >= 0;
-                if (!gameFrames.TryGetValue(key, out Sprite have) || (have.name.IndexOf("(Clone)", StringComparison.Ordinal) >= 0 && !clone))
+                if (!into.TryGetValue(key, out Sprite have) || (have.name.IndexOf("(Clone)", StringComparison.Ordinal) >= 0 && !clone))
                 {
-                    gameFrames[key] = s;
+                    into[key] = s;
                 }
             }
             if (!quiet || gameFrames.Count > 0) Plugin.Log.LogInfo($"Looks: the {b.Id}'s frames found for the recipes: {gameFrames.Count} of {b.Keys.Length} ('{prefix}*' in the {b.AtlasName} atlases).");
@@ -118,8 +122,17 @@ namespace GK2DonkeyAPI
             return gameFrames.Count > 0;
         }
 
-        // The sprite's pixels on its canvas, at its trim offset (ReadPixels from a blit of its atlas).
-        private static SkinFrame ReadFrame(string key, Sprite s, SkinBase b)
+        // Every sprite of the prefix the last search found (FindGameFrames), by key: the base's frames and the others
+        // (gameFramesOther). For DonkeyFrames, right after BaseFramesInMemory said the donkey's are there.
+        internal static void GameFramesFound(Dictionary<string, Sprite> into)
+        {
+            foreach (KeyValuePair<string, Sprite> kv in gameFrames) into[kv.Key] = kv.Value;
+            foreach (KeyValuePair<string, Sprite> kv in gameFramesOther) into[kv.Key] = kv.Value;
+        }
+
+        // The sprite's pixels on its canvas, at its trim offset (ReadPixels from a blit of its atlas). Also DonkeyFrames'
+        // read of the game's art, so the check sees the pixels the skins are built on.
+        internal static SkinFrame ReadFrame(string key, Sprite s, SkinBase b)
         {
             Texture2D tex = s.texture;
             Rect r = s.textureRect;

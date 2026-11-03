@@ -64,7 +64,7 @@ for path in sorted(glob.glob(os.path.join(REPO, "dist", "*.dll"))):
     note = None
     if name in NO_MANIFEST:
         # No manifest by design: then the DLL must reference neither game assembly (a reference would be an unchecked dependency).
-        if b"Assembly-CSharp" in b or b"LazyBearTechnology" in b:
+        if b"Assembly-CSharp" in b or b"LazyBearTechnology" in b or b"AstarPathfindingProject" in b:
             findings.append("references a game assembly but carries no dependency manifest: import DependencyManifest.targets")
         note = NO_MANIFEST[name]
     else:

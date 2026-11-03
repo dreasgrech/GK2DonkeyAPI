@@ -395,11 +395,30 @@ skin code runs on any path that touches items, the cart, cargo or the save: a sk
   its own (a listed class that uses no game member fails CecilScan as stale). Its freeze follows `Colors.Frozen`,
   which guards the same borrowed parts; a comment in the rig says so. If the rig ever needs a game member (for example
   `CameraSystem`), it gets its own `frozen` line and `Freezers` entry.
-- **Art:** `DepManifest` covers members, not sprite names. On the first donkey view of a session the registry
-  enumerates the base's sprites (the probe's `ExportAllFrames` method: the character atlases' sprites with the
-  donkey's preset prefix) and compares the key set with the shipped list; a difference is logged as a warning naming
-  the new and missing keys, and every skin still works for the keys that match. The shipped list is updated in the
-  game-update audit (docs/game-update-*.md).
+- **Art:** `DepManifest` covers members, not pictures. Until 2026-11-03 this bullet described a check of the
+  donkey's sprite keys that had never been built (found in the 1.011.1 audit, `docs/game-update-26404424.md`); what
+  exists since:
+  - **The list:** `src/GK2DonkeyAPI/donkey-frames.txt`, embedded in the DLL. It has a line per 0301_ sprite of the
+    character atlases (the 44 frame keys and the cart wheel's `wheel_walk_left_01`..`04`): its canvas size and a
+    fingerprint of its pixels (FNV-1a 64 over the RGBA bytes, rows from the top, a pixel with alpha 0 as four zeros).
+    No art. `python tools/skins/donkey_frames.py make` writes it from the asset probe's export, the PNGs every skin is
+    measured and drawn on (`BepInEx\GK2-asset-probe\donkey-frames\`, of 2026-10-17).
+  - **The check at run time** (`DonkeyFrames.cs`): once a session, in a loaded game with a view of a mount out (the
+    donkey's atlases come with its prefab), the frames are found by Looks' own search (`BaseFramesInMemory`, at most
+    every 3 s, given up after 30 s) and read back one a frame the way the skins' builds read them (`Looks.ReadFrame`).
+    They are then compared with the list: one info line when every frame is the same, one warning naming the
+    changed, missing and new frames otherwise ("A skin drawn over the donkey may not line up in those frames until a
+    re-audited build"). It changes nothing: no skin is set aside, no feature stops.
+  - **Dev builds** also write what they read to `BepInEx\GK2-donkey-frames\` (its PNGs and `donkey-frames.txt`).
+    `python tools/skins/donkey_frames.py check "<that folder>"` compares them with the list, pixel by pixel where a
+    frame differs: a few pixels in a few frames is the art; every frame off a little is the read path.
+  - **Offline:** `tools/game-asset-diff.py` says whether an update changed a 0301_ sprite or a character atlas
+    texture.
+  - **After an update that changed the art:** check the skins over the changed frames (`tools/skins/page_frames.py`
+    on the new export), then refresh. Empty the probe's `donkey-frames\` first, because its export skips files that
+    exist. Then the probe's "Export every frame", `donkey_frames.py make`, and a rebuild.
+  - **Self-test:** "the donkey's art" in the Skins group runs the comparison on made-up lists, checks a known
+    picture's fingerprint against the Python tool's, and checks the session's own result.
 - **The game's preset prefix** (`0301_`) is stripped generically, so a renumbered preset changes nothing.
 
 ## 12. Extensibility points, by name

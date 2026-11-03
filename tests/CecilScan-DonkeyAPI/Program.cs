@@ -7,7 +7,8 @@ var mod = ModuleDefinition.ReadModule(Path.Combine(repo, "src", "GK2DonkeyAPI", 
 var game = ModuleDefinition.ReadModule(managed + "Assembly-CSharp.dll", rp);
 Console.WriteLine("Game MVID " + game.Mvid);
 int fails = 0, ok = 0;
-var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology", "FlowCanvas" };
+var gameScopes = new HashSet<string> { "Assembly-CSharp", "LazyBearTechnology", "AstarPathfindingProject",
+  "FlowCanvas" };
 var seen = new HashSet<string>();
 foreach (var t in mod.GetTypes()) foreach (var m in t.Methods.Where(m => m.HasBody)) foreach (var ins in m.Body.Instructions) {
   if (ins.Operand is MemberReference mr && !(mr is TypeReference) && mr.DeclaringType != null && !(mr.DeclaringType is ArrayType) && gameScopes.Contains(mr.DeclaringType.Scope.Name)) {
@@ -203,9 +204,10 @@ bool IsSubOf(TypeDefinition t, string baseName) { var b = t.BaseType; while (b !
     var stale = listed.Where(l => !owners.Contains(l)).ToList();
     Console.WriteLine((stale.Count == 0 ? "PASS" : "FAIL") + " game-code.txt names only classes that use game members" + (stale.Count == 0 ? "" : ": " + string.Join(", ", stale)));
     if (stale.Count > 0) fails++;
-    var lbt = ModuleDefinition.ReadModule(managed + "LazyBearTechnology.dll", rp);
     var manifest = GK2Shared.DepManifest.Parse(deps);
-    var verdict = GK2Shared.DepCompare.Compare(manifest, scope => scope == "Assembly-CSharp" ? game : scope == "LazyBearTechnology" ? lbt : null!);
+    var gameModules = GK2Shared.DepCompare.ModulesIn(managed, out IDisposable gameHandle); // each scope it names
+    var verdict = GK2Shared.DepCompare.Compare(manifest, gameModules);
+    gameHandle.Dispose();
     Console.WriteLine((verdict.Identical ? "PASS" : "FAIL") + $" dependency manifest: {verdict.Checked} game members (made against game {manifest.GameMvid}{(manifest.GameMvid == game.Mvid ? "" : ", the installed game is a different build")}): {verdict.Kind}");
     foreach (var s in verdict.Missing) Console.WriteLine("  MISSING " + s);
     foreach (var s in verdict.Changed) Console.WriteLine("  CHANGED " + s);

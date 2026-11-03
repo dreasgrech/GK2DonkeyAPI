@@ -1,0 +1,53 @@
+# The donkey's frames as the skins were drawn on them (docs/skins-design.md section 11): every 0301_ sprite
+# of the game's character atlases on its canvas, as the asset probe exported them (BepInEx\GK2-asset-probe\
+# donkey-frames, 2026-10-17). The API compares the running game's frames with this once a session.
+# <key> <width>x<height> <FNV-1a 64 of the RGBA bytes, rows from the top, a transparent pixel as 0 0 0 0>
+# Made by tools/skins/donkey_frames.py make. No art: hashes only.
+bdy_chew_left_01 96x96 6a016ff473ef657d
+bdy_chew_left_02 96x96 58b05761cf5cd5e0
+bdy_chew_left_03 96x96 d23e1bbe1bfafa98
+bdy_ear_left_01 96x96 b17eae90a53ce1f8
+bdy_ear_left_02 96x96 6ed6cba883c0c9fb
+bdy_ear_left_03 96x96 b8be4ab2a99138f3
+bdy_ear_left_04 96x96 895a4cfb75d7a070
+bdy_ear_left_05 96x96 1178c18953979e8f
+bdy_graze_left_01 96x96 b17eae90a53ce1f8
+bdy_graze_left_02 96x96 7261ada2cc79c6a8
+bdy_graze_left_03 96x96 6b2febec4cd33cbb
+bdy_graze_left_04 96x96 cbee638dea1b7f5a
+bdy_graze_left_05 96x96 0be9b0c8c2f3ee93
+bdy_lips_left_01 96x96 693a0fa1955ca43b
+bdy_lips_left_02 96x96 81c85b17335f0b6b
+bdy_lips_left_03 96x96 b17eae90a53ce1f8
+bdy_lips_left_04 96x96 c652747ac6285f95
+bdy_lips_left_05 96x96 ca7d09d24ae484c8
+bdy_lips_left_06 96x96 9f903bab49c4ec25
+bdy_lips_left_07 96x96 bcf73e33c593571e
+bdy_lips_left_08 96x96 8b6a656d93bec1fa
+bdy_lips_left_09 96x96 f5be889d466ee46f
+bdy_lips_left_10 96x96 a70c19c32a9fd091
+bdy_lips_left_11 96x96 dbf2da96463c279e
+bdy_lips_left_12 96x96 b17eae90a53ce1f8
+bdy_lips_left_13 96x96 b17eae90a53ce1f8
+bdy_static_left 96x96 b17eae90a53ce1f8
+bdy_turn_left_01 96x96 b17eae90a53ce1f8
+bdy_turn_left_02 96x96 ef2523376f5fd8e7
+bdy_turn_left_03 96x96 66c4fe0b19a68ab5
+bdy_turn_left_04 96x96 014bf5510d628f76
+bdy_turn_left_05 96x96 eac5cd0ccbc9dbbe
+bdy_turn_left_06 96x96 821191f0faf4506f
+bdy_walk_left_01 96x96 fcebe7a5df363556
+bdy_walk_left_02 96x96 727ede86d66d3738
+bdy_walk_left_03 96x96 7f17a51809baea11
+bdy_walk_left_04 96x96 b494dccfad060c42
+bdy_walk_left_05 96x96 cc1b57cecb44a5e9
+bdy_walk_left_06 96x96 99899dd94787b6f6
+bdy_walk_left_07 96x96 6af0df3fcb33ba0b
+bdy_walk_left_08 96x96 e7cc53e24977f5f2
+hed_static_down 96x96 8ddd1094dee23bcf
+hed_static_down_02 96x96 6887610fe73e2c6d
+hed_static_down_03 96x96 c02ecb2cf53c9d28
+wheel_walk_left_01 96x96 4efba5c414aff175
+wheel_walk_left_02 96x96 bbc6277376a7c2b1
+wheel_walk_left_03 96x96 1adbc478fce1c603
+wheel_walk_left_04 96x96 f2638e3dfeb9c401

@@ -22,6 +22,8 @@
     <EmbeddedResource Include="cargo-shapes.cfg" LogicalName="GK2DonkeyAPI.cargo-shapes.cfg" />
     <!-- How a changed game member is treated, by the mod's class that uses it (GameCode.cs, docs/dependency-check.md). -->
     <EmbeddedResource Include="game-code.txt" LogicalName="GK2DonkeyAPI.game-code.txt" />
+    <!-- The donkey's frames the skins were drawn on, as fingerprints (DonkeyFrames.cs; tools/skins/donkey_frames.py). -->
+    <EmbeddedResource Include="donkey-frames.txt" LogicalName="GK2DonkeyAPI.donkey-frames.txt" />
     <!-- The cart lantern's mesh data (vertex and index buffers of donkey_cart_lantern-MERGE S_OBJ, read from the
          game's bundle; the mesh is not readable at runtime). LampHang.cs splits it into pole and hanging lamp. -->
     <EmbeddedResource Include="assets\lantern-vertices.bin" LogicalName="GK2DonkeyAPI.lantern-vertices.bin" />

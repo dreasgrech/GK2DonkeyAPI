@@ -38,6 +38,7 @@ namespace GK2DonkeyAPI
         internal static bool DevToolsChanged { get; private set; }
 
         private static GameDependencies.Result result;
+        internal static GameDependencies.Result Result => result;   // the start's verdict, for the self-test (GateTests)
         private static readonly HashSet<string> skippedPatches = new HashSet<string>(StringComparer.Ordinal);
         private static readonly List<string> frozenFeatures = new List<string>();
 
@@ -92,7 +93,7 @@ namespace GK2DonkeyAPI
         {
             GameDependencies.Result r = result;
             string status;
-            string builds = $"Assembly-CSharp {r.GameMvid}, built against {r.AuditedGameMvid}; LazyBearTechnology {r.LazyBearMvid}, built against {r.AuditedLazyBearMvid}";
+            string builds = GameDependencies.Builds(r);
             if (r.State == GameDependencies.State.Missing)
             {
                 Plugin.Log.LogError($"GK2 Donkey API: game members this mod uses are gone since it was built ({builds}): {Named(r.Missing)}. Mod is DISABLED; the game runs unmodified. " +

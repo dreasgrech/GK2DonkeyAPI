@@ -9,7 +9,9 @@ The game folder is a git repository with the update committed on top of the prev
     python tools/game-asset-diff.py <game folder> [old revision] [output file]
 
 Prints totals per change and type, the game's version before and after (GameInfo.Version, what a new save is stamped
-with), and the GameBalance changes that are not just regenerated quest-node ids. The full list goes to the output
+with), whether the donkey's art changed (its 0301_ sprites, the character atlases' textures: what every donkey skin is
+drawn over; the API checks the same at run time, DonkeyFrames.cs), and the GameBalance changes that are not just
+regenerated quest-node ids. The full list goes to the output
 file (default %TEMP%\\game-asset-diff.txt, not into the repo). Read only: nothing in the game folder is written.
 Needs UnityPy (pip install UnityPy).
 """
@@ -24,6 +26,7 @@ import tempfile
 import warnings
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DONKEY, ATLAS = "0301_", "characters"   # the donkey's preset prefix and its atlases' name (Looks.Donkey)
 GUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}.?$")   # .?: the next string's length
 
 
@@ -93,7 +96,7 @@ def main():
             continue   # the code is tests/GameDiff's; the catalogue and settings are not assets
         changed.append((old, new))
     tmp = tempfile.mkdtemp(prefix="gk2-asset-diff-")
-    lines, totals, info, balance = [], {}, {}, []
+    lines, totals, info, balance, donkey = [], {}, {}, [], []
     try:
         for old, new in changed:
             old_file = os.path.join(tmp, "old")
@@ -106,6 +109,8 @@ def main():
             for tag, k in diff:
                 lines.append(f"  {tag} {k[0]} {k[1]!r}" + (f" {a[k][1]} -> {b[k][1]} bytes" if tag == "~" else ""))
                 totals[(tag, k[0])] = totals.get((tag, k[0]), 0) + 1
+                if (k[0] == "Sprite" and k[1].startswith(DONKEY)) or (k[0] == "Texture2D" and ATLAS in k[1].lower()):
+                    donkey.append(f"{tag} {k[0]} {k[1]}")
                 if k[:2] == ("MonoBehaviour", "GameInfo"):
                     info = {"old": texts(raw_of(old_file, "GameInfo")),
                             "new": texts(raw_of(os.path.join(game, new), "GameInfo"))}
@@ -126,6 +131,9 @@ def main():
         print(f"  {tag} {t}: {n}")
     if info:
         print(f"GameInfo (the save version): {info['old']} -> {info['new']}")
+    print("The donkey's art (0301_ sprites, the character atlases): " + (
+        "unchanged" if not donkey else f"CHANGED, {len(donkey)}: " + "; ".join(donkey[:12])
+        + " (compare the skins: tools/skins/donkey_frames.py, docs/skins-design.md section 11)"))
     print(f"GameBalance: {len(balance)} changed regions that are not just regenerated ids")
     print("Full list:", os.path.abspath(out_path))
 

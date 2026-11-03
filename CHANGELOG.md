@@ -12,6 +12,21 @@ straight away; at release that heading becomes the version and date (docs/releas
 
 For players:
 
+- **The start-up check of the game's code covers the pathfinding too** (2026-11-03; the user's go after the 1.011.1
+  audit). The API queries the game's A* pathfinding directly (the safe ground, the mount): 29 members, which the
+  check could not see, and 1.011.1 recompiled that assembly. Its members are now in the dependency manifest like
+  the game's own, and its module id is counted in the fast path and in the cached verdict's key, so an update that
+  changes only the pathfinding is compared too. Manifests without the new `module-mvid` line read as before.
+  `docs/dependency-check.md`, "Scopes"; self-test "the start's check of the game's code" (the core group).
+- **The donkey's art is checked against the art the skins were drawn on** (2026-11-03). Once a session, with a mount
+  out in a loaded game, the API reads back the game's 48 donkey frames, as the skins' builds do, one a frame. It
+  compares them with the fingerprints of the frames every skin was measured and drawn on (`donkey-frames.txt`, from
+  the asset probe's export of 2026-10-17). Every frame the same: one info line. Otherwise one warning names the
+  changed, missing and new frames; a skin drawn over the donkey may not line up in those until a re-audited build.
+  It changes nothing else. The design doc had described a key check that was never built (`docs/skins-design.md`
+  section 11, now what exists). Self-test "the donkey's art" (the Skins group). In game 2026-11-03 22:42: the 48
+  frames the same as the list (the probe's export and the API's read agree byte for byte), read in 338 ms over 48
+  frames with no slow frame; F11 1799 passed, 0 failed.
 - **Audited against game 1.011.1** (Steam build 26404424, 2026-11-03; `docs/game-update-26404424.md`): a hotfix of the
   zombie assistants' autocrafts and two save fixers. None of the 866 game members the API uses changed, so every
   build made for 1.011 (the released 0.13.2, 0.14.0 and 0.15.0 among them) runs on 1.011.1 as it is, with one info
@@ -28,6 +43,12 @@ For players:
 
 Development:
 
+- **`tools/skins/donkey_frames.py`** (2026-11-03): `make` writes `src/GK2DonkeyAPI/donkey-frames.txt` (fingerprints,
+  no art) from the asset probe's PNGs; `check` compares it with them, or with a dev build's own read of the game
+  (`BepInEx\GK2-donkey-frames\`, its PNGs and list), pixel by pixel where a frame differs. `tools/game-asset-diff.py`
+  gained a line on the donkey's art (its 0301_ sprites, the character atlases). `tests/CecilScan-DonkeyAPI` compares
+  the manifest over every scope it names, `tools/check-dist.py` also refuses a pathfinding reference in a DLL without
+  a manifest, and the QOL repo's copies of the shared check are byte-identical again.
 - **`tools/game-asset-diff.py`** (2026-11-03): the art and data half of a game-update audit, beside
   `tests/GameDiff`: every asset file the update changed (the old ones read from the game folder's git), compared
   object by object; the game's version before and after (what a new save is stamped with); and the balance changes
